@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { AppToolConfig } from 'sunpeak';
+import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
 import { getAdapter } from '../lib/adapter.js';
 
 export const tool: AppToolConfig = {
@@ -16,7 +16,7 @@ export const schema = {
 
 type Args = z.infer<z.ZodObject<typeof schema>>;
 
-export default async function (args: Args) {
+export default async function (args: Args, _extra: ToolHandlerExtra) {
   const adapter = getAdapter();
   await adapter.setJobRetries(args.jobId, args.retries);
   return { structuredContent: { success: true, jobId: args.jobId } };

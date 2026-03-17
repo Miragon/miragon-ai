@@ -1,7 +1,0 @@
-services:
-  cibseven:
-    image: cibseven/cibseven:run-latest
-    ports:
-      - "8080:8080"
-    environment:
-      - CIBSEVEN_BPM_RUN_AUTH_ENABLED=true

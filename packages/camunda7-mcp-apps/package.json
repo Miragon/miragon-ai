@@ -6,26 +6,34 @@
   "scripts": {
     "dev": "sunpeak dev",
     "build": "sunpeak build",
-    "start": "sunpeak start",
-    "help": "sunpeak help",
-    "test": "vitest run --passWithNoTests"
+    "start": "ENGINE_TYPE=cibseven ENGINE_BASE_URL=http://localhost:8080/engine-rest ENGINE_AUTH_TYPE=basic ENGINE_USERNAME=demo ENGINE_PASSWORD=demo sunpeak start",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@camunda7-mcp/engine-adapter": "workspace:*",
     "@camunda7-mcp/shared": "workspace:*",
-    "@openai/apps-sdk-ui": "^0.2.1",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "clsx": "^2.1.1",
     "sunpeak": "^0.16.21",
+    "tailwind-merge": "^3.5.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "jsdom": "^29.0.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3",
-    "vite": "^6.4.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.1.0"
   }
 }

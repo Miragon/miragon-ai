@@ -1,4 +1,5 @@
 services:
+  # Default: custom-built CIB Seven with ClickHouse + OTEL config
   cibseven:
     build:
       context: ../plugins/examples/cibseven-example
@@ -21,6 +22,22 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/engine-rest/engine || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # Dev: plain CIB Seven image, no custom build
+  # Use: docker compose --profile dev up
+  cibseven-dev:
+    profiles: [dev]
+    image: cibseven/cibseven:run-latest
+    ports:
+      - "8080:8080"
+    environment:
+      - CIBSEVEN_BPM_RUN_AUTH_ENABLED=true
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/engine-rest/engine || exit 1"]
       interval: 10s
@@ -51,6 +68,33 @@ services:
       nofile:
         soft: 262144
         hard: 262144
+
+  # OpenTelemetry Collector
+  # Use: docker compose --profile otel up
+  otel-collector:
+    profiles: [otel]
+    image: otel/opentelemetry-collector-contrib:0.128.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Collector Metrics
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+  # Jaeger UI for trace visualization
+  # Use: docker compose --profile otel up
+  jaeger:
+    profiles: [otel]
+    image: jaegertracing/jaeger:2.16.0
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4319:4317"   # OTLP gRPC (internal, used by Collector)
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
 
 volumes:
   clickhouse-data:

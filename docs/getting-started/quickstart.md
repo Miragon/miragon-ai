@@ -59,13 +59,14 @@ cd packages/camunda7-mcp-apps
 pnpm build && pnpm start
 ```
 
-Dann verbinde deinen MCP-Client über die Streamable HTTP URL:
+Dann verbinde deinen MCP-Client:
 
 ```json
 {
   "mcpServers": {
-    "camunda7-apps": {
-      "url": "http://localhost:8000/mcp"
+    "camunda-apps": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8000/mcp"]
     }
   }
 }

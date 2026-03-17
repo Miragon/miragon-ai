@@ -74,8 +74,9 @@ Füge in `claude_desktop_config.json` einen zweiten Eintrag für die Apps hinzu:
         "ENGINE_PASSWORD": "demo"
       }
     },
-    "camunda7-apps": {
-      "url": "http://localhost:8000/mcp"
+    "camunda-apps": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8000/mcp"]
     }
   }
 }
@@ -88,8 +89,9 @@ In `.claude/settings.json` oder projektspezifisch in `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "camunda7-apps": {
-      "url": "http://localhost:8000/mcp"
+    "camunda-apps": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8000/mcp"]
     }
   }
 }

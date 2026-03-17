@@ -23,9 +23,9 @@
         "CLICKHOUSE_SECURE": "false"
       }
     },
-    "camunda7-apps": {
-      "type": "http",
-      "url": "http://localhost:8000/mcp"
+    "camunda-apps": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8000/mcp"]
     }              
   }
 }

@@ -1,4 +1,4 @@
-import type { AuthInfo } from 'sunpeak';
+import type { AuthInfo } from 'sunpeak/mcp';
 import type { IncomingMessage } from 'node:http';
 
 export async function auth(req: IncomingMessage): Promise<AuthInfo> {
