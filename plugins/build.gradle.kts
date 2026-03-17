@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "1.9.25" apply false
     kotlin("plugin.spring") version "1.9.25" apply false
+    id("com.gradleup.shadow") version "8.3.5" apply false
 }
 
 allprojects {

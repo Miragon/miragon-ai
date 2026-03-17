@@ -3,14 +3,14 @@ package com.camunda7mcp.history
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "camunda7mcp.history.clickhouse")
-data class ClickHouseProperties(
-    val enabled: Boolean = true,
-    val url: String = "jdbc:clickhouse://localhost:8123/camunda_history",
-    val username: String = "default",
-    val password: String = "",
-    val database: String = "camunda_history",
-    val batchSize: Int = 100,
-    val flushIntervalSeconds: Long = 5,
-    val createSchema: Boolean = true,
-    val excludeVariables: List<String> = emptyList(),
-)
+class ClickHouseProperties {
+    var enabled: Boolean = true
+    var url: String = "jdbc:clickhouse://localhost:8123/camunda_history"
+    var username: String = "default"
+    var password: String = ""
+    var database: String = "camunda_history"
+    var batchSize: Int = 100
+    var flushIntervalSeconds: Long = 5
+    var createSchema: Boolean = true
+    var excludeVariables: List<String> = emptyList()
+}

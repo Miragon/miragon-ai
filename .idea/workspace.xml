@@ -4,7 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c48bdc0d-e2f5-480e-b2b0-8ec50f82af9a" name="Changes" comment="" />
+    <list default="true" id="c48bdc0d-e2f5-480e-b2b0-8ec50f82af9a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/docker/docker-compose.cibseven.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker/docker-compose.cibseven.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/camunda7-history-clickhouse/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/camunda7-history-clickhouse/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/cibseven-history-clickhouse/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/cibseven-history-clickhouse/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/settings.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/shared-history-clickhouse/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/shared-history-clickhouse/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/shared-history-clickhouse/src/main/kotlin/com/camunda7mcp/history/ClickHouseProperties.kt" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/shared-history-clickhouse/src/main/kotlin/com/camunda7mcp/history/ClickHouseProperties.kt" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -22,12 +31,26 @@
   <component name="ExternalProjectsManager">
     <system id="GRADLE">
       <state>
+        <task path="$PROJECT_DIR$/plugins">
+          <activation />
+        </task>
         <projects_view>
           <tree_state>
             <expand>
               <path>
                 <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
                 <item name="camunda7-mcp-history-plugins" type="f1a62948:ProjectNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="camunda7-mcp-history-plugins" type="f1a62948:ProjectNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="camunda7-mcp-history-plugins" type="f1a62948:ProjectNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+                <item name="build" type="c8890929:TasksNode$1" />
               </path>
             </expand>
             <select />
@@ -40,6 +63,10 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GradleScriptDefinitionsStorage" workingDir="$PROJECT_DIR$/plugins" gradleHome="$USER_HOME$/.gradle/wrapper/dists/gradle-8.10.2-bin/a04bxjujx95o3nb99gddekhwo/gradle-8.10.2" javaHome="$USER_HOME$/Library/Java/JavaVirtualMachines/corretto-21.0.8/Contents/Home" gradleVersion="8.10.2" />
+  <component name="KubernetesApiPersistence"><![CDATA[{}]]></component>
+  <component name="KubernetesApiProvider"><![CDATA[{
+  "isMigrated": true
+}]]></component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
@@ -53,6 +80,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Gradle.plugins [build].executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.MCP Project settings loaded": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -71,8 +99,59 @@
     "settings.editor.selected.configurable": "configurable.group.build",
     "to.speed.mode.migration.done": "true",
     "vue.rearranger.settings.migration": "true"
+  },
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "clickhouse"
+    ]
   }
 }]]></component>
+  <component name="RunManager" selected="Gradle.plugins [build]">
+    <configuration name="plugins [build]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/plugins" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="build" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <ExternalSystemDebugDisabled>false</ExternalSystemDebugDisabled>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <GradleProfilingDisabled>false</GradleProfilingDisabled>
+      <GradleCoverageDisabled>false</GradleCoverageDisabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="Camunda7ExampleApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="camunda7-mcp-history-plugins.examples.camunda7-example.main" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.camunda7mcp.example.camunda7.Camunda7ExampleApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="CibSevenExampleApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="camunda7-mcp-history-plugins.examples.cibseven-example.main" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.camunda7mcp.example.cibseven.CibSevenExampleApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Gradle.plugins [build]" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -88,7 +167,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1773746897660</updated>
-      <workItem from="1773746899123" duration="992000" />
+      <workItem from="1773746899123" duration="6480000" />
     </task>
     <servers />
   </component>

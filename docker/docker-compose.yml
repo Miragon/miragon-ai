@@ -1,18 +1,40 @@
 services:
   cibseven:
-    image: cibseven/cibseven-bpm-platform:latest
+    build:
+      context: ../plugins/examples/cibseven-example
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
-      - CIBSEVEN_BPM_RUN_AUTH_ENABLED=true
+      - CLICKHOUSE_ENABLED=true
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=camunda
+      - CLICKHOUSE_PASSWORD=camunda123
+      - CLICKHOUSE_DATABASE=camunda_history
+    depends_on:
+      clickhouse:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/engine-rest/engine || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   clickhouse:
-    image: clickhouse/clickhouse-server:24.3
+    image: clickhouse/clickhouse-server:26.2
     ports:
       - "8123:8123"
       - "9000:9000"
     volumes:
       - clickhouse-data:/var/lib/clickhouse
+      - ./clickhouse/init-schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
+    environment:
+      - CLICKHOUSE_DB=camunda_history
+      - CLICKHOUSE_USER=camunda
+      - CLICKHOUSE_PASSWORD=camunda123
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
     ulimits:
       nofile:
         soft: 262144

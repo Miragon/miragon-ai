@@ -1,6 +1,6 @@
 services:
   cibseven:
-    image: cibseven/cibseven-bpm-platform:latest
+    image: cibseven/cibseven:run-latest
     ports:
       - "8080:8080"
     environment:
