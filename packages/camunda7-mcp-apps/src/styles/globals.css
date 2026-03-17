@@ -1,0 +1,6 @@
+@import "sunpeak/style.css";
+
+@source "../**/*.{ts,tsx}";
+@source "../../node_modules/@openai/apps-sdk-ui";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

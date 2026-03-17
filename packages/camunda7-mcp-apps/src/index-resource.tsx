@@ -1,0 +1,12 @@
+import '../src/styles/globals.css';
+import 'sunpeak';
+// @ts-expect-error - Template file with placeholders
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { createRoot } from 'react-dom/client';
+// RESOURCE_IMPORT
+
+// Mount the resource
+const root = document.getElementById('root');
+if (root) {
+  // RESOURCE_MOUNT
+}

@@ -1,0 +1,22 @@
+services:
+  cibseven:
+    image: cibseven/cibseven-bpm-platform:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - CIBSEVEN_BPM_RUN_AUTH_ENABLED=true
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+volumes:
+  clickhouse-data:

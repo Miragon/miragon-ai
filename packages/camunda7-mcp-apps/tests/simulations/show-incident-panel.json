@@ -1,0 +1,42 @@
+{
+  "tool": "show-incident-panel",
+  "userMessage": "Show me all incidents",
+  "toolInput": {},
+  "toolResult": {
+    "structuredContent": {
+      "incidents": [
+        {
+          "id": "inc-001",
+          "processDefinitionId": "payment-process:2:def456",
+          "processInstanceId": "pi-005",
+          "incidentType": "failedJob",
+          "activityId": "sendPayment",
+          "incidentMessage": "java.net.ConnectException: Connection refused (Connection refused)",
+          "incidentTimestamp": "2026-03-16T09:45:00.000+0000",
+          "jobDefinitionId": "job-def-001",
+          "failedActivityId": "sendPayment",
+          "annotation": null
+        },
+        {
+          "id": "inc-002",
+          "processDefinitionId": "onboarding:1:ghi789",
+          "processInstanceId": "pi-008",
+          "incidentType": "failedExternalTask",
+          "activityId": "verifyIdentity",
+          "incidentMessage": "External service timeout after 30000ms",
+          "incidentTimestamp": "2026-03-15T16:20:00.000+0000",
+          "jobDefinitionId": null,
+          "failedActivityId": "verifyIdentity",
+          "annotation": null
+        }
+      ],
+      "totalCount": 2
+    },
+    "isError": false
+  },
+  "serverTools": {
+    "retry-job-action": {
+      "structuredContent": { "success": true, "jobId": "job-def-001" }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "tool": "show-analytics-dashboard",
+  "userMessage": "Show me process analytics",
+  "toolInput": {},
+  "toolResult": {
+    "structuredContent": {
+      "completedCount": 42,
+      "runningCount": 7,
+      "incidentCount": 2,
+      "avgDurationMs": 172800000,
+      "completedInstances": [
+        { "id": "pi-c01", "processDefinitionKey": "invoice-process", "startTime": "2026-03-15T08:00:00Z", "endTime": "2026-03-16T10:00:00Z", "durationInMillis": 93600000, "state": "COMPLETED" },
+        { "id": "pi-c02", "processDefinitionKey": "invoice-process", "startTime": "2026-03-14T09:00:00Z", "endTime": "2026-03-15T11:00:00Z", "durationInMillis": 93600000, "state": "COMPLETED" },
+        { "id": "pi-c03", "processDefinitionKey": "payment-process", "startTime": "2026-03-13T10:00:00Z", "endTime": "2026-03-14T12:00:00Z", "durationInMillis": 93600000, "state": "COMPLETED" },
+        { "id": "pi-c04", "processDefinitionKey": "onboarding", "startTime": "2026-03-12T11:00:00Z", "endTime": "2026-03-16T13:00:00Z", "durationInMillis": 352800000, "state": "COMPLETED" }
+      ],
+      "runningInstances": [
+        { "id": "pi-r01", "processDefinitionKey": "invoice-process", "startTime": "2026-03-17T08:00:00Z", "endTime": null, "durationInMillis": null, "state": "ACTIVE" },
+        { "id": "pi-r02", "processDefinitionKey": "payment-process", "startTime": "2026-03-16T14:00:00Z", "endTime": null, "durationInMillis": null, "state": "ACTIVE" }
+      ]
+    },
+    "isError": false
+  }
+}

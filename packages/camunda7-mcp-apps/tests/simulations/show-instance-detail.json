@@ -1,0 +1,45 @@
+{
+  "tool": "show-instance-detail",
+  "userMessage": "Show me process instance pi-001",
+  "toolInput": {
+    "processInstanceId": "pi-001"
+  },
+  "toolResult": {
+    "structuredContent": {
+      "instance": {
+        "id": "pi-001",
+        "definitionId": "invoice-process:1:abc123",
+        "businessKey": "INV-2026-001",
+        "suspended": false,
+        "ended": false
+      },
+      "activityTree": {
+        "id": "pi-001",
+        "activityId": "invoice-process:1:abc123",
+        "activityName": "Invoice Processing",
+        "activityType": "processDefinition",
+        "processInstanceId": "pi-001",
+        "processDefinitionId": "invoice-process:1:abc123",
+        "childActivityInstances": [
+          {
+            "id": "reviewInvoice:1",
+            "activityId": "reviewInvoice",
+            "activityName": "Review Invoice",
+            "activityType": "userTask",
+            "processInstanceId": "pi-001",
+            "processDefinitionId": "invoice-process:1:abc123",
+            "childActivityInstances": []
+          }
+        ]
+      },
+      "variables": {
+        "invoiceNumber": { "value": "INV-2026-001", "type": "String" },
+        "amount": { "value": 1500.00, "type": "Double" },
+        "approved": { "value": false, "type": "Boolean" },
+        "submitter": { "value": "jane", "type": "String" }
+      },
+      "bpmnXml": null
+    },
+    "isError": false
+  }
+}

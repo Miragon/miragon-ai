@@ -1,0 +1,60 @@
+{
+  "tool": "show-task-dashboard",
+  "userMessage": "Show me the open tasks",
+  "toolInput": {
+    "maxResults": 50
+  },
+  "toolResult": {
+    "structuredContent": {
+      "tasks": [
+        {
+          "id": "task-001",
+          "name": "Review Invoice",
+          "assignee": "demo",
+          "created": "2026-03-15T10:30:00.000+0000",
+          "due": "2026-03-20T10:30:00.000+0000",
+          "priority": 50,
+          "processDefinitionId": "invoice-process:1:abc123",
+          "processInstanceId": "pi-001",
+          "taskDefinitionKey": "reviewInvoice",
+          "description": "Please review the submitted invoice"
+        },
+        {
+          "id": "task-002",
+          "name": "Approve Payment",
+          "assignee": null,
+          "created": "2026-03-14T08:00:00.000+0000",
+          "due": null,
+          "priority": 75,
+          "processDefinitionId": "payment-process:2:def456",
+          "processInstanceId": "pi-002",
+          "taskDefinitionKey": "approvePayment",
+          "description": null
+        },
+        {
+          "id": "task-003",
+          "name": "Verify Customer Data",
+          "assignee": "john",
+          "created": "2026-03-13T14:15:00.000+0000",
+          "due": "2026-03-18T14:15:00.000+0000",
+          "priority": 25,
+          "processDefinitionId": "onboarding:1:ghi789",
+          "processInstanceId": "pi-003",
+          "taskDefinitionKey": "verifyCustomer",
+          "description": "Check customer KYC documents"
+        }
+      ],
+      "totalCount": 3,
+      "filters": {}
+    },
+    "isError": false
+  },
+  "serverTools": {
+    "claim-task-action": {
+      "structuredContent": { "success": true, "taskId": "task-002" }
+    },
+    "complete-task-action": {
+      "structuredContent": { "success": true, "taskId": "task-001" }
+    }
+  }
+}
