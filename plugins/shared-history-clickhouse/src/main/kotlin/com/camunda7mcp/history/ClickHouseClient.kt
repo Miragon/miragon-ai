@@ -1,5 +1,6 @@
 package com.camunda7mcp.history
 
+import io.opentelemetry.api.trace.StatusCode
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.DriverManager
@@ -27,7 +28,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
                 super_process_instance_id, state, tenant_id, engine_type, event_type
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
-        executeBatch(sql, rows) { ps, row ->
+        executeBatchInstrumented("camunda_process_instances", sql, rows) { ps, row ->
             ps.setString(1, row["id"] as? String)
             ps.setString(2, row["process_definition_id"] as? String)
             ps.setString(3, row["process_definition_key"] as? String)
@@ -58,7 +59,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
                 tenant_id, engine_type, event_type
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
-        executeBatch(sql, rows) { ps, row ->
+        executeBatchInstrumented("camunda_activity_instances", sql, rows) { ps, row ->
             ps.setString(1, row["id"] as? String)
             ps.setString(2, row["parent_activity_instance_id"] as? String)
             ps.setString(3, row["activity_id"] as? String)
@@ -90,7 +91,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
                 delete_reason, tenant_id, engine_type, event_type
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
-        executeBatch(sql, rows) { ps, row ->
+        executeBatchInstrumented("camunda_task_instances", sql, rows) { ps, row ->
             ps.setString(1, row["id"] as? String)
             ps.setString(2, row["task_id"] as? String)
             ps.setString(3, row["process_definition_id"] as? String)
@@ -126,7 +127,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
                 tenant_id, engine_type, event_type
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
-        executeBatch(sql, rows) { ps, row ->
+        executeBatchInstrumented("camunda_variable_updates", sql, rows) { ps, row ->
             ps.setString(1, row["id"] as? String)
             ps.setString(2, row["process_definition_id"] as? String)
             ps.setString(3, row["process_definition_key"] as? String)
@@ -158,7 +159,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
                 tenant_id, engine_type, event_type
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
-        executeBatch(sql, rows) { ps, row ->
+        executeBatchInstrumented("camunda_incidents", sql, rows) { ps, row ->
             ps.setString(1, row["id"] as? String)
             ps.setString(2, row["process_definition_id"] as? String)
             ps.setString(3, row["process_definition_key"] as? String)
@@ -198,23 +199,35 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
         logger.info("ClickHouse schema initialized successfully")
     }
 
-    private fun executeBatch(
+    private fun executeBatchInstrumented(
+        tableName: String,
         sql: String,
         rows: List<Map<String, Any?>>,
         binder: (java.sql.PreparedStatement, Map<String, Any?>) -> Unit,
     ) {
+        val span = HistoryTelemetry.tracer.spanBuilder("history.insert.$tableName")
+            .setAttribute("table.name", tableName)
+            .setAttribute("batch.size", rows.size.toLong())
+            .startSpan()
         try {
-            getConnection().use { conn ->
-                conn.prepareStatement(sql).use { ps ->
-                    for (row in rows) {
-                        binder(ps, row)
-                        ps.addBatch()
+            span.makeCurrent().use {
+                getConnection().use { conn ->
+                    conn.prepareStatement(sql).use { ps ->
+                        for (row in rows) {
+                            binder(ps, row)
+                            ps.addBatch()
+                        }
+                        ps.executeBatch()
                     }
-                    ps.executeBatch()
                 }
             }
+            span.setStatus(StatusCode.OK)
         } catch (e: Exception) {
-            logger.error("Failed to insert batch of ${rows.size} rows", e)
+            span.setStatus(StatusCode.ERROR, e.message ?: "insert failed")
+            span.recordException(e)
+            logger.error("Failed to insert batch of ${rows.size} rows into $tableName", e)
+        } finally {
+            span.end()
         }
     }
 

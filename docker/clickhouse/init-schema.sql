@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS camunda_history.camunda_process_instances (
     tenant_id             Nullable(String),
     engine_type           String,
     event_type            String,
+    trace_id              Nullable(String),
     timestamp             DateTime64(3) DEFAULT now64(3)
 ) ENGINE = ReplacingMergeTree(timestamp)
 ORDER BY (process_definition_key, start_time, id)
@@ -43,6 +44,7 @@ CREATE TABLE IF NOT EXISTS camunda_history.camunda_activity_instances (
     tenant_id             Nullable(String),
     engine_type           String,
     event_type            String,
+    trace_id              Nullable(String),
     timestamp             DateTime64(3) DEFAULT now64(3)
 ) ENGINE = ReplacingMergeTree(timestamp)
 ORDER BY (process_definition_key, process_instance_id, start_time, id)
@@ -116,6 +118,7 @@ CREATE TABLE IF NOT EXISTS camunda_history.camunda_incidents (
     tenant_id             Nullable(String),
     engine_type           String,
     event_type            String,
+    trace_id              Nullable(String),
     timestamp             DateTime64(3) DEFAULT now64(3)
 ) ENGINE = ReplacingMergeTree(timestamp)
 ORDER BY (process_definition_key, create_time, id)

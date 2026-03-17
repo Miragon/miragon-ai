@@ -15,6 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@camunda7-mcp/shared": "workspace:*"
+    "@camunda7-mcp/shared": "workspace:*",
+    "@opentelemetry/api": "^1.9.0"
   }
 }

@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+import { initTelemetry } from './telemetry.js';
+
+await initTelemetry();
+
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadConfig } from './config.js';
 import { createServer } from './server.js';

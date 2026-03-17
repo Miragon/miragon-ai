@@ -1,3 +1,4 @@
+import { trace, SpanStatusCode, propagation, context, metrics } from '@opentelemetry/api';
 import { EngineApiError } from './errors.js';
 import type { HttpClientConfig } from './types.js';
 
@@ -8,6 +9,13 @@ export interface HttpClient {
   delete(path: string): Promise<void>;
   postMultipart<T = unknown>(path: string, formData: FormData): Promise<T>;
 }
+
+const tracer = trace.getTracer('engine-adapter');
+const meter = metrics.getMeter('engine-adapter');
+const httpDuration = meter.createHistogram('engine.http.duration_ms', {
+  description: 'Duration of engine HTTP requests in milliseconds',
+  unit: 'ms',
+});
 
 export function createHttpClient(config: HttpClientConfig): HttpClient {
   const { baseUrl, authType, username, password, token } = config;
@@ -47,38 +55,62 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
     rawBody?: BodyInit;
     rawHeaders?: Record<string, string>;
   }): Promise<T> {
-    const url = `${baseUrl}${path}${buildQueryString(options?.params)}`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    return tracer.startActiveSpan(`engine.http ${method}`, async (span) => {
+      const url = `${baseUrl}${path}${buildQueryString(options?.params)}`;
+      span.setAttribute('http.method', method);
+      span.setAttribute('http.url', url);
+      span.setAttribute('api.path', path);
 
-    try {
-      const headers = options?.rawHeaders ?? buildHeaders(options?.contentType ?? (options?.body !== undefined ? 'application/json' : undefined));
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: options?.rawBody ?? (options?.body !== undefined ? JSON.stringify(options.body) : undefined),
-        signal: controller.signal,
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
+      const start = performance.now();
 
-      if (!response.ok) {
-        let errorMessage: string;
-        try {
-          const errorBody = await response.json() as { message?: string };
-          errorMessage = errorBody.message ?? response.statusText;
-        } catch {
-          errorMessage = response.statusText;
+      try {
+        const headers = options?.rawHeaders ?? buildHeaders(options?.contentType ?? (options?.body !== undefined ? 'application/json' : undefined));
+
+        // Inject trace context for end-to-end correlation
+        propagation.inject(context.active(), headers);
+
+        const response = await fetch(url, {
+          method,
+          headers,
+          body: options?.rawBody ?? (options?.body !== undefined ? JSON.stringify(options.body) : undefined),
+          signal: controller.signal,
+        });
+
+        span.setAttribute('http.status_code', response.status);
+        httpDuration.record(performance.now() - start, {
+          'http.method': method,
+          'http.status_code': response.status,
+        });
+
+        if (!response.ok) {
+          let errorMessage: string;
+          try {
+            const errorBody = await response.json() as { message?: string };
+            errorMessage = errorBody.message ?? response.statusText;
+          } catch {
+            errorMessage = response.statusText;
+          }
+          throw new EngineApiError(response.status, errorMessage, `${method} ${path}`);
         }
-        throw new EngineApiError(response.status, errorMessage, `${method} ${path}`);
-      }
 
-      if (response.status === 204 || response.headers.get('content-length') === '0') {
-        return undefined as T;
-      }
+        if (response.status === 204 || response.headers.get('content-length') === '0') {
+          span.setStatus({ code: SpanStatusCode.OK });
+          return undefined as T;
+        }
 
-      return await response.json() as T;
-    } finally {
-      clearTimeout(timeout);
-    }
+        span.setStatus({ code: SpanStatusCode.OK });
+        return await response.json() as T;
+      } catch (error) {
+        span.setStatus({ code: SpanStatusCode.ERROR, message: String(error) });
+        span.recordException(error as Error);
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+        span.end();
+      }
+    });
   }
 
   return {

@@ -1,5 +1,6 @@
 package com.camunda7mcp.history
 
+import io.opentelemetry.api.trace.StatusCode
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
@@ -39,6 +40,7 @@ abstract class ClickHouseHistoryEventHandlerBase(
 
     protected fun bufferEvent(event: HistoryEventData) {
         buffer.add(event)
+        HistoryTelemetry.eventsBuffered.add(1)
         if (buffer.size >= properties.batchSize) {
             flush()
         }
@@ -51,24 +53,46 @@ abstract class ClickHouseHistoryEventHandlerBase(
         }
         if (events.isEmpty()) return
 
-        logger.debug("Flushing {} history events to ClickHouse", events.size)
+        val span = HistoryTelemetry.tracer.spanBuilder("history.flush")
+            .setAttribute("buffer.size", events.size.toLong())
+            .startSpan()
+        val start = System.currentTimeMillis()
 
-        val grouped = events.groupBy { it.eventCategory }
+        try {
+            span.makeCurrent().use {
+                logger.debug("Flushing {} history events to ClickHouse", events.size)
 
-        grouped[EventCategory.PROCESS_INSTANCE]?.let {
-            client.insertProcessInstances(it.map { e -> e.data })
-        }
-        grouped[EventCategory.ACTIVITY_INSTANCE]?.let {
-            client.insertActivityInstances(it.map { e -> e.data })
-        }
-        grouped[EventCategory.TASK_INSTANCE]?.let {
-            client.insertTaskInstances(it.map { e -> e.data })
-        }
-        grouped[EventCategory.VARIABLE_UPDATE]?.let {
-            client.insertVariableUpdates(it.map { e -> e.data })
-        }
-        grouped[EventCategory.INCIDENT]?.let {
-            client.insertIncidents(it.map { e -> e.data })
+                val grouped = events.groupBy { it.eventCategory }
+
+                grouped[EventCategory.PROCESS_INSTANCE]?.let {
+                    client.insertProcessInstances(it.map { e -> e.data })
+                }
+                grouped[EventCategory.ACTIVITY_INSTANCE]?.let {
+                    client.insertActivityInstances(it.map { e -> e.data })
+                }
+                grouped[EventCategory.TASK_INSTANCE]?.let {
+                    client.insertTaskInstances(it.map { e -> e.data })
+                }
+                grouped[EventCategory.VARIABLE_UPDATE]?.let {
+                    client.insertVariableUpdates(it.map { e -> e.data })
+                }
+                grouped[EventCategory.INCIDENT]?.let {
+                    client.insertIncidents(it.map { e -> e.data })
+                }
+
+                HistoryTelemetry.eventsInserted.add(events.size.toLong())
+            }
+            span.setStatus(StatusCode.OK)
+        } catch (e: Exception) {
+            span.setStatus(StatusCode.ERROR, e.message ?: "flush failed")
+            span.recordException(e)
+            HistoryTelemetry.insertErrors.add(1)
+            logger.error("Failed to flush {} history events", events.size, e)
+        } finally {
+            HistoryTelemetry.flushDuration.record(
+                (System.currentTimeMillis() - start).toDouble()
+            )
+            span.end()
         }
     }
 

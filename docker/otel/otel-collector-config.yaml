@@ -1,0 +1,72 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 10000
+    timeout: 5s
+
+  attributes/env:
+    actions:
+      - key: deployment.environment
+        value: docker-local
+        action: upsert
+
+  tail_sampling:
+    decision_wait: 10s
+    policies:
+      - name: errors-always
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+      - name: sample-rest
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 10
+
+exporters:
+  clickhouse:
+    endpoint: tcp://clickhouse:9000?dial_timeout=10s&compress=lz4
+    database: otel
+    ttl: 720h
+    create_schema: true
+    logs:
+      table_name: otel_logs
+    traces:
+      table_name: otel_traces
+    metrics:
+      table_name: otel_metrics_sum
+
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888
+
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, attributes/env, tail_sampling]
+      exporters: [clickhouse, otlp/jaeger, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, attributes/env]
+      exporters: [clickhouse, debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch, attributes/env]
+      exporters: [clickhouse, debug]
