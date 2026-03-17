@@ -1,4 +1,4 @@
-import { useWidgetProps } from 'sunpeak';
+import { useToolData, type ResourceConfig } from 'sunpeak';
 
 interface HistoricProcessInstance {
   id: string;
@@ -17,6 +17,11 @@ interface AnalyticsOutput {
   completedInstances: HistoricProcessInstance[];
   runningInstances: HistoricProcessInstance[];
 }
+
+export const resource: ResourceConfig = {
+  title: 'Analytics Dashboard',
+  description: 'Aggregated process metrics and KPIs from history data',
+};
 
 function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
@@ -37,9 +42,18 @@ function formatDuration(ms: number | null): string {
 }
 
 export function AnalyticsDashboardResource() {
-  const output = useWidgetProps<AnalyticsOutput>();
+  const { output, isLoading, isError, isCancelled } = useToolData<unknown, AnalyticsOutput>();
 
-  if (!output) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading analytics...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
     return (
       <div className="p-6">
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
@@ -48,6 +62,18 @@ export function AnalyticsDashboardResource() {
       </div>
     );
   }
+
+  if (isCancelled) {
+    return (
+      <div className="p-6">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!output) return null;
 
   // Group completed by process definition key
   const byKey = new Map<string, HistoricProcessInstance[]>();

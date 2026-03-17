@@ -6,9 +6,10 @@ Die MCP Apps sind interaktive UI-Komponenten auf Basis des [sunpeak](https://sun
 
 | Aspekt | Technologie |
 |--------|-------------|
-| Framework | sunpeak 0.8 |
+| Framework | sunpeak 0.16 |
 | UI | React 19 + Tailwind CSS |
-| State | `useWidgetProps` (sunpeak Hook) |
+| State | `useToolData` (sunpeak Hook) |
+| Interaktion | `useCallServerTool` (sunpeak Hook) |
 | Engine-Zugriff | `@camunda7-mcp/engine-adapter` |
 
 ## Apps
@@ -33,3 +34,5 @@ Zusätzlich zu den 6 Display-Apps gibt es 3 Action-Tools für Benutzerinteraktio
 | `retry-job-action` | Fehlgeschlagenen Job retrien |
 
 Detaillierter App-Katalog: [app-catalog.md](app-catalog.md)
+
+Verbindung & Setup: [verbindung.md](verbindung.md)

@@ -22,6 +22,7 @@
 ## MCP Apps
 
 * [Übersicht](mcp-apps/README.md)
+* [Verbindung & Setup](mcp-apps/verbindung.md)
 * [App-Katalog](mcp-apps/app-catalog.md)
 
 ## History Plugins

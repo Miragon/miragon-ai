@@ -1,4 +1,4 @@
-import { useWidgetProps } from 'sunpeak';
+import { useToolData, type ResourceConfig } from 'sunpeak';
 
 interface ActivityData {
   id: string;
@@ -29,6 +29,11 @@ interface TimelineOutput {
   totalActivities: number;
 }
 
+export const resource: ResourceConfig = {
+  title: 'History Timeline',
+  description: 'Color-coded activity timeline for process instances',
+};
+
 const ACTIVITY_COLORS: Record<string, string> = {
   startEvent: 'bg-green-500',
   endEvent: 'bg-red-500',
@@ -52,9 +57,18 @@ function formatDuration(ms: number | null): string {
 }
 
 export function HistoryTimelineResource() {
-  const output = useWidgetProps<TimelineOutput>();
+  const { output, isLoading, isError, isCancelled } = useToolData<unknown, TimelineOutput>();
 
-  if (!output) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading timeline...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
     return (
       <div className="p-6">
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
@@ -63,6 +77,18 @@ export function HistoryTimelineResource() {
       </div>
     );
   }
+
+  if (isCancelled) {
+    return (
+      <div className="p-6">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!output) return null;
 
   const { processInstance, activities } = output;
 

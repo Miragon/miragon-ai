@@ -1,4 +1,4 @@
-import { useWidgetProps, useWidgetAPI } from 'sunpeak';
+import { useToolData, useCallServerTool, type ResourceConfig } from 'sunpeak';
 
 interface TaskData {
   id: string;
@@ -22,6 +22,11 @@ interface DashboardOutput {
     processDefinitionKey?: string;
   };
 }
+
+export const resource: ResourceConfig = {
+  title: 'Task Dashboard',
+  description: 'Interactive dashboard showing open user tasks with claim and complete actions',
+};
 
 function PriorityBadge({ priority }: { priority: number }) {
   const level = priority >= 75 ? 'high' : priority >= 50 ? 'medium' : 'normal';
@@ -55,10 +60,19 @@ function TimeAgo({ date }: { date: string }) {
 }
 
 export function TaskDashboardResource() {
-  const output = useWidgetProps<DashboardOutput>();
-  const api = useWidgetAPI();
+  const { output, isLoading, isError, isCancelled } = useToolData<unknown, DashboardOutput>();
+  const callServerTool = useCallServerTool();
 
-  if (!output) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading tasks...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
     return (
       <div className="p-6">
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
@@ -68,13 +82,25 @@ export function TaskDashboardResource() {
     );
   }
 
+  if (isCancelled) {
+    return (
+      <div className="p-6">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!output) return null;
+
   const handleClaim = async (taskId: string) => {
     const userId = output.filters.assignee ?? 'demo';
-    await api?.callTool?.('claim-task-action', { taskId, userId });
+    await callServerTool({ name: 'claim-task-action', arguments: { taskId, userId } });
   };
 
   const handleComplete = async (taskId: string) => {
-    await api?.callTool?.('complete-task-action', { taskId });
+    await callServerTool({ name: 'complete-task-action', arguments: { taskId } });
   };
 
   return (

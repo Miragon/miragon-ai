@@ -1,4 +1,4 @@
-import { useWidgetProps } from 'sunpeak';
+import { useToolData, type ResourceConfig } from 'sunpeak';
 
 interface VariableValue {
   value: unknown;
@@ -26,6 +26,11 @@ interface InstanceDetailOutput {
   variables: Record<string, VariableValue>;
   bpmnXml: string | null;
 }
+
+export const resource: ResourceConfig = {
+  title: 'Instance Detail',
+  description: 'Detailed view of a single process instance with activity tree and variables',
+};
 
 function VariableTable({ variables }: { variables: Record<string, VariableValue> }) {
   const entries = Object.entries(variables);
@@ -81,9 +86,18 @@ function ActivityTreeNode({ node, depth = 0 }: { node: ActivityTree; depth?: num
 }
 
 export function InstanceDetailResource() {
-  const output = useWidgetProps<InstanceDetailOutput>();
+  const { output, isLoading, isError, isCancelled } = useToolData<unknown, InstanceDetailOutput>();
 
-  if (!output) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading instance details...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
     return (
       <div className="p-6">
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
@@ -92,6 +106,18 @@ export function InstanceDetailResource() {
       </div>
     );
   }
+
+  if (isCancelled) {
+    return (
+      <div className="p-6">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!output) return null;
 
   const { instance, activityTree, variables } = output;
 

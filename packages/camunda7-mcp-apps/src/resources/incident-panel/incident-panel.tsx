@@ -1,4 +1,4 @@
-import { useWidgetProps, useWidgetAPI } from 'sunpeak';
+import { useToolData, useCallServerTool, type ResourceConfig } from 'sunpeak';
 
 interface IncidentData {
   id: string;
@@ -19,11 +19,25 @@ interface IncidentPanelOutput {
   totalCount: number;
 }
 
-export function IncidentPanelResource() {
-  const output = useWidgetProps<IncidentPanelOutput>();
-  const api = useWidgetAPI();
+export const resource: ResourceConfig = {
+  title: 'Incident Panel',
+  description: 'Error monitoring panel with retry capabilities for failed jobs',
+};
 
-  if (!output) {
+export function IncidentPanelResource() {
+  const { output, isLoading, isError, isCancelled } = useToolData<unknown, IncidentPanelOutput>();
+  const callServerTool = useCallServerTool();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading incidents...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
     return (
       <div className="p-6">
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
@@ -32,6 +46,18 @@ export function IncidentPanelResource() {
       </div>
     );
   }
+
+  if (isCancelled) {
+    return (
+      <div className="p-6">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!output) return null;
 
   return (
     <div className="p-6 space-y-4">
@@ -75,7 +101,7 @@ export function IncidentPanelResource() {
                 </div>
                 {incident.configuration && incident.incidentType === 'failedJob' && (
                   <button
-                    onClick={() => api?.callTool?.('retry-job-action', { jobId: incident.configuration!, retries: 1 })}
+                    onClick={() => callServerTool({ name: 'retry-job-action', arguments: { jobId: incident.configuration!, retries: 1 } })}
                     className="ml-4 shrink-0 rounded bg-orange-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-700"
                   >
                     Retry

@@ -4,25 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c48bdc0d-e2f5-480e-b2b0-8ec50f82af9a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.mcp.json" beforeDir="false" afterPath="$PROJECT_DIR$/.mcp.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/camunda7-mcp-ecosystem-concept.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/docker-compose.clickhouse.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/docker-compose.otel.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker/docker-compose.otel.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/otel/otel-collector-config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/docker/otel/otel-collector-config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/incident-panel-resource.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/incident-panel-resource.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/task-dashboard-resource.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/task-dashboard-resource.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/server.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-server/src/server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-server/src/server.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-server/src/tools/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-server/src/tools/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/settings.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pnpm-lock.yaml" afterDir="false" />
-    </list>
+    <list default="true" id="c48bdc0d-e2f5-480e-b2b0-8ec50f82af9a" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -177,7 +159,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1773746897660</updated>
-      <workItem from="1773746899123" duration="13731000" />
+      <workItem from="1773746899123" duration="14314000" />
     </task>
     <servers />
   </component>

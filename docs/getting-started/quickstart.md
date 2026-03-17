@@ -50,6 +50,29 @@ Füge den Server in deine MCP-Client-Konfiguration ein:
 }
 ```
 
+## 3b. MCP Apps konfigurieren (optional)
+
+Die MCP Apps liefern interaktive UI-Komponenten direkt im Chat. Starte den Apps-Server:
+
+```bash
+cd packages/camunda7-mcp-apps
+pnpm build && pnpm start
+```
+
+Dann verbinde deinen MCP-Client über die Streamable HTTP URL:
+
+```json
+{
+  "mcpServers": {
+    "camunda7-apps": {
+      "url": "http://localhost:8000/mcp"
+    }
+  }
+}
+```
+
+Details: [Verbindung & Setup](../mcp-apps/verbindung.md)
+
 ## 4. Testen
 
 Frage deinen KI-Assistenten:
