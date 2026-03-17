@@ -1,6 +1,6 @@
 services:
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.98.0
+    image: otel/opentelemetry-collector-contrib:0.128.0
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
@@ -10,36 +10,13 @@ services:
       - "8888:8888"   # Collector Metrics
     depends_on:
       clickhouse:
-        condition: service_started
+        condition: service_healthy
 
   jaeger:
-    image: jaegertracing/jaeger:2.4
+    image: jaegertracing/jaeger:2.16.0
     ports:
       - "16686:16686" # Jaeger UI
       - "4319:4317"   # OTLP gRPC (internal, used by Collector)
     environment:
       - COLLECTOR_OTLP_ENABLED=true
 
-  otel-agent-init:
-    image: curlimages/curl:8.7.1
-    command: >
-      sh -c "curl -L -o /opt/otel/opentelemetry-javaagent.jar
-      https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"
-    volumes:
-      - otel-agent:/opt/otel
-
-  cibseven:
-    environment:
-      - JAVA_OPTS=-javaagent:/opt/otel/opentelemetry-javaagent.jar
-      - OTEL_SERVICE_NAME=cibseven-engine
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_TRACES_SAMPLER=parentbased_traceidratio
-      - OTEL_TRACES_SAMPLER_ARG=0.1
-    volumes:
-      - otel-agent:/opt/otel
-    depends_on:
-      otel-agent-init:
-        condition: service_completed_successfully
-
-volumes:
-  otel-agent:

@@ -9,6 +9,7 @@ interface IncidentData {
   incidentMessage: string | null;
   incidentTimestamp: string;
   jobDefinitionId: string | null;
+  configuration: string | null;
   failedActivityId: string | null;
   annotation: string | null;
 }
@@ -72,9 +73,9 @@ export function IncidentPanelResource() {
                     <span>Process: <code>{incident.processInstanceId.slice(0, 8)}...</code></span>
                   </div>
                 </div>
-                {incident.jobDefinitionId && (
+                {incident.configuration && incident.incidentType === 'failedJob' && (
                   <button
-                    onClick={() => api?.callTool?.('retry-job-action', { jobId: incident.jobDefinitionId!, retries: 1 })}
+                    onClick={() => api?.callTool?.('retry-job-action', { jobId: incident.configuration!, retries: 1 })}
                     className="ml-4 shrink-0 rounded bg-orange-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-700"
                   >
                     Retry

@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
     implementation(project(":cibseven-history-clickhouse"))
+    implementation(project(":cibseven-otel-eventbridge"))
     implementation(project(":shared-history-clickhouse"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")

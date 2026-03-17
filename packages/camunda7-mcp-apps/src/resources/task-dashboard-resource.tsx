@@ -69,7 +69,8 @@ export function TaskDashboardResource() {
   }
 
   const handleClaim = async (taskId: string) => {
-    await api?.callTool?.('claim-task-action', { taskId, userId: 'demo' });
+    const userId = output.filters.assignee ?? 'demo';
+    await api?.callTool?.('claim-task-action', { taskId, userId });
   };
 
   const handleComplete = async (taskId: string) => {

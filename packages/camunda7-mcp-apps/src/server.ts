@@ -1,9 +1,8 @@
 import type { AuthInfo } from 'sunpeak';
 import type { IncomingMessage } from 'node:http';
 
-export async function auth(req: IncomingMessage): Promise<AuthInfo | null> {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return null;
+export async function auth(req: IncomingMessage): Promise<AuthInfo> {
+  const token = req.headers['authorization']?.split(' ')[1] ?? 'anonymous';
   return { token, clientId: 'camunda7-mcp-apps', scopes: ['read', 'write'] };
 }
 

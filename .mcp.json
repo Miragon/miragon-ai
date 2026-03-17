@@ -22,6 +22,10 @@
         "CLICKHOUSE_DATABASE": "camunda_history",
         "CLICKHOUSE_SECURE": "false"
       }
-    }
+    },
+    "camunda7-apps": {
+      "type": "http",
+      "url": "http://localhost:8000/mcp"
+    }              
   }
 }

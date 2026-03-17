@@ -10,6 +10,7 @@
             <option value="$PROJECT_DIR$/plugins" />
             <option value="$PROJECT_DIR$/plugins/camunda7-history-clickhouse" />
             <option value="$PROJECT_DIR$/plugins/cibseven-history-clickhouse" />
+            <option value="$PROJECT_DIR$/plugins/cibseven-otel-eventbridge" />
             <option value="$PROJECT_DIR$/plugins/examples" />
             <option value="$PROJECT_DIR$/plugins/examples/camunda7-example" />
             <option value="$PROJECT_DIR$/plugins/examples/cibseven-example" />

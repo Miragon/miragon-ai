@@ -7,6 +7,7 @@ import { registerListProcessInstances } from './list-process-instances.js';
 import { registerGetProcessInstance } from './get-process-instance.js';
 import { registerGetActivityInstanceTree } from './get-activity-instance-tree.js';
 import { registerDeleteProcessInstance } from './delete-process-instance.js';
+import { registerModifyProcessInstance } from './modify-process-instance.js';
 import { registerListTasks } from './list-tasks.js';
 import { registerGetTask } from './get-task.js';
 import { registerClaimTask } from './claim-task.js';
@@ -25,7 +26,11 @@ import { registerListIncidents } from './list-incidents.js';
 import { registerResolveIncident } from './resolve-incident.js';
 import { registerListJobs } from './list-jobs.js';
 import { registerSetJobRetries } from './set-job-retries.js';
+import { registerFetchAndLock } from './fetch-and-lock.js';
+import { registerCompleteExternalTask } from './complete-external-task.js';
+import { registerHandleExternalTaskFailure } from './handle-external-task-failure.js';
 import { registerListDeployments } from './list-deployments.js';
+import { registerCreateDeployment } from './create-deployment.js';
 
 export function registerAllTools(server: McpServer, adapter: EngineAdapter): void {
   // Process Definitions
@@ -38,6 +43,7 @@ export function registerAllTools(server: McpServer, adapter: EngineAdapter): voi
   registerGetProcessInstance(server, adapter);
   registerGetActivityInstanceTree(server, adapter);
   registerDeleteProcessInstance(server, adapter);
+  registerModifyProcessInstance(server, adapter);
 
   // User Tasks
   registerListTasks(server, adapter);
@@ -67,6 +73,12 @@ export function registerAllTools(server: McpServer, adapter: EngineAdapter): voi
   registerListJobs(server, adapter);
   registerSetJobRetries(server, adapter);
 
+  // External Tasks
+  registerFetchAndLock(server, adapter);
+  registerCompleteExternalTask(server, adapter);
+  registerHandleExternalTaskFailure(server, adapter);
+
   // Deployments
   registerListDeployments(server, adapter);
+  registerCreateDeployment(server, adapter);
 }
