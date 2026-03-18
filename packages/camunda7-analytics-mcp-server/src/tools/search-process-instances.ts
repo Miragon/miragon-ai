@@ -44,10 +44,10 @@ export function registerSearchProcessInstances(server: McpServer, ch: ClickHouse
         conditions.push(`p.duration_in_millis > ${Number(params.durationGreaterThan)}`);
       }
       if (params.withIncidents) {
-        joins += `\nJOIN camunda_history.camunda_incidents i ON p.id = i.process_instance_id`;
+        joins += `\nJOIN camunda_history.camunda_incidents FINAL i ON p.id = i.process_instance_id`;
       }
       if (params.variableName && params.variableValue) {
-        joins += `\nJOIN camunda_history.camunda_variable_updates v ON p.id = v.process_instance_id`;
+        joins += `\nJOIN camunda_history.camunda_variable_updates FINAL v ON p.id = v.process_instance_id`;
         conditions.push(`v.variable_name = ${escapeString(params.variableName)}`);
         conditions.push(`v.text_value = ${escapeString(params.variableValue)}`);
       }

@@ -44,7 +44,7 @@ SELECT
     double_value,
     revision,
     timestamp
-FROM camunda_history.camunda_variable_updates
+FROM camunda_history.camunda_variable_updates FINAL
 WHERE process_instance_id = ${pid}
 ORDER BY timestamp ASC`;
         result.variableChanges = await ch.query(varSql);

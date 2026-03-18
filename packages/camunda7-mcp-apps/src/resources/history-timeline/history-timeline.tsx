@@ -1,4 +1,7 @@
 import { useToolData, type ResourceConfig } from 'sunpeak';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ActivityData {
   id: string;
@@ -10,7 +13,6 @@ interface ActivityData {
   durationInMillis: number | null;
   assignee: string | null;
   taskId: string | null;
-  canceled: boolean;
 }
 
 interface HistoricProcessInstance {
@@ -34,6 +36,8 @@ export const resource: ResourceConfig = {
   description: 'Color-coded activity timeline for process instances',
 };
 
+// Data-visualization dot colors — comparable to shadcn --chart-* tokens.
+// Raw colors are acceptable here as these are decorative elements.
 const ACTIVITY_COLORS: Record<string, string> = {
   startEvent: 'bg-green-500',
   endEvent: 'bg-red-500',
@@ -61,29 +65,29 @@ export function HistoryTimelineResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading timeline...</span>
+      <div className="flex items-center justify-center p-12 bg-card text-card-foreground">
+        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-3 text-sm text-muted-foreground">Loading timeline...</span>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <p className="text-red-800 dark:text-red-300">Failed to load timeline</p>
-        </div>
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert variant="destructive">
+          <AlertDescription>Failed to load timeline</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (isCancelled) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
-          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
-        </div>
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert className="bg-warning/10 text-warning-foreground border-warning/30">
+          <AlertDescription>Request was cancelled</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -93,14 +97,14 @@ export function HistoryTimelineResource() {
   const { processInstance, activities } = output;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
       {processInstance && (
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-xl font-semibold">
             {processInstance.processDefinitionName ?? processInstance.processDefinitionKey}
           </h2>
-          <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-            <span>{processInstance.state}</span>
+          <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+            <Badge variant="secondary">{processInstance.state}</Badge>
             <span>Started {new Date(processInstance.startTime).toLocaleString()}</span>
             {processInstance.durationInMillis != null && (
               <span>Duration: {formatDuration(processInstance.durationInMillis)}</span>
@@ -109,42 +113,39 @@ export function HistoryTimelineResource() {
         </div>
       )}
 
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         {activities.map((activity, index) => {
           const color = ACTIVITY_COLORS[activity.activityType] ?? 'bg-gray-400';
           return (
             <div key={activity.id} className="flex items-center gap-3">
               <div className="flex flex-col items-center">
-                <div className={`h-3 w-3 rounded-full ${color}`} />
+                <div className={`size-3 rounded-full ${color}`} />
                 {index < activities.length - 1 && (
-                  <div className="w-0.5 h-6 bg-gray-300 dark:bg-gray-600" />
+                  <div className="w-0.5 h-6 bg-border" />
                 )}
               </div>
-              <div className="flex-1 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-                <div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {activity.activityName ?? activity.activityId}
-                  </span>
-                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                    {activity.activityType}
-                  </span>
-                  {activity.assignee && (
-                    <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
-                      @{activity.assignee}
+              <Card className="flex-1 gap-0 py-0 shadow-none">
+                <CardContent className="flex items-center justify-between px-3 py-2">
+                  <div>
+                    <span className="text-sm font-medium">
+                      {activity.activityName ?? activity.activityId}
                     </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatDuration(activity.durationInMillis)}
-                  </span>
-                  {activity.canceled && (
-                    <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                      canceled
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {activity.activityType}
                     </span>
-                  )}
-                </div>
-              </div>
+                    {activity.assignee && (
+                      <span className="ml-2 text-xs text-info">
+                        @{activity.assignee}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {formatDuration(activity.durationInMillis)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           );
         })}

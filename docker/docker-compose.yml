@@ -72,7 +72,6 @@ services:
   # OpenTelemetry Collector
   # Use: docker compose --profile otel up
   otel-collector:
-    profiles: [otel]
     image: otel/opentelemetry-collector-contrib:0.128.0
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
@@ -88,7 +87,6 @@ services:
   # Jaeger UI for trace visualization
   # Use: docker compose --profile otel up
   jaeger:
-    profiles: [otel]
     image: jaegertracing/jaeger:2.16.0
     ports:
       - "16686:16686" # Jaeger UI

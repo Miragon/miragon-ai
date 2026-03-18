@@ -1,4 +1,7 @@
 import { useToolData, type ResourceConfig } from 'sunpeak';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ProcessDefinition {
   id: string;
@@ -26,29 +29,29 @@ export function ProcessListResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading process definitions...</span>
+      <div className="flex items-center justify-center p-12 bg-card text-card-foreground">
+        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-3 text-sm text-muted-foreground">Loading process definitions...</span>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <p className="text-red-800 dark:text-red-300">Failed to load process definitions</p>
-        </div>
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert variant="destructive">
+          <AlertDescription>Failed to load process definitions</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (isCancelled) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
-          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
-        </div>
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert className="bg-warning/10 text-warning-foreground border-warning/30">
+          <AlertDescription>Request was cancelled</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -56,46 +59,39 @@ export function ProcessListResource() {
   if (!output) return null;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Process Definitions</h2>
-        <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-          {output.totalCount} deployed
-        </span>
+        <h2 className="text-xl font-semibold">Process Definitions</h2>
+        <Badge variant="secondary">{output.totalCount} deployed</Badge>
       </div>
 
       <div className="grid gap-3">
         {output.definitions.map((def) => (
-          <div
-            key={def.id}
-            className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
-          >
-            <div className="flex items-center justify-between">
+          <Card key={def.id} className="gap-0 py-0 shadow-none">
+            <CardContent className="flex items-center justify-between p-4">
               <div>
-                <h3 className="font-medium text-gray-900 dark:text-gray-100">
-                  {def.name ?? def.key}
-                </h3>
-                <p className="text-sm font-mono text-gray-500 dark:text-gray-400">{def.key}</p>
+                <h3 className="font-medium">{def.name ?? def.key}</h3>
+                <p className="text-sm font-mono text-muted-foreground">{def.key}</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500 dark:text-gray-400">v{def.version}</span>
+                <span className="text-sm text-muted-foreground">v{def.version}</span>
                 {def.versionTag && (
-                  <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                  <Badge variant="secondary" className="bg-primary/10 text-primary">
                     {def.versionTag}
-                  </span>
+                  </Badge>
                 )}
                 {def.suspended ? (
-                  <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                  <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
                     Suspended
-                  </span>
+                  </Badge>
                 ) : (
-                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                  <Badge variant="secondary" className="bg-success/10 text-success-foreground">
                     Active
-                  </span>
+                  </Badge>
                 )}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>

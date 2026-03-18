@@ -8,6 +8,7 @@ dist/
 plugins/.gradle/
 plugins/build/
 plugins/*/build/
+plugins/examples/*/build/
 plugins/gradle/
 plugins/gradlew
 plugins/gradlew.bat

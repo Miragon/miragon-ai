@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "1.9.25" apply false
-    kotlin("plugin.spring") version "1.9.25" apply false
+    kotlin("jvm") version "2.0.21" apply false
+    kotlin("plugin.spring") version "2.0.21" apply false
     id("com.gradleup.shadow") version "8.3.5" apply false
 }
 
@@ -16,6 +16,10 @@ allprojects {
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
 
+    configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
+        jvmToolchain(21)
+    }
+
     dependencies {
         "implementation"(platform("org.springframework.boot:spring-boot-dependencies:3.3.5"))
         "testImplementation"("org.jetbrains.kotlin:kotlin-test-junit5")
@@ -23,14 +27,13 @@ subprojects {
     }
 
     tasks.withType<JavaCompile> {
-        sourceCompatibility = "17"
-        targetCompatibility = "17"
+        sourceCompatibility = "21"
+        targetCompatibility = "21"
     }
 
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions {
-            freeCompilerArgs = listOf("-Xjsr305=strict")
-            jvmTarget = "17"
+        compilerOptions {
+            freeCompilerArgs.set(listOf("-Xjsr305=strict"))
         }
     }
 

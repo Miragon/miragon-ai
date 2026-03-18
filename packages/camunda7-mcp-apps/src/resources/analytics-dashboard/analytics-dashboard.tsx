@@ -1,36 +1,46 @@
 import { useToolData, type ResourceConfig } from 'sunpeak';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface HistoricProcessInstance {
-  id: string;
+interface ActivityBreakdownItem {
+  activityId: string;
+  activityName: string;
+  activityType: string;
+  executionCount: number;
+  avgDurationMs: number;
+  p95DurationMs: number;
+  totalTimeMs: number;
+}
+
+interface DefinitionBreakdownItem {
   processDefinitionKey: string;
-  startTime: string;
-  endTime: string | null;
-  durationInMillis: number | null;
-  state: string;
+  totalInstances: number;
+  completed: number;
+  running: number;
+  failed: number;
+  avgDurationMs: number | null;
 }
 
 interface AnalyticsOutput {
+  totalCount: number;
   completedCount: number;
   runningCount: number;
+  failedCount: number;
   incidentCount: number;
+  failureRatePct: number;
   avgDurationMs: number | null;
-  completedInstances: HistoricProcessInstance[];
-  runningInstances: HistoricProcessInstance[];
+  medianDurationMs: number | null;
+  p95DurationMs: number | null;
+  activityBreakdown: ActivityBreakdownItem[];
+  definitionBreakdown: DefinitionBreakdownItem[];
 }
 
 export const resource: ResourceConfig = {
   title: 'Analytics Dashboard',
-  description: 'Aggregated process metrics and KPIs from history data',
+  description: 'Aggregated process metrics and KPIs from ClickHouse analytics',
 };
-
-function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
-  return (
-    <div className={`rounded-lg border p-4 ${color}`}>
-      <p className="text-sm font-medium opacity-80">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
-    </div>
-  );
-}
 
 function formatDuration(ms: number | null): string {
   if (ms == null) return '-';
@@ -46,97 +56,177 @@ export function AnalyticsDashboardResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading analytics...</span>
+      <div className="flex items-center justify-center p-12 bg-card text-card-foreground">
+        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-3 text-sm text-muted-foreground">Loading analytics...</span>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <p className="text-red-800 dark:text-red-300">Failed to load analytics</p>
-        </div>
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert variant="destructive">
+          <AlertDescription>Failed to load analytics</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (isCancelled) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
-          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
-        </div>
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert className="bg-warning/10 text-warning-foreground border-warning/30">
+          <AlertDescription>Request was cancelled</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (!output) return null;
 
-  // Group completed by process definition key
-  const byKey = new Map<string, HistoricProcessInstance[]>();
-  for (const inst of output.completedInstances) {
-    const existing = byKey.get(inst.processDefinitionKey) ?? [];
-    existing.push(inst);
-    byKey.set(inst.processDefinitionKey, existing);
-  }
-
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Process Analytics</h2>
+    <div className="flex flex-col gap-6 p-6 bg-card text-card-foreground">
+      <h2 className="text-xl font-semibold">Process Analytics</h2>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard
-          label="Completed"
-          value={output.completedCount}
-          color="border-green-200 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300"
-        />
-        <StatCard
-          label="Running"
-          value={output.runningCount}
-          color="border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
-        />
-        <StatCard
-          label="Incidents"
-          value={output.incidentCount}
-          color="border-red-200 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
-        />
-        <StatCard
-          label="Avg Duration"
-          value={formatDuration(output.avgDurationMs)}
-          color="border-purple-200 bg-purple-50 text-purple-900 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-300"
-        />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80 text-muted-foreground">Total</p>
+            <p className="text-2xl font-bold">{output.totalCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-success/10 border-success/30 text-success-foreground">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Completed</p>
+            <p className="text-2xl font-bold">{output.completedCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-info/10 border-info/30 text-info-foreground">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Running</p>
+            <p className="text-2xl font-bold">{output.runningCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-destructive/10 border-destructive/30 text-destructive">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Failed</p>
+            <p className="text-2xl font-bold">{output.failedCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-destructive/10 border-destructive/30 text-destructive">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Incidents</p>
+            <p className="text-2xl font-bold">{output.incidentCount}</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {byKey.size > 0 && (
-        <div>
-          <h3 className="mb-3 text-lg font-medium text-gray-900 dark:text-gray-100">By Process Definition</h3>
-          <div className="space-y-2">
-            {[...byKey.entries()].map(([key, instances]) => {
-              const durations = instances
-                .filter(i => i.durationInMillis != null)
-                .map(i => i.durationInMillis!);
-              const avg = durations.length > 0
-                ? durations.reduce((a, b) => a + b, 0) / durations.length
-                : null;
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Avg Duration</p>
+            <p className="text-2xl font-bold">{formatDuration(output.avgDurationMs)}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Median</p>
+            <p className="text-2xl font-bold">{formatDuration(output.medianDurationMs)}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">P95</p>
+            <p className="text-2xl font-bold">{formatDuration(output.p95DurationMs)}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80 text-muted-foreground">Failure Rate</p>
+            <p className="text-2xl font-bold">{output.failureRatePct}%</p>
+          </CardContent>
+        </Card>
+      </div>
 
-              return (
-                <div
-                  key={key}
-                  className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <span className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">{key}</span>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span>{instances.length} completed</span>
-                    <span>avg {formatDuration(avg)}</span>
+      {output.definitionBreakdown.length > 0 && (
+        <details open>
+          <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <svg
+              className="size-4 shrink-0 text-muted-foreground transition-transform [[open]>&]:rotate-90"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+            >
+              <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
+            </svg>
+            <h3 className="text-lg font-medium">By Process Definition</h3>
+            <Badge variant="secondary">{output.definitionBreakdown.length}</Badge>
+          </summary>
+          <div className="mt-3 flex flex-col gap-2">
+            {output.definitionBreakdown.map((def) => (
+              <Card key={def.processDefinitionKey} className="gap-0 py-0 shadow-none">
+                <CardContent className="flex items-center justify-between p-3">
+                  <span className="font-mono text-sm font-medium">{def.processDefinitionKey}</span>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span>{def.totalInstances} total</span>
+                    <span className="text-success-foreground">{def.completed} completed</span>
+                    <span className="text-info-foreground">{def.running} running</span>
+                    {def.failed > 0 && (
+                      <Badge variant="destructive">{def.failed} failed</Badge>
+                    )}
+                    <span>avg {formatDuration(def.avgDurationMs)}</span>
                   </div>
-                </div>
-              );
-            })}
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
+        </details>
+      )}
+
+      {output.activityBreakdown.length > 0 && (
+        <details open>
+          <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <svg
+              className="size-4 shrink-0 text-muted-foreground transition-transform [[open]>&]:rotate-90"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+            >
+              <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
+            </svg>
+            <h3 className="text-lg font-medium">Activity Bottlenecks</h3>
+            <Badge variant="secondary">{output.activityBreakdown.length}</Badge>
+          </summary>
+          <div className="mt-3 rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Activity</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Executions</TableHead>
+                  <TableHead className="text-right">Avg</TableHead>
+                  <TableHead className="text-right">P95</TableHead>
+                  <TableHead className="text-right">Total Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {output.activityBreakdown.map((act) => (
+                  <TableRow key={act.activityId}>
+                    <TableCell className="font-mono text-sm">
+                      {act.activityName || act.activityId}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{act.activityType}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">{act.executionCount}</TableCell>
+                    <TableCell className="text-right">{formatDuration(act.avgDurationMs)}</TableCell>
+                    <TableCell className="text-right">{formatDuration(act.p95DurationMs)}</TableCell>
+                    <TableCell className="text-right">{formatDuration(act.totalTimeMs)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </details>
       )}
     </div>
   );

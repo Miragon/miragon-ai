@@ -7,7 +7,7 @@ import { registerSearchByVariable } from './search-by-variable.js';
 import { registerTraceProcessExecution } from './trace-process-execution.js';
 import { registerCompareExecutionPeriods } from './compare-execution-periods.js';
 
-export function registerClickHouseTools(server: McpServer, ch: ClickHouseClient): void {
+export function registerAllTools(server: McpServer, ch: ClickHouseClient): void {
   registerSearchProcessInstances(server, ch);
   registerAnalyzeProcessPerformance(server, ch);
   registerFindFailedInstances(server, ch);

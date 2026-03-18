@@ -1,22 +1,28 @@
 {
   "tool": "show-analytics-dashboard",
   "userMessage": "Show me process analytics",
-  "toolInput": {},
+  "toolInput": { "period": "7d" },
   "toolResult": {
     "structuredContent": {
       "completedCount": 42,
       "runningCount": 7,
+      "failedCount": 3,
       "incidentCount": 2,
+      "failureRatePct": 5.77,
       "avgDurationMs": 172800000,
-      "completedInstances": [
-        { "id": "pi-c01", "processDefinitionKey": "invoice-process", "startTime": "2026-03-15T08:00:00Z", "endTime": "2026-03-16T10:00:00Z", "durationInMillis": 93600000, "state": "COMPLETED" },
-        { "id": "pi-c02", "processDefinitionKey": "invoice-process", "startTime": "2026-03-14T09:00:00Z", "endTime": "2026-03-15T11:00:00Z", "durationInMillis": 93600000, "state": "COMPLETED" },
-        { "id": "pi-c03", "processDefinitionKey": "payment-process", "startTime": "2026-03-13T10:00:00Z", "endTime": "2026-03-14T12:00:00Z", "durationInMillis": 93600000, "state": "COMPLETED" },
-        { "id": "pi-c04", "processDefinitionKey": "onboarding", "startTime": "2026-03-12T11:00:00Z", "endTime": "2026-03-16T13:00:00Z", "durationInMillis": 352800000, "state": "COMPLETED" }
+      "medianDurationMs": 93600000,
+      "p95DurationMs": 352800000,
+      "activityBreakdown": [
+        { "activityId": "processPayment", "activityName": "Process Payment", "activityType": "serviceTask", "executionCount": 39, "avgDurationMs": 93598000, "p95DurationMs": 180000000, "totalTimeMs": 3650322000 },
+        { "activityId": "reviewInvoice", "activityName": "Review Invoice", "activityType": "userTask", "executionCount": 28, "avgDurationMs": 105299000, "p95DurationMs": 259200000, "totalTimeMs": 2948372000 },
+        { "activityId": "submitInvoice", "activityName": "Submit Invoice", "activityType": "userTask", "executionCount": 42, "avgDurationMs": 4499000, "p95DurationMs": 7200000, "totalTimeMs": 188958000 },
+        { "activityId": "sendNotification", "activityName": "Send Notification", "activityType": "serviceTask", "executionCount": 42, "avgDurationMs": 1200, "p95DurationMs": 3500, "totalTimeMs": 50400 },
+        { "activityId": "gateway1", "activityName": "Amount > 1000?", "activityType": "exclusiveGateway", "executionCount": 42, "avgDurationMs": 100, "p95DurationMs": 250, "totalTimeMs": 4200 }
       ],
-      "runningInstances": [
-        { "id": "pi-r01", "processDefinitionKey": "invoice-process", "startTime": "2026-03-17T08:00:00Z", "endTime": null, "durationInMillis": null, "state": "ACTIVE" },
-        { "id": "pi-r02", "processDefinitionKey": "payment-process", "startTime": "2026-03-16T14:00:00Z", "endTime": null, "durationInMillis": null, "state": "ACTIVE" }
+      "definitionBreakdown": [
+        { "processDefinitionKey": "invoice-process", "totalInstances": 30, "completed": 26, "failed": 2, "avgDurationMs": 93600000 },
+        { "processDefinitionKey": "payment-process", "totalInstances": 15, "completed": 12, "failed": 1, "avgDurationMs": 172800000 },
+        { "processDefinitionKey": "onboarding", "totalInstances": 7, "completed": 4, "failed": 0, "avgDurationMs": 352800000 }
       ]
     },
     "isError": false
