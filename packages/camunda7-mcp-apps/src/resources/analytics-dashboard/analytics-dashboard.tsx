@@ -150,9 +150,19 @@ export function AnalyticsDashboardResource() {
       </div>
 
       {output.definitionBreakdown.length > 0 && (
-        <div>
-          <h3 className="mb-3 text-lg font-medium">By Process Definition</h3>
-          <div className="flex flex-col gap-2">
+        <details open>
+          <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <svg
+              className="size-4 shrink-0 text-muted-foreground transition-transform [[open]>&]:rotate-90"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+            >
+              <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
+            </svg>
+            <h3 className="text-lg font-medium">By Process Definition</h3>
+            <Badge variant="secondary">{output.definitionBreakdown.length}</Badge>
+          </summary>
+          <div className="mt-3 flex flex-col gap-2">
             {output.definitionBreakdown.map((def) => (
               <Card key={def.processDefinitionKey} className="gap-0 py-0 shadow-none">
                 <CardContent className="flex items-center justify-between p-3">
@@ -170,13 +180,23 @@ export function AnalyticsDashboardResource() {
               </Card>
             ))}
           </div>
-        </div>
+        </details>
       )}
 
       {output.activityBreakdown.length > 0 && (
-        <div>
-          <h3 className="mb-3 text-lg font-medium">Activity Bottlenecks</h3>
-          <div className="rounded-lg border">
+        <details open>
+          <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <svg
+              className="size-4 shrink-0 text-muted-foreground transition-transform [[open]>&]:rotate-90"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+            >
+              <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
+            </svg>
+            <h3 className="text-lg font-medium">Activity Bottlenecks</h3>
+            <Badge variant="secondary">{output.activityBreakdown.length}</Badge>
+          </summary>
+          <div className="mt-3 rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -206,7 +226,7 @@ export function AnalyticsDashboardResource() {
               </TableBody>
             </Table>
           </div>
-        </div>
+        </details>
       )}
     </div>
   );
