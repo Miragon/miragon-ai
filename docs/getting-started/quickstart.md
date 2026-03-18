@@ -100,7 +100,7 @@ CLICKHOUSE_DATABASE=camunda_history
 
 ```bash
 cd docker
-docker compose -f docker-compose.yml -f docker-compose.otel.yml up -d
+docker compose --profile otel up -d
 ```
 
 Jaeger UI: http://localhost:16686

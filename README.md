@@ -108,7 +108,7 @@ CLICKHOUSE_DATABASE=camunda_history
 
 ```bash
 cd docker
-docker compose -f docker-compose.yml -f docker-compose.otel.yml up -d
+docker compose --profile otel up -d
 ```
 
 This adds OTEL Collector + Jaeger UI (http://localhost:16686) with trace context propagation across all components.
