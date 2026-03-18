@@ -17,10 +17,11 @@ type Args = z.infer<z.ZodObject<typeof schema>>;
 export default async function (args: Args, _extra: ToolHandlerExtra) {
   const adapter = getAdapter();
 
-  const [instance, activityTree, variables] = await Promise.all([
+  const [instance, activityTree, variables, incidents] = await Promise.all([
     adapter.getProcessInstance(args.processInstanceId),
     adapter.getActivityInstanceTree(args.processInstanceId).catch(() => null),
     adapter.getVariables('process-instance', args.processInstanceId).catch(() => ({})),
+    adapter.listIncidents({ processInstanceId: args.processInstanceId, maxResults: 100 }).catch(() => []),
   ]);
 
   let bpmnXml: string | null = null;
@@ -35,6 +36,7 @@ export default async function (args: Args, _extra: ToolHandlerExtra) {
       instance,
       activityTree,
       variables,
+      incidents,
       bpmnXml,
     },
   };
