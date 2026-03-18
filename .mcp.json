@@ -11,16 +11,14 @@
         "ENGINE_PASSWORD": "demo"
       }
     },
-    "clickhouse-mcp-server": {
-      "command": "/Users/dominikhorn/.local/pipx/venvs/mcp-clickhouse/bin/mcp-clickhouse",
-      "args": [],
+    "camunda7-analytics-mcp-server": {
+      "command": "node",
+      "args": ["packages/camunda7-analytics-mcp-server/dist/index.js"],
       "env": {
-        "CLICKHOUSE_HOST": "localhost",
-        "CLICKHOUSE_PORT": "8123",
+        "CLICKHOUSE_URL": "http://localhost:8123",
         "CLICKHOUSE_USER": "camunda",
         "CLICKHOUSE_PASSWORD": "camunda123",
-        "CLICKHOUSE_DATABASE": "camunda_history",
-        "CLICKHOUSE_SECURE": "false"
+        "CLICKHOUSE_DATABASE": "camunda_history"
       }
     },
     "camunda-apps": {

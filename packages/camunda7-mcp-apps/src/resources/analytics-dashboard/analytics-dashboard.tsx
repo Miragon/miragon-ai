@@ -1,28 +1,43 @@
 import { useToolData, type ResourceConfig } from 'sunpeak';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface HistoricProcessInstance {
-  id: string;
+interface ActivityBreakdownItem {
+  activityId: string;
+  activityName: string;
+  activityType: string;
+  executionCount: number;
+  avgDurationMs: number;
+  p95DurationMs: number;
+  totalTimeMs: number;
+}
+
+interface DefinitionBreakdownItem {
   processDefinitionKey: string;
-  startTime: string;
-  endTime: string | null;
-  durationInMillis: number | null;
-  state: string;
+  totalInstances: number;
+  completed: number;
+  failed: number;
+  avgDurationMs: number | null;
 }
 
 interface AnalyticsOutput {
   completedCount: number;
   runningCount: number;
+  failedCount: number;
   incidentCount: number;
+  failureRatePct: number;
   avgDurationMs: number | null;
-  completedInstances: HistoricProcessInstance[];
-  runningInstances: HistoricProcessInstance[];
+  medianDurationMs: number | null;
+  p95DurationMs: number | null;
+  activityBreakdown: ActivityBreakdownItem[];
+  definitionBreakdown: DefinitionBreakdownItem[];
 }
 
 export const resource: ResourceConfig = {
   title: 'Analytics Dashboard',
-  description: 'Aggregated process metrics and KPIs from history data',
+  description: 'Aggregated process metrics and KPIs from ClickHouse analytics',
 };
 
 function formatDuration(ms: number | null): string {
@@ -68,14 +83,6 @@ export function AnalyticsDashboardResource() {
 
   if (!output) return null;
 
-  // Group completed by process definition key
-  const byKey = new Map<string, HistoricProcessInstance[]>();
-  for (const inst of output.completedInstances) {
-    const existing = byKey.get(inst.processDefinitionKey) ?? [];
-    existing.push(inst);
-    byKey.set(inst.processDefinitionKey, existing);
-  }
-
   return (
     <div className="flex flex-col gap-6 p-6 bg-card text-card-foreground">
       <h2 className="text-xl font-semibold">Process Analytics</h2>
@@ -95,42 +102,99 @@ export function AnalyticsDashboardResource() {
         </Card>
         <Card className="gap-0 py-0 shadow-none bg-destructive/10 border-destructive/30 text-destructive">
           <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Failed</p>
+            <p className="text-2xl font-bold">{output.failedCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-destructive/10 border-destructive/30 text-destructive">
+          <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">Incidents</p>
             <p className="text-2xl font-bold">{output.incidentCount}</p>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
           <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">Avg Duration</p>
             <p className="text-2xl font-bold">{formatDuration(output.avgDurationMs)}</p>
           </CardContent>
         </Card>
+        <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Median</p>
+            <p className="text-2xl font-bold">{formatDuration(output.medianDurationMs)}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">P95</p>
+            <p className="text-2xl font-bold">{formatDuration(output.p95DurationMs)}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80 text-muted-foreground">Failure Rate</p>
+            <p className="text-2xl font-bold">{output.failureRatePct}%</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {byKey.size > 0 && (
+      {output.definitionBreakdown.length > 0 && (
         <div>
           <h3 className="mb-3 text-lg font-medium">By Process Definition</h3>
           <div className="flex flex-col gap-2">
-            {[...byKey.entries()].map(([key, instances]) => {
-              const durations = instances
-                .filter(i => i.durationInMillis != null)
-                .map(i => i.durationInMillis!);
-              const avg = durations.length > 0
-                ? durations.reduce((a, b) => a + b, 0) / durations.length
-                : null;
+            {output.definitionBreakdown.map((def) => (
+              <Card key={def.processDefinitionKey} className="gap-0 py-0 shadow-none">
+                <CardContent className="flex items-center justify-between p-3">
+                  <span className="font-mono text-sm font-medium">{def.processDefinitionKey}</span>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span>{def.completed} completed</span>
+                    {def.failed > 0 && (
+                      <Badge variant="destructive">{def.failed} failed</Badge>
+                    )}
+                    <span>avg {formatDuration(def.avgDurationMs)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
-              return (
-                <Card key={key} className="gap-0 py-0 shadow-none">
-                  <CardContent className="flex items-center justify-between p-3">
-                    <span className="font-mono text-sm font-medium">{key}</span>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{instances.length} completed</span>
-                      <span>avg {formatDuration(avg)}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+      {output.activityBreakdown.length > 0 && (
+        <div>
+          <h3 className="mb-3 text-lg font-medium">Activity Bottlenecks</h3>
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Activity</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Executions</TableHead>
+                  <TableHead className="text-right">Avg</TableHead>
+                  <TableHead className="text-right">P95</TableHead>
+                  <TableHead className="text-right">Total Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {output.activityBreakdown.map((act) => (
+                  <TableRow key={act.activityId}>
+                    <TableCell className="font-mono text-sm">
+                      {act.activityName || act.activityId}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{act.activityType}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">{act.executionCount}</TableCell>
+                    <TableCell className="text-right">{formatDuration(act.avgDurationMs)}</TableCell>
+                    <TableCell className="text-right">{formatDuration(act.p95DurationMs)}</TableCell>
+                    <TableCell className="text-right">{formatDuration(act.totalTimeMs)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}

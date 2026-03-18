@@ -11,6 +11,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@camunda7-mcp/analytics-server": "workspace:*",
     "@camunda7-mcp/engine-adapter": "workspace:*",
     "@camunda7-mcp/shared": "workspace:*",
     "@radix-ui/react-slot": "^1.2.4",

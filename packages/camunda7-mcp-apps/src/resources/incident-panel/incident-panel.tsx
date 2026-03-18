@@ -19,14 +19,21 @@ interface IncidentData {
   annotation: string | null;
 }
 
-interface IncidentPanelOutput {
+interface DefinitionGroup {
+  processDefinitionKey: string;
+  incidentCount: number;
+  latestIncident: string;
   incidents: IncidentData[];
+}
+
+interface IncidentPanelOutput {
   totalCount: number;
+  definitions: DefinitionGroup[];
 }
 
 export const resource: ResourceConfig = {
-  title: 'Incident Panel',
-  description: 'Error monitoring panel with retry capabilities for failed jobs',
+  title: 'Open Incidents by Process Definition',
+  description: 'Open incidents grouped by process definition with retry capabilities',
 };
 
 type RetryResult = 'idle' | 'loading' | 'resolved' | 'still-open' | 'error';
@@ -88,7 +95,7 @@ function IncidentCard({ incident }: { incident: IncidentData }) {
             )}
             <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
               <span>Activity: <code>{incident.activityId}</code></span>
-              <span>Process: <code>{incident.processInstanceId.slice(0, 8)}...</code></span>
+              <span>Instance: <code>{incident.processInstanceId.slice(0, 8)}...</code></span>
             </div>
             {retryState === 'still-open' && (
               <p className="mt-2 text-xs text-warning-foreground">
@@ -122,6 +129,32 @@ function IncidentCard({ incident }: { incident: IncidentData }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function DefinitionSection({ group }: { group: DefinitionGroup }) {
+  return (
+    <details open>
+      <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+        <svg
+          className="size-4 shrink-0 text-muted-foreground transition-transform [[open]>&]:rotate-90"
+          viewBox="0 0 16 16"
+          fill="currentColor"
+        >
+          <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
+        </svg>
+        <span className="font-mono text-sm font-medium">{group.processDefinitionKey}</span>
+        <Badge variant="destructive">{group.incidentCount}</Badge>
+        <span className="text-xs text-muted-foreground">
+          latest {new Date(group.latestIncident).toLocaleString()}
+        </span>
+      </summary>
+      <div className="mt-2 ml-6 flex flex-col gap-3">
+        {group.incidents.map((incident) => (
+          <IncidentCard key={incident.id} incident={incident} />
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -162,20 +195,20 @@ export function IncidentPanelResource() {
   return (
     <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Incidents</h2>
+        <h2 className="text-xl font-semibold">Open Incidents</h2>
         <Badge variant="destructive">{output.totalCount} open</Badge>
       </div>
 
-      {output.incidents.length === 0 ? (
+      {output.definitions.length === 0 ? (
         <Card className="gap-0 py-0 shadow-none">
           <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">No incidents found</p>
+            <p className="text-muted-foreground">No open incidents</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="flex flex-col gap-3">
-          {output.incidents.map((incident) => (
-            <IncidentCard key={incident.id} incident={incident} />
+        <div className="flex flex-col gap-4">
+          {output.definitions.map((group) => (
+            <DefinitionSection key={group.processDefinitionKey} group={group} />
           ))}
         </div>
       )}

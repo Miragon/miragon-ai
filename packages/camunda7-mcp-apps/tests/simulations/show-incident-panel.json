@@ -1,42 +1,97 @@
 {
   "tool": "show-incident-panel",
-  "userMessage": "Show me all incidents",
+  "userMessage": "Show me all open incidents",
   "toolInput": {},
   "toolResult": {
     "structuredContent": {
-      "incidents": [
+      "totalCount": 5,
+      "definitions": [
         {
-          "id": "inc-001",
-          "processDefinitionId": "payment-process:2:def456",
-          "processInstanceId": "pi-005",
-          "incidentType": "failedJob",
-          "activityId": "sendPayment",
-          "incidentMessage": "java.net.ConnectException: Connection refused (Connection refused)",
-          "incidentTimestamp": "2026-03-16T09:45:00.000+0000",
-          "jobDefinitionId": "job-def-001",
-          "failedActivityId": "sendPayment",
-          "annotation": null
+          "processDefinitionKey": "payment-process",
+          "incidentCount": 3,
+          "latestIncident": "2026-03-17T14:20:00.000+0000",
+          "incidents": [
+            {
+              "id": "inc-001",
+              "processDefinitionId": "payment-process:2:def456",
+              "processInstanceId": "pi-005",
+              "incidentType": "failedJob",
+              "activityId": "sendPayment",
+              "incidentMessage": "java.net.ConnectException: Connection refused (Connection refused)",
+              "incidentTimestamp": "2026-03-17T14:20:00.000+0000",
+              "jobDefinitionId": "job-def-001",
+              "configuration": "job-001",
+              "failedActivityId": "sendPayment",
+              "annotation": null
+            },
+            {
+              "id": "inc-003",
+              "processDefinitionId": "payment-process:2:def456",
+              "processInstanceId": "pi-012",
+              "incidentType": "failedJob",
+              "activityId": "sendPayment",
+              "incidentMessage": "java.net.ConnectException: Connection refused (Connection refused)",
+              "incidentTimestamp": "2026-03-17T11:05:00.000+0000",
+              "jobDefinitionId": "job-def-001",
+              "configuration": "job-003",
+              "failedActivityId": "sendPayment",
+              "annotation": null
+            },
+            {
+              "id": "inc-005",
+              "processDefinitionId": "payment-process:2:def456",
+              "processInstanceId": "pi-019",
+              "incidentType": "failedJob",
+              "activityId": "validateAccount",
+              "incidentMessage": "org.camunda.bpm.engine.ProcessEngineException: Unknown property used in expression: ${account.iban}",
+              "incidentTimestamp": "2026-03-16T09:45:00.000+0000",
+              "jobDefinitionId": "job-def-002",
+              "configuration": "job-005",
+              "failedActivityId": "validateAccount",
+              "annotation": null
+            }
+          ]
         },
         {
-          "id": "inc-002",
-          "processDefinitionId": "onboarding:1:ghi789",
-          "processInstanceId": "pi-008",
-          "incidentType": "failedExternalTask",
-          "activityId": "verifyIdentity",
-          "incidentMessage": "External service timeout after 30000ms",
-          "incidentTimestamp": "2026-03-15T16:20:00.000+0000",
-          "jobDefinitionId": null,
-          "failedActivityId": "verifyIdentity",
-          "annotation": null
+          "processDefinitionKey": "onboarding",
+          "incidentCount": 2,
+          "latestIncident": "2026-03-16T16:20:00.000+0000",
+          "incidents": [
+            {
+              "id": "inc-002",
+              "processDefinitionId": "onboarding:1:ghi789",
+              "processInstanceId": "pi-008",
+              "incidentType": "failedExternalTask",
+              "activityId": "verifyIdentity",
+              "incidentMessage": "External service timeout after 30000ms",
+              "incidentTimestamp": "2026-03-16T16:20:00.000+0000",
+              "jobDefinitionId": null,
+              "configuration": null,
+              "failedActivityId": "verifyIdentity",
+              "annotation": null
+            },
+            {
+              "id": "inc-004",
+              "processDefinitionId": "onboarding:1:ghi789",
+              "processInstanceId": "pi-015",
+              "incidentType": "failedExternalTask",
+              "activityId": "verifyIdentity",
+              "incidentMessage": "External service timeout after 30000ms",
+              "incidentTimestamp": "2026-03-15T10:30:00.000+0000",
+              "jobDefinitionId": null,
+              "configuration": null,
+              "failedActivityId": "verifyIdentity",
+              "annotation": null
+            }
+          ]
         }
-      ],
-      "totalCount": 2
+      ]
     },
     "isError": false
   },
   "serverTools": {
     "retry-job-action": {
-      "structuredContent": { "success": true, "jobId": "job-def-001" }
+      "structuredContent": { "success": true, "jobId": "job-001", "resolved": true }
     }
   }
 }
