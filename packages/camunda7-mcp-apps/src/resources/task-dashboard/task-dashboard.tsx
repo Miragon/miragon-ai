@@ -36,9 +36,9 @@ export const resource: ResourceConfig = {
 function PriorityBadge({ priority }: { priority: number }) {
   const level = priority >= 75 ? 'high' : priority >= 50 ? 'medium' : 'normal';
   const colors = {
-    high: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    normal: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    high: 'bg-destructive/10 text-destructive',
+    medium: 'bg-warning/10 text-warning-foreground',
+    normal: 'bg-success/10 text-success-foreground',
   };
   return (
     <Badge variant="secondary" className={colors[level]}>
@@ -70,8 +70,8 @@ export function TaskDashboardResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12 bg-card">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex items-center justify-center p-12 bg-card text-card-foreground">
+        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <span className="ml-3 text-sm text-muted-foreground">Loading tasks...</span>
       </div>
     );
@@ -79,7 +79,7 @@ export function TaskDashboardResource() {
 
   if (isError) {
     return (
-      <div className="p-6 bg-card">
+      <div className="p-6 bg-card text-card-foreground">
         <Alert variant="destructive">
           <AlertDescription>Failed to load tasks</AlertDescription>
         </Alert>
@@ -89,8 +89,8 @@ export function TaskDashboardResource() {
 
   if (isCancelled) {
     return (
-      <div className="p-6 bg-card">
-        <Alert className="border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-300">
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert className="bg-warning/10 text-warning-foreground border-warning/30">
           <AlertDescription>Request was cancelled</AlertDescription>
         </Alert>
       </div>
@@ -109,7 +109,7 @@ export function TaskDashboardResource() {
   };
 
   return (
-    <div className="p-6 space-y-4 bg-card">
+    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Open Tasks</h2>
         <Badge variant="secondary">{output.totalCount} total</Badge>
@@ -165,7 +165,7 @@ export function TaskDashboardResource() {
                   <TableCell>
                     <TimeAgo date={task.created} />
                   </TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell className="flex gap-2">
                     {!task.assignee && (
                       <Button size="sm" onClick={() => handleClaim(task.id)}>
                         Claim

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useToolData, useCallServerTool, type ResourceConfig } from 'sunpeak';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,14 +29,109 @@ export const resource: ResourceConfig = {
   description: 'Error monitoring panel with retry capabilities for failed jobs',
 };
 
+type RetryResult = 'idle' | 'loading' | 'resolved' | 'still-open' | 'error';
+
+function IncidentCard({ incident }: { incident: IncidentData }) {
+  const callServerTool = useCallServerTool();
+  const [retryState, setRetryState] = useState<RetryResult>('idle');
+
+  const canRetry = incident.incidentType === 'failedJob' && !!incident.configuration;
+
+  const handleRetry = async () => {
+    setRetryState('loading');
+    try {
+      const result = await callServerTool({
+        name: 'retry-job-action',
+        arguments: {
+          jobId: incident.configuration!,
+          retries: 1,
+          incidentId: incident.id,
+          processInstanceId: incident.processInstanceId,
+        },
+      });
+
+      const resolved = (result?.structuredContent as { resolved?: boolean | null })?.resolved;
+      setRetryState(resolved === true ? 'resolved' : 'still-open');
+    } catch {
+      setRetryState('error');
+    }
+  };
+
+  if (retryState === 'resolved') {
+    return (
+      <Card className="gap-0 py-0 shadow-none border-success/30 bg-success/5">
+        <CardContent className="flex items-center gap-2 p-4 text-success-foreground">
+          <svg className="size-4 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+            <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.354-8.354a.5.5 0 00-.708-.708L7 9.586 5.354 7.94a.5.5 0 10-.708.708l2 2a.5.5 0 00.708 0l4-4z" />
+          </svg>
+          <span className="text-sm font-medium">Incident resolved</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="gap-0 py-0 shadow-none border-destructive/30">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant="destructive">{incident.incidentType}</Badge>
+              <span className="text-xs text-muted-foreground">
+                {new Date(incident.incidentTimestamp).toLocaleString()}
+              </span>
+            </div>
+            {incident.incidentMessage && (
+              <p className="text-sm text-muted-foreground break-words font-mono">
+                {incident.incidentMessage}
+              </p>
+            )}
+            <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+              <span>Activity: <code>{incident.activityId}</code></span>
+              <span>Process: <code>{incident.processInstanceId.slice(0, 8)}...</code></span>
+            </div>
+            {retryState === 'still-open' && (
+              <p className="mt-2 text-xs text-warning-foreground">
+                Retry triggered but incident still open — the job may need more time or the root cause persists
+              </p>
+            )}
+            {retryState === 'error' && (
+              <p className="mt-2 text-xs text-destructive">Retry failed — please try again</p>
+            )}
+          </div>
+          {canRetry && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={retryState === 'loading'}
+              onClick={handleRetry}
+              className="shrink-0"
+            >
+              {retryState === 'loading' ? (
+                <>
+                  <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Retrying…
+                </>
+              ) : retryState === 'still-open' ? (
+                'Retry Again'
+              ) : (
+                'Retry Job'
+              )}
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function IncidentPanelResource() {
   const { output, isLoading, isError, isCancelled } = useToolData<unknown, IncidentPanelOutput>();
-  const callServerTool = useCallServerTool();
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12 bg-card">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex items-center justify-center p-12 bg-card text-card-foreground">
+        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <span className="ml-3 text-sm text-muted-foreground">Loading incidents...</span>
       </div>
     );
@@ -43,7 +139,7 @@ export function IncidentPanelResource() {
 
   if (isError) {
     return (
-      <div className="p-6 bg-card">
+      <div className="p-6 bg-card text-card-foreground">
         <Alert variant="destructive">
           <AlertDescription>Failed to load incidents</AlertDescription>
         </Alert>
@@ -53,8 +149,8 @@ export function IncidentPanelResource() {
 
   if (isCancelled) {
     return (
-      <div className="p-6 bg-card">
-        <Alert className="border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-300">
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert className="bg-warning/10 text-warning-foreground border-warning/30">
           <AlertDescription>Request was cancelled</AlertDescription>
         </Alert>
       </div>
@@ -64,7 +160,7 @@ export function IncidentPanelResource() {
   if (!output) return null;
 
   return (
-    <div className="p-6 space-y-4 bg-card">
+    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Incidents</h2>
         <Badge variant="destructive">{output.totalCount} open</Badge>
@@ -77,41 +173,9 @@ export function IncidentPanelResource() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {output.incidents.map((incident) => (
-            <Card key={incident.id} className="gap-0 py-0 shadow-none border-red-200 dark:border-red-800/50">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="destructive">{incident.incidentType}</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(incident.incidentTimestamp).toLocaleString()}
-                      </span>
-                    </div>
-                    {incident.incidentMessage && (
-                      <p className="text-sm text-muted-foreground break-words font-mono">
-                        {incident.incidentMessage}
-                      </p>
-                    )}
-                    <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-                      <span>Activity: <code>{incident.activityId}</code></span>
-                      <span>Process: <code>{incident.processInstanceId.slice(0, 8)}...</code></span>
-                    </div>
-                  </div>
-                  {incident.configuration && incident.incidentType === 'failedJob' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => callServerTool({ name: 'retry-job-action', arguments: { jobId: incident.configuration!, retries: 1 } })}
-                      className="ml-4 shrink-0"
-                    >
-                      Retry
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <IncidentCard key={incident.id} incident={incident} />
           ))}
         </div>
       )}

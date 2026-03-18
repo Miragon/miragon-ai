@@ -37,6 +37,8 @@ export const resource: ResourceConfig = {
   description: 'Color-coded activity timeline for process instances',
 };
 
+// Data-visualization dot colors — comparable to shadcn --chart-* tokens.
+// Raw colors are acceptable here as these are decorative elements.
 const ACTIVITY_COLORS: Record<string, string> = {
   startEvent: 'bg-green-500',
   endEvent: 'bg-red-500',
@@ -64,8 +66,8 @@ export function HistoryTimelineResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12 bg-card">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex items-center justify-center p-12 bg-card text-card-foreground">
+        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <span className="ml-3 text-sm text-muted-foreground">Loading timeline...</span>
       </div>
     );
@@ -73,7 +75,7 @@ export function HistoryTimelineResource() {
 
   if (isError) {
     return (
-      <div className="p-6 bg-card">
+      <div className="p-6 bg-card text-card-foreground">
         <Alert variant="destructive">
           <AlertDescription>Failed to load timeline</AlertDescription>
         </Alert>
@@ -83,8 +85,8 @@ export function HistoryTimelineResource() {
 
   if (isCancelled) {
     return (
-      <div className="p-6 bg-card">
-        <Alert className="border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-300">
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert className="bg-warning/10 text-warning-foreground border-warning/30">
           <AlertDescription>Request was cancelled</AlertDescription>
         </Alert>
       </div>
@@ -96,7 +98,7 @@ export function HistoryTimelineResource() {
   const { processInstance, activities } = output;
 
   return (
-    <div className="p-6 space-y-4 bg-card">
+    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
       {processInstance && (
         <div>
           <h2 className="text-xl font-semibold">
@@ -112,13 +114,13 @@ export function HistoryTimelineResource() {
         </div>
       )}
 
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         {activities.map((activity, index) => {
           const color = ACTIVITY_COLORS[activity.activityType] ?? 'bg-gray-400';
           return (
             <div key={activity.id} className="flex items-center gap-3">
               <div className="flex flex-col items-center">
-                <div className={`h-3 w-3 rounded-full ${color}`} />
+                <div className={`size-3 rounded-full ${color}`} />
                 {index < activities.length - 1 && (
                   <div className="w-0.5 h-6 bg-border" />
                 )}
@@ -133,7 +135,7 @@ export function HistoryTimelineResource() {
                       {activity.activityType}
                     </span>
                     {activity.assignee && (
-                      <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                      <span className="ml-2 text-xs text-info">
                         @{activity.assignee}
                       </span>
                     )}

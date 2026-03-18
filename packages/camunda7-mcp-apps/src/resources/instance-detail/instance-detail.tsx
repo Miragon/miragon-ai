@@ -73,7 +73,7 @@ function ActivityTreeNode({ node, depth = 0 }: { node: ActivityTree; depth?: num
   return (
     <div style={{ paddingLeft: `${depth * 16}px` }}>
       <div className="flex items-center gap-2 py-1">
-        <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+        <Badge variant="secondary" className="bg-info/10 text-info-foreground">
           {node.activityType}
         </Badge>
         <span className="text-sm">
@@ -92,8 +92,8 @@ export function InstanceDetailResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12 bg-card">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex items-center justify-center p-12 bg-card text-card-foreground">
+        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <span className="ml-3 text-sm text-muted-foreground">Loading instance details...</span>
       </div>
     );
@@ -101,7 +101,7 @@ export function InstanceDetailResource() {
 
   if (isError) {
     return (
-      <div className="p-6 bg-card">
+      <div className="p-6 bg-card text-card-foreground">
         <Alert variant="destructive">
           <AlertDescription>Failed to load instance details</AlertDescription>
         </Alert>
@@ -111,8 +111,8 @@ export function InstanceDetailResource() {
 
   if (isCancelled) {
     return (
-      <div className="p-6 bg-card">
-        <Alert className="border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-300">
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert className="bg-warning/10 text-warning-foreground border-warning/30">
           <AlertDescription>Request was cancelled</AlertDescription>
         </Alert>
       </div>
@@ -124,7 +124,7 @@ export function InstanceDetailResource() {
   const { instance, activityTree, variables } = output;
 
   return (
-    <div className="p-6 space-y-6 bg-card">
+    <div className="flex flex-col gap-6 p-6 bg-card text-card-foreground">
       <div>
         <h2 className="text-xl font-semibold">Process Instance</h2>
         <p className="text-sm font-mono text-muted-foreground">{instance.id}</p>
@@ -154,11 +154,11 @@ export function InstanceDetailResource() {
               {instance.ended ? (
                 <Badge variant="secondary">Ended</Badge>
               ) : instance.suspended ? (
-                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
                   Suspended
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                <Badge variant="secondary" className="bg-success/10 text-success-foreground">
                   Active
                 </Badge>
               )}

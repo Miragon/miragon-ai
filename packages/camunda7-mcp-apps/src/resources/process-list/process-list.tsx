@@ -29,8 +29,8 @@ export function ProcessListResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12 bg-card">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex items-center justify-center p-12 bg-card text-card-foreground">
+        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <span className="ml-3 text-sm text-muted-foreground">Loading process definitions...</span>
       </div>
     );
@@ -38,7 +38,7 @@ export function ProcessListResource() {
 
   if (isError) {
     return (
-      <div className="p-6 bg-card">
+      <div className="p-6 bg-card text-card-foreground">
         <Alert variant="destructive">
           <AlertDescription>Failed to load process definitions</AlertDescription>
         </Alert>
@@ -48,8 +48,8 @@ export function ProcessListResource() {
 
   if (isCancelled) {
     return (
-      <div className="p-6 bg-card">
-        <Alert className="border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-300">
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert className="bg-warning/10 text-warning-foreground border-warning/30">
           <AlertDescription>Request was cancelled</AlertDescription>
         </Alert>
       </div>
@@ -59,7 +59,7 @@ export function ProcessListResource() {
   if (!output) return null;
 
   return (
-    <div className="p-6 space-y-4 bg-card">
+    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Process Definitions</h2>
         <Badge variant="secondary">{output.totalCount} deployed</Badge>
@@ -76,16 +76,16 @@ export function ProcessListResource() {
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground">v{def.version}</span>
                 {def.versionTag && (
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                  <Badge variant="secondary" className="bg-primary/10 text-primary">
                     {def.versionTag}
                   </Badge>
                 )}
                 {def.suspended ? (
-                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                  <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
                     Suspended
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                  <Badge variant="secondary" className="bg-success/10 text-success-foreground">
                     Active
                   </Badge>
                 )}

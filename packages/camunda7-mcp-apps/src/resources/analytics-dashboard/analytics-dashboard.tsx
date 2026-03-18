@@ -25,17 +25,6 @@ export const resource: ResourceConfig = {
   description: 'Aggregated process metrics and KPIs from history data',
 };
 
-function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
-  return (
-    <Card className={`gap-0 py-0 shadow-none ${color}`}>
-      <CardContent className="p-4">
-        <p className="text-sm font-medium opacity-80">{label}</p>
-        <p className="text-2xl font-bold">{value}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function formatDuration(ms: number | null): string {
   if (ms == null) return '-';
   if (ms < 1000) return `${ms}ms`;
@@ -50,8 +39,8 @@ export function AnalyticsDashboardResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12 bg-card">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex items-center justify-center p-12 bg-card text-card-foreground">
+        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <span className="ml-3 text-sm text-muted-foreground">Loading analytics...</span>
       </div>
     );
@@ -59,7 +48,7 @@ export function AnalyticsDashboardResource() {
 
   if (isError) {
     return (
-      <div className="p-6 bg-card">
+      <div className="p-6 bg-card text-card-foreground">
         <Alert variant="destructive">
           <AlertDescription>Failed to load analytics</AlertDescription>
         </Alert>
@@ -69,8 +58,8 @@ export function AnalyticsDashboardResource() {
 
   if (isCancelled) {
     return (
-      <div className="p-6 bg-card">
-        <Alert className="border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-300">
+      <div className="p-6 bg-card text-card-foreground">
+        <Alert className="bg-warning/10 text-warning-foreground border-warning/30">
           <AlertDescription>Request was cancelled</AlertDescription>
         </Alert>
       </div>
@@ -88,36 +77,40 @@ export function AnalyticsDashboardResource() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-card">
+    <div className="flex flex-col gap-6 p-6 bg-card text-card-foreground">
       <h2 className="text-xl font-semibold">Process Analytics</h2>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard
-          label="Completed"
-          value={output.completedCount}
-          color="border-green-200 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300"
-        />
-        <StatCard
-          label="Running"
-          value={output.runningCount}
-          color="border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
-        />
-        <StatCard
-          label="Incidents"
-          value={output.incidentCount}
-          color="border-red-200 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
-        />
-        <StatCard
-          label="Avg Duration"
-          value={formatDuration(output.avgDurationMs)}
-          color="border-purple-200 bg-purple-50 text-purple-900 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-300"
-        />
+        <Card className="gap-0 py-0 shadow-none bg-success/10 border-success/30 text-success-foreground">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Completed</p>
+            <p className="text-2xl font-bold">{output.completedCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-info/10 border-info/30 text-info-foreground">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Running</p>
+            <p className="text-2xl font-bold">{output.runningCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-destructive/10 border-destructive/30 text-destructive">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Incidents</p>
+            <p className="text-2xl font-bold">{output.incidentCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80">Avg Duration</p>
+            <p className="text-2xl font-bold">{formatDuration(output.avgDurationMs)}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {byKey.size > 0 && (
         <div>
           <h3 className="mb-3 text-lg font-medium">By Process Definition</h3>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             {[...byKey.entries()].map(([key, instances]) => {
               const durations = instances
                 .filter(i => i.durationInMillis != null)
