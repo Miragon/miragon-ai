@@ -13,10 +13,7 @@ interface IncidentData {
   activityId: string;
   incidentMessage: string | null;
   incidentTimestamp: string;
-  jobDefinitionId: string | null;
   configuration: string | null;
-  failedActivityId: string | null;
-  annotation: string | null;
 }
 
 interface DefinitionGroup {

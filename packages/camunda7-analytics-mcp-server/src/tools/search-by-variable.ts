@@ -33,7 +33,7 @@ SELECT DISTINCT
     p.duration_in_millis,
     v.variable_name,
     v.text_value
-FROM camunda_history.camunda_variable_updates v
+FROM camunda_history.camunda_variable_updates FINAL v
 JOIN camunda_history.camunda_process_instances p ON p.id = v.process_instance_id
 WHERE ${conditions.join(' AND ')}
 ORDER BY v.timestamp DESC

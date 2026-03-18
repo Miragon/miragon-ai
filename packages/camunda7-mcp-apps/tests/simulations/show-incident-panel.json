@@ -19,10 +19,7 @@
               "activityId": "sendPayment",
               "incidentMessage": "java.net.ConnectException: Connection refused (Connection refused)",
               "incidentTimestamp": "2026-03-17T14:20:00.000+0000",
-              "jobDefinitionId": "job-def-001",
-              "configuration": "job-001",
-              "failedActivityId": "sendPayment",
-              "annotation": null
+              "configuration": "job-001"
             },
             {
               "id": "inc-003",
@@ -32,10 +29,7 @@
               "activityId": "sendPayment",
               "incidentMessage": "java.net.ConnectException: Connection refused (Connection refused)",
               "incidentTimestamp": "2026-03-17T11:05:00.000+0000",
-              "jobDefinitionId": "job-def-001",
-              "configuration": "job-003",
-              "failedActivityId": "sendPayment",
-              "annotation": null
+              "configuration": "job-003"
             },
             {
               "id": "inc-005",
@@ -45,10 +39,7 @@
               "activityId": "validateAccount",
               "incidentMessage": "org.camunda.bpm.engine.ProcessEngineException: Unknown property used in expression: ${account.iban}",
               "incidentTimestamp": "2026-03-16T09:45:00.000+0000",
-              "jobDefinitionId": "job-def-002",
-              "configuration": "job-005",
-              "failedActivityId": "validateAccount",
-              "annotation": null
+              "configuration": "job-005"
             }
           ]
         },
@@ -65,10 +56,7 @@
               "activityId": "verifyIdentity",
               "incidentMessage": "External service timeout after 30000ms",
               "incidentTimestamp": "2026-03-16T16:20:00.000+0000",
-              "jobDefinitionId": null,
-              "configuration": null,
-              "failedActivityId": "verifyIdentity",
-              "annotation": null
+              "configuration": null
             },
             {
               "id": "inc-004",
@@ -78,10 +66,7 @@
               "activityId": "verifyIdentity",
               "incidentMessage": "External service timeout after 30000ms",
               "incidentTimestamp": "2026-03-15T10:30:00.000+0000",
-              "jobDefinitionId": null,
-              "configuration": null,
-              "failedActivityId": "verifyIdentity",
-              "annotation": null
+              "configuration": null
             }
           ]
         }

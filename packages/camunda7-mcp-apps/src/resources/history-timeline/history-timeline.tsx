@@ -13,7 +13,6 @@ interface ActivityData {
   durationInMillis: number | null;
   assignee: string | null;
   taskId: string | null;
-  canceled: boolean;
 }
 
 interface HistoricProcessInstance {
@@ -144,9 +143,6 @@ export function HistoryTimelineResource() {
                     <span className="text-xs text-muted-foreground">
                       {formatDuration(activity.durationInMillis)}
                     </span>
-                    {activity.canceled && (
-                      <Badge variant="destructive">canceled</Badge>
-                    )}
                   </div>
                 </CardContent>
               </Card>

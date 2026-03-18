@@ -34,7 +34,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setString(3, row["process_definition_key"] as? String)
             ps.setString(4, row["process_definition_name"] as? String)
             ps.setString(5, row["business_key"] as? String)
-            ps.setTimestamp(6, toTimestamp(row["start_time"]))
+            ps.setTimestamp(6, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
             ps.setTimestamp(7, toTimestamp(row["end_time"]))
             ps.setObject(8, row["duration_in_millis"])
             ps.setString(9, row["start_user_id"] as? String)
@@ -69,7 +69,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setString(7, row["process_definition_key"] as? String)
             ps.setString(8, row["process_instance_id"] as? String)
             ps.setString(9, row["execution_id"] as? String)
-            ps.setTimestamp(10, toTimestamp(row["start_time"]))
+            ps.setTimestamp(10, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
             ps.setTimestamp(11, toTimestamp(row["end_time"]))
             ps.setObject(12, row["duration_in_millis"])
             ps.setString(13, row["assignee"] as? String)
@@ -106,7 +106,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setInt(12, (row["priority"] as? Number)?.toInt() ?: 0)
             ps.setTimestamp(13, toTimestamp(row["due_date"]))
             ps.setTimestamp(14, toTimestamp(row["follow_up_date"]))
-            ps.setTimestamp(15, toTimestamp(row["start_time"]))
+            ps.setTimestamp(15, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
             ps.setTimestamp(16, toTimestamp(row["end_time"]))
             ps.setObject(17, row["duration_in_millis"])
             ps.setString(18, row["delete_reason"] as? String)
@@ -239,5 +239,15 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             is Long -> Timestamp(value)
             else -> null
         }
+    }
+
+    /** Derive start_time from end_time - duration for end events that lack start_time. */
+    private fun deriveStartTime(row: Map<String, Any?>): Timestamp {
+        val endTime = toTimestamp(row["end_time"])
+        val duration = (row["duration_in_millis"] as? Number)?.toLong()
+        if (endTime != null && duration != null) {
+            return Timestamp(endTime.time - duration)
+        }
+        return endTime ?: Timestamp(0)
     }
 }

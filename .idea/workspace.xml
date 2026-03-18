@@ -5,28 +5,93 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c48bdc0d-e2f5-480e-b2b0-8ec50f82af9a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.mcp.json" beforeDir="false" afterPath="$PROJECT_DIR$/.mcp.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/docker-compose.cibseven.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/docker-compose.dev.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/docker-compose.otel.yml" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/.java-version" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/getting-started/quickstart.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/getting-started/quickstart.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/mcp-apps/verbindung.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/mcp-apps/verbindung.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/index-resource.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/index-resource.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/server.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/styles/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/styles/globals.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/claim-task-action.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/claim-task-action.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/complete-task-action.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/complete-task-action.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/retry-job-action.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/retry-job-action.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/analyze-process-performance.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/analyze-process-performance.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/compare-execution-periods.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/compare-execution-periods.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/find-failed-instances.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/find-failed-instances.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/search-by-variable.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/search-by-variable.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/search-process-instances.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/search-process-instances.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/trace-process-execution.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-analytics-mcp-server/src/tools/trace-process-execution.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/history-timeline/history-timeline.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/history-timeline/history-timeline.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/incident-panel/incident-panel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/incident-panel/incident-panel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/instance-detail/instance-detail.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/resources/instance-detail/instance-detail.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-analytics-dashboard.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-analytics-dashboard.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-history-timeline.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-history-timeline.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-incident-panel.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-incident-panel.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-instance-detail.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-instance-detail.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-process-list.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-process-list.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-task-dashboard.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/src/tools/show-task-dashboard.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/tsconfig.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pnpm-lock.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/camunda7-mcp-apps/tests/simulations/show-incident-panel.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/camunda7-mcp-apps/tests/simulations/show-incident-panel.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/META-INF/cibseven-example.kotlin_module" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/META-INF/cibseven-example.kotlin_module" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/com/camunda7mcp/example/cibseven/CibSevenExampleApplication.class" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/com/camunda7mcp/example/cibseven/CibSevenExampleApplication.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/com/camunda7mcp/example/cibseven/CibSevenExampleApplicationKt.class" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/com/camunda7mcp/example/cibseven/CibSevenExampleApplicationKt.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/com/camunda7mcp/example/cibseven/NotifyApplicantDelegate.class" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/com/camunda7mcp/example/cibseven/NotifyApplicantDelegate.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/com/camunda7mcp/example/cibseven/TestDataSeeder.class" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/classes/kotlin/main/com/camunda7mcp/example/cibseven/TestDataSeeder.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/counters.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/counters.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.len" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/last-build.bin" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/cacheable/last-build.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/local-state/build-history.bin" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/kotlin/compileKotlin/local-state/build-history.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/libs/cibseven-example-0.1.0-plain.jar" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/libs/cibseven-example-0.1.0-plain.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/libs/cibseven-example.jar" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/examples/cibseven-example/build/libs/cibseven-example.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/shared-history-clickhouse/src/main/kotlin/com/camunda7mcp/history/ClickHouseClient.kt" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/shared-history-clickhouse/src/main/kotlin/com/camunda7mcp/history/ClickHouseClient.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,7 +99,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="378" />
+    <option name="cachedIndexableFilesCount" value="356" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="ExternalProjectsData">
@@ -76,6 +141,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "dominikhorn93"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "git@github.com:Miragon/c7-mcp-ecosystems.git",
+    "accountId": "6d2bd9e0-7407-4ff4-8ea3-9f4750140d7f"
+  }
+}]]></component>
   <component name="GradleScriptDefinitionsStorage" workingDir="$PROJECT_DIR$/plugins" gradleHome="$USER_HOME$/.gradle/wrapper/dists/gradle-8.10.2-bin/a04bxjujx95o3nb99gddekhwo/gradle-8.10.2" javaHome="$USER_HOME$/Library/Java/JavaVirtualMachines/corretto-21.0.8/Contents/Home" gradleVersion="8.10.2" />
   <component name="KubernetesApiPersistence">{}</component>
   <component name="KubernetesApiProvider">{
@@ -92,35 +169,36 @@
   <component name="ProjectViewState">
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Gradle.plugins [build].executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.group.build&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;/Users/dominikhorn/Code/automation-mcp/node_modules/typescript/lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Gradle.plugins [build].executor": "Run",
+    "Gradle.plugins [clean].executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "feat/ui-rework",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "pnpm",
+    "settings.editor.selected.configurable": "configurable.group.build",
+    "to.speed.mode.migration.done": "true",
+    "ts.external.directory.path": "/Users/dominikhorn/Code/automation-mcp/node_modules/typescript/lib",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;clickhouse&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "clickhouse"
     ]
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Gradle.plugins [build]">
     <configuration name="plugins [build]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
@@ -134,6 +212,31 @@
         <option name="taskNames">
           <list>
             <option value="build" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <ExternalSystemDebugDisabled>false</ExternalSystemDebugDisabled>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <GradleProfilingDisabled>false</GradleProfilingDisabled>
+      <GradleCoverageDisabled>false</GradleCoverageDisabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="plugins [clean]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/plugins" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="clean" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -164,6 +267,7 @@
     <recent_temporary>
       <list>
         <item itemvalue="Gradle.plugins [build]" />
+        <item itemvalue="Gradle.plugins [clean]" />
       </list>
     </recent_temporary>
   </component>
@@ -183,7 +287,7 @@
       <option name="presentableId" value="Default" />
       <updated>1773746897660</updated>
       <workItem from="1773746899123" duration="16111000" />
-      <workItem from="1773783050394" duration="597000" />
+      <workItem from="1773783050394" duration="4123000" />
     </task>
     <servers />
   </component>

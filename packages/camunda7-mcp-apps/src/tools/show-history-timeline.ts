@@ -30,8 +30,7 @@ SELECT
     end_time,
     duration_in_millis,
     assignee,
-    task_id,
-    canceled
+    task_id
 FROM camunda_history.camunda_activity_instances
 WHERE process_instance_id = ${pid}
 ORDER BY start_time ASC`),
@@ -71,7 +70,6 @@ LIMIT 1`),
     durationInMillis: a.duration_in_millis != null ? Number(a.duration_in_millis) : null,
     assignee: (a.assignee as string) ?? null,
     taskId: (a.task_id as string) ?? null,
-    canceled: a.canceled === true || a.canceled === 1,
   }));
 
   return {

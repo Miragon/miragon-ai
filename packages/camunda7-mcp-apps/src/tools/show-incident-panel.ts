@@ -26,10 +26,7 @@ interface IncidentRow {
   activity_id: string;
   incident_message: string | null;
   create_time: string;
-  job_definition_id: string | null;
   configuration: string | null;
-  failed_activity_id: string | null;
-  annotation: string | null;
 }
 
 export default async function (args: Args, _extra: ToolHandlerExtra) {
@@ -54,11 +51,8 @@ SELECT
     activity_id,
     incident_message,
     create_time,
-    job_definition_id,
-    configuration,
-    failed_activity_id,
-    annotation
-FROM camunda_history.camunda_incidents
+    configuration
+FROM camunda_history.camunda_incidents FINAL
 WHERE ${conditions.join(' AND ')}
 ORDER BY process_definition_key, create_time DESC
 LIMIT 200`;
@@ -88,10 +82,7 @@ LIMIT 200`;
         activityId: r.activity_id,
         incidentMessage: r.incident_message ?? null,
         incidentTimestamp: r.create_time,
-        jobDefinitionId: r.job_definition_id ?? null,
         configuration: r.configuration ?? null,
-        failedActivityId: r.failed_activity_id ?? null,
-        annotation: r.annotation ?? null,
       })),
     }));
 

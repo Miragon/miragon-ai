@@ -18,11 +18,13 @@ interface DefinitionBreakdownItem {
   processDefinitionKey: string;
   totalInstances: number;
   completed: number;
+  running: number;
   failed: number;
   avgDurationMs: number | null;
 }
 
 interface AnalyticsOutput {
+  totalCount: number;
   completedCount: number;
   runningCount: number;
   failedCount: number;
@@ -87,7 +89,13 @@ export function AnalyticsDashboardResource() {
     <div className="flex flex-col gap-6 p-6 bg-card text-card-foreground">
       <h2 className="text-xl font-semibold">Process Analytics</h2>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium opacity-80 text-muted-foreground">Total</p>
+            <p className="text-2xl font-bold">{output.totalCount}</p>
+          </CardContent>
+        </Card>
         <Card className="gap-0 py-0 shadow-none bg-success/10 border-success/30 text-success-foreground">
           <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">Completed</p>
@@ -150,7 +158,9 @@ export function AnalyticsDashboardResource() {
                 <CardContent className="flex items-center justify-between p-3">
                   <span className="font-mono text-sm font-medium">{def.processDefinitionKey}</span>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{def.completed} completed</span>
+                    <span>{def.totalInstances} total</span>
+                    <span className="text-success-foreground">{def.completed} completed</span>
+                    <span className="text-info-foreground">{def.running} running</span>
                     {def.failed > 0 && (
                       <Badge variant="destructive">{def.failed} failed</Badge>
                     )}

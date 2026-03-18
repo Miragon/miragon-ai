@@ -40,7 +40,7 @@ SELECT
     min(i.create_time) AS first_occurrence,
     max(i.create_time) AS last_occurrence,
     groupArray(10)(i.process_instance_id) AS sample_instance_ids
-FROM camunda_history.camunda_incidents i
+FROM camunda_history.camunda_incidents FINAL i
 WHERE ${where}
 GROUP BY i.incident_message, i.activity_id, i.process_definition_key
 ORDER BY incident_count DESC
@@ -58,7 +58,7 @@ SELECT
     i.incident_message,
     i.activity_id AS failed_activity,
     i.create_time AS incident_time
-FROM camunda_history.camunda_incidents i
+FROM camunda_history.camunda_incidents FINAL i
 JOIN camunda_history.camunda_process_instances p ON p.id = i.process_instance_id
 WHERE ${where}
 ORDER BY i.create_time DESC
