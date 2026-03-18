@@ -1,4 +1,0 @@
-seed:
-  instances: 200
-  completed-ratio: 0.7
-  days-back: 30
