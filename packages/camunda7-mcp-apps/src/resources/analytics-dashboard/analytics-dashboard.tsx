@@ -1,4 +1,6 @@
 import { useToolData, type ResourceConfig } from 'sunpeak';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface HistoricProcessInstance {
   id: string;
@@ -25,10 +27,12 @@ export const resource: ResourceConfig = {
 
 function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
-    <div className={`rounded-lg border p-4 ${color}`}>
-      <p className="text-sm font-medium opacity-80">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
-    </div>
+    <Card className={`gap-0 py-0 shadow-none ${color}`}>
+      <CardContent className="p-4">
+        <p className="text-sm font-medium opacity-80">{label}</p>
+        <p className="text-2xl font-bold">{value}</p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -46,29 +50,29 @@ export function AnalyticsDashboardResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading analytics...</span>
+      <div className="flex items-center justify-center p-12 bg-card">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-3 text-sm text-muted-foreground">Loading analytics...</span>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <p className="text-red-800 dark:text-red-300">Failed to load analytics</p>
-        </div>
+      <div className="p-6 bg-card">
+        <Alert variant="destructive">
+          <AlertDescription>Failed to load analytics</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (isCancelled) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
-          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
-        </div>
+      <div className="p-6 bg-card">
+        <Alert className="border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-300">
+          <AlertDescription>Request was cancelled</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -84,8 +88,8 @@ export function AnalyticsDashboardResource() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Process Analytics</h2>
+    <div className="p-6 space-y-6 bg-card">
+      <h2 className="text-xl font-semibold">Process Analytics</h2>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard
@@ -112,7 +116,7 @@ export function AnalyticsDashboardResource() {
 
       {byKey.size > 0 && (
         <div>
-          <h3 className="mb-3 text-lg font-medium text-gray-900 dark:text-gray-100">By Process Definition</h3>
+          <h3 className="mb-3 text-lg font-medium">By Process Definition</h3>
           <div className="space-y-2">
             {[...byKey.entries()].map(([key, instances]) => {
               const durations = instances
@@ -123,16 +127,15 @@ export function AnalyticsDashboardResource() {
                 : null;
 
               return (
-                <div
-                  key={key}
-                  className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <span className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">{key}</span>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span>{instances.length} completed</span>
-                    <span>avg {formatDuration(avg)}</span>
-                  </div>
-                </div>
+                <Card key={key} className="gap-0 py-0 shadow-none">
+                  <CardContent className="flex items-center justify-between p-3">
+                    <span className="font-mono text-sm font-medium">{key}</span>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>{instances.length} completed</span>
+                      <span>avg {formatDuration(avg)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>

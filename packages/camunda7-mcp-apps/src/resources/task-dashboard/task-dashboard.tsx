@@ -1,4 +1,9 @@
 import { useToolData, useCallServerTool, type ResourceConfig } from 'sunpeak';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface TaskData {
   id: string;
@@ -36,9 +41,9 @@ function PriorityBadge({ priority }: { priority: number }) {
     normal: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[level]}`}>
+    <Badge variant="secondary" className={colors[level]}>
       {level}
-    </span>
+    </Badge>
   );
 }
 
@@ -56,7 +61,7 @@ function TimeAgo({ date }: { date: string }) {
   else if (diffMins > 0) text = `${diffMins}m ago`;
   else text = 'just now';
 
-  return <span className="text-sm text-gray-500 dark:text-gray-400" title={then.toLocaleString()}>{text}</span>;
+  return <span className="text-sm text-muted-foreground" title={then.toLocaleString()}>{text}</span>;
 }
 
 export function TaskDashboardResource() {
@@ -65,29 +70,29 @@ export function TaskDashboardResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading tasks...</span>
+      <div className="flex items-center justify-center p-12 bg-card">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-3 text-sm text-muted-foreground">Loading tasks...</span>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <p className="text-red-800 dark:text-red-300">Failed to load tasks</p>
-        </div>
+      <div className="p-6 bg-card">
+        <Alert variant="destructive">
+          <AlertDescription>Failed to load tasks</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (isCancelled) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
-          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
-        </div>
+      <div className="p-6 bg-card">
+        <Alert className="border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-300">
+          <AlertDescription>Request was cancelled</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -104,84 +109,76 @@ export function TaskDashboardResource() {
   };
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-4 bg-card">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          Open Tasks
-        </h2>
-        <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-          {output.totalCount} total
-        </span>
+        <h2 className="text-xl font-semibold">Open Tasks</h2>
+        <Badge variant="secondary">{output.totalCount} total</Badge>
       </div>
 
       {output.filters.assignee && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Filtered by assignee: <strong>{output.filters.assignee}</strong>
         </p>
       )}
 
       {output.tasks.length === 0 ? (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-800">
-          <p className="text-gray-500 dark:text-gray-400">No tasks found</p>
-        </div>
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">No tasks found</p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Task</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Assignee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Process</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Priority</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Created</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Task</TableHead>
+                <TableHead>Assignee</TableHead>
+                <TableHead>Process</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {output.tasks.map((task) => (
-                <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900 dark:text-gray-100">{task.name ?? 'Unnamed Task'}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{task.taskDefinitionKey}</div>
-                  </td>
-                  <td className="px-4 py-3">
+                <TableRow key={task.id}>
+                  <TableCell>
+                    <div className="font-medium">{task.name ?? 'Unnamed Task'}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{task.taskDefinitionKey}</div>
+                  </TableCell>
+                  <TableCell>
                     {task.assignee ? (
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{task.assignee}</span>
+                      <span className="text-sm">{task.assignee}</span>
                     ) : (
-                      <span className="text-sm italic text-gray-400 dark:text-gray-500">Unassigned</span>
+                      <span className="text-sm italic text-muted-foreground">Unassigned</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs font-mono text-gray-600 dark:text-gray-400">
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs font-mono text-muted-foreground">
                       {task.processDefinitionId.split(':')[0]}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <PriorityBadge priority={task.priority} />
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <TimeAgo date={task.created} />
-                  </td>
-                  <td className="px-4 py-3 space-x-2">
+                  </TableCell>
+                  <TableCell className="space-x-2">
                     {!task.assignee && (
-                      <button
-                        onClick={() => handleClaim(task.id)}
-                        className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
-                      >
+                      <Button size="sm" onClick={() => handleClaim(task.id)}>
                         Claim
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      onClick={() => handleComplete(task.id)}
-                      className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleComplete(task.id)}>
                       Complete
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

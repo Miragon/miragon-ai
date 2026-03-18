@@ -1,4 +1,8 @@
 import { useToolData, type ResourceConfig } from 'sunpeak';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface VariableValue {
   value: unknown;
@@ -35,34 +39,32 @@ export const resource: ResourceConfig = {
 function VariableTable({ variables }: { variables: Record<string, VariableValue> }) {
   const entries = Object.entries(variables);
   if (entries.length === 0) {
-    return <p className="text-sm text-gray-500 dark:text-gray-400 italic">No variables</p>;
+    return <p className="text-sm text-muted-foreground italic">No variables</p>;
   }
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-800">
-          <tr>
-            <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Name</th>
-            <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Type</th>
-            <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Value</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+    <div className="rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Value</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {entries.map(([name, variable]) => (
-            <tr key={name}>
-              <td className="px-4 py-2 text-sm font-mono font-medium text-gray-900 dark:text-gray-100">{name}</td>
-              <td className="px-4 py-2">
-                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                  {variable.type ?? 'unknown'}
-                </span>
-              </td>
-              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 font-mono max-w-xs truncate">
+            <TableRow key={name}>
+              <TableCell className="font-mono font-medium">{name}</TableCell>
+              <TableCell>
+                <Badge variant="secondary">{variable.type ?? 'unknown'}</Badge>
+              </TableCell>
+              <TableCell className="text-muted-foreground font-mono max-w-xs truncate">
                 {JSON.stringify(variable.value)}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -71,10 +73,10 @@ function ActivityTreeNode({ node, depth = 0 }: { node: ActivityTree; depth?: num
   return (
     <div style={{ paddingLeft: `${depth * 16}px` }}>
       <div className="flex items-center gap-2 py-1">
-        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+        <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
           {node.activityType}
-        </span>
-        <span className="text-sm text-gray-900 dark:text-gray-100">
+        </Badge>
+        <span className="text-sm">
           {node.activityName ?? node.activityId}
         </span>
       </div>
@@ -90,29 +92,29 @@ export function InstanceDetailResource() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">Loading instance details...</span>
+      <div className="flex items-center justify-center p-12 bg-card">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-3 text-sm text-muted-foreground">Loading instance details...</span>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <p className="text-red-800 dark:text-red-300">Failed to load instance details</p>
-        </div>
+      <div className="p-6 bg-card">
+        <Alert variant="destructive">
+          <AlertDescription>Failed to load instance details</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (isCancelled) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
-          <p className="text-yellow-800 dark:text-yellow-300">Request was cancelled</p>
-        </div>
+      <div className="p-6 bg-card">
+        <Alert className="border-yellow-200 text-yellow-800 dark:border-yellow-800 dark:text-yellow-300">
+          <AlertDescription>Request was cancelled</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -122,58 +124,70 @@ export function InstanceDetailResource() {
   const { instance, activityTree, variables } = output;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-card">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          Process Instance
-        </h2>
-        <p className="text-sm font-mono text-gray-500 dark:text-gray-400">{instance.id}</p>
+        <h2 className="text-xl font-semibold">Process Instance</h2>
+        <p className="text-sm font-mono text-muted-foreground">{instance.id}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Definition</p>
-          <p className="text-sm font-mono font-medium text-gray-900 dark:text-gray-100">
-            {instance.definitionId.split(':')[0]}
-          </p>
-        </div>
-        <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Business Key</p>
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-            {instance.businessKey ?? '-'}
-          </p>
-        </div>
-        <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Status</p>
-          <p className="text-sm font-medium">
-            {instance.ended ? (
-              <span className="text-gray-500">Ended</span>
-            ) : instance.suspended ? (
-              <span className="text-yellow-600 dark:text-yellow-400">Suspended</span>
-            ) : (
-              <span className="text-green-600 dark:text-green-400">Active</span>
-            )}
-          </p>
-        </div>
-        <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Variables</p>
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-            {Object.keys(variables).length}
-          </p>
-        </div>
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Definition</p>
+            <p className="text-sm font-mono font-medium">
+              {instance.definitionId.split(':')[0]}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Business Key</p>
+            <p className="text-sm font-medium">
+              {instance.businessKey ?? '-'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Status</p>
+            <p className="text-sm font-medium">
+              {instance.ended ? (
+                <Badge variant="secondary">Ended</Badge>
+              ) : instance.suspended ? (
+                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                  Suspended
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                  Active
+                </Badge>
+              )}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Variables</p>
+            <p className="text-sm font-medium">
+              {Object.keys(variables).length}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {activityTree && (
         <div>
-          <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-gray-100">Activity Tree</h3>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-            <ActivityTreeNode node={activityTree} />
-          </div>
+          <h3 className="mb-2 text-lg font-medium">Activity Tree</h3>
+          <Card className="gap-0 py-0 shadow-none">
+            <CardContent className="p-4">
+              <ActivityTreeNode node={activityTree} />
+            </CardContent>
+          </Card>
         </div>
       )}
 
       <div>
-        <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-gray-100">Variables</h3>
+        <h3 className="mb-2 text-lg font-medium">Variables</h3>
         <VariableTable variables={variables} />
       </div>
     </div>
