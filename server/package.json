@@ -17,14 +17,14 @@
     "start": "cross-env NODE_ENV=production node dist/index.js"
   },
   "dependencies": {
-    "@automation-mcp/core": "workspace:*",
+    "@miragon/mcp-toolkit-core": "workspace:*",
     "@automation-mcp/mcp-camunda7": "workspace:*",
     "@automation-mcp/mcp-analytics": "workspace:*",
-    "mcp-use": "^1.22.2",
+    "mcp-use": "1.22.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@automation-mcp/ui": "workspace:*",
+    "@miragon/mcp-toolkit-ui": "workspace:*",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.14",

@@ -1,4 +1,4 @@
-import { Card, CardContent, Badge, Alert, AlertDescription } from "@automation-mcp/ui"
+import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 
 interface IncidentData {
   id: string

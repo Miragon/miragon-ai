@@ -1,7 +1,8 @@
-import type { ModulePlugin } from "@automation-mcp/core"
+import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createCamunda7Client, type Camunda7AuthType } from "@automation-mcp/client-camunda7"
 import { registerTools } from "./tools/index.js"
 import { registerWidgetTools } from "./widget-tools.js"
+import { definition } from "./definition.js"
 
 export interface Camunda7PluginConfig {
   baseUrl: string
@@ -11,7 +12,7 @@ export interface Camunda7PluginConfig {
   token?: string
 }
 
-export function createPlugin(config: Camunda7PluginConfig): ModulePlugin {
+export function createPlugin(config: Camunda7PluginConfig): AppPlugin {
   const client = createCamunda7Client({
     baseUrl: config.baseUrl,
     authType: config.authType,
@@ -20,10 +21,8 @@ export function createPlugin(config: Camunda7PluginConfig): ModulePlugin {
     token: config.token,
   })
   return {
-    name: "camunda7",
-    version: "0.1.0",
-    description:
-      "Camunda 7 / CIB Seven BPM operations: process definitions, instances, tasks, external tasks, incidents, jobs, history.",
+    definition,
+    appConfig: { client },
     registerTools: (server) => {
       registerTools(server, client)
     },

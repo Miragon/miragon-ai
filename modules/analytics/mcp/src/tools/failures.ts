@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { createToolRegistrar } from "@automation-mcp/core"
+import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { escapeString, type ClickHouseClient } from "../client.js"
 
 type Register = ReturnType<typeof createToolRegistrar<ClickHouseClient>>

@@ -18,15 +18,24 @@ export function createClickHouseClient(config: ClickHouseConfig): ClickHouseClie
         database,
       )}&default_format=JSONEachRow&readonly=1`
 
-      const response = await fetch(queryUrl, {
-        method: "POST",
-        headers: {
-          "X-ClickHouse-User": username,
-          "X-ClickHouse-Key": password,
-          "Content-Type": "text/plain",
-        },
-        body: sql,
-      })
+      let response: Response
+      try {
+        response = await fetch(queryUrl, {
+          method: "POST",
+          headers: {
+            "X-ClickHouse-User": username,
+            "X-ClickHouse-Key": password,
+            "Content-Type": "text/plain",
+          },
+          body: sql,
+        })
+      } catch (err) {
+        const cause = (err as { cause?: { code?: string; message?: string } }).cause
+        const detail = `${cause?.code ?? ""} ${cause?.message ?? (err as Error).message}`.trim()
+        throw new Error(
+          `ClickHouse request to ${queryUrl} (user=${username}) failed: ${detail}`,
+        )
+      }
 
       if (!response.ok) {
         const errorText = await response.text()

@@ -1,0 +1,308 @@
+{
+  "a45a2ccf-9372-43f7-b3d2-df58fd58367b": {
+    "lastAccessedAt": 1776114956915,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "bd0779fe-fc3f-4d29-9596-7e2e21c57f3c": {
+    "lastAccessedAt": 1776114956913,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "0c12b912-4915-4f08-9d59-ff77902369b4": {
+    "lastAccessedAt": 1776114986790,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "3c7f7412-7b8f-4623-85ef-0902a99abe2f": {
+    "lastAccessedAt": 1776114994959,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "cc249cea-b551-4c78-86b9-135d64fea4fc": {
+    "lastAccessedAt": 1776115142003,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "cd492c9e-f0ae-4f61-9a99-1b86b5274bbc": {
+    "lastAccessedAt": 1776115142030,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "241ef07f-8dc3-49ed-bb55-0e5013e12e9a": {
+    "lastAccessedAt": 1776115145709,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "4a3e64f6-9dfe-44ef-9501-4ee455ba24b6": {
+    "lastAccessedAt": 1776115379529,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "da3e759c-1255-4595-864a-1f7c83988141": {
+    "lastAccessedAt": 1776117298415,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "58931e5b-843e-4d8b-8e7d-1c48ba9d998b": {
+    "lastAccessedAt": 1776117298437,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "30939e7d-b672-402f-833a-e55a8314c178": {
+    "lastAccessedAt": 1776117301541,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "f33d6bf6-c0e3-40d6-b11d-8e6ff289be7d": {
+    "lastAccessedAt": 1776117305348,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "a8bda8a0-36bf-4cb0-aca8-2f774702dc8c": {
+    "lastAccessedAt": 1776117613999,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "5d7e2615-41af-4a37-8ae4-f822e798444d": {
+    "lastAccessedAt": 1776117614020,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "7e90cd64-f205-4067-9a0b-24f009e8b149": {
+    "lastAccessedAt": 1776117624325,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "fb6a5565-8f1e-48cc-9300-c498d3ac1ddb": {
+    "lastAccessedAt": 1776117624481,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "3ce18a06-fbf7-4183-9532-82dc207f4c02": {
+    "lastAccessedAt": 1776117835666,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "88c80ce4-0c12-435e-a1ad-426287385335": {
+    "lastAccessedAt": 1776117835691,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "aa33a692-2d74-4e3a-a357-5979651cee46": {
+    "lastAccessedAt": 1776117939962,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "54cf539b-51a9-4318-bdeb-5faa125f895b": {
+    "lastAccessedAt": 1776117939989,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "671c0193-8fc0-4589-be08-c7d1acbcd990": {
+    "lastAccessedAt": 1776118255382,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "87afa8d4-f006-4249-8a78-5c4943357b74": {
+    "lastAccessedAt": 1776118255388,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "2b877d42-65c4-4720-8e94-69866bd0c9cf": {
+    "lastAccessedAt": 1776118387573,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "9f9e3841-192e-4b64-ba27-ae38069abdfe": {
+    "lastAccessedAt": 1776118387588,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "3d6b6803-dead-4b63-a6f4-dbb636833518": {
+    "lastAccessedAt": 1776118473520,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "91d331a0-6b8c-449a-8b12-ed3f93a3d253": {
+    "lastAccessedAt": 1776118473540,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "d867551a-3cb9-4b13-85e4-a01c289a8395": {
+    "lastAccessedAt": 1776119150127,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "8eaaa0c1-534d-432e-9a15-27996c1626ce": {
+    "lastAccessedAt": 1776119150123,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "f77d8922-0dd9-40db-b025-b7d751d148bf": {
+    "lastAccessedAt": 1776119185641,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "0407744e-0633-4f19-8e2a-8ad34a7fc684": {
+    "lastAccessedAt": 1776119202529,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "8d227ca4-4c06-49f0-a7ed-52fbdb09811b": {
+    "lastAccessedAt": 1776119454101,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "db81f9cb-5a1d-4f55-8019-561b071f87f4": {
+    "lastAccessedAt": 1776119454119,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "b4e1be42-f87c-46a1-a1f3-8050671ed641": {
+    "lastAccessedAt": 1776121262101,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "mcp-remote-fallback-test",
+      "version": "0.0.0"
+    },
+    "protocolVersion": "unknown"
+  },
+  "6c79e83c-8092-4964-afd5-78ed8e35c270": {
+    "lastAccessedAt": 1776121262101,
+    "clientCapabilities": {},
+    "clientInfo": {
+      "name": "claude-ai (via mcp-remote 0.1.37)",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "unknown"
+  }
+}

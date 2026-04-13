@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { Client } from "@automation-mcp/client-camunda7"
-import type { createToolRegistrar } from "@automation-mcp/core"
+import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getJobs,
   setJobRetries,

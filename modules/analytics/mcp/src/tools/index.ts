@@ -1,5 +1,5 @@
 import type { MCPServer } from "mcp-use/server"
-import { createToolRegistrar } from "@automation-mcp/core"
+import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { ClickHouseClient } from "../client.js"
 import { registerSearchTools } from "./search.js"
 import { registerPerformanceTools } from "./performance.js"

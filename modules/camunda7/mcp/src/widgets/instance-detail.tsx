@@ -10,7 +10,7 @@ import {
   TableCell,
   Alert,
   AlertDescription,
-} from "@automation-mcp/ui"
+} from "@miragon/mcp-toolkit-ui"
 
 interface VariableValue {
   value: unknown

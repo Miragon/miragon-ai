@@ -1,6 +1,6 @@
 import type { MCPServer } from "mcp-use/server"
 import type { Client } from "@automation-mcp/client-camunda7"
-import { createToolRegistrar } from "@automation-mcp/core"
+import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 
 import { registerProcessDefinitionTools } from "./process-definitions.js"
 import { registerProcessInstanceTools } from "./process-instances.js"

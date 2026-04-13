@@ -10,7 +10,7 @@ import {
   CardContent,
   Alert,
   AlertDescription,
-} from "@automation-mcp/ui"
+} from "@miragon/mcp-toolkit-ui"
 
 interface TaskData {
   id: string

@@ -1,7 +1,8 @@
-import type { ModulePlugin } from "@automation-mcp/core"
+import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createClickHouseClient } from "./client.js"
 import { registerTools } from "./tools/index.js"
 import { registerWidgetTools } from "./widget-tools.js"
+import { definition } from "./definition.js"
 
 export interface AnalyticsPluginConfig {
   url: string
@@ -10,13 +11,11 @@ export interface AnalyticsPluginConfig {
   database: string
 }
 
-export function createPlugin(config: AnalyticsPluginConfig): ModulePlugin {
+export function createPlugin(config: AnalyticsPluginConfig): AppPlugin {
   const client = createClickHouseClient(config)
   return {
-    name: "analytics",
-    version: "0.1.0",
-    description:
-      "Camunda process analytics via ClickHouse: search, performance KPIs, failure patterns, trace reconstruction.",
+    definition,
+    appConfig: { client },
     registerTools: (server) => {
       registerTools(server, client)
     },

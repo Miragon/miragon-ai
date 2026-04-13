@@ -1,5 +1,12 @@
 import type { MCPServer } from "mcp-use/server"
-import type { ModulePlugin } from "@automation-mcp/core"
+import {
+  StepRegistry,
+  WidgetRegistry,
+  loadApps,
+  type AppConfig,
+  type AppConfigEntry,
+  type AppPlugin,
+} from "@miragon/mcp-toolkit-core"
 import { z } from "zod"
 
 import { createPlugin as createCamunda7Plugin } from "@automation-mcp/mcp-camunda7"
@@ -27,7 +34,7 @@ const analyticsConfigSchema = z.object({
 const MODULE_REGISTRY: Record<
   string,
   {
-    createPlugin: (config: Record<string, unknown>) => ModulePlugin
+    createPlugin: (config: Record<string, unknown>) => AppPlugin
     configFromEnv: () => Record<string, unknown>
   }
 > = {
@@ -81,14 +88,50 @@ function getActiveModuleNames(): string[] {
     })
 }
 
-export function createPlugins(): ModulePlugin[] {
-  return getActiveModuleNames().map((name) => {
-    const entry = MODULE_REGISTRY[name]
-    return entry.createPlugin(entry.configFromEnv())
-  })
+function getActiveAppEntries(): AppConfigEntry[] {
+  return getActiveModuleNames().map((name) => ({
+    app: name,
+    config: MODULE_REGISTRY[name].configFromEnv(),
+  }))
 }
 
-export function registerModuleTools(server: MCPServer, plugins: ModulePlugin[]) {
+export const config: AppConfig = {
+  activeApps: getActiveAppEntries(),
+  pipelines: {},
+}
+
+function createPlugins(): AppPlugin[] {
+  return config.activeApps
+    .filter((entry) => MODULE_REGISTRY[entry.app])
+    .map((entry) => MODULE_REGISTRY[entry.app].createPlugin(entry.config))
+}
+
+/**
+ * Creates the framework registries and loads every active app's steps and
+ * widgets into them. Also collects per-app `appConfig` values so pipeline
+ * steps can access their module client via `executePipeline(..., appConfigs)`.
+ */
+export function createRegistries() {
+  const plugins = createPlugins()
+  const stepRegistry = new StepRegistry()
+  const widgetRegistry = new WidgetRegistry()
+  loadApps(
+    plugins.map((p) => p.definition),
+    stepRegistry,
+    widgetRegistry,
+  )
+
+  const appConfigs: Record<string, Record<string, unknown>> = {}
+  for (const plugin of plugins) {
+    if (plugin.appConfig) {
+      appConfigs[plugin.definition.name] = plugin.appConfig
+    }
+  }
+
+  return { stepRegistry, widgetRegistry, config, plugins, appConfigs }
+}
+
+export function registerModuleTools(server: MCPServer, plugins: AppPlugin[]) {
   for (const plugin of plugins) {
     plugin.registerTools?.(server)
   }
@@ -97,7 +140,7 @@ export function registerModuleTools(server: MCPServer, plugins: ModulePlugin[]) 
 export function registerWidgetTools(
   server: MCPServer,
   resourceUri: string,
-  plugins: ModulePlugin[],
+  plugins: AppPlugin[],
 ) {
   for (const plugin of plugins) {
     plugin.registerWidgetTools?.(server, resourceUri)
