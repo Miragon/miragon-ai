@@ -3,7 +3,7 @@ dist/
 .turbo/
 *.tsbuildinfo
 .env
-
+miranum-ai/
 # Gradle
 plugins/.gradle/
 plugins/build/

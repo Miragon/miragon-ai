@@ -1,43 +1,7 @@
 
 {
   "mcpServers": {
-    "camunda7-mcp-server": {
-      "command": "node",
-      "args": ["packages/camunda7-mcp-server/dist/index.js"],
-      "env": {
-        "ENGINE_TYPE": "cibseven",
-        "ENGINE_BASE_URL": "http://localhost:8080/engine-rest",
-        "ENGINE_AUTH_TYPE": "basic",
-        "ENGINE_USERNAME": "demo",
-        "ENGINE_PASSWORD": "demo"
-      }
-    },
-     "clickhouse-mcp-server": {
-      "command": "/Users/dominikhorn/.local/pipx/venvs/mcp-clickhouse/bin/mcp-clickhouse",
-      "args": [],
-      "env": {
-        "CLICKHOUSE_HOST": "localhost",
-        "CLICKHOUSE_PORT": "8123",
-        "CLICKHOUSE_USER": "camunda",
-        "CLICKHOUSE_PASSWORD": "camunda123",
-        "CLICKHOUSE_DATABASE": "camunda_history",
-        "CLICKHOUSE_SECURE": "false"
-      }
-    },
-    "camunda7-analytics-mcp-server": {
-      "command": "node",
-      "args": ["packages/camunda7-analytics-mcp-server/dist/index.js"],
-      "env": {
-        "CLICKHOUSE_URL": "http://localhost:8123",
-        "CLICKHOUSE_USER": "camunda",
-        "CLICKHOUSE_PASSWORD": "camunda123",
-        "CLICKHOUSE_DATABASE": "camunda_history"
-      }
-    },
-    "camunda-apps": {
-      "command": "npx",
-      "args": ["mcp-remote", "http://localhost:8000/mcp"]
-    }              
+                
   }
 }
 

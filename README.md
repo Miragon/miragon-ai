@@ -1,193 +1,137 @@
-# Camunda 7 MCP Ecosystem
+# Automation MCP
 
-A multi-engine MCP-based ecosystem for Camunda 7-compatible process engines. Provides AI-powered process management through [Model Context Protocol](https://modelcontextprotocol.io/) tools, interactive UI apps, and a ClickHouse analytics pipeline.
-
-## Supported Engines
-
-| Engine | Status |
-|--------|--------|
-| **CIB Seven** | Primary — fully supported |
-| **Camunda 7** | Fully supported |
-| **Operaton** | Placeholder — structure ready |
+A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a ClickHouse-backed process analytics module through the [Model Context Protocol](https://modelcontextprotocol.io/). Built on [mcp-use](https://github.com/mcp-use/mcp-use) with OpenAPI-generated clients and interactive MCP App widgets.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │            MCP Host (Claude, ChatGPT, ...)          │
-│  ┌────────────────┐  ┌───────────────────────────┐  │
-│  │  MCP Apps (UI) │  │  camunda7-mcp-server      │  │
-│  │  6 React Apps  │  │  43 Tools + 3 Resources   │  │
-│  └───────┬────────┘  └────────────┬──────────────┘  │
-└──────────┼────────────────────────┼─────────────────┘
-           │                        │
-           ▼                        ▼
-┌───────────────────────┐  ┌──────────────────────┐
-│   Engine Adapter      │  │ ClickHouse           │
-│   (Multi-Engine)      │  │ (History Analytics)  │
-└───┬───────┬───────┬───┘  └──────────────────────┘
-    │       │       │                ▲
-    ▼       ▼       ▼                │
-┌───────┐┌───────┐┌───────┐  History Events
-│Camunda││  CIB  ││Operat.│  (Kotlin Plugins)
-│   7   ││ Seven ││       │
-└───────┘└───────┘└───────┘
+│  ┌──────────────────────────────────────────────┐   │
+│  │         @automation-mcp/server               │   │
+│  │  ┌─────────────────┐  ┌──────────────────┐   │   │
+│  │  │ camunda7 module │  │ analytics module │   │   │
+│  │  │  37 tools       │  │   6 tools        │   │   │
+│  │  │  + 5 widgets    │  │   + 1 widget     │   │   │
+│  │  └────────┬────────┘  └────────┬─────────┘   │   │
+│  └───────────┼─────────────────────┼────────────┘   │
+└──────────────┼─────────────────────┼────────────────┘
+               ▼                     ▼
+    ┌────────────────────┐ ┌─────────────────────┐
+    │  OpenAPI Client    │ │  ClickHouse Client  │
+    │  (hey-api/openapi) │ │  (hand-written)     │
+    └──────────┬─────────┘ └──────────┬──────────┘
+               ▼                      ▼
+    ┌────────────────────┐ ┌─────────────────────┐
+    │   CIB Seven /      │ │   ClickHouse        │
+    │   Camunda 7 REST   │ │   (Camunda History) │
+    └────────────────────┘ └─────────────────────┘
 ```
 
-## Packages
+## Layout
 
-| Package | Description |
-|---------|-------------|
-| `packages/engine-adapter` | Multi-engine REST API abstraction layer |
-| `packages/camunda7-mcp-server` | MCP server with 43 tools + 3 resources |
-| `packages/camunda7-mcp-apps` | 6 interactive UI apps + 3 action tools (sunpeak) |
-| `packages/shared` | Shared TypeScript types and Zod schemas |
-| `plugins/shared-history-clickhouse` | Engine-agnostic ClickHouse client + buffered handler |
-| `plugins/camunda7-history-clickhouse` | Camunda 7 history event plugin |
-| `plugins/cibseven-history-clickhouse` | CIB Seven history event plugin |
+| Path | Description |
+|------|-------------|
+| `server/` | `@automation-mcp/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
+| `modules/camunda7/client/` | `@automation-mcp/client-camunda7` — OpenAPI-generated TypeScript client (hey-api) |
+| `modules/camunda7/mcp/` | `@automation-mcp/mcp-camunda7` — BPM tools + React widgets |
+| `modules/analytics/mcp/` | `@automation-mcp/mcp-analytics` — ClickHouse analytics tools + dashboard widget |
+| `packages/core/` | `@automation-mcp/core` — `ModulePlugin` interface + `createToolRegistrar` helper |
+| `packages/ui/` | `@automation-mcp/ui` — shared shadcn primitives + tailwind globals |
+| `plugins/` | Kotlin OTEL / ClickHouse sync plugins (unchanged) |
+| `docker/` | docker-compose for CIB Seven + ClickHouse + OTEL |
+| `cibseve-open-api-doc.json` | Source spec used by the client codegen |
 
-## Quick Start
-
-### Prerequisites
+## Prerequisites
 
 - Node.js 22+
 - pnpm 10+
-- Docker (for ClickHouse + Engine)
+- Docker (for CIB Seven + ClickHouse)
 
-### 1. Start the infrastructure
-
-```bash
-cd docker
-docker compose up -d
-```
-
-This starts CIB Seven + ClickHouse with the history plugin pre-configured.
-
-### 2. Build
+## Build
 
 ```bash
 pnpm install
+pnpm -F @automation-mcp/client-camunda7 generate  # only after spec changes
 pnpm build
 ```
 
-### 3. Configure MCP client
+The build chain is:
 
-Add to your MCP client configuration (e.g., Claude Desktop):
+1. `@automation-mcp/client-camunda7` — `tsc` against the generated SDK
+2. `@automation-mcp/core`, `@automation-mcp/ui` — shared helpers and UI primitives
+3. `@automation-mcp/mcp-camunda7`, `@automation-mcp/mcp-analytics` — tool + widget modules
+4. `@automation-mcp/server` — Vite bundles `mcp-app.html` (single-file HTML with all widgets) and `tsc` compiles the server
 
-```json
-{
-  "mcpServers": {
-    "camunda7": {
-      "command": "node",
-      "args": ["packages/camunda7-mcp-server/dist/index.js"],
-      "env": {
-        "ENGINE_TYPE": "cibseven",
-        "ENGINE_BASE_URL": "http://localhost:8080/engine-rest",
-        "ENGINE_AUTH_TYPE": "basic",
-        "ENGINE_USERNAME": "demo",
-        "ENGINE_PASSWORD": "demo"
-      }
-    }
-  }
-}
-```
-
-### 4. Optional: Enable ClickHouse search tools
-
-Add these environment variables to also expose the 6 ClickHouse-powered search/analytics tools:
-
-```
-CLICKHOUSE_ENABLED=true
-CLICKHOUSE_URL=http://localhost:8123
-CLICKHOUSE_USER=camunda
-CLICKHOUSE_PASSWORD=camunda123
-CLICKHOUSE_DATABASE=camunda_history
-```
-
-### 5. Optional: OTEL Observability
+## Run
 
 ```bash
-cd docker
-docker compose --profile otel up -d
+cd docker && docker compose up -d cibseven clickhouse
+cd ..
+
+PORT=3010 \
+CAMUNDA_BASE_URL=http://localhost:8080/engine-rest \
+CAMUNDA_AUTH_TYPE=basic \
+CAMUNDA_USERNAME=demo \
+CAMUNDA_PASSWORD=demo \
+CLICKHOUSE_URL=http://localhost:8123 \
+CLICKHOUSE_USERNAME=camunda \
+CLICKHOUSE_PASSWORD=camunda123 \
+CLICKHOUSE_DATABASE=camunda_history \
+pnpm -F @automation-mcp/server start
 ```
 
-This adds OTEL Collector + Jaeger UI (http://localhost:16686) with trace context propagation across all components.
+The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP client at it.
 
-## MCP Tools (43)
-
-### Engine Tools (37)
-
-| Category | Tools |
-|----------|-------|
-| Process Definitions | `list_process_definitions`, `get_process_definition_xml`, `start_process_instance` |
-| Process Instances | `list_process_instances`, `get_process_instance`, `get_activity_instance_tree`, `delete_process_instance`, `modify_process_instance` |
-| User Tasks | `list_tasks`, `get_task`, `claim_task`, `unclaim_task`, `complete_task`, `set_task_assignee` |
-| Messages & Signals | `correlate_message`, `throw_signal` |
-| Variables | `get_variables`, `set_variable` |
-| History | `query_historic_process_instances`, `query_historic_activity_instances`, `query_historic_task_instances`, `query_historic_variable_instances` |
-| Incidents & Jobs | `list_incidents`, `resolve_incident`, `list_jobs`, `set_job_retries` |
-| External Tasks | `fetch_and_lock`, `complete_external_task`, `handle_external_task_failure` |
-| Deployments | `list_deployments`, `create_deployment` |
-
-### ClickHouse Search Tools (6)
-
-| Tool | Description |
-|------|-------------|
-| `search_process_instances` | Flexible search with filters, variable matching, incident join |
-| `analyze_process_performance` | KPI overview + activity bottleneck ranking |
-| `find_failed_instances` | Error pattern analysis with grouping |
-| `search_by_variable` | Find instances by business variable values |
-| `trace_process_execution` | Combined OTEL traces + process history |
-| `compare_execution_periods` | Before/after deployment comparison |
-
-## MCP Resources
-
-| Resource | URI |
-|----------|-----|
-| Process Definitions | `camunda7://process-definitions` |
-| BPMN XML | `camunda7://process/{key}/xml` |
-| Process Stats | `camunda7://process/{key}/stats` |
-
-## MCP Apps (UI)
-
-| App | Description |
-|-----|-------------|
-| Process List | Deployed process definitions with status badges |
-| Task Dashboard | Interactive task management with claim/complete |
-| Instance Detail | Activity tree, variables, BPMN XML |
-| Analytics Dashboard | KPIs, duration metrics, process grouping |
-| History Timeline | Color-coded activity execution timeline |
-| Incident Panel | Error monitoring with retry actions |
-
-## Configuration
+## Environment
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ENGINE_TYPE` | `cibseven` | `camunda7`, `cibseven`, or `operaton` |
-| `ENGINE_BASE_URL` | `http://localhost:8080/engine-rest` | Engine REST API URL |
-| `ENGINE_AUTH_TYPE` | `basic` | `basic`, `bearer`, or `none` |
-| `ENGINE_USERNAME` | — | Username for basic auth |
-| `ENGINE_PASSWORD` | — | Password for basic auth |
-| `ENGINE_TOKEN` | — | Token for bearer auth |
-| `CLICKHOUSE_ENABLED` | `false` | Enable ClickHouse search tools |
+| `PORT` | `3010` | HTTP port the MCP server listens on |
+| `MCP_ACTIVE_MODULES` | all | Comma-separated module list (`camunda7,analytics`) |
+| `CAMUNDA_BASE_URL` | `http://localhost:8080/engine-rest` | Engine REST API base URL |
+| `CAMUNDA_AUTH_TYPE` | `none` | `basic`, `bearer`, or `none` |
+| `CAMUNDA_USERNAME` | — | Basic auth username |
+| `CAMUNDA_PASSWORD` | — | Basic auth password |
+| `CAMUNDA_TOKEN` | — | Bearer token |
 | `CLICKHOUSE_URL` | `http://localhost:8123` | ClickHouse HTTP endpoint |
-| `OTEL_ENABLED` | `true` | Enable OpenTelemetry instrumentation |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTEL Collector endpoint |
+| `CLICKHOUSE_USERNAME` | `default` | ClickHouse user |
+| `CLICKHOUSE_PASSWORD` | `` | ClickHouse password |
+| `CLICKHOUSE_DATABASE` | `camunda_history` | ClickHouse database |
 
-## Development
+## Tools
 
-```bash
-pnpm install
-pnpm build
-pnpm test
-```
+### Camunda7 module (37 + 5 widget tools)
 
-Kotlin plugins (requires Java 17+):
+All tools are prefixed with `camunda7_`:
 
-```bash
-cd plugins
-./gradlew build
-```
+- Process definitions: `list_process_definitions`, `get_process_definition_xml`
+- Process instances: `start_process_instance`, `list_process_instances`, `get_process_instance`, `delete_process_instance`, `modify_process_instance`, `get_activity_instance_tree`, `get_process_instance_variables`, `set_process_instance_variable`
+- User tasks: `list_tasks`, `get_task`, `claim_task`, `unclaim_task`, `complete_task`, `set_task_assignee`, `get_task_variables`
+- External tasks: `fetch_and_lock`, `complete_external_task`, `handle_external_task_failure`
+- Messages / signals: `correlate_message`, `throw_signal`
+- Deployments: `list_deployments`, `create_deployment`
+- Incidents: `list_incidents`, `resolve_incident`
+- Jobs: `list_jobs`, `set_job_retries`
+- History: `query_historic_process_instances`, `query_historic_activity_instances`, `query_historic_task_instances`, `query_historic_variable_instances`
+- Widget tools (return data + render an MCP App): `show_process_list`, `show_task_dashboard`, `show_instance_detail`, `show_incident_panel`, `show_history_timeline`
+
+### Analytics module (6 + 1 widget tool)
+
+All tools are prefixed with `analytics_`:
+
+- `search_process_instances`, `search_by_variable`
+- `analyze_process_performance`, `compare_execution_periods`
+- `find_failed_instances`, `trace_process_execution`
+- Widget tool: `show_dashboard`
+
+## Widget UI
+
+`server/mcp-app.html` is a single-file HTML bundle produced by Vite + `vite-plugin-singlefile`. It contains React, Tailwind, and all widget components. The server exposes it as the MCP resource `ui://automation-mcp/mcp-app.html`. Widget tools return `{ widget, data }` in their structured content; the `McpAppView` component dispatches to the matching widget from the shared registry.
+
+## Deployment
+
+A multi-stage `Dockerfile` builds the server with pruned production deps and exposes port 3010. See `Dockerfile` in the repo root.
 
 ## License
 
