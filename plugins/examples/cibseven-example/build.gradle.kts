@@ -23,4 +23,6 @@ dependencies {
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("cibseven-example.jar")
+    dependsOn(":cibseven-history-clickhouse:shadowJar")
+    dependsOn(":cibseven-otel-eventbridge:shadowJar")
 }

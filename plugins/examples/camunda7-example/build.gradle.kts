@@ -21,4 +21,5 @@ dependencies {
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("camunda7-example.jar")
+    dependsOn(":camunda7-history-clickhouse:shadowJar")
 }
