@@ -13,6 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout private submodules
+        env:
+          TOOLKIT_PAT: ${{ secrets.TOOLKIT_PAT }}
+        run: |
+          git config --global url."https://x-access-token:${TOOLKIT_PAT}@github.com/".insteadOf "git@github.com:"
+          git submodule update --init --recursive
+
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
