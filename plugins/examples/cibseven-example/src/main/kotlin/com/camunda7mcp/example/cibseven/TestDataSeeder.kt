@@ -34,7 +34,7 @@ class TestDataSeeder(
 
     private val loanTypes = listOf("personal", "mortgage", "auto", "business", "student", "home-equity")
 
-    override fun run(vararg args: String?) {
+    override fun run(vararg args: String) {
         log.info("Seeding {} process instances ({}% completed, spread over {} days)...",
             instanceCount, (completedRatio * 100).toInt(), daysBack)
 
