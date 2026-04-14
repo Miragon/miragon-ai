@@ -11,7 +11,7 @@ jobs:
     name: TypeScript (Build + Test + Lint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Checkout private submodules
         env:
@@ -20,9 +20,9 @@ jobs:
           git config --global url."https://x-access-token:${TOOLKIT_PAT}@github.com/".insteadOf "git@github.com:"
           git submodule update --init --recursive
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -43,9 +43,9 @@ jobs:
       run:
         working-directory: plugins
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
