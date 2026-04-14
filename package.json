@@ -13,11 +13,10 @@
     "dev": "dotenv -e .env -- turbo dev --env-mode=loose"
   },
   "devDependencies": {
-    "turbo": "^2.4.0",
-    "dotenv-cli": "^11.0.0",
-    "typescript": "^5.9.3",
-    "vitest": "^3.0.0",
-    "@types/node": "^22.0.0"
+    "turbo": "2.8.17",
+    "dotenv-cli": "11.0.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4",
+    "@types/node": "22.19.15"
   }
 }
-

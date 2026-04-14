@@ -18,11 +18,11 @@
   "dependencies": {
     "@automation-mcp/client-camunda7": "workspace:*",
     "@miragon/mcp-toolkit-core": "workspace:*",
-    "zod": "^4.3.6"
+    "zod": "4.3.6"
   },
   "peerDependencies": {
     "mcp-use": "1.22.2",
-    "react": "^19.0.0"
+    "react": "19.2.4"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -31,9 +31,9 @@
   },
   "devDependencies": {
     "@miragon/mcp-toolkit-ui": "workspace:*",
-    "@types/react": "^19.2.14",
+    "@types/react": "19.2.14",
     "mcp-use": "1.22.2",
-    "react": "^19.2.4",
-    "typescript": "^5.9.3"
+    "react": "19.2.4",
+    "typescript": "5.9.3"
   }
 }
