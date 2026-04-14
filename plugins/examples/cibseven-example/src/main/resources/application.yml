@@ -1,0 +1,55 @@
+server:
+  port: 8080
+
+camunda.bpm:
+  admin-user:
+    id: demo
+    password: demo
+  filter:
+    create: All tasks
+  history-level: full
+  auto-deployment-enabled: true
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:camunda;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: sa
+  config:
+    import:
+      - optional:classpath:cibseven-webclient.properties
+
+cibseven:
+  webclient:
+    services:
+      basePath: services/v1
+    engineRest:
+      url: http://localhost:8080
+    authentication:
+      jwtSecret: Y2liN2V2ZW4tZXhhbXBsZS1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLWp3dC1zaWduaW5nLXB1cnBvc2VzLWFuZC1uZWVkcy10by1iZS1hdC1sZWFzdC0xNTUtY2hhcnMtbG9uZw==
+
+# Enable CIB Seven Spring Event Bridge
+camunda.bpm.eventing:
+  execution: true
+  task: true
+  history: true
+
+# ClickHouse History Plugin
+camunda7mcp:
+  history:
+    clickhouse:
+      enabled: ${CLICKHOUSE_ENABLED:false}
+      url: jdbc:clickhouse://${CLICKHOUSE_HOST:localhost}:${CLICKHOUSE_PORT:8123}/${CLICKHOUSE_DATABASE:camunda_history}?compress=0
+      username: ${CLICKHOUSE_USER:camunda}
+      password: ${CLICKHOUSE_PASSWORD:camunda123}
+      database: ${CLICKHOUSE_DATABASE:camunda_history}
+      batch-size: 100
+      flush-interval-seconds: 5
+      create-schema: false
+      exclude-variables: []
+
+logging:
+  level:
+    root: INFO
+    com.camunda7mcp: DEBUG

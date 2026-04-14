@@ -1,0 +1,6 @@
+packages:
+  - "server"
+  - "modules/*/client"
+  - "modules/*/mcp"
+  - "packages/*"
+  - "vendor/mcp-toolkit/packages/*"

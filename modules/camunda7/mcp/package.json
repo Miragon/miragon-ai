@@ -1,0 +1,39 @@
+{
+  "name": "@automation-mcp/mcp-camunda7",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./widgets": "./src/widgets/index.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@automation-mcp/client-camunda7": "workspace:*",
+    "@miragon/mcp-toolkit-core": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "mcp-use": "1.22.2",
+    "react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@miragon/mcp-toolkit-ui": "workspace:*",
+    "@types/react": "^19.2.14",
+    "mcp-use": "1.22.2",
+    "react": "^19.2.4",
+    "typescript": "^5.9.3"
+  }
+}

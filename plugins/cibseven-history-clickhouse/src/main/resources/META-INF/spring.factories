@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.camunda7mcp.history.cibseven.CibSevenHistoryPlugin

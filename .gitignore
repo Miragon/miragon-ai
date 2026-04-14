@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+.env
+miranum-ai/
+# Gradle
+plugins/.gradle/
+plugins/build/
+plugins/*/build/
+plugins/examples/*/build/
+.idea/
+.mcp-use/

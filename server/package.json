@@ -1,0 +1,45 @@
+{
+  "name": "@automation-mcp/server",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "automation-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build:ui": "cross-env INPUT=mcp-app.html vite build",
+    "build:server": "tsc",
+    "build": "pnpm run build:ui && pnpm run build:server",
+    "dev:ui": "cross-env INPUT=mcp-app.html vite build --watch",
+    "dev": "pnpm run build:ui && mcp-use dev --port 3010 --no-open",
+    "typecheck": "tsc --noEmit",
+    "start": "cross-env NODE_ENV=production node dist/index.js"
+  },
+  "dependencies": {
+    "@miragon/mcp-toolkit-core": "workspace:*",
+    "@automation-mcp/mcp-camunda7": "workspace:*",
+    "@automation-mcp/mcp-analytics": "workspace:*",
+    "mcp-use": "1.22.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@miragon/mcp-toolkit-ui": "workspace:*",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cross-env": "^10.0.0",
+    "radix-ui": "^1.4.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.1",
+    "vite-plugin-singlefile": "^2.3.0"
+  }
+}
