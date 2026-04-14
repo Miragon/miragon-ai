@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.0.21" apply false
-    kotlin("plugin.spring") version "2.0.21" apply false
-    id("com.gradleup.shadow") version "8.3.5" apply false
+    kotlin("jvm") version "2.3.20" apply false
+    kotlin("plugin.spring") version "2.3.20" apply false
+    id("com.gradleup.shadow") version "9.4.1" apply false
 }
 
 allprojects {
@@ -21,7 +21,7 @@ subprojects {
     }
 
     dependencies {
-        "implementation"(platform("org.springframework.boot:spring-boot-dependencies:3.3.5"))
+        "implementation"(platform("org.springframework.boot:spring-boot-dependencies:4.0.5"))
         "testImplementation"("org.jetbrains.kotlin:kotlin-test-junit5")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
