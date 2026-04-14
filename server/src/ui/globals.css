@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@source "../../../../mcp-toolkit/packages/ui/src";
+@source "../../../vendor/mcp-toolkit/packages/ui/src";
 @source "../../../modules/camunda7/mcp/src";
 @source "../../../modules/analytics/mcp/src";
 @import "@miragon/mcp-toolkit-ui/globals.css";
