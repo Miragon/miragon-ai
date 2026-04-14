@@ -47,6 +47,17 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 - Node.js 22+
 - pnpm 10+
 - Docker (for CIB Seven + ClickHouse)
+- Git submodule access to `vendor/mcp-toolkit` (private Miragon repo)
+
+## Setup
+
+The `vendor/mcp-toolkit` directory is a git submodule. Initialize it before running `pnpm install`:
+
+```bash
+git submodule update --init --recursive
+```
+
+If you don't have access to the private submodule, contact a Miragon team member.
 
 ## Build
 
