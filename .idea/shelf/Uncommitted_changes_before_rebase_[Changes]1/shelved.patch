@@ -1,0 +1,91 @@
+Index: .gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>node_modules/\ndist/\n.turbo/\n*.tsbuildinfo\n.env\nmiranum-ai/\n# Gradle\nplugins/.gradle/\nplugins/build/\nplugins/*/build/\nplugins/examples/*/build/\nplugins/gradle/\nplugins/gradlew\nplugins/gradlew.bat\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.gitignore b/.gitignore
+--- a/.gitignore	(revision 5f8f832cad1479679c676c8e220eb8e8823f830c)
++++ b/.gitignore	(date 1776156784963)
+@@ -12,3 +12,4 @@
+ plugins/gradle/
+ plugins/gradlew
+ plugins/gradlew.bat
++.idea/
+\ No newline at end of file
+Index: server/.mcp-use/sessions.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\n  \"a45a2ccf-9372-43f7-b3d2-df58fd58367b\": {\n    \"lastAccessedAt\": 1776114956915,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"bd0779fe-fc3f-4d29-9596-7e2e21c57f3c\": {\n    \"lastAccessedAt\": 1776114956913,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"0c12b912-4915-4f08-9d59-ff77902369b4\": {\n    \"lastAccessedAt\": 1776114986790,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"3c7f7412-7b8f-4623-85ef-0902a99abe2f\": {\n    \"lastAccessedAt\": 1776114994959,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"cc249cea-b551-4c78-86b9-135d64fea4fc\": {\n    \"lastAccessedAt\": 1776115142003,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"cd492c9e-f0ae-4f61-9a99-1b86b5274bbc\": {\n    \"lastAccessedAt\": 1776115142030,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"241ef07f-8dc3-49ed-bb55-0e5013e12e9a\": {\n    \"lastAccessedAt\": 1776115145709,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"4a3e64f6-9dfe-44ef-9501-4ee455ba24b6\": {\n    \"lastAccessedAt\": 1776115379529,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"da3e759c-1255-4595-864a-1f7c83988141\": {\n    \"lastAccessedAt\": 1776117298415,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"58931e5b-843e-4d8b-8e7d-1c48ba9d998b\": {\n    \"lastAccessedAt\": 1776117298437,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"30939e7d-b672-402f-833a-e55a8314c178\": {\n    \"lastAccessedAt\": 1776117301541,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"f33d6bf6-c0e3-40d6-b11d-8e6ff289be7d\": {\n    \"lastAccessedAt\": 1776117305348,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"a8bda8a0-36bf-4cb0-aca8-2f774702dc8c\": {\n    \"lastAccessedAt\": 1776117613999,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"5d7e2615-41af-4a37-8ae4-f822e798444d\": {\n    \"lastAccessedAt\": 1776117614020,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"7e90cd64-f205-4067-9a0b-24f009e8b149\": {\n    \"lastAccessedAt\": 1776117624325,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"fb6a5565-8f1e-48cc-9300-c498d3ac1ddb\": {\n    \"lastAccessedAt\": 1776117624481,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"3ce18a06-fbf7-4183-9532-82dc207f4c02\": {\n    \"lastAccessedAt\": 1776117835666,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"88c80ce4-0c12-435e-a1ad-426287385335\": {\n    \"lastAccessedAt\": 1776117835691,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"aa33a692-2d74-4e3a-a357-5979651cee46\": {\n    \"lastAccessedAt\": 1776117939962,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"54cf539b-51a9-4318-bdeb-5faa125f895b\": {\n    \"lastAccessedAt\": 1776117939989,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"671c0193-8fc0-4589-be08-c7d1acbcd990\": {\n    \"lastAccessedAt\": 1776118255382,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"87afa8d4-f006-4249-8a78-5c4943357b74\": {\n    \"lastAccessedAt\": 1776118255388,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"2b877d42-65c4-4720-8e94-69866bd0c9cf\": {\n    \"lastAccessedAt\": 1776118387573,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"9f9e3841-192e-4b64-ba27-ae38069abdfe\": {\n    \"lastAccessedAt\": 1776118387588,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"3d6b6803-dead-4b63-a6f4-dbb636833518\": {\n    \"lastAccessedAt\": 1776118473520,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"91d331a0-6b8c-449a-8b12-ed3f93a3d253\": {\n    \"lastAccessedAt\": 1776118473540,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"d867551a-3cb9-4b13-85e4-a01c289a8395\": {\n    \"lastAccessedAt\": 1776119150127,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"8eaaa0c1-534d-432e-9a15-27996c1626ce\": {\n    \"lastAccessedAt\": 1776119150123,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"f77d8922-0dd9-40db-b025-b7d751d148bf\": {\n    \"lastAccessedAt\": 1776119185641,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"0407744e-0633-4f19-8e2a-8ad34a7fc684\": {\n    \"lastAccessedAt\": 1776119202529,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"8d227ca4-4c06-49f0-a7ed-52fbdb09811b\": {\n    \"lastAccessedAt\": 1776119454101,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"db81f9cb-5a1d-4f55-8019-561b071f87f4\": {\n    \"lastAccessedAt\": 1776119454119,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"b4e1be42-f87c-46a1-a1f3-8050671ed641\": {\n    \"lastAccessedAt\": 1776121262101,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"mcp-remote-fallback-test\",\n      \"version\": \"0.0.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  },\n  \"6c79e83c-8092-4964-afd5-78ed8e35c270\": {\n    \"lastAccessedAt\": 1776121262101,\n    \"clientCapabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"claude-ai (via mcp-remote 0.1.37)\",\n      \"version\": \"0.1.0\"\n    },\n    \"protocolVersion\": \"unknown\"\n  }\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/server/.mcp-use/sessions.json b/server/.mcp-use/sessions.json
+--- a/server/.mcp-use/sessions.json	(revision 5f8f832cad1479679c676c8e220eb8e8823f830c)
++++ b/server/.mcp-use/sessions.json	(date 1776156784963)
+@@ -304,5 +304,63 @@
+       "version": "0.1.0"
+     },
+     "protocolVersion": "unknown"
++  },
++  "514b22e3-467b-4895-a778-a74d01544646": {
++    "lastAccessedAt": 1776149007952,
++    "clientCapabilities": {},
++    "clientInfo": {
++      "name": "mcp-remote-fallback-test",
++      "version": "0.0.0"
++    },
++    "protocolVersion": "unknown"
++  },
++  "03f45a80-2251-4e46-842c-cfed99c902dd": {
++    "lastAccessedAt": 1776149007951,
++    "clientCapabilities": {},
++    "clientInfo": {
++      "name": "claude-ai (via mcp-remote 0.1.37)",
++      "version": "0.1.0"
++    },
++    "protocolVersion": "unknown"
++  },
++  "9311096e-e3f4-4620-9454-0b0038e15f70": {
++    "lastAccessedAt": 1776156667854,
++    "clientCapabilities": {},
++    "clientInfo": {
++      "name": "mcp-remote-fallback-test",
++      "version": "0.0.0"
++    },
++    "protocolVersion": "unknown"
++  },
++  "82ce159c-1b7d-43c3-880e-11d0c6e5dbda": {
++    "lastAccessedAt": 1776156667852,
++    "clientCapabilities": {},
++    "clientInfo": {
++      "name": "claude-ai (via mcp-remote 0.1.37)",
++      "version": "0.1.0"
++    },
++    "protocolVersion": "unknown"
++  },
++  "5f518e75-3f04-4073-a5f8-c908d71effbc": {
++    "lastAccessedAt": 1776156745727,
++    "clientCapabilities": {},
++    "clientInfo": {
++      "name": "mcp-remote-fallback-test",
++      "version": "0.0.0"
++    },
++    "protocolVersion": "unknown"
++  },
++  "b6a5ce50-d574-42c9-af34-38822a6b8db5": {
++    "lastAccessedAt": 1776156745721,
++    "clientCapabilities": {
++      "roots": {
++        "listChanged": true
++      }
++    },
++    "clientInfo": {
++      "name": "local-agent-mode-camunda-7 (via mcp-remote 0.1.37)",
++      "version": "1.0.0"
++    },
++    "protocolVersion": "unknown"
+   }
+ }
+\ No newline at end of file
