@@ -47,7 +47,7 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 - Node.js 22+
 - pnpm 10+
 - Java 21 (for the Kotlin plugins — `plugins/.java-version` pins this version)
-- [jenv](https://www.jenv.be/) (recommended, to auto-switch Java versions)
+- [jenv](https://www.jenv.be/) — manages the Java version via `plugins/.java-version` (Java 21)
 - Docker (for CIB Seven + ClickHouse)
 - Git submodule access to `vendor/mcp-toolkit` (private Miragon repo)
 
@@ -63,17 +63,21 @@ git submodule update --init --recursive
 
 If you don't have access, contact a Miragon team member.
 
-**2. Build the Kotlin plugins**
+**2. Set the Java version**
 
-The `plugins/` directory contains a `.java-version` file (Java 21). If you have [jenv](https://www.jenv.be/) installed, it will automatically switch to the correct Java version when you enter that directory. Without the right JDK active, `./gradlew` will fail.
+Install [jenv](https://www.jenv.be/) and add Java 21. The `plugins/.java-version` file pins the version automatically when you enter the directory:
+
+```bash
+jenv add <path-to-java-21>   # e.g. $(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
+```
+
+**3. Build the Kotlin plugins**
 
 ```bash
 cd plugins && ./gradlew clean build && cd ..
 ```
 
-> **Tip:** Install jenv and add Java 21 to it (`jenv add <path-to-jdk-21>`) so the version is picked up automatically.
-
-**3. Start the infrastructure**
+**4. Start the infrastructure**
 
 ```bash
 cd docker && docker compose up -d && cd ..
