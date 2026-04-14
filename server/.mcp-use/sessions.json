@@ -324,7 +324,7 @@
     "protocolVersion": "unknown"
   },
   "9311096e-e3f4-4620-9454-0b0038e15f70": {
-    "lastAccessedAt": 1776156969802,
+    "lastAccessedAt": 1776157271756,
     "clientCapabilities": {},
     "clientInfo": {
       "name": "mcp-remote-fallback-test",
@@ -333,7 +333,7 @@
     "protocolVersion": "unknown"
   },
   "82ce159c-1b7d-43c3-880e-11d0c6e5dbda": {
-    "lastAccessedAt": 1776156969804,
+    "lastAccessedAt": 1776157271752,
     "clientCapabilities": {},
     "clientInfo": {
       "name": "claude-ai (via mcp-remote 0.1.37)",
@@ -342,7 +342,7 @@
     "protocolVersion": "unknown"
   },
   "5f518e75-3f04-4073-a5f8-c908d71effbc": {
-    "lastAccessedAt": 1776156745727,
+    "lastAccessedAt": 1776157349583,
     "clientCapabilities": {},
     "clientInfo": {
       "name": "mcp-remote-fallback-test",
@@ -351,7 +351,7 @@
     "protocolVersion": "unknown"
   },
   "b6a5ce50-d574-42c9-af34-38822a6b8db5": {
-    "lastAccessedAt": 1776156745721,
+    "lastAccessedAt": 1776157349582,
     "clientCapabilities": {
       "roots": {
         "listChanged": true
