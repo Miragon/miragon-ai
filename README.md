@@ -51,13 +51,27 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 
 ## Setup
 
-The `vendor/mcp-toolkit` directory is a git submodule. Initialize it before running `pnpm install`:
+**1. Initialize the git submodule**
+
+`vendor/mcp-toolkit` is a private Miragon submodule. Initialize it before anything else:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-If you don't have access to the private submodule, contact a Miragon team member.
+If you don't have access, contact a Miragon team member.
+
+**2. Build the Kotlin plugins**
+
+```bash
+cd plugins && ./gradlew clean build && cd ..
+```
+
+**3. Start the infrastructure**
+
+```bash
+cd docker && docker compose up -d && cd ..
+```
 
 ## Build
 
