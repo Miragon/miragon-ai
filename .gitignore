@@ -9,4 +9,5 @@ plugins/.gradle/
 plugins/build/
 plugins/*/build/
 plugins/examples/*/build/
-*.idea
+.idea/
+.mcp-use/
