@@ -8,7 +8,7 @@ on:
 
 jobs:
   typescript:
-    name: TypeScript (Build + Test)
+    name: TypeScript (Build + Test + Lint)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
