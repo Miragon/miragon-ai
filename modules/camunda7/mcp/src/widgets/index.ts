@@ -4,6 +4,10 @@ import { IncidentPanelWidget, type IncidentPanelData } from "./incident-panel.js
 import { HistoryTimelineWidget, type HistoryTimelineData } from "./history-timeline.js"
 import { TaskDashboardWidget, type TaskDashboardData } from "./task-dashboard.js"
 import { InstanceDetailWidget, type InstanceDetailData } from "./instance-detail.js"
+import { CockpitDashboardWidget, type CockpitDashboardData } from "./cockpit-dashboard.js"
+import { BpmnViewerWidget, type BpmnViewerData } from "./bpmn-viewer.js"
+import { DeploymentBrowserWidget, type DeploymentBrowserData } from "./deployment-browser.js"
+import { JobPanelWidget, type JobPanelData } from "./job-panel.js"
 
 export type {
   ProcessListData,
@@ -11,6 +15,10 @@ export type {
   HistoryTimelineData,
   TaskDashboardData,
   InstanceDetailData,
+  CockpitDashboardData,
+  BpmnViewerData,
+  DeploymentBrowserData,
+  JobPanelData,
 }
 
 export const camunda7Widgets: Record<string, ComponentType<{ data: unknown }>> = {
@@ -19,4 +27,8 @@ export const camunda7Widgets: Record<string, ComponentType<{ data: unknown }>> =
   "camunda7:history-timeline": HistoryTimelineWidget as ComponentType<{ data: unknown }>,
   "camunda7:task-dashboard": TaskDashboardWidget as ComponentType<{ data: unknown }>,
   "camunda7:instance-detail": InstanceDetailWidget as ComponentType<{ data: unknown }>,
+  "camunda7:cockpit-dashboard": CockpitDashboardWidget as ComponentType<{ data: unknown }>,
+  "camunda7:bpmn-viewer": BpmnViewerWidget as ComponentType<{ data: unknown }>,
+  "camunda7:deployment-browser": DeploymentBrowserWidget as ComponentType<{ data: unknown }>,
+  "camunda7:job-panel": JobPanelWidget as ComponentType<{ data: unknown }>,
 }

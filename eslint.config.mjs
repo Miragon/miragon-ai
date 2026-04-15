@@ -21,6 +21,7 @@ export default tseslint.config(
             "modules/camunda7/mcp/src/widgets/*.ts",
             "modules/camunda7/mcp/src/widgets/*.tsx",
           ],
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 16,
         },
         tsconfigRootDir: import.meta.dirname,
       },

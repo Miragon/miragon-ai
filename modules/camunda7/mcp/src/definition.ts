@@ -5,6 +5,10 @@ import {
   loadProcessInstanceStep,
   loadIncidentPanelStep,
   loadHistoryTimelineStep,
+  loadCockpitDashboardStep,
+  loadBpmnViewerStep,
+  loadDeploymentsStep,
+  loadJobsStep,
 } from "./steps/index.js"
 
 export const definition: AppDefinition = {
@@ -15,6 +19,10 @@ export const definition: AppDefinition = {
     loadProcessInstanceStep,
     loadIncidentPanelStep,
     loadHistoryTimelineStep,
+    loadCockpitDashboardStep,
+    loadBpmnViewerStep,
+    loadDeploymentsStep,
+    loadJobsStep,
   ],
   widgets: [
     {
@@ -40,6 +48,26 @@ export const definition: AppDefinition = {
     {
       id: "camunda7:history-timeline",
       requires: ["camunda7:historyProcessInstance", "camunda7:historyActivities"],
+      size: "full",
+    },
+    {
+      id: "camunda7:cockpit-dashboard",
+      requires: ["camunda7:cockpitDashboardData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:bpmn-viewer",
+      requires: ["camunda7:bpmnViewerData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:deployment-browser",
+      requires: ["camunda7:deploymentsData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:job-panel",
+      requires: ["camunda7:jobPanelData"],
       size: "full",
     },
   ],
