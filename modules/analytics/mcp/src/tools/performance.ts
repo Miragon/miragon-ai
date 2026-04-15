@@ -12,10 +12,7 @@ export function registerPerformanceTools(register: Register) {
     annotations: { readOnlyHint: true, idempotentHint: true },
     inputSchema: {
       processDefinitionKey: z.string().describe("Process definition key to analyze"),
-      period: z
-        .enum(["1d", "7d", "30d", "90d"])
-        .default("7d")
-        .describe("Analysis time period"),
+      period: z.enum(["1d", "7d", "30d", "90d"]).default("7d").describe("Analysis time period"),
       includeActivityBreakdown: z
         .boolean()
         .default(true)

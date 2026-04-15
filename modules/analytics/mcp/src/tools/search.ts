@@ -26,10 +26,7 @@ export function registerSearchTools(register: Register) {
         .optional()
         .describe("ISO datetime — only instances started before this time"),
       durationGreaterThan: z.number().optional().describe("Minimum duration in milliseconds"),
-      withIncidents: z
-        .boolean()
-        .optional()
-        .describe("Only return instances that have incidents"),
+      withIncidents: z.boolean().optional().describe("Only return instances that have incidents"),
       variableName: z
         .string()
         .optional()
@@ -43,13 +40,7 @@ export function registerSearchTools(register: Register) {
         .default("startTime")
         .describe("Sort field"),
       sortOrder: z.enum(["asc", "desc"]).default("desc").describe("Sort direction"),
-      limit: z
-        .number()
-        .int()
-        .positive()
-        .max(100)
-        .default(20)
-        .describe("Maximum results"),
+      limit: z.number().int().positive().max(100).default(20).describe("Maximum results"),
     },
     handler: async (ch, args) => {
       const conditions: string[] = []
@@ -119,13 +110,7 @@ LIMIT ${args.limit}`
       variableName: z.string().describe("Variable name to search for"),
       variableValue: z.string().describe("Variable value to match (text comparison)"),
       processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
-      limit: z
-        .number()
-        .int()
-        .positive()
-        .max(100)
-        .default(20)
-        .describe("Maximum results"),
+      limit: z.number().int().positive().max(100).default(20).describe("Maximum results"),
     },
     handler: async (ch, args) => {
       const conditions: string[] = [

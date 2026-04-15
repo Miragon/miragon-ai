@@ -7,6 +7,7 @@
 **OTEL Collector als zentraler Hub** — kein Direktexport aus den Komponenten.
 
 Begründung:
+
 - Entkopplung: Komponenten kennen nur OTLP, nicht das Backend
 - Flexibilität: Backend-Wechsel (Jaeger → Tempo, ClickHouse → Grafana) ohne Code-Änderung
 - Sampling & Processing: Tail-based Sampling, Attribute-Enrichment zentral konfigurierbar
@@ -68,48 +69,48 @@ Begründung:
 
 ```typescript
 // packages/camunda7-mcp-server/src/telemetry.ts
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
-import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
-import { Resource } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import { NodeSDK } from "@opentelemetry/sdk-node"
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-grpc"
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-grpc"
+import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics"
+import { Resource } from "@opentelemetry/resources"
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions"
 
 const sdk = new NodeSDK({
   resource: new Resource({
-    [ATTR_SERVICE_NAME]: 'camunda7-mcp-server',
-    [ATTR_SERVICE_VERSION]: '1.0.0',
-    'deployment.environment': process.env.NODE_ENV ?? 'development',
+    [ATTR_SERVICE_NAME]: "camunda7-mcp-server",
+    [ATTR_SERVICE_VERSION]: "1.0.0",
+    "deployment.environment": process.env.NODE_ENV ?? "development",
   }),
   traceExporter: new OTLPTraceExporter({
-    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4317',
+    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4317",
   }),
   metricReader: new PeriodicExportingMetricReader({
     exporter: new OTLPMetricExporter({
-      url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4317',
+      url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4317",
     }),
     exportIntervalMillis: 15_000,
   }),
-});
+})
 
-sdk.start();
+sdk.start()
 ```
 
 **Span-Wrapper um Tool-Handler:**
 
 ```typescript
 // packages/camunda7-mcp-server/src/tools/instrumented-tool.ts
-import { trace, SpanStatusCode, metrics } from '@opentelemetry/api';
+import { trace, SpanStatusCode, metrics } from "@opentelemetry/api"
 
-const tracer = trace.getTracer('mcp-tools');
-const meter = metrics.getMeter('mcp-tools');
-const toolDuration = meter.createHistogram('mcp.tool.duration_ms', {
-  description: 'Duration of MCP tool execution in milliseconds',
-  unit: 'ms',
-});
-const toolErrors = meter.createCounter('mcp.tool.errors_total', {
-  description: 'Total number of MCP tool errors',
-});
+const tracer = trace.getTracer("mcp-tools")
+const meter = metrics.getMeter("mcp-tools")
+const toolDuration = meter.createHistogram("mcp.tool.duration_ms", {
+  description: "Duration of MCP tool execution in milliseconds",
+  unit: "ms",
+})
+const toolErrors = meter.createCounter("mcp.tool.errors_total", {
+  description: "Total number of MCP tool errors",
+})
 
 export function instrumentToolHandler<TArgs, TResult>(
   toolName: string,
@@ -117,23 +118,23 @@ export function instrumentToolHandler<TArgs, TResult>(
 ): (args: TArgs) => Promise<TResult> {
   return async (args: TArgs) => {
     return tracer.startActiveSpan(`mcp.tool.${toolName}`, async (span) => {
-      const start = performance.now();
-      span.setAttribute('mcp.tool.name', toolName);
+      const start = performance.now()
+      span.setAttribute("mcp.tool.name", toolName)
       try {
-        const result = await handler(args);
-        span.setStatus({ code: SpanStatusCode.OK });
-        return result;
+        const result = await handler(args)
+        span.setStatus({ code: SpanStatusCode.OK })
+        return result
       } catch (error) {
-        span.setStatus({ code: SpanStatusCode.ERROR, message: String(error) });
-        span.recordException(error as Error);
-        toolErrors.add(1, { 'mcp.tool.name': toolName });
-        throw error;
+        span.setStatus({ code: SpanStatusCode.ERROR, message: String(error) })
+        span.recordException(error as Error)
+        toolErrors.add(1, { "mcp.tool.name": toolName })
+        throw error
       } finally {
-        toolDuration.record(performance.now() - start, { 'mcp.tool.name': toolName });
-        span.end();
+        toolDuration.record(performance.now() - start, { "mcp.tool.name": toolName })
+        span.end()
       }
-    });
-  };
+    })
+  }
 }
 ```
 
@@ -397,16 +398,16 @@ ORDER BY t.Timestamp;
 
 ## Custom Metrics
 
-| Metric | Typ | Labels | Quelle |
-|--------|-----|--------|--------|
-| `mcp.tool.duration_ms` | Histogram | `mcp.tool.name` | MCP Server |
-| `mcp.tool.errors_total` | Counter | `mcp.tool.name` | MCP Server |
-| `engine.http.duration_ms` | Histogram | `engine.type`, `http.method`, `http.status_code` | Engine Adapter |
-| `history.flush.duration_ms` | Histogram | `engine.type` | Kotlin Plugins |
-| `history.events.buffered_total` | Counter | `event.type` | Kotlin Plugins |
-| `history.events.inserted_total` | Counter | `table.name` | Kotlin Plugins |
-| `history.insert.errors_total` | Counter | `error.type` | Kotlin Plugins |
-| `history.buffer.size` | Gauge | `engine.type` | Kotlin Plugins |
+| Metric                          | Typ       | Labels                                           | Quelle         |
+| ------------------------------- | --------- | ------------------------------------------------ | -------------- |
+| `mcp.tool.duration_ms`          | Histogram | `mcp.tool.name`                                  | MCP Server     |
+| `mcp.tool.errors_total`         | Counter   | `mcp.tool.name`                                  | MCP Server     |
+| `engine.http.duration_ms`       | Histogram | `engine.type`, `http.method`, `http.status_code` | Engine Adapter |
+| `history.flush.duration_ms`     | Histogram | `engine.type`                                    | Kotlin Plugins |
+| `history.events.buffered_total` | Counter   | `event.type`                                     | Kotlin Plugins |
+| `history.events.inserted_total` | Counter   | `table.name`                                     | Kotlin Plugins |
+| `history.insert.errors_total`   | Counter   | `error.type`                                     | Kotlin Plugins |
+| `history.buffer.size`           | Gauge     | `engine.type`                                    | Kotlin Plugins |
 
 ## Docker Compose Erweiterung
 
@@ -421,10 +422,10 @@ services:
     volumes:
       - ./otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "8888:8888"   # Collector Metrics
-      - "8889:8889"   # Prometheus Exporter (optional)
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "8888:8888" # Collector Metrics
+      - "8889:8889" # Prometheus Exporter (optional)
     depends_on:
       clickhouse:
         condition: service_started
@@ -433,7 +434,7 @@ services:
     image: jaegertracing/jaeger:2.4
     ports:
       - "16686:16686" # Jaeger UI
-      - "4319:4317"   # OTLP gRPC (Jaeger-intern, vom Collector genutzt)
+      - "4319:4317" # OTLP gRPC (Jaeger-intern, vom Collector genutzt)
     environment:
       - COLLECTOR_OTLP_ENABLED=true
 
@@ -500,7 +501,7 @@ exporters:
   clickhouse:
     endpoint: tcp://clickhouse:9000?dial_timeout=10s&compress=lz4
     database: otel
-    ttl: 720h  # 30 Tage
+    ttl: 720h # 30 Tage
     create_schema: true
     logs:
       table_name: otel_logs
@@ -541,16 +542,16 @@ service:
 
 ## Implementierungsreihenfolge
 
-| Schritt | Was | Aufwand | Abhängigkeit |
-|---------|-----|---------|-------------|
-| **1** | `docker-compose.otel.yml` + Collector Config erstellen | Klein | Keine |
-| **2** | MCP Server: `@opentelemetry/sdk-node` + `telemetry.ts` Setup | Klein | Schritt 1 |
-| **3** | MCP Server: `instrumentToolHandler()` um alle 27 Tool-Handler wrappen | Mittel | Schritt 2 |
-| **4** | Engine Adapter: Span-Wrapper um `request()` in `http-client.ts` + `traceparent` Propagation | Mittel | Schritt 2 |
-| **5** | Kotlin Plugins: OTEL SDK Dependencies + `HistoryTelemetry` Object | Mittel | Schritt 1 |
-| **6** | Kotlin Plugins: Spans um `flush()`/`insertBatch()` in `ClickHouseHistoryEventHandlerBase` | Mittel | Schritt 5 |
-| **7** | CIB Seven Dockerfile: OTEL Java Agent Integration | Klein | Schritt 1 |
-| **8** | History-Tabellen: `trace_id`-Spalte + Migration | Klein | Schritt 4+6 |
+| Schritt | Was                                                                                         | Aufwand | Abhängigkeit |
+| ------- | ------------------------------------------------------------------------------------------- | ------- | ------------ |
+| **1**   | `docker-compose.otel.yml` + Collector Config erstellen                                      | Klein   | Keine        |
+| **2**   | MCP Server: `@opentelemetry/sdk-node` + `telemetry.ts` Setup                                | Klein   | Schritt 1    |
+| **3**   | MCP Server: `instrumentToolHandler()` um alle 27 Tool-Handler wrappen                       | Mittel  | Schritt 2    |
+| **4**   | Engine Adapter: Span-Wrapper um `request()` in `http-client.ts` + `traceparent` Propagation | Mittel  | Schritt 2    |
+| **5**   | Kotlin Plugins: OTEL SDK Dependencies + `HistoryTelemetry` Object                           | Mittel  | Schritt 1    |
+| **6**   | Kotlin Plugins: Spans um `flush()`/`insertBatch()` in `ClickHouseHistoryEventHandlerBase`   | Mittel  | Schritt 5    |
+| **7**   | CIB Seven Dockerfile: OTEL Java Agent Integration                                           | Klein   | Schritt 1    |
+| **8**   | History-Tabellen: `trace_id`-Spalte + Migration                                             | Klein   | Schritt 4+6  |
 
 ### Kritischer Pfad
 
@@ -569,10 +570,10 @@ Schritt 1 (Docker/Collector)
 
 Alle OTEL-Konfiguration erfolgt über Environment-Variablen (Standard OTEL SDK):
 
-| Variable | Default | Beschreibung |
-|----------|---------|-------------|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTEL Collector Endpoint |
-| `OTEL_SERVICE_NAME` | Komponenten-spezifisch | Service-Name in Traces |
-| `OTEL_TRACES_SAMPLER` | `parentbased_always_on` | Sampling-Strategie |
-| `OTEL_TRACES_SAMPLER_ARG` | `1.0` | Sampling-Rate |
-| `OTEL_ENABLED` | `true` | OTEL komplett deaktivieren |
+| Variable                      | Default                 | Beschreibung               |
+| ----------------------------- | ----------------------- | -------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTEL Collector Endpoint    |
+| `OTEL_SERVICE_NAME`           | Komponenten-spezifisch  | Service-Name in Traces     |
+| `OTEL_TRACES_SAMPLER`         | `parentbased_always_on` | Sampling-Strategie         |
+| `OTEL_TRACES_SAMPLER_ARG`     | `1.0`                   | Sampling-Rate              |
+| `OTEL_ENABLED`                | `true`                  | OTEL komplett deaktivieren |

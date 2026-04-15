@@ -95,10 +95,7 @@ export function registerExternalTaskTools(register: Register) {
       externalTaskId: z.string().describe("The ID of the external task"),
       workerId: z.string().describe("The ID of the worker that locked the task"),
       errorMessage: z.string().optional().describe("Error message describing the failure"),
-      errorDetails: z
-        .string()
-        .optional()
-        .describe("Detailed error information (e.g. stack trace)"),
+      errorDetails: z.string().optional().describe("Detailed error information (e.g. stack trace)"),
       retries: z
         .number()
         .int()

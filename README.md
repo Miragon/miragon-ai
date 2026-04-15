@@ -30,17 +30,17 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 
 ## Layout
 
-| Path | Description |
-|------|-------------|
-| `server/` | `@automation-mcp/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
-| `modules/camunda7/client/` | `@automation-mcp/client-camunda7` — OpenAPI-generated TypeScript client (hey-api) |
-| `modules/camunda7/mcp/` | `@automation-mcp/mcp-camunda7` — BPM tools + React widgets |
-| `modules/analytics/mcp/` | `@automation-mcp/mcp-analytics` — ClickHouse analytics tools + dashboard widget |
-| `packages/core/` | `@automation-mcp/core` — `ModulePlugin` interface + `createToolRegistrar` helper |
-| `packages/ui/` | `@automation-mcp/ui` — shared shadcn primitives + tailwind globals |
-| `plugins/` | Kotlin OTEL / ClickHouse sync plugins (unchanged) |
-| `docker/` | docker-compose for CIB Seven + ClickHouse + OTEL |
-| `cibseve-open-api-doc.json` | Source spec used by the client codegen |
+| Path                        | Description                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
+| `server/`                   | `@automation-mcp/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
+| `modules/camunda7/client/`  | `@automation-mcp/client-camunda7` — OpenAPI-generated TypeScript client (hey-api)        |
+| `modules/camunda7/mcp/`     | `@automation-mcp/mcp-camunda7` — BPM tools + React widgets                               |
+| `modules/analytics/mcp/`    | `@automation-mcp/mcp-analytics` — ClickHouse analytics tools + dashboard widget          |
+| `packages/core/`            | `@automation-mcp/core` — `ModulePlugin` interface + `createToolRegistrar` helper         |
+| `packages/ui/`              | `@automation-mcp/ui` — shared shadcn primitives + tailwind globals                       |
+| `plugins/`                  | Kotlin OTEL / ClickHouse sync plugins (unchanged)                                        |
+| `docker/`                   | docker-compose for CIB Seven + ClickHouse + OTEL                                         |
+| `cibseve-open-api-doc.json` | Source spec used by the client codegen                                                   |
 
 ## Prerequisites
 
@@ -122,19 +122,19 @@ The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP cl
 
 ## Environment
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3010` | HTTP port the MCP server listens on |
-| `MCP_ACTIVE_MODULES` | all | Comma-separated module list (`camunda7,analytics`) |
-| `CAMUNDA_BASE_URL` | `http://localhost:8080/engine-rest` | Engine REST API base URL |
-| `CAMUNDA_AUTH_TYPE` | `none` | `basic`, `bearer`, or `none` |
-| `CAMUNDA_USERNAME` | — | Basic auth username |
-| `CAMUNDA_PASSWORD` | — | Basic auth password |
-| `CAMUNDA_TOKEN` | — | Bearer token |
-| `CLICKHOUSE_URL` | `http://localhost:8123` | ClickHouse HTTP endpoint |
-| `CLICKHOUSE_USERNAME` | `default` | ClickHouse user |
-| `CLICKHOUSE_PASSWORD` | `` | ClickHouse password |
-| `CLICKHOUSE_DATABASE` | `camunda_history` | ClickHouse database |
+| Variable              | Default                             | Description                                        |
+| --------------------- | ----------------------------------- | -------------------------------------------------- |
+| `PORT`                | `3010`                              | HTTP port the MCP server listens on                |
+| `MCP_ACTIVE_MODULES`  | all                                 | Comma-separated module list (`camunda7,analytics`) |
+| `CAMUNDA_BASE_URL`    | `http://localhost:8080/engine-rest` | Engine REST API base URL                           |
+| `CAMUNDA_AUTH_TYPE`   | `none`                              | `basic`, `bearer`, or `none`                       |
+| `CAMUNDA_USERNAME`    | —                                   | Basic auth username                                |
+| `CAMUNDA_PASSWORD`    | —                                   | Basic auth password                                |
+| `CAMUNDA_TOKEN`       | —                                   | Bearer token                                       |
+| `CLICKHOUSE_URL`      | `http://localhost:8123`             | ClickHouse HTTP endpoint                           |
+| `CLICKHOUSE_USERNAME` | `default`                           | ClickHouse user                                    |
+| `CLICKHOUSE_PASSWORD` | ``                                  | ClickHouse password                                |
+| `CLICKHOUSE_DATABASE` | `camunda_history`                   | ClickHouse database                                |
 
 ## Tools
 

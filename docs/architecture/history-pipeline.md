@@ -26,13 +26,13 @@ ClickHouse (5 Tabellen)
 
 ## Tabellen
 
-| Tabelle | Inhalt |
-|---------|--------|
-| `camunda_process_instances` | Prozessinstanz-Lifecycle |
-| `camunda_activity_instances` | Activity-Ausführungen |
-| `camunda_task_instances` | User Task-Lifecycle |
-| `camunda_variable_updates` | Variablen-Änderungen |
-| `camunda_incidents` | Incidents/Fehler |
+| Tabelle                      | Inhalt                   |
+| ---------------------------- | ------------------------ |
+| `camunda_process_instances`  | Prozessinstanz-Lifecycle |
+| `camunda_activity_instances` | Activity-Ausführungen    |
+| `camunda_task_instances`     | User Task-Lifecycle      |
+| `camunda_variable_updates`   | Variablen-Änderungen     |
+| `camunda_incidents`          | Incidents/Fehler         |
 
 Alle Tabellen enthalten `engine_type` (`camunda7`, `cibseven`, `operaton`) und `trace_id` für OTEL-Korrelation.
 

@@ -17,7 +17,7 @@ export function McpAppView() {
 
   if (isPending) {
     return (
-      <div className="p-6 flex flex-col gap-4">
+      <div className="flex flex-col gap-4 p-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-64 w-full" />
       </div>

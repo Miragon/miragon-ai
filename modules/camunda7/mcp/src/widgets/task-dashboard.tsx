@@ -64,7 +64,7 @@ function TimeAgo({ date }: { date: string }) {
   else text = "just now"
 
   return (
-    <span className="text-sm text-muted-foreground" title={then.toLocaleString()}>
+    <span className="text-muted-foreground text-sm" title={then.toLocaleString()}>
       {text}
     </span>
   )
@@ -73,7 +73,7 @@ function TimeAgo({ date }: { date: string }) {
 export function TaskDashboardWidget({ data }: { data: TaskDashboardData | null }) {
   if (!data) {
     return (
-      <div className="p-6 bg-card text-card-foreground">
+      <div className="bg-card text-card-foreground p-6">
         <Alert variant="destructive">
           <AlertDescription>No data available</AlertDescription>
         </Alert>
@@ -82,14 +82,14 @@ export function TaskDashboardWidget({ data }: { data: TaskDashboardData | null }
   }
 
   return (
-    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
+    <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Open Tasks</h2>
         <Badge variant="secondary">{data.totalCount} total</Badge>
       </div>
 
       {data.filters.assignee && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Filtered by assignee: <strong>{data.filters.assignee}</strong>
         </p>
       )}
@@ -117,7 +117,7 @@ export function TaskDashboardWidget({ data }: { data: TaskDashboardData | null }
                 <TableRow key={task.id}>
                   <TableCell>
                     <div className="font-medium">{task.name ?? "Unnamed Task"}</div>
-                    <div className="text-xs text-muted-foreground font-mono">
+                    <div className="text-muted-foreground font-mono text-xs">
                       {task.taskDefinitionKey}
                     </div>
                   </TableCell>
@@ -125,11 +125,11 @@ export function TaskDashboardWidget({ data }: { data: TaskDashboardData | null }
                     {task.assignee ? (
                       <span className="text-sm">{task.assignee}</span>
                     ) : (
-                      <span className="text-sm italic text-muted-foreground">Unassigned</span>
+                      <span className="text-muted-foreground text-sm italic">Unassigned</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs font-mono text-muted-foreground">
+                    <span className="text-muted-foreground font-mono text-xs">
                       {task.processDefinitionId.split(":")[0]}
                     </span>
                   </TableCell>

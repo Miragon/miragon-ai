@@ -20,8 +20,8 @@ Dieses Projekt verbindet Camunda 7 (und kompatible Engines wie CIB Seven und Ope
 
 ## Unterstützte Engines
 
-| Engine | Status |
-|--------|--------|
+| Engine    | Status                           |
+| --------- | -------------------------------- |
 | CIB Seven | Primär — vollständig unterstützt |
-| Camunda 7 | Vollständig unterstützt |
-| Operaton | Vorbereitet — Struktur angelegt |
+| Camunda 7 | Vollständig unterstützt          |
+| Operaton  | Vorbereitet — Struktur angelegt  |

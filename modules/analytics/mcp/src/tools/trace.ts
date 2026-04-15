@@ -79,8 +79,7 @@ ORDER BY t.Timestamp`
           result.otelSpans = await ch.query(otelSql)
         } catch {
           result.otelSpans = []
-          result.otelSpansError =
-            "OTEL traces not available (otel database may not exist)"
+          result.otelSpansError = "OTEL traces not available (otel database may not exist)"
         }
       }
 

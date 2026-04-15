@@ -33,8 +33,31 @@ jobs:
 
       - run: pnpm test
 
+  quality:
+    name: Lint + Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Checkout private submodules
+        env:
+          TOOLKIT_PAT: ${{ secrets.TOOLKIT_PAT }}
+        run: |
+          git config --global url."https://x-access-token:${TOOLKIT_PAT}@github.com/".insteadOf "git@github.com:"
+          git submodule update --init --recursive
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
       - run: pnpm lint
-        if: always()
+
+      - run: pnpm format:check
 
   kotlin:
     name: Kotlin (Build + Test)

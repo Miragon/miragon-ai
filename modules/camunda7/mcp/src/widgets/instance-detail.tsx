@@ -66,7 +66,7 @@ function Section({
     <details open={defaultOpen || undefined}>
       <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
         <svg
-          className="size-4 shrink-0 text-muted-foreground transition-transform [[open]>&]:rotate-90"
+          className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
           viewBox="0 0 16 16"
           fill="currentColor"
         >
@@ -91,16 +91,9 @@ function formatValue(value: unknown, type?: string): string {
 function ActivityNode({ node, depth = 0 }: { node: ActivityTree; depth?: number }) {
   return (
     <div>
-      <div
-        className="flex items-center gap-2 py-1"
-        style={{ paddingLeft: `${depth * 16}px` }}
-      >
-        <span className="text-xs font-mono text-muted-foreground">
-          {node.activityType}
-        </span>
-        <span className="text-sm font-medium">
-          {node.activityName ?? node.activityId}
-        </span>
+      <div className="flex items-center gap-2 py-1" style={{ paddingLeft: `${depth * 16}px` }}>
+        <span className="text-muted-foreground font-mono text-xs">{node.activityType}</span>
+        <span className="text-sm font-medium">{node.activityName ?? node.activityId}</span>
       </div>
       {node.childActivityInstances.map((child) => (
         <ActivityNode key={child.id} node={child} depth={depth + 1} />
@@ -112,7 +105,7 @@ function ActivityNode({ node, depth = 0 }: { node: ActivityTree; depth?: number 
 export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null }) {
   if (!data) {
     return (
-      <div className="p-6 bg-card text-card-foreground">
+      <div className="bg-card text-card-foreground p-6">
         <Alert variant="destructive">
           <AlertDescription>No data available</AlertDescription>
         </Alert>
@@ -124,10 +117,10 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   const variableEntries = Object.entries(variables)
 
   return (
-    <div className="flex flex-col gap-5 p-6 bg-card text-card-foreground">
+    <div className="bg-card text-card-foreground flex flex-col gap-5 p-6">
       <div>
         <h2 className="text-xl font-semibold">Process Instance Detail</h2>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+        <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-sm">
           <span>
             ID: <code className="font-mono">{instance.id}</code>
           </span>
@@ -141,7 +134,7 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
           </Badge>
           {instance.suspended && <Badge variant="secondary">Suspended</Badge>}
         </div>
-        <div className="mt-1 text-xs text-muted-foreground font-mono">
+        <div className="text-muted-foreground mt-1 font-mono text-xs">
           Definition: {instance.definitionId}
         </div>
       </div>
@@ -150,16 +143,16 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
         <Section title="Incidents" count={incidents.length} defaultOpen>
           <div className="flex flex-col gap-2">
             {incidents.map((inc) => (
-              <Card key={inc.id} className="gap-0 py-0 shadow-none border-destructive/30">
+              <Card key={inc.id} className="border-destructive/30 gap-0 py-0 shadow-none">
                 <CardContent className="p-3">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="mb-1 flex items-center gap-2">
                     <Badge variant="destructive">{inc.incidentType}</Badge>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       {new Date(inc.incidentTimestamp).toLocaleString()}
                     </span>
                   </div>
                   {inc.incidentMessage && (
-                    <p className="text-sm text-muted-foreground font-mono break-words">
+                    <p className="text-muted-foreground break-words font-mono text-sm">
                       {inc.incidentMessage}
                     </p>
                   )}
@@ -182,7 +175,7 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
 
       <Section title="Variables" count={variableEntries.length} defaultOpen>
         {variableEntries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No variables</p>
+          <p className="text-muted-foreground text-sm">No variables</p>
         ) : (
           <div className="rounded-lg border">
             <Table>
@@ -197,10 +190,10 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
                 {variableEntries.map(([name, variable]) => (
                   <TableRow key={name}>
                     <TableCell className="font-mono text-sm">{name}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-muted-foreground text-xs">
                       {variable.type ?? "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-xs whitespace-pre-wrap break-words max-w-md">
+                    <TableCell className="max-w-md whitespace-pre-wrap break-words font-mono text-xs">
                       {formatValue(variable.value, variable.type)}
                     </TableCell>
                   </TableRow>

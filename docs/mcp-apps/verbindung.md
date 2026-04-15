@@ -99,14 +99,14 @@ In `.claude/settings.json` oder projektspezifisch in `.mcp.json`:
 
 ## Umgebungsvariablen
 
-| Variable | Beschreibung | Default |
-|----------|-------------|---------|
-| `ENGINE_TYPE` | Engine-Typ: `camunda7`, `cibseven`, `operaton` | `cibseven` |
-| `ENGINE_BASE_URL` | REST-API URL der Engine | `http://localhost:8080/engine-rest` |
-| `ENGINE_AUTH_TYPE` | Authentifizierung: `basic`, `bearer`, `none` | `basic` |
-| `ENGINE_USERNAME` | Benutzername (bei `basic` Auth) | - |
-| `ENGINE_PASSWORD` | Passwort (bei `basic` Auth) | - |
-| `ENGINE_TOKEN` | Token (bei `bearer` Auth) | - |
+| Variable           | Beschreibung                                   | Default                             |
+| ------------------ | ---------------------------------------------- | ----------------------------------- |
+| `ENGINE_TYPE`      | Engine-Typ: `camunda7`, `cibseven`, `operaton` | `cibseven`                          |
+| `ENGINE_BASE_URL`  | REST-API URL der Engine                        | `http://localhost:8080/engine-rest` |
+| `ENGINE_AUTH_TYPE` | Authentifizierung: `basic`, `bearer`, `none`   | `basic`                             |
+| `ENGINE_USERNAME`  | Benutzername (bei `basic` Auth)                | -                                   |
+| `ENGINE_PASSWORD`  | Passwort (bei `basic` Auth)                    | -                                   |
+| `ENGINE_TOKEN`     | Token (bei `bearer` Auth)                      | -                                   |
 
 ## Wie Apps im Chat erscheinen
 

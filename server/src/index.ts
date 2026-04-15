@@ -4,11 +4,7 @@ import { MCPServer, RESOURCE_MIME_TYPE, text } from "mcp-use/server"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { z } from "zod"
-import {
-  getFrameworkManifest,
-  renderView,
-  type LayoutConfig,
-} from "@miragon/mcp-toolkit-core"
+import { getFrameworkManifest, renderView, type LayoutConfig } from "@miragon/mcp-toolkit-core"
 import { createRegistries, registerModuleTools, registerWidgetTools } from "./setup.js"
 
 const { stepRegistry, widgetRegistry, config, appConfigs, plugins } = createRegistries()
@@ -83,9 +79,7 @@ server.tool(
         .array(
           z.object({
             id: z.string().describe('Context ID, e.g. "instance"'),
-            step: z
-              .string()
-              .describe('Registered step, e.g. "camunda7:load-process-instance"'),
+            step: z.string().describe('Registered step, e.g. "camunda7:load-process-instance"'),
             optional: z.boolean().optional(),
           }),
         )
@@ -101,7 +95,7 @@ server.tool(
   async (params) => {
     return renderView(
       {
-        keys: params.keys as Record<string, unknown> | undefined,
+        keys: params.keys,
         steps: params.steps,
         layout: params.layout as LayoutConfig,
         title: params.title,
@@ -143,7 +137,7 @@ server.tool(
   async (params) => {
     return renderView(
       {
-        keys: params.keys as Record<string, unknown> | undefined,
+        keys: params.keys,
         steps: params.steps,
         layout: params.layout as LayoutConfig,
         title: params.title,

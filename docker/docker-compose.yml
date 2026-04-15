@@ -59,7 +59,11 @@ services:
       - CLICKHOUSE_PASSWORD=camunda123
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
     healthcheck:
-      test: ["CMD-SHELL", "clickhouse-client --user camunda --password camunda123 --query 'SELECT 1' || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "clickhouse-client --user camunda --password camunda123 --query 'SELECT 1' || exit 1",
+        ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -77,9 +81,9 @@ services:
     volumes:
       - ./otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "8888:8888"   # Collector Metrics
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "8888:8888" # Collector Metrics
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -90,7 +94,7 @@ services:
     image: jaegertracing/jaeger:2.16.0
     ports:
       - "16686:16686" # Jaeger UI
-      - "4319:4317"   # OTLP gRPC (internal, used by Collector)
+      - "4319:4317" # OTLP gRPC (internal, used by Collector)
     environment:
       - COLLECTOR_OTLP_ENABLED=true
 

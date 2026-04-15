@@ -53,7 +53,7 @@ function formatDuration(ms: number | null): string {
 export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | null }) {
   if (!data) {
     return (
-      <div className="p-6 bg-card text-card-foreground">
+      <div className="bg-card text-card-foreground p-6">
         <Alert variant="destructive">
           <AlertDescription>No data available</AlertDescription>
         </Alert>
@@ -64,13 +64,13 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
   const { processInstance, activities } = data
 
   return (
-    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
+    <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
       {processInstance && (
         <div>
           <h2 className="text-xl font-semibold">
             {processInstance.processDefinitionName ?? processInstance.processDefinitionKey}
           </h2>
-          <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="text-muted-foreground mt-1 flex items-center gap-3 text-sm">
             <Badge variant="secondary">{processInstance.state}</Badge>
             <span>Started {new Date(processInstance.startTime).toLocaleString()}</span>
             {processInstance.durationInMillis != null && (
@@ -87,7 +87,7 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
             <div key={activity.id} className="flex items-center gap-3">
               <div className="flex flex-col items-center">
                 <div className={`size-3 rounded-full ${color}`} />
-                {index < activities.length - 1 && <div className="w-0.5 h-6 bg-border" />}
+                {index < activities.length - 1 && <div className="bg-border h-6 w-0.5" />}
               </div>
               <Card className="flex-1 gap-0 py-0 shadow-none">
                 <CardContent className="flex items-center justify-between px-3 py-2">
@@ -95,15 +95,15 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
                     <span className="text-sm font-medium">
                       {activity.activityName ?? activity.activityId}
                     </span>
-                    <span className="ml-2 text-xs text-muted-foreground">
+                    <span className="text-muted-foreground ml-2 text-xs">
                       {activity.activityType}
                     </span>
                     {activity.assignee && (
-                      <span className="ml-2 text-xs text-info">@{activity.assignee}</span>
+                      <span className="text-info ml-2 text-xs">@{activity.assignee}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       {formatDuration(activity.durationInMillis)}
                     </span>
                   </div>

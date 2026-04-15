@@ -11,29 +11,14 @@ export function registerFailureTools(register: Register) {
       "Find failed process instances with incident details and error patterns. Optionally group by error message to identify common failure patterns.",
     annotations: { readOnlyHint: true, idempotentHint: true },
     inputSchema: {
-      processDefinitionKey: z
-        .string()
-        .optional()
-        .describe("Filter by process definition key"),
-      period: z
-        .enum(["1d", "7d", "30d"])
-        .default("7d")
-        .describe("Time period to search"),
-      incidentType: z
-        .string()
-        .optional()
-        .describe("Filter by incident type (e.g. failedJob)"),
+      processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
+      period: z.enum(["1d", "7d", "30d"]).default("7d").describe("Time period to search"),
+      incidentType: z.string().optional().describe("Filter by incident type (e.g. failedJob)"),
       groupByError: z
         .boolean()
         .default(false)
         .describe("Group results by error message to show patterns"),
-      limit: z
-        .number()
-        .int()
-        .positive()
-        .max(100)
-        .default(20)
-        .describe("Maximum results"),
+      limit: z.number().int().positive().max(100).default(20).describe("Maximum results"),
     },
     handler: async (ch, args) => {
       const interval = { "1d": "1 DAY", "7d": "7 DAY", "30d": "30 DAY" }[
@@ -42,9 +27,7 @@ export function registerFailureTools(register: Register) {
 
       const conditions: string[] = [`i.create_time >= now() - INTERVAL ${interval}`]
       if (args.processDefinitionKey) {
-        conditions.push(
-          `i.process_definition_key = ${escapeString(args.processDefinitionKey)}`,
-        )
+        conditions.push(`i.process_definition_key = ${escapeString(args.processDefinitionKey)}`)
       }
       if (args.incidentType) {
         conditions.push(`i.incident_type = ${escapeString(args.incidentType)}`)

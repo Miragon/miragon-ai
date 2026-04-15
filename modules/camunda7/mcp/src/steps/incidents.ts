@@ -29,9 +29,7 @@ export const loadIncidentPanelStep: PipelineStepDefinition<Camunda7AppConfig> = 
   produces: ["camunda7:incidentPanelData"],
   execute: async (context, appConfig) => {
     const client = appConfig.client
-    const processDefinitionKey = context.keys["camunda7:processDefinitionKey"] as
-      | string
-      | undefined
+    const processDefinitionKey = context.keys["camunda7:processDefinitionKey"] as string | undefined
     const incidentType = context.keys["camunda7:incidentType"] as string | undefined
 
     const rows = (await getIncidents({

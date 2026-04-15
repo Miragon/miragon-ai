@@ -6,10 +6,10 @@
 
 Das LLM nutzt **zwei MCP-Server parallel**:
 
-| MCP Server | Zweck | Datenzugriff |
-|-----------|-------|-------------|
-| `camunda7-mcp-server` | Live-Daten, Aktionen (claim, complete, retry) | Engine REST API |
-| `clickhouse-mcp-server` | Historische Analyse, Suche, Aggregation | ClickHouse SQL |
+| MCP Server              | Zweck                                         | Datenzugriff    |
+| ----------------------- | --------------------------------------------- | --------------- |
+| `camunda7-mcp-server`   | Live-Daten, Aktionen (claim, complete, retry) | Engine REST API |
+| `clickhouse-mcp-server` | Historische Analyse, Suche, Aggregation       | ClickHouse SQL  |
 
 ```
 User: "Finde alle Bestellprozesse die letzte Woche fehlgeschlagen sind"
@@ -316,45 +316,45 @@ Falls die optionalen Tools implementiert werden, braucht der MCP Server einen ei
 ```typescript
 // packages/camunda7-mcp-server/src/clickhouse-client.ts
 export interface ClickHouseConfig {
-  url: string;      // z.B. http://localhost:8123
-  user: string;
-  password: string;
-  database: string;  // z.B. camunda_history
+  url: string // z.B. http://localhost:8123
+  user: string
+  password: string
+  database: string // z.B. camunda_history
 }
 
 export interface ClickHouseClient {
-  query<T = Record<string, unknown>>(sql: string): Promise<T[]>;
+  query<T = Record<string, unknown>>(sql: string): Promise<T[]>
 }
 
 export function createClickHouseClient(config: ClickHouseConfig): ClickHouseClient {
-  const { url, user, password, database } = config;
+  const { url, user, password, database } = config
 
   return {
     async query<T = Record<string, unknown>>(sql: string): Promise<T[]> {
       const response = await fetch(`${url}/?database=${database}&default_format=JSONEachRow`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'X-ClickHouse-User': user,
-          'X-ClickHouse-Key': password,
-          'Content-Type': 'text/plain',
+          "X-ClickHouse-User": user,
+          "X-ClickHouse-Key": password,
+          "Content-Type": "text/plain",
         },
         body: sql,
-      });
+      })
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`ClickHouse query failed (${response.status}): ${error}`);
+        const error = await response.text()
+        throw new Error(`ClickHouse query failed (${response.status}): ${error}`)
       }
 
-      const text = await response.text();
-      if (!text.trim()) return [];
+      const text = await response.text()
+      if (!text.trim()) return []
 
       return text
         .trim()
-        .split('\n')
-        .map((line) => JSON.parse(line) as T);
+        .split("\n")
+        .map((line) => JSON.parse(line) as T)
     },
-  };
+  }
 }
 ```
 
@@ -362,24 +362,24 @@ export function createClickHouseClient(config: ClickHouseConfig): ClickHouseClie
 
 Neue Environment-Variablen für den MCP Server:
 
-| Variable | Default | Beschreibung |
-|----------|---------|-------------|
-| `CLICKHOUSE_URL` | `http://localhost:8123` | ClickHouse HTTP-Endpunkt |
-| `CLICKHOUSE_USER` | `camunda` | ClickHouse Benutzer |
-| `CLICKHOUSE_PASSWORD` | `camunda123` | ClickHouse Passwort |
-| `CLICKHOUSE_DATABASE` | `camunda_history` | Standard-Datenbank |
-| `CLICKHOUSE_ENABLED` | `false` | ClickHouse-Features aktivieren |
+| Variable              | Default                 | Beschreibung                   |
+| --------------------- | ----------------------- | ------------------------------ |
+| `CLICKHOUSE_URL`      | `http://localhost:8123` | ClickHouse HTTP-Endpunkt       |
+| `CLICKHOUSE_USER`     | `camunda`               | ClickHouse Benutzer            |
+| `CLICKHOUSE_PASSWORD` | `camunda123`            | ClickHouse Passwort            |
+| `CLICKHOUSE_DATABASE` | `camunda_history`       | Standard-Datenbank             |
+| `CLICKHOUSE_ENABLED`  | `false`                 | ClickHouse-Features aktivieren |
 
 Diese sind nur relevant, wenn die optionalen MCP-Tools implementiert werden. Ohne diese Tools funktioniert die Suche über den separaten `clickhouse-mcp-server`.
 
 ## Entscheidungsmatrix: Eigene Tools vs. clickhouse-mcp-server
 
-| Kriterium | Eigene Tools im camunda7-mcp-server | Separater clickhouse-mcp-server |
-|-----------|-------------------------------------|--------------------------------|
-| **Flexibilität** | Feste Patterns, dafür typsicher | Beliebiges SQL, maximale Flexibilität |
-| **Sicherheit** | Read-only, parametrisiert, kein SQL-Injection | LLM generiert SQL — Risiko |
-| **UX** | Domänen-spezifische Parameter | LLM muss Schema kennen |
-| **Aufwand** | 6 neue Tools implementieren | Bereits vorhanden |
-| **Empfehlung** | Für häufige Patterns | Für Ad-hoc-Analysen |
+| Kriterium        | Eigene Tools im camunda7-mcp-server           | Separater clickhouse-mcp-server       |
+| ---------------- | --------------------------------------------- | ------------------------------------- |
+| **Flexibilität** | Feste Patterns, dafür typsicher               | Beliebiges SQL, maximale Flexibilität |
+| **Sicherheit**   | Read-only, parametrisiert, kein SQL-Injection | LLM generiert SQL — Risiko            |
+| **UX**           | Domänen-spezifische Parameter                 | LLM muss Schema kennen                |
+| **Aufwand**      | 6 neue Tools implementieren                   | Bereits vorhanden                     |
+| **Empfehlung**   | Für häufige Patterns                          | Für Ad-hoc-Analysen                   |
 
 **Empfehlung**: Beide Ansätze parallel nutzen. Die 6 Tools für die häufigsten Operations-Workflows, `clickhouse-mcp-server` für explorative Analysen.

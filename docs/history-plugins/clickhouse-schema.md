@@ -6,33 +6,33 @@ Alle Tabellen liegen in der Datenbank `camunda_history` und nutzen `ReplacingMer
 
 ### `camunda_process_instances`
 
-| Spalte | Typ | Beschreibung |
-|--------|-----|-------------|
-| `id` | String | Prozessinstanz-ID |
-| `process_definition_id` | String | Definition-ID |
-| `process_definition_key` | String | Definition-Key |
-| `process_definition_name` | Nullable(String) | Definition-Name |
-| `business_key` | Nullable(String) | Business Key |
-| `start_time` | DateTime64(3) | Startzeit |
-| `end_time` | Nullable(DateTime64(3)) | Endzeit |
-| `duration_in_millis` | Nullable(UInt64) | Dauer in ms |
-| `state` | String | ACTIVE, COMPLETED, etc. |
-| `engine_type` | String | camunda7, cibseven, operaton |
-| `trace_id` | Nullable(String) | OTEL Trace ID |
+| Spalte                    | Typ                     | Beschreibung                 |
+| ------------------------- | ----------------------- | ---------------------------- |
+| `id`                      | String                  | Prozessinstanz-ID            |
+| `process_definition_id`   | String                  | Definition-ID                |
+| `process_definition_key`  | String                  | Definition-Key               |
+| `process_definition_name` | Nullable(String)        | Definition-Name              |
+| `business_key`            | Nullable(String)        | Business Key                 |
+| `start_time`              | DateTime64(3)           | Startzeit                    |
+| `end_time`                | Nullable(DateTime64(3)) | Endzeit                      |
+| `duration_in_millis`      | Nullable(UInt64)        | Dauer in ms                  |
+| `state`                   | String                  | ACTIVE, COMPLETED, etc.      |
+| `engine_type`             | String                  | camunda7, cibseven, operaton |
+| `trace_id`                | Nullable(String)        | OTEL Trace ID                |
 
 ORDER BY: `(process_definition_key, start_time, id)`
 
 ### `camunda_activity_instances`
 
-| Spalte | Typ | Beschreibung |
-|--------|-----|-------------|
-| `id` | String | Activity Instance ID |
-| `activity_id` | String | BPMN Activity ID |
-| `activity_name` | Nullable(String) | Activity-Name |
-| `activity_type` | String | serviceTask, userTask, etc. |
-| `process_instance_id` | String | Zugehörige Prozessinstanz |
-| `duration_in_millis` | Nullable(UInt64) | Dauer in ms |
-| `trace_id` | Nullable(String) | OTEL Trace ID |
+| Spalte                | Typ              | Beschreibung                |
+| --------------------- | ---------------- | --------------------------- |
+| `id`                  | String           | Activity Instance ID        |
+| `activity_id`         | String           | BPMN Activity ID            |
+| `activity_name`       | Nullable(String) | Activity-Name               |
+| `activity_type`       | String           | serviceTask, userTask, etc. |
+| `process_instance_id` | String           | Zugehörige Prozessinstanz   |
+| `duration_in_millis`  | Nullable(UInt64) | Dauer in ms                 |
+| `trace_id`            | Nullable(String) | OTEL Trace ID               |
 
 ORDER BY: `(process_definition_key, process_instance_id, start_time, id)`
 
