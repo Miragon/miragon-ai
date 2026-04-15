@@ -278,10 +278,8 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
       _meta: uiMeta,
     },
     async () => {
-      const stats = (await getProcessDefinitionStatistics({
-        client,
-        query: { failedJobs: true, incidents: true },
-      })) as unknown as Array<{
+      // Try statistics endpoint first, fall back to plain definition list
+      let rows: Array<{
         id?: string | null
         instances?: number
         failedJobs?: number
@@ -292,9 +290,51 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
           name?: string | null
           version?: number | null
         }
-      }>
+      }> = []
 
-      const rows = Array.isArray(stats) ? stats : []
+      try {
+        const stats = await getProcessDefinitionStatistics({
+          client,
+          query: { failedJobs: true, incidents: true },
+        })
+        rows = Array.isArray(stats) ? (stats as typeof rows) : []
+      } catch {
+        // Statistics endpoint unavailable — build rows from plain definitions + incidents
+        const [defs, incidents] = await Promise.all([
+          getProcessDefinitions({
+            client,
+            query: { latestVersion: true, maxResults: 100, sortBy: "name", sortOrder: "asc" },
+          }),
+          getIncidents({ client, query: { maxResults: 500 } }).catch(() => []),
+        ])
+        const defArray = Array.isArray(defs) ? defs : []
+        const incArray = Array.isArray(incidents) ? incidents : []
+
+        // Count incidents per definition
+        const incByDef = new Map<string, number>()
+        for (const inc of incArray as Array<{ processDefinitionId?: string }>) {
+          const k = inc.processDefinitionId ?? ""
+          incByDef.set(k, (incByDef.get(k) ?? 0) + 1)
+        }
+
+        rows = (
+          defArray as Array<{
+            id?: string | null
+            key?: string | null
+            name?: string | null
+            version?: number | null
+          }>
+        ).map((d) => ({
+          id: d.id,
+          instances: 0,
+          failedJobs: 0,
+          incidents: incByDef.has(d.id ?? "")
+            ? [{ incidentType: "failedJob", incidentCount: incByDef.get(d.id ?? "") ?? 0 }]
+            : [],
+          definition: d,
+        }))
+      }
+
       let totalRunning = 0
       let totalFailed = 0
       let totalIncidents = 0

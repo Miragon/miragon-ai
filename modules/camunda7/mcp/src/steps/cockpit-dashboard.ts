@@ -1,6 +1,10 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import type { Client } from "@automation-mcp/client-camunda7"
-import { getProcessDefinitionStatistics } from "@automation-mcp/client-camunda7/generated/sdk.gen"
+import {
+  getProcessDefinitionStatistics,
+  getProcessDefinitions,
+  getIncidents,
+} from "@automation-mcp/client-camunda7/generated/sdk.gen"
 
 interface Camunda7AppConfig {
   client: Client
@@ -38,12 +42,41 @@ export const loadCockpitDashboardStep: PipelineStepDefinition<Camunda7AppConfig>
   execute: async (_context, appConfig) => {
     const client = appConfig.client
 
-    const stats = (await getProcessDefinitionStatistics({
-      client,
-      query: { failedJobs: true, incidents: true },
-    })) as unknown as StatRow[]
-
-    const rows = Array.isArray(stats) ? stats : []
+    let rows: StatRow[] = []
+    try {
+      const stats = (await getProcessDefinitionStatistics({
+        client,
+        query: { failedJobs: true, incidents: true },
+      })) as unknown as StatRow[]
+      rows = Array.isArray(stats) ? stats : []
+    } catch {
+      // Fallback: build from plain definitions + incidents
+      const [defs, incidents] = await Promise.all([
+        getProcessDefinitions({
+          client,
+          query: { latestVersion: true, maxResults: 100, sortBy: "name", sortOrder: "asc" },
+        }),
+        getIncidents({ client, query: { maxResults: 500 } }).catch(() => []),
+      ])
+      const defArray = Array.isArray(defs) ? (defs as DefinitionDto[]) : []
+      const incArray = Array.isArray(incidents)
+        ? (incidents as Array<{ processDefinitionId?: string }>)
+        : []
+      const incByDef = new Map<string, number>()
+      for (const inc of incArray) {
+        const k = inc.processDefinitionId ?? ""
+        incByDef.set(k, (incByDef.get(k) ?? 0) + 1)
+      }
+      rows = defArray.map((d) => ({
+        id: d.id,
+        instances: 0,
+        failedJobs: 0,
+        incidents: incByDef.has(d.id ?? "")
+          ? [{ incidentType: "failedJob", incidentCount: incByDef.get(d.id ?? "") }]
+          : [],
+        definition: d,
+      }))
+    }
 
     let totalRunning = 0
     let totalFailed = 0
