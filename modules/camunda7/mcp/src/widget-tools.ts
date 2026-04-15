@@ -14,11 +14,7 @@ import {
   getProcessDefinitionBpmn20Xml,
 } from "@automation-mcp/client-camunda7/generated/sdk.gen"
 
-export function registerWidgetTools(
-  server: MCPServer,
-  client: Client,
-  resourceUri: string,
-) {
+export function registerWidgetTools(server: MCPServer, client: Client, resourceUri: string) {
   const uiMeta = { ui: { resourceUri } }
 
   server.tool(
@@ -117,9 +113,7 @@ export function registerWidgetTools(
     async (args) => {
       const [instance, activityTree, variables, incidents] = await Promise.all([
         getProcessInstance({ client, path: { id: args.processInstanceId } }),
-        getActivityInstanceTree({ client, path: { id: args.processInstanceId } }).catch(
-          () => null,
-        ),
+        getActivityInstanceTree({ client, path: { id: args.processInstanceId } }).catch(() => null),
         getProcessInstanceVariables({
           client,
           path: { id: args.processInstanceId },

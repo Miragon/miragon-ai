@@ -4,12 +4,12 @@ Die History Plugins schieben Engine-History-Events in Echtzeit nach ClickHouse. 
 
 ## Module
 
-| Plugin | Engine | Status |
-|--------|--------|--------|
-| `shared-history-clickhouse` | Engine-agnostisch | Aktiv |
-| `camunda7-history-clickhouse` | Camunda 7 | Aktiv |
-| `cibseven-history-clickhouse` | CIB Seven | Aktiv |
-| `operaton-history-clickhouse` | Operaton | Platzhalter |
+| Plugin                        | Engine            | Status      |
+| ----------------------------- | ----------------- | ----------- |
+| `shared-history-clickhouse`   | Engine-agnostisch | Aktiv       |
+| `camunda7-history-clickhouse` | Camunda 7         | Aktiv       |
+| `cibseven-history-clickhouse` | CIB Seven         | Aktiv       |
+| `operaton-history-clickhouse` | Operaton          | Platzhalter |
 
 ## Funktionsweise
 

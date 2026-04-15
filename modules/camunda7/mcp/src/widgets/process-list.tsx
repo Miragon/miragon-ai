@@ -19,7 +19,7 @@ export interface ProcessListData {
 export function ProcessListWidget({ data }: { data: ProcessListData | null }) {
   if (!data) {
     return (
-      <div className="p-6 bg-card text-card-foreground">
+      <div className="bg-card text-card-foreground p-6">
         <Alert variant="destructive">
           <AlertDescription>No data available</AlertDescription>
         </Alert>
@@ -28,7 +28,7 @@ export function ProcessListWidget({ data }: { data: ProcessListData | null }) {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
+    <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Process Definitions</h2>
         <Badge variant="secondary">{data.totalCount} deployed</Badge>
@@ -40,10 +40,10 @@ export function ProcessListWidget({ data }: { data: ProcessListData | null }) {
             <CardContent className="flex items-center justify-between p-4">
               <div>
                 <h3 className="font-medium">{def.name ?? def.key}</h3>
-                <p className="text-sm font-mono text-muted-foreground">{def.key}</p>
+                <p className="text-muted-foreground font-mono text-sm">{def.key}</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">v{def.version}</span>
+                <span className="text-muted-foreground text-sm">v{def.version}</span>
                 {def.versionTag && (
                   <Badge variant="secondary" className="bg-primary/10 text-primary">
                     {def.versionTag}

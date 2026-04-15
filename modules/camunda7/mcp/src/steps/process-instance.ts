@@ -36,9 +36,7 @@ export const loadProcessInstanceStep: PipelineStepDefinition<Camunda7AppConfig> 
     const [instance, activityTree, variables, incidents] = await Promise.all([
       getProcessInstance({ client, path: { id: processInstanceId } }),
       getActivityInstanceTree({ client, path: { id: processInstanceId } }).catch(() => null),
-      getProcessInstanceVariables({ client, path: { id: processInstanceId } }).catch(
-        () => ({}),
-      ),
+      getProcessInstanceVariables({ client, path: { id: processInstanceId } }).catch(() => ({})),
       getIncidents({
         client,
         query: { processInstanceId, maxResults: 100 },

@@ -46,10 +46,10 @@ Der HttpClient ist mit OpenTelemetry instrumentiert:
 
 ```typescript
 const adapter = createEngineAdapter({
-  engineType: 'cibseven',
-  baseUrl: 'http://localhost:8080/engine-rest',
-  authType: 'basic',
-  username: 'demo',
-  password: 'demo',
-});
+  engineType: "cibseven",
+  baseUrl: "http://localhost:8080/engine-rest",
+  authType: "basic",
+  username: "demo",
+  password: "demo",
+})
 ```

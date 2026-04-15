@@ -5,7 +5,13 @@ import { HistoryTimelineWidget, type HistoryTimelineData } from "./history-timel
 import { TaskDashboardWidget, type TaskDashboardData } from "./task-dashboard.js"
 import { InstanceDetailWidget, type InstanceDetailData } from "./instance-detail.js"
 
-export type { ProcessListData, IncidentPanelData, HistoryTimelineData, TaskDashboardData, InstanceDetailData }
+export type {
+  ProcessListData,
+  IncidentPanelData,
+  HistoryTimelineData,
+  TaskDashboardData,
+  InstanceDetailData,
+}
 
 export const camunda7Widgets: Record<string, ComponentType<{ data: unknown }>> = {
   "camunda7:process-list": ProcessListWidget as ComponentType<{ data: unknown }>,

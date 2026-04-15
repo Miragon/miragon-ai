@@ -3,11 +3,7 @@ import type { MCPServer } from "mcp-use/server"
 import { text } from "mcp-use/server"
 import { escapeString, type ClickHouseClient } from "./client.js"
 
-export function registerWidgetTools(
-  server: MCPServer,
-  ch: ClickHouseClient,
-  resourceUri: string,
-) {
+export function registerWidgetTools(server: MCPServer, ch: ClickHouseClient, resourceUri: string) {
   server.tool(
     {
       name: "analytics_show_dashboard",
@@ -27,7 +23,7 @@ export function registerWidgetTools(
         "7d": "7 DAY",
         "30d": "30 DAY",
         "90d": "90 DAY",
-      }[args.period as "1d" | "7d" | "30d" | "90d"]
+      }[args.period]
 
       const keyFilter = args.processDefinitionKey
         ? `AND process_definition_key = ${escapeString(args.processDefinitionKey)}`
@@ -114,13 +110,12 @@ WHERE start_time >= now() - INTERVAL ${interval}
 GROUP BY process_definition_key
 ORDER BY total_instances DESC`
 
-      const [kpiRows, incidentRows, activityBreakdown, definitionBreakdown] =
-        await Promise.all([
-          ch.query<Record<string, number>>(kpiSql),
-          ch.query<{ incident_count: number }>(incidentSql),
-          ch.query(activitySql),
-          ch.query(definitionSql),
-        ])
+      const [kpiRows, incidentRows, activityBreakdown, definitionBreakdown] = await Promise.all([
+        ch.query<Record<string, number>>(kpiSql),
+        ch.query<{ incident_count: number }>(incidentSql),
+        ch.query(activitySql),
+        ch.query(definitionSql),
+      ])
 
       const kpi = kpiRows[0]
 
@@ -137,9 +132,7 @@ ORDER BY total_instances DESC`
             avgDurationMs:
               kpi?.avg_duration_sec != null ? Number(kpi.avg_duration_sec) * 1000 : null,
             medianDurationMs:
-              kpi?.median_duration_sec != null
-                ? Number(kpi.median_duration_sec) * 1000
-                : null,
+              kpi?.median_duration_sec != null ? Number(kpi.median_duration_sec) * 1000 : null,
             p95DurationMs:
               kpi?.p95_duration_sec != null ? Number(kpi.p95_duration_sec) * 1000 : null,
             activityBreakdown: activityBreakdown.map((a: Record<string, unknown>) => ({
@@ -151,16 +144,14 @@ ORDER BY total_instances DESC`
               p95DurationMs: Number(a.p95_duration_sec ?? 0) * 1000,
               totalTimeMs: Number(a.total_time_sec ?? 0) * 1000,
             })),
-            definitionBreakdown: definitionBreakdown.map(
-              (d: Record<string, unknown>) => ({
-                processDefinitionKey: d.process_definition_key as string,
-                totalInstances: Number(d.total_instances),
-                completed: Number(d.completed),
-                running: Number(d.running),
-                failed: Number(d.failed),
-                avgDurationMs: d.avg_duration_ms != null ? Number(d.avg_duration_ms) : null,
-              }),
-            ),
+            definitionBreakdown: definitionBreakdown.map((d: Record<string, unknown>) => ({
+              processDefinitionKey: d.process_definition_key as string,
+              totalInstances: Number(d.total_instances),
+              completed: Number(d.completed),
+              running: Number(d.running),
+              failed: Number(d.failed),
+              avgDurationMs: d.avg_duration_ms != null ? Number(d.avg_duration_ms) : null,
+            })),
           },
         }),
       )

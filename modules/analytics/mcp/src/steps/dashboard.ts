@@ -130,12 +130,10 @@ ORDER BY total_instances DESC`
       failedCount: Number(kpi?.failed ?? 0),
       incidentCount: Number(incidentRows[0]?.incident_count ?? 0),
       failureRatePct: Number(kpi?.failure_rate_pct ?? 0),
-      avgDurationMs:
-        kpi?.avg_duration_sec != null ? Number(kpi.avg_duration_sec) * 1000 : null,
+      avgDurationMs: kpi?.avg_duration_sec != null ? Number(kpi.avg_duration_sec) * 1000 : null,
       medianDurationMs:
         kpi?.median_duration_sec != null ? Number(kpi.median_duration_sec) * 1000 : null,
-      p95DurationMs:
-        kpi?.p95_duration_sec != null ? Number(kpi.p95_duration_sec) * 1000 : null,
+      p95DurationMs: kpi?.p95_duration_sec != null ? Number(kpi.p95_duration_sec) * 1000 : null,
       activityBreakdown: activityBreakdown.map((a: Record<string, unknown>) => ({
         activityId: a.activity_id,
         activityName: a.activity_name,

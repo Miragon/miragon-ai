@@ -25,22 +25,22 @@ export interface IncidentPanelData {
 
 function IncidentCard({ incident }: { incident: IncidentData }) {
   return (
-    <Card className="gap-0 py-0 shadow-none border-destructive/30">
+    <Card className="border-destructive/30 gap-0 py-0 shadow-none">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex items-center gap-2">
               <Badge variant="destructive">{incident.incidentType}</Badge>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {new Date(incident.incidentTimestamp).toLocaleString()}
               </span>
             </div>
             {incident.incidentMessage && (
-              <p className="text-sm text-muted-foreground break-words font-mono">
+              <p className="text-muted-foreground break-words font-mono text-sm">
                 {incident.incidentMessage}
               </p>
             )}
-            <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+            <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
               <span>
                 Activity: <code>{incident.activityId}</code>
               </span>
@@ -60,7 +60,7 @@ function DefinitionSection({ group }: { group: DefinitionGroup }) {
     <details open>
       <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
         <svg
-          className="size-4 shrink-0 text-muted-foreground transition-transform [[open]>&]:rotate-90"
+          className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
           viewBox="0 0 16 16"
           fill="currentColor"
         >
@@ -68,11 +68,11 @@ function DefinitionSection({ group }: { group: DefinitionGroup }) {
         </svg>
         <span className="font-mono text-sm font-medium">{group.processDefinitionKey}</span>
         <Badge variant="destructive">{group.incidentCount}</Badge>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-muted-foreground text-xs">
           latest {new Date(group.latestIncident).toLocaleString()}
         </span>
       </summary>
-      <div className="mt-2 ml-6 flex flex-col gap-3">
+      <div className="ml-6 mt-2 flex flex-col gap-3">
         {group.incidents.map((incident) => (
           <IncidentCard key={incident.id} incident={incident} />
         ))}
@@ -84,7 +84,7 @@ function DefinitionSection({ group }: { group: DefinitionGroup }) {
 export function IncidentPanelWidget({ data }: { data: IncidentPanelData | null }) {
   if (!data) {
     return (
-      <div className="p-6 bg-card text-card-foreground">
+      <div className="bg-card text-card-foreground p-6">
         <Alert variant="destructive">
           <AlertDescription>No data available</AlertDescription>
         </Alert>
@@ -93,7 +93,7 @@ export function IncidentPanelWidget({ data }: { data: IncidentPanelData | null }
   }
 
   return (
-    <div className="flex flex-col gap-4 p-6 bg-card text-card-foreground">
+    <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Open Incidents</h2>
         <Badge variant="destructive">{data.totalCount} open</Badge>

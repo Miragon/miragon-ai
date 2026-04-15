@@ -32,9 +32,7 @@ export function createClickHouseClient(config: ClickHouseConfig): ClickHouseClie
       } catch (err) {
         const cause = (err as { cause?: { code?: string; message?: string } }).cause
         const detail = `${cause?.code ?? ""} ${cause?.message ?? (err as Error).message}`.trim()
-        throw new Error(
-          `ClickHouse request to ${queryUrl} (user=${username}) failed: ${detail}`,
-        )
+        throw new Error(`ClickHouse request to ${queryUrl} (user=${username}) failed: ${detail}`)
       }
 
       if (!response.ok) {

@@ -31,9 +31,7 @@ export function registerProcessInstanceTools(register: Register) {
       "Start a new process instance by process definition key. Optionally set a business key and initial variables.",
     annotations: { openWorldHint: true },
     inputSchema: {
-      processDefinitionKey: z
-        .string()
-        .describe("The key of the process definition to start"),
+      processDefinitionKey: z.string().describe("The key of the process definition to start"),
       businessKey: z.string().optional().describe("Business key for correlation"),
       variables: variableSchema.optional(),
     },
@@ -43,7 +41,9 @@ export function registerProcessInstanceTools(register: Register) {
         path: { key: args.processDefinitionKey },
         body: {
           businessKey: args.businessKey,
-          variables: args.variables as Record<string, { value: unknown; type?: string }> | undefined,
+          variables: args.variables as
+            | Record<string, { value: unknown; type?: string }>
+            | undefined,
         },
       }),
   })
@@ -99,8 +99,7 @@ export function registerProcessInstanceTools(register: Register) {
 
   register({
     name: "camunda7_delete_process_instance",
-    description:
-      "Delete (cancel) a running process instance by ID. This action is irreversible.",
+    description: "Delete (cancel) a running process instance by ID. This action is irreversible.",
     annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: {
       processInstanceId: z.string().describe("The process instance ID to delete"),
@@ -118,14 +117,8 @@ export function registerProcessInstanceTools(register: Register) {
     annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: {
       processInstanceId: z.string().describe("The ID of the process instance to modify"),
-      skipCustomListeners: z
-        .boolean()
-        .optional()
-        .describe("Skip execution of custom listeners"),
-      skipIoMappings: z
-        .boolean()
-        .optional()
-        .describe("Skip execution of input/output mappings"),
+      skipCustomListeners: z.boolean().optional().describe("Skip execution of custom listeners"),
+      skipIoMappings: z.boolean().optional().describe("Skip execution of input/output mappings"),
       instructions: z
         .array(
           z.object({
@@ -137,10 +130,7 @@ export function registerProcessInstanceTools(register: Register) {
               .optional()
               .describe("Activity ID to start before/after or cancel"),
             transitionId: z.string().optional().describe("Transition ID for startTransition"),
-            activityInstanceId: z
-              .string()
-              .optional()
-              .describe("Activity instance ID to cancel"),
+            activityInstanceId: z.string().optional().describe("Activity instance ID to cancel"),
             transitionInstanceId: z
               .string()
               .optional()
@@ -184,10 +174,7 @@ export function registerProcessInstanceTools(register: Register) {
       processInstanceId: z.string().describe("The process instance ID"),
       variableName: z.string().describe("The variable name"),
       value: z.unknown().describe("The variable value"),
-      type: z
-        .string()
-        .optional()
-        .describe("The variable type (String, Integer, Boolean, etc.)"),
+      type: z.string().optional().describe("The variable type (String, Integer, Boolean, etc.)"),
     },
     handler: async (client, args) => {
       await setProcessInstanceVariable({

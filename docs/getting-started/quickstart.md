@@ -17,6 +17,7 @@ docker compose up -d
 ```
 
 Das startet:
+
 - **CIB Seven** auf Port 8080 (mit History Plugin)
 - **ClickHouse** auf Port 8123
 

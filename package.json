@@ -10,13 +10,34 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky",
     "dev": "dotenv -e .env -- turbo dev --env-mode=loose"
   },
   "devDependencies": {
-    "turbo": "2.8.17",
+    "@eslint/js": "9.39.4",
+    "@types/node": "22.19.15",
     "dotenv-cli": "11.0.0",
+    "eslint": "9.39.4",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "husky": "9.1.7",
+    "lint-staged": "15.5.2",
+    "prettier": "3.8.2",
+    "prettier-plugin-tailwindcss": "0.6.14",
+    "turbo": "2.8.17",
     "typescript": "5.9.3",
-    "vitest": "3.2.4",
-    "@types/node": "22.19.15"
+    "typescript-eslint": "8.58.2",
+    "vitest": "3.2.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
   }
 }

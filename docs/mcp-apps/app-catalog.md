@@ -5,6 +5,7 @@
 **Tool**: `show-process-list`
 
 Zeigt alle deployed Prozessdefinitionen als Karten mit:
+
 - Prozess-Key, Name, Version
 - Status-Badge (Active/Suspended)
 - Version-Tags
@@ -19,6 +20,7 @@ Zeigt alle deployed Prozessdefinitionen als Karten mit:
 **Tool**: `show-task-dashboard`
 
 Interaktive Tabelle offener User Tasks:
+
 - Task-Name, Assignee, Prozess, Priorität, Erstellzeitpunkt
 - Farbcodierte Priority-Badges (high/medium/normal)
 - Relative Zeitanzeige (TimeAgo)
@@ -34,6 +36,7 @@ Interaktive Tabelle offener User Tasks:
 **Tool**: `show-instance-detail`
 
 Detailansicht einer einzelnen Prozessinstanz:
+
 - Instanz-Metadaten (Definition, Business Key, Status)
 - Rekursiver Activity Instance Tree
 - Variablen-Tabelle mit Typ-Badges
@@ -48,6 +51,7 @@ Detailansicht einer einzelnen Prozessinstanz:
 **Tool**: `show-analytics-dashboard`
 
 KPI-Dashboard mit aggregierten Metriken:
+
 - StatCards: Completed, Running, Incidents, Avg Duration
 - Dauer-Formatierung (ms → Sekunden/Minuten/Stunden/Tage)
 - Gruppierung nach `processDefinitionKey`
@@ -62,6 +66,7 @@ KPI-Dashboard mit aggregierten Metriken:
 **Tool**: `show-history-timeline`
 
 Zeitliche Darstellung aller Activities einer Prozessinstanz:
+
 - Farbcodierte Punkte nach Activity-Typ (11 BPMN-Typen)
 - Verbundene Timeline mit vertikalen Linien
 - Activity-Metadaten: Name, Typ, Dauer, Assignee
@@ -76,6 +81,7 @@ Zeitliche Darstellung aller Activities einer Prozessinstanz:
 **Tool**: `show-incident-panel`
 
 Fehler-Monitoring mit Aktionsmöglichkeiten:
+
 - Incident-Karten mit roter Akzentfarbe
 - Typ-Badge, Timestamp, Error-Message
 - Activity- und Prozessreferenz

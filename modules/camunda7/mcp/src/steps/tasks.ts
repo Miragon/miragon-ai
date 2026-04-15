@@ -15,9 +15,7 @@ export const loadTasksStep: PipelineStepDefinition<Camunda7AppConfig> = {
     const client = appConfig.client
     const assignee = context.keys["camunda7:assignee"] as string | undefined
     const candidateGroup = context.keys["camunda7:candidateGroup"] as string | undefined
-    const processDefinitionKey = context.keys["camunda7:processDefinitionKey"] as
-      | string
-      | undefined
+    const processDefinitionKey = context.keys["camunda7:processDefinitionKey"] as string | undefined
 
     const tasks = await getTasks({
       client,

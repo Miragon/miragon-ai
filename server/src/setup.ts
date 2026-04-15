@@ -79,9 +79,7 @@ function getActiveModuleNames(): string[] {
     .filter(Boolean)
     .filter((name) => {
       if (!MODULE_REGISTRY[name]) {
-        console.warn(
-          `[automation-mcp] Unknown module "${name}" in MCP_ACTIVE_MODULES — skipping`,
-        )
+        console.warn(`[automation-mcp] Unknown module "${name}" in MCP_ACTIVE_MODULES — skipping`)
         return false
       }
       return true
@@ -137,11 +135,7 @@ export function registerModuleTools(server: MCPServer, plugins: AppPlugin[]) {
   }
 }
 
-export function registerWidgetTools(
-  server: MCPServer,
-  resourceUri: string,
-  plugins: AppPlugin[],
-) {
+export function registerWidgetTools(server: MCPServer, resourceUri: string, plugins: AppPlugin[]) {
   for (const plugin of plugins) {
     plugin.registerWidgetTools?.(server, resourceUri)
   }

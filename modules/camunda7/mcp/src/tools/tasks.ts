@@ -157,7 +157,6 @@ export function registerTaskTools(register: Register) {
     description: "Get all variables of a user task.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { taskId: z.string().describe("The task ID") },
-    handler: async (client, args) =>
-      getTaskVariables({ client, path: { id: args.taskId } }),
+    handler: async (client, args) => getTaskVariables({ client, path: { id: args.taskId } }),
   })
 }

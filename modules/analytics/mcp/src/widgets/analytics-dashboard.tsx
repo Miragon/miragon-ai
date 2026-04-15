@@ -54,14 +54,10 @@ function formatDuration(ms: number | null): string {
   return `${(ms / 86400000).toFixed(1)}d`
 }
 
-export function AnalyticsDashboardWidget({
-  data,
-}: {
-  data: AnalyticsDashboardData | null
-}) {
+export function AnalyticsDashboardWidget({ data }: { data: AnalyticsDashboardData | null }) {
   if (!data) {
     return (
-      <div className="p-6 bg-card text-card-foreground">
+      <div className="bg-card text-card-foreground p-6">
         <Alert variant="destructive">
           <AlertDescription>No data available</AlertDescription>
         </Alert>
@@ -70,35 +66,35 @@ export function AnalyticsDashboardWidget({
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-card text-card-foreground">
+    <div className="bg-card text-card-foreground flex flex-col gap-6 p-6">
       <h2 className="text-xl font-semibold">Process Analytics</h2>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <Card className="gap-0 py-0 shadow-none">
           <CardContent className="p-4">
-            <p className="text-sm font-medium opacity-80 text-muted-foreground">Total</p>
+            <p className="text-muted-foreground text-sm font-medium opacity-80">Total</p>
             <p className="text-2xl font-bold">{data.totalCount}</p>
           </CardContent>
         </Card>
-        <Card className="gap-0 py-0 shadow-none bg-success/10 border-success/30 text-success-foreground">
+        <Card className="bg-success/10 border-success/30 text-success-foreground gap-0 py-0 shadow-none">
           <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">Completed</p>
             <p className="text-2xl font-bold">{data.completedCount}</p>
           </CardContent>
         </Card>
-        <Card className="gap-0 py-0 shadow-none bg-info/10 border-info/30 text-info-foreground">
+        <Card className="bg-info/10 border-info/30 text-info-foreground gap-0 py-0 shadow-none">
           <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">Running</p>
             <p className="text-2xl font-bold">{data.runningCount}</p>
           </CardContent>
         </Card>
-        <Card className="gap-0 py-0 shadow-none bg-destructive/10 border-destructive/30 text-destructive">
+        <Card className="bg-destructive/10 border-destructive/30 text-destructive gap-0 py-0 shadow-none">
           <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">Failed</p>
             <p className="text-2xl font-bold">{data.failedCount}</p>
           </CardContent>
         </Card>
-        <Card className="gap-0 py-0 shadow-none bg-destructive/10 border-destructive/30 text-destructive">
+        <Card className="bg-destructive/10 border-destructive/30 text-destructive gap-0 py-0 shadow-none">
           <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">Incidents</p>
             <p className="text-2xl font-bold">{data.incidentCount}</p>
@@ -107,19 +103,19 @@ export function AnalyticsDashboardWidget({
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
+        <Card className="bg-primary/10 border-primary/30 text-primary gap-0 py-0 shadow-none">
           <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">Avg Duration</p>
             <p className="text-2xl font-bold">{formatDuration(data.avgDurationMs)}</p>
           </CardContent>
         </Card>
-        <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
+        <Card className="bg-primary/10 border-primary/30 text-primary gap-0 py-0 shadow-none">
           <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">Median</p>
             <p className="text-2xl font-bold">{formatDuration(data.medianDurationMs)}</p>
           </CardContent>
         </Card>
-        <Card className="gap-0 py-0 shadow-none bg-primary/10 border-primary/30 text-primary">
+        <Card className="bg-primary/10 border-primary/30 text-primary gap-0 py-0 shadow-none">
           <CardContent className="p-4">
             <p className="text-sm font-medium opacity-80">P95</p>
             <p className="text-2xl font-bold">{formatDuration(data.p95DurationMs)}</p>
@@ -127,7 +123,7 @@ export function AnalyticsDashboardWidget({
         </Card>
         <Card className="gap-0 py-0 shadow-none">
           <CardContent className="p-4">
-            <p className="text-sm font-medium opacity-80 text-muted-foreground">Failure Rate</p>
+            <p className="text-muted-foreground text-sm font-medium opacity-80">Failure Rate</p>
             <p className="text-2xl font-bold">{data.failureRatePct}%</p>
           </CardContent>
         </Card>
@@ -137,7 +133,7 @@ export function AnalyticsDashboardWidget({
         <details open>
           <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
             <svg
-              className="size-4 shrink-0 text-muted-foreground transition-transform [[open]>&]:rotate-90"
+              className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
               viewBox="0 0 16 16"
               fill="currentColor"
             >
@@ -150,10 +146,8 @@ export function AnalyticsDashboardWidget({
             {data.definitionBreakdown.map((def) => (
               <Card key={def.processDefinitionKey} className="gap-0 py-0 shadow-none">
                 <CardContent className="flex items-center justify-between p-3">
-                  <span className="font-mono text-sm font-medium">
-                    {def.processDefinitionKey}
-                  </span>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span className="font-mono text-sm font-medium">{def.processDefinitionKey}</span>
+                  <div className="text-muted-foreground flex items-center gap-4 text-sm">
                     <span>{def.totalInstances} total</span>
                     <span className="text-success-foreground">{def.completed} completed</span>
                     <span className="text-info-foreground">{def.running} running</span>
@@ -171,7 +165,7 @@ export function AnalyticsDashboardWidget({
         <details open>
           <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
             <svg
-              className="size-4 shrink-0 text-muted-foreground transition-transform [[open]>&]:rotate-90"
+              className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
               viewBox="0 0 16 16"
               fill="currentColor"
             >
@@ -202,8 +196,12 @@ export function AnalyticsDashboardWidget({
                       <Badge variant="secondary">{act.activityType}</Badge>
                     </TableCell>
                     <TableCell className="text-right">{act.executionCount}</TableCell>
-                    <TableCell className="text-right">{formatDuration(act.avgDurationMs)}</TableCell>
-                    <TableCell className="text-right">{formatDuration(act.p95DurationMs)}</TableCell>
+                    <TableCell className="text-right">
+                      {formatDuration(act.avgDurationMs)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatDuration(act.p95DurationMs)}
+                    </TableCell>
                     <TableCell className="text-right">{formatDuration(act.totalTimeMs)}</TableCell>
                   </TableRow>
                 ))}

@@ -101,8 +101,7 @@ export function registerHistoryTools(register: Register) {
 
   register({
     name: "camunda7_query_historic_task_instances",
-    description:
-      "Query historic task instances. Shows completed and open user tasks from history.",
+    description: "Query historic task instances. Shows completed and open user tasks from history.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: {
       processInstanceId: z.string().optional().describe("Filter by process instance ID"),
