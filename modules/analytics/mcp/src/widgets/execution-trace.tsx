@@ -19,48 +19,16 @@ import {
   TabsContent,
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
+import type {
+  ExecutionTraceData,
+  ActivityHistoryItem,
+  VariableChangeItem,
+  OtelSpanItem,
+} from "@automation-mcp/client-analytics"
 
-interface ActivityHistoryItem {
-  activity_id: string
-  activity_name: string | null
-  activity_type: string
-  start_time: string
-  end_time: string | null
-  duration_in_millis: number | null
-  assignee: string | null
-  task_id: string | null
-}
+export type { ExecutionTraceData }
 
-interface VariableChangeItem {
-  variable_name: string
-  variable_type: string
-  text_value: string | null
-  long_value: number | null
-  double_value: number | null
-  revision: number
-  timestamp: string
-}
-
-interface OtelSpanItem {
-  TraceId: string
-  SpanName: string
-  ServiceName: string
-  duration_ms: number
-  StatusCode: string
-  StatusMessage: string
-}
-
-interface TraceData {
-  activityHistory?: ActivityHistoryItem[]
-  variableChanges?: VariableChangeItem[]
-  otelSpans?: OtelSpanItem[]
-  otelSpansError?: string
-}
-
-export interface ExecutionTraceData {
-  processInstanceId: string | null
-  trace: TraceData | null
-}
+type TraceData = NonNullable<ExecutionTraceData["trace"]>
 
 function formatDuration(ms: number | null): string {
   if (ms == null) return "\u2014"

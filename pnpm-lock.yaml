@@ -48,8 +48,21 @@ importers:
         specifier: 3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@2.6.1)(jsdom@29.0.0)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.3)
 
+  modules/analytics/client:
+    dependencies:
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   modules/analytics/mcp:
     dependencies:
+      '@automation-mcp/client-analytics':
+        specifier: workspace:*
+        version: link:../client
       '@miragon/mcp-toolkit-core':
         specifier: workspace:*
         version: link:../../../vendor/mcp-toolkit/packages/core
@@ -74,6 +87,10 @@ importers:
         version: 5.9.3
 
   modules/camunda7/client:
+    dependencies:
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: 0.94.5

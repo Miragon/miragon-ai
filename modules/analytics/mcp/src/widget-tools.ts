@@ -1,7 +1,19 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
 import { text } from "mcp-use/server"
-import { escapeString, type ClickHouseClient } from "./client.js"
+import {
+  escapeString,
+  type ClickHouseClient,
+  type AnalyticsDashboardData,
+  type ActivityBreakdownItem,
+  type DefinitionBreakdownItem,
+  type FailureDashboardData,
+  type ErrorPatternItem,
+  type ProcessFailureItem,
+  type VariableSearchData,
+  type ExecutionTraceData,
+  type VariableSearchRow,
+} from "@automation-mcp/client-analytics"
 
 export function registerWidgetTools(server: MCPServer, ch: ClickHouseClient, resourceUri: string) {
   server.tool(
@@ -110,51 +122,78 @@ WHERE start_time >= now() - INTERVAL ${interval}
 GROUP BY process_definition_key
 ORDER BY total_instances DESC`
 
+      interface DashboardKpiRow {
+        total_instances: number
+        completed: number
+        running: number
+        failed: number
+        failure_rate_pct: number
+        avg_duration_sec: number | null
+        median_duration_sec: number | null
+        p95_duration_sec: number | null
+      }
+      interface ActivityDashboardRow {
+        activity_id: string
+        activity_name: string | null
+        activity_type: string
+        execution_count: number
+        avg_duration_sec: number | null
+        p95_duration_sec: number | null
+        total_time_sec: number | null
+      }
+      interface DefinitionDashboardRow {
+        process_definition_key: string
+        total_instances: number
+        completed: number
+        running: number
+        failed: number
+        avg_duration_ms: number | null
+      }
+
       const [kpiRows, incidentRows, activityBreakdown, definitionBreakdown] = await Promise.all([
-        ch.query<Record<string, number>>(kpiSql),
+        ch.query<DashboardKpiRow>(kpiSql),
         ch.query<{ incident_count: number }>(incidentSql),
-        ch.query(activitySql),
-        ch.query(definitionSql),
+        ch.query<ActivityDashboardRow>(activitySql),
+        ch.query<DefinitionDashboardRow>(definitionSql),
       ])
 
       const kpi = kpiRows[0]
 
-      return text(
-        JSON.stringify({
-          widget: "analytics:dashboard",
-          data: {
-            totalCount: Number(kpi?.total_instances ?? 0),
-            completedCount: Number(kpi?.completed ?? 0),
-            runningCount: Number(kpi?.running ?? 0),
-            failedCount: Number(kpi?.failed ?? 0),
-            incidentCount: Number(incidentRows[0]?.incident_count ?? 0),
-            failureRatePct: Number(kpi?.failure_rate_pct ?? 0),
-            avgDurationMs:
-              kpi?.avg_duration_sec != null ? Number(kpi.avg_duration_sec) * 1000 : null,
-            medianDurationMs:
-              kpi?.median_duration_sec != null ? Number(kpi.median_duration_sec) * 1000 : null,
-            p95DurationMs:
-              kpi?.p95_duration_sec != null ? Number(kpi.p95_duration_sec) * 1000 : null,
-            activityBreakdown: activityBreakdown.map((a: Record<string, unknown>) => ({
-              activityId: a.activity_id,
-              activityName: a.activity_name,
-              activityType: a.activity_type,
-              executionCount: Number(a.execution_count),
-              avgDurationMs: Number(a.avg_duration_sec ?? 0) * 1000,
-              p95DurationMs: Number(a.p95_duration_sec ?? 0) * 1000,
-              totalTimeMs: Number(a.total_time_sec ?? 0) * 1000,
-            })),
-            definitionBreakdown: definitionBreakdown.map((d: Record<string, unknown>) => ({
-              processDefinitionKey: d.process_definition_key as string,
-              totalInstances: Number(d.total_instances),
-              completed: Number(d.completed),
-              running: Number(d.running),
-              failed: Number(d.failed),
-              avgDurationMs: d.avg_duration_ms != null ? Number(d.avg_duration_ms) : null,
-            })),
-          },
-        }),
-      )
+      const activityItems: ActivityBreakdownItem[] = activityBreakdown.map((a) => ({
+        activityId: a.activity_id,
+        activityName: a.activity_name ?? "",
+        activityType: a.activity_type,
+        executionCount: Number(a.execution_count),
+        avgDurationMs: Number(a.avg_duration_sec ?? 0) * 1000,
+        p95DurationMs: Number(a.p95_duration_sec ?? 0) * 1000,
+        totalTimeMs: Number(a.total_time_sec ?? 0) * 1000,
+      }))
+
+      const definitionItems: DefinitionBreakdownItem[] = definitionBreakdown.map((d) => ({
+        processDefinitionKey: d.process_definition_key,
+        totalInstances: Number(d.total_instances),
+        completed: Number(d.completed),
+        running: Number(d.running),
+        failed: Number(d.failed),
+        avgDurationMs: d.avg_duration_ms != null ? Number(d.avg_duration_ms) : null,
+      }))
+
+      const data: AnalyticsDashboardData = {
+        totalCount: Number(kpi?.total_instances ?? 0),
+        completedCount: Number(kpi?.completed ?? 0),
+        runningCount: Number(kpi?.running ?? 0),
+        failedCount: Number(kpi?.failed ?? 0),
+        incidentCount: Number(incidentRows[0]?.incident_count ?? 0),
+        failureRatePct: Number(kpi?.failure_rate_pct ?? 0),
+        avgDurationMs: kpi?.avg_duration_sec != null ? Number(kpi.avg_duration_sec) * 1000 : null,
+        medianDurationMs:
+          kpi?.median_duration_sec != null ? Number(kpi.median_duration_sec) * 1000 : null,
+        p95DurationMs: kpi?.p95_duration_sec != null ? Number(kpi.p95_duration_sec) * 1000 : null,
+        activityBreakdown: activityItems,
+        definitionBreakdown: definitionItems,
+      }
+
+      return text(JSON.stringify({ widget: "analytics:dashboard", data }))
     },
   )
 
@@ -222,9 +261,25 @@ FROM camunda_history.camunda_incidents FINAL
 WHERE create_time >= now() - INTERVAL ${interval}
 GROUP BY process_definition_key`
 
+      interface ErrorPatternQueryRow {
+        incident_message: string | null
+        activity_id: string | null
+        process_definition_key: string | null
+        incident_count: number
+        first_occurrence: string | null
+        last_occurrence: string | null
+        sample_instance_ids: string[] | null
+      }
+      interface ProcessFailureQueryRow {
+        process_definition_key: string
+        total_instances: number
+        failed_count: number
+        failure_rate_pct: number
+      }
+
       const [errorPatterns, processFailures, incidentsByProcess] = await Promise.all([
-        ch.query<Record<string, unknown>>(errorPatternsSql),
-        ch.query<Record<string, unknown>>(processFailuresSql),
+        ch.query<ErrorPatternQueryRow>(errorPatternsSql),
+        ch.query<ProcessFailureQueryRow>(processFailuresSql),
         ch.query<{ process_definition_key: string; incident_count: number }>(incidentsByProcessSql),
       ])
 
@@ -235,43 +290,37 @@ GROUP BY process_definition_key`
 
       const totalIncidents = errorPatterns.reduce((s, r) => s + Number(r.incident_count ?? 0), 0)
 
-      const processBreakdown = processFailures.map((p) => {
-        const key = p.process_definition_key as string
-        return {
-          processDefinitionKey: key,
-          totalInstances: Number(p.total_instances),
-          failedCount: Number(p.failed_count),
-          incidentCount: incidentMap.get(key) ?? 0,
-          failureRatePct: Number(p.failure_rate_pct),
-        }
-      })
+      const processBreakdown: ProcessFailureItem[] = processFailures.map((p) => ({
+        processDefinitionKey: p.process_definition_key,
+        totalInstances: Number(p.total_instances),
+        failedCount: Number(p.failed_count),
+        incidentCount: incidentMap.get(p.process_definition_key) ?? 0,
+        failureRatePct: Number(p.failure_rate_pct),
+      }))
 
       const mostAffectedProcess =
         processBreakdown.length > 0 ? processBreakdown[0].processDefinitionKey : null
 
-      return text(
-        JSON.stringify({
-          widget: "analytics:failure-dashboard",
-          data: {
-            totalIncidents,
-            uniqueErrorPatterns: errorPatterns.length,
-            mostAffectedProcess,
-            period: args.period,
-            errorPatterns: errorPatterns.map((r) => ({
-              incidentMessage: (r.incident_message as string) ?? "",
-              activityId: (r.activity_id as string) ?? "",
-              processDefinitionKey: (r.process_definition_key as string) ?? "",
-              incidentCount: Number(r.incident_count),
-              firstOccurrence: (r.first_occurrence as string) ?? "",
-              lastOccurrence: (r.last_occurrence as string) ?? "",
-              sampleInstanceIds: Array.isArray(r.sample_instance_ids)
-                ? (r.sample_instance_ids as string[])
-                : [],
-            })),
-            processBreakdown,
-          },
-        }),
-      )
+      const errorPatternItems: ErrorPatternItem[] = errorPatterns.map((r) => ({
+        incidentMessage: r.incident_message ?? "",
+        activityId: r.activity_id ?? "",
+        processDefinitionKey: r.process_definition_key ?? "",
+        incidentCount: Number(r.incident_count),
+        firstOccurrence: r.first_occurrence ?? "",
+        lastOccurrence: r.last_occurrence ?? "",
+        sampleInstanceIds: Array.isArray(r.sample_instance_ids) ? r.sample_instance_ids : [],
+      }))
+
+      const data: FailureDashboardData = {
+        totalIncidents,
+        uniqueErrorPatterns: errorPatterns.length,
+        mostAffectedProcess,
+        period: args.period,
+        errorPatterns: errorPatternItems,
+        processBreakdown,
+      }
+
+      return text(JSON.stringify({ widget: "analytics:failure-dashboard", data }))
     },
   )
 
@@ -294,7 +343,7 @@ GROUP BY process_definition_key`
       _meta: { ui: { resourceUri } },
     },
     async (args) => {
-      let results: Record<string, unknown>[] | null = null
+      let results: VariableSearchRow[] | null = null
 
       if (args.variableName && args.variableValue) {
         const conditions = [
@@ -321,25 +370,22 @@ WHERE ${conditions.join(" AND ")}
 GROUP BY p.id, p.process_definition_key, p.business_key, v.variable_name, v.text_value
 ORDER BY start_time DESC
 LIMIT 50`
-        results = await ch.query(sql)
+        results = await ch.query<VariableSearchRow>(sql)
       }
 
-      return text(
-        JSON.stringify({
-          widget: "analytics:variable-search",
-          data: {
-            results,
-            searchParams:
-              args.variableName || args.variableValue
-                ? {
-                    variableName: args.variableName ?? "",
-                    variableValue: args.variableValue ?? "",
-                    processDefinitionKey: args.processDefinitionKey,
-                  }
-                : null,
-          },
-        }),
-      )
+      const data: VariableSearchData = {
+        results,
+        searchParams:
+          args.variableName || args.variableValue
+            ? {
+                variableName: args.variableName ?? "",
+                variableValue: args.variableValue ?? "",
+                processDefinitionKey: args.processDefinitionKey,
+              }
+            : null,
+      }
+
+      return text(JSON.stringify({ widget: "analytics:variable-search", data }))
     },
   )
 
@@ -360,7 +406,7 @@ LIMIT 50`
       _meta: { ui: { resourceUri } },
     },
     async (args) => {
-      let trace: Record<string, unknown> | null = null
+      let trace: ExecutionTraceData["trace"] = null
 
       if (args.processInstanceId) {
         const pid = escapeString(args.processInstanceId)
@@ -415,15 +461,12 @@ ORDER BY t.Timestamp`
         }
       }
 
-      return text(
-        JSON.stringify({
-          widget: "analytics:execution-trace",
-          data: {
-            processInstanceId: args.processInstanceId ?? null,
-            trace,
-          },
-        }),
-      )
+      const data: ExecutionTraceData = {
+        processInstanceId: args.processInstanceId ?? null,
+        trace,
+      }
+
+      return text(JSON.stringify({ widget: "analytics:execution-trace", data }))
     },
   )
 }

@@ -1,5 +1,13 @@
-import { z } from "zod"
 import type { Client } from "@automation-mcp/client-camunda7"
+import {
+  listTasksInput,
+  getTaskInput,
+  claimTaskInput,
+  unclaimTaskInput,
+  completeTaskInput,
+  setTaskAssigneeInput,
+  getTaskVariablesInput,
+} from "@automation-mcp/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getTasks,
@@ -13,52 +21,13 @@ import {
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
 
-const taskVariableSchema = z
-  .record(
-    z.string(),
-    z.object({
-      value: z.unknown().describe("Variable value"),
-      type: z.string().optional().describe("Variable type (String, Integer, Boolean, etc.)"),
-    }),
-  )
-  .describe("Variables to set when completing the task")
-
 export function registerTaskTools(register: Register) {
   register({
     name: "camunda7_list_tasks",
     description:
       "List user tasks with optional filters. Returns task ID, name, assignee, process info, and timestamps.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: {
-      assignee: z.string().optional().describe("Filter by assignee user ID"),
-      candidateGroup: z.string().optional().describe("Filter by candidate group"),
-      processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
-      processInstanceId: z.string().optional().describe("Filter by process instance ID"),
-      unassigned: z.boolean().optional().describe("Only return unassigned tasks"),
-      maxResults: z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .default(20)
-        .describe("Maximum number of results"),
-      sortBy: z
-        .enum([
-          "instanceId",
-          "dueDate",
-          "executionId",
-          "assignee",
-          "created",
-          "description",
-          "id",
-          "name",
-          "priority",
-          "taskDefinitionKey",
-        ])
-        .optional()
-        .describe("Sort field"),
-      sortOrder: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
-    },
+    inputSchema: listTasksInput.shape,
     handler: async (client, args) =>
       getTasks({
         client,
@@ -79,7 +48,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_get_task",
     description: "Get details of a single user task by ID.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: { taskId: z.string().describe("The task ID") },
+    inputSchema: getTaskInput.shape,
     handler: async (client, args) => getTask({ client, path: { id: args.taskId } }),
   })
 
@@ -87,10 +56,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_claim_task",
     description: "Claim a user task for a specific user.",
     annotations: { openWorldHint: true },
-    inputSchema: {
-      taskId: z.string().describe("The task ID to claim"),
-      userId: z.string().describe("The user ID to assign the task to"),
-    },
+    inputSchema: claimTaskInput.shape,
     handler: async (client, args) => {
       await claim({
         client,
@@ -105,7 +71,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_unclaim_task",
     description: "Unclaim (release) a user task, removing the current assignee.",
     annotations: { openWorldHint: true },
-    inputSchema: { taskId: z.string().describe("The task ID to unclaim") },
+    inputSchema: unclaimTaskInput.shape,
     handler: async (client, args) => {
       await unclaim({ client, path: { id: args.taskId } })
       return { success: true, taskId: args.taskId }
@@ -116,10 +82,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_complete_task",
     description: "Complete a user task by ID. Optionally set variables when completing.",
     annotations: { openWorldHint: true },
-    inputSchema: {
-      taskId: z.string().describe("The ID of the task to complete"),
-      variables: taskVariableSchema.optional(),
-    },
+    inputSchema: completeTaskInput.shape,
     handler: async (client, args) => {
       await complete({
         client,
@@ -138,10 +101,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_set_task_assignee",
     description: "Set the assignee of a user task.",
     annotations: { openWorldHint: true },
-    inputSchema: {
-      taskId: z.string().describe("The task ID"),
-      userId: z.string().describe("The user ID to set as assignee"),
-    },
+    inputSchema: setTaskAssigneeInput.shape,
     handler: async (client, args) => {
       await setAssignee({
         client,
@@ -156,7 +116,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_get_task_variables",
     description: "Get all variables of a user task.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: { taskId: z.string().describe("The task ID") },
+    inputSchema: getTaskVariablesInput.shape,
     handler: async (client, args) => getTaskVariables({ client, path: { id: args.taskId } }),
   })
 }

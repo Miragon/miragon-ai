@@ -15,27 +15,9 @@ import {
   Input,
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
+import type { VariableSearchData, VariableSearchRow } from "@automation-mcp/client-analytics"
 
-interface SearchResult {
-  process_instance_id: string
-  process_definition_key: string
-  business_key: string | null
-  state: string
-  start_time: string
-  end_time: string | null
-  duration_in_millis: number | null
-  variable_name: string
-  text_value: string
-}
-
-export interface VariableSearchData {
-  results: SearchResult[] | null
-  searchParams: {
-    variableName: string
-    variableValue: string
-    processDefinitionKey?: string
-  } | null
-}
+export type { VariableSearchData }
 
 function formatDuration(ms: number | null): string {
   if (ms == null) return "\u2014"
@@ -67,7 +49,7 @@ export function VariableSearchWidget({ data: initialData }: { data: VariableSear
   const [processKey, setProcessKey] = useState(
     initialData?.searchParams?.processDefinitionKey ?? "",
   )
-  const [results, setResults] = useState<SearchResult[] | null>(initialData?.results ?? null)
+  const [results, setResults] = useState<VariableSearchRow[] | null>(initialData?.results ?? null)
   const searchMutation = useToolMutation("analytics_search_by_variable")
 
   function handleSearch(e: React.FormEvent) {
@@ -83,7 +65,7 @@ export function VariableSearchWidget({ data: initialData }: { data: VariableSear
       },
       {
         onSuccess: (result) => {
-          setResults(result as SearchResult[])
+          setResults(result as VariableSearchRow[])
         },
       },
     )

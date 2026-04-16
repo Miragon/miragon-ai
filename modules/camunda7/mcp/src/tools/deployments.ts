@@ -1,5 +1,8 @@
-import { z } from "zod"
 import type { Client } from "@automation-mcp/client-camunda7"
+import {
+  listDeploymentsInput,
+  createDeploymentInput,
+} from "@automation-mcp/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { getDeployments, createDeployment } from "@automation-mcp/client-camunda7/generated/sdk.gen"
 
@@ -10,13 +13,7 @@ export function registerDeploymentTools(register: Register) {
     name: "camunda7_list_deployments",
     description: "List deployments with optional filters.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: {
-      name: z.string().optional().describe("Filter by deployment name"),
-      nameLike: z.string().optional().describe("Filter by deployment name (substring)"),
-      maxResults: z.number().int().positive().optional().default(20),
-      sortBy: z.enum(["id", "name", "deploymentTime", "tenantId"]).optional(),
-      sortOrder: z.enum(["asc", "desc"]).optional(),
-    },
+    inputSchema: listDeploymentsInput.shape,
     handler: async (client, args) =>
       getDeployments({
         client,
@@ -35,28 +32,7 @@ export function registerDeploymentTools(register: Register) {
     description:
       "Deploy BPMN process definitions and other resources to the engine. Supports duplicate filtering and deploy-changed-only.",
     annotations: { openWorldHint: true },
-    inputSchema: {
-      deploymentName: z.string().describe("Name for the deployment"),
-      enableDuplicateFiltering: z
-        .boolean()
-        .optional()
-        .describe("Skip deployment if identical resources already deployed"),
-      deployChangedOnly: z
-        .boolean()
-        .optional()
-        .describe("Only deploy resources that have actually changed"),
-      deploymentSource: z.string().optional().describe("Source identifier for the deployment"),
-      tenantId: z.string().optional().describe("Tenant ID for multi-tenancy"),
-      resources: z
-        .array(
-          z.object({
-            name: z.string().describe('Resource file name (e.g. "process.bpmn")'),
-            content: z.string().describe("Resource content (BPMN XML, DMN XML, etc.)"),
-          }),
-        )
-        .min(1)
-        .describe("Resources to deploy"),
-    },
+    inputSchema: createDeploymentInput.shape,
     handler: async (client, args) => {
       const form = new FormData()
       form.append("deployment-name", args.deploymentName)

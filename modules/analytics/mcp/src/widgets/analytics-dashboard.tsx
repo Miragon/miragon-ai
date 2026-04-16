@@ -11,39 +11,9 @@ import {
   Alert,
   AlertDescription,
 } from "@miragon/mcp-toolkit-ui"
+import type { AnalyticsDashboardData } from "@automation-mcp/client-analytics"
 
-interface ActivityBreakdownItem {
-  activityId: string
-  activityName: string
-  activityType: string
-  executionCount: number
-  avgDurationMs: number
-  p95DurationMs: number
-  totalTimeMs: number
-}
-
-interface DefinitionBreakdownItem {
-  processDefinitionKey: string
-  totalInstances: number
-  completed: number
-  running: number
-  failed: number
-  avgDurationMs: number | null
-}
-
-export interface AnalyticsDashboardData {
-  totalCount: number
-  completedCount: number
-  runningCount: number
-  failedCount: number
-  incidentCount: number
-  failureRatePct: number
-  avgDurationMs: number | null
-  medianDurationMs: number | null
-  p95DurationMs: number | null
-  activityBreakdown: ActivityBreakdownItem[]
-  definitionBreakdown: DefinitionBreakdownItem[]
-}
+export type { AnalyticsDashboardData }
 
 function formatDuration(ms: number | null): string {
   if (ms == null) return "-"

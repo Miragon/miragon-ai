@@ -1,5 +1,5 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import { createClickHouseClient } from "./client.js"
+import { createClickHouseClient } from "@automation-mcp/client-analytics"
 import { registerTools } from "./tools/index.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"

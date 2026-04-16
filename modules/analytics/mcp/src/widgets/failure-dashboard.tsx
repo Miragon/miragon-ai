@@ -14,33 +14,9 @@ import {
   Button,
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
+import type { FailureDashboardData } from "@automation-mcp/client-analytics"
 
-interface ErrorPatternItem {
-  incidentMessage: string
-  activityId: string
-  processDefinitionKey: string
-  incidentCount: number
-  firstOccurrence: string
-  lastOccurrence: string
-  sampleInstanceIds: string[]
-}
-
-interface ProcessFailureItem {
-  processDefinitionKey: string
-  totalInstances: number
-  failedCount: number
-  incidentCount: number
-  failureRatePct: number
-}
-
-export interface FailureDashboardData {
-  totalIncidents: number
-  uniqueErrorPatterns: number
-  mostAffectedProcess: string | null
-  period: string
-  errorPatterns: ErrorPatternItem[]
-  processBreakdown: ProcessFailureItem[]
-}
+export type { FailureDashboardData }
 
 function formatDate(iso: string): string {
   try {

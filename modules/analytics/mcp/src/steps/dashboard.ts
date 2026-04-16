@@ -1,5 +1,5 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import { escapeString, type ClickHouseClient } from "../client.js"
+import { escapeString, type ClickHouseClient } from "@automation-mcp/client-analytics"
 
 interface AnalyticsAppConfig {
   client: ClickHouseClient
