@@ -8,7 +8,7 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 ┌─────────────────────────────────────────────────────┐
 │            MCP Host (Claude, ChatGPT, ...)          │
 │  ┌──────────────────────────────────────────────┐   │
-│  │         @automation-mcp/server               │   │
+│  │         @miragon-ai/server               │   │
 │  │  ┌─────────────────┐  ┌──────────────────┐   │   │
 │  │  │ camunda7 module │  │ analytics module │   │   │
 │  │  │  37 tools       │  │   6 tools        │   │   │
@@ -32,12 +32,12 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 
 | Path                        | Description                                                                              |
 | --------------------------- | ---------------------------------------------------------------------------------------- |
-| `server/`                   | `@automation-mcp/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
-| `modules/camunda7/client/`  | `@automation-mcp/client-camunda7` — OpenAPI-generated TypeScript client (hey-api)        |
-| `modules/camunda7/mcp/`     | `@automation-mcp/mcp-camunda7` — BPM tools + React widgets                               |
-| `modules/analytics/mcp/`    | `@automation-mcp/mcp-analytics` — ClickHouse analytics tools + dashboard widget          |
-| `packages/core/`            | `@automation-mcp/core` — `ModulePlugin` interface + `createToolRegistrar` helper         |
-| `packages/ui/`              | `@automation-mcp/ui` — shared shadcn primitives + tailwind globals                       |
+| `server/`                   | `@miragon-ai/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
+| `modules/camunda7/client/`  | `@miragon-ai/client-camunda7` — OpenAPI-generated TypeScript client (hey-api)        |
+| `modules/camunda7/mcp/`     | `@miragon-ai/mcp-camunda7` — BPM tools + React widgets                               |
+| `modules/analytics/mcp/`    | `@miragon-ai/mcp-analytics` — ClickHouse analytics tools + dashboard widget          |
+| `packages/core/`            | `@miragon-ai/core` — `ModulePlugin` interface + `createToolRegistrar` helper         |
+| `packages/ui/`              | `@miragon-ai/ui` — shared shadcn primitives + tailwind globals                       |
 | `plugins/`                  | Kotlin OTEL / ClickHouse sync plugins (unchanged)                                        |
 | `docker/`                   | docker-compose for CIB Seven + ClickHouse + OTEL                                         |
 | `cibseve-open-api-doc.json` | Source spec used by the client codegen                                                   |
@@ -89,16 +89,16 @@ cd docker && docker compose up -d && cd ..
 
 ```bash
 pnpm install
-pnpm -F @automation-mcp/client-camunda7 generate  # only after spec changes
+pnpm -F @miragon-ai/client-camunda7 generate  # only after spec changes
 pnpm build
 ```
 
 The build chain is:
 
-1. `@automation-mcp/client-camunda7` — `tsc` against the generated SDK
-2. `@automation-mcp/core`, `@automation-mcp/ui` — shared helpers and UI primitives
-3. `@automation-mcp/mcp-camunda7`, `@automation-mcp/mcp-analytics` — tool + widget modules
-4. `@automation-mcp/server` — Vite bundles `mcp-app.html` (single-file HTML with all widgets) and `tsc` compiles the server
+1. `@miragon-ai/client-camunda7` — `tsc` against the generated SDK
+2. `@miragon-ai/core`, `@miragon-ai/ui` — shared helpers and UI primitives
+3. `@miragon-ai/mcp-camunda7`, `@miragon-ai/mcp-analytics` — tool + widget modules
+4. `@miragon-ai/server` — Vite bundles `mcp-app.html` (single-file HTML with all widgets) and `tsc` compiles the server
 
 ## Run
 
@@ -115,7 +115,7 @@ CLICKHOUSE_URL=http://localhost:8123 \
 CLICKHOUSE_USERNAME=camunda \
 CLICKHOUSE_PASSWORD=camunda123 \
 CLICKHOUSE_DATABASE=camunda_history \
-pnpm -F @automation-mcp/server start
+pnpm -F @miragon-ai/server start
 ```
 
 The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP client at it.

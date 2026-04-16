@@ -9,8 +9,8 @@ import {
 } from "@miragon/mcp-toolkit-core"
 import { z } from "zod"
 
-import { createPlugin as createCamunda7Plugin } from "@automation-mcp/mcp-camunda7"
-import { createPlugin as createAnalyticsPlugin } from "@automation-mcp/mcp-analytics"
+import { createPlugin as createCamunda7Plugin } from "@miragon-ai/mcp-camunda7"
+import { createPlugin as createAnalyticsPlugin } from "@miragon-ai/mcp-analytics"
 
 const camunda7ConfigSchema = z.object({
   baseUrl: z.string().default("http://localhost:8080/engine-rest"),
