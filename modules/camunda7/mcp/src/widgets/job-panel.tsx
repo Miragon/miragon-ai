@@ -15,25 +15,9 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-interface Job {
-  id: string
-  processInstanceId: string
-  processDefinitionKey: string | null
-  processDefinitionId: string | null
-  activityId: string | null
-  retries: number
-  exceptionMessage: string | null
-  dueDate: string | null
-  suspended: boolean
-  priority: number
-  createTime: string | null
-}
+import type { JobPanelData } from "@automation-mcp/client-camunda7"
 
-export interface JobPanelData {
-  totalCount: number
-  failedCount: number
-  jobs: Job[]
-}
+export type { JobPanelData }
 
 function formatDate(iso: string | null): string {
   if (!iso) return "\u2014"

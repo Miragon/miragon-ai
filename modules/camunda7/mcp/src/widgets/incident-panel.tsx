@@ -9,28 +9,13 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-interface IncidentData {
-  id: string
-  processDefinitionId: string
-  processInstanceId: string
-  incidentType: string
-  activityId: string
-  incidentMessage: string | null
-  incidentTimestamp: string
-  configuration: string | null
-}
+import type {
+  IncidentPanelData,
+  IncidentData,
+  DefinitionGroup,
+} from "@automation-mcp/client-camunda7"
 
-interface DefinitionGroup {
-  processDefinitionKey: string
-  incidentCount: number
-  latestIncident: string
-  incidents: IncidentData[]
-}
-
-export interface IncidentPanelData {
-  totalCount: number
-  definitions: DefinitionGroup[]
-}
+export type { IncidentPanelData }
 
 function IncidentCard({
   incident,

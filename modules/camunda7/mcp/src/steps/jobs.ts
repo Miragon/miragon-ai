@@ -1,5 +1,5 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client } from "@automation-mcp/client-camunda7"
+import type { Client, JobPanelData } from "@automation-mcp/client-camunda7"
 import { getJobs } from "@automation-mcp/client-camunda7/generated/sdk.gen"
 
 interface Camunda7AppConfig {
@@ -70,7 +70,7 @@ export const loadJobsStep: PipelineStepDefinition<Camunda7AppConfig> = {
       createTime: j.createTime ?? null,
     }))
 
-    const data = {
+    const data: JobPanelData = {
       totalCount: all.length,
       failedCount: failed.length,
       jobs,

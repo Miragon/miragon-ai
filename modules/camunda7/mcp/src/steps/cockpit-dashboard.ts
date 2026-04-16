@@ -1,5 +1,5 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client } from "@automation-mcp/client-camunda7"
+import type { Client, CockpitDashboardData } from "@automation-mcp/client-camunda7"
 import {
   getProcessDefinitionStatistics,
   getProcessDefinitions,
@@ -112,7 +112,7 @@ export const loadCockpitDashboardStep: PipelineStepDefinition<Camunda7AppConfig>
       return b.instances - a.instances
     })
 
-    const data = {
+    const data: CockpitDashboardData = {
       summary: {
         totalDefinitions: definitions.length,
         totalRunningInstances: totalRunning,

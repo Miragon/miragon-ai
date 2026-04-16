@@ -1,32 +1,7 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import type { HistoryTimelineData } from "@automation-mcp/client-camunda7"
 
-interface ActivityData {
-  id: string
-  activityId: string
-  activityName: string | null
-  activityType: string
-  startTime: string
-  endTime: string | null
-  durationInMillis: number | null
-  assignee: string | null
-  taskId: string | null
-}
-
-interface HistoricProcessInstance {
-  id: string
-  processDefinitionKey: string
-  processDefinitionName: string | null
-  startTime: string
-  endTime: string | null
-  durationInMillis: number | null
-  state: string
-}
-
-export interface HistoryTimelineData {
-  processInstance: HistoricProcessInstance | null
-  activities: ActivityData[]
-  totalActivities: number
-}
+export type { HistoryTimelineData }
 
 const ACTIVITY_COLORS: Record<string, string> = {
   startEvent: "bg-green-500",

@@ -1,7 +1,14 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
 import { text } from "mcp-use/server"
-import type { Client } from "@automation-mcp/client-camunda7"
+import type {
+  Client,
+  ProcessListData,
+  TaskDashboardData,
+  InstanceDetailData,
+  IncidentPanelData,
+  HistoryTimelineData,
+} from "@automation-mcp/client-camunda7"
 import {
   getProcessDefinitions,
   getProcessInstance,
@@ -47,15 +54,12 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
           sortOrder: "asc",
         },
       })
-      return text(
-        JSON.stringify({
-          widget: "camunda7:process-list",
-          data: {
-            definitions,
-            totalCount: Array.isArray(definitions) ? definitions.length : 0,
-          },
-        }),
-      )
+      const defArray = Array.isArray(definitions) ? definitions : []
+      const data: ProcessListData = {
+        definitions: defArray as ProcessListData["definitions"],
+        totalCount: defArray.length,
+      }
+      return text(JSON.stringify({ widget: "camunda7:process-list", data }))
     },
   )
 
@@ -86,20 +90,16 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         },
       })
       const taskArray = Array.isArray(tasks) ? tasks : []
-      return text(
-        JSON.stringify({
-          widget: "camunda7:task-dashboard",
-          data: {
-            tasks: taskArray,
-            totalCount: taskArray.length,
-            filters: {
-              assignee: args.assignee,
-              candidateGroup: args.candidateGroup,
-              processDefinitionKey: args.processDefinitionKey,
-            },
-          },
-        }),
-      )
+      const data: TaskDashboardData = {
+        tasks: taskArray as TaskDashboardData["tasks"],
+        totalCount: taskArray.length,
+        filters: {
+          assignee: args.assignee,
+          candidateGroup: args.candidateGroup,
+          processDefinitionKey: args.processDefinitionKey,
+        },
+      }
+      return text(JSON.stringify({ widget: "camunda7:task-dashboard", data }))
     },
   )
 
@@ -143,12 +143,14 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         }
       }
 
-      return text(
-        JSON.stringify({
-          widget: "camunda7:instance-detail",
-          data: { instance, activityTree, variables, incidents, bpmnXml },
-        }),
-      )
+      const data: InstanceDetailData = {
+        instance: instance as unknown as InstanceDetailData["instance"],
+        activityTree: activityTree as unknown as InstanceDetailData["activityTree"],
+        variables: variables as unknown as InstanceDetailData["variables"],
+        incidents: incidents as unknown as InstanceDetailData["incidents"],
+        bpmnXml,
+      }
+      return text(JSON.stringify({ widget: "camunda7:instance-detail", data }))
     },
   )
 
@@ -212,12 +214,8 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
           })),
         }))
 
-      return text(
-        JSON.stringify({
-          widget: "camunda7:incident-panel",
-          data: { totalCount: rows.length, definitions },
-        }),
-      )
+      const data: IncidentPanelData = { totalCount: rows.length, definitions }
+      return text(JSON.stringify({ widget: "camunda7:incident-panel", data }))
     },
   )
 
@@ -253,16 +251,12 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
       const actArray = Array.isArray(activities) ? activities : []
       const inst = instArray[0] ?? null
 
-      return text(
-        JSON.stringify({
-          widget: "camunda7:history-timeline",
-          data: {
-            processInstance: inst,
-            activities: actArray,
-            totalActivities: actArray.length,
-          },
-        }),
-      )
+      const data: HistoryTimelineData = {
+        processInstance: inst as HistoryTimelineData["processInstance"],
+        activities: actArray as HistoryTimelineData["activities"],
+        totalActivities: actArray.length,
+      }
+      return text(JSON.stringify({ widget: "camunda7:history-timeline", data }))
     },
   )
 

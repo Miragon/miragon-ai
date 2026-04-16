@@ -1,29 +1,7 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import type { CockpitDashboardData } from "@automation-mcp/client-camunda7"
 
-interface IncidentStat {
-  incidentType: string
-  incidentCount: number
-}
-
-interface DefinitionStat {
-  id: string
-  key: string
-  name: string | null
-  version: number
-  instances: number
-  failedJobs: number
-  incidents: IncidentStat[]
-}
-
-export interface CockpitDashboardData {
-  summary: {
-    totalDefinitions: number
-    totalRunningInstances: number
-    totalFailedJobs: number
-    totalIncidents: number
-  }
-  definitions: DefinitionStat[]
-}
+export type { CockpitDashboardData }
 
 function StatCard({
   label,

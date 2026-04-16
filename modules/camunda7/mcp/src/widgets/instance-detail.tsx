@@ -16,44 +16,13 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-interface VariableValue {
-  value: unknown
-  type?: string
-  valueInfo?: Record<string, unknown>
-}
+import type {
+  InstanceDetailData,
+  ActivityTree,
+  VariableValue,
+} from "@automation-mcp/client-camunda7"
 
-interface IncidentData {
-  id: string
-  processDefinitionId: string
-  processInstanceId: string
-  incidentType: string
-  activityId: string
-  incidentMessage: string | null
-  incidentTimestamp: string
-  configuration: string | null
-}
-
-interface ActivityTree {
-  id: string
-  activityId: string
-  activityName: string | null
-  activityType: string
-  childActivityInstances: ActivityTree[]
-}
-
-export interface InstanceDetailData {
-  instance: {
-    id: string
-    definitionId: string
-    businessKey: string | null
-    suspended: boolean
-    ended: boolean
-  }
-  activityTree: ActivityTree | null
-  variables: Record<string, VariableValue>
-  incidents?: IncidentData[]
-  bpmnXml: string | null
-}
+export type { InstanceDetailData }
 
 function Section({
   title,

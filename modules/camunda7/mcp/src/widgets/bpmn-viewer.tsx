@@ -1,21 +1,9 @@
 import { useEffect, useRef } from "react"
 import { Alert, AlertDescription, Badge } from "@miragon/mcp-toolkit-ui"
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
+import type { BpmnViewerData } from "@automation-mcp/client-camunda7"
 
-interface ActivityStat {
-  id: string
-  instances: number
-  failedJobs: number
-}
-
-export interface BpmnViewerData {
-  bpmnXml: string
-  processInstanceId: string | null
-  processDefinitionId: string | null
-  activeActivityIds: string[]
-  incidentActivityIds: string[]
-  activityStats: ActivityStat[]
-}
+export type { BpmnViewerData }
 
 const HIGHLIGHT_CSS = `
 .highlight-running:not(.djs-connection) .djs-visual > :nth-child(1) {

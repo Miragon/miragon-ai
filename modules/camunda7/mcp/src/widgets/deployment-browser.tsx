@@ -1,23 +1,7 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import type { DeploymentBrowserData } from "@automation-mcp/client-camunda7"
 
-interface DeploymentResource {
-  id: string
-  name: string
-}
-
-interface Deployment {
-  id: string
-  name: string | null
-  deploymentTime: string
-  source: string | null
-  tenantId: string | null
-  resources: DeploymentResource[]
-}
-
-export interface DeploymentBrowserData {
-  totalCount: number
-  deployments: Deployment[]
-}
+export type { DeploymentBrowserData }
 
 function formatDate(iso: string): string {
   try {

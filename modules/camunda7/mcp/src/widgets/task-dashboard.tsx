@@ -16,28 +16,9 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-interface TaskData {
-  id: string
-  name: string | null
-  assignee: string | null
-  created: string
-  due: string | null
-  priority: number
-  processDefinitionId: string
-  processInstanceId: string
-  taskDefinitionKey: string
-  description: string | null
-}
+import type { TaskDashboardData, TaskData } from "@automation-mcp/client-camunda7"
 
-export interface TaskDashboardData {
-  tasks: TaskData[]
-  totalCount: number
-  filters: {
-    assignee?: string
-    candidateGroup?: string
-    processDefinitionKey?: string
-  }
-}
+export type { TaskDashboardData }
 
 function PriorityBadge({ priority }: { priority: number }) {
   const level = priority >= 75 ? "high" : priority >= 50 ? "medium" : "normal"

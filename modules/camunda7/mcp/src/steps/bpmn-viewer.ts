@@ -1,5 +1,5 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client } from "@automation-mcp/client-camunda7"
+import type { Client, BpmnViewerData } from "@automation-mcp/client-camunda7"
 import {
   getProcessInstance,
   getActivityInstanceTree,
@@ -63,15 +63,16 @@ export const loadBpmnViewerStep: PipelineStepDefinition<Camunda7AppConfig> = {
 
     const definitionId = instance?.definitionId
     if (!definitionId) {
+      const emptyData: BpmnViewerData = {
+        bpmnXml: "",
+        processInstanceId,
+        processDefinitionId: null,
+        activeActivityIds: [],
+        incidentActivityIds: [],
+        activityStats: [],
+      }
       return {
-        data: {
-          bpmnXml: "",
-          processInstanceId,
-          processDefinitionId: null,
-          activeActivityIds: [],
-          incidentActivityIds: [],
-          activityStats: [],
-        },
+        data: emptyData,
         keys: { "camunda7:bpmnViewerData": null },
         _app: "camunda7",
         _step: "load-bpmn-viewer",
@@ -105,7 +106,7 @@ export const loadBpmnViewerStep: PipelineStepDefinition<Camunda7AppConfig> = {
       failedJobs: s.failedJobs ?? 0,
     }))
 
-    const data = {
+    const data: BpmnViewerData = {
       bpmnXml,
       processInstanceId,
       processDefinitionId: definitionId,

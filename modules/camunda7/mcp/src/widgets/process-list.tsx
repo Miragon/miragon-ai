@@ -1,20 +1,7 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import type { ProcessListData } from "@automation-mcp/client-camunda7"
 
-interface ProcessDefinition {
-  id: string
-  key: string
-  name: string | null
-  version: number
-  deploymentId: string | null
-  suspended: boolean
-  versionTag: string | null
-  tenantId: string | null
-}
-
-export interface ProcessListData {
-  definitions: ProcessDefinition[]
-  totalCount: number
-}
+export type { ProcessListData }
 
 export function ProcessListWidget({ data }: { data: ProcessListData | null }) {
   if (!data) {
