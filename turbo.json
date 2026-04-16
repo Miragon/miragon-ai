@@ -15,8 +15,12 @@
     "test": {
       "dependsOn": ["build"]
     },
-    "lint": {},
-    "lint:fix": {},
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "lint:fix": {
+      "dependsOn": ["^build"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
