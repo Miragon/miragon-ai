@@ -1,6 +1,6 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use/server"
-import { createCamunda7Client, type Camunda7AuthType } from "@automation-mcp/client-camunda7"
+import { createCamunda7Client, type Camunda7AuthType } from "@miragon-ai/client-camunda7"
 import { registerTools } from "./tools/index.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"

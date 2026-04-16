@@ -11,7 +11,7 @@ import {
   Alert,
   AlertDescription,
 } from "@miragon/mcp-toolkit-ui"
-import type { AnalyticsDashboardData } from "@automation-mcp/client-analytics"
+import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 
 export type { AnalyticsDashboardData }
 

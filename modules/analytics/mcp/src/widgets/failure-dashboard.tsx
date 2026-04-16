@@ -14,7 +14,7 @@ import {
   Button,
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
-import type { FailureDashboardData } from "@automation-mcp/client-analytics"
+import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 
 export type { FailureDashboardData }
 

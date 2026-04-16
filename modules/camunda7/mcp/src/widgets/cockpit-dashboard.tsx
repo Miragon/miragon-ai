@@ -1,5 +1,5 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import type { CockpitDashboardData } from "@automation-mcp/client-camunda7"
+import type { CockpitDashboardData } from "@miragon-ai/client-camunda7"
 
 export type { CockpitDashboardData }
 

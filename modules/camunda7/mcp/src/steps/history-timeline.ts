@@ -1,10 +1,10 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client } from "@automation-mcp/client-camunda7"
-import type { HistoryTimelineData } from "@automation-mcp/client-camunda7"
+import type { Client } from "@miragon-ai/client-camunda7"
+import type { HistoryTimelineData } from "@miragon-ai/client-camunda7"
 import {
   getHistoricActivityInstances,
   getHistoricProcessInstances,
-} from "@automation-mcp/client-camunda7/generated/sdk.gen"
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 interface Camunda7AppConfig {
   client: Client

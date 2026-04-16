@@ -1,7 +1,7 @@
-import type { Client } from "@automation-mcp/client-camunda7"
-import { correlateMessageInput, throwSignalInput } from "@automation-mcp/client-camunda7/schemas"
+import type { Client } from "@miragon-ai/client-camunda7"
+import { correlateMessageInput, throwSignalInput } from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { deliverMessage, throwSignal } from "@automation-mcp/client-camunda7/generated/sdk.gen"
+import { deliverMessage, throwSignal } from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
 

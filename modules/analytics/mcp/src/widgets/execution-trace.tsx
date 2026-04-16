@@ -24,7 +24,7 @@ import type {
   ActivityHistoryItem,
   VariableChangeItem,
   OtelSpanItem,
-} from "@automation-mcp/client-analytics"
+} from "@miragon-ai/client-analytics"
 
 export type { ExecutionTraceData }
 

@@ -1,6 +1,6 @@
 import type { MCPServer } from "mcp-use/server"
 import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import type { ClickHouseClient } from "@automation-mcp/client-analytics"
+import type { ClickHouseClient } from "@miragon-ai/client-analytics"
 import { registerSearchTools } from "./search.js"
 import { registerPerformanceTools } from "./performance.js"
 import { registerFailureTools } from "./failures.js"

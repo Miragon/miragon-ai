@@ -1,10 +1,7 @@
-import type { Client } from "@automation-mcp/client-camunda7"
-import {
-  listDeploymentsInput,
-  createDeploymentInput,
-} from "@automation-mcp/client-camunda7/schemas"
+import type { Client } from "@miragon-ai/client-camunda7"
+import { listDeploymentsInput, createDeploymentInput } from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { getDeployments, createDeployment } from "@automation-mcp/client-camunda7/generated/sdk.gen"
+import { getDeployments, createDeployment } from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
 

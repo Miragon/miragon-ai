@@ -16,7 +16,7 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-import type { TaskDashboardData, TaskData } from "@automation-mcp/client-camunda7"
+import type { TaskDashboardData, TaskData } from "@miragon-ai/client-camunda7"
 
 export type { TaskDashboardData }
 

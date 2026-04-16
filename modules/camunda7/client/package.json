@@ -1,5 +1,5 @@
 {
-  "name": "@automation-mcp/client-camunda7",
+  "name": "@miragon-ai/client-camunda7",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

@@ -13,7 +13,7 @@ import {
   type VariableSearchData,
   type ExecutionTraceData,
   type VariableSearchRow,
-} from "@automation-mcp/client-analytics"
+} from "@miragon-ai/client-analytics"
 
 export function registerWidgetTools(server: MCPServer, ch: ClickHouseClient, resourceUri: string) {
   server.tool(

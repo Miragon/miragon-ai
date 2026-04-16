@@ -15,7 +15,7 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-import type { JobPanelData } from "@automation-mcp/client-camunda7"
+import type { JobPanelData } from "@miragon-ai/client-camunda7"
 
 export type { JobPanelData }
 

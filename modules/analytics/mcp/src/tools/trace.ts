@@ -1,5 +1,5 @@
-import type { ClickHouseClient } from "@automation-mcp/client-analytics"
-import { schemas, queries } from "@automation-mcp/client-analytics"
+import type { ClickHouseClient } from "@miragon-ai/client-analytics"
+import { schemas, queries } from "@miragon-ai/client-analytics"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 
 type Register = ReturnType<typeof createToolRegistrar<ClickHouseClient>>

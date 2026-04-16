@@ -8,7 +8,7 @@ import type {
   InstanceDetailData,
   IncidentPanelData,
   HistoryTimelineData,
-} from "@automation-mcp/client-camunda7"
+} from "@miragon-ai/client-camunda7"
 import {
   getProcessDefinitions,
   getProcessInstance,
@@ -24,7 +24,7 @@ import {
   getDeployments,
   getDeploymentResources,
   getJobs,
-} from "@automation-mcp/client-camunda7/generated/sdk.gen"
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 export function registerWidgetTools(server: MCPServer, client: Client, resourceUri: string) {
   const uiMeta = { ui: { resourceUri } }

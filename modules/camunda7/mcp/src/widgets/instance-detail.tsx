@@ -16,11 +16,7 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-import type {
-  InstanceDetailData,
-  ActivityTree,
-  VariableValue,
-} from "@automation-mcp/client-camunda7"
+import type { InstanceDetailData, ActivityTree, VariableValue } from "@miragon-ai/client-camunda7"
 
 export type { InstanceDetailData }
 

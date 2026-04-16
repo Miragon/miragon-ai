@@ -36,7 +36,7 @@ export function createCamunda7Client(options: Camunda7ClientOptions): Client {
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      "User-Agent": "@automation-mcp/client-camunda7/0.1.0",
+      "User-Agent": "@miragon-ai/client-camunda7/0.1.0",
       ...buildAuthHeader(options),
     },
   })

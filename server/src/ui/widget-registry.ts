@@ -1,6 +1,6 @@
 import type { ComponentType } from "react"
-import { camunda7Widgets } from "@automation-mcp/mcp-camunda7/widgets"
-import { analyticsWidgets } from "@automation-mcp/mcp-analytics/widgets"
+import { camunda7Widgets } from "@miragon-ai/mcp-camunda7/widgets"
+import { analyticsWidgets } from "@miragon-ai/mcp-analytics/widgets"
 
 type WidgetComponent = ComponentType<{ data: unknown }>
 

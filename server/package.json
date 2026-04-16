@@ -1,5 +1,5 @@
 {
-  "name": "@automation-mcp/server",
+  "name": "@miragon-ai/server",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -20,8 +20,8 @@
   },
   "dependencies": {
     "@miragon/mcp-toolkit-core": "workspace:*",
-    "@automation-mcp/mcp-camunda7": "workspace:*",
-    "@automation-mcp/mcp-analytics": "workspace:*",
+    "@miragon-ai/mcp-camunda7": "workspace:*",
+    "@miragon-ai/mcp-analytics": "workspace:*",
     "mcp-use": "1.22.2",
     "zod": "4.3.6"
   },

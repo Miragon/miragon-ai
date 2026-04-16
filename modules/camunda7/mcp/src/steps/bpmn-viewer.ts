@@ -1,12 +1,12 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client, BpmnViewerData } from "@automation-mcp/client-camunda7"
+import type { Client, BpmnViewerData } from "@miragon-ai/client-camunda7"
 import {
   getProcessInstance,
   getActivityInstanceTree,
   getIncidents,
   getProcessDefinitionBpmn20Xml,
   getActivityStatistics,
-} from "@automation-mcp/client-camunda7/generated/sdk.gen"
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 interface Camunda7AppConfig {
   client: Client

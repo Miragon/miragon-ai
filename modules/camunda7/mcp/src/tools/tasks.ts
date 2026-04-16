@@ -1,4 +1,4 @@
-import type { Client } from "@automation-mcp/client-camunda7"
+import type { Client } from "@miragon-ai/client-camunda7"
 import {
   listTasksInput,
   getTaskInput,
@@ -7,7 +7,7 @@ import {
   completeTaskInput,
   setTaskAssigneeInput,
   getTaskVariablesInput,
-} from "@automation-mcp/client-camunda7/schemas"
+} from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getTasks,
@@ -17,7 +17,7 @@ import {
   complete,
   setAssignee,
   getTaskVariables,
-} from "@automation-mcp/client-camunda7/generated/sdk.gen"
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
 

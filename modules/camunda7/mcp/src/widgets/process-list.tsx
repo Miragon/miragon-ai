@@ -1,5 +1,5 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import type { ProcessListData } from "@automation-mcp/client-camunda7"
+import type { ProcessListData } from "@miragon-ai/client-camunda7"
 
 export type { ProcessListData }
 

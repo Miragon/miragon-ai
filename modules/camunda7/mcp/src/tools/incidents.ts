@@ -1,7 +1,7 @@
-import type { Client } from "@automation-mcp/client-camunda7"
-import { listIncidentsInput, resolveIncidentInput } from "@automation-mcp/client-camunda7/schemas"
+import type { Client } from "@miragon-ai/client-camunda7"
+import { listIncidentsInput, resolveIncidentInput } from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { getIncidents, resolveIncident } from "@automation-mcp/client-camunda7/generated/sdk.gen"
+import { getIncidents, resolveIncident } from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
 

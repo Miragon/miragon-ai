@@ -1,9 +1,9 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client, DeploymentBrowserData } from "@automation-mcp/client-camunda7"
+import type { Client, DeploymentBrowserData } from "@miragon-ai/client-camunda7"
 import {
   getDeployments,
   getDeploymentResources,
-} from "@automation-mcp/client-camunda7/generated/sdk.gen"
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 interface Camunda7AppConfig {
   client: Client

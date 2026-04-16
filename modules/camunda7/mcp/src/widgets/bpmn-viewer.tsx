@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
 import { Alert, AlertDescription, Badge } from "@miragon/mcp-toolkit-ui"
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
-import type { BpmnViewerData } from "@automation-mcp/client-camunda7"
+import type { BpmnViewerData } from "@miragon-ai/client-camunda7"
 
 export type { BpmnViewerData }
 

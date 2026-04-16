@@ -15,7 +15,7 @@ import {
   Input,
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
-import type { VariableSearchData, VariableSearchRow } from "@automation-mcp/client-analytics"
+import type { VariableSearchData, VariableSearchRow } from "@miragon-ai/client-analytics"
 
 export type { VariableSearchData }
 

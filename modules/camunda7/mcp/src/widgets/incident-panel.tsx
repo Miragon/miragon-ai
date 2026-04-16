@@ -9,11 +9,7 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-import type {
-  IncidentPanelData,
-  IncidentData,
-  DefinitionGroup,
-} from "@automation-mcp/client-camunda7"
+import type { IncidentPanelData, IncidentData, DefinitionGroup } from "@miragon-ai/client-camunda7"
 
 export type { IncidentPanelData }
 

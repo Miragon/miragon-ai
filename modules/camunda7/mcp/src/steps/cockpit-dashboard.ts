@@ -1,10 +1,10 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client, CockpitDashboardData } from "@automation-mcp/client-camunda7"
+import type { Client, CockpitDashboardData } from "@miragon-ai/client-camunda7"
 import {
   getProcessDefinitionStatistics,
   getProcessDefinitions,
   getIncidents,
-} from "@automation-mcp/client-camunda7/generated/sdk.gen"
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 interface Camunda7AppConfig {
   client: Client

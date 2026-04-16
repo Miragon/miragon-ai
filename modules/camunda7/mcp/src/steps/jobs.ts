@@ -1,6 +1,6 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client, JobPanelData } from "@automation-mcp/client-camunda7"
-import { getJobs } from "@automation-mcp/client-camunda7/generated/sdk.gen"
+import type { Client, JobPanelData } from "@miragon-ai/client-camunda7"
+import { getJobs } from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 interface Camunda7AppConfig {
   client: Client
