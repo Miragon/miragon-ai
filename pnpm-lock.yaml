@@ -84,7 +84,7 @@ importers:
 
   modules/camunda7/mcp:
     dependencies:
-      '@automation-mcp/client-camunda7':
+      '@miragon-ai/client-camunda7':
         specifier: workspace:*
         version: link:../client
       '@miragon/mcp-toolkit-core':
@@ -112,10 +112,10 @@ importers:
 
   server:
     dependencies:
-      '@automation-mcp/mcp-analytics':
+      '@miragon-ai/mcp-analytics':
         specifier: workspace:*
         version: link:../modules/analytics/mcp
-      '@automation-mcp/mcp-camunda7':
+      '@miragon-ai/mcp-camunda7':
         specifier: workspace:*
         version: link:../modules/camunda7/mcp
       '@miragon/mcp-toolkit-core':
