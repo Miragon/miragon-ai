@@ -1,3 +1,4 @@
+import { useState } from "react"
 import {
   Card,
   CardContent,
@@ -10,6 +11,8 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  Button,
+  useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
 interface Job {
@@ -47,6 +50,9 @@ function truncate(s: string | null, max: number): string {
 }
 
 export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
+  const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
+  const retryMutation = useToolMutation("camunda7_set_job_retries")
+
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
@@ -58,6 +64,13 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
   }
 
   const { totalCount, failedCount, jobs } = data
+
+  function handleRetry(jobId: string) {
+    retryMutation.mutate(
+      { jobId, retries: 1 },
+      { onSuccess: () => setRetriedIds((prev) => new Set(prev).add(jobId)) },
+    )
+  }
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
@@ -99,46 +112,71 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
                     <TableHead>Retries</TableHead>
                     <TableHead>Error</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead className="w-20"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {jobs.map((job) => (
-                    <TableRow key={job.id}>
-                      <TableCell>
-                        <span className="font-mono text-sm">{job.activityId ?? "\u2014"}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-sm">
-                          {job.processDefinitionKey ?? "\u2014"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={job.retries === 0 ? "destructive" : "secondary"}
-                          className="tabular-nums"
-                        >
-                          {job.retries}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {job.exceptionMessage ? (
-                          <details>
-                            <summary className="text-destructive cursor-pointer text-sm">
-                              {truncate(job.exceptionMessage, 50)}
-                            </summary>
-                            <pre className="bg-muted mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded p-2 text-xs">
-                              {job.exceptionMessage}
-                            </pre>
-                          </details>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">{"\u2014"}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(job.createTime)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {jobs.map((job) => {
+                    const retried = retriedIds.has(job.id)
+                    return (
+                      <TableRow key={job.id} className={retried ? "opacity-50" : ""}>
+                        <TableCell>
+                          <span className="font-mono text-sm">{job.activityId ?? "\u2014"}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-mono text-sm">
+                            {job.processDefinitionKey ?? "\u2014"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              retried
+                                ? "secondary"
+                                : job.retries === 0
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                            className="tabular-nums"
+                          >
+                            {retried ? 1 : job.retries}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {job.exceptionMessage ? (
+                            <details>
+                              <summary className="text-destructive cursor-pointer text-sm">
+                                {truncate(job.exceptionMessage, 50)}
+                              </summary>
+                              <pre className="bg-muted mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded p-2 text-xs">
+                                {job.exceptionMessage}
+                              </pre>
+                            </details>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">{"\u2014"}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {formatDate(job.createTime)}
+                        </TableCell>
+                        <TableCell>
+                          {job.retries === 0 && !retried && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={retryMutation.isPending}
+                              onClick={() => handleRetry(job.id)}
+                            >
+                              Retry
+                            </Button>
+                          )}
+                          {retried && (
+                            <span className="text-muted-foreground text-xs">Retried</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </CardContent>

@@ -157,4 +157,273 @@ ORDER BY total_instances DESC`
       )
     },
   )
+
+  // --- Failure Dashboard ---
+  server.tool(
+    {
+      name: "analytics_show_failure_dashboard",
+      title: "Failure Analysis Dashboard",
+      description:
+        "Show error patterns and failure analysis across process instances, grouped by error message and process definition.",
+      annotations: { readOnlyHint: true, idempotentHint: true },
+      schema: z.object({
+        period: z.enum(["1d", "7d", "30d", "90d"]).default("7d"),
+      }),
+      _meta: { ui: { resourceUri } },
+    },
+    async (args) => {
+      const interval = {
+        "1d": "1 DAY",
+        "7d": "7 DAY",
+        "30d": "30 DAY",
+        "90d": "90 DAY",
+      }[args.period]
+
+      const errorPatternsSql = `
+SELECT
+    incident_message,
+    activity_id,
+    process_definition_key,
+    count() AS incident_count,
+    min(create_time) AS first_occurrence,
+    max(create_time) AS last_occurrence,
+    groupArray(10)(process_instance_id) AS sample_instance_ids
+FROM camunda_history.camunda_incidents FINAL
+WHERE create_time >= now() - INTERVAL ${interval}
+GROUP BY incident_message, activity_id, process_definition_key
+ORDER BY incident_count DESC
+LIMIT 50`
+
+      const processFailuresSql = `
+SELECT
+    process_definition_key,
+    count() AS total_instances,
+    countIf(state = 'INTERNALLY_TERMINATED') AS failed_count,
+    round(countIf(state = 'INTERNALLY_TERMINATED') * 100.0 / count(), 2) AS failure_rate_pct
+FROM (
+    SELECT
+        id,
+        any(process_definition_key) AS process_definition_key,
+        argMax(state, timestamp) AS state,
+        min(start_time) AS start_time
+    FROM camunda_history.camunda_process_instances
+    GROUP BY id
+) sub
+WHERE start_time >= now() - INTERVAL ${interval}
+GROUP BY process_definition_key
+HAVING failed_count > 0
+ORDER BY failed_count DESC`
+
+      const incidentsByProcessSql = `
+SELECT
+    process_definition_key,
+    count() AS incident_count
+FROM camunda_history.camunda_incidents FINAL
+WHERE create_time >= now() - INTERVAL ${interval}
+GROUP BY process_definition_key`
+
+      const [errorPatterns, processFailures, incidentsByProcess] = await Promise.all([
+        ch.query<Record<string, unknown>>(errorPatternsSql),
+        ch.query<Record<string, unknown>>(processFailuresSql),
+        ch.query<{ process_definition_key: string; incident_count: number }>(incidentsByProcessSql),
+      ])
+
+      const incidentMap = new Map<string, number>()
+      for (const row of incidentsByProcess) {
+        incidentMap.set(row.process_definition_key, Number(row.incident_count))
+      }
+
+      const totalIncidents = errorPatterns.reduce((s, r) => s + Number(r.incident_count ?? 0), 0)
+
+      const processBreakdown = processFailures.map((p) => {
+        const key = p.process_definition_key as string
+        return {
+          processDefinitionKey: key,
+          totalInstances: Number(p.total_instances),
+          failedCount: Number(p.failed_count),
+          incidentCount: incidentMap.get(key) ?? 0,
+          failureRatePct: Number(p.failure_rate_pct),
+        }
+      })
+
+      const mostAffectedProcess =
+        processBreakdown.length > 0 ? processBreakdown[0].processDefinitionKey : null
+
+      return text(
+        JSON.stringify({
+          widget: "analytics:failure-dashboard",
+          data: {
+            totalIncidents,
+            uniqueErrorPatterns: errorPatterns.length,
+            mostAffectedProcess,
+            period: args.period,
+            errorPatterns: errorPatterns.map((r) => ({
+              incidentMessage: (r.incident_message as string) ?? "",
+              activityId: (r.activity_id as string) ?? "",
+              processDefinitionKey: (r.process_definition_key as string) ?? "",
+              incidentCount: Number(r.incident_count),
+              firstOccurrence: (r.first_occurrence as string) ?? "",
+              lastOccurrence: (r.last_occurrence as string) ?? "",
+              sampleInstanceIds: Array.isArray(r.sample_instance_ids)
+                ? (r.sample_instance_ids as string[])
+                : [],
+            })),
+            processBreakdown,
+          },
+        }),
+      )
+    },
+  )
+
+  // --- Variable Search ---
+  server.tool(
+    {
+      name: "analytics_show_variable_search",
+      title: "Variable Search",
+      description:
+        "Show interactive search panel for finding process instances by variable values (e.g. orderId, customerId).",
+      annotations: { readOnlyHint: true, idempotentHint: true },
+      schema: z.object({
+        variableName: z.string().optional().describe("Pre-fill variable name"),
+        variableValue: z.string().optional().describe("Pre-fill variable value"),
+        processDefinitionKey: z
+          .string()
+          .optional()
+          .describe("Pre-fill process definition key filter"),
+      }),
+      _meta: { ui: { resourceUri } },
+    },
+    async (args) => {
+      let results: Record<string, unknown>[] | null = null
+
+      if (args.variableName && args.variableValue) {
+        const conditions = [
+          `v.variable_name = ${escapeString(args.variableName)}`,
+          `v.text_value = ${escapeString(args.variableValue)}`,
+        ]
+        if (args.processDefinitionKey) {
+          conditions.push(`p.process_definition_key = ${escapeString(args.processDefinitionKey)}`)
+        }
+        const sql = `
+SELECT DISTINCT
+    p.id AS process_instance_id,
+    p.process_definition_key,
+    p.business_key,
+    argMax(p.state, p.timestamp) AS state,
+    min(p.start_time) AS start_time,
+    max(p.end_time) AS end_time,
+    max(p.duration_in_millis) AS duration_in_millis,
+    v.variable_name,
+    v.text_value
+FROM (SELECT * FROM camunda_history.camunda_variable_updates FINAL) v
+JOIN camunda_history.camunda_process_instances p ON p.id = v.process_instance_id
+WHERE ${conditions.join(" AND ")}
+GROUP BY p.id, p.process_definition_key, p.business_key, v.variable_name, v.text_value
+ORDER BY start_time DESC
+LIMIT 50`
+        results = await ch.query(sql)
+      }
+
+      return text(
+        JSON.stringify({
+          widget: "analytics:variable-search",
+          data: {
+            results,
+            searchParams:
+              args.variableName || args.variableValue
+                ? {
+                    variableName: args.variableName ?? "",
+                    variableValue: args.variableValue ?? "",
+                    processDefinitionKey: args.processDefinitionKey,
+                  }
+                : null,
+          },
+        }),
+      )
+    },
+  )
+
+  // --- Execution Trace ---
+  server.tool(
+    {
+      name: "analytics_show_execution_trace",
+      title: "Execution Trace",
+      description:
+        "Show end-to-end execution trace for a process instance with activity history, variable changes, and OTEL spans.",
+      annotations: { readOnlyHint: true, idempotentHint: true },
+      schema: z.object({
+        processInstanceId: z
+          .string()
+          .optional()
+          .describe("Process instance ID to trace (can be entered in widget)"),
+      }),
+      _meta: { ui: { resourceUri } },
+    },
+    async (args) => {
+      let trace: Record<string, unknown> | null = null
+
+      if (args.processInstanceId) {
+        const pid = escapeString(args.processInstanceId)
+        trace = {}
+
+        const actSql = `
+SELECT
+    activity_id,
+    activity_name,
+    activity_type,
+    start_time,
+    end_time,
+    duration_in_millis,
+    assignee,
+    task_id
+FROM camunda_history.camunda_activity_instances
+WHERE process_instance_id = ${pid}
+ORDER BY start_time ASC`
+        trace.activityHistory = await ch.query(actSql)
+
+        const varSql = `
+SELECT
+    variable_name,
+    variable_type,
+    text_value,
+    long_value,
+    double_value,
+    revision,
+    timestamp
+FROM camunda_history.camunda_variable_updates FINAL
+WHERE process_instance_id = ${pid}
+ORDER BY timestamp ASC`
+        trace.variableChanges = await ch.query(varSql)
+
+        const otelSql = `
+SELECT
+    t.TraceId,
+    t.SpanName,
+    t.ServiceName,
+    t.Duration / 1000000 AS duration_ms,
+    t.StatusCode,
+    t.StatusMessage
+FROM otel.otel_traces t
+JOIN camunda_history.camunda_process_instances p ON t.TraceId = p.trace_id
+WHERE p.id = ${pid}
+ORDER BY t.Timestamp`
+        try {
+          trace.otelSpans = await ch.query(otelSql)
+        } catch {
+          trace.otelSpans = []
+          trace.otelSpansError = "OTEL traces not available (otel database may not exist)"
+        }
+      }
+
+      return text(
+        JSON.stringify({
+          widget: "analytics:execution-trace",
+          data: {
+            processInstanceId: args.processInstanceId ?? null,
+            trace,
+          },
+        }),
+      )
+    },
+  )
 }

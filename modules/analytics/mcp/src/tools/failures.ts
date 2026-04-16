@@ -25,29 +25,30 @@ export function registerFailureTools(register: Register) {
         args.period as "1d" | "7d" | "30d"
       ]
 
-      const conditions: string[] = [`i.create_time >= now() - INTERVAL ${interval}`]
+      const baseConditions: string[] = [`create_time >= now() - INTERVAL ${interval}`]
       if (args.processDefinitionKey) {
-        conditions.push(`i.process_definition_key = ${escapeString(args.processDefinitionKey)}`)
+        baseConditions.push(`process_definition_key = ${escapeString(args.processDefinitionKey)}`)
       }
       if (args.incidentType) {
-        conditions.push(`i.incident_type = ${escapeString(args.incidentType)}`)
+        baseConditions.push(`incident_type = ${escapeString(args.incidentType)}`)
       }
 
-      const where = conditions.join(" AND ")
+      const where = baseConditions.join(" AND ")
+      const prefixedWhere = baseConditions.map((c) => `i.${c}`).join(" AND ")
 
       const sql = args.groupByError
         ? `
 SELECT
-    i.incident_message,
-    i.activity_id,
-    i.process_definition_key,
+    incident_message,
+    activity_id,
+    process_definition_key,
     count() AS incident_count,
-    min(i.create_time) AS first_occurrence,
-    max(i.create_time) AS last_occurrence,
-    groupArray(10)(i.process_instance_id) AS sample_instance_ids
-FROM camunda_history.camunda_incidents FINAL i
+    min(create_time) AS first_occurrence,
+    max(create_time) AS last_occurrence,
+    groupArray(10)(process_instance_id) AS sample_instance_ids
+FROM camunda_history.camunda_incidents FINAL
 WHERE ${where}
-GROUP BY i.incident_message, i.activity_id, i.process_definition_key
+GROUP BY incident_message, activity_id, process_definition_key
 ORDER BY incident_count DESC
 LIMIT ${args.limit}`
         : `
@@ -62,9 +63,9 @@ SELECT
     i.incident_message,
     i.activity_id AS failed_activity,
     i.create_time AS incident_time
-FROM camunda_history.camunda_incidents FINAL i
+FROM (SELECT * FROM camunda_history.camunda_incidents FINAL) i
 JOIN camunda_history.camunda_process_instances p ON p.id = i.process_instance_id
-WHERE ${where}
+WHERE ${prefixedWhere}
 ORDER BY i.create_time DESC
 LIMIT ${args.limit}`
 

@@ -65,10 +65,10 @@ export function registerSearchTools(register: Register) {
         conditions.push(`p.duration_in_millis > ${Number(args.durationGreaterThan)}`)
       }
       if (args.withIncidents) {
-        joins += `\nJOIN camunda_history.camunda_incidents FINAL i ON p.id = i.process_instance_id`
+        joins += `\nJOIN (SELECT * FROM camunda_history.camunda_incidents FINAL) i ON p.id = i.process_instance_id`
       }
       if (args.variableName && args.variableValue) {
-        joins += `\nJOIN camunda_history.camunda_variable_updates FINAL v ON p.id = v.process_instance_id`
+        joins += `\nJOIN (SELECT * FROM camunda_history.camunda_variable_updates FINAL) v ON p.id = v.process_instance_id`
         conditions.push(`v.variable_name = ${escapeString(args.variableName)}`)
         conditions.push(`v.text_value = ${escapeString(args.variableValue)}`)
       }
@@ -132,7 +132,7 @@ SELECT DISTINCT
     p.duration_in_millis,
     v.variable_name,
     v.text_value
-FROM camunda_history.camunda_variable_updates FINAL v
+FROM (SELECT * FROM camunda_history.camunda_variable_updates FINAL) v
 JOIN camunda_history.camunda_process_instances p ON p.id = v.process_instance_id
 WHERE ${conditions.join(" AND ")}
 ORDER BY v.timestamp DESC

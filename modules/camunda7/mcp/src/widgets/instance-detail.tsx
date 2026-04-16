@@ -1,3 +1,4 @@
+import { useState } from "react"
 import {
   Card,
   CardContent,
@@ -10,6 +11,9 @@ import {
   TableCell,
   Alert,
   AlertDescription,
+  Button,
+  Input,
+  useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
 interface VariableValue {
@@ -102,7 +106,108 @@ function ActivityNode({ node, depth = 0 }: { node: ActivityTree; depth?: number 
   )
 }
 
+function VariableRow({
+  name,
+  variable,
+  instanceId,
+  onSaved,
+}: {
+  name: string
+  variable: VariableValue
+  instanceId: string
+  onSaved: (name: string, value: unknown) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState("")
+  const setVarMutation = useToolMutation("camunda7_set_process_instance_variable")
+
+  function startEdit() {
+    const v = variable.value
+    setEditValue(typeof v === "object" ? JSON.stringify(v) : formatValue(v, variable.type))
+    setEditing(true)
+  }
+
+  function save() {
+    let parsed: unknown = editValue
+    // Try to preserve the original type
+    if (variable.type === "Integer" || variable.type === "Long") {
+      const num = Number(editValue)
+      if (!isNaN(num)) parsed = num
+    } else if (variable.type === "Boolean") {
+      parsed = editValue === "true"
+    } else if (variable.type === "Json" || variable.type === "Object") {
+      try {
+        parsed = JSON.parse(editValue)
+      } catch {
+        /* keep as string */
+      }
+    } else if (variable.type === "Double") {
+      const num = Number(editValue)
+      if (!isNaN(num)) parsed = num
+    }
+
+    setVarMutation.mutate(
+      {
+        processInstanceId: instanceId,
+        variableName: name,
+        value: parsed,
+        type: variable.type,
+      },
+      {
+        onSuccess: () => {
+          onSaved(name, parsed)
+          setEditing(false)
+        },
+      },
+    )
+  }
+
+  return (
+    <TableRow>
+      <TableCell className="font-mono text-sm">{name}</TableCell>
+      <TableCell className="text-muted-foreground text-xs">{variable.type ?? "—"}</TableCell>
+      <TableCell className="max-w-md whitespace-pre-wrap break-words font-mono text-xs">
+        {editing ? (
+          <form
+            className="flex items-center gap-1"
+            onSubmit={(e) => {
+              e.preventDefault()
+              save()
+            }}
+          >
+            <Input
+              className="h-7 font-mono text-xs"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              autoFocus
+            />
+            <Button variant="outline" size="sm" type="submit" disabled={setVarMutation.isPending}>
+              Save
+            </Button>
+            <Button variant="ghost" size="sm" type="button" onClick={() => setEditing(false)}>
+              X
+            </Button>
+          </form>
+        ) : (
+          formatValue(variable.value, variable.type)
+        )}
+      </TableCell>
+      <TableCell className="w-16">
+        {!editing && (
+          <Button variant="ghost" size="sm" onClick={startEdit}>
+            Edit
+          </Button>
+        )}
+      </TableCell>
+    </TableRow>
+  )
+}
+
 export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null }) {
+  const [localVars, setLocalVars] = useState<Map<string, unknown>>(new Map())
+  const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
+  const resolveMutation = useToolMutation("camunda7_resolve_incident")
+
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
@@ -114,7 +219,27 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   }
 
   const { instance, activityTree, variables, incidents } = data
+
+  function getVariable(name: string, original: VariableValue): VariableValue {
+    if (localVars.has(name)) {
+      return { ...original, value: localVars.get(name) }
+    }
+    return original
+  }
+
+  function handleVarSaved(name: string, value: unknown) {
+    setLocalVars((prev) => new Map(prev).set(name, value))
+  }
+
+  function handleResolve(incidentId: string) {
+    resolveMutation.mutate(
+      { incidentId },
+      { onSuccess: () => setResolvedIds((prev) => new Set(prev).add(incidentId)) },
+    )
+  }
+
   const variableEntries = Object.entries(variables)
+  const activeIncidents = (incidents ?? []).filter((i) => !resolvedIds.has(i.id))
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-5 p-6">
@@ -140,25 +265,45 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
       </div>
 
       {incidents && incidents.length > 0 && (
-        <Section title="Incidents" count={incidents.length} defaultOpen>
+        <Section title="Incidents" count={activeIncidents.length} defaultOpen>
           <div className="flex flex-col gap-2">
-            {incidents.map((inc) => (
-              <Card key={inc.id} className="border-destructive/30 gap-0 py-0 shadow-none">
-                <CardContent className="p-3">
-                  <div className="mb-1 flex items-center gap-2">
-                    <Badge variant="destructive">{inc.incidentType}</Badge>
-                    <span className="text-muted-foreground text-xs">
-                      {new Date(inc.incidentTimestamp).toLocaleString()}
-                    </span>
-                  </div>
-                  {inc.incidentMessage && (
-                    <p className="text-muted-foreground break-words font-mono text-sm">
-                      {inc.incidentMessage}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+            {incidents.map((inc) => {
+              const resolved = resolvedIds.has(inc.id)
+              return (
+                <Card
+                  key={inc.id}
+                  className={`border-destructive/30 gap-0 py-0 shadow-none ${resolved ? "opacity-50" : ""}`}
+                >
+                  <CardContent className="p-3">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={resolved ? "secondary" : "destructive"}>
+                          {resolved ? "Resolved" : inc.incidentType}
+                        </Badge>
+                        <span className="text-muted-foreground text-xs">
+                          {new Date(inc.incidentTimestamp).toLocaleString()}
+                        </span>
+                      </div>
+                      {!resolved && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={resolveMutation.isPending}
+                          onClick={() => handleResolve(inc.id)}
+                        >
+                          Resolve
+                        </Button>
+                      )}
+                    </div>
+                    {inc.incidentMessage && (
+                      <p className="text-muted-foreground break-words font-mono text-sm">
+                        {inc.incidentMessage}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         </Section>
       )}
@@ -184,19 +329,18 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Value</TableHead>
+                  <TableHead className="w-16"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {variableEntries.map(([name, variable]) => (
-                  <TableRow key={name}>
-                    <TableCell className="font-mono text-sm">{name}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {variable.type ?? "—"}
-                    </TableCell>
-                    <TableCell className="max-w-md whitespace-pre-wrap break-words font-mono text-xs">
-                      {formatValue(variable.value, variable.type)}
-                    </TableCell>
-                  </TableRow>
+                  <VariableRow
+                    key={name}
+                    name={name}
+                    variable={getVariable(name, variable)}
+                    instanceId={instance.id}
+                    onSaved={handleVarSaved}
+                  />
                 ))}
               </TableBody>
             </Table>

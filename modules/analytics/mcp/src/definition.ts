@@ -10,6 +10,21 @@ export const definition: AppDefinition = {
       requires: ["analytics:dashboardData"],
       size: "full",
     },
+    {
+      id: "analytics:failure-dashboard",
+      requires: [],
+      size: "full",
+    },
+    {
+      id: "analytics:variable-search",
+      requires: [],
+      size: "full",
+    },
+    {
+      id: "analytics:execution-trace",
+      requires: [],
+      size: "full",
+    },
   ],
 }
 
