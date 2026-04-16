@@ -18,6 +18,7 @@
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {
+    "@miragon-ai/client-analytics": "workspace:*",
     "@miragon/mcp-toolkit-core": "workspace:*",
     "zod": "4.3.6"
   },

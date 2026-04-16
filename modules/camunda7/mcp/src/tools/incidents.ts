@@ -1,5 +1,5 @@
-import { z } from "zod"
 import type { Client } from "@miragon-ai/client-camunda7"
+import { listIncidentsInput, resolveIncidentInput } from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { getIncidents, resolveIncident } from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
@@ -11,32 +11,7 @@ export function registerIncidentTools(register: Register) {
     description:
       "List incidents (errors) in the engine. Shows failed jobs, external task failures, etc.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: {
-      processInstanceId: z.string().optional().describe("Filter by process instance ID"),
-      processDefinitionId: z.string().optional().describe("Filter by process definition ID"),
-      incidentType: z
-        .string()
-        .optional()
-        .describe("Filter by incident type (e.g. failedJob, failedExternalTask)"),
-      maxResults: z.number().int().positive().optional().default(20),
-      sortBy: z
-        .enum([
-          "incidentId",
-          "incidentMessage",
-          "incidentTimestamp",
-          "incidentType",
-          "executionId",
-          "activityId",
-          "processInstanceId",
-          "processDefinitionId",
-          "causeIncidentId",
-          "rootCauseIncidentId",
-          "configuration",
-          "tenantId",
-        ])
-        .optional(),
-      sortOrder: z.enum(["asc", "desc"]).optional(),
-    },
+    inputSchema: listIncidentsInput.shape,
     handler: async (client, args) =>
       getIncidents({
         client,
@@ -55,7 +30,7 @@ export function registerIncidentTools(register: Register) {
     name: "camunda7_resolve_incident",
     description: "Resolve an incident by ID.",
     annotations: { openWorldHint: true },
-    inputSchema: { incidentId: z.string().describe("The incident ID to resolve") },
+    inputSchema: resolveIncidentInput.shape,
     handler: async (client, args) => {
       await resolveIncident({ client, path: { id: args.incidentId } })
       return { success: true, incidentId: args.incidentId }

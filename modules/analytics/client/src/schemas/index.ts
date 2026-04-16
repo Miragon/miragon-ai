@@ -1,0 +1,4 @@
+export { analyzePerformanceInput, comparePeriodsInput } from "./performance.js"
+export { searchProcessInstancesInput, searchByVariableInput } from "./search.js"
+export { findFailedInstancesInput } from "./failures.js"
+export { traceProcessExecutionInput } from "./trace.js"

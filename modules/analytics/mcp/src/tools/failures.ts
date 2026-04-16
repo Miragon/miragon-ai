@@ -1,6 +1,6 @@
-import { z } from "zod"
+import type { ClickHouseClient } from "@miragon-ai/client-analytics"
+import { schemas, queries } from "@miragon-ai/client-analytics"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { escapeString, type ClickHouseClient } from "../client.js"
 
 type Register = ReturnType<typeof createToolRegistrar<ClickHouseClient>>
 
@@ -10,65 +10,7 @@ export function registerFailureTools(register: Register) {
     description:
       "Find failed process instances with incident details and error patterns. Optionally group by error message to identify common failure patterns.",
     annotations: { readOnlyHint: true, idempotentHint: true },
-    inputSchema: {
-      processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
-      period: z.enum(["1d", "7d", "30d"]).default("7d").describe("Time period to search"),
-      incidentType: z.string().optional().describe("Filter by incident type (e.g. failedJob)"),
-      groupByError: z
-        .boolean()
-        .default(false)
-        .describe("Group results by error message to show patterns"),
-      limit: z.number().int().positive().max(100).default(20).describe("Maximum results"),
-    },
-    handler: async (ch, args) => {
-      const interval = { "1d": "1 DAY", "7d": "7 DAY", "30d": "30 DAY" }[
-        args.period as "1d" | "7d" | "30d"
-      ]
-
-      const conditions: string[] = [`i.create_time >= now() - INTERVAL ${interval}`]
-      if (args.processDefinitionKey) {
-        conditions.push(`i.process_definition_key = ${escapeString(args.processDefinitionKey)}`)
-      }
-      if (args.incidentType) {
-        conditions.push(`i.incident_type = ${escapeString(args.incidentType)}`)
-      }
-
-      const where = conditions.join(" AND ")
-
-      const sql = args.groupByError
-        ? `
-SELECT
-    i.incident_message,
-    i.activity_id,
-    i.process_definition_key,
-    count() AS incident_count,
-    min(i.create_time) AS first_occurrence,
-    max(i.create_time) AS last_occurrence,
-    groupArray(10)(i.process_instance_id) AS sample_instance_ids
-FROM camunda_history.camunda_incidents FINAL i
-WHERE ${where}
-GROUP BY i.incident_message, i.activity_id, i.process_definition_key
-ORDER BY incident_count DESC
-LIMIT ${args.limit}`
-        : `
-SELECT
-    p.id AS process_instance_id,
-    p.process_definition_key,
-    p.business_key,
-    p.start_time,
-    p.end_time,
-    p.duration_in_millis,
-    i.incident_type,
-    i.incident_message,
-    i.activity_id AS failed_activity,
-    i.create_time AS incident_time
-FROM camunda_history.camunda_incidents FINAL i
-JOIN camunda_history.camunda_process_instances p ON p.id = i.process_instance_id
-WHERE ${where}
-ORDER BY i.create_time DESC
-LIMIT ${args.limit}`
-
-      return ch.query(sql)
-    },
+    inputSchema: schemas.findFailedInstancesInput.shape,
+    handler: async (ch, args) => queries.findFailedInstances(ch, args),
   })
 }

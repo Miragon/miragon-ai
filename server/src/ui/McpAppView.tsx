@@ -1,5 +1,6 @@
+import { useCallback } from "react"
 import { useWidget } from "mcp-use/react"
-import { Alert, AlertDescription, Skeleton } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, Skeleton, AppQueryProvider } from "@miragon/mcp-toolkit-ui"
 import { getWidgetComponent } from "./widget-registry.js"
 
 interface ShowWidgetPayload {
@@ -13,7 +14,15 @@ interface ShowWidgetPayload {
  * this component will be replaced with `McpAppView` from `@miragon/mcp-toolkit-ui`.
  */
 export function McpAppView() {
-  const { props, isPending } = useWidget<ShowWidgetPayload>()
+  const { props, isPending, callTool } = useWidget<ShowWidgetPayload>()
+
+  // All hooks must be called before any early returns
+  const callToolFn = useCallback(
+    async (name: string, args: Record<string, unknown>) => {
+      return callTool(name, args)
+    },
+    [callTool],
+  )
 
   if (isPending) {
     return (
@@ -47,5 +56,9 @@ export function McpAppView() {
     )
   }
 
-  return <Component data={props.data} />
+  return (
+    <AppQueryProvider callTool={callToolFn}>
+      <Component data={props.data} />
+    </AppQueryProvider>
+  )
 }

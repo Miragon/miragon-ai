@@ -22,9 +22,9 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --offline
 
 RUN --mount=type=cache,id=turbo-server,target=/app/.turbo \
-    pnpm turbo build --filter=@automation-mcp/server...
+    pnpm turbo build --filter=@miragon-ai/server...
 
-RUN pnpm --filter @automation-mcp/server deploy --prod /app/deployed
+RUN pnpm --filter @miragon-ai/server deploy --prod /app/deployed
 
 FROM base AS runtime
 WORKDIR /app

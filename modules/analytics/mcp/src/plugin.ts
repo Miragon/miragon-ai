@@ -1,5 +1,6 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import { createClickHouseClient } from "./client.js"
+import type { MCPServer } from "mcp-use/server"
+import { createClickHouseClient } from "@miragon-ai/client-analytics"
 import { registerTools } from "./tools/index.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"
@@ -11,7 +12,7 @@ export interface AnalyticsPluginConfig {
   database: string
 }
 
-export function createPlugin(config: AnalyticsPluginConfig): AppPlugin {
+export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer> {
   const client = createClickHouseClient(config)
   return {
     definition,

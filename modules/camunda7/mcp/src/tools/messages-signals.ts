@@ -1,19 +1,9 @@
-import { z } from "zod"
 import type { Client } from "@miragon-ai/client-camunda7"
+import { correlateMessageInput, throwSignalInput } from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { deliverMessage, throwSignal } from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
-
-const variableSchema = z
-  .record(
-    z.string(),
-    z.object({
-      value: z.unknown(),
-      type: z.string().optional(),
-    }),
-  )
-  .describe("Variables map")
 
 export function registerMessageSignalTools(register: Register) {
   register({
@@ -21,13 +11,7 @@ export function registerMessageSignalTools(register: Register) {
     description:
       "Correlate a message to trigger a message catch event or start a message start event.",
     annotations: { openWorldHint: true },
-    inputSchema: {
-      messageName: z.string().describe("The name of the message"),
-      businessKey: z.string().optional().describe("Business key to correlate with"),
-      correlationKeys: variableSchema.optional().describe("Correlation keys to match"),
-      processVariables: variableSchema.optional().describe("Variables to set on the process"),
-      resultEnabled: z.boolean().optional().default(true).describe("Return correlation result"),
-    },
+    inputSchema: correlateMessageInput.shape,
     handler: async (client, args) =>
       deliverMessage({
         client,
@@ -50,10 +34,7 @@ export function registerMessageSignalTools(register: Register) {
     description:
       "Throw a signal to trigger all matching signal catch events and signal start events.",
     annotations: { openWorldHint: true },
-    inputSchema: {
-      name: z.string().describe("The name of the signal"),
-      variables: variableSchema.optional().describe("Variables to set"),
-    },
+    inputSchema: throwSignalInput.shape,
     handler: async (client, args) => {
       await throwSignal({
         client,

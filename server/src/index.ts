@@ -56,6 +56,7 @@ server.tool(
       "Returns all active apps, registered pipeline steps, widgets, and their key contracts. Call this first to understand which data can be loaded and which views can be composed via render-view.",
     annotations: { readOnlyHint: true },
   },
+  // eslint-disable-next-line @typescript-eslint/require-await -- mcp-use requires async handler signature
   async () => {
     const manifest = getFrameworkManifest(stepRegistry, widgetRegistry, config)
     return text(JSON.stringify(manifest, null, 2))

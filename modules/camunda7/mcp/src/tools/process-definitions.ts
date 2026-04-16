@@ -1,5 +1,8 @@
-import { z } from "zod"
 import type { Client } from "@miragon-ai/client-camunda7"
+import {
+  listProcessDefinitionsInput,
+  getProcessDefinitionXmlInput,
+} from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getProcessDefinitions,
@@ -14,23 +17,7 @@ export function registerProcessDefinitionTools(register: Register) {
     description:
       "List deployed process definitions with optional filters. Returns key, name, version, and deployment info.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: {
-      key: z.string().optional().describe("Filter by exact process definition key"),
-      nameLike: z.string().optional().describe("Filter by name (substring match)"),
-      latestVersion: z.boolean().optional().describe("Only return latest versions"),
-      maxResults: z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .default(20)
-        .describe("Maximum number of results"),
-      sortBy: z
-        .enum(["category", "key", "id", "name", "version", "deploymentId", "tenantId"])
-        .optional()
-        .describe("Sort field"),
-      sortOrder: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
-    },
+    inputSchema: listProcessDefinitionsInput.shape,
     handler: async (client, args) =>
       getProcessDefinitions({
         client,
@@ -50,9 +37,7 @@ export function registerProcessDefinitionTools(register: Register) {
     description:
       "Get the BPMN 2.0 XML of a process definition by ID. Returns the raw BPMN XML string.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: {
-      processDefinitionId: z.string().describe("The ID of the process definition"),
-    },
+    inputSchema: getProcessDefinitionXmlInput.shape,
     handler: async (client, args) =>
       getProcessDefinitionBpmn20Xml({
         client,
