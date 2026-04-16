@@ -1,0 +1,56 @@
+name: Refactor
+description: Propose a code refactoring or structural improvement
+title: "[Refactor]: "
+labels:
+  - refactor
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a refactoring! Please describe the current state, the target state, and the motivation.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What will be refactored and why?
+      placeholder: Extract tool registration logic from the camunda7 module into a shared helper so all modules follow the same pattern.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-state
+    attributes:
+      label: Current State
+      description: Describe the current implementation and its shortcomings.
+      placeholder: |
+        Tool registration is handled inline inside each module's entry point. This leads to duplicated setup code and makes it hard to enforce consistent tool metadata across modules.
+    validations:
+      required: true
+
+  - type: textarea
+    id: target-state
+    attributes:
+      label: Target State
+      description: Describe what the code should look like after the refactoring.
+      placeholder: |
+        All modules use the shared `createToolRegistrar` helper from `@automation-mcp/core`. Registration logic is defined once and modules only provide their tool definitions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of Scope
+      description: What will NOT be changed by this refactor?
+      placeholder: The public MCP tool names and their input/output schemas remain unchanged.
+    validations:
+      required: false
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks / Considerations
+      description: Any breaking changes, migration steps, or risks to be aware of?
+    validations:
+      required: false

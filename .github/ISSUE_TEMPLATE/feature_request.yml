@@ -1,0 +1,56 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for automation-mcp
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please describe what you'd like to see and why it would be useful.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear and concise description of the feature you are requesting.
+      placeholder: As an MCP user, I want a tool that retrieves all active incidents for a given process definition so that I can monitor process health without leaving my AI assistant...
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this feature needed? What problem does it solve?
+      placeholder: Currently there is no way to query active incidents through the MCP server. Users have to switch to the Camunda Cockpit to check for failures, which interrupts the AI-assisted workflow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should the feature work? Include any tool names, widget ideas, or API details.
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What conditions must be met for this feature to be considered complete?
+      placeholder: |
+        - [ ] A new MCP tool `listIncidents` is exposed by the camunda7 module
+        - [ ] The tool accepts an optional `processDefinitionId` filter
+        - [ ] Results include incident type, message, and affected process instance
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or approaches you've considered?
+    validations:
+      required: false

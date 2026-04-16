@@ -1,0 +1,79 @@
+name: Bug Report
+description: Report a bug or unexpected behaviour in automation-mcp
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill in the details below to help us reproduce and fix the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: When calling the `getProcessInstance` tool, the MCP server returns an unexpected error instead of the process instance details...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the behaviour.
+      placeholder: |
+        1. Connect an MCP host (e.g. Claude) to the automation-mcp server
+        2. Call the `getProcessInstance` tool with a valid process instance ID
+        3. Observe the following error in the response...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behaviour
+      description: What actually happened? Include logs, stack traces, or screenshots if relevant.
+    validations:
+      required: true
+
+  - type: input
+    id: server-version
+    attributes:
+      label: Server Version
+      placeholder: "1.0.0"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Affected Module
+      options:
+        - camunda7
+        - analytics
+        - core
+        - ui
+        - Other
+    validations:
+      required: false
+
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Process Engine
+      options:
+        - Camunda 7
+        - CIB Seven
+        - Not applicable
+    validations:
+      required: false
