@@ -12,7 +12,7 @@ export const listProcessDefinitionsInput = z.object({
     .default(20)
     .describe("Maximum number of results"),
   sortBy: z
-    .enum(["category", "key", "id", "name", "version", "deploymentId", "tenantId"])
+    .enum(["category", "key", "id", "name", "version", "deploymentId", "deployTime", "versionTag"])
     .optional()
     .describe("Sort field"),
   sortOrder: z.enum(["asc", "desc"]).optional().describe("Sort direction"),

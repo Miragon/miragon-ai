@@ -247,13 +247,17 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         }),
       ])
 
-      const instArray = Array.isArray(instances) ? instances : []
-      const actArray = Array.isArray(activities) ? activities : []
+      const instArray = (
+        Array.isArray(instances) ? instances : []
+      ) as HistoryTimelineData["processInstance"][]
+      const actArray = (
+        Array.isArray(activities) ? activities : []
+      ) as HistoryTimelineData["activities"]
       const inst = instArray[0] ?? null
 
       const data: HistoryTimelineData = {
-        processInstance: inst as HistoryTimelineData["processInstance"],
-        activities: actArray as HistoryTimelineData["activities"],
+        processInstance: inst,
+        activities: actArray,
         totalActivities: actArray.length,
       }
       return text(JSON.stringify({ widget: "camunda7:history-timeline", data }))

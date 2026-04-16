@@ -58,7 +58,11 @@ function formatValue(value: unknown, type?: string): string {
   if (type === "Json" || type === "Object" || typeof value === "object") {
     return JSON.stringify(value, null, 2)
   }
-  return String(value)
+  if (typeof value === "string") return value
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value)
+  }
+  return JSON.stringify(value)
 }
 
 function ActivityNode({ node, depth = 0 }: { node: ActivityTree; depth?: number }) {

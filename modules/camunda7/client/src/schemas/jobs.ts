@@ -19,7 +19,6 @@ export const listJobsInput = z.object({
       "jobRetries",
       "jobDueDate",
       "tenantId",
-      "createTime",
     ])
     .optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),

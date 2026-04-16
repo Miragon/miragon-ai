@@ -1,5 +1,6 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import type { Client } from "@automation-mcp/client-camunda7"
+import type { HistoryTimelineData } from "@automation-mcp/client-camunda7"
 import {
   getHistoricActivityInstances,
   getHistoricProcessInstances,
@@ -38,8 +39,12 @@ export const loadHistoryTimelineStep: PipelineStepDefinition<Camunda7AppConfig> 
       }),
     ])
 
-    const actArray = Array.isArray(activities) ? activities : []
-    const instArray = Array.isArray(instances) ? instances : []
+    const actArray = (
+      Array.isArray(activities) ? activities : []
+    ) as HistoryTimelineData["activities"]
+    const instArray = (
+      Array.isArray(instances) ? instances : []
+    ) as HistoryTimelineData["processInstance"][]
     const processInstance = instArray[0] ?? null
 
     return {
@@ -47,7 +52,7 @@ export const loadHistoryTimelineStep: PipelineStepDefinition<Camunda7AppConfig> 
         processInstance,
         activities: actArray,
         totalActivities: actArray.length,
-      },
+      } satisfies HistoryTimelineData,
       keys: {
         "camunda7:historyProcessInstance": processInstance,
         "camunda7:historyActivities": actArray,

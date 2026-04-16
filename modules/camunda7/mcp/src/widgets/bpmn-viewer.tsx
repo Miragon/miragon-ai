@@ -5,6 +5,19 @@ import type { BpmnViewerData } from "@automation-mcp/client-camunda7"
 
 export type { BpmnViewerData }
 
+interface BpmnCanvas {
+  zoom: (mode: string) => void
+  addMarker: (elementId: string, marker: string) => void
+}
+
+interface BpmnOverlays {
+  add: (elementId: string, overlay: { position: object; html: string }) => void
+}
+
+interface BpmnViewerWithGet {
+  get: ((service: "canvas") => BpmnCanvas) & ((service: "overlays") => BpmnOverlays)
+}
+
 const HIGHLIGHT_CSS = `
 .highlight-running:not(.djs-connection) .djs-visual > :nth-child(1) {
   fill: rgba(34, 197, 94, 0.15) !important;
@@ -67,8 +80,8 @@ export function BpmnViewerWidget({ data }: { data: BpmnViewerData | null }) {
     viewerRef.current = viewer
 
     void viewer.importXML(data.bpmnXml).then(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const canvas = (viewer as any).get("canvas")
+      const bpmn = viewer as unknown as BpmnViewerWithGet
+      const canvas = bpmn.get("canvas")
       canvas.zoom("fit-viewport")
 
       // Highlight active activities
@@ -90,8 +103,7 @@ export function BpmnViewerWidget({ data }: { data: BpmnViewerData | null }) {
       }
 
       // Add instance count overlays
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const overlays = (viewer as any).get("overlays")
+      const overlays = bpmn.get("overlays")
       for (const stat of data.activityStats) {
         if (stat.instances > 0) {
           overlays.add(stat.id, {

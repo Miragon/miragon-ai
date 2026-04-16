@@ -1,4 +1,5 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
+import type { MCPServer } from "mcp-use/server"
 import { createCamunda7Client, type Camunda7AuthType } from "@automation-mcp/client-camunda7"
 import { registerTools } from "./tools/index.js"
 import { registerWidgetTools } from "./widget-tools.js"
@@ -12,7 +13,7 @@ export interface Camunda7PluginConfig {
   token?: string
 }
 
-export function createPlugin(config: Camunda7PluginConfig): AppPlugin {
+export function createPlugin(config: Camunda7PluginConfig): AppPlugin<MCPServer> {
   const client = createCamunda7Client({
     baseUrl: config.baseUrl,
     authType: config.authType,

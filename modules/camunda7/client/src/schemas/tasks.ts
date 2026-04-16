@@ -18,14 +18,13 @@ export const listTasksInput = z.object({
     .enum([
       "instanceId",
       "dueDate",
-      "executionId",
       "assignee",
       "created",
+      "lastUpdated",
       "description",
       "id",
       "name",
       "priority",
-      "taskDefinitionKey",
     ])
     .optional()
     .describe("Sort field"),
