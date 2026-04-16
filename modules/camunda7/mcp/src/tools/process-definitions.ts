@@ -1,10 +1,10 @@
 import { z } from "zod"
-import type { Client } from "@automation-mcp/client-camunda7"
+import type { Client } from "@miragon-ai/client-camunda7"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
-} from "@automation-mcp/client-camunda7/generated/sdk.gen"
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
 

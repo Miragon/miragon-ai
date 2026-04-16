@@ -1,5 +1,5 @@
 {
-  "name": "@automation-mcp/mcp-analytics",
+  "name": "@miragon-ai/mcp-analytics",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

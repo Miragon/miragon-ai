@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
 import { text } from "mcp-use/server"
-import type { Client } from "@automation-mcp/client-camunda7"
+import type { Client } from "@miragon-ai/client-camunda7"
 import {
   getProcessDefinitions,
   getProcessInstance,
@@ -12,7 +12,7 @@ import {
   getHistoricActivityInstances,
   getHistoricProcessInstances,
   getProcessDefinitionBpmn20Xml,
-} from "@automation-mcp/client-camunda7/generated/sdk.gen"
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 export function registerWidgetTools(server: MCPServer, client: Client, resourceUri: string) {
   const uiMeta = { ui: { resourceUri } }
