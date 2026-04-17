@@ -9,10 +9,7 @@ import org.junit.jupiter.api.Test
  * inner class and passes its Gradle module name + root package. New rules land here
  * (or in sibling abstract classes) as conventions firm up — see plugins/konsist/README.md.
  */
-abstract class ArchitectureTest(
-    private val moduleName: String,
-    private val rootPackage: String,
-) {
+abstract class ArchitectureTest(private val moduleName: String, private val rootPackage: String) {
     @Test
     fun `every class resides in a declared package under the module root`() {
         Konsist
