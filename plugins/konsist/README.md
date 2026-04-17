@@ -19,6 +19,7 @@ This is intentionally minimal. Phase 2 adds more rules (no-wildcard-imports, eng
    }
    ```
 2. Add `src/test/kotlin/<rootPackage>/KonsistArchitectureTest.kt` — pass the Gradle module name (so Konsist scopes to that module only) and the root package to enforce:
+
    ```kotlin
    package com.camunda7mcp.history.camunda7
 
@@ -30,6 +31,7 @@ This is intentionally minimal. Phase 2 adds more rules (no-wildcard-imports, eng
        inner class Guidelines : BasicCodingGuidelinesTest("camunda7-history-clickhouse", "com.camunda7mcp.history.camunda7")
    }
    ```
+
 3. `./gradlew :<subproject>:test` runs the Konsist checks alongside regular unit tests.
 
 ## Adding a new rule

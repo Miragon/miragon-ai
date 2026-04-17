@@ -6,14 +6,14 @@ Multi-module Gradle build containing the Camunda 7 / CIB seven / Operaton histor
 
 Phase 1 guardrails are **warn-not-error**: ktlint and detekt report findings but do not fail the build. Only compile errors, failing unit tests, and Konsist assertion failures block CI.
 
-| Command | Purpose |
-| --- | --- |
-| `./gradlew build` | Compile + unit tests (includes Konsist architecture tests) |
-| `./gradlew test` | Run all tests (Konsist scoped per module) |
-| `./gradlew ktlintCheck` | Report ktlint findings (warn-only) |
-| `./gradlew ktlintFormat` | Auto-fix ktlint findings in place |
-| `./gradlew detekt` | Report detekt findings (warn-only, baselined) |
-| `./gradlew detektBaseline` | Regenerate per-subproject detekt baselines |
+| Command                    | Purpose                                                    |
+| -------------------------- | ---------------------------------------------------------- |
+| `./gradlew build`          | Compile + unit tests (includes Konsist architecture tests) |
+| `./gradlew test`           | Run all tests (Konsist scoped per module)                  |
+| `./gradlew ktlintCheck`    | Report ktlint findings (warn-only)                         |
+| `./gradlew ktlintFormat`   | Auto-fix ktlint findings in place                          |
+| `./gradlew detekt`         | Report detekt findings (warn-only, baselined)              |
+| `./gradlew detektBaseline` | Regenerate per-subproject detekt baselines                 |
 
 ### ktlint
 
