@@ -65,16 +65,37 @@ jobs:
             gh api "repos/${{ github.repository }}/git/refs/heads/chore/auto-format" -X DELETE || true
           fi
 
-      - name: Commit and push
+      - name: Create verified commit via GraphQL
         if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-          git checkout -b chore/auto-format
-          git add -A
-          git commit -m "chore(style): apply ktlint + prettier auto-format"
-          git push origin chore/auto-format --force
+          HEAD=$(git rev-parse HEAD)
+          REPO="${{ github.repository }}"
+
+          ADDITIONS=$(git diff --name-only | while IFS= read -r file; do
+            jq -n --arg path "$file" --arg contents "$(base64 -w0 "$file")" \
+              '{path: $path, contents: $contents}'
+          done | jq -s '.')
+
+          gh api "repos/$REPO/git/refs" \
+            --method POST \
+            --field ref="refs/heads/chore/auto-format" \
+            --field sha="$HEAD" 2>/dev/null \
+          || gh api "repos/$REPO/git/refs/heads/chore/auto-format" \
+            --method PATCH \
+            --field sha="$HEAD" \
+            --field force=true
+
+          QUERY='mutation($repo:String!,$branch:String!,$head:GitObjectID!,$additions:[FileAddition!]!){createCommitOnBranch(input:{branch:{repositoryNameWithOwner:$repo,branchName:$branch}message:{headline:"chore(style): apply ktlint + prettier auto-format"}fileChanges:{additions:$additions}expectedHeadOid:$head}){commit{oid}}}'
+
+          jq -n \
+            --arg query "$QUERY" \
+            --arg repo "$REPO" \
+            --arg head "$HEAD" \
+            --argjson additions "$ADDITIONS" \
+            '{query:$query,variables:{repo:$repo,branch:"chore/auto-format",head:$head,additions:$additions}}' \
+          | gh api graphql --input - --jq '.data.createCommitOnBranch.commit.oid'
 
       - name: Create PR
         if: steps.diff.outputs.changed == 'true'
