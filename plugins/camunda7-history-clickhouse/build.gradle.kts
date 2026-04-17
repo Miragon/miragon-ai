@@ -12,6 +12,7 @@ dependencies {
     compileOnly("org.camunda.bpm:camunda-engine:7.24.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(project(":konsist"))
 }
 
 tasks.shadowJar {

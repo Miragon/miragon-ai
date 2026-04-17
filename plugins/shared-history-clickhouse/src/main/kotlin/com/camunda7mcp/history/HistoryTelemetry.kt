@@ -1,8 +1,8 @@
 package com.camunda7mcp.history
 
 import io.opentelemetry.api.GlobalOpenTelemetry
-import io.opentelemetry.api.metrics.LongCounter
 import io.opentelemetry.api.metrics.DoubleHistogram
+import io.opentelemetry.api.metrics.LongCounter
 import io.opentelemetry.api.trace.Tracer
 
 /**

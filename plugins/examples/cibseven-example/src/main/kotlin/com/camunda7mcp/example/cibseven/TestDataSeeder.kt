@@ -35,8 +35,12 @@ class TestDataSeeder(
     private val loanTypes = listOf("personal", "mortgage", "auto", "business", "student", "home-equity")
 
     override fun run(vararg args: String) {
-        log.info("Seeding {} process instances ({}% completed, spread over {} days)...",
-            instanceCount, (completedRatio * 100).toInt(), daysBack)
+        log.info(
+            "Seeding {} process instances ({}% completed, spread over {} days)...",
+            instanceCount,
+            (completedRatio * 100).toInt(),
+            daysBack,
+        )
 
         val completedCount = (instanceCount * completedRatio).toInt()
         val now = Instant.now()
@@ -75,8 +79,11 @@ class TestDataSeeder(
                         // Randomly complete some "Prepare Bank Transfer" tasks
                         if (Random.nextDouble() < 0.5) {
                             val advanceMore = Random.nextLong(10, 24 * 60)
-                            ClockUtil.setCurrentTime(Date.from(
-                                startTime.plus(advanceMinutes + advanceMore, ChronoUnit.MINUTES)))
+                            ClockUtil.setCurrentTime(
+                                Date.from(
+                                    startTime.plus(advanceMinutes + advanceMore, ChronoUnit.MINUTES),
+                                ),
+                            )
 
                             val bankTask = taskService.createTaskQuery()
                                 .processInstanceId(instance.id)
@@ -99,7 +106,10 @@ class TestDataSeeder(
         }
 
         ClockUtil.reset()
-        log.info("Seeding complete. Created {} instances ({} targeted for completion).",
-            instanceCount, completedCount)
+        log.info(
+            "Seeding complete. Created {} instances ({} targeted for completion).",
+            instanceCount,
+            completedCount,
+        )
     }
 }

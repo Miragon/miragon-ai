@@ -1,6 +1,7 @@
 rootProject.name = "camunda7-mcp-history-plugins"
 
 include(
+    "konsist",
     "shared-history-clickhouse",
     "camunda7-history-clickhouse",
     "cibseven-history-clickhouse",

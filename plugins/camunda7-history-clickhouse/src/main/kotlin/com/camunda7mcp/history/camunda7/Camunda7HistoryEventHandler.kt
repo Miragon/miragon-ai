@@ -6,10 +6,9 @@ import com.camunda7mcp.history.ClickHouseProperties
 import org.camunda.bpm.engine.impl.history.event.HistoryEvent
 import org.camunda.bpm.engine.impl.history.handler.HistoryEventHandler
 
-class Camunda7HistoryEventHandler(
-    client: ClickHouseClient,
-    properties: ClickHouseProperties,
-) : ClickHouseHistoryEventHandlerBase(client, properties), HistoryEventHandler {
+class Camunda7HistoryEventHandler(client: ClickHouseClient, properties: ClickHouseProperties) :
+    ClickHouseHistoryEventHandlerBase(client, properties),
+    HistoryEventHandler {
 
     private val eventMapper = Camunda7EventMapper()
 

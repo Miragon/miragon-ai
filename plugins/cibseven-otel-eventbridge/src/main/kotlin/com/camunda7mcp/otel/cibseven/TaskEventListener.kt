@@ -58,7 +58,11 @@ class TaskEventListener {
 
                 log.debug(
                     "Traced task event: {} on task {} ({}), assignee {}, process instance {}",
-                    eventName, taskDefinitionKey, taskName, assignee, processInstanceId
+                    eventName,
+                    taskDefinitionKey,
+                    taskName,
+                    assignee,
+                    processInstanceId,
                 )
             } catch (ex: Exception) {
                 span.setStatus(StatusCode.ERROR, ex.message ?: "unknown error")

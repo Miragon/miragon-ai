@@ -60,7 +60,7 @@ jobs:
       - run: pnpm format:check
 
   kotlin:
-    name: Kotlin (Build + Test)
+    name: Kotlin (Build + Test + Lint)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -79,6 +79,18 @@ jobs:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
 
       - run: ./gradlew test
+        if: always()
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+      - name: ktlint
+        run: ./gradlew ktlintCheck
+        if: always()
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+      - name: detekt
+        run: ./gradlew detekt
         if: always()
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false

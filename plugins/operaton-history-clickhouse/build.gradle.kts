@@ -11,4 +11,5 @@ dependencies {
     // implementation("org.operaton:operaton-engine:1.0.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(project(":konsist"))
 }
