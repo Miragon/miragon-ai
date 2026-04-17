@@ -1,3 +1,4 @@
+import type { z } from "zod"
 import type { ClickHouseClient } from "@miragon-ai/client-analytics"
 import { schemas, queries } from "@miragon-ai/client-analytics"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
@@ -11,7 +12,8 @@ export function registerPerformanceTools(register: Register) {
       "Analyze process performance: throughput, P95 duration, failure rate, and bottleneck activities.",
     annotations: { readOnlyHint: true, idempotentHint: true },
     inputSchema: schemas.analyzePerformanceInput.shape,
-    handler: async (ch, args) => queries.analyzePerformance(ch, args),
+    handler: async (ch, args) =>
+      queries.analyzePerformance(ch, args as z.infer<typeof schemas.analyzePerformanceInput>),
   })
 
   register({
@@ -20,6 +22,7 @@ export function registerPerformanceTools(register: Register) {
       "Compare process execution metrics between two time periods. Useful for before/after deployment comparisons or regression analysis.",
     annotations: { readOnlyHint: true, idempotentHint: true },
     inputSchema: schemas.comparePeriodsInput.shape,
-    handler: async (ch, args) => queries.comparePeriods(ch, args),
+    handler: async (ch, args) =>
+      queries.comparePeriods(ch, args as z.infer<typeof schemas.comparePeriodsInput>),
   })
 }

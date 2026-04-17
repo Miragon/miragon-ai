@@ -1,4 +1,4 @@
 [submodule "vendor/mcp-toolkit"]
 	path = vendor/mcp-toolkit
 	url = git@github.com:Miragon/mcp-toolkit.git
-	branch = dominikhorn/typed-tool-args
+	branch = main

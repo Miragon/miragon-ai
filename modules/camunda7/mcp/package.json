@@ -23,8 +23,8 @@
     "zod": "4.3.6"
   },
   "peerDependencies": {
-    "mcp-use": "1.22.2",
-    "react": "19.2.4"
+    "mcp-use": "1.23.1",
+    "react": "19.2.5"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -35,8 +35,8 @@
     "@miragon/mcp-toolkit-ui": "workspace:*",
     "@types/react": "19.2.14",
     "bpmn-js": "18.14.0",
-    "mcp-use": "1.22.2",
-    "react": "19.2.4",
+    "mcp-use": "1.23.1",
+    "react": "19.2.5",
     "typescript": "5.9.3"
   }
 }
