@@ -81,22 +81,6 @@ export interface BpmnViewerData {
   activityStats: ActivityStat[]
 }
 
-export interface ProcessDefinition {
-  id: string
-  key: string
-  name: string | null
-  version: number
-  deploymentId: string | null
-  suspended: boolean
-  versionTag: string | null
-  tenantId: string | null
-}
-
-export interface ProcessListData {
-  definitions: ProcessDefinition[]
-  totalCount: number
-}
-
 export interface VariableValue {
   value: unknown
   type?: string
@@ -134,25 +118,6 @@ export interface InstanceDetailData {
   variables: Record<string, VariableValue>
   incidents?: IncidentData[]
   bpmnXml: string | null
-}
-
-export interface DeploymentResource {
-  id: string
-  name: string
-}
-
-export interface Deployment {
-  id: string
-  name: string | null
-  deploymentTime: string
-  source: string | null
-  tenantId: string | null
-  resources: DeploymentResource[]
-}
-
-export interface DeploymentBrowserData {
-  totalCount: number
-  deployments: Deployment[]
 }
 
 export interface ActivityData {
@@ -193,4 +158,92 @@ export interface DefinitionGroup {
 export interface IncidentPanelData {
   totalCount: number
   definitions: DefinitionGroup[]
+}
+
+export interface DeveloperWorkbenchDefinition {
+  id: string
+  key: string
+  name: string | null
+  version: number
+  versionTag: string | null
+  suspended: boolean
+}
+
+export interface DeveloperWorkbenchDeployment {
+  id: string
+  name: string | null
+  deploymentTime: string
+  source: string | null
+}
+
+export interface DeveloperWorkbenchIncident {
+  id: string
+  processInstanceId: string
+  activityId: string
+  incidentType: string
+  incidentMessage: string | null
+  incidentTimestamp: string
+}
+
+export interface DeveloperWorkbenchData {
+  focus: {
+    processDefinitionKey: string | null
+    processInstanceId: string | null
+  }
+  definitions: DeveloperWorkbenchDefinition[]
+  recentDeployments: DeveloperWorkbenchDeployment[]
+  incidents: DeveloperWorkbenchIncident[]
+  totalIncidents: number
+}
+
+export interface OpsConsoleIncident {
+  id: string
+  processInstanceId: string
+  activityId: string
+  incidentType: string
+  incidentMessage: string | null
+  incidentTimestamp: string
+}
+
+export interface OpsConsoleIncidentGroup {
+  processDefinitionKey: string
+  processDefinitionName: string | null
+  incidentCount: number
+  incidents: OpsConsoleIncident[]
+}
+
+export interface OpsConsoleJob {
+  id: string
+  processInstanceId: string
+  processDefinitionKey: string | null
+  activityId: string | null
+  retries: number
+  exceptionMessage: string | null
+  suspended: boolean
+}
+
+export interface OpsConsoleTask {
+  id: string
+  name: string | null
+  assignee: string | null
+  processInstanceId: string
+  created: string
+  priority: number
+}
+
+export interface OpsConsoleData {
+  filters: {
+    processDefinitionKey: string | null
+    assignee: string | null
+    candidateGroup: string | null
+  }
+  summary: {
+    totalDefinitions: number
+    totalRunningInstances: number
+    totalFailedJobs: number
+    totalIncidents: number
+  }
+  incidentGroups: OpsConsoleIncidentGroup[]
+  failedJobs: OpsConsoleJob[]
+  openTasks: OpsConsoleTask[]
 }

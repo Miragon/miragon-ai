@@ -13,6 +13,10 @@ import {
   type VariableSearchData,
   type ExecutionTraceData,
   type VariableSearchRow,
+  type AnalystCockpitData,
+  type AnalystCockpitKPIs,
+  type AnalystCockpitErrorPattern,
+  type AnalystCockpitBottleneck,
 } from "@miragon-ai/client-analytics"
 
 export function registerWidgetTools(server: MCPServer, ch: ClickHouseClient, resourceUri: string) {
@@ -467,6 +471,160 @@ ORDER BY t.Timestamp`
       }
 
       return text(JSON.stringify({ widget: "analytics:execution-trace", data }))
+    },
+  )
+
+  // --- Analyst Cockpit (role entry-point) ---
+  server.tool(
+    {
+      name: "analytics_show_analyst_cockpit",
+      title: "Analyst Cockpit",
+      description:
+        "Role entry-point for analysts: process KPIs + top error patterns + activity bottlenecks in one view. Drill down into full dashboard, failure dashboard, execution trace, or variable search.",
+      annotations: { readOnlyHint: true, idempotentHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().optional(),
+        period: z.enum(["1d", "7d", "30d", "90d"]).default("7d"),
+      }),
+      _meta: { ui: { resourceUri } },
+    },
+    async (args) => {
+      const interval = {
+        "1d": "1 DAY",
+        "7d": "7 DAY",
+        "30d": "30 DAY",
+        "90d": "90 DAY",
+      }[args.period]
+
+      const keyFilter = args.processDefinitionKey
+        ? `AND process_definition_key = ${escapeString(args.processDefinitionKey)}`
+        : ""
+
+      const kpiSql = `
+SELECT
+    count() AS total_instances,
+    countIf(state = 'INTERNALLY_TERMINATED') AS failed,
+    round(countIf(state = 'INTERNALLY_TERMINATED') * 100.0 / count(), 2) AS failure_rate_pct,
+    round(quantileIf(0.5)(dateDiff('millisecond', start_time, end_time), state = 'COMPLETED' AND end_time IS NOT NULL) / 1000, 1) AS median_duration_sec,
+    round(quantileIf(0.95)(dateDiff('millisecond', start_time, end_time), state = 'COMPLETED' AND end_time IS NOT NULL) / 1000, 1) AS p95_duration_sec
+FROM (
+    SELECT
+        id,
+        any(process_definition_key) AS process_definition_key,
+        argMax(state, timestamp) AS state,
+        min(start_time) AS start_time,
+        max(end_time) AS end_time
+    FROM camunda_history.camunda_process_instances
+    GROUP BY id
+) sub
+WHERE start_time >= now() - INTERVAL ${interval}
+    ${keyFilter}`
+
+      const errorSql = `
+SELECT
+    incident_message,
+    activity_id,
+    process_definition_key,
+    count() AS incident_count,
+    groupArray(5)(process_instance_id) AS sample_instance_ids
+FROM camunda_history.camunda_incidents FINAL
+WHERE create_time >= now() - INTERVAL ${interval}
+    ${args.processDefinitionKey ? `AND process_definition_key = ${escapeString(args.processDefinitionKey)}` : ""}
+GROUP BY incident_message, activity_id, process_definition_key
+ORDER BY incident_count DESC
+LIMIT 5`
+
+      const bottleneckSql = `
+SELECT
+    activity_id,
+    activity_name,
+    activity_type,
+    count() AS execution_count,
+    round(quantile(0.95)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS p95_duration_sec,
+    round(sum(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS total_time_sec
+FROM (
+    SELECT
+        id,
+        any(activity_id) AS activity_id,
+        any(activity_name) AS activity_name,
+        any(activity_type) AS activity_type,
+        any(process_definition_key) AS process_definition_key,
+        min(start_time) AS start_time,
+        max(end_time) AS end_time
+    FROM camunda_history.camunda_activity_instances
+    GROUP BY id
+) sub
+WHERE end_time IS NOT NULL
+    AND start_time >= now() - INTERVAL ${interval}
+    ${args.processDefinitionKey ? `AND process_definition_key = ${escapeString(args.processDefinitionKey)}` : ""}
+GROUP BY activity_id, activity_name, activity_type
+ORDER BY total_time_sec DESC
+LIMIT 10`
+
+      interface KpiRow {
+        total_instances: number
+        failed: number
+        failure_rate_pct: number
+        median_duration_sec: number | null
+        p95_duration_sec: number | null
+      }
+      interface ErrorRow {
+        incident_message: string | null
+        activity_id: string | null
+        process_definition_key: string | null
+        incident_count: number
+        sample_instance_ids: string[] | null
+      }
+      interface BottleneckRow {
+        activity_id: string
+        activity_name: string | null
+        activity_type: string
+        execution_count: number
+        p95_duration_sec: number | null
+        total_time_sec: number | null
+      }
+
+      const [kpiRows, errorRows, bottleneckRows] = await Promise.all([
+        ch.query<KpiRow>(kpiSql).catch(() => [] as KpiRow[]),
+        ch.query<ErrorRow>(errorSql).catch(() => [] as ErrorRow[]),
+        ch.query<BottleneckRow>(bottleneckSql).catch(() => [] as BottleneckRow[]),
+      ])
+
+      const kpi = kpiRows[0]
+      const kpis: AnalystCockpitKPIs = {
+        totalInstances: Number(kpi?.total_instances ?? 0),
+        failedInstances: Number(kpi?.failed ?? 0),
+        failureRatePct: Number(kpi?.failure_rate_pct ?? 0),
+        medianDurationMs:
+          kpi?.median_duration_sec != null ? Number(kpi.median_duration_sec) * 1000 : null,
+        p95DurationMs: kpi?.p95_duration_sec != null ? Number(kpi.p95_duration_sec) * 1000 : null,
+      }
+
+      const errorPatterns: AnalystCockpitErrorPattern[] = errorRows.map((r) => ({
+        incidentMessage: r.incident_message ?? "",
+        activityId: r.activity_id ?? "",
+        processDefinitionKey: r.process_definition_key ?? "",
+        incidentCount: Number(r.incident_count),
+        sampleInstanceIds: Array.isArray(r.sample_instance_ids) ? r.sample_instance_ids : [],
+      }))
+
+      const bottlenecks: AnalystCockpitBottleneck[] = bottleneckRows.map((b) => ({
+        activityId: b.activity_id,
+        activityName: b.activity_name ?? "",
+        activityType: b.activity_type,
+        executionCount: Number(b.execution_count),
+        p95DurationMs: Number(b.p95_duration_sec ?? 0) * 1000,
+        totalTimeMs: Number(b.total_time_sec ?? 0) * 1000,
+      }))
+
+      const data: AnalystCockpitData = {
+        processDefinitionKey: args.processDefinitionKey ?? null,
+        period: args.period,
+        kpis,
+        errorPatterns,
+        bottlenecks,
+      }
+      return text(JSON.stringify({ widget: "analytics:analyst-cockpit", data }))
     },
   )
 }

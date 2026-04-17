@@ -79,3 +79,36 @@ export interface AnalyticsDashboardData {
   activityBreakdown: ActivityBreakdownItem[]
   definitionBreakdown: DefinitionBreakdownItem[]
 }
+
+export interface AnalystCockpitKPIs {
+  totalInstances: number
+  failedInstances: number
+  failureRatePct: number
+  medianDurationMs: number | null
+  p95DurationMs: number | null
+}
+
+export interface AnalystCockpitErrorPattern {
+  incidentMessage: string
+  activityId: string
+  processDefinitionKey: string
+  incidentCount: number
+  sampleInstanceIds: string[]
+}
+
+export interface AnalystCockpitBottleneck {
+  activityId: string
+  activityName: string
+  activityType: string
+  executionCount: number
+  p95DurationMs: number
+  totalTimeMs: number
+}
+
+export interface AnalystCockpitData {
+  processDefinitionKey: string | null
+  period: "1d" | "7d" | "30d" | "90d"
+  kpis: AnalystCockpitKPIs
+  errorPatterns: AnalystCockpitErrorPattern[]
+  bottlenecks: AnalystCockpitBottleneck[]
+}

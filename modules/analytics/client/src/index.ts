@@ -33,4 +33,8 @@ export type {
   ActivityBreakdownItem,
   DefinitionBreakdownItem,
   AnalyticsDashboardData,
+  AnalystCockpitData,
+  AnalystCockpitKPIs,
+  AnalystCockpitErrorPattern,
+  AnalystCockpitBottleneck,
 } from "./widgets.js"

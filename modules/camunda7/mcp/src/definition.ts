@@ -1,35 +1,26 @@
 import type { AppDefinition } from "@miragon/mcp-toolkit-core"
 import {
-  loadProcessDefinitionsStep,
   loadTasksStep,
   loadProcessInstanceStep,
   loadIncidentPanelStep,
   loadHistoryTimelineStep,
   loadCockpitDashboardStep,
   loadBpmnViewerStep,
-  loadDeploymentsStep,
   loadJobsStep,
 } from "./steps/index.js"
 
 export const definition: AppDefinition = {
   name: "camunda7",
   steps: [
-    loadProcessDefinitionsStep,
     loadTasksStep,
     loadProcessInstanceStep,
     loadIncidentPanelStep,
     loadHistoryTimelineStep,
     loadCockpitDashboardStep,
     loadBpmnViewerStep,
-    loadDeploymentsStep,
     loadJobsStep,
   ],
   widgets: [
-    {
-      id: "camunda7:process-list",
-      requires: [],
-      size: "full",
-    },
     {
       id: "camunda7:task-dashboard",
       requires: ["camunda7:tasks"],
@@ -61,13 +52,18 @@ export const definition: AppDefinition = {
       size: "full",
     },
     {
-      id: "camunda7:deployment-browser",
-      requires: ["camunda7:deploymentsData"],
+      id: "camunda7:job-panel",
+      requires: ["camunda7:jobPanelData"],
       size: "full",
     },
     {
-      id: "camunda7:job-panel",
-      requires: ["camunda7:jobPanelData"],
+      id: "camunda7:developer-workbench",
+      requires: [],
+      size: "full",
+    },
+    {
+      id: "camunda7:ops-console",
+      requires: [],
       size: "full",
     },
   ],

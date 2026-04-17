@@ -3,11 +3,19 @@ import type { MCPServer } from "mcp-use/server"
 import { text } from "mcp-use/server"
 import type {
   Client,
-  ProcessListData,
   TaskDashboardData,
   InstanceDetailData,
   IncidentPanelData,
   HistoryTimelineData,
+  DeveloperWorkbenchData,
+  DeveloperWorkbenchDefinition,
+  DeveloperWorkbenchDeployment,
+  DeveloperWorkbenchIncident,
+  OpsConsoleData,
+  OpsConsoleIncidentGroup,
+  OpsConsoleIncident,
+  OpsConsoleJob,
+  OpsConsoleTask,
 } from "@miragon-ai/client-camunda7"
 import {
   getProcessDefinitions,
@@ -31,16 +39,16 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
 
   server.tool(
     {
-      name: "camunda7_show_process_list",
-      title: "Process Definitions",
-      description: "Show deployed process definitions as a card grid view.",
+      name: "camunda7_list_process_definitions",
+      title: "List Process Definitions",
+      description:
+        "List deployed process definitions as plain JSON (key, name, version, suspended, versionTag).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         key: z.string().optional(),
         nameLike: z.string().optional(),
         latestVersion: z.boolean().optional().default(true),
       }),
-      _meta: uiMeta,
     },
     async (args) => {
       const definitions = await getProcessDefinitions({
@@ -55,11 +63,12 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         },
       })
       const defArray = Array.isArray(definitions) ? definitions : []
-      const data: ProcessListData = {
-        definitions: defArray as ProcessListData["definitions"],
-        totalCount: defArray.length,
-      }
-      return text(JSON.stringify({ widget: "camunda7:process-list", data }))
+      return text(
+        JSON.stringify({
+          totalCount: defArray.length,
+          definitions: defArray,
+        }),
+      )
     },
   )
 
@@ -483,18 +492,18 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
     },
   )
 
-  // --- Deployment Browser ---
+  // --- Deployments (text-only) ---
   server.tool(
     {
-      name: "camunda7_show_deployment_browser",
-      title: "Deployment Browser",
-      description: "Show deployed resources grouped by deployment with metadata.",
+      name: "camunda7_list_deployments",
+      title: "List Deployments",
+      description:
+        "List deployments with their resources as plain JSON (no UI rendering, pure data tool).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         name: z.string().optional().describe("Filter by deployment name"),
         maxResults: z.number().optional().default(20),
       }),
-      _meta: uiMeta,
     },
     async (args) => {
       const deps = (await getDeployments({
@@ -538,12 +547,7 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         }),
       )
 
-      return text(
-        JSON.stringify({
-          widget: "camunda7:deployment-browser",
-          data: { totalCount: rows.length, deployments: withResources },
-        }),
-      )
+      return text(JSON.stringify({ totalCount: rows.length, deployments: withResources }))
     },
   )
 
@@ -631,6 +635,288 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
           },
         }),
       )
+    },
+  )
+
+  // --- Developer Workbench (role entry-point) ---
+  server.tool(
+    {
+      name: "camunda7_show_developer_workbench",
+      title: "Developer Workbench",
+      description:
+        "Role entry-point for developers: process definitions + recent deployments + active incidents in one view. Drill down into BPMN viewer, instance detail, history timeline, and job panel.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z
+          .string()
+          .optional()
+          .describe("Focus on a specific process definition key"),
+        processInstanceId: z
+          .string()
+          .optional()
+          .describe("Focus on a specific process instance ID"),
+      }),
+      _meta: uiMeta,
+    },
+    async (args) => {
+      const [defs, deployments, incidents] = await Promise.all([
+        getProcessDefinitions({
+          client,
+          query: {
+            key: args.processDefinitionKey,
+            latestVersion: true,
+            maxResults: 50,
+            sortBy: "name",
+            sortOrder: "asc",
+          },
+        }).catch(() => []),
+        getDeployments({
+          client,
+          query: { maxResults: 5, sortBy: "deploymentTime", sortOrder: "desc" },
+        }).catch(() => []),
+        getIncidents({
+          client,
+          query: {
+            processDefinitionKeyIn: args.processDefinitionKey,
+            maxResults: 50,
+            sortBy: "incidentTimestamp",
+            sortOrder: "desc",
+          },
+        }).catch(() => []),
+      ])
+
+      const defRows = Array.isArray(defs)
+        ? (defs as Array<{
+            id?: string | null
+            key?: string | null
+            name?: string | null
+            version?: number | null
+            versionTag?: string | null
+            suspended?: boolean | null
+          }>)
+        : []
+      const definitions: DeveloperWorkbenchDefinition[] = defRows.map((d) => ({
+        id: d.id ?? "",
+        key: d.key ?? "",
+        name: d.name ?? null,
+        version: d.version ?? 0,
+        versionTag: d.versionTag ?? null,
+        suspended: Boolean(d.suspended),
+      }))
+
+      const depRows = Array.isArray(deployments)
+        ? (deployments as Array<{
+            id: string
+            name?: string | null
+            deploymentTime?: string
+            source?: string | null
+          }>)
+        : []
+      const recentDeployments: DeveloperWorkbenchDeployment[] = depRows.map((d) => ({
+        id: d.id,
+        name: d.name ?? null,
+        deploymentTime: d.deploymentTime ?? "",
+        source: d.source ?? null,
+      }))
+
+      const incRows = Array.isArray(incidents)
+        ? (incidents as Array<{
+            id: string
+            processInstanceId: string
+            activityId?: string | null
+            incidentType: string
+            incidentMessage?: string | null
+            incidentTimestamp: string
+          }>)
+        : []
+      const incidentItems: DeveloperWorkbenchIncident[] = incRows.map((i) => ({
+        id: i.id,
+        processInstanceId: i.processInstanceId,
+        activityId: i.activityId ?? "",
+        incidentType: i.incidentType,
+        incidentMessage: i.incidentMessage ?? null,
+        incidentTimestamp: i.incidentTimestamp,
+      }))
+
+      const data: DeveloperWorkbenchData = {
+        focus: {
+          processDefinitionKey: args.processDefinitionKey ?? null,
+          processInstanceId: args.processInstanceId ?? null,
+        },
+        definitions,
+        recentDeployments,
+        incidents: incidentItems,
+        totalIncidents: incRows.length,
+      }
+      return text(JSON.stringify({ widget: "camunda7:developer-workbench", data }))
+    },
+  )
+
+  // --- Ops Console (role entry-point) ---
+  server.tool(
+    {
+      name: "camunda7_show_ops_console",
+      title: "Operations Console",
+      description:
+        "Role entry-point for operations: cockpit summary + top incidents + failed jobs + open user tasks in one view. Drill down into incident panel, job panel, task dashboard.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().optional(),
+        assignee: z.string().optional().describe("Filter user tasks by assignee"),
+        candidateGroup: z.string().optional().describe("Filter user tasks by candidate group"),
+      }),
+      _meta: uiMeta,
+    },
+    async (args) => {
+      const [stats, incidents, failedJobsRaw, tasks] = await Promise.all([
+        getProcessDefinitionStatistics({
+          client,
+          query: { failedJobs: true, incidents: true },
+        }).catch(() => [] as unknown),
+        getIncidents({
+          client,
+          query: {
+            processDefinitionKeyIn: args.processDefinitionKey,
+            maxResults: 200,
+            sortBy: "incidentTimestamp",
+            sortOrder: "desc",
+          },
+        }).catch(() => []),
+        getJobs({
+          client,
+          query: {
+            processDefinitionKey: args.processDefinitionKey,
+            noRetriesLeft: true,
+            maxResults: 20,
+            sortBy: "jobId",
+            sortOrder: "desc",
+          },
+        }).catch(() => []),
+        getTasks({
+          client,
+          query: {
+            assignee: args.assignee,
+            candidateGroup: args.candidateGroup,
+            processDefinitionKey: args.processDefinitionKey,
+            maxResults: 20,
+            sortBy: "created",
+            sortOrder: "desc",
+          },
+        }).catch(() => []),
+      ])
+
+      const statsRows = Array.isArray(stats)
+        ? (stats as Array<{
+            instances?: number
+            failedJobs?: number
+            incidents?: Array<{ incidentCount?: number | null }> | null
+            definition?: { key?: string | null; name?: string | null }
+          }>)
+        : []
+      let totalRunning = 0
+      let totalFailed = 0
+      let totalIncidents = 0
+      const nameByKey = new Map<string, string | null>()
+      for (const row of statsRows) {
+        totalRunning += row.instances ?? 0
+        totalFailed += row.failedJobs ?? 0
+        totalIncidents += (row.incidents ?? []).reduce((s, i) => s + (i.incidentCount ?? 0), 0)
+        const k = row.definition?.key
+        if (k) nameByKey.set(k, row.definition?.name ?? null)
+      }
+
+      const incRows = Array.isArray(incidents)
+        ? (incidents as Array<{
+            id: string
+            processDefinitionKey: string
+            processInstanceId: string
+            activityId?: string | null
+            incidentType: string
+            incidentMessage?: string | null
+            incidentTimestamp: string
+          }>)
+        : []
+      const byDef = new Map<string, OpsConsoleIncident[]>()
+      for (const row of incRows) {
+        const key = row.processDefinitionKey
+        const group = byDef.get(key) ?? []
+        group.push({
+          id: row.id,
+          processInstanceId: row.processInstanceId,
+          activityId: row.activityId ?? "",
+          incidentType: row.incidentType,
+          incidentMessage: row.incidentMessage ?? null,
+          incidentTimestamp: row.incidentTimestamp,
+        })
+        byDef.set(key, group)
+      }
+      const incidentGroups: OpsConsoleIncidentGroup[] = [...byDef.entries()]
+        .sort((a, b) => b[1].length - a[1].length)
+        .slice(0, 10)
+        .map(([key, incidents]) => ({
+          processDefinitionKey: key,
+          processDefinitionName: nameByKey.get(key) ?? null,
+          incidentCount: incidents.length,
+          incidents: incidents.slice(0, 5),
+        }))
+
+      const jobRows = Array.isArray(failedJobsRaw)
+        ? (failedJobsRaw as Array<{
+            id: string
+            processInstanceId: string
+            processDefinitionKey?: string | null
+            activityId?: string | null
+            retries: number
+            exceptionMessage?: string | null
+            suspended: boolean
+          }>)
+        : []
+      const failedJobs: OpsConsoleJob[] = jobRows.map((j) => ({
+        id: j.id,
+        processInstanceId: j.processInstanceId,
+        processDefinitionKey: j.processDefinitionKey ?? null,
+        activityId: j.activityId ?? null,
+        retries: j.retries,
+        exceptionMessage: j.exceptionMessage ?? null,
+        suspended: j.suspended,
+      }))
+
+      const taskRows = Array.isArray(tasks)
+        ? (tasks as Array<{
+            id: string
+            name?: string | null
+            assignee?: string | null
+            processInstanceId: string
+            created: string
+            priority: number
+          }>)
+        : []
+      const openTasks: OpsConsoleTask[] = taskRows.map((t) => ({
+        id: t.id,
+        name: t.name ?? null,
+        assignee: t.assignee ?? null,
+        processInstanceId: t.processInstanceId,
+        created: t.created,
+        priority: t.priority,
+      }))
+
+      const data: OpsConsoleData = {
+        filters: {
+          processDefinitionKey: args.processDefinitionKey ?? null,
+          assignee: args.assignee ?? null,
+          candidateGroup: args.candidateGroup ?? null,
+        },
+        summary: {
+          totalDefinitions: statsRows.length,
+          totalRunningInstances: totalRunning,
+          totalFailedJobs: totalFailed,
+          totalIncidents,
+        },
+        incidentGroups,
+        failedJobs,
+        openTasks,
+      }
+      return text(JSON.stringify({ widget: "camunda7:ops-console", data }))
     },
   )
 }

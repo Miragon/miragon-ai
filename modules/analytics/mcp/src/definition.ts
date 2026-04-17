@@ -25,6 +25,11 @@ export const definition: AppDefinition = {
       requires: [],
       size: "full",
     },
+    {
+      id: "analytics:analyst-cockpit",
+      requires: [],
+      size: "full",
+    },
   ],
 }
 
