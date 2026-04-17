@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<SmellBaseline>
-  <ManuallySuppressedIssues/>
-  <CurrentIssues>
-    <ID>LongMethod:CibSevenEventMapper.kt$CibSevenEventMapper$fun map(event: HistoryEvent): HistoryEventData?</ID>
-    <ID>WildcardImport:CibSevenEventMapper.kt$import org.cibseven.bpm.engine.impl.history.event.*</ID>
-  </CurrentIssues>
-</SmellBaseline>

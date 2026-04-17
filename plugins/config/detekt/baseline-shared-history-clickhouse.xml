@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<SmellBaseline>
-  <ManuallySuppressedIssues/>
-  <CurrentIssues>
-    <ID>UseCheckOrError:ClickHouseClient.kt$ClickHouseClient$throw IllegalStateException("clickhouse-schema.sql not found on classpath")</ID>
-  </CurrentIssues>
-</SmellBaseline>
