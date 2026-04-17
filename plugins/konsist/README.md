@@ -4,7 +4,7 @@ Shared [Konsist](https://github.com/LemonAppDev/konsist) base classes that encod
 
 ## Phase 1 scope
 
-One rule, in `BasicCodingGuidelinesTest`:
+One rule, in `ArchitectureTest`:
 
 - **Every class resides in a declared package under the module root** — guards against stray files landing outside the expected namespace.
 
@@ -23,12 +23,12 @@ This is intentionally minimal. Phase 2 adds more rules (no-wildcard-imports, eng
    ```kotlin
    package com.camunda7mcp.history.camunda7
 
-   import com.camunda7mcp.konsist.BasicCodingGuidelinesTest
+   import com.camunda7mcp.konsist.ArchitectureTest
    import org.junit.jupiter.api.Nested
 
    class KonsistArchitectureTest {
        @Nested
-       inner class Guidelines : BasicCodingGuidelinesTest("camunda7-history-clickhouse", "com.camunda7mcp.history.camunda7")
+       inner class Guidelines : ArchitectureTest("camunda7-history-clickhouse", "com.camunda7mcp.history.camunda7")
    }
    ```
 
@@ -36,7 +36,7 @@ This is intentionally minimal. Phase 2 adds more rules (no-wildcard-imports, eng
 
 ## Adding a new rule
 
-Prefer adding tests to `BasicCodingGuidelinesTest` or a new abstract class rather than spreading bespoke Konsist code across subprojects — the monorepo pattern only pays off if the rules are shared.
+Prefer adding tests to `ArchitectureTest` or a new abstract class rather than spreading bespoke Konsist code across subprojects — the monorepo pattern only pays off if the rules are shared.
 
 1. Either add a `@Test fun` to an existing abstract class, or create a new one (e.g. `EngineAdapterArchitectureTest(rootPackage: String, engineName: String, otherEngines: List<String>)`) in `src/main/kotlin/com/camunda7mcp/konsist/`.
 2. In the consuming subproject's `KonsistArchitectureTest`, add another `@Nested inner class` that extends the new base and passes the right parameters.

@@ -38,9 +38,10 @@ subprojects {
 
     // Detekt is applied only to the core library subprojects. The examples apply
     // io.spring.dependency-management, which force-overrides detekt's bundled
-    // Kotlin 2.0.21 with the project's 2.3.20 and causes an incompatibility.
-    // Revisit when detekt 2.x supports Kotlin 2.3.
-    if (!path.startsWith(":examples:")) {
+    // Kotlin 2.0.21 with the project's 2.3.20 and causes an incompatibility
+    // (revisit when detekt 2.x supports Kotlin 2.3). :konsist is a test-helper
+    // module with no production code worth analyzing.
+    if (!path.startsWith(":examples:") && path != ":konsist") {
         apply(plugin = "io.gitlab.arturbosch.detekt")
 
         configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {

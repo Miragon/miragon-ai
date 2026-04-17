@@ -5,11 +5,11 @@ import com.lemonappdev.konsist.api.verify.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
- * Phase 1 architecture baseline: every consuming module extends this via an @Nested
- * inner class and passes its module root package. New rules are added as new abstract
- * classes in this module as conventions firm up (see plugins/konsist/README.md).
+ * Shared architecture test base. Every consuming module extends this via an @Nested
+ * inner class and passes its Gradle module name + root package. New rules land here
+ * (or in sibling abstract classes) as conventions firm up — see plugins/konsist/README.md.
  */
-abstract class BasicCodingGuidelinesTest(
+abstract class ArchitectureTest(
     private val moduleName: String,
     private val rootPackage: String,
 ) {

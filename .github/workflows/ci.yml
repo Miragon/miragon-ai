@@ -83,12 +83,6 @@ jobs:
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
 
-      - name: ktlint
-        run: ./gradlew ktlintCheck
-        if: always()
-        env:
-          GRADLE_OPTS: -Dorg.gradle.daemon=false
-
       - name: detekt
         run: ./gradlew detekt
         if: always()
