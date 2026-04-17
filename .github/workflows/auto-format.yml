@@ -9,10 +9,10 @@ jobs:
   auto-format:
     name: Run Formatters & Open PR
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.TOOLKIT_PAT }}
 
       - name: Checkout private submodules
         env:
@@ -69,6 +69,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
           git checkout -b chore/auto-format
           git add -A
           git commit -m "chore(style): apply ktlint + prettier auto-format"
