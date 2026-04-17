@@ -1,3 +1,4 @@
+import type { z } from "zod"
 import type { ClickHouseClient } from "@miragon-ai/client-analytics"
 import { schemas, queries } from "@miragon-ai/client-analytics"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
@@ -11,6 +12,7 @@ export function registerTraceTools(register: Register) {
       "Combine OTEL traces with process history for end-to-end execution visibility of a specific process instance.",
     annotations: { readOnlyHint: true, idempotentHint: true },
     inputSchema: schemas.traceProcessExecutionInput.shape,
-    handler: async (ch, args) => queries.traceProcessExecution(ch, args),
+    handler: async (ch, args) =>
+      queries.traceProcessExecution(ch, args as z.infer<typeof schemas.traceProcessExecutionInput>),
   })
 }

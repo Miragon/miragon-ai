@@ -22,7 +22,7 @@
     "@miragon/mcp-toolkit-core": "workspace:*",
     "@miragon-ai/mcp-camunda7": "workspace:*",
     "@miragon-ai/mcp-analytics": "workspace:*",
-    "mcp-use": "1.22.2",
+    "mcp-use": "1.23.1",
     "zod": "4.3.6"
   },
   "devDependencies": {
@@ -36,8 +36,8 @@
     "clsx": "2.1.1",
     "cross-env": "10.1.0",
     "radix-ui": "1.4.3",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
     "tailwind-merge": "3.5.0",
     "tailwindcss": "4.2.2",
     "typescript": "5.9.3",
