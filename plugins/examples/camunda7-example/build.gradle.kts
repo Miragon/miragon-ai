@@ -1,22 +1,22 @@
 plugins {
-    kotlin("jvm")
-    kotlin("plugin.spring")
-    id("org.springframework.boot") version "4.0.5"
-    id("io.spring.dependency-management") version "1.1.7"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.spring)
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
 }
 
 dependencies {
     implementation(project(":camunda7-history-clickhouse"))
     implementation(project(":shared-history-clickhouse"))
 
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter-rest:7.24.0")
-    implementation("org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter-webapp:7.24.0")
+    implementation(libs.spring.boot.starter.web)
+    implementation(libs.camunda7.starter.rest)
+    implementation(libs.camunda7.starter.webapp)
 
     // H2 in-memory database
-    runtimeOnly("com.h2database:h2")
+    runtimeOnly(libs.h2)
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(libs.spring.boot.starter.test)
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {

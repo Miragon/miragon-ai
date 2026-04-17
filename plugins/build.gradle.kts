@@ -1,9 +1,9 @@
 plugins {
-    kotlin("jvm") version "2.3.20" apply false
-    kotlin("plugin.spring") version "2.3.20" apply false
-    id("com.gradleup.shadow") version "9.4.1" apply false
-    id("org.jlleitschuh.gradle.ktlint") version "14.2.0" apply false
-    id("io.gitlab.arturbosch.detekt") version "1.23.8" apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.spring) apply false
+    alias(libs.plugins.shadow) apply false
+    alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.detekt) apply false
 }
 
 allprojects {
@@ -44,7 +44,7 @@ subprojects {
         apply(plugin = "io.gitlab.arturbosch.detekt")
 
         configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
-            toolVersion = "1.23.8"
+            toolVersion = rootProject.libs.versions.detekt.get()
             config.setFrom(rootProject.file("config/detekt/detekt.yml"))
             baseline = rootProject.file("config/detekt/baseline-${project.name}.xml")
             buildUponDefaultConfig = true
@@ -67,9 +67,9 @@ subprojects {
     }
 
     dependencies {
-        "implementation"(platform("org.springframework.boot:spring-boot-dependencies:4.0.5"))
-        "testImplementation"("org.jetbrains.kotlin:kotlin-test-junit5")
-        "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+        "implementation"(platform(rootProject.libs.spring.boot.bom))
+        "testImplementation"(rootProject.libs.kotlin.test.junit5)
+        "testRuntimeOnly"(rootProject.libs.junit.platform.launcher)
     }
 
     tasks.withType<JavaCompile> {
