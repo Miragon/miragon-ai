@@ -12,3 +12,4 @@ plugins/examples/*/build/
 .idea/
 .mcp-use/
 .playwright-mcp/
+.ai/
