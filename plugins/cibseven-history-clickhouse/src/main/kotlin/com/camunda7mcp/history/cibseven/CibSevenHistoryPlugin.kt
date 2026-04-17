@@ -8,16 +8,14 @@ import org.cibseven.bpm.engine.impl.history.handler.CompositeDbHistoryEventHandl
 import org.springframework.stereotype.Component
 
 @Component
-class CibSevenHistoryPlugin(
-    private val clickHouseClient: ClickHouseClient,
-    private val properties: ClickHouseProperties,
-) : AbstractProcessEnginePlugin() {
+class CibSevenHistoryPlugin(private val clickHouseClient: ClickHouseClient, private val properties: ClickHouseProperties) :
+    AbstractProcessEnginePlugin() {
 
     override fun preInit(config: ProcessEngineConfigurationImpl) {
         val clickHouseHandler = CibSevenHistoryEventHandler(clickHouseClient, properties)
 
         val compositeHandler = CompositeDbHistoryEventHandler(
-            listOf(clickHouseHandler)
+            listOf(clickHouseHandler),
         )
         config.historyEventHandler = compositeHandler
     }

@@ -6,10 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-abstract class ClickHouseHistoryEventHandlerBase(
-    protected val client: ClickHouseClient,
-    protected val properties: ClickHouseProperties,
-) {
+abstract class ClickHouseHistoryEventHandlerBase(protected val client: ClickHouseClient, protected val properties: ClickHouseProperties) {
     private val logger = LoggerFactory.getLogger(ClickHouseHistoryEventHandlerBase::class.java)
     protected val buffer = ConcurrentLinkedQueue<HistoryEventData>()
     private val scheduler = Executors.newSingleThreadScheduledExecutor { r ->
@@ -25,10 +22,7 @@ abstract class ClickHouseHistoryEventHandlerBase(
         )
     }
 
-    data class HistoryEventData(
-        val eventCategory: EventCategory,
-        val data: Map<String, Any?>,
-    )
+    data class HistoryEventData(val eventCategory: EventCategory, val data: Map<String, Any?>)
 
     enum class EventCategory {
         PROCESS_INSTANCE,
@@ -90,7 +84,7 @@ abstract class ClickHouseHistoryEventHandlerBase(
             logger.error("Failed to flush {} history events", events.size, e)
         } finally {
             HistoryTelemetry.flushDuration.record(
-                (System.currentTimeMillis() - start).toDouble()
+                (System.currentTimeMillis() - start).toDouble(),
             )
             span.end()
         }

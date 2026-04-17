@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration
     prefix = "camunda7mcp.otel.eventbridge",
     name = ["enabled"],
     havingValue = "true",
-    matchIfMissing = true
+    matchIfMissing = true,
 )
 @EnableConfigurationProperties(OtelEventBridgeProperties::class)
 @ComponentScan(basePackageClasses = [CibSevenOtelEventBridgeAutoConfiguration::class])

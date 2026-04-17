@@ -11,3 +11,4 @@ plugins/*/build/
 plugins/examples/*/build/
 .idea/
 .mcp-use/
+.playwright-mcp/

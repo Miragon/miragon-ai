@@ -1,7 +1,8 @@
 plugins {
-    kotlin("jvm") version "2.3.20" apply false
-    kotlin("plugin.spring") version "2.3.20" apply false
-    id("com.gradleup.shadow") version "9.4.1" apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.spring) apply false
+    alias(libs.plugins.shadow) apply false
+    alias(libs.plugins.ktlint) apply false
 }
 
 allprojects {
@@ -15,15 +16,29 @@ allprojects {
 
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
     configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
         jvmToolchain(21)
     }
 
+    configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+        android.set(false)
+        ignoreFailures.set(true) // Phase 1: warn-not-error, does not fail the build
+        reporters {
+            reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
+            reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
+        }
+        filter {
+            exclude("**/generated/**")
+            exclude("**/build/**")
+        }
+    }
+
     dependencies {
-        "implementation"(platform("org.springframework.boot:spring-boot-dependencies:4.0.5"))
-        "testImplementation"("org.jetbrains.kotlin:kotlin-test-junit5")
-        "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+        "implementation"(platform(rootProject.libs.spring.boot.bom))
+        "testImplementation"(rootProject.libs.kotlin.test.junit5)
+        "testRuntimeOnly"(rootProject.libs.junit.platform.launcher)
     }
 
     tasks.withType<JavaCompile> {

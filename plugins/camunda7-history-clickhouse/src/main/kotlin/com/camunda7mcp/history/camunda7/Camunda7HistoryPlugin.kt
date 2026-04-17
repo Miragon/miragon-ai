@@ -8,16 +8,14 @@ import org.camunda.bpm.engine.impl.history.handler.CompositeDbHistoryEventHandle
 import org.springframework.stereotype.Component
 
 @Component
-class Camunda7HistoryPlugin(
-    private val clickHouseClient: ClickHouseClient,
-    private val properties: ClickHouseProperties,
-) : AbstractProcessEnginePlugin() {
+class Camunda7HistoryPlugin(private val clickHouseClient: ClickHouseClient, private val properties: ClickHouseProperties) :
+    AbstractProcessEnginePlugin() {
 
     override fun preInit(config: ProcessEngineConfigurationImpl) {
         val clickHouseHandler = Camunda7HistoryEventHandler(clickHouseClient, properties)
 
         val compositeHandler = CompositeDbHistoryEventHandler(
-            listOf(clickHouseHandler)
+            listOf(clickHouseHandler),
         )
         config.historyEventHandler = compositeHandler
     }

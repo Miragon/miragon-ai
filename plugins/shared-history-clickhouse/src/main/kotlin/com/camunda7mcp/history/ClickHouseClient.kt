@@ -10,13 +10,11 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
 
     private val logger = LoggerFactory.getLogger(ClickHouseClient::class.java)
 
-    private fun getConnection(): Connection {
-        return DriverManager.getConnection(
-            properties.url,
-            properties.username,
-            properties.password,
-        )
-    }
+    private fun getConnection(): Connection = DriverManager.getConnection(
+        properties.url,
+        properties.username,
+        properties.password,
+    )
 
     fun insertProcessInstances(rows: List<Map<String, Any?>>) {
         if (rows.isEmpty()) return
@@ -231,14 +229,12 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
         }
     }
 
-    private fun toTimestamp(value: Any?): Timestamp? {
-        return when (value) {
-            null -> null
-            is Timestamp -> value
-            is java.util.Date -> Timestamp(value.time)
-            is Long -> Timestamp(value)
-            else -> null
-        }
+    private fun toTimestamp(value: Any?): Timestamp? = when (value) {
+        null -> null
+        is Timestamp -> value
+        is java.util.Date -> Timestamp(value.time)
+        is Long -> Timestamp(value)
+        else -> null
     }
 
     /** Derive start_time from end_time - duration for end events that lack start_time. */

@@ -52,7 +52,10 @@ class ExecutionEventListener {
 
                 log.debug(
                     "Traced execution event: {} on activity {} ({}), process instance {}",
-                    eventName, activityId, activityName, processInstanceId
+                    eventName,
+                    activityId,
+                    activityName,
+                    processInstanceId,
                 )
             } catch (ex: Exception) {
                 span.setStatus(StatusCode.ERROR, ex.message ?: "unknown error")

@@ -1,0 +1,62 @@
+[versions]
+# Language / platform
+kotlin = "2.3.20"
+spring-boot = "4.0.5"
+spring-dependency-management = "1.1.7"
+
+# Build tooling
+shadow = "9.4.1"
+ktlint = "14.2.0"
+
+# Quality / testing
+konsist = "0.17.3"
+junit-jupiter = "5.11.4"
+
+# Engine SDKs
+camunda7 = "7.24.0"
+cibseven = "2.1.0"
+
+# Runtime libraries
+clickhouse-jdbc = "0.9.8"
+httpclient5 = "5.6"
+opentelemetry-api = "1.61.0"
+
+[libraries]
+# BOM
+spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
+
+# Quality / testing (explicit versions)
+konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter" }
+
+# Engine SDKs
+camunda7-engine = { module = "org.camunda.bpm:camunda-engine", version.ref = "camunda7" }
+camunda7-starter-rest = { module = "org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter-rest", version.ref = "camunda7" }
+camunda7-starter-webapp = { module = "org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter-webapp", version.ref = "camunda7" }
+cibseven-engine = { module = "org.cibseven.bpm:cibseven-engine", version.ref = "cibseven" }
+cibseven-starter = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter", version.ref = "cibseven" }
+cibseven-starter-rest = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter-rest", version.ref = "cibseven" }
+cibseven-starter-webapp = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter-webapp", version.ref = "cibseven" }
+
+# Runtime libraries (explicit versions)
+clickhouse-jdbc = { module = "com.clickhouse:clickhouse-jdbc", version.ref = "clickhouse-jdbc" }
+httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version.ref = "httpclient5" }
+opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry-api" }
+
+# BOM-managed (version resolved from spring-boot-bom — listed for discoverability)
+spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
+spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+h2 = { module = "com.h2database:h2" }
+slf4j-api = { module = "org.slf4j:slf4j-api" }
+kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
