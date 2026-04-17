@@ -1,0 +1,90 @@
+name: Auto Format
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  auto-format:
+    name: Run Formatters & Open PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.TOOLKIT_PAT }}
+
+      - name: Checkout private submodules
+        env:
+          TOOLKIT_PAT: ${{ secrets.TOOLKIT_PAT }}
+        run: |
+          git config --global url."https://x-access-token:${TOOLKIT_PAT}@github.com/".insteadOf "git@github.com:"
+          git submodule update --init --recursive
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm format
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: ktlintFormat
+        working-directory: plugins
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+        run: ./gradlew ktlintFormat
+
+      - name: Check for formatting changes
+        id: diff
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Close stale PR if codebase is already clean
+        if: steps.diff.outputs.changed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.TOOLKIT_PAT }}
+        run: |
+          EXISTING=$(gh pr list --head chore/auto-format --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh pr close "$EXISTING" --comment "Codebase is already formatted — closing stale PR."
+            gh api "repos/${{ github.repository }}/git/refs/heads/chore/auto-format" -X DELETE || true
+          fi
+
+      - name: Commit and push
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b chore/auto-format
+          git add -A
+          git commit -m "chore(style): apply ktlint + prettier auto-format"
+          git push origin chore/auto-format --force
+
+      - name: Create PR and enable auto-merge
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.TOOLKIT_PAT }}
+        run: |
+          EXISTING=$(gh pr list --head chore/auto-format --json number --jq '.[0].number')
+          if [ -z "$EXISTING" ]; then
+            gh pr create \
+              --title "chore(style): apply ktlint + prettier auto-format" \
+              --body "Automated daily formatting pass (ktlint + Prettier). Auto-merges when CI is green." \
+              --head chore/auto-format \
+              --base main
+            gh pr merge chore/auto-format --auto --squash
+          fi
