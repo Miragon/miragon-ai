@@ -16,3 +16,9 @@ export { pathFrequency } from "./path.js"
 export type { PathFrequencyRow, PathEdgeRow, PathFrequencyResult } from "./path.js"
 export { elementBottleneck } from "./element.js"
 export type { ElementBottleneckRow, ElementBottleneckResult } from "./element.js"
+export { variableDistribution } from "./variable-distribution.js"
+export type {
+  VariableDistributionResult,
+  VariableBucket,
+  VariableDistributionKind,
+} from "./variable-distribution.js"
