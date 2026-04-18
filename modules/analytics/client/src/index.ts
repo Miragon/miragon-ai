@@ -27,6 +27,9 @@ export type {
   PathFrequencyResult,
   ElementBottleneckRow,
   ElementBottleneckResult,
+  VariableDistributionResult,
+  VariableBucket,
+  VariableDistributionKind,
 } from "./queries/index.js"
 
 export type {

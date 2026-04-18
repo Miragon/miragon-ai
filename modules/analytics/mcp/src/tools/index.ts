@@ -6,6 +6,7 @@ import { registerPerformanceTools } from "./performance.js"
 import { registerFailureTools } from "./failures.js"
 import { registerTraceTools } from "./trace.js"
 import { registerPathTools } from "./path.js"
+import { registerVariableTools } from "./variable.js"
 
 export function registerTools(server: MCPServer, client: ClickHouseClient): void {
   const register = createToolRegistrar(server, client)
@@ -14,4 +15,5 @@ export function registerTools(server: MCPServer, client: ClickHouseClient): void
   registerFailureTools(register)
   registerTraceTools(register)
   registerPathTools(register)
+  registerVariableTools(register)
 }
