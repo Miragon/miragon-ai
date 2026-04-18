@@ -1,0 +1,5 @@
+export { enrichmentConfigSchema } from "./schema.js"
+export type { EnrichmentConfig, Source, Lookup, EnrichmentRule, FieldDef } from "./schema.js"
+export { parseEnrichmentConfig, loadEnrichmentConfigFromFile } from "./load.js"
+export { createEnrichmentRuntime } from "./factory.js"
+export type { EnrichmentFactoryOptions, EnrichmentRuntime } from "./factory.js"
