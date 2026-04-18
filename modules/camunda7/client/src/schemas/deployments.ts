@@ -1,5 +1,9 @@
 import { z } from "zod"
 
+export const getDeploymentInput = z.object({
+  id: z.string().min(1).describe("Deployment ID"),
+})
+
 export const listDeploymentsInput = z.object({
   name: z.string().optional().describe("Filter by deployment name"),
   nameLike: z.string().optional().describe("Filter by deployment name (substring)"),

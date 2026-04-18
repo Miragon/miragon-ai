@@ -22,3 +22,9 @@ export type {
   VariableBucket,
   VariableDistributionKind,
 } from "./variable-distribution.js"
+export { clusterCompare } from "./cluster-compare.js"
+export type {
+  ClusterCompareResult,
+  ClusterCompareKpi,
+  ClusterCompareDelta,
+} from "./cluster-compare.js"

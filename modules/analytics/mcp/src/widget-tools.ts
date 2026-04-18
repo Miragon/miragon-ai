@@ -492,4 +492,28 @@ ORDER BY t.Timestamp`
       return text(JSON.stringify({ widget: "analytics:path-frequency", data }))
     },
   )
+
+  // --- Cluster Compare (Pre/Post deployment diff) ---
+  server.tool(
+    {
+      name: "analytics_show_cluster_compare",
+      title: "Pre/Post Deployment Comparison",
+      description:
+        "Visualize before/after KPI deltas around a deployment timestamp. Results are flagged `suppressed` when either window has fewer than minBucketSize instances.",
+      annotations: { readOnlyHint: true, idempotentHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().optional(),
+        elementId: z.string().optional(),
+        deploymentTimestamp: z.string().min(1),
+        windowBeforeDays: z.number().int().min(1).max(90).default(7),
+        windowAfterDays: z.number().int().min(1).max(90).default(7),
+        minBucketSize: z.number().int().min(1).default(10),
+      }),
+      _meta: { ui: { resourceUri } },
+    },
+    async (args) => {
+      const data = await queries.clusterCompare(ch, args)
+      return text(JSON.stringify({ widget: "analytics:cluster-compare", data }))
+    },
+  )
 }

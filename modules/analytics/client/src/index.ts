@@ -30,6 +30,9 @@ export type {
   VariableDistributionResult,
   VariableBucket,
   VariableDistributionKind,
+  ClusterCompareResult,
+  ClusterCompareKpi,
+  ClusterCompareDelta,
 } from "./queries/index.js"
 
 export type {
