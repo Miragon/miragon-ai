@@ -20,6 +20,7 @@ export default tseslint.config(
             "modules/analytics/mcp/src/widgets/*.tsx",
             "modules/camunda7/mcp/src/widgets/*.ts",
             "modules/camunda7/mcp/src/widgets/*.tsx",
+            "modules/analytics/client/vitest.config.ts",
           ],
           maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 16,
         },
