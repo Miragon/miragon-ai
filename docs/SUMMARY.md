@@ -35,3 +35,13 @@
 - [OTEL → ClickHouse Integration](concepts/otel-clickhouse-integration.md)
 - [Intelligente Prozesssuche](concepts/clickhouse-process-search.md)
 - [Operations Skills](concepts/operations-skills.md)
+
+## Dev Skills
+
+- [Übersicht](dev-skills/README.md)
+- [Skills im Stack ausführen](dev-skills/running-skills.md)
+- [UC1 · dev-process-explain](dev-skills/dev-process-explain.md)
+- [UC2 · dev-change-impact](dev-skills/dev-change-impact.md)
+- [UC4 · dev-test-scenarios-from-production](dev-skills/dev-test-scenarios.md)
+- [UC5 · dev-fix-verification](dev-skills/dev-fix-verification.md)
+- [UC6 · dev-code-archaeology](dev-skills/dev-code-archaeology.md)
