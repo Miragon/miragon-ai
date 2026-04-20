@@ -113,8 +113,28 @@ Each skill is triggered via `/<skill-name> <arguments>`. The
 `argument-hint` frontmatter line in the skill file shows the expected argument
 syntax.
 
-The examples below target the `loanApproval` seed in `cibseven-example` —
-runnable as soon as `docker compose up -d` is up.
+### Pick a seed profile
+
+The cibseven-example ships three seed profiles — pick the one that matches
+what you're doing:
+
+```bash
+# Backward-compatible: loanApproval only, 200 instances (default).
+./gradlew :examples:cibseven-example:bootRun
+
+# Fast iteration: both processes, ~80 instances total.
+./gradlew :examples:cibseven-example:bootRun \
+  -Dspring-boot.run.profiles=seed-minimal
+
+# Full presentation mode: both processes, ~600 instances, two bug eras,
+# dead path, rare priority-handoff, APAC regression / rollback cutoffs.
+./gradlew :examples:cibseven-example:bootRun \
+  -Dspring-boot.run.profiles=seed-presentation
+```
+
+The examples below target both `loanApproval` and `orderFulfillment` in
+`cibseven-example` — runnable as soon as `docker compose up -d` is up and the
+app booted with a seed profile.
 
 ### UC1 — Explain a process
 
@@ -122,12 +142,18 @@ runnable as soon as `docker compose up -d` is up.
 /dev-process-explain loanApproval 30d
 ```
 
+Or the richer process (available under `seed-minimal` / `seed-presentation`):
+
+```
+/dev-process-explain orderFulfillment 30d
+```
+
 No period → defaults to `30d`. If the key is missing, the skill asks once.
 
 ### UC2 — Project a change
 
 ```
-/dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/NotifyApplicantDelegate.kt:28
+/dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/delegates/NotifyApplicantDelegate.kt:28
 ```
 
 Or a free-form description:
@@ -140,6 +166,12 @@ Or a free-form description:
 
 ```
 /dev-test-scenarios-from-production loanApproval 30d bpm-assert
+```
+
+Or against the richer order process with explicit JUnit output:
+
+```
+/dev-test-scenarios-from-production orderFulfillment 30d junit
 ```
 
 Framework optional (`junit` or `bpm-assert`, defaults to `bpm-assert`).
@@ -158,7 +190,7 @@ timestamp; the "fix" is conceptually the cutoff between the buggy era and now
 ### UC6 — Code archaeology
 
 ```
-/dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/NotifyApplicantDelegate.kt:20
+/dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/delegates/NotifyApplicantDelegate.kt:20
 ```
 
 Or paraphrase the rare FAX condition:

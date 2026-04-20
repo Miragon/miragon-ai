@@ -107,6 +107,56 @@ and halved the p95 duration — no signs of regressions in other metrics. The
 remaining 0.2% comes from a single retry event the day after the cutoff.
 ```
 
+## Second presentation example: REGRESSED verdict (`seed-presentation`)
+
+The `seed-presentation` profile deliberately stages a **second** bug era on
+`loanApproval` — a narrow band at days 7–10 ago (the "rollback era") where
+`NotifyApplicantDelegate` throws at ~12%, bracketed by healthy rates before
+and after. Pointing UC5 at a deployment whose timestamp centers on that band
+produces a REGRESSED verdict instead of IMPROVED.
+
+```
+/dev-fix-verification <rollback-era-deployment-id> loanApproval Task_notifyApplicant 3
+```
+
+Pick the deployment whose timestamp sits around `now() - 8.5d` — the
+deployment list from `camunda7_list_deployments` shows one on either side of
+the rollback band; in the presentation seed the two relevant anchors are
+labeled internally as `loanApproval-rollback-intro` and
+`loanApproval-rollback-revert`.
+
+Expected output shape (truncated):
+
+```markdown
+# Fix verification: deployment `loanApproval-rollback-intro`
+
+## Verdict
+
+**REGRESSED**
+
+Failure rate on `Task_notifyApplicant` rose from 0.2% to 8.1% in the 3-day
+window immediately after the rollout — matching the simulated regression band.
+
+## KPIs
+
+| Metric        | Before | After | Δ      |
+| ------------- | ------ | ----- | ------ |
+| Instances     | 18     | 21    | +16.7% |
+| Failure rate  | 0.2%   | 8.1%  | +7.9pp |
+| Incident rate | 0.0%   | 6.8%  | +6.8pp |
+
+## Recommendation
+
+Do not close the ticket. Consider rolling back or patching forward; the
+regression is visible in both failure rate and incident rate above the
++2pp threshold.
+```
+
+**Third angle — IMPROVED on `orderFulfillment`:** the APAC shipping failure
+is fixed after the first 10 seed days. Targeting that cutoff with
+`elementId=Task_ShipOrder` yields a clear IMPROVED verdict on a different
+element and process than the loanApproval demo.
+
 ## Context policy
 
 - Git metadata (commit hash, deployment ID, timestamps) is **quoted

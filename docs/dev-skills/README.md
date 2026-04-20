@@ -29,19 +29,41 @@ buckets instead of extrapolating them.
 | UC5 | [`dev-fix-verification`](dev-fix-verification.md)             | After deployment                 | Pre/post comparison via `cluster.compare` → verdict        |
 | UC6 | [`dev-code-archaeology`](dev-code-archaeology.md)             | Code looks dead / suspicious     | Git + 12-month path frequency → ALIVE / DEAD / UNKNOWN     |
 
-## Reference example: `loanApproval`
+## Reference examples: `loanApproval` + `orderFulfillment`
 
-All example outputs in the skill docs use the `loanApproval` process from
+All example outputs in the skill docs use two processes from
 [`plugins/examples/cibseven-example`](../../plugins/examples/cibseven-example).
-The seeder generates 200 instances per startup spread over 30 days with:
+
+The seeder runs in three flavors, selected via the Spring profile
+(`-Dspring-boot.run.profiles=seed | seed-minimal | seed-presentation`):
+
+| Profile             | loanApproval | orderFulfillment | Instances | Purpose                                                   |
+| ------------------- | ------------ | ---------------- | --------- | --------------------------------------------------------- |
+| `seed` (default)    | 200          | 0                | 200       | Backward-compatible; matches the legacy examples          |
+| `seed-minimal`      | 40           | 40               | ~80       | Fast local iteration, CI smoke tests                      |
+| `seed-presentation` | 300          | 300              | ~600      | Full presentation coverage — every UC has 2+ demo moments |
+
+### `loanApproval`
 
 - **Paths** — the standard approval path (`StartEvent_1 → Task_0dfv74n → Gateway_approved → Task_bankTransfer → EndEvent_approved`) dominates; the reject path (`... → Task_notifyApplicant → EndEvent_rejected`) fires depending on loan amount + segment.
-- **Variables** — `amount` (log-skewed, 1k–500k), `applicant`, `loanType`, `customerSegment` (PRIVATE / BUSINESS / ENTERPRISE), `currency` (EUR / USD / GBP), `channel` (ONLINE / FAX — FAX < 1%).
-- **Deployment era** — the first 15 of the 30 seed days count as "pre-fix": `NotifyApplicantDelegate` throws with 15% probability and creates incidents. Afterwards the bug is fixed → `cluster.compare` shows a clear drop.
+- **Variables** — `amount` (log-skewed, 1k–500k), `applicant`, `loanType`, `customerSegment` (PRIVATE / BUSINESS / ENTERPRISE), `currency` (EUR / USD / GBP), `channel` (ONLINE / FAX — FAX < 1%). In `seed-presentation` also `region` (EU / US / APAC) and `priorityFlag` (boolean).
+- **Deployment eras** — `seed` has one buggy era (first 15 days). `seed-presentation` adds a second, narrow **rollback era** at days 7–10 so UC5 can demo both IMPROVED and REGRESSED verdicts.
+- **Dead combination** — in `seed-presentation`, student loans are hard-capped at €40k → `loanType == "student" && amount > 100_000` is structurally unreachable → UC6 DEAD verdict.
 
-That's the foundation that lets the example outputs in the skill docs be
-reproducible without hand-waving — start CIB Seven with the `seed` profile and
-invoke the relevant skill.
+### `orderFulfillment` (seeded in `seed-minimal` / `seed-presentation` only)
+
+- **Paths** — 3-way region gateway (EU-Review → Ship; US-Review → Ship; APAC-Express → Ship), optional Priority-Handoff after ship, Timer-Escalation on stuck APAC tasks.
+- **Variables** — `orderId`, `customerId`, `region` (EU 55% / US 30% / APAC 15%), `priorityFlag` (true ~3% — ALIVE-rare), `amount`, `itemCount`, `shippingMethod` (STANDARD / EXPRESS / FREIGHT).
+- **Deployment era** — APAC shipping bug in days 1–10 (`shipOrderDelegate` throws at 20% for APAC) → second UC5 IMPROVED demo, distinct element + process from loanApproval.
+- **Timer escalation** — fires for ~1% of APAC orders → below minBucketSize → UC6 UNKNOWN on a different element than FAX.
+
+Start CIB Seven with one of the seed profiles and invoke the relevant skill.
+
+### Presentation walkthrough
+
+For a live demo against `seed-presentation`, follow
+[`presentation-script.md`](presentation-script.md) — step-by-step
+invocations, expected output snippets, talking points, and fallbacks.
 
 ## Shared building blocks
 

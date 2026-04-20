@@ -1,0 +1,13 @@
+logging:
+  level:
+    # Simulated delegate failures during seeding are intentional and already
+    # announced at WARN by the delegates themselves. Suppress the engine's
+    # redundant ERROR re-log so the seed output stays readable.
+    org.cibseven.bpm.engine.context: "OFF"
+
+seed:
+  # MINIMAL profile — ~80 instances across loanApproval (40) + orderFulfillment (40).
+  # For fast local iteration and CI smoke tests. All edge cases are hit at least
+  # once (APAC bug era, priorityFlag, escalation, student-amount cap) so the
+  # skills can be validated without a long boot.
+  profile: minimal

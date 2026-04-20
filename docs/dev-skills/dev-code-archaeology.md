@@ -22,7 +22,7 @@ DEAD, or UNKNOWN.
 Examples (against the `loanApproval` seed):
 
 ```
-/dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/TestDataSeeder.kt:152
+/dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/seeders/LoanApprovalSeeder.kt:160
 /dev-code-archaeology "instances where channel == 'FAX'"
 ```
 
@@ -69,7 +69,7 @@ Examples (against the `loanApproval` seed):
 ## Example output (against the `loanApproval` seed)
 
 ```markdown
-# Archaeology: TestDataSeeder.kt:152 — `channel == "FAX"`
+# Archaeology: seeders/LoanApprovalSeeder.kt:160 — `channel == "FAX"`
 
 ## Verdict
 
@@ -110,6 +110,55 @@ Don't delete. Options for answering the liveness question cleanly:
 - Or mark the path in the code (`@LegacyPath`) and re-check after a
   quarter.
 ```
+
+## Second presentation example: DEAD verdict (`seed-presentation`)
+
+The `seed-presentation` profile hard-caps student-loan amounts at €40k in
+the seeder, so the condition `loanType == "student" && amount > 100000` is
+**structurally unreachable** — not rare, not suppressed, genuinely zero
+observations over any window.
+
+```
+/dev-code-archaeology "loan approvals where loanType == 'student' && amount > 100000"
+```
+
+Expected output shape (truncated):
+
+```markdown
+# Archaeology: student loans above 100k
+
+## Verdict
+
+**DEAD**
+
+0 matching instances over the full 365-day window. The combined
+distribution `(loanType × amount-bucket)` has 300+ observations total —
+more than enough to trust zero. No suppression flag.
+
+## Runtime
+
+- `analytics_variable_distribution` on `loanType`: "student" appears in
+  ~17% of instances, bucket size well above minBucketSize=10.
+- `analytics_variable_distribution` on `amount`: bucket `[100000, 500000)`
+  appears in ~15% of instances.
+- Joint occurrence: 0 — cap enforced in the seeder / production code.
+
+## Recommendation
+
+Safe to delete any code path gated on this combination — the condition is
+provably unreachable given current upstream validation.
+```
+
+**Third angle — ALIVE-but-rare on `orderFulfillment`:** the priority-handoff
+path sits at ~3% share, above minBucketSize=10 but rare enough that a dev
+might question whether it still runs.
+
+```
+/dev-code-archaeology "instances where priorityFlag == true"
+```
+
+Expected verdict: **ALIVE (rare)** — used by ~3% of instances, last
+occurrence within the post-fix era. Do not delete; keep the path gated.
 
 ## Context policy
 

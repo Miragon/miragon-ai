@@ -21,7 +21,7 @@ and which customer segments would be affected. The skill produces a
 Examples (against the `loanApproval` seed):
 
 ```
-/dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/TestDataSeeder.kt:194
+/dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/seeders/LoanApprovalSeeder.kt:292
 /dev-change-impact "lift auto-approval amount threshold from 25000 to 50000"
 ```
 
@@ -67,7 +67,7 @@ Examples (against the `loanApproval` seed):
 ## Example output (truncated, against the seed)
 
 ```markdown
-# Impact: TestDataSeeder.kt:194 — lift threshold 25000 → 50000
+# Impact: seeders/LoanApprovalSeeder.kt:292 — lift threshold 25000 → 50000
 
 ## Change
 
@@ -102,6 +102,45 @@ Confirm with the business before shipping: 22 additional instances per seed
 cycle would be auto-approved without extra review — that may or may not be
 intended. Enterprise stays largely unaffected because of the segment bonus.
 ```
+
+## Second presentation example: categorical condition (`seed-presentation`)
+
+Beyond the numeric `amount` threshold example above, the `seed-presentation`
+profile stages categorical and boolean conditions too — `region` on
+`orderFulfillment` and `priorityFlag` on both processes.
+
+```
+/dev-change-impact "re-route APAC region to US fallback instead of auto-ship"
+```
+
+Expected output shape (truncated):
+
+```markdown
+# Impact: re-route APAC to US fallback
+
+## Change
+
+- Old: `region == "APAC"` → `Task_APACExpressShip` (user task, 2h timer)
+- New: `region == "APAC"` → `Task_USReview` (same path as US)
+- Variable: `region` (categorical, top-K: EU/US/APAC)
+- Element: `Gateway_Region` of `orderFulfillment`
+
+## Projected reclassification (last 30d)
+
+- Gateway fired **~300 times** in the window.
+- **~45 instances (15%)** would no longer take the APAC express path.
+- Direction: shifts traffic from Task_APACExpressShip to Task_USReview.
+
+## Affected segments
+
+APAC bucket is roughly 40% EU-based customers in the seed (customerId
+patterns), 60% genuine APAC accounts — the re-route primarily preserves
+behavior for the first group, but increases US reviewer load materially.
+```
+
+For the boolean demo, invoke with `"toggle priorityFlag default from false to
+true for EXPRESS shippingMethod"` — the projection then runs on
+`analytics_variable_distribution` over `priorityFlag × shippingMethod`.
 
 ## Context policy
 

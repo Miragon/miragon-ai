@@ -105,6 +105,42 @@ likely tied to the legacy partner.
 | Task_notifyApplicant | serviceTask | `${notifyApplicantDelegate}` — `NotifyApplicantDelegate` |
 ```
 
+## Second presentation example (against `orderFulfillment`, `seed-presentation` profile)
+
+`orderFulfillment` is the richer demo process — it has a 3-way region gateway,
+a timer boundary event, and a downstream service task that fails for APAC
+instances during the first bug era.
+
+```
+/dev-process-explain orderFulfillment 30d
+```
+
+Expected output shape (truncated):
+
+```markdown
+# Process: orderFulfillment
+
+## TL;DR
+
+A cross-region order pipeline. EU and US orders go through regional review;
+APAC orders bypass review via `Task_APACExpressShip`. All branches converge
+on `Task_ShipOrder`, then an optional priority handoff. A 2h timer boundary
+on the APAC express task can escalate stuck orders.
+
+## Behavior in production (last 30d)
+
+- Path EU-Review → Ship → Shipped: ~55%
+- Path US-Review → Ship → Shipped: ~30%
+- Path APAC-Express → Ship → Shipped: ~14%
+- Path with Priority Handoff (any region): ~3% — ALIVE-but-rare
+- Path to EndEvent_Escalated (timer fired): <1% — below minBucketSize=10
+
+## Where it breaks
+
+- `Task_ShipOrder`: elevated failure rate for APAC instances in days 1–10 of
+  the seed window; drops to 0 after the APAC fix cutoff.
+```
+
 ## Context policy
 
 - **No instance quotes.** No customer name, order number, or variable content
