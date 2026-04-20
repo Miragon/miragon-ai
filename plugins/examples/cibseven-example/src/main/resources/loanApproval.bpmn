@@ -29,7 +29,7 @@
     <bpmn2:endEvent id="EndEvent_approved" name="Loan Approved">
       <bpmn2:incoming>SequenceFlow_toEndApproved</bpmn2:incoming>
     </bpmn2:endEvent>
-    <bpmn2:serviceTask id="Task_notifyApplicant" name="Notify Applicant" camunda:delegateExpression="${notifyApplicantDelegate}">
+    <bpmn2:serviceTask id="Task_notifyApplicant" name="Notify Applicant" camunda:delegateExpression="${notifyApplicantDelegate}" camunda:asyncBefore="true">
       <bpmn2:incoming>SequenceFlow_no</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_toEndRejected</bpmn2:outgoing>
     </bpmn2:serviceTask>

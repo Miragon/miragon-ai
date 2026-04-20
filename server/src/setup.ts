@@ -1,3 +1,6 @@
+import fs from "node:fs"
+import path from "node:path"
+
 import type { MCPServer } from "mcp-use/server"
 import {
   StepRegistry,
@@ -11,6 +14,8 @@ import { z } from "zod"
 
 import { createPlugin as createCamunda7Plugin } from "@miragon-ai/mcp-camunda7"
 import { createPlugin as createAnalyticsPlugin } from "@miragon-ai/mcp-analytics"
+import { createPlugin as createEnrichmentPlugin } from "@miragon-ai/mcp-enrichment"
+import { parseEnrichmentConfig } from "@miragon-ai/client-enrichment"
 
 const camunda7ConfigSchema = z.object({
   baseUrl: z.string().default("http://localhost:8080/engine-rest"),
@@ -25,6 +30,13 @@ const analyticsConfigSchema = z.object({
   username: z.string().default("default"),
   password: z.string().default(""),
   database: z.string().default("camunda_history"),
+})
+
+const enrichmentConfigSchema = z.object({
+  /** Absolute or cwd-relative path to a tenant enrichment YAML. */
+  configPath: z.string(),
+  /** Set `"none"` to downgrade missing secrets to a 401-at-call-time instead of booting. */
+  onMissingSecret: z.enum(["throw", "none"]).optional().default("throw"),
 })
 
 /**
@@ -57,6 +69,23 @@ const MODULE_REGISTRY: Record<
       database: process.env.CLICKHOUSE_DATABASE,
     }),
   },
+  enrichment: {
+    createPlugin: (c) => {
+      const parsed = enrichmentConfigSchema.parse(c)
+      const absPath = path.isAbsolute(parsed.configPath)
+        ? parsed.configPath
+        : path.resolve(process.cwd(), parsed.configPath)
+      const yaml = fs.readFileSync(absPath, "utf-8")
+      return createEnrichmentPlugin({
+        config: parseEnrichmentConfig(yaml),
+        onMissingSecret: parsed.onMissingSecret,
+      })
+    },
+    configFromEnv: () => ({
+      configPath: process.env.ENRICHMENT_CONFIG_PATH,
+      onMissingSecret: process.env.ENRICHMENT_ON_MISSING_SECRET,
+    }),
+  },
 }
 
 /**
@@ -66,11 +95,17 @@ const MODULE_REGISTRY: Record<
  * MCP_ACTIVE_MODULES=all                 -> all available modules
  * not set                                -> all available modules (default)
  */
+/** Modules that should only auto-activate in the "all"/default mode when
+ * their required env configuration is present. */
+const OPT_IN_MODULES: Record<string, () => boolean> = {
+  enrichment: () => Boolean(process.env.ENRICHMENT_CONFIG_PATH),
+}
+
 function getActiveModuleNames(): string[] {
   const envValue = process.env.MCP_ACTIVE_MODULES?.trim()
 
   if (!envValue || envValue === "all") {
-    return Object.keys(MODULE_REGISTRY)
+    return Object.keys(MODULE_REGISTRY).filter((name) => OPT_IN_MODULES[name]?.() !== false)
   }
 
   return envValue

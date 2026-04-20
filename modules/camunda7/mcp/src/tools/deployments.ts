@@ -1,11 +1,28 @@
 import type { Client } from "@miragon-ai/client-camunda7"
-import { listDeploymentsInput, createDeploymentInput } from "@miragon-ai/client-camunda7/schemas"
+import {
+  listDeploymentsInput,
+  createDeploymentInput,
+  getDeploymentInput,
+} from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { getDeployments, createDeployment } from "@miragon-ai/client-camunda7/generated/sdk.gen"
+import {
+  getDeployments,
+  getDeployment,
+  createDeployment,
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
 
 export function registerDeploymentTools(register: Register) {
+  register({
+    name: "camunda7_get_deployment",
+    description:
+      "Get a deployment by ID — returns deployment timestamp + source, used for pre/post deployment correlation (commit-hash → deployment-ID → timestamp).",
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+    inputSchema: getDeploymentInput.shape,
+    handler: async (client, args) => getDeployment({ client, path: { id: args.id } }),
+  })
+
   register({
     name: "camunda7_list_deployments",
     description: "List deployments with optional filters.",

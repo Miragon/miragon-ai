@@ -1,38 +1,40 @@
 # MCP Apps
 
-Die MCP Apps sind interaktive UI-Komponenten auf Basis des [sunpeak](https://sunpeak.dev) MCP App Frameworks. Sie rendern Cockpit-ähnliche Funktionen direkt in MCP-kompatiblen Hosts.
+The MCP Apps are interactive UI components built on the [sunpeak](https://sunpeak.dev)
+MCP App framework. They render cockpit-style features directly inside
+MCP-compatible hosts.
 
-## Technologie-Stack
+## Tech stack
 
-| Aspekt         | Technologie                        |
-| -------------- | ---------------------------------- |
-| Framework      | sunpeak 0.16                       |
-| UI             | React 19 + Tailwind CSS            |
-| State          | `useToolData` (sunpeak Hook)       |
-| Interaktion    | `useCallServerTool` (sunpeak Hook) |
-| Engine-Zugriff | `@camunda7-mcp/engine-adapter`     |
+| Aspect        | Technology                         |
+| ------------- | ---------------------------------- |
+| Framework     | sunpeak 0.16                       |
+| UI            | React 19 + Tailwind CSS            |
+| State         | `useToolData` (sunpeak hook)       |
+| Interaction   | `useCallServerTool` (sunpeak hook) |
+| Engine access | `@camunda7-mcp/engine-adapter`     |
 
 ## Apps
 
-| App                 | Zweck                            | Interaktiv? |
-| ------------------- | -------------------------------- | ----------- |
-| Process List        | Deployed Prozessdefinitionen     | Nein        |
-| Task Dashboard      | Offene Tasks mit Claim/Complete  | Ja          |
-| Instance Detail     | Activity Tree + Variablen + BPMN | Nein        |
-| Analytics Dashboard | KPIs, Durchsatz, Dauer-Metriken  | Nein        |
-| History Timeline    | Farbcodierte Activity-Timeline   | Nein        |
-| Incident Panel      | Fehler-Monitoring mit Retry      | Ja          |
+| App                 | Purpose                            | Interactive |
+| ------------------- | ---------------------------------- | ----------- |
+| Process List        | Deployed process definitions       | No          |
+| Task Dashboard      | Open tasks with claim/complete     | Yes         |
+| Instance Detail     | Activity tree + variables + BPMN   | No          |
+| Analytics Dashboard | KPIs, throughput, duration metrics | No          |
+| History Timeline    | Colour-coded activity timeline     | No          |
+| Incident Panel      | Failure monitoring with retry      | Yes         |
 
-## Action Tools
+## Action tools
 
-Zusätzlich zu den 6 Display-Apps gibt es 3 Action-Tools für Benutzerinteraktionen:
+In addition to the 6 display apps, three action tools enable user interactions:
 
-| Tool                   | Beschreibung                              |
-| ---------------------- | ----------------------------------------- |
-| `claim-task-action`    | Task für einen User claimen               |
-| `complete-task-action` | Task mit optionalen Variablen abschließen |
-| `retry-job-action`     | Fehlgeschlagenen Job retrien              |
+| Tool                   | Description                             |
+| ---------------------- | --------------------------------------- |
+| `claim-task-action`    | Claim a task for a user                 |
+| `complete-task-action` | Complete a task with optional variables |
+| `retry-job-action`     | Retry a failed job                      |
 
-Detaillierter App-Katalog: [app-catalog.md](app-catalog.md)
+Detailed app catalog: [app-catalog.md](app-catalog.md)
 
-Verbindung & Setup: [verbindung.md](verbindung.md)
+Connection & setup: [connection.md](connection.md)

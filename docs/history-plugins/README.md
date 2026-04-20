@@ -1,26 +1,30 @@
 # History Plugins
 
-Die History Plugins schieben Engine-History-Events in Echtzeit nach ClickHouse. Jede unterstützte Engine hat ein eigenes Plugin, das die gemeinsame Shared Library nutzt.
+The history plugins push engine history events into ClickHouse in
+near-real-time. Every supported engine has its own plugin that builds on the
+shared library.
 
-## Module
+## Modules
 
-| Plugin                        | Engine            | Status      |
-| ----------------------------- | ----------------- | ----------- |
-| `shared-history-clickhouse`   | Engine-agnostisch | Aktiv       |
-| `camunda7-history-clickhouse` | Camunda 7         | Aktiv       |
-| `cibseven-history-clickhouse` | CIB Seven         | Aktiv       |
-| `operaton-history-clickhouse` | Operaton          | Platzhalter |
+| Plugin                        | Engine          | Status      |
+| ----------------------------- | --------------- | ----------- |
+| `shared-history-clickhouse`   | engine-agnostic | Active      |
+| `camunda7-history-clickhouse` | Camunda 7       | Active      |
+| `cibseven-history-clickhouse` | CIB Seven       | Active      |
+| `operaton-history-clickhouse` | Operaton        | Placeholder |
 
-## Funktionsweise
+## How it works
 
-1. Engine feuert History-Event (z.B. `HistoricProcessInstanceEventEntity`)
-2. Plugin-spezifischer EventMapper wandelt in `Map<String, Any?>` um
-3. `ClickHouseHistoryEventHandlerBase` puffert Events
-4. Bei Batch-Größe oder Timer: Flush nach ClickHouse
-5. `ClickHouseClient` führt Batch-INSERT aus
+1. The engine emits a history event (e.g. `HistoricProcessInstanceEventEntity`)
+2. A plugin-specific EventMapper turns it into `Map<String, Any?>`
+3. `ClickHouseHistoryEventHandlerBase` buffers events
+4. Once batch size or timer triggers, flush to ClickHouse
+5. `ClickHouseClient` runs a batch INSERT
 
-## OTEL Instrumentierung
+## OTEL instrumentation
 
-Alle Plugins sind mit OpenTelemetry instrumentiert. Der OTEL Java Agent (wenn angehängt) konfiguriert `GlobalOpenTelemetry` automatisch — die Plugins nutzen nur die API.
+Every plugin is instrumented with OpenTelemetry. The OTEL Java Agent (when
+attached) configures `GlobalOpenTelemetry` automatically — the plugins only
+use the API.
 
-Schema-Referenz: [clickhouse-schema.md](clickhouse-schema.md)
+Schema reference: [clickhouse-schema.md](clickhouse-schema.md)

@@ -22,6 +22,17 @@ export type {
   PeriodComparisonKpi,
   PeriodActivityComparisonRow,
   PeriodComparisonResult,
+  PathFrequencyRow,
+  PathEdgeRow,
+  PathFrequencyResult,
+  ElementBottleneckRow,
+  ElementBottleneckResult,
+  VariableDistributionResult,
+  VariableBucket,
+  VariableDistributionKind,
+  ClusterCompareResult,
+  ClusterCompareKpi,
+  ClusterCompareDelta,
 } from "./queries/index.js"
 
 export type {

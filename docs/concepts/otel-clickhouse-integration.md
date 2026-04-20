@@ -1,19 +1,22 @@
-# OTEL → ClickHouse Integration
+# OTEL → ClickHouse integration
 
-> Observability für das gesamte Camunda 7 MCP Ecosystem via OpenTelemetry
+> Observability for the entire Camunda 7 MCP ecosystem via OpenTelemetry
 
-## Architekturentscheidung
+## Architecture decision
 
-**OTEL Collector als zentraler Hub** — kein Direktexport aus den Komponenten.
+**OTEL Collector as the central hub** — no direct exports from individual
+components.
 
-Begründung:
+Rationale:
 
-- Entkopplung: Komponenten kennen nur OTLP, nicht das Backend
-- Flexibilität: Backend-Wechsel (Jaeger → Tempo, ClickHouse → Grafana) ohne Code-Änderung
-- Sampling & Processing: Tail-based Sampling, Attribute-Enrichment zentral konfigurierbar
-- Multi-Backend: Paralleler Export nach ClickHouse (Langzeit) + Jaeger (Live-UI)
+- Decoupling: components only know OTLP, not the backend
+- Flexibility: backend swap (Jaeger → Tempo, ClickHouse → Grafana) without
+  code changes
+- Sampling & processing: tail-based sampling, attribute enrichment configured
+  centrally
+- Multi-backend: parallel export to ClickHouse (long-term) + Jaeger (live UI)
 
-## Architekturdiagramm
+## Architecture diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -50,18 +53,18 @@ Begründung:
 │              ┌─────────▼──┐  ┌──▼────────┐                             │
 │              │ ClickHouse │  │  Jaeger   │                             │
 │              │ otel_*     │  │  UI :16686│                             │
-│              │ Tabellen   │  │           │                             │
+│              │ tables     │  │           │                             │
 │              └────────────┘  └───────────┘                             │
 │                                                                         │
 │  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │  CIB Seven / Camunda 7 Engine                                    │   │
-│  │  OTEL Java Agent (-javaagent:opentelemetry-javaagent.jar)        │   │
-│  │  → Auto-Instrumentierung: HTTP, JDBC, Spring                     │   │
+│  │  CIB Seven / Camunda 7 engine                                    │   │
+│  │  OTEL Java agent (-javaagent:opentelemetry-javaagent.jar)        │   │
+│  │  → Auto-instrumentation: HTTP, JDBC, Spring                      │   │
 │  └──────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Instrumentierung pro Komponente
+## Instrumentation per component
 
 ### 1. MCP Server (TypeScript)
 
@@ -96,7 +99,7 @@ const sdk = new NodeSDK({
 sdk.start()
 ```
 
-**Span-Wrapper um Tool-Handler:**
+**Span wrapper around tool handlers:**
 
 ```typescript
 // packages/camunda7-mcp-server/src/tools/instrumented-tool.ts
@@ -140,7 +143,7 @@ export function instrumentToolHandler<TArgs, TResult>(
 
 ### 2. Engine Adapter HttpClient
 
-**Span-Wrapper um `request()`** in `packages/engine-adapter/src/http-client.ts`:
+**Span wrapper around `request()`** in `packages/engine-adapter/src/http-client.ts`:
 
 ```typescript
 import { trace, SpanStatusCode, propagation, context, metrics } from '@opentelemetry/api';
@@ -152,7 +155,7 @@ const httpDuration = meter.createHistogram('engine.http.duration_ms', {
   unit: 'ms',
 });
 
-// Im request()-Wrapper:
+// In the request() wrapper:
 async function request<T>(method: string, path: string, options?: { ... }): Promise<T> {
   return tracer.startActiveSpan(`engine.http ${method} ${path}`, async (span) => {
     span.setAttribute('http.method', method);
@@ -160,7 +163,7 @@ async function request<T>(method: string, path: string, options?: { ... }): Prom
     span.setAttribute('engine.type', config.engineType ?? 'unknown');
     span.setAttribute('api.path', path);
 
-    // Trace Context Propagation → Engine
+    // Trace context propagation → engine
     const headers = { ...buildHeaders(options?.contentType) };
     propagation.inject(context.active(), headers);
 
@@ -173,7 +176,7 @@ async function request<T>(method: string, path: string, options?: { ... }): Prom
         'http.method': method,
         'http.status_code': response.status,
       });
-      // ... bestehende Fehlerbehandlung
+      // ... existing error handling
     } catch (error) {
       span.setStatus({ code: SpanStatusCode.ERROR });
       span.recordException(error as Error);
@@ -185,7 +188,7 @@ async function request<T>(method: string, path: string, options?: { ... }): Prom
 }
 ```
 
-### 3. Kotlin History Plugins
+### 3. Kotlin history plugins
 
 **SDK**: `io.opentelemetry:opentelemetry-sdk` + `io.opentelemetry:opentelemetry-exporter-otlp`
 
@@ -218,7 +221,7 @@ object HistoryTelemetry {
 }
 ```
 
-**Spans um Buffer/Flush/Insert** in `ClickHouseHistoryEventHandlerBase`:
+**Spans around buffer/flush/insert** in `ClickHouseHistoryEventHandlerBase`:
 
 ```kotlin
 fun flush() {
@@ -246,12 +249,12 @@ fun flush() {
 }
 ```
 
-### 4. CIB Seven / Camunda 7 Engine
+### 4. CIB Seven / Camunda 7 engine
 
-**OTEL Java Agent** als JVM-Argument — keine Code-Änderung nötig:
+**OTEL Java agent** as a JVM argument — no code change required:
 
 ```dockerfile
-# plugins/examples/cibseven-example/Dockerfile (Erweiterung)
+# plugins/examples/cibseven-example/Dockerfile (extension)
 ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar /opt/otel/opentelemetry-javaagent.jar
 
 ENV JAVA_OPTS="-javaagent:/opt/otel/opentelemetry-javaagent.jar"
@@ -261,11 +264,11 @@ ENV OTEL_TRACES_SAMPLER=parentbased_traceidratio
 ENV OTEL_TRACES_SAMPLER_ARG=0.1
 ```
 
-Auto-instrumentiert: Spring MVC, JDBC, HTTP-Client-Calls.
+Auto-instrumented: Spring MVC, JDBC, HTTP-client calls.
 
-## Trace Context Propagation
+## Trace context propagation
 
-Durchgängige Korrelation über `traceparent` Header (W3C Trace Context):
+End-to-end correlation via the `traceparent` header (W3C Trace Context):
 
 ```
 MCP Tool Call                Engine REST API           Process Execution
@@ -276,21 +279,22 @@ MCP Tool Call                Engine REST API           Process Execution
 [Span: engine.http GET /task]
        │ traceparent (via propagation.inject)
        ▼
-                             [Span: HTTP GET /task]    (Java Agent)
+                             [Span: HTTP GET /task]    (Java agent)
                                     │
                                     ▼
-                             [Span: JDBC SELECT]       (Java Agent)
+                             [Span: JDBC SELECT]       (Java agent)
 ```
 
-Die `trace_id` kann in bestehenden History-Tabellen gespeichert werden (siehe Schema-Erweiterung).
+The `trace_id` can be stored in the existing history tables (see schema
+extension).
 
-## ClickHouse OTEL-Schema
+## ClickHouse OTEL schema
 
-Der OTEL Collector ClickHouse Exporter erstellt automatisch native Tabellen:
+The OTEL Collector ClickHouse exporter automatically creates native tables:
 
 ```sql
--- Automatisch vom OTEL Collector ClickHouse Exporter erstellt
--- Database: otel (separat von camunda_history)
+-- Created automatically by the OTEL Collector ClickHouse exporter
+-- Database: otel (separate from camunda_history)
 
 CREATE DATABASE IF NOT EXISTS otel;
 
@@ -368,12 +372,12 @@ PARTITION BY toDate(Timestamp)
 TTL toDateTime(Timestamp) + INTERVAL 30 DAY;
 ```
 
-### `trace_id`-Spalte in bestehenden History-Tabellen
+### `trace_id` column on existing history tables
 
-Erweiterung des Schemas in `docker/clickhouse/init-schema.sql`:
+Schema extension in `docker/clickhouse/init-schema.sql`:
 
 ```sql
--- ALTER TABLE Statements für bestehende Tabellen
+-- ALTER TABLE statements for existing tables
 ALTER TABLE camunda_history.camunda_process_instances
     ADD COLUMN IF NOT EXISTS trace_id Nullable(String);
 
@@ -384,10 +388,10 @@ ALTER TABLE camunda_history.camunda_incidents
     ADD COLUMN IF NOT EXISTS trace_id Nullable(String);
 ```
 
-Damit können History-Events direkt mit OTEL-Traces korreliert werden:
+This lets history events be correlated directly with OTEL traces:
 
 ```sql
--- Beispiel: Trace für eine Prozessinstanz finden
+-- Example: find traces for a process instance
 SELECT t.TraceId, t.SpanName, t.Duration, t.StatusCode
 FROM otel.otel_traces t
 JOIN camunda_history.camunda_process_instances p
@@ -396,9 +400,9 @@ WHERE p.id = '{process_instance_id}'
 ORDER BY t.Timestamp;
 ```
 
-## Custom Metrics
+## Custom metrics
 
-| Metric                          | Typ       | Labels                                           | Quelle         |
+| Metric                          | Type      | Labels                                           | Source         |
 | ------------------------------- | --------- | ------------------------------------------------ | -------------- |
 | `mcp.tool.duration_ms`          | Histogram | `mcp.tool.name`                                  | MCP Server     |
 | `mcp.tool.errors_total`         | Counter   | `mcp.tool.name`                                  | MCP Server     |
@@ -409,12 +413,12 @@ ORDER BY t.Timestamp;
 | `history.insert.errors_total`   | Counter   | `error.type`                                     | Kotlin Plugins |
 | `history.buffer.size`           | Gauge     | `engine.type`                                    | Kotlin Plugins |
 
-## Docker Compose Erweiterung
+## Docker Compose extension
 
 ### `docker/docker-compose.otel.yml`
 
 ```yaml
-# Nutzung: docker compose -f docker-compose.yml -f docker-compose.otel.yml up
+# Usage: docker compose -f docker-compose.yml -f docker-compose.otel.yml up
 services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.98.0
@@ -424,8 +428,8 @@ services:
     ports:
       - "4317:4317" # OTLP gRPC
       - "4318:4318" # OTLP HTTP
-      - "8888:8888" # Collector Metrics
-      - "8889:8889" # Prometheus Exporter (optional)
+      - "8888:8888" # Collector metrics
+      - "8889:8889" # Prometheus exporter (optional)
     depends_on:
       clickhouse:
         condition: service_started
@@ -434,11 +438,11 @@ services:
     image: jaegertracing/jaeger:2.4
     ports:
       - "16686:16686" # Jaeger UI
-      - "4319:4317" # OTLP gRPC (Jaeger-intern, vom Collector genutzt)
+      - "4319:4317" # OTLP gRPC (Jaeger-internal, used by the collector)
     environment:
       - COLLECTOR_OTLP_ENABLED=true
 
-  # Override: CIB Seven mit OTEL Java Agent
+  # Override: CIB Seven with OTEL Java agent
   cibseven:
     environment:
       - JAVA_OPTS=-javaagent:/opt/otel/opentelemetry-javaagent.jar
@@ -449,7 +453,7 @@ services:
     volumes:
       - otel-agent:/opt/otel
 
-  # Init-Container: OTEL Java Agent herunterladen
+  # Init container: download the OTEL Java agent
   otel-agent-init:
     image: curlimages/curl:8.7.1
     command: >
@@ -484,7 +488,7 @@ processors:
         value: docker-local
         action: upsert
 
-  # Tail-based Sampling: Fehler immer, Rest 10%
+  # Tail-based sampling: always keep errors, sample 10% of the rest
   tail_sampling:
     decision_wait: 10s
     policies:
@@ -501,7 +505,7 @@ exporters:
   clickhouse:
     endpoint: tcp://clickhouse:9000?dial_timeout=10s&compress=lz4
     database: otel
-    ttl: 720h # 30 Tage
+    ttl: 720h # 30 days
     create_schema: true
     logs:
       table_name: otel_logs
@@ -540,40 +544,40 @@ service:
       exporters: [clickhouse, debug]
 ```
 
-## Implementierungsreihenfolge
+## Implementation order
 
-| Schritt | Was                                                                                         | Aufwand | Abhängigkeit |
-| ------- | ------------------------------------------------------------------------------------------- | ------- | ------------ |
-| **1**   | `docker-compose.otel.yml` + Collector Config erstellen                                      | Klein   | Keine        |
-| **2**   | MCP Server: `@opentelemetry/sdk-node` + `telemetry.ts` Setup                                | Klein   | Schritt 1    |
-| **3**   | MCP Server: `instrumentToolHandler()` um alle 27 Tool-Handler wrappen                       | Mittel  | Schritt 2    |
-| **4**   | Engine Adapter: Span-Wrapper um `request()` in `http-client.ts` + `traceparent` Propagation | Mittel  | Schritt 2    |
-| **5**   | Kotlin Plugins: OTEL SDK Dependencies + `HistoryTelemetry` Object                           | Mittel  | Schritt 1    |
-| **6**   | Kotlin Plugins: Spans um `flush()`/`insertBatch()` in `ClickHouseHistoryEventHandlerBase`   | Mittel  | Schritt 5    |
-| **7**   | CIB Seven Dockerfile: OTEL Java Agent Integration                                           | Klein   | Schritt 1    |
-| **8**   | History-Tabellen: `trace_id`-Spalte + Migration                                             | Klein   | Schritt 4+6  |
+| Step  | What                                                                                            | Effort | Dependency |
+| ----- | ----------------------------------------------------------------------------------------------- | ------ | ---------- |
+| **1** | Create `docker-compose.otel.yml` + collector config                                             | Small  | None       |
+| **2** | MCP Server: `@opentelemetry/sdk-node` + `telemetry.ts` setup                                    | Small  | Step 1     |
+| **3** | MCP Server: wrap all 27 tool handlers with `instrumentToolHandler()`                            | Medium | Step 2     |
+| **4** | Engine Adapter: span wrapper around `request()` in `http-client.ts` + `traceparent` propagation | Medium | Step 2     |
+| **5** | Kotlin Plugins: OTEL SDK dependencies + `HistoryTelemetry` object                               | Medium | Step 1     |
+| **6** | Kotlin Plugins: spans around `flush()`/`insertBatch()` in `ClickHouseHistoryEventHandlerBase`   | Medium | Step 5     |
+| **7** | CIB Seven Dockerfile: OTEL Java agent integration                                               | Small  | Step 1     |
+| **8** | History tables: `trace_id` column + migration                                                   | Small  | Steps 4+6  |
 
-### Kritischer Pfad
+### Critical path
 
 ```
-Schritt 1 (Docker/Collector)
-    ├── Schritt 2 (MCP OTEL Setup)
-    │       ├── Schritt 3 (Tool Instrumentation)
-    │       └── Schritt 4 (HttpClient Spans)
-    │               └── Schritt 8 (trace_id Spalte) ←── auch abhängig von Schritt 6
-    ├── Schritt 5 (Kotlin OTEL Setup)
-    │       └── Schritt 6 (Flush Spans)
-    └── Schritt 7 (Java Agent)
+Step 1 (Docker/Collector)
+    ├── Step 2 (MCP OTEL setup)
+    │       ├── Step 3 (Tool instrumentation)
+    │       └── Step 4 (HttpClient spans)
+    │               └── Step 8 (trace_id column) ←── also depends on step 6
+    ├── Step 5 (Kotlin OTEL setup)
+    │       └── Step 6 (Flush spans)
+    └── Step 7 (Java agent)
 ```
 
-## Konfiguration
+## Configuration
 
-Alle OTEL-Konfiguration erfolgt über Environment-Variablen (Standard OTEL SDK):
+All OTEL configuration is done via environment variables (standard OTEL SDK):
 
-| Variable                      | Default                 | Beschreibung               |
-| ----------------------------- | ----------------------- | -------------------------- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTEL Collector Endpoint    |
-| `OTEL_SERVICE_NAME`           | Komponenten-spezifisch  | Service-Name in Traces     |
-| `OTEL_TRACES_SAMPLER`         | `parentbased_always_on` | Sampling-Strategie         |
-| `OTEL_TRACES_SAMPLER_ARG`     | `1.0`                   | Sampling-Rate              |
-| `OTEL_ENABLED`                | `true`                  | OTEL komplett deaktivieren |
+| Variable                      | Default                 | Description             |
+| ----------------------------- | ----------------------- | ----------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTEL Collector endpoint |
+| `OTEL_SERVICE_NAME`           | Component-specific      | Service name in traces  |
+| `OTEL_TRACES_SAMPLER`         | `parentbased_always_on` | Sampling strategy       |
+| `OTEL_TRACES_SAMPLER_ARG`     | `1.0`                   | Sampling rate           |
+| `OTEL_ENABLED`                | `true`                  | Disable OTEL completely |

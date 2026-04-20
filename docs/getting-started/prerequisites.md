@@ -1,30 +1,30 @@
-# Voraussetzungen
+# Prerequisites
 
-## Für die TypeScript-Pakete
+## For the TypeScript packages
 
-| Tool    | Version | Beschreibung    |
+| Tool    | Version | Description     |
 | ------- | ------- | --------------- |
 | Node.js | 22+     | Runtime         |
-| pnpm    | 10+     | Package Manager |
+| pnpm    | 10+     | Package manager |
 
-## Für die Kotlin Plugins
+## For the Kotlin plugins
 
-| Tool   | Version | Beschreibung                           |
-| ------ | ------- | -------------------------------------- |
-| Java   | 17+     | JDK (Temurin empfohlen)                |
-| Gradle | 8+      | Build Tool (Wrapper im Repo enthalten) |
+| Tool   | Version | Description                          |
+| ------ | ------- | ------------------------------------ |
+| Java   | 17+     | JDK (Temurin recommended)            |
+| Gradle | 8+      | Build tool (wrapper bundled in repo) |
 
-## Für die Infrastruktur
+## For the infrastructure
 
-| Tool           | Version | Beschreibung                   |
-| -------------- | ------- | ------------------------------ |
-| Docker         | 24+     | Container Runtime              |
-| Docker Compose | 2.20+   | Multi-Container Orchestrierung |
+| Tool           | Version | Description                   |
+| -------------- | ------- | ----------------------------- |
+| Docker         | 24+     | Container runtime             |
+| Docker Compose | 2.20+   | Multi-container orchestration |
 
 ## Engines
 
-Mindestens eine der folgenden Engines muss erreichbar sein:
+At least one of the following engines must be reachable:
 
-- **CIB Seven** — Standard via Docker Compose
-- **Camunda 7** — Eigene Installation oder Docker
-- **Operaton** — Community Fork (Phase 5)
+- **CIB Seven** — default via Docker Compose
+- **Camunda 7** — your own installation or Docker
+- **Operaton** — community fork (Phase 5)

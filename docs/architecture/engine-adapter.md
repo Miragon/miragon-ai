@@ -2,27 +2,31 @@
 
 ## Motivation
 
-Camunda 7, CIB Seven und Operaton teilen sich den gleichen Kern. Ihre REST-APIs sind zu >95% identisch, unterscheiden sich aber in Base-URL-Pfaden, Maven Coordinates und einzelnen API-Endpunkten.
+Camunda 7, CIB Seven, and Operaton share the same core. Their REST APIs are
 
-Der Engine Adapter abstrahiert diese Unterschiede, sodass MCP Server und MCP Apps engine-agnostisch bleiben.
+> 95% identical, but they differ in base-URL paths, Maven coordinates, and
+> individual API endpoints.
 
-## Architektur
+The Engine Adapter abstracts those differences so MCP servers and MCP Apps
+stay engine-agnostic.
+
+## Architecture
 
 ```
-EngineAdapter (Interface)
+EngineAdapter (interface)
     │
-    ├── BaseAdapter (Shared HTTP Logic)
+    ├── BaseAdapter (shared HTTP logic)
     │       │
     │       ├── Camunda7Adapter
     │       ├── CibSevenAdapter
     │       └── OperatonAdapter
     │
-    └── HttpClient (fetch + OTEL Spans)
+    └── HttpClient (fetch + OTEL spans)
 ```
 
 ## Interface
 
-Das `EngineAdapter` Interface definiert alle Engine-Operationen:
+The `EngineAdapter` interface defines all engine operations:
 
 - **Process Definitions**: list, getXml, start
 - **Process Instances**: list, get, activityTree, delete, modify
@@ -34,15 +38,15 @@ Das `EngineAdapter` Interface definiert alle Engine-Operationen:
 - **External Tasks**: fetchAndLock, complete, handleFailure
 - **Deployments**: list, create
 
-## HttpClient mit OTEL
+## HttpClient with OTEL
 
-Der HttpClient ist mit OpenTelemetry instrumentiert:
+The HttpClient is instrumented with OpenTelemetry:
 
-- Jeder Request erzeugt einen Span (`engine.http GET /task`)
-- Trace Context wird via `traceparent` Header propagiert
-- Metriken: `engine.http.duration_ms` Histogram
+- Every request emits a span (`engine.http GET /task`)
+- Trace context is propagated via the `traceparent` header
+- Metrics: `engine.http.duration_ms` histogram
 
-## Konfiguration
+## Configuration
 
 ```typescript
 const adapter = createEngineAdapter({

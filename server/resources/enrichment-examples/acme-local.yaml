@@ -1,0 +1,113 @@
+# ACME enrichment — local end-to-end demo against WireMock.
+#
+# Mirrors the structure of acme.yaml (the production-shaped reference) but
+# replaces the real backend baseUrls + auth secrets with a local WireMock
+# instance. Useful for exercising enrichment_auto_resolve without provisioning
+# Salesforce / ERP / Contracts credentials.
+#
+# Stub coverage (see docker/wiremock/mappings/):
+#   - Salesforce: customers CUST-001 (ENTERPRISE) and CUST-002 (BUSINESS),
+#     plus a name-based search returning both.
+#   - ERP:        orders ORD-100 / ORD-101 and invoice lists for CUST-001/2.
+#   - Contracts:  active contracts for CUST-001 (platinum) and CUST-002
+#     (premium); any other id returns 404 to demonstrate `skipped` handling.
+#
+# Activation:
+#   1. cd docker && docker compose up -d wiremock
+#   2. export ENRICHMENT_CONFIG_PATH=$(pwd)/server/resources/enrichment-examples/acme-local.yaml
+#   3. pnpm --filter @miragon-ai/server dev
+
+sources:
+  salesforce:
+    baseUrl: http://localhost:8088/salesforce/v1
+    auth:
+      mode: none
+  erp:
+    baseUrl: http://localhost:8088/erp/api
+    auth:
+      mode: none
+  contracts:
+    baseUrl: http://localhost:8088/contracts/api
+    auth:
+      mode: none
+
+lookups:
+  get_customer:
+    source: salesforce
+    description: Fetch a customer by id. Returns id, account manager, and segment.
+    method: GET
+    path: /customers/{customerId}
+    inputSchema:
+      customerId:
+        type: string
+        description: Customer id (try CUST-001 or CUST-002)
+    projection:
+      - id
+      - accountManager
+      - segment
+    annotations:
+      readOnlyHint: true
+
+  search_customers:
+    source: salesforce
+    description: Search customers by name fragment. Returns at most 20 matches.
+    method: GET
+    path: /customers
+    inputSchema:
+      name:
+        type: string
+        description: Fragment to match against customer name
+    annotations:
+      readOnlyHint: true
+
+  get_order:
+    source: erp
+    description: Fetch an ERP order by id (ORD-100 or ORD-101 in the stub).
+    method: GET
+    path: /orders/{orderId}
+    inputSchema:
+      orderId:
+        type: string
+    projection:
+      - id
+      - status
+      - totalCents
+      - currency
+    annotations:
+      readOnlyHint: true
+
+  list_invoices:
+    source: erp
+    description: List recent invoices for a customer.
+    method: GET
+    path: /customers/{customerId}/invoices
+    inputSchema:
+      customerId:
+        type: string
+    annotations:
+      readOnlyHint: true
+
+  get_active_contract:
+    source: contracts
+    description: Fetch the currently-active contract for a customer.
+    method: GET
+    path: /contracts/active
+    inputSchema:
+      customerId:
+        type: string
+    projection:
+      - id
+      - tier
+      - validUntil
+    annotations:
+      readOnlyHint: true
+
+enrichment_rules:
+  - whenVariable: customerId
+    resolve:
+      - lookup: get_customer
+        with:
+          customerId: $value
+      - lookup: get_active_contract
+        with:
+          customerId: $value

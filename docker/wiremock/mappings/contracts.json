@@ -1,0 +1,61 @@
+{
+  "mappings": [
+    {
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPath": "/contracts/api/contracts/active",
+        "queryParameters": {
+          "customerId": { "equalTo": "CUST-001" }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "CTR-2024-118",
+          "tier": "platinum",
+          "validUntil": "2027-12-31",
+          "renewalNotificationDays": 90,
+          "customerId": "CUST-001"
+        }
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPath": "/contracts/api/contracts/active",
+        "queryParameters": {
+          "customerId": { "equalTo": "CUST-002" }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "CTR-2025-007",
+          "tier": "premium",
+          "validUntil": "2026-09-30",
+          "renewalNotificationDays": 60,
+          "customerId": "CUST-002"
+        }
+      }
+    },
+    {
+      "priority": 10,
+      "request": {
+        "method": "GET",
+        "urlPath": "/contracts/api/contracts/active",
+        "queryParameters": {
+          "customerId": { "matches": ".*" }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "error": "no_active_contract" }
+      }
+    }
+  ]
+}

@@ -25,7 +25,7 @@ export {
   handleExternalTaskFailureInput,
 } from "./external-tasks.js"
 export { correlateMessageInput, throwSignalInput } from "./messages-signals.js"
-export { listDeploymentsInput, createDeploymentInput } from "./deployments.js"
+export { listDeploymentsInput, createDeploymentInput, getDeploymentInput } from "./deployments.js"
 export { listIncidentsInput, resolveIncidentInput } from "./incidents.js"
 export { listJobsInput, setJobRetriesInput } from "./jobs.js"
 export {

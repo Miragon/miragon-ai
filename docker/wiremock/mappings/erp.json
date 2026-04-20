@@ -1,0 +1,89 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/erp/api/orders/ORD-100"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "ORD-100",
+          "status": "shipped",
+          "totalCents": 1245000,
+          "currency": "EUR",
+          "customerId": "CUST-001",
+          "createdAt": "2026-04-02T11:08:00Z"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/erp/api/orders/ORD-101"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "ORD-101",
+          "status": "open",
+          "totalCents": 89000,
+          "currency": "USD",
+          "customerId": "CUST-002",
+          "createdAt": "2026-04-15T16:42:00Z"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/erp/api/customers/CUST-001/invoices"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "invoices": [
+            {
+              "id": "INV-2025-0091",
+              "totalCents": 1245000,
+              "currency": "EUR",
+              "status": "paid",
+              "issuedAt": "2026-03-31"
+            },
+            {
+              "id": "INV-2025-0102",
+              "totalCents": 480000,
+              "currency": "EUR",
+              "status": "open",
+              "issuedAt": "2026-04-15"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/erp/api/customers/CUST-002/invoices"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "invoices": [
+            {
+              "id": "INV-2025-0105",
+              "totalCents": 89000,
+              "currency": "USD",
+              "status": "open",
+              "issuedAt": "2026-04-15"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

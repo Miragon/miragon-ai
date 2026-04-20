@@ -4,7 +4,9 @@ import io.opentelemetry.api.trace.StatusCode
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.DriverManager
+import java.sql.PreparedStatement
 import java.sql.Timestamp
+import java.sql.Types
 
 class ClickHouseClient(private val properties: ClickHouseProperties) {
 
@@ -33,7 +35,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setString(4, row["process_definition_name"] as? String)
             ps.setString(5, row["business_key"] as? String)
             ps.setTimestamp(6, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
-            ps.setTimestamp(7, toTimestamp(row["end_time"]))
+            bindTimestamp(ps, 7, toTimestamp(row["end_time"]))
             ps.setObject(8, row["duration_in_millis"])
             ps.setString(9, row["start_user_id"] as? String)
             ps.setString(10, row["start_activity_id"] as? String)
@@ -68,7 +70,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setString(8, row["process_instance_id"] as? String)
             ps.setString(9, row["execution_id"] as? String)
             ps.setTimestamp(10, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
-            ps.setTimestamp(11, toTimestamp(row["end_time"]))
+            bindTimestamp(ps, 11, toTimestamp(row["end_time"]))
             ps.setObject(12, row["duration_in_millis"])
             ps.setString(13, row["assignee"] as? String)
             ps.setString(14, row["task_id"] as? String)
@@ -102,10 +104,10 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setString(10, row["assignee"] as? String)
             ps.setString(11, row["owner"] as? String)
             ps.setInt(12, (row["priority"] as? Number)?.toInt() ?: 0)
-            ps.setTimestamp(13, toTimestamp(row["due_date"]))
-            ps.setTimestamp(14, toTimestamp(row["follow_up_date"]))
+            bindTimestamp(ps, 13, toTimestamp(row["due_date"]))
+            bindTimestamp(ps, 14, toTimestamp(row["follow_up_date"]))
             ps.setTimestamp(15, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
-            ps.setTimestamp(16, toTimestamp(row["end_time"]))
+            bindTimestamp(ps, 16, toTimestamp(row["end_time"]))
             ps.setObject(17, row["duration_in_millis"])
             ps.setString(18, row["delete_reason"] as? String)
             ps.setString(19, row["tenant_id"] as? String)
@@ -169,8 +171,8 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setString(9, row["cause_incident_id"] as? String)
             ps.setString(10, row["root_cause_incident_id"] as? String)
             ps.setString(11, row["configuration"] as? String)
-            ps.setTimestamp(12, toTimestamp(row["create_time"]))
-            ps.setTimestamp(13, toTimestamp(row["end_time"]))
+            bindTimestamp(ps, 12, toTimestamp(row["create_time"]))
+            bindTimestamp(ps, 13, toTimestamp(row["end_time"]))
             ps.setString(14, row["state"] as? String)
             ps.setString(15, row["tenant_id"] as? String)
             ps.setString(16, row["engine_type"] as? String)
@@ -201,7 +203,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
         tableName: String,
         sql: String,
         rows: List<Map<String, Any?>>,
-        binder: (java.sql.PreparedStatement, Map<String, Any?>) -> Unit,
+        binder: (PreparedStatement, Map<String, Any?>) -> Unit,
     ) {
         val span = HistoryTelemetry.tracer.spanBuilder("history.insert.$tableName")
             .setAttribute("table.name", tableName)
@@ -227,6 +229,10 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
         } finally {
             span.end()
         }
+    }
+
+    private fun bindTimestamp(ps: PreparedStatement, idx: Int, value: Timestamp?) {
+        if (value != null) ps.setTimestamp(idx, value) else ps.setNull(idx, Types.TIMESTAMP)
     }
 
     private fun toTimestamp(value: Any?): Timestamp? = when (value) {
