@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="_orderFulfillmentDefinitions" targetNamespace="http://camunda.org/schema/1.0/bpmn" exporter="Camunda Modeler" exporterVersion="5.0.0" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:process id="orderFulfillment" name="Order Fulfillment" isExecutable="true" camunda:historyTimeToLive="P180D">
+    <bpmn2:startEvent id="StartEvent_Order" name="Order&#10;Received">
+      <bpmn2:outgoing>SF_toInventory</bpmn2:outgoing>
+    </bpmn2:startEvent>
+
+    <bpmn2:sequenceFlow id="SF_toInventory" sourceRef="StartEvent_Order" targetRef="Task_CheckInventory" />
+
+    <bpmn2:serviceTask id="Task_CheckInventory" name="Check Inventory" camunda:delegateExpression="${inventoryCheckDelegate}" camunda:asyncBefore="true">
+      <bpmn2:incoming>SF_toInventory</bpmn2:incoming>
+      <bpmn2:outgoing>SF_toRegion</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+
+    <bpmn2:sequenceFlow id="SF_toRegion" sourceRef="Task_CheckInventory" targetRef="Gateway_Region" />
+
+    <bpmn2:exclusiveGateway id="Gateway_Region" name="Region?">
+      <bpmn2:incoming>SF_toRegion</bpmn2:incoming>
+      <bpmn2:outgoing>SF_regionEU</bpmn2:outgoing>
+      <bpmn2:outgoing>SF_regionUS</bpmn2:outgoing>
+      <bpmn2:outgoing>SF_regionAPAC</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <bpmn2:sequenceFlow id="SF_regionEU" name="EU" sourceRef="Gateway_Region" targetRef="Task_EUReview">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${region == "EU"}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SF_regionUS" name="US" sourceRef="Gateway_Region" targetRef="Task_USReview">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${region == "US"}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SF_regionAPAC" name="APAC" sourceRef="Gateway_Region" targetRef="Task_APACExpressShip">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${region == "APAC"}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+
+    <bpmn2:userTask id="Task_EUReview" name="EU Review" camunda:candidateGroups="eu-ops">
+      <bpmn2:incoming>SF_regionEU</bpmn2:incoming>
+      <bpmn2:outgoing>SF_euToMerge</bpmn2:outgoing>
+    </bpmn2:userTask>
+    <bpmn2:sequenceFlow id="SF_euToMerge" sourceRef="Task_EUReview" targetRef="Gateway_Merge" />
+
+    <bpmn2:userTask id="Task_USReview" name="US Review" camunda:candidateGroups="us-ops">
+      <bpmn2:incoming>SF_regionUS</bpmn2:incoming>
+      <bpmn2:outgoing>SF_usToMerge</bpmn2:outgoing>
+    </bpmn2:userTask>
+    <bpmn2:sequenceFlow id="SF_usToMerge" sourceRef="Task_USReview" targetRef="Gateway_Merge" />
+
+    <bpmn2:userTask id="Task_APACExpressShip" name="APAC Express Confirm" camunda:candidateGroups="apac-ops">
+      <bpmn2:incoming>SF_regionAPAC</bpmn2:incoming>
+      <bpmn2:outgoing>SF_apacToMerge</bpmn2:outgoing>
+    </bpmn2:userTask>
+    <bpmn2:sequenceFlow id="SF_apacToMerge" sourceRef="Task_APACExpressShip" targetRef="Gateway_Merge" />
+
+    <bpmn2:boundaryEvent id="BoundaryEvent_ShipTimeout" name="2h timeout" attachedToRef="Task_APACExpressShip" cancelActivity="true">
+      <bpmn2:outgoing>SF_timeoutToEscalated</bpmn2:outgoing>
+      <bpmn2:timerEventDefinition>
+        <bpmn2:timeDuration xsi:type="bpmn2:tFormalExpression">PT2H</bpmn2:timeDuration>
+      </bpmn2:timerEventDefinition>
+    </bpmn2:boundaryEvent>
+    <bpmn2:sequenceFlow id="SF_timeoutToEscalated" sourceRef="BoundaryEvent_ShipTimeout" targetRef="EndEvent_Escalated" />
+
+    <bpmn2:exclusiveGateway id="Gateway_Merge">
+      <bpmn2:incoming>SF_euToMerge</bpmn2:incoming>
+      <bpmn2:incoming>SF_usToMerge</bpmn2:incoming>
+      <bpmn2:incoming>SF_apacToMerge</bpmn2:incoming>
+      <bpmn2:outgoing>SF_toShipOrder</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    <bpmn2:sequenceFlow id="SF_toShipOrder" sourceRef="Gateway_Merge" targetRef="Task_ShipOrder" />
+
+    <bpmn2:serviceTask id="Task_ShipOrder" name="Ship Order" camunda:delegateExpression="${shipOrderDelegate}" camunda:asyncBefore="true">
+      <bpmn2:incoming>SF_toShipOrder</bpmn2:incoming>
+      <bpmn2:outgoing>SF_shipToPriority</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+    <bpmn2:sequenceFlow id="SF_shipToPriority" sourceRef="Task_ShipOrder" targetRef="Gateway_Priority" />
+
+    <bpmn2:exclusiveGateway id="Gateway_Priority" name="Priority?" default="SF_priorityFalse">
+      <bpmn2:incoming>SF_shipToPriority</bpmn2:incoming>
+      <bpmn2:outgoing>SF_priorityTrue</bpmn2:outgoing>
+      <bpmn2:outgoing>SF_priorityFalse</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <bpmn2:sequenceFlow id="SF_priorityTrue" name="Yes" sourceRef="Gateway_Priority" targetRef="Task_PriorityHandoff">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${priorityFlag == true}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SF_priorityFalse" name="No" sourceRef="Gateway_Priority" targetRef="EndEvent_Shipped" />
+
+    <bpmn2:userTask id="Task_PriorityHandoff" name="Priority Handoff" camunda:candidateGroups="priority-ops">
+      <bpmn2:incoming>SF_priorityTrue</bpmn2:incoming>
+      <bpmn2:outgoing>SF_handoffToShipped</bpmn2:outgoing>
+    </bpmn2:userTask>
+    <bpmn2:sequenceFlow id="SF_handoffToShipped" sourceRef="Task_PriorityHandoff" targetRef="EndEvent_Shipped" />
+
+    <bpmn2:endEvent id="EndEvent_Shipped" name="Order Shipped">
+      <bpmn2:incoming>SF_priorityFalse</bpmn2:incoming>
+      <bpmn2:incoming>SF_handoffToShipped</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:endEvent id="EndEvent_Escalated" name="Escalated">
+      <bpmn2:incoming>SF_timeoutToEscalated</bpmn2:incoming>
+    </bpmn2:endEvent>
+  </bpmn2:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_order">
+    <bpmndi:BPMNPlane id="BPMNPlane_order" bpmnElement="orderFulfillment">
+      <bpmndi:BPMNShape id="Shape_StartEvent_Order" bpmnElement="StartEvent_Order">
+        <dc:Bounds x="150" y="260" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CheckInventory" bpmnElement="Task_CheckInventory">
+        <dc:Bounds x="230" y="238" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Region" bpmnElement="Gateway_Region" isMarkerVisible="true">
+        <dc:Bounds x="380" y="253" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_EUReview" bpmnElement="Task_EUReview">
+        <dc:Bounds x="480" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_USReview" bpmnElement="Task_USReview">
+        <dc:Bounds x="480" y="238" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_APACExpressShip" bpmnElement="Task_APACExpressShip">
+        <dc:Bounds x="480" y="380" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_BoundaryEvent_ShipTimeout" bpmnElement="BoundaryEvent_ShipTimeout">
+        <dc:Bounds x="562" y="442" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Merge" bpmnElement="Gateway_Merge" isMarkerVisible="true">
+        <dc:Bounds x="640" y="253" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ShipOrder" bpmnElement="Task_ShipOrder">
+        <dc:Bounds x="740" y="238" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Priority" bpmnElement="Gateway_Priority" isMarkerVisible="true">
+        <dc:Bounds x="890" y="253" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_PriorityHandoff" bpmnElement="Task_PriorityHandoff">
+        <dc:Bounds x="980" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Shipped" bpmnElement="EndEvent_Shipped">
+        <dc:Bounds x="1130" y="260" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Escalated" bpmnElement="EndEvent_Escalated">
+        <dc:Bounds x="680" y="500" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Edge_SF_toInventory" bpmnElement="SF_toInventory">
+        <di:waypoint x="186" y="278" />
+        <di:waypoint x="230" y="278" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_toRegion" bpmnElement="SF_toRegion">
+        <di:waypoint x="330" y="278" />
+        <di:waypoint x="380" y="278" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_regionEU" bpmnElement="SF_regionEU">
+        <di:waypoint x="405" y="253" />
+        <di:waypoint x="405" y="140" />
+        <di:waypoint x="480" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_regionUS" bpmnElement="SF_regionUS">
+        <di:waypoint x="430" y="278" />
+        <di:waypoint x="480" y="278" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_regionAPAC" bpmnElement="SF_regionAPAC">
+        <di:waypoint x="405" y="303" />
+        <di:waypoint x="405" y="420" />
+        <di:waypoint x="480" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_euToMerge" bpmnElement="SF_euToMerge">
+        <di:waypoint x="580" y="140" />
+        <di:waypoint x="665" y="140" />
+        <di:waypoint x="665" y="253" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_usToMerge" bpmnElement="SF_usToMerge">
+        <di:waypoint x="580" y="278" />
+        <di:waypoint x="640" y="278" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_apacToMerge" bpmnElement="SF_apacToMerge">
+        <di:waypoint x="580" y="420" />
+        <di:waypoint x="665" y="420" />
+        <di:waypoint x="665" y="303" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_timeoutToEscalated" bpmnElement="SF_timeoutToEscalated">
+        <di:waypoint x="580" y="478" />
+        <di:waypoint x="580" y="518" />
+        <di:waypoint x="680" y="518" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_toShipOrder" bpmnElement="SF_toShipOrder">
+        <di:waypoint x="690" y="278" />
+        <di:waypoint x="740" y="278" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_shipToPriority" bpmnElement="SF_shipToPriority">
+        <di:waypoint x="840" y="278" />
+        <di:waypoint x="890" y="278" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_priorityTrue" bpmnElement="SF_priorityTrue">
+        <di:waypoint x="915" y="253" />
+        <di:waypoint x="915" y="200" />
+        <di:waypoint x="980" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_priorityFalse" bpmnElement="SF_priorityFalse">
+        <di:waypoint x="940" y="278" />
+        <di:waypoint x="1130" y="278" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_handoffToShipped" bpmnElement="SF_handoffToShipped">
+        <di:waypoint x="1080" y="200" />
+        <di:waypoint x="1148" y="200" />
+        <di:waypoint x="1148" y="260" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>

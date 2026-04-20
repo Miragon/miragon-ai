@@ -141,6 +141,57 @@ void scenario_enterprise_approved() {
 - Enrichment availability: yes (see `enrichment.example.yaml` in the cibseven-example).
 ````
 
+## Second presentation example (against `orderFulfillment`, `seed-presentation`)
+
+With the richer process, UC4 exercises categorical equivalence classes
+(`region` with three distinct values) and an elevated-failure edge case
+(APAC express shipping during the bug era).
+
+```
+/dev-test-scenarios-from-production orderFulfillment 30d junit
+```
+
+Expected output shape (truncated):
+
+````markdown
+# Test scenarios from production: `orderFulfillment` (last 30d)
+
+## Coverage summary
+
+| Scenario                    | Share | Segment           | Why included                              |
+| --------------------------- | ----- | ----------------- | ----------------------------------------- |
+| EU standard ship            | 55%   | EU / mixed method | Dominant path                             |
+| US standard ship            | 30%   | US / mixed method | ≥ 5% share                                |
+| APAC express ship (healthy) | 14%   | APAC / EXPRESS    | ≥ 5% share + distinct terminal task       |
+| Priority handoff            | 3%    | any / priority    | ≥ 1% share, rare enough to deserve a test |
+| APAC timer escalation       | <1%   | APAC / EXPRESS    | Below minBucketSize — **not** mapped      |
+
+## Generated tests
+
+```java
+@Test
+@Deployment(resources = "orderFulfillment.bpmn")
+void scenario_apac_express_ship() {
+    // Path share: 14% (segment: APAC / EXPRESS, elevated failures in days 1–10)
+    // Equivalence class shippingMethod: {EXPRESS, FREIGHT}
+    Map<String, Object> vars = Map.of(
+        "orderId", "ORD-TEST-APAC",
+        "customerId", "CUST-TEST",
+        "region", "APAC",
+        "priorityFlag", false,
+        "amount", 1200,
+        "itemCount", 3,
+        "shippingMethod", "EXPRESS"
+    );
+    ProcessInstance pi = runtimeService()
+        .startProcessInstanceByKey("orderFulfillment", vars);
+    assertThat(pi).isWaitingAt("Task_APACExpressShip");
+    complete(task(pi));
+    assertThat(pi).hasPassed("Task_ShipOrder").isEnded();
+}
+```
+````
+
 ## Context policy
 
 - **Aggregates only — no instance-fetch path.** Even if a "real" instance

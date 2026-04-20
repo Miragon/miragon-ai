@@ -1,0 +1,31 @@
+logging:
+  level:
+    # Seeding intentionally triggers two bug eras and one APAC regression — the
+    # delegates log their simulated failures at WARN. Suppress the engine's
+    # redundant ERROR re-log so the seed output stays readable.
+    org.cibseven.bpm.engine.context: "OFF"
+
+seed:
+  # PRESENTATION profile — ~600 instances across both processes.
+  #
+  # loanApproval (300):
+  #   - Legacy buggy era days 15..30 → NotifyApplicantDelegate throws at 15%.
+  #     Anchors the UC5 IMPROVED verdict against the buggy-era/fix cutoff.
+  #   - Rollback era days 7..10 → NotifyApplicantDelegate throws at 12% in that
+  #     narrow band, then returns to baseline. Anchors the UC5 REGRESSED verdict
+  #     when the deployment window centers on that cutoff.
+  #   - region and priorityFlag variables set on every instance → enables UC2
+  #     categorical / boolean demos without producing new BPMN paths.
+  #   - Student loans are capped at 40k → `loanType == "student" && amount >
+  #     100000` is structurally unreachable for UC6 DEAD.
+  #   - FAX channel at ~1% → below minBucketSize=10 for UC6 UNKNOWN.
+  #
+  # orderFulfillment (300):
+  #   - Region mix 55 EU / 30 US / 15 APAC → UC2 categorical change demo.
+  #   - APAC bug era days 1..10 → shipOrderDelegate throws on ~20% of APAC →
+  #     second UC5 IMPROVED demo, distinct from loanApproval.
+  #   - priorityFlag true at ~3% → Task_PriorityHandoff path is ALIVE-but-rare
+  #     for UC6.
+  #   - Timer boundary escalation at ~1% → below minBucketSize for UC6 UNKNOWN
+  #     on a different element (EndEvent_Escalated).
+  profile: presentation
