@@ -1,3 +1,10 @@
+logging:
+  level:
+    # Simulated delegate failures during seeding are intentional and already
+    # announced at WARN by NotifyApplicantDelegate. Suppress the engine's
+    # redundant ERROR re-log so the seed output stays readable.
+    org.cibseven.bpm.engine.context: "OFF"
+
 seed:
   instances: 200
   completed-ratio: 0.7

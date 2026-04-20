@@ -1,71 +1,71 @@
 # UC5 — `dev-fix-verification`
 
-> "Das Deployment ist durch. Sieht im Cockpit okay aus. Aber _hat_ mein Fix die
-> Metrik bewegt?"
+> "The deployment is through. The cockpit looks fine. But _did_ my fix move
+> the metric?"
 
-## Szenario
+## Scenario
 
-Der Fix ist deployed, der Ticket-Owner will den Ticket schließen, der Dev will
-Evidenz statt Gefühl. Der Skill zieht den Deployment-Timestamp aus Camunda,
-rechnet Pre/Post über `analytics_cluster_compare`, und gibt ein klares
-Verdikt — **IMPROVED / UNCHANGED / REGRESSED / INSUFFICIENT-SIGNAL** — mit
-Zahlen, die man in den Ticket-Kommentar kopieren kann.
+The fix is deployed, the ticket owner wants to close the ticket, the dev
+wants evidence instead of feeling. The skill pulls the deployment timestamp
+from Camunda, computes pre/post via `analytics_cluster_compare`, and emits a
+clear verdict — **IMPROVED / UNCHANGED / REGRESSED / INSUFFICIENT-SIGNAL** —
+with numbers that can be pasted into the ticket comment.
 
-## Aufruf
+## Invocation
 
 ```
 /dev-fix-verification <deploymentId> [processDefinitionKey] [elementId] [windowDays]
 ```
 
-- `deploymentId` — Pflicht. Wenn der Dev nur den Commit-Hash hat, kann er
-  `camunda7_list_deployments` nutzen, um die Deployment-ID zu finden.
-- `processDefinitionKey` — optional, engt den Vergleich auf einen Prozess ein.
-- `elementId` — optional, engt die Incident-Rate-Seite auf ein Element ein
-  (z.B. der Service-Task, den der Fix betrifft).
-- `windowDays` — optional, Default `7`. Fenster vor und nach Deployment
-  (gleich groß, `1..90`).
+- `deploymentId` — required. If the dev only has the commit hash, they can
+  use `camunda7_list_deployments` to look up the deployment ID.
+- `processDefinitionKey` — optional, narrows the comparison to one process.
+- `elementId` — optional, narrows the incident-rate side to a single element
+  (e.g. the service task the fix touches).
+- `windowDays` — optional, default `7`. Window before and after deployment
+  (equal size, `1..90`).
 
-## Beteiligte Tools
+## Tools involved
 
-| Schritt              | Tool                             | Server          |
-| -------------------- | -------------------------------- | --------------- |
-| Deployment-Metadaten | `camunda7_get_deployment`        | `camunda7-mcp`  |
-| Pre/Post-Vergleich   | `analytics_cluster_compare`      | `analytics-mcp` |
-| Widget (optional)    | `analytics_show_cluster_compare` | `analytics-mcp` |
+| Step                | Tool                             | Server          |
+| ------------------- | -------------------------------- | --------------- |
+| Deployment metadata | `camunda7_get_deployment`        | `camunda7-mcp`  |
+| Pre/post comparison | `analytics_cluster_compare`      | `analytics-mcp` |
+| Widget (optional)   | `analytics_show_cluster_compare` | `analytics-mcp` |
 
 ## Workflow
 
 ```
-1. Deployment-Timestamp holen
+1. Pull the deployment timestamp
    → camunda7_get_deployment
-   → deploymentTime ist der Anker-Timestamp
+   → deploymentTime is the anchor timestamp
 
-2. Fenster-Viabilität prüfen
-   → Wenn now() - deploymentTime < 1 Tag: Warnung, Verdikt wird
+2. Check window viability
+   → if now() - deploymentTime < 1 day: warn, the verdict becomes
      "INSUFFICIENT-SIGNAL"
 
-3. Vergleich rechnen
+3. Compute the comparison
    → analytics_cluster_compare(deploymentTimestamp, windowBefore=N,
      windowAfter=N, minBucketSize=10)
-   → kpis (before/after) + delta (pro Metrik)
+   → kpis (before/after) + delta (per metric)
 
-4. Verdikt klassifizieren
+4. Classify the verdict
    → suppressed: true                                 → INSUFFICIENT-SIGNAL
-   → failure_rate_delta <= -2pp ODER incident_rate_delta <= -2pp
-     (und die andere ist nicht regrediert)            → IMPROVED
-   → failure_rate_delta >= +2pp ODER incident_rate_delta >= +2pp
-     ODER p95_duration_delta >= +25%                  → REGRESSED
-   → sonst                                            → UNCHANGED
+   → failure_rate_delta <= -2pp OR incident_rate_delta <= -2pp
+     (and the other one has not regressed)            → IMPROVED
+   → failure_rate_delta >= +2pp OR incident_rate_delta >= +2pp
+     OR p95_duration_delta >= +25%                    → REGRESSED
+   → otherwise                                        → UNCHANGED
 
-5. Verdikt-Block emittieren
+5. Emit the verdict block
 ```
 
-## Beispiel-Ausgabe (gegen den `loanApproval`-Seed)
+## Example output (against the `loanApproval` seed)
 
-Der Seeder setzt den ersten von zwei 15-Tage-Blöcken als "pre-fix"-Ära an, in
-der `NotifyApplicantDelegate` mit 15% Wahrscheinlichkeit eine
-`RuntimeException` wirft und Incidents erzeugt. Der Cutoff in der Mitte des
-Fensters ist der simulierte Deployment-Timestamp.
+The seeder marks the first of two 15-day blocks as the "pre-fix" era in
+which `NotifyApplicantDelegate` throws a `RuntimeException` with 15%
+probability and produces incidents. The cutoff in the middle of the window is
+the simulated deployment timestamp.
 
 ```markdown
 # Fix verification: deployment `loanApproval-seed-deploy`
@@ -79,9 +79,9 @@ Failure rate dropped from 15.4% to 0.2% on element `Task_notifyApplicant` of
 
 ## Deployment
 
-- ID: `loanApproval-seed-deploy` (Seed-Cutoff zwischen buggy-era und post-fix)
-- Timestamp: `2026-04-04 00:00:00 UTC` (T0 - 15 Tage)
-- Name / source: `loanApproval.bpmn` mit gefixtem Delegate
+- ID: `loanApproval-seed-deploy` (seed cutoff between buggy era and post-fix)
+- Timestamp: `2026-04-04 00:00:00 UTC` (T0 - 15 days)
+- Name / source: `loanApproval.bpmn` with the fixed delegate
 - Window: ±7 days
 
 ## KPIs
@@ -96,34 +96,33 @@ Failure rate dropped from 15.4% to 0.2% on element `Task_notifyApplicant` of
 
 ## Caveats
 
-- Suppressed: false (beide Fenster > minBucketSize=10 Instanzen).
-- Window age: Post-Fenster vollständig (7 von 7 Seed-Tagen).
+- Suppressed: false (both windows above minBucketSize=10 instances).
+- Window age: post-window complete (7 of 7 seed days).
 - Scope: process=`loanApproval`, element=`Task_notifyApplicant`.
 
 ## Recommendation
 
-Ticket schließen. Der Fix hat die Fehlerrate auf praktisch null gedrückt und
-die p95-Dauer halbiert — keine Hinweise auf Regressionen in anderen Metriken.
-Die verbleibenden 0.2% stammen aus einem einzelnen Retry-Event am Tag nach
-dem Cutoff.
+Close the ticket. The fix pushed the failure rate down to practically zero
+and halved the p95 duration — no signs of regressions in other metrics. The
+remaining 0.2% comes from a single retry event the day after the cutoff.
 ```
 
-## Kontext-Politik
+## Context policy
 
-- Git-Metadaten (Commit-Hash, Deployment-ID, Timestamps) werden **wörtlich
-  zitiert** — sie sind öffentliche Build-Metadaten, nicht Instanz-Payload.
-- **Variableninhalte** werden nicht zitiert.
-- Der `suppressed`-Flag ist **autoritativ**: ein Fix, der nach den Zahlen
-  besser aussieht aber in einem suppressed Bucket liegt, bekommt
-  **INSUFFICIENT-SIGNAL**, nicht IMPROVED. Thresholds per Hand drehen ist
-  unerwünscht — wenn der Dev eine engere Vorgabe hat ("von 8% auf unter 1%"),
-  nennt der Skill diese Grenze wörtlich im Verdikt.
+- Git metadata (commit hash, deployment ID, timestamps) is **quoted
+  verbatim** — it is public build metadata, not instance payload.
+- **Variable contents** are not quoted.
+- The `suppressed` flag is **authoritative**: a fix that looks better in the
+  numbers but sits in a suppressed bucket gets **INSUFFICIENT-SIGNAL**, not
+  IMPROVED. Hand-tuning thresholds is discouraged — if the dev has a tighter
+  target ("from 8% down to under 1%"), the skill quotes that boundary
+  verbatim in the verdict.
 
-## Wann _nicht_ einsetzen
+## When _not_ to use it
 
-- Als generelle Post-Deploy-Dashboard-Ablösung — der Skill schaut auf einen
-  Punkt (ein Deployment, ein Fenster). Für kontinuierliches Monitoring ist
-  Grafana/OTEL das richtige Werkzeug.
-- Wenn das Deployment keinen messbaren Pfad anfasst (reines Refactoring, nur
-  Tests, nur Doku) — der Skill wird dann korrekt "UNCHANGED" sagen, aber die
-  Zeit hättest du dir sparen können.
+- As a general post-deploy dashboard replacement — the skill looks at one
+  point (one deployment, one window). For continuous monitoring, Grafana /
+  OTEL is the right tool.
+- When the deployment doesn't touch a measurable path (pure refactoring,
+  tests-only, docs-only) — the skill correctly returns "UNCHANGED", but you
+  could have saved the time.

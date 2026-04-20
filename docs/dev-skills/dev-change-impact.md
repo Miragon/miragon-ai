@@ -1,71 +1,70 @@
 # UC2 — `dev-change-impact`
 
-> "Ich will diesen Schwellwert von 10.000 auf 20.000 anheben. Wie viele Instanzen
-> würden anders klassifiziert — und _wer_ sind die?"
+> "I want to lift this threshold from 10,000 to 20,000. How many instances
+> would be classified differently — and _who_ are they?"
 
-## Szenario
+## Scenario
 
-Eine Entwicklerin steht kurz vor dem Commit: sie will einen Schwellwert, eine
-Gateway-Bedingung oder eine `in(...)`-Liste anpassen. Bevor sie deployed, will
-sie wissen, wie viele Instanzen die neue Logik über die letzten 30 Tage anders
-geroutet hätte — und welche Kundensegmente betroffen wären. Der Skill
-produziert einen **One-Pager für die Entscheidung**: ship as-is, oder vorher
-fachliches OK einholen.
+A developer is about to commit: she wants to adjust a threshold, a gateway
+condition, or an `in(...)` list. Before deploying she wants to know how many
+instances over the last 30 days the new logic would have routed differently —
+and which customer segments would be affected. The skill produces a
+**one-pager for the decision**: ship as-is, or get business sign-off first.
 
-## Aufruf
+## Invocation
 
 ```
 /dev-change-impact <file>:<line>
-/dev-change-impact "<freie Beschreibung der Änderung>"
+/dev-change-impact "<free-form description of the change>"
 ```
 
-Beispiele (gegen den `loanApproval`-Seed):
+Examples (against the `loanApproval` seed):
 
 ```
 /dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/TestDataSeeder.kt:194
 /dev-change-impact "lift auto-approval amount threshold from 25000 to 50000"
 ```
 
-## Beteiligte Tools
+## Tools involved
 
-| Schritt                   | Tool                                | Server                      |
-| ------------------------- | ----------------------------------- | --------------------------- |
-| Änderung verankern        | `Read`, `Grep`, `Glob`              | Workspace                   |
-| BPMN-Element finden       | `Grep` über `*.bpmn` + Delegate-FQN | Workspace                   |
-| Element-Traffic           | `analytics_element_bottleneck`      | `analytics-mcp`             |
-| Variable-Verteilung       | `analytics_variable_distribution`   | `analytics-mcp`             |
-| Segment-Charakterisierung | `enrichment_auto_resolve`           | `enrichment-mcp` (optional) |
+| Step                     | Tool                                | Server                      |
+| ------------------------ | ----------------------------------- | --------------------------- |
+| Anchor the change        | `Read`, `Grep`, `Glob`              | Workspace                   |
+| Find BPMN element        | `Grep` over `*.bpmn` + delegate FQN | Workspace                   |
+| Element traffic          | `analytics_element_bottleneck`      | `analytics-mcp`             |
+| Variable distribution    | `analytics_variable_distribution`   | `analytics-mcp`             |
+| Segment characterization | `enrichment_auto_resolve`           | `enrichment-mcp` (optional) |
 
 ## Workflow
 
 ```
-1. Änderung verankern
-   → File + Zeile lesen, Variable + alte Prädikat + neue Prädikat extrahieren
-   → Delegate-FQN festhalten
+1. Anchor the change
+   → read file + line, extract variable + old predicate + new predicate
+   → record delegate FQN
 
-2. BPMN-Element auflösen
-   → Grep der *.bpmn-Dateien nach Delegate-FQN / delegateExpression
-   → processDefinitionKey und elementId bestimmen
+2. Resolve the BPMN element
+   → grep *.bpmn for delegate FQN / delegateExpression
+   → determine processDefinitionKey and elementId
 
-3. Baseline holen
-   → analytics_element_bottleneck liefert Hits, Fehlerrate, Dauern
+3. Pull the baseline
+   → analytics_element_bottleneck returns hits, failure rate, durations
 
-4. Variable-Verteilung holen
-   → analytics_variable_distribution mit 20 Buckets (numerisch) oder
-     topK=20 (kategorisch)
+4. Pull the variable distribution
+   → analytics_variable_distribution with 20 buckets (numeric) or
+     topK=20 (categorical)
 
-5. Projektion rechnen
-   → Altes Prädikat vs. neues Prädikat auf die Verteilung anwenden
-   → Reklassifikations-Count + -Share + Richtung
+5. Compute the projection
+   → apply old predicate vs. new predicate to the distribution
+   → reclassification count + share + direction
 
-6. Segment-Charakterisierung
-   → enrichment_auto_resolve mit repräsentativem Grenzwert
+6. Segment characterization
+   → enrichment_auto_resolve with a representative boundary value
    → "Mostly Mid-Market with multi-currency"
 
-7. One-Pager emittieren
+7. Emit the one-pager
 ```
 
-## Beispiel-Ausgabe (gekürzt, gegen den Seed)
+## Example output (truncated, against the seed)
 
 ```markdown
 # Impact: TestDataSeeder.kt:194 — lift threshold 25000 → 50000
@@ -79,43 +78,43 @@ Beispiele (gegen den `loanApproval`-Seed):
 
 ## Projected reclassification (last 30d)
 
-- Gateway fired **140 times** in the window (Seed-skaliert).
-- **22 instances (22/140 = 15.7%)** würden unter der neuen Logik anders
-  klassifiziert — alle im Bucket `[25000, 50000)` mit aktuell ~65% Approval,
-  künftig ~85%.
-- Direction: **mehr** Instanzen laufen in den Approval-Zweig.
+- Gateway fired **140 times** in the window (seed-scaled).
+- **22 instances (22/140 = 15.7%)** would be classified differently under the
+  new logic — all in the bucket `[25000, 50000)` with currently ~65% approval,
+  ~85% in future.
+- Direction: **more** instances flow into the approval branch.
 
 ## Affected segments
 
-`[25000, 50000)` ist im Seed ~30% PRIVATE, ~55% BUSINESS, ~15% ENTERPRISE.
-Der Shift trifft also primär Business-Kunden mit mittleren Kredithöhen.
+`[25000, 50000)` is roughly 30% PRIVATE, 55% BUSINESS, 15% ENTERPRISE in the
+seed. The shift therefore mainly hits Business customers with mid-range
+loan amounts.
 
 ## Side observations
 
-- `Gateway_approved` today: 0% fail, avg 1ms, p95 3ms — Gateway selbst ist
-  nicht der Engpass.
-- Suppressed buckets nahe der Grenze: `[45000, 50000)` — nur 8 Observations.
+- `Gateway_approved` today: 0% fail, avg 1ms, p95 3ms — the gateway itself is
+  not the bottleneck.
+- Suppressed buckets near the boundary: `[45000, 50000)` — only 8 observations.
 
 ## Recommendation
 
-Vor Ship fachlich klären: 22 zusätzliche Instanzen pro Seed-Zyklus würden ohne
-zusätzlichen Review durchgewunken — das ist bewusst so gewollt oder nicht.
-Enterprise bleibt wegen des Segment-Bonus weitgehend unberührt.
+Confirm with the business before shipping: 22 additional instances per seed
+cycle would be auto-approved without extra review — that may or may not be
+intended. Enterprise stays largely unaffected because of the segment bonus.
 ```
 
-## Kontext-Politik
+## Context policy
 
-- Code, Prädikate, Element-IDs: wörtlich zitiert.
-- Variable-Werte: nicht zitiert. Der Skill berichtet nur Counts, Shares und
-  Bucket-Ranges.
-- Suppressed Buckets nahe der Grenze werden explizit markiert und **nicht**
-  als 0 oder voll angenommen — der Report ist dann "unsicher", nicht "Null-
-  Impact".
+- Code, predicates, element IDs: quoted verbatim.
+- Variable values: not quoted. The skill reports only counts, shares, and
+  bucket ranges.
+- Suppressed buckets near the boundary are flagged explicitly and **not**
+  treated as 0 or full — the report is then "uncertain", not "zero impact".
 
-## Wann _nicht_ einsetzen
+## When _not_ to use it
 
-- Für reine Code-Refactorings ohne Verhaltens-Änderung — der Skill liefert dann
-  0% Reclassified und ist Noise.
-- Wenn die Änderung nur eine neue Variable einführt, die vorher nicht geschrieben
-  wurde — `variable.distribution` hat dann keine Historie, Projektion
-  unmöglich.
+- For pure code refactorings without behavior change — the skill returns 0%
+  reclassified and is noise.
+- When the change introduces a brand-new variable that was not previously
+  written — `variable.distribution` then has no history, projection is
+  impossible.

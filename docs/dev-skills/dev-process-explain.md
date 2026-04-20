@@ -1,103 +1,103 @@
 # UC1 — `dev-process-explain`
 
-> "Ich muss morgen ein Feature an diesem Prozess bauen. Ich hab ihn nicht
-> geschrieben. Was macht er eigentlich?"
+> "I have to ship a feature on this process tomorrow. I didn't write it. What
+> does it actually do?"
 
-## Szenario
+## Scenario
 
-Eine Entwicklerin wird auf einen Camunda-7-Prozess gezogen, den sie nie gesehen
-hat. Sie könnte das BPMN aufmachen und den Java-Code lesen — aber weder BPMN
-noch Code verraten, welche Pfade in Produktion tatsächlich laufen, wo es
-klemmt und wer die Edge Cases auslöst. Der Skill produziert eine **behavior-
-first Onboarding-Doku**, die diese Fragen in einem Rutsch beantwortet.
+A developer is pulled onto a Camunda 7 process she has never seen. She could
+open the BPMN and read the Java code — but neither BPMN nor code reveal which
+paths actually run in production, where the bottlenecks are, or who triggers
+the edge cases. The skill produces a **behavior-first onboarding doc** that
+answers those questions in one shot.
 
-## Aufruf
+## Invocation
 
 ```
 /dev-process-explain <processDefinitionKey> [period: 1d|7d|30d|90d]
 ```
 
-- `processDefinitionKey` — Pflicht. Fehlt er, fragt der Skill einmal nach.
-- `period` — optional, Default `30d`.
+- `processDefinitionKey` — required. If missing, the skill asks once.
+- `period` — optional, default `30d`.
 
-## Beteiligte Tools
+## Tools involved
 
-| Schritt           | Tool                                  | Server                      |
+| Step              | Tool                                  | Server                      |
 | ----------------- | ------------------------------------- | --------------------------- |
-| BPMN laden        | `camunda7_get_process_definition_xml` | `camunda7-mcp`              |
-| Delegate-Code     | `Read`, `Grep`, `Glob`                | Workspace                   |
-| Pfad-Verteilung   | `analytics_path_frequency`            | `analytics-mcp`             |
+| Load BPMN         | `camunda7_get_process_definition_xml` | `camunda7-mcp`              |
+| Delegate code     | `Read`, `Grep`, `Glob`                | Workspace                   |
+| Path distribution | `analytics_path_frequency`            | `analytics-mcp`             |
 | Bottlenecks       | `analytics_element_bottleneck`        | `analytics-mcp`             |
-| Segment-Benennung | `enrichment_auto_resolve`             | `enrichment-mcp` (optional) |
+| Segment naming    | `enrichment_auto_resolve`             | `enrichment-mcp` (optional) |
 
 ## Workflow
 
 ```
-1. BPMN-Struktur extrahieren
-   → Start/End-Events, Service- und User-Tasks, Gateways, Listener
-   → Element-IDs merken (werden in allen Folgeschritten referenziert)
+1. Extract BPMN structure
+   → start/end events, service and user tasks, gateways, listeners
+   → remember element IDs (referenced by every later step)
 
-2. Delegate-Code lesen
-   → Für jede camunda:class / delegateExpression die Quelldatei finden
-   → Nur soviel lesen wie für den Kontrakt nötig ist (Eingaben, Side Effects)
+2. Read delegate code
+   → for each camunda:class / delegateExpression find the source file
+   → read only as much as needed to understand the contract (inputs, side effects)
 
-3. Pfad-Häufigkeit abfragen
+3. Query path frequency
    → analytics_path_frequency (minBucketSize=10, limit=20)
-   → Dominanter Pfad, Sekundärpfade, Longtail, Suppressed
+   → dominant path, secondary paths, long tail, suppressed
 
 4. Bottlenecks
-   → analytics_element_bottleneck mit gleichem Key + Periode
-   → Heiße Elemente, langsame Elemente, fehleranfällige Elemente
+   → analytics_element_bottleneck with the same key + period
+   → hot elements, slow elements, error-prone elements
 
-5. Segment-Charakterisierung (optional)
-   → Für repräsentative Variable-Namen enrichment_auto_resolve aufrufen
-   → "Pfad B ist fast ausschließlich Enterprise + multi-currency"
+5. Segment characterization (optional)
+   → call enrichment_auto_resolve for representative variable names
+   → "Path B is almost exclusively Enterprise + multi-currency"
 
-6. Onboarding-Doc komponieren
+6. Compose the onboarding doc
 ```
 
-## Beispiel-Ausgabe (gekürzt, gegen den Seed des `cibseven-example`)
+## Example output (truncated, against the `cibseven-example` seed)
 
 ```markdown
 # Process: loanApproval
 
 ## TL;DR
 
-Einfacher Freigabeprozess für Kreditanträge. Dominanter Pfad ist die
-Ablehnung über `Task_notifyApplicant` (~58%), Freigaben laufen als User-Task
-`Task_bankTransfer`. Ein seltener Legacy-Kanal (`channel="FAX"`) bleibt mit
-unter 1% unter der minBucketSize-Schwelle.
+A simple approval process for loan applications. The dominant path is the
+rejection through `Task_notifyApplicant` (~58%); approvals run as the user
+task `Task_bankTransfer`. A rare legacy channel (`channel="FAX"`) stays below
+the minBucketSize threshold at under 1%.
 
 ## Behavior in production (last 30d)
 
 - Path A (Rejected): 58% — `StartEvent_1 → Task_0dfv74n → Gateway_approved → Task_notifyApplicant → EndEvent_rejected`
-- Path B (Approved + transfer): 31% — endet auf `EndEvent_approved` mit abgeschlossener `Task_bankTransfer`
-- Path C (Approved + pending transfer): 11% — `Task_bankTransfer` hängt noch im Postfach
-- Suppressed: 1 Pfad (FAX-Kanal) unter minBucketSize=10
+- Path B (Approved + transfer): 31% — ends on `EndEvent_approved` with `Task_bankTransfer` completed
+- Path C (Approved + pending transfer): 11% — `Task_bankTransfer` still in the inbox
+- Suppressed: 1 path (FAX channel) below minBucketSize=10
 
 ## Where the time goes
 
-- `Task_0dfv74n` (userTask "Check the request"): avg 3.1h, p95 28h — User-Latenz, Long-Tail bis mehrere Tage
+- `Task_0dfv74n` (userTask "Check the request"): avg 3.1h, p95 28h — user latency, long tail of multiple days
 - `Task_bankTransfer` (userTask, candidateGroup=accounting): avg 5.4h, p95 36h
-- `Task_notifyApplicant` (serviceTask, asyncBefore): avg 45ms, p95 120ms — bis auf die Buggy-Era unauffällig
+- `Task_notifyApplicant` (serviceTask, asyncBefore): avg 45ms, p95 120ms — uneventful outside the buggy era
 
 ## Where it breaks
 
-- `Task_notifyApplicant`: 8.2% Fehlerrate **nur in den ersten 15 Seed-Tagen**
-  (Delegate `com.camunda7mcp.example.cibseven.NotifyApplicantDelegate`,
-  RuntimeException "Downstream notification service unreachable"). Nach dem
-  Fix-Stichtag unter 0.5%.
+- `Task_notifyApplicant`: 8.2% failure rate **only during the first 15 seed days**
+  (delegate `com.camunda7mcp.example.cibseven.NotifyApplicantDelegate`,
+  RuntimeException "Downstream notification service unreachable"). After the
+  fix cutoff, below 0.5%.
 
 ## Segment characterization
 
-Ablehnungen konzentrieren sich bei `amount > 100.000` und
-`customerSegment="PRIVATE"`; Enterprise-Instanzen werden trotz hoher Beträge
-überproportional freigegeben. `channel="FAX"` läuft fast ausschließlich durch
-die Reject-Seite — hängt vermutlich mit dem Legacy-Partner zusammen.
+Rejections concentrate at `amount > 100,000` and `customerSegment="PRIVATE"`;
+Enterprise instances get approved disproportionately often despite high
+amounts. `channel="FAX"` runs almost exclusively through the reject side —
+likely tied to the legacy partner.
 
 ## Code map
 
-| Element ID           | Typ         | Class / Expression                                       |
+| Element ID           | Type        | Class / Expression                                       |
 | -------------------- | ----------- | -------------------------------------------------------- |
 | Task_0dfv74n         | userTask    | `assignee=demo`                                          |
 | Gateway_approved     | exclusive   | `${approved == true}` / `${approved == false}`           |
@@ -105,18 +105,19 @@ die Reject-Seite — hängt vermutlich mit dem Legacy-Partner zusammen.
 | Task_notifyApplicant | serviceTask | `${notifyApplicantDelegate}` — `NotifyApplicantDelegate` |
 ```
 
-## Kontext-Politik
+## Context policy
 
-- **Kein Instanz-Zitat.** Kein Kundenname, keine Bestellnummer, kein
-  Variableninhalt landet in der Doku.
-- BPMN-Element-IDs, Delegate-FQNs, Gateway-Bedingungen: ja, wörtlich.
-- Fehlt Enrichment, wird der Segment-Abschnitt ausgelassen mit Hinweis "nicht
-  konfiguriert".
+- **No instance quotes.** No customer name, order number, or variable content
+  ends up in the doc.
+- BPMN element IDs, delegate FQNs, gateway conditions: yes, verbatim.
+- If enrichment is missing, the segment section is dropped with a note "not
+  configured".
 
-## Wann _nicht_ einsetzen
+## When _not_ to use it
 
-- Wenn keine produktive Historie existiert (`suppressed`: true in jedem Pfad) —
-  dann liefert der Skill nur BPMN-Struktur + Code-Kontrakt, was genauso gut
-  durch manuelles Lesen geht.
-- Wenn ein konkretes Symptom gejagt wird (Fehlersuche, einzelne Instanz) — dafür
-  ist [UC5](dev-fix-verification.md) oder direkter SQL-Zugriff geeigneter.
+- When there is no production history (`suppressed`: true on every path) —
+  the skill then only delivers BPMN structure + code contract, which manual
+  reading would do equally well.
+- When you are chasing a specific symptom (debugging, single instance) — for
+  that, [UC5](dev-fix-verification.md) or direct SQL access is the better
+  tool.

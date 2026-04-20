@@ -1,50 +1,68 @@
 # History Pipeline
 
-## Überblick
+## Overview
 
-Die History Pipeline schiebt Engine-History-Events in Echtzeit nach ClickHouse. Sie besteht aus:
+The history pipeline streams engine history events into ClickHouse in
+near-real-time. It has three layers:
 
-1. **Engine-spezifische Plugins** — fangen History-Events ab
-2. **Shared Library** — engine-agnostische Pufferung + ClickHouse-Client
-3. **ClickHouse** — spaltenorientierte Analytik-Datenbank
+1. **Engine-specific plugins** — intercept history events
+2. **Shared library** — engine-agnostic buffering + ClickHouse client
+3. **ClickHouse** — column-oriented analytics store
 
 ```
 Engine (CIB Seven)
-    │ History Events
+    │ history events
     ▼
 CibSevenHistoryPlugin
-    │ mappt auf Map<String, Any?>
+    │ maps to Map<String, Any?>
     ▼
 ClickHouseHistoryEventHandlerBase
-    │ Buffering (batch-size + flush-interval)
+    │ buffering (batch-size + flush-interval)
     ▼
 ClickHouseClient (JDBC)
-    │ Batch INSERT
+    │ batch INSERT
     ▼
-ClickHouse (5 Tabellen)
+ClickHouse (5 tables)
 ```
 
-## Tabellen
+## Tables
 
-| Tabelle                      | Inhalt                   |
-| ---------------------------- | ------------------------ |
-| `camunda_process_instances`  | Prozessinstanz-Lifecycle |
-| `camunda_activity_instances` | Activity-Ausführungen    |
-| `camunda_task_instances`     | User Task-Lifecycle      |
-| `camunda_variable_updates`   | Variablen-Änderungen     |
-| `camunda_incidents`          | Incidents/Fehler         |
+| Table                        | Content                    |
+| ---------------------------- | -------------------------- |
+| `camunda_process_instances`  | Process instance lifecycle |
+| `camunda_activity_instances` | Activity executions        |
+| `camunda_task_instances`     | User task lifecycle        |
+| `camunda_variable_updates`   | Variable changes           |
+| `camunda_incidents`          | Incidents / failures       |
 
-Alle Tabellen enthalten `engine_type` (`camunda7`, `cibseven`, `operaton`) und `trace_id` für OTEL-Korrelation.
+Every table carries `engine_type` (`camunda7`, `cibseven`, `operaton`) and
+`trace_id` for OTEL correlation.
 
-## OTEL Instrumentierung
+## Nullable timestamps
 
-Die Kotlin Plugins sind mit OpenTelemetry instrumentiert:
+`end_time`, `due_date`, `follow_up_date`, `incident.create_time` and
+`incident.end_time` are all nullable in the engine model — running instances
+have no end timestamp, tasks may have no due date, etc.
 
-- `history.flush` Span um jede Flush-Operation
-- `history.insert.<table>` Span pro Tabellen-Insert
-- Metriken: `history.flush.duration_ms`, `history.events.buffered_total`, `history.events.inserted_total`, `history.insert.errors_total`
+The ClickHouse JDBC driver (`com.clickhouse.client.api.DataTypeUtils`) refuses
+`null` for `Timestamp` parameters. The client therefore binds nullable
+timestamps via `setNull(idx, Types.TIMESTAMP)` rather than
+`setTimestamp(idx, null)`. Non-nullable lifecycle anchors
+(`process_instances.start_time`, `activity_instances.start_time`, …) keep the
+direct `setTimestamp` path with the standard fallback chain.
 
-## Konfiguration
+See `plugins/shared-history-clickhouse/.../ClickHouseClient.kt` (`bindTimestamp`).
+
+## OTEL instrumentation
+
+The Kotlin plugins are instrumented with OpenTelemetry:
+
+- `history.flush` span around each flush operation
+- `history.insert.<table>` span per table insert
+- Metrics: `history.flush.duration_ms`, `history.events.buffered_total`,
+  `history.events.inserted_total`, `history.insert.errors_total`
+
+## Configuration
 
 ```yaml
 camunda7mcp:

@@ -1,71 +1,70 @@
 # UC4 — `dev-test-scenarios-from-production`
 
-> "Meine Fixtures sind alle erfunden. Gib mir Testszenarien, die die echte
-> Kombinatorik aus Produktion abbilden — ohne dass ich echte Kundendaten
-> anfasse."
+> "My fixtures are all made up. Give me test scenarios that reflect the real
+> combinatorics from production — without me touching real customer data."
 
-## Szenario
+## Scenario
 
-Der Entwickler schreibt seit Tagen synthetische Testfixtures und merkt, dass
-sie die spannenden Kombinationen aus Produktion nicht treffen. "Cross-Border
-Enterprise mit Teil-Lieferung" ist ein Szenario, das niemand aus dem Kopf
-entwirft — aber Produktion sieht es täglich. Der Skill generiert **aus den
-Top-Pfaden + Variable-Verteilungen echte Test-Szenarien** inklusive
-lauffähigem JUnit- oder Camunda-BPM-Assert-Scaffolding.
+The developer has been writing synthetic test fixtures for days and notices
+they don't hit the interesting combinations from production. "Cross-border
+Enterprise with partial delivery" is a scenario nobody invents from memory —
+but production sees it daily. The skill generates **real test scenarios from
+the top paths + variable distributions**, including runnable JUnit or
+Camunda BPM-Assert scaffolding.
 
-## Aufruf
+## Invocation
 
 ```
 /dev-test-scenarios-from-production <processDefinitionKey> [period: 7d|30d|90d] [framework: junit|bpm-assert]
 ```
 
-- `processDefinitionKey` — Pflicht.
-- `period` — optional, Default `30d`.
-- `framework` — optional, Default `bpm-assert` (liest bei Prozesstests
-  natürlicher als reines JUnit).
+- `processDefinitionKey` — required.
+- `period` — optional, default `30d`.
+- `framework` — optional, default `bpm-assert` (reads more naturally for
+  process tests than plain JUnit).
 
-## Beteiligte Tools
+## Tools involved
 
-| Schritt             | Tool                              | Server                      |
-| ------------------- | --------------------------------- | --------------------------- |
-| Top-Pfade           | `analytics_path_frequency`        | `analytics-mcp`             |
-| Fehler-Querverweis  | `analytics_element_bottleneck`    | `analytics-mcp`             |
-| Variable-Verteilung | `analytics_variable_distribution` | `analytics-mcp`             |
-| Segment-Benennung   | `enrichment_auto_resolve`         | `enrichment-mcp` (optional) |
+| Step                    | Tool                              | Server                      |
+| ----------------------- | --------------------------------- | --------------------------- |
+| Top paths               | `analytics_path_frequency`        | `analytics-mcp`             |
+| Failure cross-reference | `analytics_element_bottleneck`    | `analytics-mcp`             |
+| Variable distribution   | `analytics_variable_distribution` | `analytics-mcp`             |
+| Segment naming          | `enrichment_auto_resolve`         | `enrichment-mcp` (optional) |
 
 ## Workflow
 
 ```
-1. Top-Pfade
+1. Top paths
    → analytics_path_frequency, limit=20, minBucketSize=10
-   → Szenarien wählen:
-     • Dominanter Pfad (>=50%) → "Happy Path"
-     • Alle Pfade >=5% → "Varianten"
-     • Pfade >=1% mit erhöhter Fehler-/Incident-Rate → "Edge Case worth a test"
-   → Cap bei ~6 Szenarien (mehr pflegt der Dev nicht)
+   → choose scenarios:
+     • dominant path (>=50%) → "Happy Path"
+     • all paths >=5% → "Variants"
+     • paths >=1% with elevated failure / incident rate → "Edge case worth a test"
+   → cap at ~6 scenarios (more is overkill for the dev to maintain)
 
-2. Variable-Verteilungen
-   → Je Szenario die Gateway-Variablen identifizieren (aus BPMN/Delegate-Code
-     oder einmalige Rückfrage an den User)
-   → analytics_variable_distribution je Variable
+2. Variable distributions
+   → for each scenario, identify the gateway variables (from BPMN/delegate
+     code or a one-time question to the user)
+   → analytics_variable_distribution per variable
 
-3. Repräsentativen Wert pro Bucket wählen
-   → Numerisch: Midpoint (lo+hi)/2, auf sinnvolle Präzision gerundet
-   → Kategorisch: modales Top-K. Mehrere Werte mit gleichem Pfad-Effekt als
-     "Äquivalenzklasse" in Test-Kommentar dokumentieren
-   → Boolean: wie im Bucket
+3. Pick a representative value per bucket
+   → numeric: midpoint (lo+hi)/2, rounded to a reasonable precision
+   → categorical: modal top-K. Multiple values with the same path effect
+     get documented as an "equivalence class" in a test comment
+   → boolean: as in the bucket
 
-4. Segment-Charakterisierung
-   → enrichment_auto_resolve → Szenario-Name ("Enterprise + multi-currency")
+4. Segment characterization
+   → enrichment_auto_resolve → scenario name ("Enterprise + multi-currency")
 
-5. Scaffolding generieren
-   → Eine @Test-Methode pro Szenario, mit Kommentar-Block: Share-%, Segment,
-     Quell-Bucket
+5. Generate scaffolding
+   → one @Test method per scenario, with comment block: share %, segment,
+     source bucket
 
-6. Report zusammenbauen
+6. Assemble the report
 ```
 
-## Beispiel-Ausgabe (gekürzt, gegen den `loanApproval`-Seed)
+## Example output (truncated, against the `loanApproval` seed)
 
 ````markdown
 # Test scenarios from production: `loanApproval` (last 30d)
@@ -74,15 +73,15 @@ lauffähigem JUnit- oder Camunda-BPM-Assert-Scaffolding.
 
 | Scenario            | Share | Segment            | Why included                                        |
 | ------------------- | ----- | ------------------ | --------------------------------------------------- |
-| Small loan approved | 42%   | PRIVATE / EUR      | Teil des dominanten Pfads                           |
+| Small loan approved | 42%   | PRIVATE / EUR      | Part of the dominant path                           |
 | Small loan rejected | 16%   | PRIVATE / EUR      | ≥ 5% share                                          |
-| Mid-range rejected  | 22%   | BUSINESS / EUR     | ≥ 5% share, eskalierte Fehlerrate in der Buggy-Era  |
-| Enterprise approved | 9%    | ENTERPRISE / mixed | ≥ 5% share + segment-spezifischer Bonus             |
-| FAX channel (rare)  | 0.5%  | BUSINESS / FAX     | Unter minBucketSize — **nicht** als Test abgebildet |
+| Mid-range rejected  | 22%   | BUSINESS / EUR     | ≥ 5% share, escalated failure rate in the buggy era |
+| Enterprise approved | 9%    | ENTERPRISE / mixed | ≥ 5% share + segment-specific bonus                 |
+| FAX channel (rare)  | 0.5%  | BUSINESS / FAX     | Below minBucketSize — **not** mapped to a test      |
 
 ## Suppressed
 
-1 Pfad (FAX-Kanal) suppressed by `minBucketSize=10`. Nicht als Test abgebildet.
+1 path (FAX channel) suppressed by `minBucketSize=10`. Not mapped to a test.
 
 ## Generated tests
 
@@ -117,7 +116,7 @@ void scenario_enterprise_approved() {
     // Path share in production (last 30d): 9%
     // Segment: ENTERPRISE / mixed currency
     // Source buckets: amount in [250000, 500000), customerSegment="ENTERPRISE"
-    // Equivalenzklasse currency: {EUR, USD, GBP}
+    // Equivalence class currency: {EUR, USD, GBP}
     Map<String, Object> vars = Map.of(
         "amount", 320000,
         "applicant", "Test Enterprise",
@@ -139,27 +138,27 @@ void scenario_enterprise_approved() {
 
 - Values are bucket representatives, not real production values.
 - Period: 30d. Re-run the skill quarterly to refresh the coverage.
-- Enrichment availability: yes (see `enrichment.example.yaml` im cibseven-example).
+- Enrichment availability: yes (see `enrichment.example.yaml` in the cibseven-example).
 ````
 
-## Kontext-Politik
+## Context policy
 
-- **Aggregate only — kein Instance-Fetch-Pfad.** Selbst wenn eine "echte"
-  Instanz das Szenario realistischer machen würde, greift der Skill nicht
-  darauf zu. Das ist _Design_, nicht Versehen.
-- Die Testwerte sind **Repräsentanten**: Midpoint eines numerischen Buckets,
-  modales Top-K eines kategorischen Buckets. Sie liegen im gleichen Bucket wie
-  Produktion, wurden aber nie in Produktion gesehen.
-- Weil nie Rohwerte die Tenant-Grenze überqueren, **braucht UC4 keinen
-  Pseudonymisierungs-Helfer**. Das ist die architektonische Entscheidung, die
-  T6′ aus dem kritischen Pfad genommen hat.
+- **Aggregates only — no instance-fetch path.** Even if a "real" instance
+  would make the scenario more realistic, the skill does not reach for one.
+  That is _by design_, not an oversight.
+- The test values are **representatives**: midpoint of a numeric bucket,
+  modal top-K of a categorical bucket. They sit in the same bucket as
+  production but were never seen in production.
+- Because raw values never cross the tenant boundary, **UC4 does not require a
+  pseudonymization helper**. That is the architectural decision that took T6′
+  off the critical path.
 
-## Wann _nicht_ einsetzen
+## When _not_ to use it
 
-- Wenn das Testziel echte Referenzwerte mit referenzieller Integrität über
-  mehrere Variablen verlangt (z.B. Rechnungs-/Lieferdatensätze, die
-  aufeinander verweisen müssen) — dafür braucht es einen separaten
-  Pseudonymisierungs-Fluss, der heute bewusst nicht gebaut ist.
-- Als Ersatz für Fachkonzept-Reviews — der Skill reflektiert nur Produktions-
-  _Realität_, nicht Produktions-_Soll_. Pfade, die nie hätten passieren dürfen,
-  werden unkritisch als Szenarien vorgeschlagen.
+- When the test goal demands real reference values with referential
+  integrity across multiple variables (e.g. invoice/delivery records that
+  must reference each other) — that needs a separate pseudonymization flow,
+  which is intentionally not built today.
+- As a substitute for business-concept reviews — the skill only reflects the
+  production _reality_, not the production _target_. Paths that should never
+  have happened are uncritically proposed as scenarios.

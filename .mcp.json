@@ -1,3 +1,8 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "automation-mcp": {
+      "type": "http",
+      "url": "http://localhost:3010/mcp"
+    }
+  }
 }

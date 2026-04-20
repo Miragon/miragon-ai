@@ -1,6 +1,6 @@
 # Quickstart
 
-## 1. Repository klonen und bauen
+## 1. Clone and build
 
 ```bash
 git clone <repo-url>
@@ -9,27 +9,30 @@ pnpm install
 pnpm build
 ```
 
-## 2. Infrastruktur starten
+## 2. Start the infrastructure
 
 ```bash
 cd docker
 docker compose up -d
 ```
 
-Das startet:
+This starts:
 
-- **CIB Seven** auf Port 8080 (mit History Plugin)
-- **ClickHouse** auf Port 8123
+- **CIB Seven** on port 8080 (with the History Plugin)
+- **ClickHouse** on port 8123
+- **WireMock** on port 8088 — backs the `*-local.yaml` enrichment demos.
+  Optional: skip with `docker compose up -d cibseven clickhouse` if you don't
+  need enrichment.
 
-Warte bis CIB Seven healthy ist:
+Wait for CIB Seven to be healthy:
 
 ```bash
 docker compose ps
 ```
 
-## 3. MCP Server konfigurieren
+## 3. Configure the MCP server
 
-Füge den Server in deine MCP-Client-Konfiguration ein:
+Add the server to your MCP client configuration:
 
 ### Claude Desktop / Claude Code
 
@@ -38,7 +41,7 @@ Füge den Server in deine MCP-Client-Konfiguration ein:
   "mcpServers": {
     "camunda7": {
       "command": "node",
-      "args": ["<pfad>/packages/camunda7-mcp-server/dist/index.js"],
+      "args": ["<path>/packages/camunda7-mcp-server/dist/index.js"],
       "env": {
         "ENGINE_TYPE": "cibseven",
         "ENGINE_BASE_URL": "http://localhost:8080/engine-rest",
@@ -51,16 +54,17 @@ Füge den Server in deine MCP-Client-Konfiguration ein:
 }
 ```
 
-## 3b. MCP Apps konfigurieren (optional)
+## 3b. Configure MCP Apps (optional)
 
-Die MCP Apps liefern interaktive UI-Komponenten direkt im Chat. Starte den Apps-Server:
+The MCP Apps deliver interactive UI components straight into the chat. Start
+the apps server:
 
 ```bash
 cd packages/camunda7-mcp-apps
 pnpm build && pnpm start
 ```
 
-Dann verbinde deinen MCP-Client:
+Then connect your MCP client:
 
 ```json
 {
@@ -73,21 +77,21 @@ Dann verbinde deinen MCP-Client:
 }
 ```
 
-Details: [Verbindung & Setup](../mcp-apps/verbindung.md)
+Details: [Connection & Setup](../mcp-apps/connection.md)
 
-## 4. Testen
+## 4. Try it
 
-Frage deinen KI-Assistenten:
+Ask your AI assistant:
 
-> "Zeige mir alle deployed Prozessdefinitionen"
+> "Show me all deployed process definitions"
 
-> "Starte eine Instanz des Prozesses 'invoice' mit businessKey 'INV-2024-001'"
+> "Start an instance of process 'invoice' with businessKey 'INV-2024-001'"
 
-> "Welche Tasks sind offen?"
+> "Which tasks are open?"
 
-## 5. Optional: ClickHouse-Suche aktivieren
+## 5. Optional: enable ClickHouse search
 
-Füge diese Umgebungsvariablen hinzu um die 6 ClickHouse-Analytics-Tools zu aktivieren:
+Add these environment variables to enable the 6 ClickHouse analytics tools:
 
 ```
 CLICKHOUSE_ENABLED=true
@@ -97,7 +101,28 @@ CLICKHOUSE_PASSWORD=camunda123
 CLICKHOUSE_DATABASE=camunda_history
 ```
 
-## 6. Optional: OTEL Observability
+## 6. Optional: enable enrichment
+
+`enrichment-mcp` is opt-in. Point `ENRICHMENT_CONFIG_PATH` at one of the
+bundled demo YAMLs (both target the WireMock sidecar from step 2):
+
+```bash
+# from the repo root
+export ENRICHMENT_CONFIG_PATH=$(pwd)/server/resources/enrichment-examples/loanApproval-local.yaml
+pnpm --filter @miragon-ai/server dev
+```
+
+| YAML                      | Pairs with                                                          |
+| ------------------------- | ------------------------------------------------------------------- |
+| `loanApproval-local.yaml` | `cibseven-example` seed (`customerSegment`, `currency`, `channel`)  |
+| `acme-local.yaml`         | Generic Salesforce / ERP / Contracts shape (`CUST-001`, `CUST-002`) |
+
+Without the env var, the rest of the stack runs unchanged. See
+[Configuration](configuration.md) and the
+[enrichment YAML reference](../mcp-server/tools-reference.md#enrichment-mcp)
+for the full schema.
+
+## 7. Optional: OTEL observability
 
 ```bash
 cd docker

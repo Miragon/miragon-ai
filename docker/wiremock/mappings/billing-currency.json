@@ -1,0 +1,52 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/billing/currencies/EUR"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "currency": "EUR",
+          "region": "EU",
+          "invoicingDelayDays": 14,
+          "vatBracket": "standard"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/billing/currencies/USD"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "currency": "USD",
+          "region": "AMER",
+          "invoicingDelayDays": 30,
+          "vatBracket": "exempt"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/billing/currencies/GBP"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "currency": "GBP",
+          "region": "UK",
+          "invoicingDelayDays": 21,
+          "vatBracket": "standard-uk"
+        }
+      }
+    }
+  ]
+}

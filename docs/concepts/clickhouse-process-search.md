@@ -1,37 +1,38 @@
-# Intelligente Prozessinstanz-Suche über ClickHouse
+# Smart process instance search via ClickHouse
 
-> LLM-gesteuerte Suche über historische Prozessdaten mit Cross-Referenz zur Engine REST API
+> LLM-driven search over historical process data with cross-reference to the
+> engine REST API
 
-## Design-Philosophie
+## Design philosophy
 
-Das LLM nutzt **zwei MCP-Server parallel**:
+The LLM uses **two MCP servers in parallel**:
 
-| MCP Server              | Zweck                                         | Datenzugriff    |
-| ----------------------- | --------------------------------------------- | --------------- |
-| `camunda7-mcp-server`   | Live-Daten, Aktionen (claim, complete, retry) | Engine REST API |
-| `clickhouse-mcp-server` | Historische Analyse, Suche, Aggregation       | ClickHouse SQL  |
+| MCP Server              | Purpose                                     | Data access     |
+| ----------------------- | ------------------------------------------- | --------------- |
+| `camunda7-mcp-server`   | Live data, actions (claim, complete, retry) | Engine REST API |
+| `clickhouse-mcp-server` | Historical analysis, search, aggregation    | ClickHouse SQL  |
 
 ```
-User: "Finde alle Bestellprozesse die letzte Woche fehlgeschlagen sind"
+User: "Find all order processes that failed last week"
 
 LLM
  ├── clickhouse-mcp-server: run_select_query
- │     → SQL auf camunda_history.camunda_process_instances + camunda_incidents
- │     → Ergebnis: Liste von process_instance_ids mit Fehlerdetails
+ │     → SQL on camunda_history.camunda_process_instances + camunda_incidents
+ │     → Result: list of process_instance_ids with failure details
  │
  └── camunda7-mcp-server: get_process_instance / list_incidents
-       → Live-Status, aktuelle Variables, offene Tasks
-       → Aktion: resolve_incident, set_job_retries
+       → live status, current variables, open tasks
+       → action: resolve_incident, set_job_retries
 ```
 
-Das LLM entscheidet selbstständig, welchen Server es für welchen Teil der Anfrage nutzt.
+The LLM decides on its own which server to use for which part of the request.
 
-## Query-Pattern-Bibliothek
+## Query pattern library
 
-### Pattern 1: Fehlgeschlagene Instanzen finden
+### Pattern 1: Find failed instances
 
 ```sql
--- Fehlgeschlagene Prozessinstanzen mit Incident-Details
+-- Failed process instances with incident details
 SELECT
     p.id AS process_instance_id,
     p.process_definition_key,
@@ -53,10 +54,10 @@ ORDER BY p.start_time DESC
 LIMIT 50;
 ```
 
-### Pattern 2: Variable-basierte Suche
+### Pattern 2: Variable-based search
 
 ```sql
--- Prozessinstanzen über Variablenwert finden
+-- Find process instances by variable value
 SELECT
     p.id AS process_instance_id,
     p.process_definition_key,
@@ -75,10 +76,10 @@ ORDER BY v.timestamp DESC
 LIMIT 50;
 ```
 
-### Pattern 3: Langsame Instanzen (P95-Vergleich)
+### Pattern 3: Slow instances (P95 comparison)
 
 ```sql
--- Instanzen die langsamer als P95 sind
+-- Instances that are slower than P95
 WITH stats AS (
     SELECT
         process_definition_key,
@@ -107,10 +108,10 @@ ORDER BY slowdown_factor DESC
 LIMIT 20;
 ```
 
-### Pattern 4: OTEL Trace → Prozessinstanz-Korrelation
+### Pattern 4: OTEL trace → process instance correlation
 
 ```sql
--- Von einem OTEL Trace zur Prozessinstanz navigieren
+-- Navigate from an OTEL trace to the process instance
 SELECT
     p.id AS process_instance_id,
     p.process_definition_key,
@@ -125,7 +126,7 @@ JOIN otel.otel_traces t ON p.trace_id = t.TraceId
 WHERE t.TraceId = '{trace_id}'
 ORDER BY t.Timestamp;
 
--- Umgekehrt: Alle Traces für eine Prozessinstanz
+-- Reverse: all traces for one process instance
 SELECT
     t.TraceId,
     t.SpanName,
@@ -140,10 +141,10 @@ WHERE p.id = '{process_instance_id}'
 ORDER BY t.Timestamp;
 ```
 
-### Pattern 5: Bottleneck/Engpass-Analyse
+### Pattern 5: Bottleneck analysis
 
 ```sql
--- Activity-Dauer-Ranking: Wo verbringen Instanzen die meiste Zeit?
+-- Activity duration ranking: where do instances spend the most time?
 SELECT
     activity_id,
     activity_name,
@@ -170,43 +171,44 @@ ORDER BY total_time_ms DESC
 LIMIT 20;
 ```
 
-## Cross-Referenz Workflow
+## Cross-reference workflow
 
-Der typische Ablauf bei einer Suche über ClickHouse mit anschließender Aktion:
+Typical flow for a search via ClickHouse followed by an action:
 
 ```
-1. User-Anfrage
-   "Finde die Bestellung 12345 und zeige mir warum sie hängt"
+1. User request
+   "Find order 12345 and show me why it's stuck"
 
-2. ClickHouse-Suche (clickhouse-mcp-server)
+2. ClickHouse search (clickhouse-mcp-server)
    SELECT p.id, p.state, i.incident_message, i.activity_id
    FROM camunda_process_instances p
    LEFT JOIN camunda_incidents i ON p.id = i.process_instance_id
    JOIN camunda_variable_updates v ON p.id = v.process_instance_id
    WHERE v.variable_name = 'orderId' AND v.text_value = '12345'
-   → Ergebnis: process_instance_id = "abc-123", Incident auf "sendInvoice"
+   → Result: process_instance_id = "abc-123", incident on "sendInvoice"
 
-3. Live-Details (camunda7-mcp-server)
+3. Live details (camunda7-mcp-server)
    get_process_instance({ id: "abc-123" })
    get_activity_instance_tree({ id: "abc-123" })
    get_variables({ id: "abc-123" })
    list_incidents({ processInstanceId: "abc-123" })
-   → Ergebnis: Aktueller Token-Stand, Variable-Werte, Incident-Details
+   → Result: current token positions, variable values, incident details
 
-4. Aktion (camunda7-mcp-server)
+4. Action (camunda7-mcp-server)
    resolve_incident({ id: "incident-456" })
    set_job_retries({ id: "job-789", retries: 1 })
-   → Ergebnis: Incident aufgelöst, Job wird erneut versucht
+   → Result: incident resolved, job will be retried
 ```
 
-## Optionale neue MCP-Tools
+## Optional new MCP tools
 
-Diese Tools würden als Convenience-Layer im `camunda7-mcp-server` implementiert und ClickHouse direkt abfragen:
+These tools would be implemented as a convenience layer in
+`camunda7-mcp-server` and query ClickHouse directly:
 
 ### 1. `search_process_instances`
 
 ```typescript
-// Universelle Suche über Process Instances
+// Universal search over process instances
 {
   name: 'search_process_instances',
   description: 'Search historic process instances using flexible criteria via ClickHouse',
@@ -232,7 +234,7 @@ Diese Tools würden als Convenience-Layer im `camunda7-mcp-server` implementiert
 ### 2. `analyze_process_performance`
 
 ```typescript
-// Engpass-Analyse für einen Prozess
+// Bottleneck analysis for a process
 {
   name: 'analyze_process_performance',
   description: 'Analyze process performance: throughput, P95 duration, bottleneck activities',
@@ -247,7 +249,7 @@ Diese Tools würden als Convenience-Layer im `camunda7-mcp-server` implementiert
 ### 3. `find_failed_instances`
 
 ```typescript
-// Fehlgeschlagene Instanzen mit Incident-Kontext
+// Failed instances with incident context
 {
   name: 'find_failed_instances',
   description: 'Find failed process instances with incident details and error patterns',
@@ -264,7 +266,7 @@ Diese Tools würden als Convenience-Layer im `camunda7-mcp-server` implementiert
 ### 4. `search_by_variable`
 
 ```typescript
-// Variable-basierte Suche
+// Variable-based search
 {
   name: 'search_by_variable',
   description: 'Search process instances by variable name and value',
@@ -280,7 +282,7 @@ Diese Tools würden als Convenience-Layer im `camunda7-mcp-server` implementiert
 ### 5. `trace_process_execution`
 
 ```typescript
-// OTEL Traces + History zusammenführen
+// Combine OTEL traces + history
 {
   name: 'trace_process_execution',
   description: 'Combine OTEL traces with process history for end-to-end execution visibility',
@@ -296,7 +298,7 @@ Diese Tools würden als Convenience-Layer im `camunda7-mcp-server` implementiert
 ### 6. `compare_execution_periods`
 
 ```typescript
-// Zeitraum-Vergleich
+// Period comparison
 {
   name: 'compare_execution_periods',
   description: 'Compare process execution metrics between two time periods',
@@ -309,17 +311,18 @@ Diese Tools würden als Convenience-Layer im `camunda7-mcp-server` implementiert
 }
 ```
 
-## ClickHouse HTTP-Client für den MCP Server
+## ClickHouse HTTP client for the MCP server
 
-Falls die optionalen Tools implementiert werden, braucht der MCP Server einen eigenen ClickHouse-Client:
+If the optional tools are implemented, the MCP server needs its own ClickHouse
+client:
 
 ```typescript
 // packages/camunda7-mcp-server/src/clickhouse-client.ts
 export interface ClickHouseConfig {
-  url: string // z.B. http://localhost:8123
+  url: string // e.g. http://localhost:8123
   user: string
   password: string
-  database: string // z.B. camunda_history
+  database: string // e.g. camunda_history
 }
 
 export interface ClickHouseClient {
@@ -358,28 +361,30 @@ export function createClickHouseClient(config: ClickHouseConfig): ClickHouseClie
 }
 ```
 
-## Konfigurationserweiterung
+## Configuration extension
 
-Neue Environment-Variablen für den MCP Server:
+New environment variables for the MCP server:
 
-| Variable              | Default                 | Beschreibung                   |
-| --------------------- | ----------------------- | ------------------------------ |
-| `CLICKHOUSE_URL`      | `http://localhost:8123` | ClickHouse HTTP-Endpunkt       |
-| `CLICKHOUSE_USER`     | `camunda`               | ClickHouse Benutzer            |
-| `CLICKHOUSE_PASSWORD` | `camunda123`            | ClickHouse Passwort            |
-| `CLICKHOUSE_DATABASE` | `camunda_history`       | Standard-Datenbank             |
-| `CLICKHOUSE_ENABLED`  | `false`                 | ClickHouse-Features aktivieren |
+| Variable              | Default                 | Description                |
+| --------------------- | ----------------------- | -------------------------- |
+| `CLICKHOUSE_URL`      | `http://localhost:8123` | ClickHouse HTTP endpoint   |
+| `CLICKHOUSE_USER`     | `camunda`               | ClickHouse user            |
+| `CLICKHOUSE_PASSWORD` | `camunda123`            | ClickHouse password        |
+| `CLICKHOUSE_DATABASE` | `camunda_history`       | Default database           |
+| `CLICKHOUSE_ENABLED`  | `false`                 | Enable ClickHouse features |
 
-Diese sind nur relevant, wenn die optionalen MCP-Tools implementiert werden. Ohne diese Tools funktioniert die Suche über den separaten `clickhouse-mcp-server`.
+These are only relevant if the optional MCP tools are implemented. Without
+them, search works through the separate `clickhouse-mcp-server`.
 
-## Entscheidungsmatrix: Eigene Tools vs. clickhouse-mcp-server
+## Decision matrix: own tools vs. clickhouse-mcp-server
 
-| Kriterium        | Eigene Tools im camunda7-mcp-server           | Separater clickhouse-mcp-server       |
-| ---------------- | --------------------------------------------- | ------------------------------------- |
-| **Flexibilität** | Feste Patterns, dafür typsicher               | Beliebiges SQL, maximale Flexibilität |
-| **Sicherheit**   | Read-only, parametrisiert, kein SQL-Injection | LLM generiert SQL — Risiko            |
-| **UX**           | Domänen-spezifische Parameter                 | LLM muss Schema kennen                |
-| **Aufwand**      | 6 neue Tools implementieren                   | Bereits vorhanden                     |
-| **Empfehlung**   | Für häufige Patterns                          | Für Ad-hoc-Analysen                   |
+| Criterion          | Own tools in camunda7-mcp-server           | Separate clickhouse-mcp-server     |
+| ------------------ | ------------------------------------------ | ---------------------------------- |
+| **Flexibility**    | Fixed patterns, but type-safe              | Arbitrary SQL, maximum flexibility |
+| **Security**       | Read-only, parameterized, no SQL injection | LLM generates SQL — risk           |
+| **UX**             | Domain-specific parameters                 | LLM has to know the schema         |
+| **Effort**         | Implement 6 new tools                      | Already exists                     |
+| **Recommendation** | For frequent patterns                      | For ad-hoc analyses                |
 
-**Empfehlung**: Beide Ansätze parallel nutzen. Die 6 Tools für die häufigsten Operations-Workflows, `clickhouse-mcp-server` für explorative Analysen.
+**Recommendation**: Use both approaches in parallel. The 6 tools for the most
+common operations workflows; `clickhouse-mcp-server` for exploratory analysis.

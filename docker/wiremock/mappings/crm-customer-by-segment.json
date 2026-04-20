@@ -1,0 +1,55 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/crm/customers/by-segment/PRIVATE"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "segment": "PRIVATE",
+          "tier": "standard",
+          "industry": "consumer",
+          "accountManager": null,
+          "slaHours": 72
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/crm/customers/by-segment/BUSINESS"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "segment": "BUSINESS",
+          "tier": "premium",
+          "industry": "mixed",
+          "accountManager": "team-business",
+          "slaHours": 24
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/crm/customers/by-segment/ENTERPRISE"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "segment": "ENTERPRISE",
+          "tier": "platinum",
+          "industry": "enterprise",
+          "accountManager": "alice.enterprise@example.com",
+          "slaHours": 4
+        }
+      }
+    }
+  ]
+}

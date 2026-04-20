@@ -1,29 +1,29 @@
-# Skills im Stack ausführen
+# Running the Skills in the Stack
 
-> Wie man die Dev Skills in Claude Code aufruft — von der Installation bis zum
-> konkreten Prompt.
+> How to invoke the dev skills from Claude Code — from prerequisites to the
+> concrete prompt.
 
-## 1. Voraussetzungen
+## 1. Prerequisites
 
-Die Dev Skills konsumieren drei MCP-Server. Alle drei müssen erreichbar sein,
-damit die Skills vollständig laufen. Fehlt einer, degradieren die Skills (siehe
-jeweilige Skill-Doku).
+The dev skills consume three MCP servers. All three need to be reachable for
+the skills to run end-to-end. If one is missing, the skills degrade (see each
+skill's docs).
 
-| Server           | Wofür                                                                              | Pflicht für                                                                       |
-| ---------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `camunda7-mcp`   | BPMN-XML, Deployment-Metadaten                                                     | UC1, UC5                                                                          |
-| `analytics-mcp`  | `path.frequency`, `element.bottleneck`, `variable.distribution`, `cluster.compare` | UC1, UC2, UC4, UC5, UC6                                                           |
-| `enrichment-mcp` | `auto_resolve` für Segment-Benennung                                               | optional — alle Skills funktionieren auch ohne, berichten aber ohne Segment-Namen |
+| Server           | Purpose                                                                            | Required for                                                            |
+| ---------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `camunda7-mcp`   | BPMN XML, deployment metadata                                                      | UC1, UC5                                                                |
+| `analytics-mcp`  | `path.frequency`, `element.bottleneck`, `variable.distribution`, `cluster.compare` | UC1, UC2, UC4, UC5, UC6                                                 |
+| `enrichment-mcp` | `auto_resolve` for segment naming                                                  | optional — every skill works without it, but reports omit segment names |
 
-Basis-Setup der MCP-Server: siehe [Quickstart](../getting-started/quickstart.md).
-ClickHouse-Analytics muss aktiv sein (`CLICKHOUSE_ENABLED=true`), damit
-`analytics-mcp` die aggregierten Tools anbietet.
+Base setup of the MCP servers: see [Quickstart](../getting-started/quickstart.md).
+ClickHouse analytics must be active (`CLICKHOUSE_ENABLED=true`) for
+`analytics-mcp` to expose the aggregation tools.
 
-## 2. Skills installieren
+## 2. Install the skills
 
-Die fünf Skills liegen im Repo unter `.claude/skills/<name>/SKILL.md`. In Claude
-Code werden sie automatisch erkannt, sobald das Repo als Workspace geöffnet
-wird — das Verzeichnis `.claude/skills/` ist die Standard-Quelle.
+The five skills live under `.claude/skills/<name>/SKILL.md` in the repo. Claude
+Code picks them up automatically once the repo is opened as a workspace —
+`.claude/skills/` is the default source.
 
 ```
 .claude/skills/
@@ -34,19 +34,19 @@ wird — das Verzeichnis `.claude/skills/` ist die Standard-Quelle.
 └── dev-code-archaeology/SKILL.md
 ```
 
-Für globale Verfügbarkeit (auch in anderen Repos) die Skill-Ordner nach
-`~/.claude/skills/` kopieren.
+For global availability (across other repos), copy the skill folders into
+`~/.claude/skills/`.
 
-## 3. MCP-Server in Claude Code verbinden
+## 3. Connect the MCP servers in Claude Code
 
-Minimale `~/.claude/mcp.json` für alle fünf Skills:
+Minimal `~/.claude/mcp.json` for all five skills:
 
 ```jsonc
 {
   "mcpServers": {
     "camunda7": {
       "command": "node",
-      "args": ["<pfad>/packages/camunda7-mcp-server/dist/index.js"],
+      "args": ["<path>/packages/camunda7-mcp-server/dist/index.js"],
       "env": {
         "ENGINE_TYPE": "cibseven",
         "ENGINE_BASE_URL": "http://localhost:8080/engine-rest",
@@ -62,7 +62,7 @@ Minimale `~/.claude/mcp.json` für alle fünf Skills:
     },
     "analytics": {
       "command": "node",
-      "args": ["<pfad>/modules/analytics/mcp/dist/index.js"],
+      "args": ["<path>/modules/analytics/mcp/dist/index.js"],
       "env": {
         "CLICKHOUSE_URL": "http://localhost:8123",
         "CLICKHOUSE_USER": "camunda",
@@ -72,74 +72,96 @@ Minimale `~/.claude/mcp.json` für alle fünf Skills:
     },
     "enrichment": {
       "command": "node",
-      "args": ["<pfad>/modules/enrichment/mcp/dist/index.js"],
+      "args": ["<path>/modules/enrichment/mcp/dist/index.js"],
       "env": {
-        "ENRICHMENT_CONFIG": "<pfad>/modules/enrichment/examples/customer.yaml",
+        "ENRICHMENT_CONFIG_PATH": "<path>/server/resources/enrichment-examples/loanApproval-local.yaml",
       },
     },
   },
 }
 ```
 
-Nach dem Speichern: Claude Code neu starten oder `MCP-Server neu laden`.
-`claude mcp list` zeigt, ob die Server registriert sind.
+After saving: restart Claude Code or `Reload MCP servers`. `claude mcp list`
+shows whether the servers are registered.
 
-## 4. Skill aufrufen
+### Enrichment locally with WireMock
 
-Jeder Skill wird via `/<skill-name> <argumente>` getriggert. Die
-`argument-hint`-Frontmatter-Zeile in der Skill-Datei zeigt die erwartete
-Argument-Syntax.
+The bundled `*-local.yaml` configs target the WireMock instance from the
+`docker/` stack (host port `8088`) instead of real backends. That makes
+`enrichment_auto_resolve` runnable out of the box, without provisioning
+Salesforce / ERP credentials.
 
-Die Beispiele unten zielen auf den `loanApproval`-Seed im
-`cibseven-example` — sie sind nach einem `docker compose up -d` direkt
-lauffähig.
+```
+cd docker && docker compose up -d wiremock
+export ENRICHMENT_CONFIG_PATH=$(pwd)/../server/resources/enrichment-examples/loanApproval-local.yaml
+pnpm --filter @miragon-ai/server dev
+```
 
-### UC1 — Prozess erklären
+Stub coverage (see `docker/wiremock/mappings/`):
+
+| YAML                      | Sources                          | Coverage                                                                                                                             |
+| ------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `loanApproval-local.yaml` | `crm`, `billing`                 | `customerSegment` (PRIVATE/BUSINESS/ENTERPRISE), `currency` (EUR/USD/GBP), `channel` (ONLINE/FAX) — pairs 1:1 with the cibseven seed |
+| `acme-local.yaml`         | `salesforce`, `erp`, `contracts` | `CUST-001` (ENTERPRISE/platinum), `CUST-002` (BUSINESS/premium); other ids return 404 to demo the `skipped` path                     |
+
+The non-`-local` variant (`acme.yaml`) is preserved as a shape reference with
+`bearer` / `header` auth examples — for real tenant configs.
+
+## 4. Invoke a skill
+
+Each skill is triggered via `/<skill-name> <arguments>`. The
+`argument-hint` frontmatter line in the skill file shows the expected argument
+syntax.
+
+The examples below target the `loanApproval` seed in `cibseven-example` —
+runnable as soon as `docker compose up -d` is up.
+
+### UC1 — Explain a process
 
 ```
 /dev-process-explain loanApproval 30d
 ```
 
-Ohne Periode → Default `30d`. Falls der Key fehlt, fragt der Skill einmal nach.
+No period → defaults to `30d`. If the key is missing, the skill asks once.
 
-### UC2 — Änderung projizieren
+### UC2 — Project a change
 
 ```
 /dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/NotifyApplicantDelegate.kt:28
 ```
 
-Oder freie Beschreibung:
+Or a free-form description:
 
 ```
 /dev-change-impact "lift amount threshold for automatic approval from 25000 to 50000"
 ```
 
-### UC4 — Tests aus Produktion erzeugen
+### UC4 — Generate tests from production
 
 ```
 /dev-test-scenarios-from-production loanApproval 30d bpm-assert
 ```
 
-Framework optional (`junit` oder `bpm-assert`, Default `bpm-assert`).
+Framework optional (`junit` or `bpm-assert`, defaults to `bpm-assert`).
 
-### UC5 — Fix verifizieren
+### UC5 — Verify a fix
 
 ```
 /dev-fix-verification <deploymentId> loanApproval Task_notifyApplicant 7
 ```
 
-`deploymentId` stammt aus `camunda7_list_deployments` — im Seed ist das die
-Deployment-ID des `loanApproval.bpmn`. Die Zeitachse wird über den Seed-
-Zeitstempel simuliert; der "Fix" ist konzeptionell der Cutoff zwischen
-Buggy-Era und heute (siehe [README](README.md) → Deployment-Era).
+`deploymentId` comes from `camunda7_list_deployments` — in the seed that's the
+deployment id of `loanApproval.bpmn`. The timeline is simulated via the seed
+timestamp; the "fix" is conceptually the cutoff between the buggy era and now
+(see [README](README.md) → Deployment-Era).
 
-### UC6 — Code-Archäologie
+### UC6 — Code archaeology
 
 ```
 /dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/NotifyApplicantDelegate.kt:20
 ```
 
-Oder die seltene FAX-Bedingung paraphrasieren:
+Or paraphrase the rare FAX condition:
 
 ```
 /dev-code-archaeology "instances where channel == 'FAX'"
@@ -147,31 +169,31 @@ Oder die seltene FAX-Bedingung paraphrasieren:
 
 ## 5. Debugging
 
-**Skill meldet "Tool nicht verfügbar":** Einer der drei MCP-Server fehlt oder
-exportiert das Tool nicht. `claude mcp tools` listet auf, was gerade angebunden
-ist.
+**Skill reports "Tool not available":** one of the three MCP servers is
+missing or doesn't export the tool. `claude mcp tools` lists what's currently
+attached.
 
-**`suppressed: true` in jedem Report:** Der gewählte Zeitraum enthält weniger
-als `minBucketSize` Instanzen. Zeitraum vergrößern (`90d`) oder
-`processDefinitionKey` weglassen, um über alle Prozesse zu aggregieren.
+**`suppressed: true` in every report:** the chosen window contains fewer than
+`minBucketSize` instances. Widen the window (`90d`) or drop
+`processDefinitionKey` to aggregate across all processes.
 
-**Enrichment-Lookups leer:** `ENRICHMENT_CONFIG` zeigt auf keine gültige YAML-
-Datei oder die Variable-Namen matchen keine `lookup`-Definition. Siehe
-[Enrichment-Modul](../mcp-server/tools-reference.md) für die YAML-Struktur.
+**Empty enrichment lookups:** `ENRICHMENT_CONFIG_PATH` points at no valid
+YAML file, or the variable names don't match any `lookup` definition. See the
+[enrichment YAML reference](../mcp-server/tools-reference.md#enrichment-mcp)
+for the schema.
 
-**Delegate nicht gefunden (UC1, UC2, UC6):** Der Skill erwartet den Java-Code
-im aktuellen Workspace. Ist der Code in einem anderen Repo, den Workspace
-erweitern oder den Skill manuell mit `Read`/`Grep` führen.
+**Delegate not found (UC1, UC2, UC6):** the skill expects the Java code in
+the current workspace. If the code lives in a separate repo, extend the
+workspace or drive the skill manually with `Read` / `Grep`.
 
-## 6. Skill-Output persistieren
+## 6. Persisting skill output
 
-Standardmäßig werden die Reports **nicht** auf die Platte geschrieben. Das ist
-Absicht — sie sollen im Chat lebendig bleiben und iteriert werden. Wer den
-Report im Ticket/PR braucht, kann ihn nach der Ausführung mit einem zweiten
-Turn speichern lassen:
+By default, reports are **not** written to disk. That's by design — they
+should stay alive in the chat so they can be iterated on. To file the report
+in a ticket / PR, save it explicitly in a follow-up turn:
 
 ```
-Speicher das als docs/process-analysis/loanApproval-2026-04.md
+Save this as docs/process-analysis/loanApproval-2026-04.md
 ```
 
-Oder das Ergebnis in die Zwischenablage kopieren und in Jira/GitHub einfügen.
+Or copy the result to the clipboard and paste it into Jira / GitHub.

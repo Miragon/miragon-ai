@@ -88,6 +88,26 @@ services:
       clickhouse:
         condition: service_healthy
 
+  # WireMock — backs the enrichment-mcp examples with realistic HTTP stubs.
+  # Mappings live in ./wiremock/mappings/*.json; the local enrichment YAMLs
+  # under server/resources/enrichment-examples/*-local.yaml point at the host
+  # port 8088. To activate: set ENRICHMENT_CONFIG_PATH to one of those YAMLs
+  # and start the MCP server.
+  wiremock:
+    image: wiremock/wiremock:3.10.0
+    ports:
+      - "8088:8080"
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings:ro
+      - ./wiremock/__files:/home/wiremock/__files:ro
+    command: ["--disable-banner", "--global-response-templating"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/__admin/health > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+
   # Jaeger UI for trace visualization
   # Use: docker compose --profile otel up
   jaeger:

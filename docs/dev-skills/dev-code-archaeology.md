@@ -1,72 +1,72 @@
 # UC6 — `dev-code-archaeology`
 
-> "Dieser else-Zweig sieht aus, als hätte ihn seit 2019 niemand angefasst. Kann
-> ich den löschen?"
+> "This else branch looks like nobody has touched it since 2019. Can I delete
+> it?"
 
-## Szenario
+## Scenario
 
-Der Entwickler stößt auf einen Code-Block, der tot wirkt — ein alter
-`if orderType == "FAX"`-Zweig, ein Delegate, der nie mehr getriggert zu werden
-scheint, eine Gateway-Bedingung mit veraltetem Wording. Reines Code-Lesen
-reicht nicht: der Pfad könnte immer noch einmal pro Quartal feuern. Der Skill
-kombiniert **Git-Historie + 12-Monats-Pfad-Häufigkeit** und liefert ein klares
-Verdikt: ALIVE, DEAD, oder UNKNOWN.
+The developer stumbles on a code block that feels dead — an old
+`if orderType == "FAX"` branch, a delegate that no longer seems to be
+triggered, a gateway condition with outdated wording. Reading the code is
+not enough: the path may still fire once a quarter. The skill combines
+**git history + 12-month path frequency** and emits a clear verdict: ALIVE,
+DEAD, or UNKNOWN.
 
-## Aufruf
+## Invocation
 
 ```
 /dev-code-archaeology <file>:<line>
-/dev-code-archaeology "<Beschreibung der Bedingung>"
+/dev-code-archaeology "<description of the condition>"
 ```
 
-Beispiele (gegen den `loanApproval`-Seed):
+Examples (against the `loanApproval` seed):
 
 ```
 /dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/TestDataSeeder.kt:152
 /dev-code-archaeology "instances where channel == 'FAX'"
 ```
 
-## Beteiligte Tools
+## Tools involved
 
-| Schritt              | Tool                                       | Server                      |
-| -------------------- | ------------------------------------------ | --------------------------- |
-| Code verankern       | `Read`, `Grep`, `Glob`                     | Workspace                   |
-| Git-Historie         | `Bash(git log/blame)`                      | Workspace                   |
-| BPMN-Element finden  | `Grep` über `*.bpmn`                       | Workspace                   |
-| Pfad-Häufigkeit (1a) | `analytics_path_frequency` mit period=365d | `analytics-mcp`             |
-| Segment-Benennung    | `enrichment_auto_resolve`                  | `enrichment-mcp` (optional) |
+| Step                | Tool                                        | Server                      |
+| ------------------- | ------------------------------------------- | --------------------------- |
+| Anchor the code     | `Read`, `Grep`, `Glob`                      | Workspace                   |
+| Git history         | `Bash(git log/blame)`                       | Workspace                   |
+| Find BPMN element   | `Grep` over `*.bpmn`                        | Workspace                   |
+| Path frequency (1y) | `analytics_path_frequency` with period=365d | `analytics-mcp`             |
+| Segment naming      | `enrichment_auto_resolve`                   | `enrichment-mcp` (optional) |
 
 ## Workflow
 
 ```
-1. Code verankern
-   → File + Zeile lesen, Bedingung + Variable + umgebende Struktur verstehen
-   → Delegate-FQN / Listener-Klasse / Gateway-Condition festhalten
+1. Anchor the code
+   → read file + line, understand condition + variable + surrounding structure
+   → record delegate FQN / listener class / gateway condition
 
-2. BPMN-Element auflösen
-   → Grep *.bpmn nach Delegate-FQN oder Gateway-ID
-   → processDefinitionKey + elementId ermitteln
+2. Resolve the BPMN element
+   → grep *.bpmn for delegate FQN or gateway ID
+   → determine processDefinitionKey + elementId
 
-3. Git-Historie
-   → git blame auf die Zeile → letzte Änderung (Autor, Datum, Commit)
-   → git log auf die Datei → Häufigkeit der Änderungen, letzte Änderung
+3. Git history
+   → git blame on the line → last change (author, date, commit)
+   → git log on the file → frequency of changes, last change
 
-4. Laufzeit-Signal
-   → analytics_path_frequency mit period=365d, minBucketSize=10
-   → Wie oft lief der Pfad, der das Element enthält, in 12 Monaten?
+4. Runtime signal
+   → analytics_path_frequency with period=365d, minBucketSize=10
+   → how often did the path containing the element run in 12 months?
 
-5. Verdikt
-   → 0 Runs in 365d, unterdrückt:              UNKNOWN (nicht DEAD — zu wenig
-     Daten um sicher zu sein)
-   → 0 Runs in 365d, nicht unterdrückt:         DEAD
-   → <N> Runs in 365d, sehr selten:             ALIVE but rare (mit Segment-
-     Kontext, wenn verfügbar)
-   → regelmäßig:                                ALIVE
+5. Verdict
+   → 0 runs in 365d, suppressed:               UNKNOWN (not DEAD — too little
+     data to be sure)
+   → 0 runs in 365d, not suppressed:           DEAD
+   → <N> runs in 365d, very rare:              ALIVE but rare (with segment
+     context, when available)
+   → regular:                                  ALIVE
 
-6. Empfehlung formulieren
+6. Phrase a recommendation
 ```
 
-## Beispiel-Ausgabe (gegen den `loanApproval`-Seed)
+## Example output (against the `loanApproval` seed)
 
 ```markdown
 # Archaeology: TestDataSeeder.kt:152 — `channel == "FAX"`
@@ -75,57 +75,57 @@ Beispiele (gegen den `loanApproval`-Seed):
 
 **UNKNOWN**
 
-Der FAX-Kanal ist in den letzten 30 Seed-Tagen **< minBucketSize=10** mal
-beobachtet worden. Das Ergebnis ist `suppressed: true` — nicht "tot", sondern
-unter der Aggregations-Schwelle. Nicht löschen, ohne die Schwelle zu senken
-oder den Beobachtungszeitraum zu verlängern.
+The FAX channel has been observed **< minBucketSize=10** times in the last
+30 seed days. The result is `suppressed: true` — not "dead", just below the
+aggregation threshold. Don't delete without lowering the threshold or
+extending the observation window.
 
-## Laufzeit
+## Runtime
 
-- Pfad-Share (365d simuliert über Seed): ~0.5–1% (2 Observations)
-- Letzter Run: innerhalb der Post-Fix-Ära
-- Element: Routing-Variable `channel` in `loanApproval`
-- `analytics_path_frequency` liefert den Pfad als `suppressed`, nicht als
-  Zeile.
+- Path share (365d simulated through the seed): ~0.5–1% (2 observations)
+- Last run: within the post-fix era
+- Element: routing variable `channel` in `loanApproval`
+- `analytics_path_frequency` returns the path as `suppressed`, not as a
+  row.
 
-## Git-Historie
+## Git history
 
-- Zuletzt geändert: 2026-04-18 (Seed-Erweiterung, Commit in `dominikhorn93/enrichment`)
-- Davor: 2026-04-14 (`58a75ef`, initial seeder scaffold)
-- Die `channel`-Variable wurde bewusst mit 1% FAX-Rate gesetzt — Motivation
-  ist das Archäologie-Szenario selbst.
+- Last changed: 2026-04-18 (seed extension, commit on `dominikhorn93/enrichment`)
+- Before that: 2026-04-14 (`58a75ef`, initial seeder scaffold)
+- The `channel` variable was deliberately set with a 1% FAX rate — the
+  motivation is the archaeology scenario itself.
 
 ## Segment
 
-Segment-Charakterisierung übersprungen: zu wenige Observations, damit
-`enrichment_auto_resolve` stabil aggregieren könnte.
+Segment characterization skipped: too few observations for
+`enrichment_auto_resolve` to aggregate stably.
 
-## Empfehlung
+## Recommendation
 
-Nicht löschen. Optionen, um die Lebendigkeits-Frage sauber zu beantworten:
+Don't delete. Options for answering the liveness question cleanly:
 
-- Beobachtungszeitraum vergrößern (`90d`, ggf. `180d`).
-- `minBucketSize` in der Analytics-Abfrage temporär auf 1 senken (mit
-  Hinweis im Report, dass dann nicht mehr aggregiert wird).
-- Oder den Pfad im Code markieren (`@LegacyPath`) und nach einem Quartal
-  erneut prüfen.
+- Extend the observation window (`90d`, possibly `180d`).
+- Temporarily lower `minBucketSize` in the analytics query to 1 (with a
+  note in the report that aggregation no longer applies).
+- Or mark the path in the code (`@LegacyPath`) and re-check after a
+  quarter.
 ```
 
-## Kontext-Politik
+## Context policy
 
-- Git-Metadaten (Hash, Autor, Timestamp, Commit-Message) werden **wörtlich
-  zitiert**.
-- Variableninhalte nicht — nur Bedingung-Text wörtlich, nicht die beobachteten
-  Werte.
-- **UNKNOWN ist kein Feigenblatt.** Wenn der Pfad null Runs hat und das
-  Ergebnis unterdrückt ist (weil `minBucketSize=10` unterschritten), sagt der
-  Skill "kann ich nicht sicher entscheiden" — nicht "vermutlich tot". Die
-  Entscheidung liegt beim Dev, nicht beim Skill.
+- Git metadata (hash, author, timestamp, commit message) is **quoted
+  verbatim**.
+- Variable contents are not — only condition text is quoted verbatim, never
+  the observed values.
+- **UNKNOWN is not a fig leaf.** When the path has zero runs and the result
+  is suppressed (because `minBucketSize=10` was undershot), the skill says
+  "I can't decide for sure" — not "probably dead". The decision is up to
+  the dev, not the skill.
 
-## Wann _nicht_ einsetzen
+## When _not_ to use it
 
-- Für Fragen zur Code-_Qualität_ ("ist das gut geschrieben?") — der Skill sagt
-  nichts dazu, das ist Review-Arbeit.
-- Wenn der Pfad nicht an ein BPMN-Element bindbar ist (reiner Util-Code ohne
-  Prozess-Bezug) — dann liefert der Skill nur Git-Historie, und die kriegst du
-  auch ohne Skill.
+- For questions about code _quality_ ("is this written well?") — the skill
+  says nothing about that, that is review work.
+- When the path can't be bound to a BPMN element (pure utility code without
+  process context) — the skill then only delivers git history, which you
+  get without the skill anyway.

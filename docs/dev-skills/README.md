@@ -1,57 +1,58 @@
 # Dev Skills
 
-> 5 Entwickler-Workflows, die Laufzeitverhalten eines Camunda-7-Prozesses in
-> Claude Code sichtbar machen — ohne die IDE zu verlassen.
+> 5 developer workflows that surface the runtime behavior of a Camunda 7
+> process inside Claude Code — without leaving the IDE.
 
-## Zielgruppe
+## Audience
 
-Entwickler, die in der IDE an einem Camunda-Prozess arbeiten und eine der
-folgenden Fragen beantworten müssen:
+Developers working on a Camunda process in the IDE who need to answer one of
+the following questions:
 
-- "Was macht dieser Prozess eigentlich in Produktion?"
-- "Was würde meine Änderung im Feld bewirken?"
-- "Welche Testfälle bilden die Realität ab?"
-- "Hat mein Fix das Problem gelöst?"
-- "Warum existiert dieser Code — und wird er noch benutzt?"
+- "What does this process actually do in production?"
+- "What would my change do in the field?"
+- "Which test cases reflect reality?"
+- "Did my fix solve the problem?"
+- "Why does this code exist — and is it still used?"
 
-Alle fünf Skills arbeiten **rein auf Aggregaten** (Pfad-Häufigkeiten,
-Bucket-Verteilungen, Segment-Lookups). Keine individuellen Instanz-Daten,
-keine Rohwerte von Variablen — die Skills respektieren `minBucketSize` (Default 10) und markieren unterdrückte Buckets statt sie zu extrapolieren.
+All five skills work **purely on aggregates** (path frequencies, bucket
+distributions, segment lookups). No individual instance data, no raw variable
+values — the skills respect `minBucketSize` (default 10) and flag suppressed
+buckets instead of extrapolating them.
 
-## Übersicht
+## Overview
 
-| #   | Skill                                                         | Trigger                            | Kernidee                                                    |
-| --- | ------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------- |
-| UC1 | [`dev-process-explain`](dev-process-explain.md)               | Onboarding auf unbekannten Prozess | BPMN + Delegate-Code + Path-Frequency → Behavior-first-Doku |
-| UC2 | [`dev-change-impact`](dev-change-impact.md)                   | Vor Commit / Deploy                | Variable-Distribution → Reklassifikation projizieren        |
-| UC4 | [`dev-test-scenarios-from-production`](dev-test-scenarios.md) | Testabdeckung erzeugen             | Top-Pfade + Bucket-Repräsentanten → JUnit/BPM-Assert        |
-| UC5 | [`dev-fix-verification`](dev-fix-verification.md)             | Nach Deploy                        | Pre/Post-Vergleich mit `cluster.compare` → Verdikt          |
-| UC6 | [`dev-code-archaeology`](dev-code-archaeology.md)             | Code-Stelle wirkt tot / verdächtig | Git + 12-Monats-Path-Frequency → ALIVE / DEAD / UNKNOWN     |
+| #   | Skill                                                         | Trigger                          | Core idea                                                  |
+| --- | ------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------------- |
+| UC1 | [`dev-process-explain`](dev-process-explain.md)               | Onboarding to an unknown process | BPMN + delegate code + path frequency → behavior-first doc |
+| UC2 | [`dev-change-impact`](dev-change-impact.md)                   | Before commit / deploy           | Variable distribution → project the reclassification       |
+| UC4 | [`dev-test-scenarios-from-production`](dev-test-scenarios.md) | Generate test coverage           | Top paths + bucket representatives → JUnit / BPM-Assert    |
+| UC5 | [`dev-fix-verification`](dev-fix-verification.md)             | After deployment                 | Pre/post comparison via `cluster.compare` → verdict        |
+| UC6 | [`dev-code-archaeology`](dev-code-archaeology.md)             | Code looks dead / suspicious     | Git + 12-month path frequency → ALIVE / DEAD / UNKNOWN     |
 
-## Referenz-Beispiel: `loanApproval`
+## Reference example: `loanApproval`
 
-Alle Beispielausgaben in den Skill-Docs nutzen den `loanApproval`-Prozess aus
+All example outputs in the skill docs use the `loanApproval` process from
 [`plugins/examples/cibseven-example`](../../plugins/examples/cibseven-example).
-Der Seeder erzeugt pro Startup 200 Instanzen über 30 Tage mit:
+The seeder generates 200 instances per startup spread over 30 days with:
 
-- **Pfade** — Standard-Approval (`StartEvent_1 → Task_0dfv74n → Gateway_approved → Task_bankTransfer → EndEvent_approved`) dominiert; der Reject-Pfad (`... → Task_notifyApplicant → EndEvent_rejected`) tritt abhängig von Kredithöhe + Segment auf.
-- **Variablen** — `amount` (log-skew, 1k–500k), `applicant`, `loanType`, `customerSegment` (PRIVATE / BUSINESS / ENTERPRISE), `currency` (EUR / USD / GBP), `channel` (ONLINE / FAX — FAX < 1%).
-- **Deployment-Era** — die ersten 15 von 30 Seed-Tagen zählen als "pre-fix": `NotifyApplicantDelegate` wirft mit 15% Wahrscheinlichkeit und erzeugt Incidents. Danach ist der Bug gefixt → `cluster.compare` zeigt einen klaren Drop.
+- **Paths** — the standard approval path (`StartEvent_1 → Task_0dfv74n → Gateway_approved → Task_bankTransfer → EndEvent_approved`) dominates; the reject path (`... → Task_notifyApplicant → EndEvent_rejected`) fires depending on loan amount + segment.
+- **Variables** — `amount` (log-skewed, 1k–500k), `applicant`, `loanType`, `customerSegment` (PRIVATE / BUSINESS / ENTERPRISE), `currency` (EUR / USD / GBP), `channel` (ONLINE / FAX — FAX < 1%).
+- **Deployment era** — the first 15 of the 30 seed days count as "pre-fix": `NotifyApplicantDelegate` throws with 15% probability and creates incidents. Afterwards the bug is fixed → `cluster.compare` shows a clear drop.
 
-Das ist die Grundlage, damit die Beispielausgaben in den Skill-Docs ohne
-Handwaving reproduzierbar sind — starte CIB Seven mit dem `seed`-Profil und
-rufe den jeweiligen Skill auf.
+That's the foundation that lets the example outputs in the skill docs be
+reproducible without hand-waving — start CIB Seven with the `seed` profile and
+invoke the relevant skill.
 
-## Gemeinsame Grundlagen
+## Shared building blocks
 
-Alle Skills kombinieren dieselben Bausteine:
+All skills combine the same components:
 
 ```
-       BPMN + Delegate-Code         camunda7-mcp (Engine)
+       BPMN + delegate code         camunda7-mcp (engine)
                 │                              │
                 ▼                              ▼
        ┌──────────────────┐           ┌──────────────────┐
-       │ Local Workspace  │           │ Deployment-Meta  │
+       │ Local Workspace  │           │ Deployment meta  │
        │ Read / Grep      │           │ get_deployment   │
        └────────┬─────────┘           └────────┬─────────┘
                 │                              │
@@ -68,33 +69,32 @@ Alle Skills kombinieren dieselben Bausteine:
                    ┌─────────────────────┐
                    │ enrichment-mcp      │
                    │ auto_resolve        │
-                   │ (Segment-Benennung) │
+                   │ (segment naming)    │
                    └─────────────────────┘
 ```
 
-- **`camunda7-mcp`** liefert BPMN-XML und Deployment-Metadaten (v.a. für UC5).
-- **`analytics-mcp`** liefert die aggregierten Laufzeitmetriken aus ClickHouse.
-- **`enrichment-mcp`** übersetzt Variablenkombinationen in fachliche Segmente
-  ("Enterprise + multi-currency") via YAML-deklarierte Lookups.
-- **Workspace-Tools** (`Read`, `Grep`, `Glob`, `Bash(git *)`) decken lokale Code-
-  und Historien-Lesung ab.
+- **`camunda7-mcp`** delivers BPMN XML and deployment metadata (used mainly by UC5).
+- **`analytics-mcp`** delivers aggregated runtime metrics from ClickHouse.
+- **`enrichment-mcp`** translates variable combinations into business segments
+  ("Enterprise + multi-currency") via YAML-declared lookups.
+- **Workspace tools** (`Read`, `Grep`, `Glob`, `Bash(git *)`) cover local code
+  and history reading.
 
-## Kontext-Politik
+## Context policy
 
-Hart verdrahtet in jeden Skill:
+Hard-wired into every skill:
 
-1. **Aggregate only.** Kein Skill lädt einen einzelnen Prozess-Instanz-
-   Datensatz. Bei UC4 sind die konkreten Test-Werte immer _Bucket-
-   Repräsentanten_ (numerischer Midpoint, modales Top-K), nie echte
-   Produktionswerte.
-2. **`minBucketSize` ist kein Vorschlag.** Suppressed Buckets werden im Report
-   aufgelistet, nicht überschrieben.
-3. **Code, BPMN-IDs, Delegate-FQNs** dürfen wörtlich zitiert werden. **Variablen-
-   werte** nicht.
-4. **Git-Metadaten** (Hash, Timestamp, Deployment-ID) werden wörtlich zitiert —
-   das ist öffentliche Metadaten-Information, keine Instanz-Payload.
+1. **Aggregates only.** No skill loads a single process instance record. In
+   UC4 the concrete test values are always _bucket representatives_ (numeric
+   midpoint, modal top-K), never real production values.
+2. **`minBucketSize` is not a suggestion.** Suppressed buckets are listed in
+   the report, not overwritten.
+3. **Code, BPMN IDs, delegate FQNs** may be quoted verbatim. **Variable
+   values** must not.
+4. **Git metadata** (hash, timestamp, deployment ID) is quoted verbatim — it is
+   public metadata, not instance payload.
 
-## Ausführung im Stack
+## Running in the stack
 
-Siehe [Skills im Stack ausführen](running-skills.md) — MCP-Server-Setup,
-Skill-Installation, Aufruf in Claude Code.
+See [Running skills in the stack](running-skills.md) — MCP server setup, skill
+installation, invocation in Claude Code.

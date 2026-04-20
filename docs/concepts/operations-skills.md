@@ -1,62 +1,65 @@
 # Operations Skills
 
-> 9 typische Betriebsszenarien als konkrete Workflows mit MCP-Tools und ClickHouse-Queries
+> 9 typical operational scenarios as concrete workflows with MCP tools and
+> ClickHouse queries
 
-## Übersicht
+## Overview
 
-| #   | Skill                            | Trigger                      | Kernidee                                         |
+| #   | Skill                            | Trigger                      | Core idea                                        |
 | --- | -------------------------------- | ---------------------------- | ------------------------------------------------ |
-| 1   | **Incident Triage**              | Neue Incidents, Eskalation   | Gruppieren → Pattern → Root Cause → Resolution   |
-| 2   | **SLA Monitoring**               | Regelmäßig, Alert            | Laufende Instanzen über Schwellwert finden       |
-| 3   | **Process Performance Analysis** | Ad-hoc, Review               | Durchsatz, P95, Bottlenecks, Trends              |
-| 4   | **Failed Job Recovery**          | Incidents, Monitoring        | Error-Pattern → Batch-Retry sinnvoller Jobs      |
-| 5   | **Process Migration**            | Deployment, Versionsupdate   | Token-Verteilung → BPMN-Vergleich → Migration    |
-| 6   | **Capacity Planning**            | Wöchentlich, Quartalsplanung | Durchsatz-Trend → Spitzenlast → Prognose         |
-| 7   | **Audit Trail**                  | Compliance, Debugging        | Vollständige Chronologie einer Instanz           |
-| 8   | **Root Cause Analysis**          | Incident, Ausfall            | Incident → OTEL Spans → External API Failure     |
-| 9   | **Comparison Analysis**          | After Deployment, Regression | Zeitraum A vs. B auf Prozess- und Activity-Level |
+| 1   | **Incident Triage**              | New incidents, escalation    | Group → pattern → root cause → resolution        |
+| 2   | **SLA Monitoring**               | Periodic, alert              | Find running instances above threshold           |
+| 3   | **Process Performance Analysis** | Ad-hoc, review               | Throughput, P95, bottlenecks, trends             |
+| 4   | **Failed Job Recovery**          | Incidents, monitoring        | Error pattern → batch retry of sensible jobs     |
+| 5   | **Process Migration**            | Deployment, version upgrade  | Token distribution → BPMN comparison → migration |
+| 6   | **Capacity Planning**            | Weekly, quarterly planning   | Throughput trend → peak load → forecast          |
+| 7   | **Audit Trail**                  | Compliance, debugging        | Complete chronology of one instance              |
+| 8   | **Root Cause Analysis**          | Incident, outage             | Incident → OTEL spans → external API failure     |
+| 9   | **Comparison Analysis**          | After deployment, regression | Period A vs. B at process and activity level     |
 
 ---
 
 ## Skill 1: Incident Triage
 
-### Szenario
+### Scenario
 
-Morgens um 8:00 Uhr — 47 offene Incidents über Nacht aufgelaufen. Der Operator muss schnell entscheiden: welche sind gleich, was ist die Root Cause, und welche kann man in Batch resolven?
+8:00 AM — 47 open incidents accumulated overnight. The operator has to decide
+quickly: which ones are duplicates, what is the root cause, and which can be
+resolved in batch?
 
-### Beteiligte Tools
+### Tools involved
 
-| Schritt                | Tool / Query                    | Quelle                |
-| ---------------------- | ------------------------------- | --------------------- |
-| Incidents gruppieren   | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Live-Status prüfen     | `list_incidents`                | camunda7-mcp-server   |
-| OTEL Error-Spans laden | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Incident resolven      | `resolve_incident`              | camunda7-mcp-server   |
-| Job-Retries setzen     | `set_job_retries`               | camunda7-mcp-server   |
+| Step                  | Tool / Query                    | Source                |
+| --------------------- | ------------------------------- | --------------------- |
+| Group incidents       | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Check live status     | `list_incidents`                | camunda7-mcp-server   |
+| Pull OTEL error spans | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Resolve incident      | `resolve_incident`              | camunda7-mcp-server   |
+| Set job retries       | `set_job_retries`               | camunda7-mcp-server   |
 
 ### Workflow
 
 ```
-1. Incident-Gruppierung (ClickHouse)
-   → Gruppen nach incident_message + activity_id
-   → Ergebnis: 3 Gruppen statt 47 einzelne Incidents
+1. Incident grouping (ClickHouse)
+   → groups by incident_message + activity_id
+   → result: 3 groups instead of 47 individual incidents
 
-2. Pattern-Analyse (ClickHouse)
-   → Zeitliche Korrelation: alle zwischen 02:00–02:15
-   → Betroffene Prozesse: nur "orderProcess"
+2. Pattern analysis (ClickHouse)
+   → temporal correlation: all between 02:00–02:15
+   → affected processes: only "orderProcess"
 
-3. Root Cause via OTEL (ClickHouse otel.otel_traces)
-   → Error-Spans um 02:00: "Connection refused: payment-service:8080"
-   → Ursache: Payment-Service Restart
+3. Root cause via OTEL (ClickHouse otel.otel_traces)
+   → error spans around 02:00: "Connection refused: payment-service:8080"
+   → cause: payment service restart
 
 4. Resolution (camunda7-mcp-server)
-   → Payment-Service ist wieder online → Batch-Retry aller 47 Jobs
+   → payment service is back online → batch retry of all 47 jobs
 ```
 
 ### ClickHouse SQL
 
 ```sql
--- Schritt 1: Incidents gruppieren
+-- Step 1: Group incidents
 SELECT
     incident_message,
     activity_id,
@@ -71,7 +74,7 @@ WHERE state = 'open'
 GROUP BY incident_message, activity_id, process_definition_key
 ORDER BY incident_count DESC;
 
--- Schritt 3: OTEL Error-Spans korrelieren
+-- Step 3: Correlate OTEL error spans
 SELECT
     SpanName,
     ServiceName,
@@ -87,48 +90,50 @@ GROUP BY SpanName, ServiceName, StatusMessage
 ORDER BY error_count DESC;
 ```
 
-### OTEL-Mehrwert
+### OTEL value-add
 
-Ohne OTEL: Man sieht nur "Service Task fehlgeschlagen". Mit OTEL: Man sieht den exakten HTTP-Call, den Statuscode, und welcher Downstream-Service nicht erreichbar war.
+Without OTEL, you only see "Service Task failed". With OTEL you see the exact
+HTTP call, the status code, and which downstream service was unreachable.
 
 ---
 
 ## Skill 2: SLA Monitoring
 
-### Szenario
+### Scenario
 
-Bestellprozesse haben ein SLA von 24h. Der Operator möchte wissen: welche laufenden Instanzen sind in Gefahr?
+Order processes have a 24h SLA. The operator wants to know: which running
+instances are at risk?
 
-### Beteiligte Tools
+### Tools involved
 
-| Schritt                  | Tool / Query                    | Quelle                |
-| ------------------------ | ------------------------------- | --------------------- |
-| SLA-Überschreiter finden | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Aktive Activity prüfen   | `get_activity_instance_tree`    | camunda7-mcp-server   |
-| Variablen prüfen         | `get_variables`                 | camunda7-mcp-server   |
-| Task-Assignee prüfen     | `list_tasks`                    | camunda7-mcp-server   |
+| Step                  | Tool / Query                    | Source                |
+| --------------------- | ------------------------------- | --------------------- |
+| Find SLA breachers    | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Check active activity | `get_activity_instance_tree`    | camunda7-mcp-server   |
+| Inspect variables     | `get_variables`                 | camunda7-mcp-server   |
+| Inspect task assignee | `list_tasks`                    | camunda7-mcp-server   |
 
 ### Workflow
 
 ```
-1. SLA-gefährdete Instanzen finden (ClickHouse)
-   → Laufende Instanzen mit start_time > SLA-Schwellwert
-   → Geordnet nach Dringlichkeit (nächste SLA-Deadline zuerst)
+1. Find SLA-endangered instances (ClickHouse)
+   → running instances with start_time > SLA threshold
+   → ordered by urgency (next SLA deadline first)
 
-2. Für Top-5: Wo stecken sie? (camunda7-mcp-server)
-   → Activity Instance Tree → aktueller Token-Stand
-   → Variables → Business-Kontext (Kundennummer, Bestellwert)
+2. For the top 5: where are they stuck? (camunda7-mcp-server)
+   → activity instance tree → current token positions
+   → variables → business context (customer ID, order value)
 
-3. Aktion entscheiden
-   → User Task blockiert? → Eskalation an Team-Lead
-   → Service Task fehlgeschlagen? → Incident resolven + Retry
-   → Timer wartet? → Signal senden zum Weitergehen
+3. Decide on an action
+   → user task blocked? → escalate to team lead
+   → service task failed? → resolve incident + retry
+   → timer waiting? → send signal to move on
 ```
 
 ### ClickHouse SQL
 
 ```sql
--- Laufende Instanzen über SLA-Schwellwert
+-- Running instances above the SLA threshold
 SELECT
     p.id AS process_instance_id,
     p.process_definition_key,
@@ -146,52 +151,55 @@ LEFT JOIN camunda_history.camunda_activity_instances a
     AND a.end_time IS NULL
 WHERE p.process_definition_key = 'orderProcess'
     AND p.state = 'ACTIVE'
-    AND p.start_time < now() - INTERVAL 20 HOUR  -- 80% SLA verbraucht
+    AND p.start_time < now() - INTERVAL 20 HOUR  -- 80% of SLA consumed
 ORDER BY p.start_time ASC
 LIMIT 20;
 ```
 
-### OTEL-Mehrwert
+### OTEL value-add
 
-OTEL Metrics (`mcp.tool.duration_ms`) zeigen ob die Engine selbst langsam antwortet — also ob das SLA-Problem im Prozess-Design oder in der Infrastruktur liegt.
+OTEL metrics (`mcp.tool.duration_ms`) show whether the engine itself is
+responding slowly — i.e. whether the SLA problem sits in the process design
+or in the infrastructure.
 
 ---
 
 ## Skill 3: Process Performance Analysis
 
-### Szenario
+### Scenario
 
-Das Team möchte wissen: Wie performt der Bestellprozess? Wo sind die Engpässe? Gibt es einen Trend?
+The team wants to know: how is the order process performing? Where are the
+bottlenecks? Is there a trend?
 
-### Beteiligte Tools
+### Tools involved
 
-| Schritt              | Tool / Query                    | Quelle                |
-| -------------------- | ------------------------------- | --------------------- |
-| Durchsatz + Dauer    | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Activity-Bottlenecks | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Tagestrend           | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| BPMN laden           | `get_process_definition_xml`    | camunda7-mcp-server   |
+| Step                  | Tool / Query                    | Source                |
+| --------------------- | ------------------------------- | --------------------- |
+| Throughput + duration | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Activity bottlenecks  | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Daily trend           | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Load BPMN             | `get_process_definition_xml`    | camunda7-mcp-server   |
 
 ### Workflow
 
 ```
-1. KPI-Übersicht (ClickHouse)
-   → Durchsatz (Instanzen/Tag), Median-Dauer, P95, Fehlerrate
+1. KPI overview (ClickHouse)
+   → throughput (instances/day), median duration, P95, failure rate
 
-2. Activity-Bottleneck-Ranking (ClickHouse)
-   → Welche Activities verbrauchen die meiste Gesamtzeit?
+2. Activity bottleneck ranking (ClickHouse)
+   → which activities consume the most total time?
 
-3. Tagestrend (ClickHouse)
-   → Durchsatz + Dauer über die letzten 30 Tage
+3. Daily trend (ClickHouse)
+   → throughput + duration over the last 30 days
 
-4. BPMN-Kontext (camunda7-mcp-server)
-   → Prozessmodell laden um Bottleneck-Activities zu kontextualisieren
+4. BPMN context (camunda7-mcp-server)
+   → load the process model to put bottleneck activities in context
 ```
 
 ### ClickHouse SQL
 
 ```sql
--- KPI-Übersicht
+-- KPI overview
 SELECT
     process_definition_key,
     count() AS total_instances,
@@ -208,7 +216,7 @@ WHERE start_time >= now() - INTERVAL 30 DAY
 GROUP BY process_definition_key
 ORDER BY total_instances DESC;
 
--- Tagestrend
+-- Daily trend
 SELECT
     toDate(start_time) AS day,
     count() AS instances,
@@ -224,48 +232,51 @@ GROUP BY day
 ORDER BY day;
 ```
 
-### OTEL-Mehrwert
+### OTEL value-add
 
-OTEL Traces zeigen die End-to-End-Latenz inklusive externer Service-Calls. So sieht man ob ein Bottleneck im Prozess-Design oder bei einem externen System liegt.
+OTEL traces show end-to-end latency including external service calls, so you
+can tell whether a bottleneck sits in the process design or in an external
+system.
 
 ---
 
 ## Skill 4: Failed Job Recovery
 
-### Szenario
+### Scenario
 
-15 Jobs sind fehlgeschlagen. Einige sind transient (Netzwerk-Timeout), andere permanent (falsche Daten). Nur die transienten sollen retried werden.
+15 jobs have failed. Some are transient (network timeout), others are
+permanent (bad data). Only the transient ones should be retried.
 
-### Beteiligte Tools
+### Tools involved
 
-| Schritt               | Tool / Query                    | Quelle                |
-| --------------------- | ------------------------------- | --------------------- |
-| Error-Pattern-Analyse | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Job-Details           | `list_jobs`                     | camunda7-mcp-server   |
-| OTEL Error-Details    | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Selektiver Retry      | `set_job_retries`               | camunda7-mcp-server   |
+| Step                   | Tool / Query                    | Source                |
+| ---------------------- | ------------------------------- | --------------------- |
+| Error pattern analysis | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Job details            | `list_jobs`                     | camunda7-mcp-server   |
+| OTEL error details     | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Selective retry        | `set_job_retries`               | camunda7-mcp-server   |
 
 ### Workflow
 
 ```
-1. Error-Pattern-Analyse (ClickHouse)
-   → Incidents nach Fehlermeldung gruppieren
-   → Pattern: 8x "Connection timeout", 5x "ValidationException", 2x "NullPointer"
+1. Error pattern analysis (ClickHouse)
+   → group incidents by error message
+   → pattern: 8x "Connection timeout", 5x "ValidationException", 2x "NullPointer"
 
-2. OTEL Error-Spans (ClickHouse)
-   → "Connection timeout" → externer Service war kurz down, jetzt wieder OK
-   → "ValidationException" → fehlerhafte Input-Daten, kein Retry sinnvoll
+2. OTEL error spans (ClickHouse)
+   → "Connection timeout" → external service was briefly down, now back up
+   → "ValidationException" → bad input data, retry pointless
 
-3. Selektiver Batch-Retry (camunda7-mcp-server)
-   → Nur die 8 "Connection timeout" Jobs retrien
-   → Die 5 "ValidationException" Jobs → manuell eskalieren
-   → Die 2 "NullPointer" Jobs → Bug-Ticket erstellen
+3. Selective batch retry (camunda7-mcp-server)
+   → retry only the 8 "Connection timeout" jobs
+   → the 5 "ValidationException" jobs → escalate manually
+   → the 2 "NullPointer" jobs → file a bug ticket
 ```
 
 ### ClickHouse SQL
 
 ```sql
--- Error-Pattern-Analyse
+-- Error pattern analysis
 SELECT
     i.incident_message,
     i.activity_id,
@@ -273,7 +284,7 @@ SELECT
     groupArray(i.process_instance_id) AS affected_instances,
     min(i.create_time) AS first_seen,
     max(i.create_time) AS last_seen,
-    -- Heuristik: Transient wenn alle im gleichen Zeitfenster
+    -- Heuristic: transient if all in the same time window
     dateDiff('minute', min(i.create_time), max(i.create_time)) AS window_minutes
 FROM camunda_history.camunda_incidents i
 WHERE i.state = 'open'
@@ -282,51 +293,55 @@ GROUP BY i.incident_message, i.activity_id
 ORDER BY occurrence_count DESC;
 ```
 
-### OTEL-Mehrwert
+### OTEL value-add
 
-OTEL Error-Spans zeigen den exakten HTTP-Statuscode und Response-Body des fehlgeschlagenen externen Calls. Damit kann man transient vs. permanent besser unterscheiden.
+OTEL error spans expose the exact HTTP status code and response body of the
+failing external call. That makes transient vs. permanent classification much
+easier.
 
 ---
 
 ## Skill 5: Process Migration
 
-### Szenario
+### Scenario
 
-Eine neue Version des Prozesses wird deployed. 200 laufende Instanzen müssen von v1 auf v2 migriert werden. Dafür muss man wissen, wo die Tokens aktuell stehen.
+A new version of the process is being deployed. 200 running instances need to
+migrate from v1 to v2. To do that you need to know where the tokens currently
+sit.
 
-### Beteiligte Tools
+### Tools involved
 
-| Schritt               | Tool / Query                    | Quelle                |
+| Step                  | Tool / Query                    | Source                |
 | --------------------- | ------------------------------- | --------------------- |
-| Token-Verteilung      | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| BPMN beider Versionen | `get_process_definition_xml`    | camunda7-mcp-server   |
-| Laufende Instanzen    | `list_process_instances`        | camunda7-mcp-server   |
-| Activity Tree         | `get_activity_instance_tree`    | camunda7-mcp-server   |
+| Token distribution    | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| BPMN of both versions | `get_process_definition_xml`    | camunda7-mcp-server   |
+| Running instances     | `list_process_instances`        | camunda7-mcp-server   |
+| Activity tree         | `get_activity_instance_tree`    | camunda7-mcp-server   |
 
 ### Workflow
 
 ```
-1. Token-Verteilung analysieren (ClickHouse)
-   → Wo stehen die 200 Instanzen gerade?
+1. Analyse token distribution (ClickHouse)
+   → where are the 200 instances right now?
    → 120 in "approveOrder", 50 in "waitForPayment", 30 in "checkInventory"
 
-2. BPMN-Vergleich (camunda7-mcp-server)
-   → v1 und v2 XML laden
-   → Welche Activities haben sich geändert?
-   → "approveOrder" unverändert ✓, "checkInventory" umbenannt zu "verifyStock" ✗
+2. BPMN comparison (camunda7-mcp-server)
+   → load v1 and v2 XML
+   → which activities have changed?
+   → "approveOrder" unchanged ✓, "checkInventory" renamed to "verifyStock" ✗
 
-3. Migrationsentscheidung
-   → 120 + 50 Instanzen: 1:1 Migration möglich (Activity-IDs gleich)
-   → 30 Instanzen in "checkInventory": Activity-ID Mapping nötig
+3. Migration decision
+   → 120 + 50 instances: 1:1 migration possible (activity IDs match)
+   → 30 instances in "checkInventory": activity ID mapping required
 
-4. Migration durchführen (camunda7-mcp-server)
-   → (Erfordert ggf. REST API für Process Instance Modification)
+4. Execute the migration (camunda7-mcp-server)
+   → (may require REST API for process instance modification)
 ```
 
 ### ClickHouse SQL
 
 ```sql
--- Token-Verteilung: Wo stehen laufende Instanzen?
+-- Token distribution: where are running instances?
 SELECT
     a.activity_id,
     a.activity_name,
@@ -338,55 +353,57 @@ JOIN camunda_history.camunda_process_instances p
     ON a.process_instance_id = p.id
 WHERE p.process_definition_key = 'orderProcess'
     AND p.state = 'ACTIVE'
-    AND a.end_time IS NULL  -- aktuell aktive Activities
+    AND a.end_time IS NULL  -- currently active activities
 GROUP BY a.activity_id, a.activity_name, a.activity_type
 ORDER BY instance_count DESC;
 ```
 
-### OTEL-Mehrwert
+### OTEL value-add
 
-Nach der Migration zeigen OTEL Traces ob die migrierten Instanzen erfolgreich weiterlaufen oder ob neue Fehler auftreten.
+After the migration, OTEL traces show whether migrated instances continue
+successfully or whether new errors appear.
 
 ---
 
 ## Skill 6: Capacity Planning
 
-### Szenario
+### Scenario
 
-Quartalsplanung: Wie viele Instanzen verarbeiten wir pro Woche? Wie entwickelt sich der Trend? Reicht die aktuelle Infrastruktur für die nächsten 3 Monate?
+Quarterly planning: how many instances do we process per week? How is the
+trend developing? Will the current infrastructure last for the next 3 months?
 
-### Beteiligte Tools
+### Tools involved
 
-| Schritt                  | Tool / Query                    | Quelle                |
-| ------------------------ | ------------------------------- | --------------------- |
-| Wöchentlicher Durchsatz  | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Spitzenlast-Analyse      | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Engine-Auslastung (OTEL) | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Step                      | Tool / Query                    | Source                |
+| ------------------------- | ------------------------------- | --------------------- |
+| Weekly throughput         | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Peak load analysis        | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Engine utilization (OTEL) | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
 
 ### Workflow
 
 ```
-1. Durchsatz-Trend (ClickHouse)
-   → Instanzen pro Woche über die letzten 12 Wochen
-   → Trend: +8% pro Woche
+1. Throughput trend (ClickHouse)
+   → instances per week over the last 12 weeks
+   → trend: +8% per week
 
-2. Spitzenlast (ClickHouse)
-   → Maximale Instanzen pro Stunde
-   → Peak: Montag 09:00–10:00, 3x Durchschnitt
+2. Peak load (ClickHouse)
+   → maximum instances per hour
+   → peak: Monday 09:00–10:00, 3x average
 
-3. Engine-Performance (OTEL)
-   → engine.http.duration_ms Trend: stabil bei P95 = 200ms
-   → Kein Performance-Degradation trotz steigendem Volumen
+3. Engine performance (OTEL)
+   → engine.http.duration_ms trend: stable at P95 = 200ms
+   → no performance degradation despite rising volume
 
-4. Prognose
-   → Bei +8%/Woche → in 12 Wochen: ~2.5x aktuelles Volumen
-   → Engine P95 hat noch Headroom → Infrastruktur reicht vorerst
+4. Forecast
+   → at +8%/week → in 12 weeks: ~2.5x current volume
+   → engine P95 still has headroom → infrastructure is fine for now
 ```
 
 ### ClickHouse SQL
 
 ```sql
--- Wöchentlicher Durchsatz-Trend
+-- Weekly throughput trend
 SELECT
     toMonday(start_time) AS week_start,
     count() AS total_instances,
@@ -399,7 +416,7 @@ WHERE start_time >= now() - INTERVAL 12 WEEK
 GROUP BY week_start
 ORDER BY week_start;
 
--- Spitzenlast pro Stunde
+-- Peak load per hour
 SELECT
     toStartOfHour(start_time) AS hour,
     toDayOfWeek(start_time) AS day_of_week,
@@ -410,7 +427,7 @@ GROUP BY hour, day_of_week
 ORDER BY instances_started DESC
 LIMIT 20;
 
--- OTEL: Engine-Latenz-Trend
+-- OTEL: engine latency trend
 SELECT
     toDate(Timestamp) AS day,
     quantile(0.5)(Duration / 1000000) AS p50_ms,
@@ -424,49 +441,52 @@ GROUP BY day
 ORDER BY day;
 ```
 
-### OTEL-Mehrwert
+### OTEL value-add
 
-Ohne OTEL hat man nur Prozess-Durchsatz. Mit OTEL sieht man auch die tatsächliche Engine-Latenz und kann Infrastructure-Bottlenecks erkennen bevor sie zum Problem werden.
+Without OTEL you only get process throughput. With OTEL you also get the
+actual engine latency and can spot infrastructure bottlenecks before they
+become a problem.
 
 ---
 
 ## Skill 7: Audit Trail
 
-### Szenario
+### Scenario
 
-Compliance-Anfrage: "Zeige mir die vollständige Chronologie der Bestellung 12345 — jeder Schritt, jede Änderung, jeder Zugriff."
+Compliance request: "Show me the complete chronology of order 12345 — every
+step, every change, every access."
 
-### Beteiligte Tools
+### Tools involved
 
-| Schritt               | Tool / Query                    | Quelle                |
-| --------------------- | ------------------------------- | --------------------- |
-| Instanz finden        | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Vollständige Historie | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| OTEL Traces           | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Live-Status           | `get_process_instance`          | camunda7-mcp-server   |
+| Step          | Tool / Query                    | Source                |
+| ------------- | ------------------------------- | --------------------- |
+| Find instance | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Full history  | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| OTEL traces   | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Live status   | `get_process_instance`          | camunda7-mcp-server   |
 
 ### Workflow
 
 ```
-1. Instanz über Business Key finden (ClickHouse)
+1. Find the instance via business key (ClickHouse)
    → variable "orderId" = "12345" → process_instance_id
 
-2. Vollständige Chronologie (ClickHouse)
-   → UNION ALL über alle 5 History-Tabellen
-   → Zeitlich sortiert: Start → Activities → Tasks → Variables → End
+2. Full chronology (ClickHouse)
+   → UNION ALL across all 5 history tables
+   → time-sorted: start → activities → tasks → variables → end
 
-3. OTEL Traces dazuladen (ClickHouse)
-   → Alle Spans für diese Instanz
-   → Externe Calls sichtbar (Payment-API, Email-Service, etc.)
+3. Add OTEL traces (ClickHouse)
+   → all spans for that instance
+   → external calls visible (Payment API, email service, etc.)
 
-4. Zusammenfassung
-   → Chronologische Timeline mit allen Events + externen Interaktionen
+4. Summary
+   → chronological timeline with all events + external interactions
 ```
 
 ### ClickHouse SQL
 
 ```sql
--- Vollständige Chronologie einer Prozessinstanz
+-- Full chronology of one process instance
 WITH target AS (
     SELECT process_instance_id
     FROM camunda_history.camunda_variable_updates
@@ -474,7 +494,7 @@ WITH target AS (
     LIMIT 1
 )
 SELECT * FROM (
-    -- Process Instance Events
+    -- Process instance events
     SELECT
         start_time AS event_time,
         'PROCESS' AS event_category,
@@ -498,7 +518,7 @@ SELECT * FROM (
 
     UNION ALL
 
-    -- Activity Events
+    -- Activity events
     SELECT
         start_time AS event_time,
         'ACTIVITY' AS event_category,
@@ -510,7 +530,7 @@ SELECT * FROM (
 
     UNION ALL
 
-    -- Task Events
+    -- Task events
     SELECT
         start_time AS event_time,
         'TASK' AS event_category,
@@ -522,7 +542,7 @@ SELECT * FROM (
 
     UNION ALL
 
-    -- Variable Changes
+    -- Variable changes
     SELECT
         timestamp AS event_time,
         'VARIABLE' AS event_category,
@@ -547,56 +567,58 @@ SELECT * FROM (
 ORDER BY event_time ASC;
 ```
 
-### OTEL-Mehrwert
+### OTEL value-add
 
-OTEL Traces ergänzen den Audit Trail um externe Interaktionen: Welche APIs wurden wann mit welchen Parametern aufgerufen? Für Compliance-Audits oft entscheidend.
+OTEL traces extend the audit trail with external interactions: which APIs
+were called when, with what parameters? Often decisive for compliance audits.
 
 ---
 
 ## Skill 8: Root Cause Analysis
 
-### Szenario
+### Scenario
 
-Ein kritischer Prozess schlägt fehl. Das Incident sagt nur "Service Task failed". Man braucht die tatsächliche Root Cause — oft ein externer Service.
+A critical process is failing. The incident only says "Service Task failed".
+You need the actual root cause — often an external service.
 
-### Beteiligte Tools
+### Tools involved
 
-| Schritt          | Tool / Query                    | Quelle                |
+| Step             | Tool / Query                    | Source                |
 | ---------------- | ------------------------------- | --------------------- |
-| Incident laden   | `list_incidents`                | camunda7-mcp-server   |
-| OTEL Error-Spans | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Span-Hierarchie  | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| History-Kontext  | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Load incident    | `list_incidents`                | camunda7-mcp-server   |
+| OTEL error spans | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Span hierarchy   | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| History context  | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
 
 ### Workflow
 
 ```
-1. Incident-Details (camunda7-mcp-server)
-   → Incident auf Activity "callPaymentService"
-   → Fehler: "java.lang.RuntimeException: HTTP 503"
+1. Incident details (camunda7-mcp-server)
+   → incident on activity "callPaymentService"
+   → error: "java.lang.RuntimeException: HTTP 503"
 
-2. OTEL Error-Spans finden (ClickHouse)
-   → Alle Error-Spans im Zeitfenster des Incidents
-   → Span: "HTTP POST payment-service/api/charge" → 503 Service Unavailable
+2. Find OTEL error spans (ClickHouse)
+   → all error spans within the incident time window
+   → span: "HTTP POST payment-service/api/charge" → 503 Service Unavailable
 
-3. Span-Hierarchie analysieren (ClickHouse)
-   → Parent-Span: "engine.http POST /process-instance/.../execute"
-   → Root-Span: "mcp.tool.complete_task"
-   → Kontext: User hat Task completed → Engine hat Service Task ausgeführt → Payment API down
+3. Analyse span hierarchy (ClickHouse)
+   → parent span: "engine.http POST /process-instance/.../execute"
+   → root span: "mcp.tool.complete_task"
+   → context: user completed task → engine ran service task → payment API down
 
-4. Erweiterte Analyse (ClickHouse)
-   → Wie oft ist payment-service in den letzten 24h ausgefallen?
-   → Gibt es ein Muster (z.B. immer zur vollen Stunde)?
+4. Extended analysis (ClickHouse)
+   → how often did payment-service fail in the last 24h?
+   → is there a pattern (e.g. always on the hour)?
 
-5. Resolution-Vorschlag
-   → Payment-Service ist wieder online → Job retrien
-   → Oder: Retry-Pattern mit Backoff im Prozessmodell empfehlen
+5. Resolution suggestion
+   → payment service is back online → retry the job
+   → or: recommend retry pattern with backoff in the process model
 ```
 
 ### ClickHouse SQL
 
 ```sql
--- OTEL: Error-Spans um den Incident-Zeitpunkt
+-- OTEL: error spans around the incident time
 SELECT
     TraceId,
     SpanId,
@@ -615,7 +637,7 @@ WHERE StatusCode = 'ERROR'
     AND Timestamp <= '{incident_time}' + INTERVAL 5 MINUTE
 ORDER BY Timestamp;
 
--- Span-Hierarchie für einen Trace
+-- Span hierarchy for one trace
 SELECT
     SpanId,
     ParentSpanId,
@@ -628,7 +650,7 @@ FROM otel.otel_traces
 WHERE TraceId = '{trace_id}'
 ORDER BY Timestamp;
 
--- Payment-Service Fehler-Historie (24h)
+-- Payment service error history (24h)
 SELECT
     toStartOfHour(Timestamp) AS hour,
     count() AS error_count,
@@ -642,51 +664,54 @@ GROUP BY hour
 ORDER BY hour;
 ```
 
-### OTEL-Mehrwert
+### OTEL value-add
 
-Dies ist DER Use Case für OTEL. Ohne Tracing sieht man nur "Service Task failed" — mit OTEL sieht man den exakten HTTP-Call, den Statuscode, die Response-Time, und kann die Fehlerhistorie des externen Service analysieren.
+This is THE OTEL use case. Without tracing you only see "Service Task failed"
+— with OTEL you see the exact HTTP call, the status code, the response time,
+and you can analyse the failure history of the external service.
 
 ---
 
 ## Skill 9: Comparison Analysis
 
-### Szenario
+### Scenario
 
-Letzte Woche wurde eine neue Prozessversion deployed. Das Team möchte wissen: Ist die neue Version schneller? Gibt es mehr Fehler? Hat sich das Bottleneck verschoben?
+A new process version was deployed last week. The team wants to know: is the
+new version faster? Are there more errors? Has the bottleneck shifted?
 
-### Beteiligte Tools
+### Tools involved
 
-| Schritt               | Tool / Query                    | Quelle                |
-| --------------------- | ------------------------------- | --------------------- |
-| KPI-Vergleich         | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| Activity-Vergleich    | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| OTEL-Latenz-Vergleich | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
-| BPMN beider Versionen | `get_process_definition_xml`    | camunda7-mcp-server   |
+| Step                    | Tool / Query                    | Source                |
+| ----------------------- | ------------------------------- | --------------------- |
+| KPI comparison          | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| Activity comparison     | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| OTEL latency comparison | `run_select_query` (ClickHouse) | clickhouse-mcp-server |
+| BPMN of both versions   | `get_process_definition_xml`    | camunda7-mcp-server   |
 
 ### Workflow
 
 ```
-1. Prozess-Level-Vergleich (ClickHouse)
-   → Periode A (vor Deploy) vs. Periode B (nach Deploy)
-   → Durchsatz, Dauer, Fehlerrate
+1. Process-level comparison (ClickHouse)
+   → period A (before deploy) vs. period B (after deploy)
+   → throughput, duration, failure rate
 
-2. Activity-Level-Vergleich (ClickHouse)
-   → Hat sich das Bottleneck verschoben?
-   → Neue Activities in v2? Entfernte Activities aus v1?
+2. Activity-level comparison (ClickHouse)
+   → has the bottleneck shifted?
+   → new activities in v2? Removed activities from v1?
 
-3. OTEL-Latenz-Vergleich (ClickHouse)
-   → Engine-HTTP-Latenz: gleich geblieben?
-   → Externe Service-Calls: Veränderung?
+3. OTEL latency comparison (ClickHouse)
+   → engine HTTP latency: unchanged?
+   → external service calls: any change?
 
-4. BPMN-Vergleich (camunda7-mcp-server)
-   → v1 und v2 XML laden
-   → Strukturelle Unterschiede identifizieren
+4. BPMN comparison (camunda7-mcp-server)
+   → load v1 and v2 XML
+   → identify structural differences
 ```
 
 ### ClickHouse SQL
 
 ```sql
--- Prozess-Level-Vergleich: Periode A vs. B
+-- Process-level comparison: period A vs. B
 SELECT
     CASE
         WHEN start_time < '{deploy_date}' THEN 'Period A (before)'
@@ -707,7 +732,7 @@ WHERE process_definition_key = '{process_key}'
 GROUP BY period
 ORDER BY period;
 
--- Activity-Level-Vergleich
+-- Activity-level comparison
 SELECT
     a.activity_id,
     a.activity_name,
@@ -730,18 +755,20 @@ GROUP BY a.activity_id, a.activity_name, period
 ORDER BY a.activity_id, period;
 ```
 
-### OTEL-Mehrwert
+### OTEL value-add
 
-OTEL zeigt ob Performance-Verbesserungen aus dem Prozess-Redesign kommen oder aus Infrastructure-Änderungen (z.B. schnellere DB). Ohne OTEL sind diese Effekte nicht trennbar.
+OTEL shows whether performance gains come from the process redesign or from
+infrastructure changes (e.g. a faster DB). Without OTEL these effects can't
+be separated.
 
 ---
 
-## Zusammenspiel der Skills
+## How the skills interact
 
-Die Skills bauen aufeinander auf und nutzen gemeinsame Bausteine:
+The skills build on each other and share common building blocks:
 
 ```
-                    ClickHouse History Tables          OTEL Traces/Metrics
+                    ClickHouse history tables          OTEL traces/metrics
                     ──────────────────────            ──────────────────
                              │                                │
               ┌──────────────┼──────────────┐                 │
@@ -765,13 +792,13 @@ Die Skills bauen aufeinander auf und nutzen gemeinsame Bausteine:
         └───────────┘  └───────────┘  └───────────────────────┘
 ```
 
-### Cross-Skill Referenzen
+### Cross-skill references
 
-| Skill                   | Nutzt Erkenntnisse aus                         |
-| ----------------------- | ---------------------------------------------- |
-| Failed Job Recovery (4) | Incident Triage (1) für Error-Patterns         |
-| Process Migration (5)   | Performance Analysis (3) für Bottleneck-Wissen |
-| Capacity Planning (6)   | Performance Analysis (3) für Baseline-Metriken |
-| Root Cause Analysis (8) | Incident Triage (1) für initiale Gruppierung   |
-| Comparison Analysis (9) | Performance Analysis (3) als Baseline          |
-| Audit Trail (7)         | Root Cause Analysis (8) für OTEL-Korrelation   |
+| Skill                   | Builds on                                     |
+| ----------------------- | --------------------------------------------- |
+| Failed Job Recovery (4) | Incident Triage (1) for error patterns        |
+| Process Migration (5)   | Performance Analysis (3) for bottleneck info  |
+| Capacity Planning (6)   | Performance Analysis (3) for baseline metrics |
+| Root Cause Analysis (8) | Incident Triage (1) for initial grouping      |
+| Comparison Analysis (9) | Performance Analysis (3) as baseline          |
+| Audit Trail (7)         | Root Cause Analysis (8) for OTEL correlation  |

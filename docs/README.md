@@ -1,27 +1,32 @@
 # Camunda 7 MCP Ecosystem
 
-Ein MCP-basiertes Ökosystem für Camunda-7-kompatible Process Engines. Bietet KI-gesteuerte Prozessverwaltung über das Model Context Protocol mit 43 Tools, 6 interaktiven UI-Apps und einer ClickHouse-Analytics-Pipeline.
+An MCP-based ecosystem for Camunda-7-compatible process engines. Provides
+AI-driven process management via the Model Context Protocol with 43 tools,
+6 interactive UI apps, and a ClickHouse analytics pipeline.
 
-## Was ist das?
+## What is this?
 
-Dieses Projekt verbindet Camunda 7 (und kompatible Engines wie CIB Seven und Operaton) mit KI-Assistenten wie Claude oder ChatGPT. Über MCP-Tools kann ein LLM:
+This project connects Camunda 7 (and compatible engines such as CIB Seven and
+Operaton) with AI assistants like Claude or ChatGPT. Through MCP tools, an LLM
+can:
 
-- Prozesse starten, Tasks bearbeiten, Incidents resolven
-- Historische Daten analysieren und Bottlenecks finden
-- Interaktive Dashboards als UI-Komponenten rendern
-- OTEL-Traces mit Prozessinstanzen korrelieren
+- Start processes, work on tasks, resolve incidents
+- Analyse historic data and find bottlenecks
+- Render interactive dashboards as UI components
+- Correlate OTEL traces with process instances
 
-## Vier Säulen
+## Five pillars
 
-1. **Engine Adapter** — Multi-Engine REST API Abstraktion
-2. **MCP Server** — 43 Tools + 3 Resources für Process Management
-3. **MCP Apps** — 6 React UI-Komponenten via sunpeak
-4. **History Pipeline** — Kotlin Plugins → ClickHouse Analytics
+1. **Engine Adapter** — multi-engine REST API abstraction
+2. **MCP Server** — 43 tools + 3 resources for process management
+3. **MCP Apps** — 6 React UI components via sunpeak
+4. **History Pipeline** — Kotlin plugins → ClickHouse analytics
+5. **Enrichment** — opt-in YAML-driven REST lookups for business context
 
-## Unterstützte Engines
+## Supported engines
 
-| Engine    | Status                           |
-| --------- | -------------------------------- |
-| CIB Seven | Primär — vollständig unterstützt |
-| Camunda 7 | Vollständig unterstützt          |
-| Operaton  | Vorbereitet — Struktur angelegt  |
+| Engine    | Status                              |
+| --------- | ----------------------------------- |
+| CIB Seven | Primary — fully supported           |
+| Camunda 7 | Fully supported                     |
+| Operaton  | Prepared — module scaffolding ready |

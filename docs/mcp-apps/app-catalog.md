@@ -1,17 +1,17 @@
-# App-Katalog
+# App Catalog
 
 ## Process List
 
 **Tool**: `show-process-list`
 
-Zeigt alle deployed Prozessdefinitionen als Karten mit:
+Shows all deployed process definitions as cards with:
 
-- Prozess-Key, Name, Version
-- Status-Badge (Active/Suspended)
-- Version-Tags
-- Suchfilter
+- Process key, name, version
+- Status badge (Active / Suspended)
+- Version tags
+- Search filter
 
-**Parameter**: `key?`, `nameLike?`, `latestVersion?`
+**Parameters**: `key?`, `nameLike?`, `latestVersion?`
 
 ---
 
@@ -19,15 +19,15 @@ Zeigt alle deployed Prozessdefinitionen als Karten mit:
 
 **Tool**: `show-task-dashboard`
 
-Interaktive Tabelle offener User Tasks:
+Interactive table of open user tasks:
 
-- Task-Name, Assignee, Prozess, Priorität, Erstellzeitpunkt
-- Farbcodierte Priority-Badges (high/medium/normal)
-- Relative Zeitanzeige (TimeAgo)
-- **Claim-Button** (für unassigned Tasks)
-- **Complete-Button** (für alle Tasks)
+- Task name, assignee, process, priority, creation timestamp
+- Colour-coded priority badges (high / medium / normal)
+- Relative time display (TimeAgo)
+- **Claim button** (for unassigned tasks)
+- **Complete button** (for all tasks)
 
-**Parameter**: `assignee?`, `candidateGroup?`, `processDefinitionKey?`, `maxResults?`
+**Parameters**: `assignee?`, `candidateGroup?`, `processDefinitionKey?`, `maxResults?`
 
 ---
 
@@ -35,14 +35,14 @@ Interaktive Tabelle offener User Tasks:
 
 **Tool**: `show-instance-detail`
 
-Detailansicht einer einzelnen Prozessinstanz:
+Detail view of a single process instance:
 
-- Instanz-Metadaten (Definition, Business Key, Status)
-- Rekursiver Activity Instance Tree
-- Variablen-Tabelle mit Typ-Badges
-- BPMN-XML der Prozessdefinition
+- Instance metadata (definition, business key, status)
+- Recursive activity instance tree
+- Variables table with type badges
+- BPMN XML of the process definition
 
-**Parameter**: `processInstanceId` (required)
+**Parameters**: `processInstanceId` (required)
 
 ---
 
@@ -50,14 +50,14 @@ Detailansicht einer einzelnen Prozessinstanz:
 
 **Tool**: `show-analytics-dashboard`
 
-KPI-Dashboard mit aggregierten Metriken:
+KPI dashboard with aggregated metrics:
 
 - StatCards: Completed, Running, Incidents, Avg Duration
-- Dauer-Formatierung (ms → Sekunden/Minuten/Stunden/Tage)
-- Gruppierung nach `processDefinitionKey`
-- Durchschnittsdauer pro Prozess
+- Duration formatting (ms → seconds / minutes / hours / days)
+- Grouping by `processDefinitionKey`
+- Average duration per process
 
-**Parameter**: `processDefinitionKey?`, `startedAfter?`, `startedBefore?`
+**Parameters**: `processDefinitionKey?`, `startedAfter?`, `startedBefore?`
 
 ---
 
@@ -65,14 +65,14 @@ KPI-Dashboard mit aggregierten Metriken:
 
 **Tool**: `show-history-timeline`
 
-Zeitliche Darstellung aller Activities einer Prozessinstanz:
+Time-based view of every activity in a process instance:
 
-- Farbcodierte Punkte nach Activity-Typ (11 BPMN-Typen)
-- Verbundene Timeline mit vertikalen Linien
-- Activity-Metadaten: Name, Typ, Dauer, Assignee
-- Canceled-Flag-Indikator
+- Colour-coded dots by activity type (11 BPMN types)
+- Connected timeline with vertical lines
+- Activity metadata: name, type, duration, assignee
+- Canceled-flag indicator
 
-**Parameter**: `processInstanceId` (required)
+**Parameters**: `processInstanceId` (required)
 
 ---
 
@@ -80,11 +80,11 @@ Zeitliche Darstellung aller Activities einer Prozessinstanz:
 
 **Tool**: `show-incident-panel`
 
-Fehler-Monitoring mit Aktionsmöglichkeiten:
+Failure monitoring with action buttons:
 
-- Incident-Karten mit roter Akzentfarbe
-- Typ-Badge, Timestamp, Error-Message
-- Activity- und Prozessreferenz
-- **Retry-Button** (bei `failedJob`-Incidents mit Job-ID)
+- Incident cards with red accent colour
+- Type badge, timestamp, error message
+- Activity and process reference
+- **Retry button** (for `failedJob` incidents with a job ID)
 
-**Parameter**: `processDefinitionId?`, `processInstanceId?`, `incidentType?`
+**Parameters**: `processDefinitionId?`, `processInstanceId?`, `incidentType?`

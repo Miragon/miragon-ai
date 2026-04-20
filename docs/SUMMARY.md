@@ -1,45 +1,45 @@
-# Inhaltsverzeichnis
+# Table of Contents
 
-- [Übersicht](README.md)
+- [Overview](README.md)
 
 ## Getting Started
 
-- [Voraussetzungen](getting-started/prerequisites.md)
+- [Prerequisites](getting-started/prerequisites.md)
 - [Quickstart](getting-started/quickstart.md)
-- [Konfiguration](getting-started/configuration.md)
+- [Configuration](getting-started/configuration.md)
 
-## Architektur
+## Architecture
 
-- [Übersicht](architecture/README.md)
+- [Overview](architecture/README.md)
 - [Engine Adapter](architecture/engine-adapter.md)
 - [History Pipeline](architecture/history-pipeline.md)
 
 ## MCP Server
 
-- [Übersicht](mcp-server/README.md)
-- [Tool-Referenz](mcp-server/tools-reference.md)
+- [Overview](mcp-server/README.md)
+- [Tool Reference](mcp-server/tools-reference.md)
 
 ## MCP Apps
 
-- [Übersicht](mcp-apps/README.md)
-- [Verbindung & Setup](mcp-apps/verbindung.md)
-- [App-Katalog](mcp-apps/app-catalog.md)
+- [Overview](mcp-apps/README.md)
+- [Connection & Setup](mcp-apps/connection.md)
+- [App Catalog](mcp-apps/app-catalog.md)
 
 ## History Plugins
 
-- [Übersicht](history-plugins/README.md)
+- [Overview](history-plugins/README.md)
 - [ClickHouse Schema](history-plugins/clickhouse-schema.md)
 
-## Konzepte
+## Concepts
 
 - [OTEL → ClickHouse Integration](concepts/otel-clickhouse-integration.md)
-- [Intelligente Prozesssuche](concepts/clickhouse-process-search.md)
+- [Intelligent Process Search](concepts/clickhouse-process-search.md)
 - [Operations Skills](concepts/operations-skills.md)
 
 ## Dev Skills
 
-- [Übersicht](dev-skills/README.md)
-- [Skills im Stack ausführen](dev-skills/running-skills.md)
+- [Overview](dev-skills/README.md)
+- [Running the Skills in the Stack](dev-skills/running-skills.md)
 - [UC1 · dev-process-explain](dev-skills/dev-process-explain.md)
 - [UC2 · dev-change-impact](dev-skills/dev-change-impact.md)
 - [UC4 · dev-test-scenarios-from-production](dev-skills/dev-test-scenarios.md)
