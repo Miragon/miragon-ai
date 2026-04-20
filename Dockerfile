@@ -13,7 +13,6 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm fetch
 
 COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
-COPY cibseve-open-api-doc.json ./
 COPY packages/ packages/
 COPY modules/ modules/
 COPY server/ server/

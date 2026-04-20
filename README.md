@@ -30,17 +30,16 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 
 ## Layout
 
-| Path                        | Description                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------ |
-| `server/`                   | `@miragon-ai/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
-| `modules/camunda7/client/`  | `@miragon-ai/client-camunda7` — OpenAPI-generated TypeScript client (hey-api)        |
-| `modules/camunda7/mcp/`     | `@miragon-ai/mcp-camunda7` — BPM tools + React widgets                               |
-| `modules/analytics/mcp/`    | `@miragon-ai/mcp-analytics` — ClickHouse analytics tools + dashboard widget          |
-| `packages/core/`            | `@miragon-ai/core` — `ModulePlugin` interface + `createToolRegistrar` helper         |
-| `packages/ui/`              | `@miragon-ai/ui` — shared shadcn primitives + tailwind globals                       |
-| `plugins/`                  | Kotlin OTEL / ClickHouse sync plugins (unchanged)                                    |
-| `docker/`                   | docker-compose for CIB Seven + ClickHouse + OTEL                                     |
-| `cibseve-open-api-doc.json` | Source spec used by the client codegen                                               |
+| Path                       | Description                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `server/`                  | `@miragon-ai/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
+| `modules/camunda7/client/` | `@miragon-ai/client-camunda7` — OpenAPI-generated TypeScript client (hey-api)        |
+| `modules/camunda7/mcp/`    | `@miragon-ai/mcp-camunda7` — BPM tools + React widgets                               |
+| `modules/analytics/mcp/`   | `@miragon-ai/mcp-analytics` — ClickHouse analytics tools + dashboard widget          |
+| `packages/core/`           | `@miragon-ai/core` — `ModulePlugin` interface + `createToolRegistrar` helper         |
+| `packages/ui/`             | `@miragon-ai/ui` — shared shadcn primitives + tailwind globals                       |
+| `plugins/`                 | Kotlin OTEL / ClickHouse sync plugins (unchanged)                                    |
+| `docker/`                  | docker-compose for CIB Seven + ClickHouse + OTEL                                     |
 
 ## Prerequisites
 

@@ -23,6 +23,7 @@ export default tseslint.config(
             "modules/enrichment/client/vitest.config.ts",
             "modules/enrichment/mcp/vitest.config.ts",
             "modules/analytics/client/vitest.config.ts",
+            "modules/camunda7/client/openapi-ts.config.ts",
           ],
           maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 16,
         },
