@@ -9,6 +9,8 @@ export {
   modifyProcessInstanceInput,
   getProcessInstanceVariablesInput,
   setProcessInstanceVariableInput,
+  suspendProcessInstanceInput,
+  activateProcessInstanceInput,
 } from "./process-instances.js"
 export {
   listTasksInput,
@@ -27,10 +29,11 @@ export {
 export { correlateMessageInput, throwSignalInput } from "./messages-signals.js"
 export { listDeploymentsInput, createDeploymentInput, getDeploymentInput } from "./deployments.js"
 export { listIncidentsInput, resolveIncidentInput } from "./incidents.js"
-export { listJobsInput, setJobRetriesInput } from "./jobs.js"
+export { listJobsInput, setJobRetriesInput, setJobRetriesBatchInput } from "./jobs.js"
 export {
   queryHistoricProcessInstancesInput,
   queryHistoricActivityInstancesInput,
   queryHistoricTaskInstancesInput,
   queryHistoricVariableInstancesInput,
 } from "./history.js"
+export { createMigrationPlanInput, migrateProcessInstancesAsyncInput } from "./migrations.js"
