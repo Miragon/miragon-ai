@@ -17,10 +17,8 @@ import org.springframework.stereotype.Component
  */
 @Component
 @Profile("seed", "seed-minimal", "seed-presentation")
-class SeedOrchestrator(
-    private val seeders: List<ProcessSeeder>,
-    @Value("\${seed.profile:default}") private val profileValue: String,
-) : CommandLineRunner {
+class SeedOrchestrator(private val seeders: List<ProcessSeeder>, @Value("\${seed.profile:default}") private val profileValue: String) :
+    CommandLineRunner {
 
     private val log = LoggerFactory.getLogger(SeedOrchestrator::class.java)
 
