@@ -1,7 +1,15 @@
 # Operations Skills
 
 > 9 typical operational scenarios as concrete workflows with MCP tools and
-> ClickHouse queries
+> ClickHouse queries.
+
+> **MVP shipped** — 4 of these 9 scenarios have been implemented as
+> Claude-Code skills, scoped to what a Camunda-7 Cockpit operator does daily:
+> `ops-incident-triage` (1), `ops-failed-job-recovery` (4),
+> `ops-instance-inspect-unblock` (combined instance inspect + action), and
+> `ops-migration` (5, plan-only). See [`../ops-skills/README.md`](../ops-skills/README.md).
+> The remaining 5 scenarios (SLA monitoring, performance, capacity, audit,
+> RCA, comparison) are analyst / SRE territory and out of scope for the MVP.
 
 ## Overview
 

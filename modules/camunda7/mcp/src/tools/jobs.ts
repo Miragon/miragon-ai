@@ -1,7 +1,15 @@
 import type { Client } from "@miragon-ai/client-camunda7"
-import { listJobsInput, setJobRetriesInput } from "@miragon-ai/client-camunda7/schemas"
+import {
+  listJobsInput,
+  setJobRetriesInput,
+  setJobRetriesBatchInput,
+} from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { getJobs, setJobRetries } from "@miragon-ai/client-camunda7/generated/sdk.gen"
+import {
+  getJobs,
+  setJobRetries,
+  setJobRetriesAsyncOperation,
+} from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
 
@@ -41,6 +49,30 @@ export function registerJobTools(register: Register) {
         body: { retries: args.retries },
       })
       return { success: true, jobId: args.jobId, retries: args.retries }
+    },
+  })
+
+  register({
+    name: "camunda7_set_job_retries_batch",
+    description:
+      "Create a batch job to set retries on multiple jobs at once. Returns the batch id; progress and failures are tracked on the batch, not inline.",
+    annotations: { openWorldHint: true },
+    inputSchema: setJobRetriesBatchInput.shape,
+    handler: async (client, args) => {
+      const batch = await setJobRetriesAsyncOperation({
+        client,
+        body: {
+          jobIds: args.jobIds,
+          retries: args.retries,
+          dueDate: args.dueDate,
+        },
+      })
+      return {
+        success: true,
+        jobCount: args.jobIds.length,
+        retries: args.retries,
+        batch,
+      }
     },
   })
 }

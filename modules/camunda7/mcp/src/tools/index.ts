@@ -11,6 +11,7 @@ import { registerDeploymentTools } from "./deployments.js"
 import { registerIncidentTools } from "./incidents.js"
 import { registerJobTools } from "./jobs.js"
 import { registerHistoryTools } from "./history.js"
+import { registerMigrationTools } from "./migrations.js"
 
 export function registerTools(server: MCPServer, client: Client): void {
   const register = createToolRegistrar(server, client)
@@ -23,4 +24,5 @@ export function registerTools(server: MCPServer, client: Client): void {
   registerIncidentTools(register)
   registerJobTools(register)
   registerHistoryTools(register)
+  registerMigrationTools(register)
 }

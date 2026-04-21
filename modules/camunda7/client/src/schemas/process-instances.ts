@@ -61,3 +61,17 @@ export const setProcessInstanceVariableInput = z.object({
   value: z.unknown().describe("The variable value"),
   type: z.string().optional().describe("The variable type (String, Integer, Boolean, etc.)"),
 })
+
+export const suspendProcessInstanceInput = z.object({
+  processInstanceId: z
+    .string()
+    .describe(
+      "The ID of the process instance to suspend. Running jobs are frozen until activated.",
+    ),
+})
+
+export const activateProcessInstanceInput = z.object({
+  processInstanceId: z
+    .string()
+    .describe("The ID of the process instance to activate (i.e. unsuspend)."),
+})
