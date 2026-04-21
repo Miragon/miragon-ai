@@ -8,6 +8,8 @@ import {
   modifyProcessInstanceInput,
   getProcessInstanceVariablesInput,
   setProcessInstanceVariableInput,
+  suspendProcessInstanceInput,
+  activateProcessInstanceInput,
 } from "@miragon-ai/client-camunda7/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
@@ -19,6 +21,7 @@ import {
   getActivityInstanceTree,
   getProcessInstanceVariables,
   setProcessInstanceVariable,
+  updateSuspensionStateById,
 } from "@miragon-ai/client-camunda7/generated/sdk.gen"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
@@ -138,6 +141,37 @@ export function registerProcessInstanceTools(register: Register) {
         processInstanceId: args.processInstanceId,
         variableName: args.variableName,
       }
+    },
+  })
+
+  register({
+    name: "camunda7_suspend_process_instance",
+    description:
+      "Suspend a running process instance. Jobs, timers, and message correlations on the instance are frozen until it is activated again.",
+    annotations: { openWorldHint: true },
+    inputSchema: suspendProcessInstanceInput.shape,
+    handler: async (client, args) => {
+      await updateSuspensionStateById({
+        client,
+        path: { id: args.processInstanceId },
+        body: { suspended: true },
+      })
+      return { success: true, processInstanceId: args.processInstanceId, suspended: true }
+    },
+  })
+
+  register({
+    name: "camunda7_activate_process_instance",
+    description: "Activate (unsuspend) a suspended process instance.",
+    annotations: { openWorldHint: true },
+    inputSchema: activateProcessInstanceInput.shape,
+    handler: async (client, args) => {
+      await updateSuspensionStateById({
+        client,
+        path: { id: args.processInstanceId },
+        body: { suspended: false },
+      })
+      return { success: true, processInstanceId: args.processInstanceId, suspended: false }
     },
   })
 }

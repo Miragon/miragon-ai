@@ -28,3 +28,12 @@ export const setJobRetriesInput = z.object({
   jobId: z.string().describe("The job ID"),
   retries: z.number().int().min(0).describe("Number of retries to set"),
 })
+
+export const setJobRetriesBatchInput = z.object({
+  jobIds: z.array(z.string()).min(1).describe("IDs of the jobs whose retries should be set."),
+  retries: z.number().int().min(0).describe("Number of retries to set on every job. Must be >= 0."),
+  dueDate: z
+    .string()
+    .optional()
+    .describe("Optional ISO-8601 due date. Jobs with a past due date are scheduled immediately."),
+})

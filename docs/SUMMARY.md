@@ -45,3 +45,12 @@
 - [UC4 · dev-test-scenarios-from-production](dev-skills/dev-test-scenarios.md)
 - [UC5 · dev-fix-verification](dev-skills/dev-fix-verification.md)
 - [UC6 · dev-code-archaeology](dev-skills/dev-code-archaeology.md)
+
+## Ops Skills
+
+- [Overview](ops-skills/README.md)
+- [Running the Skills in the Stack](ops-skills/running-skills.md)
+- [UC-O1 · ops-incident-triage](ops-skills/ops-incident-triage.md)
+- [UC-O2 · ops-failed-job-recovery](ops-skills/ops-failed-job-recovery.md)
+- [UC-O3 · ops-instance-inspect-unblock](ops-skills/ops-instance-inspect-unblock.md)
+- [UC-O4 · ops-migration](ops-skills/ops-migration.md)
