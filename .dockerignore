@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+**/.DS_Store
+.env
+.git
+.idea
+.mcp-use
+.playwright-mcp
+.ai
+plugins/.gradle
+plugins/build
+plugins/**/build
