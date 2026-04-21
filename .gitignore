@@ -14,3 +14,4 @@ plugins/examples/*/build/
 .playwright-mcp/
 .ai/
 .DS_STORE
+.claude/scheduled_tasks.lock
