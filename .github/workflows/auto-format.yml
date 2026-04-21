@@ -22,7 +22,7 @@ jobs:
           git config --global url."https://x-access-token:${TOOLKIT_PAT}@github.com/".insteadOf "git@github.com:"
           git submodule update --init --recursive
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v6
         with:
