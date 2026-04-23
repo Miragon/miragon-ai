@@ -1,5 +1,5 @@
 import type { ComponentType } from "react"
-import { camunda7Widgets } from "@miragon-ai/mcp-camunda7/widgets"
+import { camunda7Widgets } from "@miragon-ai/mcp-cibseven/widgets"
 import { analyticsWidgets } from "@miragon-ai/mcp-analytics/widgets"
 
 type WidgetComponent = ComponentType<{ data: unknown }>
