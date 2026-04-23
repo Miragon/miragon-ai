@@ -51,7 +51,7 @@ answers those questions in one shot.
 
 5. Segment characterization (optional)
    → call enrichment_auto_resolve for representative variable names
-   → "Path B is almost exclusively Enterprise + multi-currency"
+   → "Path B is almost exclusively Business + APAC"
 
 6. Compose the onboarding doc
 ```
@@ -59,91 +59,99 @@ answers those questions in one shot.
 ## Example output (truncated, against the `cibseven-example` seed)
 
 ```markdown
-# Process: loanApproval
+# Process: miraveloLeasing
 
 ## TL;DR
 
-A simple approval process for loan applications. The dominant path is the
-rejection through `Task_notifyApplicant` (~58%); approvals run as the user
-task `Task_bankTransfer`. A rare legacy channel (`channel="FAX"`) stays below
-the minBucketSize threshold at under 1%.
+Miravelo's bike-leasing inquiry process. The dominant path is the creditworthy
+customer that receives a policy (~92%); a smaller "risk identified" branch
+routes through a human decision before issuing or rejecting. A rarely-used
+FAX channel (`channel="FAX"`) stays below the minBucketSize threshold at ~1%.
+A 2 h non-interrupting timer on the decision task occasionally spawns a
+parallel "Accelerate decision making" branch.
 
 ## Behavior in production (last 30d)
 
-- Path A (Rejected): 58% — `StartEvent_1 → Task_0dfv74n → Gateway_approved → Task_notifyApplicant → EndEvent_rejected`
-- Path B (Approved + transfer): 31% — ends on `EndEvent_approved` with `Task_bankTransfer` completed
-- Path C (Approved + pending transfer): 11% — `Task_bankTransfer` still in the inbox
-- Suppressed: 1 path (FAX channel) below minBucketSize=10
+- Path A (Creditworthy → Policy issued): 92% — ends at `Event_PolicyIssued` after
+  `Activity_SendPolicy` (Send policy) and `Activity_DeliverPolicy` (Delivery)
+- Path B (Risk identified → positive decision → Policy issued): 5.6% —
+  routes through `Activity_DecideOnApplication` (Decide on application), then joins path A
+- Path C (Risk identified → negative decision → Policy rejected): 2.4% —
+  ends at `Event_PolicyRejected` via `Activity_RejectPolicy` + `Activity_SendRejection`
+- Suppressed: 2 paths (FAX channel ~1%, Decision accelerated via timer ~0.8%)
+  below minBucketSize=10
 
 ## Where the time goes
 
-- `Task_0dfv74n` (userTask "Check the request"): avg 3.1h, p95 28h — user latency, long tail of multiple days
-- `Task_bankTransfer` (userTask, candidateGroup=accounting): avg 5.4h, p95 36h
-- `Task_notifyApplicant` (serviceTask, asyncBefore): avg 45ms, p95 120ms — uneventful outside the buggy era
+- `Activity_DecideOnApplication` (userTask "Decide on application"): avg 2.4h, p95 9h —
+  user latency; small long tail beyond the 2 h timer boundary
+- `Activity_ResolveCustomer` (serviceTask "Create or resolve customer from CRM"):
+  avg 90ms, p95 240ms
+- `Activity_CheckBlacklist` (serviceTask "Check blacklist", asyncBefore, runs in
+  `assessCreditworthiness` sub-process): avg 35ms, p95 110ms — uneventful
+  outside the buggy era
 
 ## Where it breaks
 
-- `Task_notifyApplicant`: 8.2% failure rate **only during the first 15 seed days**
-  (delegate `com.camunda7mcp.example.cibseven.NotifyApplicantDelegate`,
-  RuntimeException "Downstream notification service unreachable"). After the
+- `Activity_CheckBlacklist` (sub-process "Check blacklist"): 12.8% failure rate
+  **only during the first 15 seed days** (delegate
+  `com.camunda7mcp.example.cibseven.delegates.CheckBlacklistDelegate`,
+  RuntimeException "Blacklist provider unreachable (simulated)"). After the
   fix cutoff, below 0.5%.
 
 ## Segment characterization
 
-Rejections concentrate at `amount > 100,000` and `customerSegment="PRIVATE"`;
-Enterprise instances get approved disproportionately often despite high
-amounts. `channel="FAX"` runs almost exclusively through the reject side —
-likely tied to the legacy partner.
+Rejections concentrate at `creditScore < 550` and `customerSegment="PRIVATE"`;
+BUSINESS instances pass the credit check disproportionately often.
+`channel="FAX"` runs almost exclusively through the Risk-identified branch —
+likely tied to manually-entered legacy intake.
 
 ## Code map
 
-| Element ID           | Type        | Class / Expression                                       |
-| -------------------- | ----------- | -------------------------------------------------------- |
-| Task_0dfv74n         | userTask    | `assignee=demo`                                          |
-| Gateway_approved     | exclusive   | `${approved == true}` / `${approved == false}`           |
-| Task_bankTransfer    | userTask    | `candidateGroups=accounting`                             |
-| Task_notifyApplicant | serviceTask | `${notifyApplicantDelegate}` — `NotifyApplicantDelegate` |
+| Element ID                      | Type         | Class / Expression                                    |
+| ------------------------------- | ------------ | ----------------------------------------------------- |
+| Activity_ResolveCustomer        | serviceTask  | `${createOrResolveCustomerDelegate}`                  |
+| Activity_AssessCreditworthiness | callActivity | `calledElement="assessCreditworthiness"`              |
+| Gateway_Creditworthy            | exclusive    | `${creditworthy == true}` / else (risk-identified)    |
+| Activity_DecideOnApplication    | userTask     | `assignee=demo` (2 h non-interrupting boundary timer) |
+| Gateway_Decision                | exclusive    | `${decision == "positive"}` / default (negative)      |
+| Activity_SendPolicy             | sendTask     | `${sendPolicyDelegate}` — asyncBefore                 |
+| Activity_RejectPolicy           | serviceTask  | `${rejectLeasingPolicyDelegate}`                      |
 ```
 
-## Second presentation example (against `orderFulfillment`, `seed-presentation` profile)
+## Second presentation example (against the `assessCreditworthiness` sub-process)
 
-`orderFulfillment` is the richer demo process — it has a 3-way region gateway,
-a timer boundary event, and a downstream service task that fails for APAC
-instances during the first bug era.
+The call activity's sub-process is a standalone deployment. Pointing UC1 at it
+surfaces three BPMN-error boundary events on the credit/postal/blacklist checks
+and the two terminal end events ("Customer creditworthy" / "Risk identified").
 
 ```
-/dev-process-explain orderFulfillment 30d
+/dev-process-explain assessCreditworthiness 30d
 ```
 
 Expected output shape (truncated):
 
 ```markdown
-# Process: orderFulfillment
+# Process: assessCreditworthiness
 
 ## TL;DR
 
-A cross-region order pipeline. EU and US orders go through regional review;
-APAC orders bypass review via `Task_APACExpressShip`. All branches converge
-on `Task_ShipOrder`, then an optional priority handoff. A 2h timer boundary
-on the APAC express task can escalate stuck orders.
-
-## Behavior in production (last 30d)
-
-- Path EU-Review → Ship → Shipped: ~55%
-- Path US-Review → Ship → Shipped: ~30%
-- Path APAC-Express → Ship → Shipped: ~14%
-- Path with Priority Handoff (any region): ~3% — ALIVE-but-rare
-- Path to EndEvent_Escalated (timer fired): <1% — below minBucketSize=10
+Sub-process called from `miraveloLeasing`. Three sequential checks (credit
+score, postal code, blacklist) each raise a BPMN error if they fail, all
+routed to the shared "Risk identified" end event (`Event_RiskIdentified`). Happy
+path ends at `Event_CustomerCreditworthy` ("Customer creditworthy").
 
 ## Where it breaks
 
-- `Task_ShipOrder`: elevated failure rate for APAC instances in days 1–10 of
-  the seed window; drops to 0 after the APAC fix cutoff.
+- `Activity_CheckBlacklist` ("Check blacklist", asyncBefore): elevated failure rate
+  during the first 15 seed days; drops to 0 after the cutoff. The delegate
+  throws a `RuntimeException` (simulated provider outage), which surfaces as
+  a job-level incident and decrements retries — **not** a BPMN error.
 ```
 
 ## Context policy
 
-- **No instance quotes.** No customer name, order number, or variable content
+- **No instance quotes.** No customer name, postal code, or variable content
   ends up in the doc.
 - BPMN element IDs, delegate FQNs, gateway conditions: yes, verbatim.
 - If enrichment is missing, the segment section is dropped with a note "not

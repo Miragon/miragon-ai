@@ -80,7 +80,7 @@ MCP deployment.
 ## Example output (truncated)
 
 ```markdown
-# Failed-job recovery for `loanApproval` filter=`timeout`
+# Failed-job recovery for `assessCreditworthiness` filter=`blacklist`
 
 ## Summary
 
@@ -91,11 +91,11 @@ MCP deployment.
 
 ## Groups
 
-| #   | Count | Activity               | Classification | Error class              | Sample message            |
-| --- | ----: | ---------------------- | -------------- | ------------------------ | ------------------------- |
-| 1   |    12 | `Task_notifyApplicant` | Transient      | `SocketTimeoutException` | `timed out after 30000ms` |
-| 2   |     3 | `Task_validateAmount`  | Permanent      | `ValidationException`    | `amount must be positive` |
-| 3   |     2 | `Task_bankTransfer`    | Unknown        | `RuntimeException`       | `unexpected state`        |
+| #   | Count | Activity                  | Classification | Error class              | Sample message                               |
+| --- | ----: | ------------------------- | -------------- | ------------------------ | -------------------------------------------- |
+| 1   |    12 | `Activity_CheckBlacklist` | Transient      | `SocketTimeoutException` | `blacklist provider timed out after 30000ms` |
+| 2   |     3 | `Activity_SendPolicy`     | Permanent      | `ValidationException`    | `policy template id must not be blank`       |
+| 3   |     2 | `Activity_DeliverPolicy`  | Unknown        | `RuntimeException`       | `unexpected state`                           |
 
 ## Proposed action
 

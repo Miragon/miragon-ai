@@ -74,7 +74,7 @@ Minimal `~/.claude/mcp.json` for all five skills:
       "command": "node",
       "args": ["<path>/modules/enrichment/mcp/dist/index.js"],
       "env": {
-        "ENRICHMENT_CONFIG_PATH": "<path>/server/resources/enrichment-examples/loanApproval-local.yaml",
+        "ENRICHMENT_CONFIG_PATH": "<path>/server/resources/enrichment-examples/miraveloLeasing-local.yaml",
       },
     },
   },
@@ -93,16 +93,16 @@ Salesforce / ERP credentials.
 
 ```
 cd docker && docker compose up -d wiremock
-export ENRICHMENT_CONFIG_PATH=$(pwd)/../server/resources/enrichment-examples/loanApproval-local.yaml
+export ENRICHMENT_CONFIG_PATH=$(pwd)/../server/resources/enrichment-examples/miraveloLeasing-local.yaml
 pnpm --filter @miragon-ai/server dev
 ```
 
 Stub coverage (see `docker/wiremock/mappings/`):
 
-| YAML                      | Sources                          | Coverage                                                                                                                             |
-| ------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `loanApproval-local.yaml` | `crm`, `billing`                 | `customerSegment` (PRIVATE/BUSINESS/ENTERPRISE), `currency` (EUR/USD/GBP), `channel` (ONLINE/FAX) — pairs 1:1 with the cibseven seed |
-| `acme-local.yaml`         | `salesforce`, `erp`, `contracts` | `CUST-001` (ENTERPRISE/platinum), `CUST-002` (BUSINESS/premium); other ids return 404 to demo the `skipped` path                     |
+| YAML                         | Sources                          | Coverage                                                                                                                              |
+| ---------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `miraveloLeasing-local.yaml` | `crm`                            | `customerSegment` (PRIVATE/BUSINESS/STUDENT), `region` (EU/US/APAC), `channel` (ONLINE/BRANCH/FAX) — pairs 1:1 with the cibseven seed |
+| `acme-local.yaml`            | `salesforce`, `erp`, `contracts` | `CUST-001` (ENTERPRISE/platinum), `CUST-002` (BUSINESS/premium); other ids return 404 to demo the `skipped` path                      |
 
 The non-`-local` variant (`acme.yaml`) is preserved as a shape reference with
 `bearer` / `header` auth examples — for real tenant configs.
@@ -119,33 +119,34 @@ The cibseven-example ships three seed profiles — pick the one that matches
 what you're doing:
 
 ```bash
-# Backward-compatible: loanApproval only, 200 instances (default).
+# Legacy-shape default: ~200 miraveloLeasing instances, single bug era.
 ./gradlew :examples:cibseven-example:bootRun
 
-# Fast iteration: both processes, ~80 instances total.
+# Fast iteration: ~80 instances, cargo cap on for the UC6 DEAD demo.
 ./gradlew :examples:cibseven-example:bootRun \
   -Dspring-boot.run.profiles=seed-minimal
 
-# Full presentation mode: both processes, ~600 instances, two bug eras,
-# dead path, rare priority-handoff, APAC regression / rollback cutoffs.
+# Full presentation mode: ~600 instances, two bug eras (blacklist outage +
+# policy-template rollback), cargo-cap DEAD path, rare BRANCH / FAX channels,
+# 2 h non-interrupting timer escalation.
 ./gradlew :examples:cibseven-example:bootRun \
   -Dspring-boot.run.profiles=seed-presentation
 ```
 
-The examples below target both `loanApproval` and `orderFulfillment` in
-`cibseven-example` — runnable as soon as `docker compose up -d` is up and the
-app booted with a seed profile.
+The examples below target `miraveloLeasing` (parent) and
+`assessCreditworthiness` (sub-process) in `cibseven-example` — runnable as
+soon as `docker compose up -d` is up and the app booted with a seed profile.
 
 ### UC1 — Explain a process
 
 ```
-/dev-process-explain loanApproval 30d
+/dev-process-explain miraveloLeasing 30d
 ```
 
-Or the richer process (available under `seed-minimal` / `seed-presentation`):
+Or the sub-process:
 
 ```
-/dev-process-explain orderFulfillment 30d
+/dev-process-explain assessCreditworthiness 30d
 ```
 
 No period → defaults to `30d`. If the key is missing, the skill asks once.
@@ -153,25 +154,19 @@ No period → defaults to `30d`. If the key is missing, the skill asks once.
 ### UC2 — Project a change
 
 ```
-/dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/delegates/NotifyApplicantDelegate.kt:28
+/dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/delegates/CheckCreditScoreDelegate.kt:22
 ```
 
 Or a free-form description:
 
 ```
-/dev-change-impact "lift amount threshold for automatic approval from 25000 to 50000"
+/dev-change-impact "lift the credit-score threshold from 550 to 600"
 ```
 
 ### UC4 — Generate tests from production
 
 ```
-/dev-test-scenarios-from-production loanApproval 30d bpm-assert
-```
-
-Or against the richer order process with explicit JUnit output:
-
-```
-/dev-test-scenarios-from-production orderFulfillment 30d junit
+/dev-test-scenarios-from-production miraveloLeasing 30d bpm-assert
 ```
 
 Framework optional (`junit` or `bpm-assert`, defaults to `bpm-assert`).
@@ -179,18 +174,20 @@ Framework optional (`junit` or `bpm-assert`, defaults to `bpm-assert`).
 ### UC5 — Verify a fix
 
 ```
-/dev-fix-verification <deploymentId> loanApproval Task_notifyApplicant 7
+/dev-fix-verification <deploymentId> assessCreditworthiness Activity_CheckBlacklist 7
 ```
 
 `deploymentId` comes from `camunda7_list_deployments` — in the seed that's the
-deployment id of `loanApproval.bpmn`. The timeline is simulated via the seed
-timestamp; the "fix" is conceptually the cutoff between the buggy era and now
-(see [README](README.md) → Deployment-Era).
+deployment id of `miravelo-creditworthiness.bpmn` for the blacklist IMPROVED
+demo, or the `miravelo-leasing.bpmn` rollback-era anchor for the REGRESSED
+demo on `Activity_SendPolicy`. The timeline is simulated via the seed timestamp;
+the "fix" is conceptually the cutoff between the buggy era and now (see
+[README](README.md) → Deployment-Era).
 
 ### UC6 — Code archaeology
 
 ```
-/dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/delegates/NotifyApplicantDelegate.kt:20
+/dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/delegates/CheckBlacklistDelegate.kt:29
 ```
 
 Or paraphrase the rare FAX condition:
@@ -225,7 +222,7 @@ should stay alive in the chat so they can be iterated on. To file the report
 in a ticket / PR, save it explicitly in a follow-up turn:
 
 ```
-Save this as docs/process-analysis/loanApproval-2026-04.md
+Save this as docs/process-analysis/miraveloLeasing-2026-04.md
 ```
 
 Or copy the result to the clipboard and paste it into Jira / GitHub.

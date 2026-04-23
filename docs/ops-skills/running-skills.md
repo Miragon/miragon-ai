@@ -57,15 +57,15 @@ word.
 The `cibseven-example` profiles shape what you'll see:
 
 ```bash
-# Default: loanApproval only, 200 instances.
+# Legacy-shape default: ~200 miraveloLeasing instances, single bug era.
 ./gradlew :examples:cibseven-example:bootRun
 
-# Fast iteration: both processes, ~80 instances total.
+# Fast iteration: ~80 instances, cargo cap on for the UC6 DEAD demo.
 ./gradlew :examples:cibseven-example:bootRun \
   -Dspring-boot.run.profiles=seed-minimal
 
-# Full presentation mode: both processes, ~600 instances, two bug eras,
-# APAC regression, dead path, rare priority-handoff.
+# Full presentation mode: ~600 instances, two bug eras (blacklist outage +
+# policy-template rollback), cargo-cap DEAD path, rare BRANCH / FAX channels.
 ./gradlew :examples:cibseven-example:bootRun \
   -Dspring-boot.run.profiles=seed-presentation
 ```
@@ -83,8 +83,8 @@ UC-O1/O2/O3 in one sitting.
 Or restrict to one process / window:
 
 ```
-/ops-incident-triage loanApproval 24
-/ops-incident-triage orderFulfillment 168
+/ops-incident-triage assessCreditworthiness 24
+/ops-incident-triage miraveloLeasing 168
 ```
 
 The report prints, then stops at the confirmation gate. Type `retry`,
@@ -94,8 +94,8 @@ The report prints, then stops at the confirmation gate. Type `retry`,
 
 ```
 /ops-failed-job-recovery
-/ops-failed-job-recovery loanApproval timeout
-/ops-failed-job-recovery orderFulfillment "" true      # dryRun
+/ops-failed-job-recovery assessCreditworthiness blacklist
+/ops-failed-job-recovery miraveloLeasing "" true       # dryRun
 ```
 
 `dryRun: true` is the safe way to see the classification without the retry
@@ -113,7 +113,7 @@ Pick any running instance id from Cockpit or from the triage sample list:
 Or via business key (requires ClickHouse for the history path):
 
 ```
-/ops-instance-inspect-unblock ORD-12345
+/ops-instance-inspect-unblock LEASE-12345
 ```
 
 INSPECT runs end-to-end without prompting. The action menu follows. Each
@@ -123,7 +123,7 @@ are multiple confirmations, not one.
 ### UC-O4 — Migration (plan + gated execution)
 
 ```
-/ops-migration orderFulfillment 1 2
+/ops-migration miraveloLeasing 1 2
 ```
 
 The plan prints first. Then the confirmation gate: type `execute-safe` to
@@ -138,12 +138,12 @@ Once the example app is running with `seed-presentation`, the following six
 invocations exercise the full surface in the recommended order:
 
 ```
-/ops-incident-triage                                  # see the pile
-/ops-incident-triage loanApproval 24                  # drill to one process
-/ops-failed-job-recovery loanApproval timeout         # transient-only retry
-/ops-instance-inspect-unblock <pi from the triage>    # deep-dive one case
-/ops-instance-inspect-unblock <APAC-stuck pi>         # exercise modify-tokens
-/ops-migration orderFulfillment 1 2                   # scope the next migration
+/ops-incident-triage                                          # see the pile
+/ops-incident-triage assessCreditworthiness 24                # drill to one process
+/ops-failed-job-recovery assessCreditworthiness blacklist     # transient-only retry
+/ops-instance-inspect-unblock <pi from the triage>            # deep-dive one case
+/ops-instance-inspect-unblock <APAC-stuck pi>                 # exercise modify-tokens
+/ops-migration miraveloLeasing 1 2                            # scope the next migration
 ```
 
 ## 6. Debugging

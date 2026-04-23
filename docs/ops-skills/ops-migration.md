@@ -1,6 +1,6 @@
 # UC-O4 — `ops-migration`
 
-> "Version 2 of `orderFulfillment` is ready. Before I open the Migration
+> "Version 2 of `miraveloLeasing` is ready. Before I open the Migration
 > Wizard, I need to know: how many instances move, how many need a manual
 > mapping decision, and how many are flat-out blocked — and then run it."
 
@@ -108,50 +108,50 @@ progress and failures land in Cockpit → Batches, not inline.
 ## Example output (truncated)
 
 ````markdown
-# Migration plan: `orderFulfillment` v1 → v2
+# Migration plan: `miraveloLeasing` v1 → v2
 
 ## Scope
 
 - Running instances on v1: **152**
-- Source definition id: `orderFulfillment:1:a1b2…`
-- Target definition id: `orderFulfillment:2:c3d4…`
+- Source definition id: `miraveloLeasing:1:a1b2…`
+- Target definition id: `miraveloLeasing:2:c3d4…`
 
 ## BPMN diff
 
-| Change         | Source id          | Target id         | Notes               |
-| -------------- | ------------------ | ----------------- | ------------------- |
-| Unchanged      | `ValidateOrder`    | `ValidateOrder`   |                     |
-| Unchanged      | `Task_ShipOrder`   | `Task_ShipOrder`  |                     |
-| Renamed (0.87) | `checkInventory`   | `verifyStock`     | name match 0.87     |
-| Removed        | `legacyRouteToFax` | —                 | manual intervention |
-| Added          | —                  | `priorityHandoff` | new element in v2   |
+| Change         | Source id                  | Target id                  | Notes               |
+| -------------- | -------------------------- | -------------------------- | ------------------- |
+| Unchanged      | `Activity_ResolveCustomer` | `Activity_ResolveCustomer` | call activity       |
+| Unchanged      | `Activity_SendPolicy`      | `Activity_SendPolicy`      | send policy         |
+| Renamed (0.87) | `Activity_DeliverPolicy`   | `Activity_DeliverBike`     | name match 0.87     |
+| Removed        | `Activity_legacyFax`       | —                          | manual intervention |
+| Added          | —                          | `Activity_priorityLane`    | new element in v2   |
 
 ## Token distribution (running on v1)
 
-| Activity           | Tokens | Migration status              | Target mapping   |
-| ------------------ | -----: | ----------------------------- | ---------------- |
-| `ValidateOrder`    |     12 | Safe 1:1                      | `ValidateOrder`  |
-| `Task_ShipOrder`   |    108 | Safe 1:1                      | `Task_ShipOrder` |
-| `checkInventory`   |     30 | Needs mapping (rename → 0.87) | `verifyStock`    |
-| `legacyRouteToFax` |      2 | Blocked — element removed     | —                |
+| Activity                   | Tokens | Migration status              | Target mapping             |
+| -------------------------- | -----: | ----------------------------- | -------------------------- |
+| `Activity_ResolveCustomer` |     12 | Safe 1:1                      | `Activity_ResolveCustomer` |
+| `Activity_SendPolicy`      |    108 | Safe 1:1                      | `Activity_SendPolicy`      |
+| `Activity_DeliverPolicy`   |     30 | Needs mapping (rename → 0.87) | `Activity_DeliverBike`     |
+| `Activity_legacyFax`       |      2 | Blocked — element removed     | —                          |
 
 ## Summary
 
 - **Safe**: 120 instances across 2 activities.
-- **Needs mapping**: 30 instances across 1 activity (`checkInventory` → `verifyStock`).
-- **Blocked**: 2 instances across 1 activity (`legacyRouteToFax`).
+- **Needs mapping**: 30 instances across 1 activity (`Activity_DeliverPolicy` → `Activity_DeliverBike`).
+- **Blocked**: 2 instances across 1 activity (`Activity_legacyFax`).
 
 ## Suggested Cockpit Migration Wizard input
 
 ```text
-sourceProcessDefinitionId: orderFulfillment:1:a1b2…
-targetProcessDefinitionId: orderFulfillment:2:c3d4…
+sourceProcessDefinitionId: miraveloLeasing:1:a1b2…
+targetProcessDefinitionId: miraveloLeasing:2:c3d4…
 instructions:
-  - source: ValidateOrder    → target: ValidateOrder
-  - source: Task_ShipOrder   → target: Task_ShipOrder
-  - source: checkInventory   → target: verifyStock    # verify name match in Cockpit
+  - source: Activity_ResolveCustomer   → target: Activity_ResolveCustomer
+  - source: Activity_SendPolicy   → target: Activity_SendPolicy
+  - source: Activity_DeliverPolicy   → target: Activity_DeliverBike    # verify name match in Cockpit
 # NOT AUTO-MIGRATABLE (2 instances):
-#   - source: legacyRouteToFax → (element removed in v2). Decide manually.
+#   - source: Activity_legacyFax → (element removed in v2). Decide manually.
 ```
 ````
 

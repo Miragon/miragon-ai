@@ -29,33 +29,48 @@ buckets instead of extrapolating them.
 | UC5 | [`dev-fix-verification`](dev-fix-verification.md)             | After deployment                 | Pre/post comparison via `cluster.compare` → verdict        |
 | UC6 | [`dev-code-archaeology`](dev-code-archaeology.md)             | Code looks dead / suspicious     | Git + 12-month path frequency → ALIVE / DEAD / UNKNOWN     |
 
-## Reference examples: `loanApproval` + `orderFulfillment`
+## Reference example: `miraveloLeasing`
 
-All example outputs in the skill docs use two processes from
-[`plugins/examples/cibseven-example`](../../plugins/examples/cibseven-example).
+All example outputs in the skill docs use Miravelo's bike-leasing showcase
+from [`plugins/examples/cibseven-example`](../../plugins/examples/cibseven-example).
+It is a two-deployment process: `miraveloLeasing` (parent) calls
+`assessCreditworthiness` (sub-process) via a BPMN call activity.
 
 The seeder runs in three flavors, selected via the Spring profile
 (`-Dspring-boot.run.profiles=seed | seed-minimal | seed-presentation`):
 
-| Profile             | loanApproval | orderFulfillment | Instances | Purpose                                                   |
-| ------------------- | ------------ | ---------------- | --------- | --------------------------------------------------------- |
-| `seed` (default)    | 200          | 0                | 200       | Backward-compatible; matches the legacy examples          |
-| `seed-minimal`      | 40           | 40               | ~80       | Fast local iteration, CI smoke tests                      |
-| `seed-presentation` | 300          | 300              | ~600      | Full presentation coverage — every UC has 2+ demo moments |
+| Profile             | Instances | Cargo cap | Rollback era | Purpose                                                   |
+| ------------------- | --------- | --------- | ------------ | --------------------------------------------------------- |
+| `seed` (default)    | 200       | off       | off          | Legacy-shape default; single bug era for UC5 IMPROVED     |
+| `seed-minimal`      | ~80       | on        | off          | Fast local iteration, CI smoke tests                      |
+| `seed-presentation` | ~600      | on        | on           | Full presentation coverage — every UC has 2+ demo moments |
 
-### `loanApproval`
+### What the seeder produces
 
-- **Paths** — the standard approval path (`StartEvent_1 → Task_0dfv74n → Gateway_approved → Task_bankTransfer → EndEvent_approved`) dominates; the reject path (`... → Task_notifyApplicant → EndEvent_rejected`) fires depending on loan amount + segment.
-- **Variables** — `amount` (log-skewed, 1k–500k), `applicant`, `loanType`, `customerSegment` (PRIVATE / BUSINESS / ENTERPRISE), `currency` (EUR / USD / GBP), `channel` (ONLINE / FAX — FAX < 1%). In `seed-presentation` also `region` (EU / US / APAC) and `priorityFlag` (boolean).
-- **Deployment eras** — `seed` has one buggy era (first 15 days). `seed-presentation` adds a second, narrow **rollback era** at days 7–10 so UC5 can demo both IMPROVED and REGRESSED verdicts.
-- **Dead combination** — in `seed-presentation`, student loans are hard-capped at €40k → `loanType == "student" && amount > 100_000` is structurally unreachable → UC6 DEAD verdict.
-
-### `orderFulfillment` (seeded in `seed-minimal` / `seed-presentation` only)
-
-- **Paths** — 3-way region gateway (EU-Review → Ship; US-Review → Ship; APAC-Express → Ship), optional Priority-Handoff after ship, Timer-Escalation on stuck APAC tasks.
-- **Variables** — `orderId`, `customerId`, `region` (EU 55% / US 30% / APAC 15%), `priorityFlag` (true ~3% — ALIVE-rare), `amount`, `itemCount`, `shippingMethod` (STANDARD / EXPRESS / FREIGHT).
-- **Deployment era** — APAC shipping bug in days 1–10 (`shipOrderDelegate` throws at 20% for APAC) → second UC5 IMPROVED demo, distinct element + process from loanApproval.
-- **Timer escalation** — fires for ~1% of APAC orders → below minBucketSize → UC6 UNKNOWN on a different element than FAX.
+- **Paths** — the dominant path is "creditworthy customer → leasing policy
+  issued" (`StartEvent_LeasingInquiry → Activity_ResolveCustomer → Activity_AssessCreditworthiness → Gateway_Creditworthy → Activity_SendPolicy → Activity_DeliverPolicy → Event_PolicyIssued`).
+  A smaller branch ("Risk identified") routes through the "Decide on application"
+  user task (`Activity_DecideOnApplication`) and then either issues the policy or rejects
+  it at `Event_PolicyRejected`.
+- **Variables** — every instance carries `customerId`, `creditScore` (300–850),
+  `postalCode`, `region` (EU / US / APAC), `bikeModel` (city / cargo / trail /
+  road), `leaseAmount` (€800–25k, log-skewed), `leaseTermMonths` (12 / 24 /
+  36 / 48), `customerSegment` (PRIVATE / BUSINESS / STUDENT), `channel`
+  (ONLINE / BRANCH / FAX), `priorityFlag` (boolean).
+- **Deployment eras** — `seed` has one buggy era (first 15 seed days): the
+  upstream blacklist provider is unreachable and `CheckBlacklistDelegate`
+  throws on ~15 % of instances → incidents on `Activity_CheckBlacklist` in the
+  sub-process. `seed-presentation` adds a narrow **rollback era** at days
+  7–10 where the policy template mis-renders on `Activity_SendPolicy` at ~12 %
+  → UC5 demos both IMPROVED and REGRESSED verdicts on different elements.
+- **Dead combination** — in `seed-presentation` (and `seed-minimal`) cargo
+  bikes are hard-capped at 24 months → `bikeModel == "cargo" && leaseTermMonths
+  > 24` is structurally unreachable → UC6 DEAD verdict.
+- **Suppressed buckets** — `channel == "FAX"` at ~1 % stays below
+  `minBucketSize=10` → UC6 UNKNOWN. The 2 h non-interrupting boundary timer
+  on `Activity_DecideOnApplication` fires for a small fraction of risk-identified
+  instances → `Event_DecisionAccelerated` is a second suppressed bucket on a different
+  element.
 
 Start CIB Seven with one of the seed profiles and invoke the relevant skill.
 
@@ -98,7 +113,7 @@ All skills combine the same components:
 - **`camunda7-mcp`** delivers BPMN XML and deployment metadata (used mainly by UC5).
 - **`analytics-mcp`** delivers aggregated runtime metrics from ClickHouse.
 - **`enrichment-mcp`** translates variable combinations into business segments
-  ("Enterprise + multi-currency") via YAML-declared lookups.
+  ("Business + APAC") via YAML-declared lookups.
 - **Workspace tools** (`Read`, `Grep`, `Glob`, `Bash(git *)`) cover local code
   and history reading.
 

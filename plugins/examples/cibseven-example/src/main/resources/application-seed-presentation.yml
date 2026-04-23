@@ -1,31 +1,43 @@
 logging:
   level:
-    # Seeding intentionally triggers two bug eras and one APAC regression — the
-    # delegates log their simulated failures at WARN. Suppress the engine's
-    # redundant ERROR re-log so the seed output stays readable.
+    # Seeding intentionally triggers two incident eras (pre-fix blacklist outage
+    # and rollback-era policy-template render failure) — the delegates log
+    # their simulated failures at WARN. Suppress the engine's redundant ERROR
+    # re-log so the seed output stays readable.
     org.cibseven.bpm.engine.context: "OFF"
 
 seed:
-  # PRESENTATION profile — ~600 instances across both processes.
+  # PRESENTATION profile — ~600 miraveloLeasing instances with the full
+  # coverage surface for the dev-skills demo recipes.
   #
-  # loanApproval (300):
-  #   - Legacy buggy era days 15..30 → NotifyApplicantDelegate throws at 15%.
-  #     Anchors the UC5 IMPROVED verdict against the buggy-era/fix cutoff.
-  #   - Rollback era days 7..10 → NotifyApplicantDelegate throws at 12% in that
-  #     narrow band, then returns to baseline. Anchors the UC5 REGRESSED verdict
-  #     when the deployment window centers on that cutoff.
-  #   - region and priorityFlag variables set on every instance → enables UC2
-  #     categorical / boolean demos without producing new BPMN paths.
-  #   - Student loans are capped at 40k → `loanType == "student" && amount >
-  #     100000` is structurally unreachable for UC6 DEAD.
-  #   - FAX channel at ~1% → below minBucketSize=10 for UC6 UNKNOWN.
+  # UC2 (change-impact):
+  #   - `region` (EU/US/APAC), `bikeModel` (city/cargo/trail/road),
+  #     `customerSegment` (PRIVATE/BUSINESS/STUDENT) — categorical
+  #     reclassification without producing new BPMN paths.
+  #   - `priorityFlag` boolean at ~20 % — boolean reclassification.
   #
-  # orderFulfillment (300):
-  #   - Region mix 55 EU / 30 US / 15 APAC → UC2 categorical change demo.
-  #   - APAC bug era days 1..10 → shipOrderDelegate throws on ~20% of APAC →
-  #     second UC5 IMPROVED demo, distinct from loanApproval.
-  #   - priorityFlag true at ~3% → Task_PriorityHandoff path is ALIVE-but-rare
-  #     for UC6.
-  #   - Timer boundary escalation at ~1% → below minBucketSize for UC6 UNKNOWN
-  #     on a different element (EndEvent_Escalated).
+  # UC5 IMPROVED:
+  #   - Pre-fix era days 15..30 → `_simulateBlacklistOutage=true` on 15 %
+  #     of instances → CheckBlacklist raises a job-level incident on
+  #     Activity_CheckBlacklist. After the cutoff the failure rate drops to 0.
+  #     Anchors the IMPROVED verdict against the buggy-era/fix cutoff.
+  #
+  # UC5 REGRESSED:
+  #   - Narrow rollback band days 7..10 → `_simulatePolicyRenderFailure=true`
+  #     on 12 % of instances → SendPolicy raises a job-level incident on
+  #     Activity_SendPolicy. Bracketed by stable rates before and after.
+  #     Anchors the REGRESSED verdict when the deployment window centers
+  #     on that cutoff.
+  #
+  # UC6 DEAD:
+  #   - Cargo bikes are capped at 24 lease months, so
+  #     `bikeModel == "cargo" && leaseTermMonths > 24` is structurally
+  #     unreachable regardless of how many instances we seed.
+  #
+  # UC6 UNKNOWN (suppressed buckets, below minBucketSize=10):
+  #   - FAX channel at ~1 %.
+  #   - Timer-boundary escalation at ~10 % of risk-identified instances →
+  #     the non-interrupting 2 h timer on Activity_DecideOnApplication fires
+  #     and spawns the "Accelerate decision making" branch
+  #     (Event_DecisionAccelerated).
   profile: presentation

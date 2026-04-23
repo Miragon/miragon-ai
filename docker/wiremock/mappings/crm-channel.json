@@ -19,6 +19,22 @@
     {
       "request": {
         "method": "GET",
+        "urlPath": "/crm/channels/BRANCH"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "channel": "BRANCH",
+          "supportTier": "advisor-assisted",
+          "deprecated": false,
+          "ticketSystem": "branch-crm"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
         "urlPath": "/crm/channels/FAX"
       },
       "response": {
