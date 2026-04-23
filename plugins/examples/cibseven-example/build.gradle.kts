@@ -28,3 +28,8 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     dependsOn(":cibseven-history-clickhouse:shadowJar")
     dependsOn(":cibseven-otel-eventbridge:shadowJar")
 }
+
+tasks.named<Test>("test") {
+    dependsOn(":cibseven-history-clickhouse:shadowJar")
+    dependsOn(":cibseven-otel-eventbridge:shadowJar")
+}
