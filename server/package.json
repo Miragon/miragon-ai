@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@miragon/mcp-toolkit-core": "workspace:*",
-    "@miragon-ai/mcp-camunda7": "workspace:*",
+    "@miragon-ai/mcp-cibseven": "workspace:*",
     "@miragon-ai/mcp-analytics": "workspace:*",
     "@miragon-ai/client-enrichment": "workspace:*",
     "@miragon-ai/mcp-enrichment": "workspace:*",

@@ -33,8 +33,8 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 | Path                       | Description                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------ |
 | `server/`                  | `@miragon-ai/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
-| `modules/camunda7/client/` | `@miragon-ai/client-camunda7` — OpenAPI-generated TypeScript client (hey-api)        |
-| `modules/camunda7/mcp/`    | `@miragon-ai/mcp-camunda7` — BPM tools + React widgets                               |
+| `modules/cibseven/client/` | `@miragon-ai/client-cibseven` — OpenAPI-generated TypeScript client (hey-api)        |
+| `modules/cibseven/mcp/`    | `@miragon-ai/mcp-cibseven` — BPM tools + React widgets                               |
 | `modules/analytics/mcp/`   | `@miragon-ai/mcp-analytics` — ClickHouse analytics tools + dashboard widget          |
 | `packages/core/`           | `@miragon-ai/core` — `ModulePlugin` interface + `createToolRegistrar` helper         |
 | `packages/ui/`             | `@miragon-ai/ui` — shared shadcn primitives + tailwind globals                       |
@@ -88,15 +88,15 @@ cd docker && docker compose up -d && cd ..
 
 ```bash
 pnpm install
-pnpm -F @miragon-ai/client-camunda7 generate  # only after spec changes
+pnpm -F @miragon-ai/client-cibseven generate  # only after spec changes
 pnpm build
 ```
 
 The build chain is:
 
-1. `@miragon-ai/client-camunda7` — `tsc` against the generated SDK
+1. `@miragon-ai/client-cibseven` — `tsc` against the generated SDK
 2. `@miragon-ai/core`, `@miragon-ai/ui` — shared helpers and UI primitives
-3. `@miragon-ai/mcp-camunda7`, `@miragon-ai/mcp-analytics` — tool + widget modules
+3. `@miragon-ai/mcp-cibseven`, `@miragon-ai/mcp-analytics` — tool + widget modules
 4. `@miragon-ai/server` — Vite bundles `mcp-app.html` (single-file HTML with all widgets) and `tsc` compiles the server
 
 ## Run

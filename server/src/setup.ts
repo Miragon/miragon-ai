@@ -12,7 +12,7 @@ import {
 } from "@miragon/mcp-toolkit-core"
 import { z } from "zod"
 
-import { createPlugin as createCamunda7Plugin } from "@miragon-ai/mcp-camunda7"
+import { createPlugin as createCamunda7Plugin } from "@miragon-ai/mcp-cibseven"
 import { createPlugin as createAnalyticsPlugin } from "@miragon-ai/mcp-analytics"
 import { createPlugin as createEnrichmentPlugin } from "@miragon-ai/mcp-enrichment"
 import { parseEnrichmentConfig } from "@miragon-ai/client-enrichment"
