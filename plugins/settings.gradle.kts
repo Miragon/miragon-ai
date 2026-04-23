@@ -8,5 +8,4 @@ include(
     "cibseven-otel-eventbridge",
     "operaton-history-clickhouse",
     "examples:cibseven-example",
-    "examples:camunda7-example",
 )

@@ -19,6 +19,8 @@ dependencies {
     runtimeOnly(libs.h2)
 
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.cibseven.bpm.junit5)
+    testImplementation(libs.cibseven.bpm.assert)
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {

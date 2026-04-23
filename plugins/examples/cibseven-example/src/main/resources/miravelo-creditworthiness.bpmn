@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0xrl2qj" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.41.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.24.0">
+  <bpmn:error id="Error_BadCreditScore" name="Bad credit score" errorCode="BAD_CREDIT_SCORE" />
+  <bpmn:error id="Error_UndeliverablePostalCode" name="Undeliverable postal code" errorCode="UNDELIVERABLE_POSTAL_CODE" />
+  <bpmn:error id="Error_BlacklistHit" name="Blacklist hit" errorCode="BLACKLIST_HIT" />
+  <bpmn:collaboration id="Collaboration_0ifnzux">
+    <bpmn:participant id="Participant_0ilbgu1" name="Assess Customer credebility" processRef="assessCreditworthiness" />
+  </bpmn:collaboration>
+  <bpmn:process id="assessCreditworthiness" isExecutable="true" camunda:historyTimeToLive="P30D">
+    <bpmn:startEvent id="StartEvent_CheckRequired" name="Check required">
+      <bpmn:outgoing>Flow_1uz5ar2</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1uz5ar2" sourceRef="StartEvent_CheckRequired" targetRef="Activity_CheckCreditScore" />
+    <bpmn:sequenceFlow id="Flow_1p6to0y" sourceRef="Activity_CheckCreditScore" targetRef="Activity_CheckPostalCode" />
+    <bpmn:sequenceFlow id="Flow_0vo0xvf" sourceRef="Activity_CheckPostalCode" targetRef="Activity_CheckBlacklist" />
+    <bpmn:sequenceFlow id="Flow_05l0gz3" sourceRef="Activity_CheckBlacklist" targetRef="Event_CustomerCreditworthy" />
+    <bpmn:serviceTask id="Activity_CheckCreditScore" name="Check Credit Score" camunda:delegateExpression="${checkCreditScoreDelegate}">
+      <bpmn:incoming>Flow_1uz5ar2</bpmn:incoming>
+      <bpmn:outgoing>Flow_1p6to0y</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_CheckPostalCode" name="Check postal code area" camunda:delegateExpression="${checkPostalCodeDelegate}">
+      <bpmn:incoming>Flow_1p6to0y</bpmn:incoming>
+      <bpmn:outgoing>Flow_0vo0xvf</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_CheckBlacklist" name="Check blacklist" camunda:delegateExpression="${checkBlacklistDelegate}" camunda:asyncBefore="true">
+      <bpmn:incoming>Flow_0vo0xvf</bpmn:incoming>
+      <bpmn:outgoing>Flow_05l0gz3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Event_BadCreditScoreCaught" name="bad credit score" attachedToRef="Activity_CheckCreditScore">
+      <bpmn:outgoing>Flow_09ltnyj</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_0xzkofp" errorRef="Error_BadCreditScore" />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Event_UndeliverableCaught" name="lives in an area we do not deliver to" attachedToRef="Activity_CheckPostalCode">
+      <bpmn:outgoing>Flow_1qse5po</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_04dffz0" errorRef="Error_UndeliverablePostalCode" />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Event_BlacklistHitCaught" name="We do not want to do business with said client" attachedToRef="Activity_CheckBlacklist">
+      <bpmn:outgoing>Flow_1lfgbeh</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_0qsblv5" errorRef="Error_BlacklistHit" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_1lfgbeh" sourceRef="Event_BlacklistHitCaught" targetRef="Event_RiskIdentified" />
+    <bpmn:sequenceFlow id="Flow_1qse5po" sourceRef="Event_UndeliverableCaught" targetRef="Event_RiskIdentified" />
+    <bpmn:sequenceFlow id="Flow_09ltnyj" sourceRef="Event_BadCreditScoreCaught" targetRef="Event_RiskIdentified" />
+    <bpmn:endEvent id="Event_CustomerCreditworthy" name="Customer creditworthy">
+      <bpmn:incoming>Flow_05l0gz3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="Event_RiskIdentified" name="Risk identified">
+      <bpmn:incoming>Flow_1lfgbeh</bpmn:incoming>
+      <bpmn:incoming>Flow_1qse5po</bpmn:incoming>
+      <bpmn:incoming>Flow_09ltnyj</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_0ifnzux">
+      <bpmndi:BPMNShape id="Participant_0ilbgu1_di" bpmnElement="Participant_0ilbgu1" isHorizontal="true">
+        <dc:Bounds x="132" y="55" width="736" height="355" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_CheckRequired_di" bpmnElement="StartEvent_CheckRequired">
+        <dc:Bounds x="202" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="183" y="205" width="75" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_14k5rlg_di" bpmnElement="Activity_CheckCreditScore">
+        <dc:Bounds x="280" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0kfqhgp_di" bpmnElement="Activity_CheckPostalCode">
+        <dc:Bounds x="430" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1tffnsz_di" bpmnElement="Activity_CheckBlacklist">
+        <dc:Bounds x="580" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_CustomerCreditworthy_di" bpmnElement="Event_CustomerCreditworthy">
+        <dc:Bounds x="802" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="790" y="205" width="60" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_RiskIdentified_di" bpmnElement="Event_RiskIdentified">
+        <dc:Bounds x="802" y="312" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="786" y="355" width="69" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0xrikko" bpmnElement="Event_BlacklistHitCaught">
+        <dc:Bounds x="662" y="202" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="694.5" y="240" width="89" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1f2d0aq" bpmnElement="Event_UndeliverableCaught">
+        <dc:Bounds x="512" y="202" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="538" y="240" width="84" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0pn40uh_di" bpmnElement="Event_BadCreditScoreCaught">
+        <dc:Bounds x="342" y="202" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="370" y="241" width="79" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1uz5ar2_di" bpmnElement="Flow_1uz5ar2">
+        <di:waypoint x="238" y="180" />
+        <di:waypoint x="280" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1p6to0y_di" bpmnElement="Flow_1p6to0y">
+        <di:waypoint x="380" y="180" />
+        <di:waypoint x="430" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0vo0xvf_di" bpmnElement="Flow_0vo0xvf">
+        <di:waypoint x="530" y="180" />
+        <di:waypoint x="580" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_05l0gz3_di" bpmnElement="Flow_05l0gz3">
+        <di:waypoint x="680" y="180" />
+        <di:waypoint x="802" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1lfgbeh_di" bpmnElement="Flow_1lfgbeh">
+        <di:waypoint x="680" y="238" />
+        <di:waypoint x="680" y="330" />
+        <di:waypoint x="802" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1qse5po_di" bpmnElement="Flow_1qse5po">
+        <di:waypoint x="530" y="238" />
+        <di:waypoint x="530" y="330" />
+        <di:waypoint x="802" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_09ltnyj_di" bpmnElement="Flow_09ltnyj">
+        <di:waypoint x="360" y="238" />
+        <di:waypoint x="360" y="330" />
+        <di:waypoint x="802" y="330" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -163,10 +163,10 @@ The repo ships two ready-to-run YAMLs under `server/resources/enrichment-example
 Both target the WireMock sidecar (`docker compose up -d wiremock`, port 8088),
 so no external credentials are needed:
 
-| YAML                      | Sources                          | Stub coverage                                                                                                                        |
-| ------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `loanApproval-local.yaml` | `crm`, `billing`                 | `customerSegment` (PRIVATE/BUSINESS/ENTERPRISE), `currency` (EUR/USD/GBP), `channel` (ONLINE/FAX) — pairs 1:1 with the cibseven seed |
-| `acme-local.yaml`         | `salesforce`, `erp`, `contracts` | `CUST-001` (ENTERPRISE/platinum), `CUST-002` (BUSINESS/premium); other ids return 404 to demo the `skipped` path                     |
+| YAML                         | Sources                          | Stub coverage                                                                                                                         |
+| ---------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `miraveloLeasing-local.yaml` | `crm`                            | `customerSegment` (PRIVATE/BUSINESS/STUDENT), `region` (EU/US/APAC), `channel` (ONLINE/BRANCH/FAX) — pairs 1:1 with the cibseven seed |
+| `acme-local.yaml`            | `salesforce`, `erp`, `contracts` | `CUST-001` (ENTERPRISE/platinum), `CUST-002` (BUSINESS/premium); other ids return 404 to demo the `skipped` path                      |
 
 The non-`-local` variant (`acme.yaml`) is preserved as a shape reference for
 real tenant configs and demonstrates `bearer` / `header` auth.

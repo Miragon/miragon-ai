@@ -33,8 +33,8 @@ The path is resolved against `process.cwd()` of the server, so an absolute
 path is the safest choice. Two ready-to-run examples live under
 `server/resources/enrichment-examples/`:
 
-- `loanApproval-local.yaml` — pairs with the `cibseven-example` seed
-  (`customerSegment`, `currency`, `channel`).
+- `miraveloLeasing-local.yaml` — pairs with the `cibseven-example` seed
+  (`customerSegment`, `region`, `channel`).
 - `acme-local.yaml` — generic Salesforce / ERP / Contracts shape.
 
 Both target the WireMock sidecar on `localhost:8088`, so no external
@@ -74,7 +74,7 @@ CLICKHOUSE_URL=http://localhost:8123
 CLICKHOUSE_USER=camunda
 CLICKHOUSE_PASSWORD=camunda123
 
-ENRICHMENT_CONFIG_PATH=/abs/path/to/server/resources/enrichment-examples/loanApproval-local.yaml
+ENRICHMENT_CONFIG_PATH=/abs/path/to/server/resources/enrichment-examples/miraveloLeasing-local.yaml
 
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 ```

@@ -86,21 +86,21 @@ UNBLOCK (Steps 9–13, gated)
 ## Example output (truncated, against `seed-presentation`)
 
 ```markdown
-# Instance `pi-0c3d7a…` — business key `ORD-12345`
+# Instance `pi-0c3d7a…` — business key `LEASE-12345`
 
 ## State
 
-- Process: `orderFulfillment` (id `orderFulfillment:4:a1b2…`)
+- Process: `assessCreditworthiness` (id `assessCreditworthiness:4:a1b2…`)
 - Started: 2026-04-21T00:12 — running for 6.1h
 - Suspended: no
 - Current activities (1):
-  - `Task_ShipOrder` (`serviceTask`) — since 00:14 — incidents: `inc-9fe2`
+  - `Activity_CheckBlacklist` (`serviceTask`) — since 00:14 — incidents: `inc-9fe2`
 
 ## Incidents (1)
 
-| ID         | Type      | Activity         | Age | Message                                 |
-| ---------- | --------- | ---------------- | --- | --------------------------------------- |
-| `inc-9fe2` | failedJob | `Task_ShipOrder` | 6h  | `Connection refused: shipping-svc:8080` |
+| ID         | Type      | Activity                  | Age | Message                                              |
+| ---------- | --------- | ------------------------- | --- | ---------------------------------------------------- |
+| `inc-9fe2` | failedJob | `Activity_CheckBlacklist` | 6h  | `Blacklist provider unreachable: blacklist-svc:8080` |
 
 ## Jobs (1)
 
@@ -112,21 +112,21 @@ UNBLOCK (Steps 9–13, gated)
 
 ## Variables (names only)
 
-- `orderTotal` (Double)
+- `creditScore` (Integer)
 - `region` (String)
-- `businessKey: "ORD-12345"` <-- shown: looks like a business key
+- `businessKey: "LEASE-12345"` <-- shown: looks like a business key
 
 ## Recent history (last 5 steps)
 
-- 2026-04-21T00:12 → 00:13 `ValidateOrder` (END)
+- 2026-04-21T00:12 → 00:13 `Activity_StartCreditCheck` (END)
 - 2026-04-21T00:13 → 00:14 `Gateway_region` (END)
-- 2026-04-21T00:14 → — `Task_ShipOrder` (active)
+- 2026-04-21T00:14 → — `Activity_CheckBlacklist` (active)
 
 ## Proposed actions
 
 > Proposed actions (pick one, or "no"):
 > A. retry-job `job-a77` — set retries = 3 + resolve incident `inc-9fe2`
-> F. modify-tokens — cancel `Task_ShipOrder` activity instance
+> F. modify-tokens — cancel `Activity_CheckBlacklist` activity instance
 
 > About to call:
 > camunda7_set_job_retries(jobId: "job-a77", retries: 3)
@@ -139,7 +139,7 @@ After `A` + `yes`:
 ```markdown
 ## After
 
-- Current activities: `Task_ShipOrder` → `Task_NotifyCustomer`
+- Current activities: `Activity_CheckBlacklist` → `Activity_NextStep`
 - Incidents: 1 → 0
 - Jobs with retries = 0: 1 → 0
 - Open user tasks: unchanged

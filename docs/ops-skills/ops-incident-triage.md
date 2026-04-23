@@ -76,7 +76,7 @@ wants the report first, and can re-invoke with a narrower scope.
 ## Example output (truncated, against `seed-presentation`)
 
 ```markdown
-# Incident triage — last 24h for `loanApproval`
+# Incident triage — last 24h for `assessCreditworthiness`
 
 ## Summary
 
@@ -88,11 +88,11 @@ wants the report first, and can re-invoke with a narrower scope.
 
 ## Groups
 
-| #   | Count | Historical (1d) | Activity               | Classification       | Message                                             |
-| --- | ----: | --------------: | ---------------------- | -------------------- | --------------------------------------------------- |
-| 1   |    47 |              12 | `Task_notifyApplicant` | Retry (transient)    | `Connection refused: notification-service:8080`     |
-| 2   |     8 |               0 | `Task_validateAmount`  | Escalate (permanent) | `NullPointerException at ...ValidateAmountDelegate` |
-| 3   |     3 |               3 | `Task_bankTransfer`    | Manual review        | `HTTP 429 Too Many Requests`                        |
+| #   | Count | Historical (1d) | Activity                  | Classification       | Message                                                |
+| --- | ----: | --------------: | ------------------------- | -------------------- | ------------------------------------------------------ |
+| 1   |    47 |              12 | `Activity_CheckBlacklist` | Retry (transient)    | `Blacklist provider unreachable: blacklist-svc:8080`   |
+| 2   |     8 |               0 | `Activity_SendPolicy`     | Escalate (permanent) | `NullPointerException at ...SendPolicyDelegate`        |
+| 3   |     3 |               3 | `Activity_DeliverPolicy`  | Manual review        | `HTTP 429 Too Many Requests` (policy-template service) |
 
 ## Proposed action plan
 

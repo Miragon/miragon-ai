@@ -3,48 +3,48 @@
     {
       "request": {
         "method": "GET",
-        "urlPath": "/billing/currencies/EUR"
+        "urlPath": "/crm/regions/EU"
       },
       "response": {
         "status": 200,
         "headers": { "Content-Type": "application/json" },
         "jsonBody": {
-          "currency": "EUR",
           "region": "EU",
-          "invoicingDelayDays": 14,
-          "vatBracket": "standard"
+          "gdprZone": "EEA",
+          "timezone": "Europe/Berlin",
+          "defaultCurrency": "EUR"
         }
       }
     },
     {
       "request": {
         "method": "GET",
-        "urlPath": "/billing/currencies/USD"
+        "urlPath": "/crm/regions/US"
       },
       "response": {
         "status": 200,
         "headers": { "Content-Type": "application/json" },
         "jsonBody": {
-          "currency": "USD",
-          "region": "AMER",
-          "invoicingDelayDays": 30,
-          "vatBracket": "exempt"
+          "region": "US",
+          "gdprZone": "none",
+          "timezone": "America/New_York",
+          "defaultCurrency": "USD"
         }
       }
     },
     {
       "request": {
         "method": "GET",
-        "urlPath": "/billing/currencies/GBP"
+        "urlPath": "/crm/regions/APAC"
       },
       "response": {
         "status": 200,
         "headers": { "Content-Type": "application/json" },
         "jsonBody": {
-          "currency": "GBP",
-          "region": "UK",
-          "invoicingDelayDays": 21,
-          "vatBracket": "standard-uk"
+          "region": "APAC",
+          "gdprZone": "none",
+          "timezone": "Asia/Singapore",
+          "defaultCurrency": "SGD"
         }
       }
     }
