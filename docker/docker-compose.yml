@@ -1,3 +1,5 @@
+name: miragon-ai
+
 services:
   # Default: custom-built CIB Seven with ClickHouse + OTEL config
   cibseven:
