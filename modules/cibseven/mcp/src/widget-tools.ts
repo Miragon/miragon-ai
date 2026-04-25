@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
-import { text } from "mcp-use/server"
+import { buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
 import type {
   Client,
   ProcessListData,
@@ -59,7 +59,13 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         definitions: defArray as ProcessListData["definitions"],
         totalCount: defArray.length,
       }
-      return text(JSON.stringify({ widget: "camunda7:process-list", data }))
+      return buildSingleWidgetView({
+        widget: "camunda7:process-list",
+        app: "camunda7",
+        dataType: "camunda7:processDefinitionList",
+        data,
+        title: "Process Definitions",
+      })
     },
   )
 
@@ -99,7 +105,13 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
           processDefinitionKey: args.processDefinitionKey,
         },
       }
-      return text(JSON.stringify({ widget: "camunda7:task-dashboard", data }))
+      return buildSingleWidgetView({
+        widget: "camunda7:task-dashboard",
+        app: "camunda7",
+        dataType: "camunda7:taskList",
+        data,
+        title: "Task Dashboard",
+      })
     },
   )
 
@@ -150,7 +162,13 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         incidents: incidents as unknown as InstanceDetailData["incidents"],
         bpmnXml,
       }
-      return text(JSON.stringify({ widget: "camunda7:instance-detail", data }))
+      return buildSingleWidgetView({
+        widget: "camunda7:instance-detail",
+        app: "camunda7",
+        dataType: "camunda7:processInstance",
+        data,
+        title: "Process Instance",
+      })
     },
   )
 
@@ -215,7 +233,13 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         }))
 
       const data: IncidentPanelData = { totalCount: rows.length, definitions }
-      return text(JSON.stringify({ widget: "camunda7:incident-panel", data }))
+      return buildSingleWidgetView({
+        widget: "camunda7:incident-panel",
+        app: "camunda7",
+        dataType: "camunda7:incidentPanel",
+        data,
+        title: "Incidents",
+      })
     },
   )
 
@@ -260,7 +284,13 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         activities: actArray,
         totalActivities: actArray.length,
       }
-      return text(JSON.stringify({ widget: "camunda7:history-timeline", data }))
+      return buildSingleWidgetView({
+        widget: "camunda7:history-timeline",
+        app: "camunda7",
+        dataType: "camunda7:historyTimeline",
+        data,
+        title: "History Timeline",
+      })
     },
   )
 
@@ -364,20 +394,21 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         return b.instances - a.instances
       })
 
-      return text(
-        JSON.stringify({
-          widget: "camunda7:cockpit-dashboard",
-          data: {
-            summary: {
-              totalDefinitions: definitions.length,
-              totalRunningInstances: totalRunning,
-              totalFailedJobs: totalFailed,
-              totalIncidents,
-            },
-            definitions,
+      return buildSingleWidgetView({
+        widget: "camunda7:cockpit-dashboard",
+        app: "camunda7",
+        dataType: "camunda7:cockpitDashboard",
+        title: "Cockpit Dashboard",
+        data: {
+          summary: {
+            totalDefinitions: definitions.length,
+            totalRunningInstances: totalRunning,
+            totalFailedJobs: totalFailed,
+            totalIncidents,
           },
-        }),
-      )
+          definitions,
+        },
+      })
     },
   )
 
@@ -402,19 +433,20 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
 
       const definitionId = instance?.definitionId
       if (!definitionId) {
-        return text(
-          JSON.stringify({
-            widget: "camunda7:bpmn-viewer",
-            data: {
-              bpmnXml: "",
-              processInstanceId: args.processInstanceId,
-              processDefinitionId: null,
-              activeActivityIds: [],
-              incidentActivityIds: [],
-              activityStats: [],
-            },
-          }),
-        )
+        return buildSingleWidgetView({
+          widget: "camunda7:bpmn-viewer",
+          app: "camunda7",
+          dataType: "camunda7:bpmnViewer",
+          title: "BPMN Viewer",
+          data: {
+            bpmnXml: "",
+            processInstanceId: args.processInstanceId,
+            processDefinitionId: null,
+            activeActivityIds: [],
+            incidentActivityIds: [],
+            activityStats: [],
+          },
+        })
       }
 
       const [xmlResponse, activityTree, incidents, stats] = await Promise.all([
@@ -467,19 +499,20 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         failedJobs: s.failedJobs ?? 0,
       }))
 
-      return text(
-        JSON.stringify({
-          widget: "camunda7:bpmn-viewer",
-          data: {
-            bpmnXml,
-            processInstanceId: args.processInstanceId,
-            processDefinitionId: definitionId,
-            activeActivityIds,
-            incidentActivityIds,
-            activityStats,
-          },
-        }),
-      )
+      return buildSingleWidgetView({
+        widget: "camunda7:bpmn-viewer",
+        app: "camunda7",
+        dataType: "camunda7:bpmnViewer",
+        title: "BPMN Viewer",
+        data: {
+          bpmnXml,
+          processInstanceId: args.processInstanceId,
+          processDefinitionId: definitionId,
+          activeActivityIds,
+          incidentActivityIds,
+          activityStats,
+        },
+      })
     },
   )
 
@@ -538,12 +571,13 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         }),
       )
 
-      return text(
-        JSON.stringify({
-          widget: "camunda7:deployment-browser",
-          data: { totalCount: rows.length, deployments: withResources },
-        }),
-      )
+      return buildSingleWidgetView({
+        widget: "camunda7:deployment-browser",
+        app: "camunda7",
+        dataType: "camunda7:deploymentBrowser",
+        title: "Deployment Browser",
+        data: { totalCount: rows.length, deployments: withResources },
+      })
     },
   )
 
@@ -621,16 +655,17 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
         createTime: j.createTime ?? null,
       }))
 
-      return text(
-        JSON.stringify({
-          widget: "camunda7:job-panel",
-          data: {
-            totalCount: args.failedOnly ? failed.length : all.length,
-            failedCount: failed.length,
-            jobs,
-          },
-        }),
-      )
+      return buildSingleWidgetView({
+        widget: "camunda7:job-panel",
+        app: "camunda7",
+        dataType: "camunda7:jobPanel",
+        title: "Job Panel",
+        data: {
+          totalCount: args.failedOnly ? failed.length : all.length,
+          failedCount: failed.length,
+          jobs,
+        },
+      })
     },
   )
 }

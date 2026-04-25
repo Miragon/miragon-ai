@@ -1,14 +1,8 @@
-import type { ComponentType } from "react"
+import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { camunda7Widgets } from "@miragon-ai/mcp-cibseven/widgets"
 import { analyticsWidgets } from "@miragon-ai/mcp-analytics/widgets"
-
-type WidgetComponent = ComponentType<{ data: unknown }>
 
 export const widgetRegistry: Record<string, WidgetComponent> = {
   ...camunda7Widgets,
   ...analyticsWidgets,
-}
-
-export function getWidgetComponent(widgetId: string): WidgetComponent | null {
-  return widgetRegistry[widgetId] ?? null
 }
