@@ -33,8 +33,8 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 | Path                       | Description                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------ |
 | `server/`                  | `@miragon-ai/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
-| `modules/camunda7/client/` | `@miragon-ai/client-camunda7` — OpenAPI-generated TypeScript client (hey-api)        |
-| `modules/camunda7/mcp/`    | `@miragon-ai/mcp-camunda7` — BPM tools + React widgets                               |
+| `modules/cibseven/client/` | `@miragon-ai/client-cibseven` — OpenAPI-generated TypeScript client (hey-api)        |
+| `modules/cibseven/mcp/`    | `@miragon-ai/mcp-cibseven` — BPM tools + React widgets                               |
 | `modules/analytics/mcp/`   | `@miragon-ai/mcp-analytics` — ClickHouse analytics tools + dashboard widget          |
 | `packages/core/`           | `@miragon-ai/core` — `ModulePlugin` interface + `createToolRegistrar` helper         |
 | `packages/ui/`             | `@miragon-ai/ui` — shared shadcn primitives + tailwind globals                       |
@@ -88,15 +88,15 @@ cd docker && docker compose up -d && cd ..
 
 ```bash
 pnpm install
-pnpm -F @miragon-ai/client-camunda7 generate  # only after spec changes
+pnpm -F @miragon-ai/client-cibseven generate  # only after spec changes
 pnpm build
 ```
 
 The build chain is:
 
-1. `@miragon-ai/client-camunda7` — `tsc` against the generated SDK
+1. `@miragon-ai/client-cibseven` — `tsc` against the generated SDK
 2. `@miragon-ai/core`, `@miragon-ai/ui` — shared helpers and UI primitives
-3. `@miragon-ai/mcp-camunda7`, `@miragon-ai/mcp-analytics` — tool + widget modules
+3. `@miragon-ai/mcp-cibseven`, `@miragon-ai/mcp-analytics` — tool + widget modules
 4. `@miragon-ai/server` — Vite bundles `mcp-app.html` (single-file HTML with all widgets) and `tsc` compiles the server
 
 ## Run
@@ -168,6 +168,20 @@ All tools are prefixed with `analytics_`:
 ## Deployment
 
 A multi-stage `Dockerfile` builds the server with pruned production deps and exposes port 3010. See `Dockerfile` in the repo root.
+
+## Troubleshooting
+
+### Docker image is stale after code changes
+
+`docker compose up -d` reuses existing images. `docker compose down -v` removes containers and volumes but **not images**. After changing anything that affects the build (Dockerfile, `package.json`, `tsconfig.json`, source code), force a clean rebuild:
+
+```bash
+docker compose -f docker/docker-compose.yml down -v
+docker compose -f docker/docker-compose.yml build --no-cache
+docker compose -f docker/docker-compose.yml up -d
+```
+
+`--no-cache` also bypasses the persistent BuildKit cache mounts (`pnpm-store`, `turbo-server`) that survive `down -v`.
 
 ## License
 

@@ -1,18 +1,10 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import type { MCPServer } from "mcp-use/server"
-import {
-  StepRegistry,
-  WidgetRegistry,
-  loadApps,
-  type AppConfig,
-  type AppConfigEntry,
-  type AppPlugin,
-} from "@miragon/mcp-toolkit-core"
+import type { AppConfig, AppConfigEntry, AppPlugin } from "@miragon/mcp-toolkit-core"
 import { z } from "zod"
 
-import { createPlugin as createCamunda7Plugin } from "@miragon-ai/mcp-camunda7"
+import { createPlugin as createCamunda7Plugin } from "@miragon-ai/mcp-cibseven"
 import { createPlugin as createAnalyticsPlugin } from "@miragon-ai/mcp-analytics"
 import { createPlugin as createEnrichmentPlugin } from "@miragon-ai/mcp-enrichment"
 import { parseEnrichmentConfig } from "@miragon-ai/client-enrichment"
@@ -75,6 +67,12 @@ const MODULE_REGISTRY: Record<
       const absPath = path.isAbsolute(parsed.configPath)
         ? parsed.configPath
         : path.resolve(process.cwd(), parsed.configPath)
+      if (!fs.existsSync(absPath)) {
+        throw new Error(
+          `ENRICHMENT_CONFIG_PATH points to a file that does not exist: ${absPath}\n` +
+            `Update your .env — available examples in server/resources/enrichment-examples/`,
+        )
+      }
       const yaml = fs.readFileSync(absPath, "utf-8")
       return createEnrichmentPlugin({
         config: parseEnrichmentConfig(yaml),
@@ -128,50 +126,20 @@ function getActiveAppEntries(): AppConfigEntry[] {
   }))
 }
 
-export const config: AppConfig = {
-  activeApps: getActiveAppEntries(),
-  pipelines: {},
+/**
+ * AppConfig used by `get-framework-manifest` so the manifest reflects the
+ * per-module config blobs derived from env. Plugin registry construction +
+ * per-plugin tool registration are owned by `createFrameworkApp`.
+ */
+export function getAppConfig(): AppConfig {
+  return {
+    activeApps: getActiveAppEntries(),
+    pipelines: {},
+  }
 }
 
-function createPlugins(): AppPlugin[] {
-  return config.activeApps
+export function getPlugins(): AppPlugin[] {
+  return getActiveAppEntries()
     .filter((entry) => MODULE_REGISTRY[entry.app])
     .map((entry) => MODULE_REGISTRY[entry.app].createPlugin(entry.config))
-}
-
-/**
- * Creates the framework registries and loads every active app's steps and
- * widgets into them. Also collects per-app `appConfig` values so pipeline
- * steps can access their module client via `executePipeline(..., appConfigs)`.
- */
-export function createRegistries() {
-  const plugins = createPlugins()
-  const stepRegistry = new StepRegistry()
-  const widgetRegistry = new WidgetRegistry()
-  loadApps(
-    plugins.map((p) => p.definition),
-    stepRegistry,
-    widgetRegistry,
-  )
-
-  const appConfigs: Record<string, Record<string, unknown>> = {}
-  for (const plugin of plugins) {
-    if (plugin.appConfig) {
-      appConfigs[plugin.definition.name] = plugin.appConfig
-    }
-  }
-
-  return { stepRegistry, widgetRegistry, config, plugins, appConfigs }
-}
-
-export function registerModuleTools(server: MCPServer, plugins: AppPlugin[]) {
-  for (const plugin of plugins) {
-    plugin.registerTools?.(server)
-  }
-}
-
-export function registerWidgetTools(server: MCPServer, resourceUri: string, plugins: AppPlugin[]) {
-  for (const plugin of plugins) {
-    plugin.registerWidgetTools?.(server, resourceUri)
-  }
 }

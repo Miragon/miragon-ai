@@ -59,6 +59,8 @@ jobs:
 
       - run: pnpm format:check
 
+      - uses: Miragon/pin-npm-dependencies@v1.0.1
+
   kotlin:
     name: Kotlin (Build + Test)
     runs-on: ubuntu-latest
