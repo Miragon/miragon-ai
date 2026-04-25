@@ -108,14 +108,14 @@ bundled demo YAMLs (both target the WireMock sidecar from step 2):
 
 ```bash
 # from the repo root
-export ENRICHMENT_CONFIG_PATH=$(pwd)/server/resources/enrichment-examples/loanApproval-local.yaml
+export ENRICHMENT_CONFIG_PATH=$(pwd)/server/resources/enrichment-examples/miraveloLeasing-local.yaml
 pnpm --filter @miragon-ai/server dev
 ```
 
-| YAML                      | Pairs with                                                          |
-| ------------------------- | ------------------------------------------------------------------- |
-| `loanApproval-local.yaml` | `cibseven-example` seed (`customerSegment`, `currency`, `channel`)  |
-| `acme-local.yaml`         | Generic Salesforce / ERP / Contracts shape (`CUST-001`, `CUST-002`) |
+| YAML                         | Pairs with                                                          |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `miraveloLeasing-local.yaml` | `cibseven-example` seed (`customerSegment`, `region`, `channel`)    |
+| `acme-local.yaml`            | Generic Salesforce / ERP / Contracts shape (`CUST-001`, `CUST-002`) |
 
 Without the env var, the rest of the stack runs unchanged. See
 [Configuration](configuration.md) and the

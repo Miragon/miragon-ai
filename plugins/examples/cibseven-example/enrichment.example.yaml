@@ -4,9 +4,11 @@
 # enrichment-mcp server (point ENRICHMENT_CONFIG at it) so that the Dev Skills
 # can resolve seeded variables into fachliche Segment-Beschreibungen.
 #
-# Variables covered:
-#   - `customerSegment`, `currency`, `channel`  → loanApproval (all profiles)
-#   - `region`, `priorityFlag`                  → loanApproval (seed-presentation) + orderFulfillment
+# Variables covered (all emitted by MiraveloLeasingSeeder on every instance):
+#   - customerSegment  → PRIVATE / BUSINESS / STUDENT
+#   - region           → EU / US / APAC
+#   - channel          → ONLINE / BRANCH / FAX
+#   - priorityFlag     → boolean (resolved via /priorities/{priority})
 #
 # Everything here is synthetic — no real external API is contacted. The
 # sources reference a static-stub mode used by the example runtime.
@@ -14,10 +16,6 @@
 sources:
   crm_stub:
     baseUrl: stub://crm
-    auth:
-      mode: none
-  billing_stub:
-    baseUrl: stub://billing
     auth:
       mode: none
 
@@ -35,22 +33,9 @@ lookups:
       - tier
       - industry
 
-  currency_profile:
-    source: billing_stub
-    description: Billing configuration for the given currency (static stub).
-    method: GET
-    path: /currencies/{currency}
-    inputSchema:
-      currency:
-        type: string
-    projection:
-      - currency
-      - region
-      - invoicingDelayDays
-
   channel_profile:
     source: crm_stub
-    description: Channel metadata (online / legacy fax routing).
+    description: Channel metadata (online / branch / legacy fax routing).
     method: GET
     path: /channels/{channel}
     inputSchema:
@@ -73,7 +58,6 @@ lookups:
       - region
       - gdprZone
       - timezone
-      - defaultCurrency
 
   priority_profile:
     source: crm_stub
@@ -94,11 +78,6 @@ enrichment_rules:
       - lookup: customer_profile
         with:
           customerSegment: $value
-  - whenVariable: currency
-    resolve:
-      - lookup: currency_profile
-        with:
-          currency: $value
   - whenVariable: channel
     resolve:
       - lookup: channel_profile

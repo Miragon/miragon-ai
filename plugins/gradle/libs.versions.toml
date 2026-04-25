@@ -37,6 +37,8 @@ cibseven-engine = { module = "org.cibseven.bpm:cibseven-engine", version.ref = "
 cibseven-starter = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter", version.ref = "cibseven" }
 cibseven-starter-rest = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter-rest", version.ref = "cibseven" }
 cibseven-starter-webapp = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter-webapp", version.ref = "cibseven" }
+cibseven-bpm-junit5 = { module = "org.cibseven.bpm:cibseven-bpm-junit5", version.ref = "cibseven" }
+cibseven-bpm-assert = { module = "org.cibseven.bpm:cibseven-bpm-assert", version.ref = "cibseven" }
 
 # Runtime libraries (explicit versions)
 clickhouse-jdbc = { module = "com.clickhouse:clickhouse-jdbc", version.ref = "clickhouse-jdbc" }

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if [ ! -d node_modules ]; then
+  echo "ERROR: node_modules missing — run setup first." >&2
+  exit 1
+fi
+
+if [ ! -f .env ]; then
+  sed "s|\$(pwd)|$(pwd)|g" .env.example > .env
+  echo "Created .env from .env.example"
+fi
+
+docker compose -f docker/docker-compose.yml up -d
+
+exec pnpm dev

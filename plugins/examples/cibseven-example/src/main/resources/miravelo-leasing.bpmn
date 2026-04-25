@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0rzx3jv" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.41.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.24.0">
+  <bpmn:collaboration id="Collaboration_1wc5tgg">
+    <bpmn:participant id="Participant_1kl582i" name="Miravelo - Bike Leasing" processRef="miraveloLeasing" />
+  </bpmn:collaboration>
+  <bpmn:process id="miraveloLeasing" isExecutable="true" camunda:historyTimeToLive="P30D">
+    <bpmn:exclusiveGateway id="Gateway_Creditworthy" name="Customer creditworthy?" default="Flow_18i81hz">
+      <bpmn:incoming>Flow_0vvp9qn</bpmn:incoming>
+      <bpmn:outgoing>Flow_1oiz1dg</bpmn:outgoing>
+      <bpmn:outgoing>Flow_18i81hz</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Activity_AccelerateDecision" name="Accelerate decision making">
+      <bpmn:incoming>Flow_1py2c7t</bpmn:incoming>
+      <bpmn:outgoing>Flow_0r2ryqa</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="Event_DecisionAccelerated" name="Decision accelerated">
+      <bpmn:incoming>Flow_0r2ryqa</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:callActivity id="Activity_AssessCreditworthiness" name="Assess customer creditability" calledElement="assessCreditworthiness">
+      <bpmn:extensionElements>
+        <camunda:in variables="all" />
+        <camunda:out variables="all" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_07uig79</bpmn:incoming>
+      <bpmn:outgoing>Flow_0vvp9qn</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:exclusiveGateway id="Gateway_Decision" name="Decision?" default="Flow_1yvzx67">
+      <bpmn:incoming>Flow_0ax166r</bpmn:incoming>
+      <bpmn:outgoing>Flow_0vnxels</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1yvzx67</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Event_PolicyIssued" name="Leasing Policy issued">
+      <bpmn:incoming>Flow_1cy38un</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="Activity_SendPolicy" name="Send policy to customer" camunda:delegateExpression="${sendPolicyDelegate}" camunda:asyncBefore="true">
+      <bpmn:incoming>Flow_0v4qedl</bpmn:incoming>
+      <bpmn:outgoing>Flow_1cy38un</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:serviceTask id="Activity_DeliverPolicy" name="Delivery bike leasing policy" camunda:delegateExpression="${deliverLeasingPolicyDelegate}">
+      <bpmn:incoming>Flow_1oiz1dg</bpmn:incoming>
+      <bpmn:incoming>Flow_0vnxels</bpmn:incoming>
+      <bpmn:outgoing>Flow_0v4qedl</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_RejectPolicy" name="Reject bike leasing policy" camunda:delegateExpression="${rejectLeasingPolicyDelegate}">
+      <bpmn:incoming>Flow_1yvzx67</bpmn:incoming>
+      <bpmn:outgoing>Flow_1cc5ecu</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="Event_PolicyRejected" name="Leasing Policy Rejected">
+      <bpmn:incoming>Flow_0m7ynmt</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="Activity_SendRejection" name="Send rejection to customer" camunda:delegateExpression="${sendRejectionDelegate}">
+      <bpmn:incoming>Flow_1cc5ecu</bpmn:incoming>
+      <bpmn:outgoing>Flow_0m7ynmt</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="Activity_DecideOnApplication" name="Decide on application">
+      <bpmn:incoming>Flow_18i81hz</bpmn:incoming>
+      <bpmn:outgoing>Flow_0ax166r</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Activity_ResolveCustomer" name="Create or resolve customer from CRM" camunda:delegateExpression="${createOrResolveCustomerDelegate}">
+      <bpmn:incoming>Flow_1fnfazk</bpmn:incoming>
+      <bpmn:outgoing>Flow_07uig79</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:startEvent id="StartEvent_LeasingInquiry" name="Leasing Inquiry received">
+      <bpmn:outgoing>Flow_1fnfazk</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:boundaryEvent id="Event_DecisionTimeout" name="after 2 hours" cancelActivity="false" attachedToRef="Activity_DecideOnApplication">
+      <bpmn:outgoing>Flow_1py2c7t</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_0eztp8f">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">PT2H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_0vvp9qn" sourceRef="Activity_AssessCreditworthiness" targetRef="Gateway_Creditworthy" />
+    <bpmn:sequenceFlow id="Flow_1oiz1dg" name="yes" sourceRef="Gateway_Creditworthy" targetRef="Activity_DeliverPolicy">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${creditworthy == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_18i81hz" name="risk identified" sourceRef="Gateway_Creditworthy" targetRef="Activity_DecideOnApplication" />
+    <bpmn:sequenceFlow id="Flow_1py2c7t" sourceRef="Event_DecisionTimeout" targetRef="Activity_AccelerateDecision" />
+    <bpmn:sequenceFlow id="Flow_0r2ryqa" sourceRef="Activity_AccelerateDecision" targetRef="Event_DecisionAccelerated" />
+    <bpmn:sequenceFlow id="Flow_07uig79" sourceRef="Activity_ResolveCustomer" targetRef="Activity_AssessCreditworthiness" />
+    <bpmn:sequenceFlow id="Flow_0ax166r" sourceRef="Activity_DecideOnApplication" targetRef="Gateway_Decision" />
+    <bpmn:sequenceFlow id="Flow_0vnxels" name="positive" sourceRef="Gateway_Decision" targetRef="Activity_DeliverPolicy">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${decision == "positive"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1yvzx67" name="negative" sourceRef="Gateway_Decision" targetRef="Activity_RejectPolicy" />
+    <bpmn:sequenceFlow id="Flow_1cy38un" sourceRef="Activity_SendPolicy" targetRef="Event_PolicyIssued" />
+    <bpmn:sequenceFlow id="Flow_0v4qedl" sourceRef="Activity_DeliverPolicy" targetRef="Activity_SendPolicy" />
+    <bpmn:sequenceFlow id="Flow_1cc5ecu" sourceRef="Activity_RejectPolicy" targetRef="Activity_SendRejection" />
+    <bpmn:sequenceFlow id="Flow_0m7ynmt" sourceRef="Activity_SendRejection" targetRef="Event_PolicyRejected" />
+    <bpmn:sequenceFlow id="Flow_1fnfazk" sourceRef="StartEvent_LeasingInquiry" targetRef="Activity_ResolveCustomer" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1wc5tgg">
+      <bpmndi:BPMNShape id="Participant_1kl582i_di" bpmnElement="Participant_1kl582i" isHorizontal="true">
+        <dc:Bounds x="160" y="55" width="1500" height="465" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Creditworthy_di" bpmnElement="Gateway_Creditworthy" isMarkerVisible="true">
+        <dc:Bounds x="685" y="155" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="677" y="126" width="66" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_AccelerateDecision_di" bpmnElement="Activity_AccelerateDecision">
+        <dc:Bounds x="920" y="260" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_DecisionAccelerated_di" bpmnElement="Event_DecisionAccelerated">
+        <dc:Bounds x="1062" y="282" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1052" y="325" width="57" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1hqjyq7_di" bpmnElement="Activity_AssessCreditworthiness">
+        <dc:Bounds x="500" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Decision_di" bpmnElement="Gateway_Decision" isMarkerVisible="true">
+        <dc:Bounds x="1145" y="395" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1146" y="445" width="49" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_PolicyIssued_di" bpmnElement="Event_PolicyIssued">
+        <dc:Bounds x="1572" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1554" y="205" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_020mf13_di" bpmnElement="Activity_SendPolicy">
+        <dc:Bounds x="1430" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_14aay7p_di" bpmnElement="Activity_DeliverPolicy">
+        <dc:Bounds x="1270" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0vdwfnm_di" bpmnElement="Activity_RejectPolicy">
+        <dc:Bounds x="1270" y="380" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_PolicyRejected_di" bpmnElement="Event_PolicyRejected">
+        <dc:Bounds x="1572" y="402" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1555" y="445" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1q4yfli_di" bpmnElement="Activity_SendRejection">
+        <dc:Bounds x="1430" y="380" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_DecideOnApplication_di" bpmnElement="Activity_DecideOnApplication">
+        <dc:Bounds x="810" y="380" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1vmyp8g_di" bpmnElement="Activity_ResolveCustomer">
+        <dc:Bounds x="340" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_LeasingInquiry_di" bpmnElement="StartEvent_LeasingInquiry">
+        <dc:Bounds x="232" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="212" y="205" width="75" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0jcc89y_di" bpmnElement="Event_DecisionTimeout">
+        <dc:Bounds x="862" y="362" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="899" y="363" width="62" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0vvp9qn_di" bpmnElement="Flow_0vvp9qn">
+        <di:waypoint x="600" y="180" />
+        <di:waypoint x="685" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1oiz1dg_di" bpmnElement="Flow_1oiz1dg">
+        <di:waypoint x="735" y="180" />
+        <di:waypoint x="1270" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="761" y="162" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_18i81hz_di" bpmnElement="Flow_18i81hz">
+        <di:waypoint x="710" y="205" />
+        <di:waypoint x="710" y="420" />
+        <di:waypoint x="810" y="420" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="727" y="403" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1py2c7t_di" bpmnElement="Flow_1py2c7t">
+        <di:waypoint x="880" y="362" />
+        <di:waypoint x="880" y="300" />
+        <di:waypoint x="920" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0r2ryqa_di" bpmnElement="Flow_0r2ryqa">
+        <di:waypoint x="1020" y="300" />
+        <di:waypoint x="1062" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_07uig79_di" bpmnElement="Flow_07uig79">
+        <di:waypoint x="440" y="180" />
+        <di:waypoint x="500" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ax166r_di" bpmnElement="Flow_0ax166r">
+        <di:waypoint x="910" y="420" />
+        <di:waypoint x="1145" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0vnxels_di" bpmnElement="Flow_0vnxels">
+        <di:waypoint x="1170" y="395" />
+        <di:waypoint x="1170" y="180" />
+        <di:waypoint x="1270" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1181" y="333" width="38" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1yvzx67_di" bpmnElement="Flow_1yvzx67">
+        <di:waypoint x="1195" y="420" />
+        <di:waypoint x="1270" y="420" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1212" y="402" width="42" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1cy38un_di" bpmnElement="Flow_1cy38un">
+        <di:waypoint x="1530" y="180" />
+        <di:waypoint x="1572" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0v4qedl_di" bpmnElement="Flow_0v4qedl">
+        <di:waypoint x="1370" y="180" />
+        <di:waypoint x="1430" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1cc5ecu_di" bpmnElement="Flow_1cc5ecu">
+        <di:waypoint x="1370" y="420" />
+        <di:waypoint x="1430" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0m7ynmt_di" bpmnElement="Flow_0m7ynmt">
+        <di:waypoint x="1530" y="420" />
+        <di:waypoint x="1572" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1fnfazk_di" bpmnElement="Flow_1fnfazk">
+        <di:waypoint x="268" y="180" />
+        <di:waypoint x="340" y="180" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

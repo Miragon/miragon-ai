@@ -1,3 +1,5 @@
+name: miragon-ai
+
 services:
   # Default: custom-built CIB Seven with ClickHouse + OTEL config
   cibseven:
@@ -7,7 +9,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=seed
+      - SPRING_PROFILES_ACTIVE=seed-presentation
       - CLICKHOUSE_ENABLED=true
       - CLICKHOUSE_HOST=clickhouse
       - CLICKHOUSE_PORT=8123
@@ -107,6 +109,43 @@ services:
       timeout: 3s
       retries: 6
       start_period: 5s
+
+  # Automation MCP server (Node). Runs by default alongside cibseven +
+  # clickhouse. Stop it with `docker compose stop mcp-server` when running
+  # the server natively via `pnpm -F @miragon-ai/server dev`.
+  mcp-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "3010:3010"
+    environment:
+      - PORT=3010
+      - CAMUNDA_BASE_URL=http://cibseven:8080/engine-rest
+      - CAMUNDA_AUTH_TYPE=basic
+      - CAMUNDA_USERNAME=demo
+      - CAMUNDA_PASSWORD=demo
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_USERNAME=camunda
+      - CLICKHOUSE_PASSWORD=camunda123
+      - CLICKHOUSE_DATABASE=camunda_history
+    depends_on:
+      cibseven:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('net').createConnection(3010,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 15s
 
   # Jaeger UI for trace visualization
   # Use: docker compose --profile otel up

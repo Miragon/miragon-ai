@@ -60,90 +60,91 @@ with numbers that can be pasted into the ticket comment.
 5. Emit the verdict block
 ```
 
-## Example output (against the `loanApproval` seed)
+## Example output (against the `assessCreditworthiness` seed)
 
 The seeder marks the first of two 15-day blocks as the "pre-fix" era in
-which `NotifyApplicantDelegate` throws a `RuntimeException` with 15%
-probability and produces incidents. The cutoff in the middle of the window is
-the simulated deployment timestamp.
+which `CheckBlacklistDelegate` throws a `RuntimeException` ("Blacklist
+provider unreachable") with 15% probability and produces job-level incidents.
+The cutoff in the middle of the window is the simulated deployment timestamp.
 
 ```markdown
-# Fix verification: deployment `loanApproval-seed-deploy`
+# Fix verification: deployment `assessCreditworthiness-seed-deploy`
 
 ## Verdict
 
 **IMPROVED**
 
-Failure rate dropped from 15.4% to 0.2% on element `Task_notifyApplicant` of
-`loanApproval`.
+Incident rate dropped from 12.8% to 0.0% on element `Activity_CheckBlacklist` of
+`assessCreditworthiness`.
 
 ## Deployment
 
-- ID: `loanApproval-seed-deploy` (seed cutoff between buggy era and post-fix)
-- Timestamp: `2026-04-04 00:00:00 UTC` (T0 - 15 days)
-- Name / source: `loanApproval.bpmn` with the fixed delegate
+- ID: `assessCreditworthiness-seed-deploy` (seed cutoff between buggy era and post-fix)
+- Timestamp: `2026-04-07 00:00:00 UTC` (T0 - 15 days)
+- Name / source: `miravelo-creditworthiness.bpmn` with the fixed delegate
 - Window: ±7 days
 
 ## KPIs
 
 | Metric        | Before | After | Δ       |
 | ------------- | ------ | ----- | ------- |
-| Instances     | 46     | 52    | +13.0%  |
-| Failure rate  | 15.4%  | 0.2%  | -15.2pp |
-| Incident rate | 13.0%  | 0.0%  | -13.0pp |
-| Avg duration  | 48ms   | 42ms  | -12%    |
-| P95 duration  | 260ms  | 110ms | -58%    |
+| Instances     | 48     | 54    | +12.5%  |
+| Failure rate  | 13.1%  | 0.0%  | -13.1pp |
+| Incident rate | 12.8%  | 0.0%  | -12.8pp |
+| Avg duration  | 52ms   | 38ms  | -27%    |
+| P95 duration  | 280ms  | 110ms | -61%    |
 
 ## Caveats
 
 - Suppressed: false (both windows above minBucketSize=10 instances).
 - Window age: post-window complete (7 of 7 seed days).
-- Scope: process=`loanApproval`, element=`Task_notifyApplicant`.
+- Scope: process=`assessCreditworthiness`, element=`Activity_CheckBlacklist`.
 
 ## Recommendation
 
-Close the ticket. The fix pushed the failure rate down to practically zero
-and halved the p95 duration — no signs of regressions in other metrics. The
-remaining 0.2% comes from a single retry event the day after the cutoff.
+Close the ticket. The fix eliminated the job-level incidents on the blacklist
+check and more than halved the p95 duration — no signs of regressions in
+other metrics.
 ```
 
 ## Second presentation example: REGRESSED verdict (`seed-presentation`)
 
 The `seed-presentation` profile deliberately stages a **second** bug era on
-`loanApproval` — a narrow band at days 7–10 ago (the "rollback era") where
-`NotifyApplicantDelegate` throws at ~12%, bracketed by healthy rates before
-and after. Pointing UC5 at a deployment whose timestamp centers on that band
-produces a REGRESSED verdict instead of IMPROVED.
+the parent `miraveloLeasing` process — a narrow band at days 7–10 ago (the
+"rollback era") where `SendPolicyDelegate` throws at ~12% while rendering
+the policy template, bracketed by healthy rates before and after. Pointing
+UC5 at a deployment whose timestamp centers on that band produces a REGRESSED
+verdict on a different element + delegate than the blacklist demo.
 
 ```
-/dev-fix-verification <rollback-era-deployment-id> loanApproval Task_notifyApplicant 3
+/dev-fix-verification <rollback-era-deployment-id> miraveloLeasing Activity_SendPolicy 3
 ```
 
 Pick the deployment whose timestamp sits around `now() - 8.5d` — the
 deployment list from `camunda7_list_deployments` shows one on either side of
 the rollback band; in the presentation seed the two relevant anchors are
-labeled internally as `loanApproval-rollback-intro` and
-`loanApproval-rollback-revert`.
+labeled internally as `miraveloLeasing-rollback-intro` and
+`miraveloLeasing-rollback-revert`.
 
 Expected output shape (truncated):
 
 ```markdown
-# Fix verification: deployment `loanApproval-rollback-intro`
+# Fix verification: deployment `miraveloLeasing-rollback-intro`
 
 ## Verdict
 
 **REGRESSED**
 
-Failure rate on `Task_notifyApplicant` rose from 0.2% to 8.1% in the 3-day
+Incident rate on `Activity_SendPolicy` rose from 0.3% to 11.4% in the 3-day
 window immediately after the rollout — matching the simulated regression band.
 
 ## KPIs
 
-| Metric        | Before | After | Δ      |
-| ------------- | ------ | ----- | ------ |
-| Instances     | 18     | 21    | +16.7% |
-| Failure rate  | 0.2%   | 8.1%  | +7.9pp |
-| Incident rate | 0.0%   | 6.8%  | +6.8pp |
+| Metric        | Before | After | Δ       |
+| ------------- | ------ | ----- | ------- |
+| Instances     | 19     | 22    | +15.8%  |
+| Failure rate  | 0.3%   | 11.4% | +11.1pp |
+| Incident rate | 0.0%   | 9.1%  | +9.1pp  |
 
 ## Recommendation
 
@@ -152,10 +153,11 @@ regression is visible in both failure rate and incident rate above the
 +2pp threshold.
 ```
 
-**Third angle — IMPROVED on `orderFulfillment`:** the APAC shipping failure
-is fixed after the first 10 seed days. Targeting that cutoff with
-`elementId=Task_ShipOrder` yields a clear IMPROVED verdict on a different
-element and process than the loanApproval demo.
+**Third angle — IMPROVED on the sub-process:** the blacklist outage is fixed
+after the first 15 seed days. Targeting that cutoff with
+`elementId=Activity_CheckBlacklist` of `assessCreditworthiness` yields a clear
+IMPROVED verdict on a different element and process than the SendPolicy
+rollback demo.
 
 ## Context policy
 

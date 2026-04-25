@@ -6,8 +6,8 @@ logging:
     org.cibseven.bpm.engine.context: "OFF"
 
 seed:
-  # MINIMAL profile — ~80 instances across loanApproval (40) + orderFulfillment (40).
-  # For fast local iteration and CI smoke tests. All edge cases are hit at least
-  # once (APAC bug era, priorityFlag, escalation, student-amount cap) so the
-  # skills can be validated without a long boot.
+  # MINIMAL profile — ~80 miraveloLeasing instances for fast local iteration
+  # and CI smoke tests. Every edge case (pre-fix blacklist outage,
+  # priorityFlag, timer escalation, cargo-term DEAD cap, FAX channel) is hit
+  # at least once so the skills can be validated without a long boot.
   profile: minimal

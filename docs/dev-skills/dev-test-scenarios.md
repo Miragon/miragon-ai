@@ -6,8 +6,8 @@
 ## Scenario
 
 The developer has been writing synthetic test fixtures for days and notices
-they don't hit the interesting combinations from production. "Cross-border
-Enterprise with partial delivery" is a scenario nobody invents from memory —
+they don't hit the interesting combinations from production. "Cross-region
+BUSINESS with a cargo lease" is a scenario nobody invents from memory —
 but production sees it daily. The skill generates **real test scenarios from
 the top paths + variable distributions**, including runnable JUnit or
 Camunda BPM-Assert scaffolding.
@@ -55,7 +55,7 @@ Camunda BPM-Assert scaffolding.
    → boolean: as in the bucket
 
 4. Segment characterization
-   → enrichment_auto_resolve → scenario name ("Enterprise + multi-currency")
+   → enrichment_auto_resolve → scenario name ("BUSINESS + APAC")
 
 5. Generate scaffolding
    → one @Test method per scenario, with comment block: share %, segment,
@@ -64,73 +64,88 @@ Camunda BPM-Assert scaffolding.
 6. Assemble the report
 ```
 
-## Example output (truncated, against the `loanApproval` seed)
+## Example output (truncated, against the `miraveloLeasing` seed)
 
 ````markdown
-# Test scenarios from production: `loanApproval` (last 30d)
+# Test scenarios from production: `miraveloLeasing` (last 30d)
 
 ## Coverage summary
 
-| Scenario            | Share | Segment            | Why included                                        |
-| ------------------- | ----- | ------------------ | --------------------------------------------------- |
-| Small loan approved | 42%   | PRIVATE / EUR      | Part of the dominant path                           |
-| Small loan rejected | 16%   | PRIVATE / EUR      | ≥ 5% share                                          |
-| Mid-range rejected  | 22%   | BUSINESS / EUR     | ≥ 5% share, escalated failure rate in the buggy era |
-| Enterprise approved | 9%    | ENTERPRISE / mixed | ≥ 5% share + segment-specific bonus                 |
-| FAX channel (rare)  | 0.5%  | BUSINESS / FAX     | Below minBucketSize — **not** mapped to a test      |
+| Scenario                     | Share | Segment        | Why included                                   |
+| ---------------------------- | ----- | -------------- | ---------------------------------------------- |
+| Creditworthy → policy issued | 92%   | PRIVATE / EU   | Dominant path                                  |
+| Risk identified → positive   | 5.6%  | BUSINESS / EU  | ≥ 5% share, manual-decision surface            |
+| Risk identified → negative   | 2.4%  | PRIVATE / APAC | ≥ 1% share, distinct terminal event            |
+| BRANCH intake (rare)         | 2.0%  | BUSINESS / EU  | ≥ 1% share, categorical equivalence class      |
+| FAX channel (suppressed)     | 0.8%  | BUSINESS / FAX | Below minBucketSize — **not** mapped to a test |
+| Decision accelerated (timer) | 0.5%  | any / APAC     | Below minBucketSize — **not** mapped to a test |
 
 ## Suppressed
 
-1 path (FAX channel) suppressed by `minBucketSize=10`. Not mapped to a test.
+2 paths (FAX channel, Decision accelerated via timer) suppressed by
+`minBucketSize=10`. Not mapped to a test.
 
 ## Generated tests
 
 ```java
 @Test
-@Deployment(resources = "loanApproval.bpmn")
-void scenario_small_loan_approved() {
-    // Path share in production (last 30d): 42%
-    // Segment: PRIVATE / EUR
-    // Source buckets: amount in [1000, 25000), customerSegment="PRIVATE", currency="EUR"
+@Deployment(resources = {"miravelo-leasing.bpmn", "miravelo-creditworthiness.bpmn"})
+void scenario_creditworthy_policy_issued() {
+    // Path share in production (last 30d): 92%
+    // Segment: PRIVATE / EU
+    // Source buckets: creditScore in [700, 850), region="EU",
+    //                 bikeModel="city", leaseAmount in [800, 2500),
+    //                 leaseTermMonths=24, customerSegment="PRIVATE"
     Map<String, Object> vars = Map.of(
-        "amount", 12000,
-        "applicant", "Test Applicant",
-        "loanType", "personal",
+        "customerId", "CUST-TEST-1",
+        "creditScore", 760,
+        "postalCode", "10115",
+        "region", "EU",
+        "bikeModel", "city",
+        "leaseAmount", 1500,
+        "leaseTermMonths", 24,
         "customerSegment", "PRIVATE",
-        "currency", "EUR",
-        "channel", "ONLINE"
+        "channel", "ONLINE",
+        "priorityFlag", false
     );
     ProcessInstance pi = runtimeService()
-        .startProcessInstanceByKey("loanApproval", vars);
-    // Check-the-request task completed with approved=true
-    assertThat(pi).isWaitingAt("Task_0dfv74n");
-    complete(task(pi), Map.of("approved", true));
+        .startProcessInstanceByKey("miraveloLeasing", vars);
     assertThat(pi)
-        .hasPassed("Task_0dfv74n", "Gateway_approved")
-        .isWaitingAt("Task_bankTransfer");
+        .hasPassed("Activity_ResolveCustomer", "Activity_AssessCreditworthiness", "Activity_SendPolicy")
+        .isEnded()
+        .hasPassed("Event_PolicyIssued");
 }
 
 @Test
-@Deployment(resources = "loanApproval.bpmn")
-void scenario_enterprise_approved() {
-    // Path share in production (last 30d): 9%
-    // Segment: ENTERPRISE / mixed currency
-    // Source buckets: amount in [250000, 500000), customerSegment="ENTERPRISE"
-    // Equivalence class currency: {EUR, USD, GBP}
+@Deployment(resources = {"miravelo-leasing.bpmn", "miravelo-creditworthiness.bpmn"})
+void scenario_risk_identified_positive_decision() {
+    // Path share in production (last 30d): 5.6%
+    // Segment: BUSINESS / EU
+    // Source buckets: creditScore in [300, 550) → BAD_CREDIT_SCORE,
+    //                 bikeModel="trail", leaseAmount in [6000, 12000),
+    //                 customerSegment="BUSINESS"
+    // Equivalence class bikeModel: {city, trail, road} (cargo excluded — see UC6 DEAD)
     Map<String, Object> vars = Map.of(
-        "amount", 320000,
-        "applicant", "Test Enterprise",
-        "loanType", "business",
-        "customerSegment", "ENTERPRISE",
-        "currency", "USD",
-        "channel", "ONLINE"
+        "customerId", "CUST-TEST-2",
+        "creditScore", 510,
+        "region", "EU",
+        "bikeModel", "trail",
+        "leaseAmount", 8500,
+        "leaseTermMonths", 36,
+        "customerSegment", "BUSINESS",
+        "channel", "ONLINE",
+        "priorityFlag", true
     );
     ProcessInstance pi = runtimeService()
-        .startProcessInstanceByKey("loanApproval", vars);
-    complete(task(pi), Map.of("approved", true));
+        .startProcessInstanceByKey("miraveloLeasing", vars);
+    // Sub-process surfaces "Risk identified" → parent routes to the
+    // "Decide on application" user task.
+    assertThat(pi).isWaitingAt("Activity_DecideOnApplication");
+    complete(task(pi), Map.of("decision", "positive"));
     assertThat(pi)
-        .hasPassed("Task_0dfv74n", "Gateway_approved")
-        .isWaitingAt("Task_bankTransfer");
+        .hasPassed("Activity_SendPolicy", "Activity_DeliverPolicy")
+        .isEnded()
+        .hasPassed("Event_PolicyIssued");
 }
 ```
 
@@ -138,59 +153,19 @@ void scenario_enterprise_approved() {
 
 - Values are bucket representatives, not real production values.
 - Period: 30d. Re-run the skill quarterly to refresh the coverage.
-- Enrichment availability: yes (see `enrichment.example.yaml` in the cibseven-example).
+- Enrichment availability: yes (see `enrichment.example.yaml` in the
+  cibseven-example).
 ````
 
-## Second presentation example (against `orderFulfillment`, `seed-presentation`)
+## Second presentation example (framework=junit)
 
-With the richer process, UC4 exercises categorical equivalence classes
-(`region` with three distinct values) and an elevated-failure edge case
-(APAC express shipping during the bug era).
+Running UC4 with `junit` (instead of `bpm-assert`) inlines the full
+`RuntimeService` + `TaskService` plumbing, which some teams prefer for CI
+integration with Spring context beans. The scenario coverage is the same.
 
 ```
-/dev-test-scenarios-from-production orderFulfillment 30d junit
+/dev-test-scenarios-from-production miraveloLeasing 30d junit
 ```
-
-Expected output shape (truncated):
-
-````markdown
-# Test scenarios from production: `orderFulfillment` (last 30d)
-
-## Coverage summary
-
-| Scenario                    | Share | Segment           | Why included                              |
-| --------------------------- | ----- | ----------------- | ----------------------------------------- |
-| EU standard ship            | 55%   | EU / mixed method | Dominant path                             |
-| US standard ship            | 30%   | US / mixed method | ≥ 5% share                                |
-| APAC express ship (healthy) | 14%   | APAC / EXPRESS    | ≥ 5% share + distinct terminal task       |
-| Priority handoff            | 3%    | any / priority    | ≥ 1% share, rare enough to deserve a test |
-| APAC timer escalation       | <1%   | APAC / EXPRESS    | Below minBucketSize — **not** mapped      |
-
-## Generated tests
-
-```java
-@Test
-@Deployment(resources = "orderFulfillment.bpmn")
-void scenario_apac_express_ship() {
-    // Path share: 14% (segment: APAC / EXPRESS, elevated failures in days 1–10)
-    // Equivalence class shippingMethod: {EXPRESS, FREIGHT}
-    Map<String, Object> vars = Map.of(
-        "orderId", "ORD-TEST-APAC",
-        "customerId", "CUST-TEST",
-        "region", "APAC",
-        "priorityFlag", false,
-        "amount", 1200,
-        "itemCount", 3,
-        "shippingMethod", "EXPRESS"
-    );
-    ProcessInstance pi = runtimeService()
-        .startProcessInstanceByKey("orderFulfillment", vars);
-    assertThat(pi).isWaitingAt("Task_APACExpressShip");
-    complete(task(pi));
-    assertThat(pi).hasPassed("Task_ShipOrder").isEnded();
-}
-```
-````
 
 ## Context policy
 

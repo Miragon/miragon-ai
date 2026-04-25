@@ -1,0 +1,44 @@
+{
+  "name": "@miragon-ai/widget-shell",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./server": {
+      "types": "./dist/build-single-widget-view.d.ts",
+      "import": "./dist/build-single-widget-view.js"
+    },
+    "./ui": {
+      "types": "./dist/adapt-data-widget.d.ts",
+      "import": "./dist/adapt-data-widget.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "peerDependencies": {
+    "@miragon/mcp-toolkit-core": "workspace:*",
+    "@miragon/mcp-toolkit-ui": "workspace:*",
+    "react": "19.2.5"
+  },
+  "peerDependenciesMeta": {
+    "@miragon/mcp-toolkit-ui": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@miragon/mcp-toolkit-core": "workspace:*",
+    "@miragon/mcp-toolkit-ui": "workspace:*",
+    "@types/react": "19.2.14",
+    "react": "19.2.5",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
-import { text } from "mcp-use/server"
+import { buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
 import {
   escapeString,
   queries,
@@ -194,7 +194,13 @@ ORDER BY total_instances DESC`
         definitionBreakdown: definitionItems,
       }
 
-      return text(JSON.stringify({ widget: "analytics:dashboard", data }))
+      return buildSingleWidgetView({
+        widget: "analytics:dashboard",
+        app: "analytics",
+        dataType: "analytics:dashboard",
+        data,
+        title: "Analytics Dashboard",
+      })
     },
   )
 
@@ -321,7 +327,13 @@ GROUP BY process_definition_key`
         processBreakdown,
       }
 
-      return text(JSON.stringify({ widget: "analytics:failure-dashboard", data }))
+      return buildSingleWidgetView({
+        widget: "analytics:failure-dashboard",
+        app: "analytics",
+        dataType: "analytics:failureDashboard",
+        data,
+        title: "Failure Dashboard",
+      })
     },
   )
 
@@ -386,7 +398,13 @@ LIMIT 50`
             : null,
       }
 
-      return text(JSON.stringify({ widget: "analytics:variable-search", data }))
+      return buildSingleWidgetView({
+        widget: "analytics:variable-search",
+        app: "analytics",
+        dataType: "analytics:variableSearch",
+        data,
+        title: "Variable Search",
+      })
     },
   )
 
@@ -467,7 +485,13 @@ ORDER BY t.Timestamp`
         trace,
       }
 
-      return text(JSON.stringify({ widget: "analytics:execution-trace", data }))
+      return buildSingleWidgetView({
+        widget: "analytics:execution-trace",
+        app: "analytics",
+        dataType: "analytics:executionTrace",
+        data,
+        title: "Execution Trace",
+      })
     },
   )
 
@@ -489,7 +513,13 @@ ORDER BY t.Timestamp`
     },
     async (args) => {
       const data = await queries.pathFrequency(ch, args)
-      return text(JSON.stringify({ widget: "analytics:path-frequency", data }))
+      return buildSingleWidgetView({
+        widget: "analytics:path-frequency",
+        app: "analytics",
+        dataType: "analytics:pathFrequency",
+        data,
+        title: "Path Frequency",
+      })
     },
   )
 
@@ -513,7 +543,13 @@ ORDER BY t.Timestamp`
     },
     async (args) => {
       const data = await queries.clusterCompare(ch, args)
-      return text(JSON.stringify({ widget: "analytics:cluster-compare", data }))
+      return buildSingleWidgetView({
+        widget: "analytics:cluster-compare",
+        app: "analytics",
+        dataType: "analytics:clusterCompare",
+        data,
+        title: "Cluster Compare",
+      })
     },
   )
 }

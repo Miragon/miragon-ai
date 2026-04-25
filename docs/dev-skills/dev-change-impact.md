@@ -18,11 +18,11 @@ and which customer segments would be affected. The skill produces a
 /dev-change-impact "<free-form description of the change>"
 ```
 
-Examples (against the `loanApproval` seed):
+Examples (against the `miraveloLeasing` seed):
 
 ```
-/dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/seeders/LoanApprovalSeeder.kt:292
-/dev-change-impact "lift auto-approval amount threshold from 25000 to 50000"
+/dev-change-impact plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/delegates/CheckCreditScoreDelegate.kt:22
+/dev-change-impact "lift the credit-score threshold from 550 to 600"
 ```
 
 ## Tools involved
@@ -59,7 +59,7 @@ Examples (against the `loanApproval` seed):
 
 6. Segment characterization
    → enrichment_auto_resolve with a representative boundary value
-   → "Mostly Mid-Market with multi-currency"
+   → "Mostly PRIVATE + BRANCH intake"
 
 7. Emit the one-pager
 ```
@@ -67,80 +67,88 @@ Examples (against the `loanApproval` seed):
 ## Example output (truncated, against the seed)
 
 ```markdown
-# Impact: seeders/LoanApprovalSeeder.kt:292 — lift threshold 25000 → 50000
+# Impact: CheckCreditScoreDelegate.kt:22 — lift credit-score threshold 550 → 600
 
 ## Change
 
-- Old: `amount < 25_000 → base approval = 0.85`
-- New: `amount < 50_000 → base approval = 0.85`
-- Variable: `amount` (numeric)
-- Element: `Gateway_approved` of `loanApproval` (exclusiveGateway)
+- Old: `creditScore < 550 → throw BpmnError("BAD_CREDIT_SCORE")`
+- New: `creditScore < 600 → throw BpmnError("BAD_CREDIT_SCORE")`
+- Variable: `creditScore` (numeric, 300..850)
+- Element: `Activity_CheckCreditScore` ("Check Credit Score") of `assessCreditworthiness`
 
 ## Projected reclassification (last 30d)
 
-- Gateway fired **140 times** in the window (seed-scaled).
-- **22 instances (22/140 = 15.7%)** would be classified differently under the
-  new logic — all in the bucket `[25000, 50000)` with currently ~65% approval,
-  ~85% in future.
-- Direction: **more** instances flow into the approval branch.
+- Element fired **580 times** in the window (seed-scaled; one hit per parent
+  instance that reaches the sub-process).
+- **~41 instances (7.1%)** would be reclassified from "creditworthy" to
+  "risk identified" under the new logic — all in the bucket `[550, 600)` of
+  the creditScore distribution.
+- Direction: **more** instances flow into the `Event_RiskIdentified` "Risk identified"
+  branch, which surfaces the `Activity_DecideOnApplication` "Decide on application" user
+  task in the parent process.
 
 ## Affected segments
 
-`[25000, 50000)` is roughly 30% PRIVATE, 55% BUSINESS, 15% ENTERPRISE in the
-seed. The shift therefore mainly hits Business customers with mid-range
-loan amounts.
+`creditScore ∈ [550, 600)` is roughly 45% PRIVATE, 40% BUSINESS, 15% STUDENT
+in the seed. The shift therefore hits PRIVATE and BUSINESS applicants almost
+equally; STUDENT instances are under-represented because the lease amount cap
+correlates loosely with credit score.
 
 ## Side observations
 
-- `Gateway_approved` today: 0% fail, avg 1ms, p95 3ms — the gateway itself is
-  not the bottleneck.
-- Suppressed buckets near the boundary: `[45000, 50000)` — only 8 observations.
+- `Activity_CheckCreditScore` today: 0.3% fail (a handful of stub-delegate errors),
+  avg 28ms, p95 84ms — the check itself is not the bottleneck.
+- Suppressed buckets near the boundary: `[600, 610)` has only 7 observations —
+  flagged, not extrapolated.
 
 ## Recommendation
 
-Confirm with the business before shipping: 22 additional instances per seed
-cycle would be auto-approved without extra review — that may or may not be
-intended. Enterprise stays largely unaffected because of the segment bonus.
+Confirm with the business before shipping: 41 additional applications per
+month would be routed to the manual "Decide on application" task — check that
+the decision desk has capacity before the deploy.
 ```
 
 ## Second presentation example: categorical condition (`seed-presentation`)
 
-Beyond the numeric `amount` threshold example above, the `seed-presentation`
-profile stages categorical and boolean conditions too — `region` on
-`orderFulfillment` and `priorityFlag` on both processes.
+Beyond the numeric `creditScore` example above, the `seed-presentation`
+profile stages categorical (`region`, `bikeModel`, `customerSegment`) and
+boolean (`priorityFlag`) conditions.
 
 ```
-/dev-change-impact "re-route APAC region to US fallback instead of auto-ship"
+/dev-change-impact "route APAC instances through the BUSINESS policy template instead of the default"
 ```
 
 Expected output shape (truncated):
 
 ```markdown
-# Impact: re-route APAC to US fallback
+# Impact: re-route APAC region to BUSINESS policy template
 
 ## Change
 
-- Old: `region == "APAC"` → `Task_APACExpressShip` (user task, 2h timer)
-- New: `region == "APAC"` → `Task_USReview` (same path as US)
-- Variable: `region` (categorical, top-K: EU/US/APAC)
-- Element: `Gateway_Region` of `orderFulfillment`
+- Old: all instances use the default policy template in `Activity_DeliverPolicy`
+  ("Delivery bike leasing policy")
+- New: `region == "APAC"` → BUSINESS template, others unchanged
+- Variable: `region` (categorical, top-K: EU / US / APAC)
+- Element: `Activity_DeliverPolicy` of `miraveloLeasing`
 
 ## Projected reclassification (last 30d)
 
-- Gateway fired **~300 times** in the window.
-- **~45 instances (15%)** would no longer take the APAC express path.
-- Direction: shifts traffic from Task_APACExpressShip to Task_USReview.
+- Element fired **~550 times** in the window (one hit per approved policy).
+- **~180 instances (33%)** would render with the BUSINESS template instead.
+- Direction: shifts template selection for the APAC bucket only; other
+  regions are unchanged.
 
 ## Affected segments
 
-APAC bucket is roughly 40% EU-based customers in the seed (customerId
-patterns), 60% genuine APAC accounts — the re-route primarily preserves
-behavior for the first group, but increases US reviewer load materially.
+APAC instances concentrate in BUSINESS (~45%) and PRIVATE (~50%), with STUDENT
+under-represented (~5%). Enrichment flags APAC as a non-GDPR region; confirm
+the BUSINESS template contains no EU-only compliance boilerplate before
+shipping.
 ```
 
-For the boolean demo, invoke with `"toggle priorityFlag default from false to
-true for EXPRESS shippingMethod"` — the projection then runs on
-`analytics_variable_distribution` over `priorityFlag × shippingMethod`.
+For the boolean demo, invoke with `"default priorityFlag to true for
+customerSegment=BUSINESS"` — the projection then runs on
+`analytics_variable_distribution` over `priorityFlag × customerSegment`.
 
 ## Context policy
 

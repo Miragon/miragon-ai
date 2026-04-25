@@ -37,17 +37,18 @@
     {
       "request": {
         "method": "GET",
-        "urlPath": "/crm/customers/by-segment/ENTERPRISE"
+        "urlPath": "/crm/customers/by-segment/STUDENT"
       },
       "response": {
         "status": 200,
         "headers": { "Content-Type": "application/json" },
         "jsonBody": {
-          "segment": "ENTERPRISE",
-          "tier": "platinum",
-          "industry": "enterprise",
-          "accountManager": "alice.enterprise@example.com",
-          "slaHours": 4
+          "segment": "STUDENT",
+          "tier": "lite",
+          "industry": "consumer",
+          "accountManager": null,
+          "slaHours": 96,
+          "eligibilityNote": "Requires valid student ID; leaseAmount capped at 6,000 EUR."
         }
       }
     }

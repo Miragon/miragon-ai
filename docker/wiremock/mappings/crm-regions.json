@@ -1,0 +1,52 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/crm/regions/EU"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "region": "EU",
+          "gdprZone": "EEA",
+          "timezone": "Europe/Berlin",
+          "defaultCurrency": "EUR"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/crm/regions/US"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "region": "US",
+          "gdprZone": "none",
+          "timezone": "America/New_York",
+          "defaultCurrency": "USD"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/crm/regions/APAC"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "region": "APAC",
+          "gdprZone": "none",
+          "timezone": "Asia/Singapore",
+          "defaultCurrency": "SGD"
+        }
+      }
+    }
+  ]
+}

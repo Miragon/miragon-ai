@@ -6,12 +6,10 @@ shared library.
 
 ## Modules
 
-| Plugin                        | Engine          | Status      |
-| ----------------------------- | --------------- | ----------- |
-| `shared-history-clickhouse`   | engine-agnostic | Active      |
-| `camunda7-history-clickhouse` | Camunda 7       | Active      |
-| `cibseven-history-clickhouse` | CIB Seven       | Active      |
-| `operaton-history-clickhouse` | Operaton        | Placeholder |
+| Plugin                        | Engine          | Status |
+| ----------------------------- | --------------- | ------ |
+| `shared-history-clickhouse`   | engine-agnostic | Active |
+| `cibseven-history-clickhouse` | CIB Seven       | Active |
 
 ## How it works
 

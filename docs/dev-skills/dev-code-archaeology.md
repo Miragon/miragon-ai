@@ -6,7 +6,7 @@
 ## Scenario
 
 The developer stumbles on a code block that feels dead — an old
-`if orderType == "FAX"` branch, a delegate that no longer seems to be
+`if channel == "FAX"` branch, a delegate that no longer seems to be
 triggered, a gateway condition with outdated wording. Reading the code is
 not enough: the path may still fire once a quarter. The skill combines
 **git history + 12-month path frequency** and emits a clear verdict: ALIVE,
@@ -19,10 +19,10 @@ DEAD, or UNKNOWN.
 /dev-code-archaeology "<description of the condition>"
 ```
 
-Examples (against the `loanApproval` seed):
+Examples (against the `miraveloLeasing` seed):
 
 ```
-/dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/seeders/LoanApprovalSeeder.kt:160
+/dev-code-archaeology plugins/examples/cibseven-example/src/main/kotlin/com/camunda7mcp/example/cibseven/seeders/MiraveloLeasingSeeder.kt:357
 /dev-code-archaeology "instances where channel == 'FAX'"
 ```
 
@@ -66,10 +66,10 @@ Examples (against the `loanApproval` seed):
 6. Phrase a recommendation
 ```
 
-## Example output (against the `loanApproval` seed)
+## Example output (against the `miraveloLeasing` seed)
 
 ```markdown
-# Archaeology: seeders/LoanApprovalSeeder.kt:160 — `channel == "FAX"`
+# Archaeology: MiraveloLeasingSeeder.kt:357 — `channel == "FAX"`
 
 ## Verdict
 
@@ -84,15 +84,15 @@ extending the observation window.
 
 - Path share (365d simulated through the seed): ~0.5–1% (2 observations)
 - Last run: within the post-fix era
-- Element: routing variable `channel` in `loanApproval`
+- Element: routing variable `channel` in `miraveloLeasing`
 - `analytics_path_frequency` returns the path as `suppressed`, not as a
   row.
 
 ## Git history
 
-- Last changed: 2026-04-18 (seed extension, commit on `dominikhorn93/enrichment`)
-- Before that: 2026-04-14 (`58a75ef`, initial seeder scaffold)
-- The `channel` variable was deliberately set with a 1% FAX rate — the
+- Last changed: 2026-04-22 (Miravelo migration, commit on `dominikhorn93/madison`)
+- Before that: 2026-04-14 (initial seeder scaffold, legacy era)
+- The `channel` variable is deliberately set with a 1% FAX rate — the
   motivation is the archaeology scenario itself.
 
 ## Segment
@@ -113,35 +113,37 @@ Don't delete. Options for answering the liveness question cleanly:
 
 ## Second presentation example: DEAD verdict (`seed-presentation`)
 
-The `seed-presentation` profile hard-caps student-loan amounts at €40k in
-the seeder, so the condition `loanType == "student" && amount > 100000` is
-**structurally unreachable** — not rare, not suppressed, genuinely zero
-observations over any window.
+The `seed-presentation` profile hard-caps cargo-bike lease terms at 24
+months in the seeder, so the condition `bikeModel == "cargo" && leaseTermMonths
+
+> 24` is **structurally unreachable** — not rare, not suppressed, genuinely
+> zero observations over any window.
 
 ```
-/dev-code-archaeology "loan approvals where loanType == 'student' && amount > 100000"
+/dev-code-archaeology "leasing instances where bikeModel == 'cargo' && leaseTermMonths > 24"
 ```
 
 Expected output shape (truncated):
 
 ```markdown
-# Archaeology: student loans above 100k
+# Archaeology: cargo bikes leased for more than 24 months
 
 ## Verdict
 
 **DEAD**
 
 0 matching instances over the full 365-day window. The combined
-distribution `(loanType × amount-bucket)` has 300+ observations total —
-more than enough to trust zero. No suppression flag.
+distribution `(bikeModel × leaseTermMonths-bucket)` has 600+ observations
+total — more than enough to trust zero. No suppression flag.
 
 ## Runtime
 
-- `analytics_variable_distribution` on `loanType`: "student" appears in
-  ~17% of instances, bucket size well above minBucketSize=10.
-- `analytics_variable_distribution` on `amount`: bucket `[100000, 500000)`
-  appears in ~15% of instances.
-- Joint occurrence: 0 — cap enforced in the seeder / production code.
+- `analytics_variable_distribution` on `bikeModel`: "cargo" appears in
+  ~25% of instances, bucket size well above minBucketSize=10.
+- `analytics_variable_distribution` on `leaseTermMonths`: 36 and 48 each
+  appear in ~25% of instances.
+- Joint occurrence: 0 — cap enforced in the seeder / production code
+  (upstream validation capping cargo lease terms at 24 months).
 
 ## Recommendation
 
@@ -149,15 +151,15 @@ Safe to delete any code path gated on this combination — the condition is
 provably unreachable given current upstream validation.
 ```
 
-**Third angle — ALIVE-but-rare on `orderFulfillment`:** the priority-handoff
-path sits at ~3% share, above minBucketSize=10 but rare enough that a dev
-might question whether it still runs.
+**Third angle — ALIVE-but-rare.** The BRANCH channel sits at ~2% share,
+above minBucketSize=10 but rare enough that a dev might question whether
+it still runs.
 
 ```
-/dev-code-archaeology "instances where priorityFlag == true"
+/dev-code-archaeology "instances where channel == 'BRANCH'"
 ```
 
-Expected verdict: **ALIVE (rare)** — used by ~3% of instances, last
+Expected verdict: **ALIVE (rare)** — used by ~2% of instances, last
 occurrence within the post-fix era. Do not delete; keep the path gated.
 
 ## Context policy

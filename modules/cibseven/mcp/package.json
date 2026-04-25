@@ -1,0 +1,43 @@
+{
+  "name": "@miragon-ai/mcp-cibseven",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./widgets": "./src/widgets/index.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "dependencies": {
+    "@miragon-ai/client-cibseven": "workspace:*",
+    "@miragon-ai/widget-shell": "workspace:*",
+    "@miragon/mcp-toolkit-core": "workspace:*",
+    "zod": "4.3.6"
+  },
+  "peerDependencies": {
+    "mcp-use": "1.23.1",
+    "react": "19.2.5"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@miragon/mcp-toolkit-ui": "workspace:*",
+    "@types/react": "19.2.14",
+    "bpmn-js": "18.14.0",
+    "mcp-use": "1.23.1",
+    "react": "19.2.5",
+    "typescript": "5.9.3"
+  }
+}

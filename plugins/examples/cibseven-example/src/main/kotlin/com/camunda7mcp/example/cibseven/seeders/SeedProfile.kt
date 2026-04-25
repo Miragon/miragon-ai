@@ -9,10 +9,10 @@ enum class SeedProfile {
     /** Small seed for fast local iteration and CI smoke tests. */
     MINIMAL,
 
-    /** Legacy behavior: loanApproval only, 200 instances, one bug era. */
+    /** Legacy-shape default: 200 miraveloLeasing instances, single bug era, no cargo cap. */
     DEFAULT,
 
-    /** Full presentation coverage: both processes, two bug eras, dead path, long-tail. */
+    /** Full presentation coverage: two bug eras, DEAD cargo cap, suppressed-bucket long tail. */
     PRESENTATION,
     ;
 
