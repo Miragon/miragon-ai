@@ -11,7 +11,7 @@ fi
 
 pnpm install --frozen-lockfile
 
-pnpm -F @miragon-ai/client-camunda7 generate
+pnpm -F @miragon-ai/client-cibseven generate
 
 pnpm build
 
