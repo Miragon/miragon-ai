@@ -15,6 +15,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY modules/ modules/
+COPY packages/ packages/
 COPY server/ server/
 COPY vendor/ vendor/
 
