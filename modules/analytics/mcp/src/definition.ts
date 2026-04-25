@@ -25,6 +25,16 @@ export const definition: AppDefinition = {
       requires: [],
       size: "full",
     },
+    {
+      id: "analytics:path-frequency",
+      requires: [],
+      size: "full",
+    },
+    {
+      id: "analytics:cluster-compare",
+      requires: [],
+      size: "full",
+    },
   ],
 }
 

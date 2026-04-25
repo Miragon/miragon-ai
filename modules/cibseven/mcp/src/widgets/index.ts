@@ -1,4 +1,5 @@
-import type { ComponentType } from "react"
+import { adaptDataWidget } from "@miragon-ai/widget-shell/ui"
+import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { ProcessListWidget, type ProcessListData } from "./process-list.js"
 import { IncidentPanelWidget, type IncidentPanelData } from "./incident-panel.js"
 import { HistoryTimelineWidget, type HistoryTimelineData } from "./history-timeline.js"
@@ -21,14 +22,20 @@ export type {
   JobPanelData,
 }
 
-export const camunda7Widgets: Record<string, ComponentType<{ data: unknown }>> = {
-  "camunda7:process-list": ProcessListWidget as ComponentType<{ data: unknown }>,
-  "camunda7:incident-panel": IncidentPanelWidget as ComponentType<{ data: unknown }>,
-  "camunda7:history-timeline": HistoryTimelineWidget as ComponentType<{ data: unknown }>,
-  "camunda7:task-dashboard": TaskDashboardWidget as ComponentType<{ data: unknown }>,
-  "camunda7:instance-detail": InstanceDetailWidget as ComponentType<{ data: unknown }>,
-  "camunda7:cockpit-dashboard": CockpitDashboardWidget as ComponentType<{ data: unknown }>,
-  "camunda7:bpmn-viewer": BpmnViewerWidget as ComponentType<{ data: unknown }>,
-  "camunda7:deployment-browser": DeploymentBrowserWidget as ComponentType<{ data: unknown }>,
-  "camunda7:job-panel": JobPanelWidget as ComponentType<{ data: unknown }>,
+export const camunda7Widgets: Record<string, WidgetComponent> = {
+  "camunda7:process-list": adaptDataWidget(ProcessListWidget, "camunda7:processDefinitionList"),
+  "camunda7:incident-panel": adaptDataWidget(IncidentPanelWidget, "camunda7:incidentPanel"),
+  "camunda7:history-timeline": adaptDataWidget(HistoryTimelineWidget, "camunda7:historyTimeline"),
+  "camunda7:task-dashboard": adaptDataWidget(TaskDashboardWidget, "camunda7:taskList"),
+  "camunda7:instance-detail": adaptDataWidget(InstanceDetailWidget, "camunda7:processInstance"),
+  "camunda7:cockpit-dashboard": adaptDataWidget(
+    CockpitDashboardWidget,
+    "camunda7:cockpitDashboard",
+  ),
+  "camunda7:bpmn-viewer": adaptDataWidget(BpmnViewerWidget, "camunda7:bpmnViewer"),
+  "camunda7:deployment-browser": adaptDataWidget(
+    DeploymentBrowserWidget,
+    "camunda7:deploymentBrowser",
+  ),
+  "camunda7:job-panel": adaptDataWidget(JobPanelWidget, "camunda7:jobPanel"),
 }
