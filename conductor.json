@@ -1,6 +1,7 @@
 {
   "scripts": {
     "setup": "./.conductor/setup.sh",
-    "run": "./.conductor/run.sh"
+    "run": "./.conductor/run.sh",
+    "shutdown": "./.conductor/shutdown.sh"
   }
 }
