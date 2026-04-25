@@ -75,6 +75,12 @@ const MODULE_REGISTRY: Record<
       const absPath = path.isAbsolute(parsed.configPath)
         ? parsed.configPath
         : path.resolve(process.cwd(), parsed.configPath)
+      if (!fs.existsSync(absPath)) {
+        throw new Error(
+          `ENRICHMENT_CONFIG_PATH points to a file that does not exist: ${absPath}\n` +
+            `Update your .env — available examples in server/resources/enrichment-examples/`,
+        )
+      }
       const yaml = fs.readFileSync(absPath, "utf-8")
       return createEnrichmentPlugin({
         config: parseEnrichmentConfig(yaml),
