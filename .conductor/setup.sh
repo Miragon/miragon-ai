@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 git submodule update --init --recursive
 
-pnpm install --no-frozen-lockfile
+pnpm install --frozen-lockfile
 
 pnpm -F @miragon-ai/client-cibseven generate
 
