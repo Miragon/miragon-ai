@@ -2,11 +2,21 @@
   "name": "@miragon-ai/widget-shell",
   "version": "0.1.0",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "exports": {
-    "./server": "./src/build-single-widget-view.ts",
-    "./ui": "./src/adapt-data-widget.tsx"
+    "./server": {
+      "types": "./dist/build-single-widget-view.d.ts",
+      "import": "./dist/build-single-widget-view.js"
+    },
+    "./ui": {
+      "types": "./dist/adapt-data-widget.d.ts",
+      "import": "./dist/adapt-data-widget.js"
+    }
   },
   "scripts": {
+    "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"

@@ -8,4 +8,11 @@ if [ ! -d node_modules ]; then
   exit 1
 fi
 
+if [ ! -f .env ]; then
+  sed "s|\$(pwd)|$(pwd)|g" .env.example > .env
+  echo "Created .env from .env.example"
+fi
+
+docker compose -f docker/docker-compose.yml up -d
+
 exec pnpm dev
