@@ -66,6 +66,9 @@ importers:
       '@miragon-ai/client-analytics':
         specifier: workspace:*
         version: link:../client
+      '@miragon-ai/client-cibseven':
+        specifier: workspace:*
+        version: link:../../cibseven/client
       '@miragon-ai/widget-shell':
         specifier: workspace:*
         version: link:../../../packages/widget-shell
@@ -82,6 +85,9 @@ importers:
       '@types/react':
         specifier: 19.2.14
         version: 19.2.14
+      bpmn-js:
+        specifier: 18.14.0
+        version: 18.14.0
       mcp-use:
         specifier: 1.23.1
         version: 1.23.1(d9786249426d99e52be0f0df44cbbec7)
@@ -209,6 +215,9 @@ importers:
 
   server:
     dependencies:
+      '@miragon-ai/client-cibseven':
+        specifier: workspace:*
+        version: link:../modules/cibseven/client
       '@miragon-ai/client-enrichment':
         specifier: workspace:*
         version: link:../modules/enrichment/client

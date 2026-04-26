@@ -1,5 +1,11 @@
 import type { ActivityHistoryItem, VariableChangeItem, OtelSpanItem } from "./queries/trace.js"
 import type { VariableSearchRow } from "./queries/search.js"
+import type { PathFrequencyResult } from "./queries/path.js"
+
+export interface PathFrequencyData extends PathFrequencyResult {
+  processDefinitionKey: string
+  bpmnXml: string | null
+}
 
 export interface ExecutionTraceData {
   processInstanceId: string | null

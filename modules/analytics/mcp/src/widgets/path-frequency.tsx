@@ -11,9 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@miragon/mcp-toolkit-ui"
-import type { PathFrequencyResult } from "@miragon-ai/client-analytics"
+import type { PathFrequencyData as PathFrequencyDataType } from "@miragon-ai/client-analytics"
+import { BpmnHeatmap, HeatmapLegend } from "./bpmn-heatmap.js"
 
-export type PathFrequencyData = PathFrequencyResult | null
+export type PathFrequencyData = PathFrequencyDataType | null
 
 interface Edge {
   source: string
@@ -175,6 +176,32 @@ function SankeyDiagram({ edges }: { edges: Edge[] }) {
   )
 }
 
+function buildNodeFrequencies(edges: Edge[]): Record<string, number> {
+  // Visit count per node ≈ max(sum of inflows, sum of outflows). For the
+  // start node inflows are 0, for the end node outflows are 0 — taking the
+  // max yields the right traffic for both.
+  const inflow: Record<string, number> = {}
+  const outflow: Record<string, number> = {}
+  for (const e of edges) {
+    inflow[e.target] = (inflow[e.target] ?? 0) + e.flow
+    outflow[e.source] = (outflow[e.source] ?? 0) + e.flow
+  }
+  const ids = new Set<string>([...Object.keys(inflow), ...Object.keys(outflow)])
+  const out: Record<string, number> = {}
+  for (const id of ids) {
+    out[id] = Math.max(inflow[id] ?? 0, outflow[id] ?? 0)
+  }
+  return out
+}
+
+function buildEdgeFrequencies(edges: Edge[]): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const e of edges) {
+    out[`${e.source}->${e.target}`] = e.flow
+  }
+  return out
+}
+
 export function PathFrequencyWidget({ data }: { data: PathFrequencyData }) {
   if (!data) {
     return (
@@ -186,7 +213,10 @@ export function PathFrequencyWidget({ data }: { data: PathFrequencyData }) {
     )
   }
 
-  const { paths, edges, minBucketSize, suppressedPaths, suppressedEdges } = data
+  const { paths, edges, minBucketSize, suppressedPaths, suppressedEdges, bpmnXml } = data
+
+  const nodeFrequencies = buildNodeFrequencies(edges)
+  const edgeFrequencies = buildEdgeFrequencies(edges)
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-6 p-6">
@@ -208,7 +238,21 @@ export function PathFrequencyWidget({ data }: { data: PathFrequencyData }) {
         </div>
       </div>
 
-      {edges.length > 0 ? (
+      {bpmnXml && edges.length > 0 ? (
+        <Card className="gap-0 overflow-hidden py-0 shadow-none">
+          <CardContent className="flex flex-col gap-3 p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">Heatmap</h3>
+              <HeatmapLegend />
+            </div>
+            <BpmnHeatmap
+              bpmnXml={bpmnXml}
+              nodeFrequencies={nodeFrequencies}
+              edgeFrequencies={edgeFrequencies}
+            />
+          </CardContent>
+        </Card>
+      ) : edges.length > 0 ? (
         <Card className="gap-0 overflow-x-auto py-0 shadow-none">
           <CardContent className="p-4">
             <SankeyDiagram edges={edges} />
