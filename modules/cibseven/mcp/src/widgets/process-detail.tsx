@@ -14,7 +14,7 @@ import {
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 
-import { BpmnDiagram, type BpmnCountOverlay } from "./bpmn-diagram.js"
+import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../tool-names.js"
 
 export type { ProcessDetailData }
@@ -22,22 +22,16 @@ export type { ProcessDetailData }
 export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }) {
   const host: HostActions = useHostActions()
 
-  const countOverlays = useMemo<BpmnCountOverlay[]>(
-    () =>
-      (data?.activities ?? [])
-        .filter((a) => a.incidentCount > 0)
-        .map((a) => ({
-          activityId: a.activityId,
-          count: a.incidentCount,
-          variant: "incident",
-        })),
-    [data?.activities],
-  )
-
-  const incidentActivityIds = useMemo(
-    () => (data?.activities ?? []).filter((a) => a.incidentCount > 0).map((a) => a.activityId),
-    [data?.activities],
-  )
+  const highlights = useMemo<BpmnHighlight[]>(() => {
+    const activities = (data?.activities ?? []).filter((a) => a.incidentCount > 0)
+    return [
+      {
+        kind: "incident",
+        activityIds: activities.map((a) => a.activityId),
+        counts: activities.map((a) => ({ activityId: a.activityId, count: a.incidentCount })),
+      },
+    ]
+  }, [data?.activities])
 
   if (!data) {
     return (
@@ -170,12 +164,7 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
           }
         />
         {data.bpmnXml ? (
-          <BpmnDiagram
-            bpmnXml={data.bpmnXml}
-            height={340}
-            highlightActivityIds={incidentActivityIds}
-            countOverlays={countOverlays}
-          />
+          <BpmnDiagram bpmnXml={data.bpmnXml} height={340} highlights={highlights} />
         ) : (
           <Alert>
             <AlertDescription>No BPMN diagram available</AlertDescription>

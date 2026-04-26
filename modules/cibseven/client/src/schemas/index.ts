@@ -22,6 +22,14 @@ export {
   getTaskVariablesInput,
 } from "./tasks.js"
 export {
+  getTaskFormInput,
+  taskFormFieldSchema,
+  taskFormSchema,
+  type TaskFormField,
+  type TaskFormFieldSource,
+  type TaskFormSchema,
+} from "./task-form.js"
+export {
   fetchAndLockInput,
   completeExternalTaskInput,
   handleExternalTaskFailureInput,

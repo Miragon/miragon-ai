@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Card,
   CardContent,
@@ -9,14 +9,77 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-import type { InstanceDetailData } from "@miragon-ai/client-cibseven"
+import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibseven"
+import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, Section, VariablesTable } from "./instance-sections.js"
+import { TaskCompleteForm } from "./task-complete-form.js"
 
 export type { InstanceDetailData }
 
+function OpenTaskCard({
+  task,
+  expanded,
+  onToggle,
+  onCompleted,
+}: {
+  task: OpenUserTask
+  expanded: boolean
+  onToggle: () => void
+  onCompleted: () => void
+}) {
+  return (
+    <Card className="gap-0 py-0 shadow-none">
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col">
+            <div className="font-medium">{task.name ?? task.taskDefinitionKey}</div>
+            <div className="text-muted-foreground font-mono text-xs">
+              {task.taskDefinitionKey}
+              {task.assignee && <> · assignee: {task.assignee}</>}
+              {!task.assignee && <> · unassigned</>}
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={onToggle}>
+            {expanded ? "Cancel" : "Complete"}
+          </Button>
+        </div>
+        {expanded && (
+          <div className="mt-3 border-t pt-3">
+            <TaskCompleteForm
+              taskId={task.id}
+              formSchema={task.formSchema}
+              onCompleted={onCompleted}
+              onCancel={onToggle}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null }) {
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set())
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
+
+  const visibleTasks = useMemo<OpenUserTask[]>(
+    () => (data?.openTasks ?? []).filter((task) => !completedTaskIds.has(task.id)),
+    [data?.openTasks, completedTaskIds],
+  )
+
+  const highlights = useMemo<BpmnHighlight[]>(
+    () => [
+      { kind: "active", activityIds: data?.activeActivityIds ?? [] },
+      { kind: "incident", activityIds: data?.incidentActivityIds ?? [] },
+      {
+        kind: "open-task",
+        activityIds: visibleTasks.map((task) => task.taskDefinitionKey),
+      },
+    ],
+    [data?.activeActivityIds, data?.incidentActivityIds, visibleTasks],
+  )
 
   if (!data) {
     return (
@@ -28,7 +91,7 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
     )
   }
 
-  const { instance, activityTree, variables, incidents } = data
+  const { instance, activityTree, variables, incidents, bpmnXml } = data
 
   function handleResolve(incidentId: string) {
     resolveMutation.mutate(
@@ -104,6 +167,39 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
               )
             })}
           </div>
+        </Section>
+      )}
+
+      {bpmnXml && (
+        <Section title="Process Diagram" defaultOpen>
+          <BpmnDiagram bpmnXml={bpmnXml} height={420} highlights={highlights} />
+        </Section>
+      )}
+
+      {(visibleTasks.length > 0 || (data.openTasks ?? []).length > 0) && (
+        <Section
+          title="Open User Tasks"
+          count={visibleTasks.length}
+          defaultOpen={visibleTasks.length > 0}
+        >
+          {visibleTasks.length === 0 ? (
+            <p className="text-muted-foreground text-sm">All tasks completed.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {visibleTasks.map((task) => (
+                <OpenTaskCard
+                  key={task.id}
+                  task={task}
+                  expanded={activeTaskId === task.id}
+                  onToggle={() => setActiveTaskId(activeTaskId === task.id ? null : task.id)}
+                  onCompleted={() => {
+                    setCompletedTaskIds((prev) => new Set(prev).add(task.id))
+                    setActiveTaskId(null)
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </Section>
       )}
 

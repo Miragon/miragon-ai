@@ -1,10 +1,31 @@
+import { useMemo } from "react"
 import { Alert, AlertDescription, Badge } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "@miragon-ai/client-cibseven"
-import { BpmnDiagram, type BpmnCountOverlay } from "./bpmn-diagram.js"
+import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 
 export type { BpmnViewerData }
 
 export function BpmnViewerWidget({ data }: { data: BpmnViewerData | null }) {
+  const highlights = useMemo<BpmnHighlight[]>(
+    () => [
+      { kind: "active", activityIds: data?.activeActivityIds ?? [] },
+      { kind: "incident", activityIds: data?.incidentActivityIds ?? [] },
+      {
+        kind: "failed-jobs",
+        counts: (data?.activityStats ?? [])
+          .filter((s) => s.failedJobs > 0)
+          .map((s) => ({ activityId: s.id, count: s.failedJobs })),
+      },
+      {
+        kind: "instance-count",
+        counts: (data?.activityStats ?? [])
+          .filter((s) => s.instances > 0)
+          .map((s) => ({ activityId: s.id, count: s.instances })),
+      },
+    ],
+    [data?.activeActivityIds, data?.incidentActivityIds, data?.activityStats],
+  )
+
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
@@ -27,16 +48,6 @@ export function BpmnViewerWidget({ data }: { data: BpmnViewerData | null }) {
 
   const totalActive = data.activeActivityIds.length
   const totalIncidents = data.incidentActivityIds.length
-
-  const countOverlays: BpmnCountOverlay[] = []
-  for (const stat of data.activityStats) {
-    if (stat.instances > 0) {
-      countOverlays.push({ activityId: stat.id, count: stat.instances, variant: "instance" })
-    }
-    if (stat.failedJobs > 0) {
-      countOverlays.push({ activityId: stat.id, count: stat.failedJobs, variant: "failed" })
-    }
-  }
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
@@ -74,13 +85,7 @@ export function BpmnViewerWidget({ data }: { data: BpmnViewerData | null }) {
         </div>
       </div>
 
-      <BpmnDiagram
-        bpmnXml={data.bpmnXml}
-        height={500}
-        activeActivityIds={data.activeActivityIds}
-        highlightActivityIds={data.incidentActivityIds}
-        countOverlays={countOverlays}
-      />
+      <BpmnDiagram bpmnXml={data.bpmnXml} height={500} highlights={highlights} />
     </div>
   )
 }

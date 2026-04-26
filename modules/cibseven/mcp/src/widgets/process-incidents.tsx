@@ -3,7 +3,7 @@ import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-u
 
 import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
 
-import { BpmnDiagram, type BpmnCountOverlay } from "./bpmn-diagram.js"
+import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { CAMUNDA7_SHOW_INCIDENT_DETAIL, CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../tool-names.js"
 import {
   GroupCard,
@@ -39,19 +39,16 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
     )
   }
 
-  const countOverlays = useMemo<BpmnCountOverlay[]>(
-    () =>
-      (data?.activities ?? []).map((a) => ({
-        activityId: a.activityId,
-        count: a.incidentCount,
-        variant: "incident",
-      })),
-    [data?.activities],
-  )
-  const incidentActivityIds = useMemo(
-    () => (data?.activities ?? []).map((a) => a.activityId),
-    [data?.activities],
-  )
+  const highlights = useMemo<BpmnHighlight[]>(() => {
+    const activities = data?.activities ?? []
+    return [
+      {
+        kind: "incident",
+        activityIds: activities.map((a) => a.activityId),
+        counts: activities.map((a) => ({ activityId: a.activityId, count: a.incidentCount })),
+      },
+    ]
+  }, [data?.activities])
 
   if (!data) {
     return (
@@ -186,12 +183,7 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
           }
         />
         {data.bpmnXml ? (
-          <BpmnDiagram
-            bpmnXml={data.bpmnXml}
-            height={460}
-            highlightActivityIds={incidentActivityIds}
-            countOverlays={countOverlays}
-          />
+          <BpmnDiagram bpmnXml={data.bpmnXml} height={460} highlights={highlights} />
         ) : (
           <Alert>
             <AlertDescription>No BPMN diagram available</AlertDescription>

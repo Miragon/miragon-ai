@@ -5,6 +5,7 @@ import type {
   Client,
   ProcessListData,
   TaskDashboardData,
+  TaskData,
   InstanceDetailData,
   HistoryTimelineData,
 } from "@miragon-ai/client-cibseven"
@@ -27,6 +28,8 @@ import {
 import { buildIncidentsDashboardData, buildProcessIncidentsData } from "./incident-panel-data.js"
 import { buildProcessDetailData } from "./steps/process-detail.js"
 import { buildIncidentDetailData } from "./steps/incident-detail.js"
+import { buildTaskFormSchema } from "./tools/task-form.js"
+import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
 import {
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_PROCESS_DETAIL,
@@ -145,7 +148,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     async (args) => {
-      const [instance, activityTree, variables, incidents] = await Promise.all([
+      const [instance, activityTree, variables, incidents, openTasksRaw] = await Promise.all([
         getProcessInstance({ client, path: { id: args.processInstanceId } }),
         getActivityInstanceTree({ client, path: { id: args.processInstanceId } }).catch(() => null),
         getProcessInstanceVariables({
@@ -155,6 +158,15 @@ export function registerWidgetTools(
         getIncidents({
           client,
           query: { processInstanceId: args.processInstanceId, maxResults: 100 },
+        }).catch(() => []),
+        getTasks({
+          client,
+          query: {
+            processInstanceId: args.processInstanceId,
+            maxResults: 50,
+            sortBy: "created",
+            sortOrder: "asc",
+          },
         }).catch(() => []),
       ])
 
@@ -172,12 +184,36 @@ export function registerWidgetTools(
         }
       }
 
+      const taskList = (Array.isArray(openTasksRaw) ? openTasksRaw : []) as TaskData[]
+      // Reuse the BPMN XML across all task form-schema builds (and skip
+      // the per-task `getTask` round-trip — the list rows already carry
+      // taskDefinitionKey + processDefinitionId).
+      const openTasks: InstanceDetailData["openTasks"] = await Promise.all(
+        taskList.map(async (task) => ({
+          ...task,
+          formSchema: await buildTaskFormSchema(client, task.id, {
+            task: {
+              taskDefinitionKey: task.taskDefinitionKey,
+              processDefinitionId: task.processDefinitionId,
+            },
+            bpmnXml,
+          }).catch(() => ({
+            taskId: task.id,
+            fields: [],
+            currentVariables: {},
+          })),
+        })),
+      )
+
       const data: InstanceDetailData = {
         instance: instance as unknown as InstanceDetailData["instance"],
         activityTree: activityTree as unknown as InstanceDetailData["activityTree"],
         variables: variables as unknown as InstanceDetailData["variables"],
         incidents: incidents as unknown as InstanceDetailData["incidents"],
         bpmnXml,
+        activeActivityIds: collectActiveActivityIds(activityTree),
+        incidentActivityIds: collectIncidentActivityIds(incidents),
+        openTasks,
       }
       return buildSingleWidgetView({
         widget: "camunda7:instance-detail",
@@ -521,30 +557,8 @@ export function registerWidgetTools(
 
       const bpmnXml = (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? ""
 
-      // Collect active activity IDs from tree
-      interface TreeNode {
-        activityId?: string
-        childActivityInstances?: TreeNode[]
-        childTransitionInstances?: Array<{ activityId?: string }>
-      }
-      function collect(node: TreeNode | null): string[] {
-        if (!node) return []
-        const ids: string[] = []
-        if (node.activityId) ids.push(node.activityId)
-        for (const c of node.childActivityInstances ?? []) ids.push(...collect(c))
-        for (const t of node.childTransitionInstances ?? []) {
-          if (t.activityId) ids.push(t.activityId)
-        }
-        return ids
-      }
-      const activeActivityIds = collect(activityTree as TreeNode | null)
-
-      const incidentRows = Array.isArray(incidents)
-        ? (incidents as Array<{ activityId?: string | null }>)
-        : []
-      const incidentActivityIds = [
-        ...new Set(incidentRows.map((i) => i.activityId).filter(Boolean) as string[]),
-      ]
+      const activeActivityIds = collectActiveActivityIds(activityTree)
+      const incidentActivityIds = collectIncidentActivityIds(incidents)
 
       const statRows = Array.isArray(stats)
         ? (stats as Array<{ id?: string | null; instances?: number; failedJobs?: number }>)
