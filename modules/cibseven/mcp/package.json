@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"
@@ -38,6 +39,7 @@
     "bpmn-js": "18.14.0",
     "mcp-use": "1.23.1",
     "react": "19.2.5",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "4.1.4"
   }
 }

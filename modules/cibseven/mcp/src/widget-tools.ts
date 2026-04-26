@@ -6,7 +6,6 @@ import type {
   ProcessListData,
   TaskDashboardData,
   InstanceDetailData,
-  IncidentPanelData,
   HistoryTimelineData,
 } from "@miragon-ai/client-cibseven"
 import {
@@ -25,8 +24,19 @@ import {
   getDeploymentResources,
   getJobs,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { buildIncidentsDashboardData, buildProcessIncidentsData } from "./incident-panel-data.js"
 
-export function registerWidgetTools(server: MCPServer, client: Client, resourceUri: string) {
+export interface WidgetToolsConfig {
+  baseUrl: string
+  cockpitUrl?: string
+}
+
+export function registerWidgetTools(
+  server: MCPServer,
+  client: Client,
+  resourceUri: string,
+  widgetConfig: WidgetToolsConfig,
+) {
   const uiMeta = { ui: { resourceUri } }
 
   server.tool(
@@ -174,9 +184,10 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
 
   server.tool(
     {
-      name: "camunda7_show_incident_panel",
-      title: "Open Incidents",
-      description: "Show open incidents grouped by process definition.",
+      name: "camunda7_show_incidents_dashboard",
+      title: "Incidents Dashboard",
+      description:
+        "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().optional(),
@@ -185,60 +196,44 @@ export function registerWidgetTools(server: MCPServer, client: Client, resourceU
       _meta: uiMeta,
     },
     async (args) => {
-      const rows = (await getIncidents({
-        client,
-        query: {
-          processDefinitionKeyIn: args.processDefinitionKey,
-          incidentType: args.incidentType,
-          maxResults: 200,
-          sortBy: "incidentTimestamp",
-          sortOrder: "desc",
-        },
-      })) as unknown as Array<{
-        id: string
-        processDefinitionKey: string
-        processDefinitionId: string
-        processInstanceId: string
-        incidentType: string
-        activityId: string
-        incidentMessage: string | null
-        incidentTimestamp: string
-        configuration: string | null
-      }>
-
-      const byDefinition = new Map<string, typeof rows>()
-      for (const row of rows) {
-        const key = row.processDefinitionKey
-        const group = byDefinition.get(key) ?? []
-        group.push(row)
-        byDefinition.set(key, group)
-      }
-
-      const definitions = [...byDefinition.entries()]
-        .sort((a, b) => b[1].length - a[1].length)
-        .map(([key, group]) => ({
-          processDefinitionKey: key,
-          incidentCount: group.length,
-          latestIncident: group[0].incidentTimestamp,
-          incidents: group.map((r) => ({
-            id: r.id,
-            processDefinitionId: r.processDefinitionId,
-            processInstanceId: r.processInstanceId,
-            incidentType: r.incidentType,
-            activityId: r.activityId,
-            incidentMessage: r.incidentMessage ?? null,
-            incidentTimestamp: r.incidentTimestamp,
-            configuration: r.configuration ?? null,
-          })),
-        }))
-
-      const data: IncidentPanelData = { totalCount: rows.length, definitions }
+      const data = await buildIncidentsDashboardData(client, {
+        baseUrl: widgetConfig.baseUrl,
+        cockpitUrl: widgetConfig.cockpitUrl,
+        processDefinitionKey: args.processDefinitionKey,
+        incidentType: args.incidentType,
+      })
       return buildSingleWidgetView({
-        widget: "camunda7:incident-panel",
+        widget: "camunda7:incidents-dashboard",
         app: "camunda7",
-        dataType: "camunda7:incidentPanel",
+        dataType: "camunda7:incidentsDashboard",
         data,
-        title: "Incidents",
+      })
+    },
+  )
+
+  server.tool(
+    {
+      name: "camunda7_show_process_incidents",
+      title: "Process Incidents",
+      description:
+        "Per-process incident detail: header, KPIs, BPMN diagram with incident overlays, and activity-grouped incident table with per-incident actions (resolve, jump to Cockpit).",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().describe("Process definition key to drill into"),
+      }),
+      _meta: uiMeta,
+    },
+    async (args) => {
+      const data = await buildProcessIncidentsData(client, {
+        baseUrl: widgetConfig.baseUrl,
+        cockpitUrl: widgetConfig.cockpitUrl,
+        processDefinitionKey: args.processDefinitionKey,
+      })
+      return buildSingleWidgetView({
+        widget: "camunda7:process-incidents",
+        app: "camunda7",
+        dataType: "camunda7:processIncidents",
+        data,
       })
     },
   )

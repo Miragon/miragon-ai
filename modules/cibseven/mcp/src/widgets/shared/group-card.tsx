@@ -1,0 +1,47 @@
+import type { KeyboardEvent, ReactNode } from "react"
+
+/**
+ * Bordered card with a clickable summary bar and a collapsible body. Matches
+ * the `.group-card` pattern shared between overview and detail mockups —
+ * used for both process groups (overview) and activity groups (detail).
+ *
+ * The summary uses `role="button"` rather than a `<button>` element so that
+ * action buttons / anchors can render inside it without producing invalid
+ * nested-interactive-element HTML.
+ */
+export function GroupCard({
+  expanded,
+  onToggle,
+  summary,
+  children,
+}: {
+  expanded: boolean
+  onToggle: () => void
+  summary: ReactNode
+  children?: ReactNode
+}) {
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      onToggle()
+    }
+  }
+
+  return (
+    <div className="border-line mb-2 overflow-hidden rounded-lg border">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={onToggle}
+        onKeyDown={handleKeyDown}
+        className={`bg-card hover:bg-bg focus-visible:ring-m-blue/50 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 ${
+          expanded ? "border-line border-b" : ""
+        }`}
+      >
+        {summary}
+      </div>
+      {expanded && children && <div>{children}</div>}
+    </div>
+  )
+}
