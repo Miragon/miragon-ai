@@ -10,6 +10,7 @@ import {
   TableCell,
   Alert,
   AlertDescription,
+  useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 
@@ -24,13 +25,32 @@ function formatDuration(ms: number | null): string {
   return `${(ms / 86400000).toFixed(1)}d`
 }
 
-export function AnalyticsDashboardWidget({ data }: { data: AnalyticsDashboardData | null }) {
+export function AnalyticsDashboardWidget({
+  data: initialData,
+}: {
+  data: AnalyticsDashboardData | null
+}) {
+  // Fall back to fetching the data ourselves when no upstream pipeline step
+  // populated `initialData` — keeps the widget usable in render-view layouts
+  // that don't include `analytics:load-dashboard`.
+  const fallbackQuery = useToolQuery<AnalyticsDashboardData>(
+    ["analytics:dashboard"],
+    "analytics_show_dashboard",
+    {},
+    { enabled: !initialData },
+  )
+  const data = initialData ?? fallbackQuery.data ?? null
+
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {fallbackQuery.isError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <p className="text-muted-foreground text-sm">Loading process analytics…</p>
+        )}
       </div>
     )
   }
