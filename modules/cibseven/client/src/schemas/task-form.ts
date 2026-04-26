@@ -1,0 +1,33 @@
+import { z } from "zod"
+
+export const getTaskFormInput = z.object({
+  taskId: z.string().describe("The task ID to derive the form schema for"),
+})
+
+export const taskFormFieldSourceSchema = z.enum(["form-data", "inferred-from-gateway", "manual"])
+
+export const taskFormFieldSchema = z.object({
+  name: z.string(),
+  type: z.string().optional(),
+  label: z.string().optional(),
+  defaultValue: z.unknown().optional(),
+  suggestedValues: z.array(z.unknown()).optional(),
+  required: z.boolean().optional(),
+  source: taskFormFieldSourceSchema,
+})
+
+export const taskFormSchema = z.object({
+  taskId: z.string(),
+  fields: z.array(taskFormFieldSchema),
+  currentVariables: z.record(
+    z.string(),
+    z.object({
+      value: z.unknown(),
+      type: z.string().optional(),
+    }),
+  ),
+})
+
+export type TaskFormFieldSource = z.infer<typeof taskFormFieldSourceSchema>
+export type TaskFormField = z.infer<typeof taskFormFieldSchema>
+export type TaskFormSchema = z.infer<typeof taskFormSchema>

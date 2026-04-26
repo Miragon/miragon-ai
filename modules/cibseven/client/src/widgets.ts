@@ -36,6 +36,28 @@ export interface TaskData {
   description: string | null
 }
 
+export type TaskFormFieldSource = "form-data" | "inferred-from-gateway" | "manual"
+
+export interface TaskFormField {
+  name: string
+  type?: string
+  label?: string
+  defaultValue?: unknown
+  suggestedValues?: unknown[]
+  required?: boolean
+  source: TaskFormFieldSource
+}
+
+export interface TaskFormSchema {
+  taskId: string
+  fields: TaskFormField[]
+  currentVariables: Record<string, { value: unknown; type?: string }>
+}
+
+export interface OpenUserTask extends TaskData {
+  formSchema: TaskFormSchema
+}
+
 export interface TaskDashboardData {
   tasks: TaskData[]
   totalCount: number
@@ -134,6 +156,7 @@ export interface InstanceDetailData {
   variables: Record<string, VariableValue>
   incidents?: IncidentInstance[]
   bpmnXml: string | null
+  openTasks: OpenUserTask[]
 }
 
 export interface DeploymentResource {

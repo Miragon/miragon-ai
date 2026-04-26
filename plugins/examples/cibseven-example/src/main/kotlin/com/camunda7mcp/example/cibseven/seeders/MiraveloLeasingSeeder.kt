@@ -226,7 +226,7 @@ class MiraveloLeasingSeeder(
                 seededRollbackPolicyFailure++
             }
 
-            val instance = runtimeService.startProcessInstanceByKey("miraveloLeasing", variables)
+            val instance = runtimeService.startProcessInstanceByKey("miraveloLeasing", customerId, variables)
             // Drain the asyncBefore CheckBlacklist job (sub-process) and any
             // SendPolicy job that follows in the creditworthy branch. For
             // bug-era instances the failing job decrements retries until an

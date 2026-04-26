@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { Fragment, useState } from "react"
 import {
   Badge,
   Table,
@@ -17,6 +17,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { TaskDashboardData, TaskData } from "@miragon-ai/client-cibseven"
+import { TaskCompleteForm } from "./task-complete-form.js"
 
 export type { TaskDashboardData }
 
@@ -63,10 +64,10 @@ interface TaskState {
 export function TaskDashboardWidget({ data }: { data: TaskDashboardData | null }) {
   const [taskStates, setTaskStates] = useState<Map<string, TaskState>>(new Map())
   const [claimingTaskId, setClaimingTaskId] = useState<string | null>(null)
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
   const [claimUserId, setClaimUserId] = useState("")
   const claimMutation = useToolMutation("camunda7_claim_task")
   const unclaimMutation = useToolMutation("camunda7_unclaim_task")
-  const completeMutation = useToolMutation("camunda7_complete_task")
 
   if (!data) {
     return (
@@ -115,24 +116,17 @@ export function TaskDashboardWidget({ data }: { data: TaskDashboardData | null }
     )
   }
 
-  function handleComplete(taskId: string) {
-    completeMutation.mutate(
-      { taskId },
-      {
-        onSuccess: () => {
-          setTaskStates((prev) => {
-            const next = new Map(prev)
-            const existing = next.get(taskId)
-            next.set(taskId, { assignee: existing?.assignee ?? null, completed: true })
-            return next
-          })
-        },
-      },
-    )
+  function markCompleted(taskId: string) {
+    setTaskStates((prev) => {
+      const next = new Map(prev)
+      const existing = next.get(taskId)
+      next.set(taskId, { assignee: existing?.assignee ?? null, completed: true })
+      return next
+    })
+    setCompletingTaskId(null)
   }
 
-  const isMutating =
-    claimMutation.isPending || unclaimMutation.isPending || completeMutation.isPending
+  const isMutating = claimMutation.isPending || unclaimMutation.isPending
   const activeTasks = data.tasks.filter((t) => !getTaskState(t).completed)
 
   return (
@@ -170,99 +164,118 @@ export function TaskDashboardWidget({ data }: { data: TaskDashboardData | null }
             <TableBody>
               {activeTasks.map((task) => {
                 const state = getTaskState(task)
+                const completing = completingTaskId === task.id
                 return (
-                  <TableRow key={task.id}>
-                    <TableCell>
-                      <div className="font-medium">{task.name ?? "Unnamed Task"}</div>
-                      <div className="text-muted-foreground font-mono text-xs">
-                        {task.taskDefinitionKey}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {state.assignee ? (
-                        <span className="text-sm">{state.assignee}</span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm italic">Unassigned</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-muted-foreground font-mono text-xs">
-                        {task.processDefinitionId.split(":")[0]}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <PriorityBadge priority={task.priority} />
-                    </TableCell>
-                    <TableCell>
-                      <TimeAgo date={task.created} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {claimingTaskId === task.id ? (
-                          <form
-                            className="flex items-center gap-1"
-                            onSubmit={(e) => {
-                              e.preventDefault()
-                              handleClaim(task.id)
-                            }}
-                          >
-                            <Input
-                              className="h-7 w-24 text-xs"
-                              placeholder="User ID"
-                              value={claimUserId}
-                              onChange={(e) => setClaimUserId(e.target.value)}
-                              autoFocus
-                            />
-                            <Button variant="outline" size="sm" type="submit" disabled={isMutating}>
-                              OK
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              type="button"
-                              onClick={() => {
-                                setClaimingTaskId(null)
-                                setClaimUserId("")
+                  <Fragment key={task.id}>
+                    <TableRow>
+                      <TableCell>
+                        <div className="font-medium">{task.name ?? "Unnamed Task"}</div>
+                        <div className="text-muted-foreground font-mono text-xs">
+                          {task.taskDefinitionKey}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {state.assignee ? (
+                          <span className="text-sm">{state.assignee}</span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground font-mono text-xs">
+                          {task.processDefinitionId.split(":")[0]}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <PriorityBadge priority={task.priority} />
+                      </TableCell>
+                      <TableCell>
+                        <TimeAgo date={task.created} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {claimingTaskId === task.id ? (
+                            <form
+                              className="flex items-center gap-1"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                handleClaim(task.id)
                               }}
                             >
-                              X
-                            </Button>
-                          </form>
-                        ) : (
-                          <>
-                            {!state.assignee && (
+                              <Input
+                                className="h-7 w-24 text-xs"
+                                placeholder="User ID"
+                                value={claimUserId}
+                                onChange={(e) => setClaimUserId(e.target.value)}
+                                autoFocus
+                              />
                               <Button
                                 variant="outline"
                                 size="sm"
+                                type="submit"
                                 disabled={isMutating}
-                                onClick={() => setClaimingTaskId(task.id)}
                               >
-                                Claim
+                                OK
                               </Button>
-                            )}
-                            {state.assignee && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                disabled={isMutating}
-                                onClick={() => handleUnclaim(task.id)}
+                                type="button"
+                                onClick={() => {
+                                  setClaimingTaskId(null)
+                                  setClaimUserId("")
+                                }}
                               >
-                                Unclaim
+                                X
                               </Button>
-                            )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={isMutating}
-                              onClick={() => handleComplete(task.id)}
-                            >
-                              Complete
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                            </form>
+                          ) : (
+                            <>
+                              {!state.assignee && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={isMutating}
+                                  onClick={() => setClaimingTaskId(task.id)}
+                                >
+                                  Claim
+                                </Button>
+                              )}
+                              {state.assignee && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={isMutating}
+                                  onClick={() => handleUnclaim(task.id)}
+                                >
+                                  Unclaim
+                                </Button>
+                              )}
+                              <Button
+                                variant={completing ? "ghost" : "outline"}
+                                size="sm"
+                                disabled={isMutating}
+                                onClick={() => setCompletingTaskId(completing ? null : task.id)}
+                              >
+                                {completing ? "Cancel" : "Complete"}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {completing && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="bg-muted/30">
+                          <TaskCompleteForm
+                            taskId={task.id}
+                            onCompleted={() => markCompleted(task.id)}
+                            onCancel={() => setCompletingTaskId(null)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
                 )
               })}
             </TableBody>

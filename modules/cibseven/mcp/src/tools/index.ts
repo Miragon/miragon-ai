@@ -5,6 +5,7 @@ import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { registerProcessDefinitionTools } from "./process-definitions.js"
 import { registerProcessInstanceTools } from "./process-instances.js"
 import { registerTaskTools } from "./tasks.js"
+import { registerTaskFormTools } from "./task-form.js"
 import { registerExternalTaskTools } from "./external-tasks.js"
 import { registerMessageSignalTools } from "./messages-signals.js"
 import { registerDeploymentTools } from "./deployments.js"
@@ -18,6 +19,7 @@ export function registerTools(server: MCPServer, client: Client): void {
   registerProcessDefinitionTools(register)
   registerProcessInstanceTools(register)
   registerTaskTools(register)
+  registerTaskFormTools(register)
   registerExternalTaskTools(register)
   registerMessageSignalTools(register)
   registerDeploymentTools(register)

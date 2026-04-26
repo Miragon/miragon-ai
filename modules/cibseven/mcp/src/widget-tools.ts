@@ -27,6 +27,7 @@ import {
 import { buildIncidentsDashboardData, buildProcessIncidentsData } from "./incident-panel-data.js"
 import { buildProcessDetailData } from "./steps/process-detail.js"
 import { buildIncidentDetailData } from "./steps/incident-detail.js"
+import { buildTaskFormSchema } from "./tools/task-form.js"
 import {
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_PROCESS_DETAIL,
@@ -145,7 +146,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     async (args) => {
-      const [instance, activityTree, variables, incidents] = await Promise.all([
+      const [instance, activityTree, variables, incidents, openTasksRaw] = await Promise.all([
         getProcessInstance({ client, path: { id: args.processInstanceId } }),
         getActivityInstanceTree({ client, path: { id: args.processInstanceId } }).catch(() => null),
         getProcessInstanceVariables({
@@ -155,6 +156,15 @@ export function registerWidgetTools(
         getIncidents({
           client,
           query: { processInstanceId: args.processInstanceId, maxResults: 100 },
+        }).catch(() => []),
+        getTasks({
+          client,
+          query: {
+            processInstanceId: args.processInstanceId,
+            maxResults: 50,
+            sortBy: "created",
+            sortOrder: "asc",
+          },
         }).catch(() => []),
       ])
 
@@ -172,12 +182,27 @@ export function registerWidgetTools(
         }
       }
 
+      const taskList = (Array.isArray(openTasksRaw) ? openTasksRaw : []) as Array<
+        InstanceDetailData["openTasks"][number]
+      >
+      const openTasks: InstanceDetailData["openTasks"] = await Promise.all(
+        taskList.map(async (task) => ({
+          ...task,
+          formSchema: await buildTaskFormSchema(client, task.id).catch(() => ({
+            taskId: task.id,
+            fields: [],
+            currentVariables: {},
+          })),
+        })),
+      )
+
       const data: InstanceDetailData = {
         instance: instance as unknown as InstanceDetailData["instance"],
         activityTree: activityTree as unknown as InstanceDetailData["activityTree"],
         variables: variables as unknown as InstanceDetailData["variables"],
         incidents: incidents as unknown as InstanceDetailData["incidents"],
         bpmnXml,
+        openTasks,
       }
       return buildSingleWidgetView({
         widget: "camunda7:instance-detail",
