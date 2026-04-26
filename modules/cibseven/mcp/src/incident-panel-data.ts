@@ -15,7 +15,7 @@ import {
   getProcessDefinitionStatistics,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 
-import { buildInstanceCockpitUrlPrefix, buildProcessCockpitUrl } from "./lib/cockpit-url.js"
+import { buildInstanceCockpitUrl, buildProcessCockpitUrl } from "./lib/cockpit-url.js"
 import { countBpmnActivities, extractActivityNames } from "./lib/bpmn-parse.js"
 
 interface IncidentRow {
@@ -162,13 +162,31 @@ async function fetchDefinitionInfo(
   return byKey
 }
 
-function toIncidentInstance(r: IncidentRow): IncidentInstance {
+interface IncidentInstanceContext {
+  cockpitUrl: string | undefined
+  baseUrl: string
+  processDefinitionKey: string
+  version: number | null
+  /** Cockpit tab to open on the instance page. Drill-in from an incident
+   *  list defaults to `"incidents"` — operator is debugging failures. */
+  tab: string
+}
+
+function toIncidentInstance(r: IncidentRow, ctx: IncidentInstanceContext): IncidentInstance {
   return {
     id: r.id,
     processInstanceId: r.processInstanceId,
     incidentType: r.incidentType,
     incidentMessage: r.incidentMessage ?? null,
     incidentTimestamp: r.incidentTimestamp,
+    cockpitInstanceUrl: buildInstanceCockpitUrl(
+      ctx.cockpitUrl,
+      ctx.baseUrl,
+      ctx.processDefinitionKey,
+      ctx.version,
+      r.processInstanceId,
+      { tab: ctx.tab },
+    ),
   }
 }
 
@@ -241,9 +259,13 @@ export async function buildIncidentsDashboardData(
       incidentCount: group.length,
       last24hCount,
       latestIncident: maxTimestamp(group.map((r) => r.incidentTimestamp)),
-      cockpitUrl: buildProcessCockpitUrl(options.cockpitUrl, options.baseUrl, key, {
-        tab: "incidents",
-      }),
+      cockpitUrl: buildProcessCockpitUrl(
+        options.cockpitUrl,
+        options.baseUrl,
+        key,
+        def?.version ?? null,
+        { tab: "incidents" },
+      ),
       activities,
     }
   })
@@ -292,10 +314,18 @@ export async function buildProcessIncidentsData(
 
   const cutoff = new Date(Date.now() - DAY_MS).toISOString()
 
+  const incidentCtx: IncidentInstanceContext = {
+    cockpitUrl: options.cockpitUrl,
+    baseUrl: options.baseUrl,
+    processDefinitionKey: options.processDefinitionKey,
+    version: def?.version ?? null,
+    tab: "incidents",
+  }
+
   const byActivity = new Map<string, IncidentInstance[]>()
   for (const r of group) {
     const list = byActivity.get(r.activityId) ?? []
-    list.push(toIncidentInstance(r))
+    list.push(toIncidentInstance(r, incidentCtx))
     byActivity.set(r.activityId, list)
   }
 
@@ -325,9 +355,9 @@ export async function buildProcessIncidentsData(
       options.cockpitUrl,
       options.baseUrl,
       options.processDefinitionKey,
+      def?.version ?? null,
       { tab: "incidents" },
     ),
-    cockpitInstanceUrlPrefix: buildInstanceCockpitUrlPrefix(options.cockpitUrl, options.baseUrl),
     runningInstances,
     incidentCount: group.length,
     last24hCount: group.filter((r) => r.incidentTimestamp >= cutoff).length,

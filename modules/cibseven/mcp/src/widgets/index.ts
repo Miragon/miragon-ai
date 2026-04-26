@@ -3,6 +3,7 @@ import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { ProcessListWidget, type ProcessListData } from "./process-list.js"
 import { IncidentsDashboardWidget, type IncidentsDashboardData } from "./incidents-dashboard.js"
 import { ProcessIncidentsWidget, type ProcessIncidentsData } from "./process-incidents.js"
+import { IncidentDetailWidget, type IncidentDetailData } from "./incident-detail.js"
 import { HistoryTimelineWidget, type HistoryTimelineData } from "./history-timeline.js"
 import { TaskDashboardWidget, type TaskDashboardData } from "./task-dashboard.js"
 import { InstanceDetailWidget, type InstanceDetailData } from "./instance-detail.js"
@@ -16,6 +17,7 @@ export type {
   ProcessListData,
   IncidentsDashboardData,
   ProcessIncidentsData,
+  IncidentDetailData,
   HistoryTimelineData,
   TaskDashboardData,
   InstanceDetailData,
@@ -36,6 +38,7 @@ export const camunda7Widgets: Record<string, WidgetComponent> = {
     ProcessIncidentsWidget,
     "camunda7:processIncidents",
   ),
+  "camunda7:incident-detail": adaptDataWidget(IncidentDetailWidget, "camunda7:incidentDetail"),
   "camunda7:history-timeline": adaptDataWidget(HistoryTimelineWidget, "camunda7:historyTimeline"),
   "camunda7:task-dashboard": adaptDataWidget(TaskDashboardWidget, "camunda7:taskList"),
   "camunda7:instance-detail": adaptDataWidget(InstanceDetailWidget, "camunda7:processInstance"),

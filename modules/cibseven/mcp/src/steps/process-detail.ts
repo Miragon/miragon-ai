@@ -155,6 +155,7 @@ export async function buildProcessDetailData(
       options.cockpitUrl,
       options.baseUrl,
       options.processDefinitionKey,
+      info?.version ?? null,
     ),
     runningInstances,
     openIncidents,
