@@ -21,9 +21,9 @@ export interface MiniStat {
  */
 export function MiniStats({ stats }: { stats: MiniStat[] }) {
   return (
-    <div className="bg-bg border-line flex flex-wrap items-center gap-x-6 gap-y-3 rounded-lg border px-5 py-3.5">
+    <div className="bg-bg border-line divide-line flex items-stretch divide-x rounded-lg border">
       {stats.map((stat, idx) => (
-        <div key={idx} className="flex flex-col">
+        <div key={idx} className="flex flex-1 flex-col items-center justify-center px-4 py-3.5">
           <span className="text-ink-subtle text-xs font-medium">{stat.label}</span>
           <span
             className={`font-bold tabular-nums leading-tight tracking-tight ${
