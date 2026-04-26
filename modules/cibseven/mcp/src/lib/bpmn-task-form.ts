@@ -157,6 +157,10 @@ function decodeXml(s: string): string {
     .replace(/&amp;/g, "&")
 }
 
+// Identifier on either side, value on the other. Dotted identifiers like
+// `customer.segment` are matched by the regex but dropped below — we
+// can't set nested object paths via a flat task variable, so we'd lie to
+// the user about what their button click does.
 const COMPARISON_RE =
   /([A-Za-z_$][\w$.]*)\s*(?:==|!=|<=?|>=?)\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|true|false|-?\d+(?:\.\d+)?)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|true|false|-?\d+(?:\.\d+)?)\s*(?:==|!=|<=?|>=?)\s*([A-Za-z_$][\w$.]*)/g
 
@@ -167,6 +171,7 @@ export function parseConditionExpression(expr: string): InferredCondition[] {
     const variable = match[1] ?? match[4]
     const rawValue = match[2] ?? match[3]
     if (!variable || !rawValue) continue
+    if (variable.includes(".")) continue
     const literal = parseLiteral(rawValue)
     if (literal) conditions.push({ variable, literal })
   }

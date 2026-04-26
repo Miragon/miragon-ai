@@ -193,7 +193,9 @@ class MiraveloLeasingSeeder(
             val postalCode = samplePostalCode(cfg.undeliverablePostalRate)
             val channel = sampleChannel(cfg.faxChannelRate)
             val priorityFlag = Random.nextDouble() < cfg.priorityFlagRate
-            val customerId = "CUST-${Random.nextInt(1_000, 9_999)}"
+            // 5-digit range keeps the businessKey unique with high probability across
+            // the 600-instance presentation profile (~3% collision at 4 digits).
+            val customerId = "CUST-${Random.nextInt(10_000, 99_999)}"
 
             val inBuggyEra = startTime.isBefore(buggyEraCutoff)
             val inRollbackEra = cfg.rollbackEraEnabled &&

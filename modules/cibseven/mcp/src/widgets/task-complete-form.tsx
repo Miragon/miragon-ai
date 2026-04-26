@@ -88,7 +88,14 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
 
     for (const field of schema.fields) {
       const raw = fieldValues[field.name]
-      if (raw === undefined || raw === "") continue
+      const required = isRequired(field)
+      if (raw === undefined || raw === "") {
+        if (required) {
+          setSubmitError(`Pick a value for ${field.name} before completing the task`)
+          return
+        }
+        continue
+      }
       const coerced = coerceValue(raw, field.type)
       if (coerced === undefined) {
         setSubmitError(`Invalid value for ${field.name}: expected ${field.type ?? "value"}`)
@@ -100,6 +107,7 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
     for (const entry of manualEntries) {
       const name = entry.name.trim()
       if (!name) continue
+      if (entry.value === "") continue
       const coerced = coerceValue(entry.value, entry.type)
       if (coerced === undefined) {
         setSubmitError(`Invalid value for ${name}: expected ${entry.type}`)
@@ -176,6 +184,16 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
   )
 }
 
+function isRequired(field: TaskFormField): boolean {
+  // An inferred-from-gateway field gates the next routing decision; the
+  // process will take the default flow (or fall through) without it,
+  // which is rarely what the operator wants. Treat as required unless
+  // the schema explicitly says otherwise.
+  if (field.required === true) return true
+  if (field.required === false) return false
+  return field.source === "inferred-from-gateway"
+}
+
 function FieldRow({
   field,
   value,
@@ -186,13 +204,15 @@ function FieldRow({
   onChange: (v: string) => void
 }) {
   const label = field.label ?? field.name
+  const required = isRequired(field)
   const meta = useMemo(() => {
     const parts: string[] = []
     if (field.type) parts.push(field.type)
     if (field.source === "inferred-from-gateway") parts.push("inferred from gateway")
     if (field.source === "form-data") parts.push("from form")
+    if (required) parts.push("required")
     return parts.join(" · ")
-  }, [field])
+  }, [field, required])
 
   if (field.suggestedValues && field.suggestedValues.length > 0) {
     return (

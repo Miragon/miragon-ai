@@ -5,6 +5,7 @@ import type {
   Client,
   ProcessListData,
   TaskDashboardData,
+  TaskData,
   InstanceDetailData,
   HistoryTimelineData,
 } from "@miragon-ai/client-cibseven"
@@ -183,13 +184,20 @@ export function registerWidgetTools(
         }
       }
 
-      const taskList = (Array.isArray(openTasksRaw) ? openTasksRaw : []) as Array<
-        InstanceDetailData["openTasks"][number]
-      >
+      const taskList = (Array.isArray(openTasksRaw) ? openTasksRaw : []) as TaskData[]
+      // Reuse the BPMN XML across all task form-schema builds (and skip
+      // the per-task `getTask` round-trip — the list rows already carry
+      // taskDefinitionKey + processDefinitionId).
       const openTasks: InstanceDetailData["openTasks"] = await Promise.all(
         taskList.map(async (task) => ({
           ...task,
-          formSchema: await buildTaskFormSchema(client, task.id).catch(() => ({
+          formSchema: await buildTaskFormSchema(client, task.id, {
+            task: {
+              taskDefinitionKey: task.taskDefinitionKey,
+              processDefinitionId: task.processDefinitionId,
+            },
+            bpmnXml,
+          }).catch(() => ({
             taskId: task.id,
             fields: [],
             currentVariables: {},

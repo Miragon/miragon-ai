@@ -38,6 +38,39 @@ describe("parseConditionExpression", () => {
       { variable: "decision", literal: { value: "positive", type: "String" } },
     ])
   })
+
+  it("extracts both sides of a conjunction", () => {
+    expect(parseConditionExpression('${decision == "positive" && creditworthy == true}')).toEqual([
+      { variable: "decision", literal: { value: "positive", type: "String" } },
+      { variable: "creditworthy", literal: { value: true, type: "Boolean" } },
+    ])
+  })
+
+  it("extracts both sides of a disjunction", () => {
+    expect(parseConditionExpression('${decision == "positive" || decision == "escalate"}')).toEqual(
+      [
+        { variable: "decision", literal: { value: "positive", type: "String" } },
+        { variable: "decision", literal: { value: "escalate", type: "String" } },
+      ],
+    )
+  })
+
+  it("drops dotted identifiers (nested object paths cannot be set as task vars)", () => {
+    expect(parseConditionExpression('${customer.segment == "vip"}')).toEqual([])
+  })
+
+  it("ignores method-call left-hand sides", () => {
+    expect(parseConditionExpression('${decision.equals("positive")}')).toEqual([])
+  })
+
+  it("returns an empty list for malformed input", () => {
+    expect(parseConditionExpression("")).toEqual([])
+    expect(parseConditionExpression("not an expression")).toEqual([])
+  })
+
+  it("survives entity-decoded content (engine-stored expressions)", () => {
+    expect(parseConditionExpression("${amount &lt; 1000}")).toEqual([])
+  })
 })
 
 describe("inferTaskFormFieldsFromBpmn — Miravelo Decide on Application", () => {
