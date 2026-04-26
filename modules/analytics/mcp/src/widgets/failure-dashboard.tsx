@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Card,
   CardContent,
@@ -13,6 +13,7 @@ import {
   AlertDescription,
   Button,
   useToolMutation,
+  useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 
@@ -40,14 +41,31 @@ export function FailureDashboardWidget({
 }) {
   const [data, setData] = useState<FailureDashboardData | null>(initialData)
   const [activePeriod, setActivePeriod] = useState(initialData?.period ?? "7d")
-  const refreshMutation = useToolMutation("analytics_show_failure_dashboard")
+  const refreshMutation = useToolMutation<FailureDashboardData>("analytics_show_failure_dashboard")
+  // Fall back to fetching the data ourselves when no upstream pipeline step
+  // populated `initialData` — keeps the widget usable in render-view layouts
+  // that don't include `analytics:load-failure-dashboard`.
+  const fallbackQuery = useToolQuery<FailureDashboardData>(
+    ["analytics:failureDashboard"],
+    "analytics_show_failure_dashboard",
+    { period: activePeriod },
+    { enabled: !initialData },
+  )
+
+  useEffect(() => {
+    if (!data && fallbackQuery.data) setData(fallbackQuery.data)
+  }, [data, fallbackQuery.data])
 
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {fallbackQuery.isError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <p className="text-muted-foreground text-sm">Loading failure analysis…</p>
+        )}
       </div>
     )
   }
@@ -58,8 +76,7 @@ export function FailureDashboardWidget({
       { period },
       {
         onSuccess: (result) => {
-          const parsed = result as { data?: FailureDashboardData } & FailureDashboardData
-          setData(parsed.data ?? parsed)
+          if (result) setData(result)
         },
       },
     )

@@ -20,8 +20,13 @@ export function buildSingleWidgetView(input: SingleWidgetViewInput): {
   structuredContent: Record<string, unknown>
 } {
   const layout: LayoutConfig = [{ row: [{ widget: input.widget }] }]
+  // Emit the widget's data as JSON in the text content so callers using
+  // `useToolMutation` / `useToolQuery` (which run results through
+  // `parseToolResult`) receive the data directly. The widget's initial render
+  // still reads from `structuredContent` via `useWidget`, so this only
+  // affects refreshes triggered from inside the widget (e.g. period switch).
   return {
-    content: [{ type: "text" as const, text: input.title ?? input.widget }],
+    content: [{ type: "text" as const, text: JSON.stringify(input.data) }],
     structuredContent: {
       title: input.title,
       context: {

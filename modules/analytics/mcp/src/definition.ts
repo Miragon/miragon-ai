@@ -1,9 +1,9 @@
 import type { AppDefinition } from "@miragon/mcp-toolkit-core"
-import { loadDashboardStep } from "./steps/index.js"
+import { loadDashboardStep, loadFailureDashboardStep } from "./steps/index.js"
 
 export const definition: AppDefinition = {
   name: "analytics",
-  steps: [loadDashboardStep],
+  steps: [loadDashboardStep, loadFailureDashboardStep],
   widgets: [
     {
       id: "analytics:dashboard",
@@ -12,7 +12,7 @@ export const definition: AppDefinition = {
     },
     {
       id: "analytics:failure-dashboard",
-      requires: [],
+      requires: ["analytics:failureDashboardData"],
       size: "full",
     },
     {
