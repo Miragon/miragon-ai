@@ -1,80 +1,65 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import type { Client } from "@miragon-ai/client-cibseven"
-import { getIncidents } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { buildIncidentsDashboardData, buildProcessIncidentsData } from "../incident-panel-data.js"
 
 interface Camunda7AppConfig {
   client: Client
-}
-
-interface IncidentRow {
-  id: string
-  processDefinitionKey: string
-  processDefinitionId: string
-  processInstanceId: string
-  incidentType: string
-  activityId: string
-  incidentMessage: string | null
-  incidentTimestamp: string
-  configuration: string | null
+  baseUrl: string
+  cockpitUrl?: string
 }
 
 /**
- * Loads open incidents grouped by process definition. Consumed by
- * `camunda7:incident-panel`.
+ * Loads the open-incidents overview (all processes) — KPIs, per-process cards
+ * with a per-activity summary. Consumed by `camunda7:incidents-dashboard`.
  */
-export const loadIncidentPanelStep: PipelineStepDefinition<Camunda7AppConfig> = {
-  id: "camunda7:load-incident-panel",
-  dataType: "camunda7:incidentPanel",
+export const loadIncidentsDashboardStep: PipelineStepDefinition<Camunda7AppConfig> = {
+  id: "camunda7:load-incidents-dashboard",
+  dataType: "camunda7:incidentsDashboard",
   requires: [],
-  produces: ["camunda7:incidentPanelData"],
+  produces: ["camunda7:incidentsDashboardData"],
   execute: async (context, appConfig) => {
-    const client = appConfig.client
     const processDefinitionKey = context.keys["camunda7:processDefinitionKey"] as string | undefined
     const incidentType = context.keys["camunda7:incidentType"] as string | undefined
 
-    const rows = (await getIncidents({
-      client,
-      query: {
-        processDefinitionKeyIn: processDefinitionKey,
-        incidentType,
-        maxResults: 200,
-        sortBy: "incidentTimestamp",
-        sortOrder: "desc",
-      },
-    })) as unknown as IncidentRow[]
+    const data = await buildIncidentsDashboardData(appConfig.client, {
+      baseUrl: appConfig.baseUrl,
+      cockpitUrl: appConfig.cockpitUrl,
+      processDefinitionKey,
+      incidentType,
+    })
 
-    const byDefinition = new Map<string, IncidentRow[]>()
-    for (const row of rows) {
-      const key = row.processDefinitionKey
-      const group = byDefinition.get(key) ?? []
-      group.push(row)
-      byDefinition.set(key, group)
-    }
-
-    const definitions = [...byDefinition.entries()]
-      .sort((a, b) => b[1].length - a[1].length)
-      .map(([key, group]) => ({
-        processDefinitionKey: key,
-        incidentCount: group.length,
-        latestIncident: group[0].incidentTimestamp,
-        incidents: group.map((r) => ({
-          id: r.id,
-          processDefinitionId: r.processDefinitionId,
-          processInstanceId: r.processInstanceId,
-          incidentType: r.incidentType,
-          activityId: r.activityId,
-          incidentMessage: r.incidentMessage ?? null,
-          incidentTimestamp: r.incidentTimestamp,
-          configuration: r.configuration ?? null,
-        })),
-      }))
-
-    const data = { totalCount: rows.length, definitions }
     return {
       data,
-      keys: { "camunda7:incidentPanelData": data },
+      keys: { "camunda7:incidentsDashboardData": data },
       _app: "camunda7",
-      _step: "load-incident-panel",
+      _step: "load-incidents-dashboard",
+    }
+  },
+}
+
+/**
+ * Loads the per-process incident detail — BPMN, activity groups with the full
+ * incident table. Consumed by `camunda7:process-incidents`.
+ */
+export const loadProcessIncidentsStep: PipelineStepDefinition<Camunda7AppConfig> = {
+  id: "camunda7:load-process-incidents",
+  dataType: "camunda7:processIncidents",
+  requires: ["camunda7:processDefinitionKey"],
+  produces: ["camunda7:processIncidentsData"],
+  execute: async (context, appConfig) => {
+    const processDefinitionKey = context.keys["camunda7:processDefinitionKey"] as string
+
+    const data = await buildProcessIncidentsData(appConfig.client, {
+      baseUrl: appConfig.baseUrl,
+      cockpitUrl: appConfig.cockpitUrl,
+      processDefinitionKey,
+    })
+
+    return {
+      data,
+      keys: { "camunda7:processIncidentsData": data },
+      _app: "camunda7",
+      _step: "load-process-incidents",
     }
   },
 }

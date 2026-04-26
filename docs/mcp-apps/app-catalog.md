@@ -76,15 +76,33 @@ Time-based view of every activity in a process instance:
 
 ---
 
-## Incident Panel
+## Incidents Dashboard (overview)
 
-**Tool**: `show-incident-panel`
+**Tool**: `camunda7_show_incidents_dashboard`
 
-Failure monitoring with action buttons:
+Overview across all process definitions with open incidents:
 
-- Incident cards with red accent colour
-- Type badge, timestamp, error message
-- Activity and process reference
-- **Retry button** (for `failedJob` incidents with a job ID)
+- KPI strip (Open / Processes affected / Activities affected / +24h delta)
+- Search + filter chips (e.g. Last 24h)
+- Group cards per process with per-activity summary
+- "Open detail →" jumps to the per-process drill-down
+- Secondary "▦ Cockpit" link per process
 
-**Parameters**: `processDefinitionId?`, `processInstanceId?`, `incidentType?`
+**Parameters**: `processDefinitionKey?`, `incidentType?`
+
+---
+
+## Process Incidents (per-process detail)
+
+**Tool**: `camunda7_show_process_incidents`
+
+Per-process drill-down for one process definition:
+
+- Process header with status badge, version pill, Cockpit jump-out
+- Inline mini-stats (open / activities affected / +24h / running / latest event)
+- BPMN diagram with red activity highlights and incident-count overlays
+- Activities-grouped incident table — expand a row to see instances with
+  per-incident **Retry** and **▦ Cockpit** actions
+- "Show N more" pagination per activity
+
+**Parameters**: `processDefinitionKey` (required)

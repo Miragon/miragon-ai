@@ -103,15 +103,12 @@ export interface VariableValue {
   valueInfo?: Record<string, unknown>
 }
 
-export interface IncidentData {
+export interface IncidentInstance {
   id: string
-  processDefinitionId: string
   processInstanceId: string
   incidentType: string
-  activityId: string
   incidentMessage: string | null
   incidentTimestamp: string
-  configuration: string | null
 }
 
 export interface ActivityTree {
@@ -132,7 +129,7 @@ export interface InstanceDetailData {
   }
   activityTree: ActivityTree | null
   variables: Record<string, VariableValue>
-  incidents?: IncidentData[]
+  incidents?: IncidentInstance[]
   bpmnXml: string | null
 }
 
@@ -183,14 +180,76 @@ export interface HistoryTimelineData {
   totalActivities: number
 }
 
-export interface DefinitionGroup {
-  processDefinitionKey: string
+// === Overview (camunda7_show_incidents_dashboard)
+
+export interface IncidentsDashboardActivity {
+  activityId: string
+  activityName: string | null
+  representativeMessage: string | null
   incidentCount: number
-  latestIncident: string
-  incidents: IncidentData[]
+  /** Subset of incidents with `incidentTimestamp >= now - 24h`. Used to keep the
+   *  "Last 24h" filter chip honest when it recomputes the card-level total. */
+  last24hCount: number
+  firstSeen: string | null
+  latestIncident: string | null
 }
 
-export interface IncidentPanelData {
+export interface IncidentsDashboardProcess {
+  processDefinitionKey: string
+  processDefinitionName: string | null
+  version: number | null
+  runningInstances: number | null
+  totalActivityCount: number | null
+  affectedActivityCount: number
+  incidentCount: number
+  last24hCount: number
+  latestIncident: string | null
+  cockpitUrl: string | null
+  activities: IncidentsDashboardActivity[]
+}
+
+export interface IncidentsDashboardData {
   totalCount: number
-  definitions: DefinitionGroup[]
+  processCount: number
+  affectedActivityCount: number
+  last24hCount: number
+  latestIncident: string | null
+  processes: IncidentsDashboardProcess[]
+}
+
+export interface IncidentsByProcess {
+  processDefinitionKey: string
+  processDefinitionName: string | null
+  incidentCount: number
+}
+
+// === Detail (camunda7_show_process_incidents)
+
+export interface ProcessIncidentsActivity {
+  activityId: string
+  activityName: string | null
+  representativeMessage: string | null
+  incidentCount: number
+  firstSeen: string | null
+  latestIncident: string | null
+  incidents: IncidentInstance[]
+}
+
+export interface ProcessIncidentsData {
+  processDefinitionKey: string
+  processDefinitionName: string | null
+  version: number | null
+  bpmnXml: string | null
+  cockpitUrl: string | null
+  /** URL prefix for process-instance Cockpit pages — append `encodeURIComponent(processInstanceId)`. */
+  cockpitInstanceUrlPrefix: string | null
+  runningInstances: number | null
+  incidentCount: number
+  last24hCount: number
+  totalActivityCount: number | null
+  latestIncident: string | null
+  activities: ProcessIncidentsActivity[]
+  /** Other process definitions with open incidents — surfaced in the empty
+   *  state so the operator can jump to where the incidents actually are. */
+  siblingsWithIncidents: IncidentsByProcess[]
 }
