@@ -156,6 +156,8 @@ export interface InstanceDetailData {
   variables: Record<string, VariableValue>
   incidents?: IncidentInstance[]
   bpmnXml: string | null
+  activeActivityIds: string[]
+  incidentActivityIds: string[]
   openTasks: OpenUserTask[]
 }
 

@@ -10,6 +10,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibseven"
+import { BpmnDiagram } from "./bpmn-diagram.js"
 import { ActivityNode, Section, VariablesTable } from "./instance-sections.js"
 import { TaskCompleteForm } from "./task-complete-form.js"
 
@@ -73,7 +74,9 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
     )
   }
 
-  const { instance, activityTree, variables, incidents, openTasks } = data
+  const { instance, activityTree, variables, incidents, bpmnXml, openTasks } = data
+  const activeActivityIds = data.activeActivityIds ?? []
+  const incidentActivityIds = data.incidentActivityIds ?? []
   const visibleTasks = (openTasks ?? []).filter((task) => !completedTaskIds.has(task.id))
 
   function handleResolve(incidentId: string) {
@@ -150,6 +153,17 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
               )
             })}
           </div>
+        </Section>
+      )}
+
+      {bpmnXml && (
+        <Section title="Process Diagram" defaultOpen>
+          <BpmnDiagram
+            bpmnXml={bpmnXml}
+            height={420}
+            activeActivityIds={activeActivityIds}
+            highlightActivityIds={incidentActivityIds}
+          />
         </Section>
       )}
 
