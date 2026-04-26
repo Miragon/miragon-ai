@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     implementation(project(":shared-history-clickhouse"))
+    implementation(libs.opentelemetry.api)
     compileOnly(libs.spring.boot.starter)
 
     // CIB Seven Engine SDK — provided at runtime by the engine
