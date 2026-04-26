@@ -10,7 +10,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibseven"
-import { BpmnDiagram } from "./bpmn-diagram.js"
+import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, Section, VariablesTable } from "./instance-sections.js"
 import { TaskCompleteForm } from "./task-complete-form.js"
 
@@ -161,12 +161,19 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
           <BpmnDiagram
             bpmnXml={bpmnXml}
             height={420}
-            activeActivityIds={activeActivityIds}
-            highlightActivityIds={incidentActivityIds}
-            openUserTaskBadges={visibleTasks.map((task) => ({
-              activityId: task.taskDefinitionKey,
-              label: task.name ?? task.taskDefinitionKey,
-            }))}
+            highlights={
+              [
+                { kind: "active", activityIds: activeActivityIds },
+                { kind: "incident", activityIds: incidentActivityIds },
+                {
+                  kind: "open-task",
+                  tasks: visibleTasks.map((task) => ({
+                    activityId: task.taskDefinitionKey,
+                    label: task.name ?? task.taskDefinitionKey,
+                  })),
+                },
+              ] satisfies BpmnHighlight[]
+            }
           />
         </Section>
       )}

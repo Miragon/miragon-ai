@@ -146,7 +146,7 @@ export function IncidentDetailWidget({ data }: { data: IncidentDetailData | null
           <BpmnDiagram
             bpmnXml={data.bpmnXml}
             height={420}
-            highlightActivityIds={[data.activityId]}
+            highlights={[{ kind: "incident", activityIds: [data.activityId] }]}
           />
         ) : (
           <Alert>
