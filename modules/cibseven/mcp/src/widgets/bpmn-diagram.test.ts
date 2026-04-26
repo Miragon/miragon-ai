@@ -70,7 +70,7 @@ describe("applyHighlights — marker priority", () => {
     const o = createMockOverlays()
     applyHighlights(c.canvas, o.overlays, [
       { kind: "active", activityIds: ["A"] },
-      { kind: "open-task", tasks: [{ activityId: "A" }] },
+      { kind: "open-task", activityIds: ["A"] },
       { kind: "incident", activityIds: ["A"] },
     ])
     // Only the incident marker is applied to A.
@@ -82,7 +82,7 @@ describe("applyHighlights — marker priority", () => {
     const o = createMockOverlays()
     applyHighlights(c.canvas, o.overlays, [
       { kind: "active", activityIds: ["A"] },
-      { kind: "open-task", tasks: [{ activityId: "A", label: "Decide" }] },
+      { kind: "open-task", activityIds: ["A"] },
     ])
     expect(c.calls).toEqual([{ activityId: "A", marker: "highlight-open-user-task" }])
   })
@@ -99,15 +99,12 @@ describe("applyHighlights — marker priority", () => {
 })
 
 describe("applyHighlights — overlays", () => {
-  it("adds open-task badge with the provided label", () => {
+  it("does not add a label badge for open-tasks (border pulse only)", () => {
     const c = createMockCanvas()
     const o = createMockOverlays()
-    applyHighlights(c.canvas, o.overlays, [
-      { kind: "open-task", tasks: [{ activityId: "T", label: "Decide on application" }] },
-    ])
-    const overlay = o.calls.find((x) => x.className.includes("open-task"))
-    expect(overlay).toBeDefined()
-    expect(overlay?.activityId).toBe("T")
+    applyHighlights(c.canvas, o.overlays, [{ kind: "open-task", activityIds: ["T"] }])
+    expect(o.calls).toHaveLength(0)
+    expect(c.calls).toEqual([{ activityId: "T", marker: "highlight-open-user-task" }])
   })
 
   it("adds incident count overlay when counts are supplied", () => {
@@ -150,21 +147,6 @@ describe("applyHighlights — overlays", () => {
     ])
     expect(o.calls).toHaveLength(1)
     expect(o.calls[0].activityId).toBe("C")
-  })
-
-  it("escapes html in open-task labels", () => {
-    const c = createMockCanvas()
-    let captured = ""
-    const overlays = {
-      add: (_id: string, overlay: { position: object; html: string }) => {
-        captured = overlay.html
-      },
-    }
-    applyHighlights(c.canvas, overlays, [
-      { kind: "open-task", tasks: [{ activityId: "T", label: '<script>alert("x")</script>' }] },
-    ])
-    expect(captured).not.toContain("<script>")
-    expect(captured).toContain("&lt;script&gt;")
   })
 })
 

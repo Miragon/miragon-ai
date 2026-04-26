@@ -75,10 +75,7 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
       { kind: "incident", activityIds: data?.incidentActivityIds ?? [] },
       {
         kind: "open-task",
-        tasks: visibleTasks.map((task) => ({
-          activityId: task.taskDefinitionKey,
-          label: task.name ?? task.taskDefinitionKey,
-        })),
+        activityIds: visibleTasks.map((task) => task.taskDefinitionKey),
       },
     ],
     [data?.activeActivityIds, data?.incidentActivityIds, visibleTasks],

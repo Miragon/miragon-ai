@@ -58,21 +58,6 @@ const HIGHLIGHT_CSS = `
   background: #ef4444;
   min-width: 22px;
 }
-.bpmn-overlay-badge--open-task {
-  background: #15803d;
-  gap: 4px;
-  padding: 0 8px;
-  white-space: nowrap;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-}
-.bpmn-overlay-badge--open-task::before {
-  content: "▸";
-  font-size: 12px;
-  line-height: 1;
-}
 `
 
 /**
@@ -101,10 +86,7 @@ export type BpmnHighlight =
        *  exists yet. */
       counts: ReadonlyArray<{ activityId: string; count: number }>
     }
-  | {
-      kind: "open-task"
-      tasks: ReadonlyArray<{ activityId: string; label?: string }>
-    }
+  | { kind: "open-task"; activityIds: ReadonlyArray<string> }
   | {
       kind: "instance-count"
       counts: ReadonlyArray<{ activityId: string; count: number }>
@@ -118,15 +100,6 @@ export interface BpmnDiagramProps {
    * plain BPMN without overlays.
    */
   highlights?: ReadonlyArray<BpmnHighlight>
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
 }
 
 /** Exposed for unit tests. Order-preserving dedupe. */
@@ -174,7 +147,7 @@ export function applyHighlights(
     if (h.kind === "incident") {
       incidentIds.push(...h.activityIds)
     } else if (h.kind === "open-task") {
-      openTaskIds.push(...h.tasks.map((t) => t.activityId))
+      openTaskIds.push(...h.activityIds)
     } else if (h.kind === "active") {
       activeIds.push(...h.activityIds)
     }
@@ -207,14 +180,6 @@ export function applyHighlights(
         safeAddOverlay(overlays, c.activityId, {
           position: { top: -14, right: -14 },
           html: `<div class="bpmn-overlay-badge bpmn-overlay-badge--instance-count">${safeCount}</div>`,
-        })
-      }
-    } else if (h.kind === "open-task") {
-      for (const task of h.tasks) {
-        const label = escapeHtml(task.label ?? "Open task")
-        safeAddOverlay(overlays, task.activityId, {
-          position: { bottom: -16, left: -8 },
-          html: `<div class="bpmn-overlay-badge bpmn-overlay-badge--open-task" title="${label}">${label}</div>`,
         })
       }
     }
