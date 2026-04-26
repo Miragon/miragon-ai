@@ -121,19 +121,20 @@ The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP cl
 
 ## Environment
 
-| Variable              | Default                             | Description                                        |
-| --------------------- | ----------------------------------- | -------------------------------------------------- |
-| `PORT`                | `3010`                              | HTTP port the MCP server listens on                |
-| `MCP_ACTIVE_MODULES`  | all                                 | Comma-separated module list (`camunda7,analytics`) |
-| `CAMUNDA_BASE_URL`    | `http://localhost:8080/engine-rest` | Engine REST API base URL                           |
-| `CAMUNDA_AUTH_TYPE`   | `none`                              | `basic`, `bearer`, or `none`                       |
-| `CAMUNDA_USERNAME`    | —                                   | Basic auth username                                |
-| `CAMUNDA_PASSWORD`    | —                                   | Basic auth password                                |
-| `CAMUNDA_TOKEN`       | —                                   | Bearer token                                       |
-| `CLICKHOUSE_URL`      | `http://localhost:8123`             | ClickHouse HTTP endpoint                           |
-| `CLICKHOUSE_USERNAME` | `default`                           | ClickHouse user                                    |
-| `CLICKHOUSE_PASSWORD` | ``                                  | ClickHouse password                                |
-| `CLICKHOUSE_DATABASE` | `camunda_history`                   | ClickHouse database                                |
+| Variable              | Default                             | Description                                                                                                                           |
+| --------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                | `3010`                              | HTTP port the MCP server listens on                                                                                                   |
+| `MCP_ACTIVE_MODULES`  | all                                 | Comma-separated module list (`camunda7,analytics`)                                                                                    |
+| `CAMUNDA_BASE_URL`    | `http://localhost:8080/engine-rest` | Engine REST API base URL                                                                                                              |
+| `CAMUNDA_COCKPIT_URL` | _derived from `CAMUNDA_BASE_URL`_   | Cockpit web UI base, e.g. `http://localhost:8080/webapp`. Used for jump-out links: `<base>/#/seven/auth/process/<key>?tab=incidents`. |
+| `CAMUNDA_AUTH_TYPE`   | `none`                              | `basic`, `bearer`, or `none`                                                                                                          |
+| `CAMUNDA_USERNAME`    | —                                   | Basic auth username                                                                                                                   |
+| `CAMUNDA_PASSWORD`    | —                                   | Basic auth password                                                                                                                   |
+| `CAMUNDA_TOKEN`       | —                                   | Bearer token                                                                                                                          |
+| `CLICKHOUSE_URL`      | `http://localhost:8123`             | ClickHouse HTTP endpoint                                                                                                              |
+| `CLICKHOUSE_USERNAME` | `default`                           | ClickHouse user                                                                                                                       |
+| `CLICKHOUSE_PASSWORD` | ``                                  | ClickHouse password                                                                                                                   |
+| `CLICKHOUSE_DATABASE` | `camunda_history`                   | ClickHouse database                                                                                                                   |
 
 ## Tools
 
@@ -150,7 +151,7 @@ All tools are prefixed with `camunda7_`:
 - Incidents: `list_incidents`, `resolve_incident`
 - Jobs: `list_jobs`, `set_job_retries`
 - History: `query_historic_process_instances`, `query_historic_activity_instances`, `query_historic_task_instances`, `query_historic_variable_instances`
-- Widget tools (return data + render an MCP App): `show_process_list`, `show_task_dashboard`, `show_instance_detail`, `show_incident_panel`, `show_history_timeline`
+- Widget tools (return data + render an MCP App): `show_process_list`, `show_task_dashboard`, `show_instance_detail`, `show_incidents_dashboard`, `show_process_incidents`, `show_history_timeline`
 
 ### Analytics module (6 + 1 widget tool)
 

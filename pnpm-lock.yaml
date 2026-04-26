@@ -84,7 +84,7 @@ importers:
         version: 19.2.14
       mcp-use:
         specifier: 1.23.1
-        version: 1.23.1(dc59210c7e0c1295ad85188bd09fd6e3)
+        version: 1.23.1(d9786249426d99e52be0f0df44cbbec7)
       react:
         specifier: 19.2.5
         version: 19.2.5
@@ -131,13 +131,16 @@ importers:
         version: 18.14.0
       mcp-use:
         specifier: 1.23.1
-        version: 1.23.1(d9786249426d99e52be0f0df44cbbec7)
+        version: 1.23.1(dc59210c7e0c1295ad85188bd09fd6e3)
       react:
         specifier: 19.2.5
         version: 19.2.5
       typescript:
         specifier: 5.9.3
         version: 5.9.3
+      vitest:
+        specifier: 4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.0)(@types/node@25.6.0)(jsdom@29.0.0)(vite@8.0.8(@types/node@25.6.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   modules/enrichment/client:
     dependencies:

@@ -122,6 +122,7 @@ services:
     environment:
       - PORT=3010
       - CAMUNDA_BASE_URL=http://cibseven:8080/engine-rest
+      - CAMUNDA_COCKPIT_URL=http://localhost:8080/webapp
       - CAMUNDA_AUTH_TYPE=basic
       - CAMUNDA_USERNAME=demo
       - CAMUNDA_PASSWORD=demo

@@ -11,6 +11,7 @@ import { parseEnrichmentConfig } from "@miragon-ai/client-enrichment"
 
 const camunda7ConfigSchema = z.object({
   baseUrl: z.string().default("http://localhost:8080/engine-rest"),
+  cockpitUrl: z.string().url().optional(),
   authType: z.enum(["basic", "bearer", "none"]).default("none"),
   username: z.string().optional(),
   password: z.string().optional(),
@@ -46,6 +47,7 @@ const MODULE_REGISTRY: Record<
     createPlugin: (c) => createCamunda7Plugin(camunda7ConfigSchema.parse(c)),
     configFromEnv: () => ({
       baseUrl: process.env.CAMUNDA_BASE_URL,
+      cockpitUrl: process.env.CAMUNDA_COCKPIT_URL,
       authType: process.env.CAMUNDA_AUTH_TYPE,
       username: process.env.CAMUNDA_USERNAME,
       password: process.env.CAMUNDA_PASSWORD,
