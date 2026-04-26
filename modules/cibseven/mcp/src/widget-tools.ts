@@ -26,6 +26,7 @@ import {
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 import { buildIncidentsDashboardData, buildProcessIncidentsData } from "./incident-panel-data.js"
 import { buildProcessDetailData } from "./steps/process-detail.js"
+import { CAMUNDA7_SHOW_PROCESS_DETAIL, CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "./tool-names.js"
 
 export interface WidgetToolsConfig {
   baseUrl: string
@@ -214,7 +215,7 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "camunda7_show_process_incidents",
+      name: CAMUNDA7_SHOW_PROCESS_INCIDENTS,
       title: "Process Incidents",
       description:
         "Per-process incident detail: header, KPIs, BPMN diagram with incident overlays, and activity-grouped incident table with per-incident actions (resolve, jump to Cockpit).",
@@ -241,10 +242,10 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "camunda7_show_process_detail",
+      name: CAMUNDA7_SHOW_PROCESS_DETAIL,
       title: "Process Definition Detail",
       description:
-        "Detail view for a single process definition: tinted header, MiniStats KPIs, BPMN flow with incident overlays. Drill-in target from cockpit-dashboard rows; can hand off to camunda7_show_process_incidents for the per-incident table.",
+        "Detail view for a single process definition: tinted header, boxed KPI grid, BPMN flow with incident overlays. Drill-in target from cockpit-dashboard rows; can hand off to camunda7_show_process_incidents for the per-incident table.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to display"),

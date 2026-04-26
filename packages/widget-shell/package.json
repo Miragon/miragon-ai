@@ -35,9 +35,6 @@
     "@miragon/mcp-toolkit-ui": {
       "optional": true
     },
-    "mcp-use": {
-      "optional": true
-    },
     "react": {
       "optional": true
     }

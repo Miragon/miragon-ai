@@ -7,6 +7,8 @@ import type {
   IncidentsDashboardProcess,
 } from "@miragon-ai/client-cibseven"
 
+import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../tool-names.js"
+
 import {
   CountPill,
   FilterBar,
@@ -268,7 +270,7 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
 
   function openDetail(processDefinitionKey: string) {
     host.showWidget(
-      `Show me the incidents detail for process \`${processDefinitionKey}\` (use camunda7_show_process_incidents)`,
+      `Show me the incidents detail for process \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_INCIDENTS})`,
     )
   }
 

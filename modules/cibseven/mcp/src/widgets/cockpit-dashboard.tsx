@@ -13,6 +13,8 @@ import {
 
 import type { CockpitDashboardData, DefinitionStat } from "@miragon-ai/client-cibseven"
 
+import { CAMUNDA7_SHOW_PROCESS_DETAIL } from "../tool-names.js"
+
 export type { CockpitDashboardData }
 
 interface DefinitionRow extends DefinitionStat {
@@ -20,9 +22,13 @@ interface DefinitionRow extends DefinitionStat {
   tone: ToneVariant
 }
 
-function severityTone(failedJobs: number, totalIncidents: number): ToneVariant {
+function severityTone(failedJobs: number, totalIncidents: number, instances: number): ToneVariant {
   if (totalIncidents > 0) return "critical"
   if (failedJobs > 0) return "warning"
+  // No incidents and no failed jobs, but also no running instances — the
+  // definition is deployed but unused; surface it neutrally rather than
+  // green-flagging it as "Healthy".
+  if (instances === 0) return "neutral"
   return "success"
 }
 
@@ -34,9 +40,15 @@ function ProcessRow({
   onOpen: (processDefinitionKey: string) => void
 }) {
   const dotClass =
-    row.tone === "critical" ? "bg-critical" : row.tone === "warning" ? "bg-warning" : "bg-m-green"
+    row.tone === "critical"
+      ? "bg-critical"
+      : row.tone === "warning"
+        ? "bg-warning"
+        : row.tone === "success"
+          ? "bg-m-green"
+          : "bg-ink-subtle"
   return (
-    <tr className="hover:bg-bg cursor-pointer transition-colors" onClick={() => onOpen(row.key)}>
+    <tr className="hover:bg-bg transition-colors">
       <td className="border-line border-b px-4 py-3 align-middle">
         <div className="text-ink flex items-center gap-2 text-sm font-semibold">
           <span className={`size-1.5 rounded-full ${dotClass}`} />
@@ -67,10 +79,7 @@ function ProcessRow({
       <td className="border-line border-b px-4 py-3 text-right align-middle">
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onOpen(row.key)
-          }}
+          onClick={() => onOpen(row.key)}
           className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold"
         >
           Open <span aria-hidden>→</span>
@@ -85,7 +94,7 @@ export function CockpitDashboardWidget({ data }: { data: CockpitDashboardData | 
 
   function openDetail(processDefinitionKey: string) {
     host.showWidget(
-      `Show me the process detail for \`${processDefinitionKey}\` (use camunda7_show_process_detail)`,
+      `Show me the process detail for \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_DETAIL})`,
     )
   }
 
@@ -106,12 +115,12 @@ export function CockpitDashboardWidget({ data }: { data: CockpitDashboardData | 
     return {
       ...def,
       totalIncidents,
-      tone: severityTone(def.failedJobs, totalIncidents),
+      tone: severityTone(def.failedJobs, totalIncidents, def.instances),
     }
   })
 
   const healthyCount = rows.filter((r) => r.tone === "success").length
-  const affectedCount = rows.length - healthyCount
+  const affectedCount = rows.filter((r) => r.tone === "critical" || r.tone === "warning").length
 
   return (
     <WidgetShell>

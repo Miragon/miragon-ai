@@ -9,6 +9,7 @@ import type {
 } from "@miragon-ai/client-cibseven"
 
 import { BpmnDiagram, type BpmnCountOverlay } from "./bpmn-diagram.js"
+import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../tool-names.js"
 import {
   CountPill,
   GroupCard,
@@ -225,7 +226,7 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
 
   function jumpToProcess(processDefinitionKey: string) {
     host.showWidget(
-      `Show me the incidents detail for process \`${processDefinitionKey}\` (use camunda7_show_process_incidents)`,
+      `Show me the incidents detail for process \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_INCIDENTS})`,
     )
   }
 
@@ -277,6 +278,9 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
     data.totalActivityCount !== null
       ? `${affectedActivityCount}/${data.totalActivityCount}`
       : `${affectedActivityCount}`
+  // Bind once so the click closure does not depend on TS narrowing
+  // surviving across the JSX render boundary.
+  const cockpitUrl = data.cockpitUrl
 
   return (
     <WidgetShell>
@@ -312,16 +316,16 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
                 <span>last event {timeOnly(data.latestIncident)}</span>
               </>
             )}
-            {data.cockpitUrl && (
+            {cockpitUrl && (
               <>
                 <span className="text-ink-subtle">·</span>
                 <a
-                  href={data.cockpitUrl}
+                  href={cockpitUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => {
                     e.preventDefault()
-                    host.openLink(data.cockpitUrl)
+                    host.openLink(cockpitUrl)
                   }}
                   className="text-m-blue hover:underline"
                 >

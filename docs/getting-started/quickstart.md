@@ -24,6 +24,11 @@ This starts:
   Optional: skip with `docker compose up -d cibseven clickhouse` if you don't
   need enrichment.
 
+The bundled MCP server (`mcp-server` container) is intentionally **not** part
+of the default stack — it lives behind the `full` profile so port 3010 stays
+free for a locally-run dev server. Run `docker compose --profile full up -d`
+when you want everything in containers.
+
 Wait for CIB Seven to be healthy:
 
 ```bash

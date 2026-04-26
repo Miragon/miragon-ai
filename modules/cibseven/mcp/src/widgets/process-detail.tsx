@@ -4,17 +4,18 @@ import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import type { ProcessDetailData } from "@miragon-ai/client-cibseven"
 
 import {
-  MiniStats,
+  KpiGrid,
   SectionHeading,
   StatusBadge,
   WidgetShell,
   useHostActions,
   type HostActions,
-  type MiniStat,
+  type KpiCell,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 
 import { BpmnDiagram, type BpmnCountOverlay } from "./bpmn-diagram.js"
+import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../tool-names.js"
 
 export type { ProcessDetailData }
 
@@ -50,12 +51,15 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
 
   const title = data.processDefinitionName ?? data.processDefinitionKey
   const headerTone: ToneVariant = data.openIncidents > 0 ? "critical" : "info"
+  // Bind once so the click closure does not depend on TS narrowing
+  // surviving across the JSX render boundary.
+  const cockpitUrl = data.cockpitUrl
   const totalActivityFraction =
     data.totalActivityCount !== null
       ? `${data.affectedActivityCount}/${data.totalActivityCount}`
       : `${data.affectedActivityCount}`
 
-  const stats: MiniStat[] = [
+  const stats: KpiCell[] = [
     {
       label: "Open incidents",
       value: data.openIncidents,
@@ -115,16 +119,16 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
                 <span>{data.runningInstances.toLocaleString()} running instances</span>
               </>
             )}
-            {data.cockpitUrl && (
+            {cockpitUrl && (
               <>
                 <span className="text-ink-subtle">·</span>
                 <a
-                  href={data.cockpitUrl}
+                  href={cockpitUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => {
                     e.preventDefault()
-                    host.openLink(data.cockpitUrl)
+                    host.openLink(cockpitUrl)
                   }}
                   className="text-m-blue hover:underline"
                 >
@@ -141,7 +145,7 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
               type="button"
               onClick={() =>
                 host.showWidget(
-                  `Show all incidents for process \`${data.processDefinitionKey}\` (use camunda7_show_process_incidents)`,
+                  `Show all incidents for process \`${data.processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_INCIDENTS})`,
                 )
               }
               className="bg-m-blue hover:bg-m-blue-light inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white"
@@ -152,7 +156,7 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
         )}
       </header>
 
-      <MiniStats stats={stats} />
+      <KpiGrid boxed header={{ label: "Overview", badge: "Process health" }} cells={stats} />
 
       <section>
         <SectionHeading
