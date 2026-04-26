@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Card,
   CardContent,
@@ -64,6 +64,26 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
 
+  const visibleTasks = useMemo<OpenUserTask[]>(
+    () => (data?.openTasks ?? []).filter((task) => !completedTaskIds.has(task.id)),
+    [data?.openTasks, completedTaskIds],
+  )
+
+  const highlights = useMemo<BpmnHighlight[]>(
+    () => [
+      { kind: "active", activityIds: data?.activeActivityIds ?? [] },
+      { kind: "incident", activityIds: data?.incidentActivityIds ?? [] },
+      {
+        kind: "open-task",
+        tasks: visibleTasks.map((task) => ({
+          activityId: task.taskDefinitionKey,
+          label: task.name ?? task.taskDefinitionKey,
+        })),
+      },
+    ],
+    [data?.activeActivityIds, data?.incidentActivityIds, visibleTasks],
+  )
+
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
@@ -74,10 +94,7 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
     )
   }
 
-  const { instance, activityTree, variables, incidents, bpmnXml, openTasks } = data
-  const activeActivityIds = data.activeActivityIds ?? []
-  const incidentActivityIds = data.incidentActivityIds ?? []
-  const visibleTasks = (openTasks ?? []).filter((task) => !completedTaskIds.has(task.id))
+  const { instance, activityTree, variables, incidents, bpmnXml } = data
 
   function handleResolve(incidentId: string) {
     resolveMutation.mutate(
@@ -158,27 +175,11 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
 
       {bpmnXml && (
         <Section title="Process Diagram" defaultOpen>
-          <BpmnDiagram
-            bpmnXml={bpmnXml}
-            height={420}
-            highlights={
-              [
-                { kind: "active", activityIds: activeActivityIds },
-                { kind: "incident", activityIds: incidentActivityIds },
-                {
-                  kind: "open-task",
-                  tasks: visibleTasks.map((task) => ({
-                    activityId: task.taskDefinitionKey,
-                    label: task.name ?? task.taskDefinitionKey,
-                  })),
-                },
-              ] satisfies BpmnHighlight[]
-            }
-          />
+          <BpmnDiagram bpmnXml={bpmnXml} height={420} highlights={highlights} />
         </Section>
       )}
 
-      {(visibleTasks.length > 0 || (openTasks ?? []).length > 0) && (
+      {(visibleTasks.length > 0 || (data.openTasks ?? []).length > 0) && (
         <Section
           title="Open User Tasks"
           count={visibleTasks.length}

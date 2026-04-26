@@ -86,12 +86,20 @@ const HIGHLIGHT_CSS = `
  * fills.
  */
 export type BpmnHighlight =
-  | { kind: "active"; activityIds: string[] }
+  | { kind: "active"; activityIds: ReadonlyArray<string> }
   | {
       kind: "incident"
-      activityIds: string[]
-      /** Optional red count badge per activity (top-left). */
+      activityIds: ReadonlyArray<string>
+      /** Optional red count badge per activity (top-left) — open-incident
+       *  count, e.g. how many incidents target this activity. */
       counts?: ReadonlyArray<{ activityId: string; count: number }>
+    }
+  | {
+      kind: "failed-jobs"
+      /** Red count badge per activity (top-left) — number of failed jobs
+       *  attached to this activity, regardless of whether an incident
+       *  exists yet. */
+      counts: ReadonlyArray<{ activityId: string; count: number }>
     }
   | {
       kind: "open-task"
@@ -121,7 +129,8 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;")
 }
 
-function dedupe(values: string[]): string[] {
+/** Exposed for unit tests. Order-preserving dedupe. */
+export function dedupe(values: ReadonlyArray<string>): string[] {
   return Array.from(new Set(values))
 }
 
@@ -145,7 +154,14 @@ function safeAddOverlay(
   }
 }
 
-function applyHighlights(
+/**
+ * Exposed for unit tests. Walks the declarative highlight set and
+ * applies the matching markers + overlays to the bpmn-js canvas.
+ * Priority order between marker classes is `incident > open-task >
+ * active`; lower-priority markers are skipped on activities that are
+ * already claimed by a higher-priority kind.
+ */
+export function applyHighlights(
   canvas: BpmnCanvas,
   overlays: BpmnOverlays,
   highlights: ReadonlyArray<BpmnHighlight>,
@@ -181,14 +197,9 @@ function applyHighlights(
 
   for (const h of highlights) {
     if (h.kind === "incident" && h.counts) {
-      for (const c of h.counts) {
-        const safeCount = Number(c.count) || 0
-        if (safeCount <= 0) continue
-        safeAddOverlay(overlays, c.activityId, {
-          position: { top: -14, left: -14 },
-          html: `<div class="bpmn-overlay-badge bpmn-overlay-badge--incident-count">${safeCount}</div>`,
-        })
-      }
+      addRedCountOverlays(overlays, h.counts)
+    } else if (h.kind === "failed-jobs") {
+      addRedCountOverlays(overlays, h.counts)
     } else if (h.kind === "instance-count") {
       for (const c of h.counts) {
         const safeCount = Number(c.count) || 0
@@ -207,6 +218,20 @@ function applyHighlights(
         })
       }
     }
+  }
+}
+
+function addRedCountOverlays(
+  overlays: BpmnOverlays,
+  counts: ReadonlyArray<{ activityId: string; count: number }>,
+) {
+  for (const c of counts) {
+    const safeCount = Number(c.count) || 0
+    if (safeCount <= 0) continue
+    safeAddOverlay(overlays, c.activityId, {
+      position: { top: -14, left: -14 },
+      html: `<div class="bpmn-overlay-badge bpmn-overlay-badge--incident-count">${safeCount}</div>`,
+    })
   }
 }
 

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Alert,
   AlertDescription,
@@ -21,7 +21,7 @@ import {
 
 import type { IncidentDetailData } from "@miragon-ai/client-cibseven"
 
-import { BpmnDiagram } from "./bpmn-diagram.js"
+import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, VariablesTable } from "./instance-sections.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
 import { LogsTab } from "./incident-detail/logs-tab.js"
@@ -36,6 +36,11 @@ export function IncidentDetailWidget({ data }: { data: IncidentDetailData | null
   const retryMutation = useToolMutation("camunda7_set_job_retries")
   const [resolved, setResolved] = useState(false)
   const [retried, setRetried] = useState(false)
+
+  const highlights = useMemo<BpmnHighlight[]>(
+    () => [{ kind: "incident", activityIds: data ? [data.activityId] : [] }],
+    [data?.activityId],
+  )
 
   if (!data) {
     return (
@@ -143,11 +148,7 @@ export function IncidentDetailWidget({ data }: { data: IncidentDetailData | null
       <section>
         <SectionHeading title="Process flow" hint={`activity ${data.activityId} highlighted`} />
         {data.bpmnXml ? (
-          <BpmnDiagram
-            bpmnXml={data.bpmnXml}
-            height={420}
-            highlights={[{ kind: "incident", activityIds: [data.activityId] }]}
-          />
+          <BpmnDiagram bpmnXml={data.bpmnXml} height={420} highlights={highlights} />
         ) : (
           <Alert>
             <AlertDescription>No BPMN diagram available</AlertDescription>
