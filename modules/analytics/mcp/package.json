@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@miragon-ai/client-analytics": "workspace:*",
+    "@miragon-ai/client-cibseven": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "workspace:*",
     "zod": "4.3.6"
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@miragon/mcp-toolkit-ui": "workspace:*",
     "@types/react": "19.2.14",
+    "bpmn-js": "18.14.0",
     "mcp-use": "1.23.1",
     "react": "19.2.5",
     "typescript": "5.9.3"

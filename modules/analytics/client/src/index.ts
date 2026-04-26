@@ -44,4 +44,5 @@ export type {
   ActivityBreakdownItem,
   DefinitionBreakdownItem,
   AnalyticsDashboardData,
+  PathFrequencyData,
 } from "./widgets.js"
