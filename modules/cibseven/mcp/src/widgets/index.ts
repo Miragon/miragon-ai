@@ -7,6 +7,7 @@ import { HistoryTimelineWidget, type HistoryTimelineData } from "./history-timel
 import { TaskDashboardWidget, type TaskDashboardData } from "./task-dashboard.js"
 import { InstanceDetailWidget, type InstanceDetailData } from "./instance-detail.js"
 import { CockpitDashboardWidget, type CockpitDashboardData } from "./cockpit-dashboard.js"
+import { ProcessDetailWidget, type ProcessDetailData } from "./process-detail.js"
 import { BpmnViewerWidget, type BpmnViewerData } from "./bpmn-viewer.js"
 import { DeploymentBrowserWidget, type DeploymentBrowserData } from "./deployment-browser.js"
 import { JobPanelWidget, type JobPanelData } from "./job-panel.js"
@@ -19,6 +20,7 @@ export type {
   TaskDashboardData,
   InstanceDetailData,
   CockpitDashboardData,
+  ProcessDetailData,
   BpmnViewerData,
   DeploymentBrowserData,
   JobPanelData,
@@ -41,6 +43,7 @@ export const camunda7Widgets: Record<string, WidgetComponent> = {
     CockpitDashboardWidget,
     "camunda7:cockpitDashboard",
   ),
+  "camunda7:process-detail": adaptDataWidget(ProcessDetailWidget, "camunda7:processDetail"),
   "camunda7:bpmn-viewer": adaptDataWidget(BpmnViewerWidget, "camunda7:bpmnViewer"),
   "camunda7:deployment-browser": adaptDataWidget(
     DeploymentBrowserWidget,

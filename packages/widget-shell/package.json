@@ -13,6 +13,10 @@
     "./ui": {
       "types": "./dist/adapt-data-widget.d.ts",
       "import": "./dist/adapt-data-widget.js"
+    },
+    "./widgets": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
     }
   },
   "scripts": {
@@ -24,6 +28,7 @@
   "peerDependencies": {
     "@miragon/mcp-toolkit-core": "workspace:*",
     "@miragon/mcp-toolkit-ui": "workspace:*",
+    "mcp-use": "1.23.1",
     "react": "19.2.5"
   },
   "peerDependenciesMeta": {
@@ -38,6 +43,7 @@
     "@miragon/mcp-toolkit-core": "workspace:*",
     "@miragon/mcp-toolkit-ui": "workspace:*",
     "@types/react": "19.2.14",
+    "mcp-use": "1.23.1",
     "react": "19.2.5",
     "typescript": "5.9.3"
   }

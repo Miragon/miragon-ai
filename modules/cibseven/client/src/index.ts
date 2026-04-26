@@ -29,4 +29,6 @@ export type {
   IncidentsByProcess,
   ProcessIncidentsActivity,
   ProcessIncidentsData,
+  ProcessDetailActivity,
+  ProcessDetailData,
 } from "./widgets.js"

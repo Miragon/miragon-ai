@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react"
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { useCallTool } from "mcp-use/react"
 
 import type {
   IncidentsDashboardActivity,
@@ -8,9 +7,10 @@ import type {
   IncidentsDashboardProcess,
 } from "@miragon-ai/client-cibseven"
 
+import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../tool-names.js"
+
 import {
   CountPill,
-  ExternalLinkToast,
   FilterBar,
   GroupCard,
   KpiGrid,
@@ -18,11 +18,11 @@ import {
   SectionHeading,
   WidgetHeader,
   WidgetShell,
-  useOpenExternal,
+  useHostActions,
   type FilterChip,
-  type OpenExternalApi,
+  type HostActions,
   type ToneVariant,
-} from "./shared/index.js"
+} from "@miragon-ai/widget-shell/widgets"
 
 export type { IncidentsDashboardData }
 
@@ -176,8 +176,7 @@ function ActivityList({ activities }: { activities: IncidentsDashboardActivity[]
 }
 
 export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardData | null }) {
-  const detail = useCallTool<{ processDefinitionKey: string }>("camunda7_show_process_incidents")
-  const ext: OpenExternalApi = useOpenExternal()
+  const host: HostActions = useHostActions()
 
   const [search, setSearch] = useState("")
   const [activeChip, setActiveChip] = useState<string>(TYPE_ALL)
@@ -270,7 +269,9 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
   }
 
   function openDetail(processDefinitionKey: string) {
-    detail.callTool({ processDefinitionKey })
+    host.showWidget(
+      `Show me the incidents detail for process \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_INCIDENTS})`,
+    )
   }
 
   return (
@@ -292,6 +293,8 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
       />
 
       <KpiGrid
+        boxed
+        header={{ label: "Overview", badge: "Open incidents · letzte 24h" }}
         cells={[
           {
             label: "Open Incidents",
@@ -325,12 +328,6 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
       <section>
         <SectionHeading title="Grouped by process" hint="click to expand activities" />
 
-        {detail.isError && (
-          <Alert variant="destructive" className="mb-3">
-            <AlertDescription>Could not open the detail view. Try again.</AlertDescription>
-          </Alert>
-        )}
-
         {filteredProcesses.length === 0 ? (
           <div className="border-line text-ink-muted bg-card rounded-lg border p-8 text-center text-sm">
             {data.processes.length === 0
@@ -348,7 +345,7 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
                   process={p}
                   expanded={expanded.has(p.processDefinitionKey)}
                   onOpenDetail={() => openDetail(p.processDefinitionKey)}
-                  onOpenCockpit={ext.openExternal}
+                  onOpenCockpit={host.openLink}
                 />
               }
             >
@@ -357,7 +354,6 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
           ))
         )}
       </section>
-      <ExternalLinkToast state={ext} />
     </WidgetShell>
   )
 }

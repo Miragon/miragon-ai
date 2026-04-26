@@ -110,10 +110,12 @@ services:
       retries: 6
       start_period: 5s
 
-  # Automation MCP server (Node). Runs by default alongside cibseven +
-  # clickhouse. Stop it with `docker compose stop mcp-server` when running
-  # the server natively via `pnpm -F @miragon-ai/server dev`.
+  # Automation MCP server (Node). Opt-in via the `full` profile so the
+  # default `docker compose up` brings up infra only — leaving port 3010
+  # free for a locally-run server (`pnpm -F @miragon-ai/server dev`).
+  # Use: docker compose --profile full up -d
   mcp-server:
+    profiles: [full]
     build:
       context: ..
       dockerfile: Dockerfile

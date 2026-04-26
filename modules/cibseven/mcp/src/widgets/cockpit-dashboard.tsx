@@ -1,111 +1,206 @@
-import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
+import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+
+import {
+  CountPill,
+  KpiGrid,
+  SectionHeading,
+  WidgetHeader,
+  WidgetShell,
+  useHostActions,
+  type HostActions,
+  type ToneVariant,
+} from "@miragon-ai/widget-shell/widgets"
+
+import type { CockpitDashboardData, DefinitionStat } from "@miragon-ai/client-cibseven"
+
+import { CAMUNDA7_SHOW_PROCESS_DETAIL } from "../tool-names.js"
 
 export type { CockpitDashboardData }
 
-function StatCard({
-  label,
-  value,
-  variant,
+interface DefinitionRow extends DefinitionStat {
+  totalIncidents: number
+  tone: ToneVariant
+}
+
+function severityTone(failedJobs: number, totalIncidents: number, instances: number): ToneVariant {
+  if (totalIncidents > 0) return "critical"
+  if (failedJobs > 0) return "warning"
+  // No incidents and no failed jobs, but also no running instances — the
+  // definition is deployed but unused; surface it neutrally rather than
+  // green-flagging it as "Healthy".
+  if (instances === 0) return "neutral"
+  return "success"
+}
+
+function ProcessRow({
+  row,
+  onOpen,
 }: {
-  label: string
-  value: number
-  variant: "default" | "success" | "destructive" | "warning"
+  row: DefinitionRow
+  onOpen: (processDefinitionKey: string) => void
 }) {
-  const bg: Record<string, string> = {
-    default: "bg-muted",
-    success: "bg-success/10",
-    destructive: "bg-destructive/10",
-    warning: "bg-warning/10",
-  }
-  const text: Record<string, string> = {
-    default: "text-foreground",
-    success: "text-success-foreground",
-    destructive: "text-destructive",
-    warning: "text-warning-foreground",
-  }
+  const dotClass =
+    row.tone === "critical"
+      ? "bg-critical"
+      : row.tone === "warning"
+        ? "bg-warning"
+        : row.tone === "success"
+          ? "bg-m-green"
+          : "bg-ink-subtle"
   return (
-    <div className={`rounded-lg p-4 ${bg[variant]}`}>
-      <p className="text-muted-foreground text-sm">{label}</p>
-      <p className={`text-2xl font-bold ${text[variant]}`}>{value}</p>
-    </div>
+    <tr className="hover:bg-bg transition-colors">
+      <td className="border-line border-b px-4 py-3 align-middle">
+        <div className="text-ink flex items-center gap-2 text-sm font-semibold">
+          <span className={`size-1.5 rounded-full ${dotClass}`} />
+          <span className="truncate">{row.name ?? row.key}</span>
+        </div>
+        <div className="text-ink-subtle mt-0.5 font-mono text-xs">{row.key}</div>
+      </td>
+      <td className="border-line border-b px-4 py-3 align-middle">
+        <span className="border-line bg-bg text-ink-muted inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
+          v{row.version}
+        </span>
+      </td>
+      <td className="border-line text-ink-muted border-b px-4 py-3 text-right align-middle font-mono text-xs tabular-nums">
+        {row.instances.toLocaleString()}
+      </td>
+      <td className="border-line border-b px-4 py-3 text-right align-middle">
+        {row.failedJobs > 0 ? (
+          <CountPill tone="warning">{row.failedJobs}</CountPill>
+        ) : (
+          <span className="text-ink-subtle font-mono text-xs">0</span>
+        )}
+      </td>
+      <td className="border-line border-b px-4 py-3 text-right align-middle">
+        <CountPill tone={row.totalIncidents > 0 ? "critical" : "success"}>
+          {row.totalIncidents}
+        </CountPill>
+      </td>
+      <td className="border-line border-b px-4 py-3 text-right align-middle">
+        <button
+          type="button"
+          onClick={() => onOpen(row.key)}
+          className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold"
+        >
+          Open <span aria-hidden>→</span>
+        </button>
+      </td>
+    </tr>
   )
 }
 
 export function CockpitDashboardWidget({ data }: { data: CockpitDashboardData | null }) {
+  const host: HostActions = useHostActions()
+
+  function openDetail(processDefinitionKey: string) {
+    host.showWidget(
+      `Show me the process detail for \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_DETAIL})`,
+    )
+  }
+
   if (!data) {
     return (
-      <div className="bg-card text-card-foreground p-6">
+      <WidgetShell>
         <Alert variant="destructive">
           <AlertDescription>No data available</AlertDescription>
         </Alert>
-      </div>
+      </WidgetShell>
     )
   }
 
   const { summary, definitions } = data
 
+  const rows: DefinitionRow[] = definitions.map((def) => {
+    const totalIncidents = def.incidents.reduce((s, i) => s + i.incidentCount, 0)
+    return {
+      ...def,
+      totalIncidents,
+      tone: severityTone(def.failedJobs, totalIncidents, def.instances),
+    }
+  })
+
+  const healthyCount = rows.filter((r) => r.tone === "success").length
+  const affectedCount = rows.filter((r) => r.tone === "critical" || r.tone === "warning").length
+
   return (
-    <div className="bg-card text-card-foreground flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Cockpit Dashboard</h2>
-        <Badge variant="secondary">{summary.totalDefinitions} definitions</Badge>
-      </div>
+    <WidgetShell>
+      <WidgetHeader
+        icon="▦"
+        iconTone="info"
+        title="Cockpit"
+        sub={
+          <span>
+            Übersicht aller Prozesse · {summary.totalDefinitions}{" "}
+            {summary.totalDefinitions === 1 ? "Prozess" : "Prozesse"}
+          </span>
+        }
+      />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Definitions" value={summary.totalDefinitions} variant="default" />
-        <StatCard
-          label="Running Instances"
-          value={summary.totalRunningInstances}
-          variant="success"
-        />
-        <StatCard label="Failed Jobs" value={summary.totalFailedJobs} variant="destructive" />
-        <StatCard label="Incidents" value={summary.totalIncidents} variant="warning" />
-      </div>
+      <KpiGrid
+        boxed
+        header={{ label: "Health", badge: "Status der Prozesslandschaft" }}
+        cells={[
+          {
+            label: "Prozesse gesamt",
+            value: summary.totalDefinitions,
+          },
+          {
+            label: "Healthy",
+            value: healthyCount,
+            fraction: ` /${summary.totalDefinitions}`,
+            tone: healthyCount > 0 ? "success" : undefined,
+          },
+          {
+            label: "Affected",
+            value: affectedCount,
+            fraction: ` /${summary.totalDefinitions}`,
+            tone: affectedCount > 0 ? "critical" : undefined,
+          },
+          {
+            label: "Open Incidents",
+            value: summary.totalIncidents,
+            tone: summary.totalIncidents > 0 ? "critical" : undefined,
+          },
+        ]}
+      />
 
-      <details open>
-        <summary className="text-muted-foreground mb-3 cursor-pointer text-sm font-medium">
-          Process Definitions ({definitions.length})
-        </summary>
-        <div className="grid gap-2">
-          {definitions.map((def) => {
-            const totalIncidents = def.incidents.reduce((s, i) => s + i.incidentCount, 0)
-            const hasIssues = def.failedJobs > 0 || totalIncidents > 0
-            return (
-              <Card
-                key={def.id}
-                className={`gap-0 py-0 shadow-none ${hasIssues ? "border-destructive/40" : ""}`}
-              >
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-medium">{def.name ?? def.key}</h3>
-                    <p className="text-muted-foreground font-mono text-sm">{def.key}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-primary/10 text-primary">
-                      {def.instances} running
-                    </Badge>
-                    {def.failedJobs > 0 && (
-                      <Badge variant="destructive">{def.failedJobs} failed</Badge>
-                    )}
-                    {totalIncidents > 0 && (
-                      <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
-                        {totalIncidents} incidents
-                      </Badge>
-                    )}
-                    <span className="text-muted-foreground text-sm">v{def.version}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-          {definitions.length === 0 && (
-            <p className="text-muted-foreground py-4 text-center text-sm">
-              No process definitions deployed
-            </p>
-          )}
-        </div>
-      </details>
-    </div>
+      <section>
+        <SectionHeading title="Alle Prozesse" hint={`${rows.length} deployed`} />
+
+        {rows.length === 0 ? (
+          <div className="border-line text-ink-muted bg-card rounded-lg border p-8 text-center text-sm">
+            No process definitions deployed
+          </div>
+        ) : (
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-bg">
+              <tr>
+                <th className="border-line text-ink-subtle border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide">
+                  Prozess
+                </th>
+                <th className="border-line text-ink-subtle border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide">
+                  Version
+                </th>
+                <th className="border-line text-ink-subtle border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide">
+                  Running
+                </th>
+                <th className="border-line text-ink-subtle border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide">
+                  Failed jobs
+                </th>
+                <th className="border-line text-ink-subtle border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide">
+                  Incidents
+                </th>
+                <th className="border-line border-y px-4 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <ProcessRow key={row.id} row={row} onOpen={openDetail} />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </WidgetShell>
   )
 }
