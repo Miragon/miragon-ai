@@ -25,8 +25,8 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
                 id, process_definition_id, process_definition_key, process_definition_name,
                 business_key, start_time, end_time, duration_in_millis,
                 start_user_id, start_activity_id, end_activity_id, delete_reason,
-                super_process_instance_id, state, tenant_id, engine_type, event_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                super_process_instance_id, state, tenant_id, engine_type, event_type, trace_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         executeBatchInstrumented("camunda_process_instances", sql, rows) { ps, row ->
             ps.setString(1, row["id"] as? String)
@@ -46,6 +46,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setString(15, row["tenant_id"] as? String)
             ps.setString(16, row["engine_type"] as? String)
             ps.setString(17, row["event_type"] as? String)
+            ps.setString(18, row["trace_id"] as? String)
         }
     }
 
@@ -56,8 +57,8 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
                 id, parent_activity_instance_id, activity_id, activity_name, activity_type,
                 process_definition_id, process_definition_key, process_instance_id, execution_id,
                 start_time, end_time, duration_in_millis, assignee, task_id,
-                tenant_id, engine_type, event_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                tenant_id, engine_type, event_type, trace_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         executeBatchInstrumented("camunda_activity_instances", sql, rows) { ps, row ->
             ps.setString(1, row["id"] as? String)
@@ -77,6 +78,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setString(15, row["tenant_id"] as? String)
             ps.setString(16, row["engine_type"] as? String)
             ps.setString(17, row["event_type"] as? String)
+            ps.setString(18, row["trace_id"] as? String)
         }
     }
 
@@ -156,8 +158,8 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
                 execution_id, activity_id, incident_type, incident_message,
                 cause_incident_id, root_cause_incident_id, configuration,
                 create_time, end_time, state,
-                tenant_id, engine_type, event_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                tenant_id, engine_type, event_type, trace_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         executeBatchInstrumented("camunda_incidents", sql, rows) { ps, row ->
             ps.setString(1, row["id"] as? String)
@@ -177,6 +179,7 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
             ps.setString(15, row["tenant_id"] as? String)
             ps.setString(16, row["engine_type"] as? String)
             ps.setString(17, row["event_type"] as? String)
+            ps.setString(18, row["trace_id"] as? String)
         }
     }
 
