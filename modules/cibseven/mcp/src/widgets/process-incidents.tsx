@@ -353,7 +353,7 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
         {data.bpmnXml ? (
           <BpmnDiagram
             bpmnXml={data.bpmnXml}
-            height={340}
+            height={460}
             highlightActivityIds={incidentActivityIds}
             countOverlays={countOverlays}
           />

@@ -2,8 +2,10 @@ import { useEffect, useRef } from "react"
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
 
 interface BpmnCanvas {
-  zoom: (mode: string) => void
-  addMarker: (elementId: string, marker: string) => void
+  zoom(mode: "fit-viewport"): void
+  zoom(level: number): void
+  zoom(): number
+  addMarker(elementId: string, marker: string): void
 }
 
 interface BpmnOverlays {
@@ -92,6 +94,7 @@ export function BpmnDiagram({
   countOverlays = [],
 }: BpmnDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const viewerRef = useRef<NavigatedViewer | null>(null)
 
   useEffect(() => {
     if (!containerRef.current || !bpmnXml) return
@@ -104,11 +107,13 @@ export function BpmnDiagram({
     }
 
     const viewer = new NavigatedViewer({ container: containerRef.current })
+    viewerRef.current = viewer
 
     void viewer.importXML(bpmnXml).then(() => {
       const bpmn = viewer as unknown as BpmnViewerWithGet
       const canvas = bpmn.get("canvas")
       canvas.zoom("fit-viewport")
+      canvas.zoom(canvas.zoom() * 0.95)
 
       for (const actId of activeActivityIds) {
         try {
@@ -142,15 +147,56 @@ export function BpmnDiagram({
     })
 
     return () => {
+      viewerRef.current = null
       viewer.destroy()
     }
   }, [bpmnXml, highlightActivityIds, activeActivityIds, countOverlays])
 
+  function getCanvas(): BpmnCanvas | null {
+    if (!viewerRef.current) return null
+    return (viewerRef.current as unknown as BpmnViewerWithGet).get("canvas")
+  }
+
+  function handleZoomIn() {
+    const canvas = getCanvas()
+    if (canvas) canvas.zoom(canvas.zoom() * 1.1)
+  }
+
+  function handleZoomOut() {
+    const canvas = getCanvas()
+    if (canvas) canvas.zoom(canvas.zoom() * 0.9)
+  }
+
+  function handleFit() {
+    const canvas = getCanvas()
+    if (!canvas) return
+    canvas.zoom("fit-viewport")
+    canvas.zoom(canvas.zoom() * 0.95)
+  }
+
   return (
-    <div
-      ref={containerRef}
-      className="border-border overflow-hidden rounded-lg border"
-      style={{ height: `${height}px`, width: "100%" }}
-    />
+    <div className="relative">
+      <div
+        ref={containerRef}
+        className="border-border rounded-lg border"
+        style={{ height: `${height}px`, width: "100%" }}
+      />
+      <div className="absolute bottom-3 right-3 flex flex-col overflow-hidden rounded border border-gray-300 shadow-sm">
+        {[
+          { label: "+", onClick: handleZoomIn, title: "Zoom in" },
+          { label: "⊡", onClick: handleFit, title: "Fit to viewport" },
+          { label: "−", onClick: handleZoomOut, title: "Zoom out" },
+        ].map(({ label, onClick, title }) => (
+          <button
+            key={label}
+            onClick={onClick}
+            title={title}
+            className="flex h-7 w-7 items-center justify-center bg-white text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-200 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-gray-300"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
