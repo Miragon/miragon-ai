@@ -109,6 +109,9 @@ export interface IncidentInstance {
   incidentType: string
   incidentMessage: string | null
   incidentTimestamp: string
+  /** Pre-built jump-out URL into the Cockpit instance page. Null when no
+   *  cockpitUrl is configured or scheme validation rejected the input. */
+  cockpitInstanceUrl: string | null
 }
 
 export interface ActivityTree {
@@ -264,8 +267,6 @@ export interface ProcessIncidentsData {
   version: number | null
   bpmnXml: string | null
   cockpitUrl: string | null
-  /** URL prefix for process-instance Cockpit pages — append `encodeURIComponent(processInstanceId)`. */
-  cockpitInstanceUrlPrefix: string | null
   runningInstances: number | null
   incidentCount: number
   last24hCount: number
@@ -275,4 +276,67 @@ export interface ProcessIncidentsData {
   /** Other process definitions with open incidents — surfaced in the empty
    *  state so the operator can jump to where the incidents actually are. */
   siblingsWithIncidents: IncidentsByProcess[]
+}
+
+// === Single-incident detail (camunda7_show_incident_detail)
+
+export interface IncidentDetailJob {
+  id: string
+  retries: number
+  exceptionMessage: string | null
+  /** Full stacktrace from `/job/{id}/stacktrace`. May be null if the engine
+   *  rejected the request or the incident is not job-backed. */
+  stacktrace: string | null
+  dueDate: string | null
+}
+
+export interface IncidentDetailHistoryEntry {
+  id: string
+  activityId: string
+  activityName: string | null
+  activityType: string
+  startTime: string
+  endTime: string | null
+  durationInMillis: number | null
+  canceled: boolean
+}
+
+export interface IncidentDetailData {
+  // Header
+  incidentId: string
+  incidentType: string
+  incidentMessage: string | null
+  incidentTimestamp: string
+  activityId: string
+  activityName: string | null
+
+  // Process / instance context
+  processDefinitionKey: string
+  processDefinitionId: string
+  processDefinitionName: string | null
+  processDefinitionVersion: number | null
+  processInstanceId: string
+  businessKey: string | null
+  /** Direct deep-link to the instance in the Cockpit (null if no cockpit URL configured). */
+  cockpitInstanceUrl: string | null
+
+  // BPMN
+  bpmnXml: string | null
+
+  // Failure tab — null when the incident has no associated job (e.g. external-task incidents)
+  job: IncidentDetailJob | null
+
+  // Instance tab — same shape as InstanceDetailData
+  instance: {
+    id: string
+    definitionId: string
+    businessKey: string | null
+    suspended: boolean
+    ended: boolean
+  }
+  activityTree: ActivityTree | null
+  variables: Record<string, VariableValue>
+
+  // History tab
+  history: IncidentDetailHistoryEntry[]
 }

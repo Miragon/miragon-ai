@@ -26,7 +26,12 @@ import {
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 import { buildIncidentsDashboardData, buildProcessIncidentsData } from "./incident-panel-data.js"
 import { buildProcessDetailData } from "./steps/process-detail.js"
-import { CAMUNDA7_SHOW_PROCESS_DETAIL, CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "./tool-names.js"
+import { buildIncidentDetailData } from "./steps/incident-detail.js"
+import {
+  CAMUNDA7_SHOW_INCIDENT_DETAIL,
+  CAMUNDA7_SHOW_PROCESS_DETAIL,
+  CAMUNDA7_SHOW_PROCESS_INCIDENTS,
+} from "./tool-names.js"
 
 export interface WidgetToolsConfig {
   baseUrl: string
@@ -235,6 +240,33 @@ export function registerWidgetTools(
         widget: "camunda7:process-incidents",
         app: "camunda7",
         dataType: "camunda7:processIncidents",
+        data,
+      })
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_SHOW_INCIDENT_DETAIL,
+      title: "Incident Detail",
+      description:
+        "Detail view for a single incident: failure stacktrace, BPMN with the failing activity highlighted, instance variables and activity tree, and a history timeline. Drill-in target from camunda7_show_process_incidents.",
+      annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
+      schema: z.object({
+        incidentId: z.string().describe("The incident ID to inspect"),
+      }),
+      _meta: uiMeta,
+    },
+    async (args) => {
+      const data = await buildIncidentDetailData(client, {
+        baseUrl: widgetConfig.baseUrl,
+        cockpitUrl: widgetConfig.cockpitUrl,
+        incidentId: args.incidentId,
+      })
+      return buildSingleWidgetView({
+        widget: "camunda7:incident-detail",
+        app: "camunda7",
+        dataType: "camunda7:incidentDetail",
         data,
       })
     },

@@ -6,3 +6,4 @@
  */
 export const CAMUNDA7_SHOW_PROCESS_DETAIL = "camunda7_show_process_detail"
 export const CAMUNDA7_SHOW_PROCESS_INCIDENTS = "camunda7_show_process_incidents"
+export const CAMUNDA7_SHOW_INCIDENT_DETAIL = "camunda7_show_incident_detail"

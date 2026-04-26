@@ -221,8 +221,9 @@ describe("buildProcessIncidentsData", () => {
     })
     expect(data.activities[0].incidents).toHaveLength(2)
     expect(data.totalActivityCount).toBe(2)
-    // Each instance carries only the lean five fields — confirm no extras.
+    // Each instance carries only the lean six fields — confirm no extras.
     expect(Object.keys(data.activities[0].incidents[0]).sort()).toEqual([
+      "cockpitInstanceUrl",
       "id",
       "incidentMessage",
       "incidentTimestamp",
@@ -230,10 +231,12 @@ describe("buildProcessIncidentsData", () => {
       "processInstanceId",
     ])
     expect(data.cockpitUrl).toBe(
-      "http://localhost:8080/webapp/#/seven/auth/process/K1?tab=incidents",
+      "http://localhost:8080/webapp/#/seven/auth/process/K1/5?tab=incidents",
     )
-    expect(data.cockpitInstanceUrlPrefix).toBe(
-      "http://localhost:8080/webapp/#/seven/auth/process-instance/",
+    // Per-incident cockpit URL nests the instance under the process route.
+    const firstIncident = data.activities[0].incidents[0]
+    expect(firstIncident.cockpitInstanceUrl).toBe(
+      `http://localhost:8080/webapp/#/seven/auth/process/K1/5/${encodeURIComponent(firstIncident.processInstanceId)}?tab=incidents`,
     )
   })
 

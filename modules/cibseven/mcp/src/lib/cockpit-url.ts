@@ -4,16 +4,17 @@
  * The Cockpit lives at `<webapp-base>/#/seven/auth/...`. All builders are
  * scheme-validated (only `http(s):` is accepted) and URL-encode user-supplied
  * keys/ids so reserved characters cannot break the resulting hash route.
+ *
+ * Routing convention (CIB seven Cockpit):
+ *   process definition → /seven/auth/process/{key}[/{version}]?tab=...
+ *   process instance   → /seven/auth/process/{key}[/{version}]/{instanceId}?tab=...
+ *
+ * When `version === null` we omit the version segment entirely; Cockpit
+ * resolves bare `/process/{key}` and `/process/{key}/{instanceId}` to the
+ * latest version. We do NOT substitute a placeholder like "latest" — the
+ * route would 404.
  */
 
-/**
- * Resolves the canonical webapp base URL — the part *before* the hash route.
- * Returns e.g. `http://localhost:8080/webapp`. Used by every Cockpit jump-out.
- *
- * Falls back to deriving the webapp base from `baseUrl` (`/engine-rest` →
- * `/webapp`) when an explicit `cockpitUrl` is not configured. Returns `null`
- * when the input is not an http(s) URL or no base can be derived.
- */
 function resolveCockpitBase(cockpitUrl: string | undefined, baseUrl: string): string | null {
   let base = cockpitUrl?.trim()
   if (!base) {
@@ -24,9 +25,13 @@ function resolveCockpitBase(cockpitUrl: string | undefined, baseUrl: string): st
   return base.replace(/[/#]+$/, "")
 }
 
-export interface ProcessCockpitUrlOptions {
-  /** Cockpit tab to open by default (e.g. `"incidents"`, `"history"`). */
+export interface CockpitUrlOptions {
+  /** Cockpit tab to open by default (e.g. `"incidents"`, `"variables"`, `"history"`). */
   tab?: string
+}
+
+function tabSuffix(tab: string | undefined): string {
+  return tab ? `?tab=${encodeURIComponent(tab)}` : ""
 }
 
 /**
@@ -37,39 +42,33 @@ export function buildProcessCockpitUrl(
   cockpitUrl: string | undefined,
   baseUrl: string,
   processDefinitionKey: string,
-  options?: ProcessCockpitUrlOptions,
+  version: number | null,
+  options?: CockpitUrlOptions,
 ): string | null {
   const base = resolveCockpitBase(cockpitUrl, baseUrl)
   if (!base) return null
   const encodedKey = encodeURIComponent(processDefinitionKey)
-  const tabSuffix = options?.tab ? `?tab=${encodeURIComponent(options.tab)}` : ""
-  return `${base}/#/seven/auth/process/${encodedKey}${tabSuffix}`
+  const versionSegment = version !== null ? `/${version}` : ""
+  return `${base}/#/seven/auth/process/${encodedKey}${versionSegment}${tabSuffix(options?.tab)}`
 }
 
 /**
  * Build a Cockpit URL pointing at a single process *instance* page.
+ *
+ * The instance page lives under the process route: `/process/{key}[/{version}]/{instanceId}`.
  */
 export function buildInstanceCockpitUrl(
   cockpitUrl: string | undefined,
   baseUrl: string,
+  processDefinitionKey: string,
+  version: number | null,
   processInstanceId: string,
-): string | null {
-  const prefix = buildInstanceCockpitUrlPrefix(cockpitUrl, baseUrl)
-  if (!prefix) return null
-  return `${prefix}${encodeURIComponent(processInstanceId)}`
-}
-
-/**
- * Returns the URL prefix for a process-instance Cockpit page (everything up
- * to but not including the encoded instance id). Useful when many incidents
- * need their own jump-out and the widget wants to construct them client-side
- * without re-implementing the base resolution.
- */
-export function buildInstanceCockpitUrlPrefix(
-  cockpitUrl: string | undefined,
-  baseUrl: string,
+  options?: CockpitUrlOptions,
 ): string | null {
   const base = resolveCockpitBase(cockpitUrl, baseUrl)
   if (!base) return null
-  return `${base}/#/seven/auth/process-instance/`
+  const encodedKey = encodeURIComponent(processDefinitionKey)
+  const versionSegment = version !== null ? `/${version}` : ""
+  const encodedInstance = encodeURIComponent(processInstanceId)
+  return `${base}/#/seven/auth/process/${encodedKey}${versionSegment}/${encodedInstance}${tabSuffix(options?.tab)}`
 }
