@@ -11,4 +11,9 @@ pnpm -F @miragon-ai/client-cibseven generate
 
 pnpm build
 
+if [ ! -f .env ]; then
+  sed "s|\$(pwd)|$(pwd)|g" .env.example > .env
+  echo "Created .env from .env.example"
+fi
+
 (cd plugins && ./gradlew build -x test)
