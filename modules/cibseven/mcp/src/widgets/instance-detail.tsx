@@ -163,6 +163,10 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
             height={420}
             activeActivityIds={activeActivityIds}
             highlightActivityIds={incidentActivityIds}
+            openUserTaskBadges={visibleTasks.map((task) => ({
+              activityId: task.taskDefinitionKey,
+              label: task.name ?? task.taskDefinitionKey,
+            }))}
           />
         </Section>
       )}

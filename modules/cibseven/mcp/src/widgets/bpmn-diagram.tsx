@@ -27,6 +27,16 @@ const HIGHLIGHT_CSS = `
   stroke: #dc2626 !important;
   stroke-width: 2px !important;
 }
+.highlight-open-user-task:not(.djs-connection) .djs-visual > :nth-child(1) {
+  fill: rgba(34, 197, 94, 0.22) !important;
+  stroke: #15803d !important;
+  stroke-width: 3px !important;
+  animation: bpmn-active-task-pulse 1.6s ease-in-out infinite;
+}
+@keyframes bpmn-active-task-pulse {
+  0%, 100% { stroke-opacity: 1; }
+  50% { stroke-opacity: 0.45; }
+}
 .instance-count-overlay {
   background: #3b82f6;
   color: white;
@@ -58,6 +68,29 @@ const HIGHLIGHT_CSS = `
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
+.open-user-task-badge {
+  background: #15803d;
+  color: white;
+  border-radius: 9999px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.open-user-task-badge::before {
+  content: "▸";
+  font-size: 12px;
+  line-height: 1;
+}
 `
 
 export interface BpmnCountOverlay {
@@ -66,11 +99,24 @@ export interface BpmnCountOverlay {
   variant: "incident" | "instance" | "failed"
 }
 
+export interface OpenUserTaskBadge {
+  /** BPMN element id (taskDefinitionKey for user tasks). */
+  activityId: string
+  /** Short label rendered next to the arrow icon. Trimmed when wide. */
+  label?: string
+}
+
 export interface BpmnDiagramProps {
   bpmnXml: string
   height?: number
   highlightActivityIds?: string[]
   activeActivityIds?: string[]
+  /**
+   * User tasks awaiting operator action — drawn with a pulsing border
+   * (highlight-open-user-task marker) plus a labeled badge overlay so
+   * support sees at a glance where they can intervene.
+   */
+  openUserTaskBadges?: OpenUserTaskBadge[]
   countOverlays?: BpmnCountOverlay[]
 }
 
@@ -86,11 +132,21 @@ const OVERLAY_POSITION: Record<BpmnCountOverlay["variant"], object> = {
   failed: { top: -14, left: -14 },
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
 export function BpmnDiagram({
   bpmnXml,
   height = 400,
   highlightActivityIds = [],
   activeActivityIds = [],
+  openUserTaskBadges = [],
   countOverlays = [],
 }: BpmnDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -115,8 +171,14 @@ export function BpmnDiagram({
       canvas.zoom("fit-viewport")
       canvas.zoom(canvas.zoom() * 0.95)
 
+      const userTaskIds = new Set(openUserTaskBadges.map((b) => b.activityId))
+
       for (const actId of activeActivityIds) {
         try {
+          // Skip the generic running marker on activities that get the
+          // stronger open-user-task marker — otherwise the two CSS rules
+          // fight over the same SVG fill/stroke.
+          if (userTaskIds.has(actId)) continue
           canvas.addMarker(actId, "highlight-running")
         } catch {
           /* activity may not exist in diagram */
@@ -126,6 +188,14 @@ export function BpmnDiagram({
       for (const actId of highlightActivityIds) {
         try {
           canvas.addMarker(actId, "highlight-incident")
+        } catch {
+          /* activity may not exist in diagram */
+        }
+      }
+
+      for (const badge of openUserTaskBadges) {
+        try {
+          canvas.addMarker(badge.activityId, "highlight-open-user-task")
         } catch {
           /* activity may not exist in diagram */
         }
@@ -144,13 +214,25 @@ export function BpmnDiagram({
           /* activity may not exist in diagram */
         }
       }
+
+      for (const badge of openUserTaskBadges) {
+        const label = escapeHtml(badge.label ?? "Open task")
+        try {
+          overlays.add(badge.activityId, {
+            position: { bottom: -16, left: -8 },
+            html: `<div class="open-user-task-badge" title="${label}">${label}</div>`,
+          })
+        } catch {
+          /* activity may not exist in diagram */
+        }
+      }
     })
 
     return () => {
       viewerRef.current = null
       viewer.destroy()
     }
-  }, [bpmnXml, highlightActivityIds, activeActivityIds, countOverlays])
+  }, [bpmnXml, highlightActivityIds, activeActivityIds, openUserTaskBadges, countOverlays])
 
   function getCanvas(): BpmnCanvas | null {
     if (!viewerRef.current) return null
