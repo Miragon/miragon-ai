@@ -223,6 +223,29 @@ export interface IncidentsByProcess {
   incidentCount: number
 }
 
+// === Process definition detail (camunda7_show_process_detail)
+
+export interface ProcessDetailActivity {
+  activityId: string
+  activityName: string | null
+  incidentCount: number
+  failedJobs: number
+}
+
+export interface ProcessDetailData {
+  processDefinitionKey: string
+  processDefinitionName: string | null
+  version: number | null
+  bpmnXml: string | null
+  cockpitUrl: string | null
+  runningInstances: number | null
+  openIncidents: number
+  failedJobs: number
+  totalActivityCount: number | null
+  affectedActivityCount: number
+  activities: ProcessDetailActivity[]
+}
+
 // === Detail (camunda7_show_process_incidents)
 
 export interface ProcessIncidentsActivity {

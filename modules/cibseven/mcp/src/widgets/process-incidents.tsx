@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react"
 import { Alert, AlertDescription, Badge, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import { useCallTool } from "mcp-use/react"
 
 import type {
   IncidentsByProcess,
@@ -12,15 +11,14 @@ import type {
 import { BpmnDiagram, type BpmnCountOverlay } from "./bpmn-diagram.js"
 import {
   CountPill,
-  ExternalLinkToast,
   GroupCard,
-  MiniStats,
+  KpiGrid,
   SectionHeading,
   StatusBadge,
   WidgetShell,
-  useOpenExternal,
-  type OpenExternalApi,
-} from "./shared/index.js"
+  useHostActions,
+  type HostActions,
+} from "@miragon-ai/widget-shell/widgets"
 
 export type { ProcessIncidentsData }
 
@@ -221,10 +219,15 @@ function EmptyStateWithSiblings({
 
 export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | null }) {
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
-  const detail = useCallTool<{ processDefinitionKey: string }>("camunda7_show_process_incidents")
-  const ext: OpenExternalApi = useOpenExternal()
+  const host: HostActions = useHostActions()
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  function jumpToProcess(processDefinitionKey: string) {
+    host.showWidget(
+      `Show me the incidents detail for process \`${processDefinitionKey}\` (use camunda7_show_process_incidents)`,
+    )
+  }
 
   const countOverlays = useMemo<BpmnCountOverlay[]>(
     () =>
@@ -303,6 +306,12 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
                 <span>{data.runningInstances.toLocaleString()} running instances</span>
               </>
             )}
+            {data.latestIncident && (
+              <>
+                <span className="text-ink-subtle">·</span>
+                <span>last event {timeOnly(data.latestIncident)}</span>
+              </>
+            )}
             {data.cockpitUrl && (
               <>
                 <span className="text-ink-subtle">·</span>
@@ -312,7 +321,7 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
                   rel="noopener noreferrer"
                   onClick={(e) => {
                     e.preventDefault()
-                    ext.openExternal(data.cockpitUrl)
+                    host.openLink(data.cockpitUrl)
                   }}
                   className="text-m-blue hover:underline"
                 >
@@ -325,17 +334,30 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
         </div>
       </header>
 
-      <MiniStats
-        stats={[
-          { label: "Open incidents", value: remainingCount, tone: "critical" },
-          { label: "Activities affected", value: totalActivityFraction },
-          { label: "+24h", value: `+${data.last24hCount}` },
+      <KpiGrid
+        boxed
+        header={{ label: "Overview", badge: "Incidents in diesem Prozess" }}
+        cells={[
+          {
+            label: "Open incidents",
+            value: remainingCount,
+            tone: remainingCount > 0 ? "critical" : undefined,
+          },
+          {
+            label: "Activities affected",
+            value: totalActivityFraction,
+          },
+          {
+            label: "+24h",
+            value: `+${data.last24hCount}`,
+            tone: data.last24hCount > 0 ? "critical" : undefined,
+          },
           {
             label: "Running",
             value: data.runningInstances !== null ? data.runningInstances.toLocaleString() : "—",
-            tone: "success",
+            tone:
+              data.runningInstances !== null && data.runningInstances > 0 ? "success" : undefined,
           },
-          { label: "Latest event", value: timeOnly(data.latestIncident), mono: true },
         ]}
       />
 
@@ -371,16 +393,11 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
             affectedActivityCount === 1 ? "activity" : "activities"
           } affected`}
         />
-        {detail.isError && (
-          <Alert variant="destructive" className="mb-3">
-            <AlertDescription>Could not open the detail view. Try again.</AlertDescription>
-          </Alert>
-        )}
         {data.activities.length === 0 ? (
           <EmptyStateWithSiblings
             processName={data.processDefinitionName ?? data.processDefinitionKey}
             siblings={data.siblingsWithIncidents}
-            onJumpTo={(key) => detail.callTool({ processDefinitionKey: key })}
+            onJumpTo={jumpToProcess}
           />
         ) : (
           data.activities.map((activity) => (
@@ -398,13 +415,12 @@ export function ProcessIncidentsWidget({ data }: { data: ProcessIncidentsData | 
                 resolving={resolveMutation.isPending}
                 cockpitInstanceUrlPrefix={data.cockpitInstanceUrlPrefix}
                 onResolve={handleResolve}
-                onOpenCockpit={ext.openExternal}
+                onOpenCockpit={host.openLink}
               />
             </GroupCard>
           ))
         )}
       </section>
-      <ExternalLinkToast state={ext} />
     </WidgetShell>
   )
 }

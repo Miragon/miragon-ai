@@ -20,8 +20,6 @@ export default tseslint.config(
             "modules/analytics/mcp/src/widgets/*.tsx",
             "modules/cibseven/mcp/src/widgets/*.ts",
             "modules/cibseven/mcp/src/widgets/*.tsx",
-            "modules/cibseven/mcp/src/widgets/shared/*.ts",
-            "modules/cibseven/mcp/src/widgets/shared/*.tsx",
             "modules/enrichment/client/vitest.config.ts",
             "modules/enrichment/mcp/vitest.config.ts",
             "modules/cibseven/mcp/vitest.config.ts",
