@@ -80,8 +80,16 @@ cd plugins && ./gradlew clean build && cd ..
 
 **4. Start the infrastructure**
 
+The default compose stack starts only the infra (CIB Seven, ClickHouse, OTEL collector, Jaeger, WireMock) — the Node MCP server is left out so you can run it locally via `pnpm dev` on port 3010 without a port conflict.
+
 ```bash
 cd docker && docker compose up -d && cd ..
+```
+
+To bring up the bundled MCP server in a container too (single-shot deploy, no local dev), enable the `full` profile:
+
+```bash
+cd docker && docker compose --profile full up -d && cd ..
 ```
 
 ## Build
@@ -102,7 +110,7 @@ The build chain is:
 ## Run
 
 ```bash
-cd docker && docker compose up -d cibseven clickhouse
+cd docker && docker compose up -d
 cd ..
 
 PORT=3010 \
@@ -174,12 +182,12 @@ A multi-stage `Dockerfile` builds the server with pruned production deps and exp
 
 ### Docker image is stale after code changes
 
-`docker compose up -d` reuses existing images. `docker compose down -v` removes containers and volumes but **not images**. After changing anything that affects the build (Dockerfile, `package.json`, `tsconfig.json`, source code), force a clean rebuild:
+`docker compose up -d` reuses existing images. `docker compose down -v` removes containers and volumes but **not images**. After changing anything that affects the build (Dockerfile, `package.json`, `tsconfig.json`, source code), force a clean rebuild — pass `--profile full` if you also want the bundled MCP server image rebuilt:
 
 ```bash
-docker compose -f docker/docker-compose.yml down -v
-docker compose -f docker/docker-compose.yml build --no-cache
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml --profile full down -v
+docker compose -f docker/docker-compose.yml --profile full build --no-cache
+docker compose -f docker/docker-compose.yml --profile full up -d
 ```
 
 `--no-cache` also bypasses the persistent BuildKit cache mounts (`pnpm-store`, `turbo-server`) that survive `down -v`.
