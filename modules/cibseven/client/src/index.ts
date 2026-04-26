@@ -31,4 +31,7 @@ export type {
   ProcessIncidentsData,
   ProcessDetailActivity,
   ProcessDetailData,
+  IncidentDetailData,
+  IncidentDetailHistoryEntry,
+  IncidentDetailJob,
 } from "./widgets.js"

@@ -14,9 +14,22 @@ import {
   type VariableSearchData,
   type ExecutionTraceData,
   type VariableSearchRow,
+  type PathFrequencyData,
 } from "@miragon-ai/client-analytics"
+import type { Client as Camunda7Client } from "@miragon-ai/client-cibseven"
+import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 
-export function registerWidgetTools(server: MCPServer, ch: ClickHouseClient, resourceUri: string) {
+export interface AnalyticsWidgetToolsOptions {
+  camunda7Client?: Camunda7Client
+}
+
+export function registerWidgetTools(
+  server: MCPServer,
+  ch: ClickHouseClient,
+  resourceUri: string,
+  options: AnalyticsWidgetToolsOptions = {},
+) {
+  const camunda7Client = options.camunda7Client
   server.tool(
     {
       name: "analytics_show_dashboard",
@@ -512,7 +525,23 @@ ORDER BY t.Timestamp`
       _meta: { ui: { resourceUri } },
     },
     async (args) => {
-      const data = await queries.pathFrequency(ch, args)
+      const result = await queries.pathFrequency(ch, args)
+
+      let bpmnXml: string | null = null
+      if (camunda7Client) {
+        const xmlResp = (await getProcessDefinitionBpmn20XmlByKey({
+          client: camunda7Client,
+          path: { key: args.processDefinitionKey },
+        }).catch(() => null)) as { bpmn20Xml?: string } | null
+        bpmnXml = xmlResp?.bpmn20Xml ?? null
+      }
+
+      const data: PathFrequencyData = {
+        ...result,
+        processDefinitionKey: args.processDefinitionKey,
+        bpmnXml,
+      }
+
       return buildSingleWidgetView({
         widget: "analytics:path-frequency",
         app: "analytics",
