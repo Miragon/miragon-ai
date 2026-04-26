@@ -2,6 +2,7 @@ package com.camunda7mcp.history.cibseven
 
 import com.camunda7mcp.history.ClickHouseHistoryEventHandlerBase.EventCategory
 import com.camunda7mcp.history.ClickHouseHistoryEventHandlerBase.HistoryEventData
+import io.opentelemetry.api.trace.Span
 import org.cibseven.bpm.engine.impl.history.event.*
 
 class CibSevenEventMapper {
@@ -27,6 +28,7 @@ class CibSevenEventMapper {
                 "tenant_id" to event.tenantId,
                 "engine_type" to "cibseven",
                 "event_type" to event.eventType,
+                "trace_id" to Span.current().spanContext.takeIf { it.isValid }?.traceId,
             ),
         )
         is HistoricActivityInstanceEventEntity -> HistoryEventData(
@@ -49,6 +51,7 @@ class CibSevenEventMapper {
                 "tenant_id" to event.tenantId,
                 "engine_type" to "cibseven",
                 "event_type" to event.eventType,
+                "trace_id" to Span.current().spanContext.takeIf { it.isValid }?.traceId,
             ),
         )
         is HistoricTaskInstanceEventEntity -> HistoryEventData(
@@ -119,6 +122,7 @@ class CibSevenEventMapper {
                 "tenant_id" to event.tenantId,
                 "engine_type" to "cibseven",
                 "event_type" to event.eventType,
+                "trace_id" to Span.current().spanContext.takeIf { it.isValid }?.traceId,
             ),
         )
         else -> null
