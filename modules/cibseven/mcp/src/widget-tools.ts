@@ -200,7 +200,6 @@ export function registerWidgetTools(
           }).catch(() => ({
             taskId: task.id,
             fields: [],
-            currentVariables: {},
           })),
         })),
       )

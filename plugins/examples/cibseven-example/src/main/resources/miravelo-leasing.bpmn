@@ -10,6 +10,37 @@
       <bpmn:outgoing>Flow_18i81hz</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:userTask id="Activity_AccelerateDecision" name="Accelerate decision making">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="customerId" label="Customer ID" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="creditScore" label="Credit Score" type="long">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="creditworthy" label="Creditworthy" type="boolean">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="leaseAmount" label="Lease Amount" type="long">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="leaseTermMonths" label="Lease Term (months)" type="long">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="bikeModel" label="Bike Model" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="customerSegment" label="Customer Segment" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="channel" label="Channel" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="region" label="Region" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+        </camunda:formData>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_1py2c7t</bpmn:incoming>
       <bpmn:outgoing>Flow_0r2ryqa</bpmn:outgoing>
     </bpmn:userTask>
@@ -53,6 +84,43 @@
       <bpmn:outgoing>Flow_0m7ynmt</bpmn:outgoing>
     </bpmn:sendTask>
     <bpmn:userTask id="Activity_DecideOnApplication" name="Decide on application">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="customerId" label="Customer ID" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="creditScore" label="Credit Score" type="long">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="creditworthy" label="Creditworthy" type="boolean">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="leaseAmount" label="Lease Amount" type="long">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="leaseTermMonths" label="Lease Term (months)" type="long">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="bikeModel" label="Bike Model" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="customerSegment" label="Customer Segment" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="channel" label="Channel" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="region" label="Region" type="string">
+            <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="decision" label="Decision" type="string">
+            <camunda:values>
+              <camunda:value id="positive" name="positive" />
+              <camunda:value id="negative" name="negative" />
+            </camunda:values>
+          </camunda:formField>
+        </camunda:formData>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_18i81hz</bpmn:incoming>
       <bpmn:outgoing>Flow_0ax166r</bpmn:outgoing>
     </bpmn:userTask>

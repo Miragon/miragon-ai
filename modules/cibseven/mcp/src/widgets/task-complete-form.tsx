@@ -87,6 +87,7 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
     const variables: Record<string, { value: unknown; type?: string }> = {}
 
     for (const field of schema.fields) {
+      if (field.readonly) continue
       const raw = fieldValues[field.name]
       const required = isRequired(field)
       if (raw === undefined || raw === "") {
@@ -125,14 +126,30 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
     )
   }
 
+  const editableFields = schema.fields.filter((f) => !f.readonly)
+  const readonlyFields = schema.fields.filter((f) => f.readonly)
+
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       {schema.fields.length === 0 && manualEntries.length === 0 && (
         <p className="text-muted-foreground text-sm">
-          No form fields detected. Complete without variables, or add variables manually below.
+          Für diesen Task ist kein Formular definiert.
         </p>
       )}
-      {schema.fields.map((field) => (
+      {readonlyFields.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {readonlyFields.map((field) => (
+            <FieldRow
+              key={field.name}
+              field={field}
+              value={fieldValues[field.name] ?? ""}
+              onChange={() => undefined}
+            />
+          ))}
+        </div>
+      )}
+      {readonlyFields.length > 0 && editableFields.length > 0 && <hr className="border-border" />}
+      {editableFields.map((field) => (
         <FieldRow
           key={field.name}
           field={field}
@@ -185,13 +202,9 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
 }
 
 function isRequired(field: TaskFormField): boolean {
-  // An inferred-from-gateway field gates the next routing decision; the
-  // process will take the default flow (or fall through) without it,
-  // which is rarely what the operator wants. Treat as required unless
-  // the schema explicitly says otherwise.
   if (field.required === true) return true
   if (field.required === false) return false
-  return field.source === "inferred-from-gateway"
+  return false
 }
 
 function FieldRow({
@@ -205,20 +218,20 @@ function FieldRow({
 }) {
   const label = field.label ?? field.name
   const required = isRequired(field)
+  const disabled = field.readonly === true
+
   const meta = useMemo(() => {
     const parts: string[] = []
     if (field.type) parts.push(field.type)
-    if (field.source === "inferred-from-gateway") parts.push("inferred from gateway")
-    if (field.source === "form-data") parts.push("from form")
     if (required) parts.push("required")
     return parts.join(" · ")
-  }, [field, required])
+  }, [field.type, required])
 
   if (field.suggestedValues && field.suggestedValues.length > 0) {
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-baseline justify-between">
-          <label className="text-sm font-medium">{label}</label>
+          <label className="text-muted-foreground text-sm font-medium">{label}</label>
           <span className="text-muted-foreground text-xs">{meta}</span>
         </div>
         <div className="flex flex-wrap gap-1">
@@ -231,6 +244,7 @@ function FieldRow({
                 type="button"
                 size="sm"
                 variant={selected ? "default" : "outline"}
+                disabled={disabled}
                 onClick={() => onChange(stringified)}
               >
                 {stringified}
@@ -246,7 +260,9 @@ function FieldRow({
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-baseline justify-between">
-          <label className="text-sm font-medium">{label}</label>
+          <label className={`text-sm font-medium ${disabled ? "text-muted-foreground" : ""}`}>
+            {label}
+          </label>
           <span className="text-muted-foreground text-xs">{meta}</span>
         </div>
         <div className="flex gap-1">
@@ -254,6 +270,7 @@ function FieldRow({
             type="button"
             size="sm"
             variant={value === "true" ? "default" : "outline"}
+            disabled={disabled}
             onClick={() => onChange("true")}
           >
             true
@@ -262,6 +279,7 @@ function FieldRow({
             type="button"
             size="sm"
             variant={value === "false" ? "default" : "outline"}
+            disabled={disabled}
             onClick={() => onChange("false")}
           >
             false
@@ -274,10 +292,17 @@ function FieldRow({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between">
-        <label className="text-sm font-medium">{label}</label>
+        <label className={`text-sm font-medium ${disabled ? "text-muted-foreground" : ""}`}>
+          {label}
+        </label>
         <span className="text-muted-foreground text-xs">{meta}</span>
       </div>
-      <Input value={value} onChange={(e) => onChange(e.target.value)} className="h-8" />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-8"
+        disabled={disabled}
+      />
     </div>
   )
 }

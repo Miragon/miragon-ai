@@ -1,25 +1,11 @@
 /**
- * Best-effort BPMN parser that derives expected task-completion variables from
- * the structure of a process. Two questions it answers for a given user task:
+ * Best-effort BPMN parser for user task form definitions.
  *
- *   1. Which sequence flows leave the task (directly or via a downstream
- *      gateway)?
- *   2. Which variables and concrete values are referenced in those flows'
- *      `<conditionExpression>` elements?
- *
- * The output feeds the support UI's task-completion form so the operator can
- * pick "positive"/"negative" buttons for `decision`, instead of guessing the
- * variable name. Same regex-only style as `bpmn-parse.ts` — no `bpmn-moddle`
- * dependency on the server.
+ * `extractEmbeddedFormFields` reads `<camunda:formData>` from a user task and
+ * returns structured form fields. Fields with `<camunda:property id="readonly"
+ * value="true">` are marked as readonly (displayed but not submitted).
  */
 import type { TaskFormField } from "@miragon-ai/client-cibseven"
-
-interface SequenceFlow {
-  id: string
-  sourceRef: string
-  targetRef: string
-  conditionExpression: string | null
-}
 
 interface ConditionLiteral {
   value: unknown
@@ -31,111 +17,83 @@ interface InferredCondition {
   literal: ConditionLiteral
 }
 
-export function inferTaskFormFieldsFromBpmn(
+const CAMUNDA_TYPE_MAP: Record<string, string> = {
+  string: "String",
+  boolean: "Boolean",
+  long: "Long",
+  integer: "Long",
+  double: "Double",
+  date: "String",
+  enum: "String",
+}
+
+/**
+ * Extract `<camunda:formField>` elements from the user task identified by
+ * `taskDefinitionKey`. Fields with `<camunda:property id="readonly"
+ * value="true">` are marked as readonly.
+ */
+export function extractEmbeddedFormFields(
   bpmnXml: string,
   taskDefinitionKey: string,
 ): TaskFormField[] {
-  const flows = parseSequenceFlows(bpmnXml)
-  const flowsById = new Map(flows.map((f) => [f.id, f]))
-  const gatewayIds = parseGatewayIds(bpmnXml)
-  const userTaskOutgoing = parseElementOutgoing(bpmnXml, taskDefinitionKey)
-
-  const conditions: InferredCondition[] = []
-
-  for (const flowId of userTaskOutgoing) {
-    const flow = flowsById.get(flowId)
-    if (!flow) continue
-    if (flow.conditionExpression) {
-      conditions.push(...parseConditionExpression(flow.conditionExpression))
-    }
-    if (gatewayIds.has(flow.targetRef)) {
-      for (const gOut of parseElementOutgoing(bpmnXml, flow.targetRef)) {
-        const gFlow = flowsById.get(gOut)
-        if (!gFlow?.conditionExpression) continue
-        conditions.push(...parseConditionExpression(gFlow.conditionExpression))
-      }
-    }
-  }
-
-  const grouped = new Map<string, ConditionLiteral[]>()
-  for (const cond of conditions) {
-    const list = grouped.get(cond.variable) ?? []
-    if (!list.some((existing) => sameLiteral(existing, cond.literal))) {
-      list.push(cond.literal)
-    }
-    grouped.set(cond.variable, list)
-  }
-
-  const fields: TaskFormField[] = []
-  for (const [variable, literals] of grouped) {
-    fields.push({
-      name: variable,
-      type: literals[0]?.type,
-      suggestedValues: literals.map((l) => l.value),
-      source: "inferred-from-gateway",
-    })
-  }
-  return fields
-}
-
-function sameLiteral(a: ConditionLiteral, b: ConditionLiteral): boolean {
-  return a.type === b.type && a.value === b.value
-}
-
-const SEQ_FLOW_SELF_RE = /<(?:[\w]+:)?sequenceFlow\b([^>]*?)\/>/g
-const SEQ_FLOW_BLOCK_RE =
-  /<(?:[\w]+:)?sequenceFlow\b([^>]*?)(?<!\/)>([\s\S]*?)<\/(?:[\w]+:)?sequenceFlow>/g
-
-function parseSequenceFlows(bpmnXml: string): SequenceFlow[] {
-  const flows: SequenceFlow[] = []
-  for (const match of bpmnXml.matchAll(SEQ_FLOW_SELF_RE)) {
-    const flow = buildFlow(match[1] ?? "", "")
-    if (flow) flows.push(flow)
-  }
-  for (const match of bpmnXml.matchAll(SEQ_FLOW_BLOCK_RE)) {
-    const flow = buildFlow(match[1] ?? "", match[2] ?? "")
-    if (flow) flows.push(flow)
-  }
-  return flows
-}
-
-function buildFlow(attrs: string, inner: string): SequenceFlow | null {
-  const id = readAttr(attrs, "id")
-  const sourceRef = readAttr(attrs, "sourceRef")
-  const targetRef = readAttr(attrs, "targetRef")
-  if (!id || !sourceRef || !targetRef) return null
-  const conditionMatch = inner.match(
-    /<(?:[\w]+:)?conditionExpression[^>]*>([\s\S]*?)<\/(?:[\w]+:)?conditionExpression>/,
-  )
-  const conditionExpression = conditionMatch ? decodeXml(conditionMatch[1].trim()) : null
-  return { id, sourceRef, targetRef, conditionExpression }
-}
-
-function parseGatewayIds(bpmnXml: string): Set<string> {
-  const ids = new Set<string>()
-  const gatewayRe = /<(?:[\w]+:)?(?:exclusiveGateway|inclusiveGateway|complexGateway)\b([^>]*)/g
-  for (const match of bpmnXml.matchAll(gatewayRe)) {
-    const id = readAttr(match[1] ?? "", "id")
-    if (id) ids.add(id)
-  }
-  return ids
-}
-
-function parseElementOutgoing(bpmnXml: string, elementId: string): string[] {
+  // Find the user task block
   const blockRe = new RegExp(
-    `<(?:[\\w]+:)?(\\w+)\\b([^>]*\\bid="${escapeRegex(elementId)}"[^>]*)>([\\s\\S]*?)<\\/(?:[\\w]+:)?\\1>`,
+    `<(?:[\\w]+:)?userTask\\b[^>]*\\bid="${escapeRegex(taskDefinitionKey)}"[^>]*>([\\s\\S]*?)<\\/(?:[\\w]+:)?userTask>`,
     "m",
   )
-  const match = bpmnXml.match(blockRe)
-  if (!match) return []
-  const inner = match[3]
-  const outgoingRe = /<(?:[\w]+:)?outgoing>([^<]+)<\/(?:[\w]+:)?outgoing>/g
-  const result: string[] = []
-  for (const outMatch of inner.matchAll(outgoingRe)) {
-    const ref = outMatch[1]?.trim()
-    if (ref) result.push(ref)
+  const blockMatch = bpmnXml.match(blockRe)
+  if (!blockMatch) return []
+  const taskBlock = blockMatch[1] ?? ""
+
+  // Find the formData block within the task
+  const formDataMatch = taskBlock.match(
+    /<(?:[\w]+:)?formData\b[^>]*>([\s\S]*?)<\/(?:[\w]+:)?formData>/,
+  )
+  if (!formDataMatch) return []
+  const formDataBlock = formDataMatch[1] ?? ""
+
+  // Parse individual formField elements (self-closing and block)
+  const fields: TaskFormField[] = []
+  const fieldBlockRe = /<(?:[\w]+:)?formField\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:[\w]+:)?formField>)/g
+
+  for (const match of formDataBlock.matchAll(fieldBlockRe)) {
+    const attrs = match[1] ?? ""
+    const inner = match[2] ?? ""
+
+    const id = readAttr(attrs, "id")
+    if (!id) continue
+
+    const label = readAttr(attrs, "label") ?? undefined
+    const rawType = readAttr(attrs, "type") ?? undefined
+    const type = rawType ? (CAMUNDA_TYPE_MAP[rawType.toLowerCase()] ?? rawType) : undefined
+
+    // Check for readonly custom property
+    const readonly = /camunda:property\b[^>]*\bid="readonly"[^>]*\bvalue="true"/.test(inner)
+
+    // Parse <camunda:values> for suggestedValues
+    const suggestedValues: string[] = []
+    const valuesBlockMatch = inner.match(
+      /<(?:[\w]+:)?values\b[^>]*>([\s\S]*?)<\/(?:[\w]+:)?values>/,
+    )
+    if (valuesBlockMatch) {
+      const valueRe = /<(?:[\w]+:)?value\b([^>]*?)\/>/g
+      for (const vm of (valuesBlockMatch[1] ?? "").matchAll(valueRe)) {
+        const name = readAttr(vm[1] ?? "", "name")
+        if (name) suggestedValues.push(name)
+      }
+    }
+
+    fields.push({
+      name: id,
+      label,
+      type,
+      readonly: readonly || undefined,
+      suggestedValues: suggestedValues.length > 0 ? suggestedValues : undefined,
+      source: "form-data",
+    })
   }
-  return result
+
+  return fields
 }
 
 function readAttr(attrs: string, name: string): string | null {
@@ -146,15 +104,6 @@ function readAttr(attrs: string, name: string): string | null {
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-function decodeXml(s: string): string {
-  return s
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&")
 }
 
 // Identifier on either side, value on the other. Dotted identifiers like

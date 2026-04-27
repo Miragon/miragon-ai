@@ -3,11 +3,10 @@ import { getTaskFormInput } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getTask,
-  getFormVariables,
   getTaskVariables,
   getProcessDefinitionBpmn20Xml,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
-import { inferTaskFormFieldsFromBpmn } from "../lib/bpmn-task-form.js"
+import { extractEmbeddedFormFields } from "../lib/bpmn-task-form.js"
 
 type Register = ReturnType<typeof createToolRegistrar<Client>>
 
@@ -21,8 +20,8 @@ export interface BuildTaskFormSchemaOptions {
   task?: TaskMeta | null
   /**
    * Pre-fetched BPMN XML for the task's process definition. Pass `null`
-   * to skip the BPMN fetch entirely (no inference). Leave `undefined`
-   * (default) to fetch on demand.
+   * to skip the BPMN fetch entirely. Leave `undefined` (default) to fetch
+   * on demand.
    */
   bpmnXml?: string | null
 }
@@ -31,7 +30,7 @@ export function registerTaskFormTools(register: Register) {
   register({
     name: "camunda7_get_task_form",
     description:
-      "Derive a form schema for a user task. Combines Camunda form fields (when defined) with variables inferred from outgoing gateway conditions, plus the current task variables. Used by the support UI to render task-completion forms without hardcoded knowledge.",
+      "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`). Returns form fields with current variable values pre-filled. Fields marked readonly are for context only and will not be submitted. Returns an empty fields array when no form is defined on the task.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: getTaskFormInput.shape,
     handler: async (client, args): Promise<TaskFormSchema> => {
@@ -50,49 +49,33 @@ export async function buildTaskFormSchema(
   const taskDefinitionKey = taskMeta?.taskDefinitionKey ?? null
   const processDefinitionId = taskMeta?.processDefinitionId ?? null
 
-  const bpmnPromise =
+  const bpmnXml =
     "bpmnXml" in options
-      ? Promise.resolve(options.bpmnXml ?? null)
-      : fetchBpmnXml(client, processDefinitionId)
+      ? (options.bpmnXml ?? null)
+      : await fetchBpmnXml(client, processDefinitionId)
 
-  const [formVarsResult, currentVarsResult, bpmnXml] = await Promise.all([
-    getFormVariables({ client, path: { id: taskId } }).catch(() => null),
-    getTaskVariables({ client, path: { id: taskId } }).catch(() => ({})),
-    bpmnPromise,
-  ])
-
-  const formVars = (formVarsResult ?? {}) as Record<
-    string,
-    { value?: unknown; type?: string; valueInfo?: Record<string, unknown> }
-  >
-  const currentVariables = (currentVarsResult ?? {}) as Record<
-    string,
-    { value: unknown; type?: string }
-  >
-
-  const fields: TaskFormField[] = []
-  const seen = new Set<string>()
-
-  for (const [name, info] of Object.entries(formVars)) {
-    if (seen.has(name)) continue
-    fields.push({
-      name,
-      type: info.type,
-      defaultValue: info.value,
-      source: "form-data",
-    })
-    seen.add(name)
+  if (!bpmnXml || !taskDefinitionKey) {
+    return { taskId, fields: [] }
   }
 
-  if (bpmnXml && taskDefinitionKey) {
-    for (const inferred of inferTaskFormFieldsFromBpmn(bpmnXml, taskDefinitionKey)) {
-      if (seen.has(inferred.name)) continue
-      fields.push(inferred)
-      seen.add(inferred.name)
+  const fields = extractEmbeddedFormFields(bpmnXml, taskDefinitionKey)
+
+  if (fields.length === 0) {
+    return { taskId, fields: [] }
+  }
+
+  // Populate defaultValue for all fields from current task variables so the
+  // operator sees the actual values (especially important for readonly fields).
+  const currentVars = await fetchTaskVariables(client, taskId)
+  const filledFields: TaskFormField[] = fields.map((field) => {
+    const varEntry = currentVars[field.name]
+    if (varEntry !== undefined && field.defaultValue === undefined) {
+      return { ...field, defaultValue: varEntry.value }
     }
-  }
+    return field
+  })
 
-  return { taskId, fields, currentVariables }
+  return { taskId, fields: filledFields }
 }
 
 async function fetchTaskMeta(client: Client, taskId: string): Promise<TaskMeta | null> {
@@ -112,4 +95,14 @@ async function fetchBpmnXml(
     path: { id: processDefinitionId },
   }).catch(() => null)) as { bpmn20Xml?: string } | null
   return xmlResponse?.bpmn20Xml ?? null
+}
+
+async function fetchTaskVariables(
+  client: Client,
+  taskId: string,
+): Promise<Record<string, { value: unknown; type?: string }>> {
+  const result = (await getTaskVariables({ client, path: { id: taskId } }).catch(
+    () => ({}),
+  )) as Record<string, { value: unknown; type?: string }>
+  return result
 }
