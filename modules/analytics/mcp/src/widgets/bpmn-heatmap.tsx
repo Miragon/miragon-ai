@@ -97,6 +97,8 @@ function drawHeatLayer(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
+  rawWidth: number,
+  rawHeight: number,
   points: HeatPoint[],
   maxWeight: number,
   radiusPx: number,
@@ -118,8 +120,11 @@ function drawHeatLayer(
   }
   ctx.globalAlpha = 1
 
-  // Pass 2: colorize the alpha channel through the gradient LUT.
-  const img = ctx.getImageData(0, 0, width, height)
+  // Pass 2: colorize the alpha channel through the gradient LUT. getImageData
+  // operates in raw backing-store pixels and ignores the dpr transform, so we
+  // must use the canvas's raw dimensions or only the top-left CSS-sized
+  // quadrant gets colorized on retina displays.
+  const img = ctx.getImageData(0, 0, rawWidth, rawHeight)
   const data = img.data
   for (let i = 0, n = data.length; i < n; i += 4) {
     const a = data[i + 3]
@@ -266,7 +271,17 @@ export function BpmnHeatmap({
           weight: p.weight,
         }))
         const radiusPx = Math.max(20, diagramRadius * scale)
-        drawHeatLayer(ctx, rect.width, rect.height, screenPoints, maxWeight, radiusPx, gradientLut)
+        drawHeatLayer(
+          ctx,
+          rect.width,
+          rect.height,
+          heatCanvas.width,
+          heatCanvas.height,
+          screenPoints,
+          maxWeight,
+          radiusPx,
+          gradientLut,
+        )
       }
 
       redraw()
