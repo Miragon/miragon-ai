@@ -204,7 +204,7 @@ export function registerIncidentIssuePrompt(server: MCPServer, config: IncidentI
     {
       name: "report_incident_to_github",
       description:
-        "Report a Camunda 7 / CIB Seven engine incident as a GitHub issue. Requires the official GitHub MCP server (github/github-mcp-server) to be installed alongside this server.",
+        "Report a Camunda 7 / CIB Seven engine incident as a GitHub issue. Works with any GitHub-issue-creating capability the host exposes — the official github/github-mcp-server, Claude Desktop's first-party GitHub connector, or a `gh` CLI bash tool.",
       schema: incidentIssuePromptSchema,
     },
     async ({ incidentId, repository }) => {
@@ -219,9 +219,12 @@ export function registerIncidentIssuePrompt(server: MCPServer, config: IncidentI
         `1. Call the \`camunda7_format_incident_issue\` tool with \`incidentId="${incidentId}"\`${
           repository ? ` and \`repository="${repository}"\`` : ""
         }.`,
-        "2. Take the returned `{title, body, labels, suggestedRepository}` payload and call the **GitHub MCP server**'s `create_issue` tool with those exact fields. Use `suggestedRepository` (split into `owner` and `repo`) as the target.",
-        `3. ${targetClause}`,
-        "4. Confirm to the user with the URL of the created issue.",
+        "2. Find an available GitHub issue-creation capability among the tools and connectors currently exposed to you. Possible providers (any one is fine): the official `github/github-mcp-server` (tool `create_issue`), Claude Desktop's first-party GitHub connector (often namespaced like `Github:create_issue` or `github_create_issue`), or a generic `gh` CLI bash tool. Pick whichever is actually available — do NOT insist on a specific tool name.",
+        "3. Call that capability with the `{title, body, labels}` from step 1 and `suggestedRepository` (split into `owner` and `repo`) as the target repository.",
+        `4. ${targetClause}`,
+        "5. Confirm to the user with the URL of the created issue.",
+        "",
+        "If you genuinely cannot find ANY GitHub-issue-creating tool in your current toolset, say so explicitly and print the formatted `{title, body}` so the user can paste it into GitHub manually — do not claim 'no integration exists' without having scanned the available tools first.",
         "",
         "Do NOT modify the title or body — they already match the project's bug-report template. Only set additional fields (e.g. assignees) if the user explicitly asks.",
       ].join("\n")
