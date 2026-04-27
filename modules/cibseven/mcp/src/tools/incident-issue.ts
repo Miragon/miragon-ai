@@ -96,7 +96,11 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
     "",
     "### Actual Behaviour",
     "",
-    `An incident of type \`${incidentType}\` is raised. See engine context below.`,
+    `An incident of type \`${incidentType}\` is raised.`,
+    "",
+    condensedStack
+      ? `Stacktrace (condensed — framework/JDK frames removed):\n\n\`\`\`\n${condensedStack}\n\`\`\``
+      : "_No stacktrace available._",
     "",
     "### Engine context",
     "",
@@ -120,7 +124,6 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
     "",
     "CIB Seven",
     "",
-    condensedStack ? `### Stacktrace (condensed)\n\n\`\`\`\n${condensedStack}\n\`\`\`\n` : "",
     cockpitLink ? `### Cockpit\n\n${cockpitLink}\n` : "",
     "_Filed via the `camunda7_format_incident_issue` MCP tool._",
   ]

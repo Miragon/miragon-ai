@@ -179,21 +179,26 @@ describe("buildIncidentIssuePayload", () => {
       stacktrace,
       repository: "owner/repo",
     })
-    expect(result.body).toContain("### Stacktrace (condensed)")
+    expect(result.body).toContain("Stacktrace (condensed")
     expect(result.body).toContain("RuntimeException: invoice service unreachable")
     expect(result.body).toContain("SendInvoiceDelegate")
     expect(result.body).toContain("Caused by: java.net.ConnectException")
     expect(result.body).toContain("HttpClient.connect")
+    // Stacktrace must be in the body BEFORE the engine context table so it
+    // survives URL truncation (which slices from the end).
+    expect(result.body.indexOf("Stacktrace (condensed")).toBeLessThan(
+      result.body.indexOf("### Engine context"),
+    )
   })
 
-  it("omits the stacktrace section when no stacktrace is available", () => {
+  it("shows a placeholder under Actual Behaviour when no stacktrace is available", () => {
     const result = buildIncidentIssuePayload({
       incident: baseIncident,
       processDefinition: baseDefinition,
       stacktrace: null,
       repository: "owner/repo",
     })
-    expect(result.body).not.toContain("### Stacktrace")
+    expect(result.body).toContain("_No stacktrace available._")
   })
 
   it("trims trailing slashes from cockpitUrl when building the deeplink", () => {
