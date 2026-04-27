@@ -63,6 +63,10 @@ export async function clusterCompare(
     ? `AND activity_id = ${escapeString(params.elementId)}`
     : ""
 
+  // Camunda's history exporter writes one row per state transition; collapse
+  // them via GROUP BY id and compute durations from dateDiff(start, end)
+  // because `duration_in_millis` on the process_instances table is null in
+  // CIB-Seven exports — only the activity rows ever populate it.
   const kpiSql = `
 WITH
     parseDateTimeBestEffort(${ts}) AS deploy_ts,
@@ -74,11 +78,20 @@ SELECT
     countIf(state = 'COMPLETED') AS completed_count,
     countIf(state = 'INTERNALLY_TERMINATED') AS failed_count,
     round(countIf(state = 'INTERNALLY_TERMINATED') * 100.0 / count(), 2) AS failure_rate_pct,
-    round(avg(duration_in_millis) / 1000, 1) AS avg_duration_sec,
-    round(quantile(0.95)(duration_in_millis) / 1000, 1) AS p95_duration_sec,
+    round(avg(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS avg_duration_sec,
+    round(quantile(0.95)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS p95_duration_sec,
     toString(min(start_time)) AS window_from,
     toString(max(start_time)) AS window_to
-FROM camunda_history.camunda_process_instances
+FROM (
+    SELECT
+        id,
+        any(process_definition_key) AS process_definition_key,
+        argMax(state, timestamp) AS state,
+        min(start_time) AS start_time,
+        max(end_time) AS end_time
+    FROM camunda_history.camunda_process_instances
+    GROUP BY id
+) sub
 WHERE start_time >= before_from
     AND start_time < after_to
     AND end_time IS NOT NULL

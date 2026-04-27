@@ -14,6 +14,7 @@ import { VariableSearchWidget, type VariableSearchData } from "./variable-search
 import { ExecutionTraceWidget, type ExecutionTraceData } from "./execution-trace.js"
 import { PathFrequencyWidget, type PathFrequencyData } from "./path-frequency.js"
 import { ClusterCompareWidget, type ClusterCompareData } from "./cluster-compare.js"
+import { VersionCompareWidget, type VersionCompareData } from "./version-compare.js"
 
 export type {
   AnalyticsDashboardData,
@@ -22,6 +23,7 @@ export type {
   ExecutionTraceData,
   PathFrequencyData,
   ClusterCompareData,
+  VersionCompareData,
 }
 
 export const ANALYTICS_DATA_TYPES = {
@@ -31,6 +33,7 @@ export const ANALYTICS_DATA_TYPES = {
   executionTrace: "analytics:executionTrace",
   pathFrequency: "analytics:pathFrequency",
   clusterCompare: "analytics:clusterCompare",
+  versionCompare: "analytics:versionCompare",
 } as const
 
 export const analyticsWidgets: Record<string, WidgetComponent> = {
@@ -81,5 +84,9 @@ export const analyticsWidgets: Record<string, WidgetComponent> = {
   "analytics:cluster-compare": adaptDataWidget(
     ClusterCompareWidget,
     ANALYTICS_DATA_TYPES.clusterCompare,
+  ),
+  "analytics:version-compare": adaptDataWidget(
+    VersionCompareWidget,
+    ANALYTICS_DATA_TYPES.versionCompare,
   ),
 }

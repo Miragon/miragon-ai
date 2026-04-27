@@ -28,3 +28,9 @@ export type {
   ClusterCompareKpi,
   ClusterCompareDelta,
 } from "./cluster-compare.js"
+export { versionCompare } from "./version-compare.js"
+export type {
+  VersionCompareResult,
+  VersionCompareKpi,
+  VersionCompareDelta,
+} from "./version-compare.js"

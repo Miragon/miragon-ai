@@ -12,6 +12,14 @@ export const pathFrequencyInput = z.object({
       "Minimum number of instances per path before it is returned. Prevents leakage of rare/individual executions.",
     ),
   limit: z.number().int().min(1).max(50).default(20).describe("Maximum number of paths to return"),
+  version: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe(
+      "Restrict the analysis to a single deployed process definition version. Combine with analytics_version_compare to render per-version flow diagrams side-by-side.",
+    ),
 })
 
 export const elementBottleneckInput = z.object({

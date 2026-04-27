@@ -60,6 +60,9 @@ export async function analyzePerformance(
     "90d": "90 DAY",
   }[params.period as "1d" | "7d" | "30d" | "90d"]
 
+  // GROUP BY id first to collapse Camunda's per-state-transition rows, then
+  // compute durations via dateDiff because the exporter never populates
+  // `duration_in_millis` on process_instance rows.
   const kpiSql = `
 SELECT
     process_definition_key,
@@ -67,12 +70,21 @@ SELECT
     countIf(state = 'COMPLETED') AS completed,
     countIf(state = 'INTERNALLY_TERMINATED') AS failed,
     round(countIf(state = 'INTERNALLY_TERMINATED') * 100.0 / count(), 2) AS failure_rate_pct,
-    round(avg(duration_in_millis) / 1000, 1) AS avg_duration_sec,
-    round(quantile(0.5)(duration_in_millis) / 1000, 1) AS median_duration_sec,
-    round(quantile(0.95)(duration_in_millis) / 1000, 1) AS p95_duration_sec,
+    round(avg(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS avg_duration_sec,
+    round(quantile(0.5)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS median_duration_sec,
+    round(quantile(0.95)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS p95_duration_sec,
     min(start_time) AS earliest,
     max(start_time) AS latest
-FROM camunda_history.camunda_process_instances
+FROM (
+    SELECT
+        id,
+        any(process_definition_key) AS process_definition_key,
+        argMax(state, timestamp) AS state,
+        min(start_time) AS start_time,
+        max(end_time) AS end_time
+    FROM camunda_history.camunda_process_instances
+    GROUP BY id
+) sub
 WHERE process_definition_key = ${escapeString(params.processDefinitionKey)}
     AND end_time IS NOT NULL
     AND start_time >= now() - INTERVAL ${interval}
@@ -117,10 +129,13 @@ export async function comparePeriods(
   },
 ): Promise<PeriodComparisonResult> {
   const key = escapeString(params.processDefinitionKey)
-  const aFrom = escapeString(params.periodAFrom)
-  const aTo = escapeString(params.periodATo)
-  const bFrom = escapeString(params.periodBFrom)
-  const bTo = escapeString(params.periodBTo)
+  // Wrap in parseDateTimeBestEffort so callers can pass ISO 8601 strings
+  // (`2026-03-28T20:41:43.585Z`) — ClickHouse can't auto-coerce those to
+  // DateTime64 in a comparison.
+  const aFrom = `parseDateTimeBestEffort(${escapeString(params.periodAFrom)})`
+  const aTo = `parseDateTimeBestEffort(${escapeString(params.periodATo)})`
+  const bFrom = `parseDateTimeBestEffort(${escapeString(params.periodBFrom)})`
+  const bTo = `parseDateTimeBestEffort(${escapeString(params.periodBTo)})`
 
   const kpiSql = `
 SELECT
@@ -132,10 +147,19 @@ SELECT
     countIf(state = 'COMPLETED') AS completed,
     countIf(state = 'INTERNALLY_TERMINATED') AS failed,
     round(countIf(state = 'INTERNALLY_TERMINATED') * 100.0 / count(), 2) AS failure_rate_pct,
-    round(avg(duration_in_millis) / 1000, 1) AS avg_duration_sec,
-    round(quantile(0.5)(duration_in_millis) / 1000, 1) AS median_sec,
-    round(quantile(0.95)(duration_in_millis) / 1000, 1) AS p95_sec
-FROM camunda_history.camunda_process_instances
+    round(avg(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS avg_duration_sec,
+    round(quantile(0.5)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS median_sec,
+    round(quantile(0.95)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS p95_sec
+FROM (
+    SELECT
+        id,
+        any(process_definition_key) AS process_definition_key,
+        argMax(state, timestamp) AS state,
+        min(start_time) AS start_time,
+        max(end_time) AS end_time
+    FROM camunda_history.camunda_process_instances
+    GROUP BY id
+) sub
 WHERE process_definition_key = ${key}
     AND end_time IS NOT NULL
     AND (

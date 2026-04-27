@@ -1,5 +1,6 @@
 package com.camunda7mcp.example.cibseven.delegates
 
+import com.camunda7mcp.example.cibseven.seeders.SeedClock
 import org.cibseven.bpm.engine.delegate.DelegateExecution
 import org.cibseven.bpm.engine.delegate.JavaDelegate
 import org.slf4j.LoggerFactory
@@ -11,6 +12,7 @@ class SendPolicyDelegate : JavaDelegate {
     private val log = LoggerFactory.getLogger(SendPolicyDelegate::class.java)
 
     override fun execute(execution: DelegateExecution) {
+        SeedClock.maybeAdvanceForActivity()
         // Narrow rollback regression band: MiraveloLeasingSeeder marks instances
         // in the rollback window with `_simulatePolicyRenderFailure=true`, when
         // the policy template was mis-rendered. Surfaces as a job-level

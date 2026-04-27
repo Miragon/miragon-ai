@@ -33,6 +33,9 @@ export type {
   ClusterCompareResult,
   ClusterCompareKpi,
   ClusterCompareDelta,
+  VersionCompareResult,
+  VersionCompareKpi,
+  VersionCompareDelta,
 } from "./queries/index.js"
 
 export type {

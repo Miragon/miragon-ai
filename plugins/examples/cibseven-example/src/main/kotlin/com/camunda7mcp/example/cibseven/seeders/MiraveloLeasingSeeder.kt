@@ -1,5 +1,6 @@
 package com.camunda7mcp.example.cibseven.seeders
 
+import org.cibseven.bpm.engine.RepositoryService
 import org.cibseven.bpm.engine.RuntimeService
 import org.cibseven.bpm.engine.TaskService
 import org.slf4j.LoggerFactory
@@ -48,6 +49,7 @@ import kotlin.random.Random
 class MiraveloLeasingSeeder(
     private val runtimeService: RuntimeService,
     private val taskService: TaskService,
+    private val repositoryService: RepositoryService,
     private val jobDrainer: JobDrainer,
     @Value("\${seed.instances:200}") private val legacyInstances: Int,
     @Value("\${seed.completed-ratio:0.7}") private val legacyCompletedRatio: Double,
@@ -55,6 +57,8 @@ class MiraveloLeasingSeeder(
     @Value("\${seed.buggy-era-days:15}") private val legacyBuggyEraDays: Int,
     @Value("\${seed.buggy-era-failure-rate:0.15}") private val legacyBuggyEraFailureRate: Double,
     @Value("\${seed.fax-channel-rate:0.01}") private val legacyFaxChannelRate: Double,
+    @Value("\${seed.current-era-failure-rate:0.04}") private val legacyCurrentEraFailureRate: Double,
+    @Value("\${seed.v2-share:0.5}") private val v2Share: Double,
 ) : ProcessSeeder {
 
     private val log = LoggerFactory.getLogger(MiraveloLeasingSeeder::class.java)
@@ -78,6 +82,10 @@ class MiraveloLeasingSeeder(
         val rollbackEraStartDaysAgo: Int,
         val rollbackEraEndDaysAgo: Int,
         val rollbackEraFailureRate: Double,
+        // Recent failures inside the last 7 days so analytics_show_dashboard
+        // (period=7d default) renders Incidents > 0. Distinct from buggyEra
+        // (15..30 days ago) which anchors the IMPROVED cluster-compare verdict.
+        val currentEraFailureRate: Double,
     )
 
     private fun configFor(profile: SeedProfile): Config = when (profile) {
@@ -96,6 +104,7 @@ class MiraveloLeasingSeeder(
             rollbackEraStartDaysAgo = 0,
             rollbackEraEndDaysAgo = 0,
             rollbackEraFailureRate = 0.0,
+            currentEraFailureRate = legacyCurrentEraFailureRate,
         )
         SeedProfile.MINIMAL -> Config(
             instances = 80,
@@ -112,6 +121,7 @@ class MiraveloLeasingSeeder(
             rollbackEraStartDaysAgo = 0,
             rollbackEraEndDaysAgo = 0,
             rollbackEraFailureRate = 0.0,
+            currentEraFailureRate = 0.04,
         )
         SeedProfile.PRESENTATION -> Config(
             instances = 600,
@@ -128,6 +138,7 @@ class MiraveloLeasingSeeder(
             rollbackEraStartDaysAgo = 10,
             rollbackEraEndDaysAgo = 7,
             rollbackEraFailureRate = 0.12,
+            currentEraFailureRate = 0.08,
         )
     }
 
@@ -163,14 +174,39 @@ class MiraveloLeasingSeeder(
         } else {
             null
         }
+        // Current-era band = last 7 days. Falls inside the default
+        // analytics_show_dashboard window so Incidents > 0 without depending on
+        // a longer window selection.
+        val currentEraStart = now.minus(7, ChronoUnit.DAYS)
         val completedCount = (cfg.instances * cfg.completedRatio).toInt()
+
+        // Resolve the deployed v1 / v2 process_definition_ids so each instance
+        // can be started against a specific version. Camunda's
+        // startProcessInstanceByKey would always pick the latest — instead we
+        // dispatch by id so analytics_version_compare sees a real population
+        // on both versions.
+        val v1Id = findVersionId(processKey, version = 1)
+        val v2Id = findVersionId(processKey, version = 2)
+        if (v1Id == null) {
+            log.warn("miraveloLeasing v1 not deployed — skipping seed run.")
+            return
+        }
+        log.info(
+            "miraveloLeasing v1Id={} v2Id={} v2Share={}",
+            v1Id,
+            v2Id ?: "<not deployed>",
+            v2Share,
+        )
 
         var seededFax = 0
         var seededBlacklistOutage = 0
+        var seededCurrentEraFailure = 0
         var seededRollbackPolicyFailure = 0
         var seededTimerEscalation = 0
         var seededCargoLongTermDead = 0
         var seededRiskIdentified = 0
+        var seededV1 = 0
+        var seededV2 = 0
 
         for (i in 1..cfg.instances) {
             val startTime = SeedClock.randomInstantWithin(now, cfg.daysBack)
@@ -203,6 +239,7 @@ class MiraveloLeasingSeeder(
                 rollbackEnd != null &&
                 startTime.isAfter(rollbackStart) &&
                 startTime.isBefore(rollbackEnd)
+            val inCurrentEra = startTime.isAfter(currentEraStart)
 
             if (channel == "FAX") seededFax++
             if (bikeModel == "cargo" && leaseTermMonths > 24) seededCargoLongTermDead++
@@ -227,8 +264,19 @@ class MiraveloLeasingSeeder(
                 variables["_simulatePolicyRenderFailure"] = true
                 seededRollbackPolicyFailure++
             }
+            if (inCurrentEra && Random.nextDouble() < cfg.currentEraFailureRate) {
+                // Reuse the existing blacklist-outage variable so we don't
+                // grow the delegate surface — the analytics dashboard sees
+                // an open incident on Activity_CheckBlacklist within the
+                // default 7-day window.
+                variables["_simulateBlacklistOutage"] = true
+                seededCurrentEraFailure++
+            }
 
-            val instance = runtimeService.startProcessInstanceByKey("miraveloLeasing", customerId, variables)
+            val pickV2 = v2Id != null && Random.nextDouble() < v2Share
+            val targetId = if (pickV2) v2Id else v1Id
+            if (pickV2) seededV2++ else seededV1++
+            val instance = runtimeService.startProcessInstanceById(targetId, customerId, variables)
             // Drain the asyncBefore CheckBlacklist job (sub-process) and any
             // SendPolicy job that follows in the creditworthy branch. For
             // bug-era instances the failing job decrements retries until an
@@ -258,16 +306,27 @@ class MiraveloLeasingSeeder(
         }
 
         log.info(
-            "miraveloLeasing seeding complete. instances={} risk-identified={} fax={} blacklist-outage={} rollback-policy-failure={} timer-escalation={} cargo-over-24mo={} (cargo-dead must be 0 when capCargoLeaseTerm=true)",
+            "miraveloLeasing seeding complete. instances={} v1={} v2={} risk-identified={} fax={} blacklist-outage={} current-era-failure={} rollback-policy-failure={} timer-escalation={} cargo-over-24mo={} (cargo-dead must be 0 when capCargoLeaseTerm=true)",
             cfg.instances,
+            seededV1,
+            seededV2,
             seededRiskIdentified,
             seededFax,
             seededBlacklistOutage,
+            seededCurrentEraFailure,
             seededRollbackPolicyFailure,
             seededTimerEscalation,
             seededCargoLongTermDead,
         )
     }
+
+    private fun findVersionId(processKey: String, version: Int): String? =
+        repositoryService
+            .createProcessDefinitionQuery()
+            .processDefinitionKey(processKey)
+            .processDefinitionVersion(version)
+            .singleResult()
+            ?.id
 
     private fun completeDecisionTask(processInstanceId: String, taskId: String, startTime: Instant) {
         // Cap latency at 110 min so the 2 h non-interrupting timer boundary

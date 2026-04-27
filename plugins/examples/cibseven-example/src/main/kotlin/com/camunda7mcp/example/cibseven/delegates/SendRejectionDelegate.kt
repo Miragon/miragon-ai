@@ -1,5 +1,6 @@
 package com.camunda7mcp.example.cibseven.delegates
 
+import com.camunda7mcp.example.cibseven.seeders.SeedClock
 import org.cibseven.bpm.engine.delegate.DelegateExecution
 import org.cibseven.bpm.engine.delegate.JavaDelegate
 import org.slf4j.LoggerFactory
@@ -11,6 +12,7 @@ class SendRejectionDelegate : JavaDelegate {
     private val log = LoggerFactory.getLogger(SendRejectionDelegate::class.java)
 
     override fun execute(execution: DelegateExecution) {
+        SeedClock.maybeAdvanceForActivity()
         log.info("Sending rejection notice to customer {}", execution.getVariable("customerId"))
         execution.setVariable("rejectionSent", true)
     }

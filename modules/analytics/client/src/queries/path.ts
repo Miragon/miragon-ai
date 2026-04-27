@@ -19,6 +19,7 @@ export interface PathFrequencyResult {
   minBucketSize: number
   suppressedPaths: number
   suppressedEdges: number
+  version: number | null
 }
 
 const INTERVALS = { "1d": "1 DAY", "7d": "7 DAY", "30d": "30 DAY", "90d": "90 DAY" } as const
@@ -30,12 +31,21 @@ export async function pathFrequency(
     period: keyof typeof INTERVALS
     minBucketSize: number
     limit: number
+    version?: number
   },
 ): Promise<PathFrequencyResult> {
   const interval = INTERVALS[params.period]
   const key = escapeString(params.processDefinitionKey)
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
   const limit = Math.max(1, Math.floor(params.limit))
+  const version =
+    params.version !== undefined && params.version > 0 ? Math.floor(params.version) : null
+  // Camunda's process_definition_id format is `key:version:uuid`. Filtering with
+  // a LIKE prefix is the canonical way to scope to one version because the
+  // ClickHouse schema does not store version as its own column.
+  const versionFilter = version
+    ? `AND process_definition_id LIKE ${escapeString(`${params.processDefinitionKey}:${version}:%`)}`
+    : ""
 
   // Activities ordered by start_time per process_instance become the path signature.
   // Min-bucket-size is enforced server-side so rare paths never leave ClickHouse.
@@ -50,6 +60,7 @@ WITH per_instance AS (
     WHERE process_definition_key = ${key}
         AND start_time >= now() - INTERVAL ${interval}
         AND activity_id != ''
+        ${versionFilter}
     GROUP BY process_instance_id
 )`
 
@@ -118,5 +129,6 @@ FROM (
     minBucketSize: minBucket,
     suppressedPaths: Math.max(0, (pathsTotal[0]?.total_paths ?? 0) - paths.length),
     suppressedEdges: Math.max(0, (edgesTotal[0]?.total_edges ?? 0) - edges.length),
+    version,
   }
 }

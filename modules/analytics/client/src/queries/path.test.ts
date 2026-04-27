@@ -80,4 +80,33 @@ describe("pathFrequency", () => {
     expect(sql[0]).toContain("'o\\'brien'")
     expect(sql[0]).not.toContain("'o'brien'")
   })
+
+  it("scopes to a single version when version is provided", async () => {
+    const { client, sql } = recordingClient([[], [], [{ total_paths: 0 }], [{ total_edges: 0 }]])
+
+    const result = await pathFrequency(client, {
+      processDefinitionKey: "miraveloLeasing",
+      period: "30d",
+      minBucketSize: 10,
+      limit: 20,
+      version: 2,
+    })
+
+    expect(result.version).toBe(2)
+    expect(sql[0]).toContain("process_definition_id LIKE 'miraveloLeasing:2:%'")
+  })
+
+  it("does not inject a version filter when version is omitted", async () => {
+    const { client, sql } = recordingClient([[], [], [{ total_paths: 0 }], [{ total_edges: 0 }]])
+
+    const result = await pathFrequency(client, {
+      processDefinitionKey: "miraveloLeasing",
+      period: "30d",
+      minBucketSize: 10,
+      limit: 20,
+    })
+
+    expect(result.version).toBeNull()
+    expect(sql[0]).not.toContain("process_definition_id LIKE")
+  })
 })
