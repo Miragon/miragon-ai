@@ -22,7 +22,7 @@ export function adaptDataWidget<T>(
   function AdaptedWidget({ context, widgetProps }: WidgetProps) {
     const stepResult = Object.values(context.steps).find((s) => s._dataType === dataType)
     const data = (stepResult?.data ?? null) as T | null
-    return <Widget data={data} {...(widgetProps ?? {})} />
+    return <Widget {...(widgetProps ?? {})} data={data} />
   }
   AdaptedWidget.displayName = `Adapted(${Widget.displayName ?? Widget.name ?? "Widget"})`
   return AdaptedWidget
