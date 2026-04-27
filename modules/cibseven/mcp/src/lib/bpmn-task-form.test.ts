@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import { inferTaskFormFieldsFromBpmn, parseConditionExpression } from "./bpmn-task-form.js"
+import { extractEmbeddedFormFields, parseConditionExpression } from "./bpmn-task-form.js"
 
 const miraveloBpmn = readFileSync(
   new URL(
@@ -73,23 +73,37 @@ describe("parseConditionExpression", () => {
   })
 })
 
-describe("inferTaskFormFieldsFromBpmn — Miravelo Decide on Application", () => {
-  it("derives `decision` field with positive/negative values from the gateway", () => {
-    const fields = inferTaskFormFieldsFromBpmn(miraveloBpmn, "Activity_DecideOnApplication")
+describe("extractEmbeddedFormFields — Miravelo Decide on Application", () => {
+  it("returns all form fields from camunda:formData", () => {
+    const fields = extractEmbeddedFormFields(miraveloBpmn, "Activity_DecideOnApplication")
+    expect(fields.length).toBeGreaterThan(0)
+    const names = fields.map((f) => f.name)
+    expect(names).toContain("decision")
+    expect(names).toContain("creditScore")
+  })
+
+  it("marks readonly fields correctly", () => {
+    const fields = extractEmbeddedFormFields(miraveloBpmn, "Activity_DecideOnApplication")
+    const creditScore = fields.find((f) => f.name === "creditScore")
+    expect(creditScore?.readonly).toBe(true)
     const decision = fields.find((f) => f.name === "decision")
-    expect(decision).toBeDefined()
-    expect(decision?.source).toBe("inferred-from-gateway")
-    expect(decision?.type).toBe("String")
+    expect(decision?.readonly).toBeUndefined()
+  })
+
+  it("populates suggestedValues for decision field", () => {
+    const fields = extractEmbeddedFormFields(miraveloBpmn, "Activity_DecideOnApplication")
+    const decision = fields.find((f) => f.name === "decision")
     expect(decision?.suggestedValues).toContain("positive")
+    expect(decision?.suggestedValues).toContain("negative")
   })
 
-  it("returns no fields for a task that does not exist", () => {
-    expect(inferTaskFormFieldsFromBpmn(miraveloBpmn, "Activity_DoesNotExist")).toEqual([])
+  it("returns empty array for a task without formData", () => {
+    expect(extractEmbeddedFormFields(miraveloBpmn, "Activity_DoesNotExist")).toEqual([])
   })
 
-  it("returns no fields for a task whose downstream has no conditions", () => {
-    // Activity_AccelerateDecision goes to Event_DecisionAccelerated (an end
-    // event), no gateway with conditions in between.
-    expect(inferTaskFormFieldsFromBpmn(miraveloBpmn, "Activity_AccelerateDecision")).toEqual([])
+  it("returns readonly-only fields for AccelerateDecision (no decision field)", () => {
+    const fields = extractEmbeddedFormFields(miraveloBpmn, "Activity_AccelerateDecision")
+    expect(fields.length).toBeGreaterThan(0)
+    expect(fields.every((f) => f.readonly === true)).toBe(true)
   })
 })

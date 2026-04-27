@@ -36,7 +36,7 @@ export interface TaskData {
   description: string | null
 }
 
-export type TaskFormFieldSource = "form-data" | "inferred-from-gateway" | "manual"
+export type TaskFormFieldSource = "form-data" | "manual"
 
 export interface TaskFormField {
   name: string
@@ -45,13 +45,13 @@ export interface TaskFormField {
   defaultValue?: unknown
   suggestedValues?: unknown[]
   required?: boolean
+  readonly?: boolean
   source: TaskFormFieldSource
 }
 
 export interface TaskFormSchema {
   taskId: string
   fields: TaskFormField[]
-  currentVariables: Record<string, { value: unknown; type?: string }>
 }
 
 export interface OpenUserTask extends TaskData {
