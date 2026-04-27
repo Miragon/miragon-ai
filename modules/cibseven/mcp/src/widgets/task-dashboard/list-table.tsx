@@ -17,7 +17,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { TaskDashboardData, TaskData } from "@miragon-ai/client-cibseven"
-import { TaskCompleteForm } from "./task-complete-form.js"
+import { TaskCompleteForm } from "../task-complete-form.js"
 
 export type { TaskDashboardData }
 
@@ -61,7 +61,7 @@ interface TaskState {
   completed: boolean
 }
 
-export function TaskDashboardWidget({ data }: { data: TaskDashboardData | null }) {
+export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
   const [taskStates, setTaskStates] = useState<Map<string, TaskState>>(new Map())
   const [claimingTaskId, setClaimingTaskId] = useState<string | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)

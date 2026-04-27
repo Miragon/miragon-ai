@@ -1,36 +1,14 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-
 import {
   CountPill,
-  KpiGrid,
   SectionHeading,
-  WidgetHeader,
   WidgetShell,
   useHostActions,
   type HostActions,
-  type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
-
-import type { CockpitDashboardData, DefinitionStat } from "@miragon-ai/client-cibseven"
-
-import { CAMUNDA7_SHOW_PROCESS_DETAIL } from "../tool-names.js"
-
-export type { CockpitDashboardData }
-
-interface DefinitionRow extends DefinitionStat {
-  totalIncidents: number
-  tone: ToneVariant
-}
-
-function severityTone(failedJobs: number, totalIncidents: number, instances: number): ToneVariant {
-  if (totalIncidents > 0) return "critical"
-  if (failedJobs > 0) return "warning"
-  // No incidents and no failed jobs, but also no running instances — the
-  // definition is deployed but unused; surface it neutrally rather than
-  // green-flagging it as "Healthy".
-  if (instances === 0) return "neutral"
-  return "success"
-}
+import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
+import { CAMUNDA7_SHOW_PROCESS_DETAIL } from "../../tool-names.js"
+import { buildRows, type DefinitionRow } from "./lib.js"
 
 function ProcessRow({
   row,
@@ -89,7 +67,7 @@ function ProcessRow({
   )
 }
 
-export function CockpitDashboardWidget({ data }: { data: CockpitDashboardData | null }) {
+export function ProcessDefinitionsTable({ data }: { data: CockpitDashboardData | null }) {
   const host: HostActions = useHostActions()
 
   function openDetail(processDefinitionKey: string) {
@@ -108,62 +86,10 @@ export function CockpitDashboardWidget({ data }: { data: CockpitDashboardData | 
     )
   }
 
-  const { summary, definitions } = data
-
-  const rows: DefinitionRow[] = definitions.map((def) => {
-    const totalIncidents = def.incidents.reduce((s, i) => s + i.incidentCount, 0)
-    return {
-      ...def,
-      totalIncidents,
-      tone: severityTone(def.failedJobs, totalIncidents, def.instances),
-    }
-  })
-
-  const healthyCount = rows.filter((r) => r.tone === "success").length
-  const affectedCount = rows.filter((r) => r.tone === "critical" || r.tone === "warning").length
+  const rows = buildRows(data)
 
   return (
     <WidgetShell>
-      <WidgetHeader
-        icon="▦"
-        iconTone="info"
-        title="Cockpit"
-        sub={
-          <span>
-            Übersicht aller Prozesse · {summary.totalDefinitions}{" "}
-            {summary.totalDefinitions === 1 ? "Prozess" : "Prozesse"}
-          </span>
-        }
-      />
-
-      <KpiGrid
-        boxed
-        header={{ label: "Health", badge: "Status der Prozesslandschaft" }}
-        cells={[
-          {
-            label: "Prozesse gesamt",
-            value: summary.totalDefinitions,
-          },
-          {
-            label: "Healthy",
-            value: healthyCount,
-            fraction: ` /${summary.totalDefinitions}`,
-            tone: healthyCount > 0 ? "success" : undefined,
-          },
-          {
-            label: "Affected",
-            value: affectedCount,
-            fraction: ` /${summary.totalDefinitions}`,
-            tone: affectedCount > 0 ? "critical" : undefined,
-          },
-          {
-            label: "Open Incidents",
-            value: summary.totalIncidents,
-            tone: summary.totalIncidents > 0 ? "critical" : undefined,
-          },
-        ]}
-      />
-
       <section>
         <SectionHeading title="Alle Prozesse" hint={`${rows.length} deployed`} />
 

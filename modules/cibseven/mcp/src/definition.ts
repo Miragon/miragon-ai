@@ -49,7 +49,7 @@ export const definition: AppDefinition = {
       propsSchema: processListPropsSchema,
     },
     {
-      id: "camunda7:task-dashboard",
+      id: "camunda7:task-list-table",
       requires: ["camunda7:tasks"],
       size: "full",
     },
@@ -59,12 +59,32 @@ export const definition: AppDefinition = {
       size: "full",
     },
     {
-      id: "camunda7:incidents-dashboard",
+      id: "camunda7:incident-overview-kpi",
       requires: ["camunda7:incidentsDashboardData"],
       size: "full",
     },
     {
-      id: "camunda7:process-incidents",
+      id: "camunda7:incident-process-list",
+      requires: ["camunda7:incidentsDashboardData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:process-detail-header",
+      requires: ["camunda7:processIncidentsData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:process-incident-kpi",
+      requires: ["camunda7:processIncidentsData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:process-incident-flow",
+      requires: ["camunda7:processIncidentsData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:activity-incident-list",
       requires: ["camunda7:processIncidentsData"],
       size: "full",
     },
@@ -74,12 +94,27 @@ export const definition: AppDefinition = {
       size: "full",
     },
     {
-      id: "camunda7:cockpit-dashboard",
+      id: "camunda7:process-health-kpi",
       requires: ["camunda7:cockpitDashboardData"],
       size: "full",
     },
     {
-      id: "camunda7:bpmn-viewer",
+      id: "camunda7:process-definitions-table",
+      requires: ["camunda7:cockpitDashboardData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:bpmn-viewer-header",
+      requires: ["camunda7:bpmnViewerData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:bpmn-viewer-legend",
+      requires: ["camunda7:bpmnViewerData"],
+      size: "full",
+    },
+    {
+      id: "camunda7:bpmn-flow-viewer",
       requires: ["camunda7:bpmnViewerData"],
       size: "full",
     },

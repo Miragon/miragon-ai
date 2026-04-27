@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
-import { buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
+import { buildComposedView, buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
 import type {
   Client,
   ProcessListData,
@@ -125,12 +125,11 @@ export function registerWidgetTools(
           processDefinitionKey: args.processDefinitionKey,
         },
       }
-      return buildSingleWidgetView({
-        widget: "camunda7:task-dashboard",
+      return buildComposedView({
         app: "camunda7",
-        dataType: "camunda7:taskList",
-        data,
         title: "Task Dashboard",
+        layout: [{ row: [{ widget: "camunda7:task-list-table" }] }],
+        entries: [{ dataType: "camunda7:taskList", data }],
       })
     },
   )
@@ -244,11 +243,13 @@ export function registerWidgetTools(
         processDefinitionKey: args.processDefinitionKey,
         incidentType: args.incidentType,
       })
-      return buildSingleWidgetView({
-        widget: "camunda7:incidents-dashboard",
+      return buildComposedView({
         app: "camunda7",
-        dataType: "camunda7:incidentsDashboard",
-        data,
+        layout: [
+          { row: [{ widget: "camunda7:incident-overview-kpi" }] },
+          { row: [{ widget: "camunda7:incident-process-list" }] },
+        ],
+        entries: [{ dataType: "camunda7:incidentsDashboard", data }],
       })
     },
   )
@@ -271,11 +272,15 @@ export function registerWidgetTools(
         cockpitUrl: widgetConfig.cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
       })
-      return buildSingleWidgetView({
-        widget: "camunda7:process-incidents",
+      return buildComposedView({
         app: "camunda7",
-        dataType: "camunda7:processIncidents",
-        data,
+        layout: [
+          { row: [{ widget: "camunda7:process-detail-header" }] },
+          { row: [{ widget: "camunda7:process-incident-kpi" }] },
+          { row: [{ widget: "camunda7:process-incident-flow" }] },
+          { row: [{ widget: "camunda7:activity-incident-list" }] },
+        ],
+        entries: [{ dataType: "camunda7:processIncidents", data }],
       })
     },
   )
@@ -485,20 +490,27 @@ export function registerWidgetTools(
         return b.instances - a.instances
       })
 
-      return buildSingleWidgetView({
-        widget: "camunda7:cockpit-dashboard",
+      return buildComposedView({
         app: "camunda7",
-        dataType: "camunda7:cockpitDashboard",
         title: "Cockpit Dashboard",
-        data: {
-          summary: {
-            totalDefinitions: definitions.length,
-            totalRunningInstances: totalRunning,
-            totalFailedJobs: totalFailed,
-            totalIncidents,
+        layout: [
+          { row: [{ widget: "camunda7:process-health-kpi" }] },
+          { row: [{ widget: "camunda7:process-definitions-table" }] },
+        ],
+        entries: [
+          {
+            dataType: "camunda7:cockpitDashboard",
+            data: {
+              summary: {
+                totalDefinitions: definitions.length,
+                totalRunningInstances: totalRunning,
+                totalFailedJobs: totalFailed,
+                totalIncidents,
+              },
+              definitions,
+            },
           },
-          definitions,
-        },
+        ],
       })
     },
   )
@@ -524,19 +536,27 @@ export function registerWidgetTools(
 
       const definitionId = instance?.definitionId
       if (!definitionId) {
-        return buildSingleWidgetView({
-          widget: "camunda7:bpmn-viewer",
+        return buildComposedView({
           app: "camunda7",
-          dataType: "camunda7:bpmnViewer",
           title: "BPMN Viewer",
-          data: {
-            bpmnXml: "",
-            processInstanceId: args.processInstanceId,
-            processDefinitionId: null,
-            activeActivityIds: [],
-            incidentActivityIds: [],
-            activityStats: [],
-          },
+          layout: [
+            { row: [{ widget: "camunda7:bpmn-viewer-header" }] },
+            { row: [{ widget: "camunda7:bpmn-viewer-legend" }] },
+            { row: [{ widget: "camunda7:bpmn-flow-viewer" }] },
+          ],
+          entries: [
+            {
+              dataType: "camunda7:bpmnViewer",
+              data: {
+                bpmnXml: "",
+                processInstanceId: args.processInstanceId,
+                processDefinitionId: null,
+                activeActivityIds: [],
+                incidentActivityIds: [],
+                activityStats: [],
+              },
+            },
+          ],
         })
       }
 
@@ -568,19 +588,27 @@ export function registerWidgetTools(
         failedJobs: s.failedJobs ?? 0,
       }))
 
-      return buildSingleWidgetView({
-        widget: "camunda7:bpmn-viewer",
+      return buildComposedView({
         app: "camunda7",
-        dataType: "camunda7:bpmnViewer",
         title: "BPMN Viewer",
-        data: {
-          bpmnXml,
-          processInstanceId: args.processInstanceId,
-          processDefinitionId: definitionId,
-          activeActivityIds,
-          incidentActivityIds,
-          activityStats,
-        },
+        layout: [
+          { row: [{ widget: "camunda7:bpmn-viewer-header" }] },
+          { row: [{ widget: "camunda7:bpmn-viewer-legend" }] },
+          { row: [{ widget: "camunda7:bpmn-flow-viewer" }] },
+        ],
+        entries: [
+          {
+            dataType: "camunda7:bpmnViewer",
+            data: {
+              bpmnXml,
+              processInstanceId: args.processInstanceId,
+              processDefinitionId: definitionId,
+              activeActivityIds,
+              incidentActivityIds,
+              activityStats,
+            },
+          },
+        ],
       })
     },
   )

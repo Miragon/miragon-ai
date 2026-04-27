@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
-import { buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
+import { buildComposedView, buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
 import {
   escapeString,
   queries,
@@ -207,12 +207,16 @@ ORDER BY total_instances DESC`
         definitionBreakdown: definitionItems,
       }
 
-      return buildSingleWidgetView({
-        widget: "analytics:dashboard",
+      return buildComposedView({
         app: "analytics",
-        dataType: "analytics:dashboard",
-        data,
         title: "Analytics Dashboard",
+        layout: [
+          { row: [{ widget: "analytics:execution-summary-kpi" }] },
+          { row: [{ widget: "analytics:execution-performance-kpi" }] },
+          { row: [{ widget: "analytics:process-definition-breakdown" }] },
+          { row: [{ widget: "analytics:activity-bottleneck-table" }] },
+        ],
+        entries: [{ dataType: "analytics:dashboard", data }],
       })
     },
   )
@@ -340,12 +344,16 @@ GROUP BY process_definition_key`
         processBreakdown,
       }
 
-      return buildSingleWidgetView({
-        widget: "analytics:failure-dashboard",
+      return buildComposedView({
         app: "analytics",
-        dataType: "analytics:failureDashboard",
-        data,
         title: "Failure Dashboard",
+        layout: [
+          { row: [{ widget: "analytics:period-selector" }] },
+          { row: [{ widget: "analytics:failure-summary-kpi" }] },
+          { row: [{ widget: "analytics:error-patterns-table" }] },
+          { row: [{ widget: "analytics:failure-rate-table" }] },
+        ],
+        entries: [{ dataType: "analytics:failureDashboard", data }],
       })
     },
   )
