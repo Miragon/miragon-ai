@@ -1,5 +1,5 @@
 import { Alert, AlertDescription, Badge, Card, CardContent } from "@miragon/mcp-toolkit-ui"
-import { SectionHeading } from "@miragon-ai/widget-shell/widgets"
+import { SectionHeading, useHostActions } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "@miragon-ai/client-cibseven"
 
@@ -22,7 +22,17 @@ export function FailureTab({
   retrying: boolean
   retried: boolean
 }) {
+  const host = useHostActions()
   const job = data.job
+
+  function reportToGitHub() {
+    // Hands a structured natural-language prompt back to the host agent, which
+    // chains the registered `report_incident_to_github` prompt → format tool →
+    // GitHub MCP server's `create_issue`. See modules/cibseven/mcp/src/tools/incident-issue.ts.
+    host.showWidget(
+      `File a GitHub issue for incident \`${data.incidentId}\` (use the report_incident_to_github prompt).`,
+    )
+  }
   return (
     <div className="flex flex-col gap-4">
       <Card className="gap-0 py-0 shadow-none">
@@ -91,6 +101,14 @@ export function FailureTab({
             ↻ {retried ? "Retried" : "Retry job (set retries to 1)"}
           </button>
         )}
+        <button
+          type="button"
+          onClick={reportToGitHub}
+          className="border-line text-ink-muted hover:bg-bg-subtle inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
+          title="Hand off to the agent to file a GitHub issue via the configured GitHub MCP server"
+        >
+          ⚑ File GitHub issue
+        </button>
       </div>
 
       <div>

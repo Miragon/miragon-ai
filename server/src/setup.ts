@@ -17,6 +17,10 @@ const camunda7ConfigSchema = z.object({
   username: z.string().optional(),
   password: z.string().optional(),
   token: z.string().optional(),
+  incidentIssueRepository: z
+    .string()
+    .regex(/^[^/\s]+\/[^/\s]+$/, "Expected `owner/repo`")
+    .optional(),
 })
 
 const analyticsConfigSchema = z.object({
@@ -64,6 +68,7 @@ const MODULE_REGISTRY: Record<
       username: process.env.CAMUNDA_USERNAME,
       password: process.env.CAMUNDA_PASSWORD,
       token: process.env.CAMUNDA_TOKEN,
+      incidentIssueRepository: process.env.CAMUNDA_INCIDENT_ISSUE_REPO,
     }),
   },
   analytics: {
