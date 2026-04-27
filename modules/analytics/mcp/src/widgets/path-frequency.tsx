@@ -10,11 +10,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import type { PathFrequencyData as PathFrequencyDataType } from "@miragon-ai/client-analytics"
 import { BpmnHeatmap, HeatmapLegend } from "./bpmn-heatmap.js"
 
 export type PathFrequencyData = PathFrequencyDataType | null
+export type PathFrequencyPeriod = "1d" | "7d" | "30d" | "90d"
 
 interface Edge {
   source: string
@@ -202,13 +204,62 @@ function buildEdgeFrequencies(edges: Edge[]): Record<string, number> {
   return out
 }
 
-export function PathFrequencyWidget({ data }: { data: PathFrequencyData }) {
+export function PathFrequencyWidget({
+  data: initialData,
+  processDefinitionKey,
+  period,
+  minBucketSize: minBucketSizeProp,
+  limit: limitProp,
+}: {
+  data: PathFrequencyData
+  /** Process definition key to analyze. Required for the self-fetch path. */
+  processDefinitionKey?: string
+  /** Time window for the self-fetch (default `7d` on the server). */
+  period?: PathFrequencyPeriod
+  /** Suppress paths seen fewer than this many times (default `10`). */
+  minBucketSize?: number
+  /** Max number of paths to return (default `20`, max `50`). */
+  limit?: number
+}) {
+  const queryArgs: {
+    processDefinitionKey: string
+    period?: PathFrequencyPeriod
+    minBucketSize?: number
+    limit?: number
+  } = { processDefinitionKey: processDefinitionKey ?? "" }
+  if (period) queryArgs.period = period
+  if (minBucketSizeProp !== undefined) queryArgs.minBucketSize = minBucketSizeProp
+  if (limitProp !== undefined) queryArgs.limit = limitProp
+  const fallbackQuery = useToolQuery<PathFrequencyDataType>(
+    ["analytics:path-frequency"],
+    "analytics_show_path_frequency",
+    queryArgs,
+    { enabled: !initialData && !!processDefinitionKey },
+  )
+  const data = initialData ?? fallbackQuery.data ?? null
+
   if (!data) {
+    if (!processDefinitionKey) {
+      return (
+        <div className="bg-card text-card-foreground p-6">
+          <Alert>
+            <AlertDescription>
+              Configure a <span className="font-mono">processDefinitionKey</span> in this cell's
+              props to load path frequencies.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )
+    }
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {fallbackQuery.isError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <p className="text-muted-foreground text-sm">Loading path frequencies…</p>
+        )}
       </div>
     )
   }
