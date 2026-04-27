@@ -5,6 +5,7 @@ import {
   getIncident,
   getProcessDefinition,
   getProcessInstance,
+  getStacktrace,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 import type {
   IncidentDto,
@@ -45,6 +46,8 @@ interface BuildIssueInput {
   incident: IncidentDto
   processInstance?: ProcessInstanceDto | null
   processDefinition?: ProcessDefinitionDto | null
+  /** Raw exception stacktrace (typically `getStacktrace` for the failed job). */
+  stacktrace?: string | null
   cockpitUrl?: string
   repository: string | null
 }
@@ -57,10 +60,11 @@ const ISSUE_LABELS = ["bug", "incident"]
  * so it can be unit-tested without mocking the SDK.
  */
 export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssuePayload {
-  const { incident, processInstance, processDefinition, cockpitUrl, repository } = input
+  const { incident, processInstance, processDefinition, stacktrace, cockpitUrl, repository } = input
   const incidentType = incident.incidentType ?? "unknown"
   const definitionKey = processDefinition?.key ?? "unknown-process"
   const title = `[Bug]: Engine incident (${incidentType}) in ${definitionKey}`
+  const condensedStack = stacktrace ? condenseStacktrace(stacktrace) : null
 
   const cockpitLink = buildCockpitInstanceLink({
     cockpitUrl,
@@ -116,6 +120,7 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
     "",
     "CIB Seven",
     "",
+    condensedStack ? `### Stacktrace (condensed)\n\n\`\`\`\n${condensedStack}\n\`\`\`\n` : "",
     cockpitLink ? `### Cockpit\n\n${cockpitLink}\n` : "",
     "_Filed via the `camunda7_format_incident_issue` MCP tool._",
   ]
@@ -178,6 +183,79 @@ function buildPrefilledIssueUrl(
   return `${base}?${params.toString()}`
 }
 
+/**
+ * Reduces a Java stacktrace to the actionable parts:
+ *   - the first exception line (`com.foo.Bar: message`)
+ *   - up to N frames per exception, prioritising user code over framework internals
+ *   - all `Caused by:` chain heads (each capped the same way)
+ *
+ * Frames matching common framework/proxy/JDK packages are dropped *unless* doing
+ * so would leave the section empty (then we keep them so context isn't lost).
+ * Always ends with a "trimmed N lines" note when anything was dropped.
+ */
+const FRAMEWORK_FRAME_PATTERNS = [
+  /^\s*at (java|javax|jakarta|jdk|sun|com\.sun)\./,
+  /^\s*at org\.springframework\./,
+  /^\s*at org\.apache\.(catalina|tomcat|coyote)\./,
+  /^\s*at org\.eclipse\.jetty\./,
+  /^\s*at io\.netty\./,
+  /^\s*at reactor\./,
+  /^\s*at org\.junit\./,
+  /^\s*at \w+\$\$EnhancerByCGLIB\$\$|^\s*at .*\$\$Lambda\$/,
+  /^\s*at org\.camunda\.|^\s*at org\.cibseven\./,
+]
+const FRAMES_PER_EXCEPTION = 8
+
+function isFrame(line: string): boolean {
+  return /^\s*at /.test(line)
+}
+
+function isFrameworkFrame(line: string): boolean {
+  return FRAMEWORK_FRAME_PATTERNS.some((re) => re.test(line))
+}
+
+function pickFrames(frames: string[]): string[] {
+  const userFrames = frames.filter((f) => !isFrameworkFrame(f))
+  const picked = userFrames.length > 0 ? userFrames : frames
+  return picked.slice(0, FRAMES_PER_EXCEPTION)
+}
+
+export function condenseStacktrace(raw: string): string {
+  const lines = raw.split(/\r?\n/)
+  const sections: { head: string; frames: string[] }[] = []
+  let current: { head: string; frames: string[] } | null = null
+
+  for (const line of lines) {
+    if (!line.trim()) continue
+    const isCausedBy = /^\s*Caused by:/.test(line)
+    const isSuppressed = /^\s*Suppressed:/.test(line)
+    if (!current || isCausedBy || isSuppressed) {
+      if (isFrame(line) && current) {
+        current.frames.push(line)
+      } else {
+        current = { head: line, frames: [] }
+        sections.push(current)
+      }
+      continue
+    }
+    if (isFrame(line)) current.frames.push(line)
+    // Non-frame, non-section-head lines (e.g. "... 42 more") are dropped.
+  }
+
+  const out: string[] = []
+  let droppedFrames = 0
+  for (const section of sections) {
+    out.push(section.head)
+    const kept = pickFrames(section.frames)
+    out.push(...kept)
+    droppedFrames += section.frames.length - kept.length
+  }
+  if (droppedFrames > 0) {
+    out.push(`\t... ${droppedFrames} framework/internal frames trimmed`)
+  }
+  return out.join("\n")
+}
+
 function buildCockpitInstanceLink(args: {
   cockpitUrl?: string
   processDefinitionKey?: string | null
@@ -209,7 +287,20 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
         path: { id: args.incidentId },
       })) as unknown as IncidentDto
 
-      const [processInstance, processDefinition] = await Promise.all([
+      // For `failedJob` incidents, `configuration` holds the failed job ID.
+      // The stacktrace endpoint returns 404 for non-job incidents and for jobs
+      // without an exception — both are non-fatal here, so swallow.
+      const stacktracePromise =
+        incident.incidentType === "failedJob" && incident.configuration
+          ? (
+              getStacktrace({
+                client,
+                path: { id: incident.configuration },
+              }) as unknown as Promise<string>
+            ).catch(() => null)
+          : Promise.resolve(null)
+
+      const [processInstance, processDefinition, stacktrace] = await Promise.all([
         incident.processInstanceId
           ? (getProcessInstance({
               client,
@@ -222,6 +313,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
               path: { id: incident.processDefinitionId },
             }) as unknown as Promise<ProcessDefinitionDto>)
           : Promise.resolve(null),
+        stacktracePromise,
       ])
 
       const repository = args.repository ?? config.repository ?? null
@@ -229,6 +321,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
         incident,
         processInstance,
         processDefinition,
+        stacktrace,
         cockpitUrl: config.cockpitUrl,
         repository,
       })
