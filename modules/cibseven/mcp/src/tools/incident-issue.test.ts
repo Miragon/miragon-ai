@@ -59,7 +59,36 @@ describe("buildIncidentIssuePayload", () => {
       repository: null,
     })
     expect(result.suggestedRepository).toBeNull()
+    expect(result.prefilledUrl).toBeNull()
     expect(result.nextStep).toMatch(/Ask the user which `owner\/repo`/)
+  })
+
+  it("emits a clickable prefilled GitHub new-issue URL when a repo is configured", () => {
+    const result = buildIncidentIssuePayload({
+      incident: baseIncident,
+      processDefinition: baseDefinition,
+      repository: "Miragon/miragon-ai",
+    })
+    expect(result.prefilledUrl).not.toBeNull()
+    const url = new URL(result.prefilledUrl!)
+    expect(url.origin + url.pathname).toBe("https://github.com/Miragon/miragon-ai/issues/new")
+    expect(url.searchParams.get("title")).toBe(result.title)
+    expect(url.searchParams.get("labels")).toBe("bug,incident")
+    expect(url.searchParams.get("body")).toContain("Boom: NullPointerException")
+  })
+
+  it("truncates the body in the prefilled URL when it would exceed GitHub's URL length cap", () => {
+    const huge = "x".repeat(20000)
+    const result = buildIncidentIssuePayload({
+      incident: { ...baseIncident, incidentMessage: huge },
+      processDefinition: baseDefinition,
+      repository: "owner/repo",
+    })
+    expect(result.prefilledUrl!.length).toBeLessThan(8000)
+    const url = new URL(result.prefilledUrl!)
+    expect(url.searchParams.get("body")).toContain("body truncated for URL length")
+    // The full untruncated body remains in the tool result for manual paste.
+    expect(result.body).toContain(huge)
   })
 
   it("omits the cockpit section when no cockpitUrl is configured", () => {

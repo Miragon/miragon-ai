@@ -31,6 +31,13 @@ export interface IncidentIssuePayload {
   suggestedRepository: string | null
   /** Tool name on the official GitHub MCP server that should consume this payload. */
   suggestedTool: "create_issue"
+  /**
+   * Browser URL to GitHub's "new issue" page with title/body/labels prefilled
+   * via query params. Lets the user one-click-submit even when no GitHub MCP
+   * server / connector is exposed to the agent. `null` if no repository
+   * configured. URL length is capped at GitHub's ~8KB limit.
+   */
+  prefilledUrl: string | null
   nextStep: string
 }
 
@@ -115,16 +122,60 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
     .filter((line) => line !== "")
     .join("\n")
 
+  const prefilledUrl = repository
+    ? buildPrefilledIssueUrl(repository, title, body, ISSUE_LABELS)
+    : null
+
   return {
     title,
     body,
     labels: ISSUE_LABELS,
     suggestedRepository: repository,
     suggestedTool: "create_issue",
+    prefilledUrl,
     nextStep: repository
-      ? `Pass {title, body, labels, repository: "${repository}"} to the GitHub MCP server's create_issue tool.`
+      ? `Pass {title, body, labels, repository: "${repository}"} to the GitHub MCP server's create_issue tool. If no GitHub tool is available, send the user to prefilledUrl for one-click submission.`
       : "No repository configured. Ask the user which `owner/repo` should receive this incident, then call the GitHub MCP server's create_issue tool.",
   }
+}
+
+/**
+ * GitHub's "new issue" web form accepts `title`, `body`, and `labels` as query
+ * params, letting a user submit a fully-prefilled issue with a single click.
+ * URL length is capped at ~8KB by GitHub; if we'd exceed that, we truncate the
+ * body and append a notice — the body is still in the tool result for manual
+ * paste, this URL is purely the convenience path.
+ */
+const GITHUB_URL_BUDGET = 7500
+function buildPrefilledIssueUrl(
+  repository: string,
+  title: string,
+  body: string,
+  labels: string[],
+): string {
+  const base = `https://github.com/${repository}/issues/new`
+  const labelsParam = labels.join(",")
+  const fixedOverhead =
+    base.length +
+    "?title=".length +
+    encodeURIComponent(title).length +
+    "&labels=".length +
+    encodeURIComponent(labelsParam).length +
+    "&body=".length
+  const bodyBudget = GITHUB_URL_BUDGET - fixedOverhead
+  let bodyForUrl = body
+  if (encodeURIComponent(bodyForUrl).length > bodyBudget) {
+    const truncationNotice = "\n\n_…body truncated for URL length; full body in the tool result._"
+    while (
+      encodeURIComponent(bodyForUrl + truncationNotice).length > bodyBudget &&
+      bodyForUrl.length > 0
+    ) {
+      bodyForUrl = bodyForUrl.slice(0, -200)
+    }
+    bodyForUrl = bodyForUrl + truncationNotice
+  }
+  const params = new URLSearchParams({ title, body: bodyForUrl, labels: labelsParam })
+  return `${base}?${params.toString()}`
 }
 
 function buildCockpitInstanceLink(args: {
@@ -224,7 +275,7 @@ export function registerIncidentIssuePrompt(server: MCPServer, config: IncidentI
         `4. ${targetClause}`,
         "5. Confirm to the user with the URL of the created issue.",
         "",
-        "If you genuinely cannot find ANY GitHub-issue-creating tool in your current toolset, say so explicitly and print the formatted `{title, body}` so the user can paste it into GitHub manually — do not claim 'no integration exists' without having scanned the available tools first.",
+        "If you genuinely cannot find ANY GitHub-issue-creating tool in your current toolset, fall back to `prefilledUrl` from step 1: present it to the user as a clickable link (`[Create issue on GitHub](<prefilledUrl>)`) so they can submit with one click. Do NOT just dump the title/body and tell the user to paste manually when prefilledUrl is set.",
         "",
         "Do NOT modify the title or body — they already match the project's bug-report template. Only set additional fields (e.g. assignees) if the user explicitly asks.",
       ].join("\n")
