@@ -7,24 +7,19 @@ import type {
   IncidentsDashboardProcess,
 } from "@miragon-ai/client-cibseven"
 
-import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../tool-names.js"
+import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../../tool-names.js"
 
 import {
   CountPill,
   FilterBar,
   GroupCard,
-  KpiGrid,
-  LivePill,
   SectionHeading,
-  WidgetHeader,
   WidgetShell,
   useHostActions,
   type FilterChip,
   type HostActions,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
-
-export type { IncidentsDashboardData }
 
 const TYPE_ALL = "all"
 const TYPE_LAST24H = "last24h"
@@ -175,7 +170,13 @@ function ActivityList({ activities }: { activities: IncidentsDashboardActivity[]
   )
 }
 
-export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardData | null }) {
+/**
+ * Filter bar + grouped process list. Combined into one widget because the
+ * search/chip state has to drive the visible process rows — splitting them
+ * apart would force the filter state through global storage just to avoid
+ * one shared `useState`.
+ */
+export function IncidentProcessList({ data }: { data: IncidentsDashboardData | null }) {
   const host: HostActions = useHostActions()
 
   const [search, setSearch] = useState("")
@@ -190,12 +191,8 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
 
     return data.processes
       .map<DisplayProcess | null>((p) => {
-        // 1. Chip-based pre-filter (e.g. Last 24h).
         let activities = showLast24h ? p.activities.filter((a) => a.last24hCount > 0) : p.activities
 
-        // 2. Search filter. If the process metadata matches, keep all
-        //    chip-filtered activities; otherwise only activities whose own
-        //    fields match.
         const processMatchesSearch =
           q.length === 0 ||
           (p.processDefinitionName ?? "").toLowerCase().includes(q) ||
@@ -210,13 +207,8 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
           )
         }
 
-        // 3. Drop processes that have nothing to show under any active filter.
         if (isFiltering && activities.length === 0) return null
 
-        // 4. Recompute the visible counts so the card header reflects the
-        //    filtered slice (rather than the unfiltered totals). When the
-        //    Last-24h chip is active, count only recent incidents; otherwise
-        //    count all incidents on the surviving activities.
         const incidentCount = activities.reduce(
           (sum, a) => sum + (showLast24h ? a.last24hCount : a.incidentCount),
           0,
@@ -226,8 +218,6 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
           activities,
           incidentCount,
           affectedActivityCount: activities.length,
-          // Tone is derived from the unfiltered count so the visual severity
-          // stays stable when the user toggles a filter.
           tone: severityTone(p.incidentCount),
         }
       })
@@ -245,12 +235,7 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
   }
 
   const chips: FilterChip[] = [
-    {
-      id: TYPE_ALL,
-      label: "All",
-      count: data.totalCount,
-      active: activeChip === TYPE_ALL,
-    },
+    { id: TYPE_ALL, label: "All", count: data.totalCount, active: activeChip === TYPE_ALL },
     {
       id: TYPE_LAST24H,
       label: "⏱ Last 24h",
@@ -276,47 +261,6 @@ export function IncidentsDashboardWidget({ data }: { data: IncidentsDashboardDat
 
   return (
     <WidgetShell>
-      <WidgetHeader
-        icon="⚠"
-        iconTone="critical"
-        title="Incidents"
-        sub={
-          <>
-            <LivePill>Live</LivePill>
-            <span>
-              {data.totalCount} open across {data.processCount}{" "}
-              {data.processCount === 1 ? "process" : "processes"}
-              {data.latestIncident && <> · last event {formatTimestamp(data.latestIncident)}</>}
-            </span>
-          </>
-        }
-      />
-
-      <KpiGrid
-        boxed
-        header={{ label: "Overview", badge: "Open incidents · letzte 24h" }}
-        cells={[
-          {
-            label: "Open Incidents",
-            value: data.totalCount,
-            tone: data.totalCount > 0 ? "critical" : undefined,
-          },
-          {
-            label: "Processes affected",
-            value: data.processCount,
-          },
-          {
-            label: "Activities affected",
-            value: data.affectedActivityCount,
-          },
-          {
-            label: "+24h",
-            value: `+${data.last24hCount}`,
-            tone: data.last24hCount > 0 ? "critical" : undefined,
-          },
-        ]}
-      />
-
       <FilterBar
         search={search}
         onSearchChange={setSearch}

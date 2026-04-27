@@ -47,13 +47,46 @@ export const definition: AppDefinition = {
   steps: [loadDashboardStep, loadFailureDashboardStep],
   widgets: [
     {
-      id: "analytics:dashboard",
+      id: "analytics:execution-summary-kpi",
       requires: [],
       size: "full",
       propsSchema: dashboardPropsSchema,
     },
     {
-      id: "analytics:failure-dashboard",
+      id: "analytics:execution-performance-kpi",
+      requires: [],
+      size: "full",
+      propsSchema: dashboardPropsSchema,
+    },
+    {
+      id: "analytics:process-definition-breakdown",
+      requires: [],
+      size: "full",
+      propsSchema: dashboardPropsSchema,
+    },
+    {
+      id: "analytics:activity-bottleneck-table",
+      requires: [],
+      size: "full",
+      propsSchema: dashboardPropsSchema,
+    },
+    {
+      id: "analytics:period-selector",
+      requires: [],
+      size: "full",
+    },
+    {
+      id: "analytics:failure-summary-kpi",
+      requires: [],
+      size: "full",
+    },
+    {
+      id: "analytics:error-patterns-table",
+      requires: [],
+      size: "full",
+    },
+    {
+      id: "analytics:failure-rate-table",
       requires: [],
       size: "full",
     },
