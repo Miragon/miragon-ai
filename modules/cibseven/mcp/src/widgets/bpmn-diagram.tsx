@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
+import { useWidget } from "mcp-use/react"
 
 interface BpmnCanvas {
   zoom(mode: "fit-viewport"): void
@@ -203,6 +204,19 @@ function addRedCountOverlays(
 export function BpmnDiagram({ bpmnXml, height = 400, highlights = [] }: BpmnDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<NavigatedViewer | null>(null)
+  const { displayMode } = useWidget()
+
+  function getCanvas(): BpmnCanvas | null {
+    if (!viewerRef.current) return null
+    return (viewerRef.current as unknown as BpmnViewerWithGet).get("canvas")
+  }
+
+  function fitToViewport() {
+    const canvas = getCanvas()
+    if (!canvas) return
+    canvas.zoom("fit-viewport")
+    canvas.zoom(canvas.zoom() * 0.95)
+  }
 
   useEffect(() => {
     if (!containerRef.current || !bpmnXml) return
@@ -227,16 +241,28 @@ export function BpmnDiagram({ bpmnXml, height = 400, highlights = [] }: BpmnDiag
       applyHighlights(canvas, overlays, highlights)
     })
 
+    let rafId: number | null = null
+    const observer = new ResizeObserver(() => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        fitToViewport()
+      })
+    })
+    observer.observe(containerRef.current)
+
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      observer.disconnect()
       viewerRef.current = null
       viewer.destroy()
     }
   }, [bpmnXml, highlights])
 
-  function getCanvas(): BpmnCanvas | null {
-    if (!viewerRef.current) return null
-    return (viewerRef.current as unknown as BpmnViewerWithGet).get("canvas")
-  }
+  useEffect(() => {
+    if (!viewerRef.current) return
+    fitToViewport()
+  }, [displayMode])
 
   function handleZoomIn() {
     const canvas = getCanvas()
@@ -249,10 +275,7 @@ export function BpmnDiagram({ bpmnXml, height = 400, highlights = [] }: BpmnDiag
   }
 
   function handleFit() {
-    const canvas = getCanvas()
-    if (!canvas) return
-    canvas.zoom("fit-viewport")
-    canvas.zoom(canvas.zoom() * 0.95)
+    fitToViewport()
   }
 
   return (
