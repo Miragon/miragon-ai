@@ -35,6 +35,12 @@ class JobDrainer(private val managementService: ManagementService) {
                 .list()
             if (jobs.isEmpty()) return
             for (job in jobs) {
+                // Advance the simulated clock before the job runs so the
+                // resulting activity_instance row gets a non-zero
+                // (end_time - start_time). Without this every Java-delegate
+                // execution shares the same SeedClock instant and every
+                // bottleneck-row duration is 0.
+                SeedClock.advanceMillis(SeedClock.sampleServiceTaskLatencyMillis())
                 try {
                     managementService.executeJob(job.id)
                 } catch (ex: RuntimeException) {

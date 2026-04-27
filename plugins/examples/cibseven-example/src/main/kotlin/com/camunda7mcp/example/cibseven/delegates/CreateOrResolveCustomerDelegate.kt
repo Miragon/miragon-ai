@@ -1,5 +1,6 @@
 package com.camunda7mcp.example.cibseven.delegates
 
+import com.camunda7mcp.example.cibseven.seeders.SeedClock
 import org.cibseven.bpm.engine.delegate.DelegateExecution
 import org.cibseven.bpm.engine.delegate.JavaDelegate
 import org.slf4j.LoggerFactory
@@ -12,6 +13,7 @@ class CreateOrResolveCustomerDelegate : JavaDelegate {
     private val log = LoggerFactory.getLogger(CreateOrResolveCustomerDelegate::class.java)
 
     override fun execute(execution: DelegateExecution) {
+        SeedClock.maybeAdvanceForActivity()
         val existing = execution.getVariable("customerId") as? String
         val customerId = existing ?: "CUST-${Random.nextInt(1000, 9999)}".also {
             execution.setVariable("customerId", it)

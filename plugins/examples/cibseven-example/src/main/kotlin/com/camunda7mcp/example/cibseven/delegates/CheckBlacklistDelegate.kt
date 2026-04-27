@@ -1,5 +1,6 @@
 package com.camunda7mcp.example.cibseven.delegates
 
+import com.camunda7mcp.example.cibseven.seeders.SeedClock
 import org.cibseven.bpm.engine.delegate.BpmnError
 import org.cibseven.bpm.engine.delegate.DelegateExecution
 import org.cibseven.bpm.engine.delegate.JavaDelegate
@@ -12,6 +13,7 @@ class CheckBlacklistDelegate : JavaDelegate {
     private val log = LoggerFactory.getLogger(CheckBlacklistDelegate::class.java)
 
     override fun execute(execution: DelegateExecution) {
+        SeedClock.maybeAdvanceForActivity()
         val customerId = execution.getVariable("customerId") as? String ?: ""
         log.info("Blacklist check for customer {}", customerId)
 

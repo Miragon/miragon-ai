@@ -20,3 +20,8 @@ seed:
   # below minBucketSize for suppressed-bucket demonstration in the code-
   # archaeology skill (UC6).
   fax-channel-rate: 0.01
+  # Failure rate applied to instances seeded inside the last 7 days. Reuses the
+  # blacklist-outage simulator so the analytics dashboard's default 7d window
+  # sees Incidents > 0. Independent from the buggy-era band (15..30 days ago)
+  # which still anchors the IMPROVED cluster-compare verdict.
+  current-era-failure-rate: 0.04

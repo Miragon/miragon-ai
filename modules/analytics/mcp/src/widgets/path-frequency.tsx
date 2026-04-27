@@ -210,6 +210,7 @@ export function PathFrequencyWidget({
   period,
   minBucketSize: minBucketSizeProp,
   limit: limitProp,
+  version,
 }: {
   data: PathFrequencyData
   /** Process definition key to analyze. Required for the self-fetch path. */
@@ -220,18 +221,22 @@ export function PathFrequencyWidget({
   minBucketSize?: number
   /** Max number of paths to return (default `20`, max `50`). */
   limit?: number
+  /** Optional version filter — pair with analytics_show_version_compare for side-by-side per-version flow. */
+  version?: number
 }) {
   const queryArgs: {
     processDefinitionKey: string
     period?: PathFrequencyPeriod
     minBucketSize?: number
     limit?: number
+    version?: number
   } = { processDefinitionKey: processDefinitionKey ?? "" }
   if (period) queryArgs.period = period
   if (minBucketSizeProp !== undefined) queryArgs.minBucketSize = minBucketSizeProp
   if (limitProp !== undefined) queryArgs.limit = limitProp
+  if (version !== undefined) queryArgs.version = version
   const fallbackQuery = useToolQuery<PathFrequencyDataType>(
-    ["analytics:path-frequency"],
+    ["analytics:path-frequency", processDefinitionKey ?? null, version ?? null],
     "analytics_show_path_frequency",
     queryArgs,
     { enabled: !initialData && !!processDefinitionKey },
@@ -264,7 +269,15 @@ export function PathFrequencyWidget({
     )
   }
 
-  const { paths, edges, minBucketSize, suppressedPaths, suppressedEdges, bpmnXml } = data
+  const {
+    paths,
+    edges,
+    minBucketSize,
+    suppressedPaths,
+    suppressedEdges,
+    bpmnXml,
+    version: activeVersion,
+  } = data
 
   const nodeFrequencies = buildNodeFrequencies(edges)
   const edgeFrequencies = buildEdgeFrequencies(edges)
@@ -280,6 +293,7 @@ export function PathFrequencyWidget({
           </p>
         </div>
         <div className="flex gap-2">
+          {activeVersion != null && <Badge>v{activeVersion}</Badge>}
           {suppressedPaths > 0 && (
             <Badge variant="secondary">{suppressedPaths} paths suppressed</Badge>
           )}

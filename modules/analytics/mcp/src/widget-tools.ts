@@ -514,13 +514,14 @@ ORDER BY t.Timestamp`
       name: "analytics_show_path_frequency",
       title: "Path Frequency (Sankey)",
       description:
-        "Visualize the most frequent activity paths through a process definition as a Sankey-style flow diagram. Min-bucket aggregation prevents leakage of rare executions.",
+        "Visualize the most frequent activity paths through a process definition as a Sankey-style flow diagram. Min-bucket aggregation prevents leakage of rare executions. Pass `version` to scope the diagram to one deployed version — pair with analytics_show_version_compare to render per-version flow side-by-side.",
       annotations: { readOnlyHint: true, idempotentHint: true },
       schema: z.object({
         processDefinitionKey: z.string(),
         period: z.enum(["1d", "7d", "30d", "90d"]).default("7d"),
         minBucketSize: z.number().int().min(1).default(10),
         limit: z.number().int().min(1).max(50).default(20),
+        version: z.number().int().min(1).optional(),
       }),
       _meta: { ui: { resourceUri } },
     },
@@ -578,6 +579,36 @@ ORDER BY t.Timestamp`
         dataType: "analytics:clusterCompare",
         data,
         title: "Cluster Compare",
+      })
+    },
+  )
+
+  // --- Version Compare (v1 vs v2 of one process) ---
+  server.tool(
+    {
+      name: "analytics_show_version_compare",
+      title: "Process Version Comparison",
+      description:
+        "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
+      annotations: { readOnlyHint: true, idempotentHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().min(1),
+        versionA: z.number().int().min(1),
+        versionB: z.number().int().min(1),
+        windowDays: z.number().int().min(1).max(90).default(30),
+        elementId: z.string().optional(),
+        minBucketSize: z.number().int().min(1).default(10),
+      }),
+      _meta: { ui: { resourceUri } },
+    },
+    async (args) => {
+      const data = await queries.versionCompare(ch, args)
+      return buildSingleWidgetView({
+        widget: "analytics:version-compare",
+        app: "analytics",
+        dataType: "analytics:versionCompare",
+        data,
+        title: "Version Compare",
       })
     },
   )

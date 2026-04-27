@@ -1,5 +1,6 @@
 package com.camunda7mcp.example.cibseven.delegates
 
+import com.camunda7mcp.example.cibseven.seeders.SeedClock
 import org.cibseven.bpm.engine.delegate.BpmnError
 import org.cibseven.bpm.engine.delegate.DelegateExecution
 import org.cibseven.bpm.engine.delegate.JavaDelegate
@@ -12,6 +13,7 @@ class CheckPostalCodeDelegate : JavaDelegate {
     private val log = LoggerFactory.getLogger(CheckPostalCodeDelegate::class.java)
 
     override fun execute(execution: DelegateExecution) {
+        SeedClock.maybeAdvanceForActivity()
         val postalCode = execution.getVariable("postalCode") as? String ?: DEFAULT_POSTAL_CODE
         log.info("Postal-code check for customer {} = {}", execution.getVariable("customerId"), postalCode)
 

@@ -8,6 +8,7 @@ import { registerTraceTools } from "./trace.js"
 import { registerPathTools } from "./path.js"
 import { registerVariableTools } from "./variable.js"
 import { registerClusterCompareTools } from "./cluster-compare.js"
+import { registerVersionCompareTools } from "./version-compare.js"
 
 export function registerTools(server: MCPServer, client: ClickHouseClient): void {
   const register = createToolRegistrar(server, client)
@@ -18,4 +19,5 @@ export function registerTools(server: MCPServer, client: ClickHouseClient): void
   registerPathTools(register)
   registerVariableTools(register)
   registerClusterCompareTools(register)
+  registerVersionCompareTools(register)
 }

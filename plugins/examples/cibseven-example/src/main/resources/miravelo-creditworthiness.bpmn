@@ -14,11 +14,11 @@
     <bpmn:sequenceFlow id="Flow_1p6to0y" sourceRef="Activity_CheckCreditScore" targetRef="Activity_CheckPostalCode" />
     <bpmn:sequenceFlow id="Flow_0vo0xvf" sourceRef="Activity_CheckPostalCode" targetRef="Activity_CheckBlacklist" />
     <bpmn:sequenceFlow id="Flow_05l0gz3" sourceRef="Activity_CheckBlacklist" targetRef="Event_CustomerCreditworthy" />
-    <bpmn:serviceTask id="Activity_CheckCreditScore" name="Check Credit Score" camunda:delegateExpression="${checkCreditScoreDelegate}">
+    <bpmn:serviceTask id="Activity_CheckCreditScore" name="Check Credit Score" camunda:delegateExpression="${checkCreditScoreDelegate}" camunda:asyncBefore="true">
       <bpmn:incoming>Flow_1uz5ar2</bpmn:incoming>
       <bpmn:outgoing>Flow_1p6to0y</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:serviceTask id="Activity_CheckPostalCode" name="Check postal code area" camunda:delegateExpression="${checkPostalCodeDelegate}">
+    <bpmn:serviceTask id="Activity_CheckPostalCode" name="Check postal code area" camunda:delegateExpression="${checkPostalCodeDelegate}" camunda:asyncBefore="true">
       <bpmn:incoming>Flow_1p6to0y</bpmn:incoming>
       <bpmn:outgoing>Flow_0vo0xvf</bpmn:outgoing>
     </bpmn:serviceTask>
