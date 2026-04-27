@@ -25,18 +25,31 @@ function formatDuration(ms: number | null): string {
   return `${(ms / 86400000).toFixed(1)}d`
 }
 
+export type AnalyticsDashboardPeriod = "1d" | "7d" | "30d" | "90d"
+
 export function AnalyticsDashboardWidget({
   data: initialData,
+  processDefinitionKey,
+  period,
 }: {
   data: AnalyticsDashboardData | null
+  /** Scope the self-fetched dashboard to a single process definition. */
+  processDefinitionKey?: string
+  /** Time window for the self-fetch (default `7d` on the server). */
+  period?: AnalyticsDashboardPeriod
 }) {
   // Fall back to fetching the data ourselves when no upstream pipeline step
   // populated `initialData` — keeps the widget usable in render-view layouts
-  // that don't include `analytics:load-dashboard`.
+  // that don't include `analytics:load-dashboard`. The query args are part of
+  // the cache key so multiple instances in one view (e.g. one tab per
+  // processDefinitionKey) don't collide on shared cached data.
+  const queryArgs: { processDefinitionKey?: string; period?: AnalyticsDashboardPeriod } = {}
+  if (processDefinitionKey) queryArgs.processDefinitionKey = processDefinitionKey
+  if (period) queryArgs.period = period
   const fallbackQuery = useToolQuery<AnalyticsDashboardData>(
-    ["analytics:dashboard"],
+    ["analytics:dashboard", processDefinitionKey ?? null, period ?? null],
     "analytics_show_dashboard",
-    {},
+    queryArgs,
     { enabled: !initialData },
   )
   const data = initialData ?? fallbackQuery.data ?? null

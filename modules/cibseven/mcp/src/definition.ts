@@ -1,3 +1,4 @@
+import { z } from "zod"
 import type { AppDefinition } from "@miragon/mcp-toolkit-core"
 import {
   loadProcessDefinitionsStep,
@@ -11,6 +12,20 @@ import {
   loadDeploymentsStep,
   loadJobsStep,
 } from "./steps/index.js"
+
+const processListPropsSchema = z.toJSONSchema(
+  z.object({
+    processDefinitionKey: z
+      .string()
+      .optional()
+      .describe("Filter to an exact process definition key."),
+    nameLike: z.string().optional().describe("Filter by partial process definition name."),
+    latestVersion: z
+      .boolean()
+      .optional()
+      .describe("Restrict to the latest version of each definition (default `true`)."),
+  }),
+)
 
 export const definition: AppDefinition = {
   name: "camunda7",
@@ -31,6 +46,7 @@ export const definition: AppDefinition = {
       id: "camunda7:process-list",
       requires: [],
       size: "full",
+      propsSchema: processListPropsSchema,
     },
     {
       id: "camunda7:task-dashboard",

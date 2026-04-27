@@ -1,15 +1,51 @@
-import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import {
+  Card,
+  CardContent,
+  Badge,
+  Alert,
+  AlertDescription,
+  useToolQuery,
+} from "@miragon/mcp-toolkit-ui"
 import type { ProcessListData } from "@miragon-ai/client-cibseven"
 
 export type { ProcessListData }
 
-export function ProcessListWidget({ data }: { data: ProcessListData | null }) {
+export function ProcessListWidget({
+  data: initialData,
+  processDefinitionKey,
+  nameLike,
+  latestVersion,
+}: {
+  data: ProcessListData | null
+  /** Filter by exact process definition key. */
+  processDefinitionKey?: string
+  /** Filter by partial process definition name. */
+  nameLike?: string
+  /** Restrict to the latest version of each definition (default `true`). */
+  latestVersion?: boolean
+}) {
+  const queryArgs: { key?: string; nameLike?: string; latestVersion?: boolean } = {}
+  if (processDefinitionKey) queryArgs.key = processDefinitionKey
+  if (nameLike) queryArgs.nameLike = nameLike
+  if (latestVersion !== undefined) queryArgs.latestVersion = latestVersion
+  const fallbackQuery = useToolQuery<ProcessListData>(
+    ["camunda7:process-list"],
+    "camunda7_show_process_list",
+    queryArgs,
+    { enabled: !initialData },
+  )
+  const data = initialData ?? fallbackQuery.data ?? null
+
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {fallbackQuery.isError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <p className="text-muted-foreground text-sm">Loading process definitions…</p>
+        )}
       </div>
     )
   }
