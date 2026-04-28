@@ -8,22 +8,20 @@ import {
   TableCell,
   Alert,
   AlertDescription,
-  useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
-import { formatDuration } from "./lib.js"
+import { formatDuration, useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
 
 export function ActivityBottleneckTable({
   data: initialData,
+  processDefinitionKey,
+  period,
 }: {
   data: AnalyticsDashboardData | null
+  processDefinitionKey?: string
+  period?: AnalyticsDashboardPeriod
 }) {
-  const fallbackQuery = useToolQuery<AnalyticsDashboardData>(
-    ["analytics:dashboard"],
-    "analytics_show_dashboard",
-    {},
-    { enabled: !initialData },
-  )
+  const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period })
   const data = initialData ?? fallbackQuery.data ?? null
 
   if (!data) {
