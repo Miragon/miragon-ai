@@ -62,7 +62,7 @@ export function ActivityNode({ node, depth = 0 }: { node: ActivityTree; depth?: 
         <span className="text-muted-foreground font-mono text-xs">{node.activityType}</span>
         <span className="text-sm font-medium">{node.activityName ?? node.activityId}</span>
       </div>
-      {node.childActivityInstances.map((child) => (
+      {(node.childActivityInstances ?? []).map((child) => (
         <ActivityNode key={child.id} node={child} depth={depth + 1} />
       ))}
     </div>
