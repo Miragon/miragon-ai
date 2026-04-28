@@ -3,4 +3,5 @@ packages:
   - "modules/*/client"
   - "modules/*/mcp"
   - "packages/*"
+  - "examples/*"
   - "vendor/mcp-toolkit/packages/*"

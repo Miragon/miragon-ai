@@ -22,6 +22,7 @@ import type { BpmnViewerData } from "@miragon-ai/client-cibseven"
 import { BpmnViewerHeader } from "./bpmn-viewer/header.js"
 import { BpmnViewerLegend } from "./bpmn-viewer/legend.js"
 import { BpmnFlowViewer } from "./bpmn-viewer/flow.js"
+import { BpmnViewerWidget } from "./bpmn-viewer/widget.js"
 import { DeploymentBrowserWidget, type DeploymentBrowserData } from "./deployment-browser.js"
 import { JobPanelWidget, type JobPanelData } from "./job-panel.js"
 
@@ -73,6 +74,7 @@ export const camunda7Widgets: Record<string, WidgetComponent> = {
     "camunda7:cockpitDashboard",
   ),
   "camunda7:process-detail": adaptDataWidget(ProcessDetailWidget, "camunda7:processDetail"),
+  "camunda7:bpmn-viewer": adaptDataWidget(BpmnViewerWidget, "camunda7:bpmnViewer"),
   "camunda7:bpmn-viewer-header": adaptDataWidget(BpmnViewerHeader, "camunda7:bpmnViewer"),
   "camunda7:bpmn-viewer-legend": adaptDataWidget(BpmnViewerLegend, "camunda7:bpmnViewer"),
   "camunda7:bpmn-flow-viewer": adaptDataWidget(BpmnFlowViewer, "camunda7:bpmnViewer"),
