@@ -521,22 +521,39 @@ export function registerWidgetTools(
       name: "camunda7_show_bpmn_viewer",
       title: "BPMN Diagram Viewer",
       description:
-        "Show an interactive BPMN diagram for a process instance with active activity highlights, incident markers, and instance count overlays.",
+        "Show an interactive BPMN diagram. Pass `processInstanceId` to overlay active activities, incidents, and failed-job counts for a running instance, or pass `processDefinitionKey` (with optional `version`) to view the diagram of a process definition without instance overlays.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
-        processInstanceId: z.string().describe("The process instance ID to visualize"),
-      }),
+      schema: z
+        .object({
+          processInstanceId: z
+            .string()
+            .optional()
+            .describe("Process instance ID. Renders diagram with live overlays."),
+          processDefinitionKey: z
+            .string()
+            .optional()
+            .describe("Process definition key. Renders the static diagram (no overlays)."),
+          version: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe(
+              "Specific definition version. Requires `processDefinitionKey`. Defaults to the latest version when omitted.",
+            ),
+        })
+        .refine((v) => v.processInstanceId || v.processDefinitionKey, {
+          message: "Provide either `processInstanceId` or `processDefinitionKey`.",
+        })
+        .refine((v) => !v.version || v.processDefinitionKey, {
+          message: "`version` requires `processDefinitionKey`.",
+          path: ["version"],
+        }),
       _meta: uiMeta,
     },
     async (args) => {
-      const instance = (await getProcessInstance({
-        client,
-        path: { id: args.processInstanceId },
-      })) as { definitionId?: string } | null
-
-      const definitionId = instance?.definitionId
-      if (!definitionId) {
-        return buildComposedView({
+      const renderEmpty = (processInstanceId: string | null) =>
+        buildComposedView({
           app: "camunda7",
           title: "BPMN Viewer",
           layout: [
@@ -549,7 +566,7 @@ export function registerWidgetTools(
               dataType: "camunda7:bpmnViewer",
               data: {
                 bpmnXml: "",
-                processInstanceId: args.processInstanceId,
+                processInstanceId,
                 processDefinitionId: null,
                 activeActivityIds: [],
                 incidentActivityIds: [],
@@ -558,15 +575,46 @@ export function registerWidgetTools(
             },
           ],
         })
+
+      let definitionId: string | null = null
+      let processInstanceId: string | null = null
+
+      if (args.processInstanceId) {
+        processInstanceId = args.processInstanceId
+        const instance = (await getProcessInstance({
+          client,
+          path: { id: args.processInstanceId },
+        })) as { definitionId?: string } | null
+        definitionId = instance?.definitionId ?? null
+      } else if (args.processDefinitionKey) {
+        const matches = await getProcessDefinitions({
+          client,
+          query: {
+            key: args.processDefinitionKey,
+            version: args.version,
+            latestVersion: args.version === undefined ? true : undefined,
+            maxResults: 1,
+          },
+        })
+        const first = Array.isArray(matches) ? (matches[0] as { id?: string } | undefined) : null
+        definitionId = first?.id ?? null
+      }
+
+      if (!definitionId) {
+        return renderEmpty(processInstanceId)
       }
 
       const [xmlResponse, activityTree, incidents, stats] = await Promise.all([
         getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } }).catch(() => null),
-        getActivityInstanceTree({ client, path: { id: args.processInstanceId } }).catch(() => null),
-        getIncidents({
-          client,
-          query: { processInstanceId: args.processInstanceId, maxResults: 200 },
-        }).catch(() => []),
+        processInstanceId
+          ? getActivityInstanceTree({ client, path: { id: processInstanceId } }).catch(() => null)
+          : Promise.resolve(null),
+        processInstanceId
+          ? getIncidents({
+              client,
+              query: { processInstanceId, maxResults: 200 },
+            }).catch(() => [])
+          : Promise.resolve([]),
         getActivityStatistics({
           client,
           path: { id: definitionId },
@@ -576,8 +624,8 @@ export function registerWidgetTools(
 
       const bpmnXml = (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? ""
 
-      const activeActivityIds = collectActiveActivityIds(activityTree)
-      const incidentActivityIds = collectIncidentActivityIds(incidents)
+      const activeActivityIds = processInstanceId ? collectActiveActivityIds(activityTree) : []
+      const incidentActivityIds = processInstanceId ? collectIncidentActivityIds(incidents) : []
 
       const statRows = Array.isArray(stats)
         ? (stats as Array<{ id?: string | null; instances?: number; failedJobs?: number }>)
@@ -601,7 +649,7 @@ export function registerWidgetTools(
             dataType: "camunda7:bpmnViewer",
             data: {
               bpmnXml,
-              processInstanceId: args.processInstanceId,
+              processInstanceId,
               processDefinitionId: definitionId,
               activeActivityIds,
               incidentActivityIds,
