@@ -556,11 +556,7 @@ export function registerWidgetTools(
         buildComposedView({
           app: "camunda7",
           title: "BPMN Viewer",
-          layout: [
-            { row: [{ widget: "camunda7:bpmn-viewer-header" }] },
-            { row: [{ widget: "camunda7:bpmn-viewer-legend" }] },
-            { row: [{ widget: "camunda7:bpmn-flow-viewer" }] },
-          ],
+          layout: [{ row: [{ widget: "camunda7:bpmn-viewer" }] }],
           entries: [
             {
               dataType: "camunda7:bpmnViewer",
@@ -639,11 +635,7 @@ export function registerWidgetTools(
       return buildComposedView({
         app: "camunda7",
         title: "BPMN Viewer",
-        layout: [
-          { row: [{ widget: "camunda7:bpmn-viewer-header" }] },
-          { row: [{ widget: "camunda7:bpmn-viewer-legend" }] },
-          { row: [{ widget: "camunda7:bpmn-flow-viewer" }] },
-        ],
+        layout: [{ row: [{ widget: "camunda7:bpmn-viewer" }] }],
         entries: [
           {
             dataType: "camunda7:bpmnViewer",

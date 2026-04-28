@@ -27,6 +27,31 @@ const processListPropsSchema = z.toJSONSchema(
   }),
 )
 
+const bpmnViewerPropsSchema = z.toJSONSchema(
+  z.object({
+    processInstanceId: z
+      .string()
+      .optional()
+      .describe(
+        "Render the diagram with live overlays (active activities, incidents, failed-job counts) for a running instance.",
+      ),
+    processDefinitionKey: z
+      .string()
+      .optional()
+      .describe(
+        "Render the static diagram of a process definition (no instance overlays). Combine with `version` to pin a specific revision.",
+      ),
+    version: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe(
+        "Specific definition version. Requires `processDefinitionKey`. Defaults to latest.",
+      ),
+  }),
+)
+
 export const definition: AppDefinition = {
   name: "camunda7",
   steps: [
@@ -102,6 +127,12 @@ export const definition: AppDefinition = {
       id: "camunda7:process-definitions-table",
       requires: ["camunda7:cockpitDashboardData"],
       size: "full",
+    },
+    {
+      id: "camunda7:bpmn-viewer",
+      requires: [],
+      size: "full",
+      propsSchema: bpmnViewerPropsSchema,
     },
     {
       id: "camunda7:bpmn-viewer-header",
