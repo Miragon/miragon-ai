@@ -8,8 +8,17 @@ import {
   TableCell,
 } from "@miragon/mcp-toolkit-ui"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
+import { useFailureDashboardSelfFetch, type Period } from "./lib.js"
 
-export function FailureRateTable({ data }: { data: FailureDashboardData | null }) {
+export function FailureRateTable({
+  data: initialData,
+  period,
+}: {
+  data: FailureDashboardData | null
+  period?: Period
+}) {
+  const fallbackQuery = useFailureDashboardSelfFetch(initialData, { period })
+  const data = initialData ?? fallbackQuery.data ?? null
   if (!data || data.processBreakdown.length === 0) return null
   return (
     <div className="bg-card text-card-foreground p-6">

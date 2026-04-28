@@ -13,8 +13,22 @@ interface AnalyticsAppConfig {
  */
 export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
   id: "analytics:load-dashboard",
+  description:
+    "Aggregated execution KPIs (totals, durations, incident count) + activity bottleneck breakdown over a time window. Powers the four dashboard widgets (execution-summary-kpi, execution-performance-kpi, process-definition-breakdown, activity-bottleneck-table).",
   dataType: "analytics:dashboard",
   requires: [],
+  optionalKeys: [
+    {
+      key: "analytics:processDefinitionKey",
+      description:
+        "Scope the dashboard to a single process definition (e.g. 'miraveloLeasing'). When omitted, all processes are aggregated.",
+    },
+    {
+      key: "analytics:period",
+      description: "Time window. Defaults to '7d'.",
+      enum: ["1d", "7d", "30d", "90d"],
+    },
+  ],
   produces: ["analytics:dashboardData"],
   execute: async (context, appConfig) => {
     const ch = appConfig.client

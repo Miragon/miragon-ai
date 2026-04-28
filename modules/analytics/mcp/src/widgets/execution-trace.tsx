@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Card,
   CardContent,
@@ -236,18 +236,28 @@ function OtelTab({ spans, error }: { spans: OtelSpanItem[]; error?: string }) {
   )
 }
 
-export function ExecutionTraceWidget({ data: initialData }: { data: ExecutionTraceData | null }) {
-  const [processInstanceId, setProcessInstanceId] = useState(initialData?.processInstanceId ?? "")
+export function ExecutionTraceWidget({
+  data: initialData,
+  processInstanceId: initialId,
+}: {
+  data: ExecutionTraceData | null
+  /**
+   * Pre-fills the input and auto-runs the trace on mount. Lets a layout cell
+   * pin the widget to a specific instance via `props: { processInstanceId }`.
+   */
+  processInstanceId?: string
+}) {
+  const [processInstanceId, setProcessInstanceId] = useState(
+    initialData?.processInstanceId ?? initialId ?? "",
+  )
   const [trace, setTrace] = useState<TraceData | null>(initialData?.trace ?? null)
   const traceMutation = useToolMutation("analytics_trace_process_execution")
 
-  function handleTrace(e: React.FormEvent) {
-    e.preventDefault()
-    if (!processInstanceId.trim()) return
-
+  function runTrace(id: string) {
+    if (!id) return
     traceMutation.mutate(
       {
-        processInstanceId: processInstanceId.trim(),
+        processInstanceId: id,
         includeActivityHistory: true,
         includeVariableChanges: true,
         includeOtelSpans: true,
@@ -259,6 +269,23 @@ export function ExecutionTraceWidget({ data: initialData }: { data: ExecutionTra
       },
     )
   }
+
+  function handleTrace(e: React.FormEvent) {
+    e.preventDefault()
+    runTrace(processInstanceId.trim())
+  }
+
+  // Auto-trace once when a processInstanceId prop is supplied and we don't
+  // already have data. Re-runs only if the prop itself changes.
+  const autoTracedFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (!initialId) return
+    if (initialData?.trace) return
+    if (autoTracedFor.current === initialId) return
+    autoTracedFor.current = initialId
+    runTrace(initialId.trim())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialId])
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-6 p-6">
