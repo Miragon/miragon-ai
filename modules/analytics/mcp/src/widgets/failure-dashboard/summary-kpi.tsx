@@ -1,13 +1,27 @@
 import { Card, CardContent, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
+import { useFailureDashboardSelfFetch, type Period } from "./lib.js"
 
-export function FailureSummaryKpi({ data }: { data: FailureDashboardData | null }) {
+export function FailureSummaryKpi({
+  data: initialData,
+  period,
+}: {
+  data: FailureDashboardData | null
+  period?: Period
+}) {
+  const fallbackQuery = useFailureDashboardSelfFetch(initialData, { period })
+  const data = initialData ?? fallbackQuery.data ?? null
+
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
-          <AlertDescription>No failure data available</AlertDescription>
-        </Alert>
+        {fallbackQuery.isError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <p className="text-muted-foreground text-sm">Loading failure analysis…</p>
+        )}
       </div>
     )
   }

@@ -17,8 +17,17 @@ interface AnalyticsAppConfig {
  */
 export const loadFailureDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
   id: "analytics:load-failure-dashboard",
+  description:
+    "Aggregated failure / incident analysis grouped by error message and process definition. Powers the failure widgets (failure-summary-kpi, failure-rate-table, error-patterns-table, period-selector).",
   dataType: "analytics:failureDashboard",
   requires: [],
+  optionalKeys: [
+    {
+      key: "analytics:period",
+      description: "Time window. Defaults to '7d'.",
+      enum: ["1d", "7d", "30d", "90d"],
+    },
+  ],
   produces: ["analytics:failureDashboardData"],
   execute: async (context, appConfig) => {
     const ch = appConfig.client

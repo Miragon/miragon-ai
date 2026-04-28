@@ -10,9 +10,17 @@ import {
   CardContent,
 } from "@miragon/mcp-toolkit-ui"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
-import { formatDate, truncate } from "./lib.js"
+import { formatDate, truncate, useFailureDashboardSelfFetch, type Period } from "./lib.js"
 
-export function ErrorPatternsTable({ data }: { data: FailureDashboardData | null }) {
+export function ErrorPatternsTable({
+  data: initialData,
+  period,
+}: {
+  data: FailureDashboardData | null
+  period?: Period
+}) {
+  const fallbackQuery = useFailureDashboardSelfFetch(initialData, { period })
+  const data = initialData ?? fallbackQuery.data ?? null
   if (!data) return null
   if (data.errorPatterns.length === 0) {
     if (data.processBreakdown.length === 0) {
