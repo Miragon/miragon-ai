@@ -43,6 +43,7 @@ export default tseslint.config(
             "modules/cibseven/mcp/vitest.config.ts",
             "modules/analytics/client/vitest.config.ts",
             "modules/cibseven/client/openapi-ts.config.ts",
+            "docs/.vitepress/config.ts",
           ],
           maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 64,
         },
