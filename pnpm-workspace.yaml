@@ -5,3 +5,4 @@ packages:
   - "packages/*"
   - "examples/*"
   - "vendor/mcp-toolkit/packages/*"
+  - "docs"
