@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "@miragon-ai/client-enrichment": "workspace:*",
-    "@miragon/mcp-toolkit-core": "workspace:*",
+    "@miragon/mcp-toolkit-core": "0.1.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.1.0",
     "zod": "4.3.6"
   },
   "peerDependencies": {

@@ -26,8 +26,9 @@
     "lint:fix": "eslint src --fix"
   },
   "peerDependencies": {
-    "@miragon/mcp-toolkit-core": "workspace:*",
-    "@miragon/mcp-toolkit-ui": "workspace:*",
+    "@miragon/mcp-toolkit-core": "0.1.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.1.0",
+    "@miragon/mcp-toolkit-ui": "0.1.0",
     "mcp-use": "1.23.1",
     "react": "19.2.5"
   },
@@ -40,8 +41,9 @@
     }
   },
   "devDependencies": {
-    "@miragon/mcp-toolkit-core": "workspace:*",
-    "@miragon/mcp-toolkit-ui": "workspace:*",
+    "@miragon/mcp-toolkit-core": "0.1.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.1.0",
+    "@miragon/mcp-toolkit-ui": "0.1.0",
     "@types/react": "19.2.14",
     "mcp-use": "1.23.1",
     "react": "19.2.5",

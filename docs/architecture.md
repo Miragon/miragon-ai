@@ -68,6 +68,5 @@ flowchart LR
 | `packages/core`, `packages/ui` | Shared plugin interface and shadcn/Tailwind primitives. |
 | `plugins/`                     | Kotlin history plugins.                                 |
 | `docker/`                      | Compose stack for engine, ClickHouse, OTEL, WireMock.   |
-| `vendor/mcp-toolkit/`          | Private Miragon submodule providing the MCP framework.  |
 
 For deeper detail, the root [`README.md`](https://github.com/miragon/miragon-ai/blob/main/README.md) keeps the full module table and tool list.
