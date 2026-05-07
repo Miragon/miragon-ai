@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@source "../../../vendor/mcp-toolkit/packages/ui/src";
 @source "../../../packages/widget-shell/src/ui";
 @source "../../../modules/cibseven/mcp/src";
 @source "../../../modules/analytics/mcp/src";

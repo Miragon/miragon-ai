@@ -5,22 +5,26 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+  packages: read
+
+# `.npmrc` interpolates `${GITHUB_TOKEN}` to authenticate the
+# `@miragon/mcp-toolkit-*` install against npm.pkg.github.com.
+# pnpm reads `.npmrc` on every invocation (including the
+# `pnpm config get store-dir` call setup-node makes for the cache
+# key), so the token must be present from the very first pnpm
+# command in every job.
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 jobs:
   auto-format:
     name: Run Formatters & Open PR
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v6
-
-      - name: Checkout private submodules
-        env:
-          TOOLKIT_PAT: ${{ secrets.TOOLKIT_PAT }}
-        run: |
-          git config --global url."https://x-access-token:${TOOLKIT_PAT}@github.com/".insteadOf "git@github.com:"
-          git submodule update --init --recursive
 
       - uses: pnpm/action-setup@v5
 

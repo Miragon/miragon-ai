@@ -48,16 +48,20 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 - Java 21 (for the Kotlin plugins — `plugins/.java-version` pins this version)
 - [jenv](https://www.jenv.be/) — manages the Java version via `plugins/.java-version` (Java 21)
 - Docker (for CIB Seven + ClickHouse)
-- Git submodule access to `vendor/mcp-toolkit` (private Miragon repo)
+- A GitHub PAT with `read:packages` scope (the `@miragon/mcp-toolkit-*` packages are published to the private Miragon GitHub Packages registry)
 
 ## Setup
 
-**1. Initialize the git submodule**
+**1. Authenticate to GitHub Packages**
 
-`vendor/mcp-toolkit` is a private Miragon submodule. Initialize it before anything else:
+The `@miragon/mcp-toolkit-*` packages live in a private Miragon registry on `npm.pkg.github.com`. The repo's `.npmrc` reads the token from `${GITHUB_TOKEN}` — you supply it via env var.
+
+1. Mint a classic PAT at https://github.com/settings/tokens with the **`read:packages`** scope only (long expiry recommended).
+2. If Miragon enforces SSO on your account, click **Configure SSO** on the token and authorize it for the `Miragon` org — otherwise installs fail with `403 Forbidden`.
+3. Export it in the shell that runs `pnpm` (add to `~/.zshrc` or your secret manager):
 
 ```bash
-git submodule update --init --recursive
+export GITHUB_TOKEN=ghp_xxx
 ```
 
 If you don't have access, contact a Miragon team member.

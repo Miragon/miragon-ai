@@ -2,8 +2,9 @@
 
 Mock CRM/leasing upstream for the **Miravelo Leasing** showcase
 (`plugins/examples/cibseven-example`). Standalone MCP server that ships its
-own declarative pipeline step + remote-hosted widget bundle, modelled on
-`vendor/mcp-toolkit/examples/customers-upstream`.
+own declarative pipeline step + remote-hosted widget bundle, modelled on the
+[`customers-upstream` example](https://github.com/Miragon/mcp-toolkit/tree/main/examples/customers-upstream)
+in `Miragon/mcp-toolkit`.
 
 ## What it exposes
 

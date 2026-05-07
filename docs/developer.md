@@ -8,17 +8,16 @@ A working development environment in five commands.
 - **pnpm 10.32.1** (pinned via `packageManager`; `corepack enable` picks it up automatically)
 - **Java 21** + [jenv](https://www.jenv.be/) (only needed to build the Kotlin history plugins)
 - **Docker** (for Camunda + ClickHouse)
-- Access to the private `vendor/mcp-toolkit` submodule
+- A GitHub PAT with `read:packages` scope (for the private `@miragon/mcp-toolkit-*` packages on GitHub Packages — see the [root README](https://github.com/miragon/miragon-ai/blob/main/README.md#setup) for the token setup)
 
 ## Clone and install
 
 ```bash
-git clone --recursive git@github.com:miragon/miragon-ai.git
+export GITHUB_TOKEN=ghp_xxx   # PAT with read:packages
+git clone git@github.com:miragon/miragon-ai.git
 cd miragon-ai
 pnpm install
 ```
-
-If you forgot `--recursive`, run `git submodule update --init --recursive`.
 
 ## Start the infrastructure
 
