@@ -1,0 +1,49 @@
+{
+  "name": "@miragon-ai/mcp-gateway",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "mcp-gateway": "dist/index.js"
+  },
+  "scripts": {
+    "build:ui": "cross-env INPUT=mcp-app.html vite build",
+    "build:server": "tsc",
+    "build": "pnpm run build:ui && pnpm run build:server",
+    "dev:ui": "cross-env INPUT=mcp-app.html vite build --watch",
+    "dev": "pnpm run build:ui && mcp-use dev --port 3010 --no-open",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "start": "cross-env NODE_ENV=production node dist/index.js"
+  },
+  "dependencies": {
+    "@miragon/mcp-toolkit-core": "0.1.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.1.0",
+    "@miragon-ai/client-cibseven": "workspace:*",
+    "@miragon-ai/mcp-cibseven": "workspace:*",
+    "@miragon-ai/mcp-analytics": "workspace:*",
+    "mcp-use": "1.23.1",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@miragon/mcp-toolkit-ui": "0.1.0",
+    "@tailwindcss/vite": "4.2.2",
+    "@types/node": "22.19.15",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.1",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "cross-env": "10.1.0",
+    "radix-ui": "1.4.3",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "tailwind-merge": "3.5.0",
+    "tailwindcss": "4.2.2",
+    "typescript": "5.9.3",
+    "vite": "8.0.8",
+    "vite-plugin-singlefile": "2.3.2"
+  }
+}

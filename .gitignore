@@ -5,10 +5,11 @@ dist/
 .env
 miranum-ai/
 # Gradle
-plugins/.gradle/
-plugins/build/
-plugins/*/build/
-plugins/examples/*/build/
+engine-plugins/.gradle/
+engine-plugins/build/
+engine-plugins/*/build/
+examples/cibseven-example/.gradle/
+examples/cibseven-example/build/
 .idea/
 .mcp-use/
 .playwright-mcp/

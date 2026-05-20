@@ -20,21 +20,20 @@ The Compose stack under `docker/docker-compose.yml` shows a fully wired example
 
 ## Environment variables
 
-| Variable                                | Default                             | Notes                                                |
-| --------------------------------------- | ----------------------------------- | ---------------------------------------------------- |
-| `PORT`                                  | `3010`                              | HTTP port for the MCP transport                      |
-| `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated; e.g. `camunda7,analytics`           |
-| `CAMUNDA_BASE_URL`                      | `http://localhost:8080/engine-rest` | Engine REST endpoint                                 |
-| `CAMUNDA_COCKPIT_URL`                   | derived                             | Used for jump-out links to Cockpit                   |
-| `CAMUNDA_AUTH_TYPE`                     | `none`                              | `basic`, `bearer`, or `none`                         |
-| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` | —                                   | Required for `basic`                                 |
-| `CAMUNDA_TOKEN`                         | —                                   | Required for `bearer`                                |
-| `CAMUNDA_INCIDENT_ISSUE_REPO`           | —                                   | Default `owner/repo` for the GitHub-issue tool       |
-| `CLICKHOUSE_URL`                        | `http://localhost:8123`             | HTTP endpoint                                        |
-| `CLICKHOUSE_USERNAME`                   | `default`                           |                                                      |
-| `CLICKHOUSE_PASSWORD`                   | _(empty)_                           |                                                      |
-| `CLICKHOUSE_DATABASE`                   | `camunda_history`                   |                                                      |
-| `ENRICHMENT_CONFIG_PATH`                | —                                   | Path to a YAML file; activates the enrichment module |
+| Variable                                | Default                             | Notes                                          |
+| --------------------------------------- | ----------------------------------- | ---------------------------------------------- |
+| `PORT`                                  | `3010`                              | HTTP port for the MCP transport                |
+| `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated; e.g. `camunda7,analytics`     |
+| `CAMUNDA_BASE_URL`                      | `http://localhost:8080/engine-rest` | Engine REST endpoint                           |
+| `CAMUNDA_COCKPIT_URL`                   | derived                             | Used for jump-out links to Cockpit             |
+| `CAMUNDA_AUTH_TYPE`                     | `none`                              | `basic`, `bearer`, or `none`                   |
+| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` | —                                   | Required for `basic`                           |
+| `CAMUNDA_TOKEN`                         | —                                   | Required for `bearer`                          |
+| `CAMUNDA_INCIDENT_ISSUE_REPO`           | —                                   | Default `owner/repo` for the GitHub-issue tool |
+| `CLICKHOUSE_URL`                        | `http://localhost:8123`             | HTTP endpoint                                  |
+| `CLICKHOUSE_USERNAME`                   | `default`                           |                                                |
+| `CLICKHOUSE_PASSWORD`                   | _(empty)_                           |                                                |
+| `CLICKHOUSE_DATABASE`                   | `camunda_history`                   |                                                |
 
 ## External services
 
@@ -48,14 +47,13 @@ Optional:
 
 - **OTEL collector + Jaeger** — turn on with `docker compose --profile otel up`.
   Jaeger UI runs on `:16686`.
-- **WireMock** — local HTTP stubs for the enrichment examples (`:8088`).
 
 ## History pipeline
 
-The Kotlin plugins under `plugins/` ship inside the CIB Seven runtime and
+The Kotlin plugins under `engine-plugins/` ship inside the CIB Seven runtime and
 forward history events to ClickHouse. They are versioned and built independently
-from the Node server (`./gradlew clean build` inside `plugins/`). CI runs both
-toolchains in parallel — see `.github/workflows/ci.yml`.
+from the Node gateway (`./gradlew clean build` inside `engine-plugins/`). CI runs
+both toolchains in parallel — see `.github/workflows/ci.yml`.
 
 ## Module activation
 
@@ -64,9 +62,6 @@ Disable any module by listing only the ones you want:
 ```bash
 MCP_ACTIVE_MODULES=camunda7
 ```
-
-The `enrichment` module stays inactive unless `ENRICHMENT_CONFIG_PATH` is set,
-even if it's listed.
 
 ## Observability
 
