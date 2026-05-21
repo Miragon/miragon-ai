@@ -31,5 +31,5 @@ COPY --from=build /app/deployed .
 COPY --from=build /app/apps/mcp-gateway/dist ./dist
 
 ENV NODE_ENV=production
-EXPOSE 3010
+EXPOSE 8400
 CMD ["node", "dist/index.js"]

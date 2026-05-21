@@ -21,7 +21,7 @@ pnpm install
 
 ## Start the infrastructure
 
-The default Compose stack brings up CIB Seven, ClickHouse, OTEL collector, and Jaeger — but **not** the Node MCP gateway, so port `3010` stays free for `pnpm dev`.
+The default Compose stack brings up CIB Seven, ClickHouse, OTEL collector, and Jaeger — but **not** the Node MCP gateway, so port `8400` stays free for `pnpm dev`.
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
@@ -33,8 +33,8 @@ docker compose -f docker/docker-compose.yml up -d
 pnpm dev
 ```
 
-This starts the Miravelo upstream on `:4002` and the MCP gateway on `:3010`.
-Connect any MCP host to `http://localhost:3010` and call a tool.
+This starts the Miravelo upstream on `:8401` and the MCP gateway on `:8400`.
+Connect any MCP host to `http://localhost:8400` and call a tool.
 
 ## Common tasks
 

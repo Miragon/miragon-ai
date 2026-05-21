@@ -86,7 +86,7 @@ cd engine-plugins && ./gradlew clean build && cd ..
 
 **4. Start the infrastructure**
 
-The default compose stack starts only the infra (CIB Seven, ClickHouse, OTEL collector, Jaeger) — the Node MCP server is left out so you can run it locally via `pnpm dev` on port 3010 without a port conflict.
+The default compose stack starts only the infra (CIB Seven, ClickHouse, OTEL collector, Jaeger) — the Node MCP server is left out so you can run it locally via `pnpm dev` on port 8400 without a port conflict.
 
 ```bash
 cd docker && docker compose up -d && cd ..
@@ -119,12 +119,12 @@ The build chain is:
 cd docker && docker compose up -d
 cd ..
 
-PORT=3010 \
-CAMUNDA_BASE_URL=http://localhost:8080/engine-rest \
+PORT=8400 \
+CAMUNDA_BASE_URL=http://localhost:8410/engine-rest \
 CAMUNDA_AUTH_TYPE=basic \
 CAMUNDA_USERNAME=demo \
 CAMUNDA_PASSWORD=demo \
-CLICKHOUSE_URL=http://localhost:8123 \
+CLICKHOUSE_URL=http://localhost:8420 \
 CLICKHOUSE_USERNAME=camunda \
 CLICKHOUSE_PASSWORD=camunda123 \
 CLICKHOUSE_DATABASE=camunda_history \
@@ -137,16 +137,16 @@ The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP cl
 
 | Variable                      | Default                             | Description                                                                                                                                                                                                                                                                                      |
 | ----------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`                        | `3010`                              | HTTP port the MCP server listens on                                                                                                                                                                                                                                                              |
+| `PORT`                        | `8400`                              | HTTP port the MCP server listens on                                                                                                                                                                                                                                                              |
 | `MCP_ACTIVE_MODULES`          | all                                 | Comma-separated module list (`camunda7,analytics`)                                                                                                                                                                                                                                               |
-| `CAMUNDA_BASE_URL`            | `http://localhost:8080/engine-rest` | Engine REST API base URL                                                                                                                                                                                                                                                                         |
-| `CAMUNDA_COCKPIT_URL`         | _derived from `CAMUNDA_BASE_URL`_   | Cockpit web UI base, e.g. `http://localhost:8080/webapp`. Used for jump-out links: `<base>/#/seven/auth/process/<key>/<version>?tab=incidents` (process) and `<base>/#/seven/auth/process/<key>/<version>/<instanceId>?tab=variables` (instance).                                                |
+| `CAMUNDA_BASE_URL`            | `http://localhost:8410/engine-rest` | Engine REST API base URL                                                                                                                                                                                                                                                                         |
+| `CAMUNDA_COCKPIT_URL`         | _derived from `CAMUNDA_BASE_URL`_   | Cockpit web UI base, e.g. `http://localhost:8410/webapp`. Used for jump-out links: `<base>/#/seven/auth/process/<key>/<version>?tab=incidents` (process) and `<base>/#/seven/auth/process/<key>/<version>/<instanceId>?tab=variables` (instance).                                                |
 | `CAMUNDA_AUTH_TYPE`           | `none`                              | `basic`, `bearer`, or `none`                                                                                                                                                                                                                                                                     |
 | `CAMUNDA_USERNAME`            | —                                   | Basic auth username                                                                                                                                                                                                                                                                              |
 | `CAMUNDA_PASSWORD`            | —                                   | Basic auth password                                                                                                                                                                                                                                                                              |
 | `CAMUNDA_TOKEN`               | —                                   | Bearer token                                                                                                                                                                                                                                                                                     |
 | `CAMUNDA_INCIDENT_ISSUE_REPO` | —                                   | Default `owner/repo` for the `camunda7_format_incident_issue` tool and `report_incident_to_github` prompt. Per-call override stays available. Requires the [official GitHub MCP server](https://github.com/github/github-mcp-server) installed alongside this server to actually file the issue. |
-| `CLICKHOUSE_URL`              | `http://localhost:8123`             | ClickHouse HTTP endpoint                                                                                                                                                                                                                                                                         |
+| `CLICKHOUSE_URL`              | `http://localhost:8420`             | ClickHouse HTTP endpoint                                                                                                                                                                                                                                                                         |
 | `CLICKHOUSE_USERNAME`         | `default`                           | ClickHouse user                                                                                                                                                                                                                                                                                  |
 | `CLICKHOUSE_PASSWORD`         | ``                                  | ClickHouse password                                                                                                                                                                                                                                                                              |
 | `CLICKHOUSE_DATABASE`         | `camunda_history`                   | ClickHouse database                                                                                                                                                                                                                                                                              |
@@ -183,7 +183,7 @@ All tools are prefixed with `analytics_`:
 
 ## Deployment
 
-A multi-stage `Dockerfile` builds the server with pruned production deps and exposes port 3010. See `Dockerfile` in the repo root.
+A multi-stage `Dockerfile` builds the server with pruned production deps and exposes port 8400. See `Dockerfile` in the repo root.
 
 ## Troubleshooting
 

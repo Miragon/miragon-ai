@@ -9,7 +9,7 @@ analytics module can query it.
 
 ```mermaid
 flowchart LR
-  Host[MCP Host<br/>Claude · ChatGPT] -->|MCP / HTTP| Server[MCP Server<br/>:3010]
+  Host[MCP Host<br/>Claude · ChatGPT] -->|MCP / HTTP| Server[MCP Gateway<br/>:8400]
 
   subgraph Modules
     Cibseven[cibseven<br/>tools + widgets]
@@ -32,7 +32,7 @@ flowchart LR
 
 | Module                                        | Role                                                                                                                                                     |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **MCP Gateway** (`apps/mcp-gateway/`)         | Hosts the HTTP transport on port `3010`, loads modules from `MCP_ACTIVE_MODULES`, and serves a single-file React widget bundle.                          |
+| **MCP Gateway** (`apps/mcp-gateway/`)         | Hosts the HTTP transport on port `8400`, loads modules from `MCP_ACTIVE_MODULES`, and serves a single-file React widget bundle.                          |
 | **cibseven** (`packages/mcp-cibseven/`)       | Wraps the Camunda 7 / CIB Seven REST API via an OpenAPI-generated client. Exposes 37 tools (process, task, incident, deployment, history) and 5 widgets. |
 | **analytics** (`packages/mcp-analytics/`)     | Queries the ClickHouse `camunda_history` database for performance, failure, and path-frequency analyses. 6 tools + 1 dashboard widget.                   |
 | **engine-plugins** (`engine-plugins/`)        | Kotlin plugins for CIB Seven that mirror history events into ClickHouse. Independent build (Java 21, Gradle).                                            |
@@ -40,11 +40,11 @@ flowchart LR
 
 ## External systems
 
-| System                           | Purpose                                                                   | Default endpoint                      |
-| -------------------------------- | ------------------------------------------------------------------------- | ------------------------------------- |
-| Camunda 7 / CIB Seven            | The BPM engine itself — process definitions, instances, tasks, incidents. | `http://localhost:8080/engine-rest`   |
-| ClickHouse                       | OLAP store for engine history, fed by the Kotlin plugins.                 | `http://localhost:8123`               |
-| OpenTelemetry collector + Jaeger | Optional tracing pipeline.                                                | `:4318` (OTLP) · `:16686` (Jaeger UI) |
+| System                           | Purpose                                                                   | Default endpoint                     |
+| -------------------------------- | ------------------------------------------------------------------------- | ------------------------------------ |
+| Camunda 7 / CIB Seven            | The BPM engine itself — process definitions, instances, tasks, incidents. | `http://localhost:8410/engine-rest`  |
+| ClickHouse                       | OLAP store for engine history, fed by the Kotlin plugins.                 | `http://localhost:8420`              |
+| OpenTelemetry collector + Jaeger | Optional tracing pipeline.                                                | `:8431` (OTLP) · `:8440` (Jaeger UI) |
 
 ## Data flow
 

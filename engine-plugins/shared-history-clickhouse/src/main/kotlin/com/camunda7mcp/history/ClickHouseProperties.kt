@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 @ConfigurationProperties(prefix = "camunda7mcp.history.clickhouse")
 class ClickHouseProperties {
     var enabled: Boolean = true
-    var url: String = "jdbc:clickhouse://localhost:8123/camunda_history"
+    var url: String = "jdbc:clickhouse://localhost:8420/camunda_history"
     var username: String = "default"
     var password: String = ""
     var database: String = "camunda_history"

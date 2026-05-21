@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import path from "node:path"
+import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
 import { parseProxyConfigEnv } from "@miragon/mcp-toolkit-proxy-contract"
 import { getAppConfig, getPlugins } from "./setup.js"
@@ -14,7 +15,10 @@ const app = await createFrameworkApp({
   version: "0.1.0",
   host: "0.0.0.0",
   baseUrl: process.env.MCP_URL,
-  plugins: getPlugins(),
+  // Cast: toolkit's `plugins: AppPlugin[]` is unparameterized (TServer = unknown),
+  // but our plugin factories return `AppPlugin<MCPServer>`. The framework invokes
+  // `registerTools(MCPServer)` at runtime, so the narrowing is sound.
+  plugins: getPlugins() as AppPlugin[],
   proxies: parseProxyConfigEnv(process.env.MCP_PROXIES),
   appConfig: getAppConfig(),
   app: {
@@ -23,4 +27,4 @@ const app = await createFrameworkApp({
   },
 })
 
-await app.listen(Number(process.env.PORT ?? 3010))
+await app.listen(Number(process.env.PORT ?? 8400))

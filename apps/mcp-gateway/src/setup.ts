@@ -1,4 +1,5 @@
 import type { AppConfig, AppConfigEntry, AppPlugin } from "@miragon/mcp-toolkit-core"
+import type { MCPServer } from "mcp-use/server"
 import { z } from "zod"
 
 import { createPlugin as createCamunda7Plugin } from "@miragon-ai/mcp-cibseven"
@@ -6,7 +7,7 @@ import { createPlugin as createAnalyticsPlugin } from "@miragon-ai/mcp-analytics
 import { createCamunda7Client, type Client as Camunda7Client } from "@miragon-ai/client-cibseven"
 
 const camunda7ConfigSchema = z.object({
-  baseUrl: z.string().default("http://localhost:8080/engine-rest"),
+  baseUrl: z.string().default("http://localhost:8410/engine-rest"),
   cockpitUrl: z.string().url().optional(),
   authType: z.enum(["basic", "bearer", "none"]).default("none"),
   username: z.string().optional(),
@@ -19,7 +20,7 @@ const camunda7ConfigSchema = z.object({
 })
 
 const analyticsConfigSchema = z.object({
-  url: z.string().default("http://localhost:8123"),
+  url: z.string().default("http://localhost:8420"),
   username: z.string().default("default"),
   password: z.string().default(""),
   database: z.string().default("camunda_history"),
@@ -43,7 +44,7 @@ interface SharedResources {
 const MODULE_REGISTRY: Record<
   string,
   {
-    createPlugin: (config: Record<string, unknown>, shared: SharedResources) => AppPlugin
+    createPlugin: (config: Record<string, unknown>, shared: SharedResources) => AppPlugin<MCPServer>
     configFromEnv: () => Record<string, unknown>
   }
 > = {
@@ -137,7 +138,7 @@ function buildSharedResources(entries: AppConfigEntry[]): SharedResources {
   return { camunda7Client }
 }
 
-export function getPlugins(): AppPlugin[] {
+export function getPlugins(): AppPlugin<MCPServer>[] {
   const entries = getActiveAppEntries()
   const shared = buildSharedResources(entries)
   return entries

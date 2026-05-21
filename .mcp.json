@@ -2,7 +2,7 @@
   "mcpServers": {
     "automation-mcp": {
       "type": "http",
-      "url": "http://localhost:3010/mcp"
+      "url": "http://localhost:8400/mcp"
     }
   }
 }

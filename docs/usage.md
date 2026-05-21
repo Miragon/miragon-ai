@@ -6,14 +6,14 @@ the assistant takes the right steps without you having to spell each one out.
 
 ## Connect your assistant
 
-Add an HTTP MCP server pointing at `http://localhost:3010` (or wherever you've
+Add an HTTP MCP server pointing at `http://localhost:8400` (or wherever you've
 deployed it). For Claude Desktop:
 
 ```json
 {
   "mcpServers": {
     "miragon-ai": {
-      "url": "http://localhost:3010"
+      "url": "http://localhost:8400"
     }
   }
 }

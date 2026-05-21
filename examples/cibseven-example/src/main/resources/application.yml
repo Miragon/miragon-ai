@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8410
 
 camunda.bpm:
   admin-user:
@@ -29,7 +29,7 @@ cibseven:
     services:
       basePath: services/v1
     engineRest:
-      url: http://localhost:8080
+      url: http://localhost:8410
     authentication:
       jwtSecret: Y2liN2V2ZW4tZXhhbXBsZS1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLWp3dC1zaWduaW5nLXB1cnBvc2VzLWFuZC1uZWVkcy10by1iZS1hdC1sZWFzdC0xNTUtY2hhcnMtbG9uZw==
 
@@ -44,7 +44,7 @@ camunda7mcp:
   history:
     clickhouse:
       enabled: ${CLICKHOUSE_ENABLED:false}
-      url: jdbc:clickhouse://${CLICKHOUSE_HOST:localhost}:${CLICKHOUSE_PORT:8123}/${CLICKHOUSE_DATABASE:camunda_history}?compress=0
+      url: jdbc:clickhouse://${CLICKHOUSE_HOST:localhost}:${CLICKHOUSE_PORT:8420}/${CLICKHOUSE_DATABASE:camunda_history}?compress=0
       username: ${CLICKHOUSE_USER:camunda}
       password: ${CLICKHOUSE_PASSWORD:camunda123}
       database: ${CLICKHOUSE_DATABASE:camunda_history}

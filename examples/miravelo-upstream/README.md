@@ -24,18 +24,18 @@ Module manifest:
 ## Run
 
 The repo's root `pnpm dev` orchestrates the upstream + host together — it
-starts this server first, waits for `:4002`, then boots the host:
+starts this server first, waits for `:8401`, then boots the host:
 
 ```sh
 pnpm install
-pnpm dev   # → starts miravelo-upstream + server, gated on TCP:4002
+pnpm dev   # → starts miravelo-upstream + server, gated on TCP:8401
 ```
 
 To run only the upstream:
 
 ```sh
 pnpm --filter @miragon-ai/miravelo-upstream dev
-# → [miravelo-upstream] listening on http://localhost:4002/mcp
+# → [miravelo-upstream] listening on http://localhost:8401/mcp
 ```
 
 Override the port via `UPSTREAM_MIRAVELO_PORT` in `.env`.
@@ -48,8 +48,8 @@ manifest with the declarative step + widget is _not_ discovered.
 
 ```env
 # .env
-UPSTREAM_MIRAVELO_PORT=4002
-MCP_PROXIES=[{"name":"miravelo","label":"Miravelo","upstreamUrl":"http://localhost:4002/mcp","auth":{"mode":"none"},"upstreamModules":true}]
+UPSTREAM_MIRAVELO_PORT=8401
+MCP_PROXIES=[{"name":"miravelo","label":"Miravelo","upstreamUrl":"http://localhost:8401/mcp","auth":{"mode":"none"},"upstreamModules":true}]
 ```
 
 If you already have other entries in `MCP_PROXIES`, append to the JSON array.

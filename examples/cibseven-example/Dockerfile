@@ -9,6 +9,6 @@ COPY build/libs/cibseven-example.jar app.jar
 
 ENV JAVA_OPTS="-javaagent:/opt/otel/opentelemetry-javaagent.jar"
 
-EXPOSE 8080
+EXPOSE 8410
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
