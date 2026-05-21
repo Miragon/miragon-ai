@@ -1,7 +1,7 @@
 [versions]
 # Language / platform
-kotlin = "2.3.20"
-spring-boot = "3.5.6"
+kotlin = "2.3.21"
+spring-boot = "4.0.6"
 spring-dependency-management = "1.1.7"
 
 # Build tooling
@@ -10,7 +10,7 @@ ktlint = "14.2.0"
 
 # Quality / testing
 konsist = "0.17.3"
-junit-jupiter = "5.11.4"
+junit-jupiter = "6.1.0"
 
 # Engine SDKs
 camunda7 = "7.24.0"
@@ -18,8 +18,8 @@ cibseven = "2.1.0"
 
 # Runtime libraries
 clickhouse-jdbc = "0.9.8"
-httpclient5 = "5.6"
-opentelemetry-api = "1.61.0"
+httpclient5 = "5.6.1"
+opentelemetry-api = "1.62.0"
 
 [libraries]
 # BOM
