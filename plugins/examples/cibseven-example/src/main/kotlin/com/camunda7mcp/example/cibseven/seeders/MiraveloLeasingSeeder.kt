@@ -320,13 +320,12 @@ class MiraveloLeasingSeeder(
         )
     }
 
-    private fun findVersionId(processKey: String, version: Int): String? =
-        repositoryService
-            .createProcessDefinitionQuery()
-            .processDefinitionKey(processKey)
-            .processDefinitionVersion(version)
-            .singleResult()
-            ?.id
+    private fun findVersionId(processKey: String, version: Int): String? = repositoryService
+        .createProcessDefinitionQuery()
+        .processDefinitionKey(processKey)
+        .processDefinitionVersion(version)
+        .singleResult()
+        ?.id
 
     private fun completeDecisionTask(processInstanceId: String, taskId: String, startTime: Instant) {
         // Cap latency at 110 min so the 2 h non-interrupting timer boundary
