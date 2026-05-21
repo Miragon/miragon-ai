@@ -8,7 +8,7 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 ┌─────────────────────────────────────────────────────┐
 │            MCP Host (Claude, ChatGPT, ...)          │
 │  ┌──────────────────────────────────────────────┐   │
-│  │         @miragon-ai/server               │   │
+│  │         @miragon-ai/mcp-gateway          │   │
 │  │  ┌─────────────────┐  ┌──────────────────┐   │   │
 │  │  │ camunda7 module │  │ analytics module │   │   │
 │  │  │  37 tools       │  │   6 tools        │   │   │
@@ -30,23 +30,25 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Clic
 
 ## Layout
 
-| Path                       | Description                                                                          |
-| -------------------------- | ------------------------------------------------------------------------------------ |
-| `server/`                  | `@miragon-ai/server` — mcp-use MCP server with HTTP transport and widget HTML bundle |
-| `modules/cibseven/client/` | `@miragon-ai/client-cibseven` — OpenAPI-generated TypeScript client (hey-api)        |
-| `modules/cibseven/mcp/`    | `@miragon-ai/mcp-cibseven` — BPM tools + React widgets                               |
-| `modules/analytics/mcp/`   | `@miragon-ai/mcp-analytics` — ClickHouse analytics tools + dashboard widget          |
-| `packages/core/`           | `@miragon-ai/core` — `ModulePlugin` interface + `createToolRegistrar` helper         |
-| `packages/ui/`             | `@miragon-ai/ui` — shared shadcn primitives + tailwind globals                       |
-| `plugins/`                 | Kotlin OTEL / ClickHouse sync plugins (unchanged)                                    |
-| `docker/`                  | docker-compose for CIB Seven + ClickHouse + OTEL                                     |
+| Path                          | Description                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `apps/mcp-gateway/`           | `@miragon-ai/mcp-gateway` — mcp-use MCP server with HTTP transport and widget HTML bundle |
+| `packages/client-cibseven/`   | `@miragon-ai/client-cibseven` — OpenAPI-generated TypeScript client (hey-api)             |
+| `packages/mcp-cibseven/`      | `@miragon-ai/mcp-cibseven` — BPM tools + React widgets                                    |
+| `packages/client-analytics/`  | `@miragon-ai/client-analytics` — ClickHouse query helpers                                 |
+| `packages/mcp-analytics/`     | `@miragon-ai/mcp-analytics` — ClickHouse analytics tools + dashboard widget               |
+| `packages/widget-shell/`      | `@miragon-ai/widget-shell` — shared widget primitives + adapt-data wrapper                |
+| `engine-plugins/`             | Kotlin OTEL / ClickHouse sync plugins for CIB Seven (separate Gradle build, Java 21)      |
+| `examples/miravelo-upstream/` | Mock CRM/leasing upstream that federates a manifest into the gateway                      |
+| `examples/cibseven-example/`  | Runnable Spring Boot showcase that consumes the engine-plugins (composite Gradle build)   |
+| `docker/`                     | docker-compose for CIB Seven + ClickHouse + OTEL                                          |
 
 ## Prerequisites
 
 - Node.js 22+
 - pnpm 10+
-- Java 21 (for the Kotlin plugins — `plugins/.java-version` pins this version)
-- [jenv](https://www.jenv.be/) — manages the Java version via `plugins/.java-version` (Java 21)
+- Java 21 (for the Kotlin plugins — `engine-plugins/.java-version` pins this version)
+- [jenv](https://www.jenv.be/) — manages the Java version via `engine-plugins/.java-version` (Java 21)
 - Docker (for CIB Seven + ClickHouse)
 - A GitHub PAT with `read:packages` scope (the `@miragon/mcp-toolkit-*` packages are published to the private Miragon GitHub Packages registry)
 
@@ -68,7 +70,7 @@ If you don't have access, contact a Miragon team member.
 
 **2. Set the Java version**
 
-Install [jenv](https://www.jenv.be/) and add Java 21. The `plugins/.java-version` file pins the version automatically when you enter the directory:
+Install [jenv](https://www.jenv.be/) and add Java 21. The `engine-plugins/.java-version` file pins the version automatically when you enter the directory:
 
 ```bash
 jenv add <path-to-java-21>   # e.g. $(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
@@ -79,12 +81,12 @@ jenv add <path-to-java-21>   # e.g. $(brew --prefix openjdk@21)/libexec/openjdk.
 Always use the `./gradlew` wrapper — not a globally installed `gradle`. The wrapper ensures the correct Gradle version is used; a global installation may differ and cause build failures.
 
 ```bash
-cd plugins && ./gradlew clean build && cd ..
+cd engine-plugins && ./gradlew clean build && cd ..
 ```
 
 **4. Start the infrastructure**
 
-The default compose stack starts only the infra (CIB Seven, ClickHouse, OTEL collector, Jaeger, WireMock) — the Node MCP server is left out so you can run it locally via `pnpm dev` on port 3010 without a port conflict.
+The default compose stack starts only the infra (CIB Seven, ClickHouse, OTEL collector, Jaeger) — the Node MCP server is left out so you can run it locally via `pnpm dev` on port 8400 without a port conflict.
 
 ```bash
 cd docker && docker compose up -d && cd ..
@@ -109,7 +111,7 @@ The build chain is:
 1. `@miragon-ai/client-cibseven` — `tsc` against the generated SDK
 2. `@miragon-ai/core`, `@miragon-ai/ui` — shared helpers and UI primitives
 3. `@miragon-ai/mcp-cibseven`, `@miragon-ai/mcp-analytics` — tool + widget modules
-4. `@miragon-ai/server` — Vite bundles `mcp-app.html` (single-file HTML with all widgets) and `tsc` compiles the server
+4. `@miragon-ai/mcp-gateway` — Vite bundles `mcp-app.html` (single-file HTML with all widgets) and `tsc` compiles the gateway
 
 ## Run
 
@@ -117,16 +119,16 @@ The build chain is:
 cd docker && docker compose up -d
 cd ..
 
-PORT=3010 \
-CAMUNDA_BASE_URL=http://localhost:8080/engine-rest \
+PORT=8400 \
+CAMUNDA_BASE_URL=http://localhost:8410/engine-rest \
 CAMUNDA_AUTH_TYPE=basic \
 CAMUNDA_USERNAME=demo \
 CAMUNDA_PASSWORD=demo \
-CLICKHOUSE_URL=http://localhost:8123 \
+CLICKHOUSE_URL=http://localhost:8420 \
 CLICKHOUSE_USERNAME=camunda \
 CLICKHOUSE_PASSWORD=camunda123 \
 CLICKHOUSE_DATABASE=camunda_history \
-pnpm -F @miragon-ai/server start
+pnpm -F @miragon-ai/mcp-gateway start
 ```
 
 The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP client at it.
@@ -135,16 +137,16 @@ The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP cl
 
 | Variable                      | Default                             | Description                                                                                                                                                                                                                                                                                      |
 | ----------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`                        | `3010`                              | HTTP port the MCP server listens on                                                                                                                                                                                                                                                              |
+| `PORT`                        | `8400`                              | HTTP port the MCP server listens on                                                                                                                                                                                                                                                              |
 | `MCP_ACTIVE_MODULES`          | all                                 | Comma-separated module list (`camunda7,analytics`)                                                                                                                                                                                                                                               |
-| `CAMUNDA_BASE_URL`            | `http://localhost:8080/engine-rest` | Engine REST API base URL                                                                                                                                                                                                                                                                         |
-| `CAMUNDA_COCKPIT_URL`         | _derived from `CAMUNDA_BASE_URL`_   | Cockpit web UI base, e.g. `http://localhost:8080/webapp`. Used for jump-out links: `<base>/#/seven/auth/process/<key>/<version>?tab=incidents` (process) and `<base>/#/seven/auth/process/<key>/<version>/<instanceId>?tab=variables` (instance).                                                |
+| `CAMUNDA_BASE_URL`            | `http://localhost:8410/engine-rest` | Engine REST API base URL                                                                                                                                                                                                                                                                         |
+| `CAMUNDA_COCKPIT_URL`         | _derived from `CAMUNDA_BASE_URL`_   | Cockpit web UI base, e.g. `http://localhost:8410/webapp`. Used for jump-out links: `<base>/#/seven/auth/process/<key>/<version>?tab=incidents` (process) and `<base>/#/seven/auth/process/<key>/<version>/<instanceId>?tab=variables` (instance).                                                |
 | `CAMUNDA_AUTH_TYPE`           | `none`                              | `basic`, `bearer`, or `none`                                                                                                                                                                                                                                                                     |
 | `CAMUNDA_USERNAME`            | —                                   | Basic auth username                                                                                                                                                                                                                                                                              |
 | `CAMUNDA_PASSWORD`            | —                                   | Basic auth password                                                                                                                                                                                                                                                                              |
 | `CAMUNDA_TOKEN`               | —                                   | Bearer token                                                                                                                                                                                                                                                                                     |
 | `CAMUNDA_INCIDENT_ISSUE_REPO` | —                                   | Default `owner/repo` for the `camunda7_format_incident_issue` tool and `report_incident_to_github` prompt. Per-call override stays available. Requires the [official GitHub MCP server](https://github.com/github/github-mcp-server) installed alongside this server to actually file the issue. |
-| `CLICKHOUSE_URL`              | `http://localhost:8123`             | ClickHouse HTTP endpoint                                                                                                                                                                                                                                                                         |
+| `CLICKHOUSE_URL`              | `http://localhost:8420`             | ClickHouse HTTP endpoint                                                                                                                                                                                                                                                                         |
 | `CLICKHOUSE_USERNAME`         | `default`                           | ClickHouse user                                                                                                                                                                                                                                                                                  |
 | `CLICKHOUSE_PASSWORD`         | ``                                  | ClickHouse password                                                                                                                                                                                                                                                                              |
 | `CLICKHOUSE_DATABASE`         | `camunda_history`                   | ClickHouse database                                                                                                                                                                                                                                                                              |
@@ -177,11 +179,11 @@ All tools are prefixed with `analytics_`:
 
 ## Widget UI
 
-`server/mcp-app.html` is a single-file HTML bundle produced by Vite + `vite-plugin-singlefile`. It contains React, Tailwind, and all widget components. The server exposes it as the MCP resource `ui://automation-mcp/mcp-app.html`. Widget tools return `{ widget, data }` in their structured content; the `McpAppView` component dispatches to the matching widget from the shared registry.
+`apps/mcp-gateway/mcp-app.html` is a single-file HTML bundle produced by Vite + `vite-plugin-singlefile`. It contains React, Tailwind, and all widget components. The gateway exposes it as the MCP resource `ui://automation-mcp/mcp-app.html`. Widget tools return `{ widget, data }` in their structured content; the `McpAppView` component dispatches to the matching widget from the shared registry.
 
 ## Deployment
 
-A multi-stage `Dockerfile` builds the server with pruned production deps and exposes port 3010. See `Dockerfile` in the repo root.
+A multi-stage `Dockerfile` builds the server with pruned production deps and exposes port 8400. See `Dockerfile` in the repo root.
 
 ## Troubleshooting
 

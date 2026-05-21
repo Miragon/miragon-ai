@@ -9,6 +9,8 @@
 .mcp-use
 .playwright-mcp
 .ai
-plugins/.gradle
-plugins/build
-plugins/**/build
+engine-plugins/.gradle
+engine-plugins/build
+engine-plugins/**/build
+examples/cibseven-example/.gradle
+examples/cibseven-example/build

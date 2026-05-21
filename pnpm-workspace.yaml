@@ -1,7 +1,5 @@
 packages:
-  - "server"
-  - "modules/*/client"
-  - "modules/*/mcp"
+  - "apps/*"
   - "packages/*"
   - "examples/*"
   - "docs"

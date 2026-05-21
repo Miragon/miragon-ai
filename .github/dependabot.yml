@@ -16,7 +16,7 @@ updates:
 
   # Gradle / Kotlin plugins
   - package-ecosystem: "gradle"
-    directory: "/plugins"
+    directory: "/engine-plugins"
     schedule:
       interval: "weekly"
     groups:

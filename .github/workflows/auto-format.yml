@@ -44,7 +44,7 @@ jobs:
           cache: gradle
 
       - name: ktlintFormat
-        working-directory: plugins
+        working-directory: engine-plugins
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
         run: ./gradlew ktlintFormat

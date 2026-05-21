@@ -14,25 +14,22 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm fetch
 
 COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
-COPY modules/ modules/
+COPY apps/ apps/
 COPY packages/ packages/
-COPY server/ server/
-COPY vendor/ vendor/
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --offline
 
 RUN --mount=type=cache,id=turbo-server,target=/app/.turbo \
-    pnpm turbo build --filter=@miragon-ai/server...
+    pnpm turbo build --filter=@miragon-ai/mcp-gateway...
 
-RUN pnpm --filter @miragon-ai/server deploy --prod --legacy /app/deployed
+RUN pnpm --filter @miragon-ai/mcp-gateway deploy --prod --legacy /app/deployed
 
 FROM base AS runtime
 WORKDIR /app
 COPY --from=build /app/deployed .
-COPY --from=build /app/server/dist ./dist
-COPY --from=build /app/server/resources ./resources
+COPY --from=build /app/apps/mcp-gateway/dist ./dist
 
 ENV NODE_ENV=production
-EXPOSE 3010
+EXPOSE 8400
 CMD ["node", "dist/index.js"]

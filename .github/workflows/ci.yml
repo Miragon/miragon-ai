@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: plugins
+        working-directory: engine-plugins
     steps:
       - uses: actions/checkout@v6
 

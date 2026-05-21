@@ -156,6 +156,6 @@ server.resource(
   }),
 )
 
-const port = Number(process.env.UPSTREAM_MIRAVELO_PORT ?? 4002)
+const port = Number(process.env.UPSTREAM_MIRAVELO_PORT ?? 8401)
 await server.listen(port)
 process.stdout.write(`[miravelo-upstream] listening on http://localhost:${port}/mcp\n`)

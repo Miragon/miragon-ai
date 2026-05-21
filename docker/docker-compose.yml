@@ -4,10 +4,10 @@ services:
   # Default: custom-built CIB Seven with ClickHouse + OTEL config
   cibseven:
     build:
-      context: ../plugins/examples/cibseven-example
+      context: ../examples/cibseven-example
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8410:8410"
     environment:
       - SPRING_PROFILES_ACTIVE=seed-presentation
       - CLICKHOUSE_ENABLED=true
@@ -25,7 +25,7 @@ services:
       clickhouse:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/engine-rest/engine || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8410/engine-rest/engine || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -37,7 +37,7 @@ services:
     profiles: [dev]
     image: cibseven/cibseven:run-latest
     ports:
-      - "8080:8080"
+      - "8410:8080"
     environment:
       - CIBSEVEN_BPM_RUN_AUTH_ENABLED=true
     healthcheck:
@@ -50,8 +50,8 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:26.2
     ports:
-      - "8123:8123"
-      - "9000:9000"
+      - "8420:8123"
+      - "8421:9000"
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - ./clickhouse/init-schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
@@ -83,36 +83,16 @@ services:
     volumes:
       - ./otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
-      - "4317:4317" # OTLP gRPC
-      - "4318:4318" # OTLP HTTP
-      - "8888:8888" # Collector Metrics
+      - "8430:4317" # OTLP gRPC
+      - "8431:4318" # OTLP HTTP
+      - "8450:8888" # Collector Metrics
     depends_on:
       clickhouse:
         condition: service_healthy
 
-  # WireMock — backs the enrichment-mcp examples with realistic HTTP stubs.
-  # Mappings live in ./wiremock/mappings/*.json; the local enrichment YAMLs
-  # under server/resources/enrichment-examples/*-local.yaml point at the host
-  # port 8088. To activate: set ENRICHMENT_CONFIG_PATH to one of those YAMLs
-  # and start the MCP server.
-  wiremock:
-    image: wiremock/wiremock:3.10.0
-    ports:
-      - "8088:8080"
-    volumes:
-      - ./wiremock/mappings:/home/wiremock/mappings:ro
-      - ./wiremock/__files:/home/wiremock/__files:ro
-    command: ["--disable-banner", "--global-response-templating"]
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/__admin/health > /dev/null || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 6
-      start_period: 5s
-
   # Automation MCP server (Node). Opt-in via the `full` profile so the
-  # default `docker compose up` brings up infra only — leaving port 3010
-  # free for a locally-run server (`pnpm -F @miragon-ai/server dev`).
+  # default `docker compose up` brings up infra only — leaving port 8400
+  # free for a locally-run gateway (`pnpm -F @miragon-ai/mcp-gateway dev`).
   # Use: docker compose --profile full up -d
   mcp-server:
     profiles: [full]
@@ -120,11 +100,11 @@ services:
       context: ..
       dockerfile: Dockerfile
     ports:
-      - "3010:3010"
+      - "8400:8400"
     environment:
-      - PORT=3010
-      - CAMUNDA_BASE_URL=http://cibseven:8080/engine-rest
-      - CAMUNDA_COCKPIT_URL=http://localhost:8080/webapp
+      - PORT=8400
+      - CAMUNDA_BASE_URL=http://cibseven:8410/engine-rest
+      - CAMUNDA_COCKPIT_URL=http://localhost:8410/webapp
       - CAMUNDA_AUTH_TYPE=basic
       - CAMUNDA_USERNAME=demo
       - CAMUNDA_PASSWORD=demo
@@ -143,7 +123,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "require('net').createConnection(3010,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))",
+          "require('net').createConnection(8400,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 3s
@@ -155,8 +135,8 @@ services:
   jaeger:
     image: jaegertracing/jaeger:2.16.0
     ports:
-      - "16686:16686" # Jaeger UI
-      - "4319:4317" # OTLP gRPC (internal, used by Collector)
+      - "8440:16686" # Jaeger UI
+      - "8432:4317" # OTLP gRPC (internal, used by Collector)
     environment:
       - COLLECTOR_OTLP_ENABLED=true
 
