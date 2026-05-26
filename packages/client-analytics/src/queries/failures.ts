@@ -1,4 +1,9 @@
-import { escapeString, type ClickHouseClient } from "../clickhouse.js"
+import {
+  engineFilter,
+  escapeString,
+  type ClickHouseClient,
+  type EngineFilterInput,
+} from "../clickhouse.js"
 
 export interface ErrorPatternRow {
   incident_message: string
@@ -31,6 +36,7 @@ export async function findFailedInstances(
     incidentType?: string
     groupByError: boolean
     limit: number
+    engineId?: EngineFilterInput
   },
 ): Promise<ErrorPatternRow[] | FailedInstanceRow[]> {
   const interval = { "1d": "1 DAY", "7d": "7 DAY", "30d": "30 DAY" }[
@@ -44,6 +50,8 @@ export async function findFailedInstances(
   if (params.incidentType) {
     baseConditions.push(`incident_type = ${escapeString(params.incidentType)}`)
   }
+  const efIncident = engineFilter(params.engineId)
+  if (efIncident) baseConditions.push(efIncident)
 
   const where = baseConditions.join(" AND ")
   const prefixedWhere = baseConditions.map((c) => `i.${c}`).join(" AND ")

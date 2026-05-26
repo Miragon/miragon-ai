@@ -21,6 +21,7 @@ export interface CockpitDashboardData {
     totalIncidents: number
   }
   definitions: DefinitionStat[]
+  engineId?: string
 }
 
 export interface TaskData {
@@ -66,6 +67,7 @@ export interface TaskDashboardData {
     candidateGroup?: string
     processDefinitionKey?: string
   }
+  engineId?: string
 }
 
 export interface Job {
@@ -86,6 +88,7 @@ export interface JobPanelData {
   totalCount: number
   failedCount: number
   jobs: Job[]
+  engineId?: string
 }
 
 export interface ActivityStat {
@@ -101,6 +104,7 @@ export interface BpmnViewerData {
   activeActivityIds: string[]
   incidentActivityIds: string[]
   activityStats: ActivityStat[]
+  engineId?: string
 }
 
 export interface ProcessDefinition {
@@ -117,6 +121,7 @@ export interface ProcessDefinition {
 export interface ProcessListData {
   definitions: ProcessDefinition[]
   totalCount: number
+  engineId?: string
 }
 
 export interface VariableValue {
@@ -159,6 +164,7 @@ export interface InstanceDetailData {
   activeActivityIds: string[]
   incidentActivityIds: string[]
   openTasks: OpenUserTask[]
+  engineId?: string
 }
 
 export interface DeploymentResource {
@@ -178,6 +184,7 @@ export interface Deployment {
 export interface DeploymentBrowserData {
   totalCount: number
   deployments: Deployment[]
+  engineId?: string
 }
 
 export interface ActivityData {
@@ -206,6 +213,7 @@ export interface HistoryTimelineData {
   processInstance: HistoricProcessInstance | null
   activities: ActivityData[]
   totalActivities: number
+  engineId?: string
 }
 
 // === Overview (camunda7_show_incidents_dashboard)
@@ -243,6 +251,7 @@ export interface IncidentsDashboardData {
   last24hCount: number
   latestIncident: string | null
   processes: IncidentsDashboardProcess[]
+  engineId?: string
 }
 
 export interface IncidentsByProcess {
@@ -272,6 +281,7 @@ export interface ProcessDetailData {
   totalActivityCount: number | null
   affectedActivityCount: number
   activities: ProcessDetailActivity[]
+  engineId?: string
 }
 
 // === Detail (camunda7_show_process_incidents)
@@ -301,6 +311,7 @@ export interface ProcessIncidentsData {
   /** Other process definitions with open incidents — surfaced in the empty
    *  state so the operator can jump to where the incidents actually are. */
   siblingsWithIncidents: IncidentsByProcess[]
+  engineId?: string
 }
 
 // === Single-incident detail (camunda7_show_incident_detail)
@@ -364,4 +375,6 @@ export interface IncidentDetailData {
 
   // History tab
   history: IncidentDetailHistoryEntry[]
+
+  engineId?: string
 }

@@ -55,3 +55,25 @@ export function createClickHouseClient(config: ClickHouseConfig): ClickHouseClie
 export function escapeString(value: string): string {
   return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`
 }
+
+export type EngineFilterInput = string | string[] | undefined
+
+/**
+ * Builds a `engine_id = ...` / `engine_id IN (...)` SQL fragment from the
+ * optional analytics-tool input. Returns `undefined` when no filter is set so
+ * the call site can leave the WHERE clause untouched and aggregate across all
+ * engines.
+ *
+ * Pass `alias` (e.g. `"p"`) when the column needs a table prefix in a JOIN
+ * query.
+ */
+export function engineFilter(engineId: EngineFilterInput, alias = ""): string | undefined {
+  if (engineId === undefined || engineId === null) return undefined
+  const prefix = alias ? `${alias}.` : ""
+  if (Array.isArray(engineId)) {
+    if (engineId.length === 0) return undefined
+    return `${prefix}engine_id IN (${engineId.map(escapeString).join(", ")})`
+  }
+  if (engineId.length === 0) return undefined
+  return `${prefix}engine_id = ${escapeString(engineId)}`
+}

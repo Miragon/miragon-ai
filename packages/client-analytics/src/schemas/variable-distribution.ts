@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { engineFilterShape } from "./shared.js"
 
 export const variableDistributionInput = z.object({
   variableName: z.string().min(1).describe("Process variable name to analyze"),
@@ -27,4 +28,5 @@ export const variableDistributionInput = z.object({
     .max(100)
     .default(20)
     .describe("Top-K values for string distributions"),
+  ...engineFilterShape,
 })

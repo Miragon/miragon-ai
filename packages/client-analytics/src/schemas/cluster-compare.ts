@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { engineFilterShape } from "./shared.js"
 
 export const clusterCompareInput = z.object({
   processDefinitionKey: z
@@ -33,4 +34,5 @@ export const clusterCompareInput = z.object({
     .min(1)
     .default(10)
     .describe("Minimum instance count per window before results are trusted"),
+  ...engineFilterShape,
 })

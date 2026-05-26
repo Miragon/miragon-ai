@@ -2,7 +2,6 @@ import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
 import { buildComposedView, buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
 import type {
-  Client,
   ProcessListData,
   TaskDashboardData,
   TaskData,
@@ -35,17 +34,21 @@ import {
   CAMUNDA7_SHOW_PROCESS_DETAIL,
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
 } from "./tool-names.js"
+import { resolveEngine, type EngineRegistry } from "./lib/resolve-engine.js"
 
-export interface WidgetToolsConfig {
-  baseUrl: string
-  cockpitUrl?: string
+const engineParam = {
+  engine: z
+    .string()
+    .optional()
+    .describe(
+      "Optional engine id override for this single call. When omitted, the engine selected via `camunda7_select_engine` for this session is used.",
+    ),
 }
 
 export function registerWidgetTools(
   server: MCPServer,
-  client: Client,
+  registry: EngineRegistry,
   resourceUri: string,
-  widgetConfig: WidgetToolsConfig,
 ) {
   const uiMeta = { ui: { resourceUri } }
 
@@ -59,10 +62,12 @@ export function registerWidgetTools(
         key: z.string().optional(),
         nameLike: z.string().optional(),
         latestVersion: z.boolean().optional().default(true),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
       const definitions = await getProcessDefinitions({
         client,
         query: {
@@ -78,6 +83,7 @@ export function registerWidgetTools(
       const data: ProcessListData = {
         definitions: defArray as ProcessListData["definitions"],
         totalCount: defArray.length,
+        engineId,
       }
       return buildSingleWidgetView({
         widget: "camunda7:process-list",
@@ -100,10 +106,12 @@ export function registerWidgetTools(
         candidateGroup: z.string().optional(),
         processDefinitionKey: z.string().optional(),
         maxResults: z.number().optional().default(50),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
       const tasks = await getTasks({
         client,
         query: {
@@ -124,6 +132,7 @@ export function registerWidgetTools(
           candidateGroup: args.candidateGroup,
           processDefinitionKey: args.processDefinitionKey,
         },
+        engineId,
       }
       return buildComposedView({
         app: "camunda7",
@@ -143,10 +152,12 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processInstanceId: z.string().describe("The process instance ID to inspect"),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
       const [instance, activityTree, variables, incidents, openTasksRaw] = await Promise.all([
         getProcessInstance({ client, path: { id: args.processInstanceId } }),
         getActivityInstanceTree({ client, path: { id: args.processInstanceId } }).catch(() => null),
@@ -184,9 +195,6 @@ export function registerWidgetTools(
       }
 
       const taskList = (Array.isArray(openTasksRaw) ? openTasksRaw : []) as TaskData[]
-      // Reuse the BPMN XML across all task form-schema builds (and skip
-      // the per-task `getTask` round-trip — the list rows already carry
-      // taskDefinitionKey + processDefinitionId).
       const openTasks: InstanceDetailData["openTasks"] = await Promise.all(
         taskList.map(async (task) => ({
           ...task,
@@ -212,6 +220,7 @@ export function registerWidgetTools(
         activeActivityIds: collectActiveActivityIds(activityTree),
         incidentActivityIds: collectIncidentActivityIds(incidents),
         openTasks,
+        engineId,
       }
       return buildSingleWidgetView({
         widget: "camunda7:instance-detail",
@@ -233,13 +242,16 @@ export function registerWidgetTools(
       schema: z.object({
         processDefinitionKey: z.string().optional(),
         incidentType: z.string().optional(),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildIncidentsDashboardData(client, {
-        baseUrl: widgetConfig.baseUrl,
-        cockpitUrl: widgetConfig.cockpitUrl,
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
         incidentType: args.incidentType,
       })
@@ -249,7 +261,7 @@ export function registerWidgetTools(
           { row: [{ widget: "camunda7:incident-overview-kpi" }] },
           { row: [{ widget: "camunda7:incident-process-list" }] },
         ],
-        entries: [{ dataType: "camunda7:incidentsDashboard", data }],
+        entries: [{ dataType: "camunda7:incidentsDashboard", data: { ...data, engineId } }],
       })
     },
   )
@@ -263,13 +275,16 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildProcessIncidentsData(client, {
-        baseUrl: widgetConfig.baseUrl,
-        cockpitUrl: widgetConfig.cockpitUrl,
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
       })
       return buildComposedView({
@@ -280,7 +295,7 @@ export function registerWidgetTools(
           { row: [{ widget: "camunda7:process-incident-flow" }] },
           { row: [{ widget: "camunda7:activity-incident-list" }] },
         ],
-        entries: [{ dataType: "camunda7:processIncidents", data }],
+        entries: [{ dataType: "camunda7:processIncidents", data: { ...data, engineId } }],
       })
     },
   )
@@ -294,20 +309,23 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
       schema: z.object({
         incidentId: z.string().describe("The incident ID to inspect"),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildIncidentDetailData(client, {
-        baseUrl: widgetConfig.baseUrl,
-        cockpitUrl: widgetConfig.cockpitUrl,
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
         incidentId: args.incidentId,
       })
       return buildSingleWidgetView({
         widget: "camunda7:incident-detail",
         app: "camunda7",
         dataType: "camunda7:incidentDetail",
-        data,
+        data: { ...data, engineId },
       })
     },
   )
@@ -321,20 +339,23 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to display"),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildProcessDetailData(client, {
-        baseUrl: widgetConfig.baseUrl,
-        cockpitUrl: widgetConfig.cockpitUrl,
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
       })
       return buildSingleWidgetView({
         widget: "camunda7:process-detail",
         app: "camunda7",
         dataType: "camunda7:processDetail",
-        data,
+        data: { ...data, engineId },
       })
     },
   )
@@ -347,10 +368,12 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processInstanceId: z.string().describe("The process instance ID"),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
       const [activities, instances] = await Promise.all([
         getHistoricActivityInstances({
           client,
@@ -379,6 +402,7 @@ export function registerWidgetTools(
         processInstance: inst,
         activities: actArray,
         totalActivities: actArray.length,
+        engineId,
       }
       return buildSingleWidgetView({
         widget: "camunda7:history-timeline",
@@ -390,7 +414,6 @@ export function registerWidgetTools(
     },
   )
 
-  // --- Cockpit Dashboard ---
   server.tool(
     {
       name: "camunda7_show_cockpit_dashboard",
@@ -398,11 +421,11 @@ export function registerWidgetTools(
       description:
         "Show the Cockpit dashboard with process definition statistics: running instances, failed jobs, and incidents per definition.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({}),
+      schema: z.object({ ...engineParam }),
       _meta: uiMeta,
     },
-    async () => {
-      // Try statistics endpoint first, fall back to plain definition list
+    async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
       let rows: Array<{
         id?: string | null
         instances?: number
@@ -423,7 +446,6 @@ export function registerWidgetTools(
         })
         rows = Array.isArray(stats) ? (stats as typeof rows) : []
       } catch {
-        // Statistics endpoint unavailable — build rows from plain definitions + incidents
         const [defs, incidents] = await Promise.all([
           getProcessDefinitions({
             client,
@@ -434,7 +456,6 @@ export function registerWidgetTools(
         const defArray = Array.isArray(defs) ? defs : []
         const incArray = Array.isArray(incidents) ? incidents : []
 
-        // Count incidents per definition
         const incByDef = new Map<string, number>()
         for (const inc of incArray as Array<{ processDefinitionId?: string }>) {
           const k = inc.processDefinitionId ?? ""
@@ -508,6 +529,7 @@ export function registerWidgetTools(
                 totalIncidents,
               },
               definitions,
+              engineId,
             },
           },
         ],
@@ -515,7 +537,6 @@ export function registerWidgetTools(
     },
   )
 
-  // --- BPMN Viewer ---
   server.tool(
     {
       name: "camunda7_show_bpmn_viewer",
@@ -541,6 +562,7 @@ export function registerWidgetTools(
             .describe(
               "Specific definition version. Requires `processDefinitionKey`. Defaults to the latest version when omitted.",
             ),
+          ...engineParam,
         })
         .refine((v) => v.processInstanceId || v.processDefinitionKey, {
           message: "Provide either `processInstanceId` or `processDefinitionKey`.",
@@ -552,6 +574,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
       const renderEmpty = (processInstanceId: string | null) =>
         buildComposedView({
           app: "camunda7",
@@ -567,6 +590,7 @@ export function registerWidgetTools(
                 activeActivityIds: [],
                 incidentActivityIds: [],
                 activityStats: [],
+                engineId,
               },
             },
           ],
@@ -646,6 +670,7 @@ export function registerWidgetTools(
               activeActivityIds,
               incidentActivityIds,
               activityStats,
+              engineId,
             },
           },
         ],
@@ -653,7 +678,6 @@ export function registerWidgetTools(
     },
   )
 
-  // --- Deployment Browser ---
   server.tool(
     {
       name: "camunda7_show_deployment_browser",
@@ -663,10 +687,12 @@ export function registerWidgetTools(
       schema: z.object({
         name: z.string().optional().describe("Filter by deployment name"),
         maxResults: z.number().optional().default(20),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
       const deps = (await getDeployments({
         client,
         query: {
@@ -713,12 +739,11 @@ export function registerWidgetTools(
         app: "camunda7",
         dataType: "camunda7:deploymentBrowser",
         title: "Deployment Browser",
-        data: { totalCount: rows.length, deployments: withResources },
+        data: { totalCount: rows.length, deployments: withResources, engineId },
       })
     },
   )
 
-  // --- Job Panel ---
   server.tool(
     {
       name: "camunda7_show_job_panel",
@@ -729,10 +754,12 @@ export function registerWidgetTools(
       schema: z.object({
         processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
         failedOnly: z.boolean().optional().default(false).describe("Show only failed jobs"),
+        ...engineParam,
       }),
       _meta: uiMeta,
     },
     async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
       const [failedJobs, allJobs] = await Promise.all([
         getJobs({
           client,
@@ -801,6 +828,7 @@ export function registerWidgetTools(
           totalCount: args.failedOnly ? failed.length : all.length,
           failedCount: failed.length,
           jobs,
+          engineId,
         },
       })
     },

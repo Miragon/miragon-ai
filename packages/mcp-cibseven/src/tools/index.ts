@@ -1,6 +1,6 @@
 import type { MCPServer } from "mcp-use/server"
-import type { Client } from "@miragon-ai/client-cibseven"
 import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
 
 import { registerProcessDefinitionTools } from "./process-definitions.js"
 import { registerProcessInstanceTools } from "./process-instances.js"
@@ -14,8 +14,8 @@ import { registerJobTools } from "./jobs.js"
 import { registerHistoryTools } from "./history.js"
 import { registerMigrationTools } from "./migrations.js"
 
-export function registerTools(server: MCPServer, client: Client): void {
-  const register = createToolRegistrar(server, client)
+export function registerTools(server: MCPServer, registry: EngineRegistry): void {
+  const register = createToolRegistrar(server, registry)
   registerProcessDefinitionTools(register)
   registerProcessInstanceTools(register)
   registerTaskTools(register)

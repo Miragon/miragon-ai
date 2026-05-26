@@ -1,6 +1,7 @@
 CREATE DATABASE IF NOT EXISTS camunda_history;
 
 CREATE TABLE IF NOT EXISTS camunda_history.camunda_process_instances (
+    engine_id             String,
     id                    String,
     process_definition_id String,
     process_definition_key String,
@@ -21,10 +22,11 @@ CREATE TABLE IF NOT EXISTS camunda_history.camunda_process_instances (
     trace_id              Nullable(String),
     timestamp             DateTime64(3) DEFAULT now64(3)
 ) ENGINE = MergeTree()
-ORDER BY (process_definition_key, id, timestamp)
+ORDER BY (engine_id, process_definition_key, id, timestamp)
 PARTITION BY toYYYYMM(timestamp);
 
 CREATE TABLE IF NOT EXISTS camunda_history.camunda_activity_instances (
+    engine_id             String,
     id                    String,
     parent_activity_instance_id Nullable(String),
     activity_id           String,
@@ -47,10 +49,11 @@ CREATE TABLE IF NOT EXISTS camunda_history.camunda_activity_instances (
     trace_id              Nullable(String),
     timestamp             DateTime64(3) DEFAULT now64(3)
 ) ENGINE = MergeTree()
-ORDER BY (process_definition_key, process_instance_id, id, timestamp)
+ORDER BY (engine_id, process_definition_key, process_instance_id, id, timestamp)
 PARTITION BY toYYYYMM(timestamp);
 
 CREATE TABLE IF NOT EXISTS camunda_history.camunda_task_instances (
+    engine_id             String,
     id                    String,
     task_id               String,
     process_definition_id String,
@@ -74,10 +77,11 @@ CREATE TABLE IF NOT EXISTS camunda_history.camunda_task_instances (
     event_type            String,
     timestamp             DateTime64(3) DEFAULT now64(3)
 ) ENGINE = MergeTree()
-ORDER BY (process_definition_key, process_instance_id, id, timestamp)
+ORDER BY (engine_id, process_definition_key, process_instance_id, id, timestamp)
 PARTITION BY toYYYYMM(timestamp);
 
 CREATE TABLE IF NOT EXISTS camunda_history.camunda_variable_updates (
+    engine_id             String,
     id                    String,
     process_definition_id String,
     process_definition_key String,
@@ -97,10 +101,11 @@ CREATE TABLE IF NOT EXISTS camunda_history.camunda_variable_updates (
     event_type            String,
     timestamp             DateTime64(3) DEFAULT now64(3)
 ) ENGINE = ReplacingMergeTree(timestamp)
-ORDER BY (process_definition_key, process_instance_id, variable_name, timestamp)
+ORDER BY (engine_id, process_definition_key, process_instance_id, variable_name, timestamp)
 PARTITION BY toYYYYMM(timestamp);
 
 CREATE TABLE IF NOT EXISTS camunda_history.camunda_incidents (
+    engine_id             String,
     id                    String,
     process_definition_id String,
     process_definition_key String,
@@ -121,5 +126,5 @@ CREATE TABLE IF NOT EXISTS camunda_history.camunda_incidents (
     trace_id              Nullable(String),
     timestamp             DateTime64(3) DEFAULT now64(3)
 ) ENGINE = ReplacingMergeTree(timestamp)
-ORDER BY (process_definition_key, create_time, id)
-PARTITION BY toYYYYMM(create_time)
+ORDER BY (engine_id, process_definition_key, create_time, id)
+PARTITION BY toYYYYMM(create_time);

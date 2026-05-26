@@ -1,4 +1,9 @@
-import { escapeString, type ClickHouseClient } from "../clickhouse.js"
+import {
+  engineFilter,
+  escapeString,
+  type ClickHouseClient,
+  type EngineFilterInput,
+} from "../clickhouse.js"
 
 export interface VersionCompareKpi {
   version: number
@@ -54,6 +59,7 @@ export async function versionCompare(
     windowDays: number
     elementId?: string
     minBucketSize: number
+    engineId?: EngineFilterInput
   },
 ): Promise<VersionCompareResult> {
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
@@ -66,6 +72,8 @@ export async function versionCompare(
   const activityFilter = params.elementId
     ? `AND activity_id = ${escapeString(params.elementId)}`
     : ""
+  const ef = engineFilter(params.engineId)
+  const engineClause = ef ? `AND ${ef}` : ""
 
   // GROUP BY id first to collapse Camunda's per-state-transition rows into one
   // row per instance, then compute durations via dateDiff because the exporter
@@ -96,6 +104,7 @@ FROM (
         min(start_time) AS start_time,
         max(end_time) AS end_time
     FROM camunda_history.camunda_process_instances
+    ${ef ? `WHERE ${ef}` : ""}
     GROUP BY id
 ) sub
 WHERE process_definition_key = ${key}
@@ -119,6 +128,7 @@ WHERE process_definition_key = ${key}
     AND create_time >= since
     AND (process_definition_id LIKE ${prefixA} OR process_definition_id LIKE ${prefixB})
     ${activityFilter}
+    ${engineClause}
 GROUP BY bucket`
 
   interface KpiRow {

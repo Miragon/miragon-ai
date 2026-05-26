@@ -5,12 +5,13 @@ import com.camunda7mcp.history.ClickHouseHistoryEventHandlerBase.HistoryEventDat
 import io.opentelemetry.api.trace.Span
 import org.cibseven.bpm.engine.impl.history.event.*
 
-class CibSevenEventMapper {
+class CibSevenEventMapper(private val engineId: String) {
 
     fun map(event: HistoryEvent): HistoryEventData? = when (event) {
         is HistoricProcessInstanceEventEntity -> HistoryEventData(
             eventCategory = EventCategory.PROCESS_INSTANCE,
             data = mapOf(
+                "engine_id" to engineId,
                 "id" to event.processInstanceId,
                 "process_definition_id" to event.processDefinitionId,
                 "process_definition_key" to event.processDefinitionKey,
@@ -34,6 +35,7 @@ class CibSevenEventMapper {
         is HistoricActivityInstanceEventEntity -> HistoryEventData(
             eventCategory = EventCategory.ACTIVITY_INSTANCE,
             data = mapOf(
+                "engine_id" to engineId,
                 "id" to event.activityInstanceId,
                 "parent_activity_instance_id" to event.parentActivityInstanceId,
                 "activity_id" to event.activityId,
@@ -57,6 +59,7 @@ class CibSevenEventMapper {
         is HistoricTaskInstanceEventEntity -> HistoryEventData(
             eventCategory = EventCategory.TASK_INSTANCE,
             data = mapOf(
+                "engine_id" to engineId,
                 "id" to event.id,
                 "task_id" to event.taskId,
                 "process_definition_id" to event.processDefinitionId,
@@ -83,6 +86,7 @@ class CibSevenEventMapper {
         is HistoricVariableUpdateEventEntity -> HistoryEventData(
             eventCategory = EventCategory.VARIABLE_UPDATE,
             data = mapOf(
+                "engine_id" to engineId,
                 "id" to event.variableInstanceId,
                 "process_definition_id" to event.processDefinitionId,
                 "process_definition_key" to event.processDefinitionKey,
@@ -105,6 +109,7 @@ class CibSevenEventMapper {
         is HistoricIncidentEventEntity -> HistoryEventData(
             eventCategory = EventCategory.INCIDENT,
             data = mapOf(
+                "engine_id" to engineId,
                 "id" to event.id,
                 "process_definition_id" to event.processDefinitionId,
                 "process_definition_key" to event.processDefinitionKey,

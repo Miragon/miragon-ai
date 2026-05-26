@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { engineFilterShape } from "./shared.js"
 
 export const versionCompareInput = z.object({
   processDefinitionKey: z
@@ -24,4 +25,5 @@ export const versionCompareInput = z.object({
     .min(1)
     .default(10)
     .describe("Minimum instance count per version before results are trusted."),
+  ...engineFilterShape,
 })

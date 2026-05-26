@@ -22,31 +22,32 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
         if (rows.isEmpty()) return
         val sql = """
             INSERT INTO camunda_process_instances (
-                id, process_definition_id, process_definition_key, process_definition_name,
+                engine_id, id, process_definition_id, process_definition_key, process_definition_name,
                 business_key, start_time, end_time, duration_in_millis,
                 start_user_id, start_activity_id, end_activity_id, delete_reason,
                 super_process_instance_id, state, tenant_id, engine_type, event_type, trace_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         executeBatchInstrumented("camunda_process_instances", sql, rows) { ps, row ->
-            ps.setString(1, row["id"] as? String)
-            ps.setString(2, row["process_definition_id"] as? String)
-            ps.setString(3, row["process_definition_key"] as? String)
-            ps.setString(4, row["process_definition_name"] as? String)
-            ps.setString(5, row["business_key"] as? String)
-            ps.setTimestamp(6, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
-            bindTimestamp(ps, 7, toTimestamp(row["end_time"]))
-            ps.setObject(8, row["duration_in_millis"])
-            ps.setString(9, row["start_user_id"] as? String)
-            ps.setString(10, row["start_activity_id"] as? String)
-            ps.setString(11, row["end_activity_id"] as? String)
-            ps.setString(12, row["delete_reason"] as? String)
-            ps.setString(13, row["super_process_instance_id"] as? String)
-            ps.setString(14, row["state"] as? String)
-            ps.setString(15, row["tenant_id"] as? String)
-            ps.setString(16, row["engine_type"] as? String)
-            ps.setString(17, row["event_type"] as? String)
-            ps.setString(18, row["trace_id"] as? String)
+            ps.setString(1, row["engine_id"] as? String)
+            ps.setString(2, row["id"] as? String)
+            ps.setString(3, row["process_definition_id"] as? String)
+            ps.setString(4, row["process_definition_key"] as? String)
+            ps.setString(5, row["process_definition_name"] as? String)
+            ps.setString(6, row["business_key"] as? String)
+            ps.setTimestamp(7, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
+            bindTimestamp(ps, 8, toTimestamp(row["end_time"]))
+            ps.setObject(9, row["duration_in_millis"])
+            ps.setString(10, row["start_user_id"] as? String)
+            ps.setString(11, row["start_activity_id"] as? String)
+            ps.setString(12, row["end_activity_id"] as? String)
+            ps.setString(13, row["delete_reason"] as? String)
+            ps.setString(14, row["super_process_instance_id"] as? String)
+            ps.setString(15, row["state"] as? String)
+            ps.setString(16, row["tenant_id"] as? String)
+            ps.setString(17, row["engine_type"] as? String)
+            ps.setString(18, row["event_type"] as? String)
+            ps.setString(19, row["trace_id"] as? String)
         }
     }
 
@@ -54,31 +55,32 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
         if (rows.isEmpty()) return
         val sql = """
             INSERT INTO camunda_activity_instances (
-                id, parent_activity_instance_id, activity_id, activity_name, activity_type,
+                engine_id, id, parent_activity_instance_id, activity_id, activity_name, activity_type,
                 process_definition_id, process_definition_key, process_instance_id, execution_id,
                 start_time, end_time, duration_in_millis, assignee, task_id,
                 tenant_id, engine_type, event_type, trace_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         executeBatchInstrumented("camunda_activity_instances", sql, rows) { ps, row ->
-            ps.setString(1, row["id"] as? String)
-            ps.setString(2, row["parent_activity_instance_id"] as? String)
-            ps.setString(3, row["activity_id"] as? String)
-            ps.setString(4, row["activity_name"] as? String)
-            ps.setString(5, row["activity_type"] as? String)
-            ps.setString(6, row["process_definition_id"] as? String)
-            ps.setString(7, row["process_definition_key"] as? String)
-            ps.setString(8, row["process_instance_id"] as? String)
-            ps.setString(9, row["execution_id"] as? String)
-            ps.setTimestamp(10, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
-            bindTimestamp(ps, 11, toTimestamp(row["end_time"]))
-            ps.setObject(12, row["duration_in_millis"])
-            ps.setString(13, row["assignee"] as? String)
-            ps.setString(14, row["task_id"] as? String)
-            ps.setString(15, row["tenant_id"] as? String)
-            ps.setString(16, row["engine_type"] as? String)
-            ps.setString(17, row["event_type"] as? String)
-            ps.setString(18, row["trace_id"] as? String)
+            ps.setString(1, row["engine_id"] as? String)
+            ps.setString(2, row["id"] as? String)
+            ps.setString(3, row["parent_activity_instance_id"] as? String)
+            ps.setString(4, row["activity_id"] as? String)
+            ps.setString(5, row["activity_name"] as? String)
+            ps.setString(6, row["activity_type"] as? String)
+            ps.setString(7, row["process_definition_id"] as? String)
+            ps.setString(8, row["process_definition_key"] as? String)
+            ps.setString(9, row["process_instance_id"] as? String)
+            ps.setString(10, row["execution_id"] as? String)
+            ps.setTimestamp(11, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
+            bindTimestamp(ps, 12, toTimestamp(row["end_time"]))
+            ps.setObject(13, row["duration_in_millis"])
+            ps.setString(14, row["assignee"] as? String)
+            ps.setString(15, row["task_id"] as? String)
+            ps.setString(16, row["tenant_id"] as? String)
+            ps.setString(17, row["engine_type"] as? String)
+            ps.setString(18, row["event_type"] as? String)
+            ps.setString(19, row["trace_id"] as? String)
         }
     }
 
@@ -86,35 +88,36 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
         if (rows.isEmpty()) return
         val sql = """
             INSERT INTO camunda_task_instances (
-                id, task_id, process_definition_id, process_definition_key,
+                engine_id, id, task_id, process_definition_id, process_definition_key,
                 process_instance_id, execution_id, activity_instance_id,
                 name, description, assignee, owner, priority,
                 due_date, follow_up_date, start_time, end_time, duration_in_millis,
                 delete_reason, tenant_id, engine_type, event_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         executeBatchInstrumented("camunda_task_instances", sql, rows) { ps, row ->
-            ps.setString(1, row["id"] as? String)
-            ps.setString(2, row["task_id"] as? String)
-            ps.setString(3, row["process_definition_id"] as? String)
-            ps.setString(4, row["process_definition_key"] as? String)
-            ps.setString(5, row["process_instance_id"] as? String)
-            ps.setString(6, row["execution_id"] as? String)
-            ps.setString(7, row["activity_instance_id"] as? String)
-            ps.setString(8, row["name"] as? String)
-            ps.setString(9, row["description"] as? String)
-            ps.setString(10, row["assignee"] as? String)
-            ps.setString(11, row["owner"] as? String)
-            ps.setInt(12, (row["priority"] as? Number)?.toInt() ?: 0)
-            bindTimestamp(ps, 13, toTimestamp(row["due_date"]))
-            bindTimestamp(ps, 14, toTimestamp(row["follow_up_date"]))
-            ps.setTimestamp(15, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
-            bindTimestamp(ps, 16, toTimestamp(row["end_time"]))
-            ps.setObject(17, row["duration_in_millis"])
-            ps.setString(18, row["delete_reason"] as? String)
-            ps.setString(19, row["tenant_id"] as? String)
-            ps.setString(20, row["engine_type"] as? String)
-            ps.setString(21, row["event_type"] as? String)
+            ps.setString(1, row["engine_id"] as? String)
+            ps.setString(2, row["id"] as? String)
+            ps.setString(3, row["task_id"] as? String)
+            ps.setString(4, row["process_definition_id"] as? String)
+            ps.setString(5, row["process_definition_key"] as? String)
+            ps.setString(6, row["process_instance_id"] as? String)
+            ps.setString(7, row["execution_id"] as? String)
+            ps.setString(8, row["activity_instance_id"] as? String)
+            ps.setString(9, row["name"] as? String)
+            ps.setString(10, row["description"] as? String)
+            ps.setString(11, row["assignee"] as? String)
+            ps.setString(12, row["owner"] as? String)
+            ps.setInt(13, (row["priority"] as? Number)?.toInt() ?: 0)
+            bindTimestamp(ps, 14, toTimestamp(row["due_date"]))
+            bindTimestamp(ps, 15, toTimestamp(row["follow_up_date"]))
+            ps.setTimestamp(16, toTimestamp(row["start_time"]) ?: deriveStartTime(row))
+            bindTimestamp(ps, 17, toTimestamp(row["end_time"]))
+            ps.setObject(18, row["duration_in_millis"])
+            ps.setString(19, row["delete_reason"] as? String)
+            ps.setString(20, row["tenant_id"] as? String)
+            ps.setString(21, row["engine_type"] as? String)
+            ps.setString(22, row["event_type"] as? String)
         }
     }
 
@@ -122,31 +125,32 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
         if (rows.isEmpty()) return
         val sql = """
             INSERT INTO camunda_variable_updates (
-                id, process_definition_id, process_definition_key, process_instance_id,
+                engine_id, id, process_definition_id, process_definition_key, process_instance_id,
                 execution_id, activity_instance_id, task_id,
                 variable_name, variable_type, serialized_value, text_value,
                 long_value, double_value, revision,
                 tenant_id, engine_type, event_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         executeBatchInstrumented("camunda_variable_updates", sql, rows) { ps, row ->
-            ps.setString(1, row["id"] as? String)
-            ps.setString(2, row["process_definition_id"] as? String)
-            ps.setString(3, row["process_definition_key"] as? String)
-            ps.setString(4, row["process_instance_id"] as? String)
-            ps.setString(5, row["execution_id"] as? String)
-            ps.setString(6, row["activity_instance_id"] as? String)
-            ps.setString(7, row["task_id"] as? String)
-            ps.setString(8, row["variable_name"] as? String)
-            ps.setString(9, row["variable_type"] as? String)
-            ps.setString(10, row["serialized_value"] as? String)
-            ps.setString(11, row["text_value"] as? String)
-            ps.setObject(12, row["long_value"])
-            ps.setObject(13, row["double_value"])
-            ps.setInt(14, (row["revision"] as? Number)?.toInt() ?: 0)
-            ps.setString(15, row["tenant_id"] as? String)
-            ps.setString(16, row["engine_type"] as? String)
-            ps.setString(17, row["event_type"] as? String)
+            ps.setString(1, row["engine_id"] as? String)
+            ps.setString(2, row["id"] as? String)
+            ps.setString(3, row["process_definition_id"] as? String)
+            ps.setString(4, row["process_definition_key"] as? String)
+            ps.setString(5, row["process_instance_id"] as? String)
+            ps.setString(6, row["execution_id"] as? String)
+            ps.setString(7, row["activity_instance_id"] as? String)
+            ps.setString(8, row["task_id"] as? String)
+            ps.setString(9, row["variable_name"] as? String)
+            ps.setString(10, row["variable_type"] as? String)
+            ps.setString(11, row["serialized_value"] as? String)
+            ps.setString(12, row["text_value"] as? String)
+            ps.setObject(13, row["long_value"])
+            ps.setObject(14, row["double_value"])
+            ps.setInt(15, (row["revision"] as? Number)?.toInt() ?: 0)
+            ps.setString(16, row["tenant_id"] as? String)
+            ps.setString(17, row["engine_type"] as? String)
+            ps.setString(18, row["event_type"] as? String)
         }
     }
 
@@ -154,32 +158,33 @@ class ClickHouseClient(private val properties: ClickHouseProperties) {
         if (rows.isEmpty()) return
         val sql = """
             INSERT INTO camunda_incidents (
-                id, process_definition_id, process_definition_key, process_instance_id,
+                engine_id, id, process_definition_id, process_definition_key, process_instance_id,
                 execution_id, activity_id, incident_type, incident_message,
                 cause_incident_id, root_cause_incident_id, configuration,
                 create_time, end_time, state,
                 tenant_id, engine_type, event_type, trace_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         executeBatchInstrumented("camunda_incidents", sql, rows) { ps, row ->
-            ps.setString(1, row["id"] as? String)
-            ps.setString(2, row["process_definition_id"] as? String)
-            ps.setString(3, row["process_definition_key"] as? String)
-            ps.setString(4, row["process_instance_id"] as? String)
-            ps.setString(5, row["execution_id"] as? String)
-            ps.setString(6, row["activity_id"] as? String)
-            ps.setString(7, row["incident_type"] as? String)
-            ps.setString(8, row["incident_message"] as? String)
-            ps.setString(9, row["cause_incident_id"] as? String)
-            ps.setString(10, row["root_cause_incident_id"] as? String)
-            ps.setString(11, row["configuration"] as? String)
-            bindTimestamp(ps, 12, toTimestamp(row["create_time"]))
-            bindTimestamp(ps, 13, toTimestamp(row["end_time"]))
-            ps.setString(14, row["state"] as? String)
-            ps.setString(15, row["tenant_id"] as? String)
-            ps.setString(16, row["engine_type"] as? String)
-            ps.setString(17, row["event_type"] as? String)
-            ps.setString(18, row["trace_id"] as? String)
+            ps.setString(1, row["engine_id"] as? String)
+            ps.setString(2, row["id"] as? String)
+            ps.setString(3, row["process_definition_id"] as? String)
+            ps.setString(4, row["process_definition_key"] as? String)
+            ps.setString(5, row["process_instance_id"] as? String)
+            ps.setString(6, row["execution_id"] as? String)
+            ps.setString(7, row["activity_id"] as? String)
+            ps.setString(8, row["incident_type"] as? String)
+            ps.setString(9, row["incident_message"] as? String)
+            ps.setString(10, row["cause_incident_id"] as? String)
+            ps.setString(11, row["root_cause_incident_id"] as? String)
+            ps.setString(12, row["configuration"] as? String)
+            bindTimestamp(ps, 13, toTimestamp(row["create_time"]))
+            bindTimestamp(ps, 14, toTimestamp(row["end_time"]))
+            ps.setString(15, row["state"] as? String)
+            ps.setString(16, row["tenant_id"] as? String)
+            ps.setString(17, row["engine_type"] as? String)
+            ps.setString(18, row["event_type"] as? String)
+            ps.setString(19, row["trace_id"] as? String)
         }
     }
 

@@ -1,7 +1,8 @@
 name: miragon-ai
 
 services:
-  # Default: custom-built CIB Seven with ClickHouse + OTEL config
+  # Default: custom-built CIB Seven with ClickHouse + OTEL config.
+  # Identifies itself as `prod-a` in the shared ClickHouse history.
   cibseven:
     build:
       context: ../examples/cibseven-example
@@ -11,12 +12,48 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=seed-presentation
       - CLICKHOUSE_ENABLED=true
+      - CLICKHOUSE_ENGINE_ID=prod-a
       - CLICKHOUSE_HOST=clickhouse
       - CLICKHOUSE_PORT=8123
       - CLICKHOUSE_USER=camunda
       - CLICKHOUSE_PASSWORD=camunda123
       - CLICKHOUSE_DATABASE=camunda_history
-      - OTEL_SERVICE_NAME=cibseven-engine
+      - OTEL_SERVICE_NAME=cibseven-engine-a
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_TRACES_SAMPLER=parentbased_traceidratio
+      - OTEL_TRACES_SAMPLER_ARG=0.1
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8410/engine-rest/engine || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # Second engine on port 8411, identifying as `prod-b` in the shared
+  # ClickHouse. Opt-in via the `multi-engine` profile so the default `docker
+  # compose up` keeps the existing single-engine setup unchanged.
+  # Use: docker compose --profile multi-engine up -d
+  cibseven-b:
+    profiles: [multi-engine]
+    build:
+      context: ../examples/cibseven-example
+      dockerfile: Dockerfile
+    ports:
+      - "8411:8410"
+    environment:
+      - SPRING_PROFILES_ACTIVE=seed-presentation
+      - CLICKHOUSE_ENABLED=true
+      - CLICKHOUSE_ENGINE_ID=prod-b
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=camunda
+      - CLICKHOUSE_PASSWORD=camunda123
+      - CLICKHOUSE_DATABASE=camunda_history
+      - OTEL_SERVICE_NAME=cibseven-engine-b
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
       - OTEL_TRACES_SAMPLER=parentbased_traceidratio
@@ -103,6 +140,11 @@ services:
       - "8400:8400"
     environment:
       - PORT=8400
+      # Pass either a single CAMUNDA_BASE_URL (back-compat, single engine) OR
+      # CAMUNDA_ENGINES_JSON with a list. Below: single-engine default; for
+      # multi-engine override by exporting CAMUNDA_ENGINES_JSON in the host
+      # shell before `docker compose up`, or by overriding via a compose
+      # override file.
       - CAMUNDA_BASE_URL=http://cibseven:8410/engine-rest
       - CAMUNDA_COCKPIT_URL=http://localhost:8410/webapp
       - CAMUNDA_AUTH_TYPE=basic

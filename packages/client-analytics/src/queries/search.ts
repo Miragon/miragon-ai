@@ -1,4 +1,9 @@
-import { escapeString, type ClickHouseClient } from "../clickhouse.js"
+import {
+  engineFilter,
+  escapeString,
+  type ClickHouseClient,
+  type EngineFilterInput,
+} from "../clickhouse.js"
 
 export interface ProcessInstanceSearchRow {
   process_instance_id: string
@@ -39,11 +44,14 @@ export async function searchProcessInstances(
     sortBy: string
     sortOrder: string
     limit: number
+    engineId?: EngineFilterInput
   },
 ): Promise<ProcessInstanceSearchRow[]> {
   const conditions: string[] = []
   let joins = ""
 
+  const ef = engineFilter(params.engineId, "p")
+  if (ef) conditions.push(ef)
   if (params.processDefinitionKey) {
     conditions.push(`p.process_definition_key = ${escapeString(params.processDefinitionKey)}`)
   }
@@ -105,12 +113,15 @@ export async function searchByVariable(
     variableValue: string
     processDefinitionKey?: string
     limit: number
+    engineId?: EngineFilterInput
   },
 ): Promise<VariableSearchRow[]> {
   const conditions: string[] = [
     `v.variable_name = ${escapeString(params.variableName)}`,
     `v.text_value = ${escapeString(params.variableValue)}`,
   ]
+  const ef = engineFilter(params.engineId, "p")
+  if (ef) conditions.push(ef)
   if (params.processDefinitionKey) {
     conditions.push(`p.process_definition_key = ${escapeString(params.processDefinitionKey)}`)
   }

@@ -1,4 +1,3 @@
-import type { Client } from "@miragon-ai/client-cibseven"
 import {
   queryHistoricProcessInstancesInput,
   queryHistoricActivityInstancesInput,
@@ -12,8 +11,10 @@ import {
   getHistoricTaskInstances,
   getHistoricVariableInstances,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export function registerHistoryTools(register: Register) {
   register({
@@ -21,8 +22,8 @@ export function registerHistoryTools(register: Register) {
     description:
       "Query historic process instances with filters. Returns completed and running instances from history.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: queryHistoricProcessInstancesInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...queryHistoricProcessInstancesInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getHistoricProcessInstances({
         client,
         query: {
@@ -36,6 +37,7 @@ export function registerHistoryTools(register: Register) {
           sortOrder: args.sortOrder,
         },
       }),
+    ),
   })
 
   register({
@@ -43,8 +45,8 @@ export function registerHistoryTools(register: Register) {
     description:
       "Query historic activity instances. Shows which BPMN activities were executed in a process instance.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: queryHistoricActivityInstancesInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...queryHistoricActivityInstancesInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getHistoricActivityInstances({
         client,
         query: {
@@ -57,14 +59,15 @@ export function registerHistoryTools(register: Register) {
           sortOrder: args.sortOrder,
         },
       }),
+    ),
   })
 
   register({
     name: "camunda7_query_historic_task_instances",
     description: "Query historic task instances. Shows completed and open user tasks from history.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: queryHistoricTaskInstancesInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...queryHistoricTaskInstancesInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getHistoricTaskInstances({
         client,
         query: {
@@ -78,14 +81,15 @@ export function registerHistoryTools(register: Register) {
           sortOrder: args.sortOrder,
         },
       }),
+    ),
   })
 
   register({
     name: "camunda7_query_historic_variable_instances",
     description: "Query historic variable instances. Shows variable values from process history.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: queryHistoricVariableInstancesInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...queryHistoricVariableInstancesInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getHistoricVariableInstances({
         client,
         query: {
@@ -97,5 +101,6 @@ export function registerHistoryTools(register: Register) {
           sortOrder: args.sortOrder,
         },
       }),
+    ),
   })
 }

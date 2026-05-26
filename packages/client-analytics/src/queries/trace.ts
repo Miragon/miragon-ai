@@ -1,4 +1,9 @@
-import { escapeString, type ClickHouseClient } from "../clickhouse.js"
+import {
+  engineFilter,
+  escapeString,
+  type ClickHouseClient,
+  type EngineFilterInput,
+} from "../clickhouse.js"
 
 export interface ActivityHistoryItem {
   activity_id: string
@@ -44,9 +49,12 @@ export async function traceProcessExecution(
     includeOtelSpans: boolean
     includeActivityHistory: boolean
     includeVariableChanges: boolean
+    engineId?: EngineFilterInput
   },
 ): Promise<TraceResult> {
   const pid = escapeString(params.processInstanceId)
+  const ef = engineFilter(params.engineId)
+  const efClause = ef ? `AND ${ef}` : ""
   const result: TraceResult = {}
 
   if (params.includeActivityHistory) {
@@ -62,6 +70,7 @@ SELECT
     task_id
 FROM camunda_history.camunda_activity_instances
 WHERE process_instance_id = ${pid}
+    ${efClause}
 ORDER BY start_time ASC`
     result.activityHistory = await ch.query<ActivityHistoryItem>(actSql)
   }
@@ -78,6 +87,7 @@ SELECT
     timestamp
 FROM camunda_history.camunda_variable_updates FINAL
 WHERE process_instance_id = ${pid}
+    ${efClause}
 ORDER BY timestamp ASC`
     result.variableChanges = await ch.query<VariableChangeItem>(varSql)
   }

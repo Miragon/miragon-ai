@@ -1,4 +1,3 @@
-import type { Client } from "@miragon-ai/client-cibseven"
 import {
   listJobsInput,
   setJobRetriesInput,
@@ -10,16 +9,18 @@ import {
   setJobRetries,
   setJobRetriesAsyncOperation,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export function registerJobTools(register: Register) {
   register({
     name: "camunda7_list_jobs",
     description: "List jobs (timers, async continuations) with optional filters.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: listJobsInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...listJobsInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getJobs({
         client,
         query: {
@@ -34,6 +35,7 @@ export function registerJobTools(register: Register) {
           sortOrder: args.sortOrder,
         },
       }),
+    ),
   })
 
   register({
@@ -41,15 +43,15 @@ export function registerJobTools(register: Register) {
     description:
       "Set the number of retries for a failed job. Setting retries > 0 will re-execute the job.",
     annotations: { openWorldHint: true },
-    inputSchema: setJobRetriesInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...setJobRetriesInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await setJobRetries({
         client,
         path: { id: args.jobId },
         body: { retries: args.retries },
       })
       return { success: true, jobId: args.jobId, retries: args.retries }
-    },
+    }),
   })
 
   register({
@@ -57,8 +59,8 @@ export function registerJobTools(register: Register) {
     description:
       "Create a batch job to set retries on multiple jobs at once. Returns the batch id; progress and failures are tracked on the batch, not inline.",
     annotations: { openWorldHint: true },
-    inputSchema: setJobRetriesBatchInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...setJobRetriesBatchInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       const batch = await setJobRetriesAsyncOperation({
         client,
         body: {
@@ -73,6 +75,6 @@ export function registerJobTools(register: Register) {
         retries: args.retries,
         batch,
       }
-    },
+    }),
   })
 }

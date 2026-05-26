@@ -1,4 +1,3 @@
-import type { Client } from "@miragon-ai/client-cibseven"
 import {
   listProcessDefinitionsInput,
   getProcessDefinitionXmlInput,
@@ -8,8 +7,10 @@ import {
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export function registerProcessDefinitionTools(register: Register) {
   register({
@@ -17,8 +18,8 @@ export function registerProcessDefinitionTools(register: Register) {
     description:
       "List deployed process definitions with optional filters. Returns key, name, version, and deployment info.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: listProcessDefinitionsInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...listProcessDefinitionsInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getProcessDefinitions({
         client,
         query: {
@@ -30,6 +31,7 @@ export function registerProcessDefinitionTools(register: Register) {
           sortOrder: args.sortOrder,
         },
       }),
+    ),
   })
 
   register({
@@ -37,11 +39,12 @@ export function registerProcessDefinitionTools(register: Register) {
     description:
       "Get the BPMN 2.0 XML of a process definition by ID. Returns the raw BPMN XML string.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: getProcessDefinitionXmlInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...getProcessDefinitionXmlInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getProcessDefinitionBpmn20Xml({
         client,
         path: { id: args.processDefinitionId },
       }),
+    ),
   })
 }

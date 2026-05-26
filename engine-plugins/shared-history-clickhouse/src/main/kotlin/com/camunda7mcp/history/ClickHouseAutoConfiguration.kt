@@ -11,7 +11,12 @@ import org.springframework.context.annotation.Configuration
 @EnableConfigurationProperties(ClickHouseProperties::class)
 class ClickHouseAutoConfiguration(private val properties: ClickHouseProperties) {
     @Bean
-    fun clickHouseClient(): ClickHouseClient = ClickHouseClient(properties)
+    fun clickHouseClient(): ClickHouseClient {
+        require(properties.engineId.isNotBlank()) {
+            "camunda7mcp.history.clickhouse.engineId must be set — each engine instance writing to the shared ClickHouse needs a stable identifier"
+        }
+        return ClickHouseClient(properties)
+    }
 
     @PostConstruct
     fun initSchema() {
