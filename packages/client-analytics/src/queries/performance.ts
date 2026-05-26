@@ -1,4 +1,9 @@
-import { escapeString, type ClickHouseClient } from "../clickhouse.js"
+import {
+  engineFilter,
+  escapeString,
+  type ClickHouseClient,
+  type EngineFilterInput,
+} from "../clickhouse.js"
 
 export interface PerformanceKPI {
   process_definition_key: string
@@ -51,7 +56,12 @@ export interface PeriodComparisonResult {
 
 export async function analyzePerformance(
   ch: ClickHouseClient,
-  params: { processDefinitionKey: string; period: string; includeActivityBreakdown: boolean },
+  params: {
+    processDefinitionKey: string
+    period: string
+    includeActivityBreakdown: boolean
+    engineId?: EngineFilterInput
+  },
 ): Promise<{ kpi: PerformanceKPI | null; activityBreakdown: ActivityBreakdownRow[] }> {
   const interval = {
     "1d": "1 DAY",
@@ -59,6 +69,10 @@ export async function analyzePerformance(
     "30d": "30 DAY",
     "90d": "90 DAY",
   }[params.period as "1d" | "7d" | "30d" | "90d"]
+
+  const ef = engineFilter(params.engineId)
+  const innerEngineFilter = ef ? `WHERE ${ef}` : ""
+  const outerEngineFilter = ef ? `AND ${ef}` : ""
 
   // GROUP BY id first to collapse Camunda's per-state-transition rows, then
   // compute durations via dateDiff because the exporter never populates
@@ -83,6 +97,7 @@ FROM (
         min(start_time) AS start_time,
         max(end_time) AS end_time
     FROM camunda_history.camunda_process_instances
+    ${innerEngineFilter}
     GROUP BY id
 ) sub
 WHERE process_definition_key = ${escapeString(params.processDefinitionKey)}
@@ -108,6 +123,7 @@ FROM camunda_history.camunda_activity_instances
 WHERE process_definition_key = ${escapeString(params.processDefinitionKey)}
     AND end_time IS NOT NULL
     AND start_time >= now() - INTERVAL ${interval}
+    ${outerEngineFilter}
 GROUP BY activity_id, activity_name, activity_type
 ORDER BY total_time_sec DESC
 LIMIT 20`
@@ -126,6 +142,7 @@ export async function comparePeriods(
     periodBFrom: string
     periodBTo: string
     includeActivityBreakdown: boolean
+    engineId?: EngineFilterInput
   },
 ): Promise<PeriodComparisonResult> {
   const key = escapeString(params.processDefinitionKey)
@@ -136,6 +153,11 @@ export async function comparePeriods(
   const aTo = `parseDateTimeBestEffort(${escapeString(params.periodATo)})`
   const bFrom = `parseDateTimeBestEffort(${escapeString(params.periodBFrom)})`
   const bTo = `parseDateTimeBestEffort(${escapeString(params.periodBTo)})`
+
+  const ef = engineFilter(params.engineId)
+  const innerEngineFilter = ef ? `WHERE ${ef}` : ""
+  const efA = engineFilter(params.engineId, "a")
+  const efP = engineFilter(params.engineId, "p")
 
   const kpiSql = `
 SELECT
@@ -158,6 +180,7 @@ FROM (
         min(start_time) AS start_time,
         max(end_time) AS end_time
     FROM camunda_history.camunda_process_instances
+    ${innerEngineFilter}
     GROUP BY id
 ) sub
 WHERE process_definition_key = ${key}
@@ -192,6 +215,8 @@ WHERE p.process_definition_key = ${key}
         (p.start_time >= ${aFrom} AND p.start_time <= ${aTo})
         OR (p.start_time >= ${bFrom} AND p.start_time <= ${bTo})
     )
+    ${efA ? `AND ${efA}` : ""}
+    ${efP ? `AND ${efP}` : ""}
 GROUP BY a.activity_id, a.activity_name, period
 ORDER BY a.activity_id, period`
     result.activityComparison = await ch.query<PeriodActivityComparisonRow>(actSql)

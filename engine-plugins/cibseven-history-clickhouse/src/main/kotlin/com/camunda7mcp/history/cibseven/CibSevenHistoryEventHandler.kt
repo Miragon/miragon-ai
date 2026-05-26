@@ -13,7 +13,7 @@ class CibSevenHistoryEventHandler(client: ClickHouseClient, properties: ClickHou
     HistoryEventHandler {
 
     private val log = LoggerFactory.getLogger(CibSevenHistoryEventHandler::class.java)
-    private val eventMapper = CibSevenEventMapper()
+    private val eventMapper = CibSevenEventMapper(properties.engineId)
 
     override fun handleEvent(historyEvent: HistoryEvent) {
         if (historyEvent is HistoricProcessInstanceEventEntity) {

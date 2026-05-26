@@ -48,6 +48,10 @@ camunda7mcp:
       username: ${CLICKHOUSE_USER:camunda}
       password: ${CLICKHOUSE_PASSWORD:camunda123}
       database: ${CLICKHOUSE_DATABASE:camunda_history}
+      # Engine identifier written into every history row, used by analytics to
+      # attribute data when multiple engines share one ClickHouse. Defaults to
+      # "default" so a single-engine setup works without extra config.
+      engine-id: ${CLICKHOUSE_ENGINE_ID:default}
       batch-size: 100
       flush-interval-seconds: 5
       create-schema: false

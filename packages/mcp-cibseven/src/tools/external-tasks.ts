@@ -1,4 +1,3 @@
-import type { Client } from "@miragon-ai/client-cibseven"
 import {
   fetchAndLockInput,
   completeExternalTaskInput,
@@ -10,8 +9,10 @@ import {
   completeExternalTaskResource,
   handleFailure,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export function registerExternalTaskTools(register: Register) {
   register({
@@ -19,8 +20,8 @@ export function registerExternalTaskTools(register: Register) {
     description:
       "Fetch and lock external tasks for a given worker. Returns tasks that match the specified topic(s) and locks them for processing.",
     annotations: { openWorldHint: true },
-    inputSchema: fetchAndLockInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...fetchAndLockInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       fetchAndLock({
         client,
         body: {
@@ -29,6 +30,7 @@ export function registerExternalTaskTools(register: Register) {
           topics: args.topics,
         },
       }),
+    ),
   })
 
   register({
@@ -36,8 +38,8 @@ export function registerExternalTaskTools(register: Register) {
     description:
       "Complete an external task that was previously fetched and locked. Optionally set variables.",
     annotations: { openWorldHint: true },
-    inputSchema: completeExternalTaskInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...completeExternalTaskInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await completeExternalTaskResource({
         client,
         path: { id: args.externalTaskId },
@@ -49,7 +51,7 @@ export function registerExternalTaskTools(register: Register) {
         },
       })
       return { success: true, externalTaskId: args.externalTaskId }
-    },
+    }),
   })
 
   register({
@@ -57,8 +59,8 @@ export function registerExternalTaskTools(register: Register) {
     description:
       "Report a failure for an external task. Sets the error message, remaining retries, and retry timeout.",
     annotations: { openWorldHint: true },
-    inputSchema: handleExternalTaskFailureInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...handleExternalTaskFailureInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await handleFailure({
         client,
         path: { id: args.externalTaskId },
@@ -71,6 +73,6 @@ export function registerExternalTaskTools(register: Register) {
         },
       })
       return { success: true, externalTaskId: args.externalTaskId }
-    },
+    }),
   })
 }

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { engineFilterShape } from "./shared.js"
 
 export const searchProcessInstancesInput = z.object({
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
@@ -22,6 +23,7 @@ export const searchProcessInstancesInput = z.object({
   sortBy: z.enum(["startTime", "endTime", "duration"]).default("startTime").describe("Sort field"),
   sortOrder: z.enum(["asc", "desc"]).default("desc").describe("Sort direction"),
   limit: z.number().int().positive().max(100).default(20).describe("Maximum results"),
+  ...engineFilterShape,
 })
 
 export const searchByVariableInput = z.object({
@@ -29,4 +31,5 @@ export const searchByVariableInput = z.object({
   variableValue: z.string().describe("Variable value to match (text comparison)"),
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
   limit: z.number().int().positive().max(100).default(20).describe("Maximum results"),
+  ...engineFilterShape,
 })

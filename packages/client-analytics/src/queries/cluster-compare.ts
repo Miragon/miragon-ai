@@ -1,4 +1,9 @@
-import { escapeString, type ClickHouseClient } from "../clickhouse.js"
+import {
+  engineFilter,
+  escapeString,
+  type ClickHouseClient,
+  type EngineFilterInput,
+} from "../clickhouse.js"
 
 export interface ClusterCompareKpi {
   period: "before" | "after"
@@ -50,6 +55,7 @@ export async function clusterCompare(
     windowBeforeDays: number
     windowAfterDays: number
     minBucketSize: number
+    engineId?: EngineFilterInput
   },
 ): Promise<ClusterCompareResult> {
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
@@ -62,6 +68,8 @@ export async function clusterCompare(
   const activityFilter = params.elementId
     ? `AND activity_id = ${escapeString(params.elementId)}`
     : ""
+  const ef = engineFilter(params.engineId)
+  const engineClause = ef ? `AND ${ef}` : ""
 
   // Camunda's history exporter writes one row per state transition; collapse
   // them via GROUP BY id and compute durations from dateDiff(start, end)
@@ -90,6 +98,7 @@ FROM (
         min(start_time) AS start_time,
         max(end_time) AS end_time
     FROM camunda_history.camunda_process_instances
+    ${ef ? `WHERE ${ef}` : ""}
     GROUP BY id
 ) sub
 WHERE start_time >= before_from
@@ -111,6 +120,7 @@ WHERE create_time >= before_from
     AND create_time < after_to
     ${keyFilter}
     ${activityFilter}
+    ${engineClause}
 GROUP BY period`
 
   interface KpiRow {

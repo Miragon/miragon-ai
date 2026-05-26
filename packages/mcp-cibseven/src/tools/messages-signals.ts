@@ -1,9 +1,10 @@
-import type { Client } from "@miragon-ai/client-cibseven"
 import { correlateMessageInput, throwSignalInput } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { deliverMessage, throwSignal } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export function registerMessageSignalTools(register: Register) {
   register({
@@ -11,8 +12,8 @@ export function registerMessageSignalTools(register: Register) {
     description:
       "Correlate a message to trigger a message catch event or start a message start event.",
     annotations: { openWorldHint: true },
-    inputSchema: correlateMessageInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...correlateMessageInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       deliverMessage({
         client,
         body: {
@@ -27,6 +28,7 @@ export function registerMessageSignalTools(register: Register) {
           resultEnabled: args.resultEnabled,
         },
       }),
+    ),
   })
 
   register({
@@ -34,8 +36,8 @@ export function registerMessageSignalTools(register: Register) {
     description:
       "Throw a signal to trigger all matching signal catch events and signal start events.",
     annotations: { openWorldHint: true },
-    inputSchema: throwSignalInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...throwSignalInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await throwSignal({
         client,
         body: {
@@ -46,6 +48,6 @@ export function registerMessageSignalTools(register: Register) {
         },
       })
       return { success: true, signalName: args.name }
-    },
+    }),
   })
 }

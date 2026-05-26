@@ -1,4 +1,3 @@
-import type { Client } from "@miragon-ai/client-cibseven"
 import {
   listTasksInput,
   getTaskInput,
@@ -18,8 +17,10 @@ import {
   setAssignee,
   getTaskVariables,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export function registerTaskTools(register: Register) {
   register({
@@ -27,8 +28,8 @@ export function registerTaskTools(register: Register) {
     description:
       "List user tasks with optional filters. Returns task ID, name, assignee, process info, and timestamps.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: listTasksInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...listTasksInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getTasks({
         client,
         query: {
@@ -42,48 +43,49 @@ export function registerTaskTools(register: Register) {
           sortOrder: args.sortOrder,
         },
       }),
+    ),
   })
 
   register({
     name: "camunda7_get_task",
     description: "Get details of a single user task by ID.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: getTaskInput.shape,
-    handler: async (client, args) => getTask({ client, path: { id: args.taskId } }),
+    inputSchema: { ...getTaskInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => getTask({ client, path: { id: args.taskId } })),
   })
 
   register({
     name: "camunda7_claim_task",
     description: "Claim a user task for a specific user.",
     annotations: { openWorldHint: true },
-    inputSchema: claimTaskInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...claimTaskInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await claim({
         client,
         path: { id: args.taskId },
         body: { userId: args.userId },
       })
       return { success: true, taskId: args.taskId, userId: args.userId }
-    },
+    }),
   })
 
   register({
     name: "camunda7_unclaim_task",
     description: "Unclaim (release) a user task, removing the current assignee.",
     annotations: { openWorldHint: true },
-    inputSchema: unclaimTaskInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...unclaimTaskInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await unclaim({ client, path: { id: args.taskId } })
       return { success: true, taskId: args.taskId }
-    },
+    }),
   })
 
   register({
     name: "camunda7_complete_task",
     description: "Complete a user task by ID. Optionally set variables when completing.",
     annotations: { openWorldHint: true },
-    inputSchema: completeTaskInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...completeTaskInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await complete({
         client,
         path: { id: args.taskId },
@@ -94,29 +96,31 @@ export function registerTaskTools(register: Register) {
         },
       })
       return { success: true, taskId: args.taskId }
-    },
+    }),
   })
 
   register({
     name: "camunda7_set_task_assignee",
     description: "Set the assignee of a user task.",
     annotations: { openWorldHint: true },
-    inputSchema: setTaskAssigneeInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...setTaskAssigneeInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await setAssignee({
         client,
         path: { id: args.taskId },
         body: { userId: args.userId },
       })
       return { success: true, taskId: args.taskId, userId: args.userId }
-    },
+    }),
   })
 
   register({
     name: "camunda7_get_task_variables",
     description: "Get all variables of a user task.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: getTaskVariablesInput.shape,
-    handler: async (client, args) => getTaskVariables({ client, path: { id: args.taskId } }),
+    inputSchema: { ...getTaskVariablesInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
+      getTaskVariables({ client, path: { id: args.taskId } }),
+    ),
   })
 }

@@ -1,4 +1,3 @@
-import type { Client } from "@miragon-ai/client-cibseven"
 import {
   listDeploymentsInput,
   createDeploymentInput,
@@ -10,8 +9,10 @@ import {
   getDeployment,
   createDeployment,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export function registerDeploymentTools(register: Register) {
   register({
@@ -19,16 +20,16 @@ export function registerDeploymentTools(register: Register) {
     description:
       "Get a deployment by ID — returns deployment timestamp + source, used for pre/post deployment correlation (commit-hash → deployment-ID → timestamp).",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: getDeploymentInput.shape,
-    handler: async (client, args) => getDeployment({ client, path: { id: args.id } }),
+    inputSchema: { ...getDeploymentInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => getDeployment({ client, path: { id: args.id } })),
   })
 
   register({
     name: "camunda7_list_deployments",
     description: "List deployments with optional filters.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: listDeploymentsInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...listDeploymentsInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getDeployments({
         client,
         query: {
@@ -39,6 +40,7 @@ export function registerDeploymentTools(register: Register) {
           sortOrder: args.sortOrder,
         },
       }),
+    ),
   })
 
   register({
@@ -46,8 +48,8 @@ export function registerDeploymentTools(register: Register) {
     description:
       "Deploy BPMN process definitions and other resources to the engine. Supports duplicate filtering and deploy-changed-only.",
     annotations: { openWorldHint: true },
-    inputSchema: createDeploymentInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...createDeploymentInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       const form = new FormData()
       form.append("deployment-name", args.deploymentName)
       if (args.enableDuplicateFiltering !== undefined) {
@@ -69,6 +71,6 @@ export function registerDeploymentTools(register: Register) {
           ? B
           : never,
       })
-    },
+    }),
   })
 }

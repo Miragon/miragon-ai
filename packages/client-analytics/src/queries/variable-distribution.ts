@@ -1,4 +1,9 @@
-import { escapeString, type ClickHouseClient } from "../clickhouse.js"
+import {
+  engineFilter,
+  escapeString,
+  type ClickHouseClient,
+  type EngineFilterInput,
+} from "../clickhouse.js"
 
 export type VariableDistributionKind = "numeric" | "string" | "boolean" | "unknown"
 
@@ -46,6 +51,7 @@ export async function variableDistribution(
     minBucketSize: number
     numericBuckets: number
     topK: number
+    engineId?: EngineFilterInput
   },
 ): Promise<VariableDistributionResult> {
   const interval = INTERVALS[params.period]
@@ -56,6 +62,8 @@ export async function variableDistribution(
   const keyFilter = params.processDefinitionKey
     ? `AND process_definition_key = ${escapeString(params.processDefinitionKey)}`
     : ""
+  const ef = engineFilter(params.engineId)
+  const engineClause = ef ? `AND ${ef}` : ""
 
   // Final value per instance = latest revision. We carry all typed value columns through
   // argMax so we don't care which one holds the real value until we know the type.
@@ -71,6 +79,7 @@ WITH final_values AS (
     WHERE variable_name = ${name}
         AND timestamp >= now() - INTERVAL ${interval}
         ${keyFilter}
+        ${engineClause}
     GROUP BY process_instance_id
 )`
 

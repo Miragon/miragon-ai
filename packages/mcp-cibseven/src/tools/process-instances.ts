@@ -1,4 +1,3 @@
-import type { Client } from "@miragon-ai/client-cibseven"
 import {
   startProcessInstanceInput,
   listProcessInstancesInput,
@@ -23,8 +22,10 @@ import {
   setProcessInstanceVariable,
   updateSuspensionStateById,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export function registerProcessInstanceTools(register: Register) {
   register({
@@ -32,8 +33,8 @@ export function registerProcessInstanceTools(register: Register) {
     description:
       "Start a new process instance by process definition key. Optionally set a business key and initial variables.",
     annotations: { openWorldHint: true },
-    inputSchema: startProcessInstanceInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...startProcessInstanceInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       startProcessInstanceByKey({
         client,
         path: { key: args.processDefinitionKey },
@@ -44,14 +45,15 @@ export function registerProcessInstanceTools(register: Register) {
             | undefined,
         },
       }),
+    ),
   })
 
   register({
     name: "camunda7_list_process_instances",
     description: "List running process instances with optional filters.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: listProcessInstancesInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...listProcessInstancesInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getProcessInstances({
         client,
         query: {
@@ -64,15 +66,17 @@ export function registerProcessInstanceTools(register: Register) {
           sortOrder: args.sortOrder,
         },
       }),
+    ),
   })
 
   register({
     name: "camunda7_get_process_instance",
     description: "Get details of a single process instance by ID.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: getProcessInstanceInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...getProcessInstanceInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getProcessInstance({ client, path: { id: args.processInstanceId } }),
+    ),
   })
 
   register({
@@ -80,20 +84,21 @@ export function registerProcessInstanceTools(register: Register) {
     description:
       "Get the activity instance tree of a running process instance. Shows which activities are currently active.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: getActivityInstanceTreeInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...getActivityInstanceTreeInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getActivityInstanceTree({ client, path: { id: args.processInstanceId } }),
+    ),
   })
 
   register({
     name: "camunda7_delete_process_instance",
     description: "Delete (cancel) a running process instance by ID. This action is irreversible.",
     annotations: { destructiveHint: true, openWorldHint: true },
-    inputSchema: deleteProcessInstanceInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...deleteProcessInstanceInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await deleteProcessInstance({ client, path: { id: args.processInstanceId } })
       return { success: true, processInstanceId: args.processInstanceId }
-    },
+    }),
   })
 
   register({
@@ -101,8 +106,8 @@ export function registerProcessInstanceTools(register: Register) {
     description:
       "Modify a running process instance by moving tokens. Supports cancel, startBeforeActivity, startAfterActivity, and startTransition instructions.",
     annotations: { destructiveHint: true, openWorldHint: true },
-    inputSchema: modifyProcessInstanceInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...modifyProcessInstanceInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await modifyProcessInstance({
         client,
         path: { id: args.processInstanceId },
@@ -113,24 +118,25 @@ export function registerProcessInstanceTools(register: Register) {
         },
       })
       return { success: true, processInstanceId: args.processInstanceId }
-    },
+    }),
   })
 
   register({
     name: "camunda7_get_process_instance_variables",
     description: "Get all variables of a process instance.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: getProcessInstanceVariablesInput.shape,
-    handler: async (client, args) =>
+    inputSchema: { ...getProcessInstanceVariablesInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) =>
       getProcessInstanceVariables({ client, path: { id: args.processInstanceId } }),
+    ),
   })
 
   register({
     name: "camunda7_set_process_instance_variable",
     description: "Set a single variable on a process instance.",
     annotations: { openWorldHint: true },
-    inputSchema: setProcessInstanceVariableInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...setProcessInstanceVariableInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await setProcessInstanceVariable({
         client,
         path: { id: args.processInstanceId, varName: args.variableName },
@@ -141,7 +147,7 @@ export function registerProcessInstanceTools(register: Register) {
         processInstanceId: args.processInstanceId,
         variableName: args.variableName,
       }
-    },
+    }),
   })
 
   register({
@@ -149,29 +155,29 @@ export function registerProcessInstanceTools(register: Register) {
     description:
       "Suspend a running process instance. Jobs, timers, and message correlations on the instance are frozen until it is activated again.",
     annotations: { openWorldHint: true },
-    inputSchema: suspendProcessInstanceInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...suspendProcessInstanceInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await updateSuspensionStateById({
         client,
         path: { id: args.processInstanceId },
         body: { suspended: true },
       })
       return { success: true, processInstanceId: args.processInstanceId, suspended: true }
-    },
+    }),
   })
 
   register({
     name: "camunda7_activate_process_instance",
     description: "Activate (unsuspend) a suspended process instance.",
     annotations: { openWorldHint: true },
-    inputSchema: activateProcessInstanceInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...activateProcessInstanceInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
       await updateSuspensionStateById({
         client,
         path: { id: args.processInstanceId },
         body: { suspended: false },
       })
       return { success: true, processInstanceId: args.processInstanceId, suspended: false }
-    },
+    }),
   })
 }

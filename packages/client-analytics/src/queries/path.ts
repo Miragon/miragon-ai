@@ -1,4 +1,9 @@
-import { escapeString, type ClickHouseClient } from "../clickhouse.js"
+import {
+  engineFilter,
+  escapeString,
+  type ClickHouseClient,
+  type EngineFilterInput,
+} from "../clickhouse.js"
 
 export interface PathFrequencyRow {
   path: string[]
@@ -32,6 +37,7 @@ export async function pathFrequency(
     minBucketSize: number
     limit: number
     version?: number
+    engineId?: EngineFilterInput
   },
 ): Promise<PathFrequencyResult> {
   const interval = INTERVALS[params.period]
@@ -46,6 +52,8 @@ export async function pathFrequency(
   const versionFilter = version
     ? `AND process_definition_id LIKE ${escapeString(`${params.processDefinitionKey}:${version}:%`)}`
     : ""
+  const ef = engineFilter(params.engineId)
+  const engineClause = ef ? `AND ${ef}` : ""
 
   // Activities ordered by start_time per process_instance become the path signature.
   // Min-bucket-size is enforced server-side so rare paths never leave ClickHouse.
@@ -61,6 +69,7 @@ WITH per_instance AS (
         AND start_time >= now() - INTERVAL ${interval}
         AND activity_id != ''
         ${versionFilter}
+        ${engineClause}
     GROUP BY process_instance_id
 )`
 

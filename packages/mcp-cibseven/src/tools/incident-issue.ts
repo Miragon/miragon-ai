@@ -1,4 +1,3 @@
-import type { Client } from "@miragon-ai/client-cibseven"
 import { formatIncidentIssueInput } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
@@ -14,14 +13,14 @@ import type {
 } from "@miragon-ai/client-cibseven/generated/types.gen"
 import type { MCPServer } from "mcp-use/server"
 import { z } from "zod"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export interface IncidentIssueConfig {
   /** `owner/repo` of the GitHub repository where incidents should be filed. */
   repository?: string
-  /** Cockpit base URL for jump-out links in the issue body. */
-  cockpitUrl?: string
 }
 
 export interface IncidentIssuePayload {
@@ -279,8 +278,8 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
       "Build a GitHub-issue payload (title, body, labels, repository) from a Camunda 7 / CIB Seven incident. " +
       "Does NOT create the issue — pass the returned payload to the GitHub MCP server's `create_issue` tool.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: formatIncidentIssueInput.shape,
-    handler: async (client, args) => {
+    inputSchema: { ...formatIncidentIssueInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args, { cockpitUrl }) => {
       // The OpenAPI SDK types describe a `{data, error}` envelope, but the
       // shared client (see `client.ts`) is built with `responseStyle: "data"`
       // + `throwOnError: true` — so at runtime the call returns the raw DTO.
@@ -325,10 +324,10 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
         processInstance,
         processDefinition,
         stacktrace,
-        cockpitUrl: config.cockpitUrl,
+        cockpitUrl,
         repository,
       })
-    },
+    }),
   })
 }
 

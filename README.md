@@ -135,28 +135,83 @@ The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP cl
 
 ## Environment
 
-| Variable                      | Default                             | Description                                                                                                                                                                                                                                                                                      |
-| ----------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`                        | `8400`                              | HTTP port the MCP server listens on                                                                                                                                                                                                                                                              |
-| `MCP_ACTIVE_MODULES`          | all                                 | Comma-separated module list (`camunda7,analytics`)                                                                                                                                                                                                                                               |
-| `CAMUNDA_BASE_URL`            | `http://localhost:8410/engine-rest` | Engine REST API base URL                                                                                                                                                                                                                                                                         |
-| `CAMUNDA_COCKPIT_URL`         | _derived from `CAMUNDA_BASE_URL`_   | Cockpit web UI base, e.g. `http://localhost:8410/webapp`. Used for jump-out links: `<base>/#/seven/auth/process/<key>/<version>?tab=incidents` (process) and `<base>/#/seven/auth/process/<key>/<version>/<instanceId>?tab=variables` (instance).                                                |
-| `CAMUNDA_AUTH_TYPE`           | `none`                              | `basic`, `bearer`, or `none`                                                                                                                                                                                                                                                                     |
-| `CAMUNDA_USERNAME`            | —                                   | Basic auth username                                                                                                                                                                                                                                                                              |
-| `CAMUNDA_PASSWORD`            | —                                   | Basic auth password                                                                                                                                                                                                                                                                              |
-| `CAMUNDA_TOKEN`               | —                                   | Bearer token                                                                                                                                                                                                                                                                                     |
-| `CAMUNDA_INCIDENT_ISSUE_REPO` | —                                   | Default `owner/repo` for the `camunda7_format_incident_issue` tool and `report_incident_to_github` prompt. Per-call override stays available. Requires the [official GitHub MCP server](https://github.com/github/github-mcp-server) installed alongside this server to actually file the issue. |
-| `CLICKHOUSE_URL`              | `http://localhost:8420`             | ClickHouse HTTP endpoint                                                                                                                                                                                                                                                                         |
-| `CLICKHOUSE_USERNAME`         | `default`                           | ClickHouse user                                                                                                                                                                                                                                                                                  |
-| `CLICKHOUSE_PASSWORD`         | ``                                  | ClickHouse password                                                                                                                                                                                                                                                                              |
-| `CLICKHOUSE_DATABASE`         | `camunda_history`                   | ClickHouse database                                                                                                                                                                                                                                                                              |
+| Variable                      | Default                             | Description                                                                                                                                                                                                                                                                                       |
+| ----------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                        | `8400`                              | HTTP port the MCP server listens on                                                                                                                                                                                                                                                               |
+| `MCP_ACTIVE_MODULES`          | all                                 | Comma-separated module list (`camunda7,analytics`)                                                                                                                                                                                                                                                |
+| `CAMUNDA_ENGINES_FILE`        | —                                   | Path to a JSON file containing the engine list `[{id, baseUrl, cockpitUrl?}, ...]`. Preferred at scale (ConfigMap workflows).                                                                                                                                                                     |
+| `CAMUNDA_ENGINES_JSON`        | —                                   | Inline JSON array of `{id, baseUrl, cockpitUrl?}` — see "Multi-engine setup" below. Takes precedence over `CAMUNDA_BASE_URL`; ignored when `CAMUNDA_ENGINES_FILE` is set.                                                                                                                         |
+| `CAMUNDA_BASE_URL`            | `http://localhost:8410/engine-rest` | Single-engine back-compat. When set without `CAMUNDA_ENGINES_*`, synthesized into a one-entry registry with id `default`.                                                                                                                                                                         |
+| `CAMUNDA_COCKPIT_URL`         | _derived from `CAMUNDA_BASE_URL`_   | Cockpit web UI base, e.g. `http://localhost:8410/webapp`. Used for jump-out links: `<base>/#/seven/auth/process/<key>/<version>?tab=incidents` (process) and `<base>/#/seven/auth/process/<key>/<version>/<instanceId>?tab=variables` (instance). For multi-engine, pass per-engine `cockpitUrl`. |
+| `CAMUNDA_AUTH_TYPE`           | `none`                              | `basic`, `bearer`, or `none`. Same auth applies to every engine in the registry.                                                                                                                                                                                                                  |
+| `CAMUNDA_USERNAME`            | —                                   | Basic auth username                                                                                                                                                                                                                                                                               |
+| `CAMUNDA_PASSWORD`            | —                                   | Basic auth password                                                                                                                                                                                                                                                                               |
+| `CAMUNDA_TOKEN`               | —                                   | Bearer token                                                                                                                                                                                                                                                                                      |
+| `CAMUNDA_INCIDENT_ISSUE_REPO` | —                                   | Default `owner/repo` for the `camunda7_format_incident_issue` tool and `report_incident_to_github` prompt. Per-call override stays available. Requires the [official GitHub MCP server](https://github.com/github/github-mcp-server) installed alongside this server to actually file the issue.  |
+| `CLICKHOUSE_URL`              | `http://localhost:8420`             | ClickHouse HTTP endpoint                                                                                                                                                                                                                                                                          |
+| `CLICKHOUSE_USERNAME`         | `default`                           | ClickHouse user                                                                                                                                                                                                                                                                                   |
+| `CLICKHOUSE_PASSWORD`         | ``                                  | ClickHouse password                                                                                                                                                                                                                                                                               |
+| `CLICKHOUSE_DATABASE`         | `camunda_history`                   | ClickHouse database                                                                                                                                                                                                                                                                               |
+| `CLICKHOUSE_ENGINE_ID`        | `default`                           | _(Engine plugin)_ Stable identifier the CIB Seven engine writes into every history row, so analytics can attribute data when multiple engines share one ClickHouse. Set per CIB Seven instance.                                                                                                   |
+
+## Multi-engine setup
+
+The MCP server can talk to several CIB Seven instances at once. Operations tools (`camunda7_*`) are routed per MCP session via a **sticky engine selection**; analytics tools (`analytics_*`) stay session-independent and accept an optional `engineId` filter so a single dashboard can aggregate or compare engines.
+
+**1. Tag every engine.** In each CIB Seven app that ships the history plugin, set `CLICKHOUSE_ENGINE_ID` to a stable id (e.g. `prod-a`, `prod-b`). The history plugin writes that id into every row of the shared `camunda_history.*` tables.
+
+**2. Register the engines in the MCP server.** Either as an inline JSON env (good for local dev):
+
+```bash
+CAMUNDA_ENGINES_JSON='[
+  {"id":"prod-a","baseUrl":"http://localhost:8410/engine-rest","cockpitUrl":"http://localhost:8410/webapp"},
+  {"id":"prod-b","baseUrl":"http://localhost:8411/engine-rest","cockpitUrl":"http://localhost:8411/webapp"}
+]'
+```
+
+…or as a file path (preferred at scale, fits ConfigMap workflows):
+
+```bash
+CAMUNDA_ENGINES_FILE=/etc/automation-mcp/engines.json
+```
+
+`CAMUNDA_AUTH_TYPE` / `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` / `CAMUNDA_TOKEN` still apply globally — same auth across all engines.
+
+**3. Pick an engine per MCP session.** The LLM client discovers and picks engines via three new tools:
+
+- `camunda7_list_engines` — returns the registry.
+- `camunda7_select_engine({id: "prod-a"})` — sets the sticky engine for this session.
+- `camunda7_current_engine` — reports the current selection.
+
+When more than one engine is configured, the first operations tool call without a prior selection returns a structured error `{code: "ENGINE_NOT_SELECTED", availableEngines: [...]}` — the host typically reacts by calling `select_engine` and retrying the original call. With only one engine configured (or the legacy `CAMUNDA_BASE_URL` path), the selection is implicit and no `select_engine` is needed.
+
+Every operations tool also takes an optional `engine` parameter that overrides the session pick for a single call without changing the sticky selection.
+
+**4. Local dev — bring up two engines.** The docker compose stack ships a `multi-engine` profile that adds a second CIB Seven on port 8411:
+
+```bash
+cd docker && docker compose --profile multi-engine up -d
+```
+
+Both engines write into the same ClickHouse with `engine_id = 'prod-a'` and `'prod-b'`. Start the MCP server with both registered:
+
+```bash
+CAMUNDA_ENGINES_JSON='[
+  {"id":"prod-a","baseUrl":"http://localhost:8410/engine-rest","cockpitUrl":"http://localhost:8410/webapp"},
+  {"id":"prod-b","baseUrl":"http://localhost:8411/engine-rest","cockpitUrl":"http://localhost:8411/webapp"}
+]' \
+CAMUNDA_AUTH_TYPE=basic CAMUNDA_USERNAME=demo CAMUNDA_PASSWORD=demo \
+CLICKHOUSE_URL=http://localhost:8420 CLICKHOUSE_USERNAME=camunda CLICKHOUSE_PASSWORD=camunda123 \
+pnpm -F @miragon-ai/mcp-gateway start
+```
 
 ## Tools
 
-### Camunda7 module (37 + 5 widget tools)
+### Camunda7 module (40 + 5 widget tools)
 
 All tools are prefixed with `camunda7_`:
 
+- Engine selection: `list_engines`, `select_engine`, `current_engine` — required when more than one engine is configured (see "Multi-engine setup" above).
 - Process definitions: `list_process_definitions`, `get_process_definition_xml`
 - Process instances: `start_process_instance`, `list_process_instances`, `get_process_instance`, `delete_process_instance`, `modify_process_instance`, `get_activity_instance_tree`, `get_process_instance_variables`, `set_process_instance_variable`
 - User tasks: `list_tasks`, `get_task`, `claim_task`, `unclaim_task`, `complete_task`, `set_task_assignee`, `get_task_variables`

@@ -7,8 +7,10 @@ import {
   getProcessDefinitionBpmn20Xml,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 import { extractEmbeddedFormFields } from "../lib/bpmn-task-form.js"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
-type Register = ReturnType<typeof createToolRegistrar<Client>>
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 interface TaskMeta {
   taskDefinitionKey?: string | null
@@ -32,11 +34,11 @@ export function registerTaskFormTools(register: Register) {
     description:
       "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`). Returns form fields with current variable values pre-filled. Fields marked readonly are for context only and will not be submitted. Returns an empty fields array when no form is defined on the task.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: getTaskFormInput.shape,
-    handler: async (client, args): Promise<TaskFormSchema> => {
+    inputSchema: { ...getTaskFormInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args): Promise<TaskFormSchema> => {
       const { taskId } = args as { taskId: string }
       return buildTaskFormSchema(client, taskId)
-    },
+    }),
   })
 }
 

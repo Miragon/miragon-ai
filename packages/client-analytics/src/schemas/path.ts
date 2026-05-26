@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { engineFilterShape } from "./shared.js"
 
 export const pathFrequencyInput = z.object({
   processDefinitionKey: z.string().describe("Process definition key to analyze"),
@@ -20,6 +21,7 @@ export const pathFrequencyInput = z.object({
     .describe(
       "Restrict the analysis to a single deployed process definition version. Combine with analytics_version_compare to render per-version flow diagrams side-by-side.",
     ),
+  ...engineFilterShape,
 })
 
 export const elementBottleneckInput = z.object({
@@ -38,4 +40,5 @@ export const elementBottleneckInput = z.object({
     .max(100)
     .default(20)
     .describe("Maximum number of activities to return"),
+  ...engineFilterShape,
 })

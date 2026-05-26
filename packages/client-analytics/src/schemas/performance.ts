@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { engineFilterShape } from "./shared.js"
 
 export const analyzePerformanceInput = z.object({
   processDefinitionKey: z.string().describe("Process definition key to analyze"),
@@ -7,6 +8,7 @@ export const analyzePerformanceInput = z.object({
     .boolean()
     .default(true)
     .describe("Include per-activity bottleneck analysis"),
+  ...engineFilterShape,
 })
 
 export const comparePeriodsInput = z.object({
@@ -16,4 +18,5 @@ export const comparePeriodsInput = z.object({
   periodBFrom: z.string().describe("Period B start (ISO datetime)"),
   periodBTo: z.string().describe("Period B end (ISO datetime)"),
   includeActivityBreakdown: z.boolean().default(false).describe("Include per-activity comparison"),
+  ...engineFilterShape,
 })
