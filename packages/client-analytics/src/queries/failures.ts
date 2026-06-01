@@ -29,17 +29,16 @@ export interface FailedInstanceRow {
   incident_time: string
 }
 
-const RANGE = { "1d": "1d", "7d": "7d", "30d": "30d" } as const
-
 /**
- * Failure patterns over a rolling window, from incident metrics.
+ * Currently-open incident patterns, from the `camunda_incidents_open` state
+ * gauge — grouped by `incident_type` + definition. Point-in-time ("what is
+ * failing now"), so it is robust regardless of how the data arrived (live or
+ * a backdated/bulk import, where `increase()` over a rate window reads zero).
  *
- * Reduced fidelity vs the event store: metrics carry no raw incident messages
- * (only `incident_type`), no per-instance ids, and no first/last timestamps —
- * so patterns are grouped by `incident_type` + activity + definition, with
- * `incident_message` set to the type and `sample_instance_ids` empty. For the
- * actual failed instances, drill in with `camunda7_list_incidents` /
- * `camunda7_query_historic_process_instances`.
+ * Reduced fidelity vs the event store: no raw incident messages (only
+ * `incident_type`, surfaced as `incident_message`), no activity id, no
+ * per-instance ids/timestamps. For the actual failed instances drill in with
+ * `camunda7_list_incidents` / `camunda7_query_historic_process_instances`.
  */
 export async function findFailedInstances(
   ch: PrometheusClient,
@@ -52,7 +51,6 @@ export async function findFailedInstances(
     engineId?: EngineFilterInput
   },
 ): Promise<ErrorPatternRow[] | FailedInstanceRow[]> {
-  const range = RANGE[params.period as keyof typeof RANGE] ?? "7d"
   const limit = Math.max(1, Math.floor(params.limit))
   const sel = selector(
     params.processDefinitionKey
@@ -63,13 +61,13 @@ export async function findFailedInstances(
   )
 
   const samples = await ch.instant(
-    `sum by (process_definition_key, activity_id, incident_type)(increase(camunda_incident_created_total${sel}[${range}]))`,
+    `sum by (process_definition_key, incident_type)(camunda_incidents_open${sel})`,
   )
 
   return samples
     .map((s) => ({
       incident_message: s.metric.incident_type ?? "",
-      activity_id: s.metric.activity_id ?? "",
+      activity_id: "",
       process_definition_key: s.metric.process_definition_key ?? "",
       incident_count: Math.round(s.value),
       first_occurrence: "",

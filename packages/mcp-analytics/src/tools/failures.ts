@@ -9,7 +9,7 @@ export function registerFailureTools(register: Register) {
   register({
     name: "analytics_find_failed_instances",
     description:
-      "Aggregate incident/failure patterns from metrics, grouped by incident type, activity, and process definition over a rolling window. For the actual failed instances (ids, messages), drill in with camunda7_list_incidents / camunda7_query_historic_process_instances.",
+      "List currently-open incident patterns from process metrics, grouped by incident type and process definition (point-in-time — what is failing right now). For the actual failed instances (ids, messages), drill in with camunda7_list_incidents / camunda7_query_historic_process_instances.",
     annotations: { readOnlyHint: true, idempotentHint: true },
     inputSchema: schemas.findFailedInstancesInput.shape,
     handler: async (ch, args) =>

@@ -207,40 +207,35 @@ function buildDefinitionBreakdown(
 }
 
 /**
- * Aggregated failure / incident analysis over a rolling window, from incident
- * metrics. Reduced fidelity: patterns are grouped by `incident_type` (no raw
- * messages), with empty sample-instance ids and occurrence timestamps.
+ * Current failure / incident state, from the live state gauges
+ * (`camunda_incidents_open`, `camunda_jobs_failed`, `camunda_process_instances_running`).
+ *
+ * Point-in-time ("what is failing now"), so it is robust regardless of how the
+ * data arrived — unlike a rate window over `incident_created`, which reads zero
+ * on backdated/bulk-imported history. `failureRatePct` is open incidents over
+ * currently-running instances. Reduced fidelity: patterns are grouped by
+ * `incident_type` (no raw messages / activity id / sample ids).
  */
 export async function failureDashboardData(
   ch: PrometheusClient,
   params: { period: string; engineId?: EngineFilterInput },
 ): Promise<FailureDashboardData> {
-  const range = (["1d", "7d", "30d", "90d"] as const).includes(params.period as Period)
+  const period = (["1d", "7d", "30d", "90d"] as const).includes(params.period as Period)
     ? params.period
     : "7d"
-  const engine = engineMatcher(params.engineId)
-  const sel = selector(engine)
-  const r = `[${range}]`
+  const sel = selector(engineMatcher(params.engineId))
 
-  const [patterns, started, failed, incidentsByKey] = await Promise.all([
-    ch.instant(
-      `sum by (process_definition_key, activity_id, incident_type)(increase(camunda_incident_created_total${sel}${r}))`,
-    ),
-    ch.instant(
-      `sum by (process_definition_key)(increase(camunda_process_instance_started_total${sel}${r}))`,
-    ),
-    ch.instant(
-      `sum by (process_definition_key)(increase(camunda_process_instance_ended_total${selector(`state="INTERNALLY_TERMINATED"`, engine)}${r}))`,
-    ),
-    ch.instant(
-      `sum by (process_definition_key)(increase(camunda_incident_created_total${sel}${r}))`,
-    ),
+  const [patterns, runningByKey, incidentsByKey, deadJobsByKey] = await Promise.all([
+    ch.instant(`sum by (process_definition_key, incident_type)(camunda_incidents_open${sel})`),
+    ch.instant(`sum by (process_definition_key)(camunda_process_instances_running${sel})`),
+    ch.instant(`sum by (process_definition_key)(camunda_incidents_open${sel})`),
+    ch.instant(`sum by (process_definition_key)(camunda_jobs_failed${sel})`),
   ])
 
   const errorPatterns: ErrorPatternItem[] = patterns
     .map((s) => ({
       incidentMessage: s.metric.incident_type ?? "",
-      activityId: s.metric.activity_id ?? "",
+      activityId: "",
       processDefinitionKey: s.metric.process_definition_key ?? "",
       incidentCount: Math.round(s.value),
       firstOccurrence: "",
@@ -251,21 +246,20 @@ export async function failureDashboardData(
     .sort((a, b) => b.incidentCount - a.incidentCount)
     .slice(0, 50)
 
-  const startedBy = byLabel(started, "process_definition_key")
-  const failedBy = byLabel(failed, "process_definition_key")
+  const runningBy = byLabel(runningByKey, "process_definition_key")
   const incidentBy = byLabel(incidentsByKey, "process_definition_key")
+  const deadBy = byLabel(deadJobsByKey, "process_definition_key")
 
   const processBreakdown: ProcessFailureItem[] = Object.keys(incidentBy)
     .map((key) => {
-      const total = Math.round(startedBy[key] ?? 0)
+      const running = Math.round(runningBy[key] ?? 0)
       const incidentCount = Math.round(incidentBy[key] ?? 0)
-      const failedCount = Math.round(failedBy[key] ?? 0)
       return {
         processDefinitionKey: key,
-        totalInstances: total,
-        failedCount,
+        totalInstances: running,
+        failedCount: Math.round(deadBy[key] ?? 0),
         incidentCount,
-        failureRatePct: total > 0 ? round1((incidentCount * 100) / total) : 0,
+        failureRatePct: running > 0 ? round1((incidentCount * 100) / running) : 0,
       }
     })
     .filter((p) => p.incidentCount > 0)
@@ -277,7 +271,7 @@ export async function failureDashboardData(
     uniqueErrorPatterns: errorPatterns.length,
     mostAffectedProcess:
       processBreakdown.length > 0 ? processBreakdown[0].processDefinitionKey : null,
-    period: range,
+    period,
     errorPatterns,
     processBreakdown,
   }
