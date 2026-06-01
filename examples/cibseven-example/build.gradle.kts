@@ -16,9 +16,8 @@ kotlin {
 }
 
 dependencies {
-    implementation("com.camunda7mcp:cibseven-history-clickhouse")
+    implementation("com.camunda7mcp:cibseven-history-metrics")
     implementation("com.camunda7mcp:cibseven-otel-eventbridge")
-    implementation("com.camunda7mcp:shared-history-clickhouse")
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.jdbc)
@@ -50,17 +49,17 @@ val pluginsBuild = gradle.includedBuild("engine-plugins")
 // included build. Force compileKotlin to wait until shadowJar has finished
 // writing — otherwise the example reads a half-written archive mid-build.
 tasks.named("compileKotlin") {
-    dependsOn(pluginsBuild.task(":cibseven-history-clickhouse:shadowJar"))
+    dependsOn(pluginsBuild.task(":cibseven-history-metrics:shadowJar"))
     dependsOn(pluginsBuild.task(":cibseven-otel-eventbridge:shadowJar"))
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("cibseven-example.jar")
-    dependsOn(pluginsBuild.task(":cibseven-history-clickhouse:shadowJar"))
+    dependsOn(pluginsBuild.task(":cibseven-history-metrics:shadowJar"))
     dependsOn(pluginsBuild.task(":cibseven-otel-eventbridge:shadowJar"))
 }
 
 tasks.named<Test>("test") {
-    dependsOn(pluginsBuild.task(":cibseven-history-clickhouse:shadowJar"))
+    dependsOn(pluginsBuild.task(":cibseven-history-metrics:shadowJar"))
     dependsOn(pluginsBuild.task(":cibseven-otel-eventbridge:shadowJar"))
 }

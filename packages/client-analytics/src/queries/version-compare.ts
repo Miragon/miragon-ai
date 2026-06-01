@@ -1,9 +1,11 @@
 import {
-  engineFilter,
-  escapeString,
-  type ClickHouseClient,
+  engineMatcher,
+  escapeLabelValue,
+  selector,
   type EngineFilterInput,
-} from "../clickhouse.js"
+  type PrometheusClient,
+  type PromSample,
+} from "../prometheus.js"
 
 export interface VersionCompareKpi {
   version: number
@@ -38,20 +40,23 @@ export interface VersionCompareResult {
   delta: VersionCompareDelta
 }
 
+const round1 = (n: number) => Math.round(n * 10) / 10
+const first = (s: PromSample[]) => (s.length ? s[0].value : 0)
+
+function pctChange(before: number, after: number): number | null {
+  if (before === 0) return null
+  return Math.round(((after - before) / before) * 10000) / 100
+}
+
 /**
- * Side-by-side comparison of two deployed process definition versions.
- *
- * Partitions instances by `process_definition_id` (Camunda format
- * `key:version:uuid`) within a shared time window. Mirrors clusterCompare's
- * shape but answers a different question: did rolling out v2 measurably move
- * the KPIs vs the v1 cohort still in flight?
- *
- * Suppresses the result (returns `suppressed: true`) when either version's
- * cohort is below `minBucketSize` — keeps callers from drawing conclusions
- * from a handful of instances right after a partial rollout.
+ * Side-by-side comparison of two deployed process definition versions, from
+ * OTEL metrics. Versions are a metric label (`process_definition_version`), so
+ * this is an exact partition over a shared rolling window — no per-instance
+ * data needed. `failed_count` is the terminal-failure state count; the failure
+ * signal on incident-terminated processes lives in `incident_rate_pct`.
  */
 export async function versionCompare(
-  ch: ClickHouseClient,
+  ch: PrometheusClient,
   params: {
     processDefinitionKey: string
     versionA: number
@@ -66,118 +71,14 @@ export async function versionCompare(
   const windowDays = Math.max(1, Math.floor(params.windowDays))
   const versionA = Math.max(1, Math.floor(params.versionA))
   const versionB = Math.max(1, Math.floor(params.versionB))
-  const key = escapeString(params.processDefinitionKey)
-  const prefixA = escapeString(`${params.processDefinitionKey}:${versionA}:%`)
-  const prefixB = escapeString(`${params.processDefinitionKey}:${versionB}:%`)
-  const activityFilter = params.elementId
-    ? `AND activity_id = ${escapeString(params.elementId)}`
-    : ""
-  const ef = engineFilter(params.engineId)
-  const engineClause = ef ? `AND ${ef}` : ""
+  const range = `${windowDays}d`
 
-  // GROUP BY id first to collapse Camunda's per-state-transition rows into one
-  // row per instance, then compute durations via dateDiff because the exporter
-  // does not populate `duration_in_millis` on process_instance rows. Filters
-  // belong in the outer WHERE so they apply post-aggregation; ClickHouse
-  // rejects them in the inner WHERE alongside aggregate functions.
-  const kpiSql = `
-WITH
-    now() - INTERVAL ${windowDays} DAY AS since
-SELECT
-    multiIf(
-        process_definition_id LIKE ${prefixA}, 'versionA',
-        process_definition_id LIKE ${prefixB}, 'versionB',
-        'other'
-    ) AS bucket,
-    count() AS instance_count,
-    countIf(state = 'COMPLETED') AS completed_count,
-    countIf(state = 'INTERNALLY_TERMINATED') AS failed_count,
-    round(countIf(state = 'INTERNALLY_TERMINATED') * 100.0 / count(), 2) AS failure_rate_pct,
-    round(avg(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS avg_duration_sec,
-    round(quantile(0.95)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS p95_duration_sec
-FROM (
-    SELECT
-        id,
-        any(process_definition_key) AS process_definition_key,
-        any(process_definition_id) AS process_definition_id,
-        argMax(state, timestamp) AS state,
-        min(start_time) AS start_time,
-        max(end_time) AS end_time
-    FROM camunda_history.camunda_process_instances
-    ${ef ? `WHERE ${ef}` : ""}
-    GROUP BY id
-) sub
-WHERE process_definition_key = ${key}
-    AND start_time >= since
-    AND end_time IS NOT NULL
-    AND (process_definition_id LIKE ${prefixA} OR process_definition_id LIKE ${prefixB})
-GROUP BY bucket`
-
-  const incidentSql = `
-WITH
-    now() - INTERVAL ${windowDays} DAY AS since
-SELECT
-    multiIf(
-        process_definition_id LIKE ${prefixA}, 'versionA',
-        process_definition_id LIKE ${prefixB}, 'versionB',
-        'other'
-    ) AS bucket,
-    count() AS incident_count
-FROM camunda_history.camunda_incidents
-WHERE process_definition_key = ${key}
-    AND create_time >= since
-    AND (process_definition_id LIKE ${prefixA} OR process_definition_id LIKE ${prefixB})
-    ${activityFilter}
-    ${engineClause}
-GROUP BY bucket`
-
-  interface KpiRow {
-    bucket: "versionA" | "versionB" | "other"
-    instance_count: number
-    completed_count: number
-    failed_count: number
-    failure_rate_pct: number
-    avg_duration_sec: number
-    p95_duration_sec: number
-  }
-  interface IncidentRow {
-    bucket: "versionA" | "versionB" | "other"
-    incident_count: number
-  }
-
-  const [kpiRows, incidentRows] = await Promise.all([
-    ch.query<KpiRow>(kpiSql),
-    ch.query<IncidentRow>(incidentSql),
+  const [a, b] = await Promise.all([
+    versionKpi(ch, params, "versionA", versionA, range),
+    versionKpi(ch, params, "versionB", versionB, range),
   ])
 
-  const incidentByBucket: Record<string, number> = {}
-  for (const r of incidentRows) incidentByBucket[r.bucket] = Number(r.incident_count)
-
-  const buckets = [
-    { bucket: "versionA" as const, version: versionA },
-    { bucket: "versionB" as const, version: versionB },
-  ]
-  const kpis: VersionCompareKpi[] = buckets.map(({ bucket, version }) => {
-    const row = kpiRows.find((r) => r.bucket === bucket)
-    const instances = Number(row?.instance_count ?? 0)
-    const incidents = incidentByBucket[bucket] ?? 0
-    return {
-      version,
-      bucket,
-      instance_count: instances,
-      completed_count: Number(row?.completed_count ?? 0),
-      failed_count: Number(row?.failed_count ?? 0),
-      failure_rate_pct: Number(row?.failure_rate_pct ?? 0),
-      incident_count: incidents,
-      incident_rate_pct: instances > 0 ? Math.round((incidents * 10000) / instances) / 100 : 0,
-      avg_duration_sec: Number(row?.avg_duration_sec ?? 0),
-      p95_duration_sec: Number(row?.p95_duration_sec ?? 0),
-    }
-  })
-
-  const [a, b] = kpis
   const suppressed = a.instance_count < minBucket || b.instance_count < minBucket
-
   return {
     processDefinitionKey: params.processDefinitionKey,
     versionA,
@@ -186,7 +87,7 @@ GROUP BY bucket`
     elementId: params.elementId ?? null,
     minBucketSize: minBucket,
     suppressed,
-    kpis,
+    kpis: [a, b],
     delta: {
       instance_count_delta_pct: pctChange(a.instance_count, b.instance_count),
       failure_rate_delta_pp: round1(b.failure_rate_pct - a.failure_rate_pct),
@@ -197,11 +98,57 @@ GROUP BY bucket`
   }
 }
 
-function pctChange(before: number, after: number): number | null {
-  if (before === 0) return null
-  return Math.round(((after - before) / before) * 10000) / 100
-}
+async function versionKpi(
+  ch: PrometheusClient,
+  params: { processDefinitionKey: string; elementId?: string; engineId?: EngineFilterInput },
+  bucket: "versionA" | "versionB",
+  version: number,
+  range: string,
+): Promise<VersionCompareKpi> {
+  const key = escapeLabelValue(params.processDefinitionKey)
+  const engine = engineMatcher(params.engineId)
+  const verSel = selector(
+    `process_definition_key="${key}"`,
+    `process_definition_version="${version}"`,
+    engine,
+  )
+  const incidentSel = selector(
+    `process_definition_key="${key}"`,
+    `process_definition_version="${version}"`,
+    params.elementId ? `activity_id="${escapeLabelValue(params.elementId)}"` : undefined,
+    engine,
+  )
 
-function round1(n: number): number {
-  return Math.round(n * 10) / 10
+  const [total, completed, failed, incidents, avg, p95] = await Promise.all([
+    ch.instant(`sum(increase(camunda_process_instance_started_total${verSel}[${range}]))`),
+    ch.instant(
+      `sum(increase(camunda_process_instance_ended_total${selector(`process_definition_key="${key}"`, `process_definition_version="${version}"`, `state="COMPLETED"`, engine)}[${range}]))`,
+    ),
+    ch.instant(
+      `sum(increase(camunda_process_instance_ended_total${selector(`process_definition_key="${key}"`, `process_definition_version="${version}"`, `state="INTERNALLY_TERMINATED"`, engine)}[${range}]))`,
+    ),
+    ch.instant(`sum(increase(camunda_incident_created_total${incidentSel}[${range}]))`),
+    ch.instant(
+      `sum(increase(camunda_process_instance_duration_seconds_sum${verSel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${verSel}[${range}]))`,
+    ),
+    ch.instant(
+      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${verSel}[${range}])))`,
+    ),
+  ])
+
+  const instances = Math.round(first(total))
+  const failedCount = Math.round(first(failed))
+  const incidentCount = Math.round(first(incidents))
+  return {
+    version,
+    bucket,
+    instance_count: instances,
+    completed_count: Math.round(first(completed)),
+    failed_count: failedCount,
+    failure_rate_pct: instances > 0 ? round1((failedCount * 100) / instances) : 0,
+    incident_count: incidentCount,
+    incident_rate_pct: instances > 0 ? round1((incidentCount * 100) / instances) : 0,
+    avg_duration_sec: round1(first(avg)),
+    p95_duration_sec: round1(first(p95)),
+  }
 }

@@ -1,9 +1,12 @@
 import {
-  engineFilter,
-  escapeString,
-  type ClickHouseClient,
+  engineMatcher,
+  escapeLabelValue,
+  selector,
   type EngineFilterInput,
-} from "../clickhouse.js"
+  type Period,
+  type PrometheusClient,
+  type PromSample,
+} from "../prometheus.js"
 
 export interface PerformanceKPI {
   process_definition_key: string
@@ -54,8 +57,42 @@ export interface PeriodComparisonResult {
   activityComparison?: PeriodActivityComparisonRow[]
 }
 
+const round1 = (n: number) => Math.round(n * 10) / 10
+const first = (s: PromSample[]) => (s.length ? s[0].value : 0)
+
+/** `{process_definition_key=..., engine_id=...}` plus any extra matchers. */
+function pdkSelector(
+  key: string,
+  engineId: EngineFilterInput,
+  ...extra: Array<string | undefined>
+) {
+  return selector(
+    `process_definition_key="${escapeLabelValue(key)}"`,
+    engineMatcher(engineId),
+    ...extra,
+  )
+}
+
+function byLabel(samples: PromSample[], label: string): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const s of samples) {
+    const k = s.metric[label]
+    if (k !== undefined) out[k] = s.value
+  }
+  return out
+}
+
+/**
+ * Process performance KPIs over a rolling window, from OTEL metrics.
+ *
+ * Counts come from `increase()` over the period; durations from the histogram
+ * (`histogram_quantile` for p50/p95, sum/count for the mean). `failed` is
+ * incident-based — metrics carry no per-instance terminal-failure state — and
+ * `activity_name`/`earliest`/`latest` are not on metrics, so they degrade to
+ * null/"" (resolve names from the BPMN; drill into instances via camunda7).
+ */
 export async function analyzePerformance(
-  ch: ClickHouseClient,
+  ch: PrometheusClient,
   params: {
     processDefinitionKey: string
     period: string
@@ -63,78 +100,105 @@ export async function analyzePerformance(
     engineId?: EngineFilterInput
   },
 ): Promise<{ kpi: PerformanceKPI | null; activityBreakdown: ActivityBreakdownRow[] }> {
-  const interval = {
-    "1d": "1 DAY",
-    "7d": "7 DAY",
-    "30d": "30 DAY",
-    "90d": "90 DAY",
-  }[params.period as "1d" | "7d" | "30d" | "90d"]
+  const range = (params.period as Period) ?? "7d"
+  const sel = pdkSelector(params.processDefinitionKey, params.engineId)
+  const completedSel = pdkSelector(
+    params.processDefinitionKey,
+    params.engineId,
+    'state="COMPLETED"',
+  )
 
-  const ef = engineFilter(params.engineId)
-  const innerEngineFilter = ef ? `WHERE ${ef}` : ""
-  const outerEngineFilter = ef ? `AND ${ef}` : ""
+  const [total, completed, incidents, avg, median, p95] = await Promise.all([
+    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}[${range}]))`),
+    ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}[${range}]))`),
+    ch.instant(`sum(increase(camunda_incident_created_total${sel}[${range}]))`),
+    ch.instant(
+      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${sel}[${range}]))`,
+    ),
+    ch.instant(
+      `histogram_quantile(0.5, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
+    ),
+    ch.instant(
+      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
+    ),
+  ])
 
-  // GROUP BY id first to collapse Camunda's per-state-transition rows, then
-  // compute durations via dateDiff because the exporter never populates
-  // `duration_in_millis` on process_instance rows.
-  const kpiSql = `
-SELECT
-    process_definition_key,
-    count() AS total_instances,
-    countIf(state = 'COMPLETED') AS completed,
-    countIf(state = 'INTERNALLY_TERMINATED') AS failed,
-    round(countIf(state = 'INTERNALLY_TERMINATED') * 100.0 / count(), 2) AS failure_rate_pct,
-    round(avg(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS avg_duration_sec,
-    round(quantile(0.5)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS median_duration_sec,
-    round(quantile(0.95)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS p95_duration_sec,
-    min(start_time) AS earliest,
-    max(start_time) AS latest
-FROM (
-    SELECT
-        id,
-        any(process_definition_key) AS process_definition_key,
-        argMax(state, timestamp) AS state,
-        min(start_time) AS start_time,
-        max(end_time) AS end_time
-    FROM camunda_history.camunda_process_instances
-    ${innerEngineFilter}
-    GROUP BY id
-) sub
-WHERE process_definition_key = ${escapeString(params.processDefinitionKey)}
-    AND end_time IS NOT NULL
-    AND start_time >= now() - INTERVAL ${interval}
-GROUP BY process_definition_key`
-
-  const kpi = await ch.query<PerformanceKPI>(kpiSql)
+  const totalInstances = Math.round(first(total))
+  const failed = Math.round(first(incidents))
+  const kpi: PerformanceKPI | null =
+    totalInstances > 0
+      ? {
+          process_definition_key: params.processDefinitionKey,
+          total_instances: totalInstances,
+          completed: Math.round(first(completed)),
+          failed,
+          failure_rate_pct: totalInstances > 0 ? round1((failed * 100) / totalInstances) : 0,
+          avg_duration_sec: round1(first(avg)),
+          median_duration_sec: round1(first(median)),
+          p95_duration_sec: round1(first(p95)),
+          earliest: "",
+          latest: "",
+        }
+      : null
 
   let activityBreakdown: ActivityBreakdownRow[] = []
   if (params.includeActivityBreakdown) {
-    const actSql = `
-SELECT
-    activity_id,
-    activity_name,
-    activity_type,
-    count() AS execution_count,
-    round(avg(duration_in_millis) / 1000, 1) AS avg_duration_sec,
-    round(quantile(0.5)(duration_in_millis) / 1000, 1) AS median_duration_sec,
-    round(quantile(0.95)(duration_in_millis) / 1000, 1) AS p95_duration_sec,
-    round(sum(duration_in_millis) / 1000, 1) AS total_time_sec
-FROM camunda_history.camunda_activity_instances
-WHERE process_definition_key = ${escapeString(params.processDefinitionKey)}
-    AND end_time IS NOT NULL
-    AND start_time >= now() - INTERVAL ${interval}
-    ${outerEngineFilter}
-GROUP BY activity_id, activity_name, activity_type
-ORDER BY total_time_sec DESC
-LIMIT 20`
-    activityBreakdown = await ch.query<ActivityBreakdownRow>(actSql)
+    activityBreakdown = await activityBreakdownRows(
+      ch,
+      params.processDefinitionKey,
+      `[${range}]`,
+      params.engineId,
+    )
   }
 
-  return { kpi: kpi[0] ?? null, activityBreakdown }
+  return { kpi, activityBreakdown }
 }
 
+async function activityBreakdownRows(
+  ch: PrometheusClient,
+  key: string,
+  rangeExpr: string,
+  engineId: EngineFilterInput,
+): Promise<ActivityBreakdownRow[]> {
+  const sel = pdkSelector(key, engineId)
+  const [counts, sums, p95] = await Promise.all([
+    ch.instant(
+      `sum by (activity_id, activity_type)(increase(camunda_activity_ended_total${sel}${rangeExpr}))`,
+    ),
+    ch.instant(
+      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}${rangeExpr}))`,
+    ),
+    ch.instant(
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}${rangeExpr})))`,
+    ),
+  ])
+  const sumBy = byLabel(sums, "activity_id")
+  const p95By = byLabel(p95, "activity_id")
+  const rows: ActivityBreakdownRow[] = counts.map((c) => {
+    const id = c.metric.activity_id ?? ""
+    const count = Math.round(c.value)
+    const totalSec = sumBy[id] ?? 0
+    return {
+      activity_id: id,
+      activity_name: null,
+      activity_type: c.metric.activity_type ?? "",
+      execution_count: count,
+      avg_duration_sec: count > 0 ? round1(totalSec / count) : 0,
+      median_duration_sec: 0,
+      p95_duration_sec: round1(p95By[id] ?? 0),
+      total_time_sec: round1(totalSec),
+    }
+  })
+  return rows.sort((a, b) => b.total_time_sec - a.total_time_sec).slice(0, 20)
+}
+
+/**
+ * Compare two execution windows. Uses real historical windows via the PromQL
+ * `@ <end>` modifier (each period is `[duration] @ end`), subject to Prometheus
+ * retention and data existing at that time.
+ */
 export async function comparePeriods(
-  ch: ClickHouseClient,
+  ch: PrometheusClient,
   params: {
     processDefinitionKey: string
     periodAFrom: string
@@ -145,82 +209,104 @@ export async function comparePeriods(
     engineId?: EngineFilterInput
   },
 ): Promise<PeriodComparisonResult> {
-  const key = escapeString(params.processDefinitionKey)
-  // Wrap in parseDateTimeBestEffort so callers can pass ISO 8601 strings
-  // (`2026-03-28T20:41:43.585Z`) — ClickHouse can't auto-coerce those to
-  // DateTime64 in a comparison.
-  const aFrom = `parseDateTimeBestEffort(${escapeString(params.periodAFrom)})`
-  const aTo = `parseDateTimeBestEffort(${escapeString(params.periodATo)})`
-  const bFrom = `parseDateTimeBestEffort(${escapeString(params.periodBFrom)})`
-  const bTo = `parseDateTimeBestEffort(${escapeString(params.periodBTo)})`
-
-  const ef = engineFilter(params.engineId)
-  const innerEngineFilter = ef ? `WHERE ${ef}` : ""
-  const efA = engineFilter(params.engineId, "a")
-  const efP = engineFilter(params.engineId, "p")
-
-  const kpiSql = `
-SELECT
-    CASE
-        WHEN start_time >= ${aFrom} AND start_time <= ${aTo} THEN 'Period A'
-        WHEN start_time >= ${bFrom} AND start_time <= ${bTo} THEN 'Period B'
-    END AS period,
-    count() AS total_instances,
-    countIf(state = 'COMPLETED') AS completed,
-    countIf(state = 'INTERNALLY_TERMINATED') AS failed,
-    round(countIf(state = 'INTERNALLY_TERMINATED') * 100.0 / count(), 2) AS failure_rate_pct,
-    round(avg(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS avg_duration_sec,
-    round(quantile(0.5)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS median_sec,
-    round(quantile(0.95)(dateDiff('millisecond', start_time, end_time)) / 1000, 1) AS p95_sec
-FROM (
-    SELECT
-        id,
-        any(process_definition_key) AS process_definition_key,
-        argMax(state, timestamp) AS state,
-        min(start_time) AS start_time,
-        max(end_time) AS end_time
-    FROM camunda_history.camunda_process_instances
-    ${innerEngineFilter}
-    GROUP BY id
-) sub
-WHERE process_definition_key = ${key}
-    AND end_time IS NOT NULL
-    AND (
-        (start_time >= ${aFrom} AND start_time <= ${aTo})
-        OR (start_time >= ${bFrom} AND start_time <= ${bTo})
-    )
-GROUP BY period
-ORDER BY period`
-
-  const kpiComparison = await ch.query<PeriodComparisonKpi>(kpiSql)
-  const result: PeriodComparisonResult = { kpiComparison }
+  const a = promWindow(params.periodAFrom, params.periodATo)
+  const b = promWindow(params.periodBFrom, params.periodBTo)
+  const [kpiA, kpiB] = await Promise.all([
+    periodKpi(ch, params.processDefinitionKey, "Period A", a, params.engineId),
+    periodKpi(ch, params.processDefinitionKey, "Period B", b, params.engineId),
+  ])
+  const result: PeriodComparisonResult = { kpiComparison: [kpiA, kpiB] }
 
   if (params.includeActivityBreakdown) {
-    const actSql = `
-SELECT
-    a.activity_id,
-    a.activity_name,
-    CASE
-        WHEN p.start_time >= ${aFrom} AND p.start_time <= ${aTo} THEN 'Period A'
-        WHEN p.start_time >= ${bFrom} AND p.start_time <= ${bTo} THEN 'Period B'
-    END AS period,
-    count() AS executions,
-    round(avg(a.duration_in_millis) / 1000, 1) AS avg_sec,
-    round(quantile(0.95)(a.duration_in_millis) / 1000, 1) AS p95_sec
-FROM camunda_history.camunda_activity_instances a
-JOIN camunda_history.camunda_process_instances p ON a.process_instance_id = p.id
-WHERE p.process_definition_key = ${key}
-    AND a.end_time IS NOT NULL
-    AND (
-        (p.start_time >= ${aFrom} AND p.start_time <= ${aTo})
-        OR (p.start_time >= ${bFrom} AND p.start_time <= ${bTo})
+    const [actA, actB] = await Promise.all([
+      periodActivities(ch, params.processDefinitionKey, "Period A", a, params.engineId),
+      periodActivities(ch, params.processDefinitionKey, "Period B", b, params.engineId),
+    ])
+    result.activityComparison = [...actA, ...actB].sort(
+      (x, y) => x.activity_id.localeCompare(y.activity_id) || x.period.localeCompare(y.period),
     )
-    ${efA ? `AND ${efA}` : ""}
-    ${efP ? `AND ${efP}` : ""}
-GROUP BY a.activity_id, a.activity_name, period
-ORDER BY a.activity_id, period`
-    result.activityComparison = await ch.query<PeriodActivityComparisonRow>(actSql)
   }
-
   return result
+}
+
+interface PromWindow {
+  rangeExpr: string
+}
+
+function promWindow(from: string, to: string): PromWindow {
+  const fromMs = Date.parse(from)
+  const toMs = Date.parse(to)
+  const durationSec = Math.max(1, Math.round((toMs - fromMs) / 1000))
+  const at = Math.round(toMs / 1000)
+  return { rangeExpr: `[${durationSec}s] @ ${at}` }
+}
+
+async function periodKpi(
+  ch: PrometheusClient,
+  key: string,
+  label: string,
+  w: PromWindow,
+  engineId: EngineFilterInput,
+): Promise<PeriodComparisonKpi> {
+  const sel = pdkSelector(key, engineId)
+  const completedSel = pdkSelector(key, engineId, 'state="COMPLETED"')
+  const r = w.rangeExpr
+  const [total, completed, incidents, avg, median, p95] = await Promise.all([
+    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}${r}))`),
+    ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}${r}))`),
+    ch.instant(`sum(increase(camunda_incident_created_total${sel}${r}))`),
+    ch.instant(
+      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}${r})) / sum(increase(camunda_process_instance_duration_seconds_count${sel}${r}))`,
+    ),
+    ch.instant(
+      `histogram_quantile(0.5, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}${r})))`,
+    ),
+    ch.instant(
+      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}${r})))`,
+    ),
+  ])
+  const totalInstances = Math.round(first(total))
+  const failed = Math.round(first(incidents))
+  return {
+    period: label,
+    total_instances: totalInstances,
+    completed: Math.round(first(completed)),
+    failed,
+    failure_rate_pct: totalInstances > 0 ? round1((failed * 100) / totalInstances) : 0,
+    avg_duration_sec: round1(first(avg)),
+    median_sec: round1(first(median)),
+    p95_sec: round1(first(p95)),
+  }
+}
+
+async function periodActivities(
+  ch: PrometheusClient,
+  key: string,
+  label: string,
+  w: PromWindow,
+  engineId: EngineFilterInput,
+): Promise<PeriodActivityComparisonRow[]> {
+  const sel = pdkSelector(key, engineId)
+  const r = w.rangeExpr
+  const [counts, sums, p95] = await Promise.all([
+    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}${r}))`),
+    ch.instant(`sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}${r}))`),
+    ch.instant(
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}${r})))`,
+    ),
+  ])
+  const sumBy = byLabel(sums, "activity_id")
+  const p95By = byLabel(p95, "activity_id")
+  return counts.map((c) => {
+    const id = c.metric.activity_id ?? ""
+    const executions = Math.round(c.value)
+    return {
+      activity_id: id,
+      activity_name: null,
+      period: label,
+      executions,
+      avg_sec: executions > 0 ? round1((sumBy[id] ?? 0) / executions) : 0,
+      p95_sec: round1(p95By[id] ?? 0),
+    }
+  })
 }

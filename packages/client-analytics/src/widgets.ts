@@ -1,31 +1,3 @@
-import type { ActivityHistoryItem, VariableChangeItem, OtelSpanItem } from "./queries/trace.js"
-import type { VariableSearchRow } from "./queries/search.js"
-import type { PathFrequencyResult } from "./queries/path.js"
-
-export interface PathFrequencyData extends PathFrequencyResult {
-  processDefinitionKey: string
-  bpmnXml: string | null
-}
-
-export interface ExecutionTraceData {
-  processInstanceId: string | null
-  trace: {
-    activityHistory?: ActivityHistoryItem[]
-    variableChanges?: VariableChangeItem[]
-    otelSpans?: OtelSpanItem[]
-    otelSpansError?: string
-  } | null
-}
-
-export interface VariableSearchData {
-  results: VariableSearchRow[] | null
-  searchParams: {
-    variableName: string
-    variableValue: string
-    processDefinitionKey?: string
-  } | null
-}
-
 export interface ErrorPatternItem {
   incidentMessage: string
   activityId: string

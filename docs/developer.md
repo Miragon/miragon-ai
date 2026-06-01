@@ -6,8 +6,8 @@ A working development environment in five commands.
 
 - **Node.js 22+**
 - **pnpm 10.32.1** (pinned via `packageManager`; `corepack enable` picks it up automatically)
-- **Java 21** + [jenv](https://www.jenv.be/) (only needed to build the Kotlin history plugins)
-- **Docker** (for Camunda + ClickHouse)
+- **Java 21** + [jenv](https://www.jenv.be/) (only needed to build the Kotlin engine plugins)
+- **Docker** (for Camunda, the OTEL Collector, and Prometheus)
 - A GitHub PAT with `read:packages` scope (for the private `@miragon/mcp-toolkit-*` packages on GitHub Packages — see the [root README](https://github.com/miragon/miragon-ai/blob/main/README.md#setup) for the token setup)
 
 ## Clone and install
@@ -21,7 +21,7 @@ pnpm install
 
 ## Start the infrastructure
 
-The default Compose stack brings up CIB Seven, ClickHouse, OTEL collector, and Jaeger — but **not** the Node MCP gateway, so port `8400` stays free for `pnpm dev`.
+The default Compose stack brings up CIB Seven, the OTEL Collector, Prometheus, Grafana, and Jaeger — but **not** the Node MCP gateway, so port `8400` stays free for `pnpm dev`.
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d

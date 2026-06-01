@@ -1,20 +1,20 @@
 export {
-  createClickHouseClient,
-  escapeString,
-  type ClickHouseConfig,
-  type ClickHouseClient,
-} from "./clickhouse.js"
+  createPrometheusClient,
+  escapeLabelValue,
+  engineMatcher,
+  selector,
+  PERIOD_RANGE,
+  type PrometheusConfig,
+  type PrometheusClient,
+  type PromSample,
+  type EngineFilterInput,
+  type Period,
+} from "./prometheus.js"
 export * as schemas from "./schemas/index.js"
 export * as queries from "./queries/index.js"
 export * as widgets from "./widgets.js"
 
 export type {
-  ActivityHistoryItem,
-  VariableChangeItem,
-  OtelSpanItem,
-  TraceResult,
-  ProcessInstanceSearchRow,
-  VariableSearchRow,
   ErrorPatternRow,
   FailedInstanceRow,
   PerformanceKPI,
@@ -22,30 +22,24 @@ export type {
   PeriodComparisonKpi,
   PeriodActivityComparisonRow,
   PeriodComparisonResult,
-  PathFrequencyRow,
-  PathEdgeRow,
-  PathFrequencyResult,
   ElementBottleneckRow,
   ElementBottleneckResult,
-  VariableDistributionResult,
-  VariableBucket,
-  VariableDistributionKind,
   ClusterCompareResult,
   ClusterCompareKpi,
   ClusterCompareDelta,
   VersionCompareResult,
   VersionCompareKpi,
   VersionCompareDelta,
+  EngineHealthResult,
+  HealthCount,
+  HealthAlert,
 } from "./queries/index.js"
 
 export type {
-  ExecutionTraceData,
-  VariableSearchData,
   ErrorPatternItem,
   ProcessFailureItem,
   FailureDashboardData,
   ActivityBreakdownItem,
   DefinitionBreakdownItem,
   AnalyticsDashboardData,
-  PathFrequencyData,
 } from "./widgets.js"

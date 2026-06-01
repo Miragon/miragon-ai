@@ -1,8 +1,8 @@
 name: miragon-ai
 
 services:
-  # Default: custom-built CIB Seven with ClickHouse + OTEL config.
-  # Identifies itself as `prod-a` in the shared ClickHouse history.
+  # Default: custom-built CIB Seven with the OTEL metrics plugin.
+  # Identifies itself as `prod-a` via the `engine_id` metric attribute.
   cibseven:
     build:
       context: ../examples/cibseven-example
@@ -11,21 +11,17 @@ services:
       - "8410:8410"
     environment:
       - SPRING_PROFILES_ACTIVE=seed-presentation
-      - CLICKHOUSE_ENABLED=true
-      - CLICKHOUSE_ENGINE_ID=prod-a
-      - CLICKHOUSE_HOST=clickhouse
-      - CLICKHOUSE_PORT=8123
-      - CLICKHOUSE_USER=camunda
-      - CLICKHOUSE_PASSWORD=camunda123
-      - CLICKHOUSE_DATABASE=camunda_history
+      - METRICS_ENABLED=true
+      - ENGINE_ID=prod-a
       - OTEL_SERVICE_NAME=cibseven-engine-a
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
       - OTEL_TRACES_SAMPLER=parentbased_traceidratio
       - OTEL_TRACES_SAMPLER_ARG=0.1
+      - OTEL_METRIC_EXPORT_INTERVAL=15000
     depends_on:
-      clickhouse:
-        condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8410/engine-rest/engine || exit 1"]
       interval: 10s
@@ -33,9 +29,9 @@ services:
       retries: 12
       start_period: 30s
 
-  # Second engine on port 8411, identifying as `prod-b` in the shared
-  # ClickHouse. Opt-in via the `multi-engine` profile so the default `docker
-  # compose up` keeps the existing single-engine setup unchanged.
+  # Second engine on port 8411, identifying as `prod-b`. Opt-in via the
+  # `multi-engine` profile so the default `docker compose up` keeps the existing
+  # single-engine setup unchanged.
   # Use: docker compose --profile multi-engine up -d
   cibseven-b:
     profiles: [multi-engine]
@@ -46,21 +42,17 @@ services:
       - "8411:8410"
     environment:
       - SPRING_PROFILES_ACTIVE=seed-presentation
-      - CLICKHOUSE_ENABLED=true
-      - CLICKHOUSE_ENGINE_ID=prod-b
-      - CLICKHOUSE_HOST=clickhouse
-      - CLICKHOUSE_PORT=8123
-      - CLICKHOUSE_USER=camunda
-      - CLICKHOUSE_PASSWORD=camunda123
-      - CLICKHOUSE_DATABASE=camunda_history
+      - METRICS_ENABLED=true
+      - ENGINE_ID=prod-b
       - OTEL_SERVICE_NAME=cibseven-engine-b
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
       - OTEL_TRACES_SAMPLER=parentbased_traceidratio
       - OTEL_TRACES_SAMPLER_ARG=0.1
+      - OTEL_METRIC_EXPORT_INTERVAL=15000
     depends_on:
-      clickhouse:
-        condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8410/engine-rest/engine || exit 1"]
       interval: 10s
@@ -84,36 +76,9 @@ services:
       retries: 12
       start_period: 30s
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:26.2
-    ports:
-      - "8420:8123"
-      - "8421:9000"
-    volumes:
-      - clickhouse-data:/var/lib/clickhouse
-      - ./clickhouse/init-schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
-    environment:
-      - CLICKHOUSE_DB=camunda_history
-      - CLICKHOUSE_USER=camunda
-      - CLICKHOUSE_PASSWORD=camunda123
-      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "clickhouse-client --user camunda --password camunda123 --query 'SELECT 1' || exit 1",
-        ]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
-    ulimits:
-      nofile:
-        soft: 262144
-        hard: 262144
-
-  # OpenTelemetry Collector
-  # Use: docker compose --profile otel up
+  # OpenTelemetry Collector — receives OTLP from the engines, serves process
+  # metrics for Prometheus to scrape (:9464) and forwards sampled traces to
+  # Jaeger. Sole export path of the metric-first analytics stack.
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.128.0
     command: ["--config=/etc/otel-collector-config.yaml"]
@@ -122,10 +87,40 @@ services:
     ports:
       - "8430:4317" # OTLP gRPC
       - "8431:4318" # OTLP HTTP
-      - "8450:8888" # Collector Metrics
+      - "8450:8888" # Collector's own telemetry
+      - "8451:9464" # Prometheus exporter (process metrics)
+
+  # Prometheus — scrapes the Collector's process metrics.
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "8460:9090" # Prometheus UI
     depends_on:
-      clickhouse:
-        condition: service_healthy
+      - otel-collector
+
+  # Grafana — process-analytics dashboards over Prometheus. Anonymous admin so
+  # the demo opens straight onto the provisioned dashboards.
+  grafana:
+    image: grafana/grafana:11.4.0
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_USERS_DEFAULT_THEME=light
+    ports:
+      - "8470:3000" # Grafana UI
+    depends_on:
+      - prometheus
 
   # Automation MCP server (Node). Opt-in via the `full` profile so the
   # default `docker compose up` brings up infra only — leaving port 8400
@@ -150,15 +145,12 @@ services:
       - CAMUNDA_AUTH_TYPE=basic
       - CAMUNDA_USERNAME=demo
       - CAMUNDA_PASSWORD=demo
-      - CLICKHOUSE_URL=http://clickhouse:8123
-      - CLICKHOUSE_USERNAME=camunda
-      - CLICKHOUSE_PASSWORD=camunda123
-      - CLICKHOUSE_DATABASE=camunda_history
+      - PROMETHEUS_URL=http://prometheus:9090
     depends_on:
       cibseven:
         condition: service_healthy
-      clickhouse:
-        condition: service_healthy
+      prometheus:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -173,7 +165,6 @@ services:
       start_period: 15s
 
   # Jaeger UI for trace visualization
-  # Use: docker compose --profile otel up
   jaeger:
     image: jaegertracing/jaeger:2.16.0
     ports:
@@ -183,4 +174,4 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
 
 volumes:
-  clickhouse-data:
+  prometheus-data:

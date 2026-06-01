@@ -1,9 +1,10 @@
 import {
-  engineFilter,
-  escapeString,
-  type ClickHouseClient,
+  engineMatcher,
+  escapeLabelValue,
+  selector,
   type EngineFilterInput,
-} from "../clickhouse.js"
+  type PrometheusClient,
+} from "../prometheus.js"
 
 export interface ErrorPatternRow {
   incident_message: string
@@ -28,8 +29,20 @@ export interface FailedInstanceRow {
   incident_time: string
 }
 
+const RANGE = { "1d": "1d", "7d": "7d", "30d": "30d" } as const
+
+/**
+ * Failure patterns over a rolling window, from incident metrics.
+ *
+ * Reduced fidelity vs the event store: metrics carry no raw incident messages
+ * (only `incident_type`), no per-instance ids, and no first/last timestamps —
+ * so patterns are grouped by `incident_type` + activity + definition, with
+ * `incident_message` set to the type and `sample_instance_ids` empty. For the
+ * actual failed instances, drill in with `camunda7_list_incidents` /
+ * `camunda7_query_historic_process_instances`.
+ */
 export async function findFailedInstances(
-  ch: ClickHouseClient,
+  ch: PrometheusClient,
   params: {
     processDefinitionKey?: string
     period: string
@@ -39,58 +52,31 @@ export async function findFailedInstances(
     engineId?: EngineFilterInput
   },
 ): Promise<ErrorPatternRow[] | FailedInstanceRow[]> {
-  const interval = { "1d": "1 DAY", "7d": "7 DAY", "30d": "30 DAY" }[
-    params.period as "1d" | "7d" | "30d"
-  ]
+  const range = RANGE[params.period as keyof typeof RANGE] ?? "7d"
+  const limit = Math.max(1, Math.floor(params.limit))
+  const sel = selector(
+    params.processDefinitionKey
+      ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
+      : undefined,
+    params.incidentType ? `incident_type="${escapeLabelValue(params.incidentType)}"` : undefined,
+    engineMatcher(params.engineId),
+  )
 
-  const baseConditions: string[] = [`create_time >= now() - INTERVAL ${interval}`]
-  if (params.processDefinitionKey) {
-    baseConditions.push(`process_definition_key = ${escapeString(params.processDefinitionKey)}`)
-  }
-  if (params.incidentType) {
-    baseConditions.push(`incident_type = ${escapeString(params.incidentType)}`)
-  }
-  const efIncident = engineFilter(params.engineId)
-  if (efIncident) baseConditions.push(efIncident)
+  const samples = await ch.instant(
+    `sum by (process_definition_key, activity_id, incident_type)(increase(camunda_incident_created_total${sel}[${range}]))`,
+  )
 
-  const where = baseConditions.join(" AND ")
-  const prefixedWhere = baseConditions.map((c) => `i.${c}`).join(" AND ")
-
-  if (params.groupByError) {
-    const sql = `
-SELECT
-    incident_message,
-    activity_id,
-    process_definition_key,
-    count() AS incident_count,
-    min(create_time) AS first_occurrence,
-    max(create_time) AS last_occurrence,
-    groupArray(10)(process_instance_id) AS sample_instance_ids
-FROM camunda_history.camunda_incidents FINAL
-WHERE ${where}
-GROUP BY incident_message, activity_id, process_definition_key
-ORDER BY incident_count DESC
-LIMIT ${params.limit}`
-    return ch.query<ErrorPatternRow>(sql)
-  }
-
-  const sql = `
-SELECT
-    p.id AS process_instance_id,
-    p.process_definition_key,
-    p.business_key,
-    p.start_time,
-    p.end_time,
-    p.duration_in_millis,
-    i.incident_type,
-    i.incident_message,
-    i.activity_id AS failed_activity,
-    i.create_time AS incident_time
-FROM (SELECT * FROM camunda_history.camunda_incidents FINAL) i
-JOIN camunda_history.camunda_process_instances p ON p.id = i.process_instance_id
-WHERE ${prefixedWhere}
-ORDER BY i.create_time DESC
-LIMIT ${params.limit}`
-
-  return ch.query<FailedInstanceRow>(sql)
+  return samples
+    .map((s) => ({
+      incident_message: s.metric.incident_type ?? "",
+      activity_id: s.metric.activity_id ?? "",
+      process_definition_key: s.metric.process_definition_key ?? "",
+      incident_count: Math.round(s.value),
+      first_occurrence: "",
+      last_occurrence: "",
+      sample_instance_ids: [],
+    }))
+    .filter((r) => r.incident_count > 0)
+    .sort((a, b) => b.incident_count - a.incident_count)
+    .slice(0, limit)
 }

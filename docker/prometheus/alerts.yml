@@ -1,0 +1,74 @@
+groups:
+  - name: cibseven-operations
+    rules:
+      # Engine / metrics pipeline is down — no process metrics scraped.
+      - alert: CibSevenEngineNoMetrics
+        expr: up{job="cibseven-process-metrics"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No process metrics from the engine"
+          description: "Prometheus cannot scrape process metrics (engine or OTEL Collector down) for 2m."
+
+      # Jobs that exhausted their retries — stuck work needing manual action.
+      - alert: CibSevenDeadJobs
+        expr: sum by (engine_id, process_definition_key) (camunda_jobs_failed) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Dead jobs on {{ $labels.process_definition_key }} ({{ $labels.engine_id }})"
+          description: "{{ $value }} job(s) with no retries left on {{ $labels.process_definition_key }} — increment retries or fix the failure."
+
+      # WIP exists but nothing is completing → the job executor is likely stalled.
+      - alert: CibSevenNoThroughput
+        expr: |
+          sum by (engine_id) (rate(camunda_process_instance_ended_total[15m])) == 0
+          and sum by (engine_id) (camunda_process_instances_running) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No process completions on {{ $labels.engine_id }} despite running instances"
+          description: "Running instances exist but none have ended in 15m — the job executor may be stalled."
+
+      # Executable job backlog piling up → executor can't keep pace.
+      - alert: CibSevenJobBacklogGrowing
+        expr: sum by (engine_id) (camunda_jobs_executable) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Job backlog on {{ $labels.engine_id }}"
+          description: "{{ $value }} executable jobs pending for 10m — the engine may be under-provisioned. (Threshold is tunable.)"
+
+      # External tasks queued with no/slow workers consuming them.
+      - alert: CibSevenExternalTaskBacklog
+        expr: sum by (engine_id) (camunda_external_tasks_open) > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "External-task backlog on {{ $labels.engine_id }}"
+          description: "{{ $value }} open external tasks for 10m — check that the external-task workers are running."
+
+      # Sustained open incidents.
+      - alert: CibSevenOpenIncidents
+        expr: sum by (engine_id, incident_type) (camunda_incidents_open) > 0
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "Open {{ $labels.incident_type }} incidents on {{ $labels.engine_id }}"
+          description: "{{ $value }} open {{ $labels.incident_type }} incident(s) for 15m."
+
+      # Human task backlog — SLA signal.
+      - alert: CibSevenUnassignedTaskBacklog
+        expr: sum by (engine_id) (camunda_usertasks_open{status="unassigned"}) > 100
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "Unassigned user-task backlog on {{ $labels.engine_id }}"
+          description: "{{ $value }} unassigned user tasks for 30m — review staffing / candidate assignment. (Threshold is tunable.)"

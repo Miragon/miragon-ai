@@ -1,4 +1,12 @@
-import { escapeString, type ClickHouseClient } from "../clickhouse.js"
+import {
+  engineMatcher,
+  escapeLabelValue,
+  selector,
+  type EngineFilterInput,
+  type Period,
+  type PrometheusClient,
+  type PromSample,
+} from "../prometheus.js"
 
 export interface ElementBottleneckRow {
   activity_id: string
@@ -21,91 +29,97 @@ export interface ElementBottleneckResult {
   suppressedActivities: number
 }
 
-const INTERVALS = { "1d": "1 DAY", "7d": "7 DAY", "30d": "30 DAY", "90d": "90 DAY" } as const
+const round1 = (n: number) => Math.round(n * 10) / 10
 
+function byLabel(samples: PromSample[], label: string): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const s of samples) {
+    const k = s.metric[label]
+    if (k !== undefined) out[k] = s.value
+  }
+  return out
+}
+
+/**
+ * Rank activities by time contribution + incident rate over a rolling window,
+ * from OTEL metrics.
+ *
+ * Reduced fidelity vs the event store: queue/wait time between activities needs
+ * per-instance event ordering, which metrics cannot reconstruct — so
+ * `avg_wait_sec`/`total_wait_sec` are null and `bottleneck_score_sec` is the
+ * execution-time contribution only. `activity_name` is not a metric label.
+ */
 export async function elementBottleneck(
-  ch: ClickHouseClient,
+  ch: PrometheusClient,
   params: {
     processDefinitionKey: string
-    period: keyof typeof INTERVALS
+    period: Period
     minBucketSize: number
     limit: number
+    engineId?: EngineFilterInput
   },
 ): Promise<ElementBottleneckResult> {
-  const interval = INTERVALS[params.period]
-  const key = escapeString(params.processDefinitionKey)
+  const range = params.period
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
   const limit = Math.max(1, Math.floor(params.limit))
+  const sel = selector(
+    `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
+    engineMatcher(params.engineId),
+  )
 
-  // Wait time per activity = gap between the previous activity's end and this activity's
-  // start within the same process instance (ordered by start_time). This approximates
-  // idle/queue time and is typically the missing dimension in stock Camunda analytics.
-  const cte = `
-WITH activities AS (
-    SELECT
-        process_instance_id,
-        activity_id,
-        activity_name,
-        activity_type,
-        start_time,
-        end_time,
-        duration_in_millis,
-        lagInFrame(end_time) OVER (
-            PARTITION BY process_instance_id ORDER BY start_time
-        ) AS prev_end_time
-    FROM camunda_history.camunda_activity_instances
-    WHERE process_definition_key = ${key}
-        AND start_time >= now() - INTERVAL ${interval}
-        AND end_time IS NOT NULL
-        AND activity_id != ''
-),
-incident_counts AS (
-    SELECT
-        activity_id,
-        count() AS incident_count
-    FROM camunda_history.camunda_incidents FINAL
-    WHERE process_definition_key = ${key}
-        AND create_time >= now() - INTERVAL ${interval}
-    GROUP BY activity_id
-)`
-
-  const activitiesSql = `${cte}
-SELECT
-    a.activity_id,
-    any(a.activity_name) AS activity_name,
-    any(a.activity_type) AS activity_type,
-    count() AS execution_count,
-    round(avg(a.duration_in_millis) / 1000, 1) AS avg_duration_sec,
-    round(quantile(0.95)(a.duration_in_millis) / 1000, 1) AS p95_duration_sec,
-    round(sum(a.duration_in_millis) / 1000, 1) AS total_time_sec,
-    round(avg(if(a.prev_end_time IS NULL, NULL, dateDiff('millisecond', a.prev_end_time, a.start_time))) / 1000, 1) AS avg_wait_sec,
-    round(sum(if(a.prev_end_time IS NULL, 0, dateDiff('millisecond', a.prev_end_time, a.start_time))) / 1000, 1) AS total_wait_sec,
-    ifNull(any(ic.incident_count), 0) AS incident_count,
-    round(ifNull(any(ic.incident_count), 0) * 100.0 / count(), 2) AS incident_rate_pct,
-    round((sum(a.duration_in_millis) + sum(if(a.prev_end_time IS NULL, 0, dateDiff('millisecond', a.prev_end_time, a.start_time)))) / 1000, 1) AS bottleneck_score_sec
-FROM activities a
-LEFT JOIN incident_counts ic ON ic.activity_id = a.activity_id
-GROUP BY a.activity_id
-HAVING count() >= ${minBucket}
-ORDER BY bottleneck_score_sec DESC
-LIMIT ${limit}`
-
-  const totalSql = `${cte}
-SELECT count() AS total_activities
-FROM (
-    SELECT a.activity_id
-    FROM activities a
-    GROUP BY a.activity_id
-)`
-
-  const [activities, totals] = await Promise.all([
-    ch.query<ElementBottleneckRow>(activitiesSql),
-    ch.query<{ total_activities: number }>(totalSql),
+  const [counts, sums, p95, incidents, types] = await Promise.all([
+    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}[${range}]))`),
+    ch.instant(
+      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}[${range}]))`,
+    ),
+    ch.instant(
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}[${range}])))`,
+    ),
+    ch.instant(`sum by (activity_id)(increase(camunda_incident_created_total${sel}[${range}]))`),
+    ch.instant(
+      `sum by (activity_id, activity_type)(increase(camunda_activity_ended_total${sel}[${range}]))`,
+    ),
   ])
 
+  const sumBy = byLabel(sums, "activity_id")
+  const p95By = byLabel(p95, "activity_id")
+  const incidentBy = byLabel(incidents, "activity_id")
+  const typeBy: Record<string, string> = {}
+  for (const t of types) {
+    const id = t.metric.activity_id
+    if (id !== undefined && typeBy[id] === undefined) typeBy[id] = t.metric.activity_type ?? ""
+  }
+
+  const all: ElementBottleneckRow[] = counts.map((c) => {
+    const id = c.metric.activity_id ?? ""
+    const count = Math.round(c.value)
+    const totalSec = sumBy[id] ?? 0
+    const incidentCount = Math.round(incidentBy[id] ?? 0)
+    return {
+      activity_id: id,
+      activity_name: null,
+      activity_type: typeBy[id] ?? "",
+      execution_count: count,
+      avg_duration_sec: count > 0 ? round1(totalSec / count) : 0,
+      p95_duration_sec: round1(p95By[id] ?? 0),
+      total_time_sec: round1(totalSec),
+      avg_wait_sec: null,
+      total_wait_sec: null,
+      incident_count: incidentCount,
+      incident_rate_pct: count > 0 ? round1((incidentCount * 100) / count) : 0,
+      bottleneck_score_sec: round1(totalSec),
+    }
+  })
+
+  const kept = all
+    .filter((r) => r.execution_count >= minBucket)
+    .sort((a, b) => b.bottleneck_score_sec - a.bottleneck_score_sec)
+    .slice(0, limit)
+
+  const aboveThreshold = all.filter((r) => r.execution_count >= minBucket).length
   return {
-    activities,
+    activities: kept,
     minBucketSize: minBucket,
-    suppressedActivities: Math.max(0, (totals[0]?.total_activities ?? 0) - activities.length),
+    suppressedActivities: Math.max(0, all.length - aboveThreshold),
   }
 }

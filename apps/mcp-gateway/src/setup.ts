@@ -32,10 +32,7 @@ const camunda7ConfigSchema = z.object({
 })
 
 const analyticsConfigSchema = z.object({
-  url: z.string().default("http://localhost:8420"),
-  username: z.string().default("default"),
-  password: z.string().default(""),
-  database: z.string().default("camunda_history"),
+  url: z.string().default("http://localhost:9090"),
 })
 
 interface SharedResources {
@@ -67,10 +64,7 @@ const MODULE_REGISTRY: Record<
         camunda7Client: shared.camunda7Client,
       }),
     configFromEnv: () => ({
-      url: process.env.CLICKHOUSE_URL,
-      username: process.env.CLICKHOUSE_USERNAME,
-      password: process.env.CLICKHOUSE_PASSWORD,
-      database: process.env.CLICKHOUSE_DATABASE,
+      url: process.env.PROMETHEUS_URL,
     }),
   },
 }

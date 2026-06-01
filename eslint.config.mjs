@@ -51,7 +51,7 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
-      // Downgraded to warn: mcp-use and ClickHouse libs have poor type coverage (Phase 1)
+      // Downgraded to warn: mcp-use has poor type coverage (Phase 1)
       "@typescript-eslint/no-unsafe-argument": "warn",
       "@typescript-eslint/no-unsafe-assignment": "warn",
       "@typescript-eslint/no-unsafe-call": "warn",
