@@ -5,7 +5,6 @@ import { ExecutionSummaryKpi } from "./analytics-dashboard/execution-summary-kpi
 import { ExecutionPerformanceKpi } from "./analytics-dashboard/execution-performance-kpi.js"
 import { ProcessDefinitionBreakdown } from "./analytics-dashboard/definition-breakdown.js"
 import { ActivityBottleneckTable } from "./analytics-dashboard/activity-bottleneck-table.js"
-import { PeriodSelector } from "./failure-dashboard/period-selector.js"
 import { FailureSummaryKpi } from "./failure-dashboard/summary-kpi.js"
 import { ErrorPatternsTable } from "./failure-dashboard/error-patterns-table.js"
 import { FailureRateTable } from "./failure-dashboard/failure-rate-table.js"
@@ -37,10 +36,6 @@ export const analyticsWidgets: Record<string, WidgetComponent> = {
   "analytics:activity-bottleneck-table": adaptDataWidget(
     ActivityBottleneckTable,
     ANALYTICS_DATA_TYPES.dashboard,
-  ),
-  "analytics:period-selector": adaptDataWidget(
-    PeriodSelector,
-    ANALYTICS_DATA_TYPES.failureDashboard,
   ),
   "analytics:failure-summary-kpi": adaptDataWidget(
     FailureSummaryKpi,

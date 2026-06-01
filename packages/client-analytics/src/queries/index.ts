@@ -7,7 +7,7 @@ export type {
   PeriodComparisonResult,
 } from "./performance.js"
 export { findFailedInstances } from "./failures.js"
-export type { ErrorPatternRow, FailedInstanceRow } from "./failures.js"
+export type { ErrorPatternRow } from "./failures.js"
 export { elementBottleneck } from "./element.js"
 export type { ElementBottleneckRow, ElementBottleneckResult } from "./element.js"
 export { clusterCompare } from "./cluster-compare.js"

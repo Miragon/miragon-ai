@@ -16,7 +16,6 @@ export * as widgets from "./widgets.js"
 
 export type {
   ErrorPatternRow,
-  FailedInstanceRow,
   PerformanceKPI,
   ActivityBreakdownRow,
   PeriodComparisonKpi,

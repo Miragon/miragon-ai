@@ -47,24 +47,21 @@ export function registerWidgetTools(server: MCPServer, ch: PrometheusClient, res
       name: "analytics_show_failure_dashboard",
       title: "Failure Analysis Dashboard",
       description:
-        "Show incident/failure patterns from Prometheus, grouped by incident type, activity, and process definition.",
+        "Show current incident/failure state from Prometheus, grouped by incident type, activity, and process definition (point-in-time — what is failing right now).",
       annotations: { readOnlyHint: true, idempotentHint: true },
       schema: z.object({
-        period: PERIOD.default("7d"),
         engineId: z.union([z.string(), z.array(z.string())]).optional(),
       }),
       _meta: { ui: { resourceUri } },
     },
     async (args) => {
       const data = await queries.failureDashboardData(ch, {
-        period: args.period,
         engineId: args.engineId,
       })
       return buildComposedView({
         app: "analytics",
         title: "Failure Dashboard",
         layout: [
-          { row: [{ widget: "analytics:period-selector" }] },
           { row: [{ widget: "analytics:failure-summary-kpi" }] },
           { row: [{ widget: "analytics:error-patterns-table" }] },
           { row: [{ widget: "analytics:failure-rate-table" }] },

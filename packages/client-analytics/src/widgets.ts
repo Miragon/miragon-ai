@@ -20,7 +20,6 @@ export interface FailureDashboardData {
   totalIncidents: number
   uniqueErrorPatterns: number
   mostAffectedProcess: string | null
-  period: string
   errorPatterns: ErrorPatternItem[]
   processBreakdown: ProcessFailureItem[]
 }

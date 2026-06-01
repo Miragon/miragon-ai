@@ -218,11 +218,8 @@ function buildDefinitionBreakdown(
  */
 export async function failureDashboardData(
   ch: PrometheusClient,
-  params: { period: string; engineId?: EngineFilterInput },
+  params: { engineId?: EngineFilterInput },
 ): Promise<FailureDashboardData> {
-  const period = (["1d", "7d", "30d", "90d"] as const).includes(params.period as Period)
-    ? params.period
-    : "7d"
   const sel = selector(engineMatcher(params.engineId))
 
   const [patterns, runningByKey, incidentsByKey, deadJobsByKey] = await Promise.all([
@@ -271,7 +268,6 @@ export async function failureDashboardData(
     uniqueErrorPatterns: errorPatterns.length,
     mostAffectedProcess:
       processBreakdown.length > 0 ? processBreakdown[0].processDefinitionKey : null,
-    period,
     errorPatterns,
     processBreakdown,
   }

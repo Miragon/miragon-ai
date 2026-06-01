@@ -17,15 +17,6 @@ const dashboardPropsSchema = z.toJSONSchema(
   }),
 )
 
-const failureDashboardPropsSchema = z.toJSONSchema(
-  z.object({
-    period: z
-      .enum(["1d", "7d", "30d", "90d"])
-      .optional()
-      .describe("Time window for the self-fetch when no upstream pipeline step populates data."),
-  }),
-)
-
 export const definition: AppDefinition = {
   name: "analytics",
   steps: [loadDashboardStep, loadFailureDashboardStep],
@@ -67,21 +58,12 @@ export const definition: AppDefinition = {
       propsSchema: dashboardPropsSchema,
     },
     {
-      id: "analytics:period-selector",
-      description:
-        "Interactive period chooser (1d / 7d / 30d / 90d) for the failure dashboard. Re-issues `analytics_show_failure_dashboard` on selection.",
-      requires: [],
-      consumes: ["analytics:failureDashboard"],
-      size: "full",
-    },
-    {
       id: "analytics:failure-summary-kpi",
       description:
         "Failure summary KPIs (total incidents, unique error patterns, most affected process).",
       requires: [],
       consumes: ["analytics:failureDashboard"],
       size: "full",
-      propsSchema: failureDashboardPropsSchema,
     },
     {
       id: "analytics:error-patterns-table",
@@ -90,7 +72,6 @@ export const definition: AppDefinition = {
       requires: [],
       consumes: ["analytics:failureDashboard"],
       size: "full",
-      propsSchema: failureDashboardPropsSchema,
     },
     {
       id: "analytics:failure-rate-table",
@@ -98,7 +79,6 @@ export const definition: AppDefinition = {
       requires: [],
       consumes: ["analytics:failureDashboard"],
       size: "full",
-      propsSchema: failureDashboardPropsSchema,
     },
     {
       id: "analytics:cluster-compare",

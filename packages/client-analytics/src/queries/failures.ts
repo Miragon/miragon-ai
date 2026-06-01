@@ -16,19 +16,6 @@ export interface ErrorPatternRow {
   sample_instance_ids: string[]
 }
 
-export interface FailedInstanceRow {
-  process_instance_id: string
-  process_definition_key: string
-  business_key: string | null
-  start_time: string
-  end_time: string | null
-  duration_in_millis: number | null
-  incident_type: string
-  incident_message: string
-  failed_activity: string
-  incident_time: string
-}
-
 /**
  * Currently-open incident patterns, from the `camunda_incidents_open` state
  * gauge — grouped by `incident_type` + definition. Point-in-time ("what is
@@ -44,13 +31,11 @@ export async function findFailedInstances(
   ch: PrometheusClient,
   params: {
     processDefinitionKey?: string
-    period: string
     incidentType?: string
-    groupByError: boolean
     limit: number
     engineId?: EngineFilterInput
   },
-): Promise<ErrorPatternRow[] | FailedInstanceRow[]> {
+): Promise<ErrorPatternRow[]> {
   const limit = Math.max(1, Math.floor(params.limit))
   const sel = selector(
     params.processDefinitionKey

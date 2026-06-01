@@ -131,7 +131,7 @@
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "format": "table",
           "instant": true,
-          "expr": "histogram_quantile(0.95, sum by (process_definition_key, activity_id, activity_type, le) (camunda_activity_duration_seconds_bucket{engine_id=~\"$engine_id\"}))"
+          "expr": "histogram_quantile(0.95, sum by (process_definition_key, activity_id, activity_type, le) (increase(camunda_activity_duration_seconds_bucket{engine_id=~\"$engine_id\"}[$__range])))"
         }
       ],
       "transformations": [
@@ -155,7 +155,7 @@
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "format": "table",
           "instant": true,
-          "expr": "histogram_quantile(0.95, sum by (process_definition_key, task_definition_key, le) (camunda_usertask_duration_seconds_bucket{engine_id=~\"$engine_id\"}))"
+          "expr": "histogram_quantile(0.95, sum by (process_definition_key, task_definition_key, le) (increase(camunda_usertask_duration_seconds_bucket{engine_id=~\"$engine_id\"}[$__range])))"
         }
       ],
       "transformations": [
