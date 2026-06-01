@@ -13,6 +13,9 @@ services:
       - SPRING_PROFILES_ACTIVE=seed-presentation
       - METRICS_ENABLED=true
       - ENGINE_ID=prod-a
+      # Continuous real-time traffic so the metric-first analytics populate
+      # out of the box (set false to rely on the backdated seed only).
+      - LIVE_TRAFFIC_ENABLED=true
       - OTEL_SERVICE_NAME=cibseven-engine-a
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
@@ -44,6 +47,7 @@ services:
       - SPRING_PROFILES_ACTIVE=seed-presentation
       - METRICS_ENABLED=true
       - ENGINE_ID=prod-b
+      - LIVE_TRAFFIC_ENABLED=true
       - OTEL_SERVICE_NAME=cibseven-engine-b
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf

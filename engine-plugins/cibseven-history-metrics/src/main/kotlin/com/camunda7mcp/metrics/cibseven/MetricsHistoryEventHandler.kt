@@ -19,10 +19,16 @@ import org.cibseven.bpm.engine.impl.history.handler.HistoryEventHandler
  * Durations come straight from the engine-computed `durationInMillis` on the
  * end/complete events; only model-bounded attributes are attached (see the
  * cardinality contract on [ProcessMetrics]).
+ *
+ * Backdated/replayed events are skipped: bulk seeding pins the engine clock into
+ * the past, and those (often day-long) durations would otherwise pollute every
+ * rate/duration window. Metrics represent live operation; the resulting
+ * instances still show up in the state gauges, which query the engine directly.
  */
 class MetricsHistoryEventHandler(private val engineId: String) : HistoryEventHandler {
 
     override fun handleEvent(historyEvent: HistoryEvent) {
+        if (isBackdated(historyEvent)) return
         when (historyEvent) {
             is HistoricProcessInstanceEventEntity -> onProcessInstance(historyEvent)
             is HistoricActivityInstanceEventEntity -> onActivityInstance(historyEvent)
@@ -100,8 +106,31 @@ class MetricsHistoryEventHandler(private val engineId: String) : HistoryEventHan
      */
     private fun versionOf(processDefinitionId: String?): String = processDefinitionId?.split(":")?.getOrNull(1).orEmpty()
 
+    /**
+     * True when the event's own timestamp is well in the past — i.e. a
+     * backdated/replayed event (bulk seeding), not live traffic. Keyed off the
+     * event timestamp rather than the ambient clock, because history events may
+     * be handled at transaction-flush time (after the seed has reset the clock),
+     * which would otherwise let backdated durations slip through.
+     */
+    private fun isBackdated(event: HistoryEvent): Boolean {
+        val eventMillis = eventTimeMillis(event) ?: return false
+        return System.currentTimeMillis() - eventMillis > BACKDATE_SKIP_MS
+    }
+
+    private fun eventTimeMillis(event: HistoryEvent): Long? = when (event) {
+        is HistoricProcessInstanceEventEntity -> (event.endTime ?: event.startTime)?.time
+        is HistoricActivityInstanceEventEntity -> (event.endTime ?: event.startTime)?.time
+        is HistoricTaskInstanceEventEntity -> (event.endTime ?: event.startTime)?.time
+        is HistoricIncidentEventEntity -> (event.endTime ?: event.createTime)?.time
+        else -> null
+    }
+
     private companion object {
         const val MILLIS_PER_SECOND = 1000.0
+
+        /** Skip events the engine timestamps more than this far in the past (seeding/replay). */
+        const val BACKDATE_SKIP_MS = 5 * 60 * 1000L
 
         // HistoryEventTypes.getEventName() values (see org.cibseven.bpm.engine.impl.history.event)
         const val EVENT_START = "start"
