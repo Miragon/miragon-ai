@@ -52,8 +52,9 @@ function pctChange(before: number, after: number): number | null {
 /**
  * Pre/Post deployment comparison from OTEL metrics. Each window is queried with
  * the PromQL `@ <end>` modifier so the before/after split is exact (subject to
- * Prometheus retention covering the deployment timestamp). The failure signal on
- * incident-terminated processes lives in `incident_rate_pct`.
+ * Prometheus retention covering the deployment timestamp). `failed_count` /
+ * `failure_rate_pct` are incident-based (consistent across the analytics tools);
+ * `incident_count` is the same signal optionally scoped to `elementId`.
  */
 export async function clusterCompare(
   ch: PrometheusClient,
@@ -116,7 +117,6 @@ async function windowKpi(
     : undefined
   const sel = selector(keyMatcher, engine)
   const completedSel = selector(keyMatcher, `state="COMPLETED"`, engine)
-  const failedSel = selector(keyMatcher, `state="INTERNALLY_TERMINATED"`, engine)
   const incidentSel = selector(
     keyMatcher,
     params.elementId ? `activity_id="${escapeLabelValue(params.elementId)}"` : undefined,
@@ -127,7 +127,7 @@ async function windowKpi(
   const [total, completed, failed, incidents, avg, p95] = await Promise.all([
     ch.instant(`sum(increase(camunda_process_instance_started_total${sel}${r}))`),
     ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}${r}))`),
-    ch.instant(`sum(increase(camunda_process_instance_ended_total${failedSel}${r}))`),
+    ch.instant(`sum(increase(camunda_incident_created_total${sel}${r}))`),
     ch.instant(`sum(increase(camunda_incident_created_total${incidentSel}${r}))`),
     ch.instant(
       `sum(increase(camunda_process_instance_duration_seconds_sum${sel}${r})) / sum(increase(camunda_process_instance_duration_seconds_count${sel}${r}))`,

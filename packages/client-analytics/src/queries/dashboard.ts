@@ -31,8 +31,11 @@ function byLabel(samples: PromSample[], label: string): Record<string, number> {
 /**
  * Aggregated dashboard KPIs + activity / definition breakdowns over a rolling
  * window, from OTEL metrics. Shared by the dashboard pipeline step and the
- * `analytics_show_dashboard` widget tool. `runningCount` is derived
- * (started − ended), `activityName` is unavailable on metrics.
+ * `analytics_show_dashboard` widget tool. `failedCount`/`failureRatePct` are
+ * incident-based (consistent with every other analytics tool, so the numbers
+ * reconcile tool-to-tool); `incidentCount` is the currently-open net
+ * (created − resolved). `runningCount` is derived (started − ended),
+ * `activityName` is unavailable on metrics.
  */
 export async function dashboardData(
   ch: PrometheusClient,
@@ -50,7 +53,6 @@ export async function dashboardData(
     started,
     endedAll,
     completed,
-    failed,
     incCreated,
     incResolved,
     avg,
@@ -71,9 +73,6 @@ export async function dashboardData(
     ch.instant(`sum(increase(camunda_process_instance_ended_total${sel}${r}))`),
     ch.instant(
       `sum(increase(camunda_process_instance_ended_total${selector(keyMatcher, `state="COMPLETED"`, engine)}${r}))`,
-    ),
-    ch.instant(
-      `sum(increase(camunda_process_instance_ended_total${selector(keyMatcher, `state="INTERNALLY_TERMINATED"`, engine)}${r}))`,
     ),
     ch.instant(`sum(increase(camunda_incident_created_total${sel}${r}))`),
     ch.instant(`sum(increase(camunda_incident_resolved_total${sel}${r}))`),
@@ -104,7 +103,7 @@ export async function dashboardData(
       `sum by (process_definition_key)(increase(camunda_process_instance_ended_total${sel}${r}))`,
     ),
     ch.instant(
-      `sum by (process_definition_key)(increase(camunda_process_instance_ended_total${selector(keyMatcher, `state="INTERNALLY_TERMINATED"`, engine)}${r}))`,
+      `sum by (process_definition_key)(increase(camunda_incident_created_total${sel}${r}))`,
     ),
     ch.instant(
       `sum by (process_definition_key)(increase(camunda_process_instance_duration_seconds_sum${sel}${r}))`,
@@ -117,6 +116,9 @@ export async function dashboardData(
   const totalCount = Math.round(first(started))
   const completedCount = Math.round(first(completed))
   const endedCount = Math.round(first(endedAll))
+  // Incident-based failure count, matching the other analytics tools so the
+  // numbers reconcile. `openIncidents` is the distinct "still open now" signal.
+  const failedCount = Math.round(first(incCreated))
   const openIncidents = Math.max(0, Math.round(first(incCreated) - first(incResolved)))
 
   const activityBreakdown = buildActivityBreakdown(actCount, actSum, actP95, actType)
@@ -133,9 +135,9 @@ export async function dashboardData(
     totalCount,
     completedCount,
     runningCount: Math.max(0, totalCount - endedCount),
-    failedCount: Math.round(first(failed)),
+    failedCount,
     incidentCount: openIncidents,
-    failureRatePct: totalCount > 0 ? round1((openIncidents * 100) / totalCount) : 0,
+    failureRatePct: totalCount > 0 ? round1((failedCount * 100) / totalCount) : 0,
     avgDurationMs: first(avg) > 0 ? round1(first(avg)) * 1000 : null,
     medianDurationMs: first(median) > 0 ? round1(first(median)) * 1000 : null,
     p95DurationMs: first(p95) > 0 ? round1(first(p95)) * 1000 : null,

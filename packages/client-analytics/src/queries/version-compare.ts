@@ -52,8 +52,9 @@ function pctChange(before: number, after: number): number | null {
  * Side-by-side comparison of two deployed process definition versions, from
  * OTEL metrics. Versions are a metric label (`process_definition_version`), so
  * this is an exact partition over a shared rolling window — no per-instance
- * data needed. `failed_count` is the terminal-failure state count; the failure
- * signal on incident-terminated processes lives in `incident_rate_pct`.
+ * data needed. `failed_count` / `failure_rate_pct` are incident-based
+ * (consistent across the analytics tools); `incident_count` is the same signal
+ * optionally scoped to `elementId`.
  */
 export async function versionCompare(
   ch: PrometheusClient,
@@ -124,9 +125,7 @@ async function versionKpi(
     ch.instant(
       `sum(increase(camunda_process_instance_ended_total${selector(`process_definition_key="${key}"`, `process_definition_version="${version}"`, `state="COMPLETED"`, engine)}[${range}]))`,
     ),
-    ch.instant(
-      `sum(increase(camunda_process_instance_ended_total${selector(`process_definition_key="${key}"`, `process_definition_version="${version}"`, `state="INTERNALLY_TERMINATED"`, engine)}[${range}]))`,
-    ),
+    ch.instant(`sum(increase(camunda_incident_created_total${verSel}[${range}]))`),
     ch.instant(`sum(increase(camunda_incident_created_total${incidentSel}[${range}]))`),
     ch.instant(
       `sum(increase(camunda_process_instance_duration_seconds_sum${verSel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${verSel}[${range}]))`,
