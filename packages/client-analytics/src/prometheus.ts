@@ -89,6 +89,16 @@ export function selector(...matchers: Array<string | undefined>): string {
   return parts.length ? `{${parts.join(",")}}` : ""
 }
 
-/** PromQL range windows for the analytics `period` inputs. */
-export const PERIOD_RANGE = { "1d": "1d", "7d": "7d", "30d": "30d", "90d": "90d" } as const
+/**
+ * PromQL range windows for the analytics `period` inputs. Capped at `30d` to
+ * match the Prometheus retention (`--storage.tsdb.retention.time`); longer
+ * look-backs would silently read partial/zero data, so they are not offered.
+ */
+export const PERIOD_RANGE = {
+  "1d": "1d",
+  "3d": "3d",
+  "7d": "7d",
+  "14d": "14d",
+  "30d": "30d",
+} as const
 export type Period = keyof typeof PERIOD_RANGE

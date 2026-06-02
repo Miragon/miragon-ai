@@ -3,7 +3,7 @@ import type { MCPServer } from "mcp-use/server"
 import { buildComposedView, buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
 import { queries, type PrometheusClient } from "@miragon-ai/client-analytics"
 
-const PERIOD = z.enum(["1d", "7d", "30d", "90d"])
+const PERIOD = z.enum(["1d", "3d", "7d", "14d", "30d"])
 
 export function registerWidgetTools(server: MCPServer, ch: PrometheusClient, resourceUri: string) {
   // --- Process Analytics Dashboard ---
@@ -83,8 +83,8 @@ export function registerWidgetTools(server: MCPServer, ch: PrometheusClient, res
         processDefinitionKey: z.string().optional(),
         elementId: z.string().optional(),
         deploymentTimestamp: z.string().min(1),
-        windowBeforeDays: z.number().int().min(1).max(90).default(7),
-        windowAfterDays: z.number().int().min(1).max(90).default(7),
+        windowBeforeDays: z.number().int().min(1).max(30).default(7),
+        windowAfterDays: z.number().int().min(1).max(30).default(7),
         minBucketSize: z.number().int().min(1).default(10),
         engineId: z.union([z.string(), z.array(z.string())]).optional(),
       }),
@@ -114,7 +114,7 @@ export function registerWidgetTools(server: MCPServer, ch: PrometheusClient, res
         processDefinitionKey: z.string().min(1),
         versionA: z.number().int().min(1),
         versionB: z.number().int().min(1),
-        windowDays: z.number().int().min(1).max(90).default(30),
+        windowDays: z.number().int().min(1).max(30).default(14),
         elementId: z.string().optional(),
         minBucketSize: z.number().int().min(1).default(10),
         engineId: z.union([z.string(), z.array(z.string())]).optional(),

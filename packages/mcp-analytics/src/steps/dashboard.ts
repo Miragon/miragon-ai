@@ -9,7 +9,7 @@ interface AnalyticsAppConfig {
  * Loads aggregated dashboard KPIs + activity bottleneck breakdown from
  * Prometheus. Consumed by `analytics:dashboard`. Reads optional filter keys:
  * - `analytics:processDefinitionKey`
- * - `analytics:period` (1d | 7d | 30d | 90d)
+ * - `analytics:period` (1d | 3d | 7d | 14d | 30d)
  */
 export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
   id: "analytics:load-dashboard",
@@ -26,7 +26,7 @@ export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
     {
       key: "analytics:period",
       description: "Time window. Defaults to '7d'.",
-      enum: ["1d", "7d", "30d", "90d"],
+      enum: ["1d", "3d", "7d", "14d", "30d"],
     },
   ],
   produces: ["analytics:dashboardData"],
@@ -36,7 +36,7 @@ export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
       | string
       | undefined
     const periodRaw = (context.keys["analytics:period"] as string | undefined) ?? "7d"
-    const period: Period = (["1d", "7d", "30d", "90d"] as const).includes(periodRaw as Period)
+    const period: Period = (["1d", "3d", "7d", "14d", "30d"] as const).includes(periodRaw as Period)
       ? (periodRaw as Period)
       : "7d"
 

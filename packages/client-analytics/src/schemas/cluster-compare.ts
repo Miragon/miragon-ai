@@ -18,16 +18,16 @@ export const clusterCompareInput = z.object({
     .number()
     .int()
     .min(1)
-    .max(90)
+    .max(30)
     .default(7)
-    .describe("Window size before the deployment, in days"),
+    .describe("Window size before the deployment, in days (max 30 — Prometheus retention)"),
   windowAfterDays: z
     .number()
     .int()
     .min(1)
-    .max(90)
+    .max(30)
     .default(7)
-    .describe("Window size after the deployment, in days"),
+    .describe("Window size after the deployment, in days (max 30 — Prometheus retention)"),
   minBucketSize: z
     .number()
     .int()

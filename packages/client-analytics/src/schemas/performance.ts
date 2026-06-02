@@ -3,7 +3,7 @@ import { engineFilterShape } from "./shared.js"
 
 export const analyzePerformanceInput = z.object({
   processDefinitionKey: z.string().describe("Process definition key to analyze"),
-  period: z.enum(["1d", "7d", "30d", "90d"]).default("7d").describe("Analysis time period"),
+  period: z.enum(["1d", "3d", "7d", "14d", "30d"]).default("7d").describe("Analysis time period"),
   includeActivityBreakdown: z
     .boolean()
     .default(true)

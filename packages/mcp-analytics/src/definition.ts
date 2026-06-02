@@ -11,7 +11,7 @@ const dashboardPropsSchema = z.toJSONSchema(
         "Scope the dashboard to a single process definition (e.g. 'miraveloLeasing'). When omitted, all processes are aggregated.",
       ),
     period: z
-      .enum(["1d", "7d", "30d", "90d"])
+      .enum(["1d", "3d", "7d", "14d", "30d"])
       .optional()
       .describe("Time window for the self-fetch when no upstream pipeline step populates data."),
   }),
