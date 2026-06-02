@@ -45,8 +45,11 @@ class LiveTrafficGenerator(
     private val segments = listOf("PRIVATE", "BUSINESS", "STUDENT")
     private val leaseTerms = listOf(12, 24, 36, 48)
 
+    // Default 5min: a steady trickle that keeps the analytics lit without piling
+    // up tens of thousands of instances/day in the in-memory engine. Override via
+    // live-traffic.interval-ms (env LIVE_TRAFFIC_INTERVAL_MS) for a denser pulse.
     @Scheduled(
-        fixedDelayString = "\${live-traffic.interval-ms:5000}",
+        fixedDelayString = "\${live-traffic.interval-ms:300000}",
         initialDelayString = "\${live-traffic.initial-delay-ms:20000}",
     )
     fun tick() {
