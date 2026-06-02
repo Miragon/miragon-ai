@@ -11,6 +11,7 @@ import { FailureRateTable } from "./failure-dashboard/failure-rate-table.js"
 import { ClusterCompareWidget, type ClusterCompareData } from "./cluster-compare.js"
 import { VersionCompareWidget, type VersionCompareData } from "./version-compare.js"
 import { EngineCompareWidget, type EngineCompareData } from "./engine-compare.js"
+import { BpmnHeatmapWidget, type BpmnHeatmapData } from "./bpmn-heatmap.js"
 
 export type {
   AnalyticsDashboardData,
@@ -18,6 +19,7 @@ export type {
   ClusterCompareData,
   VersionCompareData,
   EngineCompareData,
+  BpmnHeatmapData,
 }
 
 export const ANALYTICS_DATA_TYPES = {
@@ -26,6 +28,7 @@ export const ANALYTICS_DATA_TYPES = {
   clusterCompare: "analytics:clusterCompare",
   versionCompare: "analytics:versionCompare",
   engineCompare: "analytics:engineCompare",
+  bpmnHeatmap: "analytics:bpmnHeatmap",
 } as const
 
 export const analyticsWidgets: Record<string, WidgetComponent> = {
@@ -69,4 +72,5 @@ export const analyticsWidgets: Record<string, WidgetComponent> = {
     EngineCompareWidget,
     ANALYTICS_DATA_TYPES.engineCompare,
   ),
+  "analytics:bpmn-heatmap": adaptDataWidget(BpmnHeatmapWidget, ANALYTICS_DATA_TYPES.bpmnHeatmap),
 }

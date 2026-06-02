@@ -2,10 +2,23 @@ import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
 import { buildComposedView, buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
 import { queries, type PrometheusClient } from "@miragon-ai/client-analytics"
+import type { Client as Camunda7Client } from "@miragon-ai/client-cibseven"
+import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 
 const PERIOD = z.enum(["1d", "3d", "7d", "14d", "30d"])
 
-export function registerWidgetTools(server: MCPServer, ch: PrometheusClient, resourceUri: string) {
+export interface AnalyticsWidgetToolsOptions {
+  /** Used by the BPMN heatmap to fetch the diagram XML. Absent → non-diagram fallback. */
+  camunda7Client?: Camunda7Client
+}
+
+export function registerWidgetTools(
+  server: MCPServer,
+  ch: PrometheusClient,
+  resourceUri: string,
+  options: AnalyticsWidgetToolsOptions = {},
+) {
+  const camunda7Client = options.camunda7Client
   // --- Process Analytics Dashboard ---
   server.tool(
     {
@@ -159,6 +172,47 @@ export function registerWidgetTools(server: MCPServer, ch: PrometheusClient, res
         dataType: "analytics:engineCompare",
         data,
         title: "Engine Compare",
+      })
+    },
+  )
+
+  // --- BPMN Heatmap (per-element frequency + duration on the diagram) ---
+  server.tool(
+    {
+      name: "analytics_show_bpmn_heatmap",
+      title: "BPMN Heatmap",
+      description:
+        "Render a process definition's BPMN diagram with a per-element heat overlay from metrics, with a Frequency↔Duration toggle (traversal count vs average duration per element). Node-level only — sequence-flow/edge heat is not available from metrics — and rendered on the latest deployed version's diagram (activity metrics carry no version label). Needs the camunda7 client to fetch the BPMN XML; otherwise the widget shows a fallback.",
+      annotations: { readOnlyHint: true, idempotentHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().min(1),
+        period: PERIOD.default("7d"),
+        engineId: z.union([z.string(), z.array(z.string())]).optional(),
+      }),
+      _meta: { ui: { resourceUri } },
+    },
+    async (args) => {
+      const heat = await queries.elementHeat(ch, args)
+      let bpmnXml: string | null = null
+      if (camunda7Client) {
+        const xmlResp = (await getProcessDefinitionBpmn20XmlByKey({
+          client: camunda7Client,
+          path: { key: args.processDefinitionKey },
+        }).catch(() => null)) as { bpmn20Xml?: string } | null
+        bpmnXml = xmlResp?.bpmn20Xml ?? null
+      }
+      return buildSingleWidgetView({
+        widget: "analytics:bpmn-heatmap",
+        app: "analytics",
+        dataType: "analytics:bpmnHeatmap",
+        data: {
+          processDefinitionKey: args.processDefinitionKey,
+          period: args.period,
+          bpmnXml,
+          frequency: heat.frequency,
+          durationSec: heat.durationSec,
+        },
+        title: "BPMN Heatmap",
       })
     },
   )

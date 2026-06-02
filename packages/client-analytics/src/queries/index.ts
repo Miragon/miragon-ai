@@ -8,8 +8,8 @@ export type {
 } from "./performance.js"
 export { findFailedInstances } from "./failures.js"
 export type { ErrorPatternRow } from "./failures.js"
-export { elementBottleneck } from "./element.js"
-export type { ElementBottleneckRow, ElementBottleneckResult } from "./element.js"
+export { elementBottleneck, elementHeat } from "./element.js"
+export type { ElementBottleneckRow, ElementBottleneckResult, ElementHeatResult } from "./element.js"
 export { clusterCompare } from "./cluster-compare.js"
 export type {
   ClusterCompareResult,

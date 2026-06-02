@@ -104,6 +104,14 @@ export const definition: AppDefinition = {
       consumes: ["analytics:engineCompare"],
       size: "full",
     },
+    {
+      id: "analytics:bpmn-heatmap",
+      description:
+        "BPMN diagram with a per-element heat overlay from metrics, toggling between traversal frequency and average duration. Node-only; rendered on the latest deployed version's diagram.",
+      requires: [],
+      consumes: ["analytics:bpmnHeatmap"],
+      size: "full",
+    },
   ],
 }
 

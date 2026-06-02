@@ -10,8 +10,9 @@ export interface AnalyticsPluginConfig {
   /** Base URL of the Prometheus HTTP API (e.g. http://localhost:9090). */
   url: string
   /**
-   * Optional Camunda7 client, reserved for widget tools that may enrich
-   * metric data with engine lookups (e.g. BPMN element names). Unused today.
+   * Optional Camunda7 client used by widget tools that enrich metric data with
+   * engine lookups — currently the BPMN heatmap, which fetches the diagram XML.
+   * When absent, those widgets degrade to a non-diagram fallback.
    */
   camunda7Client?: Camunda7Client
 }
@@ -25,7 +26,7 @@ export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer
       registerTools(server, client)
     },
     registerWidgetTools: (server, resourceUri) => {
-      registerWidgetTools(server, client, resourceUri)
+      registerWidgetTools(server, client, resourceUri, { camunda7Client: config.camunda7Client })
     },
   }
 }

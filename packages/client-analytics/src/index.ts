@@ -23,6 +23,7 @@ export type {
   PeriodComparisonResult,
   ElementBottleneckRow,
   ElementBottleneckResult,
+  ElementHeatResult,
   ClusterCompareResult,
   ClusterCompareKpi,
   ClusterCompareDelta,

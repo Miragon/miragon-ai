@@ -123,3 +123,51 @@ export async function elementBottleneck(
     suppressedActivities: Math.max(0, all.length - aboveThreshold),
   }
 }
+
+export interface ElementHeatResult {
+  /** Per-element execution count over the window, keyed by activity id. */
+  frequency: Record<string, number>
+  /** Per-element average duration in seconds over the window, keyed by activity id. */
+  durationSec: Record<string, number>
+}
+
+/**
+ * Per-element heat values for the BPMN heatmap, from OTEL metrics: traversal
+ * frequency (`camunda_activity_ended_total`) and average duration
+ * (`camunda_activity_duration_seconds_sum` / count) per `activity_id`, for one
+ * process definition. Returns full maps (no top-N / min-bucket filtering — every
+ * element gets a value). Node-level only; metrics carry no per-instance path, so
+ * sequence-flow/edge heat is not available. Activity metrics have no version
+ * label, so this is per `processDefinitionKey`.
+ */
+export async function elementHeat(
+  ch: PrometheusClient,
+  params: { processDefinitionKey: string; period: Period; engineId?: EngineFilterInput },
+): Promise<ElementHeatResult> {
+  const range = params.period
+  const sel = selector(
+    `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
+    engineMatcher(params.engineId),
+  )
+
+  const [counts, sums] = await Promise.all([
+    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}[${range}]))`),
+    ch.instant(
+      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}[${range}]))`,
+    ),
+  ])
+
+  const countBy = byLabel(counts, "activity_id")
+  const sumBy = byLabel(sums, "activity_id")
+
+  const frequency: Record<string, number> = {}
+  const durationSec: Record<string, number> = {}
+  for (const [id, count] of Object.entries(countBy)) {
+    const c = Math.round(count)
+    if (c <= 0) continue
+    frequency[id] = c
+    const totalSec = sumBy[id] ?? 0
+    durationSec[id] = round1(totalSec / c)
+  }
+  return { frequency, durationSec }
+}
