@@ -18,6 +18,8 @@ import type {
 
 const round1 = (n: number) => Math.round(n * 10) / 10
 const first = (s: PromSample[]) => (s.length ? s[0].value : 0)
+/** Seconds -> integer milliseconds (preserves the sub-100ms precision the dashboard formats). */
+const ms = (sec: number) => Math.round(sec * 1000)
 
 function byLabel(samples: PromSample[], label: string): Record<string, number> {
   const out: Record<string, number> = {}
@@ -138,9 +140,9 @@ export async function dashboardData(
     failedCount,
     incidentCount: openIncidents,
     failureRatePct: totalCount > 0 ? round1((failedCount * 100) / totalCount) : 0,
-    avgDurationMs: first(avg) > 0 ? round1(first(avg)) * 1000 : null,
-    medianDurationMs: first(median) > 0 ? round1(first(median)) * 1000 : null,
-    p95DurationMs: first(p95) > 0 ? round1(first(p95)) * 1000 : null,
+    avgDurationMs: first(avg) > 0 ? ms(first(avg)) : null,
+    medianDurationMs: first(median) > 0 ? ms(first(median)) : null,
+    p95DurationMs: first(p95) > 0 ? ms(first(p95)) : null,
     activityBreakdown,
     definitionBreakdown,
   }
@@ -169,9 +171,9 @@ function buildActivityBreakdown(
         activityName: "",
         activityType: typeBy[id] ?? "",
         executionCount: count,
-        avgDurationMs: count > 0 ? round1(totalSec / count) * 1000 : 0,
-        p95DurationMs: round1(p95By[id] ?? 0) * 1000,
-        totalTimeMs: round1(totalSec) * 1000,
+        avgDurationMs: count > 0 ? ms(totalSec / count) : 0,
+        p95DurationMs: ms(p95By[id] ?? 0),
+        totalTimeMs: ms(totalSec),
       }
     })
     .sort((a, b) => b.totalTimeMs - a.totalTimeMs)
@@ -202,7 +204,7 @@ function buildDefinitionBreakdown(
         completed: Math.round(completedBy[key] ?? 0),
         running: Math.max(0, total - Math.round(endedBy[key] ?? 0)),
         failed: Math.round(failedBy[key] ?? 0),
-        avgDurationMs: cnt > 0 ? round1((sumBy[key] ?? 0) / cnt) * 1000 : null,
+        avgDurationMs: cnt > 0 ? ms((sumBy[key] ?? 0) / cnt) : null,
       }
     })
     .sort((a, b) => b.totalInstances - a.totalInstances)
