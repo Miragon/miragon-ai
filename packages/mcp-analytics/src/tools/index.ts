@@ -6,6 +6,7 @@ import { registerFailureTools } from "./failures.js"
 import { registerElementTools } from "./element.js"
 import { registerClusterCompareTools } from "./cluster-compare.js"
 import { registerVersionCompareTools } from "./version-compare.js"
+import { registerEngineCompareTools } from "./engine-compare.js"
 import { registerHealthTools } from "./health.js"
 
 export function registerTools(server: MCPServer, client: PrometheusClient): void {
@@ -15,5 +16,6 @@ export function registerTools(server: MCPServer, client: PrometheusClient): void
   registerElementTools(register)
   registerClusterCompareTools(register)
   registerVersionCompareTools(register)
+  registerEngineCompareTools(register)
   registerHealthTools(register)
 }

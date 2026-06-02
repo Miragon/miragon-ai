@@ -22,6 +22,8 @@ export type {
   VersionCompareKpi,
   VersionCompareDelta,
 } from "./version-compare.js"
+export { engineCompare } from "./engine-compare.js"
+export type { EngineCompareResult, EngineCompareKpi, EngineCompareDelta } from "./engine-compare.js"
 export { dashboardData, failureDashboardData } from "./dashboard.js"
 export { engineHealth } from "./health.js"
 export type { EngineHealthResult, HealthCount, HealthAlert } from "./health.js"

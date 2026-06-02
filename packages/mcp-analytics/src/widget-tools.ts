@@ -132,4 +132,34 @@ export function registerWidgetTools(server: MCPServer, ch: PrometheusClient, res
       })
     },
   )
+
+  // --- Engine Compare (engine A vs engine B across the fleet) ---
+  server.tool(
+    {
+      name: "analytics_show_engine_compare",
+      title: "Engine Comparison",
+      description:
+        "Visualize KPI deltas between two CIB Seven engines (e.g. prod-a vs prod-b) over a shared time window. Optionally scope to one processDefinitionKey. Results are flagged `suppressed` when either engine has fewer than minBucketSize instances.",
+      annotations: { readOnlyHint: true, idempotentHint: true },
+      schema: z.object({
+        engineA: z.string().min(1),
+        engineB: z.string().min(1),
+        windowDays: z.number().int().min(1).max(30).default(14),
+        processDefinitionKey: z.string().optional(),
+        elementId: z.string().optional(),
+        minBucketSize: z.number().int().min(1).default(10),
+      }),
+      _meta: { ui: { resourceUri } },
+    },
+    async (args) => {
+      const data = await queries.engineCompare(ch, args)
+      return buildSingleWidgetView({
+        widget: "analytics:engine-compare",
+        app: "analytics",
+        dataType: "analytics:engineCompare",
+        data,
+        title: "Engine Compare",
+      })
+    },
+  )
 }

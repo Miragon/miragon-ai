@@ -96,6 +96,14 @@ export const definition: AppDefinition = {
       consumes: ["analytics:versionCompare"],
       size: "full",
     },
+    {
+      id: "analytics:engine-compare",
+      description:
+        "Side-by-side comparison of KPIs (failure/incident rate, duration, throughput) across two engines (e.g. prod-a vs prod-b).",
+      requires: [],
+      consumes: ["analytics:engineCompare"],
+      size: "full",
+    },
   ],
 }
 
