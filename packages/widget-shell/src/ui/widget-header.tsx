@@ -1,14 +1,7 @@
 import type { ReactNode } from "react"
+import { TONE_SOFT, type ToneVariant } from "./tone-utils.js"
 
-export type ToneVariant = "critical" | "warning" | "success" | "info" | "neutral"
-
-const TONE_BG: Record<ToneVariant, string> = {
-  critical: "bg-critical-soft text-critical",
-  warning: "bg-warning-soft text-warning",
-  success: "bg-m-green-soft text-m-green",
-  info: "bg-m-blue-soft text-m-blue",
-  neutral: "bg-line-soft text-ink-muted",
-}
+export type { ToneVariant }
 
 /**
  * Page-level header used at the top of a dashboard widget. Mirrors the
@@ -33,14 +26,18 @@ export function WidgetHeader({
       <div className="min-w-0">
         {icon && (
           <div
-            className={`mb-3.5 grid size-11 place-items-center rounded-xl text-xl ${TONE_BG[iconTone]}`}
+            className={`mb-3.5 grid size-11 place-items-center rounded-xl text-xl ${TONE_SOFT[iconTone]}`}
           >
             {icon}
           </div>
         )}
-        <h1 className="text-ink mb-1.5 text-3xl font-bold leading-tight tracking-tight">{title}</h1>
+        <h1 className="text-foreground mb-1.5 text-3xl font-bold leading-tight tracking-tight">
+          {title}
+        </h1>
         {sub && (
-          <div className="text-ink-muted flex flex-wrap items-center gap-2 text-sm">{sub}</div>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+            {sub}
+          </div>
         )}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

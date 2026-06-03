@@ -3,21 +3,30 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function BpmnViewerLegend(_props: { data: unknown }) {
   return (
-    <div className="bg-card text-card-foreground flex items-center gap-4 px-6 text-xs">
-      <div className="flex items-center gap-1.5">
-        <span className="inline-block h-3 w-3 rounded border-2 border-green-600 bg-green-600/15" />
+    <ul role="list" className="flex items-center gap-4 text-xs">
+      <li className="flex items-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className="border-m-green bg-m-green-soft inline-block h-3 w-3 rounded border-2"
+        />
         <span className="text-muted-foreground">Running</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <span className="inline-block h-3 w-3 rounded border-2 border-red-600 bg-red-600/15" />
+      </li>
+      <li className="flex items-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className="border-critical bg-critical-soft inline-block h-3 w-3 rounded border-2"
+        />
         <span className="text-muted-foreground">Incident</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <span className="inline-block h-4 min-w-4 rounded-full bg-blue-500 px-1 text-center text-[10px] font-semibold text-white">
+      </li>
+      <li className="flex items-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className="bg-m-blue inline-block h-4 min-w-4 rounded-full px-1 text-center text-[10px] font-semibold text-white"
+        >
           n
         </span>
         <span className="text-muted-foreground">Instance count</span>
-      </div>
-    </div>
+      </li>
+    </ul>
   )
 }

@@ -22,7 +22,7 @@ export function ActivityIncidentList({ data }: { data: ProcessIncidentsData | nu
   if (!data) {
     return (
       <WidgetShell>
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </WidgetShell>

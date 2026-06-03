@@ -84,7 +84,7 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </div>

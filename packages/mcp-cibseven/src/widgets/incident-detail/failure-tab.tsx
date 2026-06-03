@@ -38,13 +38,13 @@ export function FailureTab({
       <Card className="gap-0 py-0 shadow-none">
         <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2">
           <div>
-            <div className="text-ink-subtle text-xs font-semibold uppercase tracking-wide">
+            <div className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
               Incident type
             </div>
             <div className="font-mono text-sm">{data.incidentType}</div>
           </div>
           <div>
-            <div className="text-ink-subtle text-xs font-semibold uppercase tracking-wide">
+            <div className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
               Activity
             </div>
             <div className="text-sm">
@@ -57,14 +57,14 @@ export function FailureTab({
             </div>
           </div>
           <div>
-            <div className="text-ink-subtle text-xs font-semibold uppercase tracking-wide">
+            <div className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
               Occurred at
             </div>
             <div className="text-sm">{formatTimestamp(data.incidentTimestamp)}</div>
           </div>
           {job && (
             <div>
-              <div className="text-ink-subtle text-xs font-semibold uppercase tracking-wide">
+              <div className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
                 Job
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -86,9 +86,10 @@ export function FailureTab({
             type="button"
             onClick={onResolve}
             disabled={resolving}
-            className="bg-critical-soft text-critical hover:bg-critical/10 inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            aria-label="Resolve incident"
+            className="bg-critical-soft text-critical hover:bg-critical/10 focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
           >
-            ✓ Resolve incident
+            <span aria-hidden="true">✓</span> Resolve incident
           </button>
         )}
         {job && (
@@ -96,24 +97,26 @@ export function FailureTab({
             type="button"
             onClick={onRetry}
             disabled={retrying || retried}
-            className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            aria-label={retried ? "Job retried" : "Retry job (set retries to 1)"}
+            className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
           >
-            ↻ {retried ? "Retried" : "Retry job (set retries to 1)"}
+            <span aria-hidden="true">↻</span> {retried ? "Retried" : "Retry job (set retries to 1)"}
           </button>
         )}
         <button
           type="button"
           onClick={reportToGitHub}
-          className="border-line text-ink-muted hover:bg-bg-subtle inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
+          aria-label="File GitHub issue"
+          className="border-border text-muted-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2"
           title="Hand off to the agent to file a GitHub issue via the configured GitHub MCP server"
         >
-          ⚑ File GitHub issue
+          <span aria-hidden="true">⚑</span> File GitHub issue
         </button>
       </div>
 
       <div>
         <SectionHeading title="Error message" />
-        <pre className="border-line bg-card text-ink whitespace-pre-wrap break-words rounded-lg border p-3 font-mono text-xs">
+        <pre className="border-border bg-card text-foreground whitespace-pre-wrap break-words rounded-lg border p-3 font-mono text-xs">
           {data.incidentMessage ?? job?.exceptionMessage ?? "—"}
         </pre>
       </div>
@@ -122,7 +125,7 @@ export function FailureTab({
         <div>
           <SectionHeading title="Stacktrace" hint={job.stacktrace ? undefined : "not available"} />
           {job.stacktrace ? (
-            <pre className="border-line bg-card text-ink max-h-[480px] overflow-auto rounded-lg border p-3 font-mono text-[11px] leading-relaxed">
+            <pre className="border-border bg-card text-foreground max-h-[480px] overflow-auto rounded-lg border p-3 font-mono text-[11px] leading-relaxed">
               {job.stacktrace}
             </pre>
           ) : (

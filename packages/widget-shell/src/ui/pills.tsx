@@ -1,21 +1,5 @@
 import type { ReactNode } from "react"
-import type { ToneVariant } from "./widget-header.js"
-
-const TONE: Record<ToneVariant, string> = {
-  critical: "bg-critical-soft text-critical",
-  warning: "bg-warning-soft text-warning",
-  success: "bg-m-green-soft text-m-green",
-  info: "bg-m-blue-soft text-m-blue",
-  neutral: "bg-line-soft text-ink-muted",
-}
-
-const DOT: Record<ToneVariant, string> = {
-  critical: "bg-critical",
-  warning: "bg-warning",
-  success: "bg-m-green",
-  info: "bg-m-blue",
-  neutral: "bg-ink-subtle",
-}
+import { TONE_DOT, TONE_SOFT, type ToneVariant } from "./tone-utils.js"
 
 /**
  * Live pill with a pulsing dot — used in headers to signal real-time data.
@@ -30,9 +14,9 @@ export function LivePill({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold ${TONE[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold ${TONE_SOFT[tone]}`}
     >
-      <span className={`size-1.5 animate-pulse rounded-full ${DOT[tone]}`} />
+      <span className={`size-1.5 animate-pulse rounded-full ${TONE_DOT[tone]}`} />
       {children ?? "Live"}
     </span>
   )
@@ -51,9 +35,9 @@ export function StatusBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold ${TONE[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold ${TONE_SOFT[tone]}`}
     >
-      <span className={`size-1.5 animate-pulse rounded-full ${DOT[tone]}`} />
+      <span className={`size-1.5 animate-pulse rounded-full ${TONE_DOT[tone]}`} />
       {children}
     </span>
   )
@@ -72,7 +56,7 @@ export function CountPill({
 }) {
   return (
     <span
-      className={`inline-flex min-w-[2.5rem] items-center justify-center rounded-md px-2.5 py-0.5 text-sm font-semibold tabular-nums ${TONE[tone]}`}
+      className={`inline-flex min-w-[2.5rem] items-center justify-center rounded-md px-2.5 py-0.5 text-sm font-semibold tabular-nums ${TONE_SOFT[tone]}`}
     >
       {children}
     </span>

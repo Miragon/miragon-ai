@@ -6,19 +6,32 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  Skeleton,
 } from "@miragon/mcp-toolkit-ui"
+import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 import { useFailureDashboardSelfFetch } from "./lib.js"
 
 export function FailureRateTable({ data: initialData }: { data: FailureDashboardData | null }) {
   const fallbackQuery = useFailureDashboardSelfFetch(initialData)
   const data = initialData ?? fallbackQuery.data ?? null
-  if (!data || data.processBreakdown.length === 0) return null
+  if (!data) {
+    return (
+      <WidgetShell>
+        <div className="rounded-lg border p-4" aria-busy="true">
+          <Skeleton className="mb-3 h-5 w-44" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </WidgetShell>
+    )
+  }
+  if (data.processBreakdown.length === 0) return null
   return (
-    <div className="bg-card text-card-foreground p-6">
+    <WidgetShell>
       <details open>
         <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
           <svg
+            aria-hidden="true"
             className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
             viewBox="0 0 16 16"
             fill="currentColor"
@@ -29,14 +42,24 @@ export function FailureRateTable({ data: initialData }: { data: FailureDashboard
           <Badge variant="secondary">{data.processBreakdown.length}</Badge>
         </summary>
         <div className="mt-3 rounded-lg border">
-          <Table>
+          <Table aria-label="Failure rate by process definition">
             <TableHeader>
               <TableRow>
-                <TableHead>Process</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Failed</TableHead>
-                <TableHead className="text-right">Incidents</TableHead>
-                <TableHead>Failure Rate</TableHead>
+                <TableHead scope="col" aria-sort="none">
+                  Process
+                </TableHead>
+                <TableHead scope="col" aria-sort="none" className="text-right">
+                  Total
+                </TableHead>
+                <TableHead scope="col" aria-sort="none" className="text-right">
+                  Failed
+                </TableHead>
+                <TableHead scope="col" aria-sort="none" className="text-right">
+                  Incidents
+                </TableHead>
+                <TableHead scope="col" aria-sort="none">
+                  Failure Rate
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -69,6 +92,6 @@ export function FailureRateTable({ data: initialData }: { data: FailureDashboard
           </Table>
         </div>
       </details>
-    </div>
+    </WidgetShell>
   )
 }

@@ -19,7 +19,7 @@ export function ProcessIncidentFlow({ data }: { data: ProcessIncidentsData | nul
   if (!data) {
     return (
       <WidgetShell>
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </WidgetShell>

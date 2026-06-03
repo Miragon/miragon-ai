@@ -11,15 +11,16 @@ export function HeatmapZoomControls({ onZoomIn, onZoomOut, onFit }: HeatmapZoomC
     { label: "−", onClick: onZoomOut, title: "Zoom out" },
   ]
   return (
-    <div className="absolute bottom-3 right-3 flex flex-col overflow-hidden rounded border border-gray-300 shadow-sm">
+    <div className="border-border bg-card absolute bottom-3 right-3 flex flex-col overflow-hidden rounded border shadow-sm">
       {buttons.map(({ label, onClick, title }) => (
         <button
           key={label}
           onClick={onClick}
           title={title}
-          className="flex h-7 w-7 items-center justify-center bg-white text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-200 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-gray-300"
+          aria-label={title}
+          className="bg-card text-card-foreground hover:bg-muted active:bg-muted focus-visible:ring-ring [&:not(:last-child)]:border-border flex h-7 w-7 items-center justify-center text-sm outline-none focus-visible:ring-2 [&:not(:last-child)]:border-b"
         >
-          {label}
+          <span aria-hidden="true">{label}</span>
         </button>
       ))}
     </div>

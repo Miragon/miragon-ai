@@ -47,9 +47,29 @@ const SKIP_TYPES = new Set([
 ])
 
 /**
- * Cockpit-style gradient (transparent → green → yellow → red) pre-rendered
- * to a 256-row image so we can map alpha (0-255) → RGB in O(1) during the
- * colorize pass.
+ * Cockpit-style heat gradient stops (transparent → green → yellow → orange →
+ * red), as `[offset, rgba]` tuples. Single source of truth shared by the canvas
+ * LUT ({@link buildGradientLut}) and the widget's CSS legend swatch, so the two
+ * never drift. These are intentionally explicit RGBA values (not theme tokens):
+ * a heat ramp needs fixed hue/luminance steps, and the colors read in both
+ * light and dark mode because the overlay composites with `mix-blend-mode`.
+ */
+export const HEAT_GRADIENT_STOPS: ReadonlyArray<readonly [number, string]> = [
+  [0.0, "rgba(0, 0, 255, 0)"],
+  [0.25, "rgba(0, 200, 80, 0.85)"],
+  [0.5, "rgba(255, 230, 0, 0.9)"],
+  [0.75, "rgba(255, 140, 0, 0.95)"],
+  [1.0, "rgba(220, 30, 30, 1)"],
+]
+
+/** CSS `linear-gradient(...)` color list derived from {@link HEAT_GRADIENT_STOPS}. */
+export const HEAT_GRADIENT_CSS = `linear-gradient(to right, ${HEAT_GRADIENT_STOPS.map(
+  ([, color]) => color,
+).join(", ")})`
+
+/**
+ * The heat gradient pre-rendered to a 256-row image so we can map alpha
+ * (0-255) → RGB in O(1) during the colorize pass.
  */
 export function buildGradientLut(): Uint8ClampedArray {
   const canvas = document.createElement("canvas")
@@ -57,11 +77,9 @@ export function buildGradientLut(): Uint8ClampedArray {
   canvas.height = 256
   const ctx = canvas.getContext("2d")
   const grad = ctx.createLinearGradient(0, 0, 0, 256)
-  grad.addColorStop(0.0, "rgba(0, 0, 255, 0)")
-  grad.addColorStop(0.25, "rgba(0, 200, 80, 0.85)")
-  grad.addColorStop(0.5, "rgba(255, 230, 0, 0.9)")
-  grad.addColorStop(0.75, "rgba(255, 140, 0, 0.95)")
-  grad.addColorStop(1.0, "rgba(220, 30, 30, 1)")
+  for (const [offset, color] of HEAT_GRADIENT_STOPS) {
+    grad.addColorStop(offset, color)
+  }
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, 1, 256)
   return ctx.getImageData(0, 0, 1, 256).data

@@ -72,7 +72,7 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </div>
@@ -150,15 +150,17 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
         </Card>
       ) : (
         <div className="rounded-lg border">
-          <Table>
+          <Table aria-label="Open tasks">
             <TableHeader>
               <TableRow>
-                <TableHead>Task</TableHead>
-                <TableHead>Assignee</TableHead>
-                <TableHead>Process</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="w-40"></TableHead>
+                <TableHead scope="col">Task</TableHead>
+                <TableHead scope="col">Assignee</TableHead>
+                <TableHead scope="col">Process</TableHead>
+                <TableHead scope="col">Priority</TableHead>
+                <TableHead scope="col">Created</TableHead>
+                <TableHead scope="col" className="w-40">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -221,6 +223,7 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
                                 variant="ghost"
                                 size="sm"
                                 type="button"
+                                aria-label="Cancel claim"
                                 onClick={() => {
                                   setClaimingTaskId(null)
                                   setClaimUserId("")

@@ -6,7 +6,7 @@ export function BpmnViewerHeader({ data }: { data: BpmnViewerData | null }) {
   const totalActive = data.activeActivityIds.length
   const totalIncidents = data.incidentActivityIds.length
   return (
-    <div className="bg-card text-card-foreground flex items-center justify-between px-6 pt-6">
+    <div className="flex items-center justify-between">
       <h2 className="text-xl font-semibold">BPMN Diagram</h2>
       <div className="flex items-center gap-2">
         {data.processInstanceId && (

@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "@miragon-ai/client-cibseven"
+import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import { BpmnViewerHeader } from "./header.js"
 import { BpmnViewerLegend } from "./legend.js"
 import { BpmnFlowViewer } from "./flow.js"
@@ -39,31 +40,31 @@ export function BpmnViewerWidget({
 
   if (!data && query.isPending && canSelfFetch) {
     return (
-      <div className="bg-card text-card-foreground p-6">
+      <WidgetShell>
         <Alert>
           <AlertDescription>Loading BPMN diagram…</AlertDescription>
         </Alert>
-      </div>
+      </WidgetShell>
     )
   }
 
   if (!data && query.isError) {
     return (
-      <div className="bg-card text-card-foreground p-6">
+      <WidgetShell>
         <Alert variant="destructive">
           <AlertDescription>
             Failed to load BPMN diagram: {query.error?.message ?? "Unknown error"}
           </AlertDescription>
         </Alert>
-      </div>
+      </WidgetShell>
     )
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <WidgetShell>
       <BpmnViewerHeader data={data} />
       <BpmnViewerLegend data={data} />
       <BpmnFlowViewer data={data} />
-    </div>
+    </WidgetShell>
   )
 }

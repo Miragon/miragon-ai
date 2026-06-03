@@ -148,7 +148,13 @@ function VariableRow({
             <Button variant="outline" size="sm" type="submit" disabled={setVarMutation.isPending}>
               Save
             </Button>
-            <Button variant="ghost" size="sm" type="button" onClick={() => setEditing(false)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              aria-label="Cancel editing"
+              onClick={() => setEditing(false)}
+            >
               X
             </Button>
           </form>
@@ -196,13 +202,15 @@ export function VariablesTable({
 
   return (
     <div className="rounded-lg border">
-      <Table>
+      <Table aria-label="Process instance variables">
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Value</TableHead>
-            <TableHead className="w-16"></TableHead>
+            <TableHead scope="col">Name</TableHead>
+            <TableHead scope="col">Type</TableHead>
+            <TableHead scope="col">Value</TableHead>
+            <TableHead scope="col" className="w-16">
+              <span className="sr-only">Actions</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

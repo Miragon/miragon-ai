@@ -31,27 +31,19 @@ export function BpmnFlowViewer({ data }: { data: BpmnViewerData | null }) {
 
   if (!data) {
     return (
-      <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
-      </div>
+      <Alert>
+        <AlertDescription>No data available</AlertDescription>
+      </Alert>
     )
   }
 
   if (!data.bpmnXml) {
     return (
-      <div className="bg-card text-card-foreground p-6">
-        <Alert>
-          <AlertDescription>No BPMN diagram available</AlertDescription>
-        </Alert>
-      </div>
+      <Alert>
+        <AlertDescription>No BPMN diagram available</AlertDescription>
+      </Alert>
     )
   }
 
-  return (
-    <div className="bg-card text-card-foreground px-6 pb-6">
-      <BpmnDiagram bpmnXml={data.bpmnXml} height={500} highlights={highlights} />
-    </div>
-  )
+  return <BpmnDiagram bpmnXml={data.bpmnXml} height={500} highlights={highlights} />
 }
