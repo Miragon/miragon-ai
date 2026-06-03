@@ -1,17 +1,12 @@
-import {
-  Alert,
-  AlertDescription,
-  Badge,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@miragon/mcp-toolkit-ui"
+import { Badge } from "@miragon/mcp-toolkit-ui"
 import type { VersionCompareResult } from "@miragon-ai/client-analytics"
+import {
+  ComparisonCard,
+  ComparisonEmptyState,
+  fmtPct,
+  fmtPp,
+  type ComparisonMetric,
+} from "./comparison-shared.js"
 
 export type VersionCompareData = VersionCompareResult | null
 
@@ -48,28 +43,30 @@ const METRICS: Array<{
 ]
 
 export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
-  if (!data)
-    return (
-      <Alert>
-        <AlertDescription>No version-comparison data.</AlertDescription>
-      </Alert>
-    )
+  if (!data) return <ComparisonEmptyState>No version-comparison data.</ComparisonEmptyState>
 
   const a = data.kpis.find((k) => k.bucket === "versionA")
   const b = data.kpis.find((k) => k.bucket === "versionB")
   if (!a || !b) {
-    return (
-      <Alert>
-        <AlertDescription>Incomplete KPI data.</AlertDescription>
-      </Alert>
-    )
+    return <ComparisonEmptyState>Incomplete KPI data.</ComparisonEmptyState>
   }
 
+  const metrics: ComparisonMetric[] = METRICS.map((m) => ({
+    label: m.label,
+    delta: m.delta(data.delta),
+    before: m.value(a),
+    after: m.value(b),
+  }))
+
   return (
-    <Card>
-      <CardContent>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <strong>Version comparison</strong>
+    <ComparisonCard
+      title="Version comparison"
+      tableLabel="Version metric comparison"
+      beforeLabel={`v${data.versionA}`}
+      afterLabel={`v${data.versionB}`}
+      metrics={metrics}
+      badges={
+        <>
           <Badge>{data.processDefinitionKey}</Badge>
           <Badge variant="secondary">
             v{data.versionA} ↔ v{data.versionB}
@@ -81,53 +78,8 @@ export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
               Insufficient signal (min {data.minBucketSize} instances/version)
             </Badge>
           )}
-        </div>
-
-        <Table style={{ marginTop: 16 }}>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Metric</TableHead>
-              <TableHead>v{data.versionA}</TableHead>
-              <TableHead>v{data.versionB}</TableHead>
-              <TableHead>Δ</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {METRICS.map((m) => {
-              const d = m.delta(data.delta)
-              return (
-                <TableRow key={m.label}>
-                  <TableCell>{m.label}</TableCell>
-                  <TableCell>{m.value(a)}</TableCell>
-                  <TableCell>{m.value(b)}</TableCell>
-                  <TableCell style={{ color: colorFor(d.value, d.worseIfUp) }}>{d.value}</TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+        </>
+      }
+    />
   )
-}
-
-function fmtPct(n: number | null): string {
-  if (n === null) return "—"
-  const sign = n > 0 ? "+" : ""
-  return `${sign}${n.toFixed(1)}%`
-}
-
-function fmtPp(n: number | null): string {
-  if (n === null) return "—"
-  const sign = n > 0 ? "+" : ""
-  return `${sign}${n.toFixed(1)}pp`
-}
-
-function colorFor(value: string, worseIfUp: boolean): string | undefined {
-  if (value === "—") return undefined
-  const positive = value.startsWith("+")
-  const negative = value.startsWith("-")
-  if (!positive && !negative) return undefined
-  const bad = worseIfUp ? positive : negative
-  return bad ? "#b91c1c" : "#15803d"
 }

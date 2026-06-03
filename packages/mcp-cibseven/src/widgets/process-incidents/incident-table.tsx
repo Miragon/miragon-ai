@@ -27,12 +27,17 @@ export function IncidentTable({
   const hidden = incidents.length - visible.length
 
   return (
-    <div className="bg-bg text-sm">
-      <div className="border-line text-ink-subtle bg-bg grid grid-cols-[140px_1fr_auto_auto] gap-4 border-b px-4 py-2 pl-12 text-[11px] font-semibold">
-        <span>Instance</span>
-        <span>Error message</span>
-        <span className="text-right">Time</span>
-        <span>Actions</span>
+    <div role="table" aria-label="Incidents in this activity" className="bg-muted text-sm">
+      <div
+        role="row"
+        className="border-border text-muted-foreground bg-muted grid grid-cols-[140px_1fr_auto_auto] gap-4 border-b px-4 py-2 pl-12 text-[11px] font-semibold"
+      >
+        <span role="columnheader">Instance</span>
+        <span role="columnheader">Error message</span>
+        <span role="columnheader" className="text-right">
+          Time
+        </span>
+        <span role="columnheader">Actions</span>
       </div>
       {visible.map((incident) => {
         const resolved = resolvedIds.has(incident.id)
@@ -40,25 +45,26 @@ export function IncidentTable({
         return (
           <div
             key={incident.id}
-            className={`border-line-soft hover:bg-card grid grid-cols-[140px_1fr_auto_auto] items-center gap-4 border-b px-4 py-2.5 pl-12 last:border-b-0 ${
+            role="row"
+            className={`border-border hover:bg-card grid grid-cols-[140px_1fr_auto_auto] items-center gap-4 border-b px-4 py-2.5 pl-12 last:border-b-0 ${
               resolved ? "opacity-50" : ""
             }`}
           >
-            <span className="text-m-blue truncate font-mono text-xs font-medium">
+            <span role="cell" className="text-m-blue truncate font-mono text-xs font-medium">
               {incident.processInstanceId.slice(0, 12)}…
             </span>
-            <span className="text-ink-muted truncate font-mono text-xs">
+            <span role="cell" className="text-muted-foreground truncate font-mono text-xs">
               {incident.incidentMessage ?? incident.incidentType}
             </span>
-            <span className="text-ink-subtle text-right font-mono text-[11px]">
+            <span role="cell" className="text-muted-foreground text-right font-mono text-[11px]">
               {formatTimestamp(incident.incidentTimestamp)}
             </span>
-            <span className="flex items-center gap-1">
+            <span role="cell" className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => onAnalyze(incident.id)}
                 aria-label="Analyze incident"
-                className="bg-card text-ink-muted border-line hover:text-ink hover:bg-line-soft inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium"
+                className="bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium outline-none focus-visible:ring-2"
               >
                 <span aria-hidden="true">🔍</span> Analyze
               </button>
@@ -72,7 +78,7 @@ export function IncidentTable({
                     onOpenCockpit(instanceUrl)
                   }}
                   aria-label="Open instance in Cockpit"
-                  className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium"
+                  className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium outline-none focus-visible:ring-2"
                 >
                   <span aria-hidden="true">▦</span> Cockpit
                 </a>
@@ -86,9 +92,10 @@ export function IncidentTable({
                   type="button"
                   disabled={resolving}
                   onClick={() => onResolve(incident.id)}
-                  className="text-ink-muted border-line hover:text-ink hover:bg-line-soft bg-card inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium disabled:opacity-50"
+                  aria-label="Retry incident"
+                  className="text-muted-foreground border-border hover:text-foreground hover:bg-muted bg-card focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
                 >
-                  ↻ Retry
+                  <span aria-hidden="true">↻</span> Retry
                 </button>
               )}
             </span>
@@ -99,9 +106,10 @@ export function IncidentTable({
         <button
           type="button"
           onClick={() => setShowAll(true)}
-          className="text-m-blue bg-bg hover:bg-card w-full px-4 py-2 pl-12 text-left text-xs font-medium"
+          className="text-m-blue bg-muted hover:bg-card focus-visible:ring-ring w-full px-4 py-2 pl-12 text-left text-xs font-medium outline-none focus-visible:ring-2"
         >
-          Show {hidden} more {hidden === 1 ? "incident" : "incidents"} in this activity →
+          Show {hidden} more {hidden === 1 ? "incident" : "incidents"} in this activity{" "}
+          <span aria-hidden="true">→</span>
         </button>
       )}
     </div>

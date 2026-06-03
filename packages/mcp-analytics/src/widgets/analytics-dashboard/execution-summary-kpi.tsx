@@ -1,4 +1,5 @@
-import { Card, CardContent, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, Skeleton } from "@miragon/mcp-toolkit-ui"
+import { KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 import { useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
 
@@ -16,53 +17,56 @@ export function ExecutionSummaryKpi({
 
   if (!data) {
     return (
-      <div className="bg-card text-card-foreground p-6">
+      <WidgetShell>
+        <WidgetHeader icon="▤" iconTone="info" title="Process Analytics" />
         {fallbackQuery.isError ? (
           <Alert variant="destructive">
             <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
           </Alert>
         ) : (
-          <p className="text-muted-foreground text-sm">Loading process analytics…</p>
+          <div className="border-border grid grid-cols-2 gap-px overflow-hidden rounded-lg border sm:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-card px-5 py-4">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="mt-2 h-7 w-12" />
+              </div>
+            ))}
+          </div>
         )}
-      </div>
+      </WidgetShell>
     )
   }
 
   return (
-    <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
-      <h2 className="text-xl font-semibold">Process Analytics</h2>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <Card className="gap-0 py-0 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm font-medium opacity-80">Total</p>
-            <p className="text-2xl font-bold">{data.totalCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-success/10 border-success/30 text-success-foreground gap-0 py-0 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-sm font-medium opacity-80">Completed</p>
-            <p className="text-2xl font-bold">{data.completedCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-info/10 border-info/30 text-info-foreground gap-0 py-0 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-sm font-medium opacity-80">Running</p>
-            <p className="text-2xl font-bold">{data.runningCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-destructive/10 border-destructive/30 text-destructive gap-0 py-0 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-sm font-medium opacity-80">Failed</p>
-            <p className="text-2xl font-bold">{data.failedCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-destructive/10 border-destructive/30 text-destructive gap-0 py-0 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-sm font-medium opacity-80">Incidents</p>
-            <p className="text-2xl font-bold">{data.incidentCount}</p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <WidgetShell>
+      <WidgetHeader icon="▤" iconTone="info" title="Process Analytics" />
+      <KpiGrid
+        boxed
+        header={{ label: "Execution Summary" }}
+        cells={[
+          { label: "Total", value: data.totalCount },
+          {
+            label: "Completed",
+            value: data.completedCount,
+            tone: data.completedCount > 0 ? "success" : undefined,
+          },
+          {
+            label: "Running",
+            value: data.runningCount,
+            tone: data.runningCount > 0 ? "info" : undefined,
+          },
+          {
+            label: "Failed",
+            value: data.failedCount,
+            tone: data.failedCount > 0 ? "critical" : undefined,
+          },
+          {
+            label: "Incidents",
+            value: data.incidentCount,
+            tone: data.incidentCount > 0 ? "critical" : undefined,
+          },
+        ]}
+      />
+    </WidgetShell>
   )
 }

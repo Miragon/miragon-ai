@@ -28,15 +28,15 @@ export function GroupCard({
   }
 
   return (
-    <div className="border-line mb-2 overflow-hidden rounded-lg border">
+    <div className="border-border mb-2 overflow-hidden rounded-lg border">
       <div
         role="button"
         tabIndex={0}
         aria-expanded={expanded}
         onClick={onToggle}
         onKeyDown={handleKeyDown}
-        className={`bg-card hover:bg-bg focus-visible:ring-m-blue/50 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 ${
-          expanded ? "border-line border-b" : ""
+        className={`bg-card hover:bg-muted focus-visible:ring-ring/50 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 ${
+          expanded ? "border-border border-b" : ""
         }`}
       >
         {summary}

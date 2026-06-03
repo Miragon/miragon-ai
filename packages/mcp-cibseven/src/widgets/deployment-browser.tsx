@@ -23,7 +23,7 @@ export function DeploymentBrowserWidget({ data }: { data: DeploymentBrowserData 
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </div>
@@ -67,7 +67,7 @@ export function DeploymentBrowserWidget({ data }: { data: DeploymentBrowserData 
                         key={res.id}
                         className="bg-muted flex items-center gap-2 rounded px-3 py-1.5"
                       >
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-muted-foreground text-xs" aria-hidden="true">
                           {resourceIcon(res.name)}
                         </span>
                         <span className="font-mono text-sm">{res.name}</span>

@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState } from "react"
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
-import { Alert, AlertDescription, Badge, Button, Card, CardContent } from "@miragon/mcp-toolkit-ui"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+} from "@miragon/mcp-toolkit-ui"
 import {
   buildGradientLut,
   buildHeatPoints,
   drawHeatLayer,
+  HEAT_GRADIENT_CSS,
   type BpmnElement,
   type HeatPoint,
 } from "./bpmn-heatmap/heat-utils.js"
@@ -61,6 +70,7 @@ export function BpmnHeatmap({
   const heatCanvasRef = useRef<HTMLCanvasElement>(null)
   const viewerRef = useRef<NavigatedViewer | null>(null)
   const redrawRef = useRef<(() => void) | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
   // Latest heat inputs, read by redraw() so we can repaint without re-importing.
   const dataRef = useRef({ nodeFrequencies, edgeFrequencies, diagramRadius })
   dataRef.current = { nodeFrequencies, edgeFrequencies, diagramRadius }
@@ -73,8 +83,16 @@ export function BpmnHeatmap({
     let cancelled = false
     let cleanupRedraw: (() => void) | null = null
     const gradientLut = buildGradientLut()
+    setImportError(null)
 
-    void viewer.importXML(bpmnXml).then(() => {
+    void (async () => {
+      try {
+        await viewer.importXML(bpmnXml)
+      } catch (err) {
+        if (cancelled) return
+        setImportError(err instanceof Error ? err.message : "Failed to render the BPMN diagram.")
+        return
+      }
       if (cancelled) return
       const bpmn = viewer as unknown as BpmnViewerWithGet
       const canvas = bpmn.get("canvas")
@@ -141,7 +159,7 @@ export function BpmnHeatmap({
         ro.disconnect()
         redrawRef.current = null
       }
-    })
+    })()
 
     return () => {
       cancelled = true
@@ -179,18 +197,27 @@ export function BpmnHeatmap({
   }
 
   return (
-    <div className="relative" style={{ height: `${height}px`, width: "100%" }}>
+    <div className="relative w-full" style={{ height: `${height}px` }}>
       <div
         ref={containerRef}
-        className="border-border absolute inset-0 rounded-lg border"
-        style={{ width: "100%", height: "100%" }}
+        role="img"
+        aria-label="BPMN process diagram with an execution heat overlay"
+        className="border-border absolute inset-0 size-full rounded-lg border"
       />
       <canvas
         ref={heatCanvasRef}
-        className="pointer-events-none absolute inset-0 rounded-lg"
-        style={{ mixBlendMode: "multiply", width: "100%", height: "100%" }}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 size-full rounded-lg"
+        style={{ mixBlendMode: "multiply" }}
       />
-      <HeatmapZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onFit={handleFit} />
+      {importError ? (
+        <Alert className="absolute inset-x-3 top-3">
+          <AlertTitle>Diagram could not be rendered</AlertTitle>
+          <AlertDescription>{importError}</AlertDescription>
+        </Alert>
+      ) : (
+        <HeatmapZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onFit={handleFit} />
+      )}
     </div>
   )
 }
@@ -200,11 +227,9 @@ export function HeatmapLegend() {
     <div className="flex items-center gap-2 text-xs">
       <span className="text-muted-foreground">Less</span>
       <div
+        aria-hidden="true"
         className="h-3 w-32 rounded"
-        style={{
-          background:
-            "linear-gradient(to right, rgba(0,0,255,0), rgba(0,200,80,0.85), rgba(255,230,0,0.9), rgba(255,140,0,0.95), rgba(220,30,30,1))",
-        }}
+        style={{ background: HEAT_GRADIENT_CSS }}
       />
       <span className="text-muted-foreground">More</span>
     </div>
@@ -256,19 +281,11 @@ export function BpmnHeatmapWidget({ data }: { data: BpmnHeatmapData | null }) {
   return (
     <Card>
       <CardContent>
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-            flexWrap: "wrap",
-            marginBottom: 12,
-          }}
-        >
+        <div className="mb-3 flex flex-wrap items-center gap-3">
           <strong>BPMN heatmap</strong>
           <Badge>{data.processDefinitionKey}</Badge>
           <Badge variant="outline">window: {data.period}</Badge>
-          <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
+          <div className="ml-auto flex gap-1">
             <Button
               size="sm"
               variant={mode === "frequency" ? "default" : "outline"}
@@ -288,15 +305,7 @@ export function BpmnHeatmapWidget({ data }: { data: BpmnHeatmapData | null }) {
 
         <BpmnHeatmap bpmnXml={data.bpmnXml} nodeFrequencies={values} />
 
-        <div
-          style={{
-            marginTop: 12,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <span className="text-muted-foreground text-xs">{legendLabel}</span>
           <HeatmapLegend />
         </div>

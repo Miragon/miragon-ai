@@ -14,6 +14,7 @@ import {
   FilterBar,
   GroupCard,
   SectionHeading,
+  TONE_DOT,
   WidgetShell,
   useHostActions,
   type FilterChip,
@@ -53,27 +54,26 @@ function ProcessSummary({
   onOpenCockpit: (url: string) => void
 }) {
   const tone = process.tone
-  const dotClass = tone === "critical" ? "bg-critical" : "bg-warning"
 
   return (
     <div
       className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] items-center gap-4 px-4 py-3 ${
-        expanded ? "border-line border-b" : ""
+        expanded ? "border-border border-b" : ""
       }`}
     >
       <div className="min-w-0">
-        <div className="text-ink flex items-center gap-2 text-sm font-semibold">
-          <span className={`size-1.5 rounded-full ${dotClass}`} />
+        <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
+          <span className={`size-1.5 rounded-full ${TONE_DOT[tone]}`} />
           <span className="truncate">
             {process.processDefinitionName ?? process.processDefinitionKey}
           </span>
           {process.version !== null && (
-            <code className="text-ink-subtle font-mono text-xs font-normal">
+            <code className="text-muted-foreground font-mono text-xs font-normal">
               v{process.version}
             </code>
           )}
         </div>
-        <div className="text-ink-subtle font-mono text-xs">
+        <div className="text-muted-foreground font-mono text-xs">
           {process.affectedActivityCount}{" "}
           {process.affectedActivityCount === 1 ? "activity" : "activities"} ·{" "}
           {process.runningInstances !== null
@@ -82,17 +82,20 @@ function ProcessSummary({
           · last {formatTimestamp(process.latestIncident)}
         </div>
       </div>
-      <div className="text-ink-muted text-right text-xs tabular-nums">
-        <div className="text-ink font-semibold">
+      <div className="text-muted-foreground text-right text-xs tabular-nums">
+        <div className="text-foreground font-semibold">
           {process.affectedActivityCount}
           {process.totalActivityCount !== null && (
-            <span className="text-ink-subtle font-normal"> /{process.totalActivityCount}</span>
+            <span className="text-muted-foreground font-normal">
+              {" "}
+              /{process.totalActivityCount}
+            </span>
           )}
         </div>
         <div>activities</div>
       </div>
-      <div className="text-ink-muted text-right text-xs tabular-nums">
-        <div className="text-ink font-semibold">+{process.last24hCount}</div>
+      <div className="text-muted-foreground text-right text-xs tabular-nums">
+        <div className="text-foreground font-semibold">+{process.last24hCount}</div>
         <div>last 24h</div>
       </div>
       <CountPill tone={tone}>{process.incidentCount}</CountPill>
@@ -102,7 +105,8 @@ function ProcessSummary({
           e.stopPropagation()
           onOpenDetail()
         }}
-        className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold"
+        aria-label={`Open incidents detail for ${process.processDefinitionName ?? process.processDefinitionKey}`}
+        className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
       >
         Open detail <span aria-hidden>→</span>
       </button>
@@ -117,7 +121,7 @@ function ProcessSummary({
             onOpenCockpit(process.cockpitUrl)
           }}
           aria-label={`Open ${process.processDefinitionName ?? process.processDefinitionKey} in Cockpit`}
-          className="text-ink-muted border-line hover:text-ink hover:bg-line-soft inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium"
+          className="text-muted-foreground border-border hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium outline-none focus-visible:ring-2"
         >
           <span aria-hidden="true">▦</span> Cockpit
         </a>
@@ -126,7 +130,7 @@ function ProcessSummary({
       )}
       <span
         aria-hidden="true"
-        className={`text-ink-subtle inline-block w-3 text-center text-xs transition-transform ${
+        className={`text-muted-foreground inline-block w-3 text-center text-xs transition-transform ${
           expanded ? "rotate-90" : ""
         }`}
       >
@@ -138,19 +142,19 @@ function ProcessSummary({
 
 function ActivityRow({ activity }: { activity: IncidentsDashboardActivity }) {
   return (
-    <div className="border-line-soft text-ink grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 border-b px-4 py-3 pl-7 last:border-b-0">
+    <div className="border-border text-foreground grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 border-b px-4 py-3 pl-7 last:border-b-0">
       <div className="bg-critical-soft text-critical grid size-[18px] place-items-center rounded-full text-[10px] font-bold">
         !
       </div>
       <div className="min-w-0">
-        <div className="text-ink truncate text-sm font-semibold">
+        <div className="text-foreground truncate text-sm font-semibold">
           {activity.activityName ?? activity.activityId}
         </div>
-        <div className="text-ink-muted truncate font-mono text-xs">
+        <div className="text-muted-foreground truncate font-mono text-xs">
           {activity.representativeMessage ?? activity.activityId}
         </div>
       </div>
-      <div className="text-ink-subtle text-right font-mono text-[11px]">
+      <div className="text-muted-foreground text-right font-mono text-[11px]">
         first seen
         <br />
         {formatTimestamp(activity.firstSeen)}
@@ -162,7 +166,7 @@ function ActivityRow({ activity }: { activity: IncidentsDashboardActivity }) {
 
 function ActivityList({ activities }: { activities: IncidentsDashboardActivity[] }) {
   return (
-    <div className="bg-bg">
+    <div className="bg-muted">
       {activities.map((a) => (
         <ActivityRow key={a.activityId} activity={a} />
       ))}
@@ -227,7 +231,7 @@ export function IncidentProcessList({ data }: { data: IncidentsDashboardData | n
   if (!data) {
     return (
       <WidgetShell>
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </WidgetShell>
@@ -273,7 +277,7 @@ export function IncidentProcessList({ data }: { data: IncidentsDashboardData | n
         <SectionHeading title="Grouped by process" hint="click to expand activities" />
 
         {filteredProcesses.length === 0 ? (
-          <div className="border-line text-ink-muted bg-card rounded-lg border p-8 text-center text-sm">
+          <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
             {data.processes.length === 0
               ? "No open incidents"
               : "No processes match the current filter"}

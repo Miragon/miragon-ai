@@ -132,9 +132,7 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       {schema.fields.length === 0 && manualEntries.length === 0 && (
-        <p className="text-muted-foreground text-sm">
-          Für diesen Task ist kein Formular definiert.
-        </p>
+        <p className="text-muted-foreground text-sm">No form is defined for this task.</p>
       )}
       {readonlyFields.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -292,12 +290,16 @@ function FieldRow({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between">
-        <label className={`text-sm font-medium ${disabled ? "text-muted-foreground" : ""}`}>
+        <label
+          htmlFor={`field-${field.name}`}
+          className={`text-sm font-medium ${disabled ? "text-muted-foreground" : ""}`}
+        >
           {label}
         </label>
         <span className="text-muted-foreground text-xs">{meta}</span>
       </div>
       <Input
+        id={`field-${field.name}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="h-8"
@@ -319,12 +321,14 @@ function ManualEntryRow({
   return (
     <div className="flex items-center gap-1">
       <Input
+        aria-label="Variable name"
         className="h-8 flex-1"
         placeholder="name"
         value={entry.name}
         onChange={(e) => onChange({ ...entry, name: e.target.value })}
       />
       <select
+        aria-label="Variable type"
         className="border-input bg-background h-8 rounded-md border px-2 text-xs"
         value={entry.type}
         onChange={(e) => onChange({ ...entry, type: e.target.value })}
@@ -336,6 +340,7 @@ function ManualEntryRow({
         ))}
       </select>
       <Input
+        aria-label="Variable value"
         className="h-8 flex-1"
         placeholder="value"
         value={entry.value}

@@ -8,34 +8,54 @@ import {
   TableCell,
   Card,
   CardContent,
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  Skeleton,
 } from "@miragon/mcp-toolkit-ui"
+import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 import { formatDate, truncate, useFailureDashboardSelfFetch } from "./lib.js"
 
 export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboardData | null }) {
   const fallbackQuery = useFailureDashboardSelfFetch(initialData)
   const data = initialData ?? fallbackQuery.data ?? null
-  if (!data) return null
+  if (!data) {
+    return (
+      <WidgetShell>
+        <div className="rounded-lg border p-4" aria-busy="true">
+          <Skeleton className="mb-3 h-5 w-40" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </WidgetShell>
+    )
+  }
   if (data.errorPatterns.length === 0) {
     if (data.processBreakdown.length === 0) {
       return (
-        <div className="bg-card text-card-foreground p-6">
+        <WidgetShell>
           <Card className="gap-0 py-0 shadow-none">
-            <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">No open incidents found</p>
+            <CardContent className="p-4">
+              <Alert>
+                <AlertTitle>No open incidents found</AlertTitle>
+                <AlertDescription>
+                  There are no error patterns or failing processes in the current snapshot.
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
-        </div>
+        </WidgetShell>
       )
     }
     return null
   }
 
   return (
-    <div className="bg-card text-card-foreground p-6">
+    <WidgetShell>
       <details open>
         <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
           <svg
+            aria-hidden="true"
             className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
             viewBox="0 0 16 16"
             fill="currentColor"
@@ -46,15 +66,27 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
           <Badge variant="destructive">{data.errorPatterns.length}</Badge>
         </summary>
         <div className="mt-3 rounded-lg border">
-          <Table>
+          <Table aria-label="Error patterns by incident message, activity and process">
             <TableHeader>
               <TableRow>
-                <TableHead>Error</TableHead>
-                <TableHead>Activity</TableHead>
-                <TableHead>Process</TableHead>
-                <TableHead className="text-right">Count</TableHead>
-                <TableHead>First Seen</TableHead>
-                <TableHead>Last Seen</TableHead>
+                <TableHead scope="col" aria-sort="none">
+                  Error
+                </TableHead>
+                <TableHead scope="col" aria-sort="none">
+                  Activity
+                </TableHead>
+                <TableHead scope="col" aria-sort="none">
+                  Process
+                </TableHead>
+                <TableHead scope="col" aria-sort="none" className="text-right">
+                  Count
+                </TableHead>
+                <TableHead scope="col" aria-sort="none">
+                  First Seen
+                </TableHead>
+                <TableHead scope="col" aria-sort="none">
+                  Last Seen
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -95,6 +127,6 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
           </Table>
         </div>
       </details>
-    </div>
+    </WidgetShell>
   )
 }

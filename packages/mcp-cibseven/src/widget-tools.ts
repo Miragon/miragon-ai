@@ -306,7 +306,9 @@ export function registerWidgetTools(
       title: "Incident Detail",
       description:
         "Detail view for a single incident: failure stacktrace, BPMN with the failing activity highlighted, instance variables and activity tree, and a history timeline. Drill-in target from camunda7_show_process_incidents.",
-      annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
+      // Read-only view: the tool only reads data. Mutations (resolve/retry) happen
+      // via separate tool calls from inside the widget, not from this tool.
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         incidentId: z.string().describe("The incident ID to inspect"),
         ...engineParam,

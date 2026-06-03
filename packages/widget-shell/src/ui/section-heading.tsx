@@ -14,10 +14,10 @@ export function SectionHeading({
   trailing?: ReactNode
 }) {
   return (
-    <div className="text-ink-muted mb-3 flex items-center justify-between text-sm font-semibold">
+    <div className="text-muted-foreground mb-3 flex items-center justify-between text-sm font-semibold">
       <span>{title}</span>
       {(hint || trailing) && (
-        <span className="text-ink-subtle text-xs font-medium">{trailing ?? hint}</span>
+        <span className="text-muted-foreground text-xs font-medium">{trailing ?? hint}</span>
       )}
     </div>
   )

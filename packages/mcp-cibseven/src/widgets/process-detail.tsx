@@ -36,7 +36,7 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
   if (!data) {
     return (
       <WidgetShell>
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </WidgetShell>
@@ -97,25 +97,25 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
               </StatusBadge>
             </div>
           )}
-          <h1 className="text-ink mb-1.5 text-2xl font-bold tracking-tight">
+          <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">
             {title}
             {data.version !== null && (
-              <span className="border-line bg-bg text-ink-muted ml-2 inline-block rounded border px-2 py-0.5 align-middle font-mono text-xs font-medium">
+              <span className="border-border bg-muted text-muted-foreground ml-2 inline-block rounded border px-2 py-0.5 align-middle font-mono text-xs font-medium">
                 v{data.version}
               </span>
             )}
           </h1>
-          <div className="text-ink-muted flex flex-wrap items-center gap-2 text-sm">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
             <span className="font-mono text-xs">{data.processDefinitionKey}</span>
             {data.runningInstances !== null && (
               <>
-                <span className="text-ink-subtle">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span>{data.runningInstances.toLocaleString()} running instances</span>
               </>
             )}
             {cockpitUrl && (
               <>
-                <span className="text-ink-subtle">·</span>
+                <span className="text-muted-foreground">·</span>
                 <a
                   href={cockpitUrl}
                   target="_blank"

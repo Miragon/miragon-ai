@@ -1,16 +1,10 @@
 import type { ReactNode } from "react"
-import type { ToneVariant } from "./widget-header.js"
-
-const TONE_VALUE: Partial<Record<ToneVariant, string>> = {
-  critical: "text-critical",
-  warning: "text-warning",
-  success: "text-m-green",
-}
+import { TONE_TEXT, type ToneVariant } from "./tone-utils.js"
 
 const TREND_TONE: Record<"up" | "down" | "flat", string> = {
   up: "text-critical",
   down: "text-m-green",
-  flat: "text-ink-muted",
+  flat: "text-muted-foreground",
 }
 
 export interface KpiCell {
@@ -26,7 +20,7 @@ export interface KpiCell {
 /**
  * Bordered KPI strip — typically 4 cells across. Matches the `.kpis` block
  * in the Miragon mockup. Cells flow as columns; cell count adapts via
- * `grid-cols-N` (supports 1–6). For denser compact stats use `MiniStats`.
+ * `grid-cols-N` (supports 1–6).
  */
 const COL_CLASS: Record<number, string> = {
   1: "grid-cols-1",
@@ -61,15 +55,15 @@ export function KpiGrid({
 }) {
   const cols = Math.min(Math.max(cells.length, 1), 6)
   const colClass = COL_CLASS[cols] ?? "grid-cols-4"
-  const wrapperClass = boxed ? "border-line overflow-hidden rounded-lg border" : ""
-  const stripClass = boxed ? "" : "border-line border-y"
+  const wrapperClass = boxed ? "border-border overflow-hidden rounded-lg border" : ""
+  const stripClass = boxed ? "" : "border-border border-y"
   return (
     <div className={wrapperClass}>
       {header && (
-        <div className="border-line bg-bg text-ink-subtle flex items-center gap-2 border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">
+        <div className="border-border bg-muted text-muted-foreground flex items-center gap-2 border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">
           <span>{header.label}</span>
           {header.badge && (
-            <span className="border-line bg-card text-ink-subtle rounded border px-1.5 py-0 text-[10px] font-medium normal-case">
+            <span className="border-border bg-card text-muted-foreground rounded border px-1.5 py-0 text-[10px] font-medium normal-case">
               {header.badge}
             </span>
           )}
@@ -79,23 +73,25 @@ export function KpiGrid({
         {cells.map((cell, idx) => (
           <div
             key={idx}
-            className={`px-5 py-4 ${idx < cells.length - 1 ? "border-line border-r" : ""}`}
+            className={`px-5 py-4 ${idx < cells.length - 1 ? "border-border border-r" : ""}`}
           >
-            <div className="text-ink-subtle text-xs font-medium">{cell.label}</div>
+            <div className="text-muted-foreground text-xs font-medium">{cell.label}</div>
             <div
               className={`mt-1.5 text-2xl font-bold tabular-nums leading-none tracking-tight ${
-                cell.tone ? TONE_VALUE[cell.tone] : "text-ink"
+                (cell.tone && TONE_TEXT[cell.tone]) || "text-foreground"
               }`}
             >
               {cell.value}
               {cell.fraction && (
-                <span className="text-ink-subtle ml-0.5 text-sm font-normal">{cell.fraction}</span>
+                <span className="text-muted-foreground ml-0.5 text-sm font-normal">
+                  {cell.fraction}
+                </span>
               )}
             </div>
             {cell.trend && (
               <div
                 className={`mt-1.5 text-xs ${
-                  cell.trendDirection ? TREND_TONE[cell.trendDirection] : "text-ink-muted"
+                  cell.trendDirection ? TREND_TONE[cell.trendDirection] : "text-muted-foreground"
                 }`}
               >
                 {cell.trend}

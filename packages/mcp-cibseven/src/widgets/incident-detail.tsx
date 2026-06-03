@@ -45,7 +45,7 @@ export function IncidentDetailWidget({ data }: { data: IncidentDetailData | null
   if (!data) {
     return (
       <WidgetShell>
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </WidgetShell>
@@ -76,27 +76,27 @@ export function IncidentDetailWidget({ data }: { data: IncidentDetailData | null
               {resolved ? "Resolved" : data.incidentType}
             </StatusBadge>
           </div>
-          <h1 className="text-ink mb-1.5 text-2xl font-bold tracking-tight">{title}</h1>
-          <div className="text-ink-muted flex flex-wrap items-center gap-2 text-sm">
+          <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">{title}</h1>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
             <span>
               {data.processDefinitionName ?? data.processDefinitionKey}
               {data.processDefinitionVersion !== null && (
-                <span className="border-line bg-bg text-ink-muted ml-2 inline-block rounded border px-2 py-0.5 align-middle font-mono text-xs font-medium">
+                <span className="border-border bg-muted text-muted-foreground ml-2 inline-block rounded border px-2 py-0.5 align-middle font-mono text-xs font-medium">
                   v{data.processDefinitionVersion}
                 </span>
               )}
             </span>
-            <span className="text-ink-subtle">·</span>
+            <span className="text-muted-foreground">·</span>
             <span className="font-mono text-xs">{data.processInstanceId}</span>
             {data.businessKey && (
               <>
-                <span className="text-ink-subtle">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span>BK: {data.businessKey}</span>
               </>
             )}
             {cockpitInstanceUrl && (
               <>
-                <span className="text-ink-subtle">·</span>
+                <span className="text-muted-foreground">·</span>
                 <a
                   href={cockpitInstanceUrl}
                   target="_blank"

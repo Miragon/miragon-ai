@@ -7,7 +7,7 @@ export function ProcessHealthKpi({ data }: { data: CockpitDashboardData | null }
   if (!data) {
     return (
       <WidgetShell>
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </WidgetShell>

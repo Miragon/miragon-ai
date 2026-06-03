@@ -6,7 +6,7 @@ export function ProcessIncidentKpi({ data }: { data: ProcessIncidentsData | null
   if (!data) {
     return (
       <WidgetShell>
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </WidgetShell>

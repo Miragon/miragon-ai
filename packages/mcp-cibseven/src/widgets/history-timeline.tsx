@@ -1,21 +1,27 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { TONE_DOT } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "@miragon-ai/client-cibseven"
 
 export type { HistoryTimelineData }
 
+// Categorical dot colors per BPMN activity type. Start/end map to the brand
+// success/critical tones; the remaining categories use a distinct, deduplicated
+// palette (an explicit-color set, like the heatmap legend) kept readable in both
+// light and dark mode.
 const ACTIVITY_COLORS: Record<string, string> = {
-  startEvent: "bg-green-500",
-  endEvent: "bg-red-500",
-  userTask: "bg-blue-500",
-  serviceTask: "bg-purple-500",
-  sendTask: "bg-indigo-500",
-  receiveTask: "bg-teal-500",
-  exclusiveGateway: "bg-yellow-500",
-  parallelGateway: "bg-orange-500",
-  inclusiveGateway: "bg-amber-500",
-  callActivity: "bg-cyan-500",
-  subProcess: "bg-pink-500",
+  startEvent: TONE_DOT.success,
+  endEvent: TONE_DOT.critical,
+  userTask: "bg-blue-500 dark:bg-blue-400",
+  serviceTask: "bg-purple-500 dark:bg-purple-400",
+  sendTask: "bg-indigo-500 dark:bg-indigo-400",
+  receiveTask: "bg-teal-500 dark:bg-teal-400",
+  exclusiveGateway: "bg-yellow-500 dark:bg-yellow-400",
+  parallelGateway: "bg-orange-500 dark:bg-orange-400",
+  inclusiveGateway: "bg-amber-500 dark:bg-amber-400",
+  callActivity: "bg-cyan-500 dark:bg-cyan-400",
+  subProcess: "bg-pink-500 dark:bg-pink-400",
 }
+const ACTIVITY_COLOR_FALLBACK = TONE_DOT.neutral
 
 function formatDuration(ms: number | null): string {
   if (ms == null) return "running"
@@ -29,7 +35,7 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </div>
@@ -55,14 +61,16 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
         </div>
       )}
 
-      <div className="flex flex-col gap-1">
+      <ol className="flex flex-col gap-1" aria-label="Activity history timeline">
         {activities.map((activity, index) => {
-          const color = ACTIVITY_COLORS[activity.activityType] ?? "bg-gray-400"
+          const color = ACTIVITY_COLORS[activity.activityType] ?? ACTIVITY_COLOR_FALLBACK
           return (
-            <div key={activity.id} className="flex items-center gap-3">
+            <li key={activity.id} className="flex items-center gap-3">
               <div className="flex flex-col items-center">
-                <div className={`size-3 rounded-full ${color}`} />
-                {index < activities.length - 1 && <div className="bg-border h-6 w-0.5" />}
+                <div className={`size-3 rounded-full ${color}`} aria-hidden="true" />
+                {index < activities.length - 1 && (
+                  <div className="bg-border h-6 w-0.5" aria-hidden="true" />
+                )}
               </div>
               <Card className="flex-1 gap-0 py-0 shadow-none">
                 <CardContent className="flex items-center justify-between px-3 py-2">
@@ -84,10 +92,10 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </li>
           )
         })}
-      </div>
+      </ol>
     </div>
   )
 }

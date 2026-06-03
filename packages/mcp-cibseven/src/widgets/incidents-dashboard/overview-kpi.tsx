@@ -11,7 +11,7 @@ export function IncidentOverviewKpi({ data }: { data: IncidentsDashboardData | n
   if (!data) {
     return (
       <WidgetShell>
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </WidgetShell>

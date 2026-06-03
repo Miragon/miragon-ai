@@ -40,7 +40,7 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>No data available</AlertDescription>
         </Alert>
       </div>
@@ -66,18 +66,18 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Job summary">
         <div className="bg-muted rounded-lg p-4">
           <p className="text-muted-foreground text-sm">Total Jobs</p>
           <p className="text-2xl font-bold">{totalCount}</p>
         </div>
-        <div className="rounded-lg bg-red-500/10 p-4">
+        <div className="bg-critical-soft rounded-lg p-4">
           <p className="text-muted-foreground text-sm">Failed (no retries)</p>
-          <p className="text-destructive text-2xl font-bold">{failedCount}</p>
+          <p className="text-critical text-2xl font-bold">{failedCount}</p>
         </div>
-        <div className="rounded-lg bg-green-500/10 p-4">
+        <div className="bg-m-green-soft rounded-lg p-4">
           <p className="text-muted-foreground text-sm">Healthy</p>
-          <p className="text-success-foreground text-2xl font-bold">{totalCount - failedCount}</p>
+          <p className="text-m-green text-2xl font-bold">{totalCount - failedCount}</p>
         </div>
       </div>
 
@@ -88,15 +88,17 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
           </summary>
           <Card className="gap-0 overflow-hidden py-0 shadow-none">
             <CardContent className="p-0">
-              <Table>
+              <Table aria-label="Jobs">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Activity</TableHead>
-                    <TableHead>Process</TableHead>
-                    <TableHead>Retries</TableHead>
-                    <TableHead>Error</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="w-20"></TableHead>
+                    <TableHead scope="col">Activity</TableHead>
+                    <TableHead scope="col">Process</TableHead>
+                    <TableHead scope="col">Retries</TableHead>
+                    <TableHead scope="col">Error</TableHead>
+                    <TableHead scope="col">Created</TableHead>
+                    <TableHead scope="col" className="w-20">
+                      <span className="sr-only">Actions</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
 import { useWidget } from "mcp-use/react"
+import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 
 interface BpmnCanvas {
   zoom(mode: "fit-viewport"): void
@@ -17,15 +18,32 @@ interface BpmnViewerWithGet {
   get: ((service: "canvas") => BpmnCanvas) & ((service: "overlays") => BpmnOverlays)
 }
 
+/**
+ * Single source of truth for the explicit diagram-overlay colors that get
+ * injected into the bpmn-js SVG via {@link HIGHLIGHT_CSS}. These are genuine
+ * domain colors (green = running, red = incident, blue = instance count) that
+ * must paint SVG strokes/fills, so they stay as concrete values rather than
+ * Tailwind tokens — but they live here once instead of being copy-pasted
+ * across the rule blocks below. The mid-ramp hues chosen are legible against
+ * both the light card surface and a dark canvas.
+ */
+const HIGHLIGHT_COLORS = {
+  running: { fill: "rgba(34, 197, 94, 0.15)", stroke: "#16a34a" },
+  openTask: { fill: "rgba(34, 197, 94, 0.22)", stroke: "#15803d" },
+  incident: { fill: "rgba(239, 68, 68, 0.15)", stroke: "#dc2626" },
+  instanceBadge: "#3b82f6",
+  incidentBadge: "#ef4444",
+} as const
+
 const HIGHLIGHT_CSS = `
 .highlight-running:not(.djs-connection) .djs-visual > :nth-child(1) {
-  fill: rgba(34, 197, 94, 0.15) !important;
-  stroke: #16a34a !important;
+  fill: ${HIGHLIGHT_COLORS.running.fill} !important;
+  stroke: ${HIGHLIGHT_COLORS.running.stroke} !important;
   stroke-width: 2px !important;
 }
 .highlight-open-user-task:not(.djs-connection) .djs-visual > :nth-child(1) {
-  fill: rgba(34, 197, 94, 0.22) !important;
-  stroke: #15803d !important;
+  fill: ${HIGHLIGHT_COLORS.openTask.fill} !important;
+  stroke: ${HIGHLIGHT_COLORS.openTask.stroke} !important;
   stroke-width: 3px !important;
   animation: bpmn-active-task-pulse 1.6s ease-in-out infinite;
 }
@@ -34,8 +52,8 @@ const HIGHLIGHT_CSS = `
   50% { stroke-opacity: 0.45; }
 }
 .highlight-incident:not(.djs-connection) .djs-visual > :nth-child(1) {
-  fill: rgba(239, 68, 68, 0.15) !important;
-  stroke: #dc2626 !important;
+  fill: ${HIGHLIGHT_COLORS.incident.fill} !important;
+  stroke: ${HIGHLIGHT_COLORS.incident.stroke} !important;
   stroke-width: 2px !important;
 }
 .bpmn-overlay-badge {
@@ -52,11 +70,11 @@ const HIGHLIGHT_CSS = `
   color: white;
 }
 .bpmn-overlay-badge--instance-count {
-  background: #3b82f6;
+  background: ${HIGHLIGHT_COLORS.instanceBadge};
   min-width: 22px;
 }
 .bpmn-overlay-badge--incident-count {
-  background: #ef4444;
+  background: ${HIGHLIGHT_COLORS.incidentBadge};
   min-width: 22px;
 }
 `
@@ -204,6 +222,7 @@ function addRedCountOverlays(
 export function BpmnDiagram({ bpmnXml, height = 400, highlights = [] }: BpmnDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<NavigatedViewer | null>(null)
+  const [importError, setImportError] = useState(false)
   const { displayMode } = useWidget()
 
   function getCanvas(): BpmnCanvas | null {
@@ -230,16 +249,24 @@ export function BpmnDiagram({ bpmnXml, height = 400, highlights = [] }: BpmnDiag
 
     const viewer = new NavigatedViewer({ container: containerRef.current })
     viewerRef.current = viewer
+    setImportError(false)
 
-    void viewer.importXML(bpmnXml).then(() => {
-      const bpmn = viewer as unknown as BpmnViewerWithGet
-      const canvas = bpmn.get("canvas")
-      canvas.zoom("fit-viewport")
-      canvas.zoom(canvas.zoom() * 0.95)
+    void viewer
+      .importXML(bpmnXml)
+      .then(() => {
+        const bpmn = viewer as unknown as BpmnViewerWithGet
+        const canvas = bpmn.get("canvas")
+        canvas.zoom("fit-viewport")
+        canvas.zoom(canvas.zoom() * 0.95)
 
-      const overlays = bpmn.get("overlays")
-      applyHighlights(canvas, overlays, highlights)
-    })
+        const overlays = bpmn.get("overlays")
+        applyHighlights(canvas, overlays, highlights)
+      })
+      .catch(() => {
+        // Malformed/unsupported BPMN — surface a small error state instead
+        // of leaving an empty container behind.
+        setImportError(true)
+      })
 
     let rafId: number | null = null
     const observer = new ResizeObserver(() => {
@@ -282,10 +309,19 @@ export function BpmnDiagram({ bpmnXml, height = 400, highlights = [] }: BpmnDiag
     <div className="relative">
       <div
         ref={containerRef}
+        role="img"
+        aria-label="BPMN process diagram"
         className="border-border rounded-lg border"
         style={{ height: `${height}px`, width: "100%" }}
       />
-      <div className="absolute bottom-3 right-3 flex flex-col overflow-hidden rounded border border-gray-300 shadow-sm">
+      {importError && (
+        <div className="absolute inset-0 grid place-items-center p-6">
+          <Alert>
+            <AlertDescription>Unable to render the BPMN diagram.</AlertDescription>
+          </Alert>
+        </div>
+      )}
+      <div className="border-border absolute bottom-3 right-3 flex flex-col overflow-hidden rounded border shadow-sm">
         {[
           { label: "+", onClick: handleZoomIn, title: "Zoom in" },
           { label: "⊡", onClick: handleFit, title: "Fit to viewport" },
@@ -293,11 +329,13 @@ export function BpmnDiagram({ bpmnXml, height = 400, highlights = [] }: BpmnDiag
         ].map(({ label, onClick, title }) => (
           <button
             key={label}
+            type="button"
             onClick={onClick}
             title={title}
-            className="flex h-7 w-7 items-center justify-center bg-white text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-200 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-gray-300"
+            aria-label={title}
+            className="bg-card text-muted-foreground hover:bg-muted active:bg-accent focus-visible:ring-ring [&:not(:last-child)]:border-border flex h-7 w-7 items-center justify-center text-sm outline-none focus-visible:ring-2 [&:not(:last-child)]:border-b"
           >
-            {label}
+            <span aria-hidden="true">{label}</span>
           </button>
         ))}
       </div>
