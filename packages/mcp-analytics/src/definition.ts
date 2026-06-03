@@ -11,54 +11,9 @@ const dashboardPropsSchema = z.toJSONSchema(
         "Scope the dashboard to a single process definition (e.g. 'miraveloLeasing'). When omitted, all processes are aggregated.",
       ),
     period: z
-      .enum(["1d", "7d", "30d", "90d"])
+      .enum(["1d", "3d", "7d", "14d", "30d"])
       .optional()
       .describe("Time window for the self-fetch when no upstream pipeline step populates data."),
-  }),
-)
-
-const failureDashboardPropsSchema = z.toJSONSchema(
-  z.object({
-    period: z
-      .enum(["1d", "7d", "30d", "90d"])
-      .optional()
-      .describe("Time window for the self-fetch when no upstream pipeline step populates data."),
-  }),
-)
-
-const pathFrequencyPropsSchema = z.toJSONSchema(
-  z.object({
-    processDefinitionKey: z
-      .string()
-      .optional()
-      .describe(
-        "Process definition key to analyze. Without it the widget renders a placeholder asking the user to configure it.",
-      ),
-    period: z.enum(["1d", "7d", "30d", "90d"]).optional().describe("Time window (default `7d`)."),
-    minBucketSize: z
-      .number()
-      .int()
-      .min(1)
-      .optional()
-      .describe("Suppress paths seen fewer than this many times (default `10`)."),
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(50)
-      .optional()
-      .describe("Max number of paths to return (default `20`)."),
-  }),
-)
-
-const executionTracePropsSchema = z.toJSONSchema(
-  z.object({
-    processInstanceId: z
-      .string()
-      .optional()
-      .describe(
-        "Pre-fills the trace input and auto-runs the trace on mount. Lets a layout cell pin the widget to a specific instance.",
-      ),
   }),
 )
 
@@ -103,30 +58,20 @@ export const definition: AppDefinition = {
       propsSchema: dashboardPropsSchema,
     },
     {
-      id: "analytics:period-selector",
-      description:
-        "Interactive period chooser (1d / 7d / 30d / 90d) for the failure dashboard. Re-issues `analytics_show_failure_dashboard` on selection.",
-      requires: [],
-      consumes: ["analytics:failureDashboard"],
-      size: "full",
-    },
-    {
       id: "analytics:failure-summary-kpi",
       description:
         "Failure summary KPIs (total incidents, unique error patterns, most affected process).",
       requires: [],
       consumes: ["analytics:failureDashboard"],
       size: "full",
-      propsSchema: failureDashboardPropsSchema,
     },
     {
       id: "analytics:error-patterns-table",
       description:
-        "Top error patterns grouped by message + activity + process, with sample instance ids and first/last occurrence.",
+        "Top incident patterns grouped by incident type + activity + process, with counts.",
       requires: [],
       consumes: ["analytics:failureDashboard"],
       size: "full",
-      propsSchema: failureDashboardPropsSchema,
     },
     {
       id: "analytics:failure-rate-table",
@@ -134,38 +79,11 @@ export const definition: AppDefinition = {
       requires: [],
       consumes: ["analytics:failureDashboard"],
       size: "full",
-      propsSchema: failureDashboardPropsSchema,
-    },
-    {
-      id: "analytics:variable-search",
-      description:
-        "Interactive search over historic process variables (input form + result table). Uses its own self-fetch via `analytics_search_by_variable`.",
-      requires: [],
-      consumes: ["analytics:variableSearch"],
-      size: "full",
-    },
-    {
-      id: "analytics:execution-trace",
-      description:
-        "Per-instance execution trace (activity history + variable changes + OTel spans). Takes a process instance id either via cell props or interactively.",
-      requires: [],
-      consumes: ["analytics:executionTrace"],
-      size: "full",
-      propsSchema: executionTracePropsSchema,
-    },
-    {
-      id: "analytics:path-frequency",
-      description:
-        "Sankey-style flow heatmap of the most frequent execution paths through the BPMN. Self-fetches when given a `processDefinitionKey` cell prop.",
-      requires: [],
-      consumes: ["analytics:pathFrequency"],
-      size: "full",
-      propsSchema: pathFrequencyPropsSchema,
     },
     {
       id: "analytics:cluster-compare",
       description:
-        "Side-by-side comparison of two instance clusters by performance, failure rate, and structural differences. Cluster definitions come from the parent step.",
+        "Side-by-side before/after comparison of instance KPIs around a deployment timestamp.",
       requires: [],
       consumes: ["analytics:clusterCompare"],
       size: "full",
@@ -173,9 +91,25 @@ export const definition: AppDefinition = {
     {
       id: "analytics:version-compare",
       description:
-        "Side-by-side per-version comparison of an analytics metric (e.g. failure rate, duration) across two process versions.",
+        "Side-by-side per-version comparison of KPIs (failure/incident rate, duration) across two process versions.",
       requires: [],
       consumes: ["analytics:versionCompare"],
+      size: "full",
+    },
+    {
+      id: "analytics:engine-compare",
+      description:
+        "Side-by-side comparison of KPIs (failure/incident rate, duration, throughput) across two engines (e.g. prod-a vs prod-b).",
+      requires: [],
+      consumes: ["analytics:engineCompare"],
+      size: "full",
+    },
+    {
+      id: "analytics:bpmn-heatmap",
+      description:
+        "BPMN diagram with a per-element heat overlay from metrics, toggling between traversal frequency and average duration. Node-only; rendered on the latest deployed version's diagram.",
+      requires: [],
+      consumes: ["analytics:bpmnHeatmap"],
       size: "full",
     },
   ],

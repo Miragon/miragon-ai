@@ -17,8 +17,6 @@ camunda7 = "7.24.0"
 cibseven = "2.1.0"
 
 # Runtime libraries
-clickhouse-jdbc = "0.9.8"
-httpclient5 = "5.6"
 opentelemetry-api = "1.61.0"
 
 [libraries]
@@ -41,8 +39,6 @@ cibseven-bpm-junit5 = { module = "org.cibseven.bpm:cibseven-bpm-junit5", version
 cibseven-bpm-assert = { module = "org.cibseven.bpm:cibseven-bpm-assert", version.ref = "cibseven" }
 
 # Runtime libraries (explicit versions)
-clickhouse-jdbc = { module = "com.clickhouse:clickhouse-jdbc", version.ref = "clickhouse-jdbc" }
-httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version.ref = "httpclient5" }
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry-api" }
 
 # BOM-managed (version resolved from spring-boot-bom — listed for discoverability)

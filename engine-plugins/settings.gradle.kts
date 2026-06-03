@@ -9,7 +9,6 @@ pluginManagement {
 
 include(
     "konsist",
-    "shared-history-clickhouse",
-    "cibseven-history-clickhouse",
+    "cibseven-history-metrics",
     "cibseven-otel-eventbridge",
 )

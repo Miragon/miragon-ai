@@ -1,15 +1,9 @@
 import { Card, CardContent, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
-import { useFailureDashboardSelfFetch, type Period } from "./lib.js"
+import { useFailureDashboardSelfFetch } from "./lib.js"
 
-export function FailureSummaryKpi({
-  data: initialData,
-  period,
-}: {
-  data: FailureDashboardData | null
-  period?: Period
-}) {
-  const fallbackQuery = useFailureDashboardSelfFetch(initialData, { period })
+export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboardData | null }) {
+  const fallbackQuery = useFailureDashboardSelfFetch(initialData)
   const data = initialData ?? fallbackQuery.data ?? null
 
   if (!data) {

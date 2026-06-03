@@ -13,7 +13,7 @@ if [ ! -f .env ]; then
   echo "Created .env from .env.example"
 fi
 
-# Default compose stack = infra only (CIB Seven, ClickHouse, OTEL, Jaeger, WireMock).
+# Default compose stack = infra only (CIB Seven, OTEL Collector, Prometheus, Grafana, Jaeger).
 # The bundled MCP server lives behind the `full` profile and is intentionally not
 # started here so `pnpm dev` can bind port 8400 without a conflict.
 docker compose -f docker/docker-compose.yml up -d

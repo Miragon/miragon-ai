@@ -1,9 +1,10 @@
 import {
-  engineFilter,
-  escapeString,
-  type ClickHouseClient,
+  engineMatcher,
+  escapeLabelValue,
+  selector,
   type EngineFilterInput,
-} from "../clickhouse.js"
+  type PrometheusClient,
+} from "../prometheus.js"
 
 export interface ErrorPatternRow {
   incident_message: string
@@ -15,82 +16,50 @@ export interface ErrorPatternRow {
   sample_instance_ids: string[]
 }
 
-export interface FailedInstanceRow {
-  process_instance_id: string
-  process_definition_key: string
-  business_key: string | null
-  start_time: string
-  end_time: string | null
-  duration_in_millis: number | null
-  incident_type: string
-  incident_message: string
-  failed_activity: string
-  incident_time: string
-}
-
+/**
+ * Currently-open incident patterns, from the `camunda_incidents_open` state
+ * gauge — grouped by `incident_type` + definition. Point-in-time ("what is
+ * failing now"), so it is robust regardless of how the data arrived (live or
+ * a backdated/bulk import, where `increase()` over a rate window reads zero).
+ *
+ * Reduced fidelity vs the event store: no raw incident messages (only
+ * `incident_type`, surfaced as `incident_message`), no activity id, no
+ * per-instance ids/timestamps. For the actual failed instances drill in with
+ * `camunda7_list_incidents` / `camunda7_query_historic_process_instances`.
+ */
 export async function findFailedInstances(
-  ch: ClickHouseClient,
+  ch: PrometheusClient,
   params: {
     processDefinitionKey?: string
-    period: string
     incidentType?: string
-    groupByError: boolean
     limit: number
     engineId?: EngineFilterInput
   },
-): Promise<ErrorPatternRow[] | FailedInstanceRow[]> {
-  const interval = { "1d": "1 DAY", "7d": "7 DAY", "30d": "30 DAY" }[
-    params.period as "1d" | "7d" | "30d"
-  ]
+): Promise<ErrorPatternRow[]> {
+  const limit = Math.max(1, Math.floor(params.limit))
+  const sel = selector(
+    params.processDefinitionKey
+      ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
+      : undefined,
+    params.incidentType ? `incident_type="${escapeLabelValue(params.incidentType)}"` : undefined,
+    engineMatcher(params.engineId),
+  )
 
-  const baseConditions: string[] = [`create_time >= now() - INTERVAL ${interval}`]
-  if (params.processDefinitionKey) {
-    baseConditions.push(`process_definition_key = ${escapeString(params.processDefinitionKey)}`)
-  }
-  if (params.incidentType) {
-    baseConditions.push(`incident_type = ${escapeString(params.incidentType)}`)
-  }
-  const efIncident = engineFilter(params.engineId)
-  if (efIncident) baseConditions.push(efIncident)
+  const samples = await ch.instant(
+    `sum by (process_definition_key, incident_type)(camunda_incidents_open${sel})`,
+  )
 
-  const where = baseConditions.join(" AND ")
-  const prefixedWhere = baseConditions.map((c) => `i.${c}`).join(" AND ")
-
-  if (params.groupByError) {
-    const sql = `
-SELECT
-    incident_message,
-    activity_id,
-    process_definition_key,
-    count() AS incident_count,
-    min(create_time) AS first_occurrence,
-    max(create_time) AS last_occurrence,
-    groupArray(10)(process_instance_id) AS sample_instance_ids
-FROM camunda_history.camunda_incidents FINAL
-WHERE ${where}
-GROUP BY incident_message, activity_id, process_definition_key
-ORDER BY incident_count DESC
-LIMIT ${params.limit}`
-    return ch.query<ErrorPatternRow>(sql)
-  }
-
-  const sql = `
-SELECT
-    p.id AS process_instance_id,
-    p.process_definition_key,
-    p.business_key,
-    p.start_time,
-    p.end_time,
-    p.duration_in_millis,
-    i.incident_type,
-    i.incident_message,
-    i.activity_id AS failed_activity,
-    i.create_time AS incident_time
-FROM (SELECT * FROM camunda_history.camunda_incidents FINAL) i
-JOIN camunda_history.camunda_process_instances p ON p.id = i.process_instance_id
-WHERE ${prefixedWhere}
-ORDER BY i.create_time DESC
-LIMIT ${params.limit}`
-
-  return ch.query<FailedInstanceRow>(sql)
+  return samples
+    .map((s) => ({
+      incident_message: s.metric.incident_type ?? "",
+      activity_id: "",
+      process_definition_key: s.metric.process_definition_key ?? "",
+      incident_count: Math.round(s.value),
+      first_occurrence: "",
+      last_occurrence: "",
+      sample_instance_ids: [],
+    }))
+    .filter((r) => r.incident_count > 0)
+    .sort((a, b) => b.incident_count - a.incident_count)
+    .slice(0, limit)
 }

@@ -12,9 +12,11 @@ export const versionCompareInput = z.object({
     .number()
     .int()
     .min(1)
-    .max(90)
-    .default(30)
-    .describe("Look-back window applied to both versions (in days)."),
+    .max(30)
+    .default(14)
+    .describe(
+      "Look-back window applied to both versions, in days (max 30 — Prometheus retention).",
+    ),
   elementId: z
     .string()
     .optional()

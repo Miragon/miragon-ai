@@ -21,14 +21,14 @@ This is intentionally minimal. Phase 2 adds more rules (no-wildcard-imports, eng
 2. Add `src/test/kotlin/<rootPackage>/KonsistArchitectureTest.kt` — pass the Gradle module name (so Konsist scopes to that module only) and the root package to enforce:
 
    ```kotlin
-   package com.camunda7mcp.history.camunda7
+   package com.camunda7mcp.metrics.cibseven
 
    import com.camunda7mcp.konsist.ArchitectureTest
    import org.junit.jupiter.api.Nested
 
    class KonsistArchitectureTest {
        @Nested
-       inner class Guidelines : ArchitectureTest("camunda7-history-clickhouse", "com.camunda7mcp.history.camunda7")
+       inner class Guidelines : ArchitectureTest("cibseven-history-metrics", "com.camunda7mcp.metrics.cibseven")
    }
    ```
 
@@ -45,6 +45,6 @@ Prefer adding tests to `ArchitectureTest` or a new abstract class rather than sp
 Candidate additions tracked in the Phase 2 section of the guardrails plan:
 
 - `NoWildcardImportsTest` — ban `import foo.*` (except `java.util.*`)
-- `EngineAdapterArchitectureTest` — forbid cross-engine imports, enforce single `*HistoryPlugin`, handler extends `ClickHouseHistoryEventHandlerBase`
+- `EngineAdapterArchitectureTest` — forbid cross-engine imports, enforce single `*MetricsPlugin`, handler implements `HistoryEventHandler`
 - `SharedInfrastructureTest` — shared module does not import any engine package
 - `ConfigurationPropertiesTest` — `@ConfigurationProperties` prefixes follow the agreed namespace

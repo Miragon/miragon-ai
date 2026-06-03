@@ -10,7 +10,7 @@ export function formatDuration(ms: number | null): string {
   return `${(ms / 86400000).toFixed(1)}d`
 }
 
-export type AnalyticsDashboardPeriod = "1d" | "7d" | "30d" | "90d"
+export type AnalyticsDashboardPeriod = "1d" | "3d" | "7d" | "14d" | "30d"
 
 export interface DashboardScopeProps {
   processDefinitionKey?: string

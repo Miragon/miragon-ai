@@ -1,15 +1,15 @@
 import type { z } from "zod"
-import type { ClickHouseClient } from "@miragon-ai/client-analytics"
+import type { PrometheusClient } from "@miragon-ai/client-analytics"
 import { schemas, queries } from "@miragon-ai/client-analytics"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 
-type Register = ReturnType<typeof createToolRegistrar<ClickHouseClient>>
+type Register = ReturnType<typeof createToolRegistrar<PrometheusClient>>
 
 export function registerPerformanceTools(register: Register) {
   register({
     name: "analytics_analyze_process_performance",
     description:
-      "Analyze process performance: throughput, P95 duration, failure rate, and bottleneck activities.",
+      "Analyze process performance from metrics: throughput, P50/P95 duration, incident-based failure rate, and per-activity breakdown over a rolling window.",
     annotations: { readOnlyHint: true, idempotentHint: true },
     inputSchema: schemas.analyzePerformanceInput.shape,
     handler: async (ch, args) =>
@@ -19,7 +19,7 @@ export function registerPerformanceTools(register: Register) {
   register({
     name: "analytics_compare_execution_periods",
     description:
-      "Compare process execution metrics between two time periods. Useful for before/after deployment comparisons or regression analysis.",
+      "Compare process execution metrics between two time periods (before/after deployment, regression analysis). Uses PromQL historical windows — both periods must fall within Prometheus retention.",
     annotations: { readOnlyHint: true, idempotentHint: true },
     inputSchema: schemas.comparePeriodsInput.shape,
     handler: async (ch, args) =>
