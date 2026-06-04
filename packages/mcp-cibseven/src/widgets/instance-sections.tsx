@@ -19,15 +19,21 @@ export function Section({
   title,
   count,
   defaultOpen = false,
+  onToggle,
   children,
 }: {
   title: string
   count?: number
   defaultOpen?: boolean
+  /** Notified when the disclosure opens/closes — lets callers lazy-mount content. */
+  onToggle?: (open: boolean) => void
   children: React.ReactNode
 }) {
   return (
-    <details open={defaultOpen || undefined}>
+    <details
+      open={defaultOpen || undefined}
+      onToggle={(e) => onToggle?.((e.currentTarget as HTMLDetailsElement).open)}
+    >
       <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
         <svg
           className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"

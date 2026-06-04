@@ -7,6 +7,7 @@ import {
   AlertDescription,
   Button,
   useToolMutation,
+  useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 
 import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibseven"
@@ -15,6 +16,7 @@ import { ActivityNode, Section, VariablesTable } from "./instance-sections.js"
 import { TaskCompleteForm } from "./task-complete-form.js"
 import { ConfirmDialog } from "./confirm-dialog.js"
 import { refreshCockpitData } from "./refresh.js"
+import { HistoryTimelineView, type HistoryActivity } from "./history-timeline.js"
 
 export type { InstanceDetailData }
 
@@ -60,6 +62,30 @@ function OpenTaskCard({
   )
 }
 
+/**
+ * The activity audit log is the heaviest query on this view, so it loads lazily:
+ * the wrapping <Section> mounts this component only when the operator expands it.
+ * Relies on the session's sticky engine (like the instance mutations above).
+ */
+function InstanceAuditContent({ processInstanceId }: { processInstanceId: string }) {
+  const q = useToolQuery<HistoryActivity[]>(
+    ["camunda7:instance-history", processInstanceId],
+    "camunda7_query_historic_activity_instances",
+    { processInstanceId, sortBy: "startTime", sortOrder: "asc", maxResults: 500 },
+  )
+  if (q.isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{q.error?.message ?? "Failed to load the audit log."}</AlertDescription>
+      </Alert>
+    )
+  }
+  if (!q.data) {
+    return <p className="text-muted-foreground text-sm">Loading audit log…</p>
+  }
+  return <HistoryTimelineView activities={q.data} />
+}
+
 export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null }) {
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set())
@@ -68,6 +94,7 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   const [suspendedOverride, setSuspendedOverride] = useState<boolean | null>(null)
   const [cancelled, setCancelled] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [auditOpen, setAuditOpen] = useState(false)
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const suspendMutation = useToolMutation("camunda7_suspend_process_instance")
   const activateMutation = useToolMutation("camunda7_activate_process_instance")
@@ -286,6 +313,14 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
           instanceId={instance.id}
           readOnly={instance.ended || cancelled}
         />
+      </Section>
+
+      <Section title="Audit log" onToggle={setAuditOpen}>
+        {auditOpen ? (
+          <InstanceAuditContent processInstanceId={instance.id} />
+        ) : (
+          <p className="text-muted-foreground text-sm">Expand to load the activity history.</p>
+        )}
       </Section>
 
       <ConfirmDialog

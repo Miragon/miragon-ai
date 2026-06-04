@@ -3,6 +3,7 @@ import { TONE_DOT } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "@miragon-ai/client-cibseven"
 
 export type { HistoryTimelineData }
+export type HistoryActivity = HistoryTimelineData["activities"][number]
 
 // Categorical dot colors per BPMN activity type. Start/end map to the brand
 // success/critical tones; the remaining categories use a distinct, deduplicated
@@ -31,21 +32,24 @@ function formatDuration(ms: number | null): string {
   return `${(ms / 3600000).toFixed(1)}h`
 }
 
-export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | null }) {
-  if (!data) {
-    return (
-      <div className="bg-card text-card-foreground p-6">
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
-      </div>
-    )
+/**
+ * Shell-less activity timeline. Reused as the standalone history widget and as a
+ * lazily-loaded "Audit log" section inside the instance detail. Pass
+ * `processInstance` to show the summary header (omitted when embedded).
+ */
+export function HistoryTimelineView({
+  activities,
+  processInstance,
+}: {
+  activities: HistoryActivity[]
+  processInstance?: HistoryTimelineData["processInstance"]
+}) {
+  if (activities.length === 0) {
+    return <p className="text-muted-foreground text-sm">No activity history.</p>
   }
 
-  const { processInstance, activities } = data
-
   return (
-    <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
+    <div className="flex flex-col gap-4">
       {processInstance && (
         <div>
           <h2 className="text-xl font-semibold">
@@ -96,6 +100,24 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
           )
         })}
       </ol>
+    </div>
+  )
+}
+
+export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | null }) {
+  if (!data) {
+    return (
+      <div className="bg-card text-card-foreground p-6">
+        <Alert>
+          <AlertDescription>No data available</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-card text-card-foreground p-6">
+      <HistoryTimelineView activities={data.activities} processInstance={data.processInstance} />
     </div>
   )
 }
