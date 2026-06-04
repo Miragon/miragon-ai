@@ -9,6 +9,8 @@ import {
   useToolMutation,
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
+import { ModelContext } from "mcp-use/react"
+import { useHostActions, type HostActions } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibseven"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
@@ -95,6 +97,7 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   const [cancelled, setCancelled] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
+  const host: HostActions = useHostActions()
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const suspendMutation = useToolMutation("camunda7_suspend_process_instance")
   const activateMutation = useToolMutation("camunda7_activate_process_instance")
@@ -176,6 +179,25 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-5 p-6">
+      {/* Keep the agent aware of what the operator is looking at, so "Analyze"
+          and any follow-up question resolve against this instance for free. */}
+      <ModelContext
+        content={[
+          `Support is viewing CIB Seven process instance ${instance.id}${
+            instance.businessKey ? ` (business key ${instance.businessKey})` : ""
+          }, definition ${instance.definitionId}.`,
+          `Status: ${
+            cancelled
+              ? "cancelled"
+              : instance.ended
+                ? "ended"
+                : isSuspended
+                  ? "suspended"
+                  : "running"
+          }; ${activeIncidents.length} open incident${activeIncidents.length === 1 ? "" : "s"}.`,
+          `Act via camunda7_resolve_incident / camunda7_set_job_retries / camunda7_suspend_process_instance / camunda7_delete_process_instance / camunda7_modify_process_instance. For root cause, compare with other instances via camunda7_list_incidents + camunda7_query_historic_activity_instances.`,
+        ].join(" ")}
+      />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">Process Instance Detail</h2>
@@ -241,14 +263,31 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
                         </span>
                       </div>
                       {!resolved && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={resolveMutation.isPending}
-                          onClick={() => handleResolve(inc.id)}
-                        >
-                          Resolve
-                        </Button>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              host.askAi(
+                                `Analyze the root cause of incident ${inc.id} (${inc.incidentType}${
+                                  inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
+                                }) on process instance ${instance.id}${
+                                  instance.businessKey ? ` / ${instance.businessKey}` : ""
+                                } of ${instance.definitionId}. Check whether other instances fail the same way and recommend a fix (retry, variable change, or modification).`,
+                              )
+                            }
+                          >
+                            <span aria-hidden>✦</span> Analyze
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={resolveMutation.isPending}
+                            onClick={() => handleResolve(inc.id)}
+                          >
+                            Resolve
+                          </Button>
+                        </div>
                       )}
                     </div>
                     {inc.incidentMessage && (

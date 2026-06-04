@@ -21,6 +21,16 @@ export interface HostActions {
    * right tool unambiguously.
    */
   showWidget: (prompt: string) => void
+  /**
+   * Hand an open-ended, judgment task to the agent in the conversation
+   * (`sendFollowUpMessage`) — root-cause analysis, "explain this", migration
+   * planning, ticket drafting. Same bridge as {@link HostActions.showWidget}
+   * but a distinct affordance: this crosses the UI→chat boundary deliberately,
+   * for things the deterministic UI cannot do. The prompt should be
+   * self-contained — inline the relevant IDs/keys rather than relying on
+   * ambient ModelContext alone.
+   */
+  askAi: (prompt: string) => void
 }
 
 /**
@@ -67,5 +77,14 @@ export function useHostActions(): HostActions {
     [sendFollowUpMessage],
   )
 
-  return { openLink, showWidget }
+  const askAi = useCallback(
+    (prompt: string) => {
+      void sendFollowUpMessage(prompt).catch((err: unknown) => {
+        console.warn("Failed to send follow-up message:", err)
+      })
+    },
+    [sendFollowUpMessage],
+  )
+
+  return { openLink, showWidget, askAi }
 }

@@ -16,6 +16,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "@miragon-ai/client-cibseven"
+import { useHostActions, type HostActions } from "@miragon-ai/widget-shell/widgets"
 import { ConfirmDialog } from "./confirm-dialog.js"
 import { refreshCockpitData } from "./refresh.js"
 
@@ -38,6 +39,7 @@ function truncate(s: string | null, max: number): string {
 export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
   const [confirmBatch, setConfirmBatch] = useState(false)
+  const host: HostActions = useHostActions()
   const retryMutation = useToolMutation("camunda7_set_job_retries")
   const batchMutation = useToolMutation("camunda7_set_job_retries_batch")
 
@@ -93,14 +95,29 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
           <Badge variant="secondary">{totalCount} total</Badge>
           {failedCount > 0 && <Badge variant="destructive">{failedCount} failed</Badge>}
           {failedJobs.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={batchMutation.isPending}
-              onClick={() => setConfirmBatch(true)}
-            >
-              Retry all failed
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  host.askAi(
+                    `Analyze the ${failedJobs.length} failed job${
+                      failedJobs.length === 1 ? "" : "s"
+                    } shown in the cockpit: cluster them by exception message, identify the most likely root cause, and recommend a fix (batch retry, variable change, or escalation). Investigate with camunda7_list_jobs / camunda7_list_incidents / camunda7_query_historic_activity_instances.`,
+                  )
+                }
+              >
+                <span aria-hidden>✦</span> Analyze failures
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={batchMutation.isPending}
+                onClick={() => setConfirmBatch(true)}
+              >
+                Retry all failed
+              </Button>
+            </>
           )}
         </div>
       </div>
