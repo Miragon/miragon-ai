@@ -13,6 +13,8 @@ import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibsev
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, Section, VariablesTable } from "./instance-sections.js"
 import { TaskCompleteForm } from "./task-complete-form.js"
+import { ConfirmDialog } from "./confirm-dialog.js"
+import { refreshCockpitData } from "./refresh.js"
 
 export type { InstanceDetailData }
 
@@ -62,7 +64,14 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set())
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  // null = follow server state; true/false = local override after a suspend/activate.
+  const [suspendedOverride, setSuspendedOverride] = useState<boolean | null>(null)
+  const [cancelled, setCancelled] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
+  const suspendMutation = useToolMutation("camunda7_suspend_process_instance")
+  const activateMutation = useToolMutation("camunda7_activate_process_instance")
+  const cancelMutation = useToolMutation("camunda7_delete_process_instance")
 
   const visibleTasks = useMemo<OpenUserTask[]>(
     () => (data?.openTasks ?? []).filter((task) => !completedTaskIds.has(task.id)),
@@ -92,11 +101,46 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   }
 
   const { instance, activityTree, variables, incidents, bpmnXml } = data
+  const isSuspended = suspendedOverride ?? instance.suspended ?? false
+  const isActionable = !instance.ended && !cancelled
+  const isMutatingInstance =
+    suspendMutation.isPending || activateMutation.isPending || cancelMutation.isPending
 
   function handleResolve(incidentId: string) {
     resolveMutation.mutate(
       { incidentId },
-      { onSuccess: () => setResolvedIds((prev) => new Set(prev).add(incidentId)) },
+      {
+        onSuccess: () => {
+          setResolvedIds((prev) => new Set(prev).add(incidentId))
+          refreshCockpitData()
+        },
+      },
+    )
+  }
+
+  function handleSuspendToggle() {
+    const mutation = isSuspended ? activateMutation : suspendMutation
+    mutation.mutate(
+      { processInstanceId: instance.id },
+      {
+        onSuccess: () => {
+          setSuspendedOverride(!isSuspended)
+          refreshCockpitData()
+        },
+      },
+    )
+  }
+
+  function handleCancel() {
+    cancelMutation.mutate(
+      { processInstanceId: instance.id },
+      {
+        onSuccess: () => {
+          setCancelled(true)
+          setConfirmCancel(false)
+          refreshCockpitData()
+        },
+      },
     )
   }
 
@@ -105,25 +149,48 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-5 p-6">
-      <div>
-        <h2 className="text-xl font-semibold">Process Instance Detail</h2>
-        <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-sm">
-          <span>
-            ID: <code className="font-mono">{instance.id}</code>
-          </span>
-          {instance.businessKey && (
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">Process Instance Detail</h2>
+          <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-sm">
             <span>
-              Business Key: <code className="font-mono">{instance.businessKey}</code>
+              ID: <code className="font-mono">{instance.id}</code>
             </span>
-          )}
-          <Badge variant={instance.ended ? "secondary" : "default"}>
-            {instance.ended ? "Ended" : "Running"}
-          </Badge>
-          {instance.suspended && <Badge variant="secondary">Suspended</Badge>}
+            {instance.businessKey && (
+              <span>
+                Business Key: <code className="font-mono">{instance.businessKey}</code>
+              </span>
+            )}
+            <Badge variant={cancelled || instance.ended ? "secondary" : "default"}>
+              {cancelled ? "Cancelled" : instance.ended ? "Ended" : "Running"}
+            </Badge>
+            {!cancelled && isSuspended && <Badge variant="secondary">Suspended</Badge>}
+          </div>
+          <div className="text-muted-foreground mt-1 font-mono text-xs">
+            Definition: {instance.definitionId}
+          </div>
         </div>
-        <div className="text-muted-foreground mt-1 font-mono text-xs">
-          Definition: {instance.definitionId}
-        </div>
+        {isActionable && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isMutatingInstance}
+              onClick={handleSuspendToggle}
+            >
+              {isSuspended ? "Activate" : "Suspend"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              disabled={isMutatingInstance}
+              onClick={() => setConfirmCancel(true)}
+            >
+              Cancel instance
+            </Button>
+          </div>
+        )}
       </div>
 
       {incidents && incidents.length > 0 && (
@@ -214,8 +281,23 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
       )}
 
       <Section title="Variables" count={variableEntries.length} defaultOpen>
-        <VariablesTable variables={variables} instanceId={instance.id} readOnly={instance.ended} />
+        <VariablesTable
+          variables={variables}
+          instanceId={instance.id}
+          readOnly={instance.ended || cancelled}
+        />
       </Section>
+
+      <ConfirmDialog
+        open={confirmCancel}
+        onOpenChange={setConfirmCancel}
+        title="Cancel this process instance?"
+        description="This deletes the running instance and all of its tokens. This action is irreversible."
+        confirmLabel="Cancel instance"
+        destructive
+        pending={cancelMutation.isPending}
+        onConfirm={handleCancel}
+      />
     </div>
   )
 }

@@ -13,6 +13,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { ActivityTree, VariableValue } from "@miragon-ai/client-cibseven"
+import { refreshCockpitData } from "./refresh.js"
 
 export function Section({
   title,
@@ -121,6 +122,7 @@ function VariableRow({
         onSuccess: () => {
           onSaved(name, parsed)
           setEditing(false)
+          refreshCockpitData()
         },
       },
     )

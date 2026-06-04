@@ -16,6 +16,8 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "@miragon-ai/client-cibseven"
+import { ConfirmDialog } from "./confirm-dialog.js"
+import { refreshCockpitData } from "./refresh.js"
 
 export type { JobPanelData }
 
@@ -35,7 +37,9 @@ function truncate(s: string | null, max: number): string {
 
 export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
+  const [confirmBatch, setConfirmBatch] = useState(false)
   const retryMutation = useToolMutation("camunda7_set_job_retries")
+  const batchMutation = useToolMutation("camunda7_set_job_retries_batch")
 
   if (!data) {
     return (
@@ -48,11 +52,36 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
   }
 
   const { totalCount, failedCount, jobs } = data
+  const failedJobs = jobs.filter((j) => j.retries === 0 && !retriedIds.has(j.id))
 
   function handleRetry(jobId: string) {
     retryMutation.mutate(
       { jobId, retries: 1 },
-      { onSuccess: () => setRetriedIds((prev) => new Set(prev).add(jobId)) },
+      {
+        onSuccess: () => {
+          setRetriedIds((prev) => new Set(prev).add(jobId))
+          refreshCockpitData()
+        },
+      },
+    )
+  }
+
+  function handleBatchRetry() {
+    const jobIds = failedJobs.map((j) => j.id)
+    if (jobIds.length === 0) return
+    batchMutation.mutate(
+      { jobIds, retries: 1 },
+      {
+        onSuccess: () => {
+          setRetriedIds((prev) => {
+            const next = new Set(prev)
+            jobIds.forEach((id) => next.add(id))
+            return next
+          })
+          setConfirmBatch(false)
+          refreshCockpitData()
+        },
+      },
     )
   }
 
@@ -63,6 +92,16 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{totalCount} total</Badge>
           {failedCount > 0 && <Badge variant="destructive">{failedCount} failed</Badge>}
+          {failedJobs.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={batchMutation.isPending}
+              onClick={() => setConfirmBatch(true)}
+            >
+              Retry all failed
+            </Button>
+          )}
         </div>
       </div>
 
@@ -173,6 +212,18 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
       {jobs.length === 0 && (
         <p className="text-muted-foreground py-4 text-center text-sm">No jobs found</p>
       )}
+
+      <ConfirmDialog
+        open={confirmBatch}
+        onOpenChange={setConfirmBatch}
+        title="Retry failed jobs?"
+        description={`Creates a batch that sets one retry on ${failedJobs.length} failed ${
+          failedJobs.length === 1 ? "job" : "jobs"
+        }. They will re-execute; progress is tracked on the batch.`}
+        confirmLabel={`Retry ${failedJobs.length}`}
+        pending={batchMutation.isPending}
+        onConfirm={handleBatchRetry}
+      />
     </div>
   )
 }

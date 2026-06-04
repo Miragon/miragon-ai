@@ -18,6 +18,7 @@ import {
 
 import type { TaskDashboardData, TaskData } from "@miragon-ai/client-cibseven"
 import { TaskCompleteForm } from "../task-complete-form.js"
+import { refreshCockpitData } from "../refresh.js"
 
 export type { TaskDashboardData }
 
@@ -63,11 +64,15 @@ interface TaskState {
 
 export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
   const [taskStates, setTaskStates] = useState<Map<string, TaskState>>(new Map())
-  const [claimingTaskId, setClaimingTaskId] = useState<string | null>(null)
+  const [assignTarget, setAssignTarget] = useState<{
+    taskId: string
+    mode: "claim" | "reassign"
+  } | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
-  const [claimUserId, setClaimUserId] = useState("")
+  const [assignUserId, setAssignUserId] = useState("")
   const claimMutation = useToolMutation("camunda7_claim_task")
   const unclaimMutation = useToolMutation("camunda7_unclaim_task")
+  const assignMutation = useToolMutation("camunda7_set_task_assignee")
 
   if (!data) {
     return (
@@ -83,19 +88,34 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
     return taskStates.get(task.id) ?? { assignee: task.assignee, completed: false }
   }
 
-  function handleClaim(taskId: string) {
-    if (!claimUserId.trim()) return
-    claimMutation.mutate(
-      { taskId, userId: claimUserId.trim() },
+  function openAssign(taskId: string, mode: "claim" | "reassign", current: string | null) {
+    setAssignTarget({ taskId, mode })
+    setAssignUserId(mode === "reassign" ? (current ?? "") : "")
+  }
+
+  function closeAssign() {
+    setAssignTarget(null)
+    setAssignUserId("")
+  }
+
+  function handleAssignSubmit() {
+    if (!assignTarget) return
+    const userId = assignUserId.trim()
+    if (!userId) return
+    const { taskId, mode } = assignTarget
+    // claim assigns + locks an unassigned task; set_task_assignee reassigns one.
+    const mutation = mode === "claim" ? claimMutation : assignMutation
+    mutation.mutate(
+      { taskId, userId },
       {
         onSuccess: () => {
           setTaskStates((prev) => {
             const next = new Map(prev)
-            next.set(taskId, { assignee: claimUserId.trim(), completed: false })
+            next.set(taskId, { assignee: userId, completed: false })
             return next
           })
-          setClaimingTaskId(null)
-          setClaimUserId("")
+          closeAssign()
+          refreshCockpitData()
         },
       },
     )
@@ -111,6 +131,7 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
             next.set(taskId, { assignee: null, completed: false })
             return next
           })
+          refreshCockpitData()
         },
       },
     )
@@ -124,9 +145,11 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
       return next
     })
     setCompletingTaskId(null)
+    refreshCockpitData()
   }
 
-  const isMutating = claimMutation.isPending || unclaimMutation.isPending
+  const isMutating =
+    claimMutation.isPending || unclaimMutation.isPending || assignMutation.isPending
   const activeTasks = data.tasks.filter((t) => !getTaskState(t).completed)
 
   return (
@@ -158,7 +181,7 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
                 <TableHead scope="col">Process</TableHead>
                 <TableHead scope="col">Priority</TableHead>
                 <TableHead scope="col">Created</TableHead>
-                <TableHead scope="col" className="w-40">
+                <TableHead scope="col" className="w-64">
                   <span className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
@@ -196,19 +219,19 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {claimingTaskId === task.id ? (
+                          {assignTarget?.taskId === task.id ? (
                             <form
                               className="flex items-center gap-1"
                               onSubmit={(e) => {
                                 e.preventDefault()
-                                handleClaim(task.id)
+                                handleAssignSubmit()
                               }}
                             >
                               <Input
                                 className="h-7 w-24 text-xs"
                                 placeholder="User ID"
-                                value={claimUserId}
-                                onChange={(e) => setClaimUserId(e.target.value)}
+                                value={assignUserId}
+                                onChange={(e) => setAssignUserId(e.target.value)}
                                 autoFocus
                               />
                               <Button
@@ -223,11 +246,8 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
                                 variant="ghost"
                                 size="sm"
                                 type="button"
-                                aria-label="Cancel claim"
-                                onClick={() => {
-                                  setClaimingTaskId(null)
-                                  setClaimUserId("")
-                                }}
+                                aria-label="Cancel assignment"
+                                onClick={closeAssign}
                               >
                                 X
                               </Button>
@@ -239,20 +259,30 @@ export function TaskListTable({ data }: { data: TaskDashboardData | null }) {
                                   variant="outline"
                                   size="sm"
                                   disabled={isMutating}
-                                  onClick={() => setClaimingTaskId(task.id)}
+                                  onClick={() => openAssign(task.id, "claim", null)}
                                 >
                                   Claim
                                 </Button>
                               )}
                               {state.assignee && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={isMutating}
-                                  onClick={() => handleUnclaim(task.id)}
-                                >
-                                  Unclaim
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isMutating}
+                                    onClick={() => openAssign(task.id, "reassign", state.assignee)}
+                                  >
+                                    Reassign
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={isMutating}
+                                    onClick={() => handleUnclaim(task.id)}
+                                  >
+                                    Unclaim
+                                  </Button>
+                                </>
                               )}
                               <Button
                                 variant={completing ? "ghost" : "outline"}
