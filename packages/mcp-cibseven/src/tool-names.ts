@@ -22,6 +22,7 @@ export const CAMUNDA7_INSTANCE_DETAIL_DATA = "camunda7_instance_detail_data"
 export const CAMUNDA7_TASKS_DATA = "camunda7_tasks_data"
 export const CAMUNDA7_JOBS_DATA = "camunda7_jobs_data"
 export const CAMUNDA7_DEPLOYMENTS_DATA = "camunda7_deployments_data"
+export const CAMUNDA7_INCIDENTS_DATA = "camunda7_incidents_data"
 export const CAMUNDA7_SHOW_COCKPIT_DASHBOARD = "camunda7_show_cockpit_dashboard"
 // Hub-navigation targets surfaced from the cockpit dashboard.
 export const CAMUNDA7_SHOW_INCIDENTS_DASHBOARD = "camunda7_show_incidents_dashboard"

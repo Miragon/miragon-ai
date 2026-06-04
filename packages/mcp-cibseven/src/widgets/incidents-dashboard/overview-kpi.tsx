@@ -7,19 +7,18 @@ function formatTimestamp(iso: string | null): string {
   return new Date(iso).toLocaleString()
 }
 
-export function IncidentOverviewKpi({ data }: { data: IncidentsDashboardData | null }) {
+/** Shell-less incidents KPI header. Reused standalone and in the cockpit app. */
+export function IncidentOverviewKpiView({ data }: { data: IncidentsDashboardData | null }) {
   if (!data) {
     return (
-      <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
-      </WidgetShell>
+      <Alert>
+        <AlertDescription>No data available</AlertDescription>
+      </Alert>
     )
   }
 
   return (
-    <WidgetShell>
+    <>
       <WidgetHeader
         icon="⚠"
         iconTone="critical"
@@ -53,6 +52,14 @@ export function IncidentOverviewKpi({ data }: { data: IncidentsDashboardData | n
           },
         ]}
       />
+    </>
+  )
+}
+
+export function IncidentOverviewKpi({ data }: { data: IncidentsDashboardData | null }) {
+  return (
+    <WidgetShell>
+      <IncidentOverviewKpiView data={data} />
     </WidgetShell>
   )
 }

@@ -7,7 +7,7 @@ import type {
   IncidentsDashboardProcess,
 } from "@miragon-ai/client-cibseven"
 
-import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../../tool-names.js"
+import { navigateViaHost, type OnNavigate } from "../navigation.js"
 
 import {
   CountPill,
@@ -180,8 +180,15 @@ function ActivityList({ activities }: { activities: IncidentsDashboardActivity[]
  * apart would force the filter state through global storage just to avoid
  * one shared `useState`.
  */
-export function IncidentProcessList({ data }: { data: IncidentsDashboardData | null }) {
+export function IncidentProcessListView({
+  data,
+  onNavigate,
+}: {
+  data: IncidentsDashboardData | null
+  onNavigate?: OnNavigate
+}) {
   const host: HostActions = useHostActions()
+  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
 
   const [search, setSearch] = useState("")
   const [activeChip, setActiveChip] = useState<string>(TYPE_ALL)
@@ -230,11 +237,9 @@ export function IncidentProcessList({ data }: { data: IncidentsDashboardData | n
 
   if (!data) {
     return (
-      <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
-      </WidgetShell>
+      <Alert>
+        <AlertDescription>No data available</AlertDescription>
+      </Alert>
     )
   }
 
@@ -258,13 +263,11 @@ export function IncidentProcessList({ data }: { data: IncidentsDashboardData | n
   }
 
   function openDetail(processDefinitionKey: string) {
-    host.showWidget(
-      `Show me the incidents detail for process \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_INCIDENTS})`,
-    )
+    go({ type: "process-incidents", processDefinitionKey })
   }
 
   return (
-    <WidgetShell>
+    <>
       <FilterBar
         search={search}
         onSearchChange={setSearch}
@@ -302,6 +305,14 @@ export function IncidentProcessList({ data }: { data: IncidentsDashboardData | n
           ))
         )}
       </section>
+    </>
+  )
+}
+
+export function IncidentProcessList({ data }: { data: IncidentsDashboardData | null }) {
+  return (
+    <WidgetShell>
+      <IncidentProcessListView data={data} />
     </WidgetShell>
   )
 }

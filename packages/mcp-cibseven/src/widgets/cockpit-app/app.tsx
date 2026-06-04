@@ -6,6 +6,7 @@ import type { CockpitAppData } from "@miragon-ai/client-cibseven"
 import { navigateViaHost, type NavIntent, type OnNavigate } from "../navigation.js"
 import {
   DeploymentsLoader,
+  IncidentsLoader,
   InstanceDetailLoader,
   JobsLoader,
   OverviewView,
@@ -24,6 +25,7 @@ interface EnginesResult {
 /** Internal, client-side view state — mirrors NavIntent but drives the router. */
 type CockpitView =
   | { section: "overview" }
+  | { section: "incidents" }
   | { section: "tasks" }
   | { section: "jobs" }
   | { section: "deployments" }
@@ -123,6 +125,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
       case "process-list":
         setView({ section: "overview" })
         return
+      case "incidents":
       case "tasks":
       case "jobs":
       case "deployments":
@@ -138,7 +141,6 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         setView({ section: "instance-detail", processInstanceId: intent.processInstanceId })
         return
       // Not yet client-side — delegate to the agent (opens the matching widget).
-      case "incidents":
       case "process-incidents":
       case "incident-detail":
         navigateViaHost(host, intent)
@@ -219,11 +221,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                   key={s.id}
                   type="button"
                   aria-current={isActive ? "page" : undefined}
-                  onClick={() =>
-                    s.id === "incidents"
-                      ? navigate({ type: "incidents" })
-                      : setView({ section: s.id })
-                  }
+                  onClick={() => setView({ section: s.id })}
                   className={`focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2 ${
                     isActive
                       ? "bg-m-blue-soft text-m-blue font-semibold"
@@ -232,11 +230,6 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                 >
                   <span aria-hidden="true">{s.icon}</span>
                   {s.label}
-                  {s.id === "incidents" && (
-                    <span aria-hidden="true" className="text-muted-foreground ml-auto text-xs">
-                      ↗
-                    </span>
-                  )}
                 </button>
               )
             })}
@@ -288,6 +281,9 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
 
           {view.section === "overview" && (
             <OverviewView engineId={engineId} onNavigate={navigate} />
+          )}
+          {view.section === "incidents" && (
+            <IncidentsLoader engineId={engineId} onNavigate={navigate} />
           )}
           {view.section === "tasks" && <TasksLoader engineId={engineId} />}
           {view.section === "jobs" && <JobsLoader engineId={engineId} />}

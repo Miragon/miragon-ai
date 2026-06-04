@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type {
   DeploymentBrowserData,
+  IncidentsDashboardData,
   InstanceDetailData,
   JobPanelData,
   ProcessDetailData,
@@ -10,6 +11,7 @@ import type {
 } from "@miragon-ai/client-cibseven"
 import {
   CAMUNDA7_DEPLOYMENTS_DATA,
+  CAMUNDA7_INCIDENTS_DATA,
   CAMUNDA7_INSTANCE_DETAIL_DATA,
   CAMUNDA7_JOBS_DATA,
   CAMUNDA7_PROCESS_DETAIL_DATA,
@@ -19,6 +21,8 @@ import {
 import type { OnNavigate } from "../navigation.js"
 import { ProcessHealthKpiView } from "../cockpit-dashboard/health-kpi.js"
 import { ProcessDefinitionsTableView } from "../cockpit-dashboard/definitions-table.js"
+import { IncidentOverviewKpiView } from "../incidents-dashboard/overview-kpi.js"
+import { IncidentProcessListView } from "../incidents-dashboard/process-list.js"
 import { ProcessDetailView } from "../process-detail.js"
 import { ProcessInstancesView } from "../process-instances/list.js"
 import { InstanceDetailWidget } from "../instance-detail.js"
@@ -63,6 +67,30 @@ export function OverviewView({
       <ProcessHealthKpiView engineId={engineId} onNavigate={onNavigate} />
       <ProcessDefinitionsTableView engineId={engineId} onNavigate={onNavigate} />
     </div>
+  )
+}
+
+export function IncidentsLoader({
+  engineId,
+  onNavigate,
+}: {
+  engineId: string
+  onNavigate: OnNavigate
+}) {
+  const q = useToolQuery<IncidentsDashboardData>(
+    ["camunda7:incidents", engineId],
+    CAMUNDA7_INCIDENTS_DATA,
+    { engine: engineId },
+  )
+  return (
+    <Loaded data={q.data} isError={q.isError} error={q.error}>
+      {(d) => (
+        <div className="flex flex-col gap-6">
+          <IncidentOverviewKpiView data={d} />
+          <IncidentProcessListView data={d} onNavigate={onNavigate} />
+        </div>
+      )}
+    </Loaded>
   )
 }
 
