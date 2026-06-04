@@ -24,6 +24,19 @@ export interface HostActions {
 }
 
 /**
+ * Builds the natural-language intent string passed to {@link HostActions.showWidget}.
+ * The host agent reads the trailing `(use <toolName>)` hint to pick the right
+ * tool unambiguously. Centralised so every in-widget navigation handoff phrases
+ * the hint identically (and a tool rename only has to flow through the imported
+ * `CAMUNDA7_SHOW_*` constant).
+ *
+ * @example host.showWidget(buildShowWidgetIntent(CAMUNDA7_SHOW_PROCESS_DETAIL, `Show the process detail for \`${key}\``))
+ */
+export function buildShowWidgetIntent(toolName: string, description: string): string {
+  return `${description} (use ${toolName})`
+}
+
+/**
  * Bridge-aware host actions for widgets. Replaces the older
  * `useOpenExternal` (which used raw `window.open` and was blocked in the
  * MCP host iframe). Use `openLink` for external URLs and `showWidget` to

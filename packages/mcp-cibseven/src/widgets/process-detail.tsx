@@ -15,12 +15,20 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
-import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../tool-names.js"
+import { navigateViaHost, type OnNavigate } from "./navigation.js"
 
 export type { ProcessDetailData }
 
-export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }) {
+/** Shell-less process-definition detail. Reused standalone and in the cockpit app. */
+export function ProcessDetailView({
+  data,
+  onNavigate,
+}: {
+  data: ProcessDetailData | null
+  onNavigate?: OnNavigate
+}) {
   const host: HostActions = useHostActions()
+  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
 
   const highlights = useMemo<BpmnHighlight[]>(() => {
     const activities = (data?.activities ?? []).filter((a) => a.incidentCount > 0)
@@ -35,18 +43,14 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
 
   if (!data) {
     return (
-      <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
-      </WidgetShell>
+      <Alert>
+        <AlertDescription>No data available</AlertDescription>
+      </Alert>
     )
   }
 
   const title = data.processDefinitionName ?? data.processDefinitionKey
   const headerTone: ToneVariant = data.openIncidents > 0 ? "critical" : "info"
-  // Bind once so the click closure does not depend on TS narrowing
-  // surviving across the JSX render boundary.
   const cockpitUrl = data.cockpitUrl
   const totalActivityFraction =
     data.totalActivityCount !== null
@@ -67,6 +71,9 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
       label: "Running",
       value: data.runningInstances !== null ? data.runningInstances.toLocaleString() : "—",
       tone: data.runningInstances && data.runningInstances > 0 ? "success" : undefined,
+      onClick: () =>
+        go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey }),
+      ariaLabel: `View running instances of ${title}`,
     },
   ]
   if (data.failedJobs > 0) {
@@ -78,7 +85,7 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
   }
 
   return (
-    <WidgetShell>
+    <>
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="min-w-0">
           <div
@@ -133,21 +140,28 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
             )}
           </div>
         </div>
-        {data.openIncidents > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
+            }
+            className="border-border text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold outline-none focus-visible:ring-2"
+          >
+            View running instances <span aria-hidden>→</span>
+          </button>
+          {data.openIncidents > 0 && (
             <button
               type="button"
               onClick={() =>
-                host.showWidget(
-                  `Show all incidents for process \`${data.processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_INCIDENTS})`,
-                )
+                go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
               }
-              className="bg-m-blue hover:bg-m-blue-light inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+              className="bg-m-blue hover:bg-m-blue-light focus-visible:ring-ring inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white outline-none focus-visible:ring-2"
             >
               Open all incidents <span aria-hidden>→</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       <KpiGrid boxed header={{ label: "Overview", badge: "Process health" }} cells={stats} />
@@ -171,6 +185,14 @@ export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }
           </Alert>
         )}
       </section>
+    </>
+  )
+}
+
+export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }) {
+  return (
+    <WidgetShell>
+      <ProcessDetailView data={data} />
     </WidgetShell>
   )
 }

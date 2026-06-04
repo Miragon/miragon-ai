@@ -25,6 +25,8 @@ import { BpmnFlowViewer } from "./bpmn-viewer/flow.js"
 import { BpmnViewerWidget } from "./bpmn-viewer/widget.js"
 import { DeploymentBrowserWidget, type DeploymentBrowserData } from "./deployment-browser.js"
 import { JobPanelWidget, type JobPanelData } from "./job-panel.js"
+import { ProcessInstancesWidget, type ProcessInstancesData } from "./process-instances/list.js"
+import { CockpitApp } from "./cockpit-app/app.js"
 
 export type {
   ProcessListData,
@@ -39,6 +41,7 @@ export type {
   BpmnViewerData,
   DeploymentBrowserData,
   JobPanelData,
+  ProcessInstancesData,
 }
 
 export const camunda7Widgets: Record<string, WidgetComponent> = {
@@ -83,4 +86,9 @@ export const camunda7Widgets: Record<string, WidgetComponent> = {
     "camunda7:deploymentBrowser",
   ),
   "camunda7:job-panel": adaptDataWidget(JobPanelWidget, "camunda7:jobPanel"),
+  "camunda7:process-instances": adaptDataWidget(
+    ProcessInstancesWidget,
+    "camunda7:processInstances",
+  ),
+  "camunda7:cockpit-app": adaptDataWidget(CockpitApp, "camunda7:cockpitApp"),
 }

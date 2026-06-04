@@ -8,15 +8,17 @@ import {
   type HostActions,
 } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
-import { CAMUNDA7_SHOW_PROCESS_DETAIL } from "../../tool-names.js"
 import { buildRows, type DefinitionRow } from "./lib.js"
+import { navigateViaHost, type OnNavigate } from "../navigation.js"
 
 function ProcessRow({
   row,
   onOpen,
+  onViewInstances,
 }: {
   row: DefinitionRow
   onOpen: (processDefinitionKey: string) => void
+  onViewInstances: (processDefinitionKey: string) => void
 }) {
   return (
     <tr className="hover:bg-muted transition-colors">
@@ -47,98 +49,119 @@ function ProcessRow({
           {row.totalIncidents}
         </CountPill>
       </td>
-      <td className="border-border border-b px-4 py-3 text-right align-middle">
-        <button
-          type="button"
-          onClick={() => onOpen(row.key)}
-          aria-label={`Open process detail for ${row.name ?? row.key}`}
-          className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
-        >
-          Open <span aria-hidden>→</span>
-        </button>
+      <td className="border-border border-b px-4 py-3 align-middle">
+        <div className="flex items-center justify-end gap-1.5">
+          <button
+            type="button"
+            onClick={() => onViewInstances(row.key)}
+            aria-label={`View running instances of ${row.name ?? row.key}`}
+            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium outline-none focus-visible:ring-2"
+          >
+            Instances
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpen(row.key)}
+            aria-label={`Open process detail for ${row.name ?? row.key}`}
+            className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
+          >
+            Open <span aria-hidden>→</span>
+          </button>
+        </div>
       </td>
     </tr>
   )
 }
 
-export function ProcessDefinitionsTable({ data }: { data: CockpitDashboardData | null }) {
+/** Shell-less process-definitions table. Reused standalone and in the cockpit app. */
+export function ProcessDefinitionsTableView({
+  data,
+  onNavigate,
+}: {
+  data: CockpitDashboardData | null
+  onNavigate?: OnNavigate
+}) {
   const host: HostActions = useHostActions()
-
-  function openDetail(processDefinitionKey: string) {
-    host.showWidget(
-      `Show me the process detail for \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_DETAIL})`,
-    )
-  }
+  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
 
   if (!data) {
     return (
-      <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
-      </WidgetShell>
+      <Alert>
+        <AlertDescription>No data available</AlertDescription>
+      </Alert>
     )
   }
 
   const rows = buildRows(data)
 
   return (
-    <WidgetShell>
-      <section>
-        <SectionHeading title="Alle Prozesse" hint={`${rows.length} deployed`} />
+    <section>
+      <SectionHeading title="Alle Prozesse" hint={`${rows.length} deployed`} />
 
-        {rows.length === 0 ? (
-          <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
-            No process definitions deployed
-          </div>
-        ) : (
-          <table
-            className="w-full border-collapse text-sm"
-            aria-label="Deployed process definitions with running instances, failed jobs and incidents"
-          >
-            <thead className="bg-muted">
-              <tr>
-                <th
-                  scope="col"
-                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-                >
-                  Prozess
-                </th>
-                <th
-                  scope="col"
-                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-                >
-                  Version
-                </th>
-                <th
-                  scope="col"
-                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
-                >
-                  Running
-                </th>
-                <th
-                  scope="col"
-                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
-                >
-                  Failed jobs
-                </th>
-                <th
-                  scope="col"
-                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
-                >
-                  Incidents
-                </th>
-                <th scope="col" className="border-border border-y px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <ProcessRow key={row.id} row={row} onOpen={openDetail} />
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      {rows.length === 0 ? (
+        <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
+          No process definitions deployed
+        </div>
+      ) : (
+        <table
+          className="w-full border-collapse text-sm"
+          aria-label="Deployed process definitions with running instances, failed jobs and incidents"
+        >
+          <thead className="bg-muted">
+            <tr>
+              <th
+                scope="col"
+                className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
+              >
+                Prozess
+              </th>
+              <th
+                scope="col"
+                className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
+              >
+                Version
+              </th>
+              <th
+                scope="col"
+                className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
+              >
+                Running
+              </th>
+              <th
+                scope="col"
+                className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
+              >
+                Failed jobs
+              </th>
+              <th
+                scope="col"
+                className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
+              >
+                Incidents
+              </th>
+              <th scope="col" className="border-border border-y px-4 py-2.5" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <ProcessRow
+                key={row.id}
+                row={row}
+                onOpen={(k) => go({ type: "process-detail", processDefinitionKey: k })}
+                onViewInstances={(k) => go({ type: "process-instances", processDefinitionKey: k })}
+              />
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  )
+}
+
+export function ProcessDefinitionsTable({ data }: { data: CockpitDashboardData | null }) {
+  return (
+    <WidgetShell>
+      <ProcessDefinitionsTableView data={data} />
     </WidgetShell>
   )
 }
