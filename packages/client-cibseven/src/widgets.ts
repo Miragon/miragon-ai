@@ -313,6 +313,8 @@ export interface IncidentsByProcess {
 export interface ProcessDetailActivity {
   activityId: string
   activityName: string | null
+  /** Running token count at this activity — drives the diagram heatmap badges. */
+  instances: number
   incidentCount: number
   failedJobs: number
 }

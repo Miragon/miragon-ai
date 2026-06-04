@@ -101,7 +101,7 @@ describe("buildProcessDetailData", () => {
     expect(mockedGetBpmn).not.toHaveBeenCalled()
   })
 
-  it("aggregates totals across activities and drops clean ones from the list", async () => {
+  it("aggregates totals, keeps token-bearing activities for the heatmap, drops idle ones", async () => {
     mockedGetDefinitionStats.mockResolvedValueOnce([
       {
         id: "K3:1:x",
@@ -111,11 +111,13 @@ describe("buildProcessDetailData", () => {
     ] as never)
     mockedGetActivityStats.mockResolvedValueOnce([
       { id: "A1", instances: 5, failedJobs: 2, incidents: [{ incidentCount: 3 }] },
-      { id: "A2", instances: 5, failedJobs: 0, incidents: [{ incidentCount: 7 }] },
-      // Clean activity — counted in totals (zero) but dropped from `activities`.
-      { id: "A3", instances: 5, failedJobs: 0, incidents: [] },
-      // Failed-jobs-only activity — kept in `activities` even with zero incidents.
-      { id: "A4", instances: 5, failedJobs: 4, incidents: [] },
+      { id: "A2", instances: 8, failedJobs: 0, incidents: [{ incidentCount: 7 }] },
+      // Truly idle — no tokens, no problems → dropped entirely.
+      { id: "A3", instances: 0, failedJobs: 0, incidents: [] },
+      // Failed-jobs-only — kept (affected) even with zero incidents.
+      { id: "A4", instances: 3, failedJobs: 4, incidents: [] },
+      // Running-only — kept for the heatmap, but NOT counted as affected.
+      { id: "A5", instances: 6, failedJobs: 0, incidents: [] },
     ] as never)
 
     const data = await buildProcessDetailData(fakeClient, {
@@ -125,9 +127,12 @@ describe("buildProcessDetailData", () => {
 
     expect(data.openIncidents).toBe(10)
     expect(data.failedJobs).toBe(6)
-    expect(data.affectedActivityCount).toBe(3) // A1, A2, A4 — A3 dropped
-    // Sorted by incident count desc
-    expect(data.activities.map((a) => a.activityId)).toEqual(["A2", "A1", "A4"])
+    // Affected = incident or failed-job activities only (A1, A2, A4).
+    expect(data.affectedActivityCount).toBe(3)
+    // A3 (idle) dropped; rest sorted by incidents desc, then instances desc.
+    expect(data.activities.map((a) => a.activityId)).toEqual(["A2", "A1", "A5", "A4"])
+    // Per-activity running token counts are surfaced for the diagram heatmap.
+    expect(data.activities.find((a) => a.activityId === "A2")?.instances).toBe(8)
   })
 
   it("uses BPMN names and activity count when XML is present", async () => {

@@ -30,13 +30,28 @@ export function ProcessDetailView({
   const host: HostActions = useHostActions()
   const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
 
+  // Heatmap overlay: a blue running-token badge (top-right) on every active
+  // activity, plus a red badge (top-left) for problems — incidents where they
+  // exist, otherwise failed jobs (no retries yet). The two reds never collide
+  // because an incident already implies its failed job.
   const highlights = useMemo<BpmnHighlight[]>(() => {
-    const activities = (data?.activities ?? []).filter((a) => a.incidentCount > 0)
+    const all = data?.activities ?? []
+    const running = all.filter((a) => a.instances > 0)
+    const incidents = all.filter((a) => a.incidentCount > 0)
+    const failedOnly = all.filter((a) => a.failedJobs > 0 && a.incidentCount === 0)
     return [
       {
+        kind: "instance-count",
+        counts: running.map((a) => ({ activityId: a.activityId, count: a.instances })),
+      },
+      {
         kind: "incident",
-        activityIds: activities.map((a) => a.activityId),
-        counts: activities.map((a) => ({ activityId: a.activityId, count: a.incidentCount })),
+        activityIds: incidents.map((a) => a.activityId),
+        counts: incidents.map((a) => ({ activityId: a.activityId, count: a.incidentCount })),
+      },
+      {
+        kind: "failed-jobs",
+        counts: failedOnly.map((a) => ({ activityId: a.activityId, count: a.failedJobs })),
       },
     ]
   }, [data?.activities])
@@ -178,7 +193,27 @@ export function ProcessDetailView({
           }
         />
         {data.bpmnXml ? (
-          <BpmnDiagram bpmnXml={data.bpmnXml} height={340} highlights={highlights} />
+          <>
+            <div className="text-muted-foreground mb-2 flex flex-wrap items-center gap-3 text-xs">
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="inline-block size-2.5 rounded-full"
+                  style={{ background: "#3b82f6" }}
+                  aria-hidden
+                />
+                Running tokens
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="inline-block size-2.5 rounded-full"
+                  style={{ background: "#ef4444" }}
+                  aria-hidden
+                />
+                Incidents / failed jobs
+              </span>
+            </div>
+            <BpmnDiagram bpmnXml={data.bpmnXml} height={340} highlights={highlights} />
+          </>
         ) : (
           <Alert>
             <AlertDescription>No BPMN diagram available</AlertDescription>

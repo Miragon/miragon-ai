@@ -31,6 +31,7 @@ interface DefinitionStatsRow {
 
 interface ActivityStatsRow {
   id?: string | null
+  /** Running token count at the activity (camunda activity statistics). */
   instances?: number | null
   failedJobs?: number | null
   incidents?: Array<{ incidentCount?: number | null }> | null
@@ -128,23 +129,30 @@ export async function buildProcessDetailData(
 
   let openIncidents = 0
   let failedJobs = 0
+  let affectedActivityCount = 0
   const activities: ProcessDetailActivity[] = []
   for (const row of rows) {
     const activityId = row.id ?? ""
     if (!activityId) continue
     const incidentCount = (row.incidents ?? []).reduce((sum, i) => sum + (i.incidentCount ?? 0), 0)
     const activityFailedJobs = row.failedJobs ?? 0
+    const instances = row.instances ?? 0
     openIncidents += incidentCount
     failedJobs += activityFailedJobs
-    if (incidentCount === 0 && activityFailedJobs === 0) continue
+    if (incidentCount > 0 || activityFailedJobs > 0) affectedActivityCount += 1
+    // Keep any activity that carries a running token OR a problem — these are the
+    // ones the diagram heatmap overlays (token-count + incident/failed-job badges).
+    if (instances === 0 && incidentCount === 0 && activityFailedJobs === 0) continue
     activities.push({
       activityId,
       activityName: activityNames[activityId] ?? null,
+      instances,
       incidentCount,
       failedJobs: activityFailedJobs,
     })
   }
-  activities.sort((a, b) => b.incidentCount - a.incidentCount)
+  // Most-affected first, then busiest, so the activity list reads sensibly.
+  activities.sort((a, b) => b.incidentCount - a.incidentCount || b.instances - a.instances)
 
   return {
     processDefinitionKey: options.processDefinitionKey,
@@ -161,7 +169,7 @@ export async function buildProcessDetailData(
     openIncidents,
     failedJobs,
     totalActivityCount,
-    affectedActivityCount: activities.length,
+    affectedActivityCount,
     activities,
   }
 }
