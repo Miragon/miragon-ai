@@ -1,4 +1,4 @@
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import {
   KpiGrid,
   WidgetHeader,
@@ -9,6 +9,7 @@ import {
 import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
 import { buildRows } from "./lib.js"
 import { navigateViaHost, type NavIntent, type OnNavigate } from "../navigation.js"
+import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 
 // Operations areas reachable from the cockpit that don't have their own KPI
 // number above (incidents + process list are wired onto the KPI cells instead).
@@ -25,20 +26,40 @@ const NAV: Array<{ label: string; icon: string; intent: NavIntent }> = [
  * conversational host bridge when rendered standalone.
  */
 export function ProcessHealthKpiView({
-  data,
+  data: initialData = null,
+  engineId,
   onNavigate,
 }: {
-  data: CockpitDashboardData | null
+  data?: CockpitDashboardData | null
+  engineId?: string
   onNavigate?: OnNavigate
 }) {
   const host: HostActions = useHostActions()
   const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
+  // Self-fetch when hosted in the cockpit app (engineId given, no eager data).
+  // The definitions table shares this exact query key, so TanStack dedups both
+  // self-fetching siblings to a single network call. Standalone (data via props)
+  // keeps the query disabled.
+  const query = useToolQuery<CockpitDashboardData>(
+    ["camunda7:cockpit-overview", engineId ?? null],
+    CAMUNDA7_COCKPIT_OVERVIEW_DATA,
+    { engine: engineId },
+    { enabled: !initialData && !!engineId },
+  )
+  const data = initialData ?? query.data ?? null
 
   if (!data) {
+    if (query.isError) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>{query.error?.message ?? "Failed to load."}</AlertDescription>
+        </Alert>
+      )
+    }
     return (
-      <Alert>
-        <AlertDescription>No data available</AlertDescription>
-      </Alert>
+      <div className="text-muted-foreground p-2 text-sm">
+        {!initialData && engineId ? "Loading…" : "No data available"}
+      </div>
     )
   }
 

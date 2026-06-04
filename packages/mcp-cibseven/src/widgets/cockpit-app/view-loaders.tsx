@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type {
-  CockpitDashboardData,
   DeploymentBrowserData,
   InstanceDetailData,
   JobPanelData,
@@ -10,7 +9,6 @@ import type {
   TaskDashboardData,
 } from "@miragon-ai/client-cibseven"
 import {
-  CAMUNDA7_COCKPIT_OVERVIEW_DATA,
   CAMUNDA7_DEPLOYMENTS_DATA,
   CAMUNDA7_INSTANCE_DETAIL_DATA,
   CAMUNDA7_JOBS_DATA,
@@ -58,20 +56,13 @@ export function OverviewView({
   engineId: string
   onNavigate: OnNavigate
 }) {
-  const q = useToolQuery<CockpitDashboardData>(
-    ["camunda7:cockpit", engineId],
-    CAMUNDA7_COCKPIT_OVERVIEW_DATA,
-    { engine: engineId },
-  )
+  // Each panel self-fetches under a shared query key (deduped to one call) so it
+  // stays a self-contained, reusable widget instead of receiving a data blob.
   return (
-    <Loaded data={q.data} isError={q.isError} error={q.error}>
-      {(d) => (
-        <div className="flex flex-col gap-6">
-          <ProcessHealthKpiView data={d} onNavigate={onNavigate} />
-          <ProcessDefinitionsTableView data={d} onNavigate={onNavigate} />
-        </div>
-      )}
-    </Loaded>
+    <div className="flex flex-col gap-6">
+      <ProcessHealthKpiView engineId={engineId} onNavigate={onNavigate} />
+      <ProcessDefinitionsTableView engineId={engineId} onNavigate={onNavigate} />
+    </div>
   )
 }
 

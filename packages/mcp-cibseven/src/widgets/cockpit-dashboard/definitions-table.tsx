@@ -1,4 +1,4 @@
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import {
   CountPill,
   SectionHeading,
@@ -10,6 +10,7 @@ import {
 import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
 import { buildRows, type DefinitionRow } from "./lib.js"
 import { navigateViaHost, type OnNavigate } from "../navigation.js"
+import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 
 function ProcessRow({
   row,
@@ -75,20 +76,38 @@ function ProcessRow({
 
 /** Shell-less process-definitions table. Reused standalone and in the cockpit app. */
 export function ProcessDefinitionsTableView({
-  data,
+  data: initialData = null,
+  engineId,
   onNavigate,
 }: {
-  data: CockpitDashboardData | null
+  data?: CockpitDashboardData | null
+  engineId?: string
   onNavigate?: OnNavigate
 }) {
   const host: HostActions = useHostActions()
   const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
+  // Shares the health KPI's query key → deduped to a single fetch (see
+  // health-kpi.tsx). Self-fetches in the cockpit; uses props standalone.
+  const query = useToolQuery<CockpitDashboardData>(
+    ["camunda7:cockpit-overview", engineId ?? null],
+    CAMUNDA7_COCKPIT_OVERVIEW_DATA,
+    { engine: engineId },
+    { enabled: !initialData && !!engineId },
+  )
+  const data = initialData ?? query.data ?? null
 
   if (!data) {
+    if (query.isError) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>{query.error?.message ?? "Failed to load."}</AlertDescription>
+        </Alert>
+      )
+    }
     return (
-      <Alert>
-        <AlertDescription>No data available</AlertDescription>
-      </Alert>
+      <div className="text-muted-foreground p-2 text-sm">
+        {!initialData && engineId ? "Loading…" : "No data available"}
+      </div>
     )
   }
 
