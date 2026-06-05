@@ -1,15 +1,10 @@
-import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
-import {
-  KpiGrid,
-  WidgetHeader,
-  WidgetShell,
-  useHostActions,
-  type HostActions,
-} from "@miragon-ai/widget-shell/widgets"
+import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
 import { buildRows } from "./lib.js"
-import { navigateViaHost, type NavIntent, type OnNavigate } from "../navigation.js"
+import { useNav, type NavIntent } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 
 // Operations areas reachable from the cockpit that don't have their own KPI
 // number above (incidents + process list are wired onto the KPI cells instead).
@@ -18,45 +13,39 @@ const NAV: Array<{ label: string; icon: string; intent: NavIntent }> = [
 ]
 
 /**
- * Shell-less health overview. Reused both as the standalone `ProcessHealthKpi`
- * widget and inside the consolidated cockpit app. Navigation intents flow
- * through `onNavigate` when hosted (client-side routing) and fall back to the
- * conversational host bridge when rendered standalone.
+ * Shell-less health overview. One component, two modes: standalone the agent's
+ * data is handed in via `data`; in the cockpit only `engine` is passed and the
+ * view self-fetches (deduped with the sibling definitions table under a shared
+ * key). Navigation flows through {@link useNav} — client-side in the cockpit, a
+ * host follow-up standalone.
  */
 export function ProcessHealthKpiView({
   data: initialData = null,
-  engineId,
-  onNavigate,
+  engine,
 }: {
   data?: CockpitDashboardData | null
-  engineId?: string
-  onNavigate?: OnNavigate
+  engine?: string
 }) {
-  const host: HostActions = useHostActions()
-  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
-  // Self-fetch when hosted in the cockpit app (engineId given, no eager data).
-  // The definitions table shares this exact query key, so TanStack dedups both
-  // self-fetching siblings to a single network call. Standalone (data via props)
-  // keeps the query disabled.
-  const query = useToolQuery<CockpitDashboardData>(
-    ["camunda7:cockpit-overview", engineId ?? null],
+  const go = useNav()
+  const { data, loading, error } = useViewData<CockpitDashboardData>(
+    initialData,
+    ["camunda7:cockpit-overview", engine ?? null],
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
-    { engine: engineId },
-    { enabled: !initialData && !!engineId },
+    { engine },
+    !!engine,
   )
-  const data = initialData ?? query.data ?? null
 
   if (!data) {
-    if (query.isError) {
+    if (error) {
       return (
         <Alert variant="destructive">
-          <AlertDescription>{query.error?.message ?? "Failed to load."}</AlertDescription>
+          <AlertDescription>{error.message}</AlertDescription>
         </Alert>
       )
     }
     return (
       <div className="text-muted-foreground p-2 text-sm">
-        {!initialData && engineId ? "Loading…" : "No data available"}
+        {loading ? "Loading…" : "No data available"}
       </div>
     )
   }
@@ -129,10 +118,16 @@ export function ProcessHealthKpiView({
   )
 }
 
-export function ProcessHealthKpi({ data }: { data: CockpitDashboardData | null }) {
+export function ProcessHealthKpi({
+  data,
+  engine,
+}: {
+  data: CockpitDashboardData | null
+  engine?: string
+}) {
   return (
     <WidgetShell>
-      <ProcessHealthKpiView data={data} />
+      <ProcessHealthKpiView data={data} engine={engine} />
     </WidgetShell>
   )
 }

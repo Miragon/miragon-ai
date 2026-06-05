@@ -7,16 +7,39 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
 import { formatTime } from "../../lib/format-time.js"
+import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 
-export function ProcessDetailHeader({ data }: { data: ProcessIncidentsData | null }) {
+export function ProcessDetailHeader({
+  data: initialData = null,
+  processDefinitionKey,
+  engine,
+}: {
+  data?: ProcessIncidentsData | null
+  processDefinitionKey?: string
+  engine?: string
+}) {
   const host: HostActions = useHostActions()
+  const { data, loading, error } = useViewData<ProcessIncidentsData>(
+    initialData,
+    ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
+    CAMUNDA7_PROCESS_INCIDENTS_DATA,
+    { processDefinitionKey, engine },
+    !!processDefinitionKey,
+  )
 
   if (!data) {
     return (
       <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground p-2 text-sm">
+            {loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </WidgetShell>
     )
   }

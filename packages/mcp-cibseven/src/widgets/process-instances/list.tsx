@@ -9,13 +9,11 @@ import {
   TONE_DOT,
   WidgetHeader,
   WidgetShell,
-  useHostActions,
   type FilterChip,
-  type HostActions,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessInstanceRow, ProcessInstancesData } from "@miragon-ai/client-cibseven"
-import { navigateViaHost, type OnNavigate } from "../navigation.js"
+import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 
 export type { ProcessInstancesData }
@@ -86,24 +84,23 @@ function InstanceRow({
 
 /** Shell-less running-instances list. Reused standalone and in the cockpit app. */
 export function ProcessInstancesView({
-  data: initialData,
+  data: initialData = null,
   processDefinitionKey,
+  engine,
   active,
   suspended,
   withIncidentsOnly,
   businessKeyLike,
-  onNavigate,
 }: {
-  data: ProcessInstancesData | null
+  data?: ProcessInstancesData | null
   processDefinitionKey?: string
+  engine?: string
   active?: boolean
   suspended?: boolean
   withIncidentsOnly?: boolean
   businessKeyLike?: string
-  onNavigate?: OnNavigate
 }) {
-  const host: HostActions = useHostActions()
-  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
+  const go = useNav()
   const [search, setSearch] = useState("")
   const [activeChip, setActiveChip] = useState<string>(CHIP_ALL)
 
@@ -111,12 +108,13 @@ export function ProcessInstancesView({
   // (e.g. refreshed from the host) rather than only via eager initialData.
   const queryArgs: Record<string, unknown> = {}
   if (processDefinitionKey) queryArgs.processDefinitionKey = processDefinitionKey
+  if (engine) queryArgs.engine = engine
   if (active) queryArgs.active = active
   if (suspended) queryArgs.suspended = suspended
   if (withIncidentsOnly) queryArgs.withIncidentsOnly = withIncidentsOnly
   if (businessKeyLike) queryArgs.businessKeyLike = businessKeyLike
   const fallbackQuery = useToolQuery<ProcessInstancesData>(
-    ["camunda7:process-instances", processDefinitionKey ?? null],
+    ["camunda7:process-instances", engine ?? null, processDefinitionKey ?? null],
     CAMUNDA7_PROCESS_INSTANCES_DATA,
     queryArgs,
     { enabled: !initialData && !!processDefinitionKey },
@@ -258,6 +256,7 @@ export function ProcessInstancesView({
 export function ProcessInstancesWidget(props: {
   data: ProcessInstancesData | null
   processDefinitionKey?: string
+  engine?: string
   active?: boolean
   suspended?: boolean
   withIncidentsOnly?: boolean

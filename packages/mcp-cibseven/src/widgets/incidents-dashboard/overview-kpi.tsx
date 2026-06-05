@@ -1,6 +1,8 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { KpiGrid, LivePill, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { IncidentsDashboardData } from "@miragon-ai/client-cibseven"
+import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 
 function formatTimestamp(iso: string | null): string {
   if (!iso) return "—"
@@ -8,12 +10,35 @@ function formatTimestamp(iso: string | null): string {
 }
 
 /** Shell-less incidents KPI header. Reused standalone and in the cockpit app. */
-export function IncidentOverviewKpiView({ data }: { data: IncidentsDashboardData | null }) {
+export function IncidentOverviewKpiView({
+  data: initialData = null,
+  engine,
+}: {
+  data?: IncidentsDashboardData | null
+  engine?: string
+}) {
+  // Shares the process-list query key → both incidents panels dedupe to one
+  // fetch in the cockpit; standalone the data comes in via props.
+  const { data, loading, error } = useViewData<IncidentsDashboardData>(
+    initialData,
+    ["camunda7:incidents", engine ?? null],
+    CAMUNDA7_INCIDENTS_DATA,
+    { engine },
+    !!engine,
+  )
+
   if (!data) {
+    if (error) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )
+    }
     return (
-      <Alert>
-        <AlertDescription>No data available</AlertDescription>
-      </Alert>
+      <div className="text-muted-foreground p-2 text-sm">
+        {loading ? "Loading…" : "No data available"}
+      </div>
     )
   }
 
@@ -56,10 +81,16 @@ export function IncidentOverviewKpiView({ data }: { data: IncidentsDashboardData
   )
 }
 
-export function IncidentOverviewKpi({ data }: { data: IncidentsDashboardData | null }) {
+export function IncidentOverviewKpi({
+  data,
+  engine,
+}: {
+  data: IncidentsDashboardData | null
+  engine?: string
+}) {
   return (
     <WidgetShell>
-      <IncidentOverviewKpiView data={data} />
+      <IncidentOverviewKpiView data={data} engine={engine} />
     </WidgetShell>
   )
 }

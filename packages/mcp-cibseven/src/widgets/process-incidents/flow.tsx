@@ -3,8 +3,26 @@ import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { SectionHeading, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
 import { BpmnDiagram, type BpmnHighlight } from "../bpmn-diagram.js"
+import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 
-export function ProcessIncidentFlow({ data }: { data: ProcessIncidentsData | null }) {
+export function ProcessIncidentFlow({
+  data: initialData = null,
+  processDefinitionKey,
+  engine,
+}: {
+  data?: ProcessIncidentsData | null
+  processDefinitionKey?: string
+  engine?: string
+}) {
+  const { data, loading, error } = useViewData<ProcessIncidentsData>(
+    initialData,
+    ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
+    CAMUNDA7_PROCESS_INCIDENTS_DATA,
+    { processDefinitionKey, engine },
+    !!processDefinitionKey,
+  )
+
   const highlights = useMemo<BpmnHighlight[]>(() => {
     const activities = data?.activities ?? []
     return [
@@ -19,9 +37,15 @@ export function ProcessIncidentFlow({ data }: { data: ProcessIncidentsData | nul
   if (!data) {
     return (
       <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground p-2 text-sm">
+            {loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </WidgetShell>
     )
   }

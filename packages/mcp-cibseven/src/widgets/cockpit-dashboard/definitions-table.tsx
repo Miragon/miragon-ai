@@ -1,16 +1,10 @@
-import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
-import {
-  CountPill,
-  SectionHeading,
-  TONE_DOT,
-  WidgetShell,
-  useHostActions,
-  type HostActions,
-} from "@miragon-ai/widget-shell/widgets"
+import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { CountPill, SectionHeading, TONE_DOT, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
 import { buildRows, type DefinitionRow } from "./lib.js"
-import { navigateViaHost, type OnNavigate } from "../navigation.js"
+import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 
 function ProcessRow({
   row,
@@ -77,36 +71,33 @@ function ProcessRow({
 /** Shell-less process-definitions table. Reused standalone and in the cockpit app. */
 export function ProcessDefinitionsTableView({
   data: initialData = null,
-  engineId,
-  onNavigate,
+  engine,
 }: {
   data?: CockpitDashboardData | null
-  engineId?: string
-  onNavigate?: OnNavigate
+  engine?: string
 }) {
-  const host: HostActions = useHostActions()
-  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
+  const go = useNav()
   // Shares the health KPI's query key → deduped to a single fetch (see
   // health-kpi.tsx). Self-fetches in the cockpit; uses props standalone.
-  const query = useToolQuery<CockpitDashboardData>(
-    ["camunda7:cockpit-overview", engineId ?? null],
+  const { data, loading, error } = useViewData<CockpitDashboardData>(
+    initialData,
+    ["camunda7:cockpit-overview", engine ?? null],
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
-    { engine: engineId },
-    { enabled: !initialData && !!engineId },
+    { engine },
+    !!engine,
   )
-  const data = initialData ?? query.data ?? null
 
   if (!data) {
-    if (query.isError) {
+    if (error) {
       return (
         <Alert variant="destructive">
-          <AlertDescription>{query.error?.message ?? "Failed to load."}</AlertDescription>
+          <AlertDescription>{error.message}</AlertDescription>
         </Alert>
       )
     }
     return (
       <div className="text-muted-foreground p-2 text-sm">
-        {!initialData && engineId ? "Loading…" : "No data available"}
+        {loading ? "Loading…" : "No data available"}
       </div>
     )
   }
@@ -177,10 +168,16 @@ export function ProcessDefinitionsTableView({
   )
 }
 
-export function ProcessDefinitionsTable({ data }: { data: CockpitDashboardData | null }) {
+export function ProcessDefinitionsTable({
+  data,
+  engine,
+}: {
+  data: CockpitDashboardData | null
+  engine?: string
+}) {
   return (
     <WidgetShell>
-      <ProcessDefinitionsTableView data={data} />
+      <ProcessDefinitionsTableView data={data} engine={engine} />
     </WidgetShell>
   )
 }

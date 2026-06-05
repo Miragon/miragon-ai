@@ -17,6 +17,8 @@ import {
 
 import type { JobPanelData } from "@miragon-ai/client-cibseven"
 import { useHostActions, type HostActions } from "@miragon-ai/widget-shell/widgets"
+import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
+import { useViewData } from "./use-view-data.js"
 import { ConfirmDialog } from "./confirm-dialog.js"
 import { refreshCockpitData } from "./refresh.js"
 
@@ -36,19 +38,38 @@ function truncate(s: string | null, max: number): string {
   return s.length > max ? s.slice(0, max) + "\u2026" : s
 }
 
-export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
+export function JobPanelWidget({
+  data: initialData = null,
+  engine,
+}: {
+  data?: JobPanelData | null
+  engine?: string
+}) {
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
   const [confirmBatch, setConfirmBatch] = useState(false)
   const host: HostActions = useHostActions()
   const retryMutation = useToolMutation("camunda7_set_job_retries")
   const batchMutation = useToolMutation("camunda7_set_job_retries_batch")
+  const { data, loading, error } = useViewData<JobPanelData>(
+    initialData,
+    ["camunda7:jobs", engine ?? null],
+    CAMUNDA7_JOBS_DATA,
+    { engine },
+    !!engine,
+  )
 
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground text-sm">
+            {loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </div>
     )
   }

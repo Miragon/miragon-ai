@@ -21,6 +21,8 @@ import {
 
 import type { IncidentDetailData } from "@miragon-ai/client-cibseven"
 
+import { CAMUNDA7_INCIDENT_DETAIL_DATA } from "../tool-names.js"
+import { useViewData } from "./use-view-data.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, VariablesTable } from "./instance-sections.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
@@ -30,12 +32,27 @@ import { formatDate, formatTime } from "../lib/format-time.js"
 
 export type { IncidentDetailData }
 
-export function IncidentDetailWidget({ data }: { data: IncidentDetailData | null }) {
+export function IncidentDetailWidget({
+  data: initialData = null,
+  incidentId,
+  engine,
+}: {
+  data?: IncidentDetailData | null
+  incidentId?: string
+  engine?: string
+}) {
   const host: HostActions = useHostActions()
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const retryMutation = useToolMutation("camunda7_set_job_retries")
   const [resolved, setResolved] = useState(false)
   const [retried, setRetried] = useState(false)
+  const { data, loading, error } = useViewData<IncidentDetailData>(
+    initialData,
+    ["camunda7:incident-detail", engine ?? null, incidentId ?? null],
+    CAMUNDA7_INCIDENT_DETAIL_DATA,
+    { incidentId, engine },
+    !!incidentId,
+  )
 
   const highlights = useMemo<BpmnHighlight[]>(
     () => [{ kind: "incident", activityIds: data ? [data.activityId] : [] }],
@@ -45,9 +62,15 @@ export function IncidentDetailWidget({ data }: { data: IncidentDetailData | null
   if (!data) {
     return (
       <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground p-2 text-sm">
+            {loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </WidgetShell>
     )
   }

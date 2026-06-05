@@ -13,6 +13,8 @@ import { ModelContext } from "mcp-use/react"
 import { useHostActions, type HostActions } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibseven"
+import { CAMUNDA7_INSTANCE_DETAIL_DATA } from "../tool-names.js"
+import { useViewData } from "./use-view-data.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, Section, VariablesTable } from "./instance-sections.js"
 import { TaskCompleteForm } from "./task-complete-form.js"
@@ -88,7 +90,15 @@ function InstanceAuditContent({ processInstanceId }: { processInstanceId: string
   return <HistoryTimelineView activities={q.data} />
 }
 
-export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null }) {
+export function InstanceDetailWidget({
+  data: initialData = null,
+  processInstanceId,
+  engine,
+}: {
+  data?: InstanceDetailData | null
+  processInstanceId?: string
+  engine?: string
+}) {
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set())
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
@@ -102,6 +112,13 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   const suspendMutation = useToolMutation("camunda7_suspend_process_instance")
   const activateMutation = useToolMutation("camunda7_activate_process_instance")
   const cancelMutation = useToolMutation("camunda7_delete_process_instance")
+  const { data, loading, error } = useViewData<InstanceDetailData>(
+    initialData,
+    ["camunda7:instance-detail", engine ?? null, processInstanceId ?? null],
+    CAMUNDA7_INSTANCE_DETAIL_DATA,
+    { processInstanceId, engine },
+    !!processInstanceId,
+  )
 
   const visibleTasks = useMemo<OpenUserTask[]>(
     () => (data?.openTasks ?? []).filter((task) => !completedTaskIds.has(task.id)),
@@ -123,9 +140,15 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground text-sm">
+            {loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </div>
     )
   }

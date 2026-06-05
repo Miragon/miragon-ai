@@ -6,16 +6,7 @@ import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "@miragon-ai/client-cibseven"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
 import { camunda7BaseWidgets } from "../registry.js"
-import { cockpitViews } from "./views.js"
-import {
-  IncidentDetailLoader,
-  IncidentsLoader,
-  InstanceDetailLoader,
-  JobsLoader,
-  OverviewView,
-  ProcessIncidentsLoader,
-  ProcessInstancesLoader,
-} from "./view-loaders.js"
+import { cockpitViews, type ViewParams } from "./views.js"
 
 export type { CockpitAppData }
 
@@ -216,6 +207,15 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const activeSection = topSectionOf(view)
   const crumbs = breadcrumbOf(view)
 
+  // Flatten the current route + resolved engine into the params bag every view
+  // layout reads from. Each view picks only the ids it needs (see views.ts).
+  const viewParams: ViewParams = {
+    engine: engineId,
+    processDefinitionKey: "processDefinitionKey" in view ? view.processDefinitionKey : undefined,
+    processInstanceId: "processInstanceId" in view ? view.processInstanceId : undefined,
+    incidentId: "incidentId" in view ? view.incidentId : undefined,
+  }
+
   return (
     <WidgetShell>
       <ModelContext
@@ -289,50 +289,17 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
             </nav>
           )}
 
-          {/* Client-side navigation seam: widgets rendered below call `useNav()`,
-              which resolves to this in-app router instead of a chat follow-up. */}
+          {/* Every view is a layout of self-fetching widgets rendered through the
+              toolkit renderer. The NavProvider is the client-side navigation
+              seam: widgets call `useNav()`, which resolves to this in-app router
+              instead of a chat follow-up. */}
           <NavProvider value={navigate}>
-            {view.section === "overview" && (
-              <OverviewView engineId={engineId} onNavigate={navigate} />
-            )}
-            {view.section === "incidents" && (
-              <IncidentsLoader engineId={engineId} onNavigate={navigate} />
-            )}
-            {view.section === "jobs" && <JobsLoader engineId={engineId} />}
-            {view.section === "process-detail" && (
-              <WidgetRenderer
-                layout={cockpitViews["process-detail"]({
-                  engine: engineId,
-                  processDefinitionKey: view.processDefinitionKey,
-                })}
-                keys={{}}
-                errors={[]}
-                widgets={camunda7BaseWidgets}
-              />
-            )}
-            {view.section === "process-instances" && (
-              <ProcessInstancesLoader
-                processDefinitionKey={view.processDefinitionKey}
-                engineId={engineId}
-                onNavigate={navigate}
-              />
-            )}
-            {view.section === "process-incidents" && (
-              <ProcessIncidentsLoader
-                processDefinitionKey={view.processDefinitionKey}
-                engineId={engineId}
-                onNavigate={navigate}
-              />
-            )}
-            {view.section === "instance-detail" && (
-              <InstanceDetailLoader
-                processInstanceId={view.processInstanceId}
-                engineId={engineId}
-              />
-            )}
-            {view.section === "incident-detail" && (
-              <IncidentDetailLoader incidentId={view.incidentId} engineId={engineId} />
-            )}
+            <WidgetRenderer
+              layout={cockpitViews[view.section](viewParams)}
+              keys={{}}
+              errors={[]}
+              widgets={camunda7BaseWidgets}
+            />
           </NavProvider>
         </main>
       </div>

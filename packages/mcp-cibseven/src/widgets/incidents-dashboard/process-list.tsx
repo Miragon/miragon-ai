@@ -7,7 +7,9 @@ import type {
   IncidentsDashboardProcess,
 } from "@miragon-ai/client-cibseven"
 
-import { navigateViaHost, type OnNavigate } from "../navigation.js"
+import { useNav } from "../navigation.js"
+import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 
 import {
   CountPill,
@@ -181,14 +183,23 @@ function ActivityList({ activities }: { activities: IncidentsDashboardActivity[]
  * one shared `useState`.
  */
 export function IncidentProcessListView({
-  data,
-  onNavigate,
+  data: initialData = null,
+  engine,
 }: {
-  data: IncidentsDashboardData | null
-  onNavigate?: OnNavigate
+  data?: IncidentsDashboardData | null
+  engine?: string
 }) {
+  const go = useNav()
   const host: HostActions = useHostActions()
-  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
+  // Shares the overview-kpi query key → both incidents panels dedupe to one
+  // fetch in the cockpit; standalone the data comes in via props.
+  const { data, loading, error } = useViewData<IncidentsDashboardData>(
+    initialData,
+    ["camunda7:incidents", engine ?? null],
+    CAMUNDA7_INCIDENTS_DATA,
+    { engine },
+    !!engine,
+  )
 
   const [search, setSearch] = useState("")
   const [activeChip, setActiveChip] = useState<string>(TYPE_ALL)
@@ -236,10 +247,17 @@ export function IncidentProcessListView({
   }, [data, search, activeChip])
 
   if (!data) {
+    if (error) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )
+    }
     return (
-      <Alert>
-        <AlertDescription>No data available</AlertDescription>
-      </Alert>
+      <div className="text-muted-foreground p-2 text-sm">
+        {loading ? "Loading…" : "No data available"}
+      </div>
     )
   }
 
@@ -309,10 +327,16 @@ export function IncidentProcessListView({
   )
 }
 
-export function IncidentProcessList({ data }: { data: IncidentsDashboardData | null }) {
+export function IncidentProcessList({
+  data,
+  engine,
+}: {
+  data: IncidentsDashboardData | null
+  engine?: string
+}) {
   return (
     <WidgetShell>
-      <IncidentProcessListView data={data} />
+      <IncidentProcessListView data={data} engine={engine} />
     </WidgetShell>
   )
 }

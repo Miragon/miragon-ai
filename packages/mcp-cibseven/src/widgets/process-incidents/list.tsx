@@ -8,30 +8,47 @@ import {
   type HostActions,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
-import { navigateViaHost, type OnNavigate } from "../navigation.js"
+import { useNav } from "../navigation.js"
+import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 import { ActivitySummary } from "./activity-summary.js"
 import { IncidentTable } from "./incident-table.js"
 import { EmptyStateWithSiblings } from "./empty-state.js"
 
 export function ActivityIncidentList({
-  data,
-  onNavigate,
+  data: initialData = null,
+  processDefinitionKey,
+  engine,
 }: {
-  data: ProcessIncidentsData | null
-  onNavigate?: OnNavigate
+  data?: ProcessIncidentsData | null
+  processDefinitionKey?: string
+  engine?: string
 }) {
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const host: HostActions = useHostActions()
-  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
+  const go = useNav()
+  const { data, loading, error } = useViewData<ProcessIncidentsData>(
+    initialData,
+    ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
+    CAMUNDA7_PROCESS_INCIDENTS_DATA,
+    { processDefinitionKey, engine },
+    !!processDefinitionKey,
+  )
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   if (!data) {
     return (
       <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground p-2 text-sm">
+            {loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </WidgetShell>
     )
   }
