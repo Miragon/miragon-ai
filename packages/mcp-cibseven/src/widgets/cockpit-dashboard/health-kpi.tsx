@@ -14,9 +14,7 @@ import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 // Operations areas reachable from the cockpit that don't have their own KPI
 // number above (incidents + process list are wired onto the KPI cells instead).
 const NAV: Array<{ label: string; icon: string; intent: NavIntent }> = [
-  { label: "Human Tasks", icon: "☑", intent: { type: "tasks" } },
   { label: "Jobs", icon: "⚙", intent: { type: "jobs" } },
-  { label: "Deployments", icon: "▤", intent: { type: "deployments" } },
 ]
 
 /**

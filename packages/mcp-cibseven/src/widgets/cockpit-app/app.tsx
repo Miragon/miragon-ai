@@ -5,14 +5,12 @@ import { WidgetShell, useHostActions, type HostActions } from "@miragon-ai/widge
 import type { CockpitAppData } from "@miragon-ai/client-cibseven"
 import { navigateViaHost, type NavIntent, type OnNavigate } from "../navigation.js"
 import {
-  DeploymentsLoader,
   IncidentsLoader,
   InstanceDetailLoader,
   JobsLoader,
   OverviewView,
   ProcessDetailLoader,
   ProcessInstancesLoader,
-  TasksLoader,
 } from "./view-loaders.js"
 
 export type { CockpitAppData }
@@ -26,21 +24,17 @@ interface EnginesResult {
 type CockpitView =
   | { section: "overview" }
   | { section: "incidents" }
-  | { section: "tasks" }
   | { section: "jobs" }
-  | { section: "deployments" }
   | { section: "process-detail"; processDefinitionKey: string }
   | { section: "process-instances"; processDefinitionKey: string }
   | { section: "instance-detail"; processInstanceId: string }
 
-type TopSection = "overview" | "incidents" | "tasks" | "jobs" | "deployments"
+type TopSection = "overview" | "incidents" | "jobs"
 
 const SECTIONS: Array<{ id: TopSection; label: string; icon: string }> = [
   { id: "overview", label: "Overview", icon: "▦" },
   { id: "incidents", label: "Incidents", icon: "⚠" },
-  { id: "tasks", label: "Human Tasks", icon: "☑" },
   { id: "jobs", label: "Jobs", icon: "⚙" },
-  { id: "deployments", label: "Deployments", icon: "▤" },
 ]
 
 function topSectionOf(view: CockpitView): TopSection {
@@ -126,9 +120,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         setView({ section: "overview" })
         return
       case "incidents":
-      case "tasks":
       case "jobs":
-      case "deployments":
         setView({ section: intent.type })
         return
       case "process-detail":
@@ -140,7 +132,9 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
       case "instance-detail":
         setView({ section: "instance-detail", processInstanceId: intent.processInstanceId })
         return
-      // Not yet client-side — delegate to the agent (opens the matching widget).
+      // Not hosted in-cockpit — delegate to the agent (opens the matching widget).
+      case "tasks":
+      case "deployments":
       case "process-incidents":
       case "incident-detail":
         navigateViaHost(host, intent)
@@ -285,9 +279,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
           {view.section === "incidents" && (
             <IncidentsLoader engineId={engineId} onNavigate={navigate} />
           )}
-          {view.section === "tasks" && <TasksLoader engineId={engineId} />}
           {view.section === "jobs" && <JobsLoader engineId={engineId} />}
-          {view.section === "deployments" && <DeploymentsLoader engineId={engineId} />}
           {view.section === "process-detail" && (
             <ProcessDetailLoader
               processDefinitionKey={view.processDefinitionKey}

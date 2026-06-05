@@ -1,22 +1,18 @@
 import type { ReactNode } from "react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type {
-  DeploymentBrowserData,
   IncidentsDashboardData,
   InstanceDetailData,
   JobPanelData,
   ProcessDetailData,
   ProcessInstancesData,
-  TaskDashboardData,
 } from "@miragon-ai/client-cibseven"
 import {
-  CAMUNDA7_DEPLOYMENTS_DATA,
   CAMUNDA7_INCIDENTS_DATA,
   CAMUNDA7_INSTANCE_DETAIL_DATA,
   CAMUNDA7_JOBS_DATA,
   CAMUNDA7_PROCESS_DETAIL_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
-  CAMUNDA7_TASKS_DATA,
 } from "../../tool-names.js"
 import type { OnNavigate } from "../navigation.js"
 import { ProcessHealthKpiView } from "../cockpit-dashboard/health-kpi.js"
@@ -26,9 +22,7 @@ import { IncidentProcessListView } from "../incidents-dashboard/process-list.js"
 import { ProcessDetailView } from "../process-detail.js"
 import { ProcessInstancesView } from "../process-instances/list.js"
 import { InstanceDetailWidget } from "../instance-detail.js"
-import { TaskListTable } from "../task-dashboard/list-table.js"
 import { JobPanelWidget } from "../job-panel.js"
-import { DeploymentBrowserWidget } from "../deployment-browser.js"
 
 /** Shared loading/error wrapper for a client-side loaded view. */
 function Loaded<T>({
@@ -155,17 +149,6 @@ export function InstanceDetailLoader({
   )
 }
 
-export function TasksLoader({ engineId }: { engineId: string }) {
-  const q = useToolQuery<TaskDashboardData>(["camunda7:tasks", engineId], CAMUNDA7_TASKS_DATA, {
-    engine: engineId,
-  })
-  return (
-    <Loaded data={q.data} isError={q.isError} error={q.error}>
-      {(d) => <TaskListTable data={d} />}
-    </Loaded>
-  )
-}
-
 export function JobsLoader({ engineId }: { engineId: string }) {
   const q = useToolQuery<JobPanelData>(["camunda7:jobs", engineId], CAMUNDA7_JOBS_DATA, {
     engine: engineId,
@@ -173,19 +156,6 @@ export function JobsLoader({ engineId }: { engineId: string }) {
   return (
     <Loaded data={q.data} isError={q.isError} error={q.error}>
       {(d) => <JobPanelWidget data={d} />}
-    </Loaded>
-  )
-}
-
-export function DeploymentsLoader({ engineId }: { engineId: string }) {
-  const q = useToolQuery<DeploymentBrowserData>(
-    ["camunda7:deployments", engineId],
-    CAMUNDA7_DEPLOYMENTS_DATA,
-    { engine: engineId },
-  )
-  return (
-    <Loaded data={q.data} isError={q.isError} error={q.error}>
-      {(d) => <DeploymentBrowserWidget data={d} />}
     </Loaded>
   )
 }
