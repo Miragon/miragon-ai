@@ -133,8 +133,6 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         setView({ section: "instance-detail", processInstanceId: intent.processInstanceId })
         return
       // Not hosted in-cockpit — delegate to the agent (opens the matching widget).
-      case "tasks":
-      case "deployments":
       case "process-incidents":
       case "incident-detail":
         navigateViaHost(host, intent)

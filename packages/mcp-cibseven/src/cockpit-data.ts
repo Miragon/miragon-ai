@@ -1,12 +1,10 @@
 import type {
   Client,
   CockpitDashboardData,
-  DeploymentBrowserData,
   InstanceDetailData,
   JobPanelData,
   ProcessInstancesData,
   TaskData,
-  TaskDashboardData,
 } from "@miragon-ai/client-cibseven"
 import {
   getProcessDefinitions,
@@ -19,8 +17,6 @@ import {
   getTasks,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
-  getDeployments,
-  getDeploymentResources,
   getJobs,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 import { buildTaskFormSchema } from "./tools/task-form.js"
@@ -296,40 +292,6 @@ export async function buildInstanceDetailData(
   }
 }
 
-export async function buildTaskDashboardData(
-  client: Client,
-  engineId: string,
-  args: {
-    assignee?: string
-    candidateGroup?: string
-    processDefinitionKey?: string
-    maxResults?: number
-  },
-): Promise<TaskDashboardData> {
-  const tasks = await getTasks({
-    client,
-    query: {
-      assignee: args.assignee,
-      candidateGroup: args.candidateGroup,
-      processDefinitionKey: args.processDefinitionKey,
-      maxResults: args.maxResults ?? 50,
-      sortBy: "created",
-      sortOrder: "desc",
-    },
-  })
-  const taskArray = Array.isArray(tasks) ? tasks : []
-  return {
-    tasks: taskArray as TaskDashboardData["tasks"],
-    totalCount: taskArray.length,
-    filters: {
-      assignee: args.assignee,
-      candidateGroup: args.candidateGroup,
-      processDefinitionKey: args.processDefinitionKey,
-    },
-    engineId,
-  }
-}
-
 export async function buildJobPanelData(
   client: Client,
   engineId: string,
@@ -396,53 +358,4 @@ export async function buildJobPanelData(
     jobs,
     engineId,
   }
-}
-
-export async function buildDeploymentBrowserData(
-  client: Client,
-  engineId: string,
-  args: { name?: string; maxResults?: number },
-): Promise<DeploymentBrowserData> {
-  const deps = (await getDeployments({
-    client,
-    query: {
-      name: args.name,
-      maxResults: args.maxResults ?? 20,
-      sortBy: "deploymentTime",
-      sortOrder: "desc",
-    },
-  })) as unknown as Array<{
-    id: string
-    name?: string | null
-    deploymentTime?: string
-    source?: string | null
-    tenantId?: string | null
-  }>
-
-  const rows = Array.isArray(deps) ? deps : []
-
-  const withResources = await Promise.all(
-    rows.slice(0, 20).map(async (dep) => {
-      let resources: Array<{ id: string; name: string }> = []
-      try {
-        const res = (await getDeploymentResources({
-          client,
-          path: { id: dep.id },
-        })) as unknown as Array<{ id: string; name: string }>
-        resources = Array.isArray(res) ? res.map((r) => ({ id: r.id, name: r.name })) : []
-      } catch {
-        /* resources unavailable */
-      }
-      return {
-        id: dep.id,
-        name: dep.name ?? null,
-        deploymentTime: dep.deploymentTime ?? "",
-        source: dep.source ?? null,
-        tenantId: dep.tenantId ?? null,
-        resources,
-      }
-    }),
-  )
-
-  return { totalCount: rows.length, deployments: withResources, engineId }
 }

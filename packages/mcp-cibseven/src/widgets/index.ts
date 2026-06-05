@@ -11,8 +11,6 @@ import { ProcessIncidentFlow } from "./process-incidents/flow.js"
 import { ActivityIncidentList } from "./process-incidents/list.js"
 import { IncidentDetailWidget, type IncidentDetailData } from "./incident-detail.js"
 import { HistoryTimelineWidget, type HistoryTimelineData } from "./history-timeline.js"
-import type { TaskDashboardData } from "@miragon-ai/client-cibseven"
-import { TaskListTable } from "./task-dashboard/list-table.js"
 import { InstanceDetailWidget, type InstanceDetailData } from "./instance-detail.js"
 import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
 import { ProcessHealthKpi } from "./cockpit-dashboard/health-kpi.js"
@@ -23,7 +21,6 @@ import { BpmnViewerHeader } from "./bpmn-viewer/header.js"
 import { BpmnViewerLegend } from "./bpmn-viewer/legend.js"
 import { BpmnFlowViewer } from "./bpmn-viewer/flow.js"
 import { BpmnViewerWidget } from "./bpmn-viewer/widget.js"
-import { DeploymentBrowserWidget, type DeploymentBrowserData } from "./deployment-browser.js"
 import { JobPanelWidget, type JobPanelData } from "./job-panel.js"
 import { ProcessInstancesWidget, type ProcessInstancesData } from "./process-instances/list.js"
 import { CockpitApp } from "./cockpit-app/app.js"
@@ -34,12 +31,10 @@ export type {
   ProcessIncidentsData,
   IncidentDetailData,
   HistoryTimelineData,
-  TaskDashboardData,
   InstanceDetailData,
   CockpitDashboardData,
   ProcessDetailData,
   BpmnViewerData,
-  DeploymentBrowserData,
   JobPanelData,
   ProcessInstancesData,
 }
@@ -69,7 +64,6 @@ export const camunda7Widgets: Record<string, WidgetComponent> = {
   ),
   "camunda7:incident-detail": adaptDataWidget(IncidentDetailWidget, "camunda7:incidentDetail"),
   "camunda7:history-timeline": adaptDataWidget(HistoryTimelineWidget, "camunda7:historyTimeline"),
-  "camunda7:task-list-table": adaptDataWidget(TaskListTable, "camunda7:taskList"),
   "camunda7:instance-detail": adaptDataWidget(InstanceDetailWidget, "camunda7:processInstance"),
   "camunda7:process-health-kpi": adaptDataWidget(ProcessHealthKpi, "camunda7:cockpitDashboard"),
   "camunda7:process-definitions-table": adaptDataWidget(
@@ -81,10 +75,6 @@ export const camunda7Widgets: Record<string, WidgetComponent> = {
   "camunda7:bpmn-viewer-header": adaptDataWidget(BpmnViewerHeader, "camunda7:bpmnViewer"),
   "camunda7:bpmn-viewer-legend": adaptDataWidget(BpmnViewerLegend, "camunda7:bpmnViewer"),
   "camunda7:bpmn-flow-viewer": adaptDataWidget(BpmnFlowViewer, "camunda7:bpmnViewer"),
-  "camunda7:deployment-browser": adaptDataWidget(
-    DeploymentBrowserWidget,
-    "camunda7:deploymentBrowser",
-  ),
   "camunda7:job-panel": adaptDataWidget(JobPanelWidget, "camunda7:jobPanel"),
   "camunda7:process-instances": adaptDataWidget(
     ProcessInstancesWidget,

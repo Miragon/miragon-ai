@@ -18,11 +18,9 @@ import {
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 import {
   buildCockpitDashboardData,
-  buildDeploymentBrowserData,
   buildInstanceDetailData,
   buildJobPanelData,
   buildProcessInstancesData,
-  buildTaskDashboardData,
 } from "./cockpit-data.js"
 import { buildIncidentsDashboardData, buildProcessIncidentsData } from "./incident-panel-data.js"
 import { buildProcessDetailData } from "./steps/process-detail.js"
@@ -30,16 +28,13 @@ import { buildIncidentDetailData } from "./steps/incident-detail.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
 import {
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
-  CAMUNDA7_DEPLOYMENTS_DATA,
   CAMUNDA7_INCIDENTS_DATA,
   CAMUNDA7_INSTANCE_DETAIL_DATA,
   CAMUNDA7_JOBS_DATA,
   CAMUNDA7_OPEN_COCKPIT,
   CAMUNDA7_PROCESS_DETAIL_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
-  CAMUNDA7_TASKS_DATA,
   CAMUNDA7_SHOW_COCKPIT_DASHBOARD,
-  CAMUNDA7_SHOW_DEPLOYMENT_BROWSER,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
   CAMUNDA7_SHOW_INSTANCE_DETAIL,
@@ -48,7 +43,6 @@ import {
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
   CAMUNDA7_SHOW_PROCESS_INSTANCES,
   CAMUNDA7_SHOW_PROCESS_LIST,
-  CAMUNDA7_SHOW_TASK_DASHBOARD,
 } from "./tool-names.js"
 import { resolveEngine, type EngineRegistry } from "./lib/resolve-engine.js"
 
@@ -155,38 +149,6 @@ export function registerWidgetTools(
         dataType: "camunda7:processDefinitionList",
         data,
         title: "Process Definitions",
-      })
-    },
-  )
-
-  server.tool(
-    {
-      name: CAMUNDA7_SHOW_TASK_DASHBOARD,
-      title: "Task Dashboard",
-      description: "Show open user tasks as a dashboard with filters.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
-        assignee: z.string().optional(),
-        candidateGroup: z.string().optional(),
-        processDefinitionKey: z.string().optional(),
-        maxResults: z.number().optional().default(50),
-        ...engineParam,
-      }),
-      _meta: uiMeta,
-    },
-    async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
-      const data = await buildTaskDashboardData(client, engineId, {
-        assignee: args.assignee,
-        candidateGroup: args.candidateGroup,
-        processDefinitionKey: args.processDefinitionKey,
-        maxResults: args.maxResults,
-      })
-      return buildComposedView({
-        app: "camunda7",
-        title: "Task Dashboard",
-        layout: [{ row: [{ widget: "camunda7:task-list-table" }] }],
-        entries: [{ dataType: "camunda7:taskList", data }],
       })
     },
   )
@@ -615,35 +577,6 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: CAMUNDA7_SHOW_DEPLOYMENT_BROWSER,
-      title: "Deployment Browser",
-      description: "Show deployed resources grouped by deployment with metadata.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
-        name: z.string().optional().describe("Filter by deployment name"),
-        maxResults: z.number().optional().default(20),
-        ...engineParam,
-      }),
-      _meta: uiMeta,
-    },
-    async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
-      const data = await buildDeploymentBrowserData(client, engineId, {
-        name: args.name,
-        maxResults: args.maxResults,
-      })
-      return buildSingleWidgetView({
-        widget: "camunda7:deployment-browser",
-        app: "camunda7",
-        dataType: "camunda7:deploymentBrowser",
-        title: "Deployment Browser",
-        data,
-      })
-    },
-  )
-
-  server.tool(
-    {
       name: CAMUNDA7_SHOW_JOB_PANEL,
       title: "Job Management Panel",
       description:
@@ -772,34 +705,6 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: CAMUNDA7_TASKS_DATA,
-      title: "Tasks data (internal)",
-      description:
-        "Internal JSON feed (no UI) for open user tasks. Prefer camunda7_show_task_dashboard.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
-        assignee: z.string().optional(),
-        candidateGroup: z.string().optional(),
-        processDefinitionKey: z.string().optional(),
-        maxResults: z.number().optional(),
-        ...engineParam,
-      }),
-    },
-    async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
-      return rawData(
-        await buildTaskDashboardData(client, engineId, {
-          assignee: args.assignee,
-          candidateGroup: args.candidateGroup,
-          processDefinitionKey: args.processDefinitionKey,
-          maxResults: args.maxResults,
-        }),
-      )
-    },
-  )
-
-  server.tool(
-    {
       name: CAMUNDA7_JOBS_DATA,
       title: "Jobs data (internal)",
       description: "Internal JSON feed (no UI) for jobs. Prefer camunda7_show_job_panel.",
@@ -816,30 +721,6 @@ export function registerWidgetTools(
         await buildJobPanelData(client, engineId, {
           processDefinitionKey: args.processDefinitionKey,
           failedOnly: args.failedOnly,
-        }),
-      )
-    },
-  )
-
-  server.tool(
-    {
-      name: CAMUNDA7_DEPLOYMENTS_DATA,
-      title: "Deployments data (internal)",
-      description:
-        "Internal JSON feed (no UI) for deployments. Prefer camunda7_show_deployment_browser.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
-        name: z.string().optional(),
-        maxResults: z.number().optional(),
-        ...engineParam,
-      }),
-    },
-    async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
-      return rawData(
-        await buildDeploymentBrowserData(client, engineId, {
-          name: args.name,
-          maxResults: args.maxResults,
         }),
       )
     },

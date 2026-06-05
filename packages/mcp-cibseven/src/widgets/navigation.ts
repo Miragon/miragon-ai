@@ -1,6 +1,5 @@
 import { buildShowWidgetIntent, type HostActions } from "@miragon-ai/widget-shell/widgets"
 import {
-  CAMUNDA7_SHOW_DEPLOYMENT_BROWSER,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
   CAMUNDA7_SHOW_INSTANCE_DETAIL,
@@ -9,7 +8,6 @@ import {
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
   CAMUNDA7_SHOW_PROCESS_INSTANCES,
   CAMUNDA7_SHOW_PROCESS_LIST,
-  CAMUNDA7_SHOW_TASK_DASHBOARD,
 } from "../tool-names.js"
 
 /**
@@ -26,9 +24,7 @@ import {
 export type NavIntent =
   | { type: "process-list" }
   | { type: "incidents" }
-  | { type: "tasks" }
   | { type: "jobs" }
-  | { type: "deployments" }
   | { type: "process-detail"; processDefinitionKey: string }
   | { type: "process-instances"; processDefinitionKey: string }
   | { type: "process-incidents"; processDefinitionKey: string }
@@ -57,19 +53,9 @@ export function navigateViaHost(host: HostActions, intent: NavIntent): void {
         ),
       )
       return
-    case "tasks":
-      host.showWidget(
-        buildShowWidgetIntent(CAMUNDA7_SHOW_TASK_DASHBOARD, "Show the open user tasks"),
-      )
-      return
     case "jobs":
       host.showWidget(
         buildShowWidgetIntent(CAMUNDA7_SHOW_JOB_PANEL, "Show the job management panel"),
-      )
-      return
-    case "deployments":
-      host.showWidget(
-        buildShowWidgetIntent(CAMUNDA7_SHOW_DEPLOYMENT_BROWSER, "Show the deployment browser"),
       )
       return
     case "process-detail":
