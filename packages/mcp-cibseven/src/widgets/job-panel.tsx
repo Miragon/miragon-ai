@@ -227,6 +227,12 @@ export function JobPanelWidget({
                                 title="Explain this failure"
                                 prompt={`Explain why job ${job.id} failed on engine "${engine}". It is on activity "${job.activityId}" of process "${job.processDefinitionKey}" (definition ${job.processDefinitionId}), instance ${job.processInstanceId}, retries=${job.retries}, created ${job.createTime}. Reported exception: "${job.exceptionMessage}". Steps: (1) read the full context with camunda7_get_process_instance({engine: "${engine}", id: "${job.processInstanceId}"}) and camunda7_get_process_instance_variables for the input that reached this activity; (2) find the matching incident with camunda7_list_incidents({engine: "${engine}", processInstanceId: "${job.processInstanceId}"}); (3) check camunda7_query_historic_activity_instances to see if activity "${job.activityId}" fails repeatedly. Then answer in plain language: what broke, whether it is transient (data/infra) or deterministic (code/config), and an explicit verdict — SAFE TO RETRY or WILL RE-FAIL — with one-line justification. Do not mutate anything.`}
                               />
+                              <AskAiButton
+                                variant="icon"
+                                label="Draft ticket"
+                                title="Draft ticket"
+                                prompt={`Draft and file a GitHub issue for the incident behind failed job ${job.id} on engine "${engine}". This job has no incidentId directly, so first FIND the incident: call camunda7_list_incidents({ engine: "${engine}", processInstanceId: "${job.processInstanceId}" }) and pick the incident for this job (activity "${job.activityId}" of process "${job.processDefinitionKey}", instance ${job.processInstanceId}; reported exception: "${job.exceptionMessage}"). Then build the GitHub issue payload with camunda7_format_incident_issue({ incidentId: "<found incident id>" }), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
+                              />
                               <Button
                                 variant="outline"
                                 size="sm"

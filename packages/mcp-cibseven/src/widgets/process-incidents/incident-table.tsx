@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Badge } from "@miragon/mcp-toolkit-ui"
+import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentInstance } from "@miragon-ai/client-cibseven"
 
@@ -68,6 +69,12 @@ export function IncidentTable({
               >
                 <span aria-hidden="true">▸</span> Inspect
               </button>
+              <AskAiButton
+                variant="icon"
+                label="Draft ticket"
+                title="Draft ticket"
+                prompt={`Draft and file a GitHub issue for CIB Seven incident \`${incident.id}\` (${incident.incidentType}) on process instance ${incident.processInstanceId}, engine: the current engine. Build the payload with camunda7_format_incident_issue({ incidentId: "${incident.id}" }), include the error (${incident.incidentMessage ?? incident.incidentType}), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
+              />
               {instanceUrl && (
                 <a
                   href={instanceUrl}

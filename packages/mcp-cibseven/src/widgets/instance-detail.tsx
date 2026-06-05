@@ -304,6 +304,15 @@ export function InstanceDetailWidget({
                               instance.businessKey ? ` / ${instance.businessKey}` : ""
                             } of ${instance.definitionId} (engine ${engine}). Use camunda7_query_historic_activity_instances({processInstanceId: "${instance.id}"}) to see what ran before the failure and camunda7_list_incidents to check whether other instances of ${instance.definitionId} fail the same way. Recommend a fix (resolve, retry via camunda7_set_job_retries, variable change, or camunda7_modify_process_instance) with the exact tool arguments. Do not execute it yet.`}
                           />
+                          <AskAiButton
+                            variant="subtle"
+                            label="Draft ticket"
+                            prompt={`Draft and file a GitHub issue for CIB Seven incident \`${inc.id}\` (${inc.incidentType}${
+                              inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
+                            }) on process instance ${instance.id}${
+                              instance.businessKey ? ` (business key ${instance.businessKey})` : ""
+                            } of definition ${instance.definitionId}, engine \`${engine ?? "the current engine"}\`. Build the payload with camunda7_format_incident_issue({ incidentId: "${inc.id}" }), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
+                          />
                           <Button
                             variant="outline"
                             size="sm"

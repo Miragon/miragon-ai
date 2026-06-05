@@ -10,7 +10,7 @@ import {
   AlertDescription,
   Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 import { formatDuration, useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
 
@@ -87,6 +87,7 @@ export function ActivityBottleneckTable({
                 <TableHead scope="col" className="text-right">
                   Total Time
                 </TableHead>
+                <TableHead scope="col" className="w-px" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -102,6 +103,14 @@ export function ActivityBottleneckTable({
                   <TableCell className="text-right">{formatDuration(act.avgDurationMs)}</TableCell>
                   <TableCell className="text-right">{formatDuration(act.p95DurationMs)}</TableCell>
                   <TableCell className="text-right">{formatDuration(act.totalTimeMs)}</TableCell>
+                  <TableCell className="text-right">
+                    <AskAiButton
+                      variant="icon"
+                      label="Investigate bottleneck"
+                      title="Investigate bottleneck"
+                      prompt={`Explain in plain language why activity "${act.activityName || act.activityId}" (id ${act.activityId}, type ${act.activityType})${processDefinitionKey ? ` of process definition key "${processDefinitionKey}"` : " (cluster-wide, all process definitions)"} on the current engine is a bottleneck over the ${period ?? "7d"} window. On-screen for this activity: executionCount=${act.executionCount}, avgDurationMs=${act.avgDurationMs}, p95DurationMs=${act.p95DurationMs}, totalTimeMs=${act.totalTimeMs}. Use analytics_element_bottleneck${processDefinitionKey ? `({processDefinitionKey: "${processDefinitionKey}", activityId: "${act.activityId}", period: "${period ?? "7d"}"})` : ` (activityId "${act.activityId}", per relevant process definition)`} and, if you need process-level context, analytics_analyze_process_performance${processDefinitionKey ? `({processDefinitionKey: "${processDefinitionKey}", period: "${period ?? "7d"}"})` : ""}. Tell me (1) whether the cost is driven by high per-execution duration (avg/p95) or by sheer execution count, (2) whether the wait is most likely wait time (async/external task, job queue, message/timer) vs compute time inside the activity given its type "${act.activityType}", and (3) the single most impactful thing to look at next. Explanation only — do not change anything.`}
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

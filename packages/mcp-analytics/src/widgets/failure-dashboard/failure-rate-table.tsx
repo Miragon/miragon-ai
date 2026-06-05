@@ -8,7 +8,7 @@ import {
   TableCell,
   Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { WidgetShell, AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 import { useFailureDashboardSelfFetch } from "./lib.js"
 
@@ -60,6 +60,9 @@ export function FailureRateTable({ data: initialData }: { data: FailureDashboard
                 <TableHead scope="col" aria-sort="none">
                   Failure Rate
                 </TableHead>
+                <TableHead scope="col" className="text-right">
+                  <span className="sr-only">AI</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -85,6 +88,14 @@ export function FailureRateTable({ data: initialData }: { data: FailureDashboard
                         {proc.failureRatePct}%
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AskAiButton
+                      variant="icon"
+                      title="Why this rate?"
+                      label="Why this rate?"
+                      prompt={`Explain in plain language why process definition "${proc.processDefinitionKey}" on the current engine shows a ${proc.failureRatePct}% failure rate (${proc.failedCount} failed and ${proc.incidentCount} incident(s) out of ${proc.totalInstances} instances). Determine whether this is a regression by comparing recent versions with analytics_version_compare (processDefinitionKey "${proc.processDefinitionKey}") and recent time periods with analytics_compare_execution_periods (processDefinitionKey "${proc.processDefinitionKey}"), and identify the dominant failing activity with analytics_element_bottleneck (processDefinitionKey "${proc.processDefinitionKey}"). Summarize what is driving this failure rate. Explanation only — do not change anything.`}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

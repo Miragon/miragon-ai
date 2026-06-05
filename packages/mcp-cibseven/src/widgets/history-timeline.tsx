@@ -52,6 +52,23 @@ export function HistoryTimelineView({
     return <p className="text-muted-foreground text-sm">No activity history.</p>
   }
 
+  // Duration outliers: only surface the per-row "Why so long here?" explain
+  // affordance on the slowest step(s) so the timeline isn't cluttered. A row is
+  // an outlier if it has the single max duration, or its duration is >= 2x the
+  // median of all completed (non-null) durations.
+  const durations = activities.map((a) => a.durationInMillis).filter((d): d is number => d != null)
+  let outlierThreshold = Infinity
+  let maxDuration = -Infinity
+  if (durations.length > 0) {
+    const sorted = [...durations].sort((a, b) => a - b)
+    const mid = Math.floor(sorted.length / 2)
+    const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+    outlierThreshold = median * 2
+    maxDuration = sorted[sorted.length - 1]
+  }
+  const isOutlier = (ms: number | null): boolean =>
+    ms != null && (ms === maxDuration || ms >= outlierThreshold)
+
   return (
     <div className="flex flex-col gap-4">
       {processInstance && (
@@ -103,6 +120,14 @@ export function HistoryTimelineView({
                     <span className="text-muted-foreground text-xs">
                       {formatDuration(activity.durationInMillis)}
                     </span>
+                    {isOutlier(activity.durationInMillis) && (
+                      <AskAiButton
+                        variant="icon"
+                        label="Why so long here?"
+                        title="Why so long here?"
+                        prompt={`Explain in plain language why the activity ${activity.activityName ?? activity.activityId} (id ${activity.activityId}, type ${activity.activityType}) took ${activity.durationInMillis}ms on historic process instance ${processInstance?.id ?? "the current instance"}${engineId ? ` on engine ${engineId}` : " on the current engine"}. Is this wait time (a userTask or receiveTask waiting on a human or message) or compute time (a serviceTask doing work)? Use camunda7_query_historic_activity_instances for this instance to confirm the activity's timing, and cross-check whether this duration is normal for ${activity.activityType} ${activity.activityId} by calling analytics_element_bottleneck and analytics_analyze_process_performance for processDefinitionKey ${processInstance?.processDefinitionKey ?? "this process definition"}. State whether this step is the bottleneck and whether ${activity.durationInMillis}ms is typical or an outlier. Explanation only — do not change anything.`}
+                      />
+                    )}
                   </div>
                 </CardContent>
               </Card>

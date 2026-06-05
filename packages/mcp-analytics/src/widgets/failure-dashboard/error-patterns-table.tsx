@@ -13,7 +13,7 @@ import {
   AlertDescription,
   Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { WidgetShell, AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 import { formatDate, truncate, useFailureDashboardSelfFetch } from "./lib.js"
 
@@ -87,6 +87,9 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
                 <TableHead scope="col" aria-sort="none">
                   Last Seen
                 </TableHead>
+                <TableHead scope="col" className="text-right">
+                  <span className="sr-only">AI</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,6 +123,14 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {formatDate(pattern.lastOccurrence)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AskAiButton
+                      variant="icon"
+                      title="Diagnose"
+                      label="Diagnose"
+                      prompt={`Root-cause this CIB Seven error pattern across the fleet on the current engine. The pattern is incident message "${pattern.incidentMessage}" at activity "${pattern.activityId || "(unknown activity)"}" in process definition "${pattern.processDefinitionKey}", with ${pattern.incidentCount} incident(s) first seen ${pattern.firstOccurrence} and last seen ${pattern.lastOccurrence}${pattern.sampleInstanceIds.length > 0 ? `, sample instance ids ${pattern.sampleInstanceIds.join(", ")}` : ""}. Pull the failing instances with analytics_find_failed_instances (filter by processDefinitionKey "${pattern.processDefinitionKey}") and the live incidents with camunda7_list_incidents, then inspect the failing activity history via camunda7_query_historic_activity_instances for activity "${pattern.activityId || pattern.processDefinitionKey}". Tell me the likely root cause, whether this is transient (e.g. a retryable/timing/external dependency blip) or systemic (a code/config/data defect), and the recommended fix. Explanation only — do not change anything.`}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
