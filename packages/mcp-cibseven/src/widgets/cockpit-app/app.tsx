@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react"
 import { ModelContext, useWidget } from "mcp-use/react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
 import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "@miragon-ai/client-cibseven"
-import type { NavIntent, OnNavigate } from "../navigation.js"
+import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
+import { camunda7BaseWidgets } from "../registry.js"
+import { cockpitViews } from "./views.js"
 import {
   IncidentDetailLoader,
   IncidentsLoader,
   InstanceDetailLoader,
   JobsLoader,
   OverviewView,
-  ProcessDetailLoader,
   ProcessIncidentsLoader,
   ProcessInstancesLoader,
 } from "./view-loaders.js"
@@ -287,40 +289,51 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
             </nav>
           )}
 
-          {view.section === "overview" && (
-            <OverviewView engineId={engineId} onNavigate={navigate} />
-          )}
-          {view.section === "incidents" && (
-            <IncidentsLoader engineId={engineId} onNavigate={navigate} />
-          )}
-          {view.section === "jobs" && <JobsLoader engineId={engineId} />}
-          {view.section === "process-detail" && (
-            <ProcessDetailLoader
-              processDefinitionKey={view.processDefinitionKey}
-              engineId={engineId}
-              onNavigate={navigate}
-            />
-          )}
-          {view.section === "process-instances" && (
-            <ProcessInstancesLoader
-              processDefinitionKey={view.processDefinitionKey}
-              engineId={engineId}
-              onNavigate={navigate}
-            />
-          )}
-          {view.section === "process-incidents" && (
-            <ProcessIncidentsLoader
-              processDefinitionKey={view.processDefinitionKey}
-              engineId={engineId}
-              onNavigate={navigate}
-            />
-          )}
-          {view.section === "instance-detail" && (
-            <InstanceDetailLoader processInstanceId={view.processInstanceId} engineId={engineId} />
-          )}
-          {view.section === "incident-detail" && (
-            <IncidentDetailLoader incidentId={view.incidentId} engineId={engineId} />
-          )}
+          {/* Client-side navigation seam: widgets rendered below call `useNav()`,
+              which resolves to this in-app router instead of a chat follow-up. */}
+          <NavProvider value={navigate}>
+            {view.section === "overview" && (
+              <OverviewView engineId={engineId} onNavigate={navigate} />
+            )}
+            {view.section === "incidents" && (
+              <IncidentsLoader engineId={engineId} onNavigate={navigate} />
+            )}
+            {view.section === "jobs" && <JobsLoader engineId={engineId} />}
+            {view.section === "process-detail" && (
+              <WidgetRenderer
+                layout={cockpitViews["process-detail"]({
+                  engine: engineId,
+                  processDefinitionKey: view.processDefinitionKey,
+                })}
+                keys={{}}
+                errors={[]}
+                widgets={camunda7BaseWidgets}
+              />
+            )}
+            {view.section === "process-instances" && (
+              <ProcessInstancesLoader
+                processDefinitionKey={view.processDefinitionKey}
+                engineId={engineId}
+                onNavigate={navigate}
+              />
+            )}
+            {view.section === "process-incidents" && (
+              <ProcessIncidentsLoader
+                processDefinitionKey={view.processDefinitionKey}
+                engineId={engineId}
+                onNavigate={navigate}
+              />
+            )}
+            {view.section === "instance-detail" && (
+              <InstanceDetailLoader
+                processInstanceId={view.processInstanceId}
+                engineId={engineId}
+              />
+            )}
+            {view.section === "incident-detail" && (
+              <IncidentDetailLoader incidentId={view.incidentId} engineId={engineId} />
+            )}
+          </NavProvider>
         </main>
       </div>
     </WidgetShell>

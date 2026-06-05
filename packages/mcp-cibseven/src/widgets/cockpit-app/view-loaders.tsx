@@ -5,7 +5,6 @@ import type {
   IncidentsDashboardData,
   InstanceDetailData,
   JobPanelData,
-  ProcessDetailData,
   ProcessIncidentsData,
   ProcessInstancesData,
 } from "@miragon-ai/client-cibseven"
@@ -14,7 +13,6 @@ import {
   CAMUNDA7_INCIDENTS_DATA,
   CAMUNDA7_INSTANCE_DETAIL_DATA,
   CAMUNDA7_JOBS_DATA,
-  CAMUNDA7_PROCESS_DETAIL_DATA,
   CAMUNDA7_PROCESS_INCIDENTS_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
 } from "../../tool-names.js"
@@ -27,7 +25,6 @@ import { ProcessDetailHeader } from "../process-incidents/header.js"
 import { ProcessIncidentKpi } from "../process-incidents/kpi.js"
 import { ProcessIncidentFlow } from "../process-incidents/flow.js"
 import { ActivityIncidentList } from "../process-incidents/list.js"
-import { ProcessDetailView } from "../process-detail.js"
 import { ProcessInstancesView } from "../process-instances/list.js"
 import { InstanceDetailWidget } from "../instance-detail.js"
 import { IncidentDetailWidget } from "../incident-detail.js"
@@ -140,27 +137,6 @@ export function IncidentDetailLoader({
   return (
     <Loaded data={q.data} isError={q.isError} error={q.error}>
       {(d) => <IncidentDetailWidget data={d} />}
-    </Loaded>
-  )
-}
-
-export function ProcessDetailLoader({
-  processDefinitionKey,
-  engineId,
-  onNavigate,
-}: {
-  processDefinitionKey: string
-  engineId: string
-  onNavigate: OnNavigate
-}) {
-  const q = useToolQuery<ProcessDetailData>(
-    ["camunda7:process-detail", engineId, processDefinitionKey],
-    CAMUNDA7_PROCESS_DETAIL_DATA,
-    { processDefinitionKey, engine: engineId },
-  )
-  return (
-    <Loaded data={q.data} isError={q.isError} error={q.error}>
-      {(d) => <ProcessDetailView data={d} onNavigate={onNavigate} />}
     </Loaded>
   )
 }

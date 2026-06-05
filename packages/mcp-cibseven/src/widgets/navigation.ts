@@ -1,4 +1,9 @@
-import { buildShowWidgetIntent, type HostActions } from "@miragon-ai/widget-shell/widgets"
+import { createContext, useContext } from "react"
+import {
+  buildShowWidgetIntent,
+  useHostActions,
+  type HostActions,
+} from "@miragon-ai/widget-shell/widgets"
 import {
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
@@ -99,4 +104,21 @@ export function navigateViaHost(host: HostActions, intent: NavIntent): void {
       )
       return
   }
+}
+
+/**
+ * Client-side navigation seam. The consolidated cockpit provides its router via
+ * {@link NavProvider}; widgets call {@link useNav} to navigate. Rendered
+ * standalone (no provider), `useNav` falls back to the conversational host
+ * bridge — so the very same widget drills in-app inside the cockpit and via a
+ * chat follow-up on its own. This lets the cockpit render widgets generically
+ * (through the toolkit renderer) without threading an `onNavigate` prop.
+ */
+const NavContext = createContext<OnNavigate | null>(null)
+export const NavProvider = NavContext.Provider
+
+export function useNav(): OnNavigate {
+  const fromCockpit = useContext(NavContext)
+  const host = useHostActions()
+  return fromCockpit ?? ((intent) => navigateViaHost(host, intent))
 }

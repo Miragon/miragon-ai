@@ -17,8 +17,9 @@ import {
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 
+import { CAMUNDA7_PROCESS_DETAIL_DATA } from "../tool-names.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
-import { navigateViaHost, type OnNavigate } from "./navigation.js"
+import { useNav } from "./navigation.js"
 
 type FlowMode = "live" | "frequency" | "duration"
 
@@ -64,17 +65,33 @@ function ProcessHeatmap({
 
 export type { ProcessDetailData }
 
-/** Shell-less process-definition detail. Reused standalone and in the cockpit app. */
+/**
+ * Shell-less process-definition detail. One component, two modes: rendered
+ * standalone the agent's tool result is handed in via `data`; rendered inside the
+ * cockpit only `processDefinitionKey`/`engine` are passed and the view self-fetches
+ * (deduped under a shared query key). Navigation goes through {@link useNav} so the
+ * cockpit routes client-side while the standalone widget drills in via the host.
+ */
 export function ProcessDetailView({
-  data,
-  onNavigate,
+  data: initialData = null,
+  processDefinitionKey,
+  engine,
 }: {
-  data: ProcessDetailData | null
-  onNavigate?: OnNavigate
+  data?: ProcessDetailData | null
+  processDefinitionKey?: string
+  engine?: string
 }) {
   const host: HostActions = useHostActions()
-  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
+  const go = useNav()
   const [flowMode, setFlowMode] = useState<FlowMode>("live")
+
+  const query = useToolQuery<ProcessDetailData>(
+    ["camunda7:process-detail", engine ?? null, processDefinitionKey ?? null],
+    CAMUNDA7_PROCESS_DETAIL_DATA,
+    { processDefinitionKey, engine },
+    { enabled: !initialData && !!processDefinitionKey },
+  )
+  const data = initialData ?? query.data ?? null
 
   // Heatmap overlay: a blue running-token badge (top-right) on every active
   // activity, plus a red badge (top-left) for problems — incidents where they
@@ -103,6 +120,16 @@ export function ProcessDetailView({
   }, [data?.activities])
 
   if (!data) {
+    if (query.isError) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>{query.error?.message ?? "Failed to load."}</AlertDescription>
+        </Alert>
+      )
+    }
+    if (!initialData && processDefinitionKey) {
+      return <div className="text-muted-foreground p-6 text-sm">Loading…</div>
+    }
     return (
       <Alert>
         <AlertDescription>No data available</AlertDescription>
@@ -310,10 +337,18 @@ export function ProcessDetailView({
   )
 }
 
-export function ProcessDetailWidget({ data }: { data: ProcessDetailData | null }) {
+export function ProcessDetailWidget({
+  data,
+  processDefinitionKey,
+  engine,
+}: {
+  data: ProcessDetailData | null
+  processDefinitionKey?: string
+  engine?: string
+}) {
   return (
     <WidgetShell>
-      <ProcessDetailView data={data} />
+      <ProcessDetailView data={data} processDefinitionKey={processDefinitionKey} engine={engine} />
     </WidgetShell>
   )
 }
