@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import { useToolQuery, useCallTool } from "@miragon/mcp-toolkit-ui"
 
 /** Mirrors the toolkit's internal result parsing (content[0].text JSON → structuredContent). */
@@ -75,6 +75,10 @@ export function usePagedViewData<TItem, TData>(opts: {
   const [loadingMore, setLoadingMore] = useState(false)
   const [moreError, setMoreError] = useState<Error | null>(null)
 
+  // Latest filter identity, readable from an in-flight loadMore closure so a page
+  // that resolves after the filter changed can be discarded (see loadMore).
+  const argsKeyRef = useRef(argsKey)
+
   // Render-phase reset: when the filter identity (or handed-in data) changes,
   // drop accumulated pages synchronously so we never show stale rows under a new
   // page-0 result.
@@ -83,6 +87,7 @@ export function usePagedViewData<TItem, TData>(opts: {
     setPrevReset(argsKey)
     setExtra([])
     setMoreError(null)
+    argsKeyRef.current = argsKey
   }
 
   const baseItems = useMemo(() => (first ? selectItems(first) : []), [first, selectItems])
@@ -92,17 +97,22 @@ export function usePagedViewData<TItem, TData>(opts: {
 
   const loadMore = useCallback(() => {
     if (!first || loadingMore || !callTool) return
+    // Pin the filter this page belongs to; if it changes mid-flight, the resolved
+    // page is for the old filter and must NOT be appended onto the reset list.
+    const requestArgsKey = argsKey
     setLoadingMore(true)
     void callTool(tool, { ...args, firstResult: items.length, maxResults: pageSize })
       .then((res) => {
+        if (requestArgsKey !== argsKeyRef.current) return
         const data = parseToolResult<TData>(res)
         setExtra((prev) => [...prev, ...selectItems(data)])
       })
       .catch((err: unknown) => {
+        if (requestArgsKey !== argsKeyRef.current) return
         setMoreError(err instanceof Error ? err : new Error(String(err)))
       })
       .finally(() => setLoadingMore(false))
-  }, [first, loadingMore, callTool, tool, args, items.length, pageSize, selectItems])
+  }, [first, loadingMore, callTool, tool, args, argsKey, items.length, pageSize, selectItems])
 
   return {
     items,

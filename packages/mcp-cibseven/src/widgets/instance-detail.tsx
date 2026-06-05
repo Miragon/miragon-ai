@@ -200,6 +200,10 @@ export function InstanceDetailWidget({
   const activeIncidents = (incidents ?? []).filter((i) => !resolvedIds.has(i.id))
   const activeActivityIds = (data.activeActivityIds ?? []).join(", ") || "none"
   const incidentActivityIds = (data.incidentActivityIds ?? []).join(", ") || "none"
+  // Standalone (camunda7_show_instance_detail) the `engine` prop is undefined; fall
+  // back to the engine the data was fetched against so the AI prompts never read
+  // "engine undefined".
+  const engineId = engine ?? data.engineId ?? "the current engine"
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-5 p-6">
@@ -247,7 +251,7 @@ export function InstanceDetailWidget({
           variant="primary"
           prompt={`Diagnose CIB Seven process instance ${instance.id}${
             instance.businessKey ? ` (business key ${instance.businessKey})` : ""
-          } of definition ${instance.definitionId} on engine ${engine}. It is currently at activities ${activeActivityIds} with incidents at ${incidentActivityIds}. Use camunda7_get_process_instance, camunda7_list_incidents({processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.`}
+          } of definition ${instance.definitionId} on engine ${engineId}. It is currently at activities ${activeActivityIds} with incidents at ${incidentActivityIds}. Use camunda7_get_process_instance, camunda7_list_incidents({processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.`}
         />
       </div>
 
@@ -302,7 +306,7 @@ export function InstanceDetailWidget({
                               inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
                             }) on process instance ${instance.id}${
                               instance.businessKey ? ` / ${instance.businessKey}` : ""
-                            } of ${instance.definitionId} (engine ${engine}). Use camunda7_query_historic_activity_instances({processInstanceId: "${instance.id}"}) to see what ran before the failure and camunda7_list_incidents to check whether other instances of ${instance.definitionId} fail the same way. Recommend a fix (resolve, retry via camunda7_set_job_retries, variable change, or camunda7_modify_process_instance) with the exact tool arguments. Do not execute it yet.`}
+                            } of ${instance.definitionId} (engine ${engineId}). Use camunda7_query_historic_activity_instances({processInstanceId: "${instance.id}"}) to see what ran before the failure and camunda7_list_incidents to check whether other instances of ${instance.definitionId} fail the same way. Recommend a fix (resolve, retry via camunda7_set_job_retries, variable change, or camunda7_modify_process_instance) with the exact tool arguments. Do not execute it yet.`}
                           />
                           <AskAiButton
                             variant="subtle"
@@ -311,7 +315,7 @@ export function InstanceDetailWidget({
                               inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
                             }) on process instance ${instance.id}${
                               instance.businessKey ? ` (business key ${instance.businessKey})` : ""
-                            } of definition ${instance.definitionId}, engine \`${engine ?? "the current engine"}\`. Build the payload with camunda7_format_incident_issue({ incidentId: "${inc.id}" }), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
+                            } of definition ${instance.definitionId}, engine \`${engineId}\`. Build the payload with camunda7_format_incident_issue({ incidentId: "${inc.id}" }), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
                           />
                           <Button
                             variant="outline"
@@ -385,7 +389,7 @@ export function InstanceDetailWidget({
           <AskAiButton
             variant="subtle"
             label="Explain & validate variables"
-            prompt={`Explain and sanity-check the variables of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engine ?? "the current engine"}). Use camunda7_get_process_instance_variables(processInstanceId: "${instance.id}") for the authoritative values. For each meaningful variable say what it represents, and flag any value that looks missing, malformed, or inconsistent and could explain the current incident(s). If you find a likely-bad variable, propose the corrected value — but do not set it without my confirmation.`}
+            prompt={`Explain and sanity-check the variables of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engineId}). Use camunda7_get_process_instance_variables(processInstanceId: "${instance.id}") for the authoritative values. For each meaningful variable say what it represents, and flag any value that looks missing, malformed, or inconsistent and could explain the current incident(s). If you find a likely-bad variable, propose the corrected value — but do not set it without my confirmation.`}
           />
         </div>
         <VariablesTable
@@ -400,7 +404,7 @@ export function InstanceDetailWidget({
           <AskAiButton
             variant="subtle"
             label="Explain timeline"
-            prompt={`Explain the execution timeline of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engine ?? "the current engine"}). Use camunda7_query_historic_activity_instances(processInstanceId: "${instance.id}") to walk the per-activity history in order: where did the token spend the most time, which step is it currently stuck at, and does the path taken match the expected happy path? Call out the single biggest delay and whether it indicates a problem. Explanation only — do not change anything.`}
+            prompt={`Explain the execution timeline of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engineId}). Use camunda7_query_historic_activity_instances(processInstanceId: "${instance.id}") to walk the per-activity history in order: where did the token spend the most time, which step is it currently stuck at, and does the path taken match the expected happy path? Call out the single biggest delay and whether it indicates a problem. Explanation only — do not change anything.`}
           />
         </div>
         {auditOpen ? (
