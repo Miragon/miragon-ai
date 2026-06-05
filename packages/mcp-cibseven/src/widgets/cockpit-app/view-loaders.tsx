@@ -5,6 +5,7 @@ import type {
   InstanceDetailData,
   JobPanelData,
   ProcessDetailData,
+  ProcessIncidentsData,
   ProcessInstancesData,
 } from "@miragon-ai/client-cibseven"
 import {
@@ -12,6 +13,7 @@ import {
   CAMUNDA7_INSTANCE_DETAIL_DATA,
   CAMUNDA7_JOBS_DATA,
   CAMUNDA7_PROCESS_DETAIL_DATA,
+  CAMUNDA7_PROCESS_INCIDENTS_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
 } from "../../tool-names.js"
 import type { OnNavigate } from "../navigation.js"
@@ -19,6 +21,10 @@ import { ProcessHealthKpiView } from "../cockpit-dashboard/health-kpi.js"
 import { ProcessDefinitionsTableView } from "../cockpit-dashboard/definitions-table.js"
 import { IncidentOverviewKpiView } from "../incidents-dashboard/overview-kpi.js"
 import { IncidentProcessListView } from "../incidents-dashboard/process-list.js"
+import { ProcessDetailHeader } from "../process-incidents/header.js"
+import { ProcessIncidentKpi } from "../process-incidents/kpi.js"
+import { ProcessIncidentFlow } from "../process-incidents/flow.js"
+import { ActivityIncidentList } from "../process-incidents/list.js"
 import { ProcessDetailView } from "../process-detail.js"
 import { ProcessInstancesView } from "../process-instances/list.js"
 import { InstanceDetailWidget } from "../instance-detail.js"
@@ -82,6 +88,32 @@ export function IncidentsLoader({
         <div className="flex flex-col gap-6">
           <IncidentOverviewKpiView data={d} />
           <IncidentProcessListView data={d} onNavigate={onNavigate} />
+        </div>
+      )}
+    </Loaded>
+  )
+}
+
+export function ProcessIncidentsLoader({
+  processDefinitionKey,
+  engineId,
+}: {
+  processDefinitionKey: string
+  engineId: string
+}) {
+  const q = useToolQuery<ProcessIncidentsData>(
+    ["camunda7:process-incidents", engineId, processDefinitionKey],
+    CAMUNDA7_PROCESS_INCIDENTS_DATA,
+    { processDefinitionKey, engine: engineId },
+  )
+  return (
+    <Loaded data={q.data} isError={q.isError} error={q.error}>
+      {(d) => (
+        <div className="flex flex-col gap-6">
+          <ProcessDetailHeader data={d} />
+          <ProcessIncidentKpi data={d} />
+          <ProcessIncidentFlow data={d} />
+          <ActivityIncidentList data={d} />
         </div>
       )}
     </Loaded>

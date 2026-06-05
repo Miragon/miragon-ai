@@ -33,6 +33,7 @@ import {
   CAMUNDA7_JOBS_DATA,
   CAMUNDA7_OPEN_COCKPIT,
   CAMUNDA7_PROCESS_DETAIL_DATA,
+  CAMUNDA7_PROCESS_INCIDENTS_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
   CAMUNDA7_SHOW_COCKPIT_DASHBOARD,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
@@ -747,6 +748,30 @@ export function registerWidgetTools(
         cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
         incidentType: args.incidentType,
+      })
+      return rawData({ ...data, engineId })
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_PROCESS_INCIDENTS_DATA,
+      title: "Process incidents data (internal)",
+      description:
+        "Internal JSON feed (no UI) for a single definition's incidents — header, KPIs, BPMN overlays, activity-grouped incidents. Prefer camunda7_show_process_incidents.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().describe("Process definition key to drill into"),
+        ...engineParam,
+      }),
+    },
+    async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const data = await buildProcessIncidentsData(client, {
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
+        processDefinitionKey: args.processDefinitionKey,
       })
       return rawData({ ...data, engineId })
     },

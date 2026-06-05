@@ -10,6 +10,7 @@ import {
   JobsLoader,
   OverviewView,
   ProcessDetailLoader,
+  ProcessIncidentsLoader,
   ProcessInstancesLoader,
 } from "./view-loaders.js"
 
@@ -27,6 +28,7 @@ type CockpitView =
   | { section: "jobs" }
   | { section: "process-detail"; processDefinitionKey: string }
   | { section: "process-instances"; processDefinitionKey: string }
+  | { section: "process-incidents"; processDefinitionKey: string }
   | { section: "instance-detail"; processInstanceId: string }
 
 type TopSection = "overview" | "incidents" | "jobs"
@@ -43,6 +45,8 @@ function topSectionOf(view: CockpitView): TopSection {
     case "process-instances":
     case "instance-detail":
       return "overview"
+    case "process-incidents":
+      return "incidents"
     default:
       return view.section
   }
@@ -68,6 +72,11 @@ function breadcrumbOf(view: CockpitView): Crumb[] {
           view: { section: "process-detail", processDefinitionKey: view.processDefinitionKey },
         },
         { label: "Instances" },
+      ]
+    case "process-incidents":
+      return [
+        { label: "Incidents", view: { section: "incidents" } },
+        { label: view.processDefinitionKey },
       ]
     case "instance-detail":
       return [
@@ -129,11 +138,13 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
       case "process-instances":
         setView({ section: "process-instances", processDefinitionKey: intent.processDefinitionKey })
         return
+      case "process-incidents":
+        setView({ section: "process-incidents", processDefinitionKey: intent.processDefinitionKey })
+        return
       case "instance-detail":
         setView({ section: "instance-detail", processInstanceId: intent.processInstanceId })
         return
       // Not hosted in-cockpit — delegate to the agent (opens the matching widget).
-      case "process-incidents":
       case "incident-detail":
         navigateViaHost(host, intent)
         return
@@ -290,6 +301,12 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               processDefinitionKey={view.processDefinitionKey}
               engineId={engineId}
               onNavigate={navigate}
+            />
+          )}
+          {view.section === "process-incidents" && (
+            <ProcessIncidentsLoader
+              processDefinitionKey={view.processDefinitionKey}
+              engineId={engineId}
             />
           )}
           {view.section === "instance-detail" && (
