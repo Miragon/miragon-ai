@@ -16,7 +16,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "@miragon-ai/client-cibseven"
-import { useHostActions, type HostActions } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
 import { ConfirmDialog } from "./confirm-dialog.js"
@@ -47,7 +47,6 @@ export function JobPanelWidget({
 }) {
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
   const [confirmBatch, setConfirmBatch] = useState(false)
-  const host: HostActions = useHostActions()
   const retryMutation = useToolMutation("camunda7_set_job_retries")
   const batchMutation = useToolMutation("camunda7_set_job_retries_batch")
   const { data, loading, error } = useViewData<JobPanelData>(
@@ -117,19 +116,11 @@ export function JobPanelWidget({
           {failedCount > 0 && <Badge variant="destructive">{failedCount} failed</Badge>}
           {failedJobs.length > 0 && (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  host.askAi(
-                    `Analyze the ${failedJobs.length} failed job${
-                      failedJobs.length === 1 ? "" : "s"
-                    } shown in the cockpit: cluster them by exception message, identify the most likely root cause, and recommend a fix (batch retry, variable change, or escalation). Investigate with camunda7_list_jobs / camunda7_list_incidents / camunda7_query_historic_activity_instances.`,
-                  )
-                }
-              >
-                <span aria-hidden>✦</span> Analyze failures
-              </Button>
+              <AskAiButton
+                variant="primary"
+                label="Analyze with AI"
+                prompt={`Triage the failed jobs (retries == 0) on engine "${engine}" surfaced in the Job Management panel. The engine reports ${totalCount} total jobs and ${failedCount} failed. Use camunda7_list_jobs({engine: "${engine}", withException: true, noRetriesLeft: true}) to load the exact failed set, then: (1) cluster the jobs by normalized exceptionMessage and by activityId/processDefinitionKey; (2) for each cluster name the most likely root cause, cross-checking with camunda7_list_incidents({engine: "${engine}"}) and camunda7_query_historic_activity_instances to see whether the same activity is failing across many instances (systemic) or one-off; (3) recommend a concrete action per cluster — transient/infra errors -> batch retry via camunda7_set_job_retries_batch, bad input data -> camunda7_set_process_instance_variable then retry, code/deployment defect -> escalate and draft a ticket. Return a short ranked table: cluster | likely cause | affected count | recommended action. Do not execute any retry or mutation; recommend only.`}
+              />
               <Button
                 variant="outline"
                 size="sm"
@@ -224,14 +215,22 @@ export function JobPanelWidget({
                         </TableCell>
                         <TableCell>
                           {job.retries === 0 && !retried && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={retryMutation.isPending}
-                              onClick={() => handleRetry(job.id)}
-                            >
-                              Retry
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <AskAiButton
+                                variant="icon"
+                                label="Explain this failure"
+                                title="Explain this failure"
+                                prompt={`Explain why job ${job.id} failed on engine "${engine}". It is on activity "${job.activityId}" of process "${job.processDefinitionKey}" (definition ${job.processDefinitionId}), instance ${job.processInstanceId}, retries=${job.retries}, created ${job.createTime}. Reported exception: "${job.exceptionMessage}". Steps: (1) read the full context with camunda7_get_process_instance({engine: "${engine}", id: "${job.processInstanceId}"}) and camunda7_get_process_instance_variables for the input that reached this activity; (2) find the matching incident with camunda7_list_incidents({engine: "${engine}", processInstanceId: "${job.processInstanceId}"}); (3) check camunda7_query_historic_activity_instances to see if activity "${job.activityId}" fails repeatedly. Then answer in plain language: what broke, whether it is transient (data/infra) or deterministic (code/config), and an explicit verdict — SAFE TO RETRY or WILL RE-FAIL — with one-line justification. Do not mutate anything.`}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={retryMutation.isPending}
+                                onClick={() => handleRetry(job.id)}
+                              >
+                                Retry
+                              </Button>
+                            </div>
                           )}
                           {retried && (
                             <span className="text-muted-foreground text-xs">Retried</span>

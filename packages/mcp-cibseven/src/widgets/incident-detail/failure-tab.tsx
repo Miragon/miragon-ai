@@ -1,5 +1,5 @@
 import { Alert, AlertDescription, Badge, Card, CardContent } from "@miragon/mcp-toolkit-ui"
-import { SectionHeading, useHostActions } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, SectionHeading } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "@miragon-ai/client-cibseven"
 
@@ -22,17 +22,8 @@ export function FailureTab({
   retrying: boolean
   retried: boolean
 }) {
-  const host = useHostActions()
   const job = data.job
-
-  function reportToGitHub() {
-    // Hands a structured natural-language prompt back to the host agent, which
-    // chains the registered `report_incident_to_github` prompt → format tool →
-    // GitHub MCP server's `create_issue`. See packages/mcp-cibseven/src/tools/incident-issue.ts.
-    host.showWidget(
-      `File a GitHub issue for incident \`${data.incidentId}\` (use the report_incident_to_github prompt).`,
-    )
-  }
+  const engineId = data.engineId ?? "default"
   return (
     <div className="flex flex-col gap-4">
       <Card className="gap-0 py-0 shadow-none">
@@ -79,6 +70,11 @@ export function FailureTab({
       </Card>
 
       <div className="flex flex-wrap items-center gap-2">
+        <AskAiButton
+          variant="primary"
+          label="Analyze with AI"
+          prompt={`Diagnose CIB Seven incident \`${data.incidentId}\` (type \`${data.incidentType}\`) at activity ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on process instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey} v${data.processDefinitionVersion} (definition \`${data.processDefinitionId}\`${data.businessKey ? `, business key ${data.businessKey}` : ""}), engine \`${engineId}\`. Error: ${data.incidentMessage ?? job?.exceptionMessage ?? "(none reported)"}. Use camunda7_instance_detail_data and camunda7_get_process_instance_variables for context, read the stacktrace${job ? ` on job ${job.id}` : ""}, and use camunda7_list_incidents + camunda7_query_historic_activity_instances to check whether other instances of \`${data.processDefinitionKey}\` fail the same way at ${data.activityId}. Then state: (1) the most likely root cause, (2) whether a plain retry will succeed or just re-fail, and (3) the concrete recommended fix (retry, variable correction, instance modification, or escalation).`}
+        />
         {resolved ? (
           <Badge variant="secondary">Incident resolved</Badge>
         ) : (
@@ -103,15 +99,11 @@ export function FailureTab({
             <span aria-hidden="true">↻</span> {retried ? "Retried" : "Retry job (set retries to 1)"}
           </button>
         )}
-        <button
-          type="button"
-          onClick={reportToGitHub}
-          aria-label="File GitHub issue"
-          className="border-border text-muted-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2"
-          title="Hand off to the agent to file a GitHub issue via the configured GitHub MCP server"
-        >
-          <span aria-hidden="true">⚑</span> File GitHub issue
-        </button>
+        <AskAiButton
+          variant="subtle"
+          label="Draft GitHub issue"
+          prompt={`Draft and file a GitHub issue for CIB Seven incident \`${data.incidentId}\` (${data.incidentType}) at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey} v${data.processDefinitionVersion}${data.businessKey ? `, business key ${data.businessKey}` : ""}, engine \`${engineId}\`. Build the payload with camunda7_format_incident_issue({ incidentId: '${data.incidentId}' }), include the error (${data.incidentMessage ?? job?.exceptionMessage ?? "(none reported)"}) and stacktrace, show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue.`}
+        />
       </div>
 
       <div>

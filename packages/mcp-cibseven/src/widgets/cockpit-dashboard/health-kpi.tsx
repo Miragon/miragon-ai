@@ -1,5 +1,5 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
 import { buildRows } from "./lib.js"
 import { useNav, type NavIntent } from "../navigation.js"
@@ -66,6 +66,13 @@ export function ProcessHealthKpiView({
             Übersicht aller Prozesse · {summary.totalDefinitions}{" "}
             {summary.totalDefinitions === 1 ? "Prozess" : "Prozesse"}
           </span>
+        }
+        actions={
+          <AskAiButton
+            variant="primary"
+            label="Analyze landscape health with AI"
+            prompt={`Triage the CIB Seven process landscape on engine ${engine ?? "the current engine"}. Right now ${summary.totalDefinitions} definitions are deployed with ${summary.totalRunningInstances} running instances, ${summary.totalFailedJobs} failed jobs and ${summary.totalIncidents} open incidents. Use analytics_engine_health (engineId: ${engine ?? "the current engine"}) for the live ops snapshot and analytics_show_failure_dashboard (engineId: ${engine ?? "the current engine"}) to group current failures by incident type, activity and process definition. Then rank the affected process definitions by operational severity (blast radius = running instances x incident concentration), name the single most urgent one, give the most likely root cause, and recommend the first concrete remediation step (batch retry, variable fix, migration, or escalation).`}
+          />
         }
       />
       <KpiGrid

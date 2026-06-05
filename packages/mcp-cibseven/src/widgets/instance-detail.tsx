@@ -10,7 +10,7 @@ import {
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
-import { useHostActions, type HostActions } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibseven"
 import { CAMUNDA7_INSTANCE_DETAIL_DATA } from "../tool-names.js"
@@ -107,7 +107,6 @@ export function InstanceDetailWidget({
   const [cancelled, setCancelled] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
-  const host: HostActions = useHostActions()
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const suspendMutation = useToolMutation("camunda7_suspend_process_instance")
   const activateMutation = useToolMutation("camunda7_activate_process_instance")
@@ -199,6 +198,8 @@ export function InstanceDetailWidget({
 
   const variableEntries = Object.entries(variables)
   const activeIncidents = (incidents ?? []).filter((i) => !resolvedIds.has(i.id))
+  const activeActivityIds = (data.activeActivityIds ?? []).join(", ") || "none"
+  const incidentActivityIds = (data.incidentActivityIds ?? []).join(", ") || "none"
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-5 p-6">
@@ -242,27 +243,36 @@ export function InstanceDetailWidget({
             Definition: {instance.definitionId}
           </div>
         </div>
-        {isActionable && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isMutatingInstance}
-              onClick={handleSuspendToggle}
-            >
-              {isSuspended ? "Activate" : "Suspend"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              disabled={isMutatingInstance}
-              onClick={() => setConfirmCancel(true)}
-            >
-              Cancel instance
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <AskAiButton
+            variant="primary"
+            label="Analyze instance"
+            prompt={`Diagnose CIB Seven process instance ${instance.id}${
+              instance.businessKey ? ` (business key ${instance.businessKey})` : ""
+            } of definition ${instance.definitionId} on engine ${engine}. It is currently at activities ${activeActivityIds} with incidents at ${incidentActivityIds}. Use camunda7_get_process_instance, camunda7_list_incidents({processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.`}
+          />
+          {isActionable && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isMutatingInstance}
+                onClick={handleSuspendToggle}
+              >
+                {isSuspended ? "Activate" : "Suspend"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                disabled={isMutatingInstance}
+                onClick={() => setConfirmCancel(true)}
+              >
+                Cancel instance
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {incidents && incidents.length > 0 && (
@@ -287,21 +297,15 @@ export function InstanceDetailWidget({
                       </div>
                       {!resolved && (
                         <div className="flex items-center gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              host.askAi(
-                                `Analyze the root cause of incident ${inc.id} (${inc.incidentType}${
-                                  inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
-                                }) on process instance ${instance.id}${
-                                  instance.businessKey ? ` / ${instance.businessKey}` : ""
-                                } of ${instance.definitionId}. Check whether other instances fail the same way and recommend a fix (retry, variable change, or modification).`,
-                              )
-                            }
-                          >
-                            <span aria-hidden>✦</span> Analyze
-                          </Button>
+                          <AskAiButton
+                            variant="subtle"
+                            label="Analyze"
+                            prompt={`Analyze the root cause of incident ${inc.id} (${inc.incidentType}${
+                              inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
+                            }) on process instance ${instance.id}${
+                              instance.businessKey ? ` / ${instance.businessKey}` : ""
+                            } of ${instance.definitionId} (engine ${engine}). Use camunda7_query_historic_activity_instances({processInstanceId: "${instance.id}"}) to see what ran before the failure and camunda7_list_incidents to check whether other instances of ${instance.definitionId} fail the same way. Recommend a fix (resolve, retry via camunda7_set_job_retries, variable change, or camunda7_modify_process_instance) with the exact tool arguments. Do not execute it yet.`}
+                          />
                           <Button
                             variant="outline"
                             size="sm"

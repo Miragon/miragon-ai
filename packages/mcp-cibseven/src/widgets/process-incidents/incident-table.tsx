@@ -63,10 +63,10 @@ export function IncidentTable({
               <button
                 type="button"
                 onClick={() => onAnalyze(incident.id)}
-                aria-label="Analyze incident"
+                aria-label="Inspect incident"
                 className="bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium outline-none focus-visible:ring-2"
               >
-                <span aria-hidden="true">🔍</span> Analyze
+                <span aria-hidden="true">▸</span> Inspect
               </button>
               {instanceUrl && (
                 <a

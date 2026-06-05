@@ -1,7 +1,30 @@
 import { Card, CardContent, Alert, AlertDescription, Skeleton } from "@miragon/mcp-toolkit-ui"
-import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { WidgetShell, AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 import { useFailureDashboardSelfFetch } from "./lib.js"
+
+/**
+ * Build the self-contained cross-pattern triage prompt for the surface-level
+ * "✦ Analyze failures" handoff. Every concrete id/number is inlined here so the
+ * agent gets the full point-in-time snapshot without relying on ambient context.
+ * The failure dashboard is cross-engine (no single engine in scope), so the
+ * prompt asks the agent to confirm live state across engines itself.
+ */
+function buildAnalyzeFailuresPrompt(data: FailureDashboardData): string {
+  const errorPatterns = data.errorPatterns
+    .map(
+      (p) =>
+        `"${p.incidentMessage}" at activity ${p.activityId} in process ${p.processDefinitionKey} (${p.incidentCount}×, first ${p.firstOccurrence}, last ${p.lastOccurrence}, sample instances ${p.sampleInstanceIds.join(", ")})`,
+    )
+    .join("; ")
+  const processBreakdown = data.processBreakdown
+    .map(
+      (b) =>
+        `${b.processDefinitionKey}: ${b.failedCount} failed / ${b.totalInstances} total = ${b.failureRatePct}%, ${b.incidentCount} incidents`,
+    )
+    .join("; ")
+  return `Triage the current open-incident snapshot from the failure dashboard. There are ${data.totalIncidents} open incidents across ${data.uniqueErrorPatterns} distinct error patterns; the most affected process is \`${data.mostAffectedProcess ?? "unknown"}\`. The top error patterns are: ${errorPatterns}. The per-process failure breakdown is: ${processBreakdown}. Group the patterns by likely common cause, distinguish a broad systemic outage (one cause spanning many processes) from isolated per-process bugs, and give a ranked, prioritized action list (which patterns to fix first and why) using their incidentCount, failureRatePct and recency. Confirm with the live engine state via analytics_find_failed_instances and camunda7_list_incidents before recommending, since this snapshot is point-in-time across all engines. Do not mutate anything — analysis only.`
+}
 
 export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboardData | null }) {
   const fallbackQuery = useFailureDashboardSelfFetch(initialData)
@@ -35,6 +58,13 @@ export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboar
   }
   return (
     <WidgetShell>
+      <div className="mb-4 flex items-center justify-end">
+        <AskAiButton
+          variant="primary"
+          label="Analyze failures"
+          prompt={buildAnalyzeFailuresPrompt(data)}
+        />
+      </div>
       <div className="grid grid-cols-3 gap-4" aria-label="Failure analysis summary">
         <Card className="bg-critical-soft gap-0 py-0 shadow-none">
           <CardContent className="p-4">

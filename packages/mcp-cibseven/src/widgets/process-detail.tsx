@@ -4,6 +4,7 @@ import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type { ProcessDetailData } from "@miragon-ai/client-cibseven"
 
 import {
+  AskAiButton,
   BpmnHeatmap,
   HeatmapLegend,
   KpiGrid,
@@ -172,6 +173,28 @@ export function ProcessDetailView({
     })
   }
 
+  // AI handoff prompts — fully self-contained (engine + concrete ids inlined) so
+  // the chat follow-up needs no ambient context. The problem-activity lists are
+  // baked in here from the in-scope `data.activities`.
+  const engineId = data.engineId ?? engine ?? "default"
+  const problemActivities = data.activities.filter((a) => a.incidentCount > 0 || a.failedJobs > 0)
+  const problemActivityList =
+    problemActivities
+      .map(
+        (a) =>
+          `"${a.activityName ?? a.activityId} (${a.activityId}): ${a.incidentCount} incidents, ${a.failedJobs} failed jobs, ${a.instances} running"`,
+      )
+      .join(", ") || "(none reported)"
+  const incidentActivityList =
+    data.activities
+      .filter((a) => a.incidentCount > 0)
+      .map((a) => `"${a.activityName ?? a.activityId} (${a.activityId}): ${a.incidentCount}"`)
+      .join(", ") || "(none reported)"
+
+  const analyzePrompt = `Triage the health of process definition \`${data.processDefinitionName ?? data.processDefinitionKey}\` (key \`${data.processDefinitionKey}\`, version ${data.version}, engine \`${engineId}\`). Current state: ${data.openIncidents} open incident(s), ${data.failedJobs} failed job(s), ${data.affectedActivityCount} of ${data.totalActivityCount} activities affected, ${data.runningInstances} running instances. Problem activities: ${problemActivityList}. Use camunda7_list_incidents and camunda7_list_jobs (filter by processDefinitionKey \`${data.processDefinitionKey}\`) to pull the real incident/exception messages, cluster them by root cause, and use camunda7_query_historic_activity_instances to see whether the same failures recur. Tell me: the single most likely root cause per cluster, which activities are symptoms vs. sources, and a concrete recommended fix (batch retry, variable change, modification, or migration). Do NOT mutate anything — diagnosis only.`
+
+  const draftTicketPrompt = `Draft a GitHub incident ticket for process \`${data.processDefinitionName ?? data.processDefinitionKey}\` (key \`${data.processDefinitionKey}\`, version ${data.version}, engine \`${engineId}\`), which currently has ${data.openIncidents} open incident(s) across activities ${incidentActivityList}. First call camunda7_list_incidents (filter by processDefinitionKey \`${data.processDefinitionKey}\`) to get the incident ids and messages, pick the most representative open incident, then call camunda7_format_incident_issue { incidentId: <that id> } to build the issue payload. Show me the title, body, and labels and ask for confirmation before anything is created — do NOT call create_issue yourself.`
+
   return (
     <>
       <header className="flex flex-wrap items-start justify-between gap-6">
@@ -229,6 +252,7 @@ export function ProcessDetailView({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <AskAiButton prompt={analyzePrompt} variant="primary" />
           <button
             type="button"
             onClick={() =>
@@ -239,15 +263,22 @@ export function ProcessDetailView({
             View running instances <span aria-hidden>→</span>
           </button>
           {data.openIncidents > 0 && (
-            <button
-              type="button"
-              onClick={() =>
-                go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
-              }
-              className="bg-m-blue hover:bg-m-blue-light focus-visible:ring-ring inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white outline-none focus-visible:ring-2"
-            >
-              Open all incidents <span aria-hidden>→</span>
-            </button>
+            <>
+              <AskAiButton
+                prompt={draftTicketPrompt}
+                label="Draft incident ticket"
+                variant="subtle"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
+                }
+                className="bg-m-blue hover:bg-m-blue-light focus-visible:ring-ring inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white outline-none focus-visible:ring-2"
+              >
+                Open all incidents <span aria-hidden>→</span>
+              </button>
+            </>
           )}
         </div>
       </header>

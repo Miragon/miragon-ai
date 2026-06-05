@@ -1,5 +1,11 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { KpiGrid, LivePill, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import {
+  AskAiButton,
+  KpiGrid,
+  LivePill,
+  WidgetHeader,
+  WidgetShell,
+} from "@miragon-ai/widget-shell/widgets"
 import type { IncidentsDashboardData } from "@miragon-ai/client-cibseven"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
@@ -42,6 +48,8 @@ export function IncidentOverviewKpiView({
     )
   }
 
+  const engineId = engine ?? data.engineId ?? "default"
+
   return (
     <>
       <WidgetHeader
@@ -57,6 +65,12 @@ export function IncidentOverviewKpiView({
               {data.latestIncident && <> · last event {formatTimestamp(data.latestIncident)}</>}
             </span>
           </>
+        }
+        actions={
+          <AskAiButton
+            variant="primary"
+            prompt={`Triage all open incidents in the CIB Seven cockpit for engine ${engineId}. There are currently ${data.totalCount} open incidents across ${data.processCount} process(es) affecting ${data.affectedActivityCount} activities, with ${data.last24hCount} new in the last 24h (last event ${formatTimestamp(data.latestIncident)}). Use camunda7_list_incidents and camunda7_query_historic_activity_instances to cluster the incidents by exception/error message and failing activity, rank the clusters by impact (incident count and 24h growth), identify the single most likely systemic root cause, and tell me which process(es) and activities to address first. For each top cluster recommend a concrete next step (batch job retry via camunda7_set_job_retries_batch, a variable fix, an instance modification, or escalation). Do not change anything yet — return a prioritized triage plan.`}
+          />
         }
       />
       <KpiGrid

@@ -1,5 +1,5 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { TONE_DOT } from "@miragon-ai/widget-shell/widgets"
+import { TONE_DOT, AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "@miragon-ai/client-cibseven"
 
 export type { HistoryTimelineData }
@@ -40,9 +40,13 @@ function formatDuration(ms: number | null): string {
 export function HistoryTimelineView({
   activities,
   processInstance,
+  engineId,
+  totalActivities,
 }: {
   activities: HistoryActivity[]
   processInstance?: HistoryTimelineData["processInstance"]
+  engineId?: string
+  totalActivities?: number
 }) {
   if (activities.length === 0) {
     return <p className="text-muted-foreground text-sm">No activity history.</p>
@@ -51,17 +55,23 @@ export function HistoryTimelineView({
   return (
     <div className="flex flex-col gap-4">
       {processInstance && (
-        <div>
-          <h2 className="text-xl font-semibold">
-            {processInstance.processDefinitionName ?? processInstance.processDefinitionKey}
-          </h2>
-          <div className="text-muted-foreground mt-1 flex items-center gap-3 text-sm">
-            <Badge variant="secondary">{processInstance.state}</Badge>
-            <span>Started {new Date(processInstance.startTime).toLocaleString()}</span>
-            {processInstance.durationInMillis != null && (
-              <span>Duration: {formatDuration(processInstance.durationInMillis)}</span>
-            )}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold">
+              {processInstance.processDefinitionName ?? processInstance.processDefinitionKey}
+            </h2>
+            <div className="text-muted-foreground mt-1 flex items-center gap-3 text-sm">
+              <Badge variant="secondary">{processInstance.state}</Badge>
+              <span>Started {new Date(processInstance.startTime).toLocaleString()}</span>
+              {processInstance.durationInMillis != null && (
+                <span>Duration: {formatDuration(processInstance.durationInMillis)}</span>
+              )}
+            </div>
           </div>
+          <AskAiButton
+            variant="primary"
+            prompt={`Explain why historic process instance ${processInstance.id} of ${processInstance.processDefinitionName ?? processInstance.processDefinitionKey} (key ${processInstance.processDefinitionKey}) on engine ${engineId} took ${processInstance.durationInMillis}ms end-to-end and is in state ${processInstance.state}, across ${totalActivities ?? activities.length} activities. Use camunda7_query_historic_activity_instances for instance ${processInstance.id} to get the full per-activity timeline, identify the single longest-running step (call out wait time at userTask/receiveTask vs. compute time at serviceTask), and check whether that step is normal by comparing against the definition with analytics_element_bottleneck / analytics_analyze_process_performance for processDefinitionKey ${processInstance.processDefinitionKey}. Conclude with the bottleneck activity and whether this instance is an outlier.`}
+          />
         </div>
       )}
 
@@ -117,7 +127,12 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
 
   return (
     <div className="bg-card text-card-foreground p-6">
-      <HistoryTimelineView activities={data.activities} processInstance={data.processInstance} />
+      <HistoryTimelineView
+        activities={data.activities}
+        processInstance={data.processInstance}
+        engineId={data.engineId}
+        totalActivities={data.totalActivities}
+      />
     </div>
   )
 }

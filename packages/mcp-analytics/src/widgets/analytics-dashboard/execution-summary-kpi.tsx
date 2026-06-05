@@ -1,5 +1,5 @@
 import { Alert, AlertDescription, Skeleton } from "@miragon/mcp-toolkit-ui"
-import { KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 import { useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
 
@@ -39,7 +39,18 @@ export function ExecutionSummaryKpi({
 
   return (
     <WidgetShell>
-      <WidgetHeader icon="▤" iconTone="info" title="Process Analytics" />
+      <WidgetHeader
+        icon="▤"
+        iconTone="info"
+        title="Process Analytics"
+        actions={
+          <AskAiButton
+            variant="primary"
+            label="Analyze with AI"
+            prompt={`Analyze the health of the process-analytics dashboard currently on screen${processDefinitionKey ? ` scoped to process definition key "${processDefinitionKey}"` : " (cluster-wide, all process definitions)"} over the ${period ?? "default (7d)"} window. Use analytics_analyze_process_performance${processDefinitionKey ? `({processDefinitionKey: "${processDefinitionKey}", period: "${period ?? "7d"}"})` : " per top process definition"} and, if there is open failure, analytics_find_failed_instances({processDefinitionKey: "${processDefinitionKey ?? ""}"}). On-screen summary: totalCount=${data.totalCount}, completedCount=${data.completedCount}, runningCount=${data.runningCount}, failedCount=${data.failedCount}, incidentCount=${data.incidentCount}, avgDurationMs=${data.avgDurationMs}, p95DurationMs=${data.p95DurationMs}, failureRatePct=${data.failureRatePct}. Interpret these correctly: failedCount and failureRatePct are incident-increase over the window and read ~0 on backdated/seed data; incidentCount is currently-open net (created minus resolved); runningCount is derived (started minus ended). Tell me (1) whether this is healthy or degrading, (2) the most likely root cause if incidentCount or failureRatePct is non-zero, and (3) the single highest-value next action. Be concise; do not restate the raw numbers back to me.`}
+          />
+        }
+      />
       <KpiGrid
         boxed
         header={{ label: "Execution Summary" }}

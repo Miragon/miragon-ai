@@ -7,6 +7,7 @@ export { SectionHeading } from "./section-heading.js"
 export { GroupCard } from "./group-card.js"
 export { LivePill, StatusBadge, CountPill } from "./pills.js"
 export { useHostActions, buildShowWidgetIntent, type HostActions } from "./use-host-actions.js"
+export { AskAiButton, type AskAiButtonProps, type AskAiVariant } from "./ask-ai-button.js"
 export {
   BpmnHeatmap,
   HeatmapLegend,

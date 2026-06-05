@@ -1,5 +1,6 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import {
+  AskAiButton,
   StatusBadge,
   WidgetShell,
   useHostActions,
@@ -47,6 +48,8 @@ export function ProcessDetailHeader({
   const title = data.processDefinitionName ?? data.processDefinitionKey
   const cockpitUrl = data.cockpitUrl
   const remainingCount = data.incidentCount
+  const engineId = engine ?? data.engineId
+  const triagePrompt = `Root-cause triage for process \`${data.processDefinitionName ?? data.processDefinitionKey}\` (key \`${data.processDefinitionKey}\`, version v${data.version}) on engine \`${engineId}\`, which currently has ${data.incidentCount} open incident(s), +${data.last24hCount} in the last 24h, across ${data.activities.length} of ${data.totalActivityCount} activities. Use camunda7_list_incidents (processDefinitionKey \`${data.processDefinitionKey}\`, engine \`${engineId}\`) to pull the full incident set, then for the worst-affected activity use camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables on a representative processInstanceId to inspect state. Cluster the incidents by failing activity and by error signature, tell me the single most likely root cause per cluster, whether the +${data.last24hCount} last-24h count looks like a new regression vs. steady background failures, and the safest next action (retry vs. modify vs. migrate). Do NOT change anything — analysis only.`
 
   return (
     <WidgetShell>
@@ -59,6 +62,7 @@ export function ProcessDetailHeader({
             <StatusBadge tone="critical">
               {remainingCount} open {remainingCount === 1 ? "incident" : "incidents"}
             </StatusBadge>
+            <AskAiButton prompt={triagePrompt} label="Analyze with AI" variant="primary" />
           </div>
           <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">
             {title}

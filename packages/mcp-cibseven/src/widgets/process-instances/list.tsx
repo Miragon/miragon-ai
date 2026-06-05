@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
 import {
+  AskAiButton,
   CountPill,
   FilterBar,
   LivePill,
@@ -30,9 +31,13 @@ function rowTone(row: ProcessInstanceRow): ToneVariant {
 
 function InstanceRow({
   row,
+  processDefinitionKey,
+  engine,
   onOpen,
 }: {
   row: ProcessInstanceRow
+  processDefinitionKey: string
+  engine: string
   onOpen: (processInstanceId: string) => void
 }) {
   const tone = rowTone(row)
@@ -69,14 +74,24 @@ function InstanceRow({
         )}
       </td>
       <td className="border-border border-b px-4 py-3 text-right align-middle">
-        <button
-          type="button"
-          onClick={() => onOpen(row.id)}
-          aria-label={`Open instance detail for ${row.businessKey ?? row.id}`}
-          className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
-        >
-          Open <span aria-hidden>→</span>
-        </button>
+        <div className="inline-flex items-center justify-end gap-1">
+          {row.hasIncident && (
+            <AskAiButton
+              variant="icon"
+              label="Analyze"
+              title="Analyze"
+              prompt={`Root-cause the incident on CIB Seven process instance ${row.id}${row.businessKey ? ` (business key ${row.businessKey})` : ""}, version v${row.version} of process ${processDefinitionKey} (engine ${engine}). Use camunda7_get_process_instance, camunda7_list_incidents (processInstanceId ${row.id}) and the failed job's stacktrace to explain why it failed in plain language. Then check via camunda7_list_incidents (processDefinitionKey ${processDefinitionKey}) whether other running instances of this process fail the same way, and recommend a concrete fix: job retry, a variable change (name the variable), or a modification — including whether to apply it to just this instance or the whole cluster.`}
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => onOpen(row.id)}
+            aria-label={`Open instance detail for ${row.businessKey ?? row.id}`}
+            className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
+          >
+            Open <span aria-hidden>→</span>
+          </button>
+        </div>
       </td>
     </tr>
   )
@@ -148,6 +163,7 @@ export function ProcessInstancesView({
 
   const title = data.processDefinitionName ?? data.processDefinitionKey
   const capped = data.totalCount > data.returnedCount
+  const resolvedEngine = engine ?? "default"
 
   const chips: FilterChip[] = [
     { id: CHIP_ALL, label: "All", count: data.returnedCount, active: activeChip === CHIP_ALL },
@@ -187,6 +203,13 @@ export function ProcessInstancesView({
             <span className="text-muted-foreground">·</span>
             <span className="font-mono text-xs">{data.processDefinitionKey}</span>
           </>
+        }
+        actions={
+          <AskAiButton
+            variant="primary"
+            label="Analyze with AI"
+            prompt={`Triage the running instances of CIB Seven process "${title}" (key ${data.processDefinitionKey}, engine ${resolvedEngine}). Right now ${data.returnedCount} of ${data.totalCount} instances are showing; ${data.withIncidentCount} have an open incident and ${data.suspendedCount} are suspended. Use camunda7_list_incidents (processDefinitionKey ${data.processDefinitionKey}) and camunda7_query_historic_activity_instances to group the incidents by failed activity and incident type, identify the dominant failure mode, and tell me how many instances are likely fixable by a job retry vs. needing a variable change or modification. Give me a prioritized triage: which cluster to fix first and the single recommended remediation per cluster. Do not mutate anything yet — recommendations only.`}
+          />
         }
       />
 
@@ -243,6 +266,8 @@ export function ProcessInstancesView({
               <InstanceRow
                 key={row.id}
                 row={row}
+                processDefinitionKey={data.processDefinitionKey}
+                engine={resolvedEngine}
                 onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
               />
             ))}

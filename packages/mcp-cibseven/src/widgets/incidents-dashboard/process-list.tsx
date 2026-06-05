@@ -12,6 +12,7 @@ import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
 
 import {
+  AskAiButton,
   CountPill,
   FilterBar,
   GroupCard,
@@ -47,11 +48,13 @@ function formatTimestamp(iso: string | null): string {
 function ProcessSummary({
   process,
   expanded,
+  engineId,
   onOpenDetail,
   onOpenCockpit,
 }: {
   process: DisplayProcess
   expanded: boolean
+  engineId: string
   onOpenDetail: () => void
   onOpenCockpit: (url: string) => void
 }) {
@@ -59,7 +62,7 @@ function ProcessSummary({
 
   return (
     <div
-      className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] items-center gap-4 px-4 py-3 ${
+      className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto_auto] items-center gap-4 px-4 py-3 ${
         expanded ? "border-border border-b" : ""
       }`}
     >
@@ -101,6 +104,11 @@ function ProcessSummary({
         <div>last 24h</div>
       </div>
       <CountPill tone={tone}>{process.incidentCount}</CountPill>
+      <AskAiButton
+        variant="subtle"
+        label="Analyze"
+        prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, version v${process.version ?? "n/a"}) on engine ${engineId}. ${process.affectedActivityCount} activity/activities are affected, ${process.last24hCount} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances ?? "unknown"} running instances. Use camunda7_list_incidents (filtered to processDefinitionKey ${process.processDefinitionKey}) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
+      />
       <button
         type="button"
         onClick={(e) => {
@@ -313,6 +321,7 @@ export function IncidentProcessListView({
                 <ProcessSummary
                   process={p}
                   expanded={expanded.has(p.processDefinitionKey)}
+                  engineId={engine ?? data.engineId ?? "default"}
                   onOpenDetail={() => openDetail(p.processDefinitionKey)}
                   onOpenCockpit={host.openLink}
                 />
