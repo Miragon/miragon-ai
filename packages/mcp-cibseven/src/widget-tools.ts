@@ -28,6 +28,7 @@ import { buildIncidentDetailData } from "./steps/incident-detail.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
 import {
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
+  CAMUNDA7_INCIDENT_DETAIL_DATA,
   CAMUNDA7_INCIDENTS_DATA,
   CAMUNDA7_INSTANCE_DETAIL_DATA,
   CAMUNDA7_JOBS_DATA,
@@ -772,6 +773,30 @@ export function registerWidgetTools(
         baseUrl: engineEntry?.baseUrl ?? "",
         cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
+      })
+      return rawData({ ...data, engineId })
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_INCIDENT_DETAIL_DATA,
+      title: "Incident detail data (internal)",
+      description:
+        "Internal JSON feed (no UI) for a single incident — stacktrace, BPMN with the failing activity, variables, activity tree, history. Prefer camunda7_show_incident_detail.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        incidentId: z.string().describe("The incident ID to inspect"),
+        ...engineParam,
+      }),
+    },
+    async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const data = await buildIncidentDetailData(client, {
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
+        incidentId: args.incidentId,
       })
       return rawData({ ...data, engineId })
     },

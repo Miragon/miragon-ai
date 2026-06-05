@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type {
+  IncidentDetailData,
   IncidentsDashboardData,
   InstanceDetailData,
   JobPanelData,
@@ -9,6 +10,7 @@ import type {
   ProcessInstancesData,
 } from "@miragon-ai/client-cibseven"
 import {
+  CAMUNDA7_INCIDENT_DETAIL_DATA,
   CAMUNDA7_INCIDENTS_DATA,
   CAMUNDA7_INSTANCE_DETAIL_DATA,
   CAMUNDA7_JOBS_DATA,
@@ -28,6 +30,7 @@ import { ActivityIncidentList } from "../process-incidents/list.js"
 import { ProcessDetailView } from "../process-detail.js"
 import { ProcessInstancesView } from "../process-instances/list.js"
 import { InstanceDetailWidget } from "../instance-detail.js"
+import { IncidentDetailWidget } from "../incident-detail.js"
 import { JobPanelWidget } from "../job-panel.js"
 
 /** Shared loading/error wrapper for a client-side loaded view. */
@@ -97,9 +100,11 @@ export function IncidentsLoader({
 export function ProcessIncidentsLoader({
   processDefinitionKey,
   engineId,
+  onNavigate,
 }: {
   processDefinitionKey: string
   engineId: string
+  onNavigate: OnNavigate
 }) {
   const q = useToolQuery<ProcessIncidentsData>(
     ["camunda7:process-incidents", engineId, processDefinitionKey],
@@ -113,9 +118,28 @@ export function ProcessIncidentsLoader({
           <ProcessDetailHeader data={d} />
           <ProcessIncidentKpi data={d} />
           <ProcessIncidentFlow data={d} />
-          <ActivityIncidentList data={d} />
+          <ActivityIncidentList data={d} onNavigate={onNavigate} />
         </div>
       )}
+    </Loaded>
+  )
+}
+
+export function IncidentDetailLoader({
+  incidentId,
+  engineId,
+}: {
+  incidentId: string
+  engineId: string
+}) {
+  const q = useToolQuery<IncidentDetailData>(
+    ["camunda7:incident-detail", engineId, incidentId],
+    CAMUNDA7_INCIDENT_DETAIL_DATA,
+    { incidentId, engine: engineId },
+  )
+  return (
+    <Loaded data={q.data} isError={q.isError} error={q.error}>
+      {(d) => <IncidentDetailWidget data={d} />}
     </Loaded>
   )
 }

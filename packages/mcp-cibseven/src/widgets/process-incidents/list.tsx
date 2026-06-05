@@ -8,14 +8,21 @@ import {
   type HostActions,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
-import { CAMUNDA7_SHOW_INCIDENT_DETAIL, CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../../tool-names.js"
+import { navigateViaHost, type OnNavigate } from "../navigation.js"
 import { ActivitySummary } from "./activity-summary.js"
 import { IncidentTable } from "./incident-table.js"
 import { EmptyStateWithSiblings } from "./empty-state.js"
 
-export function ActivityIncidentList({ data }: { data: ProcessIncidentsData | null }) {
+export function ActivityIncidentList({
+  data,
+  onNavigate,
+}: {
+  data: ProcessIncidentsData | null
+  onNavigate?: OnNavigate
+}) {
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const host: HostActions = useHostActions()
+  const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
@@ -30,15 +37,11 @@ export function ActivityIncidentList({ data }: { data: ProcessIncidentsData | nu
   }
 
   function jumpToProcess(processDefinitionKey: string) {
-    host.showWidget(
-      `Show me the incidents detail for process \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_INCIDENTS})`,
-    )
+    go({ type: "process-incidents", processDefinitionKey })
   }
 
   function analyzeIncident(incidentId: string) {
-    host.showWidget(
-      `Analyze incident \`${incidentId}\` in detail (use ${CAMUNDA7_SHOW_INCIDENT_DETAIL})`,
-    )
+    go({ type: "incident-detail", incidentId })
   }
 
   function markResolved(incidentId: string) {

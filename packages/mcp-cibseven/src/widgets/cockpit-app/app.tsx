@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react"
 import { ModelContext, useWidget } from "mcp-use/react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
-import { WidgetShell, useHostActions, type HostActions } from "@miragon-ai/widget-shell/widgets"
+import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "@miragon-ai/client-cibseven"
-import { navigateViaHost, type NavIntent, type OnNavigate } from "../navigation.js"
+import type { NavIntent, OnNavigate } from "../navigation.js"
 import {
+  IncidentDetailLoader,
   IncidentsLoader,
   InstanceDetailLoader,
   JobsLoader,
@@ -30,6 +31,7 @@ type CockpitView =
   | { section: "process-instances"; processDefinitionKey: string }
   | { section: "process-incidents"; processDefinitionKey: string }
   | { section: "instance-detail"; processInstanceId: string }
+  | { section: "incident-detail"; incidentId: string }
 
 type TopSection = "overview" | "incidents" | "jobs"
 
@@ -46,6 +48,7 @@ function topSectionOf(view: CockpitView): TopSection {
     case "instance-detail":
       return "overview"
     case "process-incidents":
+    case "incident-detail":
       return "incidents"
     default:
       return view.section
@@ -78,6 +81,11 @@ function breadcrumbOf(view: CockpitView): Crumb[] {
         { label: "Incidents", view: { section: "incidents" } },
         { label: view.processDefinitionKey },
       ]
+    case "incident-detail":
+      return [
+        { label: "Incidents", view: { section: "incidents" } },
+        { label: `Incident ${view.incidentId.slice(0, 8)}…` },
+      ]
     case "instance-detail":
       return [
         { label: "Overview", view: { section: "overview" } },
@@ -90,7 +98,6 @@ function breadcrumbOf(view: CockpitView): Crumb[] {
 
 export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const { requestDisplayMode, callTool } = useWidget()
-  const host: HostActions = useHostActions()
 
   // Authoritative engine source: the stable `camunda7_list_engines` tool (needs
   // no selection itself). Decoupled from the open_cockpit bootstrap so the
@@ -120,9 +127,8 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     data?.engineId ??
     (engines.length === 1 ? engines[0].id : null)
 
-  // Deterministic, client-side navigation. Views the app hosts itself are
-  // routed in-place (no LLM); the rest fall back to the conversational host
-  // bridge (a follow-up turn) until they get their own in-app view.
+  // Deterministic, client-side navigation — every view is hosted in-app and
+  // routed in-place via the router below (no LLM round-trip, no chat handoff).
   const navigate: OnNavigate = (intent: NavIntent) => {
     switch (intent.type) {
       case "process-list":
@@ -144,9 +150,8 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
       case "instance-detail":
         setView({ section: "instance-detail", processInstanceId: intent.processInstanceId })
         return
-      // Not hosted in-cockpit — delegate to the agent (opens the matching widget).
       case "incident-detail":
-        navigateViaHost(host, intent)
+        setView({ section: "incident-detail", incidentId: intent.incidentId })
         return
     }
   }
@@ -307,10 +312,14 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
             <ProcessIncidentsLoader
               processDefinitionKey={view.processDefinitionKey}
               engineId={engineId}
+              onNavigate={navigate}
             />
           )}
           {view.section === "instance-detail" && (
             <InstanceDetailLoader processInstanceId={view.processInstanceId} engineId={engineId} />
+          )}
+          {view.section === "incident-detail" && (
+            <IncidentDetailLoader incidentId={view.incidentId} engineId={engineId} />
           )}
         </main>
       </div>
