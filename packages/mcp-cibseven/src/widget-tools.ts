@@ -664,6 +664,7 @@ export function registerWidgetTools(
         suspended: z.boolean().optional(),
         withIncidentsOnly: z.boolean().optional(),
         businessKeyLike: z.string().optional(),
+        firstResult: z.number().optional().describe("Offset for pagination (0-based)"),
         maxResults: z.number().optional(),
         ...engineParam,
       }),
@@ -677,6 +678,7 @@ export function registerWidgetTools(
           suspended: args.suspended,
           withIncidentsOnly: args.withIncidentsOnly,
           businessKeyLike: args.businessKeyLike,
+          firstResult: args.firstResult,
           maxResults: args.maxResults,
         }),
       )

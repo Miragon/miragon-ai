@@ -8,6 +8,9 @@ export { GroupCard } from "./group-card.js"
 export { LivePill, StatusBadge, CountPill } from "./pills.js"
 export { useHostActions, buildShowWidgetIntent, type HostActions } from "./use-host-actions.js"
 export { AskAiButton, type AskAiButtonProps, type AskAiVariant } from "./ask-ai-button.js"
+export { ListFooter } from "./list-footer.js"
+export { useDebouncedValue } from "./use-debounced-value.js"
+export { usePagedViewData, type PagedViewData } from "./use-paged-view-data.js"
 export {
   BpmnHeatmap,
   HeatmapLegend,

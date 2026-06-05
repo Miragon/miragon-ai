@@ -1,21 +1,26 @@
-import { useMemo, useState } from "react"
-import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { useState } from "react"
+import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
 import {
   AskAiButton,
   CountPill,
   FilterBar,
+  ListFooter,
   LivePill,
   StatusBadge,
   TONE_DOT,
   WidgetHeader,
   WidgetShell,
+  useDebouncedValue,
+  usePagedViewData,
   type FilterChip,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessInstanceRow, ProcessInstancesData } from "@miragon-ai/client-cibseven"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
+
+const PAGE_SIZE = 50
 
 export type { ProcessInstancesData }
 
@@ -118,67 +123,65 @@ export function ProcessInstancesView({
   const go = useNav()
   const [search, setSearch] = useState("")
   const [activeChip, setActiveChip] = useState<string>(CHIP_ALL)
+  const debouncedSearch = useDebouncedValue(search.trim(), 300)
 
-  // Self-fetch fallback so the widget also works when rendered standalone
-  // (e.g. refreshed from the host) rather than only via eager initialData.
-  const queryArgs: Record<string, unknown> = {}
-  if (processDefinitionKey) queryArgs.processDefinitionKey = processDefinitionKey
-  if (engine) queryArgs.engine = engine
-  if (active) queryArgs.active = active
-  if (suspended) queryArgs.suspended = suspended
-  if (withIncidentsOnly) queryArgs.withIncidentsOnly = withIncidentsOnly
-  if (businessKeyLike) queryArgs.businessKeyLike = businessKeyLike
-  const fallbackQuery = useToolQuery<ProcessInstancesData>(
-    ["camunda7:process-instances", engine ?? null, processDefinitionKey ?? null],
-    CAMUNDA7_PROCESS_INSTANCES_DATA,
-    queryArgs,
-    { enabled: !initialData && !!processDefinitionKey },
-  )
-  const data = initialData ?? fallbackQuery.data ?? null
+  const pdk = processDefinitionKey ?? initialData?.processDefinitionKey
+  const resolvedEngine = engine ?? "default"
 
-  const visible = useMemo<ProcessInstanceRow[]>(() => {
-    if (!data) return []
-    const q = search.trim().toLowerCase()
-    return data.instances.filter((row) => {
-      if (activeChip === CHIP_INCIDENTS && !row.hasIncident) return false
-      if (activeChip === CHIP_SUSPENDED && !row.suspended) return false
-      if (q.length === 0) return true
-      return (row.businessKey ?? "").toLowerCase().includes(q) || row.id.toLowerCase().includes(q)
-    })
-  }, [data, search, activeChip])
+  // Filters are SERVER-side: the chips and the search box re-query the feed
+  // (search debounced) so they cover the whole result set, not just the loaded
+  // page. Pagination is offset-based with an explicit "Load more" (see footer).
+  const wantIncidents = activeChip === CHIP_INCIDENTS || !!withIncidentsOnly
+  const wantSuspended = activeChip === CHIP_SUSPENDED || !!suspended
+  const effectiveBusinessKey = debouncedSearch || businessKeyLike
+  const filterArgs: Record<string, unknown> = { processDefinitionKey: pdk, engine }
+  if (active) filterArgs.active = true
+  if (wantIncidents) filterArgs.withIncidentsOnly = true
+  if (wantSuspended) filterArgs.suspended = true
+  if (effectiveBusinessKey) filterArgs.businessKeyLike = effectiveBusinessKey
+
+  // Once the operator searches/filters, drop the handed-in page and self-fetch
+  // the server-filtered set (standalone data is only the unfiltered first page).
+  const interacted = debouncedSearch !== "" || activeChip !== CHIP_ALL
+  const paged = usePagedViewData<ProcessInstanceRow, ProcessInstancesData>({
+    initialData: interacted ? null : initialData,
+    key: ["camunda7:process-instances", engine ?? null, pdk ?? null],
+    tool: CAMUNDA7_PROCESS_INSTANCES_DATA,
+    args: filterArgs,
+    pageSize: PAGE_SIZE,
+    ready: !!pdk,
+    selectItems: (d) => d.instances,
+    selectTotal: (d) => d.totalCount,
+  })
+  const data = paged.firstPage
 
   if (!data) {
-    return fallbackQuery.isError ? (
-      <Alert variant="destructive">
-        <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
-      </Alert>
-    ) : (
+    if (paged.error) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>{paged.error.message}</AlertDescription>
+        </Alert>
+      )
+    }
+    return (
       <Alert>
         <AlertDescription>
-          {processDefinitionKey ? "Loading process instances…" : "No process definition selected."}
+          {!pdk
+            ? "No process definition selected."
+            : paged.loading
+              ? "Loading process instances…"
+              : "No running instances for this process definition."}
         </AlertDescription>
       </Alert>
     )
   }
 
   const title = data.processDefinitionName ?? data.processDefinitionKey
-  const capped = data.totalCount > data.returnedCount
-  const resolvedEngine = engine ?? "default"
 
   const chips: FilterChip[] = [
-    { id: CHIP_ALL, label: "All", count: data.returnedCount, active: activeChip === CHIP_ALL },
-    {
-      id: CHIP_INCIDENTS,
-      label: "With incidents",
-      count: data.withIncidentCount,
-      active: activeChip === CHIP_INCIDENTS,
-    },
-    {
-      id: CHIP_SUSPENDED,
-      label: "Suspended",
-      count: data.suspendedCount,
-      active: activeChip === CHIP_SUSPENDED,
-    },
+    { id: CHIP_ALL, label: "All", active: activeChip === CHIP_ALL },
+    { id: CHIP_INCIDENTS, label: "With incidents", active: activeChip === CHIP_INCIDENTS },
+    { id: CHIP_SUSPENDED, label: "Suspended", active: activeChip === CHIP_SUSPENDED },
   ]
 
   return (
@@ -187,8 +190,9 @@ export function ProcessInstancesView({
           the obvious next steps (drill into an instance, retry/suspend, etc.). */}
       <ModelContext
         content={[
-          `Viewing ${data.returnedCount}${capped ? ` of ${data.totalCount}` : ""} running instances of process "${title}" (${data.processDefinitionKey}).`,
-          `${data.withIncidentCount} have an open incident, ${data.suspendedCount} are suspended.`,
+          `Viewing ${paged.items.length} of ${paged.total} running instances of process "${title}" (${data.processDefinitionKey}) on engine ${resolvedEngine}${
+            activeChip !== CHIP_ALL ? ` — filtered to "${activeChip}"` : ""
+          }${debouncedSearch ? ` — business key matching "${debouncedSearch}"` : ""}.`,
           `Drill into one with camunda7_show_instance_detail (processInstanceId); act with camunda7_suspend_process_instance / camunda7_activate_process_instance / camunda7_delete_process_instance / camunda7_set_job_retries.`,
         ].join(" ")}
       />
@@ -198,8 +202,7 @@ export function ProcessInstancesView({
         title={title}
         sub={
           <>
-            <LivePill tone="info">{data.returnedCount} running</LivePill>
-            {capped && <span>of {data.totalCount.toLocaleString()} total</span>}
+            <LivePill tone="info">{paged.total.toLocaleString()} running</LivePill>
             <span className="text-muted-foreground">·</span>
             <span className="font-mono text-xs">{data.processDefinitionKey}</span>
           </>
@@ -207,7 +210,7 @@ export function ProcessInstancesView({
         actions={
           <AskAiButton
             variant="primary"
-            prompt={`Triage the running instances of CIB Seven process "${title}" (key ${data.processDefinitionKey}, engine ${resolvedEngine}). Right now ${data.returnedCount} of ${data.totalCount} instances are showing; ${data.withIncidentCount} have an open incident and ${data.suspendedCount} are suspended. Use camunda7_list_incidents (processDefinitionKey ${data.processDefinitionKey}) and camunda7_query_historic_activity_instances to group the incidents by failed activity and incident type, identify the dominant failure mode, and tell me how many instances are likely fixable by a job retry vs. needing a variable change or modification. Give me a prioritized triage: which cluster to fix first and the single recommended remediation per cluster. Do not mutate anything yet — recommendations only.`}
+            prompt={`Triage the running instances of CIB Seven process "${title}" (key ${data.processDefinitionKey}, engine ${resolvedEngine}). There are ${paged.total} running instances total. Use camunda7_list_incidents (processDefinitionKey ${data.processDefinitionKey}) and camunda7_query_historic_activity_instances to group the incidents by failed activity and incident type, identify the dominant failure mode, and tell me how many instances are likely fixable by a job retry vs. needing a variable change or modification. Give me a prioritized triage: which cluster to fix first and the single recommended remediation per cluster. Do not mutate anything yet — recommendations only.`}
           />
         }
       />
@@ -215,63 +218,71 @@ export function ProcessInstancesView({
       <FilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Filter by business key or instance id…"
+        searchPlaceholder="Search by business key…"
         chips={chips}
         onChipToggle={(id) => setActiveChip(id === activeChip ? CHIP_ALL : id)}
       />
 
-      {visible.length === 0 ? (
+      {paged.items.length === 0 ? (
         <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
-          {data.instances.length === 0
-            ? "No running instances for this process definition."
-            : "No instances match the current filter."}
+          No instances match the current filter.
         </div>
       ) : (
-        <table
-          className="w-full border-collapse text-sm"
-          aria-label={`Running instances of ${title}`}
-        >
-          <thead className="bg-muted">
-            <tr>
-              <th
-                scope="col"
-                className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-              >
-                Business key / ID
-              </th>
-              <th
-                scope="col"
-                className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-              >
-                Version
-              </th>
-              <th
-                scope="col"
-                className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-              >
-                State
-              </th>
-              <th
-                scope="col"
-                className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
-              >
-                Incident
-              </th>
-              <th scope="col" className="border-border border-y px-4 py-2.5" />
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((row) => (
-              <InstanceRow
-                key={row.id}
-                row={row}
-                processDefinitionKey={data.processDefinitionKey}
-                engine={resolvedEngine}
-                onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
-              />
-            ))}
-          </tbody>
-        </table>
+        <>
+          <table
+            className="w-full border-collapse text-sm"
+            aria-label={`Running instances of ${title}`}
+          >
+            <thead className="bg-muted">
+              <tr>
+                <th
+                  scope="col"
+                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
+                >
+                  Business key / ID
+                </th>
+                <th
+                  scope="col"
+                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
+                >
+                  Version
+                </th>
+                <th
+                  scope="col"
+                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
+                >
+                  State
+                </th>
+                <th
+                  scope="col"
+                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
+                >
+                  Incident
+                </th>
+                <th scope="col" className="border-border border-y px-4 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {paged.items.map((row) => (
+                <InstanceRow
+                  key={row.id}
+                  row={row}
+                  processDefinitionKey={data.processDefinitionKey}
+                  engine={resolvedEngine}
+                  onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
+                />
+              ))}
+            </tbody>
+          </table>
+          <ListFooter
+            shown={paged.items.length}
+            total={paged.total}
+            hasMore={paged.hasMore}
+            loadingMore={paged.loadingMore}
+            onLoadMore={paged.loadMore}
+            noun="instances"
+          />
+        </>
       )}
     </>
   )

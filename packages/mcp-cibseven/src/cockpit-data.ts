@@ -137,6 +137,7 @@ export interface ProcessInstancesArgs {
   suspended?: boolean
   withIncidentsOnly?: boolean
   businessKeyLike?: string
+  firstResult?: number
   maxResults?: number
 }
 
@@ -160,6 +161,7 @@ export async function buildProcessInstancesData(
       client,
       query: {
         ...filter,
+        firstResult: args.firstResult ?? 0,
         maxResults: args.maxResults ?? 50,
         sortBy: "businessKey",
         sortOrder: "asc",
