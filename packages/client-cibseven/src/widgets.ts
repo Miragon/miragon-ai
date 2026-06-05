@@ -124,6 +124,54 @@ export interface ProcessListData {
   engineId?: string
 }
 
+export interface ProcessInstanceRow {
+  id: string
+  businessKey: string | null
+  /** Definition version this instance runs on (parsed from definitionId). */
+  version: number | null
+  suspended: boolean
+  /** Whether this instance currently has at least one open incident. */
+  hasIncident: boolean
+}
+
+export interface CockpitEngineInfo {
+  id: string
+  baseUrl: string
+}
+
+/**
+ * Bootstrap payload for the consolidated cockpit app (`camunda7_open_cockpit`).
+ * Carries the resolved engine (sticky selection or the only configured engine)
+ * plus the full engine list so the app can offer a switcher / picker. The app
+ * threads the chosen `engineId` into every nested tool call via the `engine`
+ * override, so client-side navigation works regardless of the session's sticky
+ * selection.
+ */
+export interface CockpitAppData {
+  /** Resolved engine id, or null when the user must pick (multiple engines, none selected). */
+  engineId: string | null
+  engines: CockpitEngineInfo[]
+}
+
+export interface ProcessInstancesData {
+  processDefinitionKey: string
+  processDefinitionName: string | null
+  /** Total matching instances on the engine (may exceed `instances.length`). */
+  totalCount: number
+  /** Instances actually returned (capped at the tool's maxResults). */
+  returnedCount: number
+  withIncidentCount: number
+  suspendedCount: number
+  instances: ProcessInstanceRow[]
+  filters: {
+    active?: boolean
+    suspended?: boolean
+    withIncidentsOnly?: boolean
+    businessKeyLike?: string
+  }
+  engineId?: string
+}
+
 export interface VariableValue {
   value: unknown
   type?: string
@@ -265,6 +313,8 @@ export interface IncidentsByProcess {
 export interface ProcessDetailActivity {
   activityId: string
   activityName: string | null
+  /** Running token count at this activity — drives the diagram heatmap badges. */
+  instances: number
   incidentCount: number
   failedJobs: number
 }

@@ -7,18 +7,21 @@ import type {
   IncidentsDashboardProcess,
 } from "@miragon-ai/client-cibseven"
 
-import { CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../../tool-names.js"
+import { useNav } from "../navigation.js"
+import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 
 import {
+  AskAiButton,
   CountPill,
+  DrillButton,
   FilterBar,
   GroupCard,
+  OpenInCockpitLink,
   SectionHeading,
   TONE_DOT,
   WidgetShell,
-  useHostActions,
   type FilterChip,
-  type HostActions,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 
@@ -45,19 +48,20 @@ function formatTimestamp(iso: string | null): string {
 function ProcessSummary({
   process,
   expanded,
+  engineId,
   onOpenDetail,
-  onOpenCockpit,
 }: {
   process: DisplayProcess
   expanded: boolean
+  engineId: string
   onOpenDetail: () => void
-  onOpenCockpit: (url: string) => void
 }) {
   const tone = process.tone
+  const cockpitUrl = process.cockpitUrl
 
   return (
     <div
-      className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] items-center gap-4 px-4 py-3 ${
+      className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto_auto] items-center gap-4 px-4 py-3 ${
         expanded ? "border-border border-b" : ""
       }`}
     >
@@ -99,35 +103,18 @@ function ProcessSummary({
         <div>last 24h</div>
       </div>
       <CountPill tone={tone}>{process.incidentCount}</CountPill>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          onOpenDetail()
-        }}
-        aria-label={`Open incidents detail for ${process.processDefinitionName ?? process.processDefinitionKey}`}
-        className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
+      <AskAiButton
+        variant="subtle"
+        label="Analyze"
+        prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, version v${process.version ?? "n/a"}) on engine ${engineId}. ${process.affectedActivityCount} activity/activities are affected, ${process.last24hCount} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances ?? "unknown"} running instances. Use camunda7_list_incidents (filtered to processDefinitionKey ${process.processDefinitionKey}) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
+      />
+      <DrillButton
+        onClick={onOpenDetail}
+        ariaLabel={`Open incidents detail for ${process.processDefinitionName ?? process.processDefinitionKey}`}
       >
-        Open detail <span aria-hidden>→</span>
-      </button>
-      {process.cockpitUrl ? (
-        <a
-          href={process.cockpitUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-            onOpenCockpit(process.cockpitUrl)
-          }}
-          aria-label={`Open ${process.processDefinitionName ?? process.processDefinitionKey} in Cockpit`}
-          className="text-muted-foreground border-border hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium outline-none focus-visible:ring-2"
-        >
-          <span aria-hidden="true">▦</span> Cockpit
-        </a>
-      ) : (
-        <span />
-      )}
+        Open detail
+      </DrillButton>
+      {cockpitUrl ? <OpenInCockpitLink url={cockpitUrl} /> : <span />}
       <span
         aria-hidden="true"
         className={`text-muted-foreground inline-block w-3 text-center text-xs transition-transform ${
@@ -180,8 +167,23 @@ function ActivityList({ activities }: { activities: IncidentsDashboardActivity[]
  * apart would force the filter state through global storage just to avoid
  * one shared `useState`.
  */
-export function IncidentProcessList({ data }: { data: IncidentsDashboardData | null }) {
-  const host: HostActions = useHostActions()
+export function IncidentProcessListView({
+  data: initialData = null,
+  engine,
+}: {
+  data?: IncidentsDashboardData | null
+  engine?: string
+}) {
+  const go = useNav()
+  // Shares the overview-kpi query key → both incidents panels dedupe to one
+  // fetch in the cockpit; standalone the data comes in via props.
+  const { data, loading, error } = useViewData<IncidentsDashboardData>(
+    initialData,
+    ["camunda7:incidents", engine ?? null],
+    CAMUNDA7_INCIDENTS_DATA,
+    { engine },
+    !!engine,
+  )
 
   const [search, setSearch] = useState("")
   const [activeChip, setActiveChip] = useState<string>(TYPE_ALL)
@@ -229,12 +231,17 @@ export function IncidentProcessList({ data }: { data: IncidentsDashboardData | n
   }, [data, search, activeChip])
 
   if (!data) {
-    return (
-      <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
+    if (error) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
         </Alert>
-      </WidgetShell>
+      )
+    }
+    return (
+      <div className="text-muted-foreground p-2 text-sm">
+        {loading ? "Loading…" : "No data available"}
+      </div>
     )
   }
 
@@ -258,13 +265,11 @@ export function IncidentProcessList({ data }: { data: IncidentsDashboardData | n
   }
 
   function openDetail(processDefinitionKey: string) {
-    host.showWidget(
-      `Show me the incidents detail for process \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_INCIDENTS})`,
-    )
+    go({ type: "process-incidents", processDefinitionKey })
   }
 
   return (
-    <WidgetShell>
+    <>
       <FilterBar
         search={search}
         onSearchChange={setSearch}
@@ -292,8 +297,8 @@ export function IncidentProcessList({ data }: { data: IncidentsDashboardData | n
                 <ProcessSummary
                   process={p}
                   expanded={expanded.has(p.processDefinitionKey)}
+                  engineId={engine ?? data.engineId ?? "default"}
                   onOpenDetail={() => openDetail(p.processDefinitionKey)}
-                  onOpenCockpit={host.openLink}
                 />
               }
             >
@@ -302,6 +307,20 @@ export function IncidentProcessList({ data }: { data: IncidentsDashboardData | n
           ))
         )}
       </section>
+    </>
+  )
+}
+
+export function IncidentProcessList({
+  data,
+  engine,
+}: {
+  data: IncidentsDashboardData | null
+  engine?: string
+}) {
+  return (
+    <WidgetShell>
+      <IncidentProcessListView data={data} engine={engine} />
     </WidgetShell>
   )
 }

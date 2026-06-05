@@ -35,7 +35,7 @@ export function registerMigrationTools(register: Register) {
     name: "camunda7_migrate_process_instances_async",
     description:
       "Execute a migration plan asynchronously (as a batch) over multiple process instances. Returns the batch id; per-instance progress and failures are tracked on the batch.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: { ...migrateProcessInstancesAsyncInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       const batch = await executeMigrationPlanAsync({

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Badge } from "@miragon/mcp-toolkit-ui"
+import { AskAiButton, DrillButton, OpenInCockpitLink } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentInstance } from "@miragon-ai/client-cibseven"
 
@@ -12,14 +13,12 @@ export function IncidentTable({
   resolvedIds,
   resolving,
   onResolve,
-  onOpenCockpit,
   onAnalyze,
 }: {
   incidents: IncidentInstance[]
   resolvedIds: Set<string>
   resolving: boolean
   onResolve: (incidentId: string) => void
-  onOpenCockpit: (url: string) => void
   onAnalyze: (incidentId: string) => void
 }) {
   const [showAll, setShowAll] = useState(false)
@@ -60,29 +59,16 @@ export function IncidentTable({
               {formatTimestamp(incident.incidentTimestamp)}
             </span>
             <span role="cell" className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onAnalyze(incident.id)}
-                aria-label="Analyze incident"
-                className="bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium outline-none focus-visible:ring-2"
-              >
-                <span aria-hidden="true">🔍</span> Analyze
-              </button>
-              {instanceUrl && (
-                <a
-                  href={instanceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    onOpenCockpit(instanceUrl)
-                  }}
-                  aria-label="Open instance in Cockpit"
-                  className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium outline-none focus-visible:ring-2"
-                >
-                  <span aria-hidden="true">▦</span> Cockpit
-                </a>
-              )}
+              <DrillButton onClick={() => onAnalyze(incident.id)} ariaLabel="Open incident detail">
+                Open
+              </DrillButton>
+              <AskAiButton
+                variant="icon"
+                label="Draft ticket"
+                title="Draft ticket"
+                prompt={`Draft and file a GitHub issue for CIB Seven incident \`${incident.id}\` (${incident.incidentType}) on process instance ${incident.processInstanceId}, engine: the current engine. Build the payload with camunda7_format_incident_issue({ incidentId: "${incident.id}" }), include the error (${incident.incidentMessage ?? incident.incidentType}), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
+              />
+              {instanceUrl && <OpenInCockpitLink url={instanceUrl} />}
               {resolved ? (
                 <Badge variant="secondary" className="text-[11px]">
                   Resolved

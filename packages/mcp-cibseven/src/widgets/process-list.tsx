@@ -6,6 +6,7 @@ import {
   AlertDescription,
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
+import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessListData } from "@miragon-ai/client-cibseven"
 
 export type { ProcessListData }
@@ -81,6 +82,10 @@ export function ProcessListWidget({
                     Active
                   </Badge>
                 )}
+                <AskAiButton
+                  variant="subtle"
+                  prompt={`Assess the operational health of process definition \`${def.key}\` (version v${def.version}${def.versionTag ? ", tag " + def.versionTag : ""}) on engine ${data.engineId}. First call analytics_analyze_process_performance with processDefinitionKey="${def.key}", period="7d", includeActivityBreakdown=true to get throughput, P50/P95 duration and the incident-based failure rate with a per-activity breakdown. Then call camunda7_list_incidents with processDefinitionId filtered to this definition (resolve the id from \`${def.key}\` v${def.version} via camunda7_list_process_definitions if needed) to see live open incidents. Summarise: is this definition healthy or degraded, which activities are the worst offenders, the dominant incident message(s), and the single most likely root cause. End with one concrete recommended next step (e.g. retry jobs, fix variable, redeploy). Do not mutate anything.`}
+                />
               </div>
             </CardContent>
           </Card>

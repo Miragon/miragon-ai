@@ -152,7 +152,7 @@ export function BpmnHeatmap({
       eventBus.on("canvas.viewbox.changed", onChange)
       eventBus.on("canvas.resized", onChange)
       const ro = new ResizeObserver(() => redraw())
-      ro.observe(containerRef.current)
+      if (containerRef.current) ro.observe(containerRef.current)
       cleanupRedraw = () => {
         eventBus.off("canvas.viewbox.changed", onChange)
         eventBus.off("canvas.resized", onChange)

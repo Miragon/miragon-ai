@@ -15,6 +15,12 @@ export interface KpiCell {
   trend?: ReactNode
   trendDirection?: "up" | "down" | "flat"
   tone?: ToneVariant
+  /** When set, the cell renders as a button — turns a metric into a nav entry
+   *  point (e.g. "Incidents" → open the incidents dashboard). */
+  onClick?: () => void
+  /** Accessible label for the clickable cell (required for good a11y when
+   *  `onClick` is set, since the visible label/value may be terse). */
+  ariaLabel?: string
 }
 
 /**
@@ -70,35 +76,57 @@ export function KpiGrid({
         </div>
       )}
       <div className={`grid ${colClass} ${stripClass}`}>
-        {cells.map((cell, idx) => (
-          <div
-            key={idx}
-            className={`px-5 py-4 ${idx < cells.length - 1 ? "border-border border-r" : ""}`}
-          >
-            <div className="text-muted-foreground text-xs font-medium">{cell.label}</div>
-            <div
-              className={`mt-1.5 text-2xl font-bold tabular-nums leading-none tracking-tight ${
-                (cell.tone && TONE_TEXT[cell.tone]) || "text-foreground"
-              }`}
-            >
-              {cell.value}
-              {cell.fraction && (
-                <span className="text-muted-foreground ml-0.5 text-sm font-normal">
-                  {cell.fraction}
-                </span>
-              )}
-            </div>
-            {cell.trend && (
+        {cells.map((cell, idx) => {
+          const borderClass = idx < cells.length - 1 ? "border-border border-r" : ""
+          const content = (
+            <>
+              <div className="text-muted-foreground flex items-center justify-between gap-2 text-xs font-medium">
+                <span>{cell.label}</span>
+                {cell.onClick && (
+                  <span aria-hidden="true" className="text-sm leading-none">
+                    ›
+                  </span>
+                )}
+              </div>
               <div
-                className={`mt-1.5 text-xs ${
-                  cell.trendDirection ? TREND_TONE[cell.trendDirection] : "text-muted-foreground"
+                className={`mt-1.5 text-2xl font-bold tabular-nums leading-none tracking-tight ${
+                  (cell.tone && TONE_TEXT[cell.tone]) || "text-foreground"
                 }`}
               >
-                {cell.trend}
+                {cell.value}
+                {cell.fraction && (
+                  <span className="text-muted-foreground ml-0.5 text-sm font-normal">
+                    {cell.fraction}
+                  </span>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+              {cell.trend && (
+                <div
+                  className={`mt-1.5 text-xs ${
+                    cell.trendDirection ? TREND_TONE[cell.trendDirection] : "text-muted-foreground"
+                  }`}
+                >
+                  {cell.trend}
+                </div>
+              )}
+            </>
+          )
+          return cell.onClick ? (
+            <button
+              key={idx}
+              type="button"
+              onClick={cell.onClick}
+              aria-label={cell.ariaLabel}
+              className={`hover:bg-muted focus-visible:ring-ring cursor-pointer px-5 py-4 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset ${borderClass}`}
+            >
+              {content}
+            </button>
+          ) : (
+            <div key={idx} className={`px-5 py-4 ${borderClass}`}>
+              {content}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

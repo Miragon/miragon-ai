@@ -1,22 +1,44 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import {
+  AskAiButton,
+  OpenInCockpitLink,
   StatusBadge,
   WidgetShell,
-  useHostActions,
-  type HostActions,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
 import { formatTime } from "../../lib/format-time.js"
+import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 
-export function ProcessDetailHeader({ data }: { data: ProcessIncidentsData | null }) {
-  const host: HostActions = useHostActions()
+export function ProcessDetailHeader({
+  data: initialData = null,
+  processDefinitionKey,
+  engine,
+}: {
+  data?: ProcessIncidentsData | null
+  processDefinitionKey?: string
+  engine?: string
+}) {
+  const { data, loading, error } = useViewData<ProcessIncidentsData>(
+    initialData,
+    ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
+    CAMUNDA7_PROCESS_INCIDENTS_DATA,
+    { processDefinitionKey, engine },
+    !!processDefinitionKey,
+  )
 
   if (!data) {
     return (
       <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground p-2 text-sm">
+            {loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </WidgetShell>
     )
   }
@@ -24,6 +46,8 @@ export function ProcessDetailHeader({ data }: { data: ProcessIncidentsData | nul
   const title = data.processDefinitionName ?? data.processDefinitionKey
   const cockpitUrl = data.cockpitUrl
   const remainingCount = data.incidentCount
+  const engineId = engine ?? data.engineId
+  const triagePrompt = `Root-cause triage for process \`${data.processDefinitionName ?? data.processDefinitionKey}\` (key \`${data.processDefinitionKey}\`, version v${data.version}) on engine \`${engineId}\`, which currently has ${data.incidentCount} open incident(s), +${data.last24hCount} in the last 24h, across ${data.activities.length} of ${data.totalActivityCount} activities. Use camunda7_list_incidents (processDefinitionKey \`${data.processDefinitionKey}\`, engine \`${engineId}\`) to pull the full incident set, then for the worst-affected activity use camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables on a representative processInstanceId to inspect state. Cluster the incidents by failing activity and by error signature, tell me the single most likely root cause per cluster, whether the +${data.last24hCount} last-24h count looks like a new regression vs. steady background failures, and the safest next action (retry vs. modify vs. migrate). Do NOT change anything — analysis only.`
 
   return (
     <WidgetShell>
@@ -59,26 +83,10 @@ export function ProcessDetailHeader({ data }: { data: ProcessIncidentsData | nul
                 <span>last event {formatTime(data.latestIncident)}</span>
               </>
             )}
-            {cockpitUrl && (
-              <>
-                <span className="text-muted-foreground">·</span>
-                <a
-                  href={cockpitUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    host.openLink(cockpitUrl)
-                  }}
-                  className="text-m-blue hover:underline"
-                >
-                  <span aria-hidden="true">▦</span> Open in Cockpit{" "}
-                  <span aria-hidden="true">→</span>
-                </a>
-              </>
-            )}
+            {cockpitUrl && <OpenInCockpitLink url={cockpitUrl} label="Open in Cockpit" />}
           </div>
         </div>
+        <AskAiButton prompt={triagePrompt} variant="primary" />
       </header>
     </WidgetShell>
   )

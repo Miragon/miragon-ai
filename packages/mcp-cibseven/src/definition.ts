@@ -2,14 +2,12 @@ import { z } from "zod"
 import type { AppDefinition } from "@miragon/mcp-toolkit-core"
 import {
   loadProcessDefinitionsStep,
-  loadTasksStep,
   loadProcessInstanceStep,
   loadIncidentsDashboardStep,
   loadProcessIncidentsStep,
   loadHistoryTimelineStep,
   loadCockpitDashboardStep,
   loadBpmnViewerStep,
-  loadDeploymentsStep,
   loadJobsStep,
 } from "./steps/index.js"
 
@@ -56,14 +54,12 @@ export const definition: AppDefinition = {
   name: "camunda7",
   steps: [
     loadProcessDefinitionsStep,
-    loadTasksStep,
     loadProcessInstanceStep,
     loadIncidentsDashboardStep,
     loadProcessIncidentsStep,
     loadHistoryTimelineStep,
     loadCockpitDashboardStep,
     loadBpmnViewerStep,
-    loadDeploymentsStep,
     loadJobsStep,
   ],
   widgets: [
@@ -72,11 +68,6 @@ export const definition: AppDefinition = {
       requires: [],
       size: "full",
       propsSchema: processListPropsSchema,
-    },
-    {
-      id: "camunda7:task-list-table",
-      requires: ["camunda7:tasks"],
-      size: "full",
     },
     {
       id: "camunda7:instance-detail",
@@ -147,11 +138,6 @@ export const definition: AppDefinition = {
     {
       id: "camunda7:bpmn-flow-viewer",
       requires: ["camunda7:bpmnViewerData"],
-      size: "full",
-    },
-    {
-      id: "camunda7:deployment-browser",
-      requires: ["camunda7:deploymentsData"],
       size: "full",
     },
     {

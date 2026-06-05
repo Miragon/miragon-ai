@@ -58,7 +58,7 @@ export function registerJobTools(register: Register) {
     name: "camunda7_set_job_retries_batch",
     description:
       "Create a batch job to set retries on multiple jobs at once. Returns the batch id; progress and failures are tracked on the batch, not inline.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: { ...setJobRetriesBatchInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       const batch = await setJobRetriesAsyncOperation({

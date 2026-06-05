@@ -1,5 +1,5 @@
 import { Alert, AlertDescription, Badge, Card, CardContent } from "@miragon/mcp-toolkit-ui"
-import { SectionHeading, useHostActions } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, SectionHeading } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "@miragon-ai/client-cibseven"
 
@@ -22,17 +22,8 @@ export function FailureTab({
   retrying: boolean
   retried: boolean
 }) {
-  const host = useHostActions()
   const job = data.job
-
-  function reportToGitHub() {
-    // Hands a structured natural-language prompt back to the host agent, which
-    // chains the registered `report_incident_to_github` prompt → format tool →
-    // GitHub MCP server's `create_issue`. See packages/mcp-cibseven/src/tools/incident-issue.ts.
-    host.showWidget(
-      `File a GitHub issue for incident \`${data.incidentId}\` (use the report_incident_to_github prompt).`,
-    )
-  }
+  const engineId = data.engineId ?? "default"
   return (
     <div className="flex flex-col gap-4">
       <Card className="gap-0 py-0 shadow-none">
@@ -103,19 +94,24 @@ export function FailureTab({
             <span aria-hidden="true">↻</span> {retried ? "Retried" : "Retry job (set retries to 1)"}
           </button>
         )}
-        <button
-          type="button"
-          onClick={reportToGitHub}
-          aria-label="File GitHub issue"
-          className="border-border text-muted-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2"
-          title="Hand off to the agent to file a GitHub issue via the configured GitHub MCP server"
-        >
-          <span aria-hidden="true">⚑</span> File GitHub issue
-        </button>
+        <AskAiButton
+          variant="subtle"
+          label="Draft GitHub issue"
+          prompt={`Draft and file a GitHub issue for CIB Seven incident \`${data.incidentId}\` (${data.incidentType}) at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey} v${data.processDefinitionVersion}${data.businessKey ? `, business key ${data.businessKey}` : ""}, engine \`${engineId}\`. Build the payload with camunda7_format_incident_issue({ incidentId: '${data.incidentId}' }), include the error (${data.incidentMessage ?? job?.exceptionMessage ?? "(none reported)"}) and stacktrace, show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue.`}
+        />
       </div>
 
       <div>
-        <SectionHeading title="Error message" />
+        <SectionHeading
+          title="Error message"
+          trailing={
+            <AskAiButton
+              variant="subtle"
+              label="Explain this error"
+              prompt={`Explain the failure on CIB Seven incident \`${data.incidentId}\` at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}, engine \`${engineId}\`. The reported error is: "${data.incidentMessage ?? job?.exceptionMessage ?? "(none reported)"}"${job?.stacktrace ? `, with a Java stacktrace on job ${job.id}` : ""}. In plain language: what does this exception mean, what most likely caused it here, and is it transient (safe to retry) or deterministic (will re-fail)? Read the full trace with camunda7_incident_detail_data({ incidentId: "${data.incidentId}" }) if needed. Explanation only — do not change anything.`}
+            />
+          }
+        />
         <pre className="border-border bg-card text-foreground whitespace-pre-wrap break-words rounded-lg border p-3 font-mono text-xs">
           {data.incidentMessage ?? job?.exceptionMessage ?? "—"}
         </pre>

@@ -16,6 +16,10 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "@miragon-ai/client-cibseven"
+import { AskAiButton, ListFooter, usePagedViewData } from "@miragon-ai/widget-shell/widgets"
+import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
+import { ConfirmDialog } from "./confirm-dialog.js"
+import { refreshCockpitData } from "./refresh.js"
 
 export type { JobPanelData }
 
@@ -33,38 +37,111 @@ function truncate(s: string | null, max: number): string {
   return s.length > max ? s.slice(0, max) + "\u2026" : s
 }
 
-export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
+export function JobPanelWidget({
+  data: initialData = null,
+  engine,
+}: {
+  data?: JobPanelData | null
+  engine?: string
+}) {
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
+  const [confirmBatch, setConfirmBatch] = useState(false)
   const retryMutation = useToolMutation("camunda7_set_job_retries")
+  const batchMutation = useToolMutation("camunda7_set_job_retries_batch")
+  const paged = usePagedViewData<JobPanelData["jobs"][number], JobPanelData>({
+    initialData,
+    key: ["camunda7:jobs", engine ?? null],
+    tool: CAMUNDA7_JOBS_DATA,
+    args: { engine },
+    pageSize: 50,
+    ready: !!engine,
+    selectItems: (d) => d.jobs,
+    selectTotal: (d) => d.totalCount,
+  })
+  const data = paged.firstPage
 
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {paged.error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{paged.error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground text-sm">
+            {paged.loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </div>
     )
   }
 
-  const { totalCount, failedCount, jobs } = data
+  const { totalCount, failedCount } = data
+  const jobs = paged.items
+  const failedJobs = jobs.filter((j) => j.retries === 0 && !retriedIds.has(j.id))
+  // Standalone (camunda7_show_job_panel) the `engine` prop is undefined; fall back
+  // to the engine the data was fetched against (the builder always sets it) so the
+  // AI prompts never inline "undefined" into their tool-call arguments.
+  const engineId = engine ?? data.engineId
 
   function handleRetry(jobId: string) {
     retryMutation.mutate(
       { jobId, retries: 1 },
-      { onSuccess: () => setRetriedIds((prev) => new Set(prev).add(jobId)) },
+      {
+        onSuccess: () => {
+          setRetriedIds((prev) => new Set(prev).add(jobId))
+          refreshCockpitData()
+        },
+      },
+    )
+  }
+
+  function handleBatchRetry() {
+    const jobIds = failedJobs.map((j) => j.id)
+    if (jobIds.length === 0) return
+    batchMutation.mutate(
+      { jobIds, retries: 1 },
+      {
+        onSuccess: () => {
+          setRetriedIds((prev) => {
+            const next = new Set(prev)
+            jobIds.forEach((id) => next.add(id))
+            return next
+          })
+          setConfirmBatch(false)
+          refreshCockpitData()
+        },
+      },
     )
   }
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Job Management</h2>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-semibold">Job Management</h2>
           <Badge variant="secondary">{totalCount} total</Badge>
           {failedCount > 0 && <Badge variant="destructive">{failedCount} failed</Badge>}
         </div>
+        {failedJobs.length > 0 && (
+          <AskAiButton
+            variant="primary"
+            prompt={`Triage the failed jobs (retries == 0) on engine "${engineId}" surfaced in the Job Management panel. The engine reports ${totalCount} total jobs and ${failedCount} failed. Use camunda7_list_jobs({engine: "${engineId}", withException: true, noRetriesLeft: true}) to load the exact failed set, then: (1) cluster the jobs by normalized exceptionMessage and by activityId/processDefinitionKey; (2) for each cluster name the most likely root cause, cross-checking with camunda7_list_incidents({engine: "${engineId}"}) and camunda7_query_historic_activity_instances to see whether the same activity is failing across many instances (systemic) or one-off; (3) recommend a concrete action per cluster — transient/infra errors -> batch retry via camunda7_set_job_retries_batch, bad input data -> camunda7_set_process_instance_variable then retry, code/deployment defect -> escalate and draft a ticket. Return a short ranked table: cluster | likely cause | affected count | recommended action. Do not execute any retry or mutation; recommend only.`}
+          />
+        )}
       </div>
+      {failedJobs.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={batchMutation.isPending}
+            onClick={() => setConfirmBatch(true)}
+          >
+            Retry all failed
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Job summary">
         <div className="bg-muted rounded-lg p-4">
@@ -147,14 +224,28 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
                         </TableCell>
                         <TableCell>
                           {job.retries === 0 && !retried && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={retryMutation.isPending}
-                              onClick={() => handleRetry(job.id)}
-                            >
-                              Retry
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <AskAiButton
+                                variant="icon"
+                                label="Explain this failure"
+                                title="Explain this failure"
+                                prompt={`Explain why job ${job.id} failed on engine "${engineId}". It is on activity "${job.activityId}" of process "${job.processDefinitionKey}" (definition ${job.processDefinitionId}), instance ${job.processInstanceId}, retries=${job.retries}, created ${job.createTime}. Reported exception: "${job.exceptionMessage}". Steps: (1) read the full context with camunda7_get_process_instance({engine: "${engineId}", id: "${job.processInstanceId}"}) and camunda7_get_process_instance_variables for the input that reached this activity; (2) find the matching incident with camunda7_list_incidents({engine: "${engineId}", processInstanceId: "${job.processInstanceId}"}); (3) check camunda7_query_historic_activity_instances to see if activity "${job.activityId}" fails repeatedly. Then answer in plain language: what broke, whether it is transient (data/infra) or deterministic (code/config), and an explicit verdict — SAFE TO RETRY or WILL RE-FAIL — with one-line justification. Do not mutate anything.`}
+                              />
+                              <AskAiButton
+                                variant="icon"
+                                label="Draft ticket"
+                                title="Draft ticket"
+                                prompt={`Draft and file a GitHub issue for the incident behind failed job ${job.id} on engine "${engineId}". This job has no incidentId directly, so first FIND the incident: call camunda7_list_incidents({ engine: "${engineId}", processInstanceId: "${job.processInstanceId}" }) and pick the incident for this job (activity "${job.activityId}" of process "${job.processDefinitionKey}", instance ${job.processInstanceId}; reported exception: "${job.exceptionMessage}"). Then build the GitHub issue payload with camunda7_format_incident_issue({ incidentId: "<found incident id>" }), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={retryMutation.isPending}
+                                onClick={() => handleRetry(job.id)}
+                              >
+                                Retry
+                              </Button>
+                            </div>
                           )}
                           {retried && (
                             <span className="text-muted-foreground text-xs">Retried</span>
@@ -170,9 +261,30 @@ export function JobPanelWidget({ data }: { data: JobPanelData | null }) {
         </details>
       )}
 
+      <ListFooter
+        shown={jobs.length}
+        total={paged.total}
+        hasMore={paged.hasMore}
+        loadingMore={paged.loadingMore}
+        onLoadMore={paged.loadMore}
+        noun="jobs"
+      />
+
       {jobs.length === 0 && (
         <p className="text-muted-foreground py-4 text-center text-sm">No jobs found</p>
       )}
+
+      <ConfirmDialog
+        open={confirmBatch}
+        onOpenChange={setConfirmBatch}
+        title="Retry failed jobs?"
+        description={`Creates a batch that sets one retry on ${failedJobs.length} failed ${
+          failedJobs.length === 1 ? "job" : "jobs"
+        }. They will re-execute; progress is tracked on the batch.`}
+        confirmLabel={`Retry ${failedJobs.length}`}
+        pending={batchMutation.isPending}
+        onConfirm={handleBatchRetry}
+      />
     </div>
   )
 }

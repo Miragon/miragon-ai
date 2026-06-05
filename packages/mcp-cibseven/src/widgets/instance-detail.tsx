@@ -7,12 +7,20 @@ import {
   AlertDescription,
   Button,
   useToolMutation,
+  useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
+import { ModelContext } from "mcp-use/react"
+import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibseven"
+import { CAMUNDA7_INSTANCE_DETAIL_DATA } from "../tool-names.js"
+import { useViewData } from "./use-view-data.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, Section, VariablesTable } from "./instance-sections.js"
 import { TaskCompleteForm } from "./task-complete-form.js"
+import { ConfirmDialog } from "./confirm-dialog.js"
+import { refreshCockpitData } from "./refresh.js"
+import { HistoryTimelineView, type HistoryActivity } from "./history-timeline.js"
 
 export type { InstanceDetailData }
 
@@ -58,11 +66,58 @@ function OpenTaskCard({
   )
 }
 
-export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null }) {
+/**
+ * The activity audit log is the heaviest query on this view, so it loads lazily:
+ * the wrapping <Section> mounts this component only when the operator expands it.
+ * Relies on the session's sticky engine (like the instance mutations above).
+ */
+function InstanceAuditContent({ processInstanceId }: { processInstanceId: string }) {
+  const q = useToolQuery<HistoryActivity[]>(
+    ["camunda7:instance-history", processInstanceId],
+    "camunda7_query_historic_activity_instances",
+    { processInstanceId, sortBy: "startTime", sortOrder: "asc", maxResults: 500 },
+  )
+  if (q.isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{q.error?.message ?? "Failed to load the audit log."}</AlertDescription>
+      </Alert>
+    )
+  }
+  if (!q.data) {
+    return <p className="text-muted-foreground text-sm">Loading audit log…</p>
+  }
+  return <HistoryTimelineView activities={q.data} />
+}
+
+export function InstanceDetailWidget({
+  data: initialData = null,
+  processInstanceId,
+  engine,
+}: {
+  data?: InstanceDetailData | null
+  processInstanceId?: string
+  engine?: string
+}) {
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set())
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  // null = follow server state; true/false = local override after a suspend/activate.
+  const [suspendedOverride, setSuspendedOverride] = useState<boolean | null>(null)
+  const [cancelled, setCancelled] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const [auditOpen, setAuditOpen] = useState(false)
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
+  const suspendMutation = useToolMutation("camunda7_suspend_process_instance")
+  const activateMutation = useToolMutation("camunda7_activate_process_instance")
+  const cancelMutation = useToolMutation("camunda7_delete_process_instance")
+  const { data, loading, error } = useViewData<InstanceDetailData>(
+    initialData,
+    ["camunda7:instance-detail", engine ?? null, processInstanceId ?? null],
+    CAMUNDA7_INSTANCE_DETAIL_DATA,
+    { processInstanceId, engine },
+    !!processInstanceId,
+  )
 
   const visibleTasks = useMemo<OpenUserTask[]>(
     () => (data?.openTasks ?? []).filter((task) => !completedTaskIds.has(task.id)),
@@ -84,47 +139,143 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground text-sm">
+            {loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </div>
     )
   }
 
   const { instance, activityTree, variables, incidents, bpmnXml } = data
+  const isSuspended = suspendedOverride ?? instance.suspended ?? false
+  const isActionable = !instance.ended && !cancelled
+  const isMutatingInstance =
+    suspendMutation.isPending || activateMutation.isPending || cancelMutation.isPending
 
   function handleResolve(incidentId: string) {
     resolveMutation.mutate(
       { incidentId },
-      { onSuccess: () => setResolvedIds((prev) => new Set(prev).add(incidentId)) },
+      {
+        onSuccess: () => {
+          setResolvedIds((prev) => new Set(prev).add(incidentId))
+          refreshCockpitData()
+        },
+      },
+    )
+  }
+
+  function handleSuspendToggle() {
+    const mutation = isSuspended ? activateMutation : suspendMutation
+    mutation.mutate(
+      { processInstanceId: instance.id },
+      {
+        onSuccess: () => {
+          setSuspendedOverride(!isSuspended)
+          refreshCockpitData()
+        },
+      },
+    )
+  }
+
+  function handleCancel() {
+    cancelMutation.mutate(
+      { processInstanceId: instance.id },
+      {
+        onSuccess: () => {
+          setCancelled(true)
+          setConfirmCancel(false)
+          refreshCockpitData()
+        },
+      },
     )
   }
 
   const variableEntries = Object.entries(variables)
   const activeIncidents = (incidents ?? []).filter((i) => !resolvedIds.has(i.id))
+  const activeActivityIds = (data.activeActivityIds ?? []).join(", ") || "none"
+  const incidentActivityIds = (data.incidentActivityIds ?? []).join(", ") || "none"
+  // Standalone (camunda7_show_instance_detail) the `engine` prop is undefined; fall
+  // back to the engine the data was fetched against so the AI prompts never read
+  // "engine undefined".
+  const engineId = engine ?? data.engineId ?? "the current engine"
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-5 p-6">
-      <div>
-        <h2 className="text-xl font-semibold">Process Instance Detail</h2>
-        <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-sm">
-          <span>
-            ID: <code className="font-mono">{instance.id}</code>
-          </span>
-          {instance.businessKey && (
+      {/* Keep the agent aware of what the operator is looking at, so "Analyze"
+          and any follow-up question resolve against this instance for free. */}
+      <ModelContext
+        content={[
+          `Support is viewing CIB Seven process instance ${instance.id}${
+            instance.businessKey ? ` (business key ${instance.businessKey})` : ""
+          }, definition ${instance.definitionId}.`,
+          `Status: ${
+            cancelled
+              ? "cancelled"
+              : instance.ended
+                ? "ended"
+                : isSuspended
+                  ? "suspended"
+                  : "running"
+          }; ${activeIncidents.length} open incident${activeIncidents.length === 1 ? "" : "s"}.`,
+          `Act via camunda7_resolve_incident / camunda7_set_job_retries / camunda7_suspend_process_instance / camunda7_delete_process_instance / camunda7_modify_process_instance. For root cause, compare with other instances via camunda7_list_incidents + camunda7_query_historic_activity_instances.`,
+        ].join(" ")}
+      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">Process Instance Detail</h2>
+          <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-sm">
             <span>
-              Business Key: <code className="font-mono">{instance.businessKey}</code>
+              ID: <code className="font-mono">{instance.id}</code>
             </span>
-          )}
-          <Badge variant={instance.ended ? "secondary" : "default"}>
-            {instance.ended ? "Ended" : "Running"}
-          </Badge>
-          {instance.suspended && <Badge variant="secondary">Suspended</Badge>}
+            {instance.businessKey && (
+              <span>
+                Business Key: <code className="font-mono">{instance.businessKey}</code>
+              </span>
+            )}
+            <Badge variant={cancelled || instance.ended ? "secondary" : "default"}>
+              {cancelled ? "Cancelled" : instance.ended ? "Ended" : "Running"}
+            </Badge>
+            {!cancelled && isSuspended && <Badge variant="secondary">Suspended</Badge>}
+          </div>
+          <div className="text-muted-foreground mt-1 font-mono text-xs">
+            Definition: {instance.definitionId}
+          </div>
         </div>
-        <div className="text-muted-foreground mt-1 font-mono text-xs">
-          Definition: {instance.definitionId}
-        </div>
+        <AskAiButton
+          variant="primary"
+          prompt={`Diagnose CIB Seven process instance ${instance.id}${
+            instance.businessKey ? ` (business key ${instance.businessKey})` : ""
+          } of definition ${instance.definitionId} on engine ${engineId}. It is currently at activities ${activeActivityIds} with incidents at ${incidentActivityIds}. Use camunda7_get_process_instance, camunda7_list_incidents({processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.`}
+        />
       </div>
+
+      {isActionable && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isMutatingInstance}
+            onClick={handleSuspendToggle}
+          >
+            {isSuspended ? "Activate" : "Suspend"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            disabled={isMutatingInstance}
+            onClick={() => setConfirmCancel(true)}
+          >
+            Cancel instance
+          </Button>
+        </div>
+      )}
 
       {incidents && incidents.length > 0 && (
         <Section title="Incidents" count={activeIncidents.length} defaultOpen>
@@ -147,14 +298,34 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
                         </span>
                       </div>
                       {!resolved && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={resolveMutation.isPending}
-                          onClick={() => handleResolve(inc.id)}
-                        >
-                          Resolve
-                        </Button>
+                        <div className="flex items-center gap-1.5">
+                          <AskAiButton
+                            variant="subtle"
+                            label="Analyze"
+                            prompt={`Analyze the root cause of incident ${inc.id} (${inc.incidentType}${
+                              inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
+                            }) on process instance ${instance.id}${
+                              instance.businessKey ? ` / ${instance.businessKey}` : ""
+                            } of ${instance.definitionId} (engine ${engineId}). Use camunda7_query_historic_activity_instances({processInstanceId: "${instance.id}"}) to see what ran before the failure and camunda7_list_incidents to check whether other instances of ${instance.definitionId} fail the same way. Recommend a fix (resolve, retry via camunda7_set_job_retries, variable change, or camunda7_modify_process_instance) with the exact tool arguments. Do not execute it yet.`}
+                          />
+                          <AskAiButton
+                            variant="subtle"
+                            label="Draft ticket"
+                            prompt={`Draft and file a GitHub issue for CIB Seven incident \`${inc.id}\` (${inc.incidentType}${
+                              inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
+                            }) on process instance ${instance.id}${
+                              instance.businessKey ? ` (business key ${instance.businessKey})` : ""
+                            } of definition ${instance.definitionId}, engine \`${engineId}\`. Build the payload with camunda7_format_incident_issue({ incidentId: "${inc.id}" }), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={resolveMutation.isPending}
+                            onClick={() => handleResolve(inc.id)}
+                          >
+                            Resolve
+                          </Button>
+                        </div>
                       )}
                     </div>
                     {inc.incidentMessage && (
@@ -214,8 +385,45 @@ export function InstanceDetailWidget({ data }: { data: InstanceDetailData | null
       )}
 
       <Section title="Variables" count={variableEntries.length} defaultOpen>
-        <VariablesTable variables={variables} instanceId={instance.id} readOnly={instance.ended} />
+        <div className="mb-2">
+          <AskAiButton
+            variant="subtle"
+            label="Explain & validate variables"
+            prompt={`Explain and sanity-check the variables of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engineId}). Use camunda7_get_process_instance_variables(processInstanceId: "${instance.id}") for the authoritative values. For each meaningful variable say what it represents, and flag any value that looks missing, malformed, or inconsistent and could explain the current incident(s). If you find a likely-bad variable, propose the corrected value — but do not set it without my confirmation.`}
+          />
+        </div>
+        <VariablesTable
+          variables={variables}
+          instanceId={instance.id}
+          readOnly={instance.ended || cancelled}
+        />
       </Section>
+
+      <Section title="Audit log" onToggle={setAuditOpen}>
+        <div className="mb-2">
+          <AskAiButton
+            variant="subtle"
+            label="Explain timeline"
+            prompt={`Explain the execution timeline of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engineId}). Use camunda7_query_historic_activity_instances(processInstanceId: "${instance.id}") to walk the per-activity history in order: where did the token spend the most time, which step is it currently stuck at, and does the path taken match the expected happy path? Call out the single biggest delay and whether it indicates a problem. Explanation only — do not change anything.`}
+          />
+        </div>
+        {auditOpen ? (
+          <InstanceAuditContent processInstanceId={instance.id} />
+        ) : (
+          <p className="text-muted-foreground text-sm">Expand to load the activity history.</p>
+        )}
+      </Section>
+
+      <ConfirmDialog
+        open={confirmCancel}
+        onOpenChange={setConfirmCancel}
+        title="Cancel this process instance?"
+        description="This deletes the running instance and all of its tokens. This action is irreversible."
+        confirmLabel="Cancel instance"
+        destructive
+        pending={cancelMutation.isPending}
+        onConfirm={handleCancel}
+      />
     </div>
   )
 }

@@ -1,25 +1,57 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { KpiGrid, LivePill, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import {
+  AskAiButton,
+  KpiGrid,
+  LivePill,
+  WidgetHeader,
+  WidgetShell,
+} from "@miragon-ai/widget-shell/widgets"
 import type { IncidentsDashboardData } from "@miragon-ai/client-cibseven"
+import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 
 function formatTimestamp(iso: string | null): string {
   if (!iso) return "—"
   return new Date(iso).toLocaleString()
 }
 
-export function IncidentOverviewKpi({ data }: { data: IncidentsDashboardData | null }) {
+/** Shell-less incidents KPI header. Reused standalone and in the cockpit app. */
+export function IncidentOverviewKpiView({
+  data: initialData = null,
+  engine,
+}: {
+  data?: IncidentsDashboardData | null
+  engine?: string
+}) {
+  // Shares the process-list query key → both incidents panels dedupe to one
+  // fetch in the cockpit; standalone the data comes in via props.
+  const { data, loading, error } = useViewData<IncidentsDashboardData>(
+    initialData,
+    ["camunda7:incidents", engine ?? null],
+    CAMUNDA7_INCIDENTS_DATA,
+    { engine },
+    !!engine,
+  )
+
   if (!data) {
-    return (
-      <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
+    if (error) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
         </Alert>
-      </WidgetShell>
+      )
+    }
+    return (
+      <div className="text-muted-foreground p-2 text-sm">
+        {loading ? "Loading…" : "No data available"}
+      </div>
     )
   }
 
+  const engineId = engine ?? data.engineId ?? "default"
+
   return (
-    <WidgetShell>
+    <>
       <WidgetHeader
         icon="⚠"
         iconTone="critical"
@@ -33,6 +65,12 @@ export function IncidentOverviewKpi({ data }: { data: IncidentsDashboardData | n
               {data.latestIncident && <> · last event {formatTimestamp(data.latestIncident)}</>}
             </span>
           </>
+        }
+        actions={
+          <AskAiButton
+            variant="primary"
+            prompt={`Triage all open incidents in the CIB Seven cockpit for engine ${engineId}. There are currently ${data.totalCount} open incidents across ${data.processCount} process(es) affecting ${data.affectedActivityCount} activities, with ${data.last24hCount} new in the last 24h (last event ${formatTimestamp(data.latestIncident)}). Use camunda7_list_incidents and camunda7_query_historic_activity_instances to cluster the incidents by exception/error message and failing activity, rank the clusters by impact (incident count and 24h growth), identify the single most likely systemic root cause, and tell me which process(es) and activities to address first. For each top cluster recommend a concrete next step (batch job retry via camunda7_set_job_retries_batch, a variable fix, an instance modification, or escalation). Do not change anything yet — return a prioritized triage plan.`}
+          />
         }
       />
       <KpiGrid
@@ -53,6 +91,20 @@ export function IncidentOverviewKpi({ data }: { data: IncidentsDashboardData | n
           },
         ]}
       />
+    </>
+  )
+}
+
+export function IncidentOverviewKpi({
+  data,
+  engine,
+}: {
+  data: IncidentsDashboardData | null
+  engine?: string
+}) {
+  return (
+    <WidgetShell>
+      <IncidentOverviewKpiView data={data} engine={engine} />
     </WidgetShell>
   )
 }

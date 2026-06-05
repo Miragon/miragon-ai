@@ -3,36 +3,48 @@ import type { MCPServer } from "mcp-use/server"
 import { buildComposedView, buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
 import type {
   ProcessListData,
-  TaskDashboardData,
-  TaskData,
-  InstanceDetailData,
+  CockpitAppData,
   HistoryTimelineData,
 } from "@miragon-ai/client-cibseven"
 import {
   getProcessDefinitions,
   getProcessInstance,
   getActivityInstanceTree,
-  getProcessInstanceVariables,
   getIncidents,
-  getTasks,
   getHistoricActivityInstances,
   getHistoricProcessInstances,
   getProcessDefinitionBpmn20Xml,
-  getProcessDefinitionStatistics,
   getActivityStatistics,
-  getDeployments,
-  getDeploymentResources,
-  getJobs,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import {
+  buildCockpitDashboardData,
+  buildInstanceDetailData,
+  buildJobPanelData,
+  buildProcessInstancesData,
+} from "./cockpit-data.js"
 import { buildIncidentsDashboardData, buildProcessIncidentsData } from "./incident-panel-data.js"
 import { buildProcessDetailData } from "./steps/process-detail.js"
 import { buildIncidentDetailData } from "./steps/incident-detail.js"
-import { buildTaskFormSchema } from "./tools/task-form.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
 import {
+  CAMUNDA7_COCKPIT_OVERVIEW_DATA,
+  CAMUNDA7_INCIDENT_DETAIL_DATA,
+  CAMUNDA7_INCIDENTS_DATA,
+  CAMUNDA7_INSTANCE_DETAIL_DATA,
+  CAMUNDA7_JOBS_DATA,
+  CAMUNDA7_OPEN_COCKPIT,
+  CAMUNDA7_PROCESS_DETAIL_DATA,
+  CAMUNDA7_PROCESS_INCIDENTS_DATA,
+  CAMUNDA7_PROCESS_INSTANCES_DATA,
+  CAMUNDA7_SHOW_COCKPIT_DASHBOARD,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
+  CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
+  CAMUNDA7_SHOW_INSTANCE_DETAIL,
+  CAMUNDA7_SHOW_JOB_PANEL,
   CAMUNDA7_SHOW_PROCESS_DETAIL,
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
+  CAMUNDA7_SHOW_PROCESS_INSTANCES,
+  CAMUNDA7_SHOW_PROCESS_LIST,
 } from "./tool-names.js"
 import { resolveEngine, type EngineRegistry } from "./lib/resolve-engine.js"
 
@@ -45,6 +57,18 @@ const engineParam = {
     ),
 }
 
+/**
+ * Plain (no-UI) tool result carrying JSON data. The cockpit data feeds use this
+ * so the app's in-widget `callTool` gets the data back — a widget-tool result
+ * (with `_meta.ui`) is rendered by the host instead of being returned.
+ */
+function rawData(data: unknown) {
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(data) }],
+    structuredContent: data as Record<string, unknown>,
+  }
+}
+
 export function registerWidgetTools(
   server: MCPServer,
   registry: EngineRegistry,
@@ -54,7 +78,43 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "camunda7_show_process_list",
+      name: CAMUNDA7_OPEN_COCKPIT,
+      title: "Open Cockpit",
+      description:
+        "Open the consolidated CIB Seven operations cockpit — a single app that navigates client-side (no extra tool calls) across the process landscape: overview, per-definition running instances, instance detail, plus quick access to human tasks, jobs and deployments. The Support entry point.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({ ...engineParam }),
+      _meta: uiMeta,
+    },
+    async (args) => {
+      // Thin bootstrap: resolve the engine (sticky selection or the only engine)
+      // and hand the app the engine list. The app threads the chosen engineId
+      // into every nested tool call via the `engine` override, so client-side
+      // navigation works without relying on the session's sticky selection.
+      let engineId: string | null = null
+      try {
+        engineId = resolveEngine(args.engine, registry).engineId
+      } catch {
+        // Multiple engines, none selected → the app renders an engine picker.
+        engineId = null
+      }
+      const data: CockpitAppData = {
+        engineId,
+        engines: registry.engines.map((e) => ({ id: e.id, baseUrl: e.baseUrl })),
+      }
+      return buildSingleWidgetView({
+        widget: "camunda7:cockpit-app",
+        app: "camunda7",
+        dataType: "camunda7:cockpitApp",
+        data,
+        title: "Cockpit",
+      })
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_SHOW_PROCESS_LIST,
       title: "Process Definitions",
       description: "Show deployed process definitions as a card grid view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -97,55 +157,7 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "camunda7_show_task_dashboard",
-      title: "Task Dashboard",
-      description: "Show open user tasks as a dashboard with filters.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
-        assignee: z.string().optional(),
-        candidateGroup: z.string().optional(),
-        processDefinitionKey: z.string().optional(),
-        maxResults: z.number().optional().default(50),
-        ...engineParam,
-      }),
-      _meta: uiMeta,
-    },
-    async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
-      const tasks = await getTasks({
-        client,
-        query: {
-          assignee: args.assignee,
-          candidateGroup: args.candidateGroup,
-          processDefinitionKey: args.processDefinitionKey,
-          maxResults: args.maxResults,
-          sortBy: "created",
-          sortOrder: "desc",
-        },
-      })
-      const taskArray = Array.isArray(tasks) ? tasks : []
-      const data: TaskDashboardData = {
-        tasks: taskArray as TaskDashboardData["tasks"],
-        totalCount: taskArray.length,
-        filters: {
-          assignee: args.assignee,
-          candidateGroup: args.candidateGroup,
-          processDefinitionKey: args.processDefinitionKey,
-        },
-        engineId,
-      }
-      return buildComposedView({
-        app: "camunda7",
-        title: "Task Dashboard",
-        layout: [{ row: [{ widget: "camunda7:task-list-table" }] }],
-        entries: [{ dataType: "camunda7:taskList", data }],
-      })
-    },
-  )
-
-  server.tool(
-    {
-      name: "camunda7_show_instance_detail",
+      name: CAMUNDA7_SHOW_INSTANCE_DETAIL,
       title: "Process Instance Detail",
       description:
         "Show detailed view of a single process instance with activity tree, variables, and incidents.",
@@ -158,70 +170,9 @@ export function registerWidgetTools(
     },
     async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
-      const [instance, activityTree, variables, incidents, openTasksRaw] = await Promise.all([
-        getProcessInstance({ client, path: { id: args.processInstanceId } }),
-        getActivityInstanceTree({ client, path: { id: args.processInstanceId } }).catch(() => null),
-        getProcessInstanceVariables({
-          client,
-          path: { id: args.processInstanceId },
-        }).catch(() => ({})),
-        getIncidents({
-          client,
-          query: { processInstanceId: args.processInstanceId, maxResults: 100 },
-        }).catch(() => []),
-        getTasks({
-          client,
-          query: {
-            processInstanceId: args.processInstanceId,
-            maxResults: 50,
-            sortBy: "created",
-            sortOrder: "asc",
-          },
-        }).catch(() => []),
-      ])
-
-      let bpmnXml: string | null = null
-      const definitionId = (instance as { definitionId?: string } | null)?.definitionId
-      if (definitionId) {
-        try {
-          const xmlResponse = await getProcessDefinitionBpmn20Xml({
-            client,
-            path: { id: definitionId },
-          })
-          bpmnXml = (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? null
-        } catch {
-          bpmnXml = null
-        }
-      }
-
-      const taskList = (Array.isArray(openTasksRaw) ? openTasksRaw : []) as TaskData[]
-      const openTasks: InstanceDetailData["openTasks"] = await Promise.all(
-        taskList.map(async (task) => ({
-          ...task,
-          formSchema: await buildTaskFormSchema(client, task.id, {
-            task: {
-              taskDefinitionKey: task.taskDefinitionKey,
-              processDefinitionId: task.processDefinitionId,
-            },
-            bpmnXml,
-          }).catch(() => ({
-            taskId: task.id,
-            fields: [],
-          })),
-        })),
-      )
-
-      const data: InstanceDetailData = {
-        instance: instance as unknown as InstanceDetailData["instance"],
-        activityTree: activityTree as unknown as InstanceDetailData["activityTree"],
-        variables: variables as unknown as InstanceDetailData["variables"],
-        incidents: incidents as unknown as InstanceDetailData["incidents"],
-        bpmnXml,
-        activeActivityIds: collectActiveActivityIds(activityTree),
-        incidentActivityIds: collectIncidentActivityIds(incidents),
-        openTasks,
-        engineId,
-      }
+      const data = await buildInstanceDetailData(client, engineId, {
+        processInstanceId: args.processInstanceId,
+      })
       return buildSingleWidgetView({
         widget: "camunda7:instance-detail",
         app: "camunda7",
@@ -234,7 +185,51 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "camunda7_show_incidents_dashboard",
+      name: CAMUNDA7_SHOW_PROCESS_INSTANCES,
+      title: "Process Instances",
+      description:
+        "List the running process instances of a process definition as a filterable table (business key, version, suspended/incident state). Drill-in target from the cockpit definitions table and process-detail; each row opens camunda7_show_instance_detail.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().describe("Process definition key whose instances to list"),
+        active: z.boolean().optional().describe("Only running (non-suspended) instances."),
+        suspended: z.boolean().optional().describe("Only suspended instances."),
+        withIncidentsOnly: z
+          .boolean()
+          .optional()
+          .describe("Only instances that currently have an open incident."),
+        businessKeyLike: z
+          .string()
+          .optional()
+          .describe("Filter by a substring of the business key."),
+        maxResults: z.number().optional().default(50),
+        ...engineParam,
+      }),
+      _meta: uiMeta,
+    },
+    async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      const data = await buildProcessInstancesData(client, engineId, {
+        processDefinitionKey: args.processDefinitionKey,
+        active: args.active,
+        suspended: args.suspended,
+        withIncidentsOnly: args.withIncidentsOnly,
+        businessKeyLike: args.businessKeyLike,
+        maxResults: args.maxResults,
+      })
+      return buildSingleWidgetView({
+        widget: "camunda7:process-instances",
+        app: "camunda7",
+        dataType: "camunda7:processInstances",
+        data,
+        title: "Process Instances",
+      })
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
       title: "Incidents Dashboard",
       description:
         "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view.",
@@ -418,7 +413,7 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "camunda7_show_cockpit_dashboard",
+      name: CAMUNDA7_SHOW_COCKPIT_DASHBOARD,
       title: "Cockpit Dashboard",
       description:
         "Show the Cockpit dashboard with process definition statistics: running instances, failed jobs, and incidents per definition.",
@@ -428,91 +423,7 @@ export function registerWidgetTools(
     },
     async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
-      let rows: Array<{
-        id?: string | null
-        instances?: number
-        failedJobs?: number
-        incidents?: Array<{ incidentType?: string | null; incidentCount?: number | null }> | null
-        definition?: {
-          id?: string | null
-          key?: string | null
-          name?: string | null
-          version?: number | null
-        }
-      }> = []
-
-      try {
-        const stats = await getProcessDefinitionStatistics({
-          client,
-          query: { failedJobs: true, incidents: true },
-        })
-        rows = Array.isArray(stats) ? (stats as typeof rows) : []
-      } catch {
-        const [defs, incidents] = await Promise.all([
-          getProcessDefinitions({
-            client,
-            query: { latestVersion: true, maxResults: 100, sortBy: "name", sortOrder: "asc" },
-          }),
-          getIncidents({ client, query: { maxResults: 500 } }).catch(() => []),
-        ])
-        const defArray = Array.isArray(defs) ? defs : []
-        const incArray = Array.isArray(incidents) ? incidents : []
-
-        const incByDef = new Map<string, number>()
-        for (const inc of incArray as Array<{ processDefinitionId?: string }>) {
-          const k = inc.processDefinitionId ?? ""
-          incByDef.set(k, (incByDef.get(k) ?? 0) + 1)
-        }
-
-        rows = (
-          defArray as Array<{
-            id?: string | null
-            key?: string | null
-            name?: string | null
-            version?: number | null
-          }>
-        ).map((d) => ({
-          id: d.id,
-          instances: 0,
-          failedJobs: 0,
-          incidents: incByDef.has(d.id ?? "")
-            ? [{ incidentType: "failedJob", incidentCount: incByDef.get(d.id ?? "") ?? 0 }]
-            : [],
-          definition: d,
-        }))
-      }
-
-      let totalRunning = 0
-      let totalFailed = 0
-      let totalIncidents = 0
-
-      const definitions = rows.map((row) => {
-        const incidents = (row.incidents ?? []).map((i) => ({
-          incidentType: i.incidentType ?? "unknown",
-          incidentCount: i.incidentCount ?? 0,
-        }))
-        const incidentSum = incidents.reduce((s, i) => s + i.incidentCount, 0)
-        totalRunning += row.instances ?? 0
-        totalFailed += row.failedJobs ?? 0
-        totalIncidents += incidentSum
-        return {
-          id: row.definition?.id ?? row.id ?? "",
-          key: row.definition?.key ?? "",
-          name: row.definition?.name ?? null,
-          version: row.definition?.version ?? 0,
-          instances: row.instances ?? 0,
-          failedJobs: row.failedJobs ?? 0,
-          incidents,
-        }
-      })
-
-      definitions.sort((a, b) => {
-        const aIssues = a.failedJobs + a.incidents.reduce((s, i) => s + i.incidentCount, 0)
-        const bIssues = b.failedJobs + b.incidents.reduce((s, i) => s + i.incidentCount, 0)
-        if (aIssues !== bIssues) return bIssues - aIssues
-        return b.instances - a.instances
-      })
-
+      const data = await buildCockpitDashboardData(client, engineId)
       return buildComposedView({
         app: "camunda7",
         title: "Cockpit Dashboard",
@@ -520,21 +431,7 @@ export function registerWidgetTools(
           { row: [{ widget: "camunda7:process-health-kpi" }] },
           { row: [{ widget: "camunda7:process-definitions-table" }] },
         ],
-        entries: [
-          {
-            dataType: "camunda7:cockpitDashboard",
-            data: {
-              summary: {
-                totalDefinitions: definitions.length,
-                totalRunningInstances: totalRunning,
-                totalFailedJobs: totalFailed,
-                totalIncidents,
-              },
-              definitions,
-              engineId,
-            },
-          },
-        ],
+        entries: [{ dataType: "camunda7:cockpitDashboard", data }],
       })
     },
   )
@@ -682,73 +579,7 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "camunda7_show_deployment_browser",
-      title: "Deployment Browser",
-      description: "Show deployed resources grouped by deployment with metadata.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
-        name: z.string().optional().describe("Filter by deployment name"),
-        maxResults: z.number().optional().default(20),
-        ...engineParam,
-      }),
-      _meta: uiMeta,
-    },
-    async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
-      const deps = (await getDeployments({
-        client,
-        query: {
-          name: args.name,
-          maxResults: args.maxResults,
-          sortBy: "deploymentTime",
-          sortOrder: "desc",
-        },
-      })) as unknown as Array<{
-        id: string
-        name?: string | null
-        deploymentTime?: string
-        source?: string | null
-        tenantId?: string | null
-      }>
-
-      const rows = Array.isArray(deps) ? deps : []
-
-      const withResources = await Promise.all(
-        rows.slice(0, 20).map(async (dep) => {
-          let resources: Array<{ id: string; name: string }> = []
-          try {
-            const res = (await getDeploymentResources({
-              client,
-              path: { id: dep.id },
-            })) as unknown as Array<{ id: string; name: string }>
-            resources = Array.isArray(res) ? res.map((r) => ({ id: r.id, name: r.name })) : []
-          } catch {
-            /* resources unavailable */
-          }
-          return {
-            id: dep.id,
-            name: dep.name ?? null,
-            deploymentTime: dep.deploymentTime ?? "",
-            source: dep.source ?? null,
-            tenantId: dep.tenantId ?? null,
-            resources,
-          }
-        }),
-      )
-
-      return buildSingleWidgetView({
-        widget: "camunda7:deployment-browser",
-        app: "camunda7",
-        dataType: "camunda7:deploymentBrowser",
-        title: "Deployment Browser",
-        data: { totalCount: rows.length, deployments: withResources, engineId },
-      })
-    },
-  )
-
-  server.tool(
-    {
-      name: "camunda7_show_job_panel",
+      name: CAMUNDA7_SHOW_JOB_PANEL,
       title: "Job Management Panel",
       description:
         "Show jobs with a focus on failed jobs (no retries left). Displays error messages and retry status.",
@@ -762,77 +593,218 @@ export function registerWidgetTools(
     },
     async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
-      const [failedJobs, allJobs] = await Promise.all([
-        getJobs({
-          client,
-          query: {
-            processDefinitionKey: args.processDefinitionKey,
-            noRetriesLeft: true,
-            maxResults: 100,
-            sortBy: "jobId",
-            sortOrder: "desc",
-          },
-        }).catch(() => []),
-        args.failedOnly
-          ? Promise.resolve([])
-          : getJobs({
-              client,
-              query: {
-                processDefinitionKey: args.processDefinitionKey,
-                maxResults: 100,
-                sortBy: "jobId",
-                sortOrder: "desc",
-              },
-            }).catch(() => []),
-      ])
-
-      const failed = Array.isArray(failedJobs)
-        ? (failedJobs as Array<{
-            id: string
-            processInstanceId: string
-            processDefinitionKey?: string | null
-            processDefinitionId?: string | null
-            activityId?: string | null
-            retries: number
-            exceptionMessage?: string | null
-            dueDate?: string | null
-            suspended: boolean
-            priority: number
-            createTime?: string | null
-          }>)
-        : []
-      const all = args.failedOnly
-        ? failed
-        : Array.isArray(allJobs)
-          ? (allJobs as typeof failed)
-          : []
-
-      const jobs = (args.failedOnly ? failed : all).map((j) => ({
-        id: j.id,
-        processInstanceId: j.processInstanceId,
-        processDefinitionKey: j.processDefinitionKey ?? null,
-        processDefinitionId: j.processDefinitionId ?? null,
-        activityId: j.activityId ?? null,
-        retries: j.retries,
-        exceptionMessage: j.exceptionMessage ?? null,
-        dueDate: j.dueDate ?? null,
-        suspended: j.suspended,
-        priority: j.priority,
-        createTime: j.createTime ?? null,
-      }))
-
+      const data = await buildJobPanelData(client, engineId, {
+        processDefinitionKey: args.processDefinitionKey,
+        failedOnly: args.failedOnly,
+      })
       return buildSingleWidgetView({
         widget: "camunda7:job-panel",
         app: "camunda7",
         dataType: "camunda7:jobPanel",
         title: "Job Panel",
-        data: {
-          totalCount: args.failedOnly ? failed.length : all.length,
-          failedCount: failed.length,
-          jobs,
-          engineId,
-        },
+        data,
       })
+    },
+  )
+
+  // ── Per-view data feeds (plain, no UI) ──────────────────────────────────
+  // Reused by the cockpit app's loaders AND each widget's own self-fetch. Each
+  // delegates to the shared builder in cockpit-data.ts (same logic the matching
+  // camunda7_show_* widget tool uses for its eager render).
+
+  server.tool(
+    {
+      name: CAMUNDA7_COCKPIT_OVERVIEW_DATA,
+      title: "Cockpit overview data (internal)",
+      description:
+        "Internal JSON feed (no UI) for the cockpit overview — per-definition stats. Prefer camunda7_open_cockpit / camunda7_show_cockpit_dashboard.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({ ...engineParam }),
+    },
+    async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      return rawData(await buildCockpitDashboardData(client, engineId))
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_PROCESS_DETAIL_DATA,
+      title: "Process detail data (internal)",
+      description:
+        "Internal JSON feed (no UI) for a process definition's detail. Prefer camunda7_show_process_detail.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().describe("Process definition key"),
+        ...engineParam,
+      }),
+    },
+    async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const data = await buildProcessDetailData(client, {
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
+        processDefinitionKey: args.processDefinitionKey,
+      })
+      return rawData({ ...data, engineId })
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_PROCESS_INSTANCES_DATA,
+      title: "Process instances data (internal)",
+      description:
+        "Internal JSON feed (no UI) for a definition's running instances. Prefer camunda7_show_process_instances.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().describe("Process definition key"),
+        active: z.boolean().optional(),
+        suspended: z.boolean().optional(),
+        withIncidentsOnly: z.boolean().optional(),
+        businessKeyLike: z.string().optional(),
+        firstResult: z.number().optional().describe("Offset for pagination (0-based)"),
+        maxResults: z.number().optional(),
+        ...engineParam,
+      }),
+    },
+    async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      return rawData(
+        await buildProcessInstancesData(client, engineId, {
+          processDefinitionKey: args.processDefinitionKey,
+          active: args.active,
+          suspended: args.suspended,
+          withIncidentsOnly: args.withIncidentsOnly,
+          businessKeyLike: args.businessKeyLike,
+          firstResult: args.firstResult,
+          maxResults: args.maxResults,
+        }),
+      )
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_INSTANCE_DETAIL_DATA,
+      title: "Instance detail data (internal)",
+      description:
+        "Internal JSON feed (no UI) for a single process instance. Prefer camunda7_show_instance_detail.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processInstanceId: z.string().describe("The process instance ID"),
+        ...engineParam,
+      }),
+    },
+    async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      return rawData(
+        await buildInstanceDetailData(client, engineId, {
+          processInstanceId: args.processInstanceId,
+        }),
+      )
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_JOBS_DATA,
+      title: "Jobs data (internal)",
+      description: "Internal JSON feed (no UI) for jobs. Prefer camunda7_show_job_panel.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().optional(),
+        failedOnly: z.boolean().optional(),
+        firstResult: z.number().optional().describe("Offset for pagination (0-based)"),
+        maxResults: z.number().optional(),
+        ...engineParam,
+      }),
+    },
+    async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      return rawData(
+        await buildJobPanelData(client, engineId, {
+          processDefinitionKey: args.processDefinitionKey,
+          failedOnly: args.failedOnly,
+          firstResult: args.firstResult,
+          maxResults: args.maxResults,
+        }),
+      )
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_INCIDENTS_DATA,
+      title: "Incidents dashboard data (internal)",
+      description:
+        "Internal JSON feed (no UI) for the incidents dashboard — open incidents grouped by process. Prefer camunda7_show_incidents_dashboard.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().optional(),
+        incidentType: z.string().optional(),
+        ...engineParam,
+      }),
+    },
+    async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const data = await buildIncidentsDashboardData(client, {
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
+        processDefinitionKey: args.processDefinitionKey,
+        incidentType: args.incidentType,
+      })
+      return rawData({ ...data, engineId })
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_PROCESS_INCIDENTS_DATA,
+      title: "Process incidents data (internal)",
+      description:
+        "Internal JSON feed (no UI) for a single definition's incidents — header, KPIs, BPMN overlays, activity-grouped incidents. Prefer camunda7_show_process_incidents.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().describe("Process definition key to drill into"),
+        ...engineParam,
+      }),
+    },
+    async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const data = await buildProcessIncidentsData(client, {
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
+        processDefinitionKey: args.processDefinitionKey,
+      })
+      return rawData({ ...data, engineId })
+    },
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_INCIDENT_DETAIL_DATA,
+      title: "Incident detail data (internal)",
+      description:
+        "Internal JSON feed (no UI) for a single incident — stacktrace, BPMN with the failing activity, variables, activity tree, history. Prefer camunda7_show_incident_detail.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        incidentId: z.string().describe("The incident ID to inspect"),
+        ...engineParam,
+      }),
+    },
+    async (args) => {
+      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
+      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const data = await buildIncidentDetailData(client, {
+        baseUrl: engineEntry?.baseUrl ?? "",
+        cockpitUrl,
+        incidentId: args.incidentId,
+      })
+      return rawData({ ...data, engineId })
     },
   )
 }

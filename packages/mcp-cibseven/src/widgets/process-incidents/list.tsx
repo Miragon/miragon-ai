@@ -1,44 +1,57 @@
 import { useState } from "react"
 import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import {
-  GroupCard,
-  SectionHeading,
-  WidgetShell,
-  useHostActions,
-  type HostActions,
-} from "@miragon-ai/widget-shell/widgets"
+import { GroupCard, SectionHeading, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
-import { CAMUNDA7_SHOW_INCIDENT_DETAIL, CAMUNDA7_SHOW_PROCESS_INCIDENTS } from "../../tool-names.js"
+import { useNav } from "../navigation.js"
+import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
+import { useViewData } from "../use-view-data.js"
 import { ActivitySummary } from "./activity-summary.js"
 import { IncidentTable } from "./incident-table.js"
 import { EmptyStateWithSiblings } from "./empty-state.js"
 
-export function ActivityIncidentList({ data }: { data: ProcessIncidentsData | null }) {
+export function ActivityIncidentList({
+  data: initialData = null,
+  processDefinitionKey,
+  engine,
+}: {
+  data?: ProcessIncidentsData | null
+  processDefinitionKey?: string
+  engine?: string
+}) {
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
-  const host: HostActions = useHostActions()
+  const go = useNav()
+  const { data, loading, error } = useViewData<ProcessIncidentsData>(
+    initialData,
+    ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
+    CAMUNDA7_PROCESS_INCIDENTS_DATA,
+    { processDefinitionKey, engine },
+    !!processDefinitionKey,
+  )
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   if (!data) {
     return (
       <WidgetShell>
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="text-muted-foreground p-2 text-sm">
+            {loading ? "Loading…" : "No data available"}
+          </div>
+        )}
       </WidgetShell>
     )
   }
 
   function jumpToProcess(processDefinitionKey: string) {
-    host.showWidget(
-      `Show me the incidents detail for process \`${processDefinitionKey}\` (use ${CAMUNDA7_SHOW_PROCESS_INCIDENTS})`,
-    )
+    go({ type: "process-incidents", processDefinitionKey })
   }
 
   function analyzeIncident(incidentId: string) {
-    host.showWidget(
-      `Analyze incident \`${incidentId}\` in detail (use ${CAMUNDA7_SHOW_INCIDENT_DETAIL})`,
-    )
+    go({ type: "incident-detail", incidentId })
   }
 
   function markResolved(incidentId: string) {
@@ -90,7 +103,6 @@ export function ActivityIncidentList({ data }: { data: ProcessIncidentsData | nu
                 resolvedIds={resolvedIds}
                 resolving={resolveMutation.isPending}
                 onResolve={handleResolve}
-                onOpenCockpit={host.openLink}
                 onAnalyze={analyzeIncident}
               />
             </GroupCard>

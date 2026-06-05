@@ -73,6 +73,7 @@ export function ComparisonCard({
   afterLabel,
   tableLabel,
   metrics,
+  actions,
 }: {
   title: string
   badges: ReactNode
@@ -80,6 +81,8 @@ export function ComparisonCard({
   afterLabel: ReactNode
   tableLabel: string
   metrics: ComparisonMetric[]
+  /** Optional header action slot (e.g. an AI affordance), right-aligned. */
+  actions?: ReactNode
 }) {
   return (
     <Card>
@@ -87,6 +90,7 @@ export function ComparisonCard({
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-foreground text-base font-semibold">{title}</h2>
           {badges}
+          {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
         </div>
 
         <Table className="mt-4" aria-label={tableLabel}>

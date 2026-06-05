@@ -1,8 +1,9 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { TONE_DOT } from "@miragon-ai/widget-shell/widgets"
+import { TONE_DOT, AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "@miragon-ai/client-cibseven"
 
 export type { HistoryTimelineData }
+export type HistoryActivity = HistoryTimelineData["activities"][number]
 
 // Categorical dot colors per BPMN activity type. Start/end map to the brand
 // success/critical tones; the remaining categories use a distinct, deduplicated
@@ -31,33 +32,63 @@ function formatDuration(ms: number | null): string {
   return `${(ms / 3600000).toFixed(1)}h`
 }
 
-export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | null }) {
-  if (!data) {
-    return (
-      <div className="bg-card text-card-foreground p-6">
-        <Alert>
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
-      </div>
-    )
+/**
+ * Shell-less activity timeline. Reused as the standalone history widget and as a
+ * lazily-loaded "Audit log" section inside the instance detail. Pass
+ * `processInstance` to show the summary header (omitted when embedded).
+ */
+export function HistoryTimelineView({
+  activities,
+  processInstance,
+  engineId,
+  totalActivities,
+}: {
+  activities: HistoryActivity[]
+  processInstance?: HistoryTimelineData["processInstance"]
+  engineId?: string
+  totalActivities?: number
+}) {
+  if (activities.length === 0) {
+    return <p className="text-muted-foreground text-sm">No activity history.</p>
   }
 
-  const { processInstance, activities } = data
+  // Duration outliers: only surface the per-row "Why so long here?" explain
+  // affordance on the slowest step(s) so the timeline isn't cluttered. A row is
+  // an outlier if it has the single max duration, or its duration is >= 2x the
+  // median of all completed (non-null) durations.
+  const durations = activities.map((a) => a.durationInMillis).filter((d): d is number => d != null)
+  let outlierThreshold = Infinity
+  let maxDuration = -Infinity
+  if (durations.length > 0) {
+    const sorted = [...durations].sort((a, b) => a - b)
+    const mid = Math.floor(sorted.length / 2)
+    const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+    outlierThreshold = median * 2
+    maxDuration = sorted[sorted.length - 1]
+  }
+  const isOutlier = (ms: number | null): boolean =>
+    ms != null && (ms === maxDuration || ms >= outlierThreshold)
 
   return (
-    <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
+    <div className="flex flex-col gap-4">
       {processInstance && (
-        <div>
-          <h2 className="text-xl font-semibold">
-            {processInstance.processDefinitionName ?? processInstance.processDefinitionKey}
-          </h2>
-          <div className="text-muted-foreground mt-1 flex items-center gap-3 text-sm">
-            <Badge variant="secondary">{processInstance.state}</Badge>
-            <span>Started {new Date(processInstance.startTime).toLocaleString()}</span>
-            {processInstance.durationInMillis != null && (
-              <span>Duration: {formatDuration(processInstance.durationInMillis)}</span>
-            )}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold">
+              {processInstance.processDefinitionName ?? processInstance.processDefinitionKey}
+            </h2>
+            <div className="text-muted-foreground mt-1 flex items-center gap-3 text-sm">
+              <Badge variant="secondary">{processInstance.state}</Badge>
+              <span>Started {new Date(processInstance.startTime).toLocaleString()}</span>
+              {processInstance.durationInMillis != null && (
+                <span>Duration: {formatDuration(processInstance.durationInMillis)}</span>
+              )}
+            </div>
           </div>
+          <AskAiButton
+            variant="primary"
+            prompt={`Explain why historic process instance ${processInstance.id} of ${processInstance.processDefinitionName ?? processInstance.processDefinitionKey} (key ${processInstance.processDefinitionKey}) on engine ${engineId} took ${processInstance.durationInMillis}ms end-to-end and is in state ${processInstance.state}, across ${totalActivities ?? activities.length} activities. Use camunda7_query_historic_activity_instances for instance ${processInstance.id} to get the full per-activity timeline, identify the single longest-running step (call out wait time at userTask/receiveTask vs. compute time at serviceTask), and check whether that step is normal by comparing against the definition with analytics_element_bottleneck / analytics_analyze_process_performance for processDefinitionKey ${processInstance.processDefinitionKey}. Conclude with the bottleneck activity and whether this instance is an outlier.`}
+          />
         </div>
       )}
 
@@ -89,6 +120,14 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
                     <span className="text-muted-foreground text-xs">
                       {formatDuration(activity.durationInMillis)}
                     </span>
+                    {isOutlier(activity.durationInMillis) && (
+                      <AskAiButton
+                        variant="icon"
+                        label="Why so long here?"
+                        title="Why so long here?"
+                        prompt={`Explain in plain language why the activity ${activity.activityName ?? activity.activityId} (id ${activity.activityId}, type ${activity.activityType}) took ${activity.durationInMillis}ms on historic process instance ${processInstance?.id ?? "the current instance"}${engineId ? ` on engine ${engineId}` : " on the current engine"}. Is this wait time (a userTask or receiveTask waiting on a human or message) or compute time (a serviceTask doing work)? Use camunda7_query_historic_activity_instances for this instance to confirm the activity's timing, and cross-check whether this duration is normal for ${activity.activityType} ${activity.activityId} by calling analytics_element_bottleneck and analytics_analyze_process_performance for processDefinitionKey ${processInstance?.processDefinitionKey ?? "this process definition"}. State whether this step is the bottleneck and whether ${activity.durationInMillis}ms is typical or an outlier. Explanation only — do not change anything.`}
+                      />
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -96,6 +135,29 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
           )
         })}
       </ol>
+    </div>
+  )
+}
+
+export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | null }) {
+  if (!data) {
+    return (
+      <div className="bg-card text-card-foreground p-6">
+        <Alert>
+          <AlertDescription>No data available</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-card text-card-foreground p-6">
+      <HistoryTimelineView
+        activities={data.activities}
+        processInstance={data.processInstance}
+        engineId={data.engineId}
+        totalActivities={data.totalActivities}
+      />
     </div>
   )
 }
