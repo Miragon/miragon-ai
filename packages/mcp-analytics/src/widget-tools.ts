@@ -216,4 +216,38 @@ export function registerWidgetTools(
       })
     },
   )
+
+  server.tool(
+    {
+      name: "analytics_bpmn_heatmap_data",
+      title: "BPMN heatmap data (internal)",
+      description:
+        "Internal JSON feed (no UI) for the BPMN heatmap — per-element execution frequency + average duration over a window, plus the latest BPMN XML. Lets another widget (e.g. the CIB Seven cockpit) render the heatmap inline. Prefer analytics_show_bpmn_heatmap for a standalone view.",
+      annotations: { readOnlyHint: true, idempotentHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().min(1),
+        period: PERIOD.default("7d"),
+        engineId: z.union([z.string(), z.array(z.string())]).optional(),
+      }),
+    },
+    async (args) => {
+      const heat = await queries.elementHeat(ch, args)
+      let bpmnXml: string | null = null
+      if (camunda7Client) {
+        const xmlResp = (await getProcessDefinitionBpmn20XmlByKey({
+          client: camunda7Client,
+          path: { key: args.processDefinitionKey },
+        }).catch(() => null)) as { bpmn20Xml?: string } | null
+        bpmnXml = xmlResp?.bpmn20Xml ?? null
+      }
+      const data = {
+        processDefinitionKey: args.processDefinitionKey,
+        period: args.period,
+        bpmnXml,
+        frequency: heat.frequency,
+        durationSec: heat.durationSec,
+      }
+      return { content: [{ type: "text", text: JSON.stringify(data) }], structuredContent: data }
+    },
+  )
 }

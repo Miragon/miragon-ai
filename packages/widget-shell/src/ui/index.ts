@@ -7,3 +7,10 @@ export { SectionHeading } from "./section-heading.js"
 export { GroupCard } from "./group-card.js"
 export { LivePill, StatusBadge, CountPill } from "./pills.js"
 export { useHostActions, buildShowWidgetIntent, type HostActions } from "./use-host-actions.js"
+export {
+  BpmnHeatmap,
+  HeatmapLegend,
+  BpmnHeatmapWidget,
+  type BpmnHeatmapData,
+  type BpmnHeatmapProps,
+} from "./bpmn-heatmap.js"

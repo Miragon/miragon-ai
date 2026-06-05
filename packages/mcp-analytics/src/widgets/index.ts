@@ -11,7 +11,7 @@ import { FailureRateTable } from "./failure-dashboard/failure-rate-table.js"
 import { ClusterCompareWidget, type ClusterCompareData } from "./cluster-compare.js"
 import { VersionCompareWidget, type VersionCompareData } from "./version-compare.js"
 import { EngineCompareWidget, type EngineCompareData } from "./engine-compare.js"
-import { BpmnHeatmapWidget, type BpmnHeatmapData } from "./bpmn-heatmap.js"
+import { BpmnHeatmapWidget, type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
 
 export type {
   AnalyticsDashboardData,

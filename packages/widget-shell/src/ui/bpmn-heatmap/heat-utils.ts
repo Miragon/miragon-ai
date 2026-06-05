@@ -76,6 +76,7 @@ export function buildGradientLut(): Uint8ClampedArray {
   canvas.width = 1
   canvas.height = 256
   const ctx = canvas.getContext("2d")
+  if (!ctx) throw new Error("2D canvas context unavailable")
   const grad = ctx.createLinearGradient(0, 0, 0, 256)
   for (const [offset, color] of HEAT_GRADIENT_STOPS) {
     grad.addColorStop(offset, color)
@@ -91,6 +92,7 @@ export function buildBrush(radius: number, blur: number): HTMLCanvasElement {
   const canvas = document.createElement("canvas")
   canvas.width = canvas.height = r2 * 2
   const ctx = canvas.getContext("2d")
+  if (!ctx) throw new Error("2D canvas context unavailable")
   ctx.shadowOffsetX = ctx.shadowOffsetY = r2 * 2
   ctx.shadowBlur = blur
   ctx.shadowColor = "black"

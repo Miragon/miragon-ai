@@ -1,14 +1,17 @@
-import { useMemo } from "react"
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { useMemo, useState } from "react"
+import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 
 import type { ProcessDetailData } from "@miragon-ai/client-cibseven"
 
 import {
+  BpmnHeatmap,
+  HeatmapLegend,
   KpiGrid,
   SectionHeading,
   StatusBadge,
   WidgetShell,
   useHostActions,
+  type BpmnHeatmapData,
   type HostActions,
   type KpiCell,
   type ToneVariant,
@@ -16,6 +19,48 @@ import {
 
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { navigateViaHost, type OnNavigate } from "./navigation.js"
+
+type FlowMode = "live" | "frequency" | "duration"
+
+/**
+ * Lazily loads the execution heatmap (Prometheus metrics via the analytics
+ * module's plain data feed) and paints it on the definition diagram. Mounted
+ * only when the operator switches the "Process flow" toggle off "Live", so the
+ * metrics query never runs on first paint. `mode` swaps frequency↔duration
+ * without refetching (both come in one payload).
+ */
+function ProcessHeatmap({
+  processDefinitionKey,
+  mode,
+}: {
+  processDefinitionKey: string
+  mode: "frequency" | "duration"
+}) {
+  const q = useToolQuery<BpmnHeatmapData>(
+    ["camunda7:heatmap", processDefinitionKey],
+    "analytics_bpmn_heatmap_data",
+    { processDefinitionKey, period: "30d" },
+  )
+  if (q.isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{q.error?.message ?? "Failed to load the heatmap."}</AlertDescription>
+      </Alert>
+    )
+  }
+  if (!q.data) {
+    return <div className="text-muted-foreground p-6 text-sm">Loading heatmap…</div>
+  }
+  if (!q.data.bpmnXml) {
+    return (
+      <Alert>
+        <AlertDescription>No diagram available for the heatmap.</AlertDescription>
+      </Alert>
+    )
+  }
+  const values = mode === "frequency" ? q.data.frequency : q.data.durationSec
+  return <BpmnHeatmap bpmnXml={q.data.bpmnXml} nodeFrequencies={values} height={340} />
+}
 
 export type { ProcessDetailData }
 
@@ -29,6 +74,7 @@ export function ProcessDetailView({
 }) {
   const host: HostActions = useHostActions()
   const go: OnNavigate = onNavigate ?? ((intent) => navigateViaHost(host, intent))
+  const [flowMode, setFlowMode] = useState<FlowMode>("live")
 
   // Heatmap overlay: a blue running-token badge (top-right) on every active
   // activity, plus a red badge (top-left) for problems — incidents where they
@@ -194,25 +240,65 @@ export function ProcessDetailView({
         />
         {data.bpmnXml ? (
           <>
-            <div className="text-muted-foreground mb-2 flex flex-wrap items-center gap-3 text-xs">
-              <span className="inline-flex items-center gap-1.5">
-                <span
-                  className="inline-block size-2.5 rounded-full"
-                  style={{ background: "#3b82f6" }}
-                  aria-hidden
-                />
-                Running tokens
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span
-                  className="inline-block size-2.5 rounded-full"
-                  style={{ background: "#ef4444" }}
-                  aria-hidden
-                />
-                Incidents / failed jobs
-              </span>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+              <div className="border-border inline-flex overflow-hidden rounded-md border text-xs">
+                {(
+                  [
+                    ["live", "Live tokens"],
+                    ["frequency", "Frequency"],
+                    ["duration", "Duration"],
+                  ] as const
+                ).map(([m, label]) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setFlowMode(m)}
+                    aria-pressed={flowMode === m}
+                    className={`focus-visible:ring-ring [&:not(:last-child)]:border-border px-2.5 py-1 font-medium outline-none transition-colors focus-visible:ring-2 [&:not(:last-child)]:border-r ${
+                      flowMode === m
+                        ? "bg-m-blue-soft text-m-blue"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {flowMode === "live" ? (
+                <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block size-2.5 rounded-full"
+                      style={{ background: "#3b82f6" }}
+                      aria-hidden
+                    />
+                    Running tokens
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block size-2.5 rounded-full"
+                      style={{ background: "#ef4444" }}
+                      aria-hidden
+                    />
+                    Incidents / failed jobs
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs">
+                    {flowMode === "frequency"
+                      ? "Executions / element · 30d"
+                      : "Avg duration / element · 30d"}
+                  </span>
+                  <HeatmapLegend />
+                </div>
+              )}
             </div>
-            <BpmnDiagram bpmnXml={data.bpmnXml} height={340} highlights={highlights} />
+            {flowMode === "live" ? (
+              <BpmnDiagram bpmnXml={data.bpmnXml} height={340} highlights={highlights} />
+            ) : (
+              <ProcessHeatmap processDefinitionKey={data.processDefinitionKey} mode={flowMode} />
+            )}
           </>
         ) : (
           <Alert>
