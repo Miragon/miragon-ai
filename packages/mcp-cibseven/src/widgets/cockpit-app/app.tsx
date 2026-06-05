@@ -7,8 +7,16 @@ import type { CockpitAppData } from "@miragon-ai/client-cibseven"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
 import { camunda7BaseWidgets } from "../registry.js"
 import { cockpitViews, type ViewParams } from "./views.js"
+import { FleetView } from "./fleet-view.js"
 
 export type { CockpitAppData }
+
+/**
+ * Top-level cockpit scope. Open Cockpit offers two ways in: operate a single
+ * engine, or run cross-engine ("fleet") analyses. `landing` is the chooser shown
+ * when more than one engine is configured.
+ */
+type CockpitMode = "landing" | "engine" | "fleet"
 
 interface EnginesResult {
   engines: Array<{ id: string }>
@@ -104,6 +112,10 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
 
   const [picked, setPicked] = useState<string | null>(null)
   const [view, setView] = useState<CockpitView>({ section: "overview" })
+  // Start on the chooser so Open Cockpit always offers both ways in (operate an
+  // engine vs. cross-engine analyses). A single configured engine skips it (the
+  // chooser only renders when engines.length > 1).
+  const [mode, setMode] = useState<CockpitMode>("landing")
 
   // App-like surface: ask the host for fullscreen once on mount.
   useEffect(() => {
@@ -160,46 +172,137 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     })
   }
 
-  // No engine resolved yet → load / let the user pick.
-  if (!engineId) {
-    if (enginesQuery.isError) {
-      return (
-        <WidgetShell>
-          <Alert variant="destructive">
-            <AlertDescription>{enginesQuery.error.message}</AlertDescription>
-          </Alert>
-        </WidgetShell>
-      )
-    }
-    if (engines.length === 0 && enginesQuery.data === undefined) {
-      return (
-        <WidgetShell>
-          <div className="text-muted-foreground p-6 text-sm">Loading engines…</div>
-        </WidgetShell>
-      )
-    }
+  // Enter a single engine's cockpit from the landing chooser or the fleet view.
+  function enterEngine(id: string) {
+    chooseEngine(id)
+    setMode("engine")
+  }
+
+  // ── Loading / error / empty ───────────────────────────────────────────────
+  if (enginesQuery.isError) {
     return (
       <WidgetShell>
-        <div className="mx-auto flex max-w-md flex-col gap-3 py-10 text-center">
-          <h1 className="text-foreground text-xl font-bold">Select an engine</h1>
-          <p className="text-muted-foreground text-sm">
-            {engines.length === 0
-              ? "No CIB Seven engines are configured."
-              : "Choose which engine this cockpit should operate on."}
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {engines.map((e) => (
-              <button
-                key={e.id}
-                type="button"
-                onClick={() => chooseEngine(e.id)}
-                className="border-border bg-card text-foreground hover:bg-muted focus-visible:ring-ring rounded-md border px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2"
-              >
-                {e.id}
-              </button>
-            ))}
+        <Alert variant="destructive">
+          <AlertDescription>{enginesQuery.error.message}</AlertDescription>
+        </Alert>
+      </WidgetShell>
+    )
+  }
+  if (engines.length === 0) {
+    return (
+      <WidgetShell>
+        <div className="text-muted-foreground p-6 text-sm">
+          {enginesQuery.data === undefined
+            ? "Loading engines…"
+            : "No CIB Seven engines configured."}
+        </div>
+      </WidgetShell>
+    )
+  }
+
+  // The landing chooser: with more than one engine, Open Cockpit offers two ways
+  // in — operate a single engine, or run cross-engine analyses. A single engine
+  // skips it. Shown whenever no engine scope is resolved yet.
+  const needsChooser =
+    engines.length > 1 && (mode === "landing" || (mode === "engine" && !engineId))
+  if (needsChooser) {
+    return (
+      <WidgetShell>
+        <div className="mx-auto flex max-w-2xl flex-col gap-6 py-10">
+          <div className="text-center">
+            <h1 className="text-foreground text-2xl font-bold">CIB Seven Cockpit</h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {engines.length} engines configured — operate one engine, or analyze across the whole
+              fleet.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
+              <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
+                ▦
+              </div>
+              <div>
+                <h2 className="text-foreground font-semibold">Operate an engine</h2>
+                <p className="text-muted-foreground text-sm">
+                  Overview, incidents, jobs and drill-downs for one engine.
+                </p>
+              </div>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {engines.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => enterEngine(e.id)}
+                    className="border-border bg-background text-foreground hover:bg-muted focus-visible:ring-ring rounded-md border px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2"
+                  >
+                    {e.id} <span aria-hidden>→</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMode("fleet")}
+              className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-5 text-left outline-none focus-visible:ring-2"
+            >
+              <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
+                ⤧
+              </div>
+              <div>
+                <h2 className="text-foreground font-semibold">Cross-engine analyses</h2>
+                <p className="text-muted-foreground text-sm">
+                  Fleet health across all engines, engine comparison, and fleet-wide failure &
+                  performance analysis.
+                </p>
+              </div>
+              <span className="text-m-blue mt-1 text-sm font-medium">
+                Open fleet view <span aria-hidden>→</span>
+              </span>
+            </button>
           </div>
         </div>
+      </WidgetShell>
+    )
+  }
+
+  // ── Cross-engine (fleet) mode ─────────────────────────────────────────────
+  if (mode === "fleet") {
+    return (
+      <WidgetShell>
+        <ModelContext
+          content={`Support is in the consolidated CIB Seven cockpit in CROSS-ENGINE (fleet) mode across engines: ${engines
+            .map((e) => e.id)
+            .join(
+              ", ",
+            )}. Offer cross-engine analyses (compare engines, fleet-wide failure & performance) via the analytics tools; drilling into an engine switches to that engine's single-engine cockpit.`}
+        />
+        {engines.length > 1 && (
+          <nav
+            aria-label="Breadcrumb"
+            className="text-muted-foreground mb-4 flex items-center gap-1.5 text-sm"
+          >
+            <button
+              type="button"
+              onClick={() => setMode("landing")}
+              className="hover:text-foreground focus-visible:ring-ring rounded outline-none focus-visible:ring-2"
+            >
+              Cockpit
+            </button>
+            <span aria-hidden="true">›</span>
+            <span className="text-foreground font-medium">Fleet</span>
+          </nav>
+        )}
+        <FleetView engines={engines} onEnterEngine={enterEngine} />
+      </WidgetShell>
+    )
+  }
+
+  // Safety net: every multi-engine no-scope path is handled by the chooser above,
+  // and a single engine resolves; this only guards the brief load window.
+  if (!engineId) {
+    return (
+      <WidgetShell>
+        <div className="text-muted-foreground p-6 text-sm">Loading engines…</div>
       </WidgetShell>
     )
   }
@@ -246,21 +349,31 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
           </nav>
 
           {engines.length > 1 && (
-            <label className="text-muted-foreground flex flex-col gap-1 px-3 text-[11px] font-medium">
-              Engine
-              <select
-                aria-label="Active engine"
-                value={engineId}
-                onChange={(e) => chooseEngine(e.target.value)}
-                className="border-border bg-background text-foreground h-8 rounded-md border px-2 text-xs"
+            <div className="border-border mt-1 flex flex-col gap-2 border-t pt-3">
+              <button
+                type="button"
+                onClick={() => setMode("fleet")}
+                className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2"
               >
-                {engines.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.id}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <span aria-hidden="true">⤧</span>
+                Cross-engine
+              </button>
+              <label className="text-muted-foreground flex flex-col gap-1 px-3 text-[11px] font-medium">
+                Engine
+                <select
+                  aria-label="Active engine"
+                  value={engineId}
+                  onChange={(e) => chooseEngine(e.target.value)}
+                  className="border-border bg-background text-foreground h-8 rounded-md border px-2 text-xs"
+                >
+                  {engines.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           )}
         </aside>
 
