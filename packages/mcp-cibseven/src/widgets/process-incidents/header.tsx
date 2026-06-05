@@ -1,10 +1,9 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
+  OpenInCockpitLink,
   StatusBadge,
   WidgetShell,
-  useHostActions,
-  type HostActions,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
 import { formatTime } from "../../lib/format-time.js"
@@ -20,7 +19,6 @@ export function ProcessDetailHeader({
   processDefinitionKey?: string
   engine?: string
 }) {
-  const host: HostActions = useHostActions()
   const { data, loading, error } = useViewData<ProcessIncidentsData>(
     initialData,
     ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
@@ -85,24 +83,7 @@ export function ProcessDetailHeader({
                 <span>last event {formatTime(data.latestIncident)}</span>
               </>
             )}
-            {cockpitUrl && (
-              <>
-                <span className="text-muted-foreground">·</span>
-                <a
-                  href={cockpitUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    host.openLink(cockpitUrl)
-                  }}
-                  className="text-m-blue hover:underline"
-                >
-                  <span aria-hidden="true">▦</span> Open in Cockpit{" "}
-                  <span aria-hidden="true">→</span>
-                </a>
-              </>
-            )}
+            {cockpitUrl && <OpenInCockpitLink url={cockpitUrl} label="Open in Cockpit" />}
           </div>
         </div>
         <AskAiButton prompt={triagePrompt} variant="primary" />

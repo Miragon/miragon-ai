@@ -6,14 +6,14 @@ import type { ProcessDetailData } from "@miragon-ai/client-cibseven"
 import {
   AskAiButton,
   BpmnHeatmap,
+  DrillButton,
   HeatmapLegend,
   KpiGrid,
+  OpenInCockpitLink,
   SectionHeading,
   StatusBadge,
   WidgetShell,
-  useHostActions,
   type BpmnHeatmapData,
-  type HostActions,
   type KpiCell,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
@@ -82,7 +82,6 @@ export function ProcessDetailView({
   processDefinitionKey?: string
   engine?: string
 }) {
-  const host: HostActions = useHostActions()
   const go = useNav()
   const [flowMode, setFlowMode] = useState<FlowMode>("live")
 
@@ -231,56 +230,33 @@ export function ProcessDetailView({
                 <span>{data.runningInstances.toLocaleString()} running instances</span>
               </>
             )}
-            {cockpitUrl && (
-              <>
-                <span className="text-muted-foreground">·</span>
-                <a
-                  href={cockpitUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    host.openLink(cockpitUrl)
-                  }}
-                  className="text-m-blue hover:underline"
-                >
-                  <span aria-hidden="true">▦</span> Open in Cockpit{" "}
-                  <span aria-hidden="true">→</span>
-                </a>
-              </>
-            )}
+            {cockpitUrl && <OpenInCockpitLink url={cockpitUrl} label="Open in Cockpit" />}
           </div>
         </div>
         <AskAiButton prompt={analyzePrompt} variant="primary" />
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
+        <DrillButton
+          size="md"
           onClick={() =>
             go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
           }
-          className="border-border text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold outline-none focus-visible:ring-2"
         >
-          View running instances <span aria-hidden>→</span>
-        </button>
+          View running instances
+        </DrillButton>
         {data.openIncidents > 0 && (
-          <>
-            <AskAiButton
-              prompt={draftTicketPrompt}
-              label="Draft incident ticket"
-              variant="subtle"
-            />
-            <button
-              type="button"
-              onClick={() =>
-                go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
-              }
-              className="bg-m-blue hover:bg-m-blue-light focus-visible:ring-ring inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white outline-none focus-visible:ring-2"
-            >
-              Open all incidents <span aria-hidden>→</span>
-            </button>
-          </>
+          <DrillButton
+            size="md"
+            onClick={() =>
+              go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
+            }
+          >
+            Open all incidents
+          </DrillButton>
+        )}
+        {data.openIncidents > 0 && (
+          <AskAiButton prompt={draftTicketPrompt} label="Draft incident ticket" variant="subtle" />
         )}
       </div>
 

@@ -20,9 +20,11 @@ export interface AskAiButtonProps {
    */
   label?: string
   /**
-   * `primary` = the surface-level entry (outline, slightly prominent);
-   * `subtle` = per-row / per-section (ghost, the common case);
-   * `icon` = dense table rows (renders ✦ only, label → aria-label).
+   * Every variant renders as a real (outline) button — the ✦ glyph + frame is the
+   * consistent "AI" signature. They differ only in emphasis/size:
+   * `primary` = the one surface-level entry (m-blue accent, AI-first);
+   * `subtle` = per-row / per-section (neutral outline, the common case);
+   * `icon` = dense table rows (neutral outline, ✦ only, label → aria-label).
    */
   variant?: AskAiVariant
   /** Tooltip/aria override; defaults to `label`. */
@@ -55,8 +57,11 @@ export function AskAiButton({
   return (
     <Button
       type="button"
-      variant={variant === "primary" ? "outline" : "ghost"}
+      variant="outline"
       size={isIcon ? "icon-sm" : "sm"}
+      // Always a real outline button (frame) so the ✦ never reads as a bare glyph;
+      // the primary surface entry gets the m-blue accent to stand out as AI-first.
+      className={variant === "primary" ? "border-m-blue/40 text-m-blue" : undefined}
       disabled={disabled}
       aria-label={isIcon ? (title ?? label) : undefined}
       title={isIcon ? (title ?? label) : title}

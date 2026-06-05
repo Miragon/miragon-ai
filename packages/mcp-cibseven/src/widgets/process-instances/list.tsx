@@ -4,6 +4,7 @@ import { ModelContext } from "mcp-use/react"
 import {
   AskAiButton,
   CountPill,
+  DrillButton,
   FilterBar,
   ListFooter,
   LivePill,
@@ -88,14 +89,12 @@ function InstanceRow({
               prompt={`Root-cause the incident on CIB Seven process instance ${row.id}${row.businessKey ? ` (business key ${row.businessKey})` : ""}, version v${row.version} of process ${processDefinitionKey} (engine ${engine}). Use camunda7_get_process_instance, camunda7_list_incidents (processInstanceId ${row.id}) and the failed job's stacktrace to explain why it failed in plain language. Then check via camunda7_list_incidents (processDefinitionKey ${processDefinitionKey}) whether other running instances of this process fail the same way, and recommend a concrete fix: job retry, a variable change (name the variable), or a modification — including whether to apply it to just this instance or the whole cluster.`}
             />
           )}
-          <button
-            type="button"
+          <DrillButton
             onClick={() => onOpen(row.id)}
-            aria-label={`Open instance detail for ${row.businessKey ?? row.id}`}
-            className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
+            ariaLabel={`Open instance detail for ${row.businessKey ?? row.id}`}
           >
-            Open <span aria-hidden>→</span>
-          </button>
+            Open
+          </DrillButton>
         </div>
       </td>
     </tr>

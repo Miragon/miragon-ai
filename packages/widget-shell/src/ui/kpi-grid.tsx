@@ -80,7 +80,14 @@ export function KpiGrid({
           const borderClass = idx < cells.length - 1 ? "border-border border-r" : ""
           const content = (
             <>
-              <div className="text-muted-foreground text-xs font-medium">{cell.label}</div>
+              <div className="text-muted-foreground flex items-center justify-between gap-2 text-xs font-medium">
+                <span>{cell.label}</span>
+                {cell.onClick && (
+                  <span aria-hidden="true" className="text-sm leading-none">
+                    ›
+                  </span>
+                )}
+              </div>
               <div
                 className={`mt-1.5 text-2xl font-bold tabular-nums leading-none tracking-tight ${
                   (cell.tone && TONE_TEXT[cell.tone]) || "text-foreground"

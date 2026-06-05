@@ -14,14 +14,14 @@ import { useViewData } from "../use-view-data.js"
 import {
   AskAiButton,
   CountPill,
+  DrillButton,
   FilterBar,
   GroupCard,
+  OpenInCockpitLink,
   SectionHeading,
   TONE_DOT,
   WidgetShell,
-  useHostActions,
   type FilterChip,
-  type HostActions,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 
@@ -50,16 +50,13 @@ function ProcessSummary({
   expanded,
   engineId,
   onOpenDetail,
-  onOpenCockpit,
 }: {
   process: DisplayProcess
   expanded: boolean
   engineId: string
   onOpenDetail: () => void
-  onOpenCockpit: (url: string) => void
 }) {
   const tone = process.tone
-  // Local const so the narrowing survives into the onClick closure below.
   const cockpitUrl = process.cockpitUrl
 
   return (
@@ -111,35 +108,13 @@ function ProcessSummary({
         label="Analyze"
         prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, version v${process.version ?? "n/a"}) on engine ${engineId}. ${process.affectedActivityCount} activity/activities are affected, ${process.last24hCount} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances ?? "unknown"} running instances. Use camunda7_list_incidents (filtered to processDefinitionKey ${process.processDefinitionKey}) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
       />
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          onOpenDetail()
-        }}
-        aria-label={`Open incidents detail for ${process.processDefinitionName ?? process.processDefinitionKey}`}
-        className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
+      <DrillButton
+        onClick={onOpenDetail}
+        ariaLabel={`Open incidents detail for ${process.processDefinitionName ?? process.processDefinitionKey}`}
       >
-        Open detail <span aria-hidden>→</span>
-      </button>
-      {cockpitUrl ? (
-        <a
-          href={cockpitUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-            onOpenCockpit(cockpitUrl)
-          }}
-          aria-label={`Open ${process.processDefinitionName ?? process.processDefinitionKey} in Cockpit`}
-          className="text-muted-foreground border-border hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium outline-none focus-visible:ring-2"
-        >
-          <span aria-hidden="true">▦</span> Cockpit
-        </a>
-      ) : (
-        <span />
-      )}
+        Open detail
+      </DrillButton>
+      {cockpitUrl ? <OpenInCockpitLink url={cockpitUrl} /> : <span />}
       <span
         aria-hidden="true"
         className={`text-muted-foreground inline-block w-3 text-center text-xs transition-transform ${
@@ -200,7 +175,6 @@ export function IncidentProcessListView({
   engine?: string
 }) {
   const go = useNav()
-  const host: HostActions = useHostActions()
   // Shares the overview-kpi query key → both incidents panels dedupe to one
   // fetch in the cockpit; standalone the data comes in via props.
   const { data, loading, error } = useViewData<IncidentsDashboardData>(
@@ -325,7 +299,6 @@ export function IncidentProcessListView({
                   expanded={expanded.has(p.processDefinitionKey)}
                   engineId={engine ?? data.engineId ?? "default"}
                   onOpenDetail={() => openDetail(p.processDefinitionKey)}
-                  onOpenCockpit={host.openLink}
                 />
               }
             >

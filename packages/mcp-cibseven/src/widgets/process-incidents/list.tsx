@@ -1,12 +1,6 @@
 import { useState } from "react"
 import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import {
-  GroupCard,
-  SectionHeading,
-  WidgetShell,
-  useHostActions,
-  type HostActions,
-} from "@miragon-ai/widget-shell/widgets"
+import { GroupCard, SectionHeading, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
@@ -25,7 +19,6 @@ export function ActivityIncidentList({
   engine?: string
 }) {
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
-  const host: HostActions = useHostActions()
   const go = useNav()
   const { data, loading, error } = useViewData<ProcessIncidentsData>(
     initialData,
@@ -110,7 +103,6 @@ export function ActivityIncidentList({
                 resolvedIds={resolvedIds}
                 resolving={resolveMutation.isPending}
                 onResolve={handleResolve}
-                onOpenCockpit={host.openLink}
                 onAnalyze={analyzeIncident}
               />
             </GroupCard>

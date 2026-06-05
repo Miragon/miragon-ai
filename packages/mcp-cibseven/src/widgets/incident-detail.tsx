@@ -13,11 +13,10 @@ import {
 import {
   AskAiButton,
   KpiGrid,
+  OpenInCockpitLink,
   SectionHeading,
   StatusBadge,
   WidgetShell,
-  useHostActions,
-  type HostActions,
 } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "@miragon-ai/client-cibseven"
@@ -42,7 +41,6 @@ export function IncidentDetailWidget({
   incidentId?: string
   engine?: string
 }) {
-  const host: HostActions = useHostActions()
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const retryMutation = useToolMutation("camunda7_set_job_retries")
   const [resolved, setResolved] = useState(false)
@@ -120,22 +118,7 @@ export function IncidentDetailWidget({
               </>
             )}
             {cockpitInstanceUrl && (
-              <>
-                <span className="text-muted-foreground">·</span>
-                <a
-                  href={cockpitInstanceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    host.openLink(cockpitInstanceUrl)
-                  }}
-                  className="text-m-blue hover:underline"
-                >
-                  <span aria-hidden="true">▦</span> Open instance in Cockpit{" "}
-                  <span aria-hidden="true">→</span>
-                </a>
-              </>
+              <OpenInCockpitLink url={cockpitInstanceUrl} label="Open instance in Cockpit" />
             )}
           </div>
         </div>

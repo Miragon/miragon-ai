@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from "react"
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react"
 
 /**
  * Bordered card with a clickable summary bar and a collapsible body. Matches
@@ -27,13 +27,21 @@ export function GroupCard({
     }
   }
 
+  // The summary may contain its own controls (drill buttons, AI ✦, external
+  // links). A click that lands on one of those should run that control only —
+  // not also toggle the card.
+  function handleClick(e: MouseEvent<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest("button, a, input, select, textarea, label")) return
+    onToggle()
+  }
+
   return (
     <div className="border-border mb-2 overflow-hidden rounded-lg border">
       <div
         role="button"
         tabIndex={0}
         aria-expanded={expanded}
-        onClick={onToggle}
+        onClick={handleClick}
         onKeyDown={handleKeyDown}
         className={`bg-card hover:bg-muted focus-visible:ring-ring/50 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 ${
           expanded ? "border-border border-b" : ""

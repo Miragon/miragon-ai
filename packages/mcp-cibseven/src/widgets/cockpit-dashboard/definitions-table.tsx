@@ -1,5 +1,11 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { CountPill, SectionHeading, TONE_DOT, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import {
+  CountPill,
+  DrillButton,
+  SectionHeading,
+  TONE_DOT,
+  WidgetShell,
+} from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
 import { buildRows, type DefinitionRow } from "./lib.js"
 import { useNav } from "../navigation.js"
@@ -46,22 +52,18 @@ function ProcessRow({
       </td>
       <td className="border-border border-b px-4 py-3 align-middle">
         <div className="flex items-center justify-end gap-1.5">
-          <button
-            type="button"
+          <DrillButton
             onClick={() => onViewInstances(row.key)}
-            aria-label={`View running instances of ${row.name ?? row.key}`}
-            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium outline-none focus-visible:ring-2"
+            ariaLabel={`View running instances of ${row.name ?? row.key}`}
           >
             Instances
-          </button>
-          <button
-            type="button"
+          </DrillButton>
+          <DrillButton
             onClick={() => onOpen(row.key)}
-            aria-label={`Open process detail for ${row.name ?? row.key}`}
-            className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
+            ariaLabel={`Open process detail for ${row.name ?? row.key}`}
           >
-            Open <span aria-hidden>→</span>
-          </button>
+            Open
+          </DrillButton>
         </div>
       </td>
     </tr>
