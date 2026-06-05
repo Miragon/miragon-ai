@@ -18,6 +18,7 @@ import {
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
   getJobs,
+  getJobsCount,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 import { buildTaskFormSchema } from "./tools/task-form.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
@@ -297,34 +298,34 @@ export async function buildInstanceDetailData(
 export async function buildJobPanelData(
   client: Client,
   engineId: string,
-  args: { processDefinitionKey?: string; failedOnly?: boolean },
+  args: {
+    processDefinitionKey?: string
+    failedOnly?: boolean
+    firstResult?: number
+    maxResults?: number
+  },
 ): Promise<JobPanelData> {
-  const [failedJobs, allJobs] = await Promise.all([
+  const baseQuery = { processDefinitionKey: args.processDefinitionKey }
+  // One page of jobs + two cheap /job/count calls so the KPIs and the "X of Y"
+  // footer are the GLOBAL totals (not capped to the fetched page).
+  const [jobsRaw, failedCountRes, allCountRes] = await Promise.all([
     getJobs({
       client,
       query: {
-        processDefinitionKey: args.processDefinitionKey,
-        noRetriesLeft: true,
-        maxResults: 100,
+        ...baseQuery,
+        noRetriesLeft: args.failedOnly ? true : undefined,
+        firstResult: args.firstResult ?? 0,
+        maxResults: args.maxResults ?? 50,
         sortBy: "jobId",
         sortOrder: "desc",
       },
     }).catch(() => []),
-    args.failedOnly
-      ? Promise.resolve([])
-      : getJobs({
-          client,
-          query: {
-            processDefinitionKey: args.processDefinitionKey,
-            maxResults: 100,
-            sortBy: "jobId",
-            sortOrder: "desc",
-          },
-        }).catch(() => []),
+    getJobsCount({ client, query: { ...baseQuery, noRetriesLeft: true } }).catch(() => null),
+    getJobsCount({ client, query: baseQuery }).catch(() => null),
   ])
 
-  const failed = Array.isArray(failedJobs)
-    ? (failedJobs as Array<{
+  const raw = Array.isArray(jobsRaw)
+    ? (jobsRaw as Array<{
         id: string
         processInstanceId: string
         processDefinitionKey?: string | null
@@ -338,9 +339,8 @@ export async function buildJobPanelData(
         createTime?: string | null
       }>)
     : []
-  const all = args.failedOnly ? failed : Array.isArray(allJobs) ? (allJobs as typeof failed) : []
 
-  const jobs = (args.failedOnly ? failed : all).map((j) => ({
+  const jobs = raw.map((j) => ({
     id: j.id,
     processInstanceId: j.processInstanceId,
     processDefinitionKey: j.processDefinitionKey ?? null,
@@ -354,9 +354,12 @@ export async function buildJobPanelData(
     createTime: j.createTime ?? null,
   }))
 
+  const failedCount = (failedCountRes as { count?: number } | null)?.count ?? 0
+  const allCount = (allCountRes as { count?: number } | null)?.count ?? jobs.length
+
   return {
-    totalCount: args.failedOnly ? failed.length : all.length,
-    failedCount: failed.length,
+    totalCount: args.failedOnly ? failedCount : allCount,
+    failedCount,
     jobs,
     engineId,
   }

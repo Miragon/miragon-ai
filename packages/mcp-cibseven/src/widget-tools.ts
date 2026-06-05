@@ -716,6 +716,8 @@ export function registerWidgetTools(
       schema: z.object({
         processDefinitionKey: z.string().optional(),
         failedOnly: z.boolean().optional(),
+        firstResult: z.number().optional().describe("Offset for pagination (0-based)"),
+        maxResults: z.number().optional(),
         ...engineParam,
       }),
     },
@@ -725,6 +727,8 @@ export function registerWidgetTools(
         await buildJobPanelData(client, engineId, {
           processDefinitionKey: args.processDefinitionKey,
           failedOnly: args.failedOnly,
+          firstResult: args.firstResult,
+          maxResults: args.maxResults,
         }),
       )
     },

@@ -16,9 +16,8 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "@miragon-ai/client-cibseven"
-import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, ListFooter, usePagedViewData } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
-import { useViewData } from "./use-view-data.js"
 import { ConfirmDialog } from "./confirm-dialog.js"
 import { refreshCockpitData } from "./refresh.js"
 
@@ -49,31 +48,36 @@ export function JobPanelWidget({
   const [confirmBatch, setConfirmBatch] = useState(false)
   const retryMutation = useToolMutation("camunda7_set_job_retries")
   const batchMutation = useToolMutation("camunda7_set_job_retries_batch")
-  const { data, loading, error } = useViewData<JobPanelData>(
+  const paged = usePagedViewData<JobPanelData["jobs"][number], JobPanelData>({
     initialData,
-    ["camunda7:jobs", engine ?? null],
-    CAMUNDA7_JOBS_DATA,
-    { engine },
-    !!engine,
-  )
+    key: ["camunda7:jobs", engine ?? null],
+    tool: CAMUNDA7_JOBS_DATA,
+    args: { engine },
+    pageSize: 50,
+    ready: !!engine,
+    selectItems: (d) => d.jobs,
+    selectTotal: (d) => d.totalCount,
+  })
+  const data = paged.firstPage
 
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        {error ? (
+        {paged.error ? (
           <Alert variant="destructive">
-            <AlertDescription>{error.message}</AlertDescription>
+            <AlertDescription>{paged.error.message}</AlertDescription>
           </Alert>
         ) : (
           <div className="text-muted-foreground text-sm">
-            {loading ? "Loading…" : "No data available"}
+            {paged.loading ? "Loading…" : "No data available"}
           </div>
         )}
       </div>
     )
   }
 
-  const { totalCount, failedCount, jobs } = data
+  const { totalCount, failedCount } = data
+  const jobs = paged.items
   const failedJobs = jobs.filter((j) => j.retries === 0 && !retriedIds.has(j.id))
 
   function handleRetry(jobId: string) {
@@ -246,6 +250,15 @@ export function JobPanelWidget({
           </Card>
         </details>
       )}
+
+      <ListFooter
+        shown={jobs.length}
+        total={paged.total}
+        hasMore={paged.hasMore}
+        loadingMore={paged.loadingMore}
+        onLoadMore={paged.loadMore}
+        noun="jobs"
+      />
 
       {jobs.length === 0 && (
         <p className="text-muted-foreground py-4 text-center text-sm">No jobs found</p>
