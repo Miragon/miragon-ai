@@ -102,7 +102,16 @@ export function FailureTab({
       </div>
 
       <div>
-        <SectionHeading title="Error message" />
+        <SectionHeading
+          title="Error message"
+          trailing={
+            <AskAiButton
+              variant="subtle"
+              label="Explain this error"
+              prompt={`Explain the failure on CIB Seven incident \`${data.incidentId}\` at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}, engine \`${engineId}\`. The reported error is: "${data.incidentMessage ?? job?.exceptionMessage ?? "(none reported)"}"${job?.stacktrace ? `, with a Java stacktrace on job ${job.id}` : ""}. In plain language: what does this exception mean, what most likely caused it here, and is it transient (safe to retry) or deterministic (will re-fail)? Read the full trace with camunda7_incident_detail_data({ incidentId: "${data.incidentId}" }) if needed. Explanation only — do not change anything.`}
+            />
+          }
+        />
         <pre className="border-border bg-card text-foreground whitespace-pre-wrap break-words rounded-lg border p-3 font-mono text-xs">
           {data.incidentMessage ?? job?.exceptionMessage ?? "—"}
         </pre>

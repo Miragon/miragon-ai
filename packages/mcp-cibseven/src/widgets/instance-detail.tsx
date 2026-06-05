@@ -372,6 +372,13 @@ export function InstanceDetailWidget({
       )}
 
       <Section title="Variables" count={variableEntries.length} defaultOpen>
+        <div className="mb-2">
+          <AskAiButton
+            variant="subtle"
+            label="Explain & validate variables"
+            prompt={`Explain and sanity-check the variables of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engine ?? "the current engine"}). Use camunda7_get_process_instance_variables(processInstanceId: "${instance.id}") for the authoritative values. For each meaningful variable say what it represents, and flag any value that looks missing, malformed, or inconsistent and could explain the current incident(s). If you find a likely-bad variable, propose the corrected value — but do not set it without my confirmation.`}
+          />
+        </div>
         <VariablesTable
           variables={variables}
           instanceId={instance.id}
@@ -380,6 +387,13 @@ export function InstanceDetailWidget({
       </Section>
 
       <Section title="Audit log" onToggle={setAuditOpen}>
+        <div className="mb-2">
+          <AskAiButton
+            variant="subtle"
+            label="Explain timeline"
+            prompt={`Explain the execution timeline of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engine ?? "the current engine"}). Use camunda7_query_historic_activity_instances(processInstanceId: "${instance.id}") to walk the per-activity history in order: where did the token spend the most time, which step is it currently stuck at, and does the path taken match the expected happy path? Call out the single biggest delay and whether it indicates a problem. Explanation only — do not change anything.`}
+          />
+        </div>
         {auditOpen ? (
           <InstanceAuditContent processInstanceId={instance.id} />
         ) : (
