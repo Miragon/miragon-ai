@@ -59,6 +59,8 @@ function ProcessSummary({
   onOpenCockpit: (url: string) => void
 }) {
   const tone = process.tone
+  // Local const so the narrowing survives into the onClick closure below.
+  const cockpitUrl = process.cockpitUrl
 
   return (
     <div
@@ -120,15 +122,15 @@ function ProcessSummary({
       >
         Open detail <span aria-hidden>→</span>
       </button>
-      {process.cockpitUrl ? (
+      {cockpitUrl ? (
         <a
-          href={process.cockpitUrl}
+          href={cockpitUrl}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => {
             e.stopPropagation()
             e.preventDefault()
-            onOpenCockpit(process.cockpitUrl)
+            onOpenCockpit(cockpitUrl)
           }}
           aria-label={`Open ${process.processDefinitionName ?? process.processDefinitionKey} in Cockpit`}
           className="text-muted-foreground border-border hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium outline-none focus-visible:ring-2"

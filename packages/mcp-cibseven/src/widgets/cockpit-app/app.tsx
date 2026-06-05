@@ -389,7 +389,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                   {c.view ? (
                     <button
                       type="button"
-                      onClick={() => setView(c.view)}
+                      onClick={() => c.view && setView(c.view)}
                       className="hover:text-foreground focus-visible:ring-ring rounded outline-none focus-visible:ring-2"
                     >
                       {c.label}

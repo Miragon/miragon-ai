@@ -77,11 +77,12 @@ export function IncidentDetailWidget({
   }
 
   function handleResolve() {
+    if (!data) return
     resolveMutation.mutate({ incidentId: data.incidentId }, { onSuccess: () => setResolved(true) })
   }
 
   function handleRetry() {
-    if (!data.job) return
+    if (!data?.job) return
     retryMutation.mutate({ jobId: data.job.id, retries: 1 }, { onSuccess: () => setRetried(true) })
   }
 
