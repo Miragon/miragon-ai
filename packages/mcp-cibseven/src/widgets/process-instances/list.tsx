@@ -207,7 +207,6 @@ export function ProcessInstancesView({
         actions={
           <AskAiButton
             variant="primary"
-            label="Analyze with AI"
             prompt={`Triage the running instances of CIB Seven process "${title}" (key ${data.processDefinitionKey}, engine ${resolvedEngine}). Right now ${data.returnedCount} of ${data.totalCount} instances are showing; ${data.withIncidentCount} have an open incident and ${data.suspendedCount} are suspended. Use camunda7_list_incidents (processDefinitionKey ${data.processDefinitionKey}) and camunda7_query_historic_activity_instances to group the incidents by failed activity and incident type, identify the dominant failure mode, and tell me how many instances are likely fixable by a job retry vs. needing a variable change or modification. Give me a prioritized triage: which cluster to fix first and the single recommended remediation per cluster. Do not mutate anything yet — recommendations only.`}
           />
         }

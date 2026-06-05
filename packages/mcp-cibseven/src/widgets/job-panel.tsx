@@ -109,30 +109,31 @@ export function JobPanelWidget({
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Job Management</h2>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-semibold">Job Management</h2>
           <Badge variant="secondary">{totalCount} total</Badge>
           {failedCount > 0 && <Badge variant="destructive">{failedCount} failed</Badge>}
-          {failedJobs.length > 0 && (
-            <>
-              <AskAiButton
-                variant="primary"
-                label="Analyze with AI"
-                prompt={`Triage the failed jobs (retries == 0) on engine "${engine}" surfaced in the Job Management panel. The engine reports ${totalCount} total jobs and ${failedCount} failed. Use camunda7_list_jobs({engine: "${engine}", withException: true, noRetriesLeft: true}) to load the exact failed set, then: (1) cluster the jobs by normalized exceptionMessage and by activityId/processDefinitionKey; (2) for each cluster name the most likely root cause, cross-checking with camunda7_list_incidents({engine: "${engine}"}) and camunda7_query_historic_activity_instances to see whether the same activity is failing across many instances (systemic) or one-off; (3) recommend a concrete action per cluster — transient/infra errors -> batch retry via camunda7_set_job_retries_batch, bad input data -> camunda7_set_process_instance_variable then retry, code/deployment defect -> escalate and draft a ticket. Return a short ranked table: cluster | likely cause | affected count | recommended action. Do not execute any retry or mutation; recommend only.`}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={batchMutation.isPending}
-                onClick={() => setConfirmBatch(true)}
-              >
-                Retry all failed
-              </Button>
-            </>
-          )}
         </div>
+        {failedJobs.length > 0 && (
+          <AskAiButton
+            variant="primary"
+            prompt={`Triage the failed jobs (retries == 0) on engine "${engine}" surfaced in the Job Management panel. The engine reports ${totalCount} total jobs and ${failedCount} failed. Use camunda7_list_jobs({engine: "${engine}", withException: true, noRetriesLeft: true}) to load the exact failed set, then: (1) cluster the jobs by normalized exceptionMessage and by activityId/processDefinitionKey; (2) for each cluster name the most likely root cause, cross-checking with camunda7_list_incidents({engine: "${engine}"}) and camunda7_query_historic_activity_instances to see whether the same activity is failing across many instances (systemic) or one-off; (3) recommend a concrete action per cluster — transient/infra errors -> batch retry via camunda7_set_job_retries_batch, bad input data -> camunda7_set_process_instance_variable then retry, code/deployment defect -> escalate and draft a ticket. Return a short ranked table: cluster | likely cause | affected count | recommended action. Do not execute any retry or mutation; recommend only.`}
+          />
+        )}
       </div>
+      {failedJobs.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={batchMutation.isPending}
+            onClick={() => setConfirmBatch(true)}
+          >
+            Retry all failed
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Job summary">
         <div className="bg-muted rounded-lg p-4">

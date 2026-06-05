@@ -243,37 +243,35 @@ export function InstanceDetailWidget({
             Definition: {instance.definitionId}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <AskAiButton
-            variant="primary"
-            label="Analyze instance"
-            prompt={`Diagnose CIB Seven process instance ${instance.id}${
-              instance.businessKey ? ` (business key ${instance.businessKey})` : ""
-            } of definition ${instance.definitionId} on engine ${engine}. It is currently at activities ${activeActivityIds} with incidents at ${incidentActivityIds}. Use camunda7_get_process_instance, camunda7_list_incidents({processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.`}
-          />
-          {isActionable && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isMutatingInstance}
-                onClick={handleSuspendToggle}
-              >
-                {isSuspended ? "Activate" : "Suspend"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                disabled={isMutatingInstance}
-                onClick={() => setConfirmCancel(true)}
-              >
-                Cancel instance
-              </Button>
-            </>
-          )}
-        </div>
+        <AskAiButton
+          variant="primary"
+          prompt={`Diagnose CIB Seven process instance ${instance.id}${
+            instance.businessKey ? ` (business key ${instance.businessKey})` : ""
+          } of definition ${instance.definitionId} on engine ${engine}. It is currently at activities ${activeActivityIds} with incidents at ${incidentActivityIds}. Use camunda7_get_process_instance, camunda7_list_incidents({processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.`}
+        />
       </div>
+
+      {isActionable && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isMutatingInstance}
+            onClick={handleSuspendToggle}
+          >
+            {isSuspended ? "Activate" : "Suspend"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            disabled={isMutatingInstance}
+            onClick={() => setConfirmCancel(true)}
+          >
+            Cancel instance
+          </Button>
+        </div>
+      )}
 
       {incidents && incidents.length > 0 && (
         <Section title="Incidents" count={activeIncidents.length} defaultOpen>

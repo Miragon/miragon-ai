@@ -13,11 +13,10 @@ export interface AskAiButtonProps {
    */
   prompt: string
   /**
-   * Button text. Default `"Analyze with AI"` (the one surface-level primary per
-   * surface). For `icon` it moves to `aria-label`/`title`. Per the wording
-   * convention: drop the "with AI" suffix on per-row/section actions
-   * (`"Analyze"`, `"Explain this error"`, `"Draft incident ticket"`,
-   * `"Prepare migration"`).
+   * Button text. Default `"Analyze"` — the ✦ glyph already signals the AI
+   * handoff, so the primary entry needs no "…with AI" suffix. Override only for
+   * a different verb (`"Explain this error"`, `"Draft incident ticket"`,
+   * `"Prepare migration"`). For `icon` it moves to `aria-label`/`title`.
    */
   label?: string
   /**
@@ -45,7 +44,7 @@ const AI_GLYPH = "✦"
  */
 export function AskAiButton({
   prompt,
-  label = "Analyze with AI",
+  label = "Analyze",
   variant = "subtle",
   title,
   disabled,

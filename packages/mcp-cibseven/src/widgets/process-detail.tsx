@@ -251,37 +251,38 @@ export function ProcessDetailView({
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <AskAiButton prompt={analyzePrompt} variant="primary" />
-          <button
-            type="button"
-            onClick={() =>
-              go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
-            }
-            className="border-border text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold outline-none focus-visible:ring-2"
-          >
-            View running instances <span aria-hidden>→</span>
-          </button>
-          {data.openIncidents > 0 && (
-            <>
-              <AskAiButton
-                prompt={draftTicketPrompt}
-                label="Draft incident ticket"
-                variant="subtle"
-              />
-              <button
-                type="button"
-                onClick={() =>
-                  go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
-                }
-                className="bg-m-blue hover:bg-m-blue-light focus-visible:ring-ring inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white outline-none focus-visible:ring-2"
-              >
-                Open all incidents <span aria-hidden>→</span>
-              </button>
-            </>
-          )}
-        </div>
+        <AskAiButton prompt={analyzePrompt} variant="primary" />
       </header>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
+          }
+          className="border-border text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold outline-none focus-visible:ring-2"
+        >
+          View running instances <span aria-hidden>→</span>
+        </button>
+        {data.openIncidents > 0 && (
+          <>
+            <AskAiButton
+              prompt={draftTicketPrompt}
+              label="Draft incident ticket"
+              variant="subtle"
+            />
+            <button
+              type="button"
+              onClick={() =>
+                go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
+              }
+              className="bg-m-blue hover:bg-m-blue-light focus-visible:ring-ring inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white outline-none focus-visible:ring-2"
+            >
+              Open all incidents <span aria-hidden>→</span>
+            </button>
+          </>
+        )}
+      </div>
 
       <KpiGrid boxed header={{ label: "Overview", badge: "Process health" }} cells={stats} />
 

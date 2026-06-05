@@ -69,9 +69,7 @@ export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
       beforeLabel={`v${data.versionA}`}
       afterLabel={`v${data.versionB}`}
       metrics={metrics}
-      actions={
-        <AskAiButton prompt={interpretPrompt} label="Interpret this comparison" variant="primary" />
-      }
+      actions={<AskAiButton prompt={interpretPrompt} variant="primary" />}
       badges={
         <>
           <Badge>{data.processDefinitionKey}</Badge>

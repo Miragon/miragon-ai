@@ -62,7 +62,6 @@ export function ProcessDetailHeader({
             <StatusBadge tone="critical">
               {remainingCount} open {remainingCount === 1 ? "incident" : "incidents"}
             </StatusBadge>
-            <AskAiButton prompt={triagePrompt} label="Analyze with AI" variant="primary" />
           </div>
           <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">
             {title}
@@ -106,6 +105,7 @@ export function ProcessDetailHeader({
             )}
           </div>
         </div>
+        <AskAiButton prompt={triagePrompt} variant="primary" />
       </header>
     </WidgetShell>
   )

@@ -59,11 +59,7 @@ export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboar
   return (
     <WidgetShell>
       <div className="mb-4 flex items-center justify-end">
-        <AskAiButton
-          variant="primary"
-          label="Analyze failures"
-          prompt={buildAnalyzeFailuresPrompt(data)}
-        />
+        <AskAiButton variant="primary" prompt={buildAnalyzeFailuresPrompt(data)} />
       </div>
       <div className="grid grid-cols-3 gap-4" aria-label="Failure analysis summary">
         <Card className="bg-critical-soft gap-0 py-0 shadow-none">
