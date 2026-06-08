@@ -86,3 +86,30 @@ export function resolveEngine(
 
   throw new EngineNotSelectedError(registry.engines)
 }
+
+/**
+ * AppConfig the camunda7 plugin hands to its pipeline steps (used by the
+ * framework `render-view` / builder path). Mirrors the `appConfig` returned from
+ * `createPlugin` — the steps must resolve a per-engine client from the registry
+ * rather than receiving a single pre-bound client.
+ */
+export interface Camunda7StepAppConfig {
+  registry: EngineRegistry
+  engines: EngineEntry[]
+}
+
+/**
+ * Resolve the engine for a pipeline step. Steps have no per-call `engine`
+ * argument, so they honour an optional `camunda7:engine` view key, then fall
+ * back to the sticky session selection or the only configured engine (same
+ * precedence as {@link resolveEngine}). Also returns the engine's `baseUrl`
+ * (for the data builders that render Cockpit deep-links).
+ */
+export function resolveStepEngine(
+  appConfig: Camunda7StepAppConfig,
+  override?: string,
+): { client: Client; engineId: string; baseUrl: string; cockpitUrl?: string } {
+  const { client, engineId, cockpitUrl } = resolveEngine(override, appConfig.registry)
+  const baseUrl = appConfig.registry.engines.find((e) => e.id === engineId)?.baseUrl ?? ""
+  return { client, engineId, baseUrl, cockpitUrl }
+}

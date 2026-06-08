@@ -1,5 +1,5 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client, BpmnViewerData } from "@miragon-ai/client-cibseven"
+import type { BpmnViewerData } from "@miragon-ai/client-cibseven"
 import {
   getProcessInstance,
   getActivityInstanceTree,
@@ -7,10 +7,7 @@ import {
   getProcessDefinitionBpmn20Xml,
   getActivityStatistics,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
-
-interface Camunda7AppConfig {
-  client: Client
-}
+import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 
 interface ActivityInstanceNode {
   activityId?: string
@@ -46,13 +43,16 @@ function collectActivityIds(node: ActivityInstanceNode | null): string[] {
  * Loads data needed to render a BPMN diagram with activity overlays.
  * Consumed by `camunda7:bpmn-viewer`.
  */
-export const loadBpmnViewerStep: PipelineStepDefinition<Camunda7AppConfig> = {
+export const loadBpmnViewerStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-bpmn-viewer",
   dataType: "camunda7:bpmnViewer",
   requires: ["camunda7:processInstanceId"],
   produces: ["camunda7:bpmnViewerData"],
   execute: async (context, appConfig) => {
-    const client = appConfig.client
+    const { client } = resolveStepEngine(
+      appConfig,
+      context.keys["camunda7:engine"] as string | undefined,
+    )
     const processInstanceId = context.keys["camunda7:processInstanceId"] as string
 
     // Fetch instance to get definition ID

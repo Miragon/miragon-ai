@@ -1,22 +1,21 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client } from "@miragon-ai/client-cibseven"
 import { getProcessDefinitions } from "@miragon-ai/client-cibseven/generated/sdk.gen"
-
-interface Camunda7AppConfig {
-  client: Client
-}
+import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 
 /**
  * Loads the list of deployed process definitions. Widgets like
  * `camunda7:process-list` read the result from `camunda7:definitions`.
  */
-export const loadProcessDefinitionsStep: PipelineStepDefinition<Camunda7AppConfig> = {
+export const loadProcessDefinitionsStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-process-definitions",
   dataType: "camunda7:processDefinitionList",
   requires: [],
   produces: ["camunda7:definitions"],
   execute: async (context, appConfig) => {
-    const client = appConfig.client
+    const { client } = resolveStepEngine(
+      appConfig,
+      context.keys["camunda7:engine"] as string | undefined,
+    )
     const filterKey = context.keys["camunda7:processDefinitionKey"] as string | undefined
     const nameLike = context.keys["camunda7:nameLike"] as string | undefined
 

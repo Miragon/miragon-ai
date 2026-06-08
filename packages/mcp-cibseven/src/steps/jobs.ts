@@ -1,10 +1,7 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client, JobPanelData } from "@miragon-ai/client-cibseven"
+import type { JobPanelData } from "@miragon-ai/client-cibseven"
 import { getJobs } from "@miragon-ai/client-cibseven/generated/sdk.gen"
-
-interface Camunda7AppConfig {
-  client: Client
-}
+import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 
 interface JobRow {
   id: string
@@ -24,13 +21,16 @@ interface JobRow {
  * Loads jobs with a focus on failed jobs (no retries left).
  * Consumed by `camunda7:job-panel`.
  */
-export const loadJobsStep: PipelineStepDefinition<Camunda7AppConfig> = {
+export const loadJobsStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-jobs",
   dataType: "camunda7:jobPanel",
   requires: [],
   produces: ["camunda7:jobPanelData"],
-  execute: async (_context, appConfig) => {
-    const client = appConfig.client
+  execute: async (context, appConfig) => {
+    const { client } = resolveStepEngine(
+      appConfig,
+      context.keys["camunda7:engine"] as string | undefined,
+    )
 
     // Fetch failed jobs (no retries) and all jobs in parallel
     const [failedJobs, allJobs] = await Promise.all([

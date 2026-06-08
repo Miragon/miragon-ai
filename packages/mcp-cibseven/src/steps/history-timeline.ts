@@ -1,26 +1,25 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client } from "@miragon-ai/client-cibseven"
 import type { HistoryTimelineData } from "@miragon-ai/client-cibseven"
 import {
   getHistoricActivityInstances,
   getHistoricProcessInstances,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
-
-interface Camunda7AppConfig {
-  client: Client
-}
+import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 
 /**
  * Loads the activity execution timeline for a specific process instance.
  * Consumed by `camunda7:history-timeline`.
  */
-export const loadHistoryTimelineStep: PipelineStepDefinition<Camunda7AppConfig> = {
+export const loadHistoryTimelineStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-history-timeline",
   dataType: "camunda7:historyTimeline",
   requires: ["camunda7:processInstanceId"],
   produces: ["camunda7:historyProcessInstance", "camunda7:historyActivities"],
   execute: async (context, appConfig) => {
-    const client = appConfig.client
+    const { client } = resolveStepEngine(
+      appConfig,
+      context.keys["camunda7:engine"] as string | undefined,
+    )
     const processInstanceId = context.keys["camunda7:processInstanceId"] as string
 
     const [activities, instances] = await Promise.all([
