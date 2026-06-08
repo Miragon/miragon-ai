@@ -1,5 +1,4 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client } from "@miragon-ai/client-cibseven"
 import {
   getProcessInstance,
   getActivityInstanceTree,
@@ -7,10 +6,7 @@ import {
   getIncidents,
   getProcessDefinitionBpmn20Xml,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
-
-interface Camunda7AppConfig {
-  client: Client
-}
+import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 
 /**
  * Loads the full detail of a single process instance: core instance data,
@@ -18,7 +14,7 @@ interface Camunda7AppConfig {
  * the underlying process definition. Widget `camunda7:instance-detail` reads
  * these keys.
  */
-export const loadProcessInstanceStep: PipelineStepDefinition<Camunda7AppConfig> = {
+export const loadProcessInstanceStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-process-instance",
   dataType: "camunda7:processInstance",
   requires: ["camunda7:processInstanceId"],
@@ -30,7 +26,10 @@ export const loadProcessInstanceStep: PipelineStepDefinition<Camunda7AppConfig> 
     "camunda7:bpmnXml",
   ],
   execute: async (context, appConfig) => {
-    const client = appConfig.client
+    const { client } = resolveStepEngine(
+      appConfig,
+      context.keys["camunda7:engine"] as string | undefined,
+    )
     const processInstanceId = context.keys["camunda7:processInstanceId"] as string
 
     const [instance, activityTree, variables, incidents] = await Promise.all([

@@ -1,14 +1,11 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { Client, CockpitDashboardData } from "@miragon-ai/client-cibseven"
+import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
 import {
   getProcessDefinitionStatistics,
   getProcessDefinitions,
   getIncidents,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
-
-interface Camunda7AppConfig {
-  client: Client
-}
+import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 
 interface IncidentStatDto {
   incidentType?: string | null
@@ -34,13 +31,16 @@ interface StatRow {
  * Loads aggregated statistics for all deployed process definitions.
  * Consumed by `camunda7:cockpit-dashboard`.
  */
-export const loadCockpitDashboardStep: PipelineStepDefinition<Camunda7AppConfig> = {
+export const loadCockpitDashboardStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-cockpit-dashboard",
   dataType: "camunda7:cockpitDashboard",
   requires: [],
   produces: ["camunda7:cockpitDashboardData"],
-  execute: async (_context, appConfig) => {
-    const client = appConfig.client
+  execute: async (context, appConfig) => {
+    const { client } = resolveStepEngine(
+      appConfig,
+      context.keys["camunda7:engine"] as string | undefined,
+    )
 
     let rows: StatRow[] = []
     try {
