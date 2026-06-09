@@ -130,11 +130,16 @@ services:
   # default `docker compose up` brings up infra only — leaving port 8400
   # free for a locally-run gateway (`pnpm -F @miragon-ai/mcp-gateway dev`).
   # Use: docker compose --profile full up -d
+  # Building the image needs GITHUB_TOKEN exported in the host shell — the
+  # build mounts it as a BuildKit secret to fetch the private @miragon
+  # packages from npm.pkg.github.com.
   mcp-server:
     profiles: [full]
     build:
       context: ..
       dockerfile: Dockerfile
+      secrets:
+        - github_token
     ports:
       - "8400:8400"
     environment:
@@ -179,3 +184,7 @@ services:
 
 volumes:
   prometheus-data:
+
+secrets:
+  github_token:
+    environment: GITHUB_TOKEN
