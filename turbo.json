@@ -1,7 +1,9 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["tsconfig.base.json", "eslint.config.mjs"],
   "tasks": {
     "generate": {
+      "inputs": ["cibseven-open-api-doc.json", "openapi-ts.config.ts"],
       "outputs": ["src/generated/**"],
       "cache": true
     },
@@ -13,7 +15,7 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["build"]
+      "dependsOn": ["^build"]
     },
     "lint": {
       "dependsOn": ["^build"]
