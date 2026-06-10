@@ -25,8 +25,11 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     --mount=type=secret,id=github_token \
     GITHUB_TOKEN=$(cat /run/secrets/github_token) pnpm install --frozen-lockfile --offline
 
+# pnpm resolves .npmrc on every invocation; mount the secret here too so the
+# ${GITHUB_TOKEN} interpolation never fails, regardless of pnpm version.
 RUN --mount=type=cache,id=turbo-server,target=/app/.turbo \
-    pnpm turbo build --filter=@miragon-ai/mcp-gateway...
+    --mount=type=secret,id=github_token \
+    GITHUB_TOKEN=$(cat /run/secrets/github_token) pnpm turbo build --filter=@miragon-ai/mcp-gateway...
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     --mount=type=secret,id=github_token \
