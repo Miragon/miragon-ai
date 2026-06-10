@@ -11,8 +11,8 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Prom
 │  │         @miragon-ai/mcp-gateway          │   │
 │  │  ┌─────────────────┐  ┌──────────────────┐   │   │
 │  │  │ camunda7 module │  │ analytics module │   │   │
-│  │  │  37 tools       │  │   6 tools        │   │   │
-│  │  │  + 5 widgets    │  │   + 4 widgets    │   │   │
+│  │  │  BPM ops tools  │  │  analytics tools │   │   │
+│  │  │  + widgets      │  │  + dashboards    │   │   │
 │  │  └────────┬────────┘  └────────┬─────────┘   │   │
 │  └───────────┼─────────────────────┼────────────┘   │
 └──────────────┼─────────────────────┼────────────────┘
@@ -207,7 +207,7 @@ pnpm -F @miragon-ai/mcp-gateway start
 
 ## Tools
 
-### Camunda7 module (40 + 5 widget tools)
+### Camunda7 module (BPM operations tools + widgets)
 
 All tools are prefixed with `camunda7_`:
 
@@ -221,17 +221,17 @@ All tools are prefixed with `camunda7_`:
 - Incidents: `list_incidents`, `resolve_incident`, `format_incident_issue` (build a GitHub-issue payload — pair with the official GitHub MCP server's `create_issue` tool, or use the `report_incident_to_github` prompt to chain both in one step)
 - Jobs: `list_jobs`, `set_job_retries`
 - History: `query_historic_process_instances`, `query_historic_activity_instances`, `query_historic_task_instances`, `query_historic_variable_instances`
-- Widget tools (return data + render an MCP App): `show_process_list`, `show_task_dashboard`, `show_instance_detail`, `show_incidents_dashboard`, `show_process_incidents`, `show_history_timeline`
+- Widget tools (return data + render an MCP App): `open_cockpit`, `show_cockpit_dashboard`, `show_process_list`, `show_process_detail`, `show_process_instances`, `show_instance_detail`, `show_incidents_dashboard`, `show_process_incidents`, `show_incident_detail`, `show_history_timeline`, `show_bpmn_viewer`, `show_job_panel` — each cockpit view is additionally backed by a data-only `*_data` feed tool that the widgets call for in-widget refreshes
 
-### Analytics module (7 + 4 widget tools)
+### Analytics module (analytics tools + dashboards)
 
 All tools are prefixed with `analytics_` and query Prometheus over PromQL:
 
 - `analyze_process_performance`, `compare_execution_periods`
 - `element_bottleneck`, `find_failed_instances`
-- `cluster_compare`, `version_compare`
+- `cluster_compare`, `version_compare`, `engine_compare`
 - `engine_health` — live ops snapshot (running WIP, open incidents, dead jobs, job/task backlog, firing/pending alerts)
-- Widget tools: `show_dashboard`, `show_failure_dashboard`, `show_cluster_compare`, `show_version_compare`
+- Widget tools: `show_dashboard`, `show_failure_dashboard`, `show_cluster_compare`, `show_version_compare`, `show_engine_compare`, `show_bpmn_heatmap`
 
 Per-instance drill-down (search by variable, single-instance traces) is not
 metric-backed — use the `camunda7_query_historic_*` tools and the Jaeger UI.

@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Miragon AI Platform
   text: AI-driven process management for Camunda 7
-  tagline: One MCP server, two modules, a fleet of widgets — drive Camunda 7 and CIB Seven from any MCP host.
+  tagline: "One MCP server — Automation MCP — two modules, a fleet of widgets: drive Camunda 7 and CIB Seven from any MCP host."
   actions:
     - theme: brand
       text: Get Started
