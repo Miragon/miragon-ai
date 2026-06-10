@@ -8,6 +8,7 @@ import {
   type PromSample,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
+import { byLabel, first, kpiQueries, round1 } from "./helpers.js"
 import type {
   ActivityBreakdownItem,
   AnalyticsDashboardData,
@@ -17,19 +18,8 @@ import type {
   ProcessFailureItem,
 } from "../widgets.js"
 
-const round1 = (n: number) => Math.round(n * 10) / 10
-const first = (s: PromSample[]) => (s.length ? s[0].value : 0)
 /** Seconds -> integer milliseconds (preserves the sub-100ms precision the dashboard formats). */
 const ms = (sec: number) => Math.round(sec * 1000)
-
-function byLabel(samples: PromSample[], label: string): Record<string, number> {
-  const out: Record<string, number> = {}
-  for (const s of samples) {
-    const k = s.metric[label]
-    if (k !== undefined) out[k] = s.value
-  }
-  return out
-}
 
 /**
  * Aggregated dashboard KPIs + activity / definition breakdowns over a rolling
@@ -50,7 +40,9 @@ export async function dashboardData(
     ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
     : undefined
   const sel = selector(keyMatcher, engine)
+  const completedSel = selector(keyMatcher, `state="COMPLETED"`, engine)
   const r = `[${range}]`
+  const q = kpiQueries({ sel, completedSel }, r)
 
   const [
     started,
@@ -72,22 +64,14 @@ export async function dashboardData(
     defDurSum,
     defDurCount,
   ] = await Promise.all([
-    ch.instant(`sum(increase(${M.processInstanceStarted}${sel}${r}))`),
+    ch.instant(q.started),
     ch.instant(`sum(increase(${M.processInstanceEnded}${sel}${r}))`),
-    ch.instant(
-      `sum(increase(${M.processInstanceEnded}${selector(keyMatcher, `state="COMPLETED"`, engine)}${r}))`,
-    ),
-    ch.instant(`sum(increase(${M.incidentCreated}${sel}${r}))`),
+    ch.instant(q.completed),
+    ch.instant(q.incidents),
     ch.instant(`sum(increase(${M.incidentResolved}${sel}${r}))`),
-    ch.instant(
-      `sum(increase(${M.processInstanceDuration}_sum${sel}${r})) / sum(increase(${M.processInstanceDuration}_count${sel}${r}))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.5, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
-    ),
+    ch.instant(q.avgDuration),
+    ch.instant(q.medianDuration),
+    ch.instant(q.p95Duration),
     ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}${r}))`),
     ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${r}))`),
     ch.instant(
@@ -96,7 +80,7 @@ export async function dashboardData(
     ch.instant(`sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}${r}))`),
     ch.instant(`sum by (process_definition_key)(increase(${M.processInstanceStarted}${sel}${r}))`),
     ch.instant(
-      `sum by (process_definition_key)(increase(${M.processInstanceEnded}${selector(keyMatcher, `state="COMPLETED"`, engine)}${r}))`,
+      `sum by (process_definition_key)(increase(${M.processInstanceEnded}${completedSel}${r}))`,
     ),
     ch.instant(`sum by (process_definition_key)(increase(${M.processInstanceEnded}${sel}${r}))`),
     ch.instant(`sum by (process_definition_key)(increase(${M.incidentCreated}${sel}${r}))`),

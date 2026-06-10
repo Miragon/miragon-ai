@@ -5,9 +5,9 @@ import {
   type EngineFilterInput,
   type Period,
   type PrometheusClient,
-  type PromSample,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
+import { byLabel, first, kpiQueries, round1 } from "./helpers.js"
 
 export interface PerformanceKPI {
   process_definition_key: string
@@ -58,9 +58,6 @@ export interface PeriodComparisonResult {
   activityComparison?: PeriodActivityComparisonRow[]
 }
 
-const round1 = (n: number) => Math.round(n * 10) / 10
-const first = (s: PromSample[]) => (s.length ? s[0].value : 0)
-
 /** `{process_definition_key=..., engine_id=...}` plus any extra matchers. */
 function pdkSelector(
   key: string,
@@ -72,15 +69,6 @@ function pdkSelector(
     engineMatcher(engineId),
     ...extra,
   )
-}
-
-function byLabel(samples: PromSample[], label: string): Record<string, number> {
-  const out: Record<string, number> = {}
-  for (const s of samples) {
-    const k = s.metric[label]
-    if (k !== undefined) out[k] = s.value
-  }
-  return out
 }
 
 /**
@@ -102,22 +90,21 @@ export async function analyzePerformance(
   },
 ): Promise<{ kpi: PerformanceKPI | null; activityBreakdown: ActivityBreakdownRow[] }> {
   const range = (params.period as Period) ?? "7d"
-  const sel = pdkSelector(params.processDefinitionKey, params.engine)
-  const completedSel = pdkSelector(params.processDefinitionKey, params.engine, 'state="COMPLETED"')
+  const q = kpiQueries(
+    {
+      sel: pdkSelector(params.processDefinitionKey, params.engine),
+      completedSel: pdkSelector(params.processDefinitionKey, params.engine, 'state="COMPLETED"'),
+    },
+    `[${range}]`,
+  )
 
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
-    ch.instant(`sum(increase(${M.processInstanceStarted}${sel}[${range}]))`),
-    ch.instant(`sum(increase(${M.processInstanceEnded}${completedSel}[${range}]))`),
-    ch.instant(`sum(increase(${M.incidentCreated}${sel}[${range}]))`),
-    ch.instant(
-      `sum(increase(${M.processInstanceDuration}_sum${sel}[${range}])) / sum(increase(${M.processInstanceDuration}_count${sel}[${range}]))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.5, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}[${range}])))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}[${range}])))`,
-    ),
+    ch.instant(q.started),
+    ch.instant(q.completed),
+    ch.instant(q.incidents),
+    ch.instant(q.avgDuration),
+    ch.instant(q.medianDuration),
+    ch.instant(q.p95Duration),
   ])
 
   const totalInstances = Math.round(first(total))
@@ -243,22 +230,20 @@ async function periodKpi(
   w: PromWindow,
   engineId: EngineFilterInput,
 ): Promise<PeriodComparisonKpi> {
-  const sel = pdkSelector(key, engineId)
-  const completedSel = pdkSelector(key, engineId, 'state="COMPLETED"')
-  const r = w.rangeExpr
+  const q = kpiQueries(
+    {
+      sel: pdkSelector(key, engineId),
+      completedSel: pdkSelector(key, engineId, 'state="COMPLETED"'),
+    },
+    w.rangeExpr,
+  )
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
-    ch.instant(`sum(increase(${M.processInstanceStarted}${sel}${r}))`),
-    ch.instant(`sum(increase(${M.processInstanceEnded}${completedSel}${r}))`),
-    ch.instant(`sum(increase(${M.incidentCreated}${sel}${r}))`),
-    ch.instant(
-      `sum(increase(${M.processInstanceDuration}_sum${sel}${r})) / sum(increase(${M.processInstanceDuration}_count${sel}${r}))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.5, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
-    ),
+    ch.instant(q.started),
+    ch.instant(q.completed),
+    ch.instant(q.incidents),
+    ch.instant(q.avgDuration),
+    ch.instant(q.medianDuration),
+    ch.instant(q.p95Duration),
   ])
   const totalInstances = Math.round(first(total))
   const failed = Math.round(first(incidents))

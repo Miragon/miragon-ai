@@ -5,9 +5,9 @@ import {
   type EngineFilterInput,
   type Period,
   type PrometheusClient,
-  type PromSample,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
+import { byLabel, round1 } from "./helpers.js"
 
 export interface ElementBottleneckRow {
   activity_id: string
@@ -28,17 +28,6 @@ export interface ElementBottleneckResult {
   activities: ElementBottleneckRow[]
   minBucketSize: number
   suppressedActivities: number
-}
-
-const round1 = (n: number) => Math.round(n * 10) / 10
-
-function byLabel(samples: PromSample[], label: string): Record<string, number> {
-  const out: Record<string, number> = {}
-  for (const s of samples) {
-    const k = s.metric[label]
-    if (k !== undefined) out[k] = s.value
-  }
-  return out
 }
 
 /**
