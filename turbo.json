@@ -9,7 +9,7 @@
     },
     "build": {
       "dependsOn": ["^build", "generate"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", ".vitepress/dist/**", ".vitepress/cache/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"]
