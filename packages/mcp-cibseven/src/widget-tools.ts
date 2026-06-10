@@ -92,6 +92,12 @@ function rawData(data: unknown) {
  */
 const appOnlyMeta = { ui: { visibility: ["app"] } }
 
+/** One-line truncation for summaries (incident messages can be stacktrace-sized). */
+function truncate(s: string, max: number): string {
+  const flat = s.replace(/\s+/g, " ").trim()
+  return flat.length > max ? `${flat.slice(0, max)}…` : flat
+}
+
 export function registerWidgetTools(
   server: MCPServer,
   registry: EngineRegistry,
@@ -131,6 +137,9 @@ export function registerWidgetTools(
         dataType: "camunda7:cockpitApp",
         data,
         title: "Cockpit",
+        summary: engineId
+          ? `Opened the CIB Seven cockpit on engine "${engineId}" (${data.engines.length} engine(s) configured). The user can navigate the process landscape client-side from here.`
+          : `Opened the CIB Seven cockpit with an engine picker (${data.engines.length} engines configured, none selected).`,
       })
     }),
   )
@@ -168,12 +177,19 @@ export function registerWidgetTools(
         totalCount: defArray.length,
         engineId,
       }
+      const filters = [
+        args.key && `key "${args.key}"`,
+        args.nameLike && `name like "${args.nameLike}"`,
+      ]
+        .filter(Boolean)
+        .join(" and ")
       return buildSingleWidgetView({
         widget: "camunda7:process-list",
         app: "camunda7",
         dataType: "camunda7:processDefinitionList",
         data,
         title: "Process Definitions",
+        summary: `Process list: ${data.totalCount} deployed definition(s)${filters ? ` matching ${filters}` : ""} on engine "${engineId}".`,
       })
     }),
   )
@@ -196,12 +212,18 @@ export function registerWidgetTools(
       const data = await buildInstanceDetailData(client, engineId, {
         processInstanceId: args.processInstanceId,
       })
+      const state = data.instance.ended ? "ended" : data.instance.suspended ? "suspended" : "active"
       return buildSingleWidgetView({
         widget: "camunda7:instance-detail",
         app: "camunda7",
         dataType: "camunda7:processInstance",
         data,
         title: "Process Instance",
+        summary:
+          `Process instance ${data.instance.id}` +
+          `${data.instance.businessKey ? ` (business key "${data.instance.businessKey}")` : ""}: ` +
+          `${state}, ${data.activeActivityIds.length} active activities, ` +
+          `${data.incidents?.length ?? 0} open incidents, ${data.openTasks.length} open user tasks.`,
       })
     }),
   )
@@ -246,6 +268,10 @@ export function registerWidgetTools(
         dataType: "camunda7:processInstances",
         data,
         title: "Process Instances",
+        summary:
+          `${data.totalCount} running instance(s) of "${data.processDefinitionKey}" ` +
+          `(${data.withIncidentCount} with incidents, ${data.suspendedCount} suspended); ` +
+          `showing ${data.returnedCount} in the table.`,
       })
     }),
   )
@@ -279,6 +305,9 @@ export function registerWidgetTools(
           { row: [{ widget: "camunda7:incident-process-list" }] },
         ],
         entries: [{ dataType: "camunda7:incidentsDashboard", data: { ...data, engineId } }],
+        summary:
+          `Incidents dashboard: ${data.totalCount} open incident(s) across ` +
+          `${data.processCount} process definition(s), ${data.last24hCount} in the last 24h.`,
       })
     }),
   )
@@ -313,6 +342,10 @@ export function registerWidgetTools(
           { row: [{ widget: "camunda7:activity-incident-list" }] },
         ],
         entries: [{ dataType: "camunda7:processIncidents", data: { ...data, engineId } }],
+        summary:
+          `Process incidents for "${data.processDefinitionKey}"` +
+          `${data.version != null ? ` v${data.version}` : ""}: ${data.incidentCount} open ` +
+          `incident(s) across ${data.activities.length} activities, ${data.last24hCount} in the last 24h.`,
       })
     }),
   )
@@ -345,6 +378,11 @@ export function registerWidgetTools(
         app: "camunda7",
         dataType: "camunda7:incidentDetail",
         data: { ...data, engineId },
+        summary:
+          `Incident ${data.incidentId} (${data.incidentType}) at activity ` +
+          `"${data.activityName ?? data.activityId}" in "${data.processDefinitionKey}", ` +
+          `instance ${data.processInstanceId}` +
+          `${data.incidentMessage ? `: ${truncate(data.incidentMessage, 160)}` : ""}.`,
       })
     }),
   )
@@ -375,6 +413,11 @@ export function registerWidgetTools(
         app: "camunda7",
         dataType: "camunda7:processDetail",
         data: { ...data, engineId },
+        summary:
+          `Process "${data.processDefinitionKey}"` +
+          `${data.version != null ? ` v${data.version}` : ""}: ` +
+          `${data.runningInstances ?? 0} running instance(s), ${data.openIncidents} open ` +
+          `incident(s), ${data.failedJobs} failed job(s).`,
       })
     }),
   )
@@ -429,6 +472,10 @@ export function registerWidgetTools(
         dataType: "camunda7:historyTimeline",
         data,
         title: "History Timeline",
+        summary:
+          `History timeline for process instance ${args.processInstanceId}: ` +
+          `${data.totalActivities} historic activities` +
+          `${inst ? "" : " (no historic process instance found)"}.`,
       })
     }),
   )
@@ -454,6 +501,10 @@ export function registerWidgetTools(
           { row: [{ widget: "camunda7:process-definitions-table" }] },
         ],
         entries: [{ dataType: "camunda7:cockpitDashboard", data }],
+        summary:
+          `Cockpit dashboard for engine "${engineId}": ${data.summary.totalDefinitions} ` +
+          `definitions, ${data.summary.totalRunningInstances} running instances, ` +
+          `${data.summary.totalFailedJobs} failed jobs, ${data.summary.totalIncidents} open incidents.`,
       })
     }),
   )
@@ -515,6 +566,7 @@ export function registerWidgetTools(
               },
             },
           ],
+          summary: "BPMN viewer: no matching process definition found — rendered an empty diagram.",
         })
 
       let definitionId: string | null = null
@@ -577,6 +629,15 @@ export function registerWidgetTools(
         failedJobs: s.failedJobs ?? 0,
       }))
 
+      // Model summary only — the (often tens-of-KB) bpmnXml must never reach
+      // the text channel; the widget renders it from structuredContent.
+      const totalFailedJobs = activityStats.reduce((sum, s) => sum + s.failedJobs, 0)
+      const target = processInstanceId
+        ? `process instance ${processInstanceId}`
+        : `process definition ${definitionId}`
+      const overlayInfo = processInstanceId
+        ? `: ${activeActivityIds.length} active activities, ${incidentActivityIds.length} activities with incidents, ${totalFailedJobs} failed jobs`
+        : ` (static diagram, no instance overlays)`
       return buildComposedView({
         app: "camunda7",
         title: "BPMN Viewer",
@@ -595,6 +656,7 @@ export function registerWidgetTools(
             },
           },
         ],
+        summary: `Rendered the BPMN diagram for ${target}${overlayInfo}${bpmnXml ? "" : " — diagram XML unavailable"}.`,
       })
     }),
   )
@@ -625,6 +687,10 @@ export function registerWidgetTools(
         dataType: "camunda7:jobPanel",
         title: "Job Panel",
         data,
+        summary:
+          `Job panel: ${data.totalCount} job(s), ${data.failedCount} failed` +
+          `${args.processDefinitionKey ? ` for "${args.processDefinitionKey}"` : ""}` +
+          `${args.failedOnly ? " (failed only)" : ""}.`,
       })
     }),
   )

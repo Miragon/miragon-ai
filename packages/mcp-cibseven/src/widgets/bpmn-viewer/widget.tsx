@@ -1,6 +1,6 @@
-import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "@miragon-ai/client-cibseven"
-import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { WidgetShell, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
 import { BpmnViewerHeader } from "./header.js"
 import { BpmnViewerLegend } from "./legend.js"
 import { BpmnFlowViewer } from "./flow.js"
@@ -24,7 +24,9 @@ export function BpmnViewerWidget({
 
   const canSelfFetch = Boolean(processInstanceId || processDefinitionKey)
 
-  const query = useToolQuery<BpmnViewerData>(
+  // Self-fetch of a `show_*` tool: parse structuredContent-first — the text
+  // channel only carries the model summary since the text-channel diet.
+  const query = useViewToolQuery<BpmnViewerData>(
     [
       "camunda7:bpmn-viewer",
       processInstanceId ?? null,

@@ -13,6 +13,8 @@ export { OpenInCockpitLink } from "./open-in-cockpit-link.js"
 export { ListFooter } from "./list-footer.js"
 export { useDebouncedValue } from "./use-debounced-value.js"
 export { usePagedViewData, type PagedViewData } from "./use-paged-view-data.js"
+export { parseToolResult, parseViewToolResult } from "./parse-tool-result.js"
+export { useViewToolQuery, type UseViewToolQueryOptions } from "./use-view-tool-query.js"
 export {
   BpmnHeatmap,
   HeatmapLegend,

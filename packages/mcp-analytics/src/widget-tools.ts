@@ -25,6 +25,28 @@ const heatmapInputShape = {
   ...schemas.engineFilterShape,
 }
 
+/** Formats a nullable comparison delta ("+12.5%", "-3pp", "n/a") for summaries. */
+function fmtDelta(value: number | null, unit: string): string {
+  if (value == null) return "n/a"
+  return `${value > 0 ? "+" : ""}${value}${unit}`
+}
+
+/** Shared delta shape of the three compare queries, for one-line summaries. */
+function compareDeltaSummary(delta: {
+  failure_rate_delta_pp: number | null
+  avg_duration_delta_pct: number | null
+  p95_duration_delta_pct: number | null
+}): string {
+  return (
+    `failure rate ${fmtDelta(delta.failure_rate_delta_pp, "pp")}, ` +
+    `avg duration ${fmtDelta(delta.avg_duration_delta_pct, "%")}, ` +
+    `p95 ${fmtDelta(delta.p95_duration_delta_pct, "%")}`
+  )
+}
+
+const suppressedNote = (suppressed: boolean) =>
+  suppressed ? " — flagged suppressed (sample below minBucketSize)" : ""
+
 export function registerWidgetTools(
   server: MCPServer,
   ch: PrometheusClient,
@@ -78,6 +100,11 @@ export function registerWidgetTools(
           { row: [{ widget: "analytics:activity-bottleneck-table" }] },
         ],
         entries: [{ dataType: "analytics:dashboard", data }],
+        summary:
+          `Analytics dashboard${args.processDefinitionKey ? ` for "${args.processDefinitionKey}"` : ""} ` +
+          `over ${args.period}: ${data.totalCount} instances — ${data.completedCount} completed, ` +
+          `${data.runningCount} running, ${data.failedCount} failed ` +
+          `(${data.failureRatePct}% failure rate, ${data.incidentCount} incidents).`,
       })
     }),
   )
@@ -108,6 +135,10 @@ export function registerWidgetTools(
           { row: [{ widget: "analytics:failure-rate-table" }] },
         ],
         entries: [{ dataType: "analytics:failureDashboard", data }],
+        summary:
+          `Failure dashboard: ${data.totalIncidents} open incident(s) across ` +
+          `${data.uniqueErrorPatterns} error pattern(s)` +
+          `${data.mostAffectedProcess ? `; most affected process: "${data.mostAffectedProcess}"` : ""}.`,
       })
     }),
   )
@@ -131,6 +162,11 @@ export function registerWidgetTools(
         dataType: "analytics:clusterCompare",
         data,
         title: "Cluster Compare",
+        summary:
+          `Pre/post deployment comparison` +
+          `${data.processDefinitionKey ? ` for "${data.processDefinitionKey}"` : ""} around ` +
+          `${data.deploymentTimestamp}: ${compareDeltaSummary(data.delta)}` +
+          `${suppressedNote(data.suppressed)}.`,
       })
     }),
   )
@@ -154,6 +190,10 @@ export function registerWidgetTools(
         dataType: "analytics:versionCompare",
         data,
         title: "Version Compare",
+        summary:
+          `Version comparison for "${data.processDefinitionKey}" v${data.versionA} vs ` +
+          `v${data.versionB} over ${data.windowDays}d: ${compareDeltaSummary(data.delta)}` +
+          `${suppressedNote(data.suppressed)}.`,
       })
     }),
   )
@@ -177,6 +217,10 @@ export function registerWidgetTools(
         dataType: "analytics:engineCompare",
         data,
         title: "Engine Compare",
+        summary:
+          `Engine comparison "${data.engineA}" vs "${data.engineB}"` +
+          `${data.processDefinitionKey ? ` for "${data.processDefinitionKey}"` : ""} over ` +
+          `${data.windowDays}d: ${compareDeltaSummary(data.delta)}${suppressedNote(data.suppressed)}.`,
       })
     }),
   )
@@ -195,6 +239,8 @@ export function registerWidgetTools(
     withToolErrors(async (args) => {
       const heat = await queries.elementHeat(ch, args)
       const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
+      // Model summary only — the bpmnXml must never reach the text channel;
+      // the widget renders the diagram from structuredContent.
       return buildSingleWidgetView({
         widget: "analytics:bpmn-heatmap",
         app: "analytics",
@@ -207,6 +253,10 @@ export function registerWidgetTools(
           durationSec: heat.durationSec,
         },
         title: "BPMN Heatmap",
+        summary:
+          `BPMN heatmap for "${args.processDefinitionKey}" over ${args.period}: ` +
+          `heat values for ${Object.keys(heat.frequency).length} element(s)` +
+          `${bpmnXml ? "" : " — no BPMN XML available, widget shows the non-diagram fallback"}.`,
       })
     }),
   )

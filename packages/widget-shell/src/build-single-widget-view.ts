@@ -6,6 +6,14 @@ export interface SingleWidgetViewInput {
   dataType: string
   data: unknown
   title?: string
+  /**
+   * Short model-facing summary emitted on the text channel (1-2 sentences,
+   * e.g. "Process list: 12 definitions matching ..."). The full data payload
+   * lives only in `structuredContent` — never put bulky data (BPMN XML, row
+   * arrays) in the summary. Falls back to a generic one-liner derived from
+   * the widget type and an item count when omitted.
+   */
+  summary?: string
 }
 
 export interface ComposedViewEntry {
@@ -22,6 +30,39 @@ export interface ComposedViewInput {
   layout: LayoutConfig
   entries: ComposedViewEntry[]
   title?: string
+  /** Same contract as {@link SingleWidgetViewInput.summary}. */
+  summary?: string
+}
+
+/**
+ * Best-effort item count for the generic fallback summary: array length or a
+ * conventional `totalCount`/`total` field. Returns null when not derivable.
+ */
+function deriveItemCount(data: unknown): number | null {
+  if (Array.isArray(data)) return data.length
+  if (data && typeof data === "object") {
+    const d = data as Record<string, unknown>
+    if (typeof d.totalCount === "number") return d.totalCount
+    if (typeof d.total === "number") return d.total
+  }
+  return null
+}
+
+function defaultSummary(widgets: string[], data: unknown, title?: string): string {
+  const label = title ?? widgets.join(", ")
+  const count = deriveItemCount(data)
+  const countSuffix = count === null ? "" : ` (${count} item${count === 1 ? "" : "s"})`
+  return `Rendered widget "${label}"${countSuffix}. Full data is shown in the widget.`
+}
+
+/** Widget ids across all three LayoutConfig variants (rows array, rows object, tabs). */
+function collectLayoutWidgets(layout: LayoutConfig): string[] {
+  const rows = Array.isArray(layout)
+    ? layout
+    : "rows" in layout
+      ? layout.rows
+      : layout.tabs.flatMap((tab) => tab.rows)
+  return rows.flatMap((row) => row.row.map((cell) => cell.widget))
 }
 
 /**
@@ -31,12 +72,11 @@ export interface ComposedViewInput {
  * `adaptDataWidget` by `_dataType`. Widgets that share a `dataType` all
  * receive the same data object and are expected to render their own slice.
  *
- * NOTE: when called with multiple `entries`, the text channel emits an object
- * keyed by step id, not a widget's flat data shape. `useToolMutation` /
- * `useToolQuery` callers that go through `parseToolResult` expect the latter,
- * so multi-entry composed views are not safe to refresh in-place from inside
- * a child widget. Refresh by re-invoking the parent tool via
- * `host.showWidget(...)` instead.
+ * The text channel carries only the model-facing `summary`; the data payload
+ * lives in `structuredContent.context.stepData`. In-widget refresh callers
+ * must therefore parse results structuredContent-first via
+ * `parseViewToolResult` / `useViewToolQuery` (widget-shell) — the toolkit's
+ * text-first `useToolQuery` would only see the summary string.
  */
 export function buildComposedView(input: ComposedViewInput): {
   content: { type: "text"; text: string }[]
@@ -54,16 +94,12 @@ export function buildComposedView(input: ComposedViewInput): {
       _dataType: entry.dataType,
     }
   }
-  // Single-entry case: keep payload shape compatible with refresh callers
-  // that read `data` directly out of the text channel.
-  const text =
-    input.entries.length === 1
-      ? JSON.stringify(input.entries[0].data)
-      : JSON.stringify(
-          Object.fromEntries(input.entries.map((e, i) => [e.id ?? `result_${i}`, e.data])),
-        )
+  const widgets = collectLayoutWidgets(input.layout)
+  const summary =
+    input.summary ??
+    defaultSummary(widgets, input.entries.length === 1 ? input.entries[0].data : null, input.title)
   return {
-    content: [{ type: "text" as const, text }],
+    content: [{ type: "text" as const, text: summary }],
     structuredContent: {
       title: input.title,
       context: {
@@ -83,19 +119,20 @@ export function buildComposedView(input: ComposedViewInput): {
  * compute their data eagerly (no pipeline) — the widget data is exposed under
  * `context.steps["result"]` with the given `_dataType`, so the registry
  * adapter (`adaptDataWidget`) can route it to the right widget component.
+ *
+ * The text channel carries only the model-facing `summary` (the model never
+ * needs the rendered payload); the data lives in `structuredContent`.
+ * In-widget refresh callers parse structuredContent-first via
+ * `parseViewToolResult` / `useViewToolQuery` (widget-shell).
  */
 export function buildSingleWidgetView(input: SingleWidgetViewInput): {
   content: { type: "text"; text: string }[]
   structuredContent: Record<string, unknown>
 } {
   const layout: LayoutConfig = [{ row: [{ widget: input.widget }] }]
-  // Emit the widget's data as JSON in the text content so callers using
-  // `useToolMutation` / `useToolQuery` (which run results through
-  // `parseToolResult`) receive the data directly. The widget's initial render
-  // still reads from `structuredContent` via `useWidget`, so this only
-  // affects refreshes triggered from inside the widget (e.g. period switch).
+  const summary = input.summary ?? defaultSummary([input.widget], input.data, input.title)
   return {
-    content: [{ type: "text" as const, text: JSON.stringify(input.data) }],
+    content: [{ type: "text" as const, text: summary }],
     structuredContent: {
       title: input.title,
       context: {

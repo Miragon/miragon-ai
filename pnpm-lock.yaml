@@ -308,6 +308,9 @@ importers:
       '@miragon/mcp-toolkit-ui':
         specifier: 0.3.1
         version: 0.3.1(@date-fns/tz@1.4.1)(@miragon/mcp-toolkit-core@0.3.1(@miragon/mcp-toolkit-proxy-contract@0.3.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.28.0(1409db3878764f7f81859a321fdd9b5c))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(date-fns@4.1.0)(mcp-use@1.28.0(1409db3878764f7f81859a321fdd9b5c))(react-dom@19.2.6(react@19.2.5))(react@19.2.5)(tailwindcss@4.3.0)
+      '@tanstack/react-query':
+        specifier: 5.100.11
+        version: 5.100.11(react@19.2.5)
       '@types/react':
         specifier: 19.2.14
         version: 19.2.14
