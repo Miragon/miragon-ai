@@ -31,17 +31,21 @@ uses `auth.mode: "oauth2"`; it doubles as the OAuth callback base URL.
 
 ## Environment variables
 
-| Variable                                | Default                             | Notes                                           |
-| --------------------------------------- | ----------------------------------- | ----------------------------------------------- |
-| `PORT`                                  | `8400`                              | HTTP port for the MCP transport                 |
-| `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated; e.g. `camunda7,analytics`      |
-| `CAMUNDA_BASE_URL`                      | `http://localhost:8410/engine-rest` | Engine REST endpoint                            |
-| `CAMUNDA_COCKPIT_URL`                   | derived                             | Used for jump-out links to Cockpit              |
-| `CAMUNDA_AUTH_TYPE`                     | `none`                              | `basic`, `bearer`, or `none`                    |
-| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` | —                                   | Required for `basic`                            |
-| `CAMUNDA_TOKEN`                         | —                                   | Required for `bearer`                           |
-| `CAMUNDA_INCIDENT_ISSUE_REPO`           | —                                   | Default `owner/repo` for the GitHub-issue tool  |
-| `PROMETHEUS_URL`                        | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source |
+| Variable                                | Default                             | Notes                                                                                                                                         |
+| --------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                  | `8400`                              | HTTP port for the MCP transport                                                                                                               |
+| `MCP_URL`                               | —                                   | Public base URL the server advertises (resource URIs, OAuth callbacks)                                                                        |
+| `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated; e.g. `camunda7,analytics`                                                                                                    |
+| `MCP_PROXIES`                           | —                                   | JSON array of upstream MCP proxies, `[{name, label, upstreamUrl, auth}]` per the `ProxyConfigSchema` of `@miragon/mcp-toolkit-proxy-contract` |
+| `CAMUNDA_ENGINES_FILE`                  | —                                   | Path to a JSON file with the engine list `[{id, baseUrl, cockpitUrl?}, ...]`; highest precedence                                              |
+| `CAMUNDA_ENGINES_JSON`                  | —                                   | Same engine array as inline JSON; ignored when `CAMUNDA_ENGINES_FILE` is set                                                                  |
+| `CAMUNDA_BASE_URL`                      | `http://localhost:8410/engine-rest` | Legacy single-engine REST endpoint (registered as id `default`); ignored when `CAMUNDA_ENGINES_*` is set                                      |
+| `CAMUNDA_COCKPIT_URL`                   | derived                             | Used for jump-out links to Cockpit; multi-engine setups use per-engine `cockpitUrl` instead                                                   |
+| `CAMUNDA_AUTH_TYPE`                     | `none`                              | `basic`, `bearer`, or `none`                                                                                                                  |
+| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` | —                                   | Required for `basic`                                                                                                                          |
+| `CAMUNDA_TOKEN`                         | —                                   | Required for `bearer`                                                                                                                         |
+| `CAMUNDA_INCIDENT_ISSUE_REPO`           | —                                   | Default `owner/repo` for the GitHub-issue tool                                                                                                |
+| `PROMETHEUS_URL`                        | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source                                                                                               |
 
 The engine container takes its own variables (see `docker/docker-compose.yml`):
 `METRICS_ENABLED` (default `true`), `ENGINE_ID` (the `engine_id` metric label),

@@ -69,17 +69,17 @@ When a page approaches the limit, condense — don't extend.
 Treat any of the following as a signal to re-read the matching page and update
 it:
 
-| Code change                                                | Page to revisit   |
-| ---------------------------------------------------------- | ----------------- |
-| New / removed module under `modules/`                      | `architecture.md` |
-| Change to data flow, external system, or widget pipeline   | `architecture.md` |
-| New / changed `pnpm` script affecting dev workflow         | `developer.md`    |
-| Bumped Node / pnpm / Java version, new prerequisite        | `developer.md`    |
-| New / changed environment variable                         | `operations.md`   |
-| `Dockerfile` or `docker-compose.yml` change with op impact | `operations.md`   |
-| New CI job or deployment recipe                            | `operations.md`   |
-| New or removed skill under `.claude/skills/`               | `usage.md`        |
-| New top-level capability exposed to MCP hosts              | `usage.md`        |
+| Code change                                                  | Page to revisit   |
+| ------------------------------------------------------------ | ----------------- |
+| New / removed workspace package under `apps/` or `packages/` | `architecture.md` |
+| Change to data flow, external system, or widget pipeline     | `architecture.md` |
+| New / changed `pnpm` script affecting dev workflow           | `developer.md`    |
+| Bumped Node / pnpm / Java version, new prerequisite          | `developer.md`    |
+| New / changed environment variable                           | `operations.md`   |
+| `Dockerfile` or `docker-compose.yml` change with op impact   | `operations.md`   |
+| New CI job or deployment recipe                              | `operations.md`   |
+| New or removed skill under `.claude/skills/`                 | `usage.md`        |
+| New top-level capability exposed to MCP hosts                | `usage.md`        |
 
 If you ship one of these without touching the docs, the docs are stale.
 
