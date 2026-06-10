@@ -274,6 +274,7 @@ function buildCockpitInstanceLink(args: {
 export function registerIncidentIssueTools(register: Register, config: IncidentIssueConfig) {
   register({
     name: "camunda7_format_incident_issue",
+    category: "incidents",
     description:
       "Build a GitHub-issue payload (title, body, labels, repository) from a Camunda 7 / CIB Seven incident. " +
       "Does NOT create the issue — pass the returned payload to the GitHub MCP server's `create_issue` tool.",

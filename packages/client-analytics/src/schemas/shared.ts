@@ -14,6 +14,6 @@ export const engineFilterShape = {
     .union([z.string(), z.array(z.string())])
     .optional()
     .describe(
-      "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use `camunda7_list_engines` to discover ids.",
+      'Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action "list") to discover ids.',
     ),
 }

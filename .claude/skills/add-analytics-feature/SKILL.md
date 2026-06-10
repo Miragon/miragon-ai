@@ -91,6 +91,7 @@ type Register = ReturnType<typeof createToolRegistrar<PrometheusClient>>
 export function registerElementTools(register: Register) {
   register({
     name: "analytics_element_bottleneck",
+    category: "analytics",
     description: "Rank activities by execution-time contribution and incident rate …",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: schemas.elementBottleneckInput.shape,

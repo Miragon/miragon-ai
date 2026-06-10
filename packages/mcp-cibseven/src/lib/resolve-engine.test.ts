@@ -76,7 +76,7 @@ describe("resolveStepEngine", () => {
     // The message must name the selectable ids — the error path serialises
     // only code + message, so this is the LLM's one shot at seeing them.
     expect(() => resolveStepEngine(appConfigFor(MULTI))).toThrow(
-      "No engine selected for this session. Available engines: alpha, beta. Call camunda7_select_engine first.",
+      'No engine selected for this session. Available engines: alpha, beta. Call camunda7_engine with action "select" first.',
     )
   })
 

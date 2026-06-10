@@ -54,6 +54,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerProcessInstanceTools(register: Register) {
   register({
     name: "camunda7_list_process_instances",
+    category: "process-instances",
     description: "List running process instances with optional filters.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listProcessInstancesInput.shape, ...engineParamShape },
@@ -69,6 +70,9 @@ export function registerProcessInstanceTools(register: Register) {
 
 Non-negotiables:
 
+- Every tool carries a `category` matching its domain file name (e.g.
+  `"process-instances"`, `"tasks"` — `task-form.ts` uses `"tasks"`,
+  `incident-issue.ts` uses `"incidents"`).
 - `inputSchema` spreads `...engineParamShape` so every tool accepts the per-call
   `engine` override.
 - `handler` is wrapped in `withEngine(...)` — never construct, cache, or import a client
@@ -76,6 +80,10 @@ Non-negotiables:
 - Tool names are `camunda7_<verb>_<noun>` in snake_case.
 - Write tools that only flip state return a small `{ success: true, … }` object instead
   of the raw (often empty) REST response.
+- Destructive/admin-grade tools (delete, modify, suspension, deployments, migrations,
+  batches) must be added to `ADMIN_ONLY_TOOLS` in `src/lib/toolsets.ts` so the
+  `camunda7:read-only|operations|admin` toolset filtering stays correct — `read-only`
+  membership is derived from `readOnlyHint: true`.
 
 ### Annotation conventions
 

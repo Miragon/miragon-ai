@@ -140,7 +140,7 @@ The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP cl
 | Variable                      | Default                             | Description                                                                                                                                                                                                                                                                                       |
 | ----------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                        | `8400`                              | HTTP port the MCP server listens on                                                                                                                                                                                                                                                               |
-| `MCP_ACTIVE_MODULES`          | all                                 | Comma-separated module list (`camunda7,analytics`)                                                                                                                                                                                                                                                |
+| `MCP_ACTIVE_MODULES`          | all                                 | Comma-separated module list (`camunda7,analytics`). Each module optionally takes a toolset suffix, e.g. `camunda7:read-only` — see "Toolsets" below.                                                                                                                                              |
 | `CAMUNDA_ENGINES_FILE`        | —                                   | Path to a JSON file containing the engine list `[{id, baseUrl, cockpitUrl?}, ...]`. Preferred at scale (ConfigMap workflows).                                                                                                                                                                     |
 | `CAMUNDA_ENGINES_JSON`        | —                                   | Inline JSON array of `{id, baseUrl, cockpitUrl?}` — see "Multi-engine setup" below. Takes precedence over `CAMUNDA_BASE_URL`; ignored when `CAMUNDA_ENGINES_FILE` is set.                                                                                                                         |
 | `CAMUNDA_BASE_URL`            | `http://localhost:8410/engine-rest` | Single-engine back-compat. When set without `CAMUNDA_ENGINES_*`, synthesized into a one-entry registry with id `default`.                                                                                                                                                                         |
@@ -177,13 +177,13 @@ CAMUNDA_ENGINES_FILE=/etc/automation-mcp/engines.json
 
 `CAMUNDA_AUTH_TYPE` / `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` / `CAMUNDA_TOKEN` still apply globally — same auth across all engines.
 
-**3. Pick an engine per MCP session.** The LLM client discovers and picks engines via three new tools:
+**3. Pick an engine per MCP session.** The LLM client discovers and picks engines via the `camunda7_engine` tool:
 
-- `camunda7_list_engines` — returns the registry.
-- `camunda7_select_engine({id: "prod-a"})` — sets the sticky engine for this session.
-- `camunda7_current_engine` — reports the current selection.
+- `camunda7_engine({action: "list"})` — returns the registry plus the current selection.
+- `camunda7_engine({action: "select", engineId: "prod-a"})` — sets the sticky engine for this session.
+- `camunda7_engine({action: "current"})` — reports the current selection.
 
-When more than one engine is configured, the first operations tool call without a prior selection returns a structured error `{code: "ENGINE_NOT_SELECTED", availableEngines: [...]}` — the host typically reacts by calling `select_engine` and retrying the original call. With only one engine configured (or the legacy `CAMUNDA_BASE_URL` path), the selection is implicit and no `select_engine` is needed.
+When more than one engine is configured, the first operations tool call without a prior selection returns a structured error `{code: "ENGINE_NOT_SELECTED", availableEngines: [...]}` — the host typically reacts by selecting an engine and retrying the original call. With only one engine configured (or the legacy `CAMUNDA_BASE_URL` path), the selection is implicit and no selection is needed.
 
 Every operations tool also takes an optional `engine` parameter that overrides the session pick for a single call without changing the sticky selection.
 
@@ -209,11 +209,11 @@ pnpm -F @miragon-ai/mcp-gateway start
 
 ### Camunda7 module (BPM operations tools + widgets)
 
-All tools are prefixed with `camunda7_`:
+All tools are prefixed with `camunda7_` and carry a `category` matching their domain (`engines`, `process-definitions`, `process-instances`, `tasks`, `external-tasks`, `messages-signals`, `deployments`, `incidents`, `jobs`, `history`, `migrations`):
 
-- Engine selection: `list_engines`, `select_engine`, `current_engine` — required when more than one engine is configured (see "Multi-engine setup" above).
+- Engine selection: `engine` (actions `list` / `select` / `current`) — required when more than one engine is configured (see "Multi-engine setup" above).
 - Process definitions: `list_process_definitions`, `get_process_definition_xml`
-- Process instances: `start_process_instance`, `list_process_instances`, `get_process_instance`, `delete_process_instance`, `modify_process_instance`, `get_activity_instance_tree`, `get_process_instance_variables`, `set_process_instance_variable`
+- Process instances: `start_process_instance`, `list_process_instances`, `get_process_instance`, `delete_process_instance`, `modify_process_instance`, `set_process_instance_suspension`, `get_activity_instance_tree`, `get_process_instance_variables`, `set_process_instance_variable`
 - User tasks: `list_tasks`, `get_task`, `claim_task`, `unclaim_task`, `complete_task`, `set_task_assignee`, `get_task_variables`
 - External tasks: `fetch_and_lock`, `complete_external_task`, `handle_external_task_failure`
 - Messages / signals: `correlate_message`, `throw_signal`
@@ -223,9 +223,21 @@ All tools are prefixed with `camunda7_`:
 - History: `query_historic_process_instances`, `query_historic_activity_instances`, `query_historic_task_instances`, `query_historic_variable_instances`
 - Widget tools (return data + render an MCP App): `open_cockpit`, `show_cockpit_dashboard`, `show_process_list`, `show_process_detail`, `show_process_instances`, `show_instance_detail`, `show_incidents_dashboard`, `show_process_incidents`, `show_incident_detail`, `show_history_timeline`, `show_bpmn_viewer`, `show_job_panel` — each cockpit view is additionally backed by a data-only `*_data` feed tool that the widgets call for in-widget refreshes
 
+#### Toolsets
+
+A deployment can narrow the camunda7 tool surface to its use case via a toolset suffix in `MCP_ACTIVE_MODULES`:
+
+| Toolset               | Surface                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `camunda7:read-only`  | Queries only (`list_*`, `get_*`, `query_*`, `format_incident_issue`) plus the `engine` selection tool — monitoring without write access                 |
+| `camunda7:operations` | Read-only plus day-to-day engine writes: `start_process_instance`, `complete_task`, `claim_task`, variables, `set_job_retries`, messages, signals       |
+| `camunda7:admin`      | Everything, additionally `delete_/modify_process_instance`, `set_process_instance_suspension`, `create_deployment`, migrations, `set_job_retries_batch` |
+
+Without a suffix all tools are exposed (unchanged default); an unknown toolset logs a warning and falls back to all tools. The filtering rule lives in `packages/mcp-cibseven/src/lib/toolsets.ts`. Widget tools and `*_data` feeds are read-only views and are not filtered.
+
 ### Analytics module (analytics tools + dashboards)
 
-All tools are prefixed with `analytics_` and query Prometheus over PromQL:
+All tools are prefixed with `analytics_` (category `analytics`) and query Prometheus over PromQL:
 
 - `analyze_process_performance`, `compare_execution_periods`
 - `element_bottleneck`, `find_failed_instances`

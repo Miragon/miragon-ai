@@ -32,6 +32,7 @@ export interface BuildTaskFormSchemaOptions {
 export function registerTaskFormTools(register: Register) {
   register({
     name: "camunda7_get_task_form",
+    category: "tasks",
     description:
       "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`). Returns form fields with current variable values pre-filled. Fields marked readonly are for context only and will not be submitted. Returns an empty fields array when no form is defined on the task.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },

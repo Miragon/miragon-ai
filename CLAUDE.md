@@ -58,16 +58,20 @@ render widgets manually.
 1. **New operations tools go through the registrar — never raw `server.tool()`.** Add the
    Zod input schema in `packages/client-cibseven/src/schemas/`, then register the tool in
    `packages/mcp-cibseven/src/tools/<domain>.ts` via the `register` callback created by
-   `createToolRegistrar` (wired in `src/tools/index.ts`). Spread `...engineParamShape`
-   into the input schema and wrap the handler in `withEngine(...)` (both from
-   `src/lib/with-engine.ts`). See `camunda7_list_process_instances` in
+   `createToolRegistrar` (wired in `src/tools/index.ts`). Every registrar tool carries a
+   `category` matching its domain file (e.g. `"process-instances"`, `"tasks"`;
+   `"analytics"` for the analytics module). Spread `...engineParamShape` into the input
+   schema and wrap the handler in `withEngine(...)` (both from `src/lib/with-engine.ts`).
+   See `camunda7_list_process_instances` in
    `packages/mcp-cibseven/src/tools/process-instances.ts` for the canonical shape.
+   Destructive/admin tools must also be listed in `src/lib/toolsets.ts` (`ADMIN_ONLY_TOOLS`)
+   so the `camunda7:read-only|operations|admin` toolset filtering stays correct.
 
 2. **Never talk to an engine directly.** All engine access goes through
    `resolveEngine`/`withEngine` (`packages/mcp-cibseven/src/lib/`), which implements the
    multi-engine routing precedence: per-call `engine` override > sticky session selection
-   (`camunda7_select_engine`) > the single configured default. Constructing or caching a
-   client yourself breaks multi-engine routing.
+   (`camunda7_engine`, action `"select"`) > the single configured default. Constructing or
+   caching a client yourself breaks multi-engine routing.
 
 3. **Widget registration is a four-link chain** — a widget that misses a link is silently
    absent somewhere:

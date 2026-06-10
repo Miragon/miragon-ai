@@ -27,6 +27,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerTaskTools(register: Register) {
   register({
     name: "camunda7_list_tasks",
+    category: "tasks",
     description:
       "List user tasks with optional filters. Each task carries ID, name, assignee, process info, and timestamps. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -59,6 +60,7 @@ export function registerTaskTools(register: Register) {
 
   register({
     name: "camunda7_get_task",
+    category: "tasks",
     description: "Get details of a single user task by ID.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getTaskInput.shape, ...engineParamShape },
@@ -67,6 +69,7 @@ export function registerTaskTools(register: Register) {
 
   register({
     name: "camunda7_claim_task",
+    category: "tasks",
     description: "Claim a user task for a specific user.",
     annotations: { openWorldHint: true },
     inputSchema: { ...claimTaskInput.shape, ...engineParamShape },
@@ -82,6 +85,7 @@ export function registerTaskTools(register: Register) {
 
   register({
     name: "camunda7_unclaim_task",
+    category: "tasks",
     description: "Unclaim (release) a user task, removing the current assignee.",
     annotations: { openWorldHint: true },
     inputSchema: { ...unclaimTaskInput.shape, ...engineParamShape },
@@ -93,6 +97,7 @@ export function registerTaskTools(register: Register) {
 
   register({
     name: "camunda7_complete_task",
+    category: "tasks",
     description: "Complete a user task by ID. Optionally set variables when completing.",
     annotations: { openWorldHint: true },
     inputSchema: { ...completeTaskInput.shape, ...engineParamShape },
@@ -112,6 +117,7 @@ export function registerTaskTools(register: Register) {
 
   register({
     name: "camunda7_set_task_assignee",
+    category: "tasks",
     description: "Set the assignee of a user task.",
     annotations: { openWorldHint: true },
     inputSchema: { ...setTaskAssigneeInput.shape, ...engineParamShape },
@@ -127,6 +133,7 @@ export function registerTaskTools(register: Register) {
 
   register({
     name: "camunda7_get_task_variables",
+    category: "tasks",
     description: "Get all variables of a user task.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getTaskVariablesInput.shape, ...engineParamShape },

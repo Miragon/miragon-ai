@@ -10,6 +10,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerIncidentTools(register: Register) {
   register({
     name: "camunda7_list_incidents",
+    category: "incidents",
     description:
       "List incidents (errors) in the engine: failed jobs, external task failures, etc. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -40,6 +41,7 @@ export function registerIncidentTools(register: Register) {
 
   register({
     name: "camunda7_resolve_incident",
+    category: "incidents",
     description: "Resolve an incident by ID.",
     annotations: { openWorldHint: true },
     inputSchema: { ...resolveIncidentInput.shape, ...engineParamShape },

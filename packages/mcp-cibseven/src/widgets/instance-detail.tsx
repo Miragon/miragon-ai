@@ -109,8 +109,7 @@ export function InstanceDetailWidget({
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
-  const suspendMutation = useToolMutation("camunda7_suspend_process_instance")
-  const activateMutation = useToolMutation("camunda7_activate_process_instance")
+  const suspensionMutation = useToolMutation("camunda7_set_process_instance_suspension")
   const cancelMutation = useToolMutation("camunda7_delete_process_instance")
   const { data, loading, error } = useViewData<InstanceDetailData>(
     initialData,
@@ -156,8 +155,7 @@ export function InstanceDetailWidget({
   const { instance, activityTree, variables, incidents, bpmnXml } = data
   const isSuspended = suspendedOverride ?? instance.suspended ?? false
   const isActionable = !instance.ended && !cancelled
-  const isMutatingInstance =
-    suspendMutation.isPending || activateMutation.isPending || cancelMutation.isPending
+  const isMutatingInstance = suspensionMutation.isPending || cancelMutation.isPending
 
   function handleResolve(incidentId: string) {
     resolveMutation.mutate(
@@ -172,9 +170,8 @@ export function InstanceDetailWidget({
   }
 
   function handleSuspendToggle() {
-    const mutation = isSuspended ? activateMutation : suspendMutation
-    mutation.mutate(
-      { processInstanceId: instance.id },
+    suspensionMutation.mutate(
+      { processInstanceId: instance.id, suspended: !isSuspended },
       {
         onSuccess: () => {
           setSuspendedOverride(!isSuspended)
@@ -224,7 +221,7 @@ export function InstanceDetailWidget({
                   ? "suspended"
                   : "running"
           }; ${activeIncidents.length} open incident${activeIncidents.length === 1 ? "" : "s"}.`,
-          `Act via camunda7_resolve_incident / camunda7_set_job_retries / camunda7_suspend_process_instance / camunda7_delete_process_instance / camunda7_modify_process_instance. For root cause, compare with other instances via camunda7_list_incidents + camunda7_query_historic_activity_instances.`,
+          `Act via camunda7_resolve_incident / camunda7_set_job_retries / camunda7_set_process_instance_suspension / camunda7_delete_process_instance / camunda7_modify_process_instance. For root cause, compare with other instances via camunda7_list_incidents + camunda7_query_historic_activity_instances.`,
         ].join(" ")}
       />
       <div className="flex flex-wrap items-start justify-between gap-3">

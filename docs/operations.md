@@ -35,7 +35,7 @@ uses `auth.mode: "oauth2"`; it doubles as the OAuth callback base URL.
 | --------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                                  | `8400`                              | HTTP port for the MCP transport                                                                                                               |
 | `MCP_URL`                               | —                                   | Public base URL the server advertises (resource URIs, OAuth callbacks)                                                                        |
-| `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated; e.g. `camunda7,analytics`                                                                                                    |
+| `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated `module` or `module:toolset` entries; e.g. `camunda7:read-only,analytics`                                                     |
 | `MCP_PROXIES`                           | —                                   | JSON array of upstream MCP proxies, `[{name, label, upstreamUrl, auth}]` per the `ProxyConfigSchema` of `@miragon/mcp-toolkit-proxy-contract` |
 | `CAMUNDA_ENGINES_FILE`                  | —                                   | Path to a JSON file with the engine list `[{id, baseUrl, cockpitUrl?}, ...]`; highest precedence                                              |
 | `CAMUNDA_ENGINES_JSON`                  | —                                   | Same engine array as inline JSON; ignored when `CAMUNDA_ENGINES_FILE` is set                                                                  |
@@ -82,6 +82,12 @@ Disable any module by listing only the ones you want:
 ```bash
 MCP_ACTIVE_MODULES=camunda7
 ```
+
+The camunda7 module also takes a toolset suffix to narrow the advertised tool
+surface: `camunda7:read-only` (queries + engine selection only),
+`camunda7:operations` (adds start/complete/claim/variables/retries/messages),
+`camunda7:admin` (everything, incl. delete/modify/suspension, deployments,
+migrations). No suffix exposes all tools; unknown toolsets warn and fail open.
 
 ## Observability
 

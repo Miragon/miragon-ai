@@ -12,6 +12,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerMigrationTools(register: Register) {
   register({
     name: "camunda7_create_migration_plan",
+    category: "migrations",
     description:
       "Generate a migration plan from a source process definition to a target process definition. The plan contains activity-id mappings for activities that exist in both versions; pass it verbatim to camunda7_migrate_process_instances_async.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -30,6 +31,7 @@ export function registerMigrationTools(register: Register) {
 
   register({
     name: "camunda7_migrate_process_instances_async",
+    category: "migrations",
     description:
       "Execute a migration plan asynchronously (as a batch) over multiple process instances. Returns the batch id; per-instance progress and failures are tracked on the batch.",
     annotations: { destructiveHint: true, openWorldHint: true },

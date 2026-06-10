@@ -9,8 +9,7 @@ export {
   modifyProcessInstanceInput,
   getProcessInstanceVariablesInput,
   setProcessInstanceVariableInput,
-  suspendProcessInstanceInput,
-  activateProcessInstanceInput,
+  setProcessInstanceSuspensionInput,
 } from "./process-instances.js"
 export {
   listTasksInput,

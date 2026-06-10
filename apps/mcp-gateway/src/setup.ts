@@ -25,6 +25,7 @@ const camunda7ConfigSchema = z.object({
   username: z.string().optional(),
   password: z.string().optional(),
   token: z.string().optional(),
+  toolset: z.string().optional(),
   incidentIssueRepository: z
     .string()
     .regex(/^[^/\s]+\/[^/\s]+$/, "Expected `owner/repo`")
@@ -44,6 +45,8 @@ const MODULE_REGISTRY: Record<
   {
     createPlugin: (config: Record<string, unknown>, shared: SharedResources) => AppPlugin<MCPServer>
     configFromEnv: () => Record<string, unknown>
+    /** Whether the module understands the `module:toolset` suffix syntax. */
+    supportsToolsets: boolean
   }
 > = {
   camunda7: {
@@ -56,6 +59,7 @@ const MODULE_REGISTRY: Record<
       token: process.env.CAMUNDA_TOKEN,
       incidentIssueRepository: process.env.CAMUNDA_INCIDENT_ISSUE_REPO,
     }),
+    supportsToolsets: true,
   },
   analytics: {
     createPlugin: (c, shared) =>
@@ -66,6 +70,7 @@ const MODULE_REGISTRY: Record<
     configFromEnv: () => ({
       url: process.env.PROMETHEUS_URL,
     }),
+    supportsToolsets: false,
   },
 }
 
@@ -101,18 +106,33 @@ function loadEnginesFromEnv(): unknown {
   return [{ id: "default", baseUrl: "http://localhost:8410/engine-rest" }]
 }
 
-function getActiveModuleNames(): string[] {
+interface ActiveModule {
+  name: string
+  /**
+   * Optional toolset suffix from the `module:toolset` syntax, e.g.
+   * `camunda7:read-only`. Validated by the module itself (the camunda7 plugin
+   * warns + exposes all tools for unknown toolsets — fail-open, consistent
+   * with the unknown-module handling here).
+   */
+  toolset?: string
+}
+
+function getActiveModules(): ActiveModule[] {
   const envValue = process.env.MCP_ACTIVE_MODULES?.trim()
 
   if (!envValue || envValue === "all") {
-    return Object.keys(MODULE_REGISTRY)
+    return Object.keys(MODULE_REGISTRY).map((name) => ({ name }))
   }
 
   return envValue
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)
-    .filter((name) => {
+    .map((entry): ActiveModule => {
+      const [name, toolset] = entry.split(":", 2)
+      return toolset ? { name, toolset } : { name }
+    })
+    .filter(({ name }) => {
       if (!MODULE_REGISTRY[name]) {
         console.warn(`[automation-mcp] Unknown module "${name}" in MCP_ACTIVE_MODULES — skipping`)
         return false
@@ -122,10 +142,21 @@ function getActiveModuleNames(): string[] {
 }
 
 function getActiveAppEntries(): AppConfigEntry[] {
-  return getActiveModuleNames().map((name) => ({
-    app: name,
-    config: MODULE_REGISTRY[name].configFromEnv(),
-  }))
+  return getActiveModules().map(({ name, toolset }) => {
+    if (toolset && !MODULE_REGISTRY[name].supportsToolsets) {
+      console.warn(
+        `[automation-mcp] Module "${name}" has no toolsets — ignoring ":${toolset}" and exposing all tools`,
+      )
+      toolset = undefined
+    }
+    return {
+      app: name,
+      config: {
+        ...MODULE_REGISTRY[name].configFromEnv(),
+        ...(toolset ? { toolset } : {}),
+      },
+    }
+  })
 }
 
 export function getAppConfig(): AppConfig {

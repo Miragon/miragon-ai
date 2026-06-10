@@ -8,6 +8,7 @@ type Register = ReturnType<typeof createToolRegistrar<PrometheusClient>>
 export function registerElementTools(register: Register) {
   register({
     name: "analytics_element_bottleneck",
+    category: "analytics",
     description:
       "Rank activities by execution-time contribution and incident rate over a rolling window, from process metrics. Activities with fewer than `minBucketSize` executions are suppressed. Note: queue/wait time is not available from metrics.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },

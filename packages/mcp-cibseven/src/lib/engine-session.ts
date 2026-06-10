@@ -3,8 +3,8 @@ import { getRequestContext } from "mcp-use/server"
 /**
  * How long a session's engine selection survives without being re-set.
  * `mcp-use` exposes no session-close hook to plugins, so without eviction the
- * module-global map below would grow with every MCP session that ever called
- * `camunda7_select_engine`. 24h comfortably outlives any real session.
+ * module-global map below would grow with every MCP session that ever selected
+ * an engine via `camunda7_engine`. 24h comfortably outlives any real session.
  */
 export const SESSION_TTL_MS = 24 * 60 * 60 * 1000
 

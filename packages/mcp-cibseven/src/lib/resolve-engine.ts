@@ -20,8 +20,8 @@ export interface EngineRegistry {
  * The message lists the available engine ids because the error path only
  * serialises code + message (the structured `availableEngines` field never
  * reaches the model) — naming them here saves the LLM a
- * `camunda7_list_engines` roundtrip before it can pick one and call
- * `camunda7_select_engine`.
+ * `camunda7_engine` (action "list") roundtrip before it can pick one and
+ * select it.
  */
 export class EngineNotSelectedError extends Error {
   readonly code = "ENGINE_NOT_SELECTED" as const
@@ -30,7 +30,7 @@ export class EngineNotSelectedError extends Error {
     super(
       `No engine selected for this session. Available engines: ${availableEngines
         .map((e) => e.id)
-        .join(", ")}. Call camunda7_select_engine first.`,
+        .join(", ")}. Call camunda7_engine with action "select" first.`,
     )
     this.name = "EngineNotSelectedError"
     this.availableEngines = availableEngines

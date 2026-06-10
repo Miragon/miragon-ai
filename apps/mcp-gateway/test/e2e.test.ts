@@ -111,8 +111,8 @@ describe("mcp-gateway E2E smoke", () => {
     }
   })
 
-  it("answers camunda7_list_engines from the engine registry without a live engine", async () => {
-    const result = await session.callTool("camunda7_list_engines", {})
+  it("answers camunda7_engine (action list) from the engine registry without a live engine", async () => {
+    const result = await session.callTool("camunda7_engine", { action: "list" })
     expect(result.isError).toBeFalsy()
     expect(textPayload(result)).toEqual({
       engines: [{ id: "default", baseUrl: "http://localhost:1" }],
@@ -126,5 +126,89 @@ describe("mcp-gateway E2E smoke", () => {
     const manifest = JSON.stringify(textPayload(result))
     expect(manifest).toContain("camunda7")
     expect(manifest).toContain("analytics")
+  })
+})
+
+/**
+ * Toolset negative probe: a `camunda7:read-only` deployment must not advertise
+ * any destructive or engine-write tool. Boots a second gateway instance so the
+ * env-driven `module:toolset` wiring (setup.ts → plugin config → registrar
+ * filter) is covered end to end, not just the filter in isolation.
+ */
+describe("mcp-gateway E2E toolset filtering (camunda7:read-only)", () => {
+  let app: McpServerInstance<false>
+  let client: MCPClient
+  let session: MCPSession
+
+  beforeAll(async () => {
+    vi.stubEnv("CAMUNDA_BASE_URL", "http://localhost:1")
+    vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
+    vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
+    vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
+    vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:read-only")
+    vi.stubEnv("MCP_PROXIES", undefined)
+
+    app = await createFrameworkApp({
+      name: "automation-mcp",
+      version: "0.1.0",
+      host: "127.0.0.1",
+      plugins: getPlugins() as AppPlugin[],
+      proxies: parseProxyConfigEnv(process.env.MCP_PROXIES),
+      appConfig: getAppConfig(),
+      app: {
+        resourceUri: "ui://automation-mcp/mcp-app.e2e-read-only.html",
+        htmlPath: FIXTURE_HTML,
+      },
+    })
+    const port = await getFreePort()
+    await app.listen(port)
+
+    client = MCPClient.fromDict({
+      mcpServers: { gateway: { url: `http://127.0.0.1:${port}/mcp` } },
+    })
+    session = await client.createSession("gateway")
+  })
+
+  afterAll(async () => {
+    await client?.closeAllSessions()
+    await app?.close()
+    vi.unstubAllEnvs()
+  })
+
+  it("advertises no destructive or engine-write tools, but keeps queries + engine selection", async () => {
+    const tools = await session.listTools()
+    const names = tools.map((t) => t.name)
+
+    const forbidden = [
+      // admin-only (destructive / engine-content-changing)
+      "camunda7_delete_process_instance",
+      "camunda7_modify_process_instance",
+      "camunda7_set_process_instance_suspension",
+      "camunda7_create_deployment",
+      "camunda7_create_migration_plan",
+      "camunda7_migrate_process_instances_async",
+      "camunda7_set_job_retries_batch",
+      // engine writes (operations toolset only)
+      "camunda7_start_process_instance",
+      "camunda7_complete_task",
+      "camunda7_claim_task",
+      "camunda7_set_job_retries",
+      "camunda7_correlate_message",
+      "camunda7_throw_signal",
+    ]
+    for (const tool of forbidden) {
+      expect(names, `${tool} must not be advertised in camunda7:read-only`).not.toContain(tool)
+    }
+
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "camunda7_engine",
+        "camunda7_list_process_instances",
+        "camunda7_list_incidents",
+        "camunda7_query_historic_process_instances",
+      ]),
+    )
+    // The analytics module was not activated alongside.
+    expect(names.some((n) => n.startsWith("analytics_"))).toBe(false)
   })
 })

@@ -196,7 +196,7 @@ export const definition: AppDefinition = {
     },
     {
       // Consolidated client-side cockpit app (camunda7_open_cockpit). Bootstraps
-      // itself from camunda7_list_engines and the per-view data feeds.
+      // itself from camunda7_engine (action "list") and the per-view data feeds.
       id: "camunda7:cockpit-app",
       requires: [],
       size: "full",

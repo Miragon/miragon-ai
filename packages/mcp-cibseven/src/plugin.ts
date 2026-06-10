@@ -8,6 +8,7 @@ import { registerEngineTools } from "./tools/engines.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"
 import type { EngineEntry, EngineRegistry } from "./lib/resolve-engine.js"
+import { withToolsetFilter } from "./lib/toolsets.js"
 
 export interface Camunda7PluginConfig {
   engines: EngineEntry[]
@@ -15,6 +16,12 @@ export interface Camunda7PluginConfig {
   username?: string
   password?: string
   token?: string
+  /**
+   * Optional named tool subset to expose (`read-only`, `operations`, `admin`
+   * — see `lib/toolsets.ts` for the rule). Omitted = all tools. Unknown
+   * values warn and fail open to all tools.
+   */
+  toolset?: string
   /**
    * `owner/repo` of the GitHub repository where engine incidents should be filed.
    * Used as the default for the `camunda7_format_incident_issue` tool and the
@@ -57,9 +64,12 @@ export function createPlugin(config: Camunda7PluginConfig): AppPlugin<MCPServer>
       engines: config.engines,
     },
     registerTools: (server) => {
-      registerEngineTools(server, registry)
-      registerTools(server, registry)
-      const register = createToolRegistrar(server, registry)
+      // One registrar for the whole module, wrapped in the toolset filter so a
+      // `camunda7:read-only` / `:operations` / `:admin` deployment only
+      // advertises its subset (no toolset = everything, unchanged default).
+      const register = withToolsetFilter(createToolRegistrar(server, registry), config.toolset)
+      registerEngineTools(register)
+      registerTools(register)
       registerIncidentIssueTools(register, incidentIssueConfig)
       registerIncidentIssuePrompt(server, incidentIssueConfig)
     },

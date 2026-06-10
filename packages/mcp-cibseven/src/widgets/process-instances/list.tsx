@@ -192,7 +192,7 @@ export function ProcessInstancesView({
           `Viewing ${paged.items.length} of ${paged.total} running instances of process "${title}" (${data.processDefinitionKey}) on engine ${resolvedEngine}${
             activeChip !== CHIP_ALL ? ` — filtered to "${activeChip}"` : ""
           }${debouncedSearch ? ` — business key matching "${debouncedSearch}"` : ""}.`,
-          `Drill into one with camunda7_show_instance_detail (processInstanceId); act with camunda7_suspend_process_instance / camunda7_activate_process_instance / camunda7_delete_process_instance / camunda7_set_job_retries.`,
+          `Drill into one with camunda7_show_instance_detail (processInstanceId); act with camunda7_set_process_instance_suspension (suspended true/false) / camunda7_delete_process_instance / camunda7_set_job_retries.`,
         ].join(" ")}
       />
       <WidgetHeader

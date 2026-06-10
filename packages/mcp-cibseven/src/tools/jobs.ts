@@ -19,6 +19,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerJobTools(register: Register) {
   register({
     name: "camunda7_list_jobs",
+    category: "jobs",
     description:
       "List jobs (timers, async continuations) with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -52,6 +53,7 @@ export function registerJobTools(register: Register) {
 
   register({
     name: "camunda7_set_job_retries",
+    category: "jobs",
     description:
       "Set the number of retries for a failed job. Setting retries > 0 will re-execute the job.",
     annotations: { openWorldHint: true },
@@ -68,6 +70,7 @@ export function registerJobTools(register: Register) {
 
   register({
     name: "camunda7_set_job_retries_batch",
+    category: "jobs",
     description:
       "Create a batch job to set retries on multiple jobs at once. Returns the batch id; progress and failures are tracked on the batch, not inline.",
     annotations: { destructiveHint: true, openWorldHint: true },

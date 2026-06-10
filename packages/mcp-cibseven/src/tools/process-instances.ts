@@ -7,8 +7,7 @@ import {
   modifyProcessInstanceInput,
   getProcessInstanceVariablesInput,
   setProcessInstanceVariableInput,
-  suspendProcessInstanceInput,
-  activateProcessInstanceInput,
+  setProcessInstanceSuspensionInput,
 } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
@@ -32,6 +31,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerProcessInstanceTools(register: Register) {
   register({
     name: "camunda7_start_process_instance",
+    category: "process-instances",
     description:
       "Start a new process instance by process definition key. Optionally set a business key and initial variables.",
     annotations: { openWorldHint: true },
@@ -52,6 +52,7 @@ export function registerProcessInstanceTools(register: Register) {
 
   register({
     name: "camunda7_list_process_instances",
+    category: "process-instances",
     description:
       "List running process instances with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -83,6 +84,7 @@ export function registerProcessInstanceTools(register: Register) {
 
   register({
     name: "camunda7_get_process_instance",
+    category: "process-instances",
     description: "Get details of a single process instance by ID.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getProcessInstanceInput.shape, ...engineParamShape },
@@ -93,6 +95,7 @@ export function registerProcessInstanceTools(register: Register) {
 
   register({
     name: "camunda7_get_activity_instance_tree",
+    category: "process-instances",
     description:
       "Get the activity instance tree of a running process instance. Shows which activities are currently active.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -104,6 +107,7 @@ export function registerProcessInstanceTools(register: Register) {
 
   register({
     name: "camunda7_delete_process_instance",
+    category: "process-instances",
     description: "Delete (cancel) a running process instance by ID. This action is irreversible.",
     annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: { ...deleteProcessInstanceInput.shape, ...engineParamShape },
@@ -115,6 +119,7 @@ export function registerProcessInstanceTools(register: Register) {
 
   register({
     name: "camunda7_modify_process_instance",
+    category: "process-instances",
     description:
       "Modify a running process instance by moving tokens. Supports cancel, startBeforeActivity, startAfterActivity, and startTransition instructions.",
     annotations: { destructiveHint: true, openWorldHint: true },
@@ -135,6 +140,7 @@ export function registerProcessInstanceTools(register: Register) {
 
   register({
     name: "camunda7_get_process_instance_variables",
+    category: "process-instances",
     description: "Get all variables of a process instance.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getProcessInstanceVariablesInput.shape, ...engineParamShape },
@@ -145,6 +151,7 @@ export function registerProcessInstanceTools(register: Register) {
 
   register({
     name: "camunda7_set_process_instance_variable",
+    category: "process-instances",
     description: "Set a single variable on a process instance.",
     annotations: { openWorldHint: true },
     inputSchema: { ...setProcessInstanceVariableInput.shape, ...engineParamShape },
@@ -163,33 +170,23 @@ export function registerProcessInstanceTools(register: Register) {
   })
 
   register({
-    name: "camunda7_suspend_process_instance",
+    name: "camunda7_set_process_instance_suspension",
+    category: "process-instances",
     description:
-      "Suspend a running process instance. Jobs, timers, and message correlations on the instance are frozen until it is activated again.",
+      "Set the suspension state of a process instance. suspended=true suspends it (jobs, timers, and message correlations are frozen); suspended=false activates (unsuspends) it again.",
     annotations: { openWorldHint: true },
-    inputSchema: { ...suspendProcessInstanceInput.shape, ...engineParamShape },
+    inputSchema: { ...setProcessInstanceSuspensionInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await updateSuspensionStateById({
         client,
         path: { id: args.processInstanceId },
-        body: { suspended: true },
+        body: { suspended: args.suspended },
       })
-      return { success: true, processInstanceId: args.processInstanceId, suspended: true }
-    }),
-  })
-
-  register({
-    name: "camunda7_activate_process_instance",
-    description: "Activate (unsuspend) a suspended process instance.",
-    annotations: { openWorldHint: true },
-    inputSchema: { ...activateProcessInstanceInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) => {
-      await updateSuspensionStateById({
-        client,
-        path: { id: args.processInstanceId },
-        body: { suspended: false },
-      })
-      return { success: true, processInstanceId: args.processInstanceId, suspended: false }
+      return {
+        success: true,
+        processInstanceId: args.processInstanceId,
+        suspended: args.suspended,
+      }
     }),
   })
 }

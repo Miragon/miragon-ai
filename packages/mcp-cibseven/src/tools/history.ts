@@ -24,6 +24,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerHistoryTools(register: Register) {
   register({
     name: "camunda7_query_historic_process_instances",
+    category: "history",
     description:
       "Query historic process instances (completed and running) with filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -56,6 +57,7 @@ export function registerHistoryTools(register: Register) {
 
   register({
     name: "camunda7_query_historic_activity_instances",
+    category: "history",
     description:
       "Query historic activity instances, i.e. which BPMN activities were executed in a process instance. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -87,6 +89,7 @@ export function registerHistoryTools(register: Register) {
 
   register({
     name: "camunda7_query_historic_task_instances",
+    category: "history",
     description:
       "Query historic task instances (completed and open user tasks). Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -119,6 +122,7 @@ export function registerHistoryTools(register: Register) {
 
   register({
     name: "camunda7_query_historic_variable_instances",
+    category: "history",
     description:
       "Query historic variable instances, i.e. variable values from process history. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },

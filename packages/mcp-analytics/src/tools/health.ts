@@ -8,6 +8,7 @@ type Register = ReturnType<typeof createToolRegistrar<PrometheusClient>>
 export function registerHealthTools(register: Register) {
   register({
     name: "analytics_engine_health",
+    category: "analytics",
     description:
       "Live operational health of the CIB Seven engine(s), from Prometheus state gauges: running WIP, open incidents by type, dead jobs (retries exhausted), executable/suspended job backlog, open/unassigned user tasks, external-task backlog, deployed definitions, and which alert rules are firing/pending. A one-call ops snapshot with an overall status (healthy/degraded/critical). Optional engine filter.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },

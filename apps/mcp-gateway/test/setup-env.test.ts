@@ -88,3 +88,61 @@ describe("setup.ts engine resolution precedence (ENGINES_FILE > ENGINES_JSON > B
     expect(configuredEngines()).toEqual(JSON_ENGINES)
   })
 })
+
+describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
+  beforeEach(() => {
+    vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
+    vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
+    vi.stubEnv("CAMUNDA_BASE_URL", undefined)
+    vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  function activeApps() {
+    return getAppConfig().activeApps
+  }
+
+  it("threads the toolset suffix into the camunda7 module config", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:read-only,analytics")
+
+    const camunda7 = activeApps().find((e) => e.app === "camunda7")
+    expect(camunda7?.config).toMatchObject({ toolset: "read-only" })
+    const analytics = activeApps().find((e) => e.app === "analytics")
+    expect(analytics?.config).not.toHaveProperty("toolset")
+  })
+
+  it("activates all modules without a toolset when MCP_ACTIVE_MODULES is unset", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+
+    const apps = activeApps()
+    expect(apps.map((e) => e.app).sort()).toEqual(["analytics", "camunda7"])
+    for (const entry of apps) {
+      expect(entry.config).not.toHaveProperty("toolset")
+    }
+  })
+
+  it("warns and drops the toolset for modules without toolset support (fail-open)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    vi.stubEnv("MCP_ACTIVE_MODULES", "analytics:read-only")
+
+    const analytics = activeApps().find((e) => e.app === "analytics")
+    expect(analytics).toBeDefined()
+    expect(analytics?.config).not.toHaveProperty("toolset")
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Module "analytics" has no toolsets'))
+    warn.mockRestore()
+  })
+
+  it("still skips unknown modules, with or without a toolset suffix", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    vi.stubEnv("MCP_ACTIVE_MODULES", "nope:read-only,camunda7:admin")
+
+    const apps = activeApps()
+    expect(apps.map((e) => e.app)).toEqual(["camunda7"])
+    expect(apps[0].config).toMatchObject({ toolset: "admin" })
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown module "nope"'))
+    warn.mockRestore()
+  })
+})

@@ -100,14 +100,13 @@ function breadcrumbOf(view: CockpitView): Crumb[] {
 export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const { requestDisplayMode, callTool } = useWidget()
 
-  // Authoritative engine source: the stable `camunda7_list_engines` tool (needs
-  // no selection itself). Decoupled from the open_cockpit bootstrap so the
-  // picker/switcher work regardless of how the app was launched.
-  const enginesQuery = useToolQuery<EnginesResult>(
-    ["camunda7:engines"],
-    "camunda7_list_engines",
-    {},
-  )
+  // Authoritative engine source: the stable `camunda7_engine` tool's "list"
+  // action (needs no selection itself). Decoupled from the open_cockpit
+  // bootstrap so the picker/switcher work regardless of how the app was
+  // launched.
+  const enginesQuery = useToolQuery<EnginesResult>(["camunda7:engines"], "camunda7_engine", {
+    action: "list",
+  })
   const engines = enginesQuery.data?.engines ?? data?.engines ?? []
 
   const [picked, setPicked] = useState<string | null>(null)
@@ -167,7 +166,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   function chooseEngine(id: string) {
     setPicked(id)
     setView({ section: "overview" })
-    void callTool("camunda7_select_engine", { id }).catch(() => {
+    void callTool("camunda7_engine", { action: "select", engineId: id }).catch(() => {
       /* override on each call still works even if sticky selection fails */
     })
   }

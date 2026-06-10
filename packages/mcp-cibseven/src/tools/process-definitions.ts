@@ -15,6 +15,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerProcessDefinitionTools(register: Register) {
   register({
     name: "camunda7_list_process_definitions",
+    category: "process-definitions",
     description:
       "List deployed process definitions with optional filters. Returns key, name, version, and deployment info.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -36,6 +37,7 @@ export function registerProcessDefinitionTools(register: Register) {
 
   register({
     name: "camunda7_get_process_definition_xml",
+    category: "process-definitions",
     description:
       "Get the BPMN 2.0 XML of a process definition by ID. Returns the raw BPMN XML string.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
