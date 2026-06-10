@@ -97,16 +97,12 @@ export async function analyzePerformance(
     processDefinitionKey: string
     period: string
     includeActivityBreakdown: boolean
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<{ kpi: PerformanceKPI | null; activityBreakdown: ActivityBreakdownRow[] }> {
   const range = (params.period as Period) ?? "7d"
-  const sel = pdkSelector(params.processDefinitionKey, params.engineId)
-  const completedSel = pdkSelector(
-    params.processDefinitionKey,
-    params.engineId,
-    'state="COMPLETED"',
-  )
+  const sel = pdkSelector(params.processDefinitionKey, params.engine)
+  const completedSel = pdkSelector(params.processDefinitionKey, params.engine, 'state="COMPLETED"')
 
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
     ch.instant(`sum(increase(camunda_process_instance_started_total${sel}[${range}]))`),
@@ -147,7 +143,7 @@ export async function analyzePerformance(
       ch,
       params.processDefinitionKey,
       `[${range}]`,
-      params.engineId,
+      params.engine,
     )
   }
 
@@ -206,21 +202,21 @@ export async function comparePeriods(
     periodBFrom: string
     periodBTo: string
     includeActivityBreakdown: boolean
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<PeriodComparisonResult> {
   const a = promWindow(params.periodAFrom, params.periodATo)
   const b = promWindow(params.periodBFrom, params.periodBTo)
   const [kpiA, kpiB] = await Promise.all([
-    periodKpi(ch, params.processDefinitionKey, "Period A", a, params.engineId),
-    periodKpi(ch, params.processDefinitionKey, "Period B", b, params.engineId),
+    periodKpi(ch, params.processDefinitionKey, "Period A", a, params.engine),
+    periodKpi(ch, params.processDefinitionKey, "Period B", b, params.engine),
   ])
   const result: PeriodComparisonResult = { kpiComparison: [kpiA, kpiB] }
 
   if (params.includeActivityBreakdown) {
     const [actA, actB] = await Promise.all([
-      periodActivities(ch, params.processDefinitionKey, "Period A", a, params.engineId),
-      periodActivities(ch, params.processDefinitionKey, "Period B", b, params.engineId),
+      periodActivities(ch, params.processDefinitionKey, "Period A", a, params.engine),
+      periodActivities(ch, params.processDefinitionKey, "Period B", b, params.engine),
     ])
     result.activityComparison = [...actA, ...actB].sort(
       (x, y) => x.activity_id.localeCompare(y.activity_id) || x.period.localeCompare(y.period),

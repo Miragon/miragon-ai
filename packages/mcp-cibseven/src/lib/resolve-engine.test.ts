@@ -73,6 +73,11 @@ describe("resolveStepEngine", () => {
 
   it("throws a clear EngineNotSelectedError for multi-engine with no selection and no override", () => {
     expect(() => resolveStepEngine(appConfigFor(MULTI))).toThrow(EngineNotSelectedError)
+    // The message must name the selectable ids — the error path serialises
+    // only code + message, so this is the LLM's one shot at seeing them.
+    expect(() => resolveStepEngine(appConfigFor(MULTI))).toThrow(
+      "No engine selected for this session. Available engines: alpha, beta. Call camunda7_select_engine first.",
+    )
   })
 
   it("throws UnknownEngineError when the override names a non-existent engine", () => {

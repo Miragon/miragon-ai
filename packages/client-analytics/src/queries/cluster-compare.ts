@@ -65,7 +65,7 @@ export async function clusterCompare(
     windowBeforeDays: number
     windowAfterDays: number
     minBucketSize: number
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<ClusterCompareResult> {
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
@@ -105,13 +105,13 @@ async function windowKpi(
   params: {
     processDefinitionKey?: string
     elementId?: string
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
   period: "before" | "after",
   windowDays: number,
   win: { from: number; to: number },
 ): Promise<ClusterCompareKpi> {
-  const engine = engineMatcher(params.engineId)
+  const engine = engineMatcher(params.engine)
   const keyMatcher = params.processDefinitionKey
     ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
     : undefined

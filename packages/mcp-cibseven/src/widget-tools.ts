@@ -1,11 +1,20 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
-import { buildComposedView, buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
+import {
+  buildComposedView,
+  buildSingleWidgetView,
+  withToolErrors,
+} from "@miragon-ai/widget-shell/server"
 import type {
   ProcessListData,
   CockpitAppData,
   HistoryTimelineData,
 } from "@miragon-ai/client-cibseven"
+import {
+  listIncidentsInput,
+  listProcessDefinitionsInput,
+  listProcessInstancesInput,
+} from "@miragon-ai/client-cibseven/schemas"
 import {
   getProcessDefinitions,
   getProcessInstance,
@@ -47,14 +56,16 @@ import {
   CAMUNDA7_SHOW_PROCESS_LIST,
 } from "./tool-names.js"
 import { resolveEngine, type EngineRegistry } from "./lib/resolve-engine.js"
+import { engineParamShape } from "./lib/with-engine.js"
 
-const engineParam = {
-  engine: z
-    .string()
-    .optional()
-    .describe(
-      "Optional engine id override for this single call. When omitted, the engine selected via `camunda7_select_engine` for this session is used.",
-    ),
+/**
+ * Filters shared by `camunda7_show_incidents_dashboard` and its
+ * `camunda7_incidents_data` feed, composed from the exported client schemas
+ * (like the registrar tools) so the describe() texts stay in one place.
+ */
+const incidentsDashboardFilterShape = {
+  processDefinitionKey: listProcessInstancesInput.shape.processDefinitionKey,
+  incidentType: listIncidentsInput.shape.incidentType,
 }
 
 /**
@@ -92,10 +103,10 @@ export function registerWidgetTools(
       description:
         "Open the consolidated CIB Seven operations cockpit — a single app that navigates client-side (no extra tool calls) across the process landscape: overview, per-definition running instances, instance detail, plus quick access to human tasks, jobs and deployments. The Support entry point.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({ ...engineParam }),
+      schema: z.object({ ...engineParamShape }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       // Thin bootstrap: resolve the engine (sticky selection or the only engine)
       // and hand the app the engine list. The app threads the chosen engineId
       // into every nested tool call via the `engine` override, so client-side
@@ -118,7 +129,7 @@ export function registerWidgetTools(
         data,
         title: "Cockpit",
       })
-    },
+    }),
   )
 
   server.tool(
@@ -128,14 +139,14 @@ export function registerWidgetTools(
       description: "Show deployed process definitions as a card grid view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        key: z.string().optional(),
-        nameLike: z.string().optional(),
-        latestVersion: z.boolean().optional().default(true),
-        ...engineParam,
+        key: listProcessDefinitionsInput.shape.key,
+        nameLike: listProcessDefinitionsInput.shape.nameLike,
+        latestVersion: listProcessDefinitionsInput.shape.latestVersion.default(true),
+        ...engineParamShape,
       }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       const definitions = await getProcessDefinitions({
         client,
@@ -161,7 +172,7 @@ export function registerWidgetTools(
         data,
         title: "Process Definitions",
       })
-    },
+    }),
   )
 
   server.tool(
@@ -173,11 +184,11 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processInstanceId: z.string().describe("The process instance ID to inspect"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildInstanceDetailData(client, engineId, {
         processInstanceId: args.processInstanceId,
@@ -189,7 +200,7 @@ export function registerWidgetTools(
         data,
         title: "Process Instance",
       })
-    },
+    }),
   )
 
   server.tool(
@@ -212,11 +223,11 @@ export function registerWidgetTools(
           .optional()
           .describe("Filter by a substring of the business key."),
         maxResults: z.number().optional().default(50),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildProcessInstancesData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
@@ -233,7 +244,7 @@ export function registerWidgetTools(
         data,
         title: "Process Instances",
       })
-    },
+    }),
   )
 
   server.tool(
@@ -244,13 +255,12 @@ export function registerWidgetTools(
         "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        processDefinitionKey: z.string().optional(),
-        incidentType: z.string().optional(),
-        ...engineParam,
+        ...incidentsDashboardFilterShape,
+        ...engineParamShape,
       }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildIncidentsDashboardData(client, {
@@ -267,7 +277,7 @@ export function registerWidgetTools(
         ],
         entries: [{ dataType: "camunda7:incidentsDashboard", data: { ...data, engineId } }],
       })
-    },
+    }),
   )
 
   server.tool(
@@ -279,11 +289,11 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildProcessIncidentsData(client, {
@@ -301,7 +311,7 @@ export function registerWidgetTools(
         ],
         entries: [{ dataType: "camunda7:processIncidents", data: { ...data, engineId } }],
       })
-    },
+    }),
   )
 
   server.tool(
@@ -315,11 +325,11 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         incidentId: z.string().describe("The incident ID to inspect"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildIncidentDetailData(client, {
@@ -333,7 +343,7 @@ export function registerWidgetTools(
         dataType: "camunda7:incidentDetail",
         data: { ...data, engineId },
       })
-    },
+    }),
   )
 
   server.tool(
@@ -345,11 +355,11 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to display"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildProcessDetailData(client, {
@@ -363,7 +373,7 @@ export function registerWidgetTools(
         dataType: "camunda7:processDetail",
         data: { ...data, engineId },
       })
-    },
+    }),
   )
 
   server.tool(
@@ -374,11 +384,11 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processInstanceId: z.string().describe("The process instance ID"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       const [activities, instances] = await Promise.all([
         getHistoricActivityInstances({
@@ -417,7 +427,7 @@ export function registerWidgetTools(
         data,
         title: "History Timeline",
       })
-    },
+    }),
   )
 
   server.tool(
@@ -427,10 +437,10 @@ export function registerWidgetTools(
       description:
         "Show the Cockpit dashboard with process definition statistics: running instances, failed jobs, and incidents per definition.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({ ...engineParam }),
+      schema: z.object({ ...engineParamShape }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildCockpitDashboardData(client, engineId)
       return buildComposedView({
@@ -442,7 +452,7 @@ export function registerWidgetTools(
         ],
         entries: [{ dataType: "camunda7:cockpitDashboard", data }],
       })
-    },
+    }),
   )
 
   server.tool(
@@ -470,7 +480,7 @@ export function registerWidgetTools(
             .describe(
               "Specific definition version. Requires `processDefinitionKey`. Defaults to the latest version when omitted.",
             ),
-          ...engineParam,
+          ...engineParamShape,
         })
         .refine((v) => v.processInstanceId || v.processDefinitionKey, {
           message: "Provide either `processInstanceId` or `processDefinitionKey`.",
@@ -481,7 +491,7 @@ export function registerWidgetTools(
         }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       const renderEmpty = (processInstanceId: string | null) =>
         buildComposedView({
@@ -583,7 +593,7 @@ export function registerWidgetTools(
           },
         ],
       })
-    },
+    }),
   )
 
   server.tool(
@@ -596,11 +606,11 @@ export function registerWidgetTools(
       schema: z.object({
         processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
         failedOnly: z.boolean().optional().default(false).describe("Show only failed jobs"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: uiMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildJobPanelData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
@@ -613,7 +623,7 @@ export function registerWidgetTools(
         title: "Job Panel",
         data,
       })
-    },
+    }),
   )
 
   // ── Per-view data feeds (plain, no UI) ──────────────────────────────────
@@ -628,13 +638,13 @@ export function registerWidgetTools(
       description:
         "Internal JSON feed (no UI) for the cockpit overview — per-definition stats. Prefer camunda7_open_cockpit / camunda7_show_cockpit_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({ ...engineParam }),
+      schema: z.object({ ...engineParamShape }),
       _meta: appOnlyMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       return rawData(await buildCockpitDashboardData(client, engineId))
-    },
+    }),
   )
 
   server.tool(
@@ -646,11 +656,11 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: appOnlyMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildProcessDetailData(client, {
@@ -659,7 +669,7 @@ export function registerWidgetTools(
         processDefinitionKey: args.processDefinitionKey,
       })
       return rawData({ ...data, engineId })
-    },
+    }),
   )
 
   server.tool(
@@ -677,11 +687,11 @@ export function registerWidgetTools(
         businessKeyLike: z.string().optional(),
         firstResult: z.number().optional().describe("Offset for pagination (0-based)"),
         maxResults: z.number().optional(),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: appOnlyMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       return rawData(
         await buildProcessInstancesData(client, engineId, {
@@ -694,7 +704,7 @@ export function registerWidgetTools(
           maxResults: args.maxResults,
         }),
       )
-    },
+    }),
   )
 
   server.tool(
@@ -706,18 +716,18 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processInstanceId: z.string().describe("The process instance ID"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: appOnlyMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       return rawData(
         await buildInstanceDetailData(client, engineId, {
           processInstanceId: args.processInstanceId,
         }),
       )
-    },
+    }),
   )
 
   server.tool(
@@ -731,11 +741,11 @@ export function registerWidgetTools(
         failedOnly: z.boolean().optional(),
         firstResult: z.number().optional().describe("Offset for pagination (0-based)"),
         maxResults: z.number().optional(),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: appOnlyMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       return rawData(
         await buildJobPanelData(client, engineId, {
@@ -745,7 +755,7 @@ export function registerWidgetTools(
           maxResults: args.maxResults,
         }),
       )
-    },
+    }),
   )
 
   server.tool(
@@ -756,13 +766,12 @@ export function registerWidgetTools(
         "Internal JSON feed (no UI) for the incidents dashboard — open incidents grouped by process. Prefer camunda7_show_incidents_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        processDefinitionKey: z.string().optional(),
-        incidentType: z.string().optional(),
-        ...engineParam,
+        ...incidentsDashboardFilterShape,
+        ...engineParamShape,
       }),
       _meta: appOnlyMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildIncidentsDashboardData(client, {
@@ -772,7 +781,7 @@ export function registerWidgetTools(
         incidentType: args.incidentType,
       })
       return rawData({ ...data, engineId })
-    },
+    }),
   )
 
   server.tool(
@@ -784,11 +793,11 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: appOnlyMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildProcessIncidentsData(client, {
@@ -797,7 +806,7 @@ export function registerWidgetTools(
         processDefinitionKey: args.processDefinitionKey,
       })
       return rawData({ ...data, engineId })
-    },
+    }),
   )
 
   server.tool(
@@ -809,11 +818,11 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         incidentId: z.string().describe("The incident ID to inspect"),
-        ...engineParam,
+        ...engineParamShape,
       }),
       _meta: appOnlyMeta,
     },
-    async (args) => {
+    withToolErrors(async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildIncidentDetailData(client, {
@@ -822,6 +831,6 @@ export function registerWidgetTools(
         incidentId: args.incidentId,
       })
       return rawData({ ...data, engineId })
-    },
+    }),
   )
 }

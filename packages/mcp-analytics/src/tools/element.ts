@@ -10,7 +10,7 @@ export function registerElementTools(register: Register) {
     name: "analytics_element_bottleneck",
     description:
       "Rank activities by execution-time contribution and incident rate over a rolling window, from process metrics. Activities with fewer than `minBucketSize` executions are suppressed. Note: queue/wait time is not available from metrics.",
-    annotations: { readOnlyHint: true, idempotentHint: true },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: schemas.elementBottleneckInput.shape,
     handler: async (ch, args) =>
       queries.elementBottleneck(ch, args as z.infer<typeof schemas.elementBottleneckInput>),

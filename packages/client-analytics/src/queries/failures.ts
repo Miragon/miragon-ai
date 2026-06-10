@@ -33,7 +33,7 @@ export async function findFailedInstances(
     processDefinitionKey?: string
     incidentType?: string
     limit: number
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<ErrorPatternRow[]> {
   const limit = Math.max(1, Math.floor(params.limit))
@@ -42,7 +42,7 @@ export async function findFailedInstances(
       ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
       : undefined,
     params.incidentType ? `incident_type="${escapeLabelValue(params.incidentType)}"` : undefined,
-    engineMatcher(params.engineId),
+    engineMatcher(params.engine),
   )
 
   const samples = await ch.instant(

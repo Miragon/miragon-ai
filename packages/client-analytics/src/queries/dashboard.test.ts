@@ -138,7 +138,7 @@ describe("dashboardData", () => {
     await dashboardData(ch, {
       processDefinitionKey: "myKey",
       period: "30d",
-      engineId: "prod-a",
+      engine: "prod-a",
     })
 
     const queries = instant.mock.calls.map((c) => c[0])

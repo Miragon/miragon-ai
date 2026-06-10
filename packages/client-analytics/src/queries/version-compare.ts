@@ -65,7 +65,7 @@ export async function versionCompare(
     windowDays: number
     elementId?: string
     minBucketSize: number
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<VersionCompareResult> {
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
@@ -101,13 +101,13 @@ export async function versionCompare(
 
 async function versionKpi(
   ch: PrometheusClient,
-  params: { processDefinitionKey: string; elementId?: string; engineId?: EngineFilterInput },
+  params: { processDefinitionKey: string; elementId?: string; engine?: EngineFilterInput },
   bucket: "versionA" | "versionB",
   version: number,
   range: string,
 ): Promise<VersionCompareKpi> {
   const key = escapeLabelValue(params.processDefinitionKey)
-  const engine = engineMatcher(params.engineId)
+  const engine = engineMatcher(params.engine)
   const verSel = selector(
     `process_definition_key="${key}"`,
     `process_definition_version="${version}"`,

@@ -17,16 +17,20 @@ export interface EngineRegistry {
  * Thrown when an operations tool is invoked but no engine has been selected
  * for the current MCP session and the registry holds more than one engine.
  *
- * The payload mirrors what `mcp-use` returns in a tool's `content` block when
- * a handler throws — the host LLM can read the structured fields, pick an
- * engine, and call `camunda7_select_engine` before retrying.
+ * The message lists the available engine ids because the error path only
+ * serialises code + message (the structured `availableEngines` field never
+ * reaches the model) — naming them here saves the LLM a
+ * `camunda7_list_engines` roundtrip before it can pick one and call
+ * `camunda7_select_engine`.
  */
 export class EngineNotSelectedError extends Error {
   readonly code = "ENGINE_NOT_SELECTED" as const
   readonly availableEngines: EngineEntry[]
   constructor(availableEngines: EngineEntry[]) {
     super(
-      "No engine selected for this session. Call camunda7_select_engine with one of the available engine ids before invoking operations tools.",
+      `No engine selected for this session. Available engines: ${availableEngines
+        .map((e) => e.id)
+        .join(", ")}. Call camunda7_select_engine first.`,
     )
     this.name = "EngineNotSelectedError"
     this.availableEngines = availableEngines

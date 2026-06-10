@@ -56,7 +56,7 @@ export async function elementBottleneck(
     period: Period
     minBucketSize: number
     limit: number
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<ElementBottleneckResult> {
   const range = params.period
@@ -64,7 +64,7 @@ export async function elementBottleneck(
   const limit = Math.max(1, Math.floor(params.limit))
   const sel = selector(
     `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
-    engineMatcher(params.engineId),
+    engineMatcher(params.engine),
   )
 
   const [counts, sums, p95, incidents, types] = await Promise.all([
@@ -142,12 +142,12 @@ export interface ElementHeatResult {
  */
 export async function elementHeat(
   ch: PrometheusClient,
-  params: { processDefinitionKey: string; period: Period; engineId?: EngineFilterInput },
+  params: { processDefinitionKey: string; period: Period; engine?: EngineFilterInput },
 ): Promise<ElementHeatResult> {
   const range = params.period
   const sel = selector(
     `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
-    engineMatcher(params.engineId),
+    engineMatcher(params.engine),
   )
 
   const [counts, sums] = await Promise.all([

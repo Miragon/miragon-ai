@@ -41,7 +41,7 @@ describe("analytics_analyze_process_performance PromQL", () => {
       processDefinitionKey: "order",
       period: "7d",
       includeActivityBreakdown: true,
-      engineId: "prod-a",
+      engine: "prod-a",
     })
 
     const sel = '{process_definition_key="order",engine_id="prod-a"}'

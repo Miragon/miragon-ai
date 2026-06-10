@@ -19,7 +19,7 @@ Add the function to `packages/client-analytics/src/queries/<topic>.ts` and expor
 helpers from `src/prometheus.ts` — never concatenate label values by hand:
 
 - `escapeLabelValue(value)` — escapes `\` and `"` for use inside a label matcher
-- `engineMatcher(engineId)` — optional `engine_id="…"` / `engine_id=~"a|b"` fragment
+- `engineMatcher(engine)` — optional `engine_id="…"` / `engine_id=~"a|b"` fragment
 - `selector(...matchers)` — assembles `{…}`, dropping empties
 - `PERIOD_RANGE` / `Period` — the allowed windows (`1d`–`30d`, capped at retention)
 
@@ -28,7 +28,7 @@ Reference shape (from `elementBottleneck` in `src/queries/element.ts`):
 ```ts
 const sel = selector(
   `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
-  engineMatcher(params.engineId),
+  engineMatcher(params.engine),
 )
 
 const [counts, sums] = await Promise.all([
@@ -72,7 +72,7 @@ Also cover the mapping logic (ranking, thresholds, rounding, null fields).
 
 Add the tool's input schema to `packages/client-analytics/src/schemas/<topic>.ts` and
 export it from `src/schemas/index.ts`. Reuse `engineFilterShape` from
-`src/schemas/shared.ts` for the optional `engineId` filter and `.describe()` every field
+`src/schemas/shared.ts` for the optional `engine` filter and `.describe()` every field
 (see `elementBottleneckInput` in `src/schemas/path.ts`).
 
 ## Step 4 — tool in mcp-analytics
@@ -88,7 +88,7 @@ export function registerElementTools(register: Register) {
   register({
     name: "analytics_element_bottleneck",
     description: "Rank activities by execution-time contribution and incident rate …",
-    annotations: { readOnlyHint: true, idempotentHint: true },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: schemas.elementBottleneckInput.shape,
     handler: async (ch, args) =>
       queries.elementBottleneck(ch, args as z.infer<typeof schemas.elementBottleneckInput>),
@@ -96,7 +96,8 @@ export function registerElementTools(register: Register) {
 }
 ```
 
-Analytics tools are read-only by nature: `{ readOnlyHint: true, idempotentHint: true }`.
+Analytics tools are read-only by nature and talk to an external Prometheus:
+`{ readOnlyHint: true, idempotentHint: true, openWorldHint: true }`.
 New domain file → add the `registerXyzTools(register)` call to `registerTools` in
 `src/tools/index.ts`. Name the description honestly about metric limitations (e.g.
 "queue/wait time is not available from metrics").

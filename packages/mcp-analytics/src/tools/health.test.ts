@@ -37,7 +37,7 @@ describe("analytics_engine_health PromQL", () => {
     const handlers = captureHandlers(registerHealthTools)
     const { client, queries } = recordingClient()
 
-    await handlers.get("analytics_engine_health")!(client, { engineId: "prod-a" })
+    await handlers.get("analytics_engine_health")!(client, { engine: "prod-a" })
 
     const sel = '{engine_id="prod-a"}'
     expect(queries).toEqual([
@@ -80,7 +80,7 @@ describe("analytics_engine_health PromQL", () => {
     const handlers = captureHandlers(registerHealthTools)
     const { client, queries } = recordingClient()
 
-    await handlers.get("analytics_engine_health")!(client, { engineId: ["prod-a", "prod-b"] })
+    await handlers.get("analytics_engine_health")!(client, { engine: ["prod-a", "prod-b"] })
 
     expect(queries[0]).toBe('camunda_process_instances_running{engine_id=~"prod-a|prod-b"}')
     expect(queries.every((q) => q.includes('engine_id=~"prod-a|prod-b"'))).toBe(true)

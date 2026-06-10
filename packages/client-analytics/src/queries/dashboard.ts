@@ -41,10 +41,10 @@ function byLabel(samples: PromSample[], label: string): Record<string, number> {
  */
 export async function dashboardData(
   ch: PrometheusClient,
-  params: { processDefinitionKey?: string; period: Period; engineId?: EngineFilterInput },
+  params: { processDefinitionKey?: string; period: Period; engine?: EngineFilterInput },
 ): Promise<AnalyticsDashboardData> {
   const range = params.period
-  const engine = engineMatcher(params.engineId)
+  const engine = engineMatcher(params.engine)
   const keyMatcher = params.processDefinitionKey
     ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
     : undefined
@@ -222,9 +222,9 @@ function buildDefinitionBreakdown(
  */
 export async function failureDashboardData(
   ch: PrometheusClient,
-  params: { engineId?: EngineFilterInput },
+  params: { engine?: EngineFilterInput },
 ): Promise<FailureDashboardData> {
-  const sel = selector(engineMatcher(params.engineId))
+  const sel = selector(engineMatcher(params.engine))
 
   const [patterns, runningByKey, incidentsByKey, deadJobsByKey] = await Promise.all([
     ch.instant(`sum by (process_definition_key, incident_type)(camunda_incidents_open${sel})`),

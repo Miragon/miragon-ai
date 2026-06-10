@@ -156,7 +156,7 @@ The server listens on `http://0.0.0.0:${PORT}` (HTTP transport). Point an MCP cl
 
 ## Multi-engine setup
 
-The MCP server can talk to several CIB Seven instances at once. Operations tools (`camunda7_*`) are routed per MCP session via a **sticky engine selection**; analytics tools (`analytics_*`) stay session-independent and accept an optional `engineId` filter so a single dashboard can aggregate or compare engines.
+The MCP server can talk to several CIB Seven instances at once. Operations tools (`camunda7_*`) are routed per MCP session via a **sticky engine selection**; analytics tools (`analytics_*`) stay session-independent and accept an optional `engine` filter (single id or a list) so a single dashboard can aggregate or compare engines.
 
 **1. Tag every engine.** In each CIB Seven app that ships the metrics plugin, set `ENGINE_ID` to a stable id (e.g. `prod-a`, `prod-b`). The plugin attaches that id as the `engine_id` label on every emitted metric.
 
