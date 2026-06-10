@@ -2,57 +2,57 @@ import js from "@eslint/js"
 import tseslint from "typescript-eslint"
 import reactHooks from "eslint-plugin-react-hooks"
 
+// Widget/UI sources are excluded from the package tsconfigs (they are
+// compiled by Vite/the bundler) and get their type information from the
+// dedicated tsconfig.widgets.json / tsconfig.ui.json projects instead.
+const bundledUiFiles = [
+  "apps/mcp-gateway/src/ui/**/*.{ts,tsx}",
+  "packages/mcp-analytics/src/widgets/**/*.{ts,tsx}",
+  "packages/mcp-cibseven/src/widgets/**/*.{ts,tsx}",
+]
+
 export default tseslint.config(
   { ignores: ["**/dist/**", "**/node_modules/**", "**/generated/**", "vendor/**"] },
 
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
 
+  // Typed linting via the project service for everything the package tsconfigs cover
   {
+    ignores: bundledUiFiles,
     languageOptions: {
       parserOptions: {
         projectService: {
-          // UI/widget files are excluded from tsconfig (compiled by Vite/bundler directly)
+          // Standalone config files that are not part of any tsconfig
           allowDefaultProject: [
-            "apps/mcp-gateway/src/ui/*.ts",
-            "apps/mcp-gateway/src/ui/*.tsx",
             "apps/mcp-gateway/vite.config.ts",
-            "packages/mcp-analytics/src/widgets/*.ts",
-            "packages/mcp-analytics/src/widgets/*.tsx",
-            "packages/mcp-cibseven/src/widgets/*.ts",
-            "packages/mcp-cibseven/src/widgets/*.tsx",
-            "packages/mcp-cibseven/src/widgets/incident-detail/*.ts",
-            "packages/mcp-cibseven/src/widgets/incident-detail/*.tsx",
-            "packages/mcp-cibseven/src/widgets/process-incidents/*.ts",
-            "packages/mcp-cibseven/src/widgets/process-incidents/*.tsx",
-            "packages/mcp-cibseven/src/widgets/bpmn-viewer/*.ts",
-            "packages/mcp-cibseven/src/widgets/bpmn-viewer/*.tsx",
-            "packages/mcp-cibseven/src/widgets/cockpit-dashboard/*.ts",
-            "packages/mcp-cibseven/src/widgets/cockpit-dashboard/*.tsx",
-            "packages/mcp-cibseven/src/widgets/incidents-dashboard/*.ts",
-            "packages/mcp-cibseven/src/widgets/incidents-dashboard/*.tsx",
-            "packages/mcp-cibseven/src/widgets/task-dashboard/*.ts",
-            "packages/mcp-cibseven/src/widgets/task-dashboard/*.tsx",
-            "packages/mcp-cibseven/src/widgets/process-instances/*.ts",
-            "packages/mcp-cibseven/src/widgets/process-instances/*.tsx",
-            "packages/mcp-cibseven/src/widgets/cockpit-app/*.ts",
-            "packages/mcp-cibseven/src/widgets/cockpit-app/*.tsx",
-            "packages/mcp-analytics/src/widgets/analytics-dashboard/*.ts",
-            "packages/mcp-analytics/src/widgets/analytics-dashboard/*.tsx",
-            "packages/mcp-analytics/src/widgets/bpmn-heatmap/*.ts",
-            "packages/mcp-analytics/src/widgets/bpmn-heatmap/*.tsx",
-            "packages/mcp-analytics/src/widgets/failure-dashboard/*.ts",
-            "packages/mcp-analytics/src/widgets/failure-dashboard/*.tsx",
             "packages/mcp-cibseven/vitest.config.ts",
             "packages/client-analytics/vitest.config.ts",
             "packages/client-cibseven/openapi-ts.config.ts",
             "docs/.vitepress/config.ts",
           ],
-          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 64,
         },
         tsconfigRootDir: import.meta.dirname,
       },
     },
+  },
+
+  // Widget/UI files: typed via their dedicated tsconfig projects
+  {
+    files: bundledUiFiles,
+    languageOptions: {
+      parserOptions: {
+        project: [
+          "apps/mcp-gateway/tsconfig.ui.json",
+          "packages/mcp-analytics/tsconfig.widgets.json",
+          "packages/mcp-cibseven/tsconfig.widgets.json",
+        ],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+
+  {
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       // Downgraded to warn: mcp-use has poor type coverage (Phase 1)
