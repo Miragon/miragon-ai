@@ -10,6 +10,7 @@ import {
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getTasks,
+  getTasksCount,
   getTask,
   claim,
   unclaim,
@@ -17,6 +18,7 @@ import {
   setAssignee,
   getTaskVariables,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -26,24 +28,33 @@ export function registerTaskTools(register: Register) {
   register({
     name: "camunda7_list_tasks",
     description:
-      "List user tasks with optional filters. Returns task ID, name, assignee, process info, and timestamps.",
+      "List user tasks with optional filters. Each task carries ID, name, assignee, process info, and timestamps. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listTasksInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) =>
-      getTasks({
-        client,
-        query: {
-          assignee: args.assignee,
-          candidateGroup: args.candidateGroup,
-          processDefinitionKey: args.processDefinitionKey,
-          processInstanceId: args.processInstanceId,
-          unassigned: args.unassigned,
-          maxResults: args.maxResults,
-          sortBy: args.sortBy,
-          sortOrder: args.sortOrder,
-        },
-      }),
-    ),
+    outputSchema: paginatedListOutput,
+    handler: withEngine(async (client, args) => {
+      const filters = {
+        assignee: args.assignee,
+        candidateGroup: args.candidateGroup,
+        processDefinitionKey: args.processDefinitionKey,
+        processInstanceId: args.processInstanceId,
+        unassigned: args.unassigned,
+      }
+      const [items, count] = await Promise.all([
+        getTasks({
+          client,
+          query: {
+            ...filters,
+            firstResult: args.firstResult,
+            maxResults: args.maxResults,
+            sortBy: args.sortBy,
+            sortOrder: args.sortOrder,
+          },
+        }),
+        getTasksCount({ client, query: filters }),
+      ])
+      return toPaginatedList(items, count, args.firstResult)
+    }),
   })
 
   register({

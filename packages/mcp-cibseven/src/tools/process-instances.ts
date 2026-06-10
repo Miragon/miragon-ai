@@ -14,6 +14,7 @@ import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   startProcessInstanceByKey,
   getProcessInstances,
+  getProcessInstancesCount,
   getProcessInstance,
   deleteProcessInstance,
   modifyProcessInstance,
@@ -22,6 +23,7 @@ import {
   setProcessInstanceVariable,
   updateSuspensionStateById,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -50,23 +52,33 @@ export function registerProcessInstanceTools(register: Register) {
 
   register({
     name: "camunda7_list_process_instances",
-    description: "List running process instances with optional filters.",
+    description:
+      "List running process instances with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listProcessInstancesInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) =>
-      getProcessInstances({
-        client,
-        query: {
-          processDefinitionKey: args.processDefinitionKey,
-          businessKey: args.businessKey,
-          active: args.active,
-          suspended: args.suspended,
-          maxResults: args.maxResults,
-          sortBy: args.sortBy,
-          sortOrder: args.sortOrder,
-        },
-      }),
-    ),
+    outputSchema: paginatedListOutput,
+    handler: withEngine(async (client, args) => {
+      const filters = {
+        processDefinitionKey: args.processDefinitionKey,
+        businessKey: args.businessKey,
+        active: args.active,
+        suspended: args.suspended,
+      }
+      const [items, count] = await Promise.all([
+        getProcessInstances({
+          client,
+          query: {
+            ...filters,
+            firstResult: args.firstResult,
+            maxResults: args.maxResults,
+            sortBy: args.sortBy,
+            sortOrder: args.sortOrder,
+          },
+        }),
+        getProcessInstancesCount({ client, query: filters }),
+      ])
+      return toPaginatedList(items, count, args.firstResult)
+    }),
   })
 
   register({

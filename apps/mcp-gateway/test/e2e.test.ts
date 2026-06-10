@@ -85,6 +85,32 @@ describe("mcp-gateway E2E smoke", () => {
     expect(names).toEqual([...EXPECTED_TOOLS])
   })
 
+  it("advertises the pagination envelope on every list/query tool", async () => {
+    const paginatedTools = [
+      "camunda7_list_process_instances",
+      "camunda7_list_tasks",
+      "camunda7_list_jobs",
+      "camunda7_list_incidents",
+      "camunda7_query_historic_process_instances",
+      "camunda7_query_historic_activity_instances",
+      "camunda7_query_historic_task_instances",
+      "camunda7_query_historic_variable_instances",
+    ]
+    const tools = await session.listTools()
+    for (const name of paginatedTools) {
+      const tool = tools.find((t) => t.name === name)
+      expect(tool, `${name} should be exposed`).toBeDefined()
+      const outputProps = (tool!.outputSchema as { properties?: Record<string, unknown> } | null)
+        ?.properties
+      expect(outputProps, `${name} should advertise an outputSchema`).toBeTruthy()
+      expect(Object.keys(outputProps!)).toEqual(
+        expect.arrayContaining(["items", "totalCount", "hasMore", "nextOffset"]),
+      )
+      const inputProps = (tool!.inputSchema as { properties?: Record<string, unknown> })?.properties
+      expect(inputProps, `${name} should accept firstResult`).toHaveProperty("firstResult")
+    }
+  })
+
   it("answers camunda7_list_engines from the engine registry without a live engine", async () => {
     const result = await session.callTool("camunda7_list_engines", {})
     expect(result.isError).toBeFalsy()

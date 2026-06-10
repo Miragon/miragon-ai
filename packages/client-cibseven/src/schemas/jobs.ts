@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { firstResultParam } from "./shared.js"
 
 export const listJobsInput = z.object({
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
@@ -7,6 +8,7 @@ export const listJobsInput = z.object({
   noRetriesLeft: z.boolean().optional().describe("Only jobs with retries = 0 (failed)"),
   active: z.boolean().optional().describe("Only active jobs"),
   suspended: z.boolean().optional().describe("Only suspended jobs"),
+  firstResult: firstResultParam,
   maxResults: z.number().int().positive().optional().default(20),
   sortBy: z
     .enum([

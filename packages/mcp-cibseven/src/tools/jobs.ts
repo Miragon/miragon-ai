@@ -6,9 +6,11 @@ import {
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getJobs,
+  getJobsCount,
   setJobRetries,
   setJobRetriesAsyncOperation,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -17,25 +19,35 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerJobTools(register: Register) {
   register({
     name: "camunda7_list_jobs",
-    description: "List jobs (timers, async continuations) with optional filters.",
+    description:
+      "List jobs (timers, async continuations) with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listJobsInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) =>
-      getJobs({
-        client,
-        query: {
-          processInstanceId: args.processInstanceId,
-          processDefinitionKey: args.processDefinitionKey,
-          withRetriesLeft: args.withRetriesLeft,
-          noRetriesLeft: args.noRetriesLeft,
-          active: args.active,
-          suspended: args.suspended,
-          maxResults: args.maxResults,
-          sortBy: args.sortBy,
-          sortOrder: args.sortOrder,
-        },
-      }),
-    ),
+    outputSchema: paginatedListOutput,
+    handler: withEngine(async (client, args) => {
+      const filters = {
+        processInstanceId: args.processInstanceId,
+        processDefinitionKey: args.processDefinitionKey,
+        withRetriesLeft: args.withRetriesLeft,
+        noRetriesLeft: args.noRetriesLeft,
+        active: args.active,
+        suspended: args.suspended,
+      }
+      const [items, count] = await Promise.all([
+        getJobs({
+          client,
+          query: {
+            ...filters,
+            firstResult: args.firstResult,
+            maxResults: args.maxResults,
+            sortBy: args.sortBy,
+            sortOrder: args.sortOrder,
+          },
+        }),
+        getJobsCount({ client, query: filters }),
+      ])
+      return toPaginatedList(items, count, args.firstResult)
+    }),
   })
 
   register({

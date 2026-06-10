@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { variableSchema } from "./shared.js"
+import { firstResultParam, variableSchema } from "./shared.js"
 
 export const startProcessInstanceInput = z.object({
   processDefinitionKey: z.string().describe("The key of the process definition to start"),
@@ -12,6 +12,7 @@ export const listProcessInstancesInput = z.object({
   businessKey: z.string().optional().describe("Filter by business key"),
   active: z.boolean().optional().describe("Only active instances"),
   suspended: z.boolean().optional().describe("Only suspended instances"),
+  firstResult: firstResultParam,
   maxResults: z.number().int().positive().optional().default(20).describe("Maximum results"),
   sortBy: z
     .enum(["instanceId", "definitionKey", "definitionId", "tenantId", "businessKey"])

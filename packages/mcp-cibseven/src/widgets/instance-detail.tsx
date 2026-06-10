@@ -70,9 +70,10 @@ function OpenTaskCard({
  * The activity audit log is the heaviest query on this view, so it loads lazily:
  * the wrapping <Section> mounts this component only when the operator expands it.
  * Relies on the session's sticky engine (like the instance mutations above).
+ * The query tool returns a pagination envelope — the timeline renders the page.
  */
 function InstanceAuditContent({ processInstanceId }: { processInstanceId: string }) {
-  const q = useToolQuery<HistoryActivity[]>(
+  const q = useToolQuery<{ items: HistoryActivity[] }>(
     ["camunda7:instance-history", processInstanceId],
     "camunda7_query_historic_activity_instances",
     { processInstanceId, sortBy: "startTime", sortOrder: "asc", maxResults: 500 },
@@ -87,7 +88,7 @@ function InstanceAuditContent({ processInstanceId }: { processInstanceId: string
   if (!q.data) {
     return <p className="text-muted-foreground text-sm">Loading audit log…</p>
   }
-  return <HistoryTimelineView activities={q.data} />
+  return <HistoryTimelineView activities={q.data.items ?? []} />
 }
 
 export function InstanceDetailWidget({
