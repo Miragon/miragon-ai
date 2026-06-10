@@ -17,6 +17,13 @@ description: |
 
 # IMPORTANT: How to Use This Skill
 
+> **In this repository, the repo-specific skills take precedence:** consult
+> `add-bpm-feature` / `add-analytics-feature` (and the root `CLAUDE.md`) first — this
+> skill only describes the underlying mcp-use framework. Do NOT build tools here with
+> raw `server.tool()`: register them through the toolkit registrar
+> (`createToolRegistrar`). The only exception is widget tools, which follow the
+> `widget-tools.ts` pattern.
+
 This file provides a NAVIGATION GUIDE ONLY. Before implementing any MCP server features, you MUST:
 
 1. Read this overview to understand which reference files are relevant
