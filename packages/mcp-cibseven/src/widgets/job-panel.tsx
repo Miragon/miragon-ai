@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { ModelContext } from "mcp-use/react"
 import {
   Card,
   CardContent,
@@ -40,9 +41,12 @@ function truncate(s: string | null, max: number): string {
 export function JobPanelWidget({
   data: initialData = null,
   engine,
+  failedOnly,
 }: {
   data?: JobPanelData | null
   engine?: string
+  /** Restrict the self-fetched job set to failed jobs (no retries left). */
+  failedOnly?: boolean
 }) {
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
   const [confirmBatch, setConfirmBatch] = useState(false)
@@ -50,9 +54,9 @@ export function JobPanelWidget({
   const batchMutation = useToolMutation("camunda7_set_job_retries_batch")
   const paged = usePagedViewData<JobPanelData["jobs"][number], JobPanelData>({
     initialData,
-    key: ["camunda7:jobs", engine ?? null],
+    key: ["camunda7:jobs", engine ?? null, failedOnly ?? null],
     tool: CAMUNDA7_JOBS_DATA,
-    args: { engine },
+    args: { engine, failedOnly },
     pageSize: 50,
     ready: !!engine,
     selectItems: (d) => d.jobs,
@@ -117,6 +121,18 @@ export function JobPanelWidget({
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
+      {/* Rendered in-component (not via the adapter's describeForModel) because
+          this widget self-fetches in the cockpit, where the adapter has no data. */}
+      <ModelContext
+        content={[
+          `Viewing the Job Management panel on engine "${engineId}"` +
+            `${failedOnly ? " filtered to failed jobs only" : ""}: ` +
+            `${totalCount} job(s) total, ${failedCount} failed (no retries left), ` +
+            `${jobs.length} loaded.`,
+          `Retry one with camunda7_set_job_retries, all failed ones via ` +
+            `camunda7_set_job_retries_batch; matching incidents via camunda7_list_incidents.`,
+        ].join(" ")}
+      />
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-semibold">Job Management</h2>

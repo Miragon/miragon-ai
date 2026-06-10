@@ -1,5 +1,6 @@
-import { adaptDataWidget } from "@miragon-ai/widget-shell/ui"
+import { adaptDataWidget, type DescribeForModel } from "@miragon-ai/widget-shell/ui"
 import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
+import type { HistoryTimelineData } from "@miragon-ai/client-cibseven"
 import { ProcessListWidget } from "./process-list.js"
 import { IncidentOverviewKpi } from "./incidents-dashboard/overview-kpi.js"
 import { IncidentProcessList } from "./incidents-dashboard/process-list.js"
@@ -19,6 +20,28 @@ import { BpmnFlowViewer } from "./bpmn-viewer/flow.js"
 import { BpmnViewerWidget } from "./bpmn-viewer/widget.js"
 import { JobPanelWidget } from "./job-panel.js"
 import { ProcessInstancesWidget } from "./process-instances/list.js"
+
+/**
+ * Model context for the history timeline, attached via the adapter — this
+ * widget never self-fetches (data always arrives through the step result), so
+ * the central `describeForModel` lever covers every render path. Widgets that
+ * self-fetch in the cockpit (incident-detail, job-panel, instance-detail,
+ * process-instances) render their own `<ModelContext>` in-component instead.
+ */
+const describeHistoryTimeline: DescribeForModel<HistoryTimelineData> = (data) => {
+  const pi = data.processInstance
+  const head = pi
+    ? `Viewing the activity history timeline of process instance ${pi.id} ` +
+      `(${pi.processDefinitionName ?? pi.processDefinitionKey}, state ${pi.state})`
+    : `Viewing an activity history timeline`
+  const span = pi ? ` from ${pi.startTime} to ${pi.endTime ?? "now (still running)"}` : ""
+  return (
+    `${head} on engine ${data.engineId ?? "default"}: ${data.totalActivities} ` +
+    `activities${span}. Full per-activity timing via ` +
+    `camunda7_query_historic_activity_instances; compare against the definition ` +
+    `baseline with analytics_element_bottleneck.`
+  )
+}
 
 /**
  * The leaf widget registry — every CIB Seven widget EXCEPT the consolidated
@@ -52,7 +75,11 @@ export const camunda7BaseWidgets: Record<string, WidgetComponent> = {
     "camunda7:processIncidents",
   ),
   "camunda7:incident-detail": adaptDataWidget(IncidentDetailWidget, "camunda7:incidentDetail"),
-  "camunda7:history-timeline": adaptDataWidget(HistoryTimelineWidget, "camunda7:historyTimeline"),
+  "camunda7:history-timeline": adaptDataWidget(
+    HistoryTimelineWidget,
+    "camunda7:historyTimeline",
+    describeHistoryTimeline,
+  ),
   "camunda7:instance-detail": adaptDataWidget(InstanceDetailWidget, "camunda7:processInstance"),
   "camunda7:process-health-kpi": adaptDataWidget(ProcessHealthKpi, "camunda7:cockpitDashboard"),
   "camunda7:process-definitions-table": adaptDataWidget(

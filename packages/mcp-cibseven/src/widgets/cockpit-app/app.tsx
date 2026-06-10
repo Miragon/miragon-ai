@@ -310,6 +310,18 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const activeSection = topSectionOf(view)
   const crumbs = breadcrumbOf(view)
 
+  // The selected entity of the active view, surfaced in the app-level model
+  // context so drill-down views whose widgets carry no leaf <ModelContext>
+  // still resolve "this incident/process" follow-up questions correctly.
+  const selectedEntity =
+    "incidentId" in view
+      ? ` Selected incident: ${view.incidentId}.`
+      : "processInstanceId" in view
+        ? ` Selected process instance: ${view.processInstanceId}.`
+        : "processDefinitionKey" in view
+          ? ` Selected process definition: ${view.processDefinitionKey}.`
+          : ""
+
   // Flatten the current route + resolved engine into the params bag every view
   // layout reads from. Each view picks only the ids it needs (see views.ts).
   const viewParams: ViewParams = {
@@ -322,7 +334,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   return (
     <WidgetShell>
       <ModelContext
-        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". Current view: ${view.section}. Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
+        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". Current view: ${view.section}.${selectedEntity} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
       />
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">
