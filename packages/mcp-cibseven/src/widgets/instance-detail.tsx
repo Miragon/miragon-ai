@@ -12,7 +12,7 @@ import {
 import { ModelContext } from "mcp-use/react"
 import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
 
-import type { InstanceDetailData, OpenUserTask } from "@miragon-ai/client-cibseven"
+import type { InstanceDetailData, OpenUserTask } from "../view-models.js"
 import { CAMUNDA7_INSTANCE_DETAIL_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"

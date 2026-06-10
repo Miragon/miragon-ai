@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-ui"
 import { GroupCard, SectionHeading, WidgetShell } from "@miragon-ai/widget-shell/widgets"
-import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
+import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"

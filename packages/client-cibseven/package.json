@@ -21,24 +21,25 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./sdk": {
+      "types": "./dist/generated/sdk.gen.d.ts",
+      "import": "./dist/generated/sdk.gen.js"
+    },
+    "./types": {
+      "types": "./dist/generated/types.gen.d.ts",
+      "import": "./dist/generated/types.gen.js"
+    },
     "./schemas": {
       "types": "./dist/schemas/index.d.ts",
       "import": "./dist/schemas/index.js"
-    },
-    "./widgets": {
-      "types": "./dist/widgets.d.ts",
-      "import": "./dist/widgets.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
     }
   },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "generate": "openapi-ts"
+    "generate": "openapi-ts",
+    "spec:refresh": "sh ./scripts/refresh-spec.sh"
   },
   "dependencies": {
     "zod": "4.3.6"

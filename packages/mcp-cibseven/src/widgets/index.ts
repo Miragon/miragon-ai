@@ -5,7 +5,7 @@ import type {
   ProcessIncidentsData,
   CockpitDashboardData,
   BpmnViewerData,
-} from "@miragon-ai/client-cibseven"
+} from "../view-models.js"
 import type { ProcessListData } from "./process-list.js"
 import type { IncidentDetailData } from "./incident-detail.js"
 import type { HistoryTimelineData } from "./history-timeline.js"

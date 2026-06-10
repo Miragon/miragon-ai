@@ -3,10 +3,7 @@ import {
   migrateProcessInstancesAsyncInput,
 } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import {
-  generateMigrationPlan,
-  executeMigrationPlanAsync,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { generateMigrationPlan, executeMigrationPlanAsync } from "@miragon-ai/client-cibseven/sdk"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 

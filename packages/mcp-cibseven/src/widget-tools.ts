@@ -5,11 +5,7 @@ import {
   buildSingleWidgetView,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
-import type {
-  ProcessListData,
-  CockpitAppData,
-  HistoryTimelineData,
-} from "@miragon-ai/client-cibseven"
+import type { ProcessListData, CockpitAppData, HistoryTimelineData } from "./view-models.js"
 import {
   listIncidentsInput,
   listProcessDefinitionsInput,
@@ -24,7 +20,7 @@ import {
   getHistoricProcessInstances,
   getProcessDefinitionBpmn20Xml,
   getActivityStatistics,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 import {
   buildCockpitDashboardData,
   buildInstanceDetailData,

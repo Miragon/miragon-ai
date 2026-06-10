@@ -7,7 +7,7 @@ import {
 } from "@miragon-ai/widget-shell/server"
 import { queries, schemas, type PrometheusClient } from "@miragon-ai/client-analytics"
 import type { Client as Camunda7Client } from "@miragon-ai/client-cibseven"
-import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-cibseven/sdk"
 
 export interface AnalyticsWidgetToolsOptions {
   /** Used by the BPMN heatmap to fetch the diagram XML. Absent → non-diagram fallback. */

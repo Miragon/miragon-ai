@@ -1,11 +1,11 @@
+import type { Client } from "@miragon-ai/client-cibseven"
 import type {
   ActivityTree,
-  Client,
   IncidentDetailData,
   IncidentDetailHistoryEntry,
   IncidentDetailJob,
   VariableValue,
-} from "@miragon-ai/client-cibseven"
+} from "../view-models.js"
 import {
   getActivityInstanceTree,
   getHistoricActivityInstances,
@@ -16,7 +16,7 @@ import {
   getProcessInstance,
   getProcessInstanceVariables,
   getStacktrace,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import { extractActivityNames } from "../lib/bpmn-parse.js"

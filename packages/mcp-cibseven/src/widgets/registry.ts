@@ -1,6 +1,6 @@
 import { adaptDataWidget, type DescribeForModel } from "@miragon-ai/widget-shell/ui"
 import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
-import type { HistoryTimelineData } from "@miragon-ai/client-cibseven"
+import type { HistoryTimelineData } from "../view-models.js"
 import { ProcessListWidget } from "./process-list.js"
 import { IncidentOverviewKpi } from "./incidents-dashboard/overview-kpi.js"
 import { IncidentProcessList } from "./incidents-dashboard/process-list.js"

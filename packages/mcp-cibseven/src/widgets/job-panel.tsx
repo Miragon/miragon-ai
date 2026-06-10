@@ -16,7 +16,7 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-import type { JobPanelData } from "@miragon-ai/client-cibseven"
+import type { JobPanelData } from "../view-models.js"
 import { AskAiButton, ListFooter, usePagedViewData } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { ConfirmDialog } from "./confirm-dialog.js"

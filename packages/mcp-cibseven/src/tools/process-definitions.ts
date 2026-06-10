@@ -6,7 +6,7 @@ import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 

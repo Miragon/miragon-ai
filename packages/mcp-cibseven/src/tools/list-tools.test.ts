@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import type { Client } from "@miragon-ai/client-cibseven"
 
-vi.mock("@miragon-ai/client-cibseven/generated/sdk.gen", () => ({
+vi.mock("@miragon-ai/client-cibseven/sdk", () => ({
   // list endpoints + their /count twins (the surface under test)
   getProcessInstances: vi.fn(),
   getProcessInstancesCount: vi.fn(),
@@ -40,7 +40,7 @@ vi.mock("@miragon-ai/client-cibseven/generated/sdk.gen", () => ({
   resolveIncident: vi.fn(),
 }))
 
-import * as sdk from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import * as sdk from "@miragon-ai/client-cibseven/sdk"
 import { paginatedListOutput } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { registerProcessInstanceTools } from "./process-instances.js"

@@ -1,10 +1,11 @@
-import type { Client, ProcessDetailActivity, ProcessDetailData } from "@miragon-ai/client-cibseven"
+import type { Client } from "@miragon-ai/client-cibseven"
+import type { ProcessDetailActivity, ProcessDetailData } from "../view-models.js"
 import {
   getActivityStatistics,
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 
 import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
 import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"

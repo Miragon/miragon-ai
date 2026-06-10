@@ -20,7 +20,7 @@ import {
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
 
-import type { IncidentDetailData } from "@miragon-ai/client-cibseven"
+import type { IncidentDetailData } from "../view-models.js"
 
 import { CAMUNDA7_INCIDENT_DETAIL_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"

@@ -5,7 +5,7 @@ import type {
   IncidentsDashboardActivity,
   IncidentsDashboardData,
   IncidentsDashboardProcess,
-} from "@miragon-ai/client-cibseven"
+} from "../../view-models.js"
 
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"

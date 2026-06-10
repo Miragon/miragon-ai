@@ -1,10 +1,6 @@
 import { listIncidentsInput, resolveIncidentInput } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import {
-  getIncidents,
-  getIncidentsCount,
-  resolveIncident,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { getIncidents, getIncidentsCount, resolveIncident } from "@miragon-ai/client-cibseven/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"

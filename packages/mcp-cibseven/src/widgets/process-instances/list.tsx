@@ -17,7 +17,7 @@ import {
   type FilterChip,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
-import type { ProcessInstanceRow, ProcessInstancesData } from "@miragon-ai/client-cibseven"
+import type { ProcessInstanceRow, ProcessInstancesData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 

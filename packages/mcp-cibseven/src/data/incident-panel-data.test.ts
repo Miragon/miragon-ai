@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@miragon-ai/client-cibseven/generated/sdk.gen", () => ({
+vi.mock("@miragon-ai/client-cibseven/sdk", () => ({
   getIncidents: vi.fn(),
   getProcessDefinitions: vi.fn(),
   getProcessDefinitionBpmn20Xml: vi.fn(),
@@ -12,7 +12,7 @@ import {
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 
 import {
   buildIncidentsDashboardData,

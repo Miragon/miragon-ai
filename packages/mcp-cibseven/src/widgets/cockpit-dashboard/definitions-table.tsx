@@ -6,7 +6,7 @@ import {
   TONE_DOT,
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
-import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
+import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows, type DefinitionRow } from "./lib.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"

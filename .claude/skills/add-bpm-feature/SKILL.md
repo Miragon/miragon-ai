@@ -33,8 +33,8 @@ export const listProcessInstancesInput = z.object({
 })
 ```
 
-Every field gets a `.describe()`. The REST calls themselves use the generated SDK in
-`packages/client-cibseven/src/generated/sdk.gen.ts` — if the endpoint is missing there,
+Every field gets a `.describe()`. The REST calls themselves use the generated SDK
+(imported from `@miragon-ai/client-cibseven/sdk`) — if the endpoint is missing there,
 the OpenAPI spec changed and you need `pnpm generate`, not a hand-written fetch.
 
 ## Step 2 — register the tool
@@ -45,7 +45,7 @@ Add the tool in `packages/mcp-cibseven/src/tools/<domain>.ts`. Reference templat
 ```ts
 import { listProcessInstancesInput } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { getProcessInstances } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { getProcessInstances } from "@miragon-ai/client-cibseven/sdk"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 

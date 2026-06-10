@@ -5,7 +5,7 @@ import {
   StatusBadge,
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
-import type { ProcessIncidentsData } from "@miragon-ai/client-cibseven"
+import type { ProcessIncidentsData } from "../../view-models.js"
 import { formatTime } from "../../lib/format-time.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"

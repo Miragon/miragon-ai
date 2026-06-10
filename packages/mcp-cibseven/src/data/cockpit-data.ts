@@ -1,11 +1,11 @@
+import type { Client } from "@miragon-ai/client-cibseven"
 import type {
-  Client,
   CockpitDashboardData,
   InstanceDetailData,
   JobPanelData,
   ProcessInstancesData,
   TaskData,
-} from "@miragon-ai/client-cibseven"
+} from "../view-models.js"
 import {
   getProcessDefinitions,
   getProcessInstance,
@@ -19,7 +19,7 @@ import {
   getProcessDefinitionStatistics,
   getJobs,
   getJobsCount,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 import { buildTaskFormSchema } from "../tools/task-form.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "../lib/activity-tree.js"
 

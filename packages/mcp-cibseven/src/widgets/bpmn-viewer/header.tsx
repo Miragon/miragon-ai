@@ -1,5 +1,5 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
-import type { BpmnViewerData } from "@miragon-ai/client-cibseven"
+import type { BpmnViewerData } from "../../view-models.js"
 import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
 
 export function BpmnViewerHeader({ data }: { data: BpmnViewerData | null }) {

@@ -4,11 +4,7 @@ import {
   getDeploymentInput,
 } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import {
-  getDeployments,
-  getDeployment,
-  createDeployment,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { getDeployments, getDeployment, createDeployment } from "@miragon-ai/client-cibseven/sdk"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 

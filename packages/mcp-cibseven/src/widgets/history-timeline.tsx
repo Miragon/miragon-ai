@@ -1,6 +1,6 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { TONE_DOT, AskAiButton } from "@miragon-ai/widget-shell/widgets"
-import type { HistoryTimelineData } from "@miragon-ai/client-cibseven"
+import type { HistoryTimelineData } from "../view-models.js"
 
 export type { HistoryTimelineData }
 export type HistoryActivity = HistoryTimelineData["activities"][number]

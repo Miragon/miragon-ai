@@ -5,12 +5,12 @@ import {
   getProcessDefinition,
   getProcessInstance,
   getStacktrace,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 import type {
   IncidentDto,
   ProcessDefinitionDto,
   ProcessInstanceDto,
-} from "@miragon-ai/client-cibseven/generated/types.gen"
+} from "@miragon-ai/client-cibseven/types"
 import type { MCPServer } from "mcp-use/server"
 import { z } from "zod"
 import type { EngineRegistry } from "../lib/resolve-engine.js"

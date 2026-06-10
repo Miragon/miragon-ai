@@ -12,7 +12,7 @@ import {
   useToolMutation,
 } from "@miragon/mcp-toolkit-ui"
 
-import type { ActivityTree, VariableValue } from "@miragon-ai/client-cibseven"
+import type { ActivityTree, VariableValue } from "../view-models.js"
 import { refreshCockpitData } from "./refresh.js"
 
 export function Section({

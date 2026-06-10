@@ -1,11 +1,12 @@
-import type { Client, TaskFormField, TaskFormSchema } from "@miragon-ai/client-cibseven"
+import type { Client } from "@miragon-ai/client-cibseven"
+import type { TaskFormField, TaskFormSchema } from "../view-models.js"
 import { getTaskFormInput } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getTask,
   getTaskVariables,
   getProcessDefinitionBpmn20Xml,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 import { extractEmbeddedFormFields } from "../lib/bpmn-task-form.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"

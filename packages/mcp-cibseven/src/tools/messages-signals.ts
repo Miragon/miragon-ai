@@ -1,6 +1,6 @@
 import { correlateMessageInput, throwSignalInput } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { deliverMessage, throwSignal } from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { deliverMessage, throwSignal } from "@miragon-ai/client-cibseven/sdk"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 

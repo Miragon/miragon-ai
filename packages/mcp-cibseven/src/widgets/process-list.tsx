@@ -1,6 +1,6 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { AskAiButton, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
-import type { ProcessListData } from "@miragon-ai/client-cibseven"
+import type { ProcessListData } from "../view-models.js"
 
 export type { ProcessListData }
 

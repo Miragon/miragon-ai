@@ -8,7 +8,7 @@ import {
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 
-import type { TaskFormField, TaskFormSchema } from "@miragon-ai/client-cibseven"
+import type { TaskFormField, TaskFormSchema } from "../view-models.js"
 
 interface TaskCompleteFormProps {
   taskId: string

@@ -1,5 +1,5 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import type { BpmnViewerData } from "@miragon-ai/client-cibseven"
+import type { BpmnViewerData } from "../../view-models.js"
 import { WidgetShell, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
 import { BpmnViewerHeader } from "./header.js"
 import { BpmnViewerLegend } from "./legend.js"

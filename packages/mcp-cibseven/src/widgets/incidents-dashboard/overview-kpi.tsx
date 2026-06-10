@@ -6,7 +6,7 @@ import {
   WidgetHeader,
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
-import type { IncidentsDashboardData } from "@miragon-ai/client-cibseven"
+import type { IncidentsDashboardData } from "../../view-models.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
 

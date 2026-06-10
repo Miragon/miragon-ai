@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 
-import type { ProcessDetailData } from "@miragon-ai/client-cibseven"
+import type { ProcessDetailData } from "../view-models.js"
 
 import {
   AskAiButton,

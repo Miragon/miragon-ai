@@ -1,3 +1,10 @@
+/**
+ * View-model contracts shared between the `src/data` builders, the widget
+ * tools, and the React widgets (`src/widgets`). These shapes describe what the
+ * widgets render — they are not engine API types (those live in
+ * `@miragon-ai/client-cibseven/types`).
+ */
+
 export interface IncidentStat {
   incidentType: string
   incidentCount: number

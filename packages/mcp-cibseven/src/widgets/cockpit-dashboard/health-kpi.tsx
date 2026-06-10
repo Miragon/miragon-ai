@@ -1,6 +1,6 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { AskAiButton, KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
-import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
+import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
 import { useNav, type NavIntent } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"

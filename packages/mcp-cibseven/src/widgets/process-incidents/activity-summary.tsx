@@ -1,6 +1,6 @@
 import { CountPill } from "@miragon-ai/widget-shell/widgets"
 
-import type { ProcessIncidentsActivity } from "@miragon-ai/client-cibseven"
+import type { ProcessIncidentsActivity } from "../../view-models.js"
 
 import { formatTimestamp } from "../../lib/format-time.js"
 
