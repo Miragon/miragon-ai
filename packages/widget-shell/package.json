@@ -1,6 +1,13 @@
 {
   "name": "@miragon-ai/widget-shell",
   "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "directory": "packages/widget-shell"
+  },
   "type": "module",
   "files": [
     "dist"

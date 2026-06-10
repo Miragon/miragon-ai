@@ -1,6 +1,13 @@
 {
   "name": "@miragon-ai/mcp-cibseven",
   "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "directory": "packages/mcp-cibseven"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

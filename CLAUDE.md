@@ -117,6 +117,23 @@ render widgets manually.
   discovers them via `MCP_PROXIES` (`parseProxyConfigEnv`). See
   `examples/miravelo-upstream/server.ts` for the reference implementation.
 
+## Releases & toolkit contributions
+
+- **npm packages release via changesets.** Add a changeset (`pnpm changeset`) when changing
+  a publishable package; on push to `main` the `release.yml` workflow opens/updates a
+  Version PR and, once merged, publishes to npm.pkg.github.com (`access: restricted`).
+  Publication candidates are `client-cibseven` and `client-analytics`; the gateway,
+  widget-shell, mcp-cibseven and mcp-analytics are `"private": true` **and** in the
+  changesets `ignore` list until the distribution decision (#118) — don't flip either
+  without that decision.
+- **Engine plugins release via git tag.** Bump `version` in `engine-plugins/gradle.properties`,
+  push a matching `engine-plugins-v<version>` tag, and `engine-plugins-publish.yml` runs
+  `./gradlew publish` against GitHub Packages Maven (`com.camunda7mcp`, shadow jars).
+- **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
+  exactly pinned dependency (`save-exact`, currently `0.3.1`). Toolkit changes happen in
+  that repo and arrive here as a deliberate, repo-wide version bump — and since the
+  toolkit is `0.x`, treat every minor bump as potentially breaking.
+
 ## Verification — what each check actually covers
 
 | Check             | Coverage                                                                                                                                                 |

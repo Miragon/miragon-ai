@@ -1,6 +1,19 @@
 {
   "name": "@miragon-ai/client-analytics",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "directory": "packages/client-analytics"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
+  "files": [
+    "dist",
+    "metrics-contract.json"
+  ],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
