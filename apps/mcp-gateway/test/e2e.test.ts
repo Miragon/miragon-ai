@@ -1,0 +1,104 @@
+import net from "node:net"
+import path from "node:path"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import type { AppPlugin } from "@miragon/mcp-toolkit-core"
+import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
+import { parseProxyConfigEnv } from "@miragon/mcp-toolkit-proxy-contract"
+import { MCPClient, type MCPSession } from "mcp-use/client"
+import type { McpServerInstance } from "mcp-use/server"
+import { getAppConfig, getPlugins } from "../src/setup.js"
+import { EXPECTED_TOOLS } from "./expected-tools.js"
+
+const FIXTURE_HTML = path.join(import.meta.dirname, "fixtures", "mcp-app.html")
+
+/** Reserve a free TCP port by binding to port 0 and releasing it again. */
+async function getFreePort(): Promise<number> {
+  return await new Promise((resolve, reject) => {
+    const probe = net.createServer()
+    probe.once("error", reject)
+    probe.listen(0, "127.0.0.1", () => {
+      const { port } = probe.address() as net.AddressInfo
+      probe.close(() => resolve(port))
+    })
+  })
+}
+
+function textPayload(result: { content?: unknown }): unknown {
+  const content = result.content as Array<{ type: string; text?: string }> | undefined
+  const text = content?.find((c) => c.type === "text")?.text
+  expect(text, "tool result should carry a text content block").toBeTruthy()
+  return JSON.parse(text!)
+}
+
+/**
+ * E2E smoke test: boots the real gateway server in-process (same plugin set
+ * and env wiring as `src/index.ts`, minus the built UI bundle) and speaks the
+ * MCP protocol to it over streamable HTTP. This is the only test that covers
+ * tool *registration* — plugin.ts wiring, setup.ts module activation and the
+ * framework tool trio — rather than the tool implementations.
+ */
+describe("mcp-gateway E2E smoke", () => {
+  let app: McpServerInstance<false>
+  let client: MCPClient
+  let session: MCPSession
+
+  beforeAll(async () => {
+    // Dummy engine: tools that only hit the in-memory EngineRegistry keep
+    // working; nothing in this test may reach a real engine or Prometheus.
+    vi.stubEnv("CAMUNDA_BASE_URL", "http://localhost:1")
+    vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
+    vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
+    vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
+    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    vi.stubEnv("MCP_PROXIES", undefined)
+
+    app = await createFrameworkApp({
+      name: "automation-mcp",
+      version: "0.1.0",
+      host: "127.0.0.1",
+      plugins: getPlugins() as AppPlugin[],
+      proxies: parseProxyConfigEnv(process.env.MCP_PROXIES),
+      appConfig: getAppConfig(),
+      app: {
+        resourceUri: "ui://automation-mcp/mcp-app.e2e.html",
+        htmlPath: FIXTURE_HTML,
+      },
+    })
+    const port = await getFreePort()
+    await app.listen(port)
+
+    client = MCPClient.fromDict({
+      mcpServers: { gateway: { url: `http://127.0.0.1:${port}/mcp` } },
+    })
+    session = await client.createSession("gateway")
+  })
+
+  afterAll(async () => {
+    await client?.closeAllSessions()
+    await app?.close()
+    vi.unstubAllEnvs()
+  })
+
+  it("exposes exactly the expected tool surface (tools/list snapshot)", async () => {
+    const tools = await session.listTools()
+    const names = tools.map((t) => t.name).sort()
+    expect(names).toEqual([...EXPECTED_TOOLS])
+  })
+
+  it("answers camunda7_list_engines from the engine registry without a live engine", async () => {
+    const result = await session.callTool("camunda7_list_engines", {})
+    expect(result.isError).toBeFalsy()
+    expect(textPayload(result)).toEqual({
+      engines: [{ id: "default", baseUrl: "http://localhost:1" }],
+      currentSelection: null,
+    })
+  })
+
+  it("answers get-framework-manifest with the active modules", async () => {
+    const result = await session.callTool("get-framework-manifest", {})
+    expect(result.isError).toBeFalsy()
+    const manifest = JSON.stringify(textPayload(result))
+    expect(manifest).toContain("camunda7")
+    expect(manifest).toContain("analytics")
+  })
+})

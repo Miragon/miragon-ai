@@ -13,9 +13,10 @@
     "build": "pnpm run build:ui && pnpm run build:server",
     "dev:ui": "cross-env INPUT=mcp-app.html vite build --watch",
     "dev": "pnpm run build:ui && mcp-use dev --port 8400 --no-open",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.ui.json",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.ui.json && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix",
     "start": "cross-env NODE_ENV=production node dist/index.js"
   },
   "dependencies": {
@@ -44,6 +45,7 @@
     "tailwindcss": "4.2.2",
     "typescript": "5.9.3",
     "vite": "8.0.8",
-    "vite-plugin-singlefile": "2.3.2"
+    "vite-plugin-singlefile": "2.3.2",
+    "vitest": "4.1.4"
   }
 }
