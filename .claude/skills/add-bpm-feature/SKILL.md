@@ -17,7 +17,7 @@ off a four-link registration chain. Follow the steps for the path you need.
 | ---------------------------------------- | ---------------------------------------------------------- |
 | JSON data for the model                  | Registrar tool in `src/tools/<domain>.ts` (Steps 1–3)      |
 | A widget rendered for the user + summary | `show_*` widget tool in `widget-tools.ts` (Step 4)         |
-| App-only JSON for in-widget refresh/nav  | `*_data` feed in `widget-tools.ts`, no `_meta.ui` (Step 4) |
+| App-only JSON for in-widget refresh/nav  | `*_data` feed in `widget-tools.ts`, `appOnlyMeta` (Step 4) |
 
 ## Step 1 — input schema in client-cibseven
 
@@ -115,10 +115,15 @@ exception that uses `server.tool()` directly):
 
 - `show_*` tools: `_meta: { ui: { resourceUri } }`, resolve the engine via
   `resolveEngine(args.engine, registry)`, return
-  `buildSingleWidgetView({ widget, app: "camunda7", dataType, data, title })` or
-  `buildComposedView(...)` (both from `@miragon-ai/widget-shell/server`).
-- `*_data` feeds: **no** `_meta.ui` — return `rawData(data)` so the in-widget
-  `callTool()` gets JSON back instead of the host rendering a new widget.
+  `buildSingleWidgetView({ widget, app: "camunda7", dataType, data, title, summary })` or
+  `buildComposedView(...)` (both from `@miragon-ai/widget-shell/server`). The
+  `summary` is the model-facing text channel (1-2 sentences, key figures, no raw
+  data) — the full payload travels only in `structuredContent`.
+- `*_data` feeds: `_meta: appOnlyMeta` (= `{ ui: { visibility: ["app"] } }`,
+  SEP-1865 — hides the tool from the LLM on conforming hosts; **no**
+  `resourceUri`) — return `rawData(data)` so the in-widget `callTool()` gets
+  JSON back instead of the host rendering a new widget. Wrap every handler in
+  `withToolErrors` (from `@miragon-ai/widget-shell/server`).
 
 ## Step 5 — verify
 
