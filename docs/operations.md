@@ -22,6 +22,13 @@ The Compose stack under `docker/docker-compose.yml` shows a fully wired example
 Prometheus, and Grafana — export `GITHUB_TOKEN` first, the image build reads it
 as a secret too).
 
+## Security
+
+The MCP endpoint is unauthenticated — any client that reaches port `8400` gets
+full tool access. Deploy the gateway only behind an authenticating reverse
+proxy. `MCP_URL` (the public base URL) is required when any `MCP_PROXIES` entry
+uses `auth.mode: "oauth2"`; it doubles as the OAuth callback base URL.
+
 ## Environment variables
 
 | Variable                                | Default                             | Notes                                           |
