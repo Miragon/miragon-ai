@@ -7,6 +7,7 @@ import {
   type PrometheusClient,
   type PromSample,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
 
 export interface PerformanceKPI {
   process_definition_key: string
@@ -105,17 +106,17 @@ export async function analyzePerformance(
   const completedSel = pdkSelector(params.processDefinitionKey, params.engine, 'state="COMPLETED"')
 
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
-    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${sel}[${range}]))`),
+    ch.instant(`sum(increase(${M.processInstanceStarted}${sel}[${range}]))`),
+    ch.instant(`sum(increase(${M.processInstanceEnded}${completedSel}[${range}]))`),
+    ch.instant(`sum(increase(${M.incidentCreated}${sel}[${range}]))`),
     ch.instant(
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${sel}[${range}]))`,
+      `sum(increase(${M.processInstanceDuration}_sum${sel}[${range}])) / sum(increase(${M.processInstanceDuration}_count${sel}[${range}]))`,
     ),
     ch.instant(
-      `histogram_quantile(0.5, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
+      `histogram_quantile(0.5, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}[${range}])))`,
     ),
     ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
+      `histogram_quantile(0.95, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}[${range}])))`,
     ),
   ])
 
@@ -159,13 +160,11 @@ async function activityBreakdownRows(
   const sel = pdkSelector(key, engineId)
   const [counts, sums, p95] = await Promise.all([
     ch.instant(
-      `sum by (activity_id, activity_type)(increase(camunda_activity_ended_total${sel}${rangeExpr}))`,
+      `sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}${rangeExpr}))`,
     ),
+    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${rangeExpr}))`),
     ch.instant(
-      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}${rangeExpr}))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}${rangeExpr})))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${rangeExpr})))`,
     ),
   ])
   const sumBy = byLabel(sums, "activity_id")
@@ -248,17 +247,17 @@ async function periodKpi(
   const completedSel = pdkSelector(key, engineId, 'state="COMPLETED"')
   const r = w.rangeExpr
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
-    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}${r}))`),
-    ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}${r}))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${sel}${r}))`),
+    ch.instant(`sum(increase(${M.processInstanceStarted}${sel}${r}))`),
+    ch.instant(`sum(increase(${M.processInstanceEnded}${completedSel}${r}))`),
+    ch.instant(`sum(increase(${M.incidentCreated}${sel}${r}))`),
     ch.instant(
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}${r})) / sum(increase(camunda_process_instance_duration_seconds_count${sel}${r}))`,
+      `sum(increase(${M.processInstanceDuration}_sum${sel}${r})) / sum(increase(${M.processInstanceDuration}_count${sel}${r}))`,
     ),
     ch.instant(
-      `histogram_quantile(0.5, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}${r})))`,
+      `histogram_quantile(0.5, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
     ),
     ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}${r})))`,
+      `histogram_quantile(0.95, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
     ),
   ])
   const totalInstances = Math.round(first(total))
@@ -285,10 +284,10 @@ async function periodActivities(
   const sel = pdkSelector(key, engineId)
   const r = w.rangeExpr
   const [counts, sums, p95] = await Promise.all([
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}${r}))`),
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}${r}))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}${r}))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${r}))`),
     ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}${r})))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${r})))`,
     ),
   ])
   const sumBy = byLabel(sums, "activity_id")

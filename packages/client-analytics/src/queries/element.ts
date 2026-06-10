@@ -7,6 +7,7 @@ import {
   type PrometheusClient,
   type PromSample,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
 
 export interface ElementBottleneckRow {
   activity_id: string
@@ -68,17 +69,13 @@ export async function elementBottleneck(
   )
 
   const [counts, sums, p95, incidents, types] = await Promise.all([
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}[${range}]))`),
     ch.instant(
-      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}[${range}]))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}[${range}])))`,
     ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}[${range}])))`,
-    ),
-    ch.instant(`sum by (activity_id)(increase(camunda_incident_created_total${sel}[${range}]))`),
-    ch.instant(
-      `sum by (activity_id, activity_type)(increase(camunda_activity_ended_total${sel}[${range}]))`,
-    ),
+    ch.instant(`sum by (activity_id)(increase(${M.incidentCreated}${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}[${range}]))`),
   ])
 
   const sumBy = byLabel(sums, "activity_id")
@@ -151,10 +148,8 @@ export async function elementHeat(
   )
 
   const [counts, sums] = await Promise.all([
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}[${range}]))`),
-    ch.instant(
-      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}[${range}]))`,
-    ),
+    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}[${range}]))`),
   ])
 
   const countBy = byLabel(counts, "activity_id")

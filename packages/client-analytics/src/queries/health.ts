@@ -5,6 +5,7 @@ import {
   type PrometheusClient,
   type PromSample,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
 
 export interface HealthCount {
   label: string
@@ -79,19 +80,19 @@ export async function engineHealth(
     firing,
     pending,
   ] = await Promise.all([
-    ch.instant(`camunda_process_instances_running${sel}`),
-    ch.instant(`sum by (incident_type)(camunda_incidents_open${sel})`),
-    ch.instant(`sum(camunda_jobs_failed${sel})`),
-    ch.instant(`sum(camunda_jobs_executable${sel})`),
-    ch.instant(`sum(camunda_jobs_suspended${sel})`),
+    ch.instant(`${M.processInstancesRunning}${sel}`),
+    ch.instant(`sum by (incident_type)(${M.incidentsOpen}${sel})`),
+    ch.instant(`sum(${M.jobsFailed}${sel})`),
+    ch.instant(`sum(${M.jobsExecutable}${sel})`),
+    ch.instant(`sum(${M.jobsSuspended}${sel})`),
     ch.instant(
-      `sum(camunda_usertasks_open${selector(`status="total"`, engineMatcher(params.engine))})`,
+      `sum(${M.userTasksOpen}${selector(`status="total"`, engineMatcher(params.engine))})`,
     ),
     ch.instant(
-      `sum(camunda_usertasks_open${selector(`status="unassigned"`, engineMatcher(params.engine))})`,
+      `sum(${M.userTasksOpen}${selector(`status="unassigned"`, engineMatcher(params.engine))})`,
     ),
-    ch.instant(`sum(camunda_external_tasks_open${sel})`),
-    ch.instant(`count(camunda_process_definitions_deployed${sel})`),
+    ch.instant(`sum(${M.externalTasksOpen}${sel})`),
+    ch.instant(`count(${M.processDefinitionsDeployed}${sel})`),
     ch.instant(`ALERTS${alertSel("firing")}`),
     ch.instant(`ALERTS${alertSel("pending")}`),
   ])

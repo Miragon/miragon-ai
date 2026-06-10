@@ -4,6 +4,7 @@ import {
   type PrometheusClient,
   type PromSample,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
 
 export interface EngineCompareKpi {
   engineId: string
@@ -115,15 +116,15 @@ async function engineKpi(
   )
 
   const [total, completed, failed, incidents, avg, p95] = await Promise.all([
-    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${sel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${incidentSel}[${range}]))`),
+    ch.instant(`sum(increase(${M.processInstanceStarted}${sel}[${range}]))`),
+    ch.instant(`sum(increase(${M.processInstanceEnded}${completedSel}[${range}]))`),
+    ch.instant(`sum(increase(${M.incidentCreated}${sel}[${range}]))`),
+    ch.instant(`sum(increase(${M.incidentCreated}${incidentSel}[${range}]))`),
     ch.instant(
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${sel}[${range}]))`,
+      `sum(increase(${M.processInstanceDuration}_sum${sel}[${range}])) / sum(increase(${M.processInstanceDuration}_count${sel}[${range}]))`,
     ),
     ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
+      `histogram_quantile(0.95, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}[${range}])))`,
     ),
   ])
 

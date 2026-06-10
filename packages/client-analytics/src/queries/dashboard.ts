@@ -7,6 +7,7 @@ import {
   type PrometheusClient,
   type PromSample,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
 import type {
   ActivityBreakdownItem,
   AnalyticsDashboardData,
@@ -71,47 +72,39 @@ export async function dashboardData(
     defDurSum,
     defDurCount,
   ] = await Promise.all([
-    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}${r}))`),
-    ch.instant(`sum(increase(camunda_process_instance_ended_total${sel}${r}))`),
+    ch.instant(`sum(increase(${M.processInstanceStarted}${sel}${r}))`),
+    ch.instant(`sum(increase(${M.processInstanceEnded}${sel}${r}))`),
     ch.instant(
-      `sum(increase(camunda_process_instance_ended_total${selector(keyMatcher, `state="COMPLETED"`, engine)}${r}))`,
+      `sum(increase(${M.processInstanceEnded}${selector(keyMatcher, `state="COMPLETED"`, engine)}${r}))`,
     ),
-    ch.instant(`sum(increase(camunda_incident_created_total${sel}${r}))`),
-    ch.instant(`sum(increase(camunda_incident_resolved_total${sel}${r}))`),
+    ch.instant(`sum(increase(${M.incidentCreated}${sel}${r}))`),
+    ch.instant(`sum(increase(${M.incidentResolved}${sel}${r}))`),
     ch.instant(
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}${r})) / sum(increase(camunda_process_instance_duration_seconds_count${sel}${r}))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.5, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}${r})))`,
+      `sum(increase(${M.processInstanceDuration}_sum${sel}${r})) / sum(increase(${M.processInstanceDuration}_count${sel}${r}))`,
     ),
     ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}${r})))`,
-    ),
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}${r}))`),
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}${r}))`),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}${r})))`,
+      `histogram_quantile(0.5, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
     ),
     ch.instant(
-      `sum by (activity_id, activity_type)(increase(camunda_activity_ended_total${sel}${r}))`,
+      `histogram_quantile(0.95, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
+    ),
+    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}${r}))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${r}))`),
+    ch.instant(
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${r})))`,
+    ),
+    ch.instant(`sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}${r}))`),
+    ch.instant(`sum by (process_definition_key)(increase(${M.processInstanceStarted}${sel}${r}))`),
+    ch.instant(
+      `sum by (process_definition_key)(increase(${M.processInstanceEnded}${selector(keyMatcher, `state="COMPLETED"`, engine)}${r}))`,
+    ),
+    ch.instant(`sum by (process_definition_key)(increase(${M.processInstanceEnded}${sel}${r}))`),
+    ch.instant(`sum by (process_definition_key)(increase(${M.incidentCreated}${sel}${r}))`),
+    ch.instant(
+      `sum by (process_definition_key)(increase(${M.processInstanceDuration}_sum${sel}${r}))`,
     ),
     ch.instant(
-      `sum by (process_definition_key)(increase(camunda_process_instance_started_total${sel}${r}))`,
-    ),
-    ch.instant(
-      `sum by (process_definition_key)(increase(camunda_process_instance_ended_total${selector(keyMatcher, `state="COMPLETED"`, engine)}${r}))`,
-    ),
-    ch.instant(
-      `sum by (process_definition_key)(increase(camunda_process_instance_ended_total${sel}${r}))`,
-    ),
-    ch.instant(
-      `sum by (process_definition_key)(increase(camunda_incident_created_total${sel}${r}))`,
-    ),
-    ch.instant(
-      `sum by (process_definition_key)(increase(camunda_process_instance_duration_seconds_sum${sel}${r}))`,
-    ),
-    ch.instant(
-      `sum by (process_definition_key)(increase(camunda_process_instance_duration_seconds_count${sel}${r}))`,
+      `sum by (process_definition_key)(increase(${M.processInstanceDuration}_count${sel}${r}))`,
     ),
   ])
 
@@ -227,10 +220,10 @@ export async function failureDashboardData(
   const sel = selector(engineMatcher(params.engine))
 
   const [patterns, runningByKey, incidentsByKey, deadJobsByKey] = await Promise.all([
-    ch.instant(`sum by (process_definition_key, incident_type)(camunda_incidents_open${sel})`),
-    ch.instant(`sum by (process_definition_key)(camunda_process_instances_running${sel})`),
-    ch.instant(`sum by (process_definition_key)(camunda_incidents_open${sel})`),
-    ch.instant(`sum by (process_definition_key)(camunda_jobs_failed${sel})`),
+    ch.instant(`sum by (process_definition_key, incident_type)(${M.incidentsOpen}${sel})`),
+    ch.instant(`sum by (process_definition_key)(${M.processInstancesRunning}${sel})`),
+    ch.instant(`sum by (process_definition_key)(${M.incidentsOpen}${sel})`),
+    ch.instant(`sum by (process_definition_key)(${M.jobsFailed}${sel})`),
   ])
 
   const errorPatterns: ErrorPatternItem[] = patterns

@@ -5,6 +5,7 @@ import {
   type EngineFilterInput,
   type PrometheusClient,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
 
 export interface ErrorPatternRow {
   incident_message: string
@@ -46,7 +47,7 @@ export async function findFailedInstances(
   )
 
   const samples = await ch.instant(
-    `sum by (process_definition_key, incident_type)(camunda_incidents_open${sel})`,
+    `sum by (process_definition_key, incident_type)(${M.incidentsOpen}${sel})`,
   )
 
   return samples

@@ -26,25 +26,29 @@ helpers from `src/prometheus.ts` — never concatenate label values by hand:
 Reference shape (from `elementBottleneck` in `src/queries/element.ts`):
 
 ```ts
+import { METRIC_NAMES as M } from "../metric-names.js"
+
 const sel = selector(
   `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
   engineMatcher(params.engine),
 )
 
 const [counts, sums] = await Promise.all([
-  ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}[${range}]))`),
-  ch.instant(
-    `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}[${range}]))`,
-  ),
+  ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}[${range}]))`),
+  ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}[${range}]))`),
 ])
 ```
 
-**Metric-name contract:** only use series emitted by the Kotlin plugin
-(`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt`); the Collector turns
-`camunda.activity.ended` into `camunda_activity_ended_total` etc. If you need a _new_
-metric or label, you must change all four places: the Kotlin plugin, the TS queries,
-`docker/prometheus/alerts.yml`, and `docker/grafana/dashboards/process-analytics.json` —
-and keep labels model-bounded (never instance ids, business keys, variable values).
+**Metric-name contract:** series names come from `METRIC_NAMES`
+(`src/metric-names.ts`) — never raw `camunda_*` literals; a guard test in
+`src/metrics-contract.test.ts` fails on them. Histogram entries are the base name —
+append `_sum`/`_count`/`_bucket` at the call site. The single source of truth is
+`packages/client-analytics/metrics-contract.json`: if you need a _new_ metric or label,
+change the contract first, then the Kotlin plugin
+(`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt` /
+`EngineStateMetrics.kt`), `METRIC_NAMES`, and any alert rules / Grafana dashboards —
+contract tests on both sides enforce consistency. Keep labels model-bounded (never
+instance ids, business keys, variable values).
 
 ## Step 2 — PromQL snapshot test
 

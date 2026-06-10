@@ -6,6 +6,7 @@ import {
   type PrometheusClient,
   type PromSample,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
 
 export interface VersionCompareKpi {
   version: number
@@ -121,17 +122,17 @@ async function versionKpi(
   )
 
   const [total, completed, failed, incidents, avg, p95] = await Promise.all([
-    ch.instant(`sum(increase(camunda_process_instance_started_total${verSel}[${range}]))`),
+    ch.instant(`sum(increase(${M.processInstanceStarted}${verSel}[${range}]))`),
     ch.instant(
-      `sum(increase(camunda_process_instance_ended_total${selector(`process_definition_key="${key}"`, `process_definition_version="${version}"`, `state="COMPLETED"`, engine)}[${range}]))`,
+      `sum(increase(${M.processInstanceEnded}${selector(`process_definition_key="${key}"`, `process_definition_version="${version}"`, `state="COMPLETED"`, engine)}[${range}]))`,
     ),
-    ch.instant(`sum(increase(camunda_incident_created_total${verSel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${incidentSel}[${range}]))`),
+    ch.instant(`sum(increase(${M.incidentCreated}${verSel}[${range}]))`),
+    ch.instant(`sum(increase(${M.incidentCreated}${incidentSel}[${range}]))`),
     ch.instant(
-      `sum(increase(camunda_process_instance_duration_seconds_sum${verSel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${verSel}[${range}]))`,
+      `sum(increase(${M.processInstanceDuration}_sum${verSel}[${range}])) / sum(increase(${M.processInstanceDuration}_count${verSel}[${range}]))`,
     ),
     ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${verSel}[${range}])))`,
+      `histogram_quantile(0.95, sum by (le)(increase(${M.processInstanceDuration}_bucket${verSel}[${range}])))`,
     ),
   ])
 

@@ -94,15 +94,20 @@ render widgets manually.
 
 ## Contracts
 
-- **Metric names are a four-place contract.** The Kotlin plugin
-  (`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt`) emits OTEL
-  instruments that surface in Prometheus as `camunda_*` series (e.g.
-  `camunda.activity.ended` → `camunda_activity_ended_total`). Those names are consumed
-  by the TS queries (`packages/client-analytics/src/queries/*`), the alert rules
-  (`docker/prometheus/alerts.yml`), and the Grafana dashboard
-  (`docker/grafana/dashboards/process-analytics.json`). Changing a metric means changing
-  **all four** places. Only attach model-bounded labels (definition key, activity id,
-  engine id …) — never instance ids, business keys, or variable values.
+- **`packages/client-analytics/metrics-contract.json` is the single source of truth for
+  metric names and labels — when changing a metric, change it here first.** The Kotlin
+  plugin (`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt`,
+  `EngineStateMetrics.kt`) emits the OTEL instruments (`otelName`) that surface in
+  Prometheus as `camunda_*` series (`promName`, e.g. `camunda.activity.ended` →
+  `camunda_activity_ended_total`). Consumers — the TS queries (via `METRIC_NAMES` in
+  `packages/client-analytics/src/metric-names.ts`, never raw strings), the alert rules
+  (`docker/prometheus/alerts.yml`), and the Grafana dashboards
+  (`docker/grafana/dashboards/*.json`) — are checked against the contract by tests on
+  both sides: `packages/client-analytics/src/metrics-contract.test.ts` (vitest) and
+  `engine-plugins/cibseven-history-metrics/.../MetricsContractTest.kt` (Gradle). A
+  rename that skips the contract or a consumer fails one of them. Only attach
+  model-bounded labels (definition key, activity id, engine id …) — never instance ids,
+  business keys, or variable values.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
   `0.3.1` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.
