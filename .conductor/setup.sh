@@ -14,8 +14,8 @@ pnpm -F @miragon-ai/client-cibseven generate
 
 pnpm build
 
-if ! command -v java >/dev/null 2>&1; then
-  echo "Error: java not found on PATH. Install a JDK to build the engine plugins." >&2
+if [ -z "${JAVA_HOME:-}" ] && ! command -v java >/dev/null 2>&1; then
+  echo "Error: java not found on PATH and JAVA_HOME is unset. Install a JDK to build the engine plugins." >&2
   exit 1
 fi
 

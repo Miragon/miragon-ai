@@ -11,6 +11,7 @@
       "Write(.env.local)",
       "Write(.env.*.local)",
       "Bash(cat .env)",
+      "Bash(cat .env :*)",
       "Bash(cat .env.local:*)",
       "Bash(cat .env.*.local:*)",
       "Bash(cat *.env)"
