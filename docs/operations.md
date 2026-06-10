@@ -5,10 +5,12 @@ Everything you need to run the platform somewhere other than your laptop.
 ## Deployment artifact
 
 A single Docker image, built from the repo root `Dockerfile`. Multi-stage build,
-pruned production dependencies, exposes port `8400`.
+pruned production dependencies, exposes port `8400`. The build needs
+`GITHUB_TOKEN` exported in your shell (a PAT with `read:packages`) — it is
+mounted as a BuildKit secret to fetch the private `@miragon` packages.
 
 ```bash
-docker build -t miragon-ai-server .
+docker build --secret id=github_token,env=GITHUB_TOKEN -t miragon-ai-server .
 docker run --rm -p 8400:8400 \
   -e CAMUNDA_BASE_URL=... \
   -e PROMETHEUS_URL=... \
@@ -17,7 +19,8 @@ docker run --rm -p 8400:8400 \
 
 The Compose stack under `docker/docker-compose.yml` shows a fully wired example
 (`--profile full` brings up the server alongside the engine, OTEL Collector,
-Prometheus, and Grafana).
+Prometheus, and Grafana — export `GITHUB_TOKEN` first, the image build reads it
+as a secret too).
 
 ## Environment variables
 
