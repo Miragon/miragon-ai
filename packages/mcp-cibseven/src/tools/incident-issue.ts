@@ -283,7 +283,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
       // The OpenAPI SDK types describe a `{data, error}` envelope, but the
       // shared client (see `client.ts`) is built with `responseStyle: "data"`
       // + `throwOnError: true` — so at runtime the call returns the raw DTO.
-      // The cast matches the convention used in `incident-panel-data.ts`.
+      // The cast matches the convention used in `data/incident-panel-data.ts`.
       const incident = (await getIncident({
         client,
         path: { id: args.incidentId },

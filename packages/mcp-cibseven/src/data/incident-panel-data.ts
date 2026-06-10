@@ -15,8 +15,8 @@ import {
   getProcessDefinitionStatistics,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 
-import { buildInstanceCockpitUrl, buildProcessCockpitUrl } from "./lib/cockpit-url.js"
-import { countBpmnActivities, extractActivityNames } from "./lib/bpmn-parse.js"
+import { buildInstanceCockpitUrl, buildProcessCockpitUrl } from "../lib/cockpit-url.js"
+import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"
 
 interface IncidentRow {
   id: string

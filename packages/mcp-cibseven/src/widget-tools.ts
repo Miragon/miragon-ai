@@ -30,10 +30,13 @@ import {
   buildInstanceDetailData,
   buildJobPanelData,
   buildProcessInstancesData,
-} from "./cockpit-data.js"
-import { buildIncidentsDashboardData, buildProcessIncidentsData } from "./incident-panel-data.js"
-import { buildProcessDetailData } from "./steps/process-detail.js"
-import { buildIncidentDetailData } from "./steps/incident-detail.js"
+} from "./data/cockpit-data.js"
+import {
+  buildIncidentsDashboardData,
+  buildProcessIncidentsData,
+} from "./data/incident-panel-data.js"
+import { buildProcessDetailData } from "./data/process-detail-data.js"
+import { buildIncidentDetailData } from "./data/incident-detail-data.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
 import {
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,

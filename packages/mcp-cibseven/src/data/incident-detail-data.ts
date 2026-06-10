@@ -20,7 +20,7 @@ import {
 
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import { extractActivityNames } from "../lib/bpmn-parse.js"
-import { processDefinitionKeyFromId } from "../incident-panel-data.js"
+import { processDefinitionKeyFromId } from "./incident-panel-data.js"
 
 interface BuildOptions {
   baseUrl: string

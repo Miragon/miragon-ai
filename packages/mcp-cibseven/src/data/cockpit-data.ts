@@ -20,8 +20,8 @@ import {
   getJobs,
   getJobsCount,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
-import { buildTaskFormSchema } from "./tools/task-form.js"
-import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
+import { buildTaskFormSchema } from "../tools/task-form.js"
+import { collectActiveActivityIds, collectIncidentActivityIds } from "../lib/activity-tree.js"
 
 /**
  * Pure data builders shared by the `camunda7_show_*` widget tools AND the

@@ -1,5 +1,8 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import { buildIncidentsDashboardData, buildProcessIncidentsData } from "../incident-panel-data.js"
+import {
+  buildIncidentsDashboardData,
+  buildProcessIncidentsData,
+} from "../data/incident-panel-data.js"
 import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 
 /**

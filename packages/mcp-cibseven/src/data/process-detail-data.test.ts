@@ -14,7 +14,7 @@ import {
   getProcessDefinitionStatistics,
 } from "@miragon-ai/client-cibseven/generated/sdk.gen"
 
-import { buildProcessDetailData } from "./process-detail.js"
+import { buildProcessDetailData } from "./process-detail-data.js"
 
 const mockedGetActivityStats = vi.mocked(getActivityStatistics)
 const mockedGetDefs = vi.mocked(getProcessDefinitions)
