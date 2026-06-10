@@ -24,6 +24,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "generate": "openapi-ts"
   },
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.94.5",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "4.1.4"
   }
 }

@@ -1,24 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 import { useToolQuery, useCallTool } from "@miragon/mcp-toolkit-ui"
-
-/** Mirrors the toolkit's internal result parsing (content[0].text JSON → structuredContent). */
-function parseToolResult<T>(result: unknown): T {
-  const r = result as {
-    content?: Array<{ text?: string }>
-    structuredContent?: unknown
-    isError?: boolean
-  }
-  if (r?.isError) throw new Error(r.content?.[0]?.text ?? "Tool call failed")
-  const text = r?.content?.[0]?.text
-  if (text) {
-    try {
-      return JSON.parse(text) as T
-    } catch {
-      return text as T
-    }
-  }
-  return (r?.structuredContent ?? r) as T
-}
+import { parseToolResult } from "./parse-tool-result.js"
 
 export interface PagedViewData<TItem, TData = unknown> {
   /** Accumulated items across all loaded pages. */

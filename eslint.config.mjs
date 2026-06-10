@@ -11,6 +11,10 @@ const bundledUiFiles = [
   "packages/mcp-cibseven/src/widgets/**/*.{ts,tsx}",
 ]
 
+// Gateway tests live outside src/ (not part of the build tsconfig) and get
+// their type information from the dedicated tsconfig.test.json project.
+const gatewayTestFiles = ["apps/mcp-gateway/test/**/*.ts"]
+
 export default tseslint.config(
   { ignores: ["**/dist/**", "**/node_modules/**", "**/generated/**", "vendor/**"] },
 
@@ -19,16 +23,21 @@ export default tseslint.config(
 
   // Typed linting via the project service for everything the package tsconfigs cover
   {
-    ignores: bundledUiFiles,
+    ignores: [...bundledUiFiles, ...gatewayTestFiles],
     languageOptions: {
       parserOptions: {
         projectService: {
           // Standalone config files that are not part of any tsconfig
           allowDefaultProject: [
+            "vitest.shared.ts",
             "apps/mcp-gateway/vite.config.ts",
+            "apps/mcp-gateway/vitest.config.ts",
+            "packages/mcp-analytics/vitest.config.ts",
             "packages/mcp-cibseven/vitest.config.ts",
             "packages/client-analytics/vitest.config.ts",
+            "packages/client-cibseven/vitest.config.ts",
             "packages/client-cibseven/openapi-ts.config.ts",
+            "packages/widget-shell/vitest.config.ts",
             "docs/.vitepress/config.ts",
           ],
         },
@@ -47,6 +56,17 @@ export default tseslint.config(
           "packages/mcp-analytics/tsconfig.widgets.json",
           "packages/mcp-cibseven/tsconfig.widgets.json",
         ],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+
+  // Gateway test files: typed via the dedicated test tsconfig project
+  {
+    files: gatewayTestFiles,
+    languageOptions: {
+      parserOptions: {
+        project: ["apps/mcp-gateway/tsconfig.test.json"],
         tsconfigRootDir: import.meta.dirname,
       },
     },
