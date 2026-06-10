@@ -229,6 +229,10 @@ export function registerWidgetTools(
         period: PERIOD.default("7d"),
         engineId: z.union([z.string(), z.array(z.string())]).optional(),
       }),
+      // App-only (SEP-1865 visibility): hidden from the LLM on conforming
+      // hosts, still callable from widgets via `callTool`. No `resourceUri` —
+      // the feed returns JSON instead of rendering UI.
+      _meta: { ui: { visibility: ["app"] } },
     },
     async (args) => {
       const heat = await queries.elementHeat(ch, args)

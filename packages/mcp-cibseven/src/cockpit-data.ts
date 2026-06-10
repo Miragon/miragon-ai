@@ -26,7 +26,7 @@ import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/acti
 /**
  * Pure data builders shared by the `camunda7_show_*` widget tools AND the
  * data-only `camunda7_cockpit_data` feed. The widget tools wrap the result in a
- * UI view (`_meta.ui`); the cockpit app calls the data feed instead, because a
+ * UI view (`_meta.ui.resourceUri`); the cockpit app calls the data feed instead, because a
  * widget-tool result is rendered by the host rather than returned to an
  * in-widget `callTool()` — so the app would hang waiting for data.
  */

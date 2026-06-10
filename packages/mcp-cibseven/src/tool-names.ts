@@ -12,9 +12,10 @@ export const CAMUNDA7_SHOW_INSTANCE_DETAIL = "camunda7_show_instance_detail"
 // Consolidated cockpit app (client-side navigation) + the granular dashboard it
 // reuses for its overview.
 export const CAMUNDA7_OPEN_COCKPIT = "camunda7_open_cockpit"
-// Per-view data-only feeds (no UI) reused by the cockpit app AND each widget's
-// own self-fetch. A widget tool (_meta.ui) can't be used for this: the host
-// renders it instead of returning data to the in-widget callTool().
+// Per-view data-only feeds (no UI, app-only via _meta.ui.visibility) reused by
+// the cockpit app AND each widget's own self-fetch. A widget tool
+// (_meta.ui.resourceUri) can't be used for this: the host renders it instead of
+// returning data to the in-widget callTool().
 export const CAMUNDA7_COCKPIT_OVERVIEW_DATA = "camunda7_cockpit_overview_data"
 export const CAMUNDA7_PROCESS_DETAIL_DATA = "camunda7_process_detail_data"
 export const CAMUNDA7_PROCESS_INSTANCES_DATA = "camunda7_process_instances_data"

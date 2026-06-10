@@ -60,7 +60,7 @@ const engineParam = {
 /**
  * Plain (no-UI) tool result carrying JSON data. The cockpit data feeds use this
  * so the app's in-widget `callTool` gets the data back — a widget-tool result
- * (with `_meta.ui`) is rendered by the host instead of being returned.
+ * (with `_meta.ui.resourceUri`) is rendered by the host instead of being returned.
  */
 function rawData(data: unknown) {
   return {
@@ -68,6 +68,15 @@ function rawData(data: unknown) {
     structuredContent: data as Record<string, unknown>,
   }
 }
+
+/**
+ * App-only marker for the internal `*_data` feeds (SEP-1865
+ * `_meta.ui.visibility`). Conforming hosts hide these tools from the LLM tool
+ * surface while keeping them callable from widgets via `callTool`; the
+ * "Internal JSON feed" descriptions stay as fallback for non-conforming hosts.
+ * Deliberately no `resourceUri` — the feeds must return JSON, not render UI.
+ */
+const appOnlyMeta = { ui: { visibility: ["app"] } }
 
 export function registerWidgetTools(
   server: MCPServer,
@@ -620,6 +629,7 @@ export function registerWidgetTools(
         "Internal JSON feed (no UI) for the cockpit overview — per-definition stats. Prefer camunda7_open_cockpit / camunda7_show_cockpit_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({ ...engineParam }),
+      _meta: appOnlyMeta,
     },
     async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -638,6 +648,7 @@ export function registerWidgetTools(
         processDefinitionKey: z.string().describe("Process definition key"),
         ...engineParam,
       }),
+      _meta: appOnlyMeta,
     },
     async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
@@ -668,6 +679,7 @@ export function registerWidgetTools(
         maxResults: z.number().optional(),
         ...engineParam,
       }),
+      _meta: appOnlyMeta,
     },
     async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -696,6 +708,7 @@ export function registerWidgetTools(
         processInstanceId: z.string().describe("The process instance ID"),
         ...engineParam,
       }),
+      _meta: appOnlyMeta,
     },
     async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -720,6 +733,7 @@ export function registerWidgetTools(
         maxResults: z.number().optional(),
         ...engineParam,
       }),
+      _meta: appOnlyMeta,
     },
     async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -746,6 +760,7 @@ export function registerWidgetTools(
         incidentType: z.string().optional(),
         ...engineParam,
       }),
+      _meta: appOnlyMeta,
     },
     async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
@@ -771,6 +786,7 @@ export function registerWidgetTools(
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
         ...engineParam,
       }),
+      _meta: appOnlyMeta,
     },
     async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
@@ -795,6 +811,7 @@ export function registerWidgetTools(
         incidentId: z.string().describe("The incident ID to inspect"),
         ...engineParam,
       }),
+      _meta: appOnlyMeta,
     },
     async (args) => {
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)

@@ -87,9 +87,10 @@ render widgets manually.
    - Registrar tools (`src/tools/`): plain JSON data _for the model_
    - Widget tools (`widget-tools.ts`, `show_*`, `_meta: { ui: { resourceUri } }`):
      render a widget for the user + return a summary for the model
-   - `*_data` feeds (also in `widget-tools.ts`, **no** `_meta.ui`): app-only JSON for
-     in-widget refresh/navigation — a widget-tool result would be rendered by the host
-     instead of returned to the in-widget `callTool()`
+   - `*_data` feeds (also in `widget-tools.ts`, `_meta: { ui: { visibility: ["app"] } }`,
+     **no** `resourceUri`): app-only JSON for in-widget refresh/navigation — SEP-1865
+     hosts hide them from the LLM, and a widget-tool result would be rendered by the
+     host instead of returned to the in-widget `callTool()`
 
 ## Contracts
 
