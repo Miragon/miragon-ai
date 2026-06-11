@@ -1,6 +1,5 @@
 import { z } from "zod"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { getSelectedEngine, setSelectedEngine } from "../lib/engine-session.js"
 import { UnknownEngineError, type EngineRegistry } from "../lib/resolve-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
@@ -46,21 +45,21 @@ export function registerEngineTools(register: Register): void {
               baseUrl: e.baseUrl,
               ...(e.cockpitUrl ? { cockpitUrl: e.cockpitUrl } : {}),
             })),
-            currentSelection: getSelectedEngine() ?? null,
+            currentSelection: reg.backends.getSelected() ?? null,
           }
         case "select": {
           const id = args.engineId ? String(args.engineId) : ""
           if (!id) {
             throw new Error('action="select" requires an engineId (see action="list" for ids)')
           }
-          if (!reg.clients.has(id)) {
+          if (!reg.engines.some((e) => e.id === id)) {
             throw new UnknownEngineError(id, reg.engines)
           }
-          setSelectedEngine(id)
+          reg.backends.select(id)
           return { selected: id }
         }
         case "current":
-          return { engineId: getSelectedEngine() ?? null }
+          return { engineId: reg.backends.getSelected() ?? null }
       }
     },
   })

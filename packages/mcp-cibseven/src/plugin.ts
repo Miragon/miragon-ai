@@ -7,7 +7,7 @@ import { registerIncidentIssuePrompt, registerIncidentIssueTools } from "./tools
 import { registerEngineTools } from "./tools/engines.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"
-import type { EngineEntry, EngineRegistry } from "./lib/resolve-engine.js"
+import { createEngineRegistry, type EngineEntry } from "./lib/resolve-engine.js"
 import { withToolsetFilter } from "./lib/toolsets.js"
 
 export interface Camunda7PluginConfig {
@@ -31,24 +31,15 @@ export interface Camunda7PluginConfig {
 }
 
 export function createPlugin(config: Camunda7PluginConfig): AppPlugin<MCPServer> {
-  const clients = new Map(
-    config.engines.map((e) => [
-      e.id,
-      createCamunda7Client({
-        baseUrl: e.baseUrl,
-        authType: config.authType,
-        username: config.username,
-        password: config.password,
-        token: config.token,
-      }),
-    ]),
+  const registry = createEngineRegistry(config.engines, (e) =>
+    createCamunda7Client({
+      baseUrl: e.baseUrl,
+      authType: config.authType,
+      username: config.username,
+      password: config.password,
+      token: config.token,
+    }),
   )
-  const cockpitUrls = new Map(config.engines.map((e) => [e.id, e.cockpitUrl]))
-  const registry: EngineRegistry = {
-    engines: config.engines,
-    clients,
-    cockpitUrls,
-  }
 
   const incidentIssueConfig = {
     repository: config.incidentIssueRepository,

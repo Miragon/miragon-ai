@@ -42,7 +42,7 @@ vi.mock("@miragon-ai/client-cibseven/sdk", () => ({
 
 import * as sdk from "@miragon-ai/client-cibseven/sdk"
 import { paginatedListOutput } from "../lib/pagination.js"
-import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { createEngineRegistry, type EngineRegistry } from "../lib/resolve-engine.js"
 import { registerProcessInstanceTools } from "./process-instances.js"
 import { registerTaskTools } from "./tasks.js"
 import { registerJobTools } from "./jobs.js"
@@ -73,11 +73,10 @@ const tools = captureTools(
 const fakeClient = { fake: true } as unknown as Client
 
 /** Single-engine registry → resolveEngine falls back to it without a session. */
-const registry: EngineRegistry = {
-  engines: [{ id: "default", baseUrl: "http://localhost:8080/engine-rest" }],
-  clients: new Map([["default", fakeClient]]),
-  cockpitUrls: new Map(),
-}
+const registry: EngineRegistry = createEngineRegistry(
+  [{ id: "default", baseUrl: "http://localhost:8080/engine-rest" }],
+  () => fakeClient,
+)
 
 function callTool(name: string, args: Record<string, unknown>) {
   const config = tools.get(name)
