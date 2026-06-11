@@ -59,7 +59,7 @@ export function IncidentTable({
               {formatTimestamp(incident.incidentTimestamp)}
             </span>
             <span role="cell" className="flex items-center gap-1">
-              <DrillButton onClick={() => onAnalyze(incident.id)} ariaLabel="Open incident detail">
+              <DrillButton onDrill={() => onAnalyze(incident.id)} ariaLabel="Open incident detail">
                 Open
               </DrillButton>
               <AskAiButton

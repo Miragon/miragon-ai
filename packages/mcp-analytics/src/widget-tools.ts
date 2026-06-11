@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
+import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
 import {
   buildComposedView,
   buildSingleWidgetView,
@@ -54,6 +55,7 @@ export function registerWidgetTools(
   options: AnalyticsWidgetToolsOptions = {},
 ) {
   const camunda7Client = options.camunda7Client
+  const uiMeta = buildUiMeta({ resourceUri })
 
   /**
    * Fetches the latest deployed version's BPMN XML for the heatmap overlay.
@@ -82,7 +84,7 @@ export function registerWidgetTools(
         period: schemas.elementBottleneckInput.shape.period,
         ...schemas.engineFilterShape,
       }),
-      _meta: { ui: { resourceUri } },
+      _meta: uiMeta,
     },
     withToolErrors(async (args) => {
       const data = await queries.dashboardData(ch, {
@@ -120,7 +122,7 @@ export function registerWidgetTools(
       schema: z.object({
         ...schemas.engineFilterShape,
       }),
-      _meta: { ui: { resourceUri } },
+      _meta: uiMeta,
     },
     withToolErrors(async (args) => {
       const data = await queries.failureDashboardData(ch, {
@@ -152,7 +154,7 @@ export function registerWidgetTools(
         "Visualize before/after KPI deltas around a deployment timestamp. Results are flagged `suppressed` when either window has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object(schemas.clusterCompareInput.shape),
-      _meta: { ui: { resourceUri } },
+      _meta: uiMeta,
     },
     withToolErrors(async (args) => {
       const data = await queries.clusterCompare(ch, args)
@@ -180,7 +182,7 @@ export function registerWidgetTools(
         "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object(schemas.versionCompareInput.shape),
-      _meta: { ui: { resourceUri } },
+      _meta: uiMeta,
     },
     withToolErrors(async (args) => {
       const data = await queries.versionCompare(ch, args)
@@ -207,7 +209,7 @@ export function registerWidgetTools(
         "Visualize KPI deltas between two CIB Seven engines (e.g. prod-a vs prod-b) over a shared time window. Optionally scope to one processDefinitionKey. Results are flagged `suppressed` when either engine has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object(schemas.engineCompareInput.shape),
-      _meta: { ui: { resourceUri } },
+      _meta: uiMeta,
     },
     withToolErrors(async (args) => {
       const data = await queries.engineCompare(ch, args)
@@ -234,7 +236,7 @@ export function registerWidgetTools(
         "Render a process definition's BPMN diagram with a per-element heat overlay from metrics, with a Frequency↔Duration toggle (traversal count vs average duration per element). Node-level only — sequence-flow/edge heat is not available from metrics — and rendered on the latest deployed version's diagram (activity metrics carry no version label). Needs the camunda7 client to fetch the BPMN XML; otherwise the widget shows a fallback.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object(heatmapInputShape),
-      _meta: { ui: { resourceUri } },
+      _meta: uiMeta,
     },
     withToolErrors(async (args) => {
       const heat = await queries.elementHeat(ch, args)
@@ -272,7 +274,7 @@ export function registerWidgetTools(
       // App-only (SEP-1865 visibility): hidden from the LLM on conforming
       // hosts, still callable from widgets via `callTool`. No `resourceUri` —
       // the feed returns JSON instead of rendering UI.
-      _meta: { ui: { visibility: ["app"] } },
+      _meta: APP_ONLY_META,
     },
     withToolErrors(async (args) => {
       const heat = await queries.elementHeat(ch, args)

@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
+import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
 import {
   buildComposedView,
   buildSingleWidgetView,
@@ -86,7 +87,7 @@ function rawData(data: unknown) {
  * "Internal JSON feed" descriptions stay as fallback for non-conforming hosts.
  * Deliberately no `resourceUri` — the feeds must return JSON, not render UI.
  */
-const appOnlyMeta = { ui: { visibility: ["app"] } }
+const appOnlyMeta = APP_ONLY_META
 
 /** One-line truncation for summaries (incident messages can be stacktrace-sized). */
 function truncate(s: string, max: number): string {
@@ -99,7 +100,7 @@ export function registerWidgetTools(
   registry: EngineRegistry,
   resourceUri: string,
 ) {
-  const uiMeta = { ui: { resourceUri } }
+  const uiMeta = buildUiMeta({ resourceUri })
 
   server.tool(
     {

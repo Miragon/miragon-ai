@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildComposedView, buildSingleWidgetView } from "./build-single-widget-view.js"
+import { buildComposedView, buildSingleWidgetView } from "./server.js"
 import { parseViewToolResult } from "./ui/parse-tool-result.js"
 
 /**

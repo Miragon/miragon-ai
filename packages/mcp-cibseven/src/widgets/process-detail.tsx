@@ -239,7 +239,7 @@ export function ProcessDetailView({
       <div className="flex flex-wrap items-center gap-2">
         <DrillButton
           size="md"
-          onClick={() =>
+          onDrill={() =>
             go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
           }
         >
@@ -248,7 +248,7 @@ export function ProcessDetailView({
         {data.openIncidents > 0 && (
           <DrillButton
             size="md"
-            onClick={() =>
+            onDrill={() =>
               go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
             }
           >

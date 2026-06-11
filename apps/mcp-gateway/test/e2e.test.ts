@@ -62,6 +62,9 @@ describe("mcp-gateway E2E smoke", () => {
       app: {
         resourceUri: "ui://automation-mcp/mcp-app.e2e.html",
         htmlPath: FIXTURE_HTML,
+        // Match src/index.ts: keep the opt-in builder/dashboard tools registered
+        // so the EXPECTED_TOOLS snapshot covers the full surface.
+        builder: true,
       },
     })
     const port = await getFreePort()
@@ -158,6 +161,7 @@ describe("mcp-gateway E2E toolset filtering (camunda7:read-only)", () => {
       app: {
         resourceUri: "ui://automation-mcp/mcp-app.e2e-read-only.html",
         htmlPath: FIXTURE_HTML,
+        builder: true,
       },
     })
     const port = await getFreePort()

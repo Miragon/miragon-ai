@@ -27,8 +27,8 @@
     "start": "cross-env NODE_ENV=production node dist/index.js"
   },
   "dependencies": {
-    "@miragon/mcp-toolkit-core": "0.3.1",
-    "@miragon/mcp-toolkit-proxy-contract": "0.3.1",
+    "@miragon/mcp-toolkit-core": "0.5.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.5.0",
     "@miragon-ai/client-cibseven": "workspace:*",
     "@miragon-ai/mcp-cibseven": "workspace:*",
     "@miragon-ai/mcp-analytics": "workspace:*",
@@ -36,7 +36,7 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@miragon/mcp-toolkit-ui": "0.3.1",
+    "@miragon/mcp-toolkit-ui": "0.5.0",
     "@tailwindcss/vite": "4.2.2",
     "@types/node": "22.19.15",
     "@types/react": "19.2.14",

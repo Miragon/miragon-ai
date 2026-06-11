@@ -90,7 +90,7 @@ function InstanceRow({
             />
           )}
           <DrillButton
-            onClick={() => onOpen(row.id)}
+            onDrill={() => onOpen(row.id)}
             ariaLabel={`Open instance detail for ${row.businessKey ?? row.id}`}
           >
             Open

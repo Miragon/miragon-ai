@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { withToolErrors } from "./with-tool-errors.js"
+import { withToolErrors } from "./server.js"
 
 class CodedError extends Error {
   readonly code = "ENGINE_NOT_SELECTED"

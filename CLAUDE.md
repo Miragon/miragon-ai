@@ -113,7 +113,7 @@ render widgets manually.
   model-bounded labels (definition key, activity id, engine id …) — never instance ids,
   business keys, or variable values.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
-  `0.3.1` everywhere). Updates are deliberate version bumps across all packages — never
+  `0.4.0` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.
 - **The proxy-contract manifest is the federation contract to upstreams.** Upstream MCP
   servers expose `get-module-manifest` (validated by `ModuleManifestSchema` from
@@ -134,7 +134,7 @@ render widgets manually.
   push a matching `engine-plugins-v<version>` tag, and `engine-plugins-publish.yml` runs
   `./gradlew publish` against GitHub Packages Maven (`com.camunda7mcp`, shadow jars).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
-  exactly pinned dependency (`save-exact`, currently `0.3.1`). Toolkit changes happen in
+  exactly pinned dependency (`save-exact`, currently `0.4.0`). Toolkit changes happen in
   that repo and arrive here as a deliberate, repo-wide version bump — and since the
   toolkit is `0.x`, treat every minor bump as potentially breaking.
 

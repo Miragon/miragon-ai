@@ -53,13 +53,13 @@ function ProcessRow({
       <td className="border-border border-b px-4 py-3 align-middle">
         <div className="flex items-center justify-end gap-1.5">
           <DrillButton
-            onClick={() => onViewInstances(row.key)}
+            onDrill={() => onViewInstances(row.key)}
             ariaLabel={`View running instances of ${row.name ?? row.key}`}
           >
             Instances
           </DrillButton>
           <DrillButton
-            onClick={() => onOpen(row.key)}
+            onDrill={() => onOpen(row.key)}
             ariaLabel={`Open process detail for ${row.name ?? row.key}`}
           >
             Open
