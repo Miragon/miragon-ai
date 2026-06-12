@@ -11,6 +11,8 @@ import { ActivityIncidentList } from "./process-incidents/list.js"
 import { IncidentDetailWidget } from "./incident-detail.js"
 import { HistoryTimelineWidget } from "./history-timeline.js"
 import { InstanceDetailWidget } from "./instance-detail.js"
+import { ClusterDetailWidget } from "./cluster-detail.js"
+import { EngineHealthVerdict } from "./engine-health.js"
 import { ProcessHealthKpi } from "./cockpit-dashboard/health-kpi.js"
 import { ProcessDefinitionsTable } from "./cockpit-dashboard/definitions-table.js"
 import { ProcessDetailWidget } from "./process-detail.js"
@@ -81,6 +83,8 @@ export const camunda7BaseWidgets: Record<string, WidgetComponent> = {
     describeHistoryTimeline,
   ),
   "camunda7:instance-detail": adaptDataWidget(InstanceDetailWidget, "camunda7:processInstance"),
+  "camunda7:engine-health": adaptDataWidget(EngineHealthVerdict, "camunda7:engineHealth"),
+  "camunda7:cluster-detail": adaptDataWidget(ClusterDetailWidget, "camunda7:clusterDetail"),
   "camunda7:process-health-kpi": adaptDataWidget(ProcessHealthKpi, "camunda7:cockpitDashboard"),
   "camunda7:process-definitions-table": adaptDataWidget(
     ProcessDefinitionsTable,

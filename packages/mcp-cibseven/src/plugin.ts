@@ -28,6 +28,15 @@ export interface Camunda7PluginConfig {
    * `report_incident_to_github` prompt. Per-call overrides remain possible.
    */
   incidentIssueRepository?: string
+  /**
+   * Per-deployment overrides for the engine-health traffic-light thresholds
+   * (see `DEFAULT_HEALTH_THRESHOLDS`). A small DC installation may turn
+   * critical at 10 incidents where a large one tolerates hundreds.
+   */
+  healthThresholds?: {
+    criticalIncidents?: number
+    criticalClusterSize?: number
+  }
 }
 
 export function createPlugin(config: Camunda7PluginConfig): AppPlugin<MCPServer> {
@@ -65,7 +74,9 @@ export function createPlugin(config: Camunda7PluginConfig): AppPlugin<MCPServer>
       registerIncidentIssuePrompt(server, incidentIssueConfig)
     },
     registerWidgetTools: (server, resourceUri) => {
-      registerWidgetTools(server, registry, resourceUri)
+      registerWidgetTools(server, registry, resourceUri, {
+        healthThresholds: config.healthThresholds,
+      })
     },
   }
 }

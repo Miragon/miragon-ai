@@ -108,7 +108,7 @@ export function ProcessDefinitionsTableView({
 
   return (
     <section>
-      <SectionHeading title="Alle Prozesse" hint={`${rows.length} deployed`} />
+      <SectionHeading title="All processes" hint={`${rows.length} deployed`} />
 
       {rows.length === 0 ? (
         <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
@@ -125,7 +125,7 @@ export function ProcessDefinitionsTableView({
                 scope="col"
                 className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
               >
-                Prozess
+                Process
               </th>
               <th
                 scope="col"

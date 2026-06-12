@@ -27,19 +27,23 @@ interface EnginesResult {
 type CockpitView =
   | { section: "overview" }
   | { section: "incidents" }
-  | { section: "jobs" }
+  | {
+      section: "cluster-detail"
+      activityId: string
+      incidentType: string
+      messageSignature?: string
+    }
   | { section: "process-detail"; processDefinitionKey: string }
   | { section: "process-instances"; processDefinitionKey: string }
   | { section: "process-incidents"; processDefinitionKey: string }
   | { section: "instance-detail"; processInstanceId: string }
   | { section: "incident-detail"; incidentId: string }
 
-type TopSection = "overview" | "incidents" | "jobs"
+type TopSection = "overview" | "incidents"
 
 const SECTIONS: Array<{ id: TopSection; label: string; icon: string }> = [
   { id: "overview", label: "Overview", icon: "▦" },
   { id: "incidents", label: "Incidents", icon: "⚠" },
-  { id: "jobs", label: "Jobs", icon: "⚙" },
 ]
 
 function topSectionOf(view: CockpitView): TopSection {
@@ -51,6 +55,10 @@ function topSectionOf(view: CockpitView): TopSection {
     case "process-incidents":
     case "incident-detail":
       return "incidents"
+    // The cluster drill comes from the overview's failure clusters and its
+    // breadcrumb anchors there — keep the sidebar consistent with that.
+    case "cluster-detail":
+      return "overview"
     default:
       return view.section
   }
@@ -86,6 +94,11 @@ function breadcrumbOf(view: CockpitView): Crumb[] {
       return [
         { label: "Incidents", view: { section: "incidents" } },
         { label: `Incident ${view.incidentId.slice(0, 8)}…` },
+      ]
+    case "cluster-detail":
+      return [
+        { label: "Overview", view: { section: "overview" } },
+        { label: `Cluster: ${view.activityId}` },
       ]
     case "instance-detail":
       return [
@@ -139,8 +152,15 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         setView({ section: "overview" })
         return
       case "incidents":
-      case "jobs":
-        setView({ section: intent.type })
+        setView({ section: "incidents" })
+        return
+      case "cluster-detail":
+        setView({
+          section: "cluster-detail",
+          activityId: intent.activityId,
+          incidentType: intent.incidentType,
+          messageSignature: intent.messageSignature,
+        })
         return
       case "process-detail":
         setView({ section: "process-detail", processDefinitionKey: intent.processDefinitionKey })
@@ -223,7 +243,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               <div>
                 <h2 className="text-foreground font-semibold">Operate an engine</h2>
                 <p className="text-muted-foreground text-sm">
-                  Overview, incidents, jobs and drill-downs for one engine.
+                  Overview, incidents and drill-downs for one engine.
                 </p>
               </div>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -328,6 +348,9 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     processDefinitionKey: "processDefinitionKey" in view ? view.processDefinitionKey : undefined,
     processInstanceId: "processInstanceId" in view ? view.processInstanceId : undefined,
     incidentId: "incidentId" in view ? view.incidentId : undefined,
+    activityId: "activityId" in view ? view.activityId : undefined,
+    incidentType: "incidentType" in view ? view.incidentType : undefined,
+    messageSignature: "messageSignature" in view ? view.messageSignature : undefined,
   }
 
   return (

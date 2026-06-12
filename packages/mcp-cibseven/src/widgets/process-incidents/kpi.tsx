@@ -47,7 +47,7 @@ export function ProcessIncidentKpi({
     <WidgetShell>
       <KpiGrid
         boxed
-        header={{ label: "Overview", badge: "Incidents in diesem Prozess" }}
+        header={{ label: "Overview", badge: "Incidents in this process" }}
         cells={[
           {
             label: "Open incidents",

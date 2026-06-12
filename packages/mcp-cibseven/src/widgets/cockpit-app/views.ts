@@ -11,6 +11,9 @@ export interface ViewParams {
   processDefinitionKey?: string
   processInstanceId?: string
   incidentId?: string
+  activityId?: string
+  incidentType?: string
+  messageSignature?: string
 }
 
 /**
@@ -27,16 +30,27 @@ export interface ViewParams {
  * point — the cockpit shell never changes.
  */
 export const cockpitViews = {
+  // One verdict header, one KPI row: the engine-health widget IS the overview's
+  // verdict surface. The per-definition health detail lives in the definitions
+  // table below (row tones); stacking the old process-health KPI grid on top
+  // would duplicate the same numbers and a second competing AI handoff.
   overview: ({ engine }: ViewParams): LayoutConfig => [
-    { row: [{ widget: "camunda7:process-health-kpi", props: { engine } }] },
+    { row: [{ widget: "camunda7:engine-health", props: { engine } }] },
     { row: [{ widget: "camunda7:process-definitions-table", props: { engine } }] },
   ],
   incidents: ({ engine }: ViewParams): LayoutConfig => [
     { row: [{ widget: "camunda7:incident-overview-kpi", props: { engine } }] },
     { row: [{ widget: "camunda7:incident-process-list", props: { engine } }] },
   ],
-  jobs: ({ engine }: ViewParams): LayoutConfig => [
-    { row: [{ widget: "camunda7:job-panel", props: { engine } }] },
+  "cluster-detail": ({ engine, activityId, incidentType, messageSignature }: ViewParams) => [
+    {
+      row: [
+        {
+          widget: "camunda7:cluster-detail",
+          props: { engine, activityId, incidentType, messageSignature },
+        },
+      ],
+    },
   ],
   "process-detail": ({ engine, processDefinitionKey }: ViewParams): LayoutConfig => [
     { row: [{ widget: "camunda7:process-detail", props: { processDefinitionKey, engine } }] },

@@ -29,6 +29,12 @@ import {
   buildProcessInstancesData,
 } from "./data/cockpit-data.js"
 import {
+  buildClusterDetailData,
+  buildEngineHealthData,
+  DEFAULT_HEALTH_THRESHOLDS,
+  type EngineHealthThresholds,
+} from "./data/health-data.js"
+import {
   buildIncidentsDashboardData,
   buildProcessIncidentsData,
 } from "./data/incident-panel-data.js"
@@ -36,7 +42,9 @@ import { buildProcessDetailData } from "./data/process-detail-data.js"
 import { buildIncidentDetailData } from "./data/incident-detail-data.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
 import {
+  CAMUNDA7_CLUSTER_DETAIL_DATA,
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
+  CAMUNDA7_ENGINE_HEALTH_DATA,
   CAMUNDA7_INCIDENT_DETAIL_DATA,
   CAMUNDA7_INCIDENTS_DATA,
   CAMUNDA7_INSTANCE_DETAIL_DATA,
@@ -45,7 +53,9 @@ import {
   CAMUNDA7_PROCESS_DETAIL_DATA,
   CAMUNDA7_PROCESS_INCIDENTS_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
+  CAMUNDA7_SHOW_CLUSTER_DETAIL,
   CAMUNDA7_SHOW_COCKPIT_DASHBOARD,
+  CAMUNDA7_SHOW_ENGINE_HEALTH,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
   CAMUNDA7_SHOW_INSTANCE_DETAIL,
@@ -95,12 +105,22 @@ function truncate(s: string, max: number): string {
   return flat.length > max ? `${flat.slice(0, max)}…` : flat
 }
 
+export interface Camunda7WidgetToolsOptions {
+  /** Per-deployment overrides for the engine-health traffic-light thresholds. */
+  healthThresholds?: Partial<EngineHealthThresholds>
+}
+
 export function registerWidgetTools(
   server: MCPServer,
   registry: EngineRegistry,
   resourceUri: string,
+  options: Camunda7WidgetToolsOptions = {},
 ) {
   const uiMeta = buildUiMeta({ resourceUri })
+  const healthThresholds: EngineHealthThresholds = {
+    ...DEFAULT_HEALTH_THRESHOLDS,
+    ...options.healthThresholds,
+  }
 
   server.tool(
     {
@@ -508,6 +528,83 @@ export function registerWidgetTools(
 
   server.tool(
     {
+      name: CAMUNDA7_SHOW_ENGINE_HEALTH,
+      title: "Engine Health Overview",
+      description:
+        "Show the AI-first engine overview: a deterministic health verdict (ok / degraded / critical) with running-instance and incident KPIs and the top incident clusters, grouped cross-process by failing activity + incident type. The home base for triaging what is wrong on a CIB Seven / Camunda 7 engine — each cluster drills in or hands off to AI for root cause + remediation.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({ ...engineParamShape }),
+      _meta: uiMeta,
+    },
+    withToolErrors(async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      const data = await buildEngineHealthData(client, engineId, healthThresholds)
+      const top = data.clusters[0]
+      return buildSingleWidgetView({
+        widget: "camunda7:engine-health",
+        app: "camunda7",
+        dataType: "camunda7:engineHealth",
+        data,
+        title: "Engine Overview",
+        summary:
+          `Engine "${engineId}" — ${data.status}: ${data.summary.totalIncidents} open incidents ` +
+          `across ${data.summary.affectedActivities} activities, ${data.summary.runningInstances} ` +
+          `running instances.` +
+          (top
+            ? ` Top cluster: activity "${top.activityId}" / ${top.incidentType}, ${top.incidentCount} incidents.`
+            : " No open incidents."),
+      })
+    }),
+  )
+
+  // Shared by the cluster-detail show tool + its data feed.
+  const clusterDetailShape = {
+    activityId: z.string().describe("Activity id of the failure cluster."),
+    incidentType: z.string().describe('Incident type of the cluster, e.g. "failedJob".'),
+    messageSignature: z
+      .string()
+      .optional()
+      .describe(
+        "Normalized failure-message signature (as produced by the engine-health clusters). Omitted → all messages for this activity + type.",
+      ),
+  }
+
+  server.tool(
+    {
+      name: CAMUNDA7_SHOW_CLUSTER_DETAIL,
+      title: "Failure Cluster Detail",
+      description:
+        "Drill into ONE failure cluster: the affected process instances (business keys first), the full sample failure message, and the time profile (new in last hour / 24h) for an activity failing with a given incident type. The middle layer between the engine health overview and a single incident's detail.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({ ...clusterDetailShape, ...engineParamShape }),
+      _meta: uiMeta,
+    },
+    withToolErrors(async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      const data = await buildClusterDetailData(client, engineId, {
+        activityId: args.activityId,
+        incidentType: args.incidentType,
+        messageSignature: args.messageSignature,
+      })
+      return buildSingleWidgetView({
+        widget: "camunda7:cluster-detail",
+        app: "camunda7",
+        dataType: "camunda7:clusterDetail",
+        data,
+        title: `Cluster: ${data.activityId}`,
+        summary:
+          `Failure cluster on engine "${engineId}": activity "${data.activityId}" / ` +
+          `${data.incidentType} — ${data.incidentCount} incidents (${data.lastHourCount} in the ` +
+          `last hour) across ${data.processDefinitionKeys.join(", ") || "unknown processes"}.` +
+          (data.representativeMessage
+            ? ` Sample: ${truncate(data.representativeMessage, 140)}`
+            : ""),
+      })
+    }),
+  )
+
+  server.tool(
+    {
       name: "camunda7_show_bpmn_viewer",
       title: "BPMN Diagram Viewer",
       description:
@@ -710,6 +807,44 @@ export function registerWidgetTools(
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
       return rawData(await buildCockpitDashboardData(client, engineId))
+    }),
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_ENGINE_HEALTH_DATA,
+      title: "Engine health data (internal)",
+      description:
+        "Internal JSON feed (no UI) for the engine health verdict + incident clusters. Prefer camunda7_show_engine_health / camunda7_open_cockpit.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({ ...engineParamShape }),
+      _meta: appOnlyMeta,
+    },
+    withToolErrors(async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      return rawData(await buildEngineHealthData(client, engineId, healthThresholds))
+    }),
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_CLUSTER_DETAIL_DATA,
+      title: "Cluster detail data (internal)",
+      description:
+        "Internal JSON feed (no UI) for one failure cluster's detail. Prefer camunda7_show_cluster_detail.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({ ...clusterDetailShape, ...engineParamShape }),
+      _meta: appOnlyMeta,
+    },
+    withToolErrors(async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      return rawData(
+        await buildClusterDetailData(client, engineId, {
+          activityId: args.activityId,
+          incidentType: args.incidentType,
+          messageSignature: args.messageSignature,
+        }),
+      )
     }),
   )
 

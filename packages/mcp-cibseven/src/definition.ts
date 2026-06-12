@@ -75,6 +75,34 @@ const incidentDetailPropsSchema = z.toJSONSchema(
   }),
 )
 
+const engineHealthPropsSchema = z.toJSONSchema(
+  z.object({
+    engine: z
+      .string()
+      .optional()
+      .describe(
+        "Engine id to assess. Omitted → the session's sticky selection or the single configured engine.",
+      ),
+  }),
+)
+
+const clusterDetailPropsSchema = z.toJSONSchema(
+  z.object({
+    activityId: z.string().describe("Activity id of the failure cluster."),
+    incidentType: z.string().describe('Incident type of the cluster, e.g. "failedJob".'),
+    messageSignature: z
+      .string()
+      .optional()
+      .describe(
+        "Normalized failure-message signature from the overview cluster (optional filter).",
+      ),
+    engine: z
+      .string()
+      .optional()
+      .describe("Engine id. Omitted → sticky selection or single default."),
+  }),
+)
+
 export const definition: AppDefinition = {
   name: "camunda7",
   steps: [
@@ -141,6 +169,22 @@ export const definition: AppDefinition = {
       id: "camunda7:history-timeline",
       requires: ["camunda7:historyProcessInstance", "camunda7:historyActivities"],
       size: "full",
+    },
+    {
+      // Self-fetching: loads camunda7_engine_health_data for the engine (no
+      // pipeline step), eager-rendered by camunda7_show_engine_health.
+      id: "camunda7:engine-health",
+      requires: [],
+      size: "full",
+      propsSchema: engineHealthPropsSchema,
+    },
+    {
+      // Self-fetching: loads camunda7_cluster_detail_data for one failure
+      // cluster (no pipeline step), eager-rendered by camunda7_show_cluster_detail.
+      id: "camunda7:cluster-detail",
+      requires: [],
+      size: "full",
+      propsSchema: clusterDetailPropsSchema,
     },
     {
       id: "camunda7:process-health-kpi",

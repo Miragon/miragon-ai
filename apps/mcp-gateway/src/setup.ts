@@ -30,6 +30,12 @@ const camunda7ConfigSchema = z.object({
     .string()
     .regex(/^[^/\s]+\/[^/\s]+$/, "Expected `owner/repo`")
     .optional(),
+  healthThresholds: z
+    .object({
+      criticalIncidents: z.coerce.number().int().positive().optional(),
+      criticalClusterSize: z.coerce.number().int().positive().optional(),
+    })
+    .optional(),
 })
 
 const analyticsConfigSchema = z.object({
@@ -58,6 +64,17 @@ const MODULE_REGISTRY: Record<
       password: process.env.CAMUNDA_PASSWORD,
       token: process.env.CAMUNDA_TOKEN,
       incidentIssueRepository: process.env.CAMUNDA_INCIDENT_ISSUE_REPO,
+      // Engine-health verdict thresholds — only forwarded when set, so the
+      // module's defaults apply otherwise.
+      ...(process.env.CAMUNDA_HEALTH_CRITICAL_INCIDENTS ||
+      process.env.CAMUNDA_HEALTH_CRITICAL_CLUSTER_SIZE
+        ? {
+            healthThresholds: {
+              criticalIncidents: process.env.CAMUNDA_HEALTH_CRITICAL_INCIDENTS,
+              criticalClusterSize: process.env.CAMUNDA_HEALTH_CRITICAL_CLUSTER_SIZE,
+            },
+          }
+        : {}),
     }),
     supportsToolsets: true,
   },
