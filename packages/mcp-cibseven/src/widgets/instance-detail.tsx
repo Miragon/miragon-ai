@@ -309,11 +309,11 @@ export function InstanceDetailWidget({
                           <AskAiButton
                             variant="subtle"
                             label="Draft ticket"
-                            prompt={`Draft and file a GitHub issue for CIB Seven incident \`${inc.id}\` (${inc.incidentType}${
+                            prompt={`Draft an incident ticket for CIB Seven incident \`${inc.id}\` (${inc.incidentType}${
                               inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
                             }) on process instance ${instance.id}${
                               instance.businessKey ? ` (business key ${instance.businessKey})` : ""
-                            } of definition ${instance.definitionId}, engine \`${engineId}\`. Build the payload with camunda7_format_incident_issue({ incidentId: "${inc.id}" }), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
+                            } of definition ${instance.definitionId}, engine \`${engineId}\`. Build the draft with camunda7_format_incident_issue({ incidentId: "${inc.id}" }) and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
                           />
                           <Button
                             variant="outline"

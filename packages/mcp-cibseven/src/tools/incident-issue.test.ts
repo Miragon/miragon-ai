@@ -80,7 +80,10 @@ describe("buildIncidentIssuePayload", () => {
     expect(result.title).toBe("[Bug]: Engine incident (failedJob) in invoice")
     expect(result.labels).toEqual(["bug", "incident"])
     expect(result.suggestedRepository).toBe("Miragon/miragon-ai")
-    expect(result.suggestedTool).toBe("create_issue")
+    // The draft is the deliverable: nextStep must keep the agent from filing
+    // on its own and may only mention GitHub as the preconfigured convenience.
+    expect(result.nextStep).toMatch(/Do NOT file it anywhere on your own/)
+    expect(result.nextStep).toContain('repository "Miragon/miragon-ai"')
 
     for (const section of [
       "### Description",
@@ -103,7 +106,7 @@ describe("buildIncidentIssuePayload", () => {
     )
   })
 
-  it("returns null suggestedRepository and a clarifying nextStep when no repo is configured", () => {
+  it("returns null suggestedRepository and a draft-only nextStep when no repo is configured", () => {
     const result = buildIncidentIssuePayload({
       incident: baseIncident,
       processDefinition: baseDefinition,
@@ -111,7 +114,10 @@ describe("buildIncidentIssuePayload", () => {
     })
     expect(result.suggestedRepository).toBeNull()
     expect(result.prefilledUrl).toBeNull()
-    expect(result.nextStep).toMatch(/Ask the user which `owner\/repo`/)
+    // Tracker-agnostic: the user decides where the draft goes — the agent
+    // must not steer towards any specific tracker.
+    expect(result.nextStep).toMatch(/Do NOT file it anywhere on your own/)
+    expect(result.nextStep).not.toContain("GitHub")
   })
 
   it("emits a clickable prefilled GitHub new-issue URL when a repo is configured", () => {

@@ -23,9 +23,11 @@ export interface Camunda7PluginConfig {
    */
   toolset?: string
   /**
-   * `owner/repo` of the GitHub repository where engine incidents should be filed.
-   * Used as the default for the `camunda7_format_incident_issue` tool and the
-   * `report_incident_to_github` prompt. Per-call overrides remain possible.
+   * Optional `owner/repo` of a GitHub repository — purely a convenience for
+   * GitHub customers (enables the prefilled new-issue URL and a default target
+   * when the user asks to file there). The `camunda7_format_incident_issue`
+   * tool and the `draft_incident_ticket` prompt produce a tracker-agnostic
+   * draft either way and never file anything themselves.
    */
   incidentIssueRepository?: string
   /**
