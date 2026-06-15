@@ -1,13 +1,6 @@
-import {
-  Card,
-  CardContent,
-  Badge,
-  Alert,
-  AlertDescription,
-  useToolQuery,
-} from "@miragon/mcp-toolkit-ui"
-import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
-import type { ProcessListData } from "@miragon-ai/client-cibseven"
+import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { AskAiButton, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
+import type { ProcessListData } from "../view-models.js"
 
 export type { ProcessListData }
 
@@ -29,7 +22,9 @@ export function ProcessListWidget({
   if (processDefinitionKey) queryArgs.key = processDefinitionKey
   if (nameLike) queryArgs.nameLike = nameLike
   if (latestVersion !== undefined) queryArgs.latestVersion = latestVersion
-  const fallbackQuery = useToolQuery<ProcessListData>(
+  // Self-fetch of a `show_*` tool: parse structuredContent-first — the text
+  // channel only carries the model summary since the text-channel diet.
+  const fallbackQuery = useViewToolQuery<ProcessListData>(
     ["camunda7:process-list"],
     "camunda7_show_process_list",
     queryArgs,

@@ -1,6 +1,6 @@
 import { Alert, AlertDescription, Badge } from "@miragon/mcp-toolkit-ui"
 
-import type { IncidentDetailHistoryEntry } from "@miragon-ai/client-cibseven"
+import type { IncidentDetailHistoryEntry } from "../../view-models.js"
 
 import { formatDuration, formatTimestamp } from "../../lib/format-time.js"
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { ModelContext } from "mcp-use/react"
 import {
   Alert,
   AlertDescription,
@@ -19,7 +20,7 @@ import {
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
 
-import type { IncidentDetailData } from "@miragon-ai/client-cibseven"
+import type { IncidentDetailData } from "../view-models.js"
 
 import { CAMUNDA7_INCIDENT_DETAIL_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
@@ -31,6 +32,10 @@ import { HistoryTimeline } from "./incident-detail/history-timeline.js"
 import { formatDate, formatTime } from "../lib/format-time.js"
 
 export type { IncidentDetailData }
+
+function truncateMessage(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text
+}
 
 export function IncidentDetailWidget({
   data: initialData = null,
@@ -87,8 +92,26 @@ export function IncidentDetailWidget({
   const title = data.activityName ?? data.activityId
   const cockpitInstanceUrl = data.cockpitInstanceUrl
 
+  const incidentMessage = data.incidentMessage ?? data.job?.exceptionMessage
+
   return (
     <WidgetShell>
+      {/* Rendered in-component (not via the adapter's describeForModel) because
+          this widget self-fetches in the cockpit, where the adapter has no data. */}
+      <ModelContext
+        content={[
+          `Viewing CIB Seven incident ${data.incidentId} (type ${data.incidentType}` +
+            `${resolved ? ", marked resolved in this session" : ""}) at activity ` +
+            `${data.activityName ?? data.activityId} (${data.activityId}) on process instance ` +
+            `${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}` +
+            `${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}, ` +
+            `engine ${data.engineId ?? "default"}.`,
+          `Message: ${incidentMessage ? `"${truncateMessage(incidentMessage, 160)}"` : "(none reported)"}.`,
+          `Act via camunda7_resolve_incident / camunda7_set_job_retries` +
+            `${data.job ? ` (job ${data.job.id}, ${data.job.retries} retries left)` : ""}; ` +
+            `full instance context via camunda7_show_instance_detail.`,
+        ].join(" ")}
+      />
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="min-w-0">
           <div className="mb-3 flex items-center gap-3">

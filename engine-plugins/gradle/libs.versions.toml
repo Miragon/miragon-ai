@@ -42,6 +42,7 @@ cibseven-bpm-assert = { module = "org.cibseven.bpm:cibseven-bpm-assert", version
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry-api" }
 
 # BOM-managed (version resolved from spring-boot-bom — listed for discoverability)
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
 spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
 spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }

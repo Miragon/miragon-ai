@@ -1,3 +1,10 @@
+/**
+ * View-model contracts shared between the `src/data` builders, the widget
+ * tools, and the React widgets (`src/widgets`). These shapes describe what the
+ * widgets render — they are not engine API types (those live in
+ * `@miragon-ai/client-cibseven/types`).
+ */
+
 export interface IncidentStat {
   incidentType: string
   incidentCount: number
@@ -427,4 +434,97 @@ export interface IncidentDetailData {
   history: IncidentDetailHistoryEntry[]
 
   engineId?: string
+}
+
+// === Engine health verdict (camunda7_show_engine_health) ===
+
+export type EngineHealthStatus = "ok" | "degraded" | "critical"
+
+/**
+ * A cross-process incident cluster: the same activity failing the same way
+ * (`activityId` + `incidentType` + normalized failure-message signature) across
+ * one or more process definitions. This is the root-cause unit a support
+ * operator triages — surfaced instead of a flat per-instance incident list. The
+ * plain-language interpretation and the recommended fix are the host agent's
+ * job (the "ask the AI" handoff), not the server's: the cluster carries only
+ * deterministic, grounded facts.
+ */
+export interface EngineHealthCluster {
+  /** Stable key `${activityId}::${incidentType}::${messageSignature}` — used for React keys. */
+  id: string
+  activityId: string
+  incidentType: string
+  /** Normalized failure-message signature — the third clustering dimension; drill filter. */
+  messageSignature: string
+  incidentCount: number
+  last24hCount: number
+  /** Distinct process definition keys this cluster spans, most-affected first. */
+  processDefinitionKeys: string[]
+  /** A sample message + its incident id, for the drill-in and the AI prompt. */
+  representativeMessage: string | null
+  representativeIncidentId: string
+  latestIncident: string | null
+}
+
+export interface EngineHealthData {
+  /** Deterministic traffic-light verdict from incident volume + cluster size. */
+  status: EngineHealthStatus
+  /** Deterministic plain-language headline, e.g. "Degraded — 51 open incidents across 3 activities". */
+  headline: string
+  summary: {
+    totalIncidents: number
+    /** New incidents in the last hour — the "is it burning right now?" signal. */
+    lastHourIncidents: number
+    last24hIncidents: number
+    affectedActivities: number
+    affectedDefinitions: number
+    runningInstances: number
+    totalDefinitions: number
+    /** Instances started in the last 24h — null when the history API is unavailable. */
+    started24h: number | null
+    /** Instances completed in the last 24h — null when the history API is unavailable. */
+    completed24h: number | null
+  }
+  /** Top incident clusters by count (cross-process), most severe first. */
+  clusters: EngineHealthCluster[]
+  /** When this snapshot was computed (ISO) — rendered as "as of …" for ops trust. */
+  fetchedAt: string
+  engineId: string
+}
+
+// === Cluster detail (camunda7_show_cluster_detail) ===
+
+export interface ClusterIncidentRow {
+  incidentId: string
+  processInstanceId: string
+  /** Business key of the affected instance — the operator's "order number". */
+  businessKey: string | null
+  processDefinitionKey: string
+  incidentTimestamp: string
+}
+
+/**
+ * Drill-in for ONE failure cluster: the affected instances (business keys
+ * first), the full sample message, and the time profile — the middle layer
+ * between the engine overview's cluster list and the single-incident detail.
+ */
+export interface ClusterDetailData {
+  activityId: string
+  incidentType: string
+  /** Signature the result was filtered by; null = no message filter (activity+type only). */
+  messageSignature: string | null
+  incidentCount: number
+  lastHourCount: number
+  last24hCount: number
+  firstSeen: string | null
+  latestIncident: string | null
+  /** Distinct process definition keys, most-affected first. */
+  processDefinitionKeys: string[]
+  representativeMessage: string | null
+  /** First page of affected incidents (most recent first). */
+  incidents: ClusterIncidentRow[]
+  /** Total matching incidents (may exceed `incidents.length`). */
+  totalMatching: number
+  fetchedAt: string
+  engineId: string
 }

@@ -5,7 +5,7 @@ import type {
   IncidentsDashboardActivity,
   IncidentsDashboardData,
   IncidentsDashboardProcess,
-} from "@miragon-ai/client-cibseven"
+} from "../../view-models.js"
 
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
@@ -109,7 +109,7 @@ function ProcessSummary({
         prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, version v${process.version ?? "n/a"}) on engine ${engineId}. ${process.affectedActivityCount} activity/activities are affected, ${process.last24hCount} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances ?? "unknown"} running instances. Use camunda7_list_incidents (filtered to processDefinitionKey ${process.processDefinitionKey}) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
       />
       <DrillButton
-        onClick={onOpenDetail}
+        onDrill={onOpenDetail}
         ariaLabel={`Open incidents detail for ${process.processDefinitionName ?? process.processDefinitionKey}`}
       >
         Open detail

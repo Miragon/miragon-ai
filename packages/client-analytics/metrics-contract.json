@@ -1,0 +1,150 @@
+{
+  "$comment": "Single source of truth for the Kotlin<->TS metric contract. The Kotlin engine plugin (engine-plugins/cibseven-history-metrics) emits the OTEL instruments (otelName); the OTEL Collector's Prometheus exporter normalises them (dots -> underscores, unit suffix `_seconds` for unit `s`, `_total` for monotonic counters) into promName, which is what the TS queries (packages/client-analytics/src/metric-names.ts), the alert rules (docker/prometheus/alerts.yml) and the Grafana dashboards (docker/grafana/dashboards/*.json) consume. Histograms list the base promName; the `_sum`/`_count`/`_bucket` series are implied. `knownValues` documents label values consumers may rely on. Change a metric HERE first - contract tests on both sides (src/metrics-contract.test.ts and MetricsContractTest.kt) enforce consistency.",
+  "metrics": [
+    {
+      "otelName": "camunda.process.instance.started",
+      "promName": "camunda_process_instance_started_total",
+      "type": "counter",
+      "unit": "",
+      "labels": ["process_definition_key", "process_definition_version", "engine_id", "tenant_id"]
+    },
+    {
+      "otelName": "camunda.process.instance.ended",
+      "promName": "camunda_process_instance_ended_total",
+      "type": "counter",
+      "unit": "",
+      "labels": [
+        "process_definition_key",
+        "process_definition_version",
+        "engine_id",
+        "tenant_id",
+        "state"
+      ],
+      "knownValues": {
+        "state": ["COMPLETED", "EXTERNALLY_TERMINATED", "INTERNALLY_TERMINATED"]
+      }
+    },
+    {
+      "otelName": "camunda.process.instance.duration",
+      "promName": "camunda_process_instance_duration_seconds",
+      "type": "histogram",
+      "unit": "s",
+      "labels": ["process_definition_key", "process_definition_version", "engine_id", "tenant_id"]
+    },
+    {
+      "otelName": "camunda.activity.ended",
+      "promName": "camunda_activity_ended_total",
+      "type": "counter",
+      "unit": "",
+      "labels": ["process_definition_key", "activity_id", "activity_type", "engine_id"]
+    },
+    {
+      "otelName": "camunda.activity.duration",
+      "promName": "camunda_activity_duration_seconds",
+      "type": "histogram",
+      "unit": "s",
+      "labels": ["process_definition_key", "activity_id", "activity_type", "engine_id"]
+    },
+    {
+      "otelName": "camunda.usertask.created",
+      "promName": "camunda_usertask_created_total",
+      "type": "counter",
+      "unit": "",
+      "labels": ["process_definition_key", "task_definition_key", "engine_id"]
+    },
+    {
+      "otelName": "camunda.usertask.completed",
+      "promName": "camunda_usertask_completed_total",
+      "type": "counter",
+      "unit": "",
+      "labels": ["process_definition_key", "task_definition_key", "engine_id"]
+    },
+    {
+      "otelName": "camunda.usertask.duration",
+      "promName": "camunda_usertask_duration_seconds",
+      "type": "histogram",
+      "unit": "s",
+      "labels": ["process_definition_key", "task_definition_key", "engine_id"]
+    },
+    {
+      "otelName": "camunda.incident.created",
+      "promName": "camunda_incident_created_total",
+      "type": "counter",
+      "unit": "",
+      "labels": ["process_definition_key", "activity_id", "incident_type", "engine_id"]
+    },
+    {
+      "otelName": "camunda.incident.resolved",
+      "promName": "camunda_incident_resolved_total",
+      "type": "counter",
+      "unit": "",
+      "labels": ["process_definition_key", "activity_id", "incident_type", "engine_id"]
+    },
+    {
+      "otelName": "camunda.process.instances.running",
+      "promName": "camunda_process_instances_running",
+      "type": "gauge",
+      "unit": "",
+      "labels": ["process_definition_key", "engine_id"]
+    },
+    {
+      "otelName": "camunda.jobs.failed",
+      "promName": "camunda_jobs_failed",
+      "type": "gauge",
+      "unit": "",
+      "labels": ["process_definition_key", "engine_id"]
+    },
+    {
+      "otelName": "camunda.incidents.open",
+      "promName": "camunda_incidents_open",
+      "type": "gauge",
+      "unit": "",
+      "labels": ["process_definition_key", "incident_type", "engine_id"]
+    },
+    {
+      "otelName": "camunda.jobs.executable",
+      "promName": "camunda_jobs_executable",
+      "type": "gauge",
+      "unit": "",
+      "labels": ["engine_id"]
+    },
+    {
+      "otelName": "camunda.jobs.suspended",
+      "promName": "camunda_jobs_suspended",
+      "type": "gauge",
+      "unit": "",
+      "labels": ["engine_id"]
+    },
+    {
+      "otelName": "camunda.jobs.due_future",
+      "promName": "camunda_jobs_due_future",
+      "type": "gauge",
+      "unit": "",
+      "labels": ["engine_id"]
+    },
+    {
+      "otelName": "camunda.usertasks.open",
+      "promName": "camunda_usertasks_open",
+      "type": "gauge",
+      "unit": "",
+      "labels": ["status", "engine_id"],
+      "knownValues": {
+        "status": ["total", "unassigned", "assigned"]
+      }
+    },
+    {
+      "otelName": "camunda.process.definitions.deployed",
+      "promName": "camunda_process_definitions_deployed",
+      "type": "gauge",
+      "unit": "",
+      "labels": ["process_definition_key", "engine_id"]
+    },
+    {
+      "otelName": "camunda.external_tasks.open",
+      "promName": "camunda_external_tasks_open",
+      "type": "gauge",
+      "unit": "",
+      "labels": ["engine_id"]
+    }
+  ]
+}

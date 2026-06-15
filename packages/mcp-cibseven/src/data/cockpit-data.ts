@@ -1,11 +1,11 @@
+import type { Client } from "@miragon-ai/client-cibseven"
 import type {
-  Client,
   CockpitDashboardData,
   InstanceDetailData,
   JobPanelData,
   ProcessInstancesData,
   TaskData,
-} from "@miragon-ai/client-cibseven"
+} from "../view-models.js"
 import {
   getProcessDefinitions,
   getProcessInstance,
@@ -19,14 +19,14 @@ import {
   getProcessDefinitionStatistics,
   getJobs,
   getJobsCount,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
-import { buildTaskFormSchema } from "./tools/task-form.js"
-import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
+} from "@miragon-ai/client-cibseven/sdk"
+import { buildTaskFormSchema } from "../tools/task-form.js"
+import { collectActiveActivityIds, collectIncidentActivityIds } from "../lib/activity-tree.js"
 
 /**
  * Pure data builders shared by the `camunda7_show_*` widget tools AND the
  * data-only `camunda7_cockpit_data` feed. The widget tools wrap the result in a
- * UI view (`_meta.ui`); the cockpit app calls the data feed instead, because a
+ * UI view (`_meta.ui.resourceUri`); the cockpit app calls the data feed instead, because a
  * widget-tool result is rendered by the host rather than returned to an
  * in-widget `callTool()` — so the app would hang waiting for data.
  */

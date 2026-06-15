@@ -1,5 +1,5 @@
+import type { Client } from "@miragon-ai/client-cibseven"
 import type {
-  Client,
   IncidentInstance,
   IncidentsByProcess,
   IncidentsDashboardActivity,
@@ -7,16 +7,16 @@ import type {
   IncidentsDashboardProcess,
   ProcessIncidentsActivity,
   ProcessIncidentsData,
-} from "@miragon-ai/client-cibseven"
+} from "../view-models.js"
 import {
   getIncidents,
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 
-import { buildInstanceCockpitUrl, buildProcessCockpitUrl } from "./lib/cockpit-url.js"
-import { countBpmnActivities, extractActivityNames } from "./lib/bpmn-parse.js"
+import { buildInstanceCockpitUrl, buildProcessCockpitUrl } from "../lib/cockpit-url.js"
+import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"
 
 interface IncidentRow {
   id: string

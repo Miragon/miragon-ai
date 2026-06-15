@@ -12,7 +12,7 @@ export const engineParamShape = {
     .string()
     .optional()
     .describe(
-      "Optional engine id override for this single call. When omitted, the engine selected via `camunda7_select_engine` for this session is used; when only one engine is configured, that one is used.",
+      'Optional engine id override for this single call. When omitted, the engine selected via `camunda7_engine` (action "select") for this session is used; when only one engine is configured, that one is used.',
     ),
 }
 

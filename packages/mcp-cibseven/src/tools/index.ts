@@ -1,5 +1,4 @@
-import type { MCPServer } from "mcp-use/server"
-import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 
 import { registerProcessDefinitionTools } from "./process-definitions.js"
@@ -14,8 +13,9 @@ import { registerJobTools } from "./jobs.js"
 import { registerHistoryTools } from "./history.js"
 import { registerMigrationTools } from "./migrations.js"
 
-export function registerTools(server: MCPServer, registry: EngineRegistry): void {
-  const register = createToolRegistrar(server, registry)
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
+
+export function registerTools(register: Register): void {
   registerProcessDefinitionTools(register)
   registerProcessInstanceTools(register)
   registerTaskTools(register)

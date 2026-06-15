@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@miragon-ai/client-cibseven/generated/sdk.gen", () => ({
+vi.mock("@miragon-ai/client-cibseven/sdk", () => ({
   getActivityStatistics: vi.fn(),
   getProcessDefinitions: vi.fn(),
   getProcessDefinitionBpmn20Xml: vi.fn(),
@@ -12,9 +12,9 @@ import {
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 
-import { buildProcessDetailData } from "./process-detail.js"
+import { buildProcessDetailData } from "./process-detail-data.js"
 
 const mockedGetActivityStats = vi.mocked(getActivityStatistics)
 const mockedGetDefs = vi.mocked(getProcessDefinitions)

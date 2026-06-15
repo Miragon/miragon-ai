@@ -5,8 +5,9 @@ import {
   type EngineFilterInput,
   type Period,
   type PrometheusClient,
-  type PromSample,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
+import { byLabel, round1 } from "./helpers.js"
 
 export interface ElementBottleneckRow {
   activity_id: string
@@ -29,17 +30,6 @@ export interface ElementBottleneckResult {
   suppressedActivities: number
 }
 
-const round1 = (n: number) => Math.round(n * 10) / 10
-
-function byLabel(samples: PromSample[], label: string): Record<string, number> {
-  const out: Record<string, number> = {}
-  for (const s of samples) {
-    const k = s.metric[label]
-    if (k !== undefined) out[k] = s.value
-  }
-  return out
-}
-
 /**
  * Rank activities by time contribution + incident rate over a rolling window,
  * from OTEL metrics.
@@ -56,7 +46,7 @@ export async function elementBottleneck(
     period: Period
     minBucketSize: number
     limit: number
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<ElementBottleneckResult> {
   const range = params.period
@@ -64,21 +54,17 @@ export async function elementBottleneck(
   const limit = Math.max(1, Math.floor(params.limit))
   const sel = selector(
     `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
-    engineMatcher(params.engineId),
+    engineMatcher(params.engine),
   )
 
   const [counts, sums, p95, incidents, types] = await Promise.all([
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}[${range}]))`),
     ch.instant(
-      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}[${range}]))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}[${range}])))`,
     ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}[${range}])))`,
-    ),
-    ch.instant(`sum by (activity_id)(increase(camunda_incident_created_total${sel}[${range}]))`),
-    ch.instant(
-      `sum by (activity_id, activity_type)(increase(camunda_activity_ended_total${sel}[${range}]))`,
-    ),
+    ch.instant(`sum by (activity_id)(increase(${M.incidentCreated}${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}[${range}]))`),
   ])
 
   const sumBy = byLabel(sums, "activity_id")
@@ -142,19 +128,17 @@ export interface ElementHeatResult {
  */
 export async function elementHeat(
   ch: PrometheusClient,
-  params: { processDefinitionKey: string; period: Period; engineId?: EngineFilterInput },
+  params: { processDefinitionKey: string; period: Period; engine?: EngineFilterInput },
 ): Promise<ElementHeatResult> {
   const range = params.period
   const sel = selector(
     `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
-    engineMatcher(params.engineId),
+    engineMatcher(params.engine),
   )
 
   const [counts, sums] = await Promise.all([
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}[${range}]))`),
-    ch.instant(
-      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}[${range}]))`,
-    ),
+    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}[${range}]))`),
   ])
 
   const countBy = byLabel(counts, "activity_id")

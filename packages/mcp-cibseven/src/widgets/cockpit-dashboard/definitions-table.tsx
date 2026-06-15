@@ -6,7 +6,7 @@ import {
   TONE_DOT,
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
-import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
+import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows, type DefinitionRow } from "./lib.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
@@ -53,13 +53,13 @@ function ProcessRow({
       <td className="border-border border-b px-4 py-3 align-middle">
         <div className="flex items-center justify-end gap-1.5">
           <DrillButton
-            onClick={() => onViewInstances(row.key)}
+            onDrill={() => onViewInstances(row.key)}
             ariaLabel={`View running instances of ${row.name ?? row.key}`}
           >
             Instances
           </DrillButton>
           <DrillButton
-            onClick={() => onOpen(row.key)}
+            onDrill={() => onOpen(row.key)}
             ariaLabel={`Open process detail for ${row.name ?? row.key}`}
           >
             Open
@@ -108,7 +108,7 @@ export function ProcessDefinitionsTableView({
 
   return (
     <section>
-      <SectionHeading title="Alle Prozesse" hint={`${rows.length} deployed`} />
+      <SectionHeading title="All processes" hint={`${rows.length} deployed`} />
 
       {rows.length === 0 ? (
         <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
@@ -125,7 +125,7 @@ export function ProcessDefinitionsTableView({
                 scope="col"
                 className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
               >
-                Prozess
+                Process
               </th>
               <th
                 scope="col"

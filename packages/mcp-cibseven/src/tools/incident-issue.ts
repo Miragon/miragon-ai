@@ -5,12 +5,12 @@ import {
   getProcessDefinition,
   getProcessInstance,
   getStacktrace,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 import type {
   IncidentDto,
   ProcessDefinitionDto,
   ProcessInstanceDto,
-} from "@miragon-ai/client-cibseven/generated/types.gen"
+} from "@miragon-ai/client-cibseven/types"
 import type { MCPServer } from "mcp-use/server"
 import { z } from "zod"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
@@ -19,23 +19,34 @@ import { engineParamShape, withEngine } from "../lib/with-engine.js"
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export interface IncidentIssueConfig {
-  /** `owner/repo` of the GitHub repository where incidents should be filed. */
+  /**
+   * Optional `owner/repo` of a GitHub repository. Purely a convenience for
+   * GitHub customers (enables `prefilledUrl` + a default target) — the ticket
+   * draft itself is tracker-agnostic and never filed by this server.
+   */
   repository?: string
 }
 
+/**
+ * A tracker-agnostic ticket draft. `title` + markdown `body` + `labels` work
+ * as-is in GitHub, Jira, and most issue trackers; the draft is presented in
+ * the chat for review and reuse — WHERE it goes (if anywhere) is the user's
+ * decision, via whatever integration their host exposes.
+ */
 export interface IncidentIssuePayload {
   title: string
   body: string
   labels: string[]
-  /** Repository in `owner/repo` form, or `null` if neither config nor override provided one. */
-  suggestedRepository: string | null
-  /** Tool name on the official GitHub MCP server that should consume this payload. */
-  suggestedTool: "create_issue"
   /**
-   * Browser URL to GitHub's "new issue" page with title/body/labels prefilled
-   * via query params. Lets the user one-click-submit even when no GitHub MCP
-   * server / connector is exposed to the agent. `null` if no repository
-   * configured. URL length is capped at GitHub's ~8KB limit.
+   * GitHub convenience: repository in `owner/repo` form when one is
+   * configured/overridden, else `null`. Irrelevant for non-GitHub trackers.
+   */
+  suggestedRepository: string | null
+  /**
+   * GitHub convenience: browser URL to GitHub's "new issue" page with
+   * title/body/labels prefilled via query params — one-click submission
+   * without any integration. `null` if no repository configured. URL length
+   * is capped at GitHub's ~8KB limit.
    */
   prefilledUrl: string | null
   nextStep: string
@@ -54,9 +65,11 @@ interface BuildIssueInput {
 const ISSUE_LABELS = ["bug", "incident"]
 
 /**
- * Pure formatter — no I/O. Mirrors the structure of `.github/ISSUE_TEMPLATE/bug_report.yml`
- * so the resulting issue body fills the same sections a human would. Kept side-effect-free
- * so it can be unit-tested without mocking the SDK.
+ * Pure formatter — no I/O. Produces a structured bug-report layout
+ * (description, reproduction, expected/actual, engine context) that reads
+ * well in any tracker; the section structure follows the classic bug-report
+ * template. Kept side-effect-free so it can be unit-tested without mocking
+ * the SDK.
  */
 export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssuePayload {
   const { incident, processInstance, processDefinition, stacktrace, cockpitUrl, repository } = input
@@ -124,7 +137,7 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
     "CIB Seven",
     "",
     cockpitLink ? `### Cockpit\n\n${cockpitLink}\n` : "",
-    "_Filed via the `camunda7_format_incident_issue` MCP tool._",
+    "_Drafted via the `camunda7_format_incident_issue` MCP tool._",
   ]
     .filter((line) => line !== "")
     .join("\n")
@@ -138,11 +151,10 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
     body,
     labels: ISSUE_LABELS,
     suggestedRepository: repository,
-    suggestedTool: "create_issue",
     prefilledUrl,
     nextStep: repository
-      ? `Pass {title, body, labels, repository: "${repository}"} to the GitHub MCP server's create_issue tool. If no GitHub tool is available, send the user to prefilledUrl for one-click submission.`
-      : "No repository configured. Ask the user which `owner/repo` should receive this incident, then call the GitHub MCP server's create_issue tool.",
+      ? `Present this draft to the user in the chat (title, full body, labels) for review and reuse. Do NOT file it anywhere on your own — the user decides where it goes. If they ask to file it, use whatever issue-tracker capability is available; for GitHub, repository "${repository}" is preconfigured and prefilledUrl offers one-click submission without any integration.`
+      : "Present this draft to the user in the chat (title, full body, labels) for review and reuse. Do NOT file it anywhere on your own — the user decides where it goes (their issue tracker, e-mail, or nowhere). Only file it if the user explicitly asks, using whatever issue-tracker capability is available.",
   }
 }
 
@@ -274,16 +286,18 @@ function buildCockpitInstanceLink(args: {
 export function registerIncidentIssueTools(register: Register, config: IncidentIssueConfig) {
   register({
     name: "camunda7_format_incident_issue",
+    category: "incidents",
     description:
-      "Build a GitHub-issue payload (title, body, labels, repository) from a Camunda 7 / CIB Seven incident. " +
-      "Does NOT create the issue — pass the returned payload to the GitHub MCP server's `create_issue` tool.",
+      "Build a structured, tracker-agnostic ticket draft (title, markdown body, labels) from a Camunda 7 / CIB Seven incident. " +
+      "Does NOT file anything — present the draft in the chat for review and reuse; the user decides where it goes " +
+      "(their issue tracker via whatever integration is available, the optional prefilled GitHub URL, or copy-paste).",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...formatIncidentIssueInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args, { cockpitUrl }) => {
       // The OpenAPI SDK types describe a `{data, error}` envelope, but the
       // shared client (see `client.ts`) is built with `responseStyle: "data"`
       // + `throwOnError: true` — so at runtime the call returns the raw DTO.
-      // The cast matches the convention used in `incident-panel-data.ts`.
+      // The cast matches the convention used in `data/incident-panel-data.ts`.
       const incident = (await getIncident({
         client,
         path: { id: args.incidentId },
@@ -332,47 +346,50 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
 }
 
 const incidentIssuePromptSchema = z.object({
-  incidentId: z.string().describe("The Camunda 7 / CIB Seven incident ID to report"),
+  incidentId: z.string().describe("The Camunda 7 / CIB Seven incident ID to draft a ticket for"),
   repository: z
     .string()
     .optional()
-    .describe("Optional `owner/repo` override for the target GitHub repository"),
+    .describe(
+      "Optional `owner/repo` — only relevant if the user later chooses to file the draft on GitHub",
+    ),
 })
 
 /**
- * Cross-MCP orchestration prompt: tells the host agent to chain
- * `camunda7_format_incident_issue` → official GitHub MCP server's `create_issue`.
- * We don't issue the GitHub call ourselves — auth/scope/secret-scanning are handled
- * by the user's installed GitHub MCP server.
+ * Drafting prompt: tells the host agent to build a tracker-agnostic ticket
+ * draft via `camunda7_format_incident_issue` and present it in the chat. The
+ * draft is the deliverable — filing it (GitHub, Jira, anything else) only
+ * happens on the user's explicit request, through whatever integration their
+ * host exposes. We never file anything ourselves.
  */
 export function registerIncidentIssuePrompt(server: MCPServer, config: IncidentIssueConfig) {
   server.prompt(
     {
-      name: "report_incident_to_github",
+      name: "draft_incident_ticket",
       description:
-        "Report a Camunda 7 / CIB Seven engine incident as a GitHub issue. Works with any GitHub-issue-creating capability the host exposes — the official github/github-mcp-server, Claude Desktop's first-party GitHub connector, or a `gh` CLI bash tool.",
+        "Draft a structured ticket from a Camunda 7 / CIB Seven engine incident and present it in the chat for review. " +
+        "Tracker-agnostic: the user decides where to file it (their issue tracker via any available integration, " +
+        "a prefilled GitHub link, or copy-paste) — filing only happens on explicit request.",
       schema: incidentIssuePromptSchema,
     },
     async ({ incidentId, repository }) => {
       const target = repository ?? config.repository
-      const targetClause = target
-        ? `Use repository \`${target}\` unless the user explicitly overrides it.`
-        : "Ask the user which `owner/repo` should receive the issue if none is specified."
+      const githubClause = target
+        ? `If they choose GitHub without naming a repository, default to \`${target}\`; without any GitHub integration, offer \`prefilledUrl\` as a one-click link (\`[Create issue on GitHub](<prefilledUrl>)\`).`
+        : "If they choose GitHub, ask which `owner/repo` should receive it."
       const text = [
-        `You will report Camunda 7 / CIB Seven incident \`${incidentId}\` to GitHub.`,
+        `You will draft a ticket for Camunda 7 / CIB Seven incident \`${incidentId}\`.`,
         "",
         "Steps:",
         `1. Call the \`camunda7_format_incident_issue\` tool with \`incidentId="${incidentId}"\`${
           repository ? ` and \`repository="${repository}"\`` : ""
         }.`,
-        "2. Find an available GitHub issue-creation capability among the tools and connectors currently exposed to you. Possible providers (any one is fine): the official `github/github-mcp-server` (tool `create_issue`), Claude Desktop's first-party GitHub connector (often namespaced like `Github:create_issue` or `github_create_issue`), or a generic `gh` CLI bash tool. Pick whichever is actually available — do NOT insist on a specific tool name.",
-        "3. Call that capability with the `{title, body, labels}` from step 1 and `suggestedRepository` (split into `owner` and `repo`) as the target repository.",
-        `4. ${targetClause}`,
-        "5. Confirm to the user with the URL of the created issue.",
+        "2. Present the draft to the user in the chat: the title, the full markdown body, and the labels. The draft is the deliverable — it must be reviewable and reusable as-is (copy-paste into any tracker).",
+        "3. Ask the user whether and where it should be filed. Do NOT file it anywhere on your own.",
+        `4. Only if the user names a destination, use whatever matching capability is exposed to you (a GitHub MCP server / connector, a Jira or other tracker integration, or a CLI tool) — do NOT insist on a specific tool name. ${githubClause}`,
+        "5. After filing, confirm to the user with the link/id of the created ticket.",
         "",
-        "If you genuinely cannot find ANY GitHub-issue-creating tool in your current toolset, fall back to `prefilledUrl` from step 1: present it to the user as a clickable link (`[Create issue on GitHub](<prefilledUrl>)`) so they can submit with one click. Do NOT just dump the title/body and tell the user to paste manually when prefilledUrl is set.",
-        "",
-        "Do NOT modify the title or body — they already match the project's bug-report template. Only set additional fields (e.g. assignees) if the user explicitly asks.",
+        "Do NOT modify the title or body — they follow the bug-report structure. Only set additional fields (e.g. assignees) if the user explicitly asks.",
       ].join("\n")
 
       return {

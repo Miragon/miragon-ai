@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import type { BpmnViewerData } from "@miragon-ai/client-cibseven"
+import type { BpmnViewerData } from "../../view-models.js"
 import { BpmnDiagram, type BpmnHighlight } from "../bpmn-diagram.js"
 
 /**

@@ -1,6 +1,13 @@
 {
   "name": "@miragon-ai/mcp-analytics",
   "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "directory": "packages/mcp-analytics"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,6 +20,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.widgets.json",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"
@@ -21,12 +29,12 @@
     "@miragon-ai/client-analytics": "workspace:*",
     "@miragon-ai/client-cibseven": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
-    "@miragon/mcp-toolkit-core": "0.3.1",
-    "@miragon/mcp-toolkit-proxy-contract": "0.3.1",
+    "@miragon/mcp-toolkit-core": "0.5.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.5.0",
     "zod": "4.3.6"
   },
   "peerDependencies": {
-    "mcp-use": "1.28.0",
+    "mcp-use": "1.30.2",
     "react": "19.2.5"
   },
   "peerDependenciesMeta": {
@@ -35,11 +43,12 @@
     }
   },
   "devDependencies": {
-    "@miragon/mcp-toolkit-ui": "0.3.1",
+    "@miragon/mcp-toolkit-ui": "0.5.0",
     "@types/react": "19.2.14",
     "bpmn-js": "18.14.0",
-    "mcp-use": "1.28.0",
+    "mcp-use": "1.30.2",
     "react": "19.2.5",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "4.1.4"
   }
 }

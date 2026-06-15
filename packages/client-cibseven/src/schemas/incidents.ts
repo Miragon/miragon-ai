@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { firstResultParam } from "./shared.js"
 
 export const listIncidentsInput = z.object({
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
@@ -7,6 +8,7 @@ export const listIncidentsInput = z.object({
     .string()
     .optional()
     .describe("Filter by incident type (e.g. failedJob, failedExternalTask)"),
+  firstResult: firstResultParam,
   maxResults: z.number().int().positive().optional().default(20),
   sortBy: z
     .enum([

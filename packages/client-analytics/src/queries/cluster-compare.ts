@@ -4,30 +4,21 @@ import {
   selector,
   type EngineFilterInput,
   type PrometheusClient,
-  type PromSample,
 } from "../prometheus.js"
+import {
+  compareKpiDelta,
+  queryCompareKpis,
+  type CompareKpiDelta,
+  type CompareKpis,
+} from "./helpers.js"
 
-export interface ClusterCompareKpi {
+export interface ClusterCompareKpi extends CompareKpis {
   period: "before" | "after"
-  instance_count: number
-  completed_count: number
-  failed_count: number
-  failure_rate_pct: number
-  incident_count: number
-  incident_rate_pct: number
-  avg_duration_sec: number
-  p95_duration_sec: number
   window_from: string
   window_to: string
 }
 
-export interface ClusterCompareDelta {
-  instance_count_delta_pct: number | null
-  failure_rate_delta_pp: number | null
-  incident_rate_delta_pp: number | null
-  avg_duration_delta_pct: number | null
-  p95_duration_delta_pct: number | null
-}
+export type ClusterCompareDelta = CompareKpiDelta
 
 export interface ClusterCompareResult {
   processDefinitionKey: string | null
@@ -40,14 +31,7 @@ export interface ClusterCompareResult {
   delta: ClusterCompareDelta
 }
 
-const round1 = (n: number) => Math.round(n * 10) / 10
-const first = (s: PromSample[]) => (s.length ? s[0].value : 0)
 const DAY = 86400
-
-function pctChange(before: number, after: number): number | null {
-  if (before === 0) return null
-  return Math.round(((after - before) / before) * 10000) / 100
-}
 
 /**
  * Pre/Post deployment comparison from OTEL metrics. Each window is queried with
@@ -65,7 +49,7 @@ export async function clusterCompare(
     windowBeforeDays: number
     windowAfterDays: number
     minBucketSize: number
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<ClusterCompareResult> {
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
@@ -90,13 +74,7 @@ export async function clusterCompare(
     minBucketSize: minBucket,
     suppressed,
     kpis: [b, a],
-    delta: {
-      instance_count_delta_pct: pctChange(b.instance_count, a.instance_count),
-      failure_rate_delta_pp: round1(a.failure_rate_pct - b.failure_rate_pct),
-      incident_rate_delta_pp: round1(a.incident_rate_pct - b.incident_rate_pct),
-      avg_duration_delta_pct: pctChange(b.avg_duration_sec, a.avg_duration_sec),
-      p95_duration_delta_pct: pctChange(b.p95_duration_sec, a.p95_duration_sec),
-    },
+    delta: compareKpiDelta(b, a),
   }
 }
 
@@ -105,13 +83,13 @@ async function windowKpi(
   params: {
     processDefinitionKey?: string
     elementId?: string
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
   period: "before" | "after",
   windowDays: number,
   win: { from: number; to: number },
 ): Promise<ClusterCompareKpi> {
-  const engine = engineMatcher(params.engineId)
+  const engine = engineMatcher(params.engine)
   const keyMatcher = params.processDefinitionKey
     ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
     : undefined
@@ -122,34 +100,15 @@ async function windowKpi(
     params.elementId ? `activity_id="${escapeLabelValue(params.elementId)}"` : undefined,
     engine,
   )
-  const r = `[${windowDays}d] @ ${win.to}`
 
-  const [total, completed, failed, incidents, avg, p95] = await Promise.all([
-    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}${r}))`),
-    ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}${r}))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${sel}${r}))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${incidentSel}${r}))`),
-    ch.instant(
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}${r})) / sum(increase(camunda_process_instance_duration_seconds_count${sel}${r}))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}${r})))`,
-    ),
-  ])
-
-  const instances = Math.round(first(total))
-  const failedCount = Math.round(first(failed))
-  const incidentCount = Math.round(first(incidents))
+  const kpis = await queryCompareKpis(
+    ch,
+    { sel, completedSel, incidentSel },
+    `[${windowDays}d] @ ${win.to}`,
+  )
   return {
     period,
-    instance_count: instances,
-    completed_count: Math.round(first(completed)),
-    failed_count: failedCount,
-    failure_rate_pct: instances > 0 ? round1((failedCount * 100) / instances) : 0,
-    incident_count: incidentCount,
-    incident_rate_pct: instances > 0 ? round1((incidentCount * 100) / instances) : 0,
-    avg_duration_sec: round1(first(avg)),
-    p95_duration_sec: round1(first(p95)),
+    ...kpis,
     window_from: new Date(win.from * 1000).toISOString(),
     window_to: new Date(win.to * 1000).toISOString(),
   }

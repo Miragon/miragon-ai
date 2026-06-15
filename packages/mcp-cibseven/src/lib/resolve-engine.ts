@@ -1,5 +1,10 @@
+import {
+  BackendNotSelectedError,
+  UnknownBackendError,
+  createBackendRegistry,
+  type BackendRegistry,
+} from "@miragon/mcp-toolkit-core/tools"
 import type { Client } from "@miragon-ai/client-cibseven"
-import { getSelectedEngine } from "./engine-session.js"
 
 export interface EngineEntry {
   id: string
@@ -7,26 +12,63 @@ export interface EngineEntry {
   cockpitUrl?: string
 }
 
+/** Per-engine metadata carried on each backend-registry entry. */
+export interface EngineMeta {
+  baseUrl: string
+  cockpitUrl?: string
+}
+
+/**
+ * Session-aware engine routing for the camunda7 module. Wraps the toolkit's
+ * generic {@link BackendRegistry} — the single source of truth for the
+ * per-session engine selection (override > sticky > single-default precedence,
+ * lazy-TTL eviction, session id read from the MCP request context) — alongside
+ * the static configured engine list for listing and the cockpit-count reads.
+ */
 export interface EngineRegistry {
+  backends: BackendRegistry<Client, EngineMeta>
   engines: EngineEntry[]
-  clients: Map<string, Client>
-  cockpitUrls: Map<string, string | undefined>
+}
+
+/**
+ * Builds an {@link EngineRegistry} from the configured engines and a factory
+ * that creates the REST client for each. `opts` is a test seam mirroring the
+ * toolkit registry's injectable session/clock; production callers omit it.
+ */
+export function createEngineRegistry(
+  engines: EngineEntry[],
+  clientFor: (engine: EngineEntry) => Client,
+  opts?: { getSessionId?: () => string | undefined; now?: () => number },
+): EngineRegistry {
+  const backends = createBackendRegistry<Client, EngineMeta>(
+    engines.map((e) => ({
+      id: e.id,
+      client: clientFor(e),
+      meta: { baseUrl: e.baseUrl, cockpitUrl: e.cockpitUrl },
+    })),
+    { label: "engine", ...opts },
+  )
+  return { backends, engines }
 }
 
 /**
  * Thrown when an operations tool is invoked but no engine has been selected
  * for the current MCP session and the registry holds more than one engine.
  *
- * The payload mirrors what `mcp-use` returns in a tool's `content` block when
- * a handler throws — the host LLM can read the structured fields, pick an
- * engine, and call `camunda7_select_engine` before retrying.
+ * The message lists the available engine ids because the error path only
+ * serialises code + message (the structured `availableEngines` field never
+ * reaches the model) — naming them here saves the LLM a
+ * `camunda7_engine` (action "list") roundtrip before it can pick one and
+ * select it.
  */
 export class EngineNotSelectedError extends Error {
   readonly code = "ENGINE_NOT_SELECTED" as const
   readonly availableEngines: EngineEntry[]
   constructor(availableEngines: EngineEntry[]) {
     super(
-      "No engine selected for this session. Call camunda7_select_engine with one of the available engine ids before invoking operations tools.",
+      `No engine selected for this session. Available engines: ${availableEngines
+        .map((e) => e.id)
+        .join(", ")}. Call camunda7_engine with action "select" first.`,
     )
     this.name = "EngineNotSelectedError"
     this.availableEngines = availableEngines
@@ -48,43 +90,26 @@ export class UnknownEngineError extends Error {
 }
 
 /**
- * Resolves an engine for the current tool call:
- *   1. explicit per-call `override` wins,
- *   2. otherwise the sticky session selection,
- *   3. otherwise, if only one engine is configured, that one,
- *   4. otherwise throws `EngineNotSelectedError` so the host can react.
+ * Resolves an engine for the current tool call (precedence: explicit `override`
+ * > sticky session selection > the only configured engine, else throws). Thin
+ * adapter over the toolkit backend registry that re-exposes the camunda7
+ * ergonomic shape and re-throws the toolkit's failures as the module's own
+ * `EngineNotSelectedError` / `UnknownEngineError` so the error contract (codes,
+ * `availableEngines`, the `camunda7_engine` remediation hint) is preserved.
  */
 export function resolveEngine(
   override: string | undefined,
   registry: EngineRegistry,
 ): { client: Client; engineId: string; cockpitUrl?: string } {
-  if (override) {
-    const client = registry.clients.get(override)
-    if (!client) {
-      throw new UnknownEngineError(override, registry.engines)
-    }
-    return { client, engineId: override, cockpitUrl: registry.cockpitUrls.get(override) }
+  try {
+    const backend = registry.backends.resolve(override)
+    return { client: backend.client, engineId: backend.id, cockpitUrl: backend.meta?.cockpitUrl }
+  } catch (e) {
+    if (e instanceof BackendNotSelectedError) throw new EngineNotSelectedError(registry.engines)
+    if (e instanceof UnknownBackendError)
+      throw new UnknownEngineError(e.requestedId, registry.engines)
+    throw e
   }
-
-  const sticky = getSelectedEngine()
-  if (sticky) {
-    const client = registry.clients.get(sticky)
-    if (!client) {
-      throw new UnknownEngineError(sticky, registry.engines)
-    }
-    return { client, engineId: sticky, cockpitUrl: registry.cockpitUrls.get(sticky) }
-  }
-
-  if (registry.engines.length === 1) {
-    const only = registry.engines[0]
-    return {
-      client: registry.clients.get(only.id)!,
-      engineId: only.id,
-      cockpitUrl: registry.cockpitUrls.get(only.id),
-    }
-  }
-
-  throw new EngineNotSelectedError(registry.engines)
 }
 
 /**

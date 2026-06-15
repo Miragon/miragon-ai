@@ -1,4 +1,4 @@
-export { variableSchema } from "./shared.js"
+export { firstResultParam, variableSchema } from "./shared.js"
 export { listProcessDefinitionsInput, getProcessDefinitionXmlInput } from "./process-definitions.js"
 export {
   startProcessInstanceInput,
@@ -9,8 +9,7 @@ export {
   modifyProcessInstanceInput,
   getProcessInstanceVariablesInput,
   setProcessInstanceVariableInput,
-  suspendProcessInstanceInput,
-  activateProcessInstanceInput,
+  setProcessInstanceSuspensionInput,
 } from "./process-instances.js"
 export {
   listTasksInput,

@@ -70,14 +70,14 @@ export type EngineFilterInput = string | string[] | undefined
  * e.g. `engine_id="prod-a"` or `engine_id=~"prod-a|prod-b"`. Returns `undefined`
  * when no filter is set so the caller can aggregate across all engines.
  */
-export function engineMatcher(engineId: EngineFilterInput): string | undefined {
-  if (engineId === undefined || engineId === null) return undefined
-  if (Array.isArray(engineId)) {
-    if (engineId.length === 0) return undefined
-    return `engine_id=~"${engineId.map(escapeLabelValue).join("|")}"`
+export function engineMatcher(engine: EngineFilterInput): string | undefined {
+  if (engine === undefined || engine === null) return undefined
+  if (Array.isArray(engine)) {
+    if (engine.length === 0) return undefined
+    return `engine_id=~"${engine.map(escapeLabelValue).join("|")}"`
   }
-  if (engineId.length === 0) return undefined
-  return `engine_id="${escapeLabelValue(engineId)}"`
+  if (engine.length === 0) return undefined
+  return `engine_id="${escapeLabelValue(engine)}"`
 }
 
 /**

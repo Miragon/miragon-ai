@@ -1,4 +1,4 @@
-import { useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 
 export function formatDuration(ms: number | null): string {
@@ -19,7 +19,9 @@ export interface DashboardScopeProps {
 
 // Centralised so all four split dashboard widgets share one self-fetch contract.
 // The cache key includes the scope props so per-cell instances (e.g. one tab per
-// period) don't collide on a single shared cache entry.
+// period) don't collide on a single shared cache entry. Self-fetches a `show_*`
+// tool, so it must parse structuredContent-first (`useViewToolQuery`) — the text
+// channel only carries the model summary since the text-channel diet.
 export function useDashboardSelfFetch(
   initialData: AnalyticsDashboardData | null,
   props: DashboardScopeProps,
@@ -28,7 +30,7 @@ export function useDashboardSelfFetch(
   const queryArgs: DashboardScopeProps = {}
   if (processDefinitionKey) queryArgs.processDefinitionKey = processDefinitionKey
   if (period) queryArgs.period = period
-  return useToolQuery<AnalyticsDashboardData>(
+  return useViewToolQuery<AnalyticsDashboardData>(
     ["analytics:dashboard", processDefinitionKey ?? null, period ?? null],
     "analytics_show_dashboard",
     queryArgs,

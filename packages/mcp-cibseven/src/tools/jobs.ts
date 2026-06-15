@@ -6,9 +6,11 @@ import {
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getJobs,
+  getJobsCount,
   setJobRetries,
   setJobRetriesAsyncOperation,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
+import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -17,29 +19,41 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerJobTools(register: Register) {
   register({
     name: "camunda7_list_jobs",
-    description: "List jobs (timers, async continuations) with optional filters.",
+    category: "jobs",
+    description:
+      "List jobs (timers, async continuations) with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listJobsInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) =>
-      getJobs({
-        client,
-        query: {
-          processInstanceId: args.processInstanceId,
-          processDefinitionKey: args.processDefinitionKey,
-          withRetriesLeft: args.withRetriesLeft,
-          noRetriesLeft: args.noRetriesLeft,
-          active: args.active,
-          suspended: args.suspended,
-          maxResults: args.maxResults,
-          sortBy: args.sortBy,
-          sortOrder: args.sortOrder,
-        },
-      }),
-    ),
+    outputSchema: paginatedListOutput,
+    handler: withEngine(async (client, args) => {
+      const filters = {
+        processInstanceId: args.processInstanceId,
+        processDefinitionKey: args.processDefinitionKey,
+        withRetriesLeft: args.withRetriesLeft,
+        noRetriesLeft: args.noRetriesLeft,
+        active: args.active,
+        suspended: args.suspended,
+      }
+      const [items, count] = await Promise.all([
+        getJobs({
+          client,
+          query: {
+            ...filters,
+            firstResult: args.firstResult,
+            maxResults: args.maxResults,
+            sortBy: args.sortBy,
+            sortOrder: args.sortOrder,
+          },
+        }),
+        getJobsCount({ client, query: filters }),
+      ])
+      return toPaginatedList(items, count, args.firstResult)
+    }),
   })
 
   register({
     name: "camunda7_set_job_retries",
+    category: "jobs",
     description:
       "Set the number of retries for a failed job. Setting retries > 0 will re-execute the job.",
     annotations: { openWorldHint: true },
@@ -56,6 +70,7 @@ export function registerJobTools(register: Register) {
 
   register({
     name: "camunda7_set_job_retries_batch",
+    category: "jobs",
     description:
       "Create a batch job to set retries on multiple jobs at once. Returns the batch id; progress and failures are tracked on the batch, not inline.",
     annotations: { destructiveHint: true, openWorldHint: true },

@@ -2,7 +2,11 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { MCPServer } from "mcp-use/server"
-import { GET_MODULE_MANIFEST_TOOL, type ModuleManifest } from "@miragon/mcp-toolkit-proxy-contract"
+import {
+  GET_MODULE_MANIFEST_TOOL,
+  MODULE_MANIFEST_SCHEMA_VERSION,
+  type ModuleManifest,
+} from "@miragon/mcp-toolkit-proxy-contract"
 import { z } from "zod"
 
 import { listKnownCustomers, lookupCustomer } from "./data.js"
@@ -106,6 +110,7 @@ server.tool(
 )
 
 const manifest: ModuleManifest = {
+  schemaVersion: MODULE_MANIFEST_SCHEMA_VERSION,
   moduleId: "miravelo",
   runtime: { react: "^19.0.0" },
   steps: [

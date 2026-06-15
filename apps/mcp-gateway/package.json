@@ -1,6 +1,13 @@
 {
   "name": "@miragon-ai/mcp-gateway",
   "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "directory": "apps/mcp-gateway"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,22 +20,23 @@
     "build": "pnpm run build:ui && pnpm run build:server",
     "dev:ui": "cross-env INPUT=mcp-app.html vite build --watch",
     "dev": "pnpm run build:ui && mcp-use dev --port 8400 --no-open",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.ui.json && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix",
     "start": "cross-env NODE_ENV=production node dist/index.js"
   },
   "dependencies": {
-    "@miragon/mcp-toolkit-core": "0.3.1",
-    "@miragon/mcp-toolkit-proxy-contract": "0.3.1",
+    "@miragon/mcp-toolkit-core": "0.5.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.5.0",
     "@miragon-ai/client-cibseven": "workspace:*",
     "@miragon-ai/mcp-cibseven": "workspace:*",
     "@miragon-ai/mcp-analytics": "workspace:*",
-    "mcp-use": "1.28.0",
+    "mcp-use": "1.30.2",
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@miragon/mcp-toolkit-ui": "0.3.1",
+    "@miragon/mcp-toolkit-ui": "0.5.0",
     "@tailwindcss/vite": "4.2.2",
     "@types/node": "22.19.15",
     "@types/react": "19.2.14",
@@ -44,6 +52,7 @@
     "tailwindcss": "4.2.2",
     "typescript": "5.9.3",
     "vite": "8.0.8",
-    "vite-plugin-singlefile": "2.3.2"
+    "vite-plugin-singlefile": "2.3.2",
+    "vitest": "4.1.4"
   }
 }

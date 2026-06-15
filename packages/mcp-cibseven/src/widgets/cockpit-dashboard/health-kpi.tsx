@@ -1,16 +1,10 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { AskAiButton, KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
-import type { CockpitDashboardData } from "@miragon-ai/client-cibseven"
+import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
-import { useNav, type NavIntent } from "../navigation.js"
+import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
-
-// Operations areas reachable from the cockpit that don't have their own KPI
-// number above (incidents + process list are wired onto the KPI cells instead).
-const NAV: Array<{ label: string; icon: string; intent: NavIntent }> = [
-  { label: "Jobs", icon: "⚙", intent: { type: "jobs" } },
-]
 
 /**
  * Shell-less health overview. One component, two modes: standalone the agent's
@@ -63,8 +57,8 @@ export function ProcessHealthKpiView({
         title="Cockpit"
         sub={
           <span>
-            Übersicht aller Prozesse · {summary.totalDefinitions}{" "}
-            {summary.totalDefinitions === 1 ? "Prozess" : "Prozesse"}
+            All processes at a glance · {summary.totalDefinitions}{" "}
+            {summary.totalDefinitions === 1 ? "process" : "processes"}
           </span>
         }
         actions={
@@ -76,10 +70,10 @@ export function ProcessHealthKpiView({
       />
       <KpiGrid
         boxed
-        header={{ label: "Health", badge: "Status der Prozesslandschaft" }}
+        header={{ label: "Health", badge: "Process landscape status" }}
         cells={[
           {
-            label: "Prozesse gesamt",
+            label: "Total processes",
             value: summary.totalDefinitions,
             onClick: () => go({ type: "process-list" }),
             ariaLabel: "Show all process definitions",
@@ -105,21 +99,6 @@ export function ProcessHealthKpiView({
           },
         ]}
       />
-
-      <nav aria-label="Cockpit navigation" className="flex flex-wrap items-center gap-2">
-        <span className="text-muted-foreground text-xs font-medium">Jump to</span>
-        {NAV.map((item) => (
-          <button
-            key={item.label}
-            type="button"
-            onClick={() => go(item.intent)}
-            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium outline-none transition-colors focus-visible:ring-2"
-          >
-            <span aria-hidden="true">{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </nav>
     </>
   )
 }

@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import { AskAiButton, DrillButton, OpenInCockpitLink } from "@miragon-ai/widget-shell/widgets"
 
-import type { IncidentInstance } from "@miragon-ai/client-cibseven"
+import type { IncidentInstance } from "../../view-models.js"
 
 import { formatTimestamp } from "../../lib/format-time.js"
 
@@ -59,14 +59,14 @@ export function IncidentTable({
               {formatTimestamp(incident.incidentTimestamp)}
             </span>
             <span role="cell" className="flex items-center gap-1">
-              <DrillButton onClick={() => onAnalyze(incident.id)} ariaLabel="Open incident detail">
+              <DrillButton onDrill={() => onAnalyze(incident.id)} ariaLabel="Open incident detail">
                 Open
               </DrillButton>
               <AskAiButton
                 variant="icon"
                 label="Draft ticket"
                 title="Draft ticket"
-                prompt={`Draft and file a GitHub issue for CIB Seven incident \`${incident.id}\` (${incident.incidentType}) on process instance ${incident.processInstanceId}, engine: the current engine. Build the payload with camunda7_format_incident_issue({ incidentId: "${incident.id}" }), include the error (${incident.incidentMessage ?? incident.incidentType}), show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue. Do not create it without my confirmation.`}
+                prompt={`Draft an incident ticket for CIB Seven incident \`${incident.id}\` (${incident.incidentType}) on process instance ${incident.processInstanceId}, engine: the current engine. Build the draft with camunda7_format_incident_issue({ incidentId: "${incident.id}" }), include the error (${incident.incidentMessage ?? incident.incidentType}), and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
               />
               {instanceUrl && <OpenInCockpitLink url={instanceUrl} />}
               {resolved ? (

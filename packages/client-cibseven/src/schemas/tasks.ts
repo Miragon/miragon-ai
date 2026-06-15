@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { variableSchema } from "./shared.js"
+import { firstResultParam, variableSchema } from "./shared.js"
 
 export const listTasksInput = z.object({
   assignee: z.string().optional().describe("Filter by assignee user ID"),
@@ -7,6 +7,7 @@ export const listTasksInput = z.object({
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
   unassigned: z.boolean().optional().describe("Only return unassigned tasks"),
+  firstResult: firstResultParam,
   maxResults: z
     .number()
     .int()

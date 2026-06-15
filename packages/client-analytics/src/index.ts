@@ -10,6 +10,7 @@ export {
   type EngineFilterInput,
   type Period,
 } from "./prometheus.js"
+export { METRIC_NAMES, type MetricName } from "./metric-names.js"
 export * as schemas from "./schemas/index.js"
 export * as queries from "./queries/index.js"
 export * as widgets from "./widgets.js"

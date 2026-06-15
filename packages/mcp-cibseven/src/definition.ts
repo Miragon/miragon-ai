@@ -50,6 +50,59 @@ const bpmnViewerPropsSchema = z.toJSONSchema(
   }),
 )
 
+const processDetailPropsSchema = z.toJSONSchema(
+  z.object({
+    processDefinitionKey: z.string().describe("Process definition key to display."),
+  }),
+)
+
+const processInstancesPropsSchema = z.toJSONSchema(
+  z.object({
+    processDefinitionKey: z.string().describe("Process definition key whose instances to list."),
+    active: z.boolean().optional().describe("Only running (non-suspended) instances."),
+    suspended: z.boolean().optional().describe("Only suspended instances."),
+    withIncidentsOnly: z
+      .boolean()
+      .optional()
+      .describe("Only instances that currently have an open incident."),
+    businessKeyLike: z.string().optional().describe("Filter by a substring of the business key."),
+  }),
+)
+
+const incidentDetailPropsSchema = z.toJSONSchema(
+  z.object({
+    incidentId: z.string().describe("The incident ID to inspect."),
+  }),
+)
+
+const engineHealthPropsSchema = z.toJSONSchema(
+  z.object({
+    engine: z
+      .string()
+      .optional()
+      .describe(
+        "Engine id to assess. Omitted → the session's sticky selection or the single configured engine.",
+      ),
+  }),
+)
+
+const clusterDetailPropsSchema = z.toJSONSchema(
+  z.object({
+    activityId: z.string().describe("Activity id of the failure cluster."),
+    incidentType: z.string().describe('Incident type of the cluster, e.g. "failedJob".'),
+    messageSignature: z
+      .string()
+      .optional()
+      .describe(
+        "Normalized failure-message signature from the overview cluster (optional filter).",
+      ),
+    engine: z
+      .string()
+      .optional()
+      .describe("Engine id. Omitted → sticky selection or single default."),
+  }),
+)
+
 export const definition: AppDefinition = {
   name: "camunda7",
   steps: [
@@ -105,9 +158,33 @@ export const definition: AppDefinition = {
       size: "full",
     },
     {
+      // Self-fetching: loads camunda7_incident_detail_data for the given
+      // incidentId (no pipeline step), like its camunda7_show_incident_detail tool.
+      id: "camunda7:incident-detail",
+      requires: [],
+      size: "full",
+      propsSchema: incidentDetailPropsSchema,
+    },
+    {
       id: "camunda7:history-timeline",
       requires: ["camunda7:historyProcessInstance", "camunda7:historyActivities"],
       size: "full",
+    },
+    {
+      // Self-fetching: loads camunda7_engine_health_data for the engine (no
+      // pipeline step), eager-rendered by camunda7_show_engine_health.
+      id: "camunda7:engine-health",
+      requires: [],
+      size: "full",
+      propsSchema: engineHealthPropsSchema,
+    },
+    {
+      // Self-fetching: loads camunda7_cluster_detail_data for one failure
+      // cluster (no pipeline step), eager-rendered by camunda7_show_cluster_detail.
+      id: "camunda7:cluster-detail",
+      requires: [],
+      size: "full",
+      propsSchema: clusterDetailPropsSchema,
     },
     {
       id: "camunda7:process-health-kpi",
@@ -118,6 +195,22 @@ export const definition: AppDefinition = {
       id: "camunda7:process-definitions-table",
       requires: ["camunda7:cockpitDashboardData"],
       size: "full",
+    },
+    {
+      // Self-fetching: loads camunda7_process_detail_data for the given
+      // processDefinitionKey (no pipeline step).
+      id: "camunda7:process-detail",
+      requires: [],
+      size: "full",
+      propsSchema: processDetailPropsSchema,
+    },
+    {
+      // Self-fetching: loads camunda7_process_instances_data for the given
+      // processDefinitionKey (no pipeline step).
+      id: "camunda7:process-instances",
+      requires: [],
+      size: "full",
+      propsSchema: processInstancesPropsSchema,
     },
     {
       id: "camunda7:bpmn-viewer",
@@ -143,6 +236,13 @@ export const definition: AppDefinition = {
     {
       id: "camunda7:job-panel",
       requires: ["camunda7:jobPanelData"],
+      size: "full",
+    },
+    {
+      // Consolidated client-side cockpit app (camunda7_open_cockpit). Bootstraps
+      // itself from camunda7_engine (action "list") and the per-view data feeds.
+      id: "camunda7:cockpit-app",
+      requires: [],
       size: "full",
     },
   ],

@@ -5,8 +5,9 @@ import {
   type EngineFilterInput,
   type Period,
   type PrometheusClient,
-  type PromSample,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
+import { byLabel, first, kpiQueries, round1 } from "./helpers.js"
 
 export interface PerformanceKPI {
   process_definition_key: string
@@ -57,9 +58,6 @@ export interface PeriodComparisonResult {
   activityComparison?: PeriodActivityComparisonRow[]
 }
 
-const round1 = (n: number) => Math.round(n * 10) / 10
-const first = (s: PromSample[]) => (s.length ? s[0].value : 0)
-
 /** `{process_definition_key=..., engine_id=...}` plus any extra matchers. */
 function pdkSelector(
   key: string,
@@ -71,15 +69,6 @@ function pdkSelector(
     engineMatcher(engineId),
     ...extra,
   )
-}
-
-function byLabel(samples: PromSample[], label: string): Record<string, number> {
-  const out: Record<string, number> = {}
-  for (const s of samples) {
-    const k = s.metric[label]
-    if (k !== undefined) out[k] = s.value
-  }
-  return out
 }
 
 /**
@@ -97,30 +86,25 @@ export async function analyzePerformance(
     processDefinitionKey: string
     period: string
     includeActivityBreakdown: boolean
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<{ kpi: PerformanceKPI | null; activityBreakdown: ActivityBreakdownRow[] }> {
   const range = (params.period as Period) ?? "7d"
-  const sel = pdkSelector(params.processDefinitionKey, params.engineId)
-  const completedSel = pdkSelector(
-    params.processDefinitionKey,
-    params.engineId,
-    'state="COMPLETED"',
+  const q = kpiQueries(
+    {
+      sel: pdkSelector(params.processDefinitionKey, params.engine),
+      completedSel: pdkSelector(params.processDefinitionKey, params.engine, 'state="COMPLETED"'),
+    },
+    `[${range}]`,
   )
 
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
-    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${sel}[${range}]))`),
-    ch.instant(
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${sel}[${range}]))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.5, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
-    ),
+    ch.instant(q.started),
+    ch.instant(q.completed),
+    ch.instant(q.incidents),
+    ch.instant(q.avgDuration),
+    ch.instant(q.medianDuration),
+    ch.instant(q.p95Duration),
   ])
 
   const totalInstances = Math.round(first(total))
@@ -147,7 +131,7 @@ export async function analyzePerformance(
       ch,
       params.processDefinitionKey,
       `[${range}]`,
-      params.engineId,
+      params.engine,
     )
   }
 
@@ -163,13 +147,11 @@ async function activityBreakdownRows(
   const sel = pdkSelector(key, engineId)
   const [counts, sums, p95] = await Promise.all([
     ch.instant(
-      `sum by (activity_id, activity_type)(increase(camunda_activity_ended_total${sel}${rangeExpr}))`,
+      `sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}${rangeExpr}))`,
     ),
+    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${rangeExpr}))`),
     ch.instant(
-      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}${rangeExpr}))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}${rangeExpr})))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${rangeExpr})))`,
     ),
   ])
   const sumBy = byLabel(sums, "activity_id")
@@ -206,21 +188,21 @@ export async function comparePeriods(
     periodBFrom: string
     periodBTo: string
     includeActivityBreakdown: boolean
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<PeriodComparisonResult> {
   const a = promWindow(params.periodAFrom, params.periodATo)
   const b = promWindow(params.periodBFrom, params.periodBTo)
   const [kpiA, kpiB] = await Promise.all([
-    periodKpi(ch, params.processDefinitionKey, "Period A", a, params.engineId),
-    periodKpi(ch, params.processDefinitionKey, "Period B", b, params.engineId),
+    periodKpi(ch, params.processDefinitionKey, "Period A", a, params.engine),
+    periodKpi(ch, params.processDefinitionKey, "Period B", b, params.engine),
   ])
   const result: PeriodComparisonResult = { kpiComparison: [kpiA, kpiB] }
 
   if (params.includeActivityBreakdown) {
     const [actA, actB] = await Promise.all([
-      periodActivities(ch, params.processDefinitionKey, "Period A", a, params.engineId),
-      periodActivities(ch, params.processDefinitionKey, "Period B", b, params.engineId),
+      periodActivities(ch, params.processDefinitionKey, "Period A", a, params.engine),
+      periodActivities(ch, params.processDefinitionKey, "Period B", b, params.engine),
     ])
     result.activityComparison = [...actA, ...actB].sort(
       (x, y) => x.activity_id.localeCompare(y.activity_id) || x.period.localeCompare(y.period),
@@ -248,22 +230,20 @@ async function periodKpi(
   w: PromWindow,
   engineId: EngineFilterInput,
 ): Promise<PeriodComparisonKpi> {
-  const sel = pdkSelector(key, engineId)
-  const completedSel = pdkSelector(key, engineId, 'state="COMPLETED"')
-  const r = w.rangeExpr
+  const q = kpiQueries(
+    {
+      sel: pdkSelector(key, engineId),
+      completedSel: pdkSelector(key, engineId, 'state="COMPLETED"'),
+    },
+    w.rangeExpr,
+  )
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
-    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}${r}))`),
-    ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}${r}))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${sel}${r}))`),
-    ch.instant(
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}${r})) / sum(increase(camunda_process_instance_duration_seconds_count${sel}${r}))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.5, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}${r})))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}${r})))`,
-    ),
+    ch.instant(q.started),
+    ch.instant(q.completed),
+    ch.instant(q.incidents),
+    ch.instant(q.avgDuration),
+    ch.instant(q.medianDuration),
+    ch.instant(q.p95Duration),
   ])
   const totalInstances = Math.round(first(total))
   const failed = Math.round(first(incidents))
@@ -289,10 +269,10 @@ async function periodActivities(
   const sel = pdkSelector(key, engineId)
   const r = w.rangeExpr
   const [counts, sums, p95] = await Promise.all([
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_ended_total${sel}${r}))`),
-    ch.instant(`sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}${r}))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}${r}))`),
+    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${r}))`),
     ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}${r})))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${r})))`,
     ),
   ])
   const sumBy = byLabel(sums, "activity_id")

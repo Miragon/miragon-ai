@@ -25,7 +25,8 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  * The size of the result set can be retrieved by using the
  * [Get Authorization Count](https://docs.cibseven.org/manual/2.1/reference/rest/authorization/get-query-count/) method.
  */
-export const queryAuthorizations = <ThrowOnError extends boolean = false>(options?: Options<QueryAuthorizationsData, ThrowOnError>) => (options?.client ?? client).get<QueryAuthorizationsResponses, QueryAuthorizationsErrors, ThrowOnError>({
+export const queryAuthorizations = <ThrowOnError extends boolean = true>(options?: Options<QueryAuthorizationsData, ThrowOnError>) => (options?.client ?? client).get<QueryAuthorizationsResponses, QueryAuthorizationsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/authorization',
     ...options
@@ -39,7 +40,8 @@ export const queryAuthorizations = <ThrowOnError extends boolean = false>(option
  * or not may depend on various factors, including the users authorizations to interact with this
  * resource and the internal configuration of the process engine.
  */
-export const availableOperationsAuthorization = <ThrowOnError extends boolean = false>(options?: Options<AvailableOperationsAuthorizationData, ThrowOnError>) => (options?.client ?? client).options<AvailableOperationsAuthorizationResponses, unknown, ThrowOnError>({
+export const availableOperationsAuthorization = <ThrowOnError extends boolean = true>(options?: Options<AvailableOperationsAuthorizationData, ThrowOnError>) => (options?.client ?? client).options<AvailableOperationsAuthorizationResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/authorization',
     ...options
@@ -50,7 +52,8 @@ export const availableOperationsAuthorization = <ThrowOnError extends boolean = 
  *
  * Performs an authorization check for the currently authenticated user.
  */
-export const isUserAuthorized = <ThrowOnError extends boolean = false>(options: Options<IsUserAuthorizedData, ThrowOnError>) => (options.client ?? client).get<IsUserAuthorizedResponses, IsUserAuthorizedErrors, ThrowOnError>({
+export const isUserAuthorized = <ThrowOnError extends boolean = true>(options: Options<IsUserAuthorizedData, ThrowOnError>) => (options.client ?? client).get<IsUserAuthorizedResponses, IsUserAuthorizedErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/authorization/check',
     ...options
@@ -61,7 +64,8 @@ export const isUserAuthorized = <ThrowOnError extends boolean = false>(options: 
  *
  * Queries for authorizations using a list of parameters and retrieves the count.
  */
-export const getAuthorizationCount = <ThrowOnError extends boolean = false>(options?: Options<GetAuthorizationCountData, ThrowOnError>) => (options?.client ?? client).get<GetAuthorizationCountResponses, GetAuthorizationCountErrors, ThrowOnError>({
+export const getAuthorizationCount = <ThrowOnError extends boolean = true>(options?: Options<GetAuthorizationCountData, ThrowOnError>) => (options?.client ?? client).get<GetAuthorizationCountResponses, GetAuthorizationCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/authorization/count',
     ...options
@@ -72,7 +76,8 @@ export const getAuthorizationCount = <ThrowOnError extends boolean = false>(opti
  *
  * Creates a new authorization.
  */
-export const createAuthorization = <ThrowOnError extends boolean = false>(options?: Options<CreateAuthorizationData, ThrowOnError>) => (options?.client ?? client).post<CreateAuthorizationResponses, CreateAuthorizationErrors, ThrowOnError>({
+export const createAuthorization = <ThrowOnError extends boolean = true>(options?: Options<CreateAuthorizationData, ThrowOnError>) => (options?.client ?? client).post<CreateAuthorizationResponses, CreateAuthorizationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/authorization/create',
     ...options,
@@ -87,7 +92,8 @@ export const createAuthorization = <ThrowOnError extends boolean = false>(option
  *
  * Deletes an authorization by id.
  */
-export const deleteAuthorization = <ThrowOnError extends boolean = false>(options: Options<DeleteAuthorizationData, ThrowOnError>) => (options.client ?? client).delete<DeleteAuthorizationResponses, DeleteAuthorizationErrors, ThrowOnError>({
+export const deleteAuthorization = <ThrowOnError extends boolean = true>(options: Options<DeleteAuthorizationData, ThrowOnError>) => (options.client ?? client).delete<DeleteAuthorizationResponses, DeleteAuthorizationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/authorization/{id}',
     ...options
@@ -98,7 +104,8 @@ export const deleteAuthorization = <ThrowOnError extends boolean = false>(option
  *
  * Retrieves an authorization by id.
  */
-export const getAuthorization = <ThrowOnError extends boolean = false>(options: Options<GetAuthorizationData, ThrowOnError>) => (options.client ?? client).get<GetAuthorizationResponses, GetAuthorizationErrors, ThrowOnError>({
+export const getAuthorization = <ThrowOnError extends boolean = true>(options: Options<GetAuthorizationData, ThrowOnError>) => (options.client ?? client).get<GetAuthorizationResponses, GetAuthorizationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/authorization/{id}',
     ...options
@@ -112,7 +119,8 @@ export const getAuthorization = <ThrowOnError extends boolean = false>(options: 
  * Whether the user can perform an operation or not may depend on various factors, including the users
  * authorizations to interact with this resource and the internal configuration of the process engine.
  */
-export const availableOperationsAuthorizationInstance = <ThrowOnError extends boolean = false>(options: Options<AvailableOperationsAuthorizationInstanceData, ThrowOnError>) => (options.client ?? client).options<AvailableOperationsAuthorizationInstanceResponses, unknown, ThrowOnError>({
+export const availableOperationsAuthorizationInstance = <ThrowOnError extends boolean = true>(options: Options<AvailableOperationsAuthorizationInstanceData, ThrowOnError>) => (options.client ?? client).options<AvailableOperationsAuthorizationInstanceResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/authorization/{id}',
     ...options
@@ -123,7 +131,8 @@ export const availableOperationsAuthorizationInstance = <ThrowOnError extends bo
  *
  * Updates an authorization by id.
  */
-export const updateAuthorization = <ThrowOnError extends boolean = false>(options: Options<UpdateAuthorizationData, ThrowOnError>) => (options.client ?? client).put<UpdateAuthorizationResponses, UpdateAuthorizationErrors, ThrowOnError>({
+export const updateAuthorization = <ThrowOnError extends boolean = true>(options: Options<UpdateAuthorizationData, ThrowOnError>) => (options.client ?? client).put<UpdateAuthorizationResponses, UpdateAuthorizationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/authorization/{id}',
     ...options,
@@ -140,7 +149,8 @@ export const updateAuthorization = <ThrowOnError extends boolean = false>(option
  * The size of the result set can be retrieved by using the
  * [Get Batch Count](https://docs.cibseven.org/manual/2.1/reference/rest/batch/get-query-count/) method.
  */
-export const getBatches = <ThrowOnError extends boolean = false>(options?: Options<GetBatchesData, ThrowOnError>) => (options?.client ?? client).get<GetBatchesResponses, GetBatchesErrors, ThrowOnError>({
+export const getBatches = <ThrowOnError extends boolean = true>(options?: Options<GetBatchesData, ThrowOnError>) => (options?.client ?? client).get<GetBatchesResponses, GetBatchesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/batch',
     ...options
@@ -152,7 +162,8 @@ export const getBatches = <ThrowOnError extends boolean = false>(options?: Optio
  * Requests the number of batches that fulfill the query criteria.
  * Takes the same filtering parameters as the [Get Batches](https://docs.cibseven.org/manual/2.1/reference/rest/batch/get-query/) method.
  */
-export const getBatchesCount = <ThrowOnError extends boolean = false>(options?: Options<GetBatchesCountData, ThrowOnError>) => (options?.client ?? client).get<GetBatchesCountResponses, GetBatchesCountErrors, ThrowOnError>({
+export const getBatchesCount = <ThrowOnError extends boolean = true>(options?: Options<GetBatchesCountData, ThrowOnError>) => (options?.client ?? client).get<GetBatchesCountResponses, GetBatchesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/batch/count',
     ...options
@@ -166,7 +177,8 @@ export const getBatchesCount = <ThrowOnError extends boolean = false>(options?: 
  * The size of the result set can be retrieved by using the
  * [Get Batch Statistics Count](https://docs.cibseven.org/manual/2.1/reference/rest/batch/get-statistics-query-count/) method.
  */
-export const getBatchStatistics = <ThrowOnError extends boolean = false>(options?: Options<GetBatchStatisticsData, ThrowOnError>) => (options?.client ?? client).get<GetBatchStatisticsResponses, GetBatchStatisticsErrors, ThrowOnError>({
+export const getBatchStatistics = <ThrowOnError extends boolean = true>(options?: Options<GetBatchStatisticsData, ThrowOnError>) => (options?.client ?? client).get<GetBatchStatisticsResponses, GetBatchStatisticsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/batch/statistics',
     ...options
@@ -179,7 +191,8 @@ export const getBatchStatistics = <ThrowOnError extends boolean = false>(options
  * Takes the same filtering parameters as the
  * [Get Batch Statistics](https://docs.cibseven.org/manual/2.1/reference/rest/batch/get-statistics-query/) method.
  */
-export const getBatchStatisticsCount = <ThrowOnError extends boolean = false>(options?: Options<GetBatchStatisticsCountData, ThrowOnError>) => (options?.client ?? client).get<GetBatchStatisticsCountResponses, GetBatchStatisticsCountErrors, ThrowOnError>({
+export const getBatchStatisticsCount = <ThrowOnError extends boolean = true>(options?: Options<GetBatchStatisticsCountData, ThrowOnError>) => (options?.client ?? client).get<GetBatchStatisticsCountResponses, GetBatchStatisticsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/batch/statistics/count',
     ...options
@@ -191,7 +204,8 @@ export const getBatchStatisticsCount = <ThrowOnError extends boolean = false>(op
  * Deletes a batch by id, including all related jobs and job definitions.
  * Optionally also deletes the batch history.
  */
-export const deleteBatch = <ThrowOnError extends boolean = false>(options: Options<DeleteBatchData, ThrowOnError>) => (options.client ?? client).delete<DeleteBatchResponses, DeleteBatchErrors, ThrowOnError>({
+export const deleteBatch = <ThrowOnError extends boolean = true>(options: Options<DeleteBatchData, ThrowOnError>) => (options.client ?? client).delete<DeleteBatchResponses, DeleteBatchErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/batch/{id}',
     ...options
@@ -202,7 +216,8 @@ export const deleteBatch = <ThrowOnError extends boolean = false>(options: Optio
  *
  * Retrieves a batch by id, according to the Batch interface in the engine.
  */
-export const getBatch = <ThrowOnError extends boolean = false>(options: Options<GetBatchData, ThrowOnError>) => (options.client ?? client).get<GetBatchResponses, GetBatchErrors, ThrowOnError>({
+export const getBatch = <ThrowOnError extends boolean = true>(options: Options<GetBatchData, ThrowOnError>) => (options.client ?? client).get<GetBatchResponses, GetBatchErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/batch/{id}',
     ...options
@@ -213,7 +228,8 @@ export const getBatch = <ThrowOnError extends boolean = false>(options: Options<
  *
  * Activates or suspends a batch by id.
  */
-export const updateBatchSuspensionState = <ThrowOnError extends boolean = false>(options: Options<UpdateBatchSuspensionStateData, ThrowOnError>) => (options.client ?? client).put<UpdateBatchSuspensionStateResponses, UpdateBatchSuspensionStateErrors, ThrowOnError>({
+export const updateBatchSuspensionState = <ThrowOnError extends boolean = true>(options: Options<UpdateBatchSuspensionStateData, ThrowOnError>) => (options.client ?? client).put<UpdateBatchSuspensionStateResponses, UpdateBatchSuspensionStateErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/batch/{id}/suspended',
     ...options,
@@ -231,7 +247,8 @@ export const updateBatchSuspensionState = <ThrowOnError extends boolean = false>
  * For more information see the [Conditional Start Events](https://docs.cibseven.org/manual/2.1/reference/bpmn20/events/conditional-events/#conditional-start-event)
  * section of the [BPMN 2.0 Implementation Reference](https://docs.cibseven.org/manual/2.1/reference/bpmn20/).
  */
-export const evaluateCondition = <ThrowOnError extends boolean = false>(options?: Options<EvaluateConditionData, ThrowOnError>) => (options?.client ?? client).post<EvaluateConditionResponses, EvaluateConditionErrors, ThrowOnError>({
+export const evaluateCondition = <ThrowOnError extends boolean = true>(options?: Options<EvaluateConditionData, ThrowOnError>) => (options?.client ?? client).post<EvaluateConditionResponses, EvaluateConditionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/condition',
     ...options,
@@ -249,7 +266,8 @@ export const evaluateCondition = <ThrowOnError extends boolean = false>(options?
  * The size of the result set can be retrieved by using
  * the [Get Decision Definition Count](https://docs.cibseven.org/manual/2.1/reference/rest/decision-definition/get-query-count/) method.
  */
-export const getDecisionDefinitions = <ThrowOnError extends boolean = false>(options?: Options<GetDecisionDefinitionsData, ThrowOnError>) => (options?.client ?? client).get<GetDecisionDefinitionsResponses, GetDecisionDefinitionsErrors, ThrowOnError>({
+export const getDecisionDefinitions = <ThrowOnError extends boolean = true>(options?: Options<GetDecisionDefinitionsData, ThrowOnError>) => (options?.client ?? client).get<GetDecisionDefinitionsResponses, GetDecisionDefinitionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition',
     ...options
@@ -262,7 +280,8 @@ export const getDecisionDefinitions = <ThrowOnError extends boolean = false>(opt
  * Takes the same filtering parameters as the
  * [Get Decision Definition](https://docs.cibseven.org/manual/2.1/reference/rest/decision-definition/get-query/) method.
  */
-export const getDecisionDefinitionsCount = <ThrowOnError extends boolean = false>(options?: Options<GetDecisionDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetDecisionDefinitionsCountResponses, GetDecisionDefinitionsCountErrors, ThrowOnError>({
+export const getDecisionDefinitionsCount = <ThrowOnError extends boolean = true>(options?: Options<GetDecisionDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetDecisionDefinitionsCountResponses, GetDecisionDefinitionsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/count',
     ...options
@@ -273,7 +292,8 @@ export const getDecisionDefinitionsCount = <ThrowOnError extends boolean = false
  *
  * Retrieves the latest version of the decision definition which belongs to no tenant.
  */
-export const getDecisionDefinitionByKey = <ThrowOnError extends boolean = false>(options: Options<GetDecisionDefinitionByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionByKeyResponses, GetDecisionDefinitionByKeyErrors, ThrowOnError>({
+export const getDecisionDefinitionByKey = <ThrowOnError extends boolean = true>(options: Options<GetDecisionDefinitionByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionByKeyResponses, GetDecisionDefinitionByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}',
     ...options
@@ -284,7 +304,8 @@ export const getDecisionDefinitionByKey = <ThrowOnError extends boolean = false>
  *
  * Returns the diagram for the latest version of the decision definition which belongs to no tenant
  */
-export const getDecisionDefinitionDiagramByKey = <ThrowOnError extends boolean = false>(options: Options<GetDecisionDefinitionDiagramByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDiagramByKeyResponses, GetDecisionDefinitionDiagramByKeyErrors, ThrowOnError>({
+export const getDecisionDefinitionDiagramByKey = <ThrowOnError extends boolean = true>(options: Options<GetDecisionDefinitionDiagramByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDiagramByKeyResponses, GetDecisionDefinitionDiagramByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}/diagram',
     ...options
@@ -296,7 +317,8 @@ export const getDecisionDefinitionDiagramByKey = <ThrowOnError extends boolean =
  * Evaluates the latest version of the decision definition which belongs to no tenant.
  * The input values of the decision have to be supplied in the request body.
  */
-export const evaluateDecisionByKey = <ThrowOnError extends boolean = false>(options: Options<EvaluateDecisionByKeyData, ThrowOnError>) => (options.client ?? client).post<EvaluateDecisionByKeyResponses, EvaluateDecisionByKeyErrors, ThrowOnError>({
+export const evaluateDecisionByKey = <ThrowOnError extends boolean = true>(options: Options<EvaluateDecisionByKeyData, ThrowOnError>) => (options.client ?? client).post<EvaluateDecisionByKeyResponses, EvaluateDecisionByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}/evaluate',
     ...options,
@@ -312,7 +334,8 @@ export const evaluateDecisionByKey = <ThrowOnError extends boolean = false>(opti
  * Updates the latest version of the decision definition which belongs to no tenant.
  * The field is used within [History cleanup](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/history/#history-cleanup).
  */
-export const updateHistoryTimeToLiveByDecisionDefinitionKey = <ThrowOnError extends boolean = false>(options: Options<UpdateHistoryTimeToLiveByDecisionDefinitionKeyData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByDecisionDefinitionKeyResponses, UpdateHistoryTimeToLiveByDecisionDefinitionKeyErrors, ThrowOnError>({
+export const updateHistoryTimeToLiveByDecisionDefinitionKey = <ThrowOnError extends boolean = true>(options: Options<UpdateHistoryTimeToLiveByDecisionDefinitionKeyData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByDecisionDefinitionKeyResponses, UpdateHistoryTimeToLiveByDecisionDefinitionKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}/history-time-to-live',
     ...options,
@@ -327,7 +350,8 @@ export const updateHistoryTimeToLiveByDecisionDefinitionKey = <ThrowOnError exte
  *
  * Retrieves the latest version of the decision definition for tenant
  */
-export const getDecisionDefinitionByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetDecisionDefinitionByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionByKeyAndTenantIdResponses, GetDecisionDefinitionByKeyAndTenantIdErrors, ThrowOnError>({
+export const getDecisionDefinitionByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetDecisionDefinitionByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionByKeyAndTenantIdResponses, GetDecisionDefinitionByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}/tenant-id/{tenant-id}',
     ...options
@@ -338,7 +362,8 @@ export const getDecisionDefinitionByKeyAndTenantId = <ThrowOnError extends boole
  *
  * Returns the XML of the latest version of the decision definition for tenant.
  */
-export const getDecisionDefinitionDiagramByKeyAndTenant = <ThrowOnError extends boolean = false>(options: Options<GetDecisionDefinitionDiagramByKeyAndTenantData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDiagramByKeyAndTenantResponses, GetDecisionDefinitionDiagramByKeyAndTenantErrors, ThrowOnError>({
+export const getDecisionDefinitionDiagramByKeyAndTenant = <ThrowOnError extends boolean = true>(options: Options<GetDecisionDefinitionDiagramByKeyAndTenantData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDiagramByKeyAndTenantResponses, GetDecisionDefinitionDiagramByKeyAndTenantErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}/tenant-id/{tenant-id}/diagram',
     ...options
@@ -350,7 +375,8 @@ export const getDecisionDefinitionDiagramByKeyAndTenant = <ThrowOnError extends 
  * Evaluates the latest version of the decision definition for tenant.
  * The input values of the decision have to be supplied in the request body.
  */
-export const evaluateDecisionByKeyAndTenant = <ThrowOnError extends boolean = false>(options: Options<EvaluateDecisionByKeyAndTenantData, ThrowOnError>) => (options.client ?? client).post<EvaluateDecisionByKeyAndTenantResponses, EvaluateDecisionByKeyAndTenantErrors, ThrowOnError>({
+export const evaluateDecisionByKeyAndTenant = <ThrowOnError extends boolean = true>(options: Options<EvaluateDecisionByKeyAndTenantData, ThrowOnError>) => (options.client ?? client).post<EvaluateDecisionByKeyAndTenantResponses, EvaluateDecisionByKeyAndTenantErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}/tenant-id/{tenant-id}/evaluate',
     ...options,
@@ -369,7 +395,8 @@ export const evaluateDecisionByKeyAndTenant = <ThrowOnError extends boolean = fa
  * set the feature flag `enforceHistoryTimeToLive` to `false`. Read more in [Configuration Properties]
  * (https://docs.cibseven.org/manual/2.1/reference/deployment-descriptors/tags/process-engine#configuration-properties)
  */
-export const updateHistoryTimeToLiveByDecisionDefinitionKeyAndTenant = <ThrowOnError extends boolean = false>(options: Options<UpdateHistoryTimeToLiveByDecisionDefinitionKeyAndTenantData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByDecisionDefinitionKeyAndTenantResponses, UpdateHistoryTimeToLiveByDecisionDefinitionKeyAndTenantErrors, ThrowOnError>({
+export const updateHistoryTimeToLiveByDecisionDefinitionKeyAndTenant = <ThrowOnError extends boolean = true>(options: Options<UpdateHistoryTimeToLiveByDecisionDefinitionKeyAndTenantData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByDecisionDefinitionKeyAndTenantResponses, UpdateHistoryTimeToLiveByDecisionDefinitionKeyAndTenantErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}/tenant-id/{tenant-id}/history-time-to-live',
     ...options,
@@ -384,7 +411,8 @@ export const updateHistoryTimeToLiveByDecisionDefinitionKeyAndTenant = <ThrowOnE
  *
  * Retrieves the XML of the latest version of the decision definition for tenant
  */
-export const getDecisionDefinitionDmnXmlByKeyAndTenant = <ThrowOnError extends boolean = false>(options: Options<GetDecisionDefinitionDmnXmlByKeyAndTenantData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDmnXmlByKeyAndTenantResponses, GetDecisionDefinitionDmnXmlByKeyAndTenantErrors, ThrowOnError>({
+export const getDecisionDefinitionDmnXmlByKeyAndTenant = <ThrowOnError extends boolean = true>(options: Options<GetDecisionDefinitionDmnXmlByKeyAndTenantData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDmnXmlByKeyAndTenantResponses, GetDecisionDefinitionDmnXmlByKeyAndTenantErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}/tenant-id/{tenant-id}/xml',
     ...options
@@ -395,7 +423,8 @@ export const getDecisionDefinitionDmnXmlByKeyAndTenant = <ThrowOnError extends b
  *
  * Retrieves the XML for the latest version of the decision definition which belongs to no tenant.
  */
-export const getDecisionDefinitionDmnXmlByKey = <ThrowOnError extends boolean = false>(options: Options<GetDecisionDefinitionDmnXmlByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDmnXmlByKeyResponses, GetDecisionDefinitionDmnXmlByKeyErrors, ThrowOnError>({
+export const getDecisionDefinitionDmnXmlByKey = <ThrowOnError extends boolean = true>(options: Options<GetDecisionDefinitionDmnXmlByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDmnXmlByKeyResponses, GetDecisionDefinitionDmnXmlByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/key/{key}/xml',
     ...options
@@ -406,7 +435,8 @@ export const getDecisionDefinitionDmnXmlByKey = <ThrowOnError extends boolean = 
  *
  * Retrieves a decision definition by id, according to the `DecisionDefinition` interface in the engine.
  */
-export const getDecisionDefinitionById = <ThrowOnError extends boolean = false>(options: Options<GetDecisionDefinitionByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionByIdResponses, GetDecisionDefinitionByIdErrors, ThrowOnError>({
+export const getDecisionDefinitionById = <ThrowOnError extends boolean = true>(options: Options<GetDecisionDefinitionByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionByIdResponses, GetDecisionDefinitionByIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/{id}',
     ...options
@@ -417,7 +447,8 @@ export const getDecisionDefinitionById = <ThrowOnError extends boolean = false>(
  *
  * Retrieves the diagram of a decision definition.
  */
-export const getDecisionDefinitionDiagram = <ThrowOnError extends boolean = false>(options: Options<GetDecisionDefinitionDiagramData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDiagramResponses, GetDecisionDefinitionDiagramErrors, ThrowOnError>({
+export const getDecisionDefinitionDiagram = <ThrowOnError extends boolean = true>(options: Options<GetDecisionDefinitionDiagramData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDiagramResponses, GetDecisionDefinitionDiagramErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/{id}/diagram',
     ...options
@@ -429,7 +460,8 @@ export const getDecisionDefinitionDiagram = <ThrowOnError extends boolean = fals
  * Evaluates a given decision and returns the result.
  * The input values of the decision have to be supplied in the request body.
  */
-export const evaluateDecisionById = <ThrowOnError extends boolean = false>(options: Options<EvaluateDecisionByIdData, ThrowOnError>) => (options.client ?? client).post<EvaluateDecisionByIdResponses, EvaluateDecisionByIdErrors, ThrowOnError>({
+export const evaluateDecisionById = <ThrowOnError extends boolean = true>(options: Options<EvaluateDecisionByIdData, ThrowOnError>) => (options.client ?? client).post<EvaluateDecisionByIdResponses, EvaluateDecisionByIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/{id}/evaluate',
     ...options,
@@ -445,7 +477,8 @@ export const evaluateDecisionById = <ThrowOnError extends boolean = false>(optio
  * Updates history time to live for decision definition.
  * The field is used within [History cleanup](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/history/#history-cleanup).
  */
-export const updateHistoryTimeToLiveByDecisionDefinitionId = <ThrowOnError extends boolean = false>(options: Options<UpdateHistoryTimeToLiveByDecisionDefinitionIdData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByDecisionDefinitionIdResponses, UpdateHistoryTimeToLiveByDecisionDefinitionIdErrors, ThrowOnError>({
+export const updateHistoryTimeToLiveByDecisionDefinitionId = <ThrowOnError extends boolean = true>(options: Options<UpdateHistoryTimeToLiveByDecisionDefinitionIdData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByDecisionDefinitionIdResponses, UpdateHistoryTimeToLiveByDecisionDefinitionIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/{id}/history-time-to-live',
     ...options,
@@ -460,7 +493,8 @@ export const updateHistoryTimeToLiveByDecisionDefinitionId = <ThrowOnError exten
  *
  * Retrieves the DMN XML of a decision definition.
  */
-export const getDecisionDefinitionDmnXmlById = <ThrowOnError extends boolean = false>(options: Options<GetDecisionDefinitionDmnXmlByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDmnXmlByIdResponses, GetDecisionDefinitionDmnXmlByIdErrors, ThrowOnError>({
+export const getDecisionDefinitionDmnXmlById = <ThrowOnError extends boolean = true>(options: Options<GetDecisionDefinitionDmnXmlByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionDefinitionDmnXmlByIdResponses, GetDecisionDefinitionDmnXmlByIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-definition/{id}/xml',
     ...options
@@ -475,7 +509,8 @@ export const getDecisionDefinitionDmnXmlById = <ThrowOnError extends boolean = f
  * [Get Decision Requirements Definition Count](https://docs.cibseven.org/manual/2.1/reference/rest/decision-requirements-definition/get-query-count/)
  * method.
  */
-export const getDecisionRequirementsDefinitions = <ThrowOnError extends boolean = false>(options?: Options<GetDecisionRequirementsDefinitionsData, ThrowOnError>) => (options?.client ?? client).get<GetDecisionRequirementsDefinitionsResponses, GetDecisionRequirementsDefinitionsErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitions = <ThrowOnError extends boolean = true>(options?: Options<GetDecisionRequirementsDefinitionsData, ThrowOnError>) => (options?.client ?? client).get<GetDecisionRequirementsDefinitionsResponses, GetDecisionRequirementsDefinitionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition',
     ...options
@@ -490,7 +525,8 @@ export const getDecisionRequirementsDefinitions = <ThrowOnError extends boolean 
  * [Get Decision Requirements Definitions](https://docs.cibseven.org/manual/2.1/reference/rest/decision-requirements-definition/get-query/)
  * method.
  */
-export const getDecisionRequirementsDefinitionsCount = <ThrowOnError extends boolean = false>(options?: Options<GetDecisionRequirementsDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetDecisionRequirementsDefinitionsCountResponses, GetDecisionRequirementsDefinitionsCountErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionsCount = <ThrowOnError extends boolean = true>(options?: Options<GetDecisionRequirementsDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetDecisionRequirementsDefinitionsCountResponses, GetDecisionRequirementsDefinitionsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/count',
     ...options
@@ -504,7 +540,8 @@ export const getDecisionRequirementsDefinitionsCount = <ThrowOnError extends boo
  * Returns the latest version of the decision requirements definition
  * which belongs to no tenant.
  */
-export const getDecisionRequirementsDefinitionByKey = <ThrowOnError extends boolean = false>(options: Options<GetDecisionRequirementsDefinitionByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionByKeyResponses, GetDecisionRequirementsDefinitionByKeyErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionByKey = <ThrowOnError extends boolean = true>(options: Options<GetDecisionRequirementsDefinitionByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionByKeyResponses, GetDecisionRequirementsDefinitionByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/key/{key}',
     ...options
@@ -517,7 +554,8 @@ export const getDecisionRequirementsDefinitionByKey = <ThrowOnError extends bool
  * Returns the diagram for the latest version of the decision requirements
  * definition which belongs to no tenant.
  */
-export const getDecisionRequirementsDefinitionDiagramByKey = <ThrowOnError extends boolean = false>(options: Options<GetDecisionRequirementsDefinitionDiagramByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDiagramByKeyResponses, GetDecisionRequirementsDefinitionDiagramByKeyErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionDiagramByKey = <ThrowOnError extends boolean = true>(options: Options<GetDecisionRequirementsDefinitionDiagramByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDiagramByKeyResponses, GetDecisionRequirementsDefinitionDiagramByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/key/{key}/diagram',
     ...options
@@ -531,7 +569,8 @@ export const getDecisionRequirementsDefinitionDiagramByKey = <ThrowOnError exten
  * Returns the latest version of the decision requirements definition
  * for a tenant.
  */
-export const getDecisionRequirementsDefinitionByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetDecisionRequirementsDefinitionByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionByKeyAndTenantIdResponses, GetDecisionRequirementsDefinitionByKeyAndTenantIdErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetDecisionRequirementsDefinitionByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionByKeyAndTenantIdResponses, GetDecisionRequirementsDefinitionByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/key/{key}/tenant-id/{tenant-id}',
     ...options
@@ -544,7 +583,8 @@ export const getDecisionRequirementsDefinitionByKeyAndTenantId = <ThrowOnError e
  * Returns the diagram of the latest version of the decision requirements
  * definition for a tenant.
  */
-export const getDecisionRequirementsDefinitionDiagramByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetDecisionRequirementsDefinitionDiagramByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDiagramByKeyAndTenantIdResponses, GetDecisionRequirementsDefinitionDiagramByKeyAndTenantIdErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionDiagramByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetDecisionRequirementsDefinitionDiagramByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDiagramByKeyAndTenantIdResponses, GetDecisionRequirementsDefinitionDiagramByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/key/{key}/tenant-id/{tenant-id}/diagram',
     ...options
@@ -557,7 +597,8 @@ export const getDecisionRequirementsDefinitionDiagramByKeyAndTenantId = <ThrowOn
  * Returns the XML of the latest version of the decision requirements
  * definition for a tenant.
  */
-export const getDecisionRequirementsDefinitionDmnXmlByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetDecisionRequirementsDefinitionDmnXmlByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDmnXmlByKeyAndTenantIdResponses, GetDecisionRequirementsDefinitionDmnXmlByKeyAndTenantIdErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionDmnXmlByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetDecisionRequirementsDefinitionDmnXmlByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDmnXmlByKeyAndTenantIdResponses, GetDecisionRequirementsDefinitionDmnXmlByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/key/{key}/tenant-id/{tenant-id}/xml',
     ...options
@@ -570,7 +611,8 @@ export const getDecisionRequirementsDefinitionDmnXmlByKeyAndTenantId = <ThrowOnE
  * Returns the XML for the latest version of the decision requirements
  * definition which belongs to no tenant.
  */
-export const getDecisionRequirementsDefinitionDmnXmlByKey = <ThrowOnError extends boolean = false>(options: Options<GetDecisionRequirementsDefinitionDmnXmlByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDmnXmlByKeyResponses, GetDecisionRequirementsDefinitionDmnXmlByKeyErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionDmnXmlByKey = <ThrowOnError extends boolean = true>(options: Options<GetDecisionRequirementsDefinitionDmnXmlByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDmnXmlByKeyResponses, GetDecisionRequirementsDefinitionDmnXmlByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/key/{key}/xml',
     ...options
@@ -582,7 +624,8 @@ export const getDecisionRequirementsDefinitionDmnXmlByKey = <ThrowOnError extend
  * Retrieves a decision requirements definition according to the
  * `DecisionRequirementsDefinition` interface in the engine.
  */
-export const getDecisionRequirementsDefinitionById = <ThrowOnError extends boolean = false>(options: Options<GetDecisionRequirementsDefinitionByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionByIdResponses, GetDecisionRequirementsDefinitionByIdErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionById = <ThrowOnError extends boolean = true>(options: Options<GetDecisionRequirementsDefinitionByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionByIdResponses, GetDecisionRequirementsDefinitionByIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/{id}',
     ...options
@@ -593,7 +636,8 @@ export const getDecisionRequirementsDefinitionById = <ThrowOnError extends boole
  *
  * Retrieves the diagram of a decision requirements definition.
  */
-export const getDecisionRequirementsDefinitionDiagramById = <ThrowOnError extends boolean = false>(options: Options<GetDecisionRequirementsDefinitionDiagramByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDiagramByIdResponses, GetDecisionRequirementsDefinitionDiagramByIdErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionDiagramById = <ThrowOnError extends boolean = true>(options: Options<GetDecisionRequirementsDefinitionDiagramByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDiagramByIdResponses, GetDecisionRequirementsDefinitionDiagramByIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/{id}/diagram',
     ...options
@@ -604,7 +648,8 @@ export const getDecisionRequirementsDefinitionDiagramById = <ThrowOnError extend
  *
  * Retrieves the DMN XML of a decision requirements definition.
  */
-export const getDecisionRequirementsDefinitionDmnXmlById = <ThrowOnError extends boolean = false>(options: Options<GetDecisionRequirementsDefinitionDmnXmlByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDmnXmlByIdResponses, GetDecisionRequirementsDefinitionDmnXmlByIdErrors, ThrowOnError>({
+export const getDecisionRequirementsDefinitionDmnXmlById = <ThrowOnError extends boolean = true>(options: Options<GetDecisionRequirementsDefinitionDmnXmlByIdData, ThrowOnError>) => (options.client ?? client).get<GetDecisionRequirementsDefinitionDmnXmlByIdResponses, GetDecisionRequirementsDefinitionDmnXmlByIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/decision-requirements-definition/{id}/xml',
     ...options
@@ -617,7 +662,8 @@ export const getDecisionRequirementsDefinitionDmnXmlById = <ThrowOnError extends
  * such as the id or name or a range of the deployment time. The size of the result set can be retrieved by
  * using the [Get Deployment count](https://docs.cibseven.org/manual/2.1/reference/rest/deployment/get-query-count/) method.
  */
-export const getDeployments = <ThrowOnError extends boolean = false>(options?: Options<GetDeploymentsData, ThrowOnError>) => (options?.client ?? client).get<GetDeploymentsResponses, GetDeploymentsErrors, ThrowOnError>({
+export const getDeployments = <ThrowOnError extends boolean = true>(options?: Options<GetDeploymentsData, ThrowOnError>) => (options?.client ?? client).get<GetDeploymentsResponses, GetDeploymentsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment',
     ...options
@@ -629,7 +675,8 @@ export const getDeployments = <ThrowOnError extends boolean = false>(options?: O
  * Queries for the number of deployments that fulfill given parameters. Takes the same parameters as the
  * [Get Deployments](https://docs.cibseven.org/manual/2.1/reference/rest/deployment/get-query/) method.
  */
-export const getDeploymentsCount = <ThrowOnError extends boolean = false>(options?: Options<GetDeploymentsCountData, ThrowOnError>) => (options?.client ?? client).get<GetDeploymentsCountResponses, GetDeploymentsCountErrors, ThrowOnError>({
+export const getDeploymentsCount = <ThrowOnError extends boolean = true>(options?: Options<GetDeploymentsCountData, ThrowOnError>) => (options?.client ?? client).get<GetDeploymentsCountResponses, GetDeploymentsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment/count',
     ...options
@@ -645,8 +692,9 @@ export const getDeploymentsCount = <ThrowOnError extends boolean = false>(option
  * Deployments can contain custom code in form of scripts or EL expressions to customize process behavior.
  * This may be abused for remote execution of arbitrary code.
  */
-export const createDeployment = <ThrowOnError extends boolean = false>(options?: Options<CreateDeploymentData, ThrowOnError>) => (options?.client ?? client).post<CreateDeploymentResponses, CreateDeploymentErrors, ThrowOnError>({
+export const createDeployment = <ThrowOnError extends boolean = true>(options?: Options<CreateDeploymentData, ThrowOnError>) => (options?.client ?? client).post<CreateDeploymentResponses, CreateDeploymentErrors, ThrowOnError, 'data'>({
     ...formDataBodySerializer,
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment/create',
     ...options,
@@ -661,7 +709,8 @@ export const createDeployment = <ThrowOnError extends boolean = false>(options?:
  *
  * Queries the registered deployment IDs for the current application.
  */
-export const getRegisteredDeployments = <ThrowOnError extends boolean = false>(options?: Options<GetRegisteredDeploymentsData, ThrowOnError>) => (options?.client ?? client).get<GetRegisteredDeploymentsResponses, unknown, ThrowOnError>({
+export const getRegisteredDeployments = <ThrowOnError extends boolean = true>(options?: Options<GetRegisteredDeploymentsData, ThrowOnError>) => (options?.client ?? client).get<GetRegisteredDeploymentsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment/registered',
     ...options
@@ -672,7 +721,8 @@ export const getRegisteredDeployments = <ThrowOnError extends boolean = false>(o
  *
  * Deletes a deployment by id.
  */
-export const deleteDeployment = <ThrowOnError extends boolean = false>(options: Options<DeleteDeploymentData, ThrowOnError>) => (options.client ?? client).delete<DeleteDeploymentResponses, DeleteDeploymentErrors, ThrowOnError>({
+export const deleteDeployment = <ThrowOnError extends boolean = true>(options: Options<DeleteDeploymentData, ThrowOnError>) => (options.client ?? client).delete<DeleteDeploymentResponses, DeleteDeploymentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment/{id}',
     ...options
@@ -683,7 +733,8 @@ export const deleteDeployment = <ThrowOnError extends boolean = false>(options: 
  *
  * Retrieves a deployment by id, according to the `Deployment` interface of the engine.
  */
-export const getDeployment = <ThrowOnError extends boolean = false>(options: Options<GetDeploymentData, ThrowOnError>) => (options.client ?? client).get<GetDeploymentResponses, GetDeploymentErrors, ThrowOnError>({
+export const getDeployment = <ThrowOnError extends boolean = true>(options: Options<GetDeploymentData, ThrowOnError>) => (options.client ?? client).get<GetDeploymentResponses, GetDeploymentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment/{id}',
     ...options
@@ -703,7 +754,8 @@ export const getDeployment = <ThrowOnError extends boolean = false>(options: Opt
  * [security considerations for custom code](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/securing-custom-code/) in
  * the user guide for details.
  */
-export const redeploy = <ThrowOnError extends boolean = false>(options: Options<RedeployData, ThrowOnError>) => (options.client ?? client).post<RedeployResponses, RedeployErrors, ThrowOnError>({
+export const redeploy = <ThrowOnError extends boolean = true>(options: Options<RedeployData, ThrowOnError>) => (options.client ?? client).post<RedeployResponses, RedeployErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment/{id}/redeploy',
     ...options,
@@ -718,7 +770,8 @@ export const redeploy = <ThrowOnError extends boolean = false>(options: Options<
  *
  * Retrieves all deployment resources of a given deployment.
  */
-export const getDeploymentResources = <ThrowOnError extends boolean = false>(options: Options<GetDeploymentResourcesData, ThrowOnError>) => (options.client ?? client).get<GetDeploymentResourcesResponses, GetDeploymentResourcesErrors, ThrowOnError>({
+export const getDeploymentResources = <ThrowOnError extends boolean = true>(options: Options<GetDeploymentResourcesData, ThrowOnError>) => (options.client ?? client).get<GetDeploymentResourcesResponses, GetDeploymentResourcesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment/{id}/resources',
     ...options
@@ -729,7 +782,8 @@ export const getDeploymentResources = <ThrowOnError extends boolean = false>(opt
  *
  * Retrieves a deployment resource by resource id for the given deployment.
  */
-export const getDeploymentResource = <ThrowOnError extends boolean = false>(options: Options<GetDeploymentResourceData, ThrowOnError>) => (options.client ?? client).get<GetDeploymentResourceResponses, GetDeploymentResourceErrors, ThrowOnError>({
+export const getDeploymentResource = <ThrowOnError extends boolean = true>(options: Options<GetDeploymentResourceData, ThrowOnError>) => (options.client ?? client).get<GetDeploymentResourceResponses, GetDeploymentResourceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment/{id}/resources/{resourceId}',
     ...options
@@ -740,7 +794,8 @@ export const getDeploymentResource = <ThrowOnError extends boolean = false>(opti
  *
  * Retrieves the binary content of a deployment resource for the given deployment by id.
  */
-export const getDeploymentResourceData = <ThrowOnError extends boolean = false>(options: Options<GetDeploymentResourceDataData, ThrowOnError>) => (options.client ?? client).get<GetDeploymentResourceDataResponses, GetDeploymentResourceDataErrors, ThrowOnError>({
+export const getDeploymentResourceData = <ThrowOnError extends boolean = true>(options: Options<GetDeploymentResourceDataData, ThrowOnError>) => (options.client ?? client).get<GetDeploymentResourceDataResponses, GetDeploymentResourceDataErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/deployment/{id}/resources/{resourceId}/data',
     ...options
@@ -752,7 +807,8 @@ export const getDeploymentResourceData = <ThrowOnError extends boolean = false>(
  * Retrieves the names of all process engines available on your platform.
  * **Note**: You cannot prepend `/engine/{name}` to this method.
  */
-export const getProcessEngineNames = <ThrowOnError extends boolean = false>(options?: Options<GetProcessEngineNamesData, ThrowOnError>) => (options?.client ?? client).get<GetProcessEngineNamesResponses, unknown, ThrowOnError>({
+export const getProcessEngineNames = <ThrowOnError extends boolean = true>(options?: Options<GetProcessEngineNamesData, ThrowOnError>) => (options?.client ?? client).get<GetProcessEngineNamesResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/engine',
     ...options
@@ -765,7 +821,8 @@ export const getProcessEngineNames = <ThrowOnError extends boolean = false>(opti
  * The size of the result set can be retrieved by using the
  * [Get Event Subscriptions count](https://docs.cibseven.org/manual/2.1/reference/rest/event-subscription/get-query-count/) method.
  */
-export const getEventSubscriptions = <ThrowOnError extends boolean = false>(options?: Options<GetEventSubscriptionsData, ThrowOnError>) => (options?.client ?? client).get<GetEventSubscriptionsResponses, GetEventSubscriptionsErrors, ThrowOnError>({
+export const getEventSubscriptions = <ThrowOnError extends boolean = true>(options?: Options<GetEventSubscriptionsData, ThrowOnError>) => (options?.client ?? client).get<GetEventSubscriptionsResponses, GetEventSubscriptionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/event-subscription',
     ...options
@@ -778,7 +835,8 @@ export const getEventSubscriptions = <ThrowOnError extends boolean = false>(opti
  * Takes the same parameters as the
  * [Get Event Subscriptions](https://docs.cibseven.org/manual/2.1/reference/rest/event-subscription/get-query/) method.
  */
-export const getEventSubscriptionsCount = <ThrowOnError extends boolean = false>(options?: Options<GetEventSubscriptionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetEventSubscriptionsCountResponses, GetEventSubscriptionsCountErrors, ThrowOnError>({
+export const getEventSubscriptionsCount = <ThrowOnError extends boolean = true>(options?: Options<GetEventSubscriptionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetEventSubscriptionsCountResponses, GetEventSubscriptionsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/event-subscription/count',
     ...options
@@ -794,7 +852,8 @@ export const getEventSubscriptionsCount = <ThrowOnError extends boolean = false>
  * Execution Count](https://docs.cibseven.org/manual/2.1/reference/rest/execution/get-query-count/)
  * method.
  */
-export const getExecutions = <ThrowOnError extends boolean = false>(options?: Options<GetExecutionsData, ThrowOnError>) => (options?.client ?? client).get<GetExecutionsResponses, GetExecutionsErrors, ThrowOnError>({
+export const getExecutions = <ThrowOnError extends boolean = true>(options?: Options<GetExecutionsData, ThrowOnError>) => (options?.client ?? client).get<GetExecutionsResponses, GetExecutionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution',
     ...options
@@ -810,7 +869,8 @@ export const getExecutions = <ThrowOnError extends boolean = false>(options?: Op
  * to filter by multiple instance and execution variables of types
  * `String`, `Number` or `Boolean`.
  */
-export const queryExecutions = <ThrowOnError extends boolean = false>(options?: Options<QueryExecutionsData, ThrowOnError>) => (options?.client ?? client).post<QueryExecutionsResponses, QueryExecutionsErrors, ThrowOnError>({
+export const queryExecutions = <ThrowOnError extends boolean = true>(options?: Options<QueryExecutionsData, ThrowOnError>) => (options?.client ?? client).post<QueryExecutionsResponses, QueryExecutionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution',
     ...options,
@@ -827,7 +887,8 @@ export const queryExecutions = <ThrowOnError extends boolean = false>(options?: 
  * Takes the same parameters as the [Get
  * Executions](https://docs.cibseven.org/manual/2.1/reference/rest/execution/get-query/) method.
  */
-export const getExecutionsCount = <ThrowOnError extends boolean = false>(options?: Options<GetExecutionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetExecutionsCountResponses, GetExecutionsCountErrors, ThrowOnError>({
+export const getExecutionsCount = <ThrowOnError extends boolean = true>(options?: Options<GetExecutionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetExecutionsCountResponses, GetExecutionsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/count',
     ...options
@@ -842,7 +903,8 @@ export const getExecutionsCount = <ThrowOnError extends boolean = false>(options
  * therefore it is slightly more powerful than the [Get Execution
  * Count](https://docs.cibseven.org/manual/2.1/reference/rest/execution/get-query-count/) method.
  */
-export const queryExecutionsCount = <ThrowOnError extends boolean = false>(options?: Options<QueryExecutionsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryExecutionsCountResponses, QueryExecutionsCountErrors, ThrowOnError>({
+export const queryExecutionsCount = <ThrowOnError extends boolean = true>(options?: Options<QueryExecutionsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryExecutionsCountResponses, QueryExecutionsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/count',
     ...options,
@@ -858,7 +920,8 @@ export const queryExecutionsCount = <ThrowOnError extends boolean = false>(optio
  * Retrieves an execution by id, according to the `Execution` interface in the
  * engine.
  */
-export const getExecution = <ThrowOnError extends boolean = false>(options: Options<GetExecutionData, ThrowOnError>) => (options.client ?? client).get<GetExecutionResponses, GetExecutionErrors, ThrowOnError>({
+export const getExecution = <ThrowOnError extends boolean = true>(options: Options<GetExecutionData, ThrowOnError>) => (options.client ?? client).get<GetExecutionResponses, GetExecutionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}',
     ...options
@@ -869,7 +932,8 @@ export const getExecution = <ThrowOnError extends boolean = false>(options: Opti
  *
  * Creates a custom incident with given properties.
  */
-export const createIncident = <ThrowOnError extends boolean = false>(options: Options<CreateIncidentData, ThrowOnError>) => (options.client ?? client).post<CreateIncidentResponses, CreateIncidentErrors, ThrowOnError>({
+export const createIncident = <ThrowOnError extends boolean = true>(options: Options<CreateIncidentData, ThrowOnError>) => (options.client ?? client).post<CreateIncidentResponses, CreateIncidentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/create-incident',
     ...options,
@@ -884,7 +948,8 @@ export const createIncident = <ThrowOnError extends boolean = false>(options: Op
  *
  * Retrieves all variables of a given execution by id.
  */
-export const getLocalExecutionVariables = <ThrowOnError extends boolean = false>(options: Options<GetLocalExecutionVariablesData, ThrowOnError>) => (options.client ?? client).get<GetLocalExecutionVariablesResponses, GetLocalExecutionVariablesErrors, ThrowOnError>({
+export const getLocalExecutionVariables = <ThrowOnError extends boolean = true>(options: Options<GetLocalExecutionVariablesData, ThrowOnError>) => (options.client ?? client).get<GetLocalExecutionVariablesResponses, GetLocalExecutionVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/localVariables',
     ...options
@@ -898,7 +963,8 @@ export const getLocalExecutionVariables = <ThrowOnError extends boolean = false>
  * Updates precede deletions. So, if a variable is updated AND deleted,
  * the deletion overrides the update.
  */
-export const modifyLocalExecutionVariables = <ThrowOnError extends boolean = false>(options: Options<ModifyLocalExecutionVariablesData, ThrowOnError>) => (options.client ?? client).post<ModifyLocalExecutionVariablesResponses, ModifyLocalExecutionVariablesErrors, ThrowOnError>({
+export const modifyLocalExecutionVariables = <ThrowOnError extends boolean = true>(options: Options<ModifyLocalExecutionVariablesData, ThrowOnError>) => (options.client ?? client).post<ModifyLocalExecutionVariablesResponses, ModifyLocalExecutionVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/localVariables',
     ...options,
@@ -914,7 +980,8 @@ export const modifyLocalExecutionVariables = <ThrowOnError extends boolean = fal
  * Deletes a variable in the context of a given execution by id. Deletion does not
  * propagate upwards in the execution hierarchy.
  */
-export const deleteLocalExecutionVariable = <ThrowOnError extends boolean = false>(options: Options<DeleteLocalExecutionVariableData, ThrowOnError>) => (options.client ?? client).delete<DeleteLocalExecutionVariableResponses, unknown, ThrowOnError>({
+export const deleteLocalExecutionVariable = <ThrowOnError extends boolean = true>(options: Options<DeleteLocalExecutionVariableData, ThrowOnError>) => (options.client ?? client).delete<DeleteLocalExecutionVariableResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/localVariables/{varName}',
     ...options
@@ -926,7 +993,8 @@ export const deleteLocalExecutionVariable = <ThrowOnError extends boolean = fals
  * Retrieves a variable from the context of a given execution by id. Does not traverse
  * the parent execution hierarchy.
  */
-export const getLocalExecutionVariable = <ThrowOnError extends boolean = false>(options: Options<GetLocalExecutionVariableData, ThrowOnError>) => (options.client ?? client).get<GetLocalExecutionVariableResponses, GetLocalExecutionVariableErrors, ThrowOnError>({
+export const getLocalExecutionVariable = <ThrowOnError extends boolean = true>(options: Options<GetLocalExecutionVariableData, ThrowOnError>) => (options.client ?? client).get<GetLocalExecutionVariableResponses, GetLocalExecutionVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/localVariables/{varName}',
     ...options
@@ -938,7 +1006,8 @@ export const getLocalExecutionVariable = <ThrowOnError extends boolean = false>(
  * Sets a variable in the context of a given execution by id. Update does not
  * propagate upwards in the execution hierarchy.
  */
-export const putLocalExecutionVariable = <ThrowOnError extends boolean = false>(options: Options<PutLocalExecutionVariableData, ThrowOnError>) => (options.client ?? client).put<PutLocalExecutionVariableResponses, PutLocalExecutionVariableErrors, ThrowOnError>({
+export const putLocalExecutionVariable = <ThrowOnError extends boolean = true>(options: Options<PutLocalExecutionVariableData, ThrowOnError>) => (options.client ?? client).put<PutLocalExecutionVariableResponses, PutLocalExecutionVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/localVariables/{varName}',
     ...options,
@@ -955,7 +1024,8 @@ export const putLocalExecutionVariable = <ThrowOnError extends boolean = false>(
  * traverse the parent execution hierarchy. Applicable for byte array and
  * file variables.
  */
-export const getLocalExecutionVariableBinary = <ThrowOnError extends boolean = false>(options: Options<GetLocalExecutionVariableBinaryData, ThrowOnError>) => (options.client ?? client).get<GetLocalExecutionVariableBinaryResponses, GetLocalExecutionVariableBinaryErrors, ThrowOnError>({
+export const getLocalExecutionVariableBinary = <ThrowOnError extends boolean = true>(options: Options<GetLocalExecutionVariableBinaryData, ThrowOnError>) => (options.client ?? client).get<GetLocalExecutionVariableBinaryResponses, GetLocalExecutionVariableBinaryErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/localVariables/{varName}/data',
     ...options
@@ -967,8 +1037,9 @@ export const getLocalExecutionVariableBinary = <ThrowOnError extends boolean = f
  * Sets the serialized value for a binary variable or the binary value for a file
  * variable in the context of a given execution by id.
  */
-export const setLocalExecutionVariableBinary = <ThrowOnError extends boolean = false>(options: Options<SetLocalExecutionVariableBinaryData, ThrowOnError>) => (options.client ?? client).post<SetLocalExecutionVariableBinaryResponses, SetLocalExecutionVariableBinaryErrors, ThrowOnError>({
+export const setLocalExecutionVariableBinary = <ThrowOnError extends boolean = true>(options: Options<SetLocalExecutionVariableBinaryData, ThrowOnError>) => (options.client ?? client).post<SetLocalExecutionVariableBinaryResponses, SetLocalExecutionVariableBinaryErrors, ThrowOnError, 'data'>({
     ...formDataBodySerializer,
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/localVariables/{varName}/data',
     ...options,
@@ -984,7 +1055,8 @@ export const setLocalExecutionVariableBinary = <ThrowOnError extends boolean = f
  * Retrieves a message event subscription for a given execution by id and a message
  * name.
  */
-export const getMessageEventSubscription = <ThrowOnError extends boolean = false>(options: Options<GetMessageEventSubscriptionData, ThrowOnError>) => (options.client ?? client).get<GetMessageEventSubscriptionResponses, GetMessageEventSubscriptionErrors, ThrowOnError>({
+export const getMessageEventSubscription = <ThrowOnError extends boolean = true>(options: Options<GetMessageEventSubscriptionData, ThrowOnError>) => (options.client ?? client).get<GetMessageEventSubscriptionResponses, GetMessageEventSubscriptionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/messageSubscriptions/{messageName}',
     ...options
@@ -997,7 +1069,8 @@ export const getMessageEventSubscription = <ThrowOnError extends boolean = false
  * event subscription. Inject process variables as the message's
  * payload.
  */
-export const triggerEvent = <ThrowOnError extends boolean = false>(options: Options<TriggerEventData, ThrowOnError>) => (options.client ?? client).post<TriggerEventResponses, TriggerEventErrors, ThrowOnError>({
+export const triggerEvent = <ThrowOnError extends boolean = true>(options: Options<TriggerEventData, ThrowOnError>) => (options.client ?? client).post<TriggerEventResponses, TriggerEventErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/messageSubscriptions/{messageName}/trigger',
     ...options,
@@ -1013,7 +1086,8 @@ export const triggerEvent = <ThrowOnError extends boolean = false>(options: Opti
  * Signals an execution by id. Can for example be used to explicitly skip user tasks
  * or signal asynchronous continuations.
  */
-export const signalExecution = <ThrowOnError extends boolean = false>(options: Options<SignalExecutionData, ThrowOnError>) => (options.client ?? client).post<SignalExecutionResponses, SignalExecutionErrors, ThrowOnError>({
+export const signalExecution = <ThrowOnError extends boolean = true>(options: Options<SignalExecutionData, ThrowOnError>) => (options.client ?? client).post<SignalExecutionResponses, SignalExecutionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/execution/{id}/signal',
     ...options,
@@ -1030,7 +1104,8 @@ export const signalExecution = <ThrowOnError extends boolean = false>(options: O
  * runtime properties of executions. The size of the result set can be retrieved by using the
  * [Get External Task Count](https://docs.cibseven.org/manual/2.1/reference/rest/external-task/get-query-count/) method.
  */
-export const getExternalTasks = <ThrowOnError extends boolean = false>(options?: Options<GetExternalTasksData, ThrowOnError>) => (options?.client ?? client).get<GetExternalTasksResponses, GetExternalTasksErrors, ThrowOnError>({
+export const getExternalTasks = <ThrowOnError extends boolean = true>(options?: Options<GetExternalTasksData, ThrowOnError>) => (options?.client ?? client).get<GetExternalTasksResponses, GetExternalTasksErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task',
     ...options
@@ -1045,7 +1120,8 @@ export const getExternalTasks = <ThrowOnError extends boolean = false>(options?:
  * [Get External Tasks](https://docs.cibseven.org/manual/2.1/reference/rest/external-task/get-query/) method because it allows to
  * specify a hierarchical result sorting.
  */
-export const queryExternalTasks = <ThrowOnError extends boolean = false>(options?: Options<QueryExternalTasksData, ThrowOnError>) => (options?.client ?? client).post<QueryExternalTasksResponses, QueryExternalTasksErrors, ThrowOnError>({
+export const queryExternalTasks = <ThrowOnError extends boolean = true>(options?: Options<QueryExternalTasksData, ThrowOnError>) => (options?.client ?? client).post<QueryExternalTasksResponses, QueryExternalTasksErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task',
     ...options,
@@ -1061,7 +1137,8 @@ export const queryExternalTasks = <ThrowOnError extends boolean = false>(options
  * Queries for the number of external tasks that fulfill given parameters. Takes the same parameters as the
  * [Get External Tasks](https://docs.cibseven.org/manual/2.1/reference/rest/external-task/get-query/) method.
  */
-export const getExternalTasksCount = <ThrowOnError extends boolean = false>(options?: Options<GetExternalTasksCountData, ThrowOnError>) => (options?.client ?? client).get<GetExternalTasksCountResponses, GetExternalTasksCountErrors, ThrowOnError>({
+export const getExternalTasksCount = <ThrowOnError extends boolean = true>(options?: Options<GetExternalTasksCountData, ThrowOnError>) => (options?.client ?? client).get<GetExternalTasksCountResponses, GetExternalTasksCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/count',
     ...options
@@ -1073,7 +1150,8 @@ export const getExternalTasksCount = <ThrowOnError extends boolean = false>(opti
  * Queries for the number of external tasks that fulfill given parameters. This method takes the same message
  * body as the [Get External Tasks (POST)](https://docs.cibseven.org/manual/2.1/reference/rest/external-task/post-query/) method.
  */
-export const queryExternalTasksCount = <ThrowOnError extends boolean = false>(options?: Options<QueryExternalTasksCountData, ThrowOnError>) => (options?.client ?? client).post<QueryExternalTasksCountResponses, QueryExternalTasksCountErrors, ThrowOnError>({
+export const queryExternalTasksCount = <ThrowOnError extends boolean = true>(options?: Options<QueryExternalTasksCountData, ThrowOnError>) => (options?.client ?? client).post<QueryExternalTasksCountResponses, QueryExternalTasksCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/count',
     ...options,
@@ -1089,7 +1167,8 @@ export const queryExternalTasksCount = <ThrowOnError extends boolean = false>(op
  * Fetches and locks a specific number of external tasks for execution by a worker. Query can be restricted
  * to specific task topics and for each task topic an individual lock time can be provided.
  */
-export const fetchAndLock = <ThrowOnError extends boolean = false>(options?: Options<FetchAndLockData, ThrowOnError>) => (options?.client ?? client).post<FetchAndLockResponses, FetchAndLockErrors, ThrowOnError>({
+export const fetchAndLock = <ThrowOnError extends boolean = true>(options?: Options<FetchAndLockData, ThrowOnError>) => (options?.client ?? client).post<FetchAndLockResponses, FetchAndLockErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/fetchAndLock',
     ...options,
@@ -1105,7 +1184,8 @@ export const fetchAndLock = <ThrowOnError extends boolean = false>(options?: Opt
  * Sets the number of retries left to execute external tasks by id synchronously. If retries are set to 0,
  * an incident is created.
  */
-export const setExternalTaskRetries = <ThrowOnError extends boolean = false>(options?: Options<SetExternalTaskRetriesData, ThrowOnError>) => (options?.client ?? client).put<SetExternalTaskRetriesResponses, SetExternalTaskRetriesErrors, ThrowOnError>({
+export const setExternalTaskRetries = <ThrowOnError extends boolean = true>(options?: Options<SetExternalTaskRetriesData, ThrowOnError>) => (options?.client ?? client).put<SetExternalTaskRetriesResponses, SetExternalTaskRetriesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/retries',
     ...options,
@@ -1121,7 +1201,8 @@ export const setExternalTaskRetries = <ThrowOnError extends boolean = false>(opt
  * Sets the number of retries left to execute external tasks by id asynchronously. If retries are set to 0,
  * an incident is created.
  */
-export const setExternalTaskRetriesAsyncOperation = <ThrowOnError extends boolean = false>(options?: Options<SetExternalTaskRetriesAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<SetExternalTaskRetriesAsyncOperationResponses, SetExternalTaskRetriesAsyncOperationErrors, ThrowOnError>({
+export const setExternalTaskRetriesAsyncOperation = <ThrowOnError extends boolean = true>(options?: Options<SetExternalTaskRetriesAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<SetExternalTaskRetriesAsyncOperationResponses, SetExternalTaskRetriesAsyncOperationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/retries-async',
     ...options,
@@ -1140,7 +1221,8 @@ export const setExternalTaskRetriesAsyncOperation = <ThrowOnError extends boolea
  * exclusive. Setting them both to true will return an empty list.
  * Providing no parameters will return a list of all distinct topic names with external tasks.
  */
-export const getTopicNames = <ThrowOnError extends boolean = false>(options?: Options<GetTopicNamesData, ThrowOnError>) => (options?.client ?? client).get<GetTopicNamesResponses, GetTopicNamesErrors, ThrowOnError>({
+export const getTopicNames = <ThrowOnError extends boolean = true>(options?: Options<GetTopicNamesData, ThrowOnError>) => (options?.client ?? client).get<GetTopicNamesResponses, GetTopicNamesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/topic-names',
     ...options
@@ -1151,7 +1233,8 @@ export const getTopicNames = <ThrowOnError extends boolean = false>(options?: Op
  *
  * Retrieves an external task by id, corresponding to the `ExternalTask` interface in the engine.
  */
-export const getExternalTask = <ThrowOnError extends boolean = false>(options: Options<GetExternalTaskData, ThrowOnError>) => (options.client ?? client).get<GetExternalTaskResponses, GetExternalTaskErrors, ThrowOnError>({
+export const getExternalTask = <ThrowOnError extends boolean = true>(options: Options<GetExternalTaskData, ThrowOnError>) => (options.client ?? client).get<GetExternalTaskResponses, GetExternalTaskErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}',
     ...options
@@ -1163,7 +1246,8 @@ export const getExternalTask = <ThrowOnError extends boolean = false>(options: O
  * Reports a business error in the context of a running external task by id. The error code must be specified
  * to identify the BPMN error handler.
  */
-export const handleExternalTaskBpmnError = <ThrowOnError extends boolean = false>(options: Options<HandleExternalTaskBpmnErrorData, ThrowOnError>) => (options.client ?? client).post<HandleExternalTaskBpmnErrorResponses, HandleExternalTaskBpmnErrorErrors, ThrowOnError>({
+export const handleExternalTaskBpmnError = <ThrowOnError extends boolean = true>(options: Options<HandleExternalTaskBpmnErrorData, ThrowOnError>) => (options.client ?? client).post<HandleExternalTaskBpmnErrorResponses, HandleExternalTaskBpmnErrorErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}/bpmnError',
     ...options,
@@ -1178,7 +1262,8 @@ export const handleExternalTaskBpmnError = <ThrowOnError extends boolean = false
  *
  * Completes an external task by id and updates process variables.
  */
-export const completeExternalTaskResource = <ThrowOnError extends boolean = false>(options: Options<CompleteExternalTaskResourceData, ThrowOnError>) => (options.client ?? client).post<CompleteExternalTaskResourceResponses, CompleteExternalTaskResourceErrors, ThrowOnError>({
+export const completeExternalTaskResource = <ThrowOnError extends boolean = true>(options: Options<CompleteExternalTaskResourceData, ThrowOnError>) => (options.client ?? client).post<CompleteExternalTaskResourceResponses, CompleteExternalTaskResourceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}/complete',
     ...options,
@@ -1193,7 +1278,8 @@ export const completeExternalTaskResource = <ThrowOnError extends boolean = fals
  *
  * Retrieves the error details in the context of a running external task by id.
  */
-export const getExternalTaskErrorDetails = <ThrowOnError extends boolean = false>(options: Options<GetExternalTaskErrorDetailsData, ThrowOnError>) => (options.client ?? client).get<GetExternalTaskErrorDetailsResponses, GetExternalTaskErrorDetailsErrors, ThrowOnError>({
+export const getExternalTaskErrorDetails = <ThrowOnError extends boolean = true>(options: Options<GetExternalTaskErrorDetailsData, ThrowOnError>) => (options.client ?? client).get<GetExternalTaskErrorDetailsResponses, GetExternalTaskErrorDetailsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}/errorDetails',
     ...options
@@ -1204,7 +1290,8 @@ export const getExternalTaskErrorDetails = <ThrowOnError extends boolean = false
  *
  * Extends the timeout of the lock by a given amount of time.
  */
-export const extendLock = <ThrowOnError extends boolean = false>(options: Options<ExtendLockData, ThrowOnError>) => (options.client ?? client).post<ExtendLockResponses, ExtendLockErrors, ThrowOnError>({
+export const extendLock = <ThrowOnError extends boolean = true>(options: Options<ExtendLockData, ThrowOnError>) => (options.client ?? client).post<ExtendLockResponses, ExtendLockErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}/extendLock',
     ...options,
@@ -1220,7 +1307,8 @@ export const extendLock = <ThrowOnError extends boolean = false>(options: Option
  * Reports a failure to execute an external task by id. A number of retries and a timeout until the task can
  * be retried can be specified. If retries are set to 0, an incident for this task is created.
  */
-export const handleFailure = <ThrowOnError extends boolean = false>(options: Options<HandleFailureData, ThrowOnError>) => (options.client ?? client).post<HandleFailureResponses, HandleFailureErrors, ThrowOnError>({
+export const handleFailure = <ThrowOnError extends boolean = true>(options: Options<HandleFailureData, ThrowOnError>) => (options.client ?? client).post<HandleFailureResponses, HandleFailureErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}/failure',
     ...options,
@@ -1233,7 +1321,8 @@ export const handleFailure = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Lock an external task by a given id for a specified worker and amount of time.
  */
-export const lock = <ThrowOnError extends boolean = false>(options: Options<LockData, ThrowOnError>) => (options.client ?? client).post<LockResponses, LockErrors, ThrowOnError>({
+export const lock = <ThrowOnError extends boolean = true>(options: Options<LockData, ThrowOnError>) => (options.client ?? client).post<LockResponses, LockErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}/lock',
     ...options,
@@ -1248,7 +1337,8 @@ export const lock = <ThrowOnError extends boolean = false>(options: Options<Lock
  *
  * Sets the priority of an existing external task by id. The default value of a priority is 0.
  */
-export const setExternalTaskResourcePriority = <ThrowOnError extends boolean = false>(options: Options<SetExternalTaskResourcePriorityData, ThrowOnError>) => (options.client ?? client).put<SetExternalTaskResourcePriorityResponses, SetExternalTaskResourcePriorityErrors, ThrowOnError>({
+export const setExternalTaskResourcePriority = <ThrowOnError extends boolean = true>(options: Options<SetExternalTaskResourcePriorityData, ThrowOnError>) => (options.client ?? client).put<SetExternalTaskResourcePriorityResponses, SetExternalTaskResourcePriorityErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}/priority',
     ...options,
@@ -1264,7 +1354,8 @@ export const setExternalTaskResourcePriority = <ThrowOnError extends boolean = f
  * Sets the number of retries left to execute an external task by id. If retries are set to 0, an
  * incident is created.
  */
-export const setExternalTaskResourceRetries = <ThrowOnError extends boolean = false>(options: Options<SetExternalTaskResourceRetriesData, ThrowOnError>) => (options.client ?? client).put<SetExternalTaskResourceRetriesResponses, SetExternalTaskResourceRetriesErrors, ThrowOnError>({
+export const setExternalTaskResourceRetries = <ThrowOnError extends boolean = true>(options: Options<SetExternalTaskResourceRetriesData, ThrowOnError>) => (options.client ?? client).put<SetExternalTaskResourceRetriesResponses, SetExternalTaskResourceRetriesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}/retries',
     ...options,
@@ -1279,7 +1370,8 @@ export const setExternalTaskResourceRetries = <ThrowOnError extends boolean = fa
  *
  * Unlocks an external task by id. Clears the task's lock expiration time and worker id.
  */
-export const unlock = <ThrowOnError extends boolean = false>(options: Options<UnlockData, ThrowOnError>) => (options.client ?? client).post<UnlockResponses, UnlockErrors, ThrowOnError>({
+export const unlock = <ThrowOnError extends boolean = true>(options: Options<UnlockData, ThrowOnError>) => (options.client ?? client).post<UnlockResponses, UnlockErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/external-task/{id}/unlock',
     ...options
@@ -1292,7 +1384,8 @@ export const unlock = <ThrowOnError extends boolean = false>(options: Options<Un
  * set can be retrieved
  * by using the [Get Filter Count](https://docs.cibseven.org/manual/2.1/reference/rest/filter/get-query-count/) method.
  */
-export const getFilterList = <ThrowOnError extends boolean = false>(options?: Options<GetFilterListData, ThrowOnError>) => (options?.client ?? client).get<GetFilterListResponses, GetFilterListErrors, ThrowOnError>({
+export const getFilterList = <ThrowOnError extends boolean = true>(options?: Options<GetFilterListData, ThrowOnError>) => (options?.client ?? client).get<GetFilterListResponses, GetFilterListErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter',
     ...options
@@ -1307,7 +1400,8 @@ export const getFilterList = <ThrowOnError extends boolean = false>(options?: Op
  * factors, including the users authorizations to interact with this
  * resource and the internal configuration of the process engine.
  */
-export const filterResourceOptions = <ThrowOnError extends boolean = false>(options?: Options<FilterResourceOptionsData, ThrowOnError>) => (options?.client ?? client).options<FilterResourceOptionsResponses, unknown, ThrowOnError>({
+export const filterResourceOptions = <ThrowOnError extends boolean = true>(options?: Options<FilterResourceOptionsData, ThrowOnError>) => (options?.client ?? client).options<FilterResourceOptionsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter',
     ...options
@@ -1320,7 +1414,8 @@ export const filterResourceOptions = <ThrowOnError extends boolean = false>(opti
  * size of the result set when using the
  * [Get Filters](https://docs.cibseven.org/manual/2.1/reference/rest/filter/get-query/) method.
  */
-export const getFilterCount = <ThrowOnError extends boolean = false>(options?: Options<GetFilterCountData, ThrowOnError>) => (options?.client ?? client).get<GetFilterCountResponses, GetFilterCountErrors, ThrowOnError>({
+export const getFilterCount = <ThrowOnError extends boolean = true>(options?: Options<GetFilterCountData, ThrowOnError>) => (options?.client ?? client).get<GetFilterCountResponses, GetFilterCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/count',
     ...options
@@ -1331,7 +1426,8 @@ export const getFilterCount = <ThrowOnError extends boolean = false>(options?: O
  *
  * Creates a new filter.
  */
-export const createFilter = <ThrowOnError extends boolean = false>(options?: Options<CreateFilterData, ThrowOnError>) => (options?.client ?? client).post<CreateFilterResponses, CreateFilterErrors, ThrowOnError>({
+export const createFilter = <ThrowOnError extends boolean = true>(options?: Options<CreateFilterData, ThrowOnError>) => (options?.client ?? client).post<CreateFilterResponses, CreateFilterErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/create',
     ...options,
@@ -1346,7 +1442,8 @@ export const createFilter = <ThrowOnError extends boolean = false>(options?: Opt
  *
  * Deletes a filter by id.
  */
-export const deleteFilter = <ThrowOnError extends boolean = false>(options: Options<DeleteFilterData, ThrowOnError>) => (options.client ?? client).delete<DeleteFilterResponses, DeleteFilterErrors, ThrowOnError>({
+export const deleteFilter = <ThrowOnError extends boolean = true>(options: Options<DeleteFilterData, ThrowOnError>) => (options.client ?? client).delete<DeleteFilterResponses, DeleteFilterErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}',
     ...options
@@ -1357,7 +1454,8 @@ export const deleteFilter = <ThrowOnError extends boolean = false>(options: Opti
  *
  * Retrieves a single filter by id, according to the `Filter` interface in the engine.
  */
-export const getSingleFilter = <ThrowOnError extends boolean = false>(options: Options<GetSingleFilterData, ThrowOnError>) => (options.client ?? client).get<GetSingleFilterResponses, GetSingleFilterErrors, ThrowOnError>({
+export const getSingleFilter = <ThrowOnError extends boolean = true>(options: Options<GetSingleFilterData, ThrowOnError>) => (options.client ?? client).get<GetSingleFilterResponses, GetSingleFilterErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}',
     ...options
@@ -1372,7 +1470,8 @@ export const getSingleFilter = <ThrowOnError extends boolean = false>(options: O
  * factors, including the users authorizations to interact with this
  * resource and the internal configuration of the process engine.
  */
-export const filterResourceOptionsSingle = <ThrowOnError extends boolean = false>(options: Options<FilterResourceOptionsSingleData, ThrowOnError>) => (options.client ?? client).options<FilterResourceOptionsSingleResponses, unknown, ThrowOnError>({
+export const filterResourceOptionsSingle = <ThrowOnError extends boolean = true>(options: Options<FilterResourceOptionsSingleData, ThrowOnError>) => (options.client ?? client).options<FilterResourceOptionsSingleResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}',
     ...options
@@ -1383,7 +1482,8 @@ export const filterResourceOptionsSingle = <ThrowOnError extends boolean = false
  *
  * Updates an existing filter.
  */
-export const updateFilter = <ThrowOnError extends boolean = false>(options: Options<UpdateFilterData, ThrowOnError>) => (options.client ?? client).put<UpdateFilterResponses, UpdateFilterErrors, ThrowOnError>({
+export const updateFilter = <ThrowOnError extends boolean = true>(options: Options<UpdateFilterData, ThrowOnError>) => (options.client ?? client).put<UpdateFilterResponses, UpdateFilterErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}',
     ...options,
@@ -1398,7 +1498,8 @@ export const updateFilter = <ThrowOnError extends boolean = false>(options: Opti
  *
  * Executes the saved query of the filter by id and returns the count.
  */
-export const executeFilterCount = <ThrowOnError extends boolean = false>(options: Options<ExecuteFilterCountData, ThrowOnError>) => (options.client ?? client).get<ExecuteFilterCountResponses, ExecuteFilterCountErrors, ThrowOnError>({
+export const executeFilterCount = <ThrowOnError extends boolean = true>(options: Options<ExecuteFilterCountData, ThrowOnError>) => (options.client ?? client).get<ExecuteFilterCountResponses, ExecuteFilterCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}/count',
     ...options
@@ -1411,7 +1512,8 @@ export const executeFilterCount = <ThrowOnError extends boolean = false>(options
  * slightly more powerful then the [Get Execute Filter Count](https://docs.cibseven.org/manual/2.1/reference/rest/filter/get-execute-count/)
  * method because it allows to extend the saved query of the filter.
  */
-export const postExecuteFilterCount = <ThrowOnError extends boolean = false>(options: Options<PostExecuteFilterCountData, ThrowOnError>) => (options.client ?? client).post<PostExecuteFilterCountResponses, PostExecuteFilterCountErrors, ThrowOnError>({
+export const postExecuteFilterCount = <ThrowOnError extends boolean = true>(options: Options<PostExecuteFilterCountData, ThrowOnError>) => (options.client ?? client).post<PostExecuteFilterCountResponses, PostExecuteFilterCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}/count',
     ...options,
@@ -1426,7 +1528,8 @@ export const postExecuteFilterCount = <ThrowOnError extends boolean = false>(opt
  *
  * Executes the saved query of the filter by id and returns the result list.
  */
-export const executeFilterList = <ThrowOnError extends boolean = false>(options: Options<ExecuteFilterListData, ThrowOnError>) => (options.client ?? client).get<ExecuteFilterListResponses, ExecuteFilterListErrors, ThrowOnError>({
+export const executeFilterList = <ThrowOnError extends boolean = true>(options: Options<ExecuteFilterListData, ThrowOnError>) => (options.client ?? client).get<ExecuteFilterListResponses, ExecuteFilterListErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}/list',
     ...options
@@ -1440,7 +1543,8 @@ export const executeFilterList = <ThrowOnError extends boolean = false>(options:
  * [Get Execute FilterList](https://docs.cibseven.org/manual/2.1/reference/rest/filter/get-execute-list/) method
  * because it allows to extend the saved query of the filter.
  */
-export const postExecuteFilterList = <ThrowOnError extends boolean = false>(options: Options<PostExecuteFilterListData, ThrowOnError>) => (options.client ?? client).post<PostExecuteFilterListResponses, PostExecuteFilterListErrors, ThrowOnError>({
+export const postExecuteFilterList = <ThrowOnError extends boolean = true>(options: Options<PostExecuteFilterListData, ThrowOnError>) => (options.client ?? client).post<PostExecuteFilterListResponses, PostExecuteFilterListErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}/list',
     ...options,
@@ -1455,7 +1559,8 @@ export const postExecuteFilterList = <ThrowOnError extends boolean = false>(opti
  *
  * Executes the saved query of the filter by id and returns the single result.
  */
-export const executeFilterSingleResult = <ThrowOnError extends boolean = false>(options: Options<ExecuteFilterSingleResultData, ThrowOnError>) => (options.client ?? client).get<ExecuteFilterSingleResultResponses, ExecuteFilterSingleResultErrors, ThrowOnError>({
+export const executeFilterSingleResult = <ThrowOnError extends boolean = true>(options: Options<ExecuteFilterSingleResultData, ThrowOnError>) => (options.client ?? client).get<ExecuteFilterSingleResultResponses, ExecuteFilterSingleResultErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}/singleResult',
     ...options
@@ -1468,7 +1573,8 @@ export const executeFilterSingleResult = <ThrowOnError extends boolean = false>(
  * powerful then the [Get Execute Filter Single Result](https://docs.cibseven.org/manual/2.1/reference/rest/filter/get-execute-single-result/)
  * method because it allows to extend the saved query of the filter.
  */
-export const postExecuteFilterSingleResult = <ThrowOnError extends boolean = false>(options: Options<PostExecuteFilterSingleResultData, ThrowOnError>) => (options.client ?? client).post<PostExecuteFilterSingleResultResponses, PostExecuteFilterSingleResultErrors, ThrowOnError>({
+export const postExecuteFilterSingleResult = <ThrowOnError extends boolean = true>(options: Options<PostExecuteFilterSingleResultData, ThrowOnError>) => (options.client ?? client).post<PostExecuteFilterSingleResultResponses, PostExecuteFilterSingleResultErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/filter/{id}/singleResult',
     ...options,
@@ -1484,7 +1590,8 @@ export const postExecuteFilterSingleResult = <ThrowOnError extends boolean = fal
  * Queries for a list of groups using a list of parameters. The size of the result set can be retrieved
  * by using the [Get Group Count](https://docs.cibseven.org/manual/2.1/reference/rest/group/get-query-count) method.
  */
-export const getQueryGroups = <ThrowOnError extends boolean = false>(options?: Options<GetQueryGroupsData, ThrowOnError>) => (options?.client ?? client).get<GetQueryGroupsResponses, GetQueryGroupsErrors, ThrowOnError>({
+export const getQueryGroups = <ThrowOnError extends boolean = true>(options?: Options<GetQueryGroupsData, ThrowOnError>) => (options?.client ?? client).get<GetQueryGroupsResponses, GetQueryGroupsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group',
     ...options
@@ -1499,7 +1606,8 @@ export const getQueryGroups = <ThrowOnError extends boolean = false>(options?: O
  * or not may depend on various things, including the users authorizations to interact with this resource and
  * the internal configuration of the process engine.
  */
-export const availableGroupOperations = <ThrowOnError extends boolean = false>(options?: Options<AvailableGroupOperationsData, ThrowOnError>) => (options?.client ?? client).options<AvailableGroupOperationsResponses, unknown, ThrowOnError>({
+export const availableGroupOperations = <ThrowOnError extends boolean = true>(options?: Options<AvailableGroupOperationsData, ThrowOnError>) => (options?.client ?? client).options<AvailableGroupOperationsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group',
     ...options
@@ -1512,7 +1620,8 @@ export const availableGroupOperations = <ThrowOnError extends boolean = false>(o
  * The size of the result set can be retrieved by using the
  * [Get Group Count (POST)](https://docs.cibseven.org/manual/2.1/reference/rest/group/post-query-count/) method.
  */
-export const postQueryGroups = <ThrowOnError extends boolean = false>(options?: Options<PostQueryGroupsData, ThrowOnError>) => (options?.client ?? client).post<PostQueryGroupsResponses, PostQueryGroupsErrors, ThrowOnError>({
+export const postQueryGroups = <ThrowOnError extends boolean = true>(options?: Options<PostQueryGroupsData, ThrowOnError>) => (options?.client ?? client).post<PostQueryGroupsResponses, PostQueryGroupsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group',
     ...options,
@@ -1527,7 +1636,8 @@ export const postQueryGroups = <ThrowOnError extends boolean = false>(options?: 
  *
  * Queries for groups using a list of parameters and retrieves the count.
  */
-export const getGroupCount = <ThrowOnError extends boolean = false>(options?: Options<GetGroupCountData, ThrowOnError>) => (options?.client ?? client).get<GetGroupCountResponses, GetGroupCountErrors, ThrowOnError>({
+export const getGroupCount = <ThrowOnError extends boolean = true>(options?: Options<GetGroupCountData, ThrowOnError>) => (options?.client ?? client).get<GetGroupCountResponses, GetGroupCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/count',
     ...options
@@ -1538,7 +1648,8 @@ export const getGroupCount = <ThrowOnError extends boolean = false>(options?: Op
  *
  * Queries for groups using a list of parameters and retrieves the count.
  */
-export const queryGroupCount = <ThrowOnError extends boolean = false>(options?: Options<QueryGroupCountData, ThrowOnError>) => (options?.client ?? client).post<QueryGroupCountResponses, QueryGroupCountErrors, ThrowOnError>({
+export const queryGroupCount = <ThrowOnError extends boolean = true>(options?: Options<QueryGroupCountData, ThrowOnError>) => (options?.client ?? client).post<QueryGroupCountResponses, QueryGroupCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/count',
     ...options,
@@ -1553,7 +1664,8 @@ export const queryGroupCount = <ThrowOnError extends boolean = false>(options?: 
  *
  * Creates a new group.
  */
-export const createGroup = <ThrowOnError extends boolean = false>(options?: Options<CreateGroupData, ThrowOnError>) => (options?.client ?? client).post<CreateGroupResponses, CreateGroupErrors, ThrowOnError>({
+export const createGroup = <ThrowOnError extends boolean = true>(options?: Options<CreateGroupData, ThrowOnError>) => (options?.client ?? client).post<CreateGroupResponses, CreateGroupErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/create',
     ...options,
@@ -1568,7 +1680,8 @@ export const createGroup = <ThrowOnError extends boolean = false>(options?: Opti
  *
  * Deletes a group by id.
  */
-export const deleteGroup = <ThrowOnError extends boolean = false>(options: Options<DeleteGroupData, ThrowOnError>) => (options.client ?? client).delete<DeleteGroupResponses, DeleteGroupErrors, ThrowOnError>({
+export const deleteGroup = <ThrowOnError extends boolean = true>(options: Options<DeleteGroupData, ThrowOnError>) => (options.client ?? client).delete<DeleteGroupResponses, DeleteGroupErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/{id}',
     ...options
@@ -1579,7 +1692,8 @@ export const deleteGroup = <ThrowOnError extends boolean = false>(options: Optio
  *
  * Retrieves a group by id.
  */
-export const getGroup = <ThrowOnError extends boolean = false>(options: Options<GetGroupData, ThrowOnError>) => (options.client ?? client).get<GetGroupResponses, GetGroupErrors, ThrowOnError>({
+export const getGroup = <ThrowOnError extends boolean = true>(options: Options<GetGroupData, ThrowOnError>) => (options.client ?? client).get<GetGroupResponses, GetGroupErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/{id}',
     ...options
@@ -1593,7 +1707,8 @@ export const getGroup = <ThrowOnError extends boolean = false>(options: Options<
  * `/group/{id}` resource instance. If the user can perform an operation or not may depend on various things, including the users authorizations
  * to interact with this resource and the internal configuration of the process engine.
  */
-export const availableGroupInstanceOperations = <ThrowOnError extends boolean = false>(options: Options<AvailableGroupInstanceOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableGroupInstanceOperationsResponses, unknown, ThrowOnError>({
+export const availableGroupInstanceOperations = <ThrowOnError extends boolean = true>(options: Options<AvailableGroupInstanceOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableGroupInstanceOperationsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/{id}',
     ...options
@@ -1604,7 +1719,8 @@ export const availableGroupInstanceOperations = <ThrowOnError extends boolean = 
  *
  * Updates a given group by id.
  */
-export const updateGroup = <ThrowOnError extends boolean = false>(options: Options<UpdateGroupData, ThrowOnError>) => (options.client ?? client).put<UpdateGroupResponses, UpdateGroupErrors, ThrowOnError>({
+export const updateGroup = <ThrowOnError extends boolean = true>(options: Options<UpdateGroupData, ThrowOnError>) => (options.client ?? client).put<UpdateGroupResponses, UpdateGroupErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/{id}',
     ...options,
@@ -1622,7 +1738,8 @@ export const updateGroup = <ThrowOnError extends boolean = false>(options: Optio
  * things, including the users authorizations to interact with this resource and the internal configuration
  * of the process engine.
  */
-export const availableGroupMembersOperations = <ThrowOnError extends boolean = false>(options: Options<AvailableGroupMembersOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableGroupMembersOperationsResponses, unknown, ThrowOnError>({
+export const availableGroupMembersOperations = <ThrowOnError extends boolean = true>(options: Options<AvailableGroupMembersOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableGroupMembersOperationsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/{id}/members',
     ...options
@@ -1633,7 +1750,8 @@ export const availableGroupMembersOperations = <ThrowOnError extends boolean = f
  *
  * Removes a member from a group.
  */
-export const deleteGroupMember = <ThrowOnError extends boolean = false>(options: Options<DeleteGroupMemberData, ThrowOnError>) => (options.client ?? client).delete<DeleteGroupMemberResponses, DeleteGroupMemberErrors, ThrowOnError>({
+export const deleteGroupMember = <ThrowOnError extends boolean = true>(options: Options<DeleteGroupMemberData, ThrowOnError>) => (options.client ?? client).delete<DeleteGroupMemberResponses, DeleteGroupMemberErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/{id}/members/{userId}',
     ...options
@@ -1644,7 +1762,8 @@ export const deleteGroupMember = <ThrowOnError extends boolean = false>(options:
  *
  * Adds a member to a group.
  */
-export const createGroupMember = <ThrowOnError extends boolean = false>(options: Options<CreateGroupMemberData, ThrowOnError>) => (options.client ?? client).put<CreateGroupMemberResponses, CreateGroupMemberErrors, ThrowOnError>({
+export const createGroupMember = <ThrowOnError extends boolean = true>(options: Options<CreateGroupMemberData, ThrowOnError>) => (options.client ?? client).put<CreateGroupMemberResponses, CreateGroupMemberErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/group/{id}/members/{userId}',
     ...options
@@ -1657,7 +1776,8 @@ export const createGroupMember = <ThrowOnError extends boolean = false>(options:
  * The size of the result set can be retrieved by using the
  * [Get Historic Activity Instance Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/activity-instance/get-activity-instance-query-count/) method.
  */
-export const getHistoricActivityInstances = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricActivityInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricActivityInstancesResponses, GetHistoricActivityInstancesErrors, ThrowOnError>({
+export const getHistoricActivityInstances = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricActivityInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricActivityInstancesResponses, GetHistoricActivityInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/activity-instance',
     ...options
@@ -1670,7 +1790,8 @@ export const getHistoricActivityInstances = <ThrowOnError extends boolean = fals
  * The size of the result set can be retrieved by using the
  * [Get Historic Activity Instance Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/activity-instance/get-activity-instance-query-count/) method.
  */
-export const queryHistoricActivityInstances = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricActivityInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricActivityInstancesResponses, QueryHistoricActivityInstancesErrors, ThrowOnError>({
+export const queryHistoricActivityInstances = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricActivityInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricActivityInstancesResponses, QueryHistoricActivityInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/activity-instance',
     ...options,
@@ -1686,7 +1807,8 @@ export const queryHistoricActivityInstances = <ThrowOnError extends boolean = fa
  * Queries for the number of historic activity instances that fulfill the given parameters.
  * Takes the same parameters as the [Get Historic Activity Instance](https://docs.cibseven.org/manual/2.1/reference/rest/history/activity-instance/get-activity-instance-query/)  method.
  */
-export const getHistoricActivityInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricActivityInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricActivityInstancesCountResponses, GetHistoricActivityInstancesCountErrors, ThrowOnError>({
+export const getHistoricActivityInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricActivityInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricActivityInstancesCountResponses, GetHistoricActivityInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/activity-instance/count',
     ...options
@@ -1697,7 +1819,8 @@ export const getHistoricActivityInstancesCount = <ThrowOnError extends boolean =
  *
  * Queries for the number of historic activity instances that fulfill the given parameters.
  */
-export const queryHistoricActivityInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricActivityInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricActivityInstancesCountResponses, QueryHistoricActivityInstancesCountErrors, ThrowOnError>({
+export const queryHistoricActivityInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricActivityInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricActivityInstancesCountResponses, QueryHistoricActivityInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/activity-instance/count',
     ...options,
@@ -1712,7 +1835,8 @@ export const queryHistoricActivityInstancesCount = <ThrowOnError extends boolean
  *
  * Retrieves a historic activity instance by id, according to the `HistoricActivityInstance` interface in the engine.
  */
-export const getHistoricActivityInstance = <ThrowOnError extends boolean = false>(options: Options<GetHistoricActivityInstanceData, ThrowOnError>) => (options.client ?? client).get<GetHistoricActivityInstanceResponses, GetHistoricActivityInstanceErrors, ThrowOnError>({
+export const getHistoricActivityInstance = <ThrowOnError extends boolean = true>(options: Options<GetHistoricActivityInstanceData, ThrowOnError>) => (options.client ?? client).get<GetHistoricActivityInstanceResponses, GetHistoricActivityInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/activity-instance/{id}',
     ...options
@@ -1727,7 +1851,8 @@ export const getHistoricActivityInstance = <ThrowOnError extends boolean = false
  * [Get Historic Batch Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/batch/get-query-count/)
  * method.
  */
-export const getHistoricBatches = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricBatchesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricBatchesResponses, GetHistoricBatchesErrors, ThrowOnError>({
+export const getHistoricBatches = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricBatchesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricBatchesResponses, GetHistoricBatchesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/batch',
     ...options
@@ -1752,7 +1877,8 @@ export const getHistoricBatches = <ThrowOnError extends boolean = false>(options
  * to see the history.
  *
  */
-export const getCleanableHistoricBatchesReport = <ThrowOnError extends boolean = false>(options?: Options<GetCleanableHistoricBatchesReportData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricBatchesReportResponses, GetCleanableHistoricBatchesReportErrors, ThrowOnError>({
+export const getCleanableHistoricBatchesReport = <ThrowOnError extends boolean = true>(options?: Options<GetCleanableHistoricBatchesReportData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricBatchesReportResponses, GetCleanableHistoricBatchesReportErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/batch/cleanable-batch-report',
     ...options
@@ -1769,7 +1895,8 @@ export const getCleanableHistoricBatchesReport = <ThrowOnError extends boolean =
  * [Get Cleanable Batch Report](https://docs.cibseven.org/manual/2.1/reference/rest/history/batch/get-cleanable-batch-report/)
  * method.
  */
-export const getCleanableHistoricBatchesReportCount = <ThrowOnError extends boolean = false>(options?: Options<GetCleanableHistoricBatchesReportCountData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricBatchesReportCountResponses, GetCleanableHistoricBatchesReportCountErrors, ThrowOnError>({
+export const getCleanableHistoricBatchesReportCount = <ThrowOnError extends boolean = true>(options?: Options<GetCleanableHistoricBatchesReportCountData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricBatchesReportCountResponses, GetCleanableHistoricBatchesReportCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/batch/cleanable-batch-report/count',
     ...options
@@ -1783,7 +1910,8 @@ export const getCleanableHistoricBatchesReportCount = <ThrowOnError extends bool
  * [Get Historic Batches](https://docs.cibseven.org/manual/2.1/reference/rest/history/batch/get-query/)
  * method.
  */
-export const getHistoricBatchesCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricBatchesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricBatchesCountResponses, GetHistoricBatchesCountErrors, ThrowOnError>({
+export const getHistoricBatchesCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricBatchesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricBatchesCountResponses, GetHistoricBatchesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/batch/count',
     ...options
@@ -1799,7 +1927,8 @@ export const getHistoricBatchesCount = <ThrowOnError extends boolean = false>(op
  * all instances matching query criterion and instances from the list
  * will be updated with a removal time.
  */
-export const setRemovalTimeAsyncHistoricBatch = <ThrowOnError extends boolean = false>(options?: Options<SetRemovalTimeAsyncHistoricBatchData, ThrowOnError>) => (options?.client ?? client).post<SetRemovalTimeAsyncHistoricBatchResponses, SetRemovalTimeAsyncHistoricBatchErrors, ThrowOnError>({
+export const setRemovalTimeAsyncHistoricBatch = <ThrowOnError extends boolean = true>(options?: Options<SetRemovalTimeAsyncHistoricBatchData, ThrowOnError>) => (options?.client ?? client).post<SetRemovalTimeAsyncHistoricBatchResponses, SetRemovalTimeAsyncHistoricBatchErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/batch/set-removal-time',
     ...options,
@@ -1814,7 +1943,8 @@ export const setRemovalTimeAsyncHistoricBatch = <ThrowOnError extends boolean = 
  *
  * Deletes a historic batch by id, including related historic job logs.
  */
-export const deleteHistoricBatch = <ThrowOnError extends boolean = false>(options: Options<DeleteHistoricBatchData, ThrowOnError>) => (options.client ?? client).delete<DeleteHistoricBatchResponses, DeleteHistoricBatchErrors, ThrowOnError>({
+export const deleteHistoricBatch = <ThrowOnError extends boolean = true>(options: Options<DeleteHistoricBatchData, ThrowOnError>) => (options.client ?? client).delete<DeleteHistoricBatchResponses, DeleteHistoricBatchErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/batch/{id}',
     ...options
@@ -1826,7 +1956,8 @@ export const deleteHistoricBatch = <ThrowOnError extends boolean = false>(option
  * Retrieves a historic batch by id, according to the `HistoricBatch` interface in the
  * engine.
  */
-export const getHistoricBatch = <ThrowOnError extends boolean = false>(options: Options<GetHistoricBatchData, ThrowOnError>) => (options.client ?? client).get<GetHistoricBatchResponses, GetHistoricBatchErrors, ThrowOnError>({
+export const getHistoricBatch = <ThrowOnError extends boolean = true>(options: Options<GetHistoricBatchData, ThrowOnError>) => (options.client ?? client).get<GetHistoricBatchResponses, GetHistoricBatchErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/batch/{id}',
     ...options
@@ -1844,7 +1975,8 @@ export const getHistoricBatch = <ThrowOnError extends boolean = false>(options: 
  * [`GET /history/cleanup/jobs`](https://docs.cibseven.org/manual/2.1/reference/rest/history/history-cleanup/get-history-cleanup-jobs)
  * to find all the available history cleanup jobs.
  */
-export const cleanupAsync = <ThrowOnError extends boolean = false>(options?: Options<CleanupAsyncData, ThrowOnError>) => (options?.client ?? client).post<CleanupAsyncResponses, CleanupAsyncErrors, ThrowOnError>({
+export const cleanupAsync = <ThrowOnError extends boolean = true>(options?: Options<CleanupAsyncData, ThrowOnError>) => (options?.client ?? client).post<CleanupAsyncResponses, CleanupAsyncErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/cleanup',
     ...options
@@ -1856,7 +1988,8 @@ export const cleanupAsync = <ThrowOnError extends boolean = false>(options?: Opt
  * Retrieves history cleanup batch window configuration (See
  * [History cleanup](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/history/#history-cleanup)).
  */
-export const getHistoryCleanupConfiguration = <ThrowOnError extends boolean = false>(options?: Options<GetHistoryCleanupConfigurationData, ThrowOnError>) => (options?.client ?? client).get<GetHistoryCleanupConfigurationResponses, unknown, ThrowOnError>({
+export const getHistoryCleanupConfiguration = <ThrowOnError extends boolean = true>(options?: Options<GetHistoryCleanupConfigurationData, ThrowOnError>) => (options?.client ?? client).get<GetHistoryCleanupConfigurationResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/cleanup/configuration',
     ...options
@@ -1872,7 +2005,8 @@ export const getHistoryCleanupConfiguration = <ThrowOnError extends boolean = fa
  *
  * @deprecated
  */
-export const findCleanupJob = <ThrowOnError extends boolean = false>(options?: Options<FindCleanupJobData, ThrowOnError>) => (options?.client ?? client).get<FindCleanupJobResponses, FindCleanupJobErrors, ThrowOnError>({
+export const findCleanupJob = <ThrowOnError extends boolean = true>(options?: Options<FindCleanupJobData, ThrowOnError>) => (options?.client ?? client).get<FindCleanupJobResponses, FindCleanupJobErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/cleanup/job',
     ...options
@@ -1884,7 +2018,8 @@ export const findCleanupJob = <ThrowOnError extends boolean = false>(options?: O
  * Finds history cleanup jobs (See
  * [History cleanup](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/history/#history-cleanup)).
  */
-export const findCleanupJobs = <ThrowOnError extends boolean = false>(options?: Options<FindCleanupJobsData, ThrowOnError>) => (options?.client ?? client).get<FindCleanupJobsResponses, FindCleanupJobsErrors, ThrowOnError>({
+export const findCleanupJobs = <ThrowOnError extends boolean = true>(options?: Options<FindCleanupJobsData, ThrowOnError>) => (options?.client ?? client).get<FindCleanupJobsResponses, FindCleanupJobsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/cleanup/jobs',
     ...options
@@ -1903,7 +2038,8 @@ export const findCleanupJobs = <ThrowOnError extends boolean = false>(options?: 
  * The size of the result set can be retrieved by using the
  * [Get Cleanable Decision Instance Report Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/decision-definition/get-cleanable-decision-instance-report-count/) method.
  */
-export const getCleanableHistoricDecisionInstanceReport = <ThrowOnError extends boolean = false>(options?: Options<GetCleanableHistoricDecisionInstanceReportData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricDecisionInstanceReportResponses, GetCleanableHistoricDecisionInstanceReportErrors, ThrowOnError>({
+export const getCleanableHistoricDecisionInstanceReport = <ThrowOnError extends boolean = true>(options?: Options<GetCleanableHistoricDecisionInstanceReportData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricDecisionInstanceReportResponses, GetCleanableHistoricDecisionInstanceReportErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/decision-definition/cleanable-decision-instance-report',
     ...options
@@ -1918,7 +2054,8 @@ export const getCleanableHistoricDecisionInstanceReport = <ThrowOnError extends 
  * Takes the same parameters as the [Get Cleanable Decision Instance Report](https://docs.cibseven.org/manual/2.1/reference/rest/history/decision-definition/get-cleanable-decision-instance-report/)
  * method.
  */
-export const getCleanableHistoricDecisionInstanceReportCount = <ThrowOnError extends boolean = false>(options?: Options<GetCleanableHistoricDecisionInstanceReportCountData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricDecisionInstanceReportCountResponses, GetCleanableHistoricDecisionInstanceReportCountErrors, ThrowOnError>({
+export const getCleanableHistoricDecisionInstanceReportCount = <ThrowOnError extends boolean = true>(options?: Options<GetCleanableHistoricDecisionInstanceReportCountData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricDecisionInstanceReportCountResponses, GetCleanableHistoricDecisionInstanceReportCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/decision-definition/cleanable-decision-instance-report/count',
     ...options
@@ -1932,7 +2069,8 @@ export const getCleanableHistoricDecisionInstanceReportCount = <ThrowOnError ext
  * [Get Historic Decision Instance Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/decision-instance/get-decision-instance-query-count/)
  * method.
  */
-export const getHistoricDecisionInstances = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricDecisionInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricDecisionInstancesResponses, GetHistoricDecisionInstancesErrors, ThrowOnError>({
+export const getHistoricDecisionInstances = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricDecisionInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricDecisionInstancesResponses, GetHistoricDecisionInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/decision-instance',
     ...options
@@ -1946,7 +2084,8 @@ export const getHistoricDecisionInstances = <ThrowOnError extends boolean = fals
  * [Get Historic Decision Instances](https://docs.cibseven.org/manual/2.1/reference/rest/history/decision-instance/get-decision-instance-query/)
  * method.
  */
-export const getHistoricDecisionInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricDecisionInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricDecisionInstancesCountResponses, GetHistoricDecisionInstancesCountErrors, ThrowOnError>({
+export const getHistoricDecisionInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricDecisionInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricDecisionInstancesCountResponses, GetHistoricDecisionInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/decision-instance/count',
     ...options
@@ -1960,7 +2099,8 @@ export const getHistoricDecisionInstancesCount = <ThrowOnError extends boolean =
  * has to be provided. If both are provided then all instances matching query
  * criterion and instances from the list will be deleted.
  */
-export const deleteAsync = <ThrowOnError extends boolean = false>(options?: Options<DeleteAsyncData, ThrowOnError>) => (options?.client ?? client).post<DeleteAsyncResponses, DeleteAsyncErrors, ThrowOnError>({
+export const deleteAsync = <ThrowOnError extends boolean = true>(options?: Options<DeleteAsyncData, ThrowOnError>) => (options?.client ?? client).post<DeleteAsyncResponses, DeleteAsyncErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/decision-instance/delete',
     ...options,
@@ -1981,7 +2121,8 @@ export const deleteAsync = <ThrowOnError extends boolean = false>(options?: Opti
  * provided, all instances matching query criterion and instances from the list
  * will be updated with a removal time.
  */
-export const setRemovalTimeAsyncHistoricDecisionInstance = <ThrowOnError extends boolean = false>(options?: Options<SetRemovalTimeAsyncHistoricDecisionInstanceData, ThrowOnError>) => (options?.client ?? client).post<SetRemovalTimeAsyncHistoricDecisionInstanceResponses, SetRemovalTimeAsyncHistoricDecisionInstanceErrors, ThrowOnError>({
+export const setRemovalTimeAsyncHistoricDecisionInstance = <ThrowOnError extends boolean = true>(options?: Options<SetRemovalTimeAsyncHistoricDecisionInstanceData, ThrowOnError>) => (options?.client ?? client).post<SetRemovalTimeAsyncHistoricDecisionInstanceResponses, SetRemovalTimeAsyncHistoricDecisionInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/decision-instance/set-removal-time',
     ...options,
@@ -1997,7 +2138,8 @@ export const setRemovalTimeAsyncHistoricDecisionInstance = <ThrowOnError extends
  * Retrieves a historic decision instance by id, according to the
  * `HistoricDecisionInstance` interface in the engine.
  */
-export const getHistoricDecisionInstance = <ThrowOnError extends boolean = false>(options: Options<GetHistoricDecisionInstanceData, ThrowOnError>) => (options.client ?? client).get<GetHistoricDecisionInstanceResponses, GetHistoricDecisionInstanceErrors, ThrowOnError>({
+export const getHistoricDecisionInstance = <ThrowOnError extends boolean = true>(options: Options<GetHistoricDecisionInstanceData, ThrowOnError>) => (options.client ?? client).get<GetHistoricDecisionInstanceResponses, GetHistoricDecisionInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/decision-instance/{id}',
     ...options
@@ -2008,7 +2150,8 @@ export const getHistoricDecisionInstance = <ThrowOnError extends boolean = false
  *
  * Retrieves evaluation statistics of a given decision requirements definition.
  */
-export const getDecisionStatistics = <ThrowOnError extends boolean = false>(options: Options<GetDecisionStatisticsData, ThrowOnError>) => (options.client ?? client).get<GetDecisionStatisticsResponses, GetDecisionStatisticsErrors, ThrowOnError>({
+export const getDecisionStatistics = <ThrowOnError extends boolean = true>(options: Options<GetDecisionStatisticsData, ThrowOnError>) => (options.client ?? client).get<GetDecisionStatisticsResponses, GetDecisionStatisticsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/decision-requirements-definition/{id}/statistics',
     ...options
@@ -2021,7 +2164,8 @@ export const getDecisionStatistics = <ThrowOnError extends boolean = false>(opti
  * The size of the result set can be retrieved by using the
  * [Get Historic Detail Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/detail/get-detail-query-count/) method.
  */
-export const getHistoricDetails = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricDetailsData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricDetailsResponses, GetHistoricDetailsErrors, ThrowOnError>({
+export const getHistoricDetails = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricDetailsData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricDetailsResponses, GetHistoricDetailsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/detail',
     ...options
@@ -2036,7 +2180,8 @@ export const getHistoricDetails = <ThrowOnError extends boolean = false>(options
  * using the [Get Historic Detail Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/detail/get-detail-query-count/)
  * method.
  */
-export const queryHistoricDetails = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricDetailsData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricDetailsResponses, QueryHistoricDetailsErrors, ThrowOnError>({
+export const queryHistoricDetails = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricDetailsData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricDetailsResponses, QueryHistoricDetailsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/detail',
     ...options,
@@ -2054,7 +2199,8 @@ export const queryHistoricDetails = <ThrowOnError extends boolean = false>(optio
  * Details](https://docs.cibseven.org/manual/2.1/reference/rest/history/detail/get-detail-query/)
  * method.
  */
-export const getHistoricDetailsCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricDetailsCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricDetailsCountResponses, GetHistoricDetailsCountErrors, ThrowOnError>({
+export const getHistoricDetailsCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricDetailsCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricDetailsCountResponses, GetHistoricDetailsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/detail/count',
     ...options
@@ -2065,7 +2211,8 @@ export const getHistoricDetailsCount = <ThrowOnError extends boolean = false>(op
  *
  * Retrieves a historic detail by id.
  */
-export const historicDetail = <ThrowOnError extends boolean = false>(options: Options<HistoricDetailData, ThrowOnError>) => (options.client ?? client).get<HistoricDetailResponses, HistoricDetailErrors, ThrowOnError>({
+export const historicDetail = <ThrowOnError extends boolean = true>(options: Options<HistoricDetailData, ThrowOnError>) => (options.client ?? client).get<HistoricDetailResponses, HistoricDetailErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/detail/{id}',
     ...options
@@ -2077,7 +2224,8 @@ export const historicDetail = <ThrowOnError extends boolean = false>(options: Op
  * Retrieves the content of a historic variable update by id. Applicable for byte
  * array and file variables.
  */
-export const historicDetailBinary = <ThrowOnError extends boolean = false>(options: Options<HistoricDetailBinaryData, ThrowOnError>) => (options.client ?? client).get<HistoricDetailBinaryResponses, HistoricDetailBinaryErrors, ThrowOnError>({
+export const historicDetailBinary = <ThrowOnError extends boolean = true>(options: Options<HistoricDetailBinaryData, ThrowOnError>) => (options.client ?? client).get<HistoricDetailBinaryResponses, HistoricDetailBinaryErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/detail/{id}/data',
     ...options
@@ -2091,7 +2239,8 @@ export const historicDetailBinary = <ThrowOnError extends boolean = false>(optio
  * [Get External Task Log Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/external-task-log/get-external-task-log-query-count/)
  * method.
  */
-export const getHistoricExternalTaskLogs = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricExternalTaskLogsData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricExternalTaskLogsResponses, GetHistoricExternalTaskLogsErrors, ThrowOnError>({
+export const getHistoricExternalTaskLogs = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricExternalTaskLogsData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricExternalTaskLogsResponses, GetHistoricExternalTaskLogsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/external-task-log',
     ...options
@@ -2106,7 +2255,8 @@ export const getHistoricExternalTaskLogs = <ThrowOnError extends boolean = false
  * method because it allows filtering by historic external task logs
  * values of the different types `String`, `Number` or `Boolean`.
  */
-export const queryHistoricExternalTaskLogs = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricExternalTaskLogsData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricExternalTaskLogsResponses, QueryHistoricExternalTaskLogsErrors, ThrowOnError>({
+export const queryHistoricExternalTaskLogs = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricExternalTaskLogsData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricExternalTaskLogsResponses, QueryHistoricExternalTaskLogsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/external-task-log',
     ...options,
@@ -2125,7 +2275,8 @@ export const queryHistoricExternalTaskLogs = <ThrowOnError extends boolean = fal
  * [Get External Task Logs](https://docs.cibseven.org/manual/2.1/reference/rest/history/external-task-log/get-external-task-log-query/)
  * method.
  */
-export const getHistoricExternalTaskLogsCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricExternalTaskLogsCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricExternalTaskLogsCountResponses, GetHistoricExternalTaskLogsCountErrors, ThrowOnError>({
+export const getHistoricExternalTaskLogsCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricExternalTaskLogsCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricExternalTaskLogsCountResponses, GetHistoricExternalTaskLogsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/external-task-log/count',
     ...options
@@ -2142,7 +2293,8 @@ export const getHistoricExternalTaskLogsCount = <ThrowOnError extends boolean = 
  * [Get External Task Log Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/external-task-log/get-external-task-log-query-count/)
  * method.
  */
-export const queryHistoricExternalTaskLogsCount = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricExternalTaskLogsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricExternalTaskLogsCountResponses, QueryHistoricExternalTaskLogsCountErrors, ThrowOnError>({
+export const queryHistoricExternalTaskLogsCount = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricExternalTaskLogsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricExternalTaskLogsCountResponses, QueryHistoricExternalTaskLogsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/external-task-log/count',
     ...options,
@@ -2157,7 +2309,8 @@ export const queryHistoricExternalTaskLogsCount = <ThrowOnError extends boolean 
  *
  * Retrieves a historic external task log by id.
  */
-export const getHistoricExternalTaskLog = <ThrowOnError extends boolean = false>(options: Options<GetHistoricExternalTaskLogData, ThrowOnError>) => (options.client ?? client).get<GetHistoricExternalTaskLogResponses, GetHistoricExternalTaskLogErrors, ThrowOnError>({
+export const getHistoricExternalTaskLog = <ThrowOnError extends boolean = true>(options: Options<GetHistoricExternalTaskLogData, ThrowOnError>) => (options.client ?? client).get<GetHistoricExternalTaskLogResponses, GetHistoricExternalTaskLogErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/external-task-log/{id}',
     ...options
@@ -2169,7 +2322,8 @@ export const getHistoricExternalTaskLog = <ThrowOnError extends boolean = false>
  * Retrieves the corresponding error details of the passed historic external task log
  * by id.
  */
-export const getErrorDetailsHistoricExternalTaskLog = <ThrowOnError extends boolean = false>(options: Options<GetErrorDetailsHistoricExternalTaskLogData, ThrowOnError>) => (options.client ?? client).get<GetErrorDetailsHistoricExternalTaskLogResponses, GetErrorDetailsHistoricExternalTaskLogErrors, ThrowOnError>({
+export const getErrorDetailsHistoricExternalTaskLog = <ThrowOnError extends boolean = true>(options: Options<GetErrorDetailsHistoricExternalTaskLogData, ThrowOnError>) => (options.client ?? client).get<GetErrorDetailsHistoricExternalTaskLogResponses, GetErrorDetailsHistoricExternalTaskLogErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/external-task-log/{id}/error-details',
     ...options
@@ -2183,7 +2337,8 @@ export const getErrorDetailsHistoricExternalTaskLog = <ThrowOnError extends bool
  * [Get Identity-Link-Log Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/identity-links/get-identity-link-query-count/)
  * method.
  */
-export const getHistoricIdentityLinks = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricIdentityLinksData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricIdentityLinksResponses, GetHistoricIdentityLinksErrors, ThrowOnError>({
+export const getHistoricIdentityLinks = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricIdentityLinksData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricIdentityLinksResponses, GetHistoricIdentityLinksErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/identity-link-log',
     ...options
@@ -2197,7 +2352,8 @@ export const getHistoricIdentityLinks = <ThrowOnError extends boolean = false>(o
  * [Get Identity-Link-Logs](https://docs.cibseven.org/manual/2.1/reference/rest/history/identity-links/get-identity-link-query/)
  * method.
  */
-export const getHistoricIdentityLinksCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricIdentityLinksCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricIdentityLinksCountResponses, GetHistoricIdentityLinksCountErrors, ThrowOnError>({
+export const getHistoricIdentityLinksCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricIdentityLinksCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricIdentityLinksCountResponses, GetHistoricIdentityLinksCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/identity-link-log/count',
     ...options
@@ -2211,7 +2367,8 @@ export const getHistoricIdentityLinksCount = <ThrowOnError extends boolean = fal
  * [Get Incident Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/incident/get-incident-query-count/)
  * method.
  */
-export const getHistoricIncidents = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricIncidentsData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricIncidentsResponses, GetHistoricIncidentsErrors, ThrowOnError>({
+export const getHistoricIncidents = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricIncidentsData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricIncidentsResponses, GetHistoricIncidentsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/incident',
     ...options
@@ -2225,7 +2382,8 @@ export const getHistoricIncidents = <ThrowOnError extends boolean = false>(optio
  * [Get Incidents](https://docs.cibseven.org/manual/2.1/reference/rest/history/incident/get-incident-query/)
  * method.
  */
-export const getHistoricIncidentsCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricIncidentsCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricIncidentsCountResponses, GetHistoricIncidentsCountErrors, ThrowOnError>({
+export const getHistoricIncidentsCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricIncidentsCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricIncidentsCountResponses, GetHistoricIncidentsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/incident/count',
     ...options
@@ -2239,7 +2397,8 @@ export const getHistoricIncidentsCount = <ThrowOnError extends boolean = false>(
  * [Get Job Log Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/job-log/get-job-log-query-count/)
  * method.
  */
-export const getHistoricJobLogs = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricJobLogsData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricJobLogsResponses, GetHistoricJobLogsErrors, ThrowOnError>({
+export const getHistoricJobLogs = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricJobLogsData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricJobLogsResponses, GetHistoricJobLogsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/job-log',
     ...options
@@ -2254,7 +2413,8 @@ export const getHistoricJobLogs = <ThrowOnError extends boolean = false>(options
  * method because it allows filtering by historic job logs values of the
  * different types `String`, `Number` or `Boolean`.
  */
-export const queryHistoricJobLogs = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricJobLogsData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricJobLogsResponses, QueryHistoricJobLogsErrors, ThrowOnError>({
+export const queryHistoricJobLogs = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricJobLogsData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricJobLogsResponses, QueryHistoricJobLogsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/job-log',
     ...options,
@@ -2272,7 +2432,8 @@ export const queryHistoricJobLogs = <ThrowOnError extends boolean = false>(optio
  * [Get Job Logs](https://docs.cibseven.org/manual/2.1/reference/rest/history/job-log/get-job-log-query/)
  * method.
  */
-export const getHistoricJobLogsCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricJobLogsCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricJobLogsCountResponses, GetHistoricJobLogsCountErrors, ThrowOnError>({
+export const getHistoricJobLogsCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricJobLogsCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricJobLogsCountResponses, GetHistoricJobLogsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/job-log/count',
     ...options
@@ -2288,7 +2449,8 @@ export const getHistoricJobLogsCount = <ThrowOnError extends boolean = false>(op
  * [Get Job Log Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/job-log/get-job-log-query-count/)
  * method.
  */
-export const queryHistoricJobLogsCount = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricJobLogsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricJobLogsCountResponses, QueryHistoricJobLogsCountErrors, ThrowOnError>({
+export const queryHistoricJobLogsCount = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricJobLogsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricJobLogsCountResponses, QueryHistoricJobLogsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/job-log/count',
     ...options,
@@ -2303,7 +2465,8 @@ export const queryHistoricJobLogsCount = <ThrowOnError extends boolean = false>(
  *
  * Retrieves a historic job log by id.
  */
-export const getHistoricJobLog = <ThrowOnError extends boolean = false>(options: Options<GetHistoricJobLogData, ThrowOnError>) => (options.client ?? client).get<GetHistoricJobLogResponses, GetHistoricJobLogErrors, ThrowOnError>({
+export const getHistoricJobLog = <ThrowOnError extends boolean = true>(options: Options<GetHistoricJobLogData, ThrowOnError>) => (options.client ?? client).get<GetHistoricJobLogResponses, GetHistoricJobLogErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/job-log/{id}',
     ...options
@@ -2315,7 +2478,8 @@ export const getHistoricJobLog = <ThrowOnError extends boolean = false>(options:
  * Retrieves the corresponding exception stacktrace to the passed historic job log by
  * id.
  */
-export const getStacktraceHistoricJobLog = <ThrowOnError extends boolean = false>(options: Options<GetStacktraceHistoricJobLogData, ThrowOnError>) => (options.client ?? client).get<GetStacktraceHistoricJobLogResponses, GetStacktraceHistoricJobLogErrors, ThrowOnError>({
+export const getStacktraceHistoricJobLog = <ThrowOnError extends boolean = true>(options: Options<GetStacktraceHistoricJobLogData, ThrowOnError>) => (options.client ?? client).get<GetStacktraceHistoricJobLogResponses, GetStacktraceHistoricJobLogErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/job-log/{id}/stacktrace',
     ...options
@@ -2335,7 +2499,8 @@ export const getStacktraceHistoricJobLog = <ThrowOnError extends boolean = false
  * [Get Cleanable Process Instance Report Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/process-definition/get-cleanable-process-instance-report-count/)
  * method.
  */
-export const getCleanableHistoricProcessInstanceReport = <ThrowOnError extends boolean = false>(options?: Options<GetCleanableHistoricProcessInstanceReportData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricProcessInstanceReportResponses, GetCleanableHistoricProcessInstanceReportErrors, ThrowOnError>({
+export const getCleanableHistoricProcessInstanceReport = <ThrowOnError extends boolean = true>(options?: Options<GetCleanableHistoricProcessInstanceReportData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricProcessInstanceReportResponses, GetCleanableHistoricProcessInstanceReportErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-definition/cleanable-process-instance-report',
     ...options
@@ -2351,7 +2516,8 @@ export const getCleanableHistoricProcessInstanceReport = <ThrowOnError extends b
  * [Get Cleanable Process Instance Report](https://docs.cibseven.org/manual/2.1/reference/rest/history/process-definition/get-cleanable-process-instance-report/)
  * method.
  */
-export const getCleanableHistoricProcessInstanceReportCount = <ThrowOnError extends boolean = false>(options?: Options<GetCleanableHistoricProcessInstanceReportCountData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricProcessInstanceReportCountResponses, GetCleanableHistoricProcessInstanceReportCountErrors, ThrowOnError>({
+export const getCleanableHistoricProcessInstanceReportCount = <ThrowOnError extends boolean = true>(options?: Options<GetCleanableHistoricProcessInstanceReportCountData, ThrowOnError>) => (options?.client ?? client).get<GetCleanableHistoricProcessInstanceReportCountResponses, GetCleanableHistoricProcessInstanceReportCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-definition/cleanable-process-instance-report/count',
     ...options
@@ -2369,7 +2535,8 @@ export const getCleanableHistoricProcessInstanceReportCount = <ThrowOnError exte
  * a new token).
  * **Note:** This only includes historic data.
  */
-export const getHistoricActivityStatistics = <ThrowOnError extends boolean = false>(options: Options<GetHistoricActivityStatisticsData, ThrowOnError>) => (options.client ?? client).get<GetHistoricActivityStatisticsResponses, GetHistoricActivityStatisticsErrors, ThrowOnError>({
+export const getHistoricActivityStatistics = <ThrowOnError extends boolean = true>(options: Options<GetHistoricActivityStatisticsData, ThrowOnError>) => (options.client ?? client).get<GetHistoricActivityStatisticsResponses, GetHistoricActivityStatisticsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-definition/{id}/statistics',
     ...options
@@ -2382,7 +2549,8 @@ export const getHistoricActivityStatistics = <ThrowOnError extends boolean = fal
  * The size of the result set can be retrieved by using the
  * [Get Process Instance Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/process-instance/get-process-instance-query-count/) method.
  */
-export const getHistoricProcessInstances = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricProcessInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricProcessInstancesResponses, GetHistoricProcessInstancesErrors, ThrowOnError>({
+export const getHistoricProcessInstances = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricProcessInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricProcessInstancesResponses, GetHistoricProcessInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance',
     ...options
@@ -2396,7 +2564,8 @@ export const getHistoricProcessInstances = <ThrowOnError extends boolean = false
  * [Get Process Instance](https://docs.cibseven.org/manual/2.1/reference/rest/history/process-instance/get-process-instance-query/)
  * because it allows filtering by multiple process variables of types `String`, `Number` or `Boolean`.
  */
-export const queryHistoricProcessInstances = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricProcessInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricProcessInstancesResponses, QueryHistoricProcessInstancesErrors, ThrowOnError>({
+export const queryHistoricProcessInstances = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricProcessInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricProcessInstancesResponses, QueryHistoricProcessInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance',
     ...options,
@@ -2412,7 +2581,8 @@ export const queryHistoricProcessInstances = <ThrowOnError extends boolean = fal
  * Queries for the number of historic process instances that fulfill the given parameters.
  * Takes the same parameters as the [Get Process Instances](https://docs.cibseven.org/manual/2.1/reference/rest/history/process-instance/get-process-instance-query/) method.
  */
-export const getHistoricProcessInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricProcessInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricProcessInstancesCountResponses, GetHistoricProcessInstancesCountErrors, ThrowOnError>({
+export const getHistoricProcessInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricProcessInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricProcessInstancesCountResponses, GetHistoricProcessInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance/count',
     ...options
@@ -2425,7 +2595,8 @@ export const getHistoricProcessInstancesCount = <ThrowOnError extends boolean = 
  * This method takes the same message body as the [Get Process Instances (POST)](https://docs.cibseven.org/manual/2.1/reference/rest/history/process-instance/get-process-instance-query/) method and
  * therefore it is slightly more powerful than the [Get Process Instance Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/process-instance/post-process-instance-query-count/) method.
  */
-export const queryHistoricProcessInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricProcessInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricProcessInstancesCountResponses, QueryHistoricProcessInstancesCountErrors, ThrowOnError>({
+export const queryHistoricProcessInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricProcessInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricProcessInstancesCountResponses, QueryHistoricProcessInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance/count',
     ...options,
@@ -2442,7 +2613,8 @@ export const queryHistoricProcessInstancesCount = <ThrowOnError extends boolean 
  * At least `historicProcessInstanceIds` or `historicProcessInstanceQuery` has to be provided.
  * If both are provided then all instances matching query criterion and instances from the list will be deleted.
  */
-export const deleteHistoricProcessInstancesAsync = <ThrowOnError extends boolean = false>(options?: Options<DeleteHistoricProcessInstancesAsyncData, ThrowOnError>) => (options?.client ?? client).post<DeleteHistoricProcessInstancesAsyncResponses, DeleteHistoricProcessInstancesAsyncErrors, ThrowOnError>({
+export const deleteHistoricProcessInstancesAsync = <ThrowOnError extends boolean = true>(options?: Options<DeleteHistoricProcessInstancesAsyncData, ThrowOnError>) => (options?.client ?? client).post<DeleteHistoricProcessInstancesAsyncResponses, DeleteHistoricProcessInstancesAsyncErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance/delete',
     ...options,
@@ -2460,7 +2632,8 @@ export const deleteHistoricProcessInstancesAsync = <ThrowOnError extends boolean
  *
  * **Note:** This only includes historic data.
  */
-export const getHistoricProcessInstanceDurationReport = <ThrowOnError extends boolean = false>(options: Options<GetHistoricProcessInstanceDurationReportData, ThrowOnError>) => (options.client ?? client).get<GetHistoricProcessInstanceDurationReportResponses, GetHistoricProcessInstanceDurationReportErrors, ThrowOnError>({
+export const getHistoricProcessInstanceDurationReport = <ThrowOnError extends boolean = true>(options: Options<GetHistoricProcessInstanceDurationReportData, ThrowOnError>) => (options.client ?? client).get<GetHistoricProcessInstanceDurationReportResponses, GetHistoricProcessInstanceDurationReportErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance/report',
     ...options
@@ -2474,7 +2647,8 @@ export const getHistoricProcessInstanceDurationReport = <ThrowOnError extends bo
  * At least `historicProcessInstanceIds` or `historicProcessInstanceQuery` has to be provided.
  * If both are provided, all instances matching query criterion and instances from the list will be updated with a removal time.
  */
-export const setRemovalTimeAsync = <ThrowOnError extends boolean = false>(options?: Options<SetRemovalTimeAsyncData, ThrowOnError>) => (options?.client ?? client).post<SetRemovalTimeAsyncResponses, SetRemovalTimeAsyncErrors, ThrowOnError>({
+export const setRemovalTimeAsync = <ThrowOnError extends boolean = true>(options?: Options<SetRemovalTimeAsyncData, ThrowOnError>) => (options?.client ?? client).post<SetRemovalTimeAsyncResponses, SetRemovalTimeAsyncErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance/set-removal-time',
     ...options,
@@ -2489,7 +2663,8 @@ export const setRemovalTimeAsync = <ThrowOnError extends boolean = false>(option
  *
  * Deletes a process instance from the history by id.
  */
-export const deleteHistoricProcessInstance = <ThrowOnError extends boolean = false>(options: Options<DeleteHistoricProcessInstanceData, ThrowOnError>) => (options.client ?? client).delete<DeleteHistoricProcessInstanceResponses, DeleteHistoricProcessInstanceErrors, ThrowOnError>({
+export const deleteHistoricProcessInstance = <ThrowOnError extends boolean = true>(options: Options<DeleteHistoricProcessInstanceData, ThrowOnError>) => (options.client ?? client).delete<DeleteHistoricProcessInstanceResponses, DeleteHistoricProcessInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance/{id}',
     ...options
@@ -2500,7 +2675,8 @@ export const deleteHistoricProcessInstance = <ThrowOnError extends boolean = fal
  *
  * Retrieves a historic process instance by id, according to the `HistoricProcessInstance` interface in the engine.
  */
-export const getHistoricProcessInstance = <ThrowOnError extends boolean = false>(options: Options<GetHistoricProcessInstanceData, ThrowOnError>) => (options.client ?? client).get<GetHistoricProcessInstanceResponses, GetHistoricProcessInstanceErrors, ThrowOnError>({
+export const getHistoricProcessInstance = <ThrowOnError extends boolean = true>(options: Options<GetHistoricProcessInstanceData, ThrowOnError>) => (options.client ?? client).get<GetHistoricProcessInstanceResponses, GetHistoricProcessInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance/{id}',
     ...options
@@ -2511,7 +2687,8 @@ export const getHistoricProcessInstance = <ThrowOnError extends boolean = false>
  *
  * Deletes all variables of a process instance from the history by id.
  */
-export const deleteHistoricVariableInstancesOfHistoricProcessInstance = <ThrowOnError extends boolean = false>(options: Options<DeleteHistoricVariableInstancesOfHistoricProcessInstanceData, ThrowOnError>) => (options.client ?? client).delete<DeleteHistoricVariableInstancesOfHistoricProcessInstanceResponses, DeleteHistoricVariableInstancesOfHistoricProcessInstanceErrors, ThrowOnError>({
+export const deleteHistoricVariableInstancesOfHistoricProcessInstance = <ThrowOnError extends boolean = true>(options: Options<DeleteHistoricVariableInstancesOfHistoricProcessInstanceData, ThrowOnError>) => (options.client ?? client).delete<DeleteHistoricVariableInstancesOfHistoricProcessInstanceResponses, DeleteHistoricVariableInstancesOfHistoricProcessInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/process-instance/{id}/variable-instances',
     ...options
@@ -2525,7 +2702,8 @@ export const deleteHistoricVariableInstancesOfHistoricProcessInstance = <ThrowOn
  * [Get Task Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/task/get-task-query-count/)
  * method.
  */
-export const getHistoricTaskInstances = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricTaskInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricTaskInstancesResponses, GetHistoricTaskInstancesErrors, ThrowOnError>({
+export const getHistoricTaskInstances = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricTaskInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricTaskInstancesResponses, GetHistoricTaskInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/task',
     ...options
@@ -2541,7 +2719,8 @@ export const getHistoricTaskInstances = <ThrowOnError extends boolean = false>(o
  * [Get Task Count (POST)](https://docs.cibseven.org/manual/2.1/reference/rest/history/task/post-task-query-count/)
  * method.
  */
-export const queryHistoricTaskInstances = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricTaskInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricTaskInstancesResponses, QueryHistoricTaskInstancesErrors, ThrowOnError>({
+export const queryHistoricTaskInstances = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricTaskInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricTaskInstancesResponses, QueryHistoricTaskInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/task',
     ...options,
@@ -2559,7 +2738,8 @@ export const queryHistoricTaskInstances = <ThrowOnError extends boolean = false>
  * [Get Tasks (Historic)](https://docs.cibseven.org/manual/2.1/reference/rest/history/task/get-task-query/)
  * method.
  */
-export const getHistoricTaskInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricTaskInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricTaskInstancesCountResponses, GetHistoricTaskInstancesCountErrors, ThrowOnError>({
+export const getHistoricTaskInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricTaskInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricTaskInstancesCountResponses, GetHistoricTaskInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/task/count',
     ...options
@@ -2574,7 +2754,8 @@ export const getHistoricTaskInstancesCount = <ThrowOnError extends boolean = fal
  * [Get Tasks (Historic) (POST)](https://docs.cibseven.org/manual/2.1/reference/rest/history/task/post-task-query/)
  * method and takes the same parameters.
  */
-export const queryHistoricTaskInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricTaskInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricTaskInstancesCountResponses, QueryHistoricTaskInstancesCountErrors, ThrowOnError>({
+export const queryHistoricTaskInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricTaskInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricTaskInstancesCountResponses, QueryHistoricTaskInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/task/count',
     ...options,
@@ -2594,7 +2775,8 @@ export const queryHistoricTaskInstancesCount = <ThrowOnError extends boolean = f
  * period. When the report type is set to `duration`, the report contains a minimum, maximum and
  * average duration value of all completed task instances in a given period.
  */
-export const getHistoricTaskInstanceReport = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricTaskInstanceReportData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricTaskInstanceReportResponses, GetHistoricTaskInstanceReportErrors, ThrowOnError>({
+export const getHistoricTaskInstanceReport = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricTaskInstanceReportData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricTaskInstanceReportResponses, GetHistoricTaskInstanceReportErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/task/report',
     ...options
@@ -2618,7 +2800,8 @@ export const getHistoricTaskInstanceReport = <ThrowOnError extends boolean = fal
  * populated. This way, which entities were changed by a user operation
  * can easily be reconstructed.
  */
-export const queryUserOperationEntries = <ThrowOnError extends boolean = false>(options?: Options<QueryUserOperationEntriesData, ThrowOnError>) => (options?.client ?? client).get<QueryUserOperationEntriesResponses, QueryUserOperationEntriesErrors, ThrowOnError>({
+export const queryUserOperationEntries = <ThrowOnError extends boolean = true>(options?: Options<QueryUserOperationEntriesData, ThrowOnError>) => (options?.client ?? client).get<QueryUserOperationEntriesResponses, QueryUserOperationEntriesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/user-operation',
     ...options
@@ -2632,7 +2815,8 @@ export const queryUserOperationEntries = <ThrowOnError extends boolean = false>(
  * [Get User Operation Log (Historic)](https://docs.cibseven.org/manual/2.1/reference/rest/history/user-operation-log/get-user-operation-log-query/)
  * method.
  */
-export const queryUserOperationCount = <ThrowOnError extends boolean = false>(options?: Options<QueryUserOperationCountData, ThrowOnError>) => (options?.client ?? client).get<QueryUserOperationCountResponses, QueryUserOperationCountErrors, ThrowOnError>({
+export const queryUserOperationCount = <ThrowOnError extends boolean = true>(options?: Options<QueryUserOperationCountData, ThrowOnError>) => (options?.client ?? client).get<QueryUserOperationCountResponses, QueryUserOperationCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/user-operation/count',
     ...options
@@ -2643,7 +2827,8 @@ export const queryUserOperationCount = <ThrowOnError extends boolean = false>(op
  *
  * Clear the annotation which was previously set for auditing reasons.
  */
-export const clearAnnotationUserOperationLog = <ThrowOnError extends boolean = false>(options: Options<ClearAnnotationUserOperationLogData, ThrowOnError>) => (options.client ?? client).put<ClearAnnotationUserOperationLogResponses, ClearAnnotationUserOperationLogErrors, ThrowOnError>({
+export const clearAnnotationUserOperationLog = <ThrowOnError extends boolean = true>(options: Options<ClearAnnotationUserOperationLogData, ThrowOnError>) => (options.client ?? client).put<ClearAnnotationUserOperationLogResponses, ClearAnnotationUserOperationLogErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/user-operation/{operationId}/clear-annotation',
     ...options
@@ -2654,7 +2839,8 @@ export const clearAnnotationUserOperationLog = <ThrowOnError extends boolean = f
  *
  * Set an annotation for auditing reasons.
  */
-export const setAnnotationUserOperationLog = <ThrowOnError extends boolean = false>(options: Options<SetAnnotationUserOperationLogData, ThrowOnError>) => (options.client ?? client).put<SetAnnotationUserOperationLogResponses, SetAnnotationUserOperationLogErrors, ThrowOnError>({
+export const setAnnotationUserOperationLog = <ThrowOnError extends boolean = true>(options: Options<SetAnnotationUserOperationLogData, ThrowOnError>) => (options.client ?? client).put<SetAnnotationUserOperationLogResponses, SetAnnotationUserOperationLogErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/user-operation/{operationId}/set-annotation',
     ...options,
@@ -2672,8 +2858,9 @@ export const setAnnotationUserOperationLog = <ThrowOnError extends boolean = fal
  * [Get Variable Instance Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/variable-instance/get-variable-instance-query-count/)
  * method.
  */
-export const getHistoricVariableInstances = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricVariableInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricVariableInstancesResponses, GetHistoricVariableInstancesErrors, ThrowOnError>({
+export const getHistoricVariableInstances = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricVariableInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricVariableInstancesResponses, GetHistoricVariableInstancesErrors, ThrowOnError, 'data'>({
     querySerializer: { parameters: { variableValue: { object: { style: 'form' } } } },
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/variable-instance',
     ...options
@@ -2688,7 +2875,8 @@ export const getHistoricVariableInstances = <ThrowOnError extends boolean = fals
  * method because it allows filtering by variable values of the different
  * types `String`, `Number` or `Boolean`.
  */
-export const queryHistoricVariableInstances = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricVariableInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricVariableInstancesResponses, QueryHistoricVariableInstancesErrors, ThrowOnError>({
+export const queryHistoricVariableInstances = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricVariableInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricVariableInstancesResponses, QueryHistoricVariableInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/variable-instance',
     ...options,
@@ -2707,8 +2895,9 @@ export const queryHistoricVariableInstances = <ThrowOnError extends boolean = fa
  * [Get Variable Instances](https://docs.cibseven.org/manual/2.1/reference/rest/history/variable-instance/get-variable-instance-query/)
  * method.
  */
-export const getHistoricVariableInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<GetHistoricVariableInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricVariableInstancesCountResponses, GetHistoricVariableInstancesCountErrors, ThrowOnError>({
+export const getHistoricVariableInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<GetHistoricVariableInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetHistoricVariableInstancesCountResponses, GetHistoricVariableInstancesCountErrors, ThrowOnError, 'data'>({
     querySerializer: { parameters: { variableValue: { object: { style: 'form' } } } },
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/variable-instance/count',
     ...options
@@ -2725,7 +2914,8 @@ export const getHistoricVariableInstancesCount = <ThrowOnError extends boolean =
  * [Get Variable Instance Count](https://docs.cibseven.org/manual/2.1/reference/rest/history/variable-instance/get-variable-instance-query-count/)
  * method.
  */
-export const queryHistoricVariableInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<QueryHistoricVariableInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricVariableInstancesCountResponses, QueryHistoricVariableInstancesCountErrors, ThrowOnError>({
+export const queryHistoricVariableInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<QueryHistoricVariableInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryHistoricVariableInstancesCountResponses, QueryHistoricVariableInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/variable-instance/count',
     ...options,
@@ -2740,7 +2930,8 @@ export const queryHistoricVariableInstancesCount = <ThrowOnError extends boolean
  *
  * Deletes a historic variable instance by id.
  */
-export const deleteHistoricVariableInstance = <ThrowOnError extends boolean = false>(options: Options<DeleteHistoricVariableInstanceData, ThrowOnError>) => (options.client ?? client).delete<DeleteHistoricVariableInstanceResponses, DeleteHistoricVariableInstanceErrors, ThrowOnError>({
+export const deleteHistoricVariableInstance = <ThrowOnError extends boolean = true>(options: Options<DeleteHistoricVariableInstanceData, ThrowOnError>) => (options.client ?? client).delete<DeleteHistoricVariableInstanceResponses, DeleteHistoricVariableInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/variable-instance/{id}',
     ...options
@@ -2751,7 +2942,8 @@ export const deleteHistoricVariableInstance = <ThrowOnError extends boolean = fa
  *
  * Retrieves a historic variable by id.
  */
-export const getHistoricVariableInstance = <ThrowOnError extends boolean = false>(options: Options<GetHistoricVariableInstanceData, ThrowOnError>) => (options.client ?? client).get<GetHistoricVariableInstanceResponses, GetHistoricVariableInstanceErrors, ThrowOnError>({
+export const getHistoricVariableInstance = <ThrowOnError extends boolean = true>(options: Options<GetHistoricVariableInstanceData, ThrowOnError>) => (options.client ?? client).get<GetHistoricVariableInstanceResponses, GetHistoricVariableInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/variable-instance/{id}',
     ...options
@@ -2763,7 +2955,8 @@ export const getHistoricVariableInstance = <ThrowOnError extends boolean = false
  * Retrieves the content of a historic variable by id. Applicable for variables that
  * are serialized as binary data.
  */
-export const getHistoricVariableInstanceBinary = <ThrowOnError extends boolean = false>(options: Options<GetHistoricVariableInstanceBinaryData, ThrowOnError>) => (options.client ?? client).get<GetHistoricVariableInstanceBinaryResponses, GetHistoricVariableInstanceBinaryErrors, ThrowOnError>({
+export const getHistoricVariableInstanceBinary = <ThrowOnError extends boolean = true>(options: Options<GetHistoricVariableInstanceBinaryData, ThrowOnError>) => (options.client ?? client).get<GetHistoricVariableInstanceBinaryResponses, GetHistoricVariableInstanceBinaryErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/history/variable-instance/{id}/data',
     ...options
@@ -2775,7 +2968,8 @@ export const getHistoricVariableInstanceBinary = <ThrowOnError extends boolean =
  * Gets the groups of a user by id and includes all users that share a group with the
  * given user.
  */
-export const getGroupInfo = <ThrowOnError extends boolean = false>(options: Options<GetGroupInfoData, ThrowOnError>) => (options.client ?? client).get<GetGroupInfoResponses, GetGroupInfoErrors, ThrowOnError>({
+export const getGroupInfo = <ThrowOnError extends boolean = true>(options: Options<GetGroupInfoData, ThrowOnError>) => (options.client ?? client).get<GetGroupInfoResponses, GetGroupInfoErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/identity/groups',
     ...options
@@ -2790,7 +2984,8 @@ export const getGroupInfo = <ThrowOnError extends boolean = false>(options: Opti
  * [user guide](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/password-policy/) and in
  * the [security instructions](https://docs.cibseven.org/manual/2.1/user-guide/security/).
  */
-export const getPasswordPolicy = <ThrowOnError extends boolean = false>(options?: Options<GetPasswordPolicyData, ThrowOnError>) => (options?.client ?? client).get<GetPasswordPolicyResponses, GetPasswordPolicyErrors, ThrowOnError>({
+export const getPasswordPolicy = <ThrowOnError extends boolean = true>(options?: Options<GetPasswordPolicyData, ThrowOnError>) => (options?.client ?? client).get<GetPasswordPolicyResponses, GetPasswordPolicyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/identity/password-policy',
     ...options
@@ -2805,7 +3000,8 @@ export const getPasswordPolicy = <ThrowOnError extends boolean = false>(options?
  * [user guide](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/password-policy/) and in
  * the [security instructions](https://docs.cibseven.org/manual/2.1/user-guide/security/).
  */
-export const checkPassword = <ThrowOnError extends boolean = false>(options?: Options<CheckPasswordData, ThrowOnError>) => (options?.client ?? client).post<CheckPasswordResponses, CheckPasswordErrors, ThrowOnError>({
+export const checkPassword = <ThrowOnError extends boolean = true>(options?: Options<CheckPasswordData, ThrowOnError>) => (options?.client ?? client).post<CheckPasswordResponses, CheckPasswordErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/identity/password-policy',
     ...options,
@@ -2820,7 +3016,8 @@ export const checkPassword = <ThrowOnError extends boolean = false>(options?: Op
  *
  * Verifies that user credentials are valid.
  */
-export const verifyUser = <ThrowOnError extends boolean = false>(options?: Options<VerifyUserData, ThrowOnError>) => (options?.client ?? client).post<VerifyUserResponses, VerifyUserErrors, ThrowOnError>({
+export const verifyUser = <ThrowOnError extends boolean = true>(options?: Options<VerifyUserData, ThrowOnError>) => (options?.client ?? client).post<VerifyUserResponses, VerifyUserErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/identity/verify',
     ...options,
@@ -2836,7 +3033,8 @@ export const verifyUser = <ThrowOnError extends boolean = false>(options?: Optio
  * Queries for incidents that fulfill given parameters. The size of the result set can be retrieved by using
  * the [Get Incident Count](https://docs.cibseven.org/manual/2.1/reference/rest/incident/get-query-count/) method.
  */
-export const getIncidents = <ThrowOnError extends boolean = false>(options?: Options<GetIncidentsData, ThrowOnError>) => (options?.client ?? client).get<GetIncidentsResponses, GetIncidentsErrors, ThrowOnError>({
+export const getIncidents = <ThrowOnError extends boolean = true>(options?: Options<GetIncidentsData, ThrowOnError>) => (options?.client ?? client).get<GetIncidentsResponses, GetIncidentsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/incident',
     ...options
@@ -2848,7 +3046,8 @@ export const getIncidents = <ThrowOnError extends boolean = false>(options?: Opt
  * Queries for the number of incidents that fulfill given parameters. Takes the same parameters as the
  * [Get Incidents](https://docs.cibseven.org/manual/2.1/reference/rest/incident/get-query/) method.
  */
-export const getIncidentsCount = <ThrowOnError extends boolean = false>(options?: Options<GetIncidentsCountData, ThrowOnError>) => (options?.client ?? client).get<GetIncidentsCountResponses, GetIncidentsCountErrors, ThrowOnError>({
+export const getIncidentsCount = <ThrowOnError extends boolean = true>(options?: Options<GetIncidentsCountData, ThrowOnError>) => (options?.client ?? client).get<GetIncidentsCountResponses, GetIncidentsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/incident/count',
     ...options
@@ -2859,7 +3058,8 @@ export const getIncidentsCount = <ThrowOnError extends boolean = false>(options?
  *
  * Resolves an incident with given id.
  */
-export const resolveIncident = <ThrowOnError extends boolean = false>(options: Options<ResolveIncidentData, ThrowOnError>) => (options.client ?? client).delete<ResolveIncidentResponses, ResolveIncidentErrors, ThrowOnError>({
+export const resolveIncident = <ThrowOnError extends boolean = true>(options: Options<ResolveIncidentData, ThrowOnError>) => (options.client ?? client).delete<ResolveIncidentResponses, ResolveIncidentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/incident/{id}',
     ...options
@@ -2870,7 +3070,8 @@ export const resolveIncident = <ThrowOnError extends boolean = false>(options: O
  *
  * Retrieves an incident by ID.
  */
-export const getIncident = <ThrowOnError extends boolean = false>(options: Options<GetIncidentData, ThrowOnError>) => (options.client ?? client).get<GetIncidentResponses, GetIncidentErrors, ThrowOnError>({
+export const getIncident = <ThrowOnError extends boolean = true>(options: Options<GetIncidentData, ThrowOnError>) => (options.client ?? client).get<GetIncidentResponses, GetIncidentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/incident/{id}',
     ...options
@@ -2881,7 +3082,8 @@ export const getIncident = <ThrowOnError extends boolean = false>(options: Optio
  *
  * Clears the annotation of an incident with given id.
  */
-export const clearIncidentAnnotation = <ThrowOnError extends boolean = false>(options: Options<ClearIncidentAnnotationData, ThrowOnError>) => (options.client ?? client).delete<ClearIncidentAnnotationResponses, ClearIncidentAnnotationErrors, ThrowOnError>({
+export const clearIncidentAnnotation = <ThrowOnError extends boolean = true>(options: Options<ClearIncidentAnnotationData, ThrowOnError>) => (options.client ?? client).delete<ClearIncidentAnnotationResponses, ClearIncidentAnnotationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/incident/{id}/annotation',
     ...options
@@ -2892,7 +3094,8 @@ export const clearIncidentAnnotation = <ThrowOnError extends boolean = false>(op
  *
  * Sets the annotation of an incident with given id.
  */
-export const setIncidentAnnotation = <ThrowOnError extends boolean = false>(options: Options<SetIncidentAnnotationData, ThrowOnError>) => (options.client ?? client).put<SetIncidentAnnotationResponses, SetIncidentAnnotationErrors, ThrowOnError>({
+export const setIncidentAnnotation = <ThrowOnError extends boolean = true>(options: Options<SetIncidentAnnotationData, ThrowOnError>) => (options.client ?? client).put<SetIncidentAnnotationResponses, SetIncidentAnnotationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/incident/{id}/annotation',
     ...options,
@@ -2909,7 +3112,8 @@ export const setIncidentAnnotation = <ThrowOnError extends boolean = false>(opti
  * The size of the result set can be retrieved by using the [Get Job
  * Count](https://docs.cibseven.org/manual/2.1/reference/rest/job/get-query-count/) method.
  */
-export const getJobs = <ThrowOnError extends boolean = false>(options?: Options<GetJobsData, ThrowOnError>) => (options?.client ?? client).get<GetJobsResponses, GetJobsErrors, ThrowOnError>({
+export const getJobs = <ThrowOnError extends boolean = true>(options?: Options<GetJobsData, ThrowOnError>) => (options?.client ?? client).get<GetJobsResponses, GetJobsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job',
     ...options
@@ -2923,7 +3127,8 @@ export const getJobs = <ThrowOnError extends boolean = false>(options?: Options<
  * method because it allows filtering by multiple jobs of types `String`,
  * `Number` or `Boolean`.
  */
-export const queryJobs = <ThrowOnError extends boolean = false>(options?: Options<QueryJobsData, ThrowOnError>) => (options?.client ?? client).post<QueryJobsResponses, QueryJobsErrors, ThrowOnError>({
+export const queryJobs = <ThrowOnError extends boolean = true>(options?: Options<QueryJobsData, ThrowOnError>) => (options?.client ?? client).post<QueryJobsResponses, QueryJobsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job',
     ...options,
@@ -2941,7 +3146,8 @@ export const queryJobs = <ThrowOnError extends boolean = false>(options?: Option
  * [Get Job Definition Count](https://docs.cibseven.org/manual/2.1/reference/rest/job-definition/get-query-count/)
  * method.
  */
-export const getJobDefinitions = <ThrowOnError extends boolean = false>(options?: Options<GetJobDefinitionsData, ThrowOnError>) => (options?.client ?? client).get<GetJobDefinitionsResponses, GetJobDefinitionsErrors, ThrowOnError>({
+export const getJobDefinitions = <ThrowOnError extends boolean = true>(options?: Options<GetJobDefinitionsData, ThrowOnError>) => (options?.client ?? client).get<GetJobDefinitionsResponses, GetJobDefinitionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job-definition',
     ...options
@@ -2956,7 +3162,8 @@ export const getJobDefinitions = <ThrowOnError extends boolean = false>(options?
  * method because it allows filtering by multiple job definitions of
  * types `String`, `Number` or `Boolean`.
  */
-export const queryJobDefinitions = <ThrowOnError extends boolean = false>(options?: Options<QueryJobDefinitionsData, ThrowOnError>) => (options?.client ?? client).post<QueryJobDefinitionsResponses, QueryJobDefinitionsErrors, ThrowOnError>({
+export const queryJobDefinitions = <ThrowOnError extends boolean = true>(options?: Options<QueryJobDefinitionsData, ThrowOnError>) => (options?.client ?? client).post<QueryJobDefinitionsResponses, QueryJobDefinitionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job-definition',
     ...options,
@@ -2974,7 +3181,8 @@ export const queryJobDefinitions = <ThrowOnError extends boolean = false>(option
  * [Get Job Definitions](https://docs.cibseven.org/manual/2.1/reference/rest/job-definition/get-query/)
  * method.
  */
-export const getJobDefinitionsCount = <ThrowOnError extends boolean = false>(options?: Options<GetJobDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetJobDefinitionsCountResponses, GetJobDefinitionsCountErrors, ThrowOnError>({
+export const getJobDefinitionsCount = <ThrowOnError extends boolean = true>(options?: Options<GetJobDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetJobDefinitionsCountResponses, GetJobDefinitionsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job-definition/count',
     ...options
@@ -2990,7 +3198,8 @@ export const getJobDefinitionsCount = <ThrowOnError extends boolean = false>(opt
  * [Get Job Definition Count](https://docs.cibseven.org/manual/2.1/reference/rest/job-definition/get-query-count/)
  * method.
  */
-export const queryJobDefinitionsCount = <ThrowOnError extends boolean = false>(options?: Options<QueryJobDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryJobDefinitionsCountResponses, QueryJobDefinitionsCountErrors, ThrowOnError>({
+export const queryJobDefinitionsCount = <ThrowOnError extends boolean = true>(options?: Options<QueryJobDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryJobDefinitionsCountResponses, QueryJobDefinitionsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job-definition/count',
     ...options,
@@ -3005,7 +3214,8 @@ export const queryJobDefinitionsCount = <ThrowOnError extends boolean = false>(o
  *
  * Activates or suspends job definitions with the given process definition id or process definition key.
  */
-export const updateSuspensionStateJobDefinitions = <ThrowOnError extends boolean = false>(options?: Options<UpdateSuspensionStateJobDefinitionsData, ThrowOnError>) => (options?.client ?? client).put<UpdateSuspensionStateJobDefinitionsResponses, UpdateSuspensionStateJobDefinitionsErrors, ThrowOnError>({
+export const updateSuspensionStateJobDefinitions = <ThrowOnError extends boolean = true>(options?: Options<UpdateSuspensionStateJobDefinitionsData, ThrowOnError>) => (options?.client ?? client).put<UpdateSuspensionStateJobDefinitionsResponses, UpdateSuspensionStateJobDefinitionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job-definition/suspended',
     ...options,
@@ -3020,7 +3230,8 @@ export const updateSuspensionStateJobDefinitions = <ThrowOnError extends boolean
  *
  * Retrieves a job definition by id, according to the `JobDefinition` interface in the engine.
  */
-export const getJobDefinition = <ThrowOnError extends boolean = false>(options: Options<GetJobDefinitionData, ThrowOnError>) => (options.client ?? client).get<GetJobDefinitionResponses, GetJobDefinitionErrors, ThrowOnError>({
+export const getJobDefinition = <ThrowOnError extends boolean = true>(options: Options<GetJobDefinitionData, ThrowOnError>) => (options.client ?? client).get<GetJobDefinitionResponses, GetJobDefinitionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job-definition/{id}',
     ...options
@@ -3037,7 +3248,8 @@ export const getJobDefinition = <ThrowOnError extends boolean = false>(options: 
  * [user guide on job prioritization](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/the-job-executor/#set-job-definition-priorities-via-managementservice-api)
  * for details.
  */
-export const setJobPriorityJobDefinition = <ThrowOnError extends boolean = false>(options: Options<SetJobPriorityJobDefinitionData, ThrowOnError>) => (options.client ?? client).put<SetJobPriorityJobDefinitionResponses, SetJobPriorityJobDefinitionErrors, ThrowOnError>({
+export const setJobPriorityJobDefinition = <ThrowOnError extends boolean = true>(options: Options<SetJobPriorityJobDefinitionData, ThrowOnError>) => (options.client ?? client).put<SetJobPriorityJobDefinitionResponses, SetJobPriorityJobDefinitionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job-definition/{id}/jobPriority',
     ...options,
@@ -3053,7 +3265,8 @@ export const setJobPriorityJobDefinition = <ThrowOnError extends boolean = false
  * Sets the number of retries of all **failed** jobs associated with the given job
  * definition id.
  */
-export const setJobRetriesJobDefinition = <ThrowOnError extends boolean = false>(options: Options<SetJobRetriesJobDefinitionData, ThrowOnError>) => (options.client ?? client).put<SetJobRetriesJobDefinitionResponses, SetJobRetriesJobDefinitionErrors, ThrowOnError>({
+export const setJobRetriesJobDefinition = <ThrowOnError extends boolean = true>(options: Options<SetJobRetriesJobDefinitionData, ThrowOnError>) => (options.client ?? client).put<SetJobRetriesJobDefinitionResponses, SetJobRetriesJobDefinitionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job-definition/{id}/retries',
     ...options,
@@ -3068,7 +3281,8 @@ export const setJobRetriesJobDefinition = <ThrowOnError extends boolean = false>
  *
  * Activates or suspends a given job definition by id.
  */
-export const updateSuspensionStateJobDefinition = <ThrowOnError extends boolean = false>(options: Options<UpdateSuspensionStateJobDefinitionData, ThrowOnError>) => (options.client ?? client).put<UpdateSuspensionStateJobDefinitionResponses, UpdateSuspensionStateJobDefinitionErrors, ThrowOnError>({
+export const updateSuspensionStateJobDefinition = <ThrowOnError extends boolean = true>(options: Options<UpdateSuspensionStateJobDefinitionData, ThrowOnError>) => (options.client ?? client).put<UpdateSuspensionStateJobDefinitionResponses, UpdateSuspensionStateJobDefinitionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job-definition/{id}/suspended',
     ...options,
@@ -3085,7 +3299,8 @@ export const updateSuspensionStateJobDefinition = <ThrowOnError extends boolean 
  * Takes the same parameters as the [Get
  * Jobs](https://docs.cibseven.org/manual/2.1/reference/rest/job/get-query/) method.
  */
-export const getJobsCount = <ThrowOnError extends boolean = false>(options?: Options<GetJobsCountData, ThrowOnError>) => (options?.client ?? client).get<GetJobsCountResponses, GetJobsCountErrors, ThrowOnError>({
+export const getJobsCount = <ThrowOnError extends boolean = true>(options?: Options<GetJobsCountData, ThrowOnError>) => (options?.client ?? client).get<GetJobsCountResponses, GetJobsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/count',
     ...options
@@ -3100,7 +3315,8 @@ export const getJobsCount = <ThrowOnError extends boolean = false>(options?: Opt
  * [Get Job Count](https://docs.cibseven.org/manual/2.1/reference/rest/job/get-query-count/)
  * method.
  */
-export const queryJobsCount = <ThrowOnError extends boolean = false>(options?: Options<QueryJobsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryJobsCountResponses, QueryJobsCountErrors, ThrowOnError>({
+export const queryJobsCount = <ThrowOnError extends boolean = true>(options?: Options<QueryJobsCountData, ThrowOnError>) => (options?.client ?? client).post<QueryJobsCountResponses, QueryJobsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/count',
     ...options,
@@ -3115,7 +3331,8 @@ export const queryJobsCount = <ThrowOnError extends boolean = false>(options?: O
  *
  * Create a batch to set retries of jobs asynchronously.
  */
-export const setJobRetriesAsyncOperation = <ThrowOnError extends boolean = false>(options?: Options<SetJobRetriesAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<SetJobRetriesAsyncOperationResponses, SetJobRetriesAsyncOperationErrors, ThrowOnError>({
+export const setJobRetriesAsyncOperation = <ThrowOnError extends boolean = true>(options?: Options<SetJobRetriesAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<SetJobRetriesAsyncOperationResponses, SetJobRetriesAsyncOperationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/retries',
     ...options,
@@ -3135,7 +3352,8 @@ export const setJobRetriesAsyncOperation = <ThrowOnError extends boolean = false
  * * `processInstanceId`
  * * `processDefinitionKey`
  */
-export const updateSuspensionStateBy = <ThrowOnError extends boolean = false>(options?: Options<UpdateSuspensionStateByData, ThrowOnError>) => (options?.client ?? client).put<UpdateSuspensionStateByResponses, UpdateSuspensionStateByErrors, ThrowOnError>({
+export const updateSuspensionStateBy = <ThrowOnError extends boolean = true>(options?: Options<UpdateSuspensionStateByData, ThrowOnError>) => (options?.client ?? client).put<UpdateSuspensionStateByResponses, UpdateSuspensionStateByErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/suspended',
     ...options,
@@ -3150,7 +3368,8 @@ export const updateSuspensionStateBy = <ThrowOnError extends boolean = false>(op
  *
  * Deletes a job by id.
  */
-export const deleteJob = <ThrowOnError extends boolean = false>(options: Options<DeleteJobData, ThrowOnError>) => (options.client ?? client).delete<DeleteJobResponses, DeleteJobErrors, ThrowOnError>({
+export const deleteJob = <ThrowOnError extends boolean = true>(options: Options<DeleteJobData, ThrowOnError>) => (options.client ?? client).delete<DeleteJobResponses, DeleteJobErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/{id}',
     ...options
@@ -3161,7 +3380,8 @@ export const deleteJob = <ThrowOnError extends boolean = false>(options: Options
  *
  * Retrieves a job by id, according to the `Job` interface in the engine.
  */
-export const getJob = <ThrowOnError extends boolean = false>(options: Options<GetJobData, ThrowOnError>) => (options.client ?? client).get<GetJobResponses, GetJobErrors, ThrowOnError>({
+export const getJob = <ThrowOnError extends boolean = true>(options: Options<GetJobData, ThrowOnError>) => (options.client ?? client).get<GetJobResponses, GetJobErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/{id}',
     ...options
@@ -3172,7 +3392,8 @@ export const getJob = <ThrowOnError extends boolean = false>(options: Options<Ge
  *
  * Updates the due date of a job by id.
  */
-export const setJobDuedate = <ThrowOnError extends boolean = false>(options: Options<SetJobDuedateData, ThrowOnError>) => (options.client ?? client).put<SetJobDuedateResponses, SetJobDuedateErrors, ThrowOnError>({
+export const setJobDuedate = <ThrowOnError extends boolean = true>(options: Options<SetJobDuedateData, ThrowOnError>) => (options.client ?? client).put<SetJobDuedateResponses, SetJobDuedateErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/{id}/duedate',
     ...options,
@@ -3187,7 +3408,8 @@ export const setJobDuedate = <ThrowOnError extends boolean = false>(options: Opt
  *
  * Recalculates the due date of a job by id.
  */
-export const recalculateDuedate = <ThrowOnError extends boolean = false>(options: Options<RecalculateDuedateData, ThrowOnError>) => (options.client ?? client).post<RecalculateDuedateResponses, RecalculateDuedateErrors, ThrowOnError>({
+export const recalculateDuedate = <ThrowOnError extends boolean = true>(options: Options<RecalculateDuedateData, ThrowOnError>) => (options.client ?? client).post<RecalculateDuedateResponses, RecalculateDuedateErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/{id}/duedate/recalculate',
     ...options
@@ -3199,7 +3421,8 @@ export const recalculateDuedate = <ThrowOnError extends boolean = false>(options
  * Executes a job by id. **Note:** The execution of the job happens synchronously in
  * the same thread.
  */
-export const executeJob = <ThrowOnError extends boolean = false>(options: Options<ExecuteJobData, ThrowOnError>) => (options.client ?? client).post<ExecuteJobResponses, ExecuteJobErrors, ThrowOnError>({
+export const executeJob = <ThrowOnError extends boolean = true>(options: Options<ExecuteJobData, ThrowOnError>) => (options.client ?? client).post<ExecuteJobResponses, ExecuteJobErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/{id}/execute',
     ...options
@@ -3210,7 +3433,8 @@ export const executeJob = <ThrowOnError extends boolean = false>(options: Option
  *
  * Sets the execution priority of a job by id.
  */
-export const setJobPriority = <ThrowOnError extends boolean = false>(options: Options<SetJobPriorityData, ThrowOnError>) => (options.client ?? client).put<SetJobPriorityResponses, SetJobPriorityErrors, ThrowOnError>({
+export const setJobPriority = <ThrowOnError extends boolean = true>(options: Options<SetJobPriorityData, ThrowOnError>) => (options.client ?? client).put<SetJobPriorityResponses, SetJobPriorityErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/{id}/priority',
     ...options,
@@ -3225,7 +3449,8 @@ export const setJobPriority = <ThrowOnError extends boolean = false>(options: Op
  *
  * Sets the retries of the job to the given number of retries by id.
  */
-export const setJobRetries = <ThrowOnError extends boolean = false>(options: Options<SetJobRetriesData, ThrowOnError>) => (options.client ?? client).put<SetJobRetriesResponses, SetJobRetriesErrors, ThrowOnError>({
+export const setJobRetries = <ThrowOnError extends boolean = true>(options: Options<SetJobRetriesData, ThrowOnError>) => (options.client ?? client).put<SetJobRetriesResponses, SetJobRetriesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/{id}/retries',
     ...options,
@@ -3240,7 +3465,8 @@ export const setJobRetries = <ThrowOnError extends boolean = false>(options: Opt
  *
  * Retrieves the exception stacktrace corresponding to the passed job id.
  */
-export const getStacktrace = <ThrowOnError extends boolean = false>(options: Options<GetStacktraceData, ThrowOnError>) => (options.client ?? client).get<GetStacktraceResponses, GetStacktraceErrors, ThrowOnError>({
+export const getStacktrace = <ThrowOnError extends boolean = true>(options: Options<GetStacktraceData, ThrowOnError>) => (options.client ?? client).get<GetStacktraceResponses, GetStacktraceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/{id}/stacktrace',
     ...options
@@ -3251,7 +3477,8 @@ export const getStacktrace = <ThrowOnError extends boolean = false>(options: Opt
  *
  * Activates or suspends a given job by id.
  */
-export const updateJobSuspensionState = <ThrowOnError extends boolean = false>(options: Options<UpdateJobSuspensionStateData, ThrowOnError>) => (options.client ?? client).put<UpdateJobSuspensionStateResponses, unknown, ThrowOnError>({
+export const updateJobSuspensionState = <ThrowOnError extends boolean = true>(options: Options<UpdateJobSuspensionStateData, ThrowOnError>) => (options.client ?? client).put<UpdateJobSuspensionStateResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/job/{id}/suspended',
     ...options,
@@ -3270,7 +3497,8 @@ export const updateJobSuspensionState = <ThrowOnError extends boolean = false>(o
  * For more information about the correlation behavior, see the [Message Events](https://docs.cibseven.org/manual/2.1/bpmn20/events/message-events/)
  * section of the [BPMN 2.0 Implementation Reference](https://docs.cibseven.org/manual/2.1/reference/bpmn20/).
  */
-export const deliverMessage = <ThrowOnError extends boolean = false>(options?: Options<DeliverMessageData, ThrowOnError>) => (options?.client ?? client).post<DeliverMessageResponses, DeliverMessageErrors, ThrowOnError>({
+export const deliverMessage = <ThrowOnError extends boolean = true>(options?: Options<DeliverMessageData, ThrowOnError>) => (options?.client ?? client).post<DeliverMessageResponses, DeliverMessageErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/message',
     ...options,
@@ -3285,7 +3513,8 @@ export const deliverMessage = <ThrowOnError extends boolean = false>(options?: O
  *
  * Retrieves a list of metrics, aggregated for a given interval.
  */
-export const interval = <ThrowOnError extends boolean = false>(options?: Options<IntervalData, ThrowOnError>) => (options?.client ?? client).get<IntervalResponses, IntervalErrors, ThrowOnError>({
+export const interval = <ThrowOnError extends boolean = true>(options?: Options<IntervalData, ThrowOnError>) => (options?.client ?? client).get<IntervalResponses, IntervalErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/metrics',
     ...options
@@ -3296,7 +3525,8 @@ export const interval = <ThrowOnError extends boolean = false>(options?: Options
  *
  * Deletes all task worker metrics prior to the given date or all if no date is provided.
  */
-export const deleteTaskMetrics = <ThrowOnError extends boolean = false>(options?: Options<DeleteTaskMetricsData, ThrowOnError>) => (options?.client ?? client).delete<DeleteTaskMetricsResponses, DeleteTaskMetricsErrors, ThrowOnError>({
+export const deleteTaskMetrics = <ThrowOnError extends boolean = true>(options?: Options<DeleteTaskMetricsData, ThrowOnError>) => (options?.client ?? client).delete<DeleteTaskMetricsResponses, DeleteTaskMetricsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/metrics/task-worker',
     ...options
@@ -3307,7 +3537,8 @@ export const deleteTaskMetrics = <ThrowOnError extends boolean = false>(options?
  *
  * Retrieves the `sum` (count) for a given metric.
  */
-export const getMetrics = <ThrowOnError extends boolean = false>(options: Options<GetMetricsData, ThrowOnError>) => (options.client ?? client).get<GetMetricsResponses, unknown, ThrowOnError>({
+export const getMetrics = <ThrowOnError extends boolean = true>(options: Options<GetMetricsData, ThrowOnError>) => (options.client ?? client).get<GetMetricsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/metrics/{metrics-name}/sum',
     ...options
@@ -3325,7 +3556,8 @@ export const getMetrics = <ThrowOnError extends boolean = false>(options: Option
  * execution of a migration plan, please refer to the related section of
  * [the user guide](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/process-instance-migration/#executing-a-migration-plan).
  */
-export const executeMigrationPlan = <ThrowOnError extends boolean = false>(options?: Options<ExecuteMigrationPlanData, ThrowOnError>) => (options?.client ?? client).post<ExecuteMigrationPlanResponses, ExecuteMigrationPlanErrors, ThrowOnError>({
+export const executeMigrationPlan = <ThrowOnError extends boolean = true>(options?: Options<ExecuteMigrationPlanData, ThrowOnError>) => (options?.client ?? client).post<ExecuteMigrationPlanResponses, ExecuteMigrationPlanErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/migration/execute',
     ...options,
@@ -3347,7 +3579,8 @@ export const executeMigrationPlan = <ThrowOnError extends boolean = false>(optio
  * execution of a migration plan, please refer to the related section of
  * [the user guide](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/process-instance-migration/#executing-a-migration-plan).
  */
-export const executeMigrationPlanAsync = <ThrowOnError extends boolean = false>(options?: Options<ExecuteMigrationPlanAsyncData, ThrowOnError>) => (options?.client ?? client).post<ExecuteMigrationPlanAsyncResponses, ExecuteMigrationPlanAsyncErrors, ThrowOnError>({
+export const executeMigrationPlanAsync = <ThrowOnError extends boolean = true>(options?: Options<ExecuteMigrationPlanAsyncData, ThrowOnError>) => (options?.client ?? client).post<ExecuteMigrationPlanAsyncResponses, ExecuteMigrationPlanAsyncErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/migration/executeAsync',
     ...options,
@@ -3365,7 +3598,8 @@ export const executeMigrationPlanAsync = <ThrowOnError extends boolean = false>(
  * between the
  * two process definitions.
  */
-export const generateMigrationPlan = <ThrowOnError extends boolean = false>(options?: Options<GenerateMigrationPlanData, ThrowOnError>) => (options?.client ?? client).post<GenerateMigrationPlanResponses, GenerateMigrationPlanErrors, ThrowOnError>({
+export const generateMigrationPlan = <ThrowOnError extends boolean = true>(options?: Options<GenerateMigrationPlanData, ThrowOnError>) => (options?.client ?? client).post<GenerateMigrationPlanResponses, GenerateMigrationPlanErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/migration/generate',
     ...options,
@@ -3383,7 +3617,8 @@ export const generateMigrationPlan = <ThrowOnError extends boolean = false>(opti
  * [creation time validation](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/process-instance-migration/#creation-time-validation)
  * described in the user guide.
  */
-export const validateMigrationPlan = <ThrowOnError extends boolean = false>(options?: Options<ValidateMigrationPlanData, ThrowOnError>) => (options?.client ?? client).post<ValidateMigrationPlanResponses, ValidateMigrationPlanErrors, ThrowOnError>({
+export const validateMigrationPlan = <ThrowOnError extends boolean = true>(options?: Options<ValidateMigrationPlanData, ThrowOnError>) => (options?.client ?? client).post<ValidateMigrationPlanResponses, ValidateMigrationPlanErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/migration/validate',
     ...options,
@@ -3407,7 +3642,8 @@ export const validateMigrationPlan = <ThrowOnError extends boolean = false>(opti
  * section of the
  * [user guide](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/process-instance-migration.md#executing-a-migration-plan).
  */
-export const executeModification = <ThrowOnError extends boolean = false>(options?: Options<ExecuteModificationData, ThrowOnError>) => (options?.client ?? client).post<ExecuteModificationResponses, ExecuteModificationErrors, ThrowOnError>({
+export const executeModification = <ThrowOnError extends boolean = true>(options?: Options<ExecuteModificationData, ThrowOnError>) => (options?.client ?? client).post<ExecuteModificationResponses, ExecuteModificationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/modification/execute',
     ...options,
@@ -3429,7 +3665,8 @@ export const executeModification = <ThrowOnError extends boolean = false>(option
  * section of the
  * [user guide](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/process-instance-migration.md#executing-a-migration-plan).
  */
-export const executeModificationAsync = <ThrowOnError extends boolean = false>(options?: Options<ExecuteModificationAsyncData, ThrowOnError>) => (options?.client ?? client).post<ExecuteModificationAsyncResponses, ExecuteModificationAsyncErrors, ThrowOnError>({
+export const executeModificationAsync = <ThrowOnError extends boolean = true>(options?: Options<ExecuteModificationAsyncData, ThrowOnError>) => (options?.client ?? client).post<ExecuteModificationAsyncResponses, ExecuteModificationAsyncErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/modification/executeAsync',
     ...options,
@@ -3446,7 +3683,8 @@ export const executeModificationAsync = <ThrowOnError extends boolean = false>(o
  * process definitions, such as the name, key or version. The size of the result set can be retrieved
  * by using the [Get Definition Count](https://docs.cibseven.org/manual/2.1/reference/rest/process-definition/get-query-count/) method.
  */
-export const getProcessDefinitions = <ThrowOnError extends boolean = false>(options?: Options<GetProcessDefinitionsData, ThrowOnError>) => (options?.client ?? client).get<GetProcessDefinitionsResponses, GetProcessDefinitionsErrors, ThrowOnError>({
+export const getProcessDefinitions = <ThrowOnError extends boolean = true>(options?: Options<GetProcessDefinitionsData, ThrowOnError>) => (options?.client ?? client).get<GetProcessDefinitionsResponses, GetProcessDefinitionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition',
     ...options
@@ -3458,7 +3696,8 @@ export const getProcessDefinitions = <ThrowOnError extends boolean = false>(opti
  * Requests the number of process definitions that fulfill the query criteria.
  * Takes the same filtering parameters as the [Get Definitions](https://docs.cibseven.org/manual/2.1/reference/rest/process-definition/get-query/) method.
  */
-export const getProcessDefinitionsCount = <ThrowOnError extends boolean = false>(options?: Options<GetProcessDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetProcessDefinitionsCountResponses, GetProcessDefinitionsCountErrors, ThrowOnError>({
+export const getProcessDefinitionsCount = <ThrowOnError extends boolean = true>(options?: Options<GetProcessDefinitionsCountData, ThrowOnError>) => (options?.client ?? client).get<GetProcessDefinitionsCountResponses, GetProcessDefinitionsCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/count',
     ...options
@@ -3469,7 +3708,8 @@ export const getProcessDefinitionsCount = <ThrowOnError extends boolean = false>
  *
  * Deletes process definitions by a given key which belong to no tenant id.
  */
-export const deleteProcessDefinitionsByKey = <ThrowOnError extends boolean = false>(options: Options<DeleteProcessDefinitionsByKeyData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessDefinitionsByKeyResponses, DeleteProcessDefinitionsByKeyErrors, ThrowOnError>({
+export const deleteProcessDefinitionsByKey = <ThrowOnError extends boolean = true>(options: Options<DeleteProcessDefinitionsByKeyData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessDefinitionsByKeyResponses, DeleteProcessDefinitionsByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}',
     ...options
@@ -3480,7 +3720,8 @@ export const deleteProcessDefinitionsByKey = <ThrowOnError extends boolean = fal
  *
  * Retrieves the latest version of the process definition which belongs to no tenant according to the `ProcessDefinition` interface in the engine.
  */
-export const getProcessDefinitionByKey = <ThrowOnError extends boolean = false>(options: Options<GetProcessDefinitionByKeyData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionByKeyResponses, GetProcessDefinitionByKeyErrors, ThrowOnError>({
+export const getProcessDefinitionByKey = <ThrowOnError extends boolean = true>(options: Options<GetProcessDefinitionByKeyData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionByKeyResponses, GetProcessDefinitionByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}',
     ...options
@@ -3492,7 +3733,8 @@ export const getProcessDefinitionByKey = <ThrowOnError extends boolean = false>(
  * Retrieves the deployed form that can be referenced from a start event.
  * For further information please refer to [User Guide](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#embedded-task-forms).
  */
-export const getDeployedStartFormByKey = <ThrowOnError extends boolean = false>(options: Options<GetDeployedStartFormByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDeployedStartFormByKeyResponses, GetDeployedStartFormByKeyErrors, ThrowOnError>({
+export const getDeployedStartFormByKey = <ThrowOnError extends boolean = true>(options: Options<GetDeployedStartFormByKeyData, ThrowOnError>) => (options.client ?? client).get<GetDeployedStartFormByKeyResponses, GetDeployedStartFormByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/deployed-start-form',
     ...options
@@ -3508,7 +3750,8 @@ export const getDeployedStartFormByKey = <ThrowOnError extends boolean = false>(
  * Example: `someProcess.bpmn` and `someProcess.png`.
  * Supported file extentions for the image are: `svg`, `png`, `jpg`, and `gif`.
  */
-export const getProcessDefinitionDiagramByKey = <ThrowOnError extends boolean = false>(options: Options<GetProcessDefinitionDiagramByKeyData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionDiagramByKeyResponses, GetProcessDefinitionDiagramByKeyErrors, ThrowOnError>({
+export const getProcessDefinitionDiagramByKey = <ThrowOnError extends boolean = true>(options: Options<GetProcessDefinitionDiagramByKeyData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionDiagramByKeyResponses, GetProcessDefinitionDiagramByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/diagram',
     ...options
@@ -3524,7 +3767,8 @@ export const getProcessDefinitionDiagramByKey = <ThrowOnError extends boolean = 
  * If form fields are defined, the variable types and default values
  * of the form fields are taken into account.
  */
-export const getStartFormVariablesByKey = <ThrowOnError extends boolean = false>(options: Options<GetStartFormVariablesByKeyData, ThrowOnError>) => (options.client ?? client).get<GetStartFormVariablesByKeyResponses, GetStartFormVariablesByKeyErrors, ThrowOnError>({
+export const getStartFormVariablesByKey = <ThrowOnError extends boolean = true>(options: Options<GetStartFormVariablesByKeyData, ThrowOnError>) => (options.client ?? client).get<GetStartFormVariablesByKeyResponses, GetStartFormVariablesByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/form-variables',
     ...options
@@ -3539,7 +3783,8 @@ export const getStartFormVariablesByKey = <ThrowOnError extends boolean = false>
  * set the feature flag `enforceHistoryTimeToLive` to `false`. Read more in [Configuration Properties]
  * (https://docs.cibseven.org/manual/2.1/reference/deployment-descriptors/tags/process-engine#configuration-properties)
  */
-export const updateHistoryTimeToLiveByProcessDefinitionKey = <ThrowOnError extends boolean = false>(options: Options<UpdateHistoryTimeToLiveByProcessDefinitionKeyData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByProcessDefinitionKeyResponses, UpdateHistoryTimeToLiveByProcessDefinitionKeyErrors, ThrowOnError>({
+export const updateHistoryTimeToLiveByProcessDefinitionKey = <ThrowOnError extends boolean = true>(options: Options<UpdateHistoryTimeToLiveByProcessDefinitionKeyData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByProcessDefinitionKeyResponses, UpdateHistoryTimeToLiveByProcessDefinitionKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/history-time-to-live',
     ...options,
@@ -3556,7 +3801,8 @@ export const updateHistoryTimeToLiveByProcessDefinitionKey = <ThrowOnError exten
  * This method can be used to get the HTML rendering of a
  * [Generated Task Form](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#generated-task-forms).
  */
-export const getRenderedStartFormByKey = <ThrowOnError extends boolean = false>(options: Options<GetRenderedStartFormByKeyData, ThrowOnError>) => (options.client ?? client).get<GetRenderedStartFormByKeyResponses, GetRenderedStartFormByKeyErrors, ThrowOnError>({
+export const getRenderedStartFormByKey = <ThrowOnError extends boolean = true>(options: Options<GetRenderedStartFormByKeyData, ThrowOnError>) => (options.client ?? client).get<GetRenderedStartFormByKeyResponses, GetRenderedStartFormByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/rendered-form',
     ...options
@@ -3569,7 +3815,8 @@ export const getRenderedStartFormByKey = <ThrowOnError extends boolean = false>(
  * which belongs to no tenant.
  * Process variables and business key may be supplied in the request body.
  */
-export const startProcessInstanceByKey = <ThrowOnError extends boolean = false>(options: Options<StartProcessInstanceByKeyData, ThrowOnError>) => (options.client ?? client).post<StartProcessInstanceByKeyResponses, StartProcessInstanceByKeyErrors, ThrowOnError>({
+export const startProcessInstanceByKey = <ThrowOnError extends boolean = true>(options: Options<StartProcessInstanceByKeyData, ThrowOnError>) => (options.client ?? client).post<StartProcessInstanceByKeyResponses, StartProcessInstanceByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/start',
     ...options,
@@ -3586,7 +3833,8 @@ export const startProcessInstanceByKey = <ThrowOnError extends boolean = false>(
  * which belongs to no tenant.
  * The form key corresponds to the `FormData#formKey` property in the engine.
  */
-export const getStartFormByKey = <ThrowOnError extends boolean = false>(options: Options<GetStartFormByKeyData, ThrowOnError>) => (options.client ?? client).get<GetStartFormByKeyResponses, GetStartFormByKeyErrors, ThrowOnError>({
+export const getStartFormByKey = <ThrowOnError extends boolean = true>(options: Options<GetStartFormByKeyData, ThrowOnError>) => (options.client ?? client).get<GetStartFormByKeyResponses, GetStartFormByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/startForm',
     ...options
@@ -3602,7 +3850,8 @@ export const getStartFormByKey = <ThrowOnError extends boolean = false>(options:
  * for a specific incident type.
  * **Note**: This does not include historic data.
  */
-export const getActivityStatisticsByProcessDefinitionKey = <ThrowOnError extends boolean = false>(options: Options<GetActivityStatisticsByProcessDefinitionKeyData, ThrowOnError>) => (options.client ?? client).get<GetActivityStatisticsByProcessDefinitionKeyResponses, GetActivityStatisticsByProcessDefinitionKeyErrors, ThrowOnError>({
+export const getActivityStatisticsByProcessDefinitionKey = <ThrowOnError extends boolean = true>(options: Options<GetActivityStatisticsByProcessDefinitionKeyData, ThrowOnError>) => (options.client ?? client).get<GetActivityStatisticsByProcessDefinitionKeyResponses, GetActivityStatisticsByProcessDefinitionKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/statistics',
     ...options
@@ -3617,7 +3866,8 @@ export const getActivityStatisticsByProcessDefinitionKey = <ThrowOnError extends
  * for any form fields which have validators defined.
  * See [Documentation on Generated Task Forms](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#generated-task-forms).
  */
-export const submitFormByKey = <ThrowOnError extends boolean = false>(options: Options<SubmitFormByKeyData, ThrowOnError>) => (options.client ?? client).post<SubmitFormByKeyResponses, SubmitFormByKeyErrors, ThrowOnError>({
+export const submitFormByKey = <ThrowOnError extends boolean = true>(options: Options<SubmitFormByKeyData, ThrowOnError>) => (options.client ?? client).post<SubmitFormByKeyResponses, SubmitFormByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/submit-form',
     ...options,
@@ -3633,7 +3883,8 @@ export const submitFormByKey = <ThrowOnError extends boolean = false>(options: O
  * Activates or suspends a given process definition by latest version of process definition key
  * which belongs to no tenant.
  */
-export const updateProcessDefinitionSuspensionStateByKey = <ThrowOnError extends boolean = false>(options: Options<UpdateProcessDefinitionSuspensionStateByKeyData, ThrowOnError>) => (options.client ?? client).put<UpdateProcessDefinitionSuspensionStateByKeyResponses, UpdateProcessDefinitionSuspensionStateByKeyErrors, ThrowOnError>({
+export const updateProcessDefinitionSuspensionStateByKey = <ThrowOnError extends boolean = true>(options: Options<UpdateProcessDefinitionSuspensionStateByKeyData, ThrowOnError>) => (options.client ?? client).put<UpdateProcessDefinitionSuspensionStateByKeyResponses, UpdateProcessDefinitionSuspensionStateByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/suspended',
     ...options,
@@ -3648,7 +3899,8 @@ export const updateProcessDefinitionSuspensionStateByKey = <ThrowOnError extends
  *
  * Deletes process definitions by a given key and which belong to a tenant id.
  */
-export const deleteProcessDefinitionsByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<DeleteProcessDefinitionsByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessDefinitionsByKeyAndTenantIdResponses, DeleteProcessDefinitionsByKeyAndTenantIdErrors, ThrowOnError>({
+export const deleteProcessDefinitionsByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<DeleteProcessDefinitionsByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessDefinitionsByKeyAndTenantIdResponses, DeleteProcessDefinitionsByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}',
     ...options
@@ -3660,7 +3912,8 @@ export const deleteProcessDefinitionsByKeyAndTenantId = <ThrowOnError extends bo
  * Retrieves the latest version of the process definition for tenant according to
  * the `ProcessDefinition` interface in the engine.
  */
-export const getLatestProcessDefinitionByTenantId = <ThrowOnError extends boolean = false>(options: Options<GetLatestProcessDefinitionByTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetLatestProcessDefinitionByTenantIdResponses, GetLatestProcessDefinitionByTenantIdErrors, ThrowOnError>({
+export const getLatestProcessDefinitionByTenantId = <ThrowOnError extends boolean = true>(options: Options<GetLatestProcessDefinitionByTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetLatestProcessDefinitionByTenantIdResponses, GetLatestProcessDefinitionByTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}',
     ...options
@@ -3672,7 +3925,8 @@ export const getLatestProcessDefinitionByTenantId = <ThrowOnError extends boolea
  * Retrieves the deployed form that can be referenced from a start event.
  * For further information please refer to [User Guide](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#embedded-task-forms).
  */
-export const getDeployedStartFormByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetDeployedStartFormByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDeployedStartFormByKeyAndTenantIdResponses, GetDeployedStartFormByKeyAndTenantIdErrors, ThrowOnError>({
+export const getDeployedStartFormByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetDeployedStartFormByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetDeployedStartFormByKeyAndTenantIdResponses, GetDeployedStartFormByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/deployed-start-form',
     ...options
@@ -3688,7 +3942,8 @@ export const getDeployedStartFormByKeyAndTenantId = <ThrowOnError extends boolea
  * Example: `someProcess.bpmn` and `someProcess.png`.
  * Supported file extentions for the image are: `svg`, `png`, `jpg`, and `gif`.
  */
-export const getProcessDefinitionDiagramByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetProcessDefinitionDiagramByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionDiagramByKeyAndTenantIdResponses, GetProcessDefinitionDiagramByKeyAndTenantIdErrors, ThrowOnError>({
+export const getProcessDefinitionDiagramByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetProcessDefinitionDiagramByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionDiagramByKeyAndTenantIdResponses, GetProcessDefinitionDiagramByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/diagram',
     ...options
@@ -3704,7 +3959,8 @@ export const getProcessDefinitionDiagramByKeyAndTenantId = <ThrowOnError extends
  * If form fields are defined, the variable types and default values
  * of the form fields are taken into account.
  */
-export const getStartFormVariablesByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetStartFormVariablesByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetStartFormVariablesByKeyAndTenantIdResponses, GetStartFormVariablesByKeyAndTenantIdErrors, ThrowOnError>({
+export const getStartFormVariablesByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetStartFormVariablesByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetStartFormVariablesByKeyAndTenantIdResponses, GetStartFormVariablesByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/form-variables',
     ...options
@@ -3716,7 +3972,8 @@ export const getStartFormVariablesByKeyAndTenantId = <ThrowOnError extends boole
  * Updates history time to live for the latest version of the process definition for a tenant.
  * The field is used within [History cleanup](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/history/#history-cleanup).
  */
-export const updateHistoryTimeToLiveByProcessDefinitionKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<UpdateHistoryTimeToLiveByProcessDefinitionKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByProcessDefinitionKeyAndTenantIdResponses, UpdateHistoryTimeToLiveByProcessDefinitionKeyAndTenantIdErrors, ThrowOnError>({
+export const updateHistoryTimeToLiveByProcessDefinitionKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<UpdateHistoryTimeToLiveByProcessDefinitionKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByProcessDefinitionKeyAndTenantIdResponses, UpdateHistoryTimeToLiveByProcessDefinitionKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/history-time-to-live',
     ...options,
@@ -3733,7 +3990,8 @@ export const updateHistoryTimeToLiveByProcessDefinitionKeyAndTenantId = <ThrowOn
  * This method can be used to get the HTML rendering of a
  * [Generated Task Form](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#generated-task-forms).
  */
-export const getRenderedStartFormByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetRenderedStartFormByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetRenderedStartFormByKeyAndTenantIdResponses, GetRenderedStartFormByKeyAndTenantIdErrors, ThrowOnError>({
+export const getRenderedStartFormByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetRenderedStartFormByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetRenderedStartFormByKeyAndTenantIdResponses, GetRenderedStartFormByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/rendered-form',
     ...options
@@ -3745,7 +4003,8 @@ export const getRenderedStartFormByKeyAndTenantId = <ThrowOnError extends boolea
  * Instantiates a given process definition, starts the latest version of the process definition for tenant.
  * Process variables and business key may be supplied in the request body.
  */
-export const startProcessInstanceByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<StartProcessInstanceByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).post<StartProcessInstanceByKeyAndTenantIdResponses, StartProcessInstanceByKeyAndTenantIdErrors, ThrowOnError>({
+export const startProcessInstanceByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<StartProcessInstanceByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).post<StartProcessInstanceByKeyAndTenantIdResponses, StartProcessInstanceByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/start',
     ...options,
@@ -3761,7 +4020,8 @@ export const startProcessInstanceByKeyAndTenantId = <ThrowOnError extends boolea
  * Retrieves the key of the start form for the latest version of the process definition for a tenant.
  * The form key corresponds to the `FormData#formKey` property in the engine.
  */
-export const getStartFormByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetStartFormByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetStartFormByKeyAndTenantIdResponses, GetStartFormByKeyAndTenantIdErrors, ThrowOnError>({
+export const getStartFormByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetStartFormByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetStartFormByKeyAndTenantIdResponses, GetStartFormByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/startForm',
     ...options
@@ -3777,7 +4037,8 @@ export const getStartFormByKeyAndTenantId = <ThrowOnError extends boolean = fals
  * for a specific incident type.
  * **Note**: This does not include historic data.
  */
-export const getActivityStatisticsByProcessDefinitionKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetActivityStatisticsByProcessDefinitionKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetActivityStatisticsByProcessDefinitionKeyAndTenantIdResponses, GetActivityStatisticsByProcessDefinitionKeyAndTenantIdErrors, ThrowOnError>({
+export const getActivityStatisticsByProcessDefinitionKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetActivityStatisticsByProcessDefinitionKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetActivityStatisticsByProcessDefinitionKeyAndTenantIdResponses, GetActivityStatisticsByProcessDefinitionKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/statistics',
     ...options
@@ -3792,7 +4053,8 @@ export const getActivityStatisticsByProcessDefinitionKeyAndTenantId = <ThrowOnEr
  * for any form fields which have validators defined.
  * See [Documentation on Generated Task Forms](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#generated-task-forms).
  */
-export const submitFormByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<SubmitFormByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).post<SubmitFormByKeyAndTenantIdResponses, SubmitFormByKeyAndTenantIdErrors, ThrowOnError>({
+export const submitFormByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<SubmitFormByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).post<SubmitFormByKeyAndTenantIdResponses, SubmitFormByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/submit-form',
     ...options,
@@ -3808,7 +4070,8 @@ export const submitFormByKeyAndTenantId = <ThrowOnError extends boolean = false>
  * Activates or suspends a given process definition by the latest version of
  * the process definition for tenant.
  */
-export const updateProcessDefinitionSuspensionStateByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<UpdateProcessDefinitionSuspensionStateByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).put<UpdateProcessDefinitionSuspensionStateByKeyAndTenantIdResponses, UpdateProcessDefinitionSuspensionStateByKeyAndTenantIdErrors, ThrowOnError>({
+export const updateProcessDefinitionSuspensionStateByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<UpdateProcessDefinitionSuspensionStateByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).put<UpdateProcessDefinitionSuspensionStateByKeyAndTenantIdResponses, UpdateProcessDefinitionSuspensionStateByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/suspended',
     ...options,
@@ -3824,7 +4087,8 @@ export const updateProcessDefinitionSuspensionStateByKeyAndTenantId = <ThrowOnEr
  * Retrieves latest version the BPMN 2.0 XML of a process definition.
  * Returns the XML for the latest version of the process definition for tenant.
  */
-export const getProcessDefinitionBpmn20XmlByKeyAndTenantId = <ThrowOnError extends boolean = false>(options: Options<GetProcessDefinitionBpmn20XmlByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionBpmn20XmlByKeyAndTenantIdResponses, GetProcessDefinitionBpmn20XmlByKeyAndTenantIdErrors, ThrowOnError>({
+export const getProcessDefinitionBpmn20XmlByKeyAndTenantId = <ThrowOnError extends boolean = true>(options: Options<GetProcessDefinitionBpmn20XmlByKeyAndTenantIdData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionBpmn20XmlByKeyAndTenantIdResponses, GetProcessDefinitionBpmn20XmlByKeyAndTenantIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/tenant-id/{tenant-id}/xml',
     ...options
@@ -3835,7 +4099,8 @@ export const getProcessDefinitionBpmn20XmlByKeyAndTenantId = <ThrowOnError exten
  *
  * Retrieves latest version the BPMN 2.0 XML of a process definition.
  */
-export const getProcessDefinitionBpmn20XmlByKey = <ThrowOnError extends boolean = false>(options: Options<GetProcessDefinitionBpmn20XmlByKeyData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionBpmn20XmlByKeyResponses, GetProcessDefinitionBpmn20XmlByKeyErrors, ThrowOnError>({
+export const getProcessDefinitionBpmn20XmlByKey = <ThrowOnError extends boolean = true>(options: Options<GetProcessDefinitionBpmn20XmlByKeyData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionBpmn20XmlByKeyResponses, GetProcessDefinitionBpmn20XmlByKeyErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/key/{key}/xml',
     ...options
@@ -3850,7 +4115,8 @@ export const getProcessDefinitionBpmn20XmlByKey = <ThrowOnError extends boolean 
  * for a specific incident type.
  * **Note**: This does not include historic data.
  */
-export const getProcessDefinitionStatistics = <ThrowOnError extends boolean = false>(options?: Options<GetProcessDefinitionStatisticsData, ThrowOnError>) => (options?.client ?? client).get<GetProcessDefinitionStatisticsResponses, GetProcessDefinitionStatisticsErrors, ThrowOnError>({
+export const getProcessDefinitionStatistics = <ThrowOnError extends boolean = true>(options?: Options<GetProcessDefinitionStatisticsData, ThrowOnError>) => (options?.client ?? client).get<GetProcessDefinitionStatisticsResponses, GetProcessDefinitionStatisticsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/statistics',
     ...options
@@ -3861,7 +4127,8 @@ export const getProcessDefinitionStatistics = <ThrowOnError extends boolean = fa
  *
  * Activates or suspends process definitions with the given process definition key.
  */
-export const updateProcessDefinitionSuspensionState = <ThrowOnError extends boolean = false>(options?: Options<UpdateProcessDefinitionSuspensionStateData, ThrowOnError>) => (options?.client ?? client).put<UpdateProcessDefinitionSuspensionStateResponses, UpdateProcessDefinitionSuspensionStateErrors, ThrowOnError>({
+export const updateProcessDefinitionSuspensionState = <ThrowOnError extends boolean = true>(options?: Options<UpdateProcessDefinitionSuspensionStateData, ThrowOnError>) => (options?.client ?? client).put<UpdateProcessDefinitionSuspensionStateResponses, UpdateProcessDefinitionSuspensionStateErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/suspended',
     ...options,
@@ -3876,7 +4143,8 @@ export const updateProcessDefinitionSuspensionState = <ThrowOnError extends bool
  *
  * Deletes a process definition by id.
  */
-export const deleteProcessDefinition = <ThrowOnError extends boolean = false>(options: Options<DeleteProcessDefinitionData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessDefinitionResponses, DeleteProcessDefinitionErrors, ThrowOnError>({
+export const deleteProcessDefinition = <ThrowOnError extends boolean = true>(options: Options<DeleteProcessDefinitionData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessDefinitionResponses, DeleteProcessDefinitionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}',
     ...options
@@ -3887,7 +4155,8 @@ export const deleteProcessDefinition = <ThrowOnError extends boolean = false>(op
  *
  * Retrieves a process definition according to the `ProcessDefinition` interface in the engine.
  */
-export const getProcessDefinition = <ThrowOnError extends boolean = false>(options: Options<GetProcessDefinitionData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionResponses, GetProcessDefinitionErrors, ThrowOnError>({
+export const getProcessDefinition = <ThrowOnError extends boolean = true>(options: Options<GetProcessDefinitionData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionResponses, GetProcessDefinitionErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}',
     ...options
@@ -3899,7 +4168,8 @@ export const getProcessDefinition = <ThrowOnError extends boolean = false>(optio
  * Retrieves the deployed form that can be referenced from a start event.
  * For further information please refer to [User Guide](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#embedded-task-forms).
  */
-export const getDeployedStartForm = <ThrowOnError extends boolean = false>(options: Options<GetDeployedStartFormData, ThrowOnError>) => (options.client ?? client).get<GetDeployedStartFormResponses, GetDeployedStartFormErrors, ThrowOnError>({
+export const getDeployedStartForm = <ThrowOnError extends boolean = true>(options: Options<GetDeployedStartFormData, ThrowOnError>) => (options.client ?? client).get<GetDeployedStartFormResponses, GetDeployedStartFormErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/deployed-start-form',
     ...options
@@ -3915,7 +4185,8 @@ export const getDeployedStartForm = <ThrowOnError extends boolean = false>(optio
  * Example: `someProcess.bpmn` and `someProcess.png`.
  * Supported file extentions for the image are: `svg`, `png`, `jpg`, and `gif`.
  */
-export const getProcessDefinitionDiagram = <ThrowOnError extends boolean = false>(options: Options<GetProcessDefinitionDiagramData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionDiagramResponses, GetProcessDefinitionDiagramErrors, ThrowOnError>({
+export const getProcessDefinitionDiagram = <ThrowOnError extends boolean = true>(options: Options<GetProcessDefinitionDiagramData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionDiagramResponses, GetProcessDefinitionDiagramErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/diagram',
     ...options
@@ -3931,7 +4202,8 @@ export const getProcessDefinitionDiagram = <ThrowOnError extends boolean = false
  * If form fields are defined, the variable types and default values
  * of the form fields are taken into account.
  */
-export const getStartFormVariables = <ThrowOnError extends boolean = false>(options: Options<GetStartFormVariablesData, ThrowOnError>) => (options.client ?? client).get<GetStartFormVariablesResponses, GetStartFormVariablesErrors, ThrowOnError>({
+export const getStartFormVariables = <ThrowOnError extends boolean = true>(options: Options<GetStartFormVariablesData, ThrowOnError>) => (options.client ?? client).get<GetStartFormVariablesResponses, GetStartFormVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/form-variables',
     ...options
@@ -3946,7 +4218,8 @@ export const getStartFormVariables = <ThrowOnError extends boolean = false>(opti
  * set the feature flag `enforceHistoryTimeToLive` to `false`. Read more in [Configuration Properties]
  * (https://docs.cibseven.org/manual/2.1/reference/deployment-descriptors/tags/process-engine#configuration-properties)
  */
-export const updateHistoryTimeToLiveByProcessDefinitionId = <ThrowOnError extends boolean = false>(options: Options<UpdateHistoryTimeToLiveByProcessDefinitionIdData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByProcessDefinitionIdResponses, UpdateHistoryTimeToLiveByProcessDefinitionIdErrors, ThrowOnError>({
+export const updateHistoryTimeToLiveByProcessDefinitionId = <ThrowOnError extends boolean = true>(options: Options<UpdateHistoryTimeToLiveByProcessDefinitionIdData, ThrowOnError>) => (options.client ?? client).put<UpdateHistoryTimeToLiveByProcessDefinitionIdResponses, UpdateHistoryTimeToLiveByProcessDefinitionIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/history-time-to-live',
     ...options,
@@ -3963,7 +4236,8 @@ export const updateHistoryTimeToLiveByProcessDefinitionId = <ThrowOnError extend
  * This method can be used to get the HTML rendering of a
  * [Generated Task Form](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#generated-task-forms).
  */
-export const getRenderedStartForm = <ThrowOnError extends boolean = false>(options: Options<GetRenderedStartFormData, ThrowOnError>) => (options.client ?? client).get<GetRenderedStartFormResponses, GetRenderedStartFormErrors, ThrowOnError>({
+export const getRenderedStartForm = <ThrowOnError extends boolean = true>(options: Options<GetRenderedStartFormData, ThrowOnError>) => (options.client ?? client).get<GetRenderedStartFormResponses, GetRenderedStartFormErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/rendered-form',
     ...options
@@ -3982,7 +4256,8 @@ export const getRenderedStartForm = <ThrowOnError extends boolean = false>(optio
  * please refer to the related section of the
  * [User Guide](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/process-instance-restart/#execution).
  */
-export const restartProcessInstance = <ThrowOnError extends boolean = false>(options: Options<RestartProcessInstanceData, ThrowOnError>) => (options.client ?? client).post<RestartProcessInstanceResponses, RestartProcessInstanceErrors, ThrowOnError>({
+export const restartProcessInstance = <ThrowOnError extends boolean = true>(options: Options<RestartProcessInstanceData, ThrowOnError>) => (options.client ?? client).post<RestartProcessInstanceResponses, RestartProcessInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/restart',
     ...options,
@@ -4005,7 +4280,8 @@ export const restartProcessInstance = <ThrowOnError extends boolean = false>(opt
  * please refer to the related section of the
  * [User Guide](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/process-instance-restart/#execution).
  */
-export const restartProcessInstanceAsyncOperation = <ThrowOnError extends boolean = false>(options: Options<RestartProcessInstanceAsyncOperationData, ThrowOnError>) => (options.client ?? client).post<RestartProcessInstanceAsyncOperationResponses, RestartProcessInstanceAsyncOperationErrors, ThrowOnError>({
+export const restartProcessInstanceAsyncOperation = <ThrowOnError extends boolean = true>(options: Options<RestartProcessInstanceAsyncOperationData, ThrowOnError>) => (options.client ?? client).post<RestartProcessInstanceAsyncOperationResponses, RestartProcessInstanceAsyncOperationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/restart-async',
     ...options,
@@ -4021,7 +4297,8 @@ export const restartProcessInstanceAsyncOperation = <ThrowOnError extends boolea
  * Instantiates a given process definition.
  * Process variables and business key may be supplied in the request body.
  */
-export const startProcessInstance = <ThrowOnError extends boolean = false>(options: Options<StartProcessInstanceData, ThrowOnError>) => (options.client ?? client).post<StartProcessInstanceResponses, StartProcessInstanceErrors, ThrowOnError>({
+export const startProcessInstance = <ThrowOnError extends boolean = true>(options: Options<StartProcessInstanceData, ThrowOnError>) => (options.client ?? client).post<StartProcessInstanceResponses, StartProcessInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/start',
     ...options,
@@ -4037,7 +4314,8 @@ export const startProcessInstance = <ThrowOnError extends boolean = false>(optio
  * Retrieves the key of the start form for a process definition.
  * The form key corresponds to the `FormData#formKey` property in the engine.
  */
-export const getStartForm = <ThrowOnError extends boolean = false>(options: Options<GetStartFormData, ThrowOnError>) => (options.client ?? client).get<GetStartFormResponses, GetStartFormErrors, ThrowOnError>({
+export const getStartForm = <ThrowOnError extends boolean = true>(options: Options<GetStartFormData, ThrowOnError>) => (options.client ?? client).get<GetStartFormResponses, GetStartFormErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/startForm',
     ...options
@@ -4059,7 +4337,8 @@ export const getStartForm = <ThrowOnError extends boolean = false>(options: Opti
  * process. This endpoint does not resolve references to case
  * definitions.
  */
-export const getStaticCalledProcessDefinitions = <ThrowOnError extends boolean = false>(options: Options<GetStaticCalledProcessDefinitionsData, ThrowOnError>) => (options.client ?? client).get<GetStaticCalledProcessDefinitionsResponses, GetStaticCalledProcessDefinitionsErrors, ThrowOnError>({
+export const getStaticCalledProcessDefinitions = <ThrowOnError extends boolean = true>(options: Options<GetStaticCalledProcessDefinitionsData, ThrowOnError>) => (options.client ?? client).get<GetStaticCalledProcessDefinitionsResponses, GetStaticCalledProcessDefinitionsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/static-called-process-definitions',
     ...options
@@ -4073,7 +4352,8 @@ export const getStaticCalledProcessDefinitions = <ThrowOnError extends boolean =
  * and also optionally the number of incidents either grouped by incident types or for a specific incident type.
  * **Note**: This does not include historic data.
  */
-export const getActivityStatistics = <ThrowOnError extends boolean = false>(options: Options<GetActivityStatisticsData, ThrowOnError>) => (options.client ?? client).get<GetActivityStatisticsResponses, GetActivityStatisticsErrors, ThrowOnError>({
+export const getActivityStatistics = <ThrowOnError extends boolean = true>(options: Options<GetActivityStatisticsData, ThrowOnError>) => (options.client ?? client).get<GetActivityStatisticsResponses, GetActivityStatisticsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/statistics',
     ...options
@@ -4087,7 +4367,8 @@ export const getActivityStatistics = <ThrowOnError extends boolean = false>(opti
  * for any form fields which have validators defined.
  * See [Documentation on Generated Task Forms](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#generated-task-forms).
  */
-export const submitForm = <ThrowOnError extends boolean = false>(options: Options<SubmitFormData, ThrowOnError>) => (options.client ?? client).post<SubmitFormResponses, SubmitFormErrors, ThrowOnError>({
+export const submitForm = <ThrowOnError extends boolean = true>(options: Options<SubmitFormData, ThrowOnError>) => (options.client ?? client).post<SubmitFormResponses, SubmitFormErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/submit-form',
     ...options,
@@ -4102,7 +4383,8 @@ export const submitForm = <ThrowOnError extends boolean = false>(options: Option
  *
  * Activates or suspends a given process definition by id.
  */
-export const updateProcessDefinitionSuspensionStateById = <ThrowOnError extends boolean = false>(options: Options<UpdateProcessDefinitionSuspensionStateByIdData, ThrowOnError>) => (options.client ?? client).put<UpdateProcessDefinitionSuspensionStateByIdResponses, UpdateProcessDefinitionSuspensionStateByIdErrors, ThrowOnError>({
+export const updateProcessDefinitionSuspensionStateById = <ThrowOnError extends boolean = true>(options: Options<UpdateProcessDefinitionSuspensionStateByIdData, ThrowOnError>) => (options.client ?? client).put<UpdateProcessDefinitionSuspensionStateByIdResponses, UpdateProcessDefinitionSuspensionStateByIdErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/suspended',
     ...options,
@@ -4117,7 +4399,8 @@ export const updateProcessDefinitionSuspensionStateById = <ThrowOnError extends 
  *
  * Retrieves the BPMN 2.0 XML of a process definition.
  */
-export const getProcessDefinitionBpmn20Xml = <ThrowOnError extends boolean = false>(options: Options<GetProcessDefinitionBpmn20XmlData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionBpmn20XmlResponses, GetProcessDefinitionBpmn20XmlErrors, ThrowOnError>({
+export const getProcessDefinitionBpmn20Xml = <ThrowOnError extends boolean = true>(options: Options<GetProcessDefinitionBpmn20XmlData, ThrowOnError>) => (options.client ?? client).get<GetProcessDefinitionBpmn20XmlResponses, GetProcessDefinitionBpmn20XmlErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-definition/{id}/xml',
     ...options
@@ -4130,7 +4413,8 @@ export const getProcessDefinitionBpmn20Xml = <ThrowOnError extends boolean = fal
  * Parameters may be static as well as dynamic runtime properties of process instances.
  * The size of the result set can be retrieved by using the Get Instance Count method.
  */
-export const getProcessInstances = <ThrowOnError extends boolean = false>(options?: Options<GetProcessInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetProcessInstancesResponses, GetProcessInstancesErrors, ThrowOnError>({
+export const getProcessInstances = <ThrowOnError extends boolean = true>(options?: Options<GetProcessInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetProcessInstancesResponses, GetProcessInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance',
     ...options
@@ -4143,7 +4427,8 @@ export const getProcessInstances = <ThrowOnError extends boolean = false>(option
  * This method is slightly more powerful than the Get Instances method because
  * it allows filtering by multiple process variables of types `string`, `number` or `boolean`.
  */
-export const queryProcessInstances = <ThrowOnError extends boolean = false>(options?: Options<QueryProcessInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryProcessInstancesResponses, QueryProcessInstancesErrors, ThrowOnError>({
+export const queryProcessInstances = <ThrowOnError extends boolean = true>(options?: Options<QueryProcessInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryProcessInstancesResponses, QueryProcessInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance',
     ...options,
@@ -4158,7 +4443,8 @@ export const queryProcessInstances = <ThrowOnError extends boolean = false>(opti
  *
  * Queries for the number of process instances that fulfill given parameters.
  */
-export const getProcessInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<GetProcessInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetProcessInstancesCountResponses, GetProcessInstancesCountErrors, ThrowOnError>({
+export const getProcessInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<GetProcessInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetProcessInstancesCountResponses, GetProcessInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/count',
     ...options
@@ -4171,7 +4457,8 @@ export const getProcessInstancesCount = <ThrowOnError extends boolean = false>(o
  * This method takes the same message body as the Get Instances (POST) method and
  * therefore it is slightly more powerful than the Get Instance Count method.
  */
-export const queryProcessInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<QueryProcessInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryProcessInstancesCountResponses, QueryProcessInstancesCountErrors, ThrowOnError>({
+export const queryProcessInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<QueryProcessInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryProcessInstancesCountResponses, QueryProcessInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/count',
     ...options,
@@ -4186,7 +4473,8 @@ export const queryProcessInstancesCount = <ThrowOnError extends boolean = false>
  *
  * Deletes multiple process instances asynchronously (batch).
  */
-export const deleteProcessInstancesAsyncOperation = <ThrowOnError extends boolean = false>(options?: Options<DeleteProcessInstancesAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<DeleteProcessInstancesAsyncOperationResponses, DeleteProcessInstancesAsyncOperationErrors, ThrowOnError>({
+export const deleteProcessInstancesAsyncOperation = <ThrowOnError extends boolean = true>(options?: Options<DeleteProcessInstancesAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<DeleteProcessInstancesAsyncOperationResponses, DeleteProcessInstancesAsyncOperationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/delete',
     ...options,
@@ -4201,7 +4489,8 @@ export const deleteProcessInstancesAsyncOperation = <ThrowOnError extends boolea
  *
  * Deletes a set of process instances asynchronously (batch) based on a historic process instance query.
  */
-export const deleteAsyncHistoricQueryBased = <ThrowOnError extends boolean = false>(options?: Options<DeleteAsyncHistoricQueryBasedData, ThrowOnError>) => (options?.client ?? client).post<DeleteAsyncHistoricQueryBasedResponses, DeleteAsyncHistoricQueryBasedErrors, ThrowOnError>({
+export const deleteAsyncHistoricQueryBased = <ThrowOnError extends boolean = true>(options?: Options<DeleteAsyncHistoricQueryBasedData, ThrowOnError>) => (options?.client ?? client).post<DeleteAsyncHistoricQueryBasedResponses, DeleteAsyncHistoricQueryBasedErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/delete-historic-query-based',
     ...options,
@@ -4216,7 +4505,8 @@ export const deleteAsyncHistoricQueryBased = <ThrowOnError extends boolean = fal
  *
  * Create a batch to set retries of jobs associated with given processes asynchronously.
  */
-export const setRetriesByProcess = <ThrowOnError extends boolean = false>(options?: Options<SetRetriesByProcessData, ThrowOnError>) => (options?.client ?? client).post<SetRetriesByProcessResponses, SetRetriesByProcessErrors, ThrowOnError>({
+export const setRetriesByProcess = <ThrowOnError extends boolean = true>(options?: Options<SetRetriesByProcessData, ThrowOnError>) => (options?.client ?? client).post<SetRetriesByProcessResponses, SetRetriesByProcessErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/job-retries',
     ...options,
@@ -4231,7 +4521,8 @@ export const setRetriesByProcess = <ThrowOnError extends boolean = false>(option
  *
  * Create a batch to set retries of jobs asynchronously based on a historic process instance query.
  */
-export const setRetriesByProcessHistoricQueryBased = <ThrowOnError extends boolean = false>(options?: Options<SetRetriesByProcessHistoricQueryBasedData, ThrowOnError>) => (options?.client ?? client).post<SetRetriesByProcessHistoricQueryBasedResponses, SetRetriesByProcessHistoricQueryBasedErrors, ThrowOnError>({
+export const setRetriesByProcessHistoricQueryBased = <ThrowOnError extends boolean = true>(options?: Options<SetRetriesByProcessHistoricQueryBasedData, ThrowOnError>) => (options?.client ?? client).post<SetRetriesByProcessHistoricQueryBasedResponses, SetRetriesByProcessHistoricQueryBasedErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/job-retries-historic-query-based',
     ...options,
@@ -4247,7 +4538,8 @@ export const setRetriesByProcessHistoricQueryBased = <ThrowOnError extends boole
  * Correlates a message asynchronously to executions that are waiting for this message.
  * Messages will not be correlated to process definition-level start message events to start process instances.
  */
-export const correlateMessageAsyncOperation = <ThrowOnError extends boolean = false>(options?: Options<CorrelateMessageAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<CorrelateMessageAsyncOperationResponses, CorrelateMessageAsyncOperationErrors, ThrowOnError>({
+export const correlateMessageAsyncOperation = <ThrowOnError extends boolean = true>(options?: Options<CorrelateMessageAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<CorrelateMessageAsyncOperationResponses, CorrelateMessageAsyncOperationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/message-async',
     ...options,
@@ -4279,7 +4571,8 @@ export const correlateMessageAsyncOperation = <ThrowOnError extends boolean = fa
  * * `processInstanceQuery`
  * * `historicProcessInstanceQuery`
  */
-export const updateSuspensionState = <ThrowOnError extends boolean = false>(options?: Options<UpdateSuspensionStateData, ThrowOnError>) => (options?.client ?? client).put<UpdateSuspensionStateResponses, UpdateSuspensionStateErrors, ThrowOnError>({
+export const updateSuspensionState = <ThrowOnError extends boolean = true>(options?: Options<UpdateSuspensionStateData, ThrowOnError>) => (options?.client ?? client).put<UpdateSuspensionStateResponses, UpdateSuspensionStateErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/suspended',
     ...options,
@@ -4295,7 +4588,8 @@ export const updateSuspensionState = <ThrowOnError extends boolean = false>(opti
  * Activates or suspends process instances asynchronously with a list of process instance ids,
  * a process instance query, and/or a historical process instance query.
  */
-export const updateSuspensionStateAsyncOperation = <ThrowOnError extends boolean = false>(options?: Options<UpdateSuspensionStateAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<UpdateSuspensionStateAsyncOperationResponses, UpdateSuspensionStateAsyncOperationErrors, ThrowOnError>({
+export const updateSuspensionStateAsyncOperation = <ThrowOnError extends boolean = true>(options?: Options<UpdateSuspensionStateAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<UpdateSuspensionStateAsyncOperationResponses, UpdateSuspensionStateAsyncOperationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/suspended-async',
     ...options,
@@ -4310,7 +4604,8 @@ export const updateSuspensionStateAsyncOperation = <ThrowOnError extends boolean
  *
  * Update or create runtime process variables in the root scope of process instances.
  */
-export const setVariablesAsyncOperation = <ThrowOnError extends boolean = false>(options?: Options<SetVariablesAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<SetVariablesAsyncOperationResponses, SetVariablesAsyncOperationErrors, ThrowOnError>({
+export const setVariablesAsyncOperation = <ThrowOnError extends boolean = true>(options?: Options<SetVariablesAsyncOperationData, ThrowOnError>) => (options?.client ?? client).post<SetVariablesAsyncOperationResponses, SetVariablesAsyncOperationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/variables-async',
     ...options,
@@ -4325,7 +4620,8 @@ export const setVariablesAsyncOperation = <ThrowOnError extends boolean = false>
  *
  * Deletes a running process instance by id.
  */
-export const deleteProcessInstance = <ThrowOnError extends boolean = false>(options: Options<DeleteProcessInstanceData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessInstanceResponses, DeleteProcessInstanceErrors, ThrowOnError>({
+export const deleteProcessInstance = <ThrowOnError extends boolean = true>(options: Options<DeleteProcessInstanceData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessInstanceResponses, DeleteProcessInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}',
     ...options
@@ -4336,7 +4632,8 @@ export const deleteProcessInstance = <ThrowOnError extends boolean = false>(opti
  *
  * Retrieves a process instance by id, according to the `ProcessInstance` interface in the engine.
  */
-export const getProcessInstance = <ThrowOnError extends boolean = false>(options: Options<GetProcessInstanceData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceResponses, GetProcessInstanceErrors, ThrowOnError>({
+export const getProcessInstance = <ThrowOnError extends boolean = true>(options: Options<GetProcessInstanceData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceResponses, GetProcessInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}',
     ...options
@@ -4347,7 +4644,8 @@ export const getProcessInstance = <ThrowOnError extends boolean = false>(options
  *
  * Retrieves an Activity Instance (Tree) for a given process instance by id.
  */
-export const getActivityInstanceTree = <ThrowOnError extends boolean = false>(options: Options<GetActivityInstanceTreeData, ThrowOnError>) => (options.client ?? client).get<GetActivityInstanceTreeResponses, GetActivityInstanceTreeErrors, ThrowOnError>({
+export const getActivityInstanceTree = <ThrowOnError extends boolean = true>(options: Options<GetActivityInstanceTreeData, ThrowOnError>) => (options.client ?? client).get<GetActivityInstanceTreeResponses, GetActivityInstanceTreeErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/activity-instances',
     ...options
@@ -4358,7 +4656,8 @@ export const getActivityInstanceTree = <ThrowOnError extends boolean = false>(op
  *
  * Deletes all comments of a process instance by id.
  */
-export const deleteProcessInstanceComments = <ThrowOnError extends boolean = false>(options: Options<DeleteProcessInstanceCommentsData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessInstanceCommentsResponses, DeleteProcessInstanceCommentsErrors, ThrowOnError>({
+export const deleteProcessInstanceComments = <ThrowOnError extends boolean = true>(options: Options<DeleteProcessInstanceCommentsData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessInstanceCommentsResponses, DeleteProcessInstanceCommentsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/comment',
     ...options
@@ -4369,7 +4668,8 @@ export const deleteProcessInstanceComments = <ThrowOnError extends boolean = fal
  *
  * Gets the comments for a process instance by id.
  */
-export const getProcessInstanceComments = <ThrowOnError extends boolean = false>(options: Options<GetProcessInstanceCommentsData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceCommentsResponses, GetProcessInstanceCommentsErrors, ThrowOnError>({
+export const getProcessInstanceComments = <ThrowOnError extends boolean = true>(options: Options<GetProcessInstanceCommentsData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceCommentsResponses, GetProcessInstanceCommentsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/comment',
     ...options
@@ -4380,7 +4680,8 @@ export const getProcessInstanceComments = <ThrowOnError extends boolean = false>
  *
  * Updates a Comment.
  */
-export const updateProcessInstanceComment = <ThrowOnError extends boolean = false>(options: Options<UpdateProcessInstanceCommentData, ThrowOnError>) => (options.client ?? client).put<UpdateProcessInstanceCommentResponses, UpdateProcessInstanceCommentErrors, ThrowOnError>({
+export const updateProcessInstanceComment = <ThrowOnError extends boolean = true>(options: Options<UpdateProcessInstanceCommentData, ThrowOnError>) => (options.client ?? client).put<UpdateProcessInstanceCommentResponses, UpdateProcessInstanceCommentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/comment',
     ...options,
@@ -4395,7 +4696,8 @@ export const updateProcessInstanceComment = <ThrowOnError extends boolean = fals
  *
  * Removes a comment from a process instance by id.
  */
-export const deleteProcessInstanceComment = <ThrowOnError extends boolean = false>(options: Options<DeleteProcessInstanceCommentData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessInstanceCommentResponses, DeleteProcessInstanceCommentErrors, ThrowOnError>({
+export const deleteProcessInstanceComment = <ThrowOnError extends boolean = true>(options: Options<DeleteProcessInstanceCommentData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessInstanceCommentResponses, DeleteProcessInstanceCommentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/comment/{commentId}',
     ...options
@@ -4417,7 +4719,8 @@ export const deleteProcessInstanceComment = <ThrowOnError extends boolean = fals
  *
  * The exact semantics of modification can be read about in the [User guide](https://docs.cibseven.org/manual/develop/user-guide/process-engine/process-instance-modification/).
  */
-export const modifyProcessInstance = <ThrowOnError extends boolean = false>(options: Options<ModifyProcessInstanceData, ThrowOnError>) => (options.client ?? client).post<ModifyProcessInstanceResponses, ModifyProcessInstanceErrors, ThrowOnError>({
+export const modifyProcessInstance = <ThrowOnError extends boolean = true>(options: Options<ModifyProcessInstanceData, ThrowOnError>) => (options.client ?? client).post<ModifyProcessInstanceResponses, ModifyProcessInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/modification',
     ...options,
@@ -4444,7 +4747,8 @@ export const modifyProcessInstance = <ThrowOnError extends boolean = false>(opti
  * The exact semantics of modification can be read about in the
  * [User guide](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/process-instance-modification/).
  */
-export const modifyProcessInstanceAsyncOperation = <ThrowOnError extends boolean = false>(options: Options<ModifyProcessInstanceAsyncOperationData, ThrowOnError>) => (options.client ?? client).post<ModifyProcessInstanceAsyncOperationResponses, ModifyProcessInstanceAsyncOperationErrors, ThrowOnError>({
+export const modifyProcessInstanceAsyncOperation = <ThrowOnError extends boolean = true>(options: Options<ModifyProcessInstanceAsyncOperationData, ThrowOnError>) => (options.client ?? client).post<ModifyProcessInstanceAsyncOperationResponses, ModifyProcessInstanceAsyncOperationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/modification-async',
     ...options,
@@ -4459,7 +4763,8 @@ export const modifyProcessInstanceAsyncOperation = <ThrowOnError extends boolean
  *
  * Activates or suspends a given process instance by id.
  */
-export const updateSuspensionStateById = <ThrowOnError extends boolean = false>(options: Options<UpdateSuspensionStateByIdData, ThrowOnError>) => (options.client ?? client).put<UpdateSuspensionStateByIdResponses, unknown, ThrowOnError>({
+export const updateSuspensionStateById = <ThrowOnError extends boolean = true>(options: Options<UpdateSuspensionStateByIdData, ThrowOnError>) => (options.client ?? client).put<UpdateSuspensionStateByIdResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/suspended',
     ...options,
@@ -4474,7 +4779,8 @@ export const updateSuspensionStateById = <ThrowOnError extends boolean = false>(
  *
  * Retrieves all variables of a given process instance by id.
  */
-export const getProcessInstanceVariables = <ThrowOnError extends boolean = false>(options: Options<GetProcessInstanceVariablesData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceVariablesResponses, GetProcessInstanceVariablesErrors, ThrowOnError>({
+export const getProcessInstanceVariables = <ThrowOnError extends boolean = true>(options: Options<GetProcessInstanceVariablesData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceVariablesResponses, GetProcessInstanceVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/variables',
     ...options
@@ -4486,7 +4792,8 @@ export const getProcessInstanceVariables = <ThrowOnError extends boolean = false
  * Updates or deletes the variables of a process instance by id. Updates precede deletions.
  * So, if a variable is updated AND deleted, the deletion overrides the update.
  */
-export const modifyProcessInstanceVariables = <ThrowOnError extends boolean = false>(options: Options<ModifyProcessInstanceVariablesData, ThrowOnError>) => (options.client ?? client).post<ModifyProcessInstanceVariablesResponses, ModifyProcessInstanceVariablesErrors, ThrowOnError>({
+export const modifyProcessInstanceVariables = <ThrowOnError extends boolean = true>(options: Options<ModifyProcessInstanceVariablesData, ThrowOnError>) => (options.client ?? client).post<ModifyProcessInstanceVariablesResponses, ModifyProcessInstanceVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/variables',
     ...options,
@@ -4501,7 +4808,8 @@ export const modifyProcessInstanceVariables = <ThrowOnError extends boolean = fa
  *
  * Deletes a variable of a process instance by id.
  */
-export const deleteProcessInstanceVariable = <ThrowOnError extends boolean = false>(options: Options<DeleteProcessInstanceVariableData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessInstanceVariableResponses, unknown, ThrowOnError>({
+export const deleteProcessInstanceVariable = <ThrowOnError extends boolean = true>(options: Options<DeleteProcessInstanceVariableData, ThrowOnError>) => (options.client ?? client).delete<DeleteProcessInstanceVariableResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/variables/{varName}',
     ...options
@@ -4512,7 +4820,8 @@ export const deleteProcessInstanceVariable = <ThrowOnError extends boolean = fal
  *
  * Retrieves a variable of a given process instance by id.
  */
-export const getProcessInstanceVariable = <ThrowOnError extends boolean = false>(options: Options<GetProcessInstanceVariableData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceVariableResponses, GetProcessInstanceVariableErrors, ThrowOnError>({
+export const getProcessInstanceVariable = <ThrowOnError extends boolean = true>(options: Options<GetProcessInstanceVariableData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceVariableResponses, GetProcessInstanceVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/variables/{varName}',
     ...options
@@ -4523,7 +4832,8 @@ export const getProcessInstanceVariable = <ThrowOnError extends boolean = false>
  *
  * Sets a variable of a given process instance by id.
  */
-export const setProcessInstanceVariable = <ThrowOnError extends boolean = false>(options: Options<SetProcessInstanceVariableData, ThrowOnError>) => (options.client ?? client).put<SetProcessInstanceVariableResponses, SetProcessInstanceVariableErrors, ThrowOnError>({
+export const setProcessInstanceVariable = <ThrowOnError extends boolean = true>(options: Options<SetProcessInstanceVariableData, ThrowOnError>) => (options.client ?? client).put<SetProcessInstanceVariableResponses, SetProcessInstanceVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/variables/{varName}',
     ...options,
@@ -4539,7 +4849,8 @@ export const setProcessInstanceVariable = <ThrowOnError extends boolean = false>
  * Retrieves the content of a Process Variable by the Process Instance id and the Process Variable name.
  * Applicable for byte array or file Process Variables.
  */
-export const getProcessInstanceVariableBinary = <ThrowOnError extends boolean = false>(options: Options<GetProcessInstanceVariableBinaryData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceVariableBinaryResponses, GetProcessInstanceVariableBinaryErrors, ThrowOnError>({
+export const getProcessInstanceVariableBinary = <ThrowOnError extends boolean = true>(options: Options<GetProcessInstanceVariableBinaryData, ThrowOnError>) => (options.client ?? client).get<GetProcessInstanceVariableBinaryResponses, GetProcessInstanceVariableBinaryErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/variables/{varName}/data',
     ...options
@@ -4550,8 +4861,9 @@ export const getProcessInstanceVariableBinary = <ThrowOnError extends boolean = 
  *
  * Sets the serialized value for a binary variable or the binary value for a file variable.
  */
-export const setProcessInstanceVariableBinary = <ThrowOnError extends boolean = false>(options: Options<SetProcessInstanceVariableBinaryData, ThrowOnError>) => (options.client ?? client).post<SetProcessInstanceVariableBinaryResponses, SetProcessInstanceVariableBinaryErrors, ThrowOnError>({
+export const setProcessInstanceVariableBinary = <ThrowOnError extends boolean = true>(options: Options<SetProcessInstanceVariableBinaryData, ThrowOnError>) => (options.client ?? client).post<SetProcessInstanceVariableBinaryResponses, SetProcessInstanceVariableBinaryErrors, ThrowOnError, 'data'>({
     ...formDataBodySerializer,
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/process-instance/{id}/variables/{varName}/data',
     ...options,
@@ -4566,7 +4878,8 @@ export const setProcessInstanceVariableBinary = <ThrowOnError extends boolean = 
  *
  * Queries for schema log entries that fulfill given parameters.
  */
-export const getSchemaLog = <ThrowOnError extends boolean = false>(options?: Options<GetSchemaLogData, ThrowOnError>) => (options?.client ?? client).get<GetSchemaLogResponses, unknown, ThrowOnError>({
+export const getSchemaLog = <ThrowOnError extends boolean = true>(options?: Options<GetSchemaLogData, ThrowOnError>) => (options?.client ?? client).get<GetSchemaLogResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/schema/log',
     ...options
@@ -4577,7 +4890,8 @@ export const getSchemaLog = <ThrowOnError extends boolean = false>(options?: Opt
  *
  * Queries for schema log entries that fulfill given parameters.
  */
-export const querySchemaLog = <ThrowOnError extends boolean = false>(options?: Options<QuerySchemaLogData, ThrowOnError>) => (options?.client ?? client).post<QuerySchemaLogResponses, unknown, ThrowOnError>({
+export const querySchemaLog = <ThrowOnError extends boolean = true>(options?: Options<QuerySchemaLogData, ThrowOnError>) => (options?.client ?? client).post<QuerySchemaLogResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/schema/log',
     ...options,
@@ -4596,7 +4910,8 @@ export const querySchemaLog = <ThrowOnError extends boolean = false>(options?: O
  * behavior, see the [Signal Events](https://docs.cibseven.org/manual/2.1/reference/bpmn20/events/signal-events/)
  * section of the [BPMN 2.0 Implementation Reference](https://docs.cibseven.org/manual/2.1/reference/bpmn20/).
  */
-export const throwSignal = <ThrowOnError extends boolean = false>(options?: Options<ThrowSignalData, ThrowOnError>) => (options?.client ?? client).post<ThrowSignalResponses, ThrowSignalErrors, ThrowOnError>({
+export const throwSignal = <ThrowOnError extends boolean = true>(options?: Options<ThrowSignalData, ThrowOnError>) => (options?.client ?? client).post<ThrowSignalResponses, ThrowSignalErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/signal',
     ...options,
@@ -4618,7 +4933,8 @@ export const throwSignal = <ThrowOnError extends boolean = false>(options?: Opti
  * [security considerations](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/securing-custom-code/)
  * for custom code in the user guide for details.
  */
-export const getTasks = <ThrowOnError extends boolean = false>(options?: Options<GetTasksData, ThrowOnError>) => (options?.client ?? client).get<GetTasksResponses, GetTasksErrors, ThrowOnError>({
+export const getTasks = <ThrowOnError extends boolean = true>(options?: Options<GetTasksData, ThrowOnError>) => (options?.client ?? client).get<GetTasksResponses, GetTasksErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task',
     ...options
@@ -4640,7 +4956,8 @@ export const getTasks = <ThrowOnError extends boolean = false>(options?: Options
  * [security considerations for custom code](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/securing-custom-code/)
  * in the user guide for details.
  */
-export const queryTasks = <ThrowOnError extends boolean = false>(options?: Options<QueryTasksData, ThrowOnError>) => (options?.client ?? client).post<QueryTasksResponses, QueryTasksErrors, ThrowOnError>({
+export const queryTasks = <ThrowOnError extends boolean = true>(options?: Options<QueryTasksData, ThrowOnError>) => (options?.client ?? client).post<QueryTasksResponses, QueryTasksErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task',
     ...options,
@@ -4662,7 +4979,8 @@ export const queryTasks = <ThrowOnError extends boolean = false>(options?: Optio
  * [security considerations](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/securing-custom-code/)
  * for custom code in the user guide for details.
  */
-export const getTasksCount = <ThrowOnError extends boolean = false>(options?: Options<GetTasksCountData, ThrowOnError>) => (options?.client ?? client).get<GetTasksCountResponses, GetTasksCountErrors, ThrowOnError>({
+export const getTasksCount = <ThrowOnError extends boolean = true>(options?: Options<GetTasksCountData, ThrowOnError>) => (options?.client ?? client).get<GetTasksCountResponses, GetTasksCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/count',
     ...options
@@ -4682,7 +5000,8 @@ export const getTasksCount = <ThrowOnError extends boolean = false>(options?: Op
  * [security considerations for custom code](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/securing-custom-code/)
  * in the user guide for details.
  */
-export const queryTasksCount = <ThrowOnError extends boolean = false>(options?: Options<QueryTasksCountData, ThrowOnError>) => (options?.client ?? client).post<QueryTasksCountResponses, QueryTasksCountErrors, ThrowOnError>({
+export const queryTasksCount = <ThrowOnError extends boolean = true>(options?: Options<QueryTasksCountData, ThrowOnError>) => (options?.client ?? client).post<QueryTasksCountResponses, QueryTasksCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/count',
     ...options,
@@ -4697,7 +5016,8 @@ export const queryTasksCount = <ThrowOnError extends boolean = false>(options?: 
  *
  * Creates a new task.
  */
-export const createTask = <ThrowOnError extends boolean = false>(options?: Options<CreateTaskData, ThrowOnError>) => (options?.client ?? client).post<CreateTaskResponses, CreateTaskErrors, ThrowOnError>({
+export const createTask = <ThrowOnError extends boolean = true>(options?: Options<CreateTaskData, ThrowOnError>) => (options?.client ?? client).post<CreateTaskResponses, CreateTaskErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/create',
     ...options,
@@ -4712,7 +5032,8 @@ export const createTask = <ThrowOnError extends boolean = false>(options?: Optio
  *
  * Retrieves the number of tasks for each candidate group.
  */
-export const getTaskCountByCandidateGroup = <ThrowOnError extends boolean = false>(options?: Options<GetTaskCountByCandidateGroupData, ThrowOnError>) => (options?.client ?? client).get<GetTaskCountByCandidateGroupResponses, GetTaskCountByCandidateGroupErrors, ThrowOnError>({
+export const getTaskCountByCandidateGroup = <ThrowOnError extends boolean = true>(options?: Options<GetTaskCountByCandidateGroupData, ThrowOnError>) => (options?.client ?? client).get<GetTaskCountByCandidateGroupResponses, GetTaskCountByCandidateGroupErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/report/candidate-group-count',
     ...options
@@ -4723,7 +5044,8 @@ export const getTaskCountByCandidateGroup = <ThrowOnError extends boolean = fals
  *
  * Removes a task by id.
  */
-export const deleteTask = <ThrowOnError extends boolean = false>(options: Options<DeleteTaskData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskResponses, DeleteTaskErrors, ThrowOnError>({
+export const deleteTask = <ThrowOnError extends boolean = true>(options: Options<DeleteTaskData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskResponses, DeleteTaskErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}',
     ...options
@@ -4734,7 +5056,8 @@ export const deleteTask = <ThrowOnError extends boolean = false>(options: Option
  *
  * Retrieves a task by id.
  */
-export const getTask = <ThrowOnError extends boolean = false>(options: Options<GetTaskData, ThrowOnError>) => (options.client ?? client).get<GetTaskResponses, GetTaskErrors, ThrowOnError>({
+export const getTask = <ThrowOnError extends boolean = true>(options: Options<GetTaskData, ThrowOnError>) => (options.client ?? client).get<GetTaskResponses, GetTaskErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}',
     ...options
@@ -4745,7 +5068,8 @@ export const getTask = <ThrowOnError extends boolean = false>(options: Options<G
  *
  * Updates a task.
  */
-export const updateTask = <ThrowOnError extends boolean = false>(options: Options<UpdateTaskData, ThrowOnError>) => (options.client ?? client).put<UpdateTaskResponses, UpdateTaskErrors, ThrowOnError>({
+export const updateTask = <ThrowOnError extends boolean = true>(options: Options<UpdateTaskData, ThrowOnError>) => (options.client ?? client).put<UpdateTaskResponses, UpdateTaskErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}',
     ...options,
@@ -4764,7 +5088,8 @@ export const updateTask = <ThrowOnError extends boolean = false>(options: Option
  * method is that this method does not check if the task already has a user
  * assigned to it.
  */
-export const setAssignee = <ThrowOnError extends boolean = false>(options: Options<SetAssigneeData, ThrowOnError>) => (options.client ?? client).post<SetAssigneeResponses, SetAssigneeErrors, ThrowOnError>({
+export const setAssignee = <ThrowOnError extends boolean = true>(options: Options<SetAssigneeData, ThrowOnError>) => (options.client ?? client).post<SetAssigneeResponses, SetAssigneeErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/assignee',
     ...options,
@@ -4779,7 +5104,8 @@ export const setAssignee = <ThrowOnError extends boolean = false>(options: Optio
  *
  * Gets the attachments for a task.
  */
-export const getAttachments = <ThrowOnError extends boolean = false>(options: Options<GetAttachmentsData, ThrowOnError>) => (options.client ?? client).get<GetAttachmentsResponses, GetAttachmentsErrors, ThrowOnError>({
+export const getAttachments = <ThrowOnError extends boolean = true>(options: Options<GetAttachmentsData, ThrowOnError>) => (options.client ?? client).get<GetAttachmentsResponses, GetAttachmentsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/attachment',
     ...options
@@ -4790,8 +5116,9 @@ export const getAttachments = <ThrowOnError extends boolean = false>(options: Op
  *
  * Creates an attachment for a task.
  */
-export const addAttachment = <ThrowOnError extends boolean = false>(options: Options<AddAttachmentData, ThrowOnError>) => (options.client ?? client).post<AddAttachmentResponses, AddAttachmentErrors, ThrowOnError>({
+export const addAttachment = <ThrowOnError extends boolean = true>(options: Options<AddAttachmentData, ThrowOnError>) => (options.client ?? client).post<AddAttachmentResponses, AddAttachmentErrors, ThrowOnError, 'data'>({
     ...formDataBodySerializer,
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/attachment/create',
     ...options,
@@ -4806,7 +5133,8 @@ export const addAttachment = <ThrowOnError extends boolean = false>(options: Opt
  *
  * Removes an attachment from a task by id.
  */
-export const deleteAttachment = <ThrowOnError extends boolean = false>(options: Options<DeleteAttachmentData, ThrowOnError>) => (options.client ?? client).delete<DeleteAttachmentResponses, DeleteAttachmentErrors, ThrowOnError>({
+export const deleteAttachment = <ThrowOnError extends boolean = true>(options: Options<DeleteAttachmentData, ThrowOnError>) => (options.client ?? client).delete<DeleteAttachmentResponses, DeleteAttachmentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/attachment/{attachmentId}',
     ...options
@@ -4817,7 +5145,8 @@ export const deleteAttachment = <ThrowOnError extends boolean = false>(options: 
  *
  * Retrieves a task attachment by task id and attachment id.
  */
-export const getAttachment = <ThrowOnError extends boolean = false>(options: Options<GetAttachmentData, ThrowOnError>) => (options.client ?? client).get<GetAttachmentResponses, GetAttachmentErrors, ThrowOnError>({
+export const getAttachment = <ThrowOnError extends boolean = true>(options: Options<GetAttachmentData, ThrowOnError>) => (options.client ?? client).get<GetAttachmentResponses, GetAttachmentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/attachment/{attachmentId}',
     ...options
@@ -4828,7 +5157,8 @@ export const getAttachment = <ThrowOnError extends boolean = false>(options: Opt
  *
  * Retrieves the binary content of a task attachment by task id and attachment id.
  */
-export const getAttachmentData = <ThrowOnError extends boolean = false>(options: Options<GetAttachmentDataData, ThrowOnError>) => (options.client ?? client).get<GetAttachmentDataResponses, GetAttachmentDataErrors, ThrowOnError>({
+export const getAttachmentData = <ThrowOnError extends boolean = true>(options: Options<GetAttachmentDataData, ThrowOnError>) => (options.client ?? client).get<GetAttachmentDataResponses, GetAttachmentDataErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/attachment/{attachmentId}/data',
     ...options
@@ -4842,7 +5172,8 @@ export const getAttachmentData = <ThrowOnError extends boolean = false>(options:
  * [Reporting Bpmn Error](https://docs.cibseven.org/manual/2.1/reference/bpmn20/tasks/user-task/#reporting-bpmn-error)
  * in User Tasks.
  */
-export const handleBpmnError = <ThrowOnError extends boolean = false>(options: Options<HandleBpmnErrorData, ThrowOnError>) => (options.client ?? client).post<HandleBpmnErrorResponses, HandleBpmnErrorErrors, ThrowOnError>({
+export const handleBpmnError = <ThrowOnError extends boolean = true>(options: Options<HandleBpmnErrorData, ThrowOnError>) => (options.client ?? client).post<HandleBpmnErrorResponses, HandleBpmnErrorErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/bpmnError',
     ...options,
@@ -4860,7 +5191,8 @@ export const handleBpmnError = <ThrowOnError extends boolean = false>(options: O
  * [Reporting Bpmn Escalation](https://docs.cibseven.org/manual/2.1/reference/bpmn20/tasks/user-task/#reporting-bpmn-escalation)
  * in User Tasks.
  */
-export const handleEscalation = <ThrowOnError extends boolean = false>(options: Options<HandleEscalationData, ThrowOnError>) => (options.client ?? client).post<HandleEscalationResponses, HandleEscalationErrors, ThrowOnError>({
+export const handleEscalation = <ThrowOnError extends boolean = true>(options: Options<HandleEscalationData, ThrowOnError>) => (options.client ?? client).post<HandleEscalationResponses, HandleEscalationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/bpmnEscalation',
     ...options,
@@ -4880,7 +5212,8 @@ export const handleEscalation = <ThrowOnError extends boolean = false>(options: 
  * method is that here a check is performed to see if the task already has a user
  * assigned to it.
  */
-export const claim = <ThrowOnError extends boolean = false>(options: Options<ClaimData, ThrowOnError>) => (options.client ?? client).post<ClaimResponses, ClaimErrors, ThrowOnError>({
+export const claim = <ThrowOnError extends boolean = true>(options: Options<ClaimData, ThrowOnError>) => (options.client ?? client).post<ClaimResponses, ClaimErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/claim',
     ...options,
@@ -4895,7 +5228,8 @@ export const claim = <ThrowOnError extends boolean = false>(options: Options<Cla
  *
  * Deletes all comments of a task by task id.
  */
-export const deleteTaskComments = <ThrowOnError extends boolean = false>(options: Options<DeleteTaskCommentsData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskCommentsResponses, DeleteTaskCommentsErrors, ThrowOnError>({
+export const deleteTaskComments = <ThrowOnError extends boolean = true>(options: Options<DeleteTaskCommentsData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskCommentsResponses, DeleteTaskCommentsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/comment',
     ...options
@@ -4906,7 +5240,8 @@ export const deleteTaskComments = <ThrowOnError extends boolean = false>(options
  *
  * Gets the comments for a task by id.
  */
-export const getComments = <ThrowOnError extends boolean = false>(options: Options<GetCommentsData, ThrowOnError>) => (options.client ?? client).get<GetCommentsResponses, GetCommentsErrors, ThrowOnError>({
+export const getComments = <ThrowOnError extends boolean = true>(options: Options<GetCommentsData, ThrowOnError>) => (options.client ?? client).get<GetCommentsResponses, GetCommentsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/comment',
     ...options
@@ -4917,7 +5252,8 @@ export const getComments = <ThrowOnError extends boolean = false>(options: Optio
  *
  * Updates a Comment.
  */
-export const updateTaskComment = <ThrowOnError extends boolean = false>(options: Options<UpdateTaskCommentData, ThrowOnError>) => (options.client ?? client).put<UpdateTaskCommentResponses, UpdateTaskCommentErrors, ThrowOnError>({
+export const updateTaskComment = <ThrowOnError extends boolean = true>(options: Options<UpdateTaskCommentData, ThrowOnError>) => (options.client ?? client).put<UpdateTaskCommentResponses, UpdateTaskCommentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/comment',
     ...options,
@@ -4932,7 +5268,8 @@ export const updateTaskComment = <ThrowOnError extends boolean = false>(options:
  *
  * Creates a comment for a task by id.
  */
-export const createComment = <ThrowOnError extends boolean = false>(options: Options<CreateCommentData, ThrowOnError>) => (options.client ?? client).post<CreateCommentResponses, CreateCommentErrors, ThrowOnError>({
+export const createComment = <ThrowOnError extends boolean = true>(options: Options<CreateCommentData, ThrowOnError>) => (options.client ?? client).post<CreateCommentResponses, CreateCommentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/comment/create',
     ...options,
@@ -4947,7 +5284,8 @@ export const createComment = <ThrowOnError extends boolean = false>(options: Opt
  *
  * Removes a comment from a task by id.
  */
-export const deleteTaskComment = <ThrowOnError extends boolean = false>(options: Options<DeleteTaskCommentData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskCommentResponses, DeleteTaskCommentErrors, ThrowOnError>({
+export const deleteTaskComment = <ThrowOnError extends boolean = true>(options: Options<DeleteTaskCommentData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskCommentResponses, DeleteTaskCommentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/comment/{commentId}',
     ...options
@@ -4958,7 +5296,8 @@ export const deleteTaskComment = <ThrowOnError extends boolean = false>(options:
  *
  * Retrieves a task comment by task id and comment id.
  */
-export const getComment = <ThrowOnError extends boolean = false>(options: Options<GetCommentData, ThrowOnError>) => (options.client ?? client).get<GetCommentResponses, GetCommentErrors, ThrowOnError>({
+export const getComment = <ThrowOnError extends boolean = true>(options: Options<GetCommentData, ThrowOnError>) => (options.client ?? client).get<GetCommentResponses, GetCommentErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/comment/{commentId}',
     ...options
@@ -4969,7 +5308,8 @@ export const getComment = <ThrowOnError extends boolean = false>(options: Option
  *
  * Completes a task and updates process variables.
  */
-export const complete = <ThrowOnError extends boolean = false>(options: Options<CompleteData, ThrowOnError>) => (options.client ?? client).post<CompleteResponses, CompleteErrors, ThrowOnError>({
+export const complete = <ThrowOnError extends boolean = true>(options: Options<CompleteData, ThrowOnError>) => (options.client ?? client).post<CompleteResponses, CompleteErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/complete',
     ...options,
@@ -4984,7 +5324,8 @@ export const complete = <ThrowOnError extends boolean = false>(options: Options<
  *
  * Delegates a task to another user.
  */
-export const delegateTask = <ThrowOnError extends boolean = false>(options: Options<DelegateTaskData, ThrowOnError>) => (options.client ?? client).post<DelegateTaskResponses, DelegateTaskErrors, ThrowOnError>({
+export const delegateTask = <ThrowOnError extends boolean = true>(options: Options<DelegateTaskData, ThrowOnError>) => (options.client ?? client).post<DelegateTaskResponses, DelegateTaskErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/delegate',
     ...options,
@@ -5001,7 +5342,8 @@ export const delegateTask = <ThrowOnError extends boolean = false>(options: Opti
  * information please refer to the
  * [User Guide](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#embedded-task-forms).
  */
-export const getDeployedForm = <ThrowOnError extends boolean = false>(options: Options<GetDeployedFormData, ThrowOnError>) => (options.client ?? client).get<GetDeployedFormResponses, GetDeployedFormErrors, ThrowOnError>({
+export const getDeployedForm = <ThrowOnError extends boolean = true>(options: Options<GetDeployedFormData, ThrowOnError>) => (options.client ?? client).get<GetDeployedFormResponses, GetDeployedFormErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/deployed-form',
     ...options
@@ -5015,7 +5357,8 @@ export const getDeployedForm = <ThrowOnError extends boolean = false>(options: O
  * client applications. Additionally, the context path of the containing process
  * application is returned.
  */
-export const getForm = <ThrowOnError extends boolean = false>(options: Options<GetFormData, ThrowOnError>) => (options.client ?? client).get<GetFormResponses, GetFormErrors, ThrowOnError>({
+export const getForm = <ThrowOnError extends boolean = true>(options: Options<GetFormData, ThrowOnError>) => (options.client ?? client).get<GetFormResponses, GetFormErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/form',
     ...options
@@ -5028,7 +5371,8 @@ export const getForm = <ThrowOnError extends boolean = false>(options: Options<G
  * on the task into account. If form fields are defined, the variable types and default
  * values of the form fields are taken into account.
  */
-export const getFormVariables = <ThrowOnError extends boolean = false>(options: Options<GetFormVariablesData, ThrowOnError>) => (options.client ?? client).get<GetFormVariablesResponses, GetFormVariablesErrors, ThrowOnError>({
+export const getFormVariables = <ThrowOnError extends boolean = true>(options: Options<GetFormVariablesData, ThrowOnError>) => (options.client ?? client).get<GetFormVariablesResponses, GetFormVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/form-variables',
     ...options
@@ -5040,7 +5384,8 @@ export const getFormVariables = <ThrowOnError extends boolean = false>(options: 
  * Gets the identity links for a task by id, which are the users and groups that are in
  * *some* relation to it (including assignee and owner).
  */
-export const getIdentityLinks = <ThrowOnError extends boolean = false>(options: Options<GetIdentityLinksData, ThrowOnError>) => (options.client ?? client).get<GetIdentityLinksResponses, GetIdentityLinksErrors, ThrowOnError>({
+export const getIdentityLinks = <ThrowOnError extends boolean = true>(options: Options<GetIdentityLinksData, ThrowOnError>) => (options.client ?? client).get<GetIdentityLinksResponses, GetIdentityLinksErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/identity-links',
     ...options
@@ -5052,7 +5397,8 @@ export const getIdentityLinks = <ThrowOnError extends boolean = false>(options: 
  * Adds an identity link to a task by id. Can be used to link any user or group to a task
  * and specify a relation.
  */
-export const addIdentityLink = <ThrowOnError extends boolean = false>(options: Options<AddIdentityLinkData, ThrowOnError>) => (options.client ?? client).post<AddIdentityLinkResponses, AddIdentityLinkErrors, ThrowOnError>({
+export const addIdentityLink = <ThrowOnError extends boolean = true>(options: Options<AddIdentityLinkData, ThrowOnError>) => (options.client ?? client).post<AddIdentityLinkResponses, AddIdentityLinkErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/identity-links',
     ...options,
@@ -5067,7 +5413,8 @@ export const addIdentityLink = <ThrowOnError extends boolean = false>(options: O
  *
  * Removes an identity link from a task by id
  */
-export const deleteIdentityLink = <ThrowOnError extends boolean = false>(options: Options<DeleteIdentityLinkData, ThrowOnError>) => (options.client ?? client).post<DeleteIdentityLinkResponses, DeleteIdentityLinkErrors, ThrowOnError>({
+export const deleteIdentityLink = <ThrowOnError extends boolean = true>(options: Options<DeleteIdentityLinkData, ThrowOnError>) => (options.client ?? client).post<DeleteIdentityLinkResponses, DeleteIdentityLinkErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/identity-links/delete',
     ...options,
@@ -5082,7 +5429,8 @@ export const deleteIdentityLink = <ThrowOnError extends boolean = false>(options
  *
  * Retrieves all variables of a given task by id.
  */
-export const getTaskLocalVariables = <ThrowOnError extends boolean = false>(options: Options<GetTaskLocalVariablesData, ThrowOnError>) => (options.client ?? client).get<GetTaskLocalVariablesResponses, GetTaskLocalVariablesErrors, ThrowOnError>({
+export const getTaskLocalVariables = <ThrowOnError extends boolean = true>(options: Options<GetTaskLocalVariablesData, ThrowOnError>) => (options.client ?? client).get<GetTaskLocalVariablesResponses, GetTaskLocalVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/localVariables',
     ...options
@@ -5094,7 +5442,8 @@ export const getTaskLocalVariables = <ThrowOnError extends boolean = false>(opti
  * Updates or deletes the variables in the context of a task. Updates precede deletions. So, if a variable is
  * updated AND deleted, the deletion overrides the update.
  */
-export const modifyTaskLocalVariables = <ThrowOnError extends boolean = false>(options: Options<ModifyTaskLocalVariablesData, ThrowOnError>) => (options.client ?? client).post<ModifyTaskLocalVariablesResponses, ModifyTaskLocalVariablesErrors, ThrowOnError>({
+export const modifyTaskLocalVariables = <ThrowOnError extends boolean = true>(options: Options<ModifyTaskLocalVariablesData, ThrowOnError>) => (options.client ?? client).post<ModifyTaskLocalVariablesResponses, ModifyTaskLocalVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/localVariables',
     ...options,
@@ -5109,7 +5458,8 @@ export const modifyTaskLocalVariables = <ThrowOnError extends boolean = false>(o
  *
  * Removes a local variable from a task by id.
  */
-export const deleteTaskLocalVariable = <ThrowOnError extends boolean = false>(options: Options<DeleteTaskLocalVariableData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskLocalVariableResponses, DeleteTaskLocalVariableErrors, ThrowOnError>({
+export const deleteTaskLocalVariable = <ThrowOnError extends boolean = true>(options: Options<DeleteTaskLocalVariableData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskLocalVariableResponses, DeleteTaskLocalVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/localVariables/{varName}',
     ...options
@@ -5120,7 +5470,8 @@ export const deleteTaskLocalVariable = <ThrowOnError extends boolean = false>(op
  *
  * Retrieves a variable from the context of a given task by id.
  */
-export const getTaskLocalVariable = <ThrowOnError extends boolean = false>(options: Options<GetTaskLocalVariableData, ThrowOnError>) => (options.client ?? client).get<GetTaskLocalVariableResponses, GetTaskLocalVariableErrors, ThrowOnError>({
+export const getTaskLocalVariable = <ThrowOnError extends boolean = true>(options: Options<GetTaskLocalVariableData, ThrowOnError>) => (options.client ?? client).get<GetTaskLocalVariableResponses, GetTaskLocalVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/localVariables/{varName}',
     ...options
@@ -5131,7 +5482,8 @@ export const getTaskLocalVariable = <ThrowOnError extends boolean = false>(optio
  *
  * Sets a variable in the context of a given task.
  */
-export const putTaskLocalVariable = <ThrowOnError extends boolean = false>(options: Options<PutTaskLocalVariableData, ThrowOnError>) => (options.client ?? client).put<PutTaskLocalVariableResponses, PutTaskLocalVariableErrors, ThrowOnError>({
+export const putTaskLocalVariable = <ThrowOnError extends boolean = true>(options: Options<PutTaskLocalVariableData, ThrowOnError>) => (options.client ?? client).put<PutTaskLocalVariableResponses, PutTaskLocalVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/localVariables/{varName}',
     ...options,
@@ -5147,7 +5499,8 @@ export const putTaskLocalVariable = <ThrowOnError extends boolean = false>(optio
  * Retrieves a binary variable from the context of a given task by id. Applicable for byte array and file
  * variables.
  */
-export const getTaskLocalVariableBinary = <ThrowOnError extends boolean = false>(options: Options<GetTaskLocalVariableBinaryData, ThrowOnError>) => (options.client ?? client).get<GetTaskLocalVariableBinaryResponses, GetTaskLocalVariableBinaryErrors, ThrowOnError>({
+export const getTaskLocalVariableBinary = <ThrowOnError extends boolean = true>(options: Options<GetTaskLocalVariableBinaryData, ThrowOnError>) => (options.client ?? client).get<GetTaskLocalVariableBinaryResponses, GetTaskLocalVariableBinaryErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/localVariables/{varName}/data',
     ...options
@@ -5158,8 +5511,9 @@ export const getTaskLocalVariableBinary = <ThrowOnError extends boolean = false>
  *
  * Sets the serialized value for a binary variable or the binary value for a file variable.
  */
-export const setBinaryTaskLocalVariable = <ThrowOnError extends boolean = false>(options: Options<SetBinaryTaskLocalVariableData, ThrowOnError>) => (options.client ?? client).post<SetBinaryTaskLocalVariableResponses, SetBinaryTaskLocalVariableErrors, ThrowOnError>({
+export const setBinaryTaskLocalVariable = <ThrowOnError extends boolean = true>(options: Options<SetBinaryTaskLocalVariableData, ThrowOnError>) => (options.client ?? client).post<SetBinaryTaskLocalVariableResponses, SetBinaryTaskLocalVariableErrors, ThrowOnError, 'data'>({
     ...formDataBodySerializer,
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/localVariables/{varName}/data',
     ...options,
@@ -5176,7 +5530,8 @@ export const setBinaryTaskLocalVariable = <ThrowOnError extends boolean = false>
  * rendering of a
  * [Generated Task Form](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/#generated-task-forms).
  */
-export const getRenderedForm = <ThrowOnError extends boolean = false>(options: Options<GetRenderedFormData, ThrowOnError>) => (options.client ?? client).get<GetRenderedFormResponses, GetRenderedFormErrors, ThrowOnError>({
+export const getRenderedForm = <ThrowOnError extends boolean = true>(options: Options<GetRenderedFormData, ThrowOnError>) => (options.client ?? client).get<GetRenderedFormResponses, GetRenderedFormErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/rendered-form',
     ...options
@@ -5191,7 +5546,8 @@ export const getRenderedForm = <ThrowOnError extends boolean = false>(options: O
  * that it can be sent back to the owner. Can only be executed when the task has been
  * delegated. The assignee will be set to the owner, who performed the delegation.
  */
-export const resolve = <ThrowOnError extends boolean = false>(options: Options<ResolveData, ThrowOnError>) => (options.client ?? client).post<ResolveResponses, ResolveErrors, ThrowOnError>({
+export const resolve = <ThrowOnError extends boolean = true>(options: Options<ResolveData, ThrowOnError>) => (options.client ?? client).post<ResolveResponses, ResolveErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/resolve',
     ...options,
@@ -5215,7 +5571,8 @@ export const resolve = <ThrowOnError extends boolean = false>(options: Options<R
  * [Generated Task Forms](https://docs.cibseven.org/manual/2.1/user-guide/task-forms/_index/#generated-task-forms)
  * section of the [User Guide](https://docs.cibseven.org/manual/2.1/user-guide/) for more information.
  */
-export const submit = <ThrowOnError extends boolean = false>(options: Options<SubmitData, ThrowOnError>) => (options.client ?? client).post<SubmitResponses, SubmitErrors, ThrowOnError>({
+export const submit = <ThrowOnError extends boolean = true>(options: Options<SubmitData, ThrowOnError>) => (options.client ?? client).post<SubmitResponses, SubmitErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/submit-form',
     ...options,
@@ -5230,7 +5587,8 @@ export const submit = <ThrowOnError extends boolean = false>(options: Options<Su
  *
  * Resets a task's assignee. If successful, the task is not assigned to a user.
  */
-export const unclaim = <ThrowOnError extends boolean = false>(options: Options<UnclaimData, ThrowOnError>) => (options.client ?? client).post<UnclaimResponses, UnclaimErrors, ThrowOnError>({
+export const unclaim = <ThrowOnError extends boolean = true>(options: Options<UnclaimData, ThrowOnError>) => (options.client ?? client).post<UnclaimResponses, UnclaimErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/unclaim',
     ...options
@@ -5243,7 +5601,8 @@ export const unclaim = <ThrowOnError extends boolean = false>(options: Options<U
  * variable or declared in a parent scope of the task. See documentation on
  * [visiblity of variables](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/variables/).
  */
-export const getTaskVariables = <ThrowOnError extends boolean = false>(options: Options<GetTaskVariablesData, ThrowOnError>) => (options.client ?? client).get<GetTaskVariablesResponses, GetTaskVariablesErrors, ThrowOnError>({
+export const getTaskVariables = <ThrowOnError extends boolean = true>(options: Options<GetTaskVariablesData, ThrowOnError>) => (options.client ?? client).get<GetTaskVariablesResponses, GetTaskVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/variables',
     ...options
@@ -5257,7 +5616,8 @@ export const getTaskVariables = <ThrowOnError extends boolean = false>(options: 
  * local task variable or declared in a parent scope of the task. See documentation on
  * [visiblity of variables](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/variables/).
  */
-export const modifyTaskVariables = <ThrowOnError extends boolean = false>(options: Options<ModifyTaskVariablesData, ThrowOnError>) => (options.client ?? client).post<ModifyTaskVariablesResponses, ModifyTaskVariablesErrors, ThrowOnError>({
+export const modifyTaskVariables = <ThrowOnError extends boolean = true>(options: Options<ModifyTaskVariablesData, ThrowOnError>) => (options.client ?? client).post<ModifyTaskVariablesResponses, ModifyTaskVariablesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/variables',
     ...options,
@@ -5274,7 +5634,8 @@ export const modifyTaskVariables = <ThrowOnError extends boolean = false>(option
  * variable or declared in a parent scope of the task. See documentation on
  * [visiblity of variables](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/variables/).
  */
-export const deleteTaskVariable = <ThrowOnError extends boolean = false>(options: Options<DeleteTaskVariableData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskVariableResponses, DeleteTaskVariableErrors, ThrowOnError>({
+export const deleteTaskVariable = <ThrowOnError extends boolean = true>(options: Options<DeleteTaskVariableData, ThrowOnError>) => (options.client ?? client).delete<DeleteTaskVariableResponses, DeleteTaskVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/variables/{varName}',
     ...options
@@ -5288,7 +5649,8 @@ export const deleteTaskVariable = <ThrowOnError extends boolean = false>(options
  * declared in a parent scope of the task. See documentation on
  * [visiblity of variables](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/variables/).
  */
-export const getTaskVariable = <ThrowOnError extends boolean = false>(options: Options<GetTaskVariableData, ThrowOnError>) => (options.client ?? client).get<GetTaskVariableResponses, GetTaskVariableErrors, ThrowOnError>({
+export const getTaskVariable = <ThrowOnError extends boolean = true>(options: Options<GetTaskVariableData, ThrowOnError>) => (options.client ?? client).get<GetTaskVariableResponses, GetTaskVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/variables/{varName}',
     ...options
@@ -5304,7 +5666,8 @@ export const getTaskVariable = <ThrowOnError extends boolean = false>(options: O
  * **Note**: If a variable doesn't exist, the variable is created in the top-most scope
  * visible from the task.
  */
-export const putTaskVariable = <ThrowOnError extends boolean = false>(options: Options<PutTaskVariableData, ThrowOnError>) => (options.client ?? client).put<PutTaskVariableResponses, PutTaskVariableErrors, ThrowOnError>({
+export const putTaskVariable = <ThrowOnError extends boolean = true>(options: Options<PutTaskVariableData, ThrowOnError>) => (options.client ?? client).put<PutTaskVariableResponses, PutTaskVariableErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/variables/{varName}',
     ...options,
@@ -5322,7 +5685,8 @@ export const putTaskVariable = <ThrowOnError extends boolean = false>(options: O
  * variable or declared in a parent scope of the task. See documentation on
  * [visiblity of variables](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/variables/).
  */
-export const getTaskVariableBinary = <ThrowOnError extends boolean = false>(options: Options<GetTaskVariableBinaryData, ThrowOnError>) => (options.client ?? client).get<GetTaskVariableBinaryResponses, GetTaskVariableBinaryErrors, ThrowOnError>({
+export const getTaskVariableBinary = <ThrowOnError extends boolean = true>(options: Options<GetTaskVariableBinaryData, ThrowOnError>) => (options.client ?? client).get<GetTaskVariableBinaryResponses, GetTaskVariableBinaryErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/variables/{varName}/data',
     ...options
@@ -5336,8 +5700,9 @@ export const getTaskVariableBinary = <ThrowOnError extends boolean = false>(opti
  * the task. See documentation on
  * [visiblity of variables](https://docs.cibseven.org/manual/2.1/user-guide/process-engine/variables/).
  */
-export const setBinaryTaskVariable = <ThrowOnError extends boolean = false>(options: Options<SetBinaryTaskVariableData, ThrowOnError>) => (options.client ?? client).post<SetBinaryTaskVariableResponses, SetBinaryTaskVariableErrors, ThrowOnError>({
+export const setBinaryTaskVariable = <ThrowOnError extends boolean = true>(options: Options<SetBinaryTaskVariableData, ThrowOnError>) => (options.client ?? client).post<SetBinaryTaskVariableResponses, SetBinaryTaskVariableErrors, ThrowOnError, 'data'>({
     ...formDataBodySerializer,
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/task/{id}/variables/{varName}/data',
     ...options,
@@ -5352,7 +5717,8 @@ export const setBinaryTaskVariable = <ThrowOnError extends boolean = false>(opti
  *
  * Fetches Telemetry Configuration.
  */
-export const getTelemetryConfiguration = <ThrowOnError extends boolean = false>(options?: Options<GetTelemetryConfigurationData, ThrowOnError>) => (options?.client ?? client).get<GetTelemetryConfigurationResponses, GetTelemetryConfigurationErrors, ThrowOnError>({
+export const getTelemetryConfiguration = <ThrowOnError extends boolean = true>(options?: Options<GetTelemetryConfigurationData, ThrowOnError>) => (options?.client ?? client).get<GetTelemetryConfigurationResponses, GetTelemetryConfigurationErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/telemetry/configuration',
     ...options
@@ -5365,7 +5731,8 @@ export const getTelemetryConfiguration = <ThrowOnError extends boolean = false>(
  *
  * @deprecated
  */
-export const configureTelemetry = <ThrowOnError extends boolean = false>(options?: Options<ConfigureTelemetryData, ThrowOnError>) => (options?.client ?? client).post<ConfigureTelemetryResponses, ConfigureTelemetryErrors, ThrowOnError>({
+export const configureTelemetry = <ThrowOnError extends boolean = true>(options?: Options<ConfigureTelemetryData, ThrowOnError>) => (options?.client ?? client).post<ConfigureTelemetryResponses, ConfigureTelemetryErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/telemetry/configuration',
     ...options,
@@ -5382,7 +5749,8 @@ export const configureTelemetry = <ThrowOnError extends boolean = false>(options
  *
  * @deprecated
  */
-export const getTelemetryData = <ThrowOnError extends boolean = false>(options?: Options<GetTelemetryDataData, ThrowOnError>) => (options?.client ?? client).get<GetTelemetryDataResponses, unknown, ThrowOnError>({
+export const getTelemetryData = <ThrowOnError extends boolean = true>(options?: Options<GetTelemetryDataData, ThrowOnError>) => (options?.client ?? client).get<GetTelemetryDataResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/telemetry/data',
     ...options
@@ -5395,7 +5763,8 @@ export const getTelemetryData = <ThrowOnError extends boolean = false>(options?:
  * can be retrieved by using the [Get Tenant
  * Count](https://docs.cibseven.org/manual/2.1/reference/rest/tenant/get-query-count/) method.
  */
-export const queryTenants = <ThrowOnError extends boolean = false>(options?: Options<QueryTenantsData, ThrowOnError>) => (options?.client ?? client).get<QueryTenantsResponses, QueryTenantsErrors, ThrowOnError>({
+export const queryTenants = <ThrowOnError extends boolean = true>(options?: Options<QueryTenantsData, ThrowOnError>) => (options?.client ?? client).get<QueryTenantsResponses, QueryTenantsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant',
     ...options
@@ -5412,7 +5781,8 @@ export const queryTenants = <ThrowOnError extends boolean = false>(options?: Opt
  * including the users authorizations to interact with this resource and
  * the internal configuration of the process engine.
  */
-export const availableTenantResourceOperations = <ThrowOnError extends boolean = false>(options?: Options<AvailableTenantResourceOperationsData, ThrowOnError>) => (options?.client ?? client).options<AvailableTenantResourceOperationsResponses, unknown, ThrowOnError>({
+export const availableTenantResourceOperations = <ThrowOnError extends boolean = true>(options?: Options<AvailableTenantResourceOperationsData, ThrowOnError>) => (options?.client ?? client).options<AvailableTenantResourceOperationsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant',
     ...options
@@ -5423,7 +5793,8 @@ export const availableTenantResourceOperations = <ThrowOnError extends boolean =
  *
  * Query for tenants using a list of parameters and retrieves the count.
  */
-export const getTenantCount = <ThrowOnError extends boolean = false>(options?: Options<GetTenantCountData, ThrowOnError>) => (options?.client ?? client).get<GetTenantCountResponses, GetTenantCountErrors, ThrowOnError>({
+export const getTenantCount = <ThrowOnError extends boolean = true>(options?: Options<GetTenantCountData, ThrowOnError>) => (options?.client ?? client).get<GetTenantCountResponses, GetTenantCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/count',
     ...options
@@ -5434,7 +5805,8 @@ export const getTenantCount = <ThrowOnError extends boolean = false>(options?: O
  *
  * Create a new tenant.
  */
-export const createTenant = <ThrowOnError extends boolean = false>(options?: Options<CreateTenantData, ThrowOnError>) => (options?.client ?? client).post<CreateTenantResponses, CreateTenantErrors, ThrowOnError>({
+export const createTenant = <ThrowOnError extends boolean = true>(options?: Options<CreateTenantData, ThrowOnError>) => (options?.client ?? client).post<CreateTenantResponses, CreateTenantErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/create',
     ...options,
@@ -5449,7 +5821,8 @@ export const createTenant = <ThrowOnError extends boolean = false>(options?: Opt
  *
  * Deletes a tenant by id.
  */
-export const deleteTenant = <ThrowOnError extends boolean = false>(options: Options<DeleteTenantData, ThrowOnError>) => (options.client ?? client).delete<DeleteTenantResponses, DeleteTenantErrors, ThrowOnError>({
+export const deleteTenant = <ThrowOnError extends boolean = true>(options: Options<DeleteTenantData, ThrowOnError>) => (options.client ?? client).delete<DeleteTenantResponses, DeleteTenantErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}',
     ...options
@@ -5460,7 +5833,8 @@ export const deleteTenant = <ThrowOnError extends boolean = false>(options: Opti
  *
  * Retrieves a tenant.
  */
-export const getTenant = <ThrowOnError extends boolean = false>(options: Options<GetTenantData, ThrowOnError>) => (options.client ?? client).get<GetTenantResponses, GetTenantErrors, ThrowOnError>({
+export const getTenant = <ThrowOnError extends boolean = true>(options: Options<GetTenantData, ThrowOnError>) => (options.client ?? client).get<GetTenantResponses, GetTenantErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}',
     ...options
@@ -5475,7 +5849,8 @@ export const getTenant = <ThrowOnError extends boolean = false>(options: Options
  * operation or not may depend on various things, including the users authorizations to interact with this
  * resource and the internal configuration of the process engine.
  */
-export const availableTenantInstanceOperations = <ThrowOnError extends boolean = false>(options: Options<AvailableTenantInstanceOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableTenantInstanceOperationsResponses, unknown, ThrowOnError>({
+export const availableTenantInstanceOperations = <ThrowOnError extends boolean = true>(options: Options<AvailableTenantInstanceOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableTenantInstanceOperationsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}',
     ...options
@@ -5486,7 +5861,8 @@ export const availableTenantInstanceOperations = <ThrowOnError extends boolean =
  *
  * Updates a given tenant.
  */
-export const updateTenant = <ThrowOnError extends boolean = false>(options: Options<UpdateTenantData, ThrowOnError>) => (options.client ?? client).put<UpdateTenantResponses, UpdateTenantErrors, ThrowOnError>({
+export const updateTenant = <ThrowOnError extends boolean = true>(options: Options<UpdateTenantData, ThrowOnError>) => (options.client ?? client).put<UpdateTenantResponses, UpdateTenantErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}',
     ...options,
@@ -5505,7 +5881,8 @@ export const updateTenant = <ThrowOnError extends boolean = false>(options: Opti
  * including the users authorizations to interact with this resource and
  * the internal configuration of the process engine.
  */
-export const availableTenantGroupMembersOperations = <ThrowOnError extends boolean = false>(options: Options<AvailableTenantGroupMembersOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableTenantGroupMembersOperationsResponses, unknown, ThrowOnError>({
+export const availableTenantGroupMembersOperations = <ThrowOnError extends boolean = true>(options: Options<AvailableTenantGroupMembersOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableTenantGroupMembersOperationsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}/group-members',
     ...options
@@ -5516,7 +5893,8 @@ export const availableTenantGroupMembersOperations = <ThrowOnError extends boole
  *
  * Deletes a membership between a tenant and a group.
  */
-export const deleteGroupMembership = <ThrowOnError extends boolean = false>(options: Options<DeleteGroupMembershipData, ThrowOnError>) => (options.client ?? client).delete<DeleteGroupMembershipResponses, DeleteGroupMembershipErrors, ThrowOnError>({
+export const deleteGroupMembership = <ThrowOnError extends boolean = true>(options: Options<DeleteGroupMembershipData, ThrowOnError>) => (options.client ?? client).delete<DeleteGroupMembershipResponses, DeleteGroupMembershipErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}/group-members/{groupId}',
     ...options
@@ -5527,7 +5905,8 @@ export const deleteGroupMembership = <ThrowOnError extends boolean = false>(opti
  *
  * Creates a membership between a tenant and a group.
  */
-export const createGroupMembership = <ThrowOnError extends boolean = false>(options: Options<CreateGroupMembershipData, ThrowOnError>) => (options.client ?? client).put<CreateGroupMembershipResponses, CreateGroupMembershipErrors, ThrowOnError>({
+export const createGroupMembership = <ThrowOnError extends boolean = true>(options: Options<CreateGroupMembershipData, ThrowOnError>) => (options.client ?? client).put<CreateGroupMembershipResponses, CreateGroupMembershipErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}/group-members/{groupId}',
     ...options
@@ -5542,7 +5921,8 @@ export const createGroupMembership = <ThrowOnError extends boolean = false>(opti
  * including the users authorizations to interact with this resource and
  * the internal configuration of the process engine.
  */
-export const availableTenantUserMembersOperations = <ThrowOnError extends boolean = false>(options: Options<AvailableTenantUserMembersOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableTenantUserMembersOperationsResponses, unknown, ThrowOnError>({
+export const availableTenantUserMembersOperations = <ThrowOnError extends boolean = true>(options: Options<AvailableTenantUserMembersOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableTenantUserMembersOperationsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}/user-members',
     ...options
@@ -5553,7 +5933,8 @@ export const availableTenantUserMembersOperations = <ThrowOnError extends boolea
  *
  * Deletes a membership between a tenant and an user.
  */
-export const deleteUserMembership = <ThrowOnError extends boolean = false>(options: Options<DeleteUserMembershipData, ThrowOnError>) => (options.client ?? client).delete<DeleteUserMembershipResponses, DeleteUserMembershipErrors, ThrowOnError>({
+export const deleteUserMembership = <ThrowOnError extends boolean = true>(options: Options<DeleteUserMembershipData, ThrowOnError>) => (options.client ?? client).delete<DeleteUserMembershipResponses, DeleteUserMembershipErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}/user-members/{userId}',
     ...options
@@ -5564,7 +5945,8 @@ export const deleteUserMembership = <ThrowOnError extends boolean = false>(optio
  *
  * Creates a membership between a tenant and an user.
  */
-export const createUserMembership = <ThrowOnError extends boolean = false>(options: Options<CreateUserMembershipData, ThrowOnError>) => (options.client ?? client).put<CreateUserMembershipResponses, CreateUserMembershipErrors, ThrowOnError>({
+export const createUserMembership = <ThrowOnError extends boolean = true>(options: Options<CreateUserMembershipData, ThrowOnError>) => (options.client ?? client).put<CreateUserMembershipResponses, CreateUserMembershipErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/tenant/{id}/user-members/{userId}',
     ...options
@@ -5577,7 +5959,8 @@ export const createUserMembership = <ThrowOnError extends boolean = false>(optio
  * The size of the result set can be retrieved by using the Get User Count method.
  * [Get User Count](https://docs.cibseven.org/manual/2.1/reference/rest/user/get-query-count/) method.
  */
-export const getUsers = <ThrowOnError extends boolean = false>(options?: Options<GetUsersData, ThrowOnError>) => (options?.client ?? client).get<GetUsersResponses, GetUsersErrors, ThrowOnError>({
+export const getUsers = <ThrowOnError extends boolean = true>(options?: Options<GetUsersData, ThrowOnError>) => (options?.client ?? client).get<GetUsersResponses, GetUsersErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user',
     ...options
@@ -5593,7 +5976,8 @@ export const getUsers = <ThrowOnError extends boolean = false>(options?: Options
  * authorizations to interact with this resource and the internal configuration of the process
  * engine. `OPTIONS /user` returns available interactions on the resource.
  */
-export const availableOperations = <ThrowOnError extends boolean = false>(options?: Options<AvailableOperationsData, ThrowOnError>) => (options?.client ?? client).options<AvailableOperationsResponses, unknown, ThrowOnError>({
+export const availableOperations = <ThrowOnError extends boolean = true>(options?: Options<AvailableOperationsData, ThrowOnError>) => (options?.client ?? client).options<AvailableOperationsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user',
     ...options
@@ -5605,7 +5989,8 @@ export const availableOperations = <ThrowOnError extends boolean = false>(option
  * Queries for the number of deployments that fulfill given parameters. Takes the same parameters as the
  * [Get Users](https://docs.cibseven.org/manual/2.1/reference/rest/user/get-query/) method.
  */
-export const getUserCount = <ThrowOnError extends boolean = false>(options?: Options<GetUserCountData, ThrowOnError>) => (options?.client ?? client).get<GetUserCountResponses, GetUserCountErrors, ThrowOnError>({
+export const getUserCount = <ThrowOnError extends boolean = true>(options?: Options<GetUserCountData, ThrowOnError>) => (options?.client ?? client).get<GetUserCountResponses, GetUserCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user/count',
     ...options
@@ -5616,7 +6001,8 @@ export const getUserCount = <ThrowOnError extends boolean = false>(options?: Opt
  *
  * Create a new user.
  */
-export const createUser = <ThrowOnError extends boolean = false>(options?: Options<CreateUserData, ThrowOnError>) => (options?.client ?? client).post<CreateUserResponses, unknown, ThrowOnError>({
+export const createUser = <ThrowOnError extends boolean = true>(options?: Options<CreateUserData, ThrowOnError>) => (options?.client ?? client).post<CreateUserResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user/create',
     ...options,
@@ -5631,7 +6017,8 @@ export const createUser = <ThrowOnError extends boolean = false>(options?: Optio
  *
  * Deletes a user by id.
  */
-export const deleteUser = <ThrowOnError extends boolean = false>(options: Options<DeleteUserData, ThrowOnError>) => (options.client ?? client).delete<DeleteUserResponses, DeleteUserErrors, ThrowOnError>({
+export const deleteUser = <ThrowOnError extends boolean = true>(options: Options<DeleteUserData, ThrowOnError>) => (options.client ?? client).delete<DeleteUserResponses, DeleteUserErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user/{id}',
     ...options
@@ -5647,7 +6034,8 @@ export const deleteUser = <ThrowOnError extends boolean = false>(options: Option
  * authorizations to interact with this resource and the internal configuration of the process
  * engine. `OPTIONS /user/{id}` returns available interactions on a resource instance.
  */
-export const availableUserOperations = <ThrowOnError extends boolean = false>(options: Options<AvailableUserOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableUserOperationsResponses, unknown, ThrowOnError>({
+export const availableUserOperations = <ThrowOnError extends boolean = true>(options: Options<AvailableUserOperationsData, ThrowOnError>) => (options.client ?? client).options<AvailableUserOperationsResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user/{id}',
     ...options
@@ -5658,7 +6046,8 @@ export const availableUserOperations = <ThrowOnError extends boolean = false>(op
  *
  * Updates a user's credentials (password)
  */
-export const updateCredentials = <ThrowOnError extends boolean = false>(options: Options<UpdateCredentialsData, ThrowOnError>) => (options.client ?? client).put<UpdateCredentialsResponses, UpdateCredentialsErrors, ThrowOnError>({
+export const updateCredentials = <ThrowOnError extends boolean = true>(options: Options<UpdateCredentialsData, ThrowOnError>) => (options.client ?? client).put<UpdateCredentialsResponses, UpdateCredentialsErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user/{id}/credentials',
     ...options,
@@ -5673,7 +6062,8 @@ export const updateCredentials = <ThrowOnError extends boolean = false>(options:
  *
  * Retrieves a user's profile.
  */
-export const getUserProfile = <ThrowOnError extends boolean = false>(options: Options<GetUserProfileData, ThrowOnError>) => (options.client ?? client).get<GetUserProfileResponses, GetUserProfileErrors, ThrowOnError>({
+export const getUserProfile = <ThrowOnError extends boolean = true>(options: Options<GetUserProfileData, ThrowOnError>) => (options.client ?? client).get<GetUserProfileResponses, GetUserProfileErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user/{id}/profile',
     ...options
@@ -5684,7 +6074,8 @@ export const getUserProfile = <ThrowOnError extends boolean = false>(options: Op
  *
  * Updates the profile information of an already existing user.
  */
-export const updateProfile = <ThrowOnError extends boolean = false>(options: Options<UpdateProfileData, ThrowOnError>) => (options.client ?? client).put<UpdateProfileResponses, UpdateProfileErrors, ThrowOnError>({
+export const updateProfile = <ThrowOnError extends boolean = true>(options: Options<UpdateProfileData, ThrowOnError>) => (options.client ?? client).put<UpdateProfileResponses, UpdateProfileErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user/{id}/profile',
     ...options,
@@ -5699,7 +6090,8 @@ export const updateProfile = <ThrowOnError extends boolean = false>(options: Opt
  *
  * Unlocks a user by id.
  */
-export const unlockUser = <ThrowOnError extends boolean = false>(options: Options<UnlockUserData, ThrowOnError>) => (options.client ?? client).post<UnlockUserResponses, UnlockUserErrors, ThrowOnError>({
+export const unlockUser = <ThrowOnError extends boolean = true>(options: Options<UnlockUserData, ThrowOnError>) => (options.client ?? client).post<UnlockUserResponses, UnlockUserErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/user/{id}/unlock',
     ...options
@@ -5714,7 +6106,8 @@ export const unlockUser = <ThrowOnError extends boolean = false>(options: Option
  * Count](https://docs.cibseven.org/manual/2.1/reference/rest/variable-instance/get-query-count/)
  * method.
  */
-export const getVariableInstances = <ThrowOnError extends boolean = false>(options?: Options<GetVariableInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetVariableInstancesResponses, GetVariableInstancesErrors, ThrowOnError>({
+export const getVariableInstances = <ThrowOnError extends boolean = true>(options?: Options<GetVariableInstancesData, ThrowOnError>) => (options?.client ?? client).get<GetVariableInstancesResponses, GetVariableInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/variable-instance',
     ...options
@@ -5729,7 +6122,8 @@ export const getVariableInstances = <ThrowOnError extends boolean = false>(optio
  * instance/get-query/) method because it allows filtering by multiple
  * variable instances of types `String`, `Number` or `Boolean`.
  */
-export const queryVariableInstances = <ThrowOnError extends boolean = false>(options?: Options<QueryVariableInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryVariableInstancesResponses, QueryVariableInstancesErrors, ThrowOnError>({
+export const queryVariableInstances = <ThrowOnError extends boolean = true>(options?: Options<QueryVariableInstancesData, ThrowOnError>) => (options?.client ?? client).post<QueryVariableInstancesResponses, QueryVariableInstancesErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/variable-instance',
     ...options,
@@ -5747,7 +6141,8 @@ export const queryVariableInstances = <ThrowOnError extends boolean = false>(opt
  * Instances](https://docs.cibseven.org/manual/2.1/reference/rest/variable-instance/get-query/)
  * method.
  */
-export const getVariableInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<GetVariableInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetVariableInstancesCountResponses, GetVariableInstancesCountErrors, ThrowOnError>({
+export const getVariableInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<GetVariableInstancesCountData, ThrowOnError>) => (options?.client ?? client).get<GetVariableInstancesCountResponses, GetVariableInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/variable-instance/count',
     ...options
@@ -5764,7 +6159,8 @@ export const getVariableInstancesCount = <ThrowOnError extends boolean = false>(
  * Count](https://docs.cibseven.org/manual/2.1/reference/rest/variable-instance/get-query-count/)
  * method.
  */
-export const queryVariableInstancesCount = <ThrowOnError extends boolean = false>(options?: Options<QueryVariableInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryVariableInstancesCountResponses, QueryVariableInstancesCountErrors, ThrowOnError>({
+export const queryVariableInstancesCount = <ThrowOnError extends boolean = true>(options?: Options<QueryVariableInstancesCountData, ThrowOnError>) => (options?.client ?? client).post<QueryVariableInstancesCountResponses, QueryVariableInstancesCountErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/variable-instance/count',
     ...options,
@@ -5779,7 +6175,8 @@ export const queryVariableInstancesCount = <ThrowOnError extends boolean = false
  *
  * Retrieves a variable by id.
  */
-export const getVariableInstance = <ThrowOnError extends boolean = false>(options: Options<GetVariableInstanceData, ThrowOnError>) => (options.client ?? client).get<GetVariableInstanceResponses, GetVariableInstanceErrors, ThrowOnError>({
+export const getVariableInstance = <ThrowOnError extends boolean = true>(options: Options<GetVariableInstanceData, ThrowOnError>) => (options.client ?? client).get<GetVariableInstanceResponses, GetVariableInstanceErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/variable-instance/{id}',
     ...options
@@ -5791,7 +6188,8 @@ export const getVariableInstance = <ThrowOnError extends boolean = false>(option
  * Retrieves the content of a variable by id. Applicable for byte array and file
  * variables.
  */
-export const getVariableInstanceBinary = <ThrowOnError extends boolean = false>(options: Options<GetVariableInstanceBinaryData, ThrowOnError>) => (options.client ?? client).get<GetVariableInstanceBinaryResponses, GetVariableInstanceBinaryErrors, ThrowOnError>({
+export const getVariableInstanceBinary = <ThrowOnError extends boolean = true>(options: Options<GetVariableInstanceBinaryData, ThrowOnError>) => (options.client ?? client).get<GetVariableInstanceBinaryResponses, GetVariableInstanceBinaryErrors, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/variable-instance/{id}/data',
     ...options
@@ -5802,7 +6200,8 @@ export const getVariableInstanceBinary = <ThrowOnError extends boolean = false>(
  *
  * Retrieves the version of the Rest API.
  */
-export const getRestApiVersion = <ThrowOnError extends boolean = false>(options?: Options<GetRestApiVersionData, ThrowOnError>) => (options?.client ?? client).get<GetRestApiVersionResponses, unknown, ThrowOnError>({
+export const getRestApiVersion = <ThrowOnError extends boolean = true>(options?: Options<GetRestApiVersionData, ThrowOnError>) => (options?.client ?? client).get<GetRestApiVersionResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
     security: [{ scheme: 'basic', type: 'http' }],
     url: '/version',
     ...options

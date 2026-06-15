@@ -37,6 +37,8 @@ jobs:
 
       - run: pnpm build
 
+      - run: pnpm typecheck
+
       - run: pnpm test
 
   quality:
@@ -79,7 +81,22 @@ jobs:
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
 
-      - run: ./gradlew test
-        if: always()
+  cibseven-example:
+    name: CIB Seven Example (Build + Test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/cibseven-example
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      # The composite build (`includeBuild`) pulls in engine-plugins automatically.
+      - run: ./gradlew build
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false

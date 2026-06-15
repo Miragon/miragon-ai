@@ -4,11 +4,7 @@ import {
   getDeploymentInput,
 } from "@miragon-ai/client-cibseven/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import {
-  getDeployments,
-  getDeployment,
-  createDeployment,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+import { getDeployments, getDeployment, createDeployment } from "@miragon-ai/client-cibseven/sdk"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -17,6 +13,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerDeploymentTools(register: Register) {
   register({
     name: "camunda7_get_deployment",
+    category: "deployments",
     description:
       "Get a deployment by ID — returns deployment timestamp + source, used for pre/post deployment correlation (commit-hash → deployment-ID → timestamp).",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -26,6 +23,7 @@ export function registerDeploymentTools(register: Register) {
 
   register({
     name: "camunda7_list_deployments",
+    category: "deployments",
     description: "List deployments with optional filters.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listDeploymentsInput.shape, ...engineParamShape },
@@ -45,6 +43,7 @@ export function registerDeploymentTools(register: Register) {
 
   register({
     name: "camunda7_create_deployment",
+    category: "deployments",
     description:
       "Deploy BPMN process definitions and other resources to the engine. Supports duplicate filtering and deploy-changed-only.",
     annotations: { openWorldHint: true },

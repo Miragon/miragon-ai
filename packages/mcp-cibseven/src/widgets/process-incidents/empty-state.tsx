@@ -1,4 +1,4 @@
-import type { IncidentsByProcess } from "@miragon-ai/client-cibseven"
+import type { IncidentsByProcess } from "../../view-models.js"
 
 export function EmptyStateWithSiblings({
   processName,

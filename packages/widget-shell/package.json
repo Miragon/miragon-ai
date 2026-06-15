@@ -1,14 +1,21 @@
 {
   "name": "@miragon-ai/widget-shell",
   "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "directory": "packages/widget-shell"
+  },
   "type": "module",
   "files": [
     "dist"
   ],
   "exports": {
     "./server": {
-      "types": "./dist/build-single-widget-view.d.ts",
-      "import": "./dist/build-single-widget-view.js"
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
     },
     "./ui": {
       "types": "./dist/adapt-data-widget.d.ts",
@@ -21,20 +28,25 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"
   },
   "peerDependencies": {
-    "@miragon/mcp-toolkit-core": "0.3.1",
-    "@miragon/mcp-toolkit-proxy-contract": "0.3.1",
-    "@miragon/mcp-toolkit-ui": "0.3.1",
+    "@miragon/mcp-toolkit-core": "0.5.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.5.0",
+    "@miragon/mcp-toolkit-ui": "0.5.0",
+    "@tanstack/react-query": "5.100.11",
     "bpmn-js": "18.14.0",
-    "mcp-use": "1.28.0",
+    "mcp-use": "1.30.2",
     "react": "19.2.5"
   },
   "peerDependenciesMeta": {
     "@miragon/mcp-toolkit-ui": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
       "optional": true
     },
     "react": {
@@ -42,13 +54,15 @@
     }
   },
   "devDependencies": {
-    "@miragon/mcp-toolkit-core": "0.3.1",
-    "@miragon/mcp-toolkit-proxy-contract": "0.3.1",
-    "@miragon/mcp-toolkit-ui": "0.3.1",
+    "@miragon/mcp-toolkit-core": "0.5.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.5.0",
+    "@miragon/mcp-toolkit-ui": "0.5.0",
+    "@tanstack/react-query": "5.100.11",
     "@types/react": "19.2.14",
     "bpmn-js": "18.14.0",
-    "mcp-use": "1.28.0",
+    "mcp-use": "1.30.2",
     "react": "19.2.5",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "4.1.4"
   }
 }

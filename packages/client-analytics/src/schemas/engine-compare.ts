@@ -4,7 +4,9 @@ export const engineCompareInput = z.object({
   engineA: z
     .string()
     .min(1)
-    .describe("First engine id (the baseline). Discover ids with camunda7_list_engines."),
+    .describe(
+      'First engine id (the baseline). Discover ids with the camunda7_engine tool (action "list").',
+    ),
   engineB: z.string().min(1).describe("Second engine id (the comparison)."),
   windowDays: z
     .number()

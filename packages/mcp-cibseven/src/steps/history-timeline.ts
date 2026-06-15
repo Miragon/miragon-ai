@@ -1,9 +1,9 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { HistoryTimelineData } from "@miragon-ai/client-cibseven"
+import type { HistoryTimelineData } from "../view-models.js"
 import {
   getHistoricActivityInstances,
   getHistoricProcessInstances,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 
 /**

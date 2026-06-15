@@ -3,7 +3,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-git submodule update --init --recursive
+if [ ! -f .env ]; then
+  sed "s|\$(pwd)|$(pwd)|g" .env.example > .env
+  echo "Created .env from .env.example"
+fi
 
 pnpm install --frozen-lockfile
 
@@ -11,9 +14,9 @@ pnpm -F @miragon-ai/client-cibseven generate
 
 pnpm build
 
-if [ ! -f .env ]; then
-  sed "s|\$(pwd)|$(pwd)|g" .env.example > .env
-  echo "Created .env from .env.example"
+if [ -z "${JAVA_HOME:-}" ] && ! command -v java >/dev/null 2>&1; then
+  echo "Error: java not found on PATH and JAVA_HOME is unset. Install a JDK to build the engine plugins." >&2
+  exit 1
 fi
 
-(cd plugins && ./gradlew build -x test)
+(cd engine-plugins && ./gradlew build -x test)

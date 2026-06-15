@@ -3,7 +3,7 @@ import { ModelContext, useWidget } from "mcp-use/react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
 import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
-import type { CockpitAppData } from "@miragon-ai/client-cibseven"
+import type { CockpitAppData } from "../../view-models.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
 import { camunda7BaseWidgets } from "../registry.js"
 import { cockpitViews, type ViewParams } from "./views.js"
@@ -27,19 +27,23 @@ interface EnginesResult {
 type CockpitView =
   | { section: "overview" }
   | { section: "incidents" }
-  | { section: "jobs" }
+  | {
+      section: "cluster-detail"
+      activityId: string
+      incidentType: string
+      messageSignature?: string
+    }
   | { section: "process-detail"; processDefinitionKey: string }
   | { section: "process-instances"; processDefinitionKey: string }
   | { section: "process-incidents"; processDefinitionKey: string }
   | { section: "instance-detail"; processInstanceId: string }
   | { section: "incident-detail"; incidentId: string }
 
-type TopSection = "overview" | "incidents" | "jobs"
+type TopSection = "overview" | "incidents"
 
 const SECTIONS: Array<{ id: TopSection; label: string; icon: string }> = [
   { id: "overview", label: "Overview", icon: "▦" },
   { id: "incidents", label: "Incidents", icon: "⚠" },
-  { id: "jobs", label: "Jobs", icon: "⚙" },
 ]
 
 function topSectionOf(view: CockpitView): TopSection {
@@ -51,6 +55,10 @@ function topSectionOf(view: CockpitView): TopSection {
     case "process-incidents":
     case "incident-detail":
       return "incidents"
+    // The cluster drill comes from the overview's failure clusters and its
+    // breadcrumb anchors there — keep the sidebar consistent with that.
+    case "cluster-detail":
+      return "overview"
     default:
       return view.section
   }
@@ -87,6 +95,11 @@ function breadcrumbOf(view: CockpitView): Crumb[] {
         { label: "Incidents", view: { section: "incidents" } },
         { label: `Incident ${view.incidentId.slice(0, 8)}…` },
       ]
+    case "cluster-detail":
+      return [
+        { label: "Overview", view: { section: "overview" } },
+        { label: `Cluster: ${view.activityId}` },
+      ]
     case "instance-detail":
       return [
         { label: "Overview", view: { section: "overview" } },
@@ -100,14 +113,13 @@ function breadcrumbOf(view: CockpitView): Crumb[] {
 export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const { requestDisplayMode, callTool } = useWidget()
 
-  // Authoritative engine source: the stable `camunda7_list_engines` tool (needs
-  // no selection itself). Decoupled from the open_cockpit bootstrap so the
-  // picker/switcher work regardless of how the app was launched.
-  const enginesQuery = useToolQuery<EnginesResult>(
-    ["camunda7:engines"],
-    "camunda7_list_engines",
-    {},
-  )
+  // Authoritative engine source: the stable `camunda7_engine` tool's "list"
+  // action (needs no selection itself). Decoupled from the open_cockpit
+  // bootstrap so the picker/switcher work regardless of how the app was
+  // launched.
+  const enginesQuery = useToolQuery<EnginesResult>(["camunda7:engines"], "camunda7_engine", {
+    action: "list",
+  })
   const engines = enginesQuery.data?.engines ?? data?.engines ?? []
 
   const [picked, setPicked] = useState<string | null>(null)
@@ -140,8 +152,15 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         setView({ section: "overview" })
         return
       case "incidents":
-      case "jobs":
-        setView({ section: intent.type })
+        setView({ section: "incidents" })
+        return
+      case "cluster-detail":
+        setView({
+          section: "cluster-detail",
+          activityId: intent.activityId,
+          incidentType: intent.incidentType,
+          messageSignature: intent.messageSignature,
+        })
         return
       case "process-detail":
         setView({ section: "process-detail", processDefinitionKey: intent.processDefinitionKey })
@@ -167,7 +186,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   function chooseEngine(id: string) {
     setPicked(id)
     setView({ section: "overview" })
-    void callTool("camunda7_select_engine", { id }).catch(() => {
+    void callTool("camunda7_engine", { action: "select", engineId: id }).catch(() => {
       /* override on each call still works even if sticky selection fails */
     })
   }
@@ -224,7 +243,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               <div>
                 <h2 className="text-foreground font-semibold">Operate an engine</h2>
                 <p className="text-muted-foreground text-sm">
-                  Overview, incidents, jobs and drill-downs for one engine.
+                  Overview, incidents and drill-downs for one engine.
                 </p>
               </div>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -310,6 +329,18 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const activeSection = topSectionOf(view)
   const crumbs = breadcrumbOf(view)
 
+  // The selected entity of the active view, surfaced in the app-level model
+  // context so drill-down views whose widgets carry no leaf <ModelContext>
+  // still resolve "this incident/process" follow-up questions correctly.
+  const selectedEntity =
+    "incidentId" in view
+      ? ` Selected incident: ${view.incidentId}.`
+      : "processInstanceId" in view
+        ? ` Selected process instance: ${view.processInstanceId}.`
+        : "processDefinitionKey" in view
+          ? ` Selected process definition: ${view.processDefinitionKey}.`
+          : ""
+
   // Flatten the current route + resolved engine into the params bag every view
   // layout reads from. Each view picks only the ids it needs (see views.ts).
   const viewParams: ViewParams = {
@@ -317,12 +348,15 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     processDefinitionKey: "processDefinitionKey" in view ? view.processDefinitionKey : undefined,
     processInstanceId: "processInstanceId" in view ? view.processInstanceId : undefined,
     incidentId: "incidentId" in view ? view.incidentId : undefined,
+    activityId: "activityId" in view ? view.activityId : undefined,
+    incidentType: "incidentType" in view ? view.incidentType : undefined,
+    messageSignature: "messageSignature" in view ? view.messageSignature : undefined,
   }
 
   return (
     <WidgetShell>
       <ModelContext
-        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". Current view: ${view.section}. Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
+        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". Current view: ${view.section}.${selectedEntity} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
       />
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">

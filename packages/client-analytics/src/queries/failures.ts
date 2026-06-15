@@ -5,6 +5,7 @@ import {
   type EngineFilterInput,
   type PrometheusClient,
 } from "../prometheus.js"
+import { METRIC_NAMES as M } from "../metric-names.js"
 
 export interface ErrorPatternRow {
   incident_message: string
@@ -33,7 +34,7 @@ export async function findFailedInstances(
     processDefinitionKey?: string
     incidentType?: string
     limit: number
-    engineId?: EngineFilterInput
+    engine?: EngineFilterInput
   },
 ): Promise<ErrorPatternRow[]> {
   const limit = Math.max(1, Math.floor(params.limit))
@@ -42,11 +43,11 @@ export async function findFailedInstances(
       ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
       : undefined,
     params.incidentType ? `incident_type="${escapeLabelValue(params.incidentType)}"` : undefined,
-    engineMatcher(params.engineId),
+    engineMatcher(params.engine),
   )
 
   const samples = await ch.instant(
-    `sum by (process_definition_key, incident_type)(camunda_incidents_open${sel})`,
+    `sum by (process_definition_key, incident_type)(${M.incidentsOpen}${sel})`,
   )
 
   return samples

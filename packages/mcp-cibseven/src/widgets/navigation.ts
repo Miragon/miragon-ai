@@ -5,10 +5,10 @@ import {
   type HostActions,
 } from "@miragon-ai/widget-shell/widgets"
 import {
+  CAMUNDA7_SHOW_CLUSTER_DETAIL,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
   CAMUNDA7_SHOW_INSTANCE_DETAIL,
-  CAMUNDA7_SHOW_JOB_PANEL,
   CAMUNDA7_SHOW_PROCESS_DETAIL,
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
   CAMUNDA7_SHOW_PROCESS_INSTANCES,
@@ -29,7 +29,7 @@ import {
 export type NavIntent =
   | { type: "process-list" }
   | { type: "incidents" }
-  | { type: "jobs" }
+  | { type: "cluster-detail"; activityId: string; incidentType: string; messageSignature?: string }
   | { type: "process-detail"; processDefinitionKey: string }
   | { type: "process-instances"; processDefinitionKey: string }
   | { type: "process-incidents"; processDefinitionKey: string }
@@ -58,9 +58,12 @@ export function navigateViaHost(host: HostActions, intent: NavIntent): void {
         ),
       )
       return
-    case "jobs":
+    case "cluster-detail":
       host.showWidget(
-        buildShowWidgetIntent(CAMUNDA7_SHOW_JOB_PANEL, "Show the job management panel"),
+        buildShowWidgetIntent(
+          CAMUNDA7_SHOW_CLUSTER_DETAIL,
+          `Show the failure cluster for activity \`${intent.activityId}\` (incident type ${intent.incidentType})`,
+        ),
       )
       return
     case "process-detail":

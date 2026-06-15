@@ -12,6 +12,19 @@ import { ClusterCompareWidget, type ClusterCompareData } from "./cluster-compare
 import { VersionCompareWidget, type VersionCompareData } from "./version-compare.js"
 import { EngineCompareWidget, type EngineCompareData } from "./engine-compare.js"
 import { BpmnHeatmapWidget, type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
+import {
+  describeActivityBottlenecks,
+  describeBpmnHeatmap,
+  describeClusterCompare,
+  describeDefinitionBreakdown,
+  describeEngineCompare,
+  describeErrorPatterns,
+  describeExecutionPerformance,
+  describeExecutionSummary,
+  describeFailureRates,
+  describeFailureSummary,
+  describeVersionCompare,
+} from "./model-descriptions.js"
 
 export type {
   AnalyticsDashboardData,
@@ -31,46 +44,63 @@ export const ANALYTICS_DATA_TYPES = {
   bpmnHeatmap: "analytics:bpmnHeatmap",
 } as const
 
+// Every widget passes a `describeForModel` so the model always knows the view,
+// its active filters (period / engine scope) and the headline numbers — see
+// `model-descriptions.ts` for the house pattern.
 export const analyticsWidgets: Record<string, WidgetComponent> = {
   "analytics:execution-summary-kpi": adaptDataWidget(
     ExecutionSummaryKpi,
     ANALYTICS_DATA_TYPES.dashboard,
+    describeExecutionSummary,
   ),
   "analytics:execution-performance-kpi": adaptDataWidget(
     ExecutionPerformanceKpi,
     ANALYTICS_DATA_TYPES.dashboard,
+    describeExecutionPerformance,
   ),
   "analytics:process-definition-breakdown": adaptDataWidget(
     ProcessDefinitionBreakdown,
     ANALYTICS_DATA_TYPES.dashboard,
+    describeDefinitionBreakdown,
   ),
   "analytics:activity-bottleneck-table": adaptDataWidget(
     ActivityBottleneckTable,
     ANALYTICS_DATA_TYPES.dashboard,
+    describeActivityBottlenecks,
   ),
   "analytics:failure-summary-kpi": adaptDataWidget(
     FailureSummaryKpi,
     ANALYTICS_DATA_TYPES.failureDashboard,
+    describeFailureSummary,
   ),
   "analytics:error-patterns-table": adaptDataWidget(
     ErrorPatternsTable,
     ANALYTICS_DATA_TYPES.failureDashboard,
+    describeErrorPatterns,
   ),
   "analytics:failure-rate-table": adaptDataWidget(
     FailureRateTable,
     ANALYTICS_DATA_TYPES.failureDashboard,
+    describeFailureRates,
   ),
   "analytics:cluster-compare": adaptDataWidget(
     ClusterCompareWidget,
     ANALYTICS_DATA_TYPES.clusterCompare,
+    describeClusterCompare,
   ),
   "analytics:version-compare": adaptDataWidget(
     VersionCompareWidget,
     ANALYTICS_DATA_TYPES.versionCompare,
+    describeVersionCompare,
   ),
   "analytics:engine-compare": adaptDataWidget(
     EngineCompareWidget,
     ANALYTICS_DATA_TYPES.engineCompare,
+    describeEngineCompare,
   ),
-  "analytics:bpmn-heatmap": adaptDataWidget(BpmnHeatmapWidget, ANALYTICS_DATA_TYPES.bpmnHeatmap),
+  "analytics:bpmn-heatmap": adaptDataWidget(
+    BpmnHeatmapWidget,
+    ANALYTICS_DATA_TYPES.bpmnHeatmap,
+    describeBpmnHeatmap,
+  ),
 }

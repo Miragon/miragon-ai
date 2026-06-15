@@ -1,30 +1,17 @@
+import { escapeLabelValue, selector, type PrometheusClient } from "../prometheus.js"
 import {
-  escapeLabelValue,
-  selector,
-  type PrometheusClient,
-  type PromSample,
-} from "../prometheus.js"
+  compareKpiDelta,
+  queryCompareKpis,
+  type CompareKpiDelta,
+  type CompareKpis,
+} from "./helpers.js"
 
-export interface EngineCompareKpi {
+export interface EngineCompareKpi extends CompareKpis {
   engineId: string
   bucket: "engineA" | "engineB"
-  instance_count: number
-  completed_count: number
-  failed_count: number
-  failure_rate_pct: number
-  incident_count: number
-  incident_rate_pct: number
-  avg_duration_sec: number
-  p95_duration_sec: number
 }
 
-export interface EngineCompareDelta {
-  instance_count_delta_pct: number | null
-  failure_rate_delta_pp: number | null
-  incident_rate_delta_pp: number | null
-  avg_duration_delta_pct: number | null
-  p95_duration_delta_pct: number | null
-}
+export type EngineCompareDelta = CompareKpiDelta
 
 export interface EngineCompareResult {
   engineA: string
@@ -36,14 +23,6 @@ export interface EngineCompareResult {
   suppressed: boolean
   kpis: EngineCompareKpi[]
   delta: EngineCompareDelta
-}
-
-const round1 = (n: number) => Math.round(n * 10) / 10
-const first = (s: PromSample[]) => (s.length ? s[0].value : 0)
-
-function pctChange(before: number, after: number): number | null {
-  if (before === 0) return null
-  return Math.round(((after - before) / before) * 10000) / 100
 }
 
 /**
@@ -85,13 +64,7 @@ export async function engineCompare(
     minBucketSize: minBucket,
     suppressed,
     kpis: [a, b],
-    delta: {
-      instance_count_delta_pct: pctChange(a.instance_count, b.instance_count),
-      failure_rate_delta_pp: round1(b.failure_rate_pct - a.failure_rate_pct),
-      incident_rate_delta_pp: round1(b.incident_rate_pct - a.incident_rate_pct),
-      avg_duration_delta_pct: pctChange(a.avg_duration_sec, b.avg_duration_sec),
-      p95_duration_delta_pct: pctChange(a.p95_duration_sec, b.p95_duration_sec),
-    },
+    delta: compareKpiDelta(a, b),
   }
 }
 
@@ -114,32 +87,6 @@ async function engineKpi(
     engine,
   )
 
-  const [total, completed, failed, incidents, avg, p95] = await Promise.all([
-    ch.instant(`sum(increase(camunda_process_instance_started_total${sel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_process_instance_ended_total${completedSel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${sel}[${range}]))`),
-    ch.instant(`sum(increase(camunda_incident_created_total${incidentSel}[${range}]))`),
-    ch.instant(
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${sel}[${range}]))`,
-    ),
-    ch.instant(
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
-    ),
-  ])
-
-  const instances = Math.round(first(total))
-  const failedCount = Math.round(first(failed))
-  const incidentCount = Math.round(first(incidents))
-  return {
-    engineId,
-    bucket,
-    instance_count: instances,
-    completed_count: Math.round(first(completed)),
-    failed_count: failedCount,
-    failure_rate_pct: instances > 0 ? round1((failedCount * 100) / instances) : 0,
-    incident_count: incidentCount,
-    incident_rate_pct: instances > 0 ? round1((incidentCount * 100) / instances) : 0,
-    avg_duration_sec: round1(first(avg)),
-    p95_duration_sec: round1(first(p95)),
-  }
+  const kpis = await queryCompareKpis(ch, { sel, completedSel, incidentSel }, `[${range}]`)
+  return { engineId, bucket, ...kpis }
 }

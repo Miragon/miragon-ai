@@ -1,7 +1,7 @@
 import { Alert, AlertDescription, Badge, Card, CardContent } from "@miragon/mcp-toolkit-ui"
 import { AskAiButton, SectionHeading } from "@miragon-ai/widget-shell/widgets"
 
-import type { IncidentDetailData } from "@miragon-ai/client-cibseven"
+import type { IncidentDetailData } from "../../view-models.js"
 
 import { formatTimestamp } from "../../lib/format-time.js"
 
@@ -96,8 +96,8 @@ export function FailureTab({
         )}
         <AskAiButton
           variant="subtle"
-          label="Draft GitHub issue"
-          prompt={`Draft and file a GitHub issue for CIB Seven incident \`${data.incidentId}\` (${data.incidentType}) at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey} v${data.processDefinitionVersion}${data.businessKey ? `, business key ${data.businessKey}` : ""}, engine \`${engineId}\`. Build the payload with camunda7_format_incident_issue({ incidentId: '${data.incidentId}' }), include the error (${data.incidentMessage ?? job?.exceptionMessage ?? "(none reported)"}) and stacktrace, show me the title/body/labels for confirmation, then create it via the GitHub MCP server's create_issue.`}
+          label="Draft ticket"
+          prompt={`Draft an incident ticket for CIB Seven incident \`${data.incidentId}\` (${data.incidentType}) at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey} v${data.processDefinitionVersion}${data.businessKey ? `, business key ${data.businessKey}` : ""}, engine \`${engineId}\`. Build the draft with camunda7_format_incident_issue({ incidentId: '${data.incidentId}' }), include the error (${data.incidentMessage ?? job?.exceptionMessage ?? "(none reported)"}) and stacktrace, and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
         />
       </div>
 

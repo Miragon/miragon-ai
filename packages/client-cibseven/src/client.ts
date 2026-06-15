@@ -1,5 +1,6 @@
 import { createClient } from "./generated/client/client.gen.js"
 import type { Client } from "./generated/client/types.gen.js"
+import { createClientConfig } from "./hey-api.js"
 
 export type { Client }
 
@@ -28,16 +29,17 @@ function buildAuthHeader(options: Camunda7ClientOptions): Record<string, string>
   return {}
 }
 
+/**
+ * Per-engine client factory. All defaults (JSON content negotiation headers,
+ * `throwOnError`, `responseStyle`) come from `createClientConfig` in
+ * src/hey-api.ts — the same function the generated default client uses — so
+ * runtime behavior and the generated SDK types stay in sync.
+ */
 export function createCamunda7Client(options: Camunda7ClientOptions): Client {
-  return createClient({
-    baseUrl: options.baseUrl,
-    throwOnError: true,
-    responseStyle: "data",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "User-Agent": "@miragon-ai/client-cibseven/0.1.0",
-      ...buildAuthHeader(options),
-    },
-  })
+  return createClient(
+    createClientConfig({
+      baseUrl: options.baseUrl,
+      headers: buildAuthHeader(options),
+    }),
+  )
 }

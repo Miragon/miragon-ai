@@ -6,7 +6,7 @@ import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
-} from "@miragon-ai/client-cibseven/generated/sdk.gen"
+} from "@miragon-ai/client-cibseven/sdk"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -15,6 +15,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerProcessDefinitionTools(register: Register) {
   register({
     name: "camunda7_list_process_definitions",
+    category: "process-definitions",
     description:
       "List deployed process definitions with optional filters. Returns key, name, version, and deployment info.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -36,6 +37,7 @@ export function registerProcessDefinitionTools(register: Register) {
 
   register({
     name: "camunda7_get_process_definition_xml",
+    category: "process-definitions",
     description:
       "Get the BPMN 2.0 XML of a process definition by ID. Returns the raw BPMN XML string.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },

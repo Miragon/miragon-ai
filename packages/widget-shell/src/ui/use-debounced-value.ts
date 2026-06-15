@@ -1,15 +1,5 @@
-import { useEffect, useState } from "react"
-
 /**
- * Returns `value` delayed by `delayMs`, resetting the timer on every change.
- * Used to debounce a search box so a server-side filter only re-queries once
- * the operator pauses typing (not on every keystroke).
+ * Re-exports the toolkit's debounce hook (`@miragon/mcp-toolkit-ui` 0.4.0). Kept
+ * as a local module so the `/widgets` barrel keeps a stable path.
  */
-export function useDebouncedValue<T>(value: T, delayMs = 300): T {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delayMs)
-    return () => clearTimeout(id)
-  }, [value, delayMs])
-  return debounced
-}
+export { useDebouncedValue } from "@miragon/mcp-toolkit-ui"

@@ -5,7 +5,7 @@
  * returns structured form fields. Fields with `<camunda:property id="readonly"
  * value="true">` are marked as readonly (displayed but not submitted).
  */
-import type { TaskFormField } from "@miragon-ai/client-cibseven"
+import type { TaskFormField } from "../view-models.js"
 
 interface ConditionLiteral {
   value: unknown

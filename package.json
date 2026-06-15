@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "scripts": {
     "generate": "turbo run generate",
@@ -13,6 +16,8 @@
     "lint:fix": "turbo run lint:fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "changeset": "changeset",
+    "release": "changeset publish",
     "prepare": "husky",
     "dev:miravelo-upstream": "pnpm --filter @miragon-ai/miravelo-upstream dev",
     "dev:mcp-gateway": "wait-on -t 30000 tcp:${UPSTREAM_MIRAVELO_PORT:-8401} && pnpm --filter @miragon-ai/mcp-gateway dev",
@@ -22,8 +27,10 @@
     "docs:preview": "pnpm --filter @miragon-ai/docs preview"
   },
   "devDependencies": {
+    "@changesets/cli": "2.31.0",
     "@eslint/js": "9.39.4",
     "@types/node": "22.19.15",
+    "@vitest/coverage-v8": "4.1.4",
     "concurrently": "9.2.1",
     "dotenv-cli": "11.0.0",
     "eslint": "9.39.4",
@@ -35,7 +42,7 @@
     "turbo": "2.8.17",
     "typescript": "5.9.3",
     "typescript-eslint": "8.58.2",
-    "vitest": "3.2.4",
+    "vitest": "4.1.4",
     "wait-on": "9.0.5"
   },
   "lint-staged": {

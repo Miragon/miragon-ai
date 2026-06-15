@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 
-import type { ProcessDetailData } from "@miragon-ai/client-cibseven"
+import type { ProcessDetailData } from "../view-models.js"
 
 import {
   AskAiButton,
@@ -192,7 +192,7 @@ export function ProcessDetailView({
 
   const analyzePrompt = `Triage the health of process definition \`${data.processDefinitionName ?? data.processDefinitionKey}\` (key \`${data.processDefinitionKey}\`, version ${data.version}, engine \`${engineId}\`). Current state: ${data.openIncidents} open incident(s), ${data.failedJobs} failed job(s), ${data.affectedActivityCount} of ${data.totalActivityCount} activities affected, ${data.runningInstances} running instances. Problem activities: ${problemActivityList}. Use camunda7_list_incidents and camunda7_list_jobs (filter by processDefinitionKey \`${data.processDefinitionKey}\`) to pull the real incident/exception messages, cluster them by root cause, and use camunda7_query_historic_activity_instances to see whether the same failures recur. Tell me: the single most likely root cause per cluster, which activities are symptoms vs. sources, and a concrete recommended fix (batch retry, variable change, modification, or migration). Do NOT mutate anything — diagnosis only.`
 
-  const draftTicketPrompt = `Draft a GitHub incident ticket for process \`${data.processDefinitionName ?? data.processDefinitionKey}\` (key \`${data.processDefinitionKey}\`, version ${data.version}, engine \`${engineId}\`), which currently has ${data.openIncidents} open incident(s) across activities ${incidentActivityList}. First call camunda7_list_incidents (filter by processDefinitionKey \`${data.processDefinitionKey}\`) to get the incident ids and messages, pick the most representative open incident, then call camunda7_format_incident_issue { incidentId: <that id> } to build the issue payload. Show me the title, body, and labels and ask for confirmation before anything is created — do NOT call create_issue yourself.`
+  const draftTicketPrompt = `Draft an incident ticket for process \`${data.processDefinitionName ?? data.processDefinitionKey}\` (key \`${data.processDefinitionKey}\`, version ${data.version}, engine \`${engineId}\`), which currently has ${data.openIncidents} open incident(s) across activities ${incidentActivityList}. First call camunda7_list_incidents (filter by processDefinitionKey \`${data.processDefinitionKey}\`) to get the incident ids and messages, pick the most representative open incident, then call camunda7_format_incident_issue { incidentId: <that id> } to build the draft. Present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`
 
   return (
     <>
@@ -239,7 +239,7 @@ export function ProcessDetailView({
       <div className="flex flex-wrap items-center gap-2">
         <DrillButton
           size="md"
-          onClick={() =>
+          onDrill={() =>
             go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
           }
         >
@@ -248,7 +248,7 @@ export function ProcessDetailView({
         {data.openIncidents > 0 && (
           <DrillButton
             size="md"
-            onClick={() =>
+            onDrill={() =>
               go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
             }
           >
