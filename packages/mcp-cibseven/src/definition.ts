@@ -239,6 +239,13 @@ export const definition: AppDefinition = {
       size: "full",
     },
     {
+      // Self-fetching: loads camunda7_user_profile_data for the current session
+      // (no pipeline step), eager-rendered by camunda7_show_user_profile.
+      id: "camunda7:user-profile",
+      requires: [],
+      size: "full",
+    },
+    {
       // Consolidated client-side cockpit app (camunda7_open_cockpit). Bootstraps
       // itself from camunda7_engine (action "list") and the per-view data feeds.
       id: "camunda7:cockpit-app",

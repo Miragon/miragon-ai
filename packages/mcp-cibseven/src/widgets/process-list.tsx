@@ -1,5 +1,6 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { AskAiButton, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
+import { useT } from "../messages/use-t.js"
 import type { ProcessListData } from "../view-models.js"
 
 export type { ProcessListData }
@@ -18,6 +19,7 @@ export function ProcessListWidget({
   /** Restrict to the latest version of each definition (default `true`). */
   latestVersion?: boolean
 }) {
+  const t = useT()
   const queryArgs: { key?: string; nameLike?: string; latestVersion?: boolean } = {}
   if (processDefinitionKey) queryArgs.key = processDefinitionKey
   if (nameLike) queryArgs.nameLike = nameLike
@@ -40,7 +42,7 @@ export function ProcessListWidget({
             <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
           </Alert>
         ) : (
-          <p className="text-muted-foreground text-sm">Loading process definitions…</p>
+          <p className="text-muted-foreground text-sm">{t("processList.loading")}</p>
         )}
       </div>
     )
@@ -49,8 +51,10 @@ export function ProcessListWidget({
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Process Definitions</h2>
-        <Badge variant="secondary">{data.totalCount} deployed</Badge>
+        <h2 className="text-xl font-semibold">{t("processList.heading")}</h2>
+        <Badge variant="secondary">
+          {t("processList.deployedCount", { count: data.totalCount })}
+        </Badge>
       </div>
 
       <div className="grid gap-3">
@@ -70,11 +74,11 @@ export function ProcessListWidget({
                 )}
                 {def.suspended ? (
                   <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
-                    Suspended
+                    {t("processList.statusSuspended")}
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="bg-success/10 text-success-foreground">
-                    Active
+                    {t("processList.statusActive")}
                   </Badge>
                 )}
                 <AskAiButton

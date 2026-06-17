@@ -20,6 +20,7 @@ import type { JobPanelData } from "../view-models.js"
 import { AskAiButton, ListFooter, usePagedViewData } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { refreshCockpitData } from "./refresh.js"
+import { useT } from "../messages/use-t.js"
 
 export type { JobPanelData }
 
@@ -59,6 +60,7 @@ export function JobPanelWidget({
     selectItems: (d) => d.jobs,
     selectTotal: (d) => d.totalCount,
   })
+  const t = useT()
   const data = paged.firstPage
 
   if (!data) {
@@ -70,7 +72,7 @@ export function JobPanelWidget({
           </Alert>
         ) : (
           <div className="text-muted-foreground text-sm">
-            {paged.loading ? "Loading…" : "No data available"}
+            {paged.loading ? t("jobPanel.loading") : t("jobPanel.noData")}
           </div>
         )}
       </div>
@@ -113,9 +115,11 @@ export function JobPanelWidget({
       />
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-semibold">Job Management</h2>
-          <Badge variant="secondary">{totalCount} total</Badge>
-          {failedCount > 0 && <Badge variant="destructive">{failedCount} failed</Badge>}
+          <h2 className="text-xl font-semibold">{t("jobPanel.title")}</h2>
+          <Badge variant="secondary">{t("jobPanel.badgeTotal", { count: totalCount })}</Badge>
+          {failedCount > 0 && (
+            <Badge variant="destructive">{t("jobPanel.badgeFailed", { count: failedCount })}</Badge>
+          )}
         </div>
         {failedJobs.length > 0 && (
           <AskAiButton
@@ -124,17 +128,20 @@ export function JobPanelWidget({
           />
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Job summary">
+      <div
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+        aria-label={t("jobPanel.summaryLabel")}
+      >
         <div className="bg-muted rounded-lg p-4">
-          <p className="text-muted-foreground text-sm">Total Jobs</p>
+          <p className="text-muted-foreground text-sm">{t("jobPanel.totalJobs")}</p>
           <p className="text-2xl font-bold">{totalCount}</p>
         </div>
         <div className="bg-critical-soft rounded-lg p-4">
-          <p className="text-muted-foreground text-sm">Stuck (no retries left)</p>
+          <p className="text-muted-foreground text-sm">{t("jobPanel.stuck")}</p>
           <p className="text-critical text-2xl font-bold">{failedCount}</p>
         </div>
         <div className="bg-m-green-soft rounded-lg p-4">
-          <p className="text-muted-foreground text-sm">Healthy</p>
+          <p className="text-muted-foreground text-sm">{t("jobPanel.healthy")}</p>
           <p className="text-m-green text-2xl font-bold">{totalCount - failedCount}</p>
         </div>
       </div>
@@ -142,20 +149,20 @@ export function JobPanelWidget({
       {jobs.length > 0 && (
         <details open={jobs.length <= 20}>
           <summary className="text-muted-foreground mb-2 cursor-pointer text-sm font-medium">
-            Jobs ({jobs.length})
+            {t("jobPanel.jobsSummary", { count: jobs.length })}
           </summary>
           <Card className="gap-0 overflow-hidden py-0 shadow-none">
             <CardContent className="p-0">
-              <Table aria-label="Jobs">
+              <Table aria-label={t("jobPanel.tableLabel")}>
                 <TableHeader>
                   <TableRow>
-                    <TableHead scope="col">Activity</TableHead>
-                    <TableHead scope="col">Process</TableHead>
-                    <TableHead scope="col">Retries</TableHead>
-                    <TableHead scope="col">Error</TableHead>
-                    <TableHead scope="col">Created</TableHead>
+                    <TableHead scope="col">{t("jobPanel.colActivity")}</TableHead>
+                    <TableHead scope="col">{t("jobPanel.colProcess")}</TableHead>
+                    <TableHead scope="col">{t("jobPanel.colRetries")}</TableHead>
+                    <TableHead scope="col">{t("jobPanel.colError")}</TableHead>
+                    <TableHead scope="col">{t("jobPanel.colCreated")}</TableHead>
                     <TableHead scope="col" className="w-20">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t("jobPanel.colActions")}</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -208,14 +215,14 @@ export function JobPanelWidget({
                             <div className="flex items-center gap-1">
                               <AskAiButton
                                 variant="icon"
-                                label="Explain this failure"
-                                title="Explain this failure"
+                                label={t("jobPanel.explainFailure")}
+                                title={t("jobPanel.explainFailure")}
                                 prompt={`Explain why job ${job.id} failed on engine "${engineId}". It is on activity "${job.activityId}" of process "${job.processDefinitionKey}" (definition ${job.processDefinitionId}), instance ${job.processInstanceId}, retries=${job.retries}, created ${job.createTime}. Reported exception: "${job.exceptionMessage}". Steps: (1) read the full context with camunda7_get_process_instance({engine: "${engineId}", id: "${job.processInstanceId}"}) and camunda7_get_process_instance_variables for the input that reached this activity; (2) find the matching incident with camunda7_list_incidents({engine: "${engineId}", processInstanceId: "${job.processInstanceId}"}); (3) check camunda7_query_historic_activity_instances to see if activity "${job.activityId}" fails repeatedly. Then answer in plain language: what broke, whether it is transient (data/infra) or deterministic (code/config), and an explicit verdict — SAFE TO RETRY or WILL RE-FAIL — with one-line justification. Do not mutate anything.`}
                               />
                               <AskAiButton
                                 variant="icon"
-                                label="Draft ticket"
-                                title="Draft ticket"
+                                label={t("jobPanel.draftTicket")}
+                                title={t("jobPanel.draftTicket")}
                                 prompt={`Draft an incident ticket for the incident behind failed job ${job.id} on engine "${engineId}". This job has no incidentId directly, so first FIND the incident: call camunda7_list_incidents({ engine: "${engineId}", processInstanceId: "${job.processInstanceId}" }) and pick the incident for this job (activity "${job.activityId}" of process "${job.processDefinitionKey}", instance ${job.processInstanceId}; reported exception: "${job.exceptionMessage}"). Then build the draft with camunda7_format_incident_issue({ incidentId: "<found incident id>" }) and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
                               />
                               <Button
@@ -224,12 +231,14 @@ export function JobPanelWidget({
                                 disabled={retryMutation.isPending}
                                 onClick={() => handleRetry(job.id)}
                               >
-                                Retry
+                                {t("jobPanel.retry")}
                               </Button>
                             </div>
                           )}
                           {retried && (
-                            <span className="text-muted-foreground text-xs">Retried</span>
+                            <span className="text-muted-foreground text-xs">
+                              {t("jobPanel.retried")}
+                            </span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -248,11 +257,11 @@ export function JobPanelWidget({
         hasMore={paged.hasMore}
         loadingMore={paged.loadingMore}
         onLoadMore={paged.loadMore}
-        noun="jobs"
+        noun={t("jobPanel.footerNoun")}
       />
 
       {jobs.length === 0 && (
-        <p className="text-muted-foreground py-4 text-center text-sm">No jobs found</p>
+        <p className="text-muted-foreground py-4 text-center text-sm">{t("jobPanel.noJobs")}</p>
       )}
     </div>
   )

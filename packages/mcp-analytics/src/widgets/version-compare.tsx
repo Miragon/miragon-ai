@@ -1,6 +1,7 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import type { VersionCompareResult } from "@miragon-ai/client-analytics"
 import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
+import { useT } from "../messages/use-t.js"
 import {
   ComparisonCard,
   ComparisonEmptyState,
@@ -12,48 +13,49 @@ import {
 export type VersionCompareData = VersionCompareResult | null
 
 const METRICS: Array<{
-  label: string
+  labelKey: string
   value: (k: VersionCompareResult["kpis"][number]) => string
   delta: (d: VersionCompareResult["delta"]) => { value: string; worseIfUp: boolean }
 }> = [
   {
-    label: "Instances",
+    labelKey: "aVersionCompare.metricInstances",
     value: (k) => String(k.instance_count),
     delta: (d) => ({ value: fmtPct(d.instance_count_delta_pct), worseIfUp: false }),
   },
   {
-    label: "Failure rate",
+    labelKey: "aVersionCompare.metricFailureRate",
     value: (k) => `${k.failure_rate_pct.toFixed(1)}%`,
     delta: (d) => ({ value: fmtPp(d.failure_rate_delta_pp), worseIfUp: true }),
   },
   {
-    label: "Incident rate",
+    labelKey: "aVersionCompare.metricIncidentRate",
     value: (k) => `${k.incident_rate_pct.toFixed(1)}%`,
     delta: (d) => ({ value: fmtPp(d.incident_rate_delta_pp), worseIfUp: true }),
   },
   {
-    label: "Avg duration",
+    labelKey: "aVersionCompare.metricAvgDuration",
     value: (k) => `${k.avg_duration_sec.toFixed(1)}s`,
     delta: (d) => ({ value: fmtPct(d.avg_duration_delta_pct), worseIfUp: true }),
   },
   {
-    label: "P95 duration",
+    labelKey: "aVersionCompare.metricP95Duration",
     value: (k) => `${k.p95_duration_sec.toFixed(1)}s`,
     delta: (d) => ({ value: fmtPct(d.p95_duration_delta_pct), worseIfUp: true }),
   },
 ]
 
 export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
-  if (!data) return <ComparisonEmptyState>No version-comparison data.</ComparisonEmptyState>
+  const t = useT()
+  if (!data) return <ComparisonEmptyState>{t("aVersionCompare.emptyNoData")}</ComparisonEmptyState>
 
   const a = data.kpis.find((k) => k.bucket === "versionA")
   const b = data.kpis.find((k) => k.bucket === "versionB")
   if (!a || !b) {
-    return <ComparisonEmptyState>Incomplete KPI data.</ComparisonEmptyState>
+    return <ComparisonEmptyState>{t("aVersionCompare.emptyIncomplete")}</ComparisonEmptyState>
   }
 
   const metrics: ComparisonMetric[] = METRICS.map((m) => ({
-    label: m.label,
+    label: t(m.labelKey),
     delta: m.delta(data.delta),
     before: m.value(a),
     after: m.value(b),
@@ -64,8 +66,8 @@ export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
 
   return (
     <ComparisonCard
-      title="Version comparison"
-      tableLabel="Version metric comparison"
+      title={t("aVersionCompare.title")}
+      tableLabel={t("aVersionCompare.tableLabel")}
       beforeLabel={`v${data.versionA}`}
       afterLabel={`v${data.versionB}`}
       metrics={metrics}
@@ -76,11 +78,17 @@ export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
           <Badge variant="secondary">
             v{data.versionA} ↔ v{data.versionB}
           </Badge>
-          <Badge variant="outline">window: {data.windowDays}d</Badge>
-          {data.elementId && <Badge variant="outline">element: {data.elementId}</Badge>}
+          <Badge variant="outline">
+            {t("aVersionCompare.badgeWindow", { days: data.windowDays })}
+          </Badge>
+          {data.elementId && (
+            <Badge variant="outline">
+              {t("aVersionCompare.badgeElement", { element: data.elementId })}
+            </Badge>
+          )}
           {data.suppressed && (
             <Badge variant="destructive">
-              Insufficient signal (min {data.minBucketSize} instances/version)
+              {t("aVersionCompare.badgeInsufficientSignal", { min: data.minBucketSize })}
             </Badge>
           )}
         </>

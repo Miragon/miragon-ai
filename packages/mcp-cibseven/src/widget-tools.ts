@@ -54,7 +54,6 @@ import {
   CAMUNDA7_PROCESS_INCIDENTS_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
   CAMUNDA7_SHOW_CLUSTER_DETAIL,
-  CAMUNDA7_SHOW_COCKPIT_DASHBOARD,
   CAMUNDA7_SHOW_ENGINE_HEALTH,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
@@ -67,6 +66,8 @@ import {
 } from "./tool-names.js"
 import { resolveEngine, type EngineRegistry } from "./lib/resolve-engine.js"
 import { engineParamShape } from "./lib/with-engine.js"
+import { createInMemoryProfileStore, type ProfileStore } from "./lib/profile-store.js"
+import { localizeFor } from "./lib/server-locale.js"
 
 /**
  * Filters shared by `camunda7_show_incidents_dashboard` and its
@@ -108,6 +109,8 @@ function truncate(s: string, max: number): string {
 export interface Camunda7WidgetToolsOptions {
   /** Per-deployment overrides for the engine-health traffic-light thresholds. */
   healthThresholds?: Partial<EngineHealthThresholds>
+  /** Profile store for localizing model-facing summaries (locale → profile language). */
+  profileStore?: ProfileStore
 }
 
 export function registerWidgetTools(
@@ -121,6 +124,10 @@ export function registerWidgetTools(
     ...DEFAULT_HEALTH_THRESHOLDS,
     ...options.healthThresholds,
   }
+  // Resolve the request locale via `await localizeFor(profileStore)` inside each
+  // handler to localize its model-facing `summary`. Falls back to an empty
+  // in-memory store (→ locale "en") when none is injected (tests/embeds).
+  const profileStore = options.profileStore ?? createInMemoryProfileStore()
 
   server.tool(
     {
@@ -133,6 +140,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       // Thin bootstrap: resolve the engine (sticky selection or the only engine)
       // and hand the app the engine list. The app threads the chosen engineId
       // into every nested tool call via the `engine` override, so client-side
@@ -155,8 +163,8 @@ export function registerWidgetTools(
         data,
         title: "Cockpit",
         summary: engineId
-          ? `Opened the CIB Seven cockpit on engine "${engineId}" (${data.engines.length} engine(s) configured). The user can navigate the process landscape client-side from here.`
-          : `Opened the CIB Seven cockpit with an engine picker (${data.engines.length} engines configured, none selected).`,
+          ? t("c7sum.cockpitOpened", { engineId, engineCount: data.engines.length })
+          : t("c7sum.cockpitOpenedPicker", { engineCount: data.engines.length }),
       })
     }),
   )
@@ -176,6 +184,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const definitions = await getProcessDefinitions({
         client,
@@ -206,7 +215,11 @@ export function registerWidgetTools(
         dataType: "camunda7:processDefinitionList",
         data,
         title: "Process Definitions",
-        summary: `Process list: ${data.totalCount} deployed definition(s)${filters ? ` matching ${filters}` : ""} on engine "${engineId}".`,
+        summary: t("c7sum.processList", {
+          totalCount: data.totalCount,
+          filters: filters ? ` matching ${filters}` : "",
+          engineId,
+        }),
       })
     }),
   )
@@ -225,22 +238,32 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildInstanceDetailData(client, engineId, {
         processInstanceId: args.processInstanceId,
       })
-      const state = data.instance.ended ? "ended" : data.instance.suspended ? "suspended" : "active"
+      const state = data.instance.ended
+        ? t("c7sum.state.ended")
+        : data.instance.suspended
+          ? t("c7sum.state.suspended")
+          : t("c7sum.state.active")
       return buildSingleWidgetView({
         widget: "camunda7:instance-detail",
         app: "camunda7",
         dataType: "camunda7:processInstance",
         data,
         title: "Process Instance",
-        summary:
-          `Process instance ${data.instance.id}` +
-          `${data.instance.businessKey ? ` (business key "${data.instance.businessKey}")` : ""}: ` +
-          `${state}, ${data.activeActivityIds.length} active activities, ` +
-          `${data.incidents?.length ?? 0} open incidents, ${data.openTasks.length} open user tasks.`,
+        summary: t("c7sum.instanceDetail", {
+          instanceId: data.instance.id,
+          businessKey: data.instance.businessKey
+            ? ` (business key "${data.instance.businessKey}")`
+            : "",
+          state,
+          activeActivities: data.activeActivityIds.length,
+          openIncidents: data.incidents?.length ?? 0,
+          openTasks: data.openTasks.length,
+        }),
       })
     }),
   )
@@ -270,6 +293,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildProcessInstancesData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
@@ -285,10 +309,13 @@ export function registerWidgetTools(
         dataType: "camunda7:processInstances",
         data,
         title: "Process Instances",
-        summary:
-          `${data.totalCount} running instance(s) of "${data.processDefinitionKey}" ` +
-          `(${data.withIncidentCount} with incidents, ${data.suspendedCount} suspended); ` +
-          `showing ${data.returnedCount} in the table.`,
+        summary: t("c7sum.processInstances", {
+          totalCount: data.totalCount,
+          processDefinitionKey: data.processDefinitionKey,
+          withIncidentCount: data.withIncidentCount,
+          suspendedCount: data.suspendedCount,
+          returnedCount: data.returnedCount,
+        }),
       })
     }),
   )
@@ -307,6 +334,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildIncidentsDashboardData(client, {
@@ -322,9 +350,11 @@ export function registerWidgetTools(
           { row: [{ widget: "camunda7:incident-process-list" }] },
         ],
         entries: [{ dataType: "camunda7:incidentsDashboard", data: { ...data, engineId } }],
-        summary:
-          `Incidents dashboard: ${data.totalCount} open incident(s) across ` +
-          `${data.processCount} process definition(s), ${data.last24hCount} in the last 24h.`,
+        summary: t("c7sum.incidentsDashboard", {
+          totalCount: data.totalCount,
+          processCount: data.processCount,
+          last24hCount: data.last24hCount,
+        }),
       })
     }),
   )
@@ -343,6 +373,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildProcessIncidentsData(client, {
@@ -359,10 +390,13 @@ export function registerWidgetTools(
           { row: [{ widget: "camunda7:activity-incident-list" }] },
         ],
         entries: [{ dataType: "camunda7:processIncidents", data: { ...data, engineId } }],
-        summary:
-          `Process incidents for "${data.processDefinitionKey}"` +
-          `${data.version != null ? ` v${data.version}` : ""}: ${data.incidentCount} open ` +
-          `incident(s) across ${data.activities.length} activities, ${data.last24hCount} in the last 24h.`,
+        summary: t("c7sum.processIncidents", {
+          processDefinitionKey: data.processDefinitionKey,
+          version: data.version != null ? ` v${data.version}` : "",
+          incidentCount: data.incidentCount,
+          activities: data.activities.length,
+          last24hCount: data.last24hCount,
+        }),
       })
     }),
   )
@@ -383,6 +417,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildIncidentDetailData(client, {
@@ -395,11 +430,14 @@ export function registerWidgetTools(
         app: "camunda7",
         dataType: "camunda7:incidentDetail",
         data: { ...data, engineId },
-        summary:
-          `Incident ${data.incidentId} (${data.incidentType}) at activity ` +
-          `"${data.activityName ?? data.activityId}" in "${data.processDefinitionKey}", ` +
-          `instance ${data.processInstanceId}` +
-          `${data.incidentMessage ? `: ${truncate(data.incidentMessage, 160)}` : ""}.`,
+        summary: t("c7sum.incidentDetail", {
+          incidentId: data.incidentId,
+          incidentType: data.incidentType,
+          activity: data.activityName ?? data.activityId,
+          processDefinitionKey: data.processDefinitionKey,
+          processInstanceId: data.processInstanceId,
+          message: data.incidentMessage ? `: ${truncate(data.incidentMessage, 160)}` : "",
+        }),
       })
     }),
   )
@@ -418,6 +456,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
       const engineEntry = registry.engines.find((e) => e.id === engineId)
       const data = await buildProcessDetailData(client, {
@@ -430,11 +469,13 @@ export function registerWidgetTools(
         app: "camunda7",
         dataType: "camunda7:processDetail",
         data: { ...data, engineId },
-        summary:
-          `Process "${data.processDefinitionKey}"` +
-          `${data.version != null ? ` v${data.version}` : ""}: ` +
-          `${data.runningInstances ?? 0} running instance(s), ${data.openIncidents} open ` +
-          `incident(s), ${data.failedJobs} failed job(s).`,
+        summary: t("c7sum.processDetail", {
+          processDefinitionKey: data.processDefinitionKey,
+          version: data.version != null ? ` v${data.version}` : "",
+          runningInstances: data.runningInstances ?? 0,
+          openIncidents: data.openIncidents,
+          failedJobs: data.failedJobs,
+        }),
       })
     }),
   )
@@ -452,6 +493,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const [activities, instances] = await Promise.all([
         getHistoricActivityInstances({
@@ -489,39 +531,11 @@ export function registerWidgetTools(
         dataType: "camunda7:historyTimeline",
         data,
         title: "History Timeline",
-        summary:
-          `History timeline for process instance ${args.processInstanceId}: ` +
-          `${data.totalActivities} historic activities` +
-          `${inst ? "" : " (no historic process instance found)"}.`,
-      })
-    }),
-  )
-
-  server.tool(
-    {
-      name: CAMUNDA7_SHOW_COCKPIT_DASHBOARD,
-      title: "Cockpit Dashboard",
-      description:
-        "Show the Cockpit dashboard with process definition statistics: running instances, failed jobs, and incidents per definition.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({ ...engineParamShape }),
-      _meta: uiMeta,
-    },
-    withToolErrors(async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
-      const data = await buildCockpitDashboardData(client, engineId)
-      return buildComposedView({
-        app: "camunda7",
-        title: "Cockpit Dashboard",
-        layout: [
-          { row: [{ widget: "camunda7:process-health-kpi" }] },
-          { row: [{ widget: "camunda7:process-definitions-table" }] },
-        ],
-        entries: [{ dataType: "camunda7:cockpitDashboard", data }],
-        summary:
-          `Cockpit dashboard for engine "${engineId}": ${data.summary.totalDefinitions} ` +
-          `definitions, ${data.summary.totalRunningInstances} running instances, ` +
-          `${data.summary.totalFailedJobs} failed jobs, ${data.summary.totalIncidents} open incidents.`,
+        summary: t("c7sum.historyTimeline", {
+          processInstanceId: args.processInstanceId,
+          totalActivities: data.totalActivities,
+          notFound: inst ? "" : t("c7sum.historyTimeline.notFound"),
+        }),
       })
     }),
   )
@@ -537,6 +551,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildEngineHealthData(client, engineId, healthThresholds)
       const top = data.clusters[0]
@@ -546,13 +561,20 @@ export function registerWidgetTools(
         dataType: "camunda7:engineHealth",
         data,
         title: "Engine Overview",
-        summary:
-          `Engine "${engineId}" — ${data.status}: ${data.summary.totalIncidents} open incidents ` +
-          `across ${data.summary.affectedActivities} activities, ${data.summary.runningInstances} ` +
-          `running instances.` +
-          (top
-            ? ` Top cluster: activity "${top.activityId}" / ${top.incidentType}, ${top.incidentCount} incidents.`
-            : " No open incidents."),
+        summary: t("c7sum.engineHealth", {
+          engineId,
+          status: data.status,
+          totalIncidents: data.summary.totalIncidents,
+          affectedActivities: data.summary.affectedActivities,
+          runningInstances: data.summary.runningInstances,
+          topCluster: top
+            ? t("c7sum.engineHealth.topCluster", {
+                activityId: top.activityId,
+                incidentType: top.incidentType,
+                incidentCount: top.incidentCount,
+              })
+            : t("c7sum.engineHealth.noIncidents"),
+        }),
       })
     }),
   )
@@ -580,6 +602,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildClusterDetailData(client, engineId, {
         activityId: args.activityId,
@@ -592,13 +615,20 @@ export function registerWidgetTools(
         dataType: "camunda7:clusterDetail",
         data,
         title: `Cluster: ${data.activityId}`,
-        summary:
-          `Failure cluster on engine "${engineId}": activity "${data.activityId}" / ` +
-          `${data.incidentType} — ${data.incidentCount} incidents (${data.lastHourCount} in the ` +
-          `last hour) across ${data.processDefinitionKeys.join(", ") || "unknown processes"}.` +
-          (data.representativeMessage
-            ? ` Sample: ${truncate(data.representativeMessage, 140)}`
-            : ""),
+        summary: t("c7sum.clusterDetail", {
+          engineId,
+          activityId: data.activityId,
+          incidentType: data.incidentType,
+          incidentCount: data.incidentCount,
+          lastHourCount: data.lastHourCount,
+          processes:
+            data.processDefinitionKeys.join(", ") || t("c7sum.clusterDetail.unknownProcesses"),
+          sample: data.representativeMessage
+            ? t("c7sum.clusterDetail.sample", {
+                message: truncate(data.representativeMessage, 140),
+              })
+            : "",
+        }),
       })
     }),
   )
@@ -640,6 +670,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const renderEmpty = (processInstanceId: string | null) =>
         buildComposedView({
@@ -660,7 +691,7 @@ export function registerWidgetTools(
               },
             },
           ],
-          summary: "BPMN viewer: no matching process definition found — rendered an empty diagram.",
+          summary: t("c7sum.bpmnViewer.empty"),
         })
 
       let definitionId: string | null = null
@@ -727,11 +758,15 @@ export function registerWidgetTools(
       // the text channel; the widget renders it from structuredContent.
       const totalFailedJobs = activityStats.reduce((sum, s) => sum + s.failedJobs, 0)
       const target = processInstanceId
-        ? `process instance ${processInstanceId}`
-        : `process definition ${definitionId}`
+        ? t("c7sum.bpmnViewer.targetInstance", { processInstanceId })
+        : t("c7sum.bpmnViewer.targetDefinition", { definitionId })
       const overlayInfo = processInstanceId
-        ? `: ${activeActivityIds.length} active activities, ${incidentActivityIds.length} activities with incidents, ${totalFailedJobs} failed jobs`
-        : ` (static diagram, no instance overlays)`
+        ? t("c7sum.bpmnViewer.overlays", {
+            activeActivities: activeActivityIds.length,
+            incidentActivities: incidentActivityIds.length,
+            failedJobs: totalFailedJobs,
+          })
+        : t("c7sum.bpmnViewer.noOverlays")
       return buildComposedView({
         app: "camunda7",
         title: "BPMN Viewer",
@@ -750,7 +785,11 @@ export function registerWidgetTools(
             },
           },
         ],
-        summary: `Rendered the BPMN diagram for ${target}${overlayInfo}${bpmnXml ? "" : " — diagram XML unavailable"}.`,
+        summary: t("c7sum.bpmnViewer", {
+          target,
+          overlayInfo,
+          xmlUnavailable: bpmnXml ? "" : t("c7sum.bpmnViewer.xmlUnavailable"),
+        }),
       })
     }),
   )
@@ -770,6 +809,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildJobPanelData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
@@ -781,10 +821,14 @@ export function registerWidgetTools(
         dataType: "camunda7:jobPanel",
         title: "Job Panel",
         data,
-        summary:
-          `Job panel: ${data.totalCount} job(s), ${data.failedCount} failed` +
-          `${args.processDefinitionKey ? ` for "${args.processDefinitionKey}"` : ""}` +
-          `${args.failedOnly ? " (failed only)" : ""}.`,
+        summary: t("c7sum.jobPanel", {
+          totalCount: data.totalCount,
+          failedCount: data.failedCount,
+          forProcess: args.processDefinitionKey
+            ? t("c7sum.jobPanel.forProcess", { processDefinitionKey: args.processDefinitionKey })
+            : "",
+          failedOnly: args.failedOnly ? t("c7sum.jobPanel.failedOnly") : "",
+        }),
       })
     }),
   )
@@ -799,7 +843,7 @@ export function registerWidgetTools(
       name: CAMUNDA7_COCKPIT_OVERVIEW_DATA,
       title: "Cockpit overview data (internal)",
       description:
-        "Internal JSON feed (no UI) for the cockpit overview — per-definition stats. Prefer camunda7_open_cockpit / camunda7_show_cockpit_dashboard.",
+        "Internal JSON feed (no UI) for the cockpit overview — per-definition stats. Prefer camunda7_open_cockpit.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({ ...engineParamShape }),
       _meta: appOnlyMeta,

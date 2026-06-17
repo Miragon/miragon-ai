@@ -1,7 +1,10 @@
+import { useT } from "../../messages/use-t.js"
+
 // Static legend. The `data` prop is part of the `adaptDataWidget` contract
 // but the legend itself doesn't depend on the BPMN payload.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function BpmnViewerLegend(_props: { data: unknown }) {
+  const t = useT()
   return (
     <ul role="list" className="flex items-center gap-4 text-xs">
       <li className="flex items-center gap-1.5">
@@ -9,14 +12,14 @@ export function BpmnViewerLegend(_props: { data: unknown }) {
           aria-hidden="true"
           className="border-m-green bg-m-green-soft inline-block h-3 w-3 rounded border-2"
         />
-        <span className="text-muted-foreground">Running</span>
+        <span className="text-muted-foreground">{t("bpmnLegend.running")}</span>
       </li>
       <li className="flex items-center gap-1.5">
         <span
           aria-hidden="true"
           className="border-critical bg-critical-soft inline-block h-3 w-3 rounded border-2"
         />
-        <span className="text-muted-foreground">Incident</span>
+        <span className="text-muted-foreground">{t("bpmnLegend.incident")}</span>
       </li>
       <li className="flex items-center gap-1.5">
         <span
@@ -25,7 +28,7 @@ export function BpmnViewerLegend(_props: { data: unknown }) {
         >
           n
         </span>
-        <span className="text-muted-foreground">Instance count</span>
+        <span className="text-muted-foreground">{t("bpmnLegend.instanceCount")}</span>
       </li>
     </ul>
   )

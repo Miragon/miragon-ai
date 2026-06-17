@@ -10,6 +10,7 @@ import type {
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
+import { useT } from "../../messages/use-t.js"
 
 import {
   AskAiButton,
@@ -56,6 +57,7 @@ function ProcessSummary({
   engineId: string
   onOpenDetail: () => void
 }) {
+  const t = useT()
   const tone = process.tone
   const cockpitUrl = process.cockpitUrl
 
@@ -79,11 +81,16 @@ function ProcessSummary({
         </div>
         <div className="text-muted-foreground font-mono text-xs">
           {process.affectedActivityCount}{" "}
-          {process.affectedActivityCount === 1 ? "activity" : "activities"} ·{" "}
+          {process.affectedActivityCount === 1
+            ? t("incidentsList.activitySingular")
+            : t("incidentsList.activityPlural")}{" "}
+          ·{" "}
           {process.runningInstances !== null
-            ? `${process.runningInstances.toLocaleString()} instances`
-            : "instances unknown"}{" "}
-          · last {formatTimestamp(process.latestIncident)}
+            ? t("incidentsList.instancesCount", {
+                count: process.runningInstances.toLocaleString(),
+              })
+            : t("incidentsList.instancesUnknown")}{" "}
+          · {t("incidentsList.lastSeen", { time: formatTimestamp(process.latestIncident) })}
         </div>
       </div>
       <div className="text-muted-foreground text-right text-xs tabular-nums">
@@ -96,23 +103,25 @@ function ProcessSummary({
             </span>
           )}
         </div>
-        <div>activities</div>
+        <div>{t("incidentsList.activitiesLabel")}</div>
       </div>
       <div className="text-muted-foreground text-right text-xs tabular-nums">
         <div className="text-foreground font-semibold">+{process.last24hCount}</div>
-        <div>last 24h</div>
+        <div>{t("incidentsList.last24hLabel")}</div>
       </div>
       <CountPill tone={tone}>{process.incidentCount}</CountPill>
       <AskAiButton
         variant="subtle"
-        label="Analyze"
+        label={t("incidentsList.analyze")}
         prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, version v${process.version ?? "n/a"}) on engine ${engineId}. ${process.affectedActivityCount} activity/activities are affected, ${process.last24hCount} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances ?? "unknown"} running instances. Use camunda7_list_incidents (filtered to processDefinitionKey ${process.processDefinitionKey}) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
       />
       <DrillButton
         onDrill={onOpenDetail}
-        ariaLabel={`Open incidents detail for ${process.processDefinitionName ?? process.processDefinitionKey}`}
+        ariaLabel={t("incidentsList.openDetailAria", {
+          name: process.processDefinitionName ?? process.processDefinitionKey,
+        })}
       >
-        Open detail
+        {t("incidentsList.openDetail")}
       </DrillButton>
       {cockpitUrl ? <OpenInCockpitLink url={cockpitUrl} /> : <span />}
       <span
@@ -128,6 +137,7 @@ function ProcessSummary({
 }
 
 function ActivityRow({ activity }: { activity: IncidentsDashboardActivity }) {
+  const t = useT()
   return (
     <div className="border-border text-foreground grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 border-b px-4 py-3 pl-7 last:border-b-0">
       <div className="bg-critical-soft text-critical grid size-[18px] place-items-center rounded-full text-[10px] font-bold">
@@ -142,7 +152,7 @@ function ActivityRow({ activity }: { activity: IncidentsDashboardActivity }) {
         </div>
       </div>
       <div className="text-muted-foreground text-right font-mono text-[11px]">
-        first seen
+        {t("incidentsList.firstSeen")}
         <br />
         {formatTimestamp(activity.firstSeen)}
       </div>
@@ -175,6 +185,7 @@ export function IncidentProcessListView({
   engine?: string
 }) {
   const go = useNav()
+  const t = useT()
   // Shares the overview-kpi query key → both incidents panels dedupe to one
   // fetch in the cockpit; standalone the data comes in via props.
   const { data, loading, error } = useViewData<IncidentsDashboardData>(
@@ -240,16 +251,21 @@ export function IncidentProcessListView({
     }
     return (
       <div className="text-muted-foreground p-2 text-sm">
-        {loading ? "Loading…" : "No data available"}
+        {loading ? t("incidentsList.loading") : t("incidentsList.noData")}
       </div>
     )
   }
 
   const chips: FilterChip[] = [
-    { id: TYPE_ALL, label: "All", count: data.totalCount, active: activeChip === TYPE_ALL },
+    {
+      id: TYPE_ALL,
+      label: t("incidentsList.chipAll"),
+      count: data.totalCount,
+      active: activeChip === TYPE_ALL,
+    },
     {
       id: TYPE_LAST24H,
-      label: "⏱ Last 24h",
+      label: t("incidentsList.chipLast24h"),
       count: data.last24hCount,
       active: activeChip === TYPE_LAST24H,
     },
@@ -273,19 +289,22 @@ export function IncidentProcessListView({
       <FilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Filter incidents — by process, activity, error message…"
+        searchPlaceholder={t("incidentsList.searchPlaceholder")}
         chips={chips}
         onChipToggle={(id) => setActiveChip(id === activeChip ? TYPE_ALL : id)}
       />
 
       <section>
-        <SectionHeading title="Grouped by process" hint="click to expand activities" />
+        <SectionHeading
+          title={t("incidentsList.groupedByProcess")}
+          hint={t("incidentsList.clickToExpand")}
+        />
 
         {filteredProcesses.length === 0 ? (
           <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
             {data.processes.length === 0
-              ? "No open incidents"
-              : "No processes match the current filter"}
+              ? t("incidentsList.noOpenIncidents")
+              : t("incidentsList.noMatch")}
           </div>
         ) : (
           filteredProcesses.map((p) => (

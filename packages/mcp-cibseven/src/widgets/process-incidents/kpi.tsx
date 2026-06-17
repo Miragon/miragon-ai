@@ -3,6 +3,7 @@ import { KpiGrid, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
+import { useT } from "../../messages/use-t.js"
 
 export function ProcessIncidentKpi({
   data: initialData = null,
@@ -13,6 +14,7 @@ export function ProcessIncidentKpi({
   processDefinitionKey?: string
   engine?: string
 }) {
+  const t = useT()
   const { data, loading, error } = useViewData<ProcessIncidentsData>(
     initialData,
     ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
@@ -30,7 +32,7 @@ export function ProcessIncidentKpi({
           </Alert>
         ) : (
           <div className="text-muted-foreground p-2 text-sm">
-            {loading ? "Loading…" : "No data available"}
+            {loading ? t("procIncKpi.loading") : t("procIncKpi.noData")}
           </div>
         )}
       </WidgetShell>
@@ -47,21 +49,21 @@ export function ProcessIncidentKpi({
     <WidgetShell>
       <KpiGrid
         boxed
-        header={{ label: "Overview", badge: "Incidents in this process" }}
+        header={{ label: t("procIncKpi.overview"), badge: t("procIncKpi.headerBadge") }}
         cells={[
           {
-            label: "Open incidents",
+            label: t("procIncKpi.openIncidents"),
             value: data.incidentCount,
             tone: data.incidentCount > 0 ? "critical" : undefined,
           },
-          { label: "Activities affected", value: totalActivityFraction },
+          { label: t("procIncKpi.activitiesAffected"), value: totalActivityFraction },
           {
             label: "+24h",
             value: `+${data.last24hCount}`,
             tone: data.last24hCount > 0 ? "critical" : undefined,
           },
           {
-            label: "Running",
+            label: t("procIncKpi.running"),
             value: data.runningInstances !== null ? data.runningInstances.toLocaleString() : "—",
             tone:
               data.runningInstances !== null && data.runningInstances > 0 ? "success" : undefined,

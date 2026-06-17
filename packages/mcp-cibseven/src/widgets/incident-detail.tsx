@@ -30,6 +30,7 @@ import { FailureTab } from "./incident-detail/failure-tab.js"
 import { LogsTab } from "./incident-detail/logs-tab.js"
 import { HistoryTimeline } from "./incident-detail/history-timeline.js"
 import { formatDate, formatTime } from "../lib/format-time.js"
+import { useT } from "../messages/use-t.js"
 
 export type { IncidentDetailData }
 
@@ -62,6 +63,7 @@ export function IncidentDetailWidget({
     () => [{ kind: "incident", activityIds: data ? [data.activityId] : [] }],
     [data?.activityId],
   )
+  const t = useT()
 
   if (!data) {
     return (
@@ -72,7 +74,7 @@ export function IncidentDetailWidget({
           </Alert>
         ) : (
           <div className="text-muted-foreground p-2 text-sm">
-            {loading ? "Loading…" : "No data available"}
+            {loading ? t("incidentDetail.loading") : t("incidentDetail.noData")}
           </div>
         )}
       </WidgetShell>
@@ -119,7 +121,7 @@ export function IncidentDetailWidget({
               ⚠
             </div>
             <StatusBadge tone={resolved ? "neutral" : "critical"}>
-              {resolved ? "Resolved" : data.incidentType}
+              {resolved ? t("incidentDetail.resolved") : data.incidentType}
             </StatusBadge>
           </div>
           <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">{title}</h1>
@@ -137,11 +139,16 @@ export function IncidentDetailWidget({
             {data.businessKey && (
               <>
                 <span className="text-muted-foreground">·</span>
-                <span>BK: {data.businessKey}</span>
+                <span>
+                  {t("incidentDetail.businessKeyLabel")} {data.businessKey}
+                </span>
               </>
             )}
             {cockpitInstanceUrl && (
-              <OpenInCockpitLink url={cockpitInstanceUrl} label="Open instance in Cockpit" />
+              <OpenInCockpitLink
+                url={cockpitInstanceUrl}
+                label={t("incidentDetail.openInstanceInCockpit")}
+              />
             )}
           </div>
         </div>
@@ -153,40 +160,46 @@ export function IncidentDetailWidget({
 
       <KpiGrid
         boxed
-        header={{ label: "Incident", badge: "Failure summary" }}
+        header={{
+          label: t("incidentDetail.kpiHeaderLabel"),
+          badge: t("incidentDetail.kpiHeaderBadge"),
+        }}
         cells={[
           {
-            label: "Type",
+            label: t("incidentDetail.kpiType"),
             value: data.incidentType,
             tone: resolved ? "success" : "critical",
           },
           {
-            label: "Retries left",
+            label: t("incidentDetail.kpiRetriesLeft"),
             value: data.job?.retries ?? "—",
             tone: data.job && data.job.retries > 0 ? "success" : data.job ? "critical" : undefined,
           },
           {
-            label: "Datum",
+            label: t("incidentDetail.kpiDate"),
             value: formatDate(data.incidentTimestamp),
           },
           {
-            label: "Uhrzeit",
+            label: t("incidentDetail.kpiTime"),
             value: formatTime(data.incidentTimestamp),
           },
           {
-            label: "History events",
+            label: t("incidentDetail.kpiHistoryEvents"),
             value: data.history.length,
           },
         ]}
       />
 
       <section>
-        <SectionHeading title="Process flow" hint={`activity ${data.activityId} highlighted`} />
+        <SectionHeading
+          title={t("incidentDetail.processFlowTitle")}
+          hint={t("incidentDetail.processFlowHint", { activity: data.activityId })}
+        />
         {data.bpmnXml ? (
           <BpmnDiagram bpmnXml={data.bpmnXml} height={420} highlights={highlights} />
         ) : (
           <Alert>
-            <AlertDescription>No BPMN diagram available</AlertDescription>
+            <AlertDescription>{t("incidentDetail.noBpmnDiagram")}</AlertDescription>
           </Alert>
         )}
       </section>
@@ -194,10 +207,10 @@ export function IncidentDetailWidget({
       <section>
         <Tabs defaultValue="failure">
           <TabsList variant="line">
-            <TabsTrigger value="failure">Failure</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-            <TabsTrigger value="instance">Instance</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="failure">{t("incidentDetail.tabFailure")}</TabsTrigger>
+            <TabsTrigger value="logs">{t("incidentDetail.tabLogs")}</TabsTrigger>
+            <TabsTrigger value="instance">{t("incidentDetail.tabInstance")}</TabsTrigger>
+            <TabsTrigger value="history">{t("incidentDetail.tabHistory")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="failure" className="pt-4">
@@ -219,7 +232,7 @@ export function IncidentDetailWidget({
           <TabsContent value="instance" className="flex flex-col gap-4 pt-4">
             {data.activityTree && (
               <div>
-                <SectionHeading title="Activity tree" />
+                <SectionHeading title={t("incidentDetail.activityTreeTitle")} />
                 <Card className="gap-0 py-0 shadow-none">
                   <CardContent className="p-3">
                     <ActivityNode node={data.activityTree} />
@@ -229,8 +242,10 @@ export function IncidentDetailWidget({
             )}
             <div>
               <SectionHeading
-                title="Variables"
-                hint={`${Object.keys(data.variables).length} variables`}
+                title={t("incidentDetail.variablesTitle")}
+                hint={t("incidentDetail.variablesHint", {
+                  count: Object.keys(data.variables).length,
+                })}
               />
               <VariablesTable
                 variables={data.variables}

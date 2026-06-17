@@ -9,6 +9,7 @@ import type { ProcessIncidentsData } from "../../view-models.js"
 import { formatTime } from "../../lib/format-time.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
+import { useT } from "../../messages/use-t.js"
 
 export function ProcessDetailHeader({
   data: initialData = null,
@@ -19,6 +20,7 @@ export function ProcessDetailHeader({
   processDefinitionKey?: string
   engine?: string
 }) {
+  const t = useT()
   const { data, loading, error } = useViewData<ProcessIncidentsData>(
     initialData,
     ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
@@ -36,7 +38,7 @@ export function ProcessDetailHeader({
           </Alert>
         ) : (
           <div className="text-muted-foreground p-2 text-sm">
-            {loading ? "Loading…" : "No data available"}
+            {loading ? t("procIncHeader.loading") : t("procIncHeader.noData")}
           </div>
         )}
       </WidgetShell>
@@ -58,7 +60,9 @@ export function ProcessDetailHeader({
               ⚠
             </div>
             <StatusBadge tone="critical">
-              {remainingCount} open {remainingCount === 1 ? "incident" : "incidents"}
+              {remainingCount === 1
+                ? t("procIncHeader.openIncidentsOne", { count: remainingCount })
+                : t("procIncHeader.openIncidentsOther", { count: remainingCount })}
             </StatusBadge>
           </div>
           <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">
@@ -74,16 +78,26 @@ export function ProcessDetailHeader({
             {data.runningInstances !== null && (
               <>
                 <span className="text-muted-foreground">·</span>
-                <span>{data.runningInstances.toLocaleString()} running instances</span>
+                <span>
+                  {t("procIncHeader.runningInstances", {
+                    count: data.runningInstances.toLocaleString(),
+                  })}
+                </span>
               </>
             )}
             {data.latestIncident && (
               <>
                 <span className="text-muted-foreground">·</span>
-                <span>last event {formatTime(data.latestIncident)}</span>
+                <span>
+                  {t("procIncHeader.lastEvent", {
+                    time: formatTime(data.latestIncident),
+                  })}
+                </span>
               </>
             )}
-            {cockpitUrl && <OpenInCockpitLink url={cockpitUrl} label="Open in Cockpit" />}
+            {cockpitUrl && (
+              <OpenInCockpitLink url={cockpitUrl} label={t("procIncHeader.openInCockpit")} />
+            )}
           </div>
         </div>
         <AskAiButton prompt={triagePrompt} variant="primary" />

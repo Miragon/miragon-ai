@@ -22,6 +22,7 @@ import { BpmnFlowViewer } from "./bpmn-viewer/flow.js"
 import { BpmnViewerWidget } from "./bpmn-viewer/widget.js"
 import { JobPanelWidget } from "./job-panel.js"
 import { ProcessInstancesWidget } from "./process-instances/list.js"
+import { UserProfileWidget } from "./user-profile.js"
 
 /**
  * Model context for the history timeline, attached via the adapter — this
@@ -100,4 +101,7 @@ export const camunda7BaseWidgets: Record<string, WidgetComponent> = {
     ProcessInstancesWidget,
     "camunda7:processInstances",
   ),
+  // Self-fetching: loads camunda7_user_profile_data for the current session (no
+  // pipeline step), eager-rendered by camunda7_show_user_profile.
+  "camunda7:user-profile": adaptDataWidget(UserProfileWidget, "camunda7:userProfile"),
 }

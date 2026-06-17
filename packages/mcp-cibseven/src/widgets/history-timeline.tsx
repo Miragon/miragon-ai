@@ -1,6 +1,7 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { TONE_DOT, AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
+import { useT } from "../messages/use-t.js"
 
 export type { HistoryTimelineData }
 export type HistoryActivity = HistoryTimelineData["activities"][number]
@@ -48,8 +49,9 @@ export function HistoryTimelineView({
   engineId?: string
   totalActivities?: number
 }) {
+  const t = useT()
   if (activities.length === 0) {
-    return <p className="text-muted-foreground text-sm">No activity history.</p>
+    return <p className="text-muted-foreground text-sm">{t("historyTimeline.empty")}</p>
   }
 
   // Duration outliers: only surface the per-row "Why so long here?" explain
@@ -79,9 +81,17 @@ export function HistoryTimelineView({
             </h2>
             <div className="text-muted-foreground mt-1 flex items-center gap-3 text-sm">
               <Badge variant="secondary">{processInstance.state}</Badge>
-              <span>Started {new Date(processInstance.startTime).toLocaleString()}</span>
+              <span>
+                {t("historyTimeline.started", {
+                  time: new Date(processInstance.startTime).toLocaleString(),
+                })}
+              </span>
               {processInstance.durationInMillis != null && (
-                <span>Duration: {formatDuration(processInstance.durationInMillis)}</span>
+                <span>
+                  {t("historyTimeline.duration", {
+                    duration: formatDuration(processInstance.durationInMillis),
+                  })}
+                </span>
               )}
             </div>
           </div>
@@ -92,7 +102,7 @@ export function HistoryTimelineView({
         </div>
       )}
 
-      <ol className="flex flex-col gap-1" aria-label="Activity history timeline">
+      <ol className="flex flex-col gap-1" aria-label={t("historyTimeline.timelineLabel")}>
         {activities.map((activity, index) => {
           const color = ACTIVITY_COLORS[activity.activityType] ?? ACTIVITY_COLOR_FALLBACK
           return (
@@ -123,8 +133,8 @@ export function HistoryTimelineView({
                     {isOutlier(activity.durationInMillis) && (
                       <AskAiButton
                         variant="icon"
-                        label="Why so long here?"
-                        title="Why so long here?"
+                        label={t("historyTimeline.whySoLong")}
+                        title={t("historyTimeline.whySoLong")}
                         prompt={`Explain in plain language why the activity ${activity.activityName ?? activity.activityId} (id ${activity.activityId}, type ${activity.activityType}) took ${activity.durationInMillis}ms on historic process instance ${processInstance?.id ?? "the current instance"}${engineId ? ` on engine ${engineId}` : " on the current engine"}. Is this wait time (a userTask or receiveTask waiting on a human or message) or compute time (a serviceTask doing work)? Use camunda7_query_historic_activity_instances for this instance to confirm the activity's timing, and cross-check whether this duration is normal for ${activity.activityType} ${activity.activityId} by calling analytics_element_bottleneck and analytics_analyze_process_performance for processDefinitionKey ${processInstance?.processDefinitionKey ?? "this process definition"}. State whether this step is the bottleneck and whether ${activity.durationInMillis}ms is typical or an outlier. Explanation only — do not change anything.`}
                       />
                     )}
@@ -140,11 +150,12 @@ export function HistoryTimelineView({
 }
 
 export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | null }) {
+  const t = useT()
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
         <Alert>
-          <AlertDescription>No data available</AlertDescription>
+          <AlertDescription>{t("historyTimeline.noData")}</AlertDescription>
         </Alert>
       </div>
     )

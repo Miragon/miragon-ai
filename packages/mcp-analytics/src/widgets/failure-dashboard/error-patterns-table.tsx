@@ -16,8 +16,10 @@ import {
 import { WidgetShell, AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 import { formatDate, truncate, useFailureDashboardSelfFetch } from "./lib.js"
+import { useT } from "../../messages/use-t.js"
 
 export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboardData | null }) {
+  const t = useT()
   const fallbackQuery = useFailureDashboardSelfFetch(initialData)
   const data = initialData ?? fallbackQuery.data ?? null
   if (!data) {
@@ -37,10 +39,8 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
           <Card className="gap-0 py-0 shadow-none">
             <CardContent className="p-4">
               <Alert>
-                <AlertTitle>No open incidents found</AlertTitle>
-                <AlertDescription>
-                  There are no error patterns or failing processes in the current snapshot.
-                </AlertDescription>
+                <AlertTitle>{t("aErrorPatterns.emptyTitle")}</AlertTitle>
+                <AlertDescription>{t("aErrorPatterns.emptyDescription")}</AlertDescription>
               </Alert>
             </CardContent>
           </Card>
@@ -62,33 +62,33 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
           >
             <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
           </svg>
-          <h3 className="text-lg font-medium">Error Patterns</h3>
+          <h3 className="text-lg font-medium">{t("aErrorPatterns.heading")}</h3>
           <Badge variant="destructive">{data.errorPatterns.length}</Badge>
         </summary>
         <div className="mt-3 rounded-lg border">
-          <Table aria-label="Error patterns by incident message, activity and process">
+          <Table aria-label={t("aErrorPatterns.tableAriaLabel")}>
             <TableHeader>
               <TableRow>
                 <TableHead scope="col" aria-sort="none">
-                  Error
+                  {t("aErrorPatterns.columnError")}
                 </TableHead>
                 <TableHead scope="col" aria-sort="none">
-                  Activity
+                  {t("aErrorPatterns.columnActivity")}
                 </TableHead>
                 <TableHead scope="col" aria-sort="none">
-                  Process
+                  {t("aErrorPatterns.columnProcess")}
                 </TableHead>
                 <TableHead scope="col" aria-sort="none" className="text-right">
-                  Count
+                  {t("aErrorPatterns.columnCount")}
                 </TableHead>
                 <TableHead scope="col" aria-sort="none">
-                  First Seen
+                  {t("aErrorPatterns.columnFirstSeen")}
                 </TableHead>
                 <TableHead scope="col" aria-sort="none">
-                  Last Seen
+                  {t("aErrorPatterns.columnLastSeen")}
                 </TableHead>
                 <TableHead scope="col" className="text-right">
-                  <span className="sr-only">AI</span>
+                  <span className="sr-only">{t("aErrorPatterns.columnAi")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -105,7 +105,7 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
                       </pre>
                       {pattern.sampleInstanceIds.length > 0 && (
                         <div className="text-muted-foreground mt-1 text-xs">
-                          Sample IDs:{" "}
+                          {t("aErrorPatterns.sampleIdsLabel")}{" "}
                           {pattern.sampleInstanceIds.map((id) => id.slice(0, 8)).join(", ")}
                         </div>
                       )}
@@ -127,8 +127,8 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
                   <TableCell className="text-right">
                     <AskAiButton
                       variant="icon"
-                      title="Diagnose"
-                      label="Diagnose"
+                      title={t("aErrorPatterns.diagnoseTitle")}
+                      label={t("aErrorPatterns.diagnoseLabel")}
                       prompt={`Root-cause this CIB Seven error pattern across the fleet on the current engine. The pattern is incident message "${pattern.incidentMessage}" at activity "${pattern.activityId || "(unknown activity)"}" in process definition "${pattern.processDefinitionKey}", with ${pattern.incidentCount} incident(s) first seen ${pattern.firstOccurrence} and last seen ${pattern.lastOccurrence}${pattern.sampleInstanceIds.length > 0 ? `, sample instance ids ${pattern.sampleInstanceIds.join(", ")}` : ""}. Pull the failing instances with analytics_find_failed_instances (filter by processDefinitionKey "${pattern.processDefinitionKey}") and the live incidents with camunda7_list_incidents, then inspect the failing activity history via camunda7_query_historic_activity_instances for activity "${pattern.activityId || pattern.processDefinitionKey}". Tell me the likely root cause, whether this is transient (e.g. a retryable/timing/external dependency blip) or systemic (a code/config/data defect), and the recommended fix. Explanation only — do not change anything.`}
                     />
                   </TableCell>

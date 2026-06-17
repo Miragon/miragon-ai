@@ -21,6 +21,7 @@ import { TaskCompleteForm } from "./task-complete-form.js"
 import { ConfirmDialog } from "./confirm-dialog.js"
 import { refreshCockpitData } from "./refresh.js"
 import { HistoryTimelineView, type HistoryActivity } from "./history-timeline.js"
+import { useT } from "../messages/use-t.js"
 
 export type { InstanceDetailData }
 
@@ -35,6 +36,7 @@ function OpenTaskCard({
   onToggle: () => void
   onCompleted: () => void
 }) {
+  const t = useT()
   return (
     <Card className="gap-0 py-0 shadow-none">
       <CardContent className="p-3">
@@ -43,12 +45,12 @@ function OpenTaskCard({
             <div className="font-medium">{task.name ?? task.taskDefinitionKey}</div>
             <div className="text-muted-foreground font-mono text-xs">
               {task.taskDefinitionKey}
-              {task.assignee && <> · assignee: {task.assignee}</>}
-              {!task.assignee && <> · unassigned</>}
+              {task.assignee && <> · {t("instanceDetail.assignee", { name: task.assignee })}</>}
+              {!task.assignee && <> · {t("instanceDetail.unassigned")}</>}
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={onToggle}>
-            {expanded ? "Cancel" : "Complete"}
+            {expanded ? t("instanceDetail.cancel") : t("instanceDetail.complete")}
           </Button>
         </div>
         {expanded && (
@@ -73,6 +75,7 @@ function OpenTaskCard({
  * The query tool returns a pagination envelope — the timeline renders the page.
  */
 function InstanceAuditContent({ processInstanceId }: { processInstanceId: string }) {
+  const t = useT()
   const q = useToolQuery<{ items: HistoryActivity[] }>(
     ["camunda7:instance-history", processInstanceId],
     "camunda7_query_historic_activity_instances",
@@ -81,12 +84,14 @@ function InstanceAuditContent({ processInstanceId }: { processInstanceId: string
   if (q.isError) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>{q.error?.message ?? "Failed to load the audit log."}</AlertDescription>
+        <AlertDescription>
+          {q.error?.message ?? t("instanceDetail.auditLoadError")}
+        </AlertDescription>
       </Alert>
     )
   }
   if (!q.data) {
-    return <p className="text-muted-foreground text-sm">Loading audit log…</p>
+    return <p className="text-muted-foreground text-sm">{t("instanceDetail.auditLoading")}</p>
   }
   return <HistoryTimelineView activities={q.data.items ?? []} />
 }
@@ -108,6 +113,7 @@ export function InstanceDetailWidget({
   const [cancelled, setCancelled] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
+  const t = useT()
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const suspensionMutation = useToolMutation("camunda7_set_process_instance_suspension")
   const cancelMutation = useToolMutation("camunda7_delete_process_instance")
@@ -145,7 +151,7 @@ export function InstanceDetailWidget({
           </Alert>
         ) : (
           <div className="text-muted-foreground text-sm">
-            {loading ? "Loading…" : "No data available"}
+            {loading ? t("instanceDetail.loading") : t("instanceDetail.noData")}
           </div>
         )}
       </div>
@@ -226,23 +232,30 @@ export function InstanceDetailWidget({
       />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Process Instance Detail</h2>
+          <h2 className="text-xl font-semibold">{t("instanceDetail.title")}</h2>
           <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-sm">
             <span>
-              ID: <code className="font-mono">{instance.id}</code>
+              {t("instanceDetail.idLabel")} <code className="font-mono">{instance.id}</code>
             </span>
             {instance.businessKey && (
               <span>
-                Business Key: <code className="font-mono">{instance.businessKey}</code>
+                {t("instanceDetail.businessKeyLabel")}{" "}
+                <code className="font-mono">{instance.businessKey}</code>
               </span>
             )}
             <Badge variant={cancelled || instance.ended ? "secondary" : "default"}>
-              {cancelled ? "Cancelled" : instance.ended ? "Ended" : "Running"}
+              {cancelled
+                ? t("instanceDetail.statusCancelled")
+                : instance.ended
+                  ? t("instanceDetail.statusEnded")
+                  : t("instanceDetail.statusRunning")}
             </Badge>
-            {!cancelled && isSuspended && <Badge variant="secondary">Suspended</Badge>}
+            {!cancelled && isSuspended && (
+              <Badge variant="secondary">{t("instanceDetail.statusSuspended")}</Badge>
+            )}
           </div>
           <div className="text-muted-foreground mt-1 font-mono text-xs">
-            Definition: {instance.definitionId}
+            {t("instanceDetail.definitionLabel", { id: instance.definitionId })}
           </div>
         </div>
         <AskAiButton
@@ -261,7 +274,7 @@ export function InstanceDetailWidget({
             disabled={isMutatingInstance}
             onClick={handleSuspendToggle}
           >
-            {isSuspended ? "Activate" : "Suspend"}
+            {isSuspended ? t("instanceDetail.activate") : t("instanceDetail.suspend")}
           </Button>
           <Button
             variant="outline"
@@ -270,13 +283,17 @@ export function InstanceDetailWidget({
             disabled={isMutatingInstance}
             onClick={() => setConfirmCancel(true)}
           >
-            Cancel instance
+            {t("instanceDetail.cancelInstance")}
           </Button>
         </div>
       )}
 
       {incidents && incidents.length > 0 && (
-        <Section title="Incidents" count={activeIncidents.length} defaultOpen>
+        <Section
+          title={t("instanceDetail.sectionIncidents")}
+          count={activeIncidents.length}
+          defaultOpen
+        >
           <div className="flex flex-col gap-2">
             {incidents.map((inc) => {
               const resolved = resolvedIds.has(inc.id)
@@ -289,7 +306,7 @@ export function InstanceDetailWidget({
                     <div className="mb-1 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <Badge variant={resolved ? "secondary" : "destructive"}>
-                          {resolved ? "Resolved" : inc.incidentType}
+                          {resolved ? t("instanceDetail.resolved") : inc.incidentType}
                         </Badge>
                         <span className="text-muted-foreground text-xs">
                           {new Date(inc.incidentTimestamp).toLocaleString()}
@@ -299,7 +316,7 @@ export function InstanceDetailWidget({
                         <div className="flex items-center gap-1.5">
                           <AskAiButton
                             variant="subtle"
-                            label="Analyze"
+                            label={t("instanceDetail.analyze")}
                             prompt={`Analyze the root cause of incident ${inc.id} (${inc.incidentType}${
                               inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
                             }) on process instance ${instance.id}${
@@ -308,7 +325,7 @@ export function InstanceDetailWidget({
                           />
                           <AskAiButton
                             variant="subtle"
-                            label="Draft ticket"
+                            label={t("instanceDetail.draftTicket")}
                             prompt={`Draft an incident ticket for CIB Seven incident \`${inc.id}\` (${inc.incidentType}${
                               inc.incidentMessage ? `: ${inc.incidentMessage}` : ""
                             }) on process instance ${instance.id}${
@@ -321,7 +338,7 @@ export function InstanceDetailWidget({
                             disabled={resolveMutation.isPending}
                             onClick={() => handleResolve(inc.id)}
                           >
-                            Resolve
+                            {t("instanceDetail.resolve")}
                           </Button>
                         </div>
                       )}
@@ -340,19 +357,19 @@ export function InstanceDetailWidget({
       )}
 
       {bpmnXml && (
-        <Section title="Process Diagram" defaultOpen>
+        <Section title={t("instanceDetail.sectionDiagram")} defaultOpen>
           <BpmnDiagram bpmnXml={bpmnXml} height={420} highlights={highlights} />
         </Section>
       )}
 
       {(visibleTasks.length > 0 || (data.openTasks ?? []).length > 0) && (
         <Section
-          title="Open User Tasks"
+          title={t("instanceDetail.sectionOpenTasks")}
           count={visibleTasks.length}
           defaultOpen={visibleTasks.length > 0}
         >
           {visibleTasks.length === 0 ? (
-            <p className="text-muted-foreground text-sm">All tasks completed.</p>
+            <p className="text-muted-foreground text-sm">{t("instanceDetail.tasksAllCompleted")}</p>
           ) : (
             <div className="flex flex-col gap-2">
               {visibleTasks.map((task) => (
@@ -373,7 +390,7 @@ export function InstanceDetailWidget({
       )}
 
       {activityTree && (
-        <Section title="Activity Tree" defaultOpen>
+        <Section title={t("instanceDetail.sectionActivityTree")} defaultOpen>
           <Card className="gap-0 py-0 shadow-none">
             <CardContent className="p-3">
               <ActivityNode node={activityTree} />
@@ -382,11 +399,15 @@ export function InstanceDetailWidget({
         </Section>
       )}
 
-      <Section title="Variables" count={variableEntries.length} defaultOpen>
+      <Section
+        title={t("instanceDetail.sectionVariables")}
+        count={variableEntries.length}
+        defaultOpen
+      >
         <div className="mb-2">
           <AskAiButton
             variant="subtle"
-            label="Explain & validate variables"
+            label={t("instanceDetail.explainVariables")}
             prompt={`Explain and sanity-check the variables of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engineId}). Use camunda7_get_process_instance_variables(processInstanceId: "${instance.id}") for the authoritative values. For each meaningful variable say what it represents, and flag any value that looks missing, malformed, or inconsistent and could explain the current incident(s). If you find a likely-bad variable, propose the corrected value — but do not set it without my confirmation.`}
           />
         </div>
@@ -397,27 +418,27 @@ export function InstanceDetailWidget({
         />
       </Section>
 
-      <Section title="Audit log" onToggle={setAuditOpen}>
+      <Section title={t("instanceDetail.sectionAuditLog")} onToggle={setAuditOpen}>
         <div className="mb-2">
           <AskAiButton
             variant="subtle"
-            label="Explain timeline"
+            label={t("instanceDetail.explainTimeline")}
             prompt={`Explain the execution timeline of CIB Seven process instance ${instance.id} (definition ${instance.definitionId}, engine ${engineId}). Use camunda7_query_historic_activity_instances(processInstanceId: "${instance.id}") to walk the per-activity history in order: where did the token spend the most time, which step is it currently stuck at, and does the path taken match the expected happy path? Call out the single biggest delay and whether it indicates a problem. Explanation only — do not change anything.`}
           />
         </div>
         {auditOpen ? (
           <InstanceAuditContent processInstanceId={instance.id} />
         ) : (
-          <p className="text-muted-foreground text-sm">Expand to load the activity history.</p>
+          <p className="text-muted-foreground text-sm">{t("instanceDetail.auditExpandHint")}</p>
         )}
       </Section>
 
       <ConfirmDialog
         open={confirmCancel}
         onOpenChange={setConfirmCancel}
-        title="Cancel this process instance?"
-        description="This deletes the running instance and all of its tokens. This action is irreversible."
-        confirmLabel="Cancel instance"
+        title={t("instanceDetail.confirmCancelTitle")}
+        description={t("instanceDetail.confirmCancelDescription")}
+        confirmLabel={t("instanceDetail.cancelInstance")}
         destructive
         pending={cancelMutation.isPending}
         onConfirm={handleCancel}

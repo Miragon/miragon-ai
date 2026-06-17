@@ -11,6 +11,7 @@ import { buildRows, type DefinitionRow } from "./lib.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
+import { useT } from "../../messages/use-t.js"
 
 function ProcessRow({
   row,
@@ -21,6 +22,7 @@ function ProcessRow({
   onOpen: (processDefinitionKey: string) => void
   onViewInstances: (processDefinitionKey: string) => void
 }) {
+  const t = useT()
   return (
     <tr className="hover:bg-muted transition-colors">
       <td className="border-border border-b px-4 py-3 align-middle">
@@ -54,15 +56,15 @@ function ProcessRow({
         <div className="flex items-center justify-end gap-1.5">
           <DrillButton
             onDrill={() => onViewInstances(row.key)}
-            ariaLabel={`View running instances of ${row.name ?? row.key}`}
+            ariaLabel={t("cockpitDefs.viewInstancesAria", { name: row.name ?? row.key })}
           >
-            Instances
+            {t("cockpitDefs.instancesAction")}
           </DrillButton>
           <DrillButton
             onDrill={() => onOpen(row.key)}
-            ariaLabel={`Open process detail for ${row.name ?? row.key}`}
+            ariaLabel={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
           >
-            Open
+            {t("cockpitDefs.openAction")}
           </DrillButton>
         </div>
       </td>
@@ -78,6 +80,7 @@ export function ProcessDefinitionsTableView({
   data?: CockpitDashboardData | null
   engine?: string
 }) {
+  const t = useT()
   const go = useNav()
   // Shares the health KPI's query key → deduped to a single fetch (see
   // health-kpi.tsx). Self-fetches in the cockpit; uses props standalone.
@@ -99,7 +102,7 @@ export function ProcessDefinitionsTableView({
     }
     return (
       <div className="text-muted-foreground p-2 text-sm">
-        {loading ? "Loading…" : "No data available"}
+        {loading ? t("cockpitDefs.loading") : t("cockpitDefs.noData")}
       </div>
     )
   }
@@ -108,48 +111,48 @@ export function ProcessDefinitionsTableView({
 
   return (
     <section>
-      <SectionHeading title="All processes" hint={`${rows.length} deployed`} />
+      <SectionHeading
+        title={t("cockpitDefs.heading")}
+        hint={t("cockpitDefs.deployedHint", { count: rows.length })}
+      />
 
       {rows.length === 0 ? (
         <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
-          No process definitions deployed
+          {t("cockpitDefs.emptyState")}
         </div>
       ) : (
-        <table
-          className="w-full border-collapse text-sm"
-          aria-label="Deployed process definitions with running instances, failed jobs and incidents"
-        >
+        <table className="w-full border-collapse text-sm" aria-label={t("cockpitDefs.tableAria")}>
           <thead className="bg-muted">
             <tr>
               <th
                 scope="col"
                 className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
               >
-                Process
+                {t("cockpitDefs.colProcess")}
               </th>
               <th
                 scope="col"
                 className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
               >
-                Version
+                {t("cockpitDefs.colVersion")}
               </th>
               <th
                 scope="col"
                 className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
               >
-                Running
+                {t("cockpitDefs.colRunning")}
               </th>
               <th
                 scope="col"
                 className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
               >
-                Failed jobs
+                {t("cockpitDefs.colFailedJobs")}
               </th>
               <th
                 scope="col"
                 className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
               >
-                Incidents
+                {t("cockpitDefs.colIncidents")}
               </th>
               <th scope="col" className="border-border border-y px-4 py-2.5" />
             </tr>

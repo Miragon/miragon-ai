@@ -8,6 +8,7 @@ import {
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 
+import { useT } from "../messages/use-t.js"
 import type { TaskFormField, TaskFormSchema } from "../view-models.js"
 
 interface TaskCompleteFormProps {
@@ -33,6 +34,7 @@ export function TaskCompleteForm({
   onCompleted,
   onCancel,
 }: TaskCompleteFormProps) {
+  const t = useT()
   const fetchedSchema = useToolQuery<TaskFormSchema>(
     ["camunda7", "task-form"],
     "camunda7_get_task_form",
@@ -47,12 +49,12 @@ export function TaskCompleteForm({
       return (
         <Alert variant="destructive" className="mt-2">
           <AlertDescription>
-            Could not load task form: {fetchedSchema.error.message}
+            {t("taskForm.loadError", { message: fetchedSchema.error.message })}
           </AlertDescription>
         </Alert>
       )
     }
-    return <p className="text-muted-foreground py-2 text-sm">Loading task form…</p>
+    return <p className="text-muted-foreground py-2 text-sm">{t("taskForm.loading")}</p>
   }
 
   return (
@@ -73,6 +75,7 @@ interface BodyProps {
 }
 
 function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyProps) {
+  const t = useT()
   const completeMutation = useToolMutation("camunda7_complete_task")
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() =>
     initialFieldValues(schema),
@@ -92,14 +95,16 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
       const required = isRequired(field)
       if (raw === undefined || raw === "") {
         if (required) {
-          setSubmitError(`Pick a value for ${field.name} before completing the task`)
+          setSubmitError(t("taskForm.errorRequired", { name: field.name }))
           return
         }
         continue
       }
       const coerced = coerceValue(raw, field.type)
       if (coerced === undefined) {
-        setSubmitError(`Invalid value for ${field.name}: expected ${field.type ?? "value"}`)
+        setSubmitError(
+          t("taskForm.errorInvalid", { name: field.name, type: field.type ?? "value" }),
+        )
         return
       }
       variables[field.name] = { value: coerced, type: field.type ?? "String" }
@@ -111,7 +116,7 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
       if (entry.value === "") continue
       const coerced = coerceValue(entry.value, entry.type)
       if (coerced === undefined) {
-        setSubmitError(`Invalid value for ${name}: expected ${entry.type}`)
+        setSubmitError(t("taskForm.errorInvalid", { name, type: entry.type }))
         return
       }
       variables[name] = { value: coerced, type: entry.type }
@@ -132,7 +137,7 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       {schema.fields.length === 0 && manualEntries.length === 0 && (
-        <p className="text-muted-foreground text-sm">No form is defined for this task.</p>
+        <p className="text-muted-foreground text-sm">{t("taskForm.empty")}</p>
       )}
       {readonlyFields.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -177,16 +182,16 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
             ])
           }
         >
-          + Add variable
+          {t("taskForm.addVariable")}
         </Button>
         <div className="flex items-center gap-2">
           {onCancel && (
             <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-              Cancel
+              {t("taskForm.cancel")}
             </Button>
           )}
           <Button type="submit" size="sm" disabled={completeMutation.isPending}>
-            {completeMutation.isPending ? "Completing…" : "Complete task"}
+            {completeMutation.isPending ? t("taskForm.completing") : t("taskForm.complete")}
           </Button>
         </div>
       </div>
@@ -214,6 +219,7 @@ function FieldRow({
   value: string
   onChange: (v: string) => void
 }) {
+  const t = useT()
   const label = field.label ?? field.name
   const required = isRequired(field)
   const disabled = field.readonly === true
@@ -221,9 +227,9 @@ function FieldRow({
   const meta = useMemo(() => {
     const parts: string[] = []
     if (field.type) parts.push(field.type)
-    if (required) parts.push("required")
+    if (required) parts.push(t("taskForm.required"))
     return parts.join(" · ")
-  }, [field.type, required])
+  }, [field.type, required, t])
 
   if (field.suggestedValues && field.suggestedValues.length > 0) {
     return (
@@ -318,31 +324,32 @@ function ManualEntryRow({
   onChange: (updated: ManualEntry) => void
   onRemove: () => void
 }) {
+  const t = useT()
   return (
     <div className="flex items-center gap-1">
       <Input
-        aria-label="Variable name"
+        aria-label={t("taskForm.variableName")}
         className="h-8 flex-1"
-        placeholder="name"
+        placeholder={t("taskForm.namePlaceholder")}
         value={entry.name}
         onChange={(e) => onChange({ ...entry, name: e.target.value })}
       />
       <select
-        aria-label="Variable type"
+        aria-label={t("taskForm.variableType")}
         className="border-input bg-background h-8 rounded-md border px-2 text-xs"
         value={entry.type}
         onChange={(e) => onChange({ ...entry, type: e.target.value })}
       >
-        {TYPE_OPTIONS.map((t) => (
-          <option key={t} value={t}>
-            {t}
+        {TYPE_OPTIONS.map((option) => (
+          <option key={option} value={option}>
+            {option}
           </option>
         ))}
       </select>
       <Input
-        aria-label="Variable value"
+        aria-label={t("taskForm.variableValue")}
         className="h-8 flex-1"
-        placeholder="value"
+        placeholder={t("taskForm.valuePlaceholder")}
         value={entry.value}
         onChange={(e) => onChange({ ...entry, value: e.target.value })}
       />

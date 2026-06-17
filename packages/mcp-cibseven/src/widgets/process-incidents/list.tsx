@@ -8,6 +8,7 @@ import { useViewData } from "../use-view-data.js"
 import { ActivitySummary } from "./activity-summary.js"
 import { IncidentTable } from "./incident-table.js"
 import { EmptyStateWithSiblings } from "./empty-state.js"
+import { useT } from "../../messages/use-t.js"
 
 export function ActivityIncidentList({
   data: initialData = null,
@@ -18,6 +19,7 @@ export function ActivityIncidentList({
   processDefinitionKey?: string
   engine?: string
 }) {
+  const t = useT()
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const go = useNav()
   const { data, loading, error } = useViewData<ProcessIncidentsData>(
@@ -39,7 +41,7 @@ export function ActivityIncidentList({
           </Alert>
         ) : (
           <div className="text-muted-foreground p-2 text-sm">
-            {loading ? "Loading…" : "No data available"}
+            {loading ? t("procIncList.loading") : t("procIncList.noData")}
           </div>
         )}
       </WidgetShell>
@@ -77,10 +79,12 @@ export function ActivityIncidentList({
     <WidgetShell>
       <section>
         <SectionHeading
-          title="Incidents grouped by activity"
-          hint={`click to expand · ${affectedActivityCount} ${
-            affectedActivityCount === 1 ? "activity" : "activities"
-          } affected`}
+          title={t("procIncList.groupedHeading")}
+          hint={
+            affectedActivityCount === 1
+              ? t("procIncList.affectedHintOne", { count: affectedActivityCount })
+              : t("procIncList.affectedHintOther", { count: affectedActivityCount })
+          }
         />
         {data.activities.length === 0 ? (
           <EmptyStateWithSiblings

@@ -9,10 +9,13 @@ import {
 import { queries, schemas, type PrometheusClient } from "@miragon-ai/client-analytics"
 import type { Client as Camunda7Client } from "@miragon-ai/client-cibseven"
 import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-cibseven/sdk"
+import { localizeFor, type LocaleSource } from "./server-locale.js"
 
 export interface AnalyticsWidgetToolsOptions {
   /** Used by the BPMN heatmap to fetch the diagram XML. Absent → non-diagram fallback. */
   camunda7Client?: Camunda7Client
+  /** Profile store for localizing model-facing summaries (locale → profile language). */
+  profileStore?: LocaleSource
 }
 
 /**
@@ -55,6 +58,9 @@ export function registerWidgetTools(
   options: AnalyticsWidgetToolsOptions = {},
 ) {
   const camunda7Client = options.camunda7Client
+  // Resolve the request locale via `await localizeFor(profileStore)` inside each
+  // handler to localize its model-facing `summary` (→ "en" when no store/session).
+  const profileStore = options.profileStore
   const uiMeta = buildUiMeta({ resourceUri })
 
   /**
@@ -87,6 +93,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const data = await queries.dashboardData(ch, {
         processDefinitionKey: args.processDefinitionKey,
         period: args.period,
@@ -102,11 +109,18 @@ export function registerWidgetTools(
           { row: [{ widget: "analytics:activity-bottleneck-table" }] },
         ],
         entries: [{ dataType: "analytics:dashboard", data }],
-        summary:
-          `Analytics dashboard${args.processDefinitionKey ? ` for "${args.processDefinitionKey}"` : ""} ` +
-          `over ${args.period}: ${data.totalCount} instances — ${data.completedCount} completed, ` +
-          `${data.runningCount} running, ${data.failedCount} failed ` +
-          `(${data.failureRatePct}% failure rate, ${data.incidentCount} incidents).`,
+        summary: t("aSum.dashboard", {
+          scope: args.processDefinitionKey
+            ? t("aSum.scopeForProcess", { key: args.processDefinitionKey })
+            : "",
+          period: args.period,
+          totalCount: data.totalCount,
+          completedCount: data.completedCount,
+          runningCount: data.runningCount,
+          failedCount: data.failedCount,
+          failureRatePct: data.failureRatePct,
+          incidentCount: data.incidentCount,
+        }),
       })
     }),
   )
@@ -125,6 +139,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const data = await queries.failureDashboardData(ch, {
         engine: args.engine,
       })
@@ -137,10 +152,13 @@ export function registerWidgetTools(
           { row: [{ widget: "analytics:failure-rate-table" }] },
         ],
         entries: [{ dataType: "analytics:failureDashboard", data }],
-        summary:
-          `Failure dashboard: ${data.totalIncidents} open incident(s) across ` +
-          `${data.uniqueErrorPatterns} error pattern(s)` +
-          `${data.mostAffectedProcess ? `; most affected process: "${data.mostAffectedProcess}"` : ""}.`,
+        summary: t("aSum.failureDashboard", {
+          totalIncidents: data.totalIncidents,
+          uniqueErrorPatterns: data.uniqueErrorPatterns,
+          mostAffected: data.mostAffectedProcess
+            ? t("aSum.mostAffectedProcess", { key: data.mostAffectedProcess })
+            : "",
+        }),
       })
     }),
   )
@@ -157,6 +175,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const data = await queries.clusterCompare(ch, args)
       return buildSingleWidgetView({
         widget: "analytics:cluster-compare",
@@ -164,11 +183,14 @@ export function registerWidgetTools(
         dataType: "analytics:clusterCompare",
         data,
         title: "Cluster Compare",
-        summary:
-          `Pre/post deployment comparison` +
-          `${data.processDefinitionKey ? ` for "${data.processDefinitionKey}"` : ""} around ` +
-          `${data.deploymentTimestamp}: ${compareDeltaSummary(data.delta)}` +
-          `${suppressedNote(data.suppressed)}.`,
+        summary: t("aSum.clusterCompare", {
+          scope: data.processDefinitionKey
+            ? t("aSum.scopeForProcess", { key: data.processDefinitionKey })
+            : "",
+          deploymentTimestamp: data.deploymentTimestamp,
+          delta: compareDeltaSummary(data.delta),
+          suppressed: suppressedNote(data.suppressed),
+        }),
       })
     }),
   )
@@ -185,6 +207,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const data = await queries.versionCompare(ch, args)
       return buildSingleWidgetView({
         widget: "analytics:version-compare",
@@ -192,10 +215,14 @@ export function registerWidgetTools(
         dataType: "analytics:versionCompare",
         data,
         title: "Version Compare",
-        summary:
-          `Version comparison for "${data.processDefinitionKey}" v${data.versionA} vs ` +
-          `v${data.versionB} over ${data.windowDays}d: ${compareDeltaSummary(data.delta)}` +
-          `${suppressedNote(data.suppressed)}.`,
+        summary: t("aSum.versionCompare", {
+          key: data.processDefinitionKey,
+          versionA: data.versionA,
+          versionB: data.versionB,
+          windowDays: data.windowDays,
+          delta: compareDeltaSummary(data.delta),
+          suppressed: suppressedNote(data.suppressed),
+        }),
       })
     }),
   )
@@ -212,6 +239,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const data = await queries.engineCompare(ch, args)
       return buildSingleWidgetView({
         widget: "analytics:engine-compare",
@@ -219,10 +247,16 @@ export function registerWidgetTools(
         dataType: "analytics:engineCompare",
         data,
         title: "Engine Compare",
-        summary:
-          `Engine comparison "${data.engineA}" vs "${data.engineB}"` +
-          `${data.processDefinitionKey ? ` for "${data.processDefinitionKey}"` : ""} over ` +
-          `${data.windowDays}d: ${compareDeltaSummary(data.delta)}${suppressedNote(data.suppressed)}.`,
+        summary: t("aSum.engineCompare", {
+          engineA: data.engineA,
+          engineB: data.engineB,
+          scope: data.processDefinitionKey
+            ? t("aSum.scopeForProcess", { key: data.processDefinitionKey })
+            : "",
+          windowDays: data.windowDays,
+          delta: compareDeltaSummary(data.delta),
+          suppressed: suppressedNote(data.suppressed),
+        }),
       })
     }),
   )
@@ -239,6 +273,7 @@ export function registerWidgetTools(
       _meta: uiMeta,
     },
     withToolErrors(async (args) => {
+      const t = await localizeFor(profileStore)
       const heat = await queries.elementHeat(ch, args)
       const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
       // Model summary only — the bpmnXml must never reach the text channel;
@@ -255,10 +290,12 @@ export function registerWidgetTools(
           durationSec: heat.durationSec,
         },
         title: "BPMN Heatmap",
-        summary:
-          `BPMN heatmap for "${args.processDefinitionKey}" over ${args.period}: ` +
-          `heat values for ${Object.keys(heat.frequency).length} element(s)` +
-          `${bpmnXml ? "" : " — no BPMN XML available, widget shows the non-diagram fallback"}.`,
+        summary: t("aSum.bpmnHeatmap", {
+          key: args.processDefinitionKey,
+          period: args.period,
+          elementCount: Object.keys(heat.frequency).length,
+          fallbackNote: bpmnXml ? "" : t("aSum.bpmnHeatmapNoXml"),
+        }),
       })
     }),
   )

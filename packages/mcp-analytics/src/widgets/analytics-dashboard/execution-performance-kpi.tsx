@@ -2,6 +2,7 @@ import { Alert, AlertDescription, Skeleton } from "@miragon/mcp-toolkit-ui"
 import { KpiGrid, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 import { formatDuration, useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
+import { useT } from "../../messages/use-t.js"
 
 export function ExecutionPerformanceKpi({
   data: initialData,
@@ -12,6 +13,7 @@ export function ExecutionPerformanceKpi({
   processDefinitionKey?: string
   period?: AnalyticsDashboardPeriod
 }) {
+  const t = useT()
   const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period })
   const data = initialData ?? fallbackQuery.data ?? null
 
@@ -40,13 +42,13 @@ export function ExecutionPerformanceKpi({
     <WidgetShell>
       <KpiGrid
         boxed
-        header={{ label: "Execution Performance" }}
+        header={{ label: t("aExecPerf.headerLabel") }}
         cells={[
-          { label: "Avg Duration", value: formatDuration(data.avgDurationMs) },
-          { label: "Median", value: formatDuration(data.medianDurationMs) },
-          { label: "P95", value: formatDuration(data.p95DurationMs) },
+          { label: t("aExecPerf.avgDuration"), value: formatDuration(data.avgDurationMs) },
+          { label: t("aExecPerf.median"), value: formatDuration(data.medianDurationMs) },
+          { label: t("aExecPerf.p95"), value: formatDuration(data.p95DurationMs) },
           {
-            label: "Failure Rate",
+            label: t("aExecPerf.failureRate"),
             value: `${data.failureRatePct}%`,
             tone: data.failureRatePct > 0 ? "critical" : undefined,
           },

@@ -1,4 +1,5 @@
 import type { IncidentsByProcess } from "../../view-models.js"
+import { useT } from "../../messages/use-t.js"
 
 export function EmptyStateWithSiblings({
   processName,
@@ -9,14 +10,21 @@ export function EmptyStateWithSiblings({
   siblings: IncidentsByProcess[]
   onJumpTo: (key: string) => void
 }) {
+  const t = useT()
   return (
     <div className="border-border bg-card flex flex-col items-center gap-3 rounded-lg border px-6 py-8 text-center text-sm">
-      <div className="text-foreground font-medium">No open incidents on {processName}</div>
+      <div className="text-foreground font-medium">
+        {t("procIncEmpty.noOpenIncidentsOnProcess", { processName })}
+      </div>
       {siblings.length === 0 ? (
-        <div className="text-muted-foreground text-xs">No open incidents in the engine.</div>
+        <div className="text-muted-foreground text-xs">
+          {t("procIncEmpty.noOpenIncidentsInEngine")}
+        </div>
       ) : (
         <>
-          <div className="text-muted-foreground text-xs">Other processes have open incidents:</div>
+          <div className="text-muted-foreground text-xs">
+            {t("procIncEmpty.otherProcessesHaveIncidents")}
+          </div>
           <div className="flex flex-wrap items-center justify-center gap-1.5">
             {siblings.map((s) => (
               <button

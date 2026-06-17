@@ -9,6 +9,7 @@ import {
 import type { IncidentsDashboardData } from "../../view-models.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
+import { useT } from "../../messages/use-t.js"
 
 function formatTimestamp(iso: string | null): string {
   if (!iso) return "—"
@@ -32,6 +33,7 @@ export function IncidentOverviewKpiView({
     { engine },
     !!engine,
   )
+  const t = useT()
 
   if (!data) {
     if (error) {
@@ -43,7 +45,7 @@ export function IncidentOverviewKpiView({
     }
     return (
       <div className="text-muted-foreground p-2 text-sm">
-        {loading ? "Loading…" : "No data available"}
+        {loading ? t("incidentsKpi.loading") : t("incidentsKpi.noData")}
       </div>
     )
   }
@@ -55,14 +57,27 @@ export function IncidentOverviewKpiView({
       <WidgetHeader
         icon="⚠"
         iconTone="critical"
-        title="Incidents"
+        title={t("incidentsKpi.title")}
         sub={
           <>
-            <LivePill>Live</LivePill>
+            <LivePill>{t("incidentsKpi.live")}</LivePill>
             <span>
-              {data.totalCount} open across {data.processCount}{" "}
-              {data.processCount === 1 ? "process" : "processes"}
-              {data.latestIncident && <> · last event {formatTimestamp(data.latestIncident)}</>}
+              {t("incidentsKpi.openSummary", {
+                count: data.totalCount,
+                processes: data.processCount,
+                unit:
+                  data.processCount === 1
+                    ? t("incidentsKpi.processUnitSingular")
+                    : t("incidentsKpi.processUnitPlural"),
+              })}
+              {data.latestIncident && (
+                <>
+                  {" "}
+                  {t("incidentsKpi.lastEvent", {
+                    time: formatTimestamp(data.latestIncident),
+                  })}
+                </>
+              )}
             </span>
           </>
         }
@@ -75,17 +90,17 @@ export function IncidentOverviewKpiView({
       />
       <KpiGrid
         boxed
-        header={{ label: "Overview", badge: "Open incidents · letzte 24h" }}
+        header={{ label: t("incidentsKpi.overviewLabel"), badge: t("incidentsKpi.overviewBadge") }}
         cells={[
           {
-            label: "Open Incidents",
+            label: t("incidentsKpi.cellOpenIncidents"),
             value: data.totalCount,
             tone: data.totalCount > 0 ? "critical" : undefined,
           },
-          { label: "Processes affected", value: data.processCount },
-          { label: "Activities affected", value: data.affectedActivityCount },
+          { label: t("incidentsKpi.cellProcessesAffected"), value: data.processCount },
+          { label: t("incidentsKpi.cellActivitiesAffected"), value: data.affectedActivityCount },
           {
-            label: "+24h",
+            label: t("incidentsKpi.cellLast24h"),
             value: `+${data.last24hCount}`,
             tone: data.last24hCount > 0 ? "critical" : undefined,
           },

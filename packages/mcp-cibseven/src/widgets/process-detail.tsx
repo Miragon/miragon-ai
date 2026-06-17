@@ -18,6 +18,7 @@ import {
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 
+import { useT } from "../messages/use-t.js"
 import { CAMUNDA7_PROCESS_DETAIL_DATA } from "../tool-names.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { useNav } from "./navigation.js"
@@ -38,6 +39,7 @@ function ProcessHeatmap({
   processDefinitionKey: string
   mode: "frequency" | "duration"
 }) {
+  const t = useT()
   const q = useToolQuery<BpmnHeatmapData>(
     ["camunda7:heatmap", processDefinitionKey],
     "analytics_bpmn_heatmap_data",
@@ -46,17 +48,21 @@ function ProcessHeatmap({
   if (q.isError) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>{q.error?.message ?? "Failed to load the heatmap."}</AlertDescription>
+        <AlertDescription>
+          {q.error?.message ?? t("processDetail.heatmapLoadError")}
+        </AlertDescription>
       </Alert>
     )
   }
   if (!q.data) {
-    return <div className="text-muted-foreground p-6 text-sm">Loading heatmap…</div>
+    return (
+      <div className="text-muted-foreground p-6 text-sm">{t("processDetail.heatmapLoading")}</div>
+    )
   }
   if (!q.data.bpmnXml) {
     return (
       <Alert>
-        <AlertDescription>No diagram available for the heatmap.</AlertDescription>
+        <AlertDescription>{t("processDetail.heatmapNoDiagram")}</AlertDescription>
       </Alert>
     )
   }
@@ -83,6 +89,7 @@ export function ProcessDetailView({
   engine?: string
 }) {
   const go = useNav()
+  const t = useT()
   const [flowMode, setFlowMode] = useState<FlowMode>("live")
 
   const query = useToolQuery<ProcessDetailData>(
@@ -123,16 +130,18 @@ export function ProcessDetailView({
     if (query.isError) {
       return (
         <Alert variant="destructive">
-          <AlertDescription>{query.error?.message ?? "Failed to load."}</AlertDescription>
+          <AlertDescription>
+            {query.error?.message ?? t("processDetail.loadError")}
+          </AlertDescription>
         </Alert>
       )
     }
     if (!initialData && processDefinitionKey) {
-      return <div className="text-muted-foreground p-6 text-sm">Loading…</div>
+      return <div className="text-muted-foreground p-6 text-sm">{t("processDetail.loading")}</div>
     }
     return (
       <Alert>
-        <AlertDescription>No data available</AlertDescription>
+        <AlertDescription>{t("processDetail.noData")}</AlertDescription>
       </Alert>
     )
   }
@@ -147,26 +156,26 @@ export function ProcessDetailView({
 
   const stats: KpiCell[] = [
     {
-      label: "Open incidents",
+      label: t("processDetail.kpiOpenIncidents"),
       value: data.openIncidents,
       tone: data.openIncidents > 0 ? "critical" : undefined,
     },
     {
-      label: "Activities affected",
+      label: t("processDetail.kpiActivitiesAffected"),
       value: totalActivityFraction,
     },
     {
-      label: "Running",
+      label: t("processDetail.kpiRunning"),
       value: data.runningInstances !== null ? data.runningInstances.toLocaleString() : "—",
       tone: data.runningInstances && data.runningInstances > 0 ? "success" : undefined,
       onClick: () =>
         go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey }),
-      ariaLabel: `View running instances of ${title}`,
+      ariaLabel: t("processDetail.kpiRunningAria", { name: title }),
     },
   ]
   if (data.failedJobs > 0) {
     stats.push({
-      label: "Failed jobs",
+      label: t("processDetail.kpiFailedJobs"),
       value: data.failedJobs,
       tone: "warning",
     })
@@ -210,7 +219,9 @@ export function ProcessDetailView({
           {data.openIncidents > 0 && (
             <div className="mb-3">
               <StatusBadge tone="critical">
-                {data.openIncidents} open {data.openIncidents === 1 ? "incident" : "incidents"}
+                {data.openIncidents === 1
+                  ? t("processDetail.openIncidentsBadgeOne", { count: data.openIncidents })
+                  : t("processDetail.openIncidentsBadgeOther", { count: data.openIncidents })}
               </StatusBadge>
             </div>
           )}
@@ -227,10 +238,16 @@ export function ProcessDetailView({
             {data.runningInstances !== null && (
               <>
                 <span className="text-muted-foreground">·</span>
-                <span>{data.runningInstances.toLocaleString()} running instances</span>
+                <span>
+                  {t("processDetail.runningInstances", {
+                    count: data.runningInstances.toLocaleString(),
+                  })}
+                </span>
               </>
             )}
-            {cockpitUrl && <OpenInCockpitLink url={cockpitUrl} label="Open in Cockpit" />}
+            {cockpitUrl && (
+              <OpenInCockpitLink url={cockpitUrl} label={t("processDetail.openInCockpit")} />
+            )}
           </div>
         </div>
         <AskAiButton prompt={analyzePrompt} variant="primary" />
@@ -243,7 +260,7 @@ export function ProcessDetailView({
             go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
           }
         >
-          View running instances
+          {t("processDetail.viewRunningInstances")}
         </DrillButton>
         {data.openIncidents > 0 && (
           <DrillButton
@@ -252,25 +269,43 @@ export function ProcessDetailView({
               go({ type: "process-incidents", processDefinitionKey: data.processDefinitionKey })
             }
           >
-            Open all incidents
+            {t("processDetail.openAllIncidents")}
           </DrillButton>
         )}
         {data.openIncidents > 0 && (
-          <AskAiButton prompt={draftTicketPrompt} label="Draft incident ticket" variant="subtle" />
+          <AskAiButton
+            prompt={draftTicketPrompt}
+            label={t("processDetail.draftIncidentTicket")}
+            variant="subtle"
+          />
         )}
       </div>
 
-      <KpiGrid boxed header={{ label: "Overview", badge: "Process health" }} cells={stats} />
+      <KpiGrid
+        boxed
+        header={{
+          label: t("processDetail.overviewLabel"),
+          badge: t("processDetail.overviewBadge"),
+        }}
+        cells={stats}
+      />
 
       <section>
         <SectionHeading
-          title="Process flow"
+          title={t("processDetail.processFlow")}
           hint={
             data.totalActivityCount !== null
-              ? `${data.affectedActivityCount} of ${data.totalActivityCount} activities affected`
-              : `${data.affectedActivityCount} ${
-                  data.affectedActivityCount === 1 ? "activity" : "activities"
-                } affected`
+              ? t("processDetail.activitiesAffectedFraction", {
+                  affected: data.affectedActivityCount,
+                  total: data.totalActivityCount,
+                })
+              : data.affectedActivityCount === 1
+                ? t("processDetail.activitiesAffectedOne", {
+                    count: data.affectedActivityCount,
+                  })
+                : t("processDetail.activitiesAffectedOther", {
+                    count: data.affectedActivityCount,
+                  })
           }
         />
         {data.bpmnXml ? (
@@ -279,9 +314,9 @@ export function ProcessDetailView({
               <div className="border-border inline-flex overflow-hidden rounded-md border text-xs">
                 {(
                   [
-                    ["live", "Live tokens"],
-                    ["frequency", "Frequency"],
-                    ["duration", "Duration"],
+                    ["live", t("processDetail.flowModeLive")],
+                    ["frequency", t("processDetail.flowModeFrequency")],
+                    ["duration", t("processDetail.flowModeDuration")],
                   ] as const
                 ).map(([m, label]) => (
                   <button
@@ -307,7 +342,7 @@ export function ProcessDetailView({
                       style={{ background: "#3b82f6" }}
                       aria-hidden
                     />
-                    Running tokens
+                    {t("processDetail.legendRunningTokens")}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span
@@ -315,15 +350,15 @@ export function ProcessDetailView({
                       style={{ background: "#ef4444" }}
                       aria-hidden
                     />
-                    Incidents / failed jobs
+                    {t("processDetail.legendIncidentsFailedJobs")}
                   </span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground text-xs">
                     {flowMode === "frequency"
-                      ? "Executions / element · 30d"
-                      : "Avg duration / element · 30d"}
+                      ? t("processDetail.heatmapCaptionFrequency")
+                      : t("processDetail.heatmapCaptionDuration")}
                   </span>
                   <HeatmapLegend />
                 </div>
@@ -337,7 +372,7 @@ export function ProcessDetailView({
           </>
         ) : (
           <Alert>
-            <AlertDescription>No BPMN diagram available</AlertDescription>
+            <AlertDescription>{t("processDetail.noBpmnDiagram")}</AlertDescription>
           </Alert>
         )}
       </section>

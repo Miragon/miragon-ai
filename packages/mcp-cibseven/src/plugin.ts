@@ -5,9 +5,11 @@ import { createCamunda7Client, type Camunda7AuthType } from "@miragon-ai/client-
 import { registerTools } from "./tools/index.js"
 import { registerIncidentIssuePrompt, registerIncidentIssueTools } from "./tools/incident-issue.js"
 import { registerEngineTools } from "./tools/engines.js"
+import { registerUserProfileTools } from "./tools/user-profile.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"
 import { createEngineRegistry, type EngineEntry } from "./lib/resolve-engine.js"
+import { createInMemoryProfileStore, type ProfileStore } from "./lib/profile-store.js"
 import { withToolsetFilter } from "./lib/toolsets.js"
 
 export interface Camunda7PluginConfig {
@@ -41,7 +43,21 @@ export interface Camunda7PluginConfig {
   }
 }
 
-export function createPlugin(config: Camunda7PluginConfig): AppPlugin<MCPServer> {
+/**
+ * Cross-cutting resources the gateway threads into the plugin. Currently just
+ * the {@link ProfileStore} (shared with the analytics module so both can read
+ * the same per-session preferences). Optional so the plugin stays usable
+ * standalone (tests, embedding) — it falls back to an in-memory store.
+ */
+export interface Camunda7SharedResources {
+  profileStore?: ProfileStore
+}
+
+export function createPlugin(
+  config: Camunda7PluginConfig,
+  shared: Camunda7SharedResources = {},
+): AppPlugin<MCPServer> {
+  const profileStore = shared.profileStore ?? createInMemoryProfileStore()
   const registry = createEngineRegistry(config.engines, (e) =>
     createCamunda7Client({
       baseUrl: e.baseUrl,
@@ -70,7 +86,7 @@ export function createPlugin(config: Camunda7PluginConfig): AppPlugin<MCPServer>
       // `camunda7:read-only` / `:operations` / `:admin` deployment only
       // advertises its subset (no toolset = everything, unchanged default).
       const register = withToolsetFilter(createToolRegistrar(server, registry), config.toolset)
-      registerEngineTools(register)
+      registerEngineTools(register, profileStore)
       registerTools(register)
       registerIncidentIssueTools(register, incidentIssueConfig)
       registerIncidentIssuePrompt(server, incidentIssueConfig)
@@ -78,7 +94,12 @@ export function createPlugin(config: Camunda7PluginConfig): AppPlugin<MCPServer>
     registerWidgetTools: (server, resourceUri) => {
       registerWidgetTools(server, registry, resourceUri, {
         healthThresholds: config.healthThresholds,
+        profileStore,
       })
+      // Profile tools render/own the settings widget and need the same
+      // resourceUri; the engine registry is read only for the configured engine
+      // list the settings UI offers as availability checkboxes.
+      registerUserProfileTools(server, profileStore, registry, resourceUri)
     },
   }
 }
