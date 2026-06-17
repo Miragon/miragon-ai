@@ -3,34 +3,36 @@ import { Alert, AlertDescription, Badge } from "@miragon/mcp-toolkit-ui"
 import type { IncidentDetailHistoryEntry } from "../../view-models.js"
 
 import { formatDuration, formatTimestamp } from "../../lib/format-time.js"
+import { useT } from "../../messages/use-t.js"
 
 export function HistoryTimeline({ entries }: { entries: IncidentDetailHistoryEntry[] }) {
+  const t = useT()
   if (entries.length === 0) {
     return (
       <Alert>
-        <AlertDescription>No history events for this instance</AlertDescription>
+        <AlertDescription>{t("incidentHistory.empty")}</AlertDescription>
       </Alert>
     )
   }
   return (
     <div
       role="table"
-      aria-label="Activity history timeline for this process instance"
+      aria-label={t("incidentHistory.tableAriaLabel")}
       className="border-border rounded-lg border"
     >
       <div
         role="row"
         className="border-border text-muted-foreground bg-muted grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide"
       >
-        <span role="columnheader">Activity</span>
+        <span role="columnheader">{t("incidentHistory.columnActivity")}</span>
         <span role="columnheader" className="text-right">
-          Started
+          {t("incidentHistory.columnStarted")}
         </span>
         <span role="columnheader" className="text-right">
-          Duration
+          {t("incidentHistory.columnDuration")}
         </span>
         <span role="columnheader" className="text-right">
-          Status
+          {t("incidentHistory.columnStatus")}
         </span>
       </div>
       {entries.map((entry) => (
@@ -55,11 +57,11 @@ export function HistoryTimeline({ entries }: { entries: IncidentDetailHistoryEnt
           </span>
           <span className="text-right">
             {entry.canceled ? (
-              <Badge variant="secondary">canceled</Badge>
+              <Badge variant="secondary">{t("incidentHistory.statusCanceled")}</Badge>
             ) : entry.endTime ? (
-              <Badge variant="secondary">completed</Badge>
+              <Badge variant="secondary">{t("incidentHistory.statusCompleted")}</Badge>
             ) : (
-              <Badge variant="default">running</Badge>
+              <Badge variant="default">{t("incidentHistory.statusRunning")}</Badge>
             )}
           </span>
         </div>

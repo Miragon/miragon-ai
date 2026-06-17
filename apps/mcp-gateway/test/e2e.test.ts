@@ -120,6 +120,7 @@ describe("mcp-gateway E2E smoke", () => {
     expect(textPayload(result)).toEqual({
       engines: [{ id: "default", baseUrl: "http://localhost:1" }],
       currentSelection: null,
+      profileDefaultEngineId: null,
     })
   })
 

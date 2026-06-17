@@ -2,6 +2,7 @@ import { Alert, AlertDescription, Skeleton } from "@miragon/mcp-toolkit-ui"
 import { AskAiButton, KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 import { useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
+import { useT } from "../../messages/use-t.js"
 
 export function ExecutionSummaryKpi({
   data: initialData,
@@ -13,12 +14,13 @@ export function ExecutionSummaryKpi({
   period?: AnalyticsDashboardPeriod
 }) {
   const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period })
+  const t = useT()
   const data = initialData ?? fallbackQuery.data ?? null
 
   if (!data) {
     return (
       <WidgetShell>
-        <WidgetHeader icon="▤" iconTone="info" title="Process Analytics" />
+        <WidgetHeader icon="▤" iconTone="info" title={t("aExecSummary.title")} />
         {fallbackQuery.isError ? (
           <Alert variant="destructive">
             <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
@@ -42,7 +44,7 @@ export function ExecutionSummaryKpi({
       <WidgetHeader
         icon="▤"
         iconTone="info"
-        title="Process Analytics"
+        title={t("aExecSummary.title")}
         actions={
           <AskAiButton
             variant="primary"
@@ -52,26 +54,26 @@ export function ExecutionSummaryKpi({
       />
       <KpiGrid
         boxed
-        header={{ label: "Execution Summary" }}
+        header={{ label: t("aExecSummary.headerExecutionSummary") }}
         cells={[
-          { label: "Total", value: data.totalCount },
+          { label: t("aExecSummary.cellTotal"), value: data.totalCount },
           {
-            label: "Completed",
+            label: t("aExecSummary.cellCompleted"),
             value: data.completedCount,
             tone: data.completedCount > 0 ? "success" : undefined,
           },
           {
-            label: "Running",
+            label: t("aExecSummary.cellRunning"),
             value: data.runningCount,
             tone: data.runningCount > 0 ? "info" : undefined,
           },
           {
-            label: "Failed",
+            label: t("aExecSummary.cellFailed"),
             value: data.failedCount,
             tone: data.failedCount > 0 ? "critical" : undefined,
           },
           {
-            label: "Incidents",
+            label: t("aExecSummary.cellIncidents"),
             value: data.incidentCount,
             tone: data.incidentCount > 0 ? "critical" : undefined,
           },

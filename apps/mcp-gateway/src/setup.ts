@@ -3,7 +3,12 @@ import type { AppConfig, AppConfigEntry, AppPlugin } from "@miragon/mcp-toolkit-
 import type { MCPServer } from "mcp-use/server"
 import { z } from "zod"
 
-import { createPlugin as createCamunda7Plugin } from "@miragon-ai/mcp-cibseven"
+import {
+  createPlugin as createCamunda7Plugin,
+  createFileSystemProfileStore,
+  createInMemoryProfileStore,
+  type ProfileStore,
+} from "@miragon-ai/mcp-cibseven"
 import { createPlugin as createAnalyticsPlugin } from "@miragon-ai/mcp-analytics"
 import { createCamunda7Client, type Client as Camunda7Client } from "@miragon-ai/client-cibseven"
 
@@ -44,6 +49,13 @@ const analyticsConfigSchema = z.object({
 
 interface SharedResources {
   camunda7Client?: Camunda7Client
+  /**
+   * Per-session/user preference store, shared across modules so engine
+   * availability, locale, theme, dashboard and analytics defaults come from one
+   * source. Filesystem-backed when `MCP_PROFILE_DIR` is set (survives restarts),
+   * else in-memory (lost on restart, like the sticky engine selection).
+   */
+  profileStore: ProfileStore
 }
 
 const MODULE_REGISTRY: Record<
@@ -56,7 +68,10 @@ const MODULE_REGISTRY: Record<
   }
 > = {
   camunda7: {
-    createPlugin: (c) => createCamunda7Plugin(camunda7ConfigSchema.parse(c)),
+    createPlugin: (c, shared) =>
+      createCamunda7Plugin(camunda7ConfigSchema.parse(c), {
+        profileStore: shared.profileStore,
+      }),
     configFromEnv: () => ({
       engines: loadEnginesFromEnv(),
       authType: process.env.CAMUNDA_AUTH_TYPE,
@@ -83,6 +98,7 @@ const MODULE_REGISTRY: Record<
       createAnalyticsPlugin({
         ...analyticsConfigSchema.parse(c),
         camunda7Client: shared.camunda7Client,
+        profileStore: shared.profileStore,
       }),
     configFromEnv: () => ({
       url: process.env.PROMETHEUS_URL,
@@ -184,13 +200,20 @@ export function getAppConfig(): AppConfig {
 }
 
 function buildSharedResources(entries: AppConfigEntry[]): SharedResources {
+  // One preference store for the whole gateway, regardless of which modules are
+  // active. Filesystem-backed when MCP_PROFILE_DIR is set so profiles survive
+  // restarts; otherwise in-memory (fine for dev, lost on restart).
+  const profileStore: ProfileStore = process.env.MCP_PROFILE_DIR
+    ? createFileSystemProfileStore({ dir: process.env.MCP_PROFILE_DIR })
+    : createInMemoryProfileStore()
+
   // Build a single Camunda7 client (against the first engine) for modules that
   // need to reach the engine REST API but don't yet participate in the
   // multi-engine routing — most notably the analytics module's BPMN-XML fetch
   // for the path-frequency heatmap. When a process definition exists on more
   // than one engine the XML is assumed to match across engines.
   const camunda7Entry = entries.find((e) => e.app === "camunda7")
-  if (!camunda7Entry) return {}
+  if (!camunda7Entry) return { profileStore }
   const parsed = camunda7ConfigSchema.parse(camunda7Entry.config)
   const primary = parsed.engines[0]
   const camunda7Client = createCamunda7Client({
@@ -200,7 +223,7 @@ function buildSharedResources(entries: AppConfigEntry[]): SharedResources {
     password: parsed.password,
     token: parsed.token,
   })
-  return { camunda7Client }
+  return { camunda7Client, profileStore }
 }
 
 export function getPlugins(): AppPlugin<MCPServer>[] {

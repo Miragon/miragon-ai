@@ -5,6 +5,7 @@ import type { ProcessIncidentsData } from "../../view-models.js"
 import { BpmnDiagram, type BpmnHighlight } from "../bpmn-diagram.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
+import { useT } from "../../messages/use-t.js"
 
 export function ProcessIncidentFlow({
   data: initialData = null,
@@ -15,6 +16,7 @@ export function ProcessIncidentFlow({
   processDefinitionKey?: string
   engine?: string
 }) {
+  const t = useT()
   const { data, loading, error } = useViewData<ProcessIncidentsData>(
     initialData,
     ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
@@ -43,7 +45,7 @@ export function ProcessIncidentFlow({
           </Alert>
         ) : (
           <div className="text-muted-foreground p-2 text-sm">
-            {loading ? "Loading…" : "No data available"}
+            {loading ? t("procIncFlow.loading") : t("procIncFlow.noDataAvailable")}
           </div>
         )}
       </WidgetShell>
@@ -56,20 +58,23 @@ export function ProcessIncidentFlow({
     <WidgetShell>
       <section>
         <SectionHeading
-          title="Process flow"
+          title={t("procIncFlow.title")}
           hint={
             data.totalActivityCount !== null
-              ? `${affectedActivityCount} of ${data.totalActivityCount} activities failing`
-              : `${affectedActivityCount} ${
-                  affectedActivityCount === 1 ? "activity" : "activities"
-                } failing`
+              ? t("procIncFlow.hintOfTotal", {
+                  count: affectedActivityCount,
+                  total: data.totalActivityCount,
+                })
+              : affectedActivityCount === 1
+                ? t("procIncFlow.hintSingular", { count: affectedActivityCount })
+                : t("procIncFlow.hintPlural", { count: affectedActivityCount })
           }
         />
         {data.bpmnXml ? (
           <BpmnDiagram bpmnXml={data.bpmnXml} height={460} highlights={highlights} />
         ) : (
           <Alert>
-            <AlertDescription>No BPMN diagram available</AlertDescription>
+            <AlertDescription>{t("procIncFlow.noBpmnDiagram")}</AlertDescription>
           </Alert>
         )}
       </section>

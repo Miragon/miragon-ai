@@ -8,6 +8,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
+import { useT } from "../../messages/use-t.js"
 
 /**
  * One health tile per engine. Self-fetches the same `camunda7_cockpit_overview_data`
@@ -21,6 +22,7 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
     { engine: engineId },
   )
+  const t = useT()
   const s = q.data?.summary
   const incidents = s?.totalIncidents ?? 0
   const failed = s?.totalFailedJobs ?? 0
@@ -30,7 +32,7 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
     <button
       type="button"
       onClick={onEnter}
-      aria-label={`Operate engine ${engineId}`}
+      aria-label={t("fleet.operateEngineAria", { name: engineId })}
       className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-4 text-left outline-none transition-colors focus-visible:ring-2"
     >
       <div className="flex items-center justify-between gap-2">
@@ -39,30 +41,30 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
           {engineId}
         </span>
         <span className="text-muted-foreground text-xs">
-          Operate <span aria-hidden>→</span>
+          {t("fleet.operate")} <span aria-hidden>→</span>
         </span>
       </div>
 
       {q.isError ? (
-        <span className="text-critical text-xs">{q.error?.message ?? "Failed to load"}</span>
+        <span className="text-critical text-xs">{q.error?.message ?? t("fleet.failedToLoad")}</span>
       ) : !s ? (
-        <span className="text-muted-foreground text-xs">Loading…</span>
+        <span className="text-muted-foreground text-xs">{t("fleet.loading")}</span>
       ) : (
         <div className="grid grid-cols-3 gap-2 text-sm">
           <div>
-            <div className="text-muted-foreground text-[11px]">Running</div>
+            <div className="text-muted-foreground text-[11px]">{t("fleet.running")}</div>
             <div className="text-foreground font-mono font-semibold tabular-nums">
               {s.totalRunningInstances.toLocaleString()}
             </div>
           </div>
           <div>
-            <div className="text-muted-foreground text-[11px]">Incidents</div>
+            <div className="text-muted-foreground text-[11px]">{t("fleet.incidents")}</div>
             <div>
               <CountPill tone={incidents > 0 ? "critical" : "success"}>{incidents}</CountPill>
             </div>
           </div>
           <div>
-            <div className="text-muted-foreground text-[11px]">Failed jobs</div>
+            <div className="text-muted-foreground text-[11px]">{t("fleet.failedJobs")}</div>
             <div>
               {failed > 0 ? (
                 <CountPill tone="warning">{failed}</CountPill>
@@ -75,7 +77,9 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
       )}
       {s && (
         <div className="text-muted-foreground text-[11px]">
-          {s.totalDefinitions} process {s.totalDefinitions === 1 ? "definition" : "definitions"}
+          {s.totalDefinitions === 1
+            ? t("fleet.processDefinitionsOne", { count: s.totalDefinitions })
+            : t("fleet.processDefinitionsOther", { count: s.totalDefinitions })}
         </div>
       )}
     </button>
@@ -97,6 +101,7 @@ export function FleetView({
   engines: Array<{ id: string }>
   onEnterEngine: (id: string) => void
 }) {
+  const t = useT()
   const ids = engines.map((e) => e.id)
   const idList = ids.join(", ")
   const idArray = ids.map((id) => `"${id}"`).join(", ")
@@ -110,10 +115,12 @@ export function FleetView({
             ⤧
           </div>
           <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">
-            Cross-engine analyses
+            {t("fleet.heading")}
           </h1>
           <div className="text-muted-foreground text-sm">
-            {engines.length} {engines.length === 1 ? "engine" : "engines"} · {idList}
+            {engines.length === 1
+              ? t("fleet.engineCountOne", { count: engines.length, list: idList })
+              : t("fleet.engineCountOther", { count: engines.length, list: idList })}
           </div>
         </div>
         <AskAiButton
@@ -123,7 +130,7 @@ export function FleetView({
       </header>
 
       <section>
-        <SectionHeading title="Engine health" hint="click an engine to operate it" />
+        <SectionHeading title={t("fleet.engineHealth.title")} hint={t("fleet.engineHealth.hint")} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {engines.map((e) => (
             <FleetEngineCard key={e.id} engineId={e.id} onEnter={() => onEnterEngine(e.id)} />
@@ -132,23 +139,26 @@ export function FleetView({
       </section>
 
       <section>
-        <SectionHeading title="Fleet analyses" hint="agentic — runs the analytics tools" />
+        <SectionHeading
+          title={t("fleet.fleetAnalyses.title")}
+          hint={t("fleet.fleetAnalyses.hint")}
+        />
         <div className="flex flex-wrap items-center gap-2">
           {a && b && (
             <AskAiButton
               variant="subtle"
-              label="Compare engines"
+              label={t("fleet.compareEngines")}
               prompt={`Compare the CIB Seven engines ${a} vs ${b} over the last 7 days. Use analytics_show_engine_compare({engineA: "${a}", engineB: "${b}", windowDays: 7}) to render the side-by-side KPIs, then interpret the deltas (failure rate, incident rate, avg/p95 duration): which engine is healthier and by how much, whether the gap is significant (watch the 'suppressed' low-sample flag), and the single recommended action.${ids.length > 2 ? ` Note: ${ids.length} engines are configured (${idList}); after this pair, compare the remaining engines too.` : ""}`}
             />
           )}
           <AskAiButton
             variant="subtle"
-            label="Fleet failure analysis"
+            label={t("fleet.failureAnalysis")}
             prompt={`Analyze failures across the entire CIB Seven fleet (engines ${idList}). Use analytics_show_failure_dashboard({engineId: [${idArray}]}) to group incidents fleet-wide by error pattern, activity and process definition. Tell me the dominant cross-engine failure cluster, whether it is isolated to one engine or systemic across the fleet, and the highest-leverage remediation.`}
           />
           <AskAiButton
             variant="subtle"
-            label="Fleet performance"
+            label={t("fleet.performance")}
             prompt={`Give me a fleet-wide process-performance overview across CIB Seven engines ${idList}. Use analytics_show_dashboard({engineId: [${idArray}], period: "7d"}) for the aggregate throughput / duration / incident picture, then call out the worst-performing process definitions across the fleet and the main bottleneck.`}
           />
         </div>

@@ -20,11 +20,12 @@ import { useNav, type OnNavigate } from "./navigation.js"
 import { CAMUNDA7_ENGINE_HEALTH_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
 import { remediatePrompt, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
+import { useT } from "../messages/use-t.js"
 
-const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; glyph: string; label: string }> = {
-  ok: { tone: "success", glyph: "✓", label: "Stable" },
-  degraded: { tone: "warning", glyph: "!", label: "Degraded" },
-  critical: { tone: "critical", glyph: "✕", label: "Critical" },
+const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; glyph: string; labelKey: string }> = {
+  ok: { tone: "success", glyph: "✓", labelKey: "engineHealth.statusStable" },
+  degraded: { tone: "warning", glyph: "!", labelKey: "engineHealth.statusDegraded" },
+  critical: { tone: "critical", glyph: "✕", labelKey: "engineHealth.statusCritical" },
 }
 
 /**
@@ -122,6 +123,7 @@ function ClusterRow({
   engine?: string
   go: OnNavigate
 }) {
+  const t = useT()
   const primaryKey = cluster.processDefinitionKeys.find((k) => k !== UNKNOWN)
   // Drill keeps the cluster scope: activity + type + message signature travel
   // into the cluster-detail view (instead of falling back to a per-process or
@@ -136,7 +138,7 @@ function ClusterRow({
 
   const scope =
     cluster.processDefinitionKeys.length > 1
-      ? `${cluster.processDefinitionKeys.length} processes`
+      ? t("engineHealth.scopeProcesses", { count: cluster.processDefinitionKeys.length })
       : (primaryKey ?? UNKNOWN)
 
   return (
@@ -147,15 +149,25 @@ function ClusterRow({
           <Badge variant="secondary">{cluster.incidentType}</Badge>
         </div>
         <p className="text-muted-foreground truncate text-xs">
-          {cluster.incidentCount} affected
-          {cluster.last24hCount > 0 ? ` · ${cluster.last24hCount} new in 24h` : ""} · {scope}
+          {t("engineHealth.clusterAffected", { count: cluster.incidentCount })}
+          {cluster.last24hCount > 0
+            ? ` · ${t("engineHealth.clusterNew24h", { count: cluster.last24hCount })}`
+            : ""}{" "}
+          · {scope}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        <DrillButton onDrill={drill} ariaLabel={`View incidents for ${cluster.activityId}`}>
-          View
+        <DrillButton
+          onDrill={drill}
+          ariaLabel={t("engineHealth.clusterViewAria", { activity: cluster.activityId })}
+        >
+          {t("engineHealth.clusterView")}
         </DrillButton>
-        <AskAiButton variant="subtle" label="Fix" prompt={remediatePrompt(cluster, engine)} />
+        <AskAiButton
+          variant="subtle"
+          label={t("engineHealth.clusterFix")}
+          prompt={remediatePrompt(cluster, engine)}
+        />
       </div>
     </div>
   )
@@ -176,6 +188,7 @@ export function EngineHealthView({
   data?: EngineHealthData | null
   engine?: string
 }) {
+  const t = useT()
   const go = useNav()
   const callTool = useCallTool()
   // Always ready: unlike the per-process widgets (whose feeds require an id),
@@ -227,7 +240,7 @@ export function EngineHealthView({
           </Alert>
           <AskAiButton
             variant="primary"
-            label="Diagnose with AI"
+            label={t("engineHealth.diagnoseWithAi")}
             prompt={diagnosePrompt(engine, error.message)}
           />
         </div>
@@ -235,7 +248,7 @@ export function EngineHealthView({
     }
     return (
       <div className="text-muted-foreground p-2 text-sm">
-        {loading ? "Loading…" : "No data available"}
+        {loading ? t("engineHealth.loading") : t("engineHealth.noData")}
       </div>
     )
   }
@@ -249,12 +262,12 @@ export function EngineHealthView({
       <WidgetHeader
         icon={status.glyph}
         iconTone={status.tone}
-        title="Engine Overview"
+        title={t("engineHealth.title")}
         sub={<span>{data.headline}</span>}
         actions={
           <AskAiButton
             variant="primary"
-            label="What should I do?"
+            label={t("engineHealth.whatShouldIDo")}
             prompt={triagePrompt(data, engine)}
           />
         }
@@ -263,7 +276,7 @@ export function EngineHealthView({
       {/* Ops trust: show how fresh the verdict is and let the operator re-pull
           it — during an active incident this is the screen they stare at. */}
       <div className="text-muted-foreground -mt-2 flex items-center gap-2 text-xs">
-        <span>as of {formatTime(data.fetchedAt)}</span>
+        <span>{t("engineHealth.asOf", { time: formatTime(data.fetchedAt) })}</span>
         <span aria-hidden="true">·</span>
         <button
           type="button"
@@ -271,42 +284,42 @@ export function EngineHealthView({
           disabled={refreshing}
           className="hover:text-foreground focus-visible:ring-ring rounded font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
         >
-          {refreshing ? "Refreshing…" : "↻ Refresh"}
+          {refreshing ? t("engineHealth.refreshing") : t("engineHealth.refresh")}
         </button>
       </div>
 
       <KpiGrid
         boxed
-        header={{ label: "Health", badge: status.label }}
+        header={{ label: t("engineHealth.kpiHealth"), badge: t(status.labelKey) }}
         cells={[
           {
-            label: "Running instances",
+            label: t("engineHealth.kpiRunningInstances"),
             value: summary.runningInstances,
             onClick: () => go({ type: "process-list" }),
-            ariaLabel: "Show all process definitions",
+            ariaLabel: t("engineHealth.kpiRunningInstancesAria"),
           },
           {
-            label: "Open incidents",
+            label: t("engineHealth.kpiOpenIncidents"),
             // The derivative beats the absolute during an active incident:
             // "9 in the last hour" = burning now; fall back to the 24h count.
             value: summary.totalIncidents,
             fraction:
               summary.lastHourIncidents > 0
-                ? ` (${summary.lastHourIncidents} in last hour)`
+                ? ` ${t("engineHealth.kpiInLastHour", { count: summary.lastHourIncidents })}`
                 : summary.last24hIncidents > 0
-                  ? ` (${summary.last24hIncidents} in 24h)`
+                  ? ` ${t("engineHealth.kpiIn24h", { count: summary.last24hIncidents })}`
                   : undefined,
             tone: summary.totalIncidents > 0 ? status.tone : undefined,
             onClick: () => go({ type: "incidents" }),
-            ariaLabel: "Show the incidents dashboard",
+            ariaLabel: t("engineHealth.kpiOpenIncidentsAria"),
           },
           {
-            label: "Affected activities",
+            label: t("engineHealth.kpiAffectedActivities"),
             value: summary.affectedActivities,
             tone: summary.affectedActivities > 0 ? "warning" : undefined,
           },
           {
-            label: "Affected processes",
+            label: t("engineHealth.kpiAffectedProcesses"),
             value: summary.affectedDefinitions,
             fraction: ` /${summary.totalDefinitions}`,
             tone: summary.affectedDefinitions > 0 ? "critical" : undefined,
@@ -319,18 +332,22 @@ export function EngineHealthView({
           when the history API is unavailable (counts degrade to null). */}
       {(summary.started24h !== null || summary.completed24h !== null) && (
         <p className="text-muted-foreground text-xs">
-          Throughput (24h):{" "}
-          {summary.started24h !== null ? `${summary.started24h.toLocaleString()} started` : ""}
+          {t("engineHealth.throughput24h")}{" "}
+          {summary.started24h !== null
+            ? t("engineHealth.throughputStarted", { count: summary.started24h.toLocaleString() })
+            : ""}
           {summary.started24h !== null && summary.completed24h !== null ? " · " : ""}
           {summary.completed24h !== null
-            ? `${summary.completed24h.toLocaleString()} completed`
+            ? t("engineHealth.throughputCompleted", {
+                count: summary.completed24h.toLocaleString(),
+              })
             : ""}
         </p>
       )}
 
       {clusters.length > 0 && (
-        <section aria-label="Top failure clusters" className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold">Top failures (grouped by root cause)</h3>
+        <section aria-label={t("engineHealth.clustersAria")} className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">{t("engineHealth.clustersHeading")}</h3>
           {clusters.map((cluster) => (
             // Fall back to the engine the data was fetched against (standalone
             // renders pass no `engine` prop) so the remediation prompt never

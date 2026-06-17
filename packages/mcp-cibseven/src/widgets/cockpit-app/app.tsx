@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react"
 import { ModelContext, useWidget } from "mcp-use/react"
-import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
 import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "../../view-models.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
 import { camunda7BaseWidgets } from "../registry.js"
+import { translator } from "../../messages/index.js"
 import { cockpitViews, type ViewParams } from "./views.js"
 import { FleetView } from "./fleet-view.js"
 
@@ -21,12 +22,15 @@ type CockpitMode = "landing" | "engine" | "fleet"
 interface EnginesResult {
   engines: Array<{ id: string }>
   currentSelection: string | null
+  /** Profile default engine — landing hint when nothing is sticky-selected yet. */
+  profileDefaultEngineId?: string | null
 }
 
 /** Internal, client-side view state — mirrors NavIntent but drives the router. */
 type CockpitView =
   | { section: "overview" }
   | { section: "incidents" }
+  | { section: "settings" }
   | {
       section: "cluster-detail"
       activityId: string
@@ -39,11 +43,12 @@ type CockpitView =
   | { section: "instance-detail"; processInstanceId: string }
   | { section: "incident-detail"; incidentId: string }
 
-type TopSection = "overview" | "incidents"
+type TopSection = "overview" | "incidents" | "settings"
 
 const SECTIONS: Array<{ id: TopSection; label: string; icon: string }> = [
   { id: "overview", label: "Overview", icon: "▦" },
   { id: "incidents", label: "Incidents", icon: "⚠" },
+  { id: "settings", label: "Settings", icon: "⚙" },
 ]
 
 function topSectionOf(view: CockpitView): TopSection {
@@ -69,41 +74,42 @@ interface Crumb {
   view?: CockpitView
 }
 
-function breadcrumbOf(view: CockpitView): Crumb[] {
+function breadcrumbOf(view: CockpitView, locale: string): Crumb[] {
+  const tr = (key: string, params?: Record<string, unknown>) => translator(locale, key, params)
   switch (view.section) {
     case "process-detail":
       return [
-        { label: "Overview", view: { section: "overview" } },
+        { label: tr("cockpit.crumb.overview"), view: { section: "overview" } },
         { label: view.processDefinitionKey },
       ]
     case "process-instances":
       return [
-        { label: "Overview", view: { section: "overview" } },
+        { label: tr("cockpit.crumb.overview"), view: { section: "overview" } },
         {
           label: view.processDefinitionKey,
           view: { section: "process-detail", processDefinitionKey: view.processDefinitionKey },
         },
-        { label: "Instances" },
+        { label: tr("cockpit.crumb.instances") },
       ]
     case "process-incidents":
       return [
-        { label: "Incidents", view: { section: "incidents" } },
+        { label: tr("cockpit.crumb.incidents"), view: { section: "incidents" } },
         { label: view.processDefinitionKey },
       ]
     case "incident-detail":
       return [
-        { label: "Incidents", view: { section: "incidents" } },
-        { label: `Incident ${view.incidentId.slice(0, 8)}…` },
+        { label: tr("cockpit.crumb.incidents"), view: { section: "incidents" } },
+        { label: tr("cockpit.crumb.incident", { id: view.incidentId.slice(0, 8) }) },
       ]
     case "cluster-detail":
       return [
-        { label: "Overview", view: { section: "overview" } },
-        { label: `Cluster: ${view.activityId}` },
+        { label: tr("cockpit.crumb.overview"), view: { section: "overview" } },
+        { label: tr("cockpit.crumb.cluster", { activity: view.activityId }) },
       ]
     case "instance-detail":
       return [
-        { label: "Overview", view: { section: "overview" } },
-        { label: `Instance ${view.processInstanceId.slice(0, 8)}…` },
+        { label: tr("cockpit.crumb.overview"), view: { section: "overview" } },
+        { label: tr("cockpit.crumb.instance", { id: view.processInstanceId.slice(0, 8) }) },
       ]
     default:
       return []
@@ -122,6 +128,11 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   })
   const engines = enginesQuery.data?.engines ?? data?.engines ?? []
 
+  // Active locale from the global ProfileGate (gateway root) — used for the
+  // shell strings here; the rendered leaf widgets read it the same way. Theme is
+  // applied document-wide by the ProfileGate too, so the cockpit stays unaware.
+  const locale = useLocale()
+
   const [picked, setPicked] = useState<string | null>(null)
   const [view, setView] = useState<CockpitView>({ section: "overview" })
   // Start on the chooser so Open Cockpit always offers both ways in (operate an
@@ -137,10 +148,11 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   }, [requestDisplayMode])
 
   // Resolution order: explicit user pick → sticky session selection →
-  // open_cockpit hint → the only engine (if just one).
+  // profile default engine → open_cockpit hint → the only engine (if just one).
   const engineId =
     picked ??
     enginesQuery.data?.currentSelection ??
+    enginesQuery.data?.profileDefaultEngineId ??
     data?.engineId ??
     (engines.length === 1 ? engines[0].id : null)
 
@@ -212,8 +224,8 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
       <WidgetShell>
         <div className="text-muted-foreground p-6 text-sm">
           {enginesQuery.data === undefined
-            ? "Loading engines…"
-            : "No CIB Seven engines configured."}
+            ? translator(locale, "cockpit.loading.engines")
+            : translator(locale, "cockpit.empty.engines")}
         </div>
       </WidgetShell>
     )
@@ -229,10 +241,11 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
       <WidgetShell>
         <div className="mx-auto flex max-w-2xl flex-col gap-6 py-10">
           <div className="text-center">
-            <h1 className="text-foreground text-2xl font-bold">CIB Seven Cockpit</h1>
+            <h1 className="text-foreground text-2xl font-bold">
+              {translator(locale, "cockpit.landing.title")}
+            </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              {engines.length} engines configured — operate one engine, or analyze across the whole
-              fleet.
+              {translator(locale, "cockpit.landing.subtitle", { count: engines.length })}
             </p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -241,9 +254,11 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                 ▦
               </div>
               <div>
-                <h2 className="text-foreground font-semibold">Operate an engine</h2>
+                <h2 className="text-foreground font-semibold">
+                  {translator(locale, "cockpit.landing.operate.title")}
+                </h2>
                 <p className="text-muted-foreground text-sm">
-                  Overview, incidents and drill-downs for one engine.
+                  {translator(locale, "cockpit.landing.operate.desc")}
                 </p>
               </div>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -268,14 +283,15 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                 ⤧
               </div>
               <div>
-                <h2 className="text-foreground font-semibold">Cross-engine analyses</h2>
+                <h2 className="text-foreground font-semibold">
+                  {translator(locale, "cockpit.landing.fleet.title")}
+                </h2>
                 <p className="text-muted-foreground text-sm">
-                  Fleet health across all engines, engine comparison, and fleet-wide failure &
-                  performance analysis.
+                  {translator(locale, "cockpit.landing.fleet.desc")}
                 </p>
               </div>
               <span className="text-m-blue mt-1 text-sm font-medium">
-                Open fleet view <span aria-hidden>→</span>
+                {translator(locale, "cockpit.landing.fleet.open")} <span aria-hidden>→</span>
               </span>
             </button>
           </div>
@@ -305,10 +321,12 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               onClick={() => setMode("landing")}
               className="hover:text-foreground focus-visible:ring-ring rounded outline-none focus-visible:ring-2"
             >
-              Cockpit
+              {translator(locale, "cockpit.crumb.cockpit")}
             </button>
             <span aria-hidden="true">›</span>
-            <span className="text-foreground font-medium">Fleet</span>
+            <span className="text-foreground font-medium">
+              {translator(locale, "cockpit.crumb.fleet")}
+            </span>
           </nav>
         )}
         <FleetView engines={engines} onEnterEngine={enterEngine} />
@@ -321,13 +339,15 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   if (!engineId) {
     return (
       <WidgetShell>
-        <div className="text-muted-foreground p-6 text-sm">Loading engines…</div>
+        <div className="text-muted-foreground p-6 text-sm">
+          {translator(locale, "cockpit.loading.engines")}
+        </div>
       </WidgetShell>
     )
   }
 
   const activeSection = topSectionOf(view)
-  const crumbs = breadcrumbOf(view)
+  const crumbs = breadcrumbOf(view, locale)
 
   // The selected entity of the active view, surfaced in the app-level model
   // context so drill-down views whose widgets carry no leaf <ModelContext>
@@ -376,7 +396,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                   }`}
                 >
                   <span aria-hidden="true">{s.icon}</span>
-                  {s.label}
+                  {translator(locale, `cockpit.section.${s.id}`)}
                 </button>
               )
             })}
@@ -390,10 +410,10 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                 className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2"
               >
                 <span aria-hidden="true">⤧</span>
-                Cross-engine
+                {translator(locale, "cockpit.nav.crossEngine")}
               </button>
               <label className="text-muted-foreground flex flex-col gap-1 px-3 text-[11px] font-medium">
-                Engine
+                {translator(locale, "cockpit.nav.engine")}
                 <select
                   aria-label="Active engine"
                   value={engineId}

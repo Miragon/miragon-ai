@@ -76,6 +76,9 @@ export const cockpitViews = {
   "incident-detail": ({ engine, incidentId }: ViewParams): LayoutConfig => [
     { row: [{ widget: "camunda7:incident-detail", props: { incidentId, engine } }] },
   ],
+  // The profile/settings widget self-fetches the session's profile; it needs no
+  // route params (engine availability is part of the profile itself).
+  settings: (): LayoutConfig => [{ row: [{ widget: "camunda7:user-profile", props: {} }] }],
 } satisfies Record<string, (params: ViewParams) => LayoutConfig>
 
 export type CockpitViewId = keyof typeof cockpitViews

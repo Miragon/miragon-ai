@@ -5,6 +5,7 @@ import type { Client as Camunda7Client } from "@miragon-ai/client-cibseven"
 import { registerTools } from "./tools/index.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"
+import type { LocaleSource } from "./server-locale.js"
 
 export interface AnalyticsPluginConfig {
   /** Base URL of the Prometheus HTTP API (e.g. http://localhost:9090). */
@@ -15,6 +16,8 @@ export interface AnalyticsPluginConfig {
    * When absent, those widgets degrade to a non-diagram fallback.
    */
   camunda7Client?: Camunda7Client
+  /** Profile store (shared with camunda7) for localizing model-facing summaries. */
+  profileStore?: LocaleSource
 }
 
 export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer> {
@@ -26,7 +29,10 @@ export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer
       registerTools(server, client)
     },
     registerWidgetTools: (server, resourceUri) => {
-      registerWidgetTools(server, client, resourceUri, { camunda7Client: config.camunda7Client })
+      registerWidgetTools(server, client, resourceUri, {
+        camunda7Client: config.camunda7Client,
+        profileStore: config.profileStore,
+      })
     },
   }
 }

@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
 import { WidgetShell, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
+import { useT } from "../../messages/use-t.js"
 import { BpmnViewerHeader } from "./header.js"
 import { BpmnViewerLegend } from "./legend.js"
 import { BpmnFlowViewer } from "./flow.js"
@@ -17,6 +18,7 @@ export function BpmnViewerWidget({
   processDefinitionKey,
   version,
 }: { data: BpmnViewerData | null } & BpmnViewerProps) {
+  const t = useT()
   const queryArgs: Record<string, unknown> = {}
   if (processInstanceId) queryArgs.processInstanceId = processInstanceId
   if (processDefinitionKey) queryArgs.processDefinitionKey = processDefinitionKey
@@ -44,7 +46,7 @@ export function BpmnViewerWidget({
     return (
       <WidgetShell>
         <Alert>
-          <AlertDescription>Loading BPMN diagram…</AlertDescription>
+          <AlertDescription>{t("bpmnWidget.loading")}</AlertDescription>
         </Alert>
       </WidgetShell>
     )
@@ -55,7 +57,9 @@ export function BpmnViewerWidget({
       <WidgetShell>
         <Alert variant="destructive">
           <AlertDescription>
-            Failed to load BPMN diagram: {query.error?.message ?? "Unknown error"}
+            {t("bpmnWidget.loadError", {
+              message: query.error?.message ?? t("bpmnWidget.unknownError"),
+            })}
           </AlertDescription>
         </Alert>
       </WidgetShell>

@@ -4,6 +4,7 @@ import { registerEngineTools } from "../tools/engines.js"
 import { registerTools } from "../tools/index.js"
 import { registerIncidentIssueTools } from "../tools/incident-issue.js"
 import type { EngineRegistry } from "./resolve-engine.js"
+import { createInMemoryProfileStore } from "./profile-store.js"
 import { withToolsetFilter } from "./toolsets.js"
 
 type Register = Parameters<typeof registerTools>[0]
@@ -20,7 +21,7 @@ function toolNamesFor(toolset?: string): string[] {
     getRegisteredTools: () => [],
   }) as unknown as Register
   const register = withToolsetFilter(recorder, toolset)
-  registerEngineTools(register)
+  registerEngineTools(register, createInMemoryProfileStore())
   registerTools(register)
   registerIncidentIssueTools(register, {})
   return names.sort()

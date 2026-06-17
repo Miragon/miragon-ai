@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
 import { BpmnDiagram, type BpmnHighlight } from "../bpmn-diagram.js"
+import { useT } from "../../messages/use-t.js"
 
 /**
  * Renders the BPMN canvas with active/incident/failed-job/instance-count
@@ -28,11 +29,12 @@ export function BpmnFlowViewer({ data }: { data: BpmnViewerData | null }) {
     ],
     [data?.activeActivityIds, data?.incidentActivityIds, data?.activityStats],
   )
+  const t = useT()
 
   if (!data) {
     return (
       <Alert>
-        <AlertDescription>No data available</AlertDescription>
+        <AlertDescription>{t("bpmnFlow.noData")}</AlertDescription>
       </Alert>
     )
   }
@@ -40,7 +42,7 @@ export function BpmnFlowViewer({ data }: { data: BpmnViewerData | null }) {
   if (!data.bpmnXml) {
     return (
       <Alert>
-        <AlertDescription>No BPMN diagram available</AlertDescription>
+        <AlertDescription>{t("bpmnFlow.noDiagram")}</AlertDescription>
       </Alert>
     )
   }

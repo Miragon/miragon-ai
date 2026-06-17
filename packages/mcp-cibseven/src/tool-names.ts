@@ -24,7 +24,6 @@ export const CAMUNDA7_JOBS_DATA = "camunda7_jobs_data"
 export const CAMUNDA7_INCIDENTS_DATA = "camunda7_incidents_data"
 export const CAMUNDA7_PROCESS_INCIDENTS_DATA = "camunda7_process_incidents_data"
 export const CAMUNDA7_INCIDENT_DETAIL_DATA = "camunda7_incident_detail_data"
-export const CAMUNDA7_SHOW_COCKPIT_DASHBOARD = "camunda7_show_cockpit_dashboard"
 // AI-first engine overview: deterministic health verdict + cross-process
 // incident clusters. The cockpit overview's home base; self-fetches its feed.
 export const CAMUNDA7_SHOW_ENGINE_HEALTH = "camunda7_show_engine_health"
@@ -37,3 +36,9 @@ export const CAMUNDA7_CLUSTER_DETAIL_DATA = "camunda7_cluster_detail_data"
 export const CAMUNDA7_SHOW_INCIDENTS_DASHBOARD = "camunda7_show_incidents_dashboard"
 export const CAMUNDA7_SHOW_JOB_PANEL = "camunda7_show_job_panel"
 export const CAMUNDA7_SHOW_PROCESS_LIST = "camunda7_show_process_list"
+// User profile & settings: the show tool renders the settings widget, the
+// _data feed backs the widget's self-fetch (app-only), and save persists a
+// partial preference update (model-visible, e.g. "switch the UI to German").
+export const CAMUNDA7_SHOW_USER_PROFILE = "camunda7_show_user_profile"
+export const CAMUNDA7_USER_PROFILE_DATA = "camunda7_user_profile_data"
+export const CAMUNDA7_SAVE_USER_PROFILE = "camunda7_save_user_profile"

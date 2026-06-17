@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@miragon/mcp-toolkit-ui"
 import { TONE_TEXT } from "@miragon-ai/widget-shell/widgets"
+import { useT } from "../messages/use-t.js"
 
 /** Format a percentage delta with an explicit sign, or an em-dash when null. */
 export function fmtPct(n: number | null): string {
@@ -84,6 +85,7 @@ export function ComparisonCard({
   /** Optional header action slot (e.g. an AI affordance), right-aligned. */
   actions?: ReactNode
 }) {
+  const t = useT()
   return (
     <Card>
       <CardContent>
@@ -96,7 +98,7 @@ export function ComparisonCard({
         <Table className="mt-4" aria-label={tableLabel}>
           <TableHeader>
             <TableRow>
-              <TableHead scope="col">Metric</TableHead>
+              <TableHead scope="col">{t("aComparison.metricColumnHeader")}</TableHead>
               <TableHead scope="col">{beforeLabel}</TableHead>
               <TableHead scope="col">{afterLabel}</TableHead>
               <TableHead scope="col">Δ</TableHead>

@@ -20,6 +20,7 @@ import {
 import type { ProcessInstanceRow, ProcessInstancesData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
+import { useT } from "../../messages/use-t.js"
 
 const PAGE_SIZE = 50
 
@@ -46,6 +47,7 @@ function InstanceRow({
   engine: string
   onOpen: (processInstanceId: string) => void
 }) {
+  const t = useT()
   const tone = rowTone(row)
   return (
     <tr className="hover:bg-muted transition-colors">
@@ -67,9 +69,11 @@ function InstanceRow({
       </td>
       <td className="border-border border-b px-4 py-3 align-middle">
         {row.suspended ? (
-          <StatusBadge tone="warning">Suspended</StatusBadge>
+          <StatusBadge tone="warning">{t("processInstances.stateSuspended")}</StatusBadge>
         ) : (
-          <span className="text-muted-foreground text-xs">Running</span>
+          <span className="text-muted-foreground text-xs">
+            {t("processInstances.stateRunning")}
+          </span>
         )}
       </td>
       <td className="border-border border-b px-4 py-3 text-right align-middle">
@@ -84,16 +88,16 @@ function InstanceRow({
           {row.hasIncident && (
             <AskAiButton
               variant="icon"
-              label="Analyze"
-              title="Analyze"
+              label={t("processInstances.analyzeLabel")}
+              title={t("processInstances.analyzeLabel")}
               prompt={`Root-cause the incident on CIB Seven process instance ${row.id}${row.businessKey ? ` (business key ${row.businessKey})` : ""}, version v${row.version} of process ${processDefinitionKey} (engine ${engine}). Use camunda7_get_process_instance, camunda7_list_incidents (processInstanceId ${row.id}) and the failed job's stacktrace to explain why it failed in plain language. Then check via camunda7_list_incidents (processDefinitionKey ${processDefinitionKey}) whether other running instances of this process fail the same way, and recommend a concrete fix: job retry, a variable change (name the variable), or a modification — including whether to apply it to just this instance or the whole cluster.`}
             />
           )}
           <DrillButton
             onDrill={() => onOpen(row.id)}
-            ariaLabel={`Open instance detail for ${row.businessKey ?? row.id}`}
+            ariaLabel={t("processInstances.openInstanceAria", { name: row.businessKey ?? row.id })}
           >
-            Open
+            {t("processInstances.openButton")}
           </DrillButton>
         </div>
       </td>
@@ -119,6 +123,7 @@ export function ProcessInstancesView({
   withIncidentsOnly?: boolean
   businessKeyLike?: string
 }) {
+  const t = useT()
   const go = useNav()
   const [search, setSearch] = useState("")
   const [activeChip, setActiveChip] = useState<string>(CHIP_ALL)
@@ -166,10 +171,10 @@ export function ProcessInstancesView({
       <Alert>
         <AlertDescription>
           {!pdk
-            ? "No process definition selected."
+            ? t("processInstances.noDefinitionSelected")
             : paged.loading
-              ? "Loading process instances…"
-              : "No running instances for this process definition."}
+              ? t("processInstances.loading")
+              : t("processInstances.noRunningInstances")}
         </AlertDescription>
       </Alert>
     )
@@ -178,9 +183,17 @@ export function ProcessInstancesView({
   const title = data.processDefinitionName ?? data.processDefinitionKey
 
   const chips: FilterChip[] = [
-    { id: CHIP_ALL, label: "All", active: activeChip === CHIP_ALL },
-    { id: CHIP_INCIDENTS, label: "With incidents", active: activeChip === CHIP_INCIDENTS },
-    { id: CHIP_SUSPENDED, label: "Suspended", active: activeChip === CHIP_SUSPENDED },
+    { id: CHIP_ALL, label: t("processInstances.chipAll"), active: activeChip === CHIP_ALL },
+    {
+      id: CHIP_INCIDENTS,
+      label: t("processInstances.chipWithIncidents"),
+      active: activeChip === CHIP_INCIDENTS,
+    },
+    {
+      id: CHIP_SUSPENDED,
+      label: t("processInstances.chipSuspended"),
+      active: activeChip === CHIP_SUSPENDED,
+    },
   ]
 
   return (
@@ -201,7 +214,9 @@ export function ProcessInstancesView({
         title={title}
         sub={
           <>
-            <LivePill tone="info">{paged.total.toLocaleString()} running</LivePill>
+            <LivePill tone="info">
+              {t("processInstances.runningCount", { count: paged.total.toLocaleString() })}
+            </LivePill>
             <span className="text-muted-foreground">·</span>
             <span className="font-mono text-xs">{data.processDefinitionKey}</span>
           </>
@@ -217,20 +232,20 @@ export function ProcessInstancesView({
       <FilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search by business key…"
+        searchPlaceholder={t("processInstances.searchPlaceholder")}
         chips={chips}
         onChipToggle={(id) => setActiveChip(id === activeChip ? CHIP_ALL : id)}
       />
 
       {paged.items.length === 0 ? (
         <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
-          No instances match the current filter.
+          {t("processInstances.noMatch")}
         </div>
       ) : (
         <>
           <table
             className="w-full border-collapse text-sm"
-            aria-label={`Running instances of ${title}`}
+            aria-label={t("processInstances.tableAriaLabel", { name: title })}
           >
             <thead className="bg-muted">
               <tr>
@@ -238,25 +253,25 @@ export function ProcessInstancesView({
                   scope="col"
                   className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
                 >
-                  Business key / ID
+                  {t("processInstances.colBusinessKey")}
                 </th>
                 <th
                   scope="col"
                   className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
                 >
-                  Version
+                  {t("processInstances.colVersion")}
                 </th>
                 <th
                   scope="col"
                   className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
                 >
-                  State
+                  {t("processInstances.colState")}
                 </th>
                 <th
                   scope="col"
                   className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
                 >
-                  Incident
+                  {t("processInstances.colIncident")}
                 </th>
                 <th scope="col" className="border-border border-y px-4 py-2.5" />
               </tr>
@@ -279,7 +294,7 @@ export function ProcessInstancesView({
             hasMore={paged.hasMore}
             loadingMore={paged.loadingMore}
             onLoadMore={paged.loadMore}
-            noun="instances"
+            noun={t("processInstances.footerNoun")}
           />
         </>
       )}

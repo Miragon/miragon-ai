@@ -2,6 +2,7 @@ import { Card, CardContent, Alert, AlertDescription, Skeleton } from "@miragon/m
 import { WidgetShell, AskAiButton } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 import { useFailureDashboardSelfFetch } from "./lib.js"
+import { useT } from "../../messages/use-t.js"
 
 /**
  * Build the self-contained cross-pattern triage prompt for the surface-level
@@ -29,6 +30,7 @@ function buildAnalyzeFailuresPrompt(data: FailureDashboardData): string {
 export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboardData | null }) {
   const fallbackQuery = useFailureDashboardSelfFetch(initialData)
   const data = initialData ?? fallbackQuery.data ?? null
+  const t = useT()
 
   if (!data) {
     return (
@@ -40,7 +42,7 @@ export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboar
         ) : (
           <div
             className="grid grid-cols-3 gap-4"
-            aria-label="Loading failure analysis summary"
+            aria-label={t("aFailureSummary.loadingAriaLabel")}
             aria-busy="true"
           >
             {[0, 1, 2].map((i) => (
@@ -61,22 +63,26 @@ export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboar
       <div className="mb-4 flex items-center justify-end">
         <AskAiButton variant="primary" prompt={buildAnalyzeFailuresPrompt(data)} />
       </div>
-      <div className="grid grid-cols-3 gap-4" aria-label="Failure analysis summary">
+      <div className="grid grid-cols-3 gap-4" aria-label={t("aFailureSummary.summaryAriaLabel")}>
         <Card className="bg-critical-soft gap-0 py-0 shadow-none">
           <CardContent className="p-4">
-            <p className="text-critical text-sm font-medium">Total Incidents</p>
+            <p className="text-critical text-sm font-medium">
+              {t("aFailureSummary.totalIncidents")}
+            </p>
             <p className="text-critical text-2xl font-bold">{data.totalIncidents}</p>
           </CardContent>
         </Card>
         <Card className="bg-warning-soft gap-0 py-0 shadow-none">
           <CardContent className="p-4">
-            <p className="text-warning text-sm font-medium">Unique Error Patterns</p>
+            <p className="text-warning text-sm font-medium">
+              {t("aFailureSummary.uniqueErrorPatterns")}
+            </p>
             <p className="text-warning text-2xl font-bold">{data.uniqueErrorPatterns}</p>
           </CardContent>
         </Card>
         <Card className="bg-m-blue-soft gap-0 py-0 shadow-none">
           <CardContent className="p-4">
-            <p className="text-m-blue text-sm font-medium">Most Affected</p>
+            <p className="text-m-blue text-sm font-medium">{t("aFailureSummary.mostAffected")}</p>
             <p className="text-m-blue truncate font-mono text-lg font-bold">
               {data.mostAffectedProcess ?? "—"}
             </p>

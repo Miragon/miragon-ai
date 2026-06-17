@@ -5,6 +5,7 @@ import { buildRows } from "./lib.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
+import { useT } from "../../messages/use-t.js"
 
 /**
  * Shell-less health overview. One component, two modes: standalone the agent's
@@ -28,6 +29,7 @@ export function ProcessHealthKpiView({
     { engine },
     !!engine,
   )
+  const t = useT()
 
   if (!data) {
     if (error) {
@@ -39,7 +41,7 @@ export function ProcessHealthKpiView({
     }
     return (
       <div className="text-muted-foreground p-2 text-sm">
-        {loading ? "Loading…" : "No data available"}
+        {loading ? t("cockpitHealth.loading") : t("cockpitHealth.noData")}
       </div>
     )
   }
@@ -54,11 +56,16 @@ export function ProcessHealthKpiView({
       <WidgetHeader
         icon="▦"
         iconTone="info"
-        title="Cockpit"
+        title={t("cockpitHealth.title")}
         sub={
           <span>
-            All processes at a glance · {summary.totalDefinitions}{" "}
-            {summary.totalDefinitions === 1 ? "process" : "processes"}
+            {t("cockpitHealth.subSummary", {
+              count: summary.totalDefinitions,
+              unit:
+                summary.totalDefinitions === 1
+                  ? t("cockpitHealth.processUnitSingular")
+                  : t("cockpitHealth.processUnitPlural"),
+            })}
           </span>
         }
         actions={
@@ -70,32 +77,35 @@ export function ProcessHealthKpiView({
       />
       <KpiGrid
         boxed
-        header={{ label: "Health", badge: "Process landscape status" }}
+        header={{
+          label: t("cockpitHealth.gridLabel"),
+          badge: t("cockpitHealth.gridBadge"),
+        }}
         cells={[
           {
-            label: "Total processes",
+            label: t("cockpitHealth.cellTotalProcesses"),
             value: summary.totalDefinitions,
             onClick: () => go({ type: "process-list" }),
-            ariaLabel: "Show all process definitions",
+            ariaLabel: t("cockpitHealth.cellTotalProcessesAria"),
           },
           {
-            label: "Healthy",
+            label: t("cockpitHealth.cellHealthy"),
             value: healthyCount,
             fraction: ` /${summary.totalDefinitions}`,
             tone: healthyCount > 0 ? "success" : undefined,
           },
           {
-            label: "Affected",
+            label: t("cockpitHealth.cellAffected"),
             value: affectedCount,
             fraction: ` /${summary.totalDefinitions}`,
             tone: affectedCount > 0 ? "critical" : undefined,
           },
           {
-            label: "Open Incidents",
+            label: t("cockpitHealth.cellOpenIncidents"),
             value: summary.totalIncidents,
             tone: summary.totalIncidents > 0 ? "critical" : undefined,
             onClick: () => go({ type: "incidents" }),
-            ariaLabel: "Show the incidents dashboard",
+            ariaLabel: t("cockpitHealth.cellOpenIncidentsAria"),
           },
         ]}
       />

@@ -13,6 +13,7 @@ import {
 import { AskAiButton, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 import { formatDuration, useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
+import { useT } from "../../messages/use-t.js"
 
 export function ActivityBottleneckTable({
   data: initialData,
@@ -23,6 +24,7 @@ export function ActivityBottleneckTable({
   processDefinitionKey?: string
   period?: AnalyticsDashboardPeriod
 }) {
+  const t = useT()
   const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period })
   const data = initialData ?? fallbackQuery.data ?? null
 
@@ -48,7 +50,7 @@ export function ActivityBottleneckTable({
     return (
       <WidgetShell>
         <Alert>
-          <AlertDescription>No activity executions in the selected window.</AlertDescription>
+          <AlertDescription>{t("aBottleneck.emptyState")}</AlertDescription>
         </Alert>
       </WidgetShell>
     )
@@ -66,26 +68,26 @@ export function ActivityBottleneckTable({
           >
             <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
           </svg>
-          <h3 className="text-lg font-medium">Activity Bottlenecks</h3>
+          <h3 className="text-lg font-medium">{t("aBottleneck.heading")}</h3>
           <Badge variant="secondary">{data.activityBreakdown.length}</Badge>
         </summary>
         <div className="border-border mt-3 rounded-lg border">
-          <Table aria-label="Activity bottlenecks by total execution time">
+          <Table aria-label={t("aBottleneck.tableLabel")}>
             <TableHeader>
               <TableRow>
-                <TableHead scope="col">Activity</TableHead>
-                <TableHead scope="col">Type</TableHead>
+                <TableHead scope="col">{t("aBottleneck.colActivity")}</TableHead>
+                <TableHead scope="col">{t("aBottleneck.colType")}</TableHead>
                 <TableHead scope="col" className="text-right">
-                  Executions
+                  {t("aBottleneck.colExecutions")}
                 </TableHead>
                 <TableHead scope="col" className="text-right">
-                  Avg
+                  {t("aBottleneck.colAvg")}
                 </TableHead>
                 <TableHead scope="col" className="text-right">
-                  P95
+                  {t("aBottleneck.colP95")}
                 </TableHead>
                 <TableHead scope="col" className="text-right">
-                  Total Time
+                  {t("aBottleneck.colTotalTime")}
                 </TableHead>
                 <TableHead scope="col" className="w-px" />
               </TableRow>
@@ -106,8 +108,8 @@ export function ActivityBottleneckTable({
                   <TableCell className="text-right">
                     <AskAiButton
                       variant="icon"
-                      label="Investigate bottleneck"
-                      title="Investigate bottleneck"
+                      label={t("aBottleneck.investigateLabel")}
+                      title={t("aBottleneck.investigateTitle")}
                       prompt={`Explain in plain language why activity "${act.activityName || act.activityId}" (id ${act.activityId}, type ${act.activityType})${processDefinitionKey ? ` of process definition key "${processDefinitionKey}"` : " (cluster-wide, all process definitions)"} on the current engine is a bottleneck over the ${period ?? "7d"} window. On-screen for this activity: executionCount=${act.executionCount}, avgDurationMs=${act.avgDurationMs}, p95DurationMs=${act.p95DurationMs}, totalTimeMs=${act.totalTimeMs}. Use analytics_element_bottleneck${processDefinitionKey ? `({processDefinitionKey: "${processDefinitionKey}", activityId: "${act.activityId}", period: "${period ?? "7d"}"})` : ` (activityId "${act.activityId}", per relevant process definition)`} and, if you need process-level context, analytics_analyze_process_performance${processDefinitionKey ? `({processDefinitionKey: "${processDefinitionKey}", period: "${period ?? "7d"}"})` : ""}. Tell me (1) whether the cost is driven by high per-execution duration (avg/p95) or by sheer execution count, (2) whether the wait is most likely wait time (async/external task, job queue, message/timer) vs compute time inside the activity given its type "${act.activityType}", and (3) the single most impactful thing to look at next. Explanation only — do not change anything.`}
                     />
                   </TableCell>

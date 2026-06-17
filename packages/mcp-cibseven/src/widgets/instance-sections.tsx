@@ -13,6 +13,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { ActivityTree, VariableValue } from "../view-models.js"
+import { useT } from "../messages/use-t.js"
 import { refreshCockpitData } from "./refresh.js"
 
 export function Section({
@@ -92,6 +93,7 @@ function VariableRow({
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState("")
   const setVarMutation = useToolMutation("camunda7_set_process_instance_variable")
+  const t = useT()
 
   function startEdit() {
     const v = variable.value
@@ -154,13 +156,13 @@ function VariableRow({
               autoFocus
             />
             <Button variant="outline" size="sm" type="submit" disabled={setVarMutation.isPending}>
-              Save
+              {t("instanceSections.save")}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               type="button"
-              aria-label="Cancel editing"
+              aria-label={t("instanceSections.cancelEditing")}
               onClick={() => setEditing(false)}
             >
               X
@@ -173,7 +175,7 @@ function VariableRow({
       <TableCell className="w-16">
         {!editing && !readOnly && (
           <Button variant="ghost" size="sm" onClick={startEdit}>
-            Edit
+            {t("instanceSections.edit")}
           </Button>
         )}
       </TableCell>
@@ -191,6 +193,7 @@ export function VariablesTable({
   readOnly?: boolean
 }) {
   const [localVars, setLocalVars] = useState<Map<string, unknown>>(new Map())
+  const t = useT()
   const entries = Object.entries(variables)
 
   function getVariable(name: string, original: VariableValue): VariableValue {
@@ -205,19 +208,19 @@ export function VariablesTable({
   }
 
   if (entries.length === 0) {
-    return <p className="text-muted-foreground text-sm">No variables</p>
+    return <p className="text-muted-foreground text-sm">{t("instanceSections.noVariables")}</p>
   }
 
   return (
     <div className="rounded-lg border">
-      <Table aria-label="Process instance variables">
+      <Table aria-label={t("instanceSections.variablesTableLabel")}>
         <TableHeader>
           <TableRow>
-            <TableHead scope="col">Name</TableHead>
-            <TableHead scope="col">Type</TableHead>
-            <TableHead scope="col">Value</TableHead>
+            <TableHead scope="col">{t("instanceSections.columnName")}</TableHead>
+            <TableHead scope="col">{t("instanceSections.columnType")}</TableHead>
+            <TableHead scope="col">{t("instanceSections.columnValue")}</TableHead>
             <TableHead scope="col" className="w-16">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{t("instanceSections.columnActions")}</span>
             </TableHead>
           </TableRow>
         </TableHeader>
