@@ -17,18 +17,6 @@ processors:
         value: docker-local
         action: upsert
 
-  tail_sampling:
-    decision_wait: 10s
-    policies:
-      - name: errors-always
-        type: status_code
-        status_code:
-          status_codes: [ERROR]
-      - name: sample-rest
-        type: probabilistic
-        probabilistic:
-          sampling_percentage: 10
-
 exporters:
   # Process analytics metrics — exposed for Prometheus to scrape. This is the
   # sole export path for the metric-first analytics stack; the engine emits
@@ -37,11 +25,6 @@ exporters:
   prometheus:
     endpoint: 0.0.0.0:9464
     send_timestamps: true
-
-  otlp/jaeger:
-    endpoint: jaeger:4317
-    tls:
-      insecure: true
 
   debug:
     verbosity: basic
@@ -59,11 +42,6 @@ service:
                 port: 8888
 
   pipelines:
-    # Traces are sampled (observability) and live only in Jaeger now.
-    traces:
-      receivers: [otlp]
-      processors: [batch, attributes/env, tail_sampling]
-      exporters: [otlp/jaeger, debug]
     # Process metrics are unsampled (100 % via the history-event stream) and
     # feed Prometheus → Grafana / analytics widgets.
     metrics:

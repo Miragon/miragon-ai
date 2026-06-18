@@ -33,12 +33,6 @@ cibseven:
     authentication:
       jwtSecret: Y2liN2V2ZW4tZXhhbXBsZS1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLWp3dC1zaWduaW5nLXB1cnBvc2VzLWFuZC1uZWVkcy10by1iZS1hdC1sZWFzdC0xNTUtY2hhcnMtbG9uZw==
 
-# Enable CIB Seven Spring Event Bridge
-camunda.bpm.eventing:
-  execution: true
-  task: true
-  history: true
-
 # History plugins
 camunda7mcp:
   history:

@@ -25,7 +25,6 @@ flowchart LR
   Engine -. OTEL metrics .-> Plugin[Kotlin metrics plugin]
   Plugin --> Collector[OTEL Collector]
   Collector --> Prom
-  Collector -. traces .-> Jaeger[(Jaeger)]
   Prom --> Grafana[Grafana dashboards]
 
   Server -. serves .-> Widgets[Widget bundle<br/>React + Tailwind]
@@ -38,18 +37,17 @@ flowchart LR
 | **MCP Gateway** (`apps/mcp-gateway/`)         | Hosts the HTTP transport on port `8400`, loads modules from `MCP_ACTIVE_MODULES`, and serves a single-file React widget bundle.                        |
 | **cibseven** (`packages/mcp-cibseven/`)       | Wraps the Camunda 7 / CIB Seven REST API via an OpenAPI-generated client. Exposes process, task, incident, deployment, and history tools plus widgets. |
 | **analytics** (`packages/mcp-analytics/`)     | Queries Prometheus via PromQL for performance, failure, bottleneck, and version/cluster comparison. Tools + dashboard, failure, and compare widgets.   |
-| **engine-plugins** (`engine-plugins/`)        | Kotlin OTEL plugins for CIB Seven: a process-metrics emitter and a trace event-bridge. Independent build (Java 21, Gradle). No engine-side database.   |
+| **engine-plugins** (`engine-plugins/`)        | Kotlin OTEL plugins for CIB Seven: a process-metrics emitter. Independent build (Java 21, Gradle). No engine-side database.                            |
 | **widgets** (`apps/mcp-gateway/mcp-app.html`) | A single Vite-built HTML bundle containing React, Tailwind, and every widget. The MCP host renders it inline when a tool returns `{ widget, data }`.   |
 
 ## External systems
 
-| System                  | Purpose                                                                         | Default endpoint                    |
-| ----------------------- | ------------------------------------------------------------------------------- | ----------------------------------- |
-| Camunda 7 / CIB Seven   | The BPM engine itself — process definitions, instances, tasks, incidents.       | `http://localhost:8410/engine-rest` |
-| OpenTelemetry collector | Receives OTLP from the engine; exports metrics to Prometheus, traces to Jaeger. | `:8431` (OTLP HTTP)                 |
-| Prometheus              | Time-series store for the process metrics; the analytics module's data source.  | `http://localhost:8460`             |
-| Grafana                 | Provisioned process-analytics dashboards over Prometheus.                       | `http://localhost:8470`             |
-| Jaeger                  | Trace visualization (optional, fed by the OTEL event-bridge).                   | `http://localhost:8440`             |
+| System                  | Purpose                                                                        | Default endpoint                    |
+| ----------------------- | ------------------------------------------------------------------------------ | ----------------------------------- |
+| Camunda 7 / CIB Seven   | The BPM engine itself — process definitions, instances, tasks, incidents.      | `http://localhost:8410/engine-rest` |
+| OpenTelemetry collector | Receives OTLP from the engine; exports metrics to Prometheus.                  | `:8431` (OTLP HTTP)                 |
+| Prometheus              | Time-series store for the process metrics; the analytics module's data source. | `http://localhost:8460`             |
+| Grafana                 | Provisioned process-analytics dashboards over Prometheus.                      | `http://localhost:8470`             |
 
 ## Data flow
 
@@ -62,8 +60,8 @@ flowchart LR
 
 Process metrics originate in the engine: the Kotlin plugin maps history events
 to OTEL counters/histograms (100 % coverage, model-bounded labels), the Collector
-serves them, and Prometheus stores them. Per-instance drill-down (search, single
-traces) is served by the engine REST history API and Jaeger, not the metrics.
+serves them, and Prometheus stores them. Per-instance drill-down (search) is
+served by the engine REST history API, not the metrics.
 
 ## Repository layout
 
@@ -71,7 +69,7 @@ traces) is served by the engine REST history API and Jaeger, not the metrics.
 | ------------------- | ----------------------------------------------------------- |
 | `apps/mcp-gateway/` | The MCP gateway entry point and the widget bundle.          |
 | `packages/`         | Reusable libraries — clients, MCP plugins, widget-shell.    |
-| `engine-plugins/`   | Kotlin OTEL plugins (process metrics + trace event-bridge). |
+| `engine-plugins/`   | Kotlin OTEL plugins (process metrics).                      |
 | `examples/`         | Standalone showcases (miravelo-upstream, cibseven-example). |
 | `docker/`           | Compose stack: engine, OTEL Collector, Prometheus, Grafana. |
 

@@ -10,5 +10,4 @@ pluginManagement {
 include(
     "konsist",
     "cibseven-history-metrics",
-    "cibseven-otel-eventbridge",
 )

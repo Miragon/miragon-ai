@@ -27,7 +27,6 @@ import { useViewData } from "./use-view-data.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, VariablesTable } from "./instance-sections.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
-import { LogsTab } from "./incident-detail/logs-tab.js"
 import { HistoryTimeline } from "./incident-detail/history-timeline.js"
 import { formatDate, formatTime } from "../lib/format-time.js"
 import { useT } from "../messages/use-t.js"
@@ -208,7 +207,6 @@ export function IncidentDetailWidget({
         <Tabs defaultValue="failure">
           <TabsList variant="line">
             <TabsTrigger value="failure">{t("incidentDetail.tabFailure")}</TabsTrigger>
-            <TabsTrigger value="logs">{t("incidentDetail.tabLogs")}</TabsTrigger>
             <TabsTrigger value="instance">{t("incidentDetail.tabInstance")}</TabsTrigger>
             <TabsTrigger value="history">{t("incidentDetail.tabHistory")}</TabsTrigger>
           </TabsList>
@@ -223,10 +221,6 @@ export function IncidentDetailWidget({
               retrying={retryMutation.isPending}
               retried={retried}
             />
-          </TabsContent>
-
-          <TabsContent value="logs" className="pt-4">
-            <LogsTab processInstanceId={data.processInstanceId} />
           </TabsContent>
 
           <TabsContent value="instance" className="flex flex-col gap-4 pt-4">

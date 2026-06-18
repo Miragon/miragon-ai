@@ -138,7 +138,6 @@ export const enSweep: MessageCatalog = {
   "incidentDetail.tabFailure": "Failure",
   "incidentDetail.tabHistory": "History",
   "incidentDetail.tabInstance": "Instance",
-  "incidentDetail.tabLogs": "Logs",
   "incidentDetail.variablesHint": "{count} variables",
   "incidentDetail.variablesTitle": "Variables",
   "incidentFailure.activity": "Activity",

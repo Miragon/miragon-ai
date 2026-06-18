@@ -43,7 +43,7 @@ A single MCP server that exposes Camunda 7 / CIB Seven BPM operations and a Prom
 | `packages/client-analytics/`  | `@miragon-ai/client-analytics` — Prometheus PromQL query helpers                          |
 | `packages/mcp-analytics/`     | `@miragon-ai/mcp-analytics` — Prometheus analytics tools + dashboard widgets              |
 | `packages/widget-shell/`      | `@miragon-ai/widget-shell` — shared widget primitives + adapt-data wrapper                |
-| `engine-plugins/`             | Kotlin OTEL plugins for CIB Seven: process-metrics emitter + trace event-bridge (Java 21) |
+| `engine-plugins/`             | Kotlin OTEL plugins for CIB Seven: process-metrics emitter (Java 21)                      |
 | `examples/miravelo-upstream/` | Mock CRM/leasing upstream that federates a manifest into the gateway                      |
 | `examples/cibseven-example/`  | Runnable Spring Boot showcase that consumes the engine-plugins (composite Gradle build)   |
 | `docker/`                     | docker-compose for CIB Seven + OTEL Collector + Prometheus + Grafana                      |
@@ -91,7 +91,7 @@ cd engine-plugins && ./gradlew clean build && cd ..
 
 **4. Start the infrastructure**
 
-The default compose stack starts only the infra (CIB Seven, OTEL Collector, Prometheus, Grafana, Jaeger) — the Node MCP server is left out so you can run it locally via `pnpm dev` on port 8400 without a port conflict.
+The default compose stack starts only the infra (CIB Seven, OTEL Collector, Prometheus, Grafana) — the Node MCP server is left out so you can run it locally via `pnpm dev` on port 8400 without a port conflict.
 
 ```bash
 cd docker && docker compose up -d && cd ..
@@ -245,8 +245,8 @@ All tools are prefixed with `analytics_` (category `analytics`) and query Promet
 - `engine_health` — live ops snapshot (running WIP, open incidents, dead jobs, job/task backlog, firing/pending alerts)
 - Widget tools: `show_dashboard`, `show_failure_dashboard`, `show_cluster_compare`, `show_version_compare`, `show_engine_compare`, `show_bpmn_heatmap`
 
-Per-instance drill-down (search by variable, single-instance traces) is not
-metric-backed — use the `camunda7_query_historic_*` tools and the Jaeger UI.
+Per-instance drill-down (search by variable) is not
+metric-backed — use the `camunda7_query_historic_*` tools.
 CIB Seven operational alert rules live in `docker/prometheus/alerts.yml`.
 
 ## Widget UI

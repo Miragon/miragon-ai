@@ -17,7 +17,6 @@ kotlin {
 
 dependencies {
     implementation("com.camunda7mcp:cibseven-history-metrics")
-    implementation("com.camunda7mcp:cibseven-otel-eventbridge")
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.jdbc)
@@ -50,16 +49,13 @@ val pluginsBuild = gradle.includedBuild("engine-plugins")
 // writing — otherwise the example reads a half-written archive mid-build.
 tasks.named("compileKotlin") {
     dependsOn(pluginsBuild.task(":cibseven-history-metrics:shadowJar"))
-    dependsOn(pluginsBuild.task(":cibseven-otel-eventbridge:shadowJar"))
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("cibseven-example.jar")
     dependsOn(pluginsBuild.task(":cibseven-history-metrics:shadowJar"))
-    dependsOn(pluginsBuild.task(":cibseven-otel-eventbridge:shadowJar"))
 }
 
 tasks.named<Test>("test") {
     dependsOn(pluginsBuild.task(":cibseven-history-metrics:shadowJar"))
-    dependsOn(pluginsBuild.task(":cibseven-otel-eventbridge:shadowJar"))
 }
