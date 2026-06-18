@@ -2,7 +2,7 @@ name: Engine Plugins Publish
 
 # Maven publishing of the Kotlin engine plugins is decoupled from the npm
 # release flow: push a tag like `engine-plugins-v0.1.0` (matching `version`
-# in engine-plugins/gradle.properties) to publish both shadow jars to the
+# in engine-plugins/gradle.properties) to publish the metrics shadow jar to the
 # GitHub Packages Maven registry of this repository.
 on:
   push:
