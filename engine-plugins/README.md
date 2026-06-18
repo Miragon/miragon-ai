@@ -1,6 +1,6 @@
 # plugins — Kotlin/Spring Boot engine adapters
 
-Multi-module Gradle build containing the CIB Seven OTEL process-metrics plugin (`cibseven-history-metrics`) and the CIB Seven OTEL event-bridge. Both emit OpenTelemetry signals that the OTEL Collector exports to Prometheus / Jaeger — there is no engine-side database. A runnable showcase that consumes these plugins lives in [`../examples/cibseven-example/`](../examples/cibseven-example/) as a separate Gradle build (composite via `includeBuild`).
+Multi-module Gradle build containing the CIB Seven OTEL process-metrics plugin (`cibseven-history-metrics`). It emits OpenTelemetry metrics that the OTEL Collector exports to Prometheus — there is no engine-side database. A runnable showcase that consumes this plugin lives in [`../examples/cibseven-example/`](../examples/cibseven-example/) as a separate Gradle build (composite via `includeBuild`).
 
 ## Quality gates
 

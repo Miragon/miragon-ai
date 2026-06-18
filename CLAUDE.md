@@ -20,9 +20,9 @@ operations and Prometheus-backed process analytics, including interactive React 
 | `packages/client-cibseven/`   | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)   |
 | `packages/client-analytics/`  | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas              |
 | `packages/widget-shell/`      | Shared widget plumbing: `adaptDataWidget`, `buildSingleWidgetView`/`buildComposedView` |
-| `engine-plugins/`             | Kotlin/Gradle: CIB Seven OTEL metrics + event-bridge plugins (Java 21)                 |
+| `engine-plugins/`             | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                 |
 | `examples/miravelo-upstream/` | Federated upstream example implementing the proxy-contract manifest                    |
-| `docker/`                     | Compose stack: CIB Seven engines, OTEL Collector, Prometheus, Grafana, Jaeger          |
+| `docker/`                     | Compose stack: CIB Seven engines, OTEL Collector, Prometheus, Grafana                  |
 | `docs/`                       | VitePress docs site (see the `docs-style` skill before editing)                        |
 
 ## Commands

@@ -57,8 +57,8 @@ subprojects {
         useJUnitPlatform()
     }
 
-    // Publishing convention: every module that builds a shadow jar (the two
-    // engine plugins, not :konsist) publishes exactly that jar — the modules
+    // Publishing convention: every module that builds a shadow jar (the
+    // metrics engine plugin, not :konsist) publishes exactly that jar — the modules
     // set `archiveClassifier = ""`, so the shadow jar IS the main artefact and
     // `components["shadow"]` keeps bundled `implementation` dependencies out
     // of the POM. Target is the GitHub Packages Maven registry of this repo;

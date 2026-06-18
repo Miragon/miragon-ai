@@ -19,8 +19,6 @@ services:
       - OTEL_SERVICE_NAME=cibseven-engine-a
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      - OTEL_TRACES_SAMPLER=parentbased_traceidratio
-      - OTEL_TRACES_SAMPLER_ARG=0.1
       - OTEL_METRIC_EXPORT_INTERVAL=15000
     depends_on:
       otel-collector:
@@ -51,8 +49,6 @@ services:
       - OTEL_SERVICE_NAME=cibseven-engine-b
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      - OTEL_TRACES_SAMPLER=parentbased_traceidratio
-      - OTEL_TRACES_SAMPLER_ARG=0.1
       - OTEL_METRIC_EXPORT_INTERVAL=15000
     depends_on:
       otel-collector:
@@ -81,8 +77,8 @@ services:
       start_period: 30s
 
   # OpenTelemetry Collector — receives OTLP from the engines, serves process
-  # metrics for Prometheus to scrape (:9464) and forwards sampled traces to
-  # Jaeger. Sole export path of the metric-first analytics stack.
+  # metrics for Prometheus to scrape (:9464). Sole export path of the
+  # metric-first analytics stack.
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.128.0
     command: ["--config=/etc/otel-collector-config.yaml"]
@@ -172,15 +168,6 @@ services:
       timeout: 3s
       retries: 6
       start_period: 15s
-
-  # Jaeger UI for trace visualization
-  jaeger:
-    image: jaegertracing/jaeger:2.16.0
-    ports:
-      - "8440:16686" # Jaeger UI
-      - "8432:4317" # OTLP gRPC (internal, used by Collector)
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
 
 volumes:
   prometheus-data:

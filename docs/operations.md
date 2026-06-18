@@ -61,7 +61,6 @@ The server expects:
 Optional:
 
 - **Grafana** — provisioned dashboards on `:8470` (`docker/grafana/`).
-- **Jaeger** — trace UI on `:8440`, fed by the OTEL event-bridge.
 
 ## Metrics pipeline
 
@@ -72,8 +71,8 @@ them to Prometheus; the analytics module queries Prometheus over PromQL. The
 plugins build independently from the Node gateway (`./gradlew clean build`
 inside `engine-plugins/`). CI runs both toolchains — see `.github/workflows/ci.yml`.
 
-Per-instance drill-down (search, single-instance traces) is not metric-backed —
-use the `camunda7_query_historic_*` tools and Jaeger.
+Per-instance drill-down (search) is not metric-backed —
+use the `camunda7_query_historic_*` tools.
 
 ## Module activation
 
@@ -97,7 +96,6 @@ migrations). No suffix exposes all tools; unknown toolsets warn and fail open.
   Two kinds: event-driven counters/histograms (throughput, durations) and
   point-in-time gauges polled from the engine (running WIP, open incidents, job
   backlog/dead jobs, task backlog) — the latter are the live-ops/alerting signals.
-- Engine traces flow through the Collector into Jaeger.
 - CIB Seven alert rules ship in `docker/prometheus/alerts.yml` (dead jobs,
   stalled executor, job/task/external-task backlog, engine down). Prometheus
   evaluates them; wire an Alertmanager under `alerting:` to route notifications.

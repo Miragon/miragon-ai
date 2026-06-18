@@ -138,7 +138,6 @@ export const deSweep: MessageCatalog = {
   "incidentDetail.tabFailure": "Fehler",
   "incidentDetail.tabHistory": "Verlauf",
   "incidentDetail.tabInstance": "Instanz",
-  "incidentDetail.tabLogs": "Protokolle",
   "incidentDetail.variablesHint": "{count} Variablen",
   "incidentDetail.variablesTitle": "Variablen",
   "incidentFailure.activity": "Aktivität",
