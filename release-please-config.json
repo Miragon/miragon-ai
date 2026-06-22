@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "draft": false,
+  "packages": {
+    ".": {
+      "package-name": "miragon-ai",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        { "type": "generic", "path": "engine-plugins/gradle.properties" },
+        { "type": "json", "path": "package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "apps/mcp-gateway/package.json", "jsonpath": "$.version" },
+        {
+          "type": "json",
+          "path": "packages/client-cibseven/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/client-analytics/package.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
+  }
+}

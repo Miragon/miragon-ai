@@ -6,16 +6,14 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 permissions:
   contents: read
   packages: read
 
-# `.npmrc` interpolates `${GITHUB_TOKEN}` to authenticate the
-# `@miragon/mcp-toolkit-*` install against npm.pkg.github.com.
-# pnpm reads `.npmrc` on every invocation (including the
-# `pnpm config get store-dir` call setup-node makes for the cache
-# key), so the token must be present from the very first pnpm
-# command in every job.
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -96,7 +94,6 @@ jobs:
           java-version: 21
           cache: gradle
 
-      # The composite build (`includeBuild`) pulls in engine-plugins automatically.
       - run: ./gradlew build
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false

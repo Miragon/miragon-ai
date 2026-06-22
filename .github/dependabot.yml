@@ -5,6 +5,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "dominikhorn93"
+      - "emaarco"
     groups:
       npm-dependencies:
         patterns:
@@ -19,6 +22,9 @@ updates:
     directory: "/engine-plugins"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "dominikhorn93"
+      - "emaarco"
     groups:
       gradle-dependencies:
         patterns:
@@ -33,6 +39,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "dominikhorn93"
+      - "emaarco"
     groups:
       github-actions:
         patterns:
@@ -42,13 +51,33 @@ updates:
           - "minor"
           - "major"
 
-  # Docker images
+  # Docker images — compose stack
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "dominikhorn93"
+      - "emaarco"
     groups:
       docker-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+          - "major"
+
+  # Docker image — root Dockerfile (gateway), keeps the pinned base digest current
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "dominikhorn93"
+      - "emaarco"
+    groups:
+      docker-root:
         patterns:
           - "*"
         update-types:
