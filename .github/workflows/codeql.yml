@@ -26,27 +26,17 @@ jobs:
         include:
           - language: javascript-typescript
             build-mode: none
+          # `none` extracts Kotlin/Java straight from source — no Gradle build,
+          # which avoids the CodeQL tracer hanging on the Kotlin compiler daemon.
           - language: java-kotlin
-            build-mode: manual
+            build-mode: none
     steps:
       - uses: actions/checkout@v6
-
-      - if: matrix.language == 'java-kotlin'
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 21
 
       - uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
-
-      - if: matrix.language == 'java-kotlin'
-        working-directory: engine-plugins
-        run: ./gradlew build -x test --warning-mode all
-        env:
-          GRADLE_OPTS: -Dorg.gradle.daemon=false
 
       - uses: github/codeql-action/analyze@v3
         with:
