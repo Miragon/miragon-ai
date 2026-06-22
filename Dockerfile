@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22-slim@sha256:d9f850096136edbc402debdd8729579a288aac64574ada0ff4db26b6ae58b0b2 AS base
+FROM node:26-slim@sha256:191ef878ecb351d68b78219593de18bd8942afd59af59f29960dc4b24805a3f1 AS base
 RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
