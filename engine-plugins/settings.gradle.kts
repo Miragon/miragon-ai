@@ -1,4 +1,4 @@
-rootProject.name = "camunda7-mcp-history-plugins"
+rootProject.name = "miragon-mcp-engine-plugins"
 
 pluginManagement {
     repositories {

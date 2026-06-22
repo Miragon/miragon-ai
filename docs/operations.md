@@ -4,10 +4,24 @@ Everything you need to run the platform somewhere other than your laptop.
 
 ## Deployment artifact
 
-A single Docker image, built from the repo root `Dockerfile`. Multi-stage build,
-pruned production dependencies, exposes port `8400`. The build needs
-`GITHUB_TOKEN` exported in your shell (a PAT with `read:packages`) — it is
-mounted as a BuildKit secret to fetch the private `@miragon` packages.
+A single Docker image. Released builds are published to GHCR at
+`ghcr.io/miragon/miragon-ai-server` — pull a tagged version (or `:latest`) and run it:
+
+```bash
+docker run --rm -p 8400:8400 \
+  -e CAMUNDA_BASE_URL=... \
+  -e PROMETHEUS_URL=... \
+  ghcr.io/miragon/miragon-ai-server:latest
+```
+
+Releases are cut by pushing a `server-v<version>` git tag (matching `version` in
+`apps/mcp-gateway/package.json`); the `server-publish.yml` workflow builds the root
+`Dockerfile` and pushes `:<version>` and `:latest`.
+
+To build the image yourself instead — multi-stage build, pruned production
+dependencies, exposes port `8400`. The build needs `GITHUB_TOKEN` exported in your
+shell (a PAT with `read:packages`), mounted as a BuildKit secret to fetch the private
+`@miragon` packages:
 
 ```bash
 docker build --secret id=github_token,env=GITHUB_TOKEN -t miragon-ai-server .

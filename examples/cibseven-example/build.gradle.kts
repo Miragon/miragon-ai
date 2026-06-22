@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.spring.dependency.management)
 }
 
-group = "com.camunda7mcp.example"
+group = "ai.miragon.mcp.cibseven.example"
 version = "0.1.0"
 
 kotlin {
@@ -16,7 +16,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("com.camunda7mcp:cibseven-history-metrics")
+    implementation("ai.miragon.mcp:cibseven-history-metrics")
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.jdbc)

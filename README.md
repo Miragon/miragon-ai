@@ -255,7 +255,7 @@ CIB Seven operational alert rules live in `docker/prometheus/alerts.yml`.
 
 ## Deployment
 
-A multi-stage `Dockerfile` builds the server with pruned production deps and exposes port 8400. See `Dockerfile` in the repo root.
+Released server images are published to GHCR at `ghcr.io/miragon/miragon-ai-server` — push a `server-v<version>` tag (matching `apps/mcp-gateway/package.json`) to build and publish via the `server-publish.yml` workflow. To build locally, the multi-stage `Dockerfile` in the repo root produces the server with pruned production deps and exposes port 8400. See [`docs/operations.md`](docs/operations.md).
 
 ## Troubleshooting
 

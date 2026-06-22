@@ -21,14 +21,14 @@ This is intentionally minimal. Phase 2 adds more rules (no-wildcard-imports, eng
 2. Add `src/test/kotlin/<rootPackage>/KonsistArchitectureTest.kt` — pass the Gradle module name (so Konsist scopes to that module only) and the root package to enforce:
 
    ```kotlin
-   package com.camunda7mcp.metrics.cibseven
+   package ai.miragon.mcp.cibseven
 
-   import com.camunda7mcp.konsist.ArchitectureTest
+   import ai.miragon.mcp.konsist.ArchitectureTest
    import org.junit.jupiter.api.Nested
 
    class KonsistArchitectureTest {
        @Nested
-       inner class Guidelines : ArchitectureTest("cibseven-history-metrics", "com.camunda7mcp.metrics.cibseven")
+       inner class Guidelines : ArchitectureTest("cibseven-history-metrics", "ai.miragon.mcp.cibseven")
    }
    ```
 
@@ -38,7 +38,7 @@ This is intentionally minimal. Phase 2 adds more rules (no-wildcard-imports, eng
 
 Prefer adding tests to `ArchitectureTest` or a new abstract class rather than spreading bespoke Konsist code across subprojects — the monorepo pattern only pays off if the rules are shared.
 
-1. Either add a `@Test fun` to an existing abstract class, or create a new one (e.g. `EngineAdapterArchitectureTest(rootPackage: String, engineName: String, otherEngines: List<String>)`) in `src/main/kotlin/com/camunda7mcp/konsist/`.
+1. Either add a `@Test fun` to an existing abstract class, or create a new one (e.g. `EngineAdapterArchitectureTest(rootPackage: String, engineName: String, otherEngines: List<String>)`) in `src/main/kotlin/ai/miragon/mcp/konsist/`.
 2. In the consuming subproject's `KonsistArchitectureTest`, add another `@Nested inner class` that extends the new base and passes the right parameters.
 3. Run `./gradlew :<subproject>:test` to verify.
 

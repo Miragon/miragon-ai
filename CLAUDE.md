@@ -132,7 +132,14 @@ render widgets manually.
   without that decision.
 - **Engine plugins release via git tag.** Bump `version` in `engine-plugins/gradle.properties`,
   push a matching `engine-plugins-v<version>` tag, and `engine-plugins-publish.yml` runs
-  `./gradlew publish` against GitHub Packages Maven (`com.camunda7mcp`, shadow jars).
+  `./gradlew publish` against GitHub Packages Maven. All engine plugins share the umbrella
+  group `ai.miragon.mcp` with the engine carried in the artifactId (`<engine>-<artifact>`);
+  the cibseven metrics plugin publishes as `ai.miragon.mcp:cibseven-history-metrics`
+  (shadow jar).
+- **MCP server image releases via git tag.** The gateway ships as a container: push a
+  `server-v<version>` tag (matching `version` in `apps/mcp-gateway/package.json`) and
+  `server-publish.yml` builds the root `Dockerfile` and pushes
+  `ghcr.io/miragon/miragon-ai-server:<version>` (and `:latest`) to GHCR.
 - **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
   exactly pinned dependency (`save-exact`, currently `0.5.0`). Toolkit changes happen in
   that repo and arrive here as a deliberate, repo-wide version bump — and since the
