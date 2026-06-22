@@ -182,8 +182,7 @@ class EngineStateMetrics(private val engine: ProcessEngine, private val engineId
     private fun keyAttrs(key: String): Attributes =
         Attributes.builder().put("process_definition_key", key).put("engine_id", engineId).build()
 
-    private fun statusAttrs(status: String): Attributes =
-        Attributes.builder().put("status", status).put("engine_id", engineId).build()
+    private fun statusAttrs(status: String): Attributes = Attributes.builder().put("status", status).put("engine_id", engineId).build()
 
     override fun close() {
         callbacks.forEach { runCatching { it.close() } }
