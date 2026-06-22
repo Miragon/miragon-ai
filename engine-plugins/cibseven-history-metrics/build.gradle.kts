@@ -4,6 +4,10 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
+// Group is the `ai.miragon.mcp` umbrella inherited from the root build; the Gradle
+// module name is the artifactId, so this publishes as
+// `ai.miragon.mcp:cibseven-history-metrics`.
+
 dependencies {
     implementation(libs.opentelemetry.api)
     compileOnly(libs.spring.boot.starter)

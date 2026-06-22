@@ -6,7 +6,11 @@ plugins {
 }
 
 allprojects {
-    group = "com.camunda7mcp"
+    // Umbrella group shared by every engine-plugin module; the engine is carried in
+    // the artifactId (the Gradle module name, e.g. `cibseven-history-metrics`), so the
+    // published coordinate is `ai.miragon.mcp:<engine>-<artifact>`. Keeps one group as
+    // more engines are added.
+    group = "ai.miragon.mcp"
     // version comes from gradle.properties so the publish workflow can match
     // it against the `engine-plugins-v*` git tag.
 

@@ -33,19 +33,16 @@ cibseven:
     authentication:
       jwtSecret: Y2liN2V2ZW4tZXhhbXBsZS1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLWp3dC1zaWduaW5nLXB1cnBvc2VzLWFuZC1uZWVkcy10by1iZS1hdC1sZWFzdC0xNTUtY2hhcnMtbG9uZw==
 
-# History plugins
-camunda7mcp:
-  history:
-    # OTEL process-metrics emitter — the metric-first analytics path. Emits
-    # aggregated counters/histograms from the history-event stream via the OTEL
-    # agent; the Collector exports them to Prometheus. No event store required.
-    metrics:
-      enabled: ${METRICS_ENABLED:true}
-      # Engine identifier attached as the `engine_id` metric attribute so
-      # Prometheus/analytics can attribute and compare data across engines.
-      engine-id: ${ENGINE_ID:default}
+# History plugins — OTEL process-metrics emitter (the metric-first analytics
+# path). Emits aggregated counters/histograms from the history-event stream via
+# the OTEL agent; the Collector exports them to Prometheus. No event store required.
+miragon.mcp.cibseven.history.metrics:
+  enabled: ${METRICS_ENABLED:true}
+  # Engine identifier attached as the `engine_id` metric attribute so
+  # Prometheus/analytics can attribute and compare data across engines.
+  engine-id: ${ENGINE_ID:default}
 
 logging:
   level:
     root: INFO
-    com.camunda7mcp: DEBUG
+    ai.miragon.mcp: DEBUG
