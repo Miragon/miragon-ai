@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
 FROM node:26-slim@sha256:191ef878ecb351d68b78219593de18bd8942afd59af59f29960dc4b24805a3f1 AS base
-RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+# Node 25+ no longer bundles Corepack, so install pnpm directly.
+RUN npm install -g pnpm@10.32.1
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV TURBO_NO_UPDATE_NOTIFIER=1
