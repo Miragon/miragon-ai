@@ -1,0 +1,49 @@
+name: Publish to GitHub Packages
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        type: boolean
+        default: false
+        description: "Build & verify only — do not publish"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
+        default: false
+        description: "Build & verify only — do not publish"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish engine plugins to GitHub Packages Maven
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: engine-plugins
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build & Test
+        run: ./gradlew build --warning-mode all
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+      - name: Publish
+        if: ${{ inputs.dry_run != true }}
+        run: ./gradlew publish
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

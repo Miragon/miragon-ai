@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22-slim AS base
+
+FROM node:22-slim@sha256:d9f850096136edbc402debdd8729579a288aac64574ada0ff4db26b6ae58b0b2 AS base
 RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -9,9 +10,6 @@ ENV CI=true
 FROM base AS build
 WORKDIR /app
 
-# .npmrc resolves ${GITHUB_TOKEN} for npm.pkg.github.com (private @miragon
-# packages). The token is mounted as a BuildKit secret per RUN step — never
-# an ARG/ENV — so it cannot leak into image layers.
 COPY pnpm-lock.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     --mount=type=secret,id=github_token \
@@ -25,8 +23,6 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     --mount=type=secret,id=github_token \
     GITHUB_TOKEN=$(cat /run/secrets/github_token) pnpm install --frozen-lockfile --offline
 
-# pnpm resolves .npmrc on every invocation; mount the secret here too so the
-# ${GITHUB_TOKEN} interpolation never fails, regardless of pnpm version.
 RUN --mount=type=cache,id=turbo-server,target=/app/.turbo \
     --mount=type=secret,id=github_token \
     GITHUB_TOKEN=$(cat /run/secrets/github_token) pnpm turbo build --filter=@miragon-ai/mcp-gateway...
@@ -43,4 +39,12 @@ COPY --from=build /app/apps/mcp-gateway/dist ./dist
 
 ENV NODE_ENV=production
 EXPOSE 8400
+
+USER node
+
+# Liveness: succeed once the gateway is accepting TCP connections on 8400.
+# Port-level check avoids coupling to a specific HTTP route.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+  CMD node -e "require('net').connect(8400,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"
+
 CMD ["node", "dist/index.js"]
