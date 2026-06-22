@@ -1,5 +1,11 @@
 name: CodeQL
 
+# Scans the TS/JS server code — the primary attack surface. The Kotlin
+# engine-plugins are intentionally NOT scanned here: CodeQL's Kotlin support is
+# fragile for this Gradle-in-subdir layout (manual build-mode hangs on the
+# Kotlin compiler daemon; build-mode `none` fails to extract any source). The
+# Kotlin module is small and already covered by Konsist + unit tests + the CI
+# Gradle build. Revisit if CodeQL Kotlin extraction stabilises.
 on:
   push:
     branches: [main]
@@ -13,31 +19,21 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze (${{ matrix.language }})
+    name: Analyze (javascript-typescript)
     runs-on: ubuntu-latest
     permissions:
       security-events: write
       actions: read
       contents: read
       packages: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - language: javascript-typescript
-            build-mode: none
-          # `none` extracts Kotlin/Java straight from source — no Gradle build,
-          # which avoids the CodeQL tracer hanging on the Kotlin compiler daemon.
-          - language: java-kotlin
-            build-mode: none
     steps:
       - uses: actions/checkout@v6
 
       - uses: github/codeql-action/init@v3
         with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
+          languages: javascript-typescript
+          build-mode: none
 
       - uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:${{ matrix.language }}"
+          category: "/language:javascript-typescript"
