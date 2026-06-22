@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/Miragon/miragon-ai/compare/v0.2.0...v0.2.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* **docker:** install pnpm directly, node:26 dropped corepack ([#135](https://github.com/Miragon/miragon-ai/issues/135)) ([f664c8e](https://github.com/Miragon/miragon-ai/commit/f664c8e83df0f5d8f44dd116c2356b2ef38a1da8))
+
 ## [0.2.0](https://github.com/Miragon/miragon-ai/compare/v0.1.0...v0.2.0) (2026-06-22)
 
 
