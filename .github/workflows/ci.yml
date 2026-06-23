@@ -22,11 +22,11 @@ jobs:
     name: TypeScript (Build + Test + Lint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.0
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v6.0.9
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6.4.0
         with:
           node-version: 22
           cache: pnpm
@@ -43,11 +43,11 @@ jobs:
     name: Lint + Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.0
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v6.0.9
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6.4.0
         with:
           node-version: 22
           cache: pnpm
@@ -67,9 +67,9 @@ jobs:
       run:
         working-directory: engine-plugins
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.0
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v5.3.0
         with:
           distribution: temurin
           java-version: 21
@@ -86,9 +86,9 @@ jobs:
       run:
         working-directory: examples/cibseven-example
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.0
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v5.3.0
         with:
           distribution: temurin
           java-version: 21
