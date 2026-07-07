@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ext-apps host simulator</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+      }
+      #app {
+        width: 900px;
+        height: 620px;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe id="app" src="/app/mcp-app.html" title="widget under test"></iframe>
+    <script>
+      // Minimal SEP-1865 (ext-apps) host: answers ui/initialize, delivers the
+      // tool lifecycle notifications, and serves tools/call requests from the
+      // canned fixture. `?structuredContent=strip` mimics claude.ai / Claude
+      // Desktop, which forward the tool-result notification WITHOUT
+      // structuredContent — the regression that made every widget hang on its
+      // loading skeleton. The spec inspects `window.__hostLog`.
+      const strip =
+        new URLSearchParams(location.search).get("structuredContent") === "strip"
+      const TOOL_NAME = "render-view"
+
+      window.__hostLog = { toolCalls: [], initialized: false, errors: [] }
+
+      const fixturePromise = fetch("/fixtures/view-result.json").then((r) => r.json())
+      const iframe = document.getElementById("app")
+      const post = (msg) => iframe.contentWindow.postMessage(msg, "*")
+      const clone = (value) => JSON.parse(JSON.stringify(value))
+
+      async function deliverToolLifecycle() {
+        const fixture = await fixturePromise
+        post({
+          jsonrpc: "2.0",
+          method: "ui/notifications/tool-input",
+          params: { arguments: clone(fixture.toolInput) },
+        })
+        post({
+          jsonrpc: "2.0",
+          method: "ui/notifications/host-context-changed",
+          params: { toolInfo: { tool: { name: TOOL_NAME } } },
+        })
+        const result = clone(fixture.result)
+        if (strip) delete result.structuredContent
+        post({ jsonrpc: "2.0", method: "ui/notifications/tool-result", params: result })
+      }
+
+      async function respondToToolCall(request) {
+        const fixture = await fixturePromise
+        const name = request.params && request.params.name
+        if (name === TOOL_NAME) {
+          post({ jsonrpc: "2.0", id: request.id, result: clone(fixture.result) })
+        } else {
+          // Ancillary app-only feeds (e.g. camunda7_user_profile_data from the
+          // ProfileGate) get a benign empty payload.
+          post({
+            jsonrpc: "2.0",
+            id: request.id,
+            result: { content: [{ type: "text", text: "{}" }], structuredContent: {} },
+          })
+        }
+      }
+
+      window.addEventListener("message", (event) => {
+        const m = event.data
+        if (!m || m.jsonrpc !== "2.0") return
+
+        if (m.method === "ui/initialize" && m.id !== undefined) {
+          post({
+            jsonrpc: "2.0",
+            id: m.id,
+            result: {
+              hostInfo: { name: "host-sim", version: "0.0.0" },
+              hostContext: {
+                theme: "light",
+                displayMode: "inline",
+                toolInfo: { tool: { name: TOOL_NAME } },
+              },
+              hostCapabilities: { serverTools: {} },
+            },
+          })
+          return
+        }
+        if (m.method === "ui/notifications/initialized") {
+          window.__hostLog.initialized = true
+          void deliverToolLifecycle()
+          return
+        }
+        if (m.method === "tools/call" && m.id !== undefined) {
+          window.__hostLog.toolCalls.push(clone(m.params ?? {}))
+          void respondToToolCall(m)
+          return
+        }
+        // Any other request (ui/update-model-context, size hints, logging …)
+        // gets a generic success so the bridge never times out.
+        if (m.id !== undefined && m.method) {
+          post({ jsonrpc: "2.0", id: m.id, result: {} })
+        }
+      })
+    </script>
+  </body>
+</html>
