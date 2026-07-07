@@ -55,7 +55,7 @@ export function registerEngineTools(register: Register, profileStore: ProfileSto
         .describe('Engine id to select (required for action="select"), e.g. "prod-a".'),
     },
     handler: async (reg: EngineRegistry, args) => {
-      const action = args.action as "list" | "select" | "current"
+      const action = args.action
       switch (action) {
         case "list": {
           const available = await allowedEnginesFor(reg)

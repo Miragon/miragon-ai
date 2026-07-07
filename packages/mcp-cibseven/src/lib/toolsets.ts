@@ -1,7 +1,9 @@
 import type { createToolRegistrar, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
+import type { z } from "zod"
 import type { EngineRegistry } from "./resolve-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
+type ZodRawShape = Record<string, z.ZodType>
 
 /**
  * Named tool subsets a deployment can pick via `MCP_ACTIVE_MODULES`, e.g.
@@ -80,7 +82,7 @@ export function withToolsetFilter(register: Register, toolset?: string): Registe
     )
     return register
   }
-  const filtered = (config: ToolConfig<EngineRegistry>) => {
+  const filtered = <TShape extends ZodRawShape>(config: ToolConfig<EngineRegistry, TShape>) => {
     if (isToolInToolset(config, toolset)) register(config)
   }
   return Object.assign(filtered, { getRegisteredTools: () => register.getRegisteredTools() })

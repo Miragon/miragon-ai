@@ -2,7 +2,13 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { getAppConfig } from "../src/setup.js"
+import {
+  getAppConfig,
+  getPlugins,
+  proxySecretEnvVarNames,
+  warnPrometheusDefault,
+  warnUnknownEnvVars,
+} from "../src/setup.js"
 
 const FILE_ENGINES = [{ id: "from-file", baseUrl: "http://file.example/engine-rest" }]
 const JSON_ENGINES = [{ id: "from-json", baseUrl: "http://json.example/engine-rest" }]
@@ -144,5 +150,161 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
     expect(apps[0].config).toMatchObject({ toolset: "admin" })
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown module "nope"'))
     warn.mockRestore()
+  })
+})
+
+describe("setup.ts engine credential enforcement (fail fast, no silent anonymous requests)", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
+    vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
+    vi.stubEnv("CAMUNDA_BASE_URL", undefined)
+    vi.stubEnv("CAMUNDA_AUTH_TYPE", undefined)
+    vi.stubEnv("CAMUNDA_USERNAME", undefined)
+    vi.stubEnv("CAMUNDA_PASSWORD", undefined)
+    vi.stubEnv("CAMUNDA_TOKEN", undefined)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  it("fails the boot when basic auth lacks a password", () => {
+    vi.stubEnv("CAMUNDA_AUTH_TYPE", "basic")
+    vi.stubEnv("CAMUNDA_USERNAME", "demo")
+
+    expect(() => getPlugins()).toThrow(/CAMUNDA_USERNAME and CAMUNDA_PASSWORD/)
+  })
+
+  it("fails the boot when bearer auth lacks a token", () => {
+    vi.stubEnv("CAMUNDA_AUTH_TYPE", "bearer")
+
+    expect(() => getPlugins()).toThrow(/CAMUNDA_TOKEN/)
+  })
+
+  it("boots with complete basic credentials", () => {
+    vi.stubEnv("CAMUNDA_AUTH_TYPE", "basic")
+    vi.stubEnv("CAMUNDA_USERNAME", "demo")
+    vi.stubEnv("CAMUNDA_PASSWORD", "demo")
+
+    expect(getPlugins().length).toBeGreaterThan(0)
+  })
+
+  it("does not require global credentials when every engine carries per-engine auth", () => {
+    vi.stubEnv("CAMUNDA_AUTH_TYPE", "basic")
+    vi.stubEnv(
+      "CAMUNDA_ENGINES_JSON",
+      JSON.stringify([
+        {
+          id: "a",
+          baseUrl: "http://a.example/engine-rest",
+          auth: { type: "bearer", token: "tok-a" },
+        },
+      ]),
+    )
+
+    expect(getPlugins().length).toBeGreaterThan(0)
+  })
+
+  it("accepts per-engine auth entries in CAMUNDA_ENGINES_JSON", () => {
+    vi.stubEnv(
+      "CAMUNDA_ENGINES_JSON",
+      JSON.stringify([
+        { id: "a", baseUrl: "http://a.example/engine-rest" },
+        {
+          id: "b",
+          baseUrl: "http://b.example/engine-rest",
+          auth: { type: "bearer", token: "tok-b" },
+        },
+      ]),
+    )
+
+    expect(getPlugins().length).toBeGreaterThan(0)
+  })
+
+  it("fails the boot on an incomplete per-engine auth entry", () => {
+    vi.stubEnv(
+      "CAMUNDA_ENGINES_JSON",
+      JSON.stringify([
+        { id: "a", baseUrl: "http://a.example/engine-rest", auth: { type: "basic" } },
+      ]),
+    )
+
+    expect(() => getPlugins()).toThrow(/requires username and password/)
+  })
+})
+
+describe("setup.ts PROMETHEUS_URL boot hint", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  it("warns when PROMETHEUS_URL is unset (default does not match the compose stack)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+    expect(warnPrometheusDefault({})).toBe(true)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("PROMETHEUS_URL"))
+  })
+
+  it("stays silent when PROMETHEUS_URL is set or the analytics module is inactive", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+    expect(warnPrometheusDefault({ PROMETHEUS_URL: "http://localhost:8460" })).toBe(false)
+    expect(warnPrometheusDefault({ MCP_ACTIVE_MODULES: "camunda7" })).toBe(false)
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it("lets an empty PROMETHEUS_URL fall through to the schema default", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    vi.stubEnv("PROMETHEUS_URL", "")
+
+    const analytics = getAppConfig().activeApps.find((e) => e.app === "analytics")
+    expect((analytics?.config as { url?: string }).url).toBeUndefined()
+  })
+})
+
+describe("warnUnknownEnvVars", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("flags unknown CAMUNDA_*/MCP_* variables (typos)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+    const unknown = warnUnknownEnvVars({
+      CAMUNDA_ENGINE_JSON: "[]",
+      MCP_DASHBOARDS_DIR: "./x",
+      CAMUNDA_BASE_URL: "http://ok.example",
+    })
+
+    expect(unknown.sort()).toEqual(["CAMUNDA_ENGINE_JSON", "MCP_DASHBOARDS_DIR"])
+    expect(warn).toHaveBeenCalledTimes(2)
+  })
+
+  it("ignores known variables, foreign prefixes, and unrelated names", () => {
+    const unknown = warnUnknownEnvVars({
+      MCP_OAUTH: "{}",
+      MCP_USE_ANONYMIZED_TELEMETRY: "false",
+      MCP_PROXY_MIRAVELO_TOKEN: "secret",
+      MCP_INSPECTOR_FRAME_ANCESTORS: "*",
+      MCP_DEBUG_LEVEL: "debug",
+      PATH: "/usr/bin",
+      PROMETHEUS_URL: "http://localhost:8460",
+    })
+
+    expect(unknown).toEqual([])
+  })
+
+  it("accepts proxy-secret names declared in MCP_PROXIES via the extra allowlist", () => {
+    const extras = proxySecretEnvVarNames([
+      { auth: { mode: "bearer", tokenEnvVar: "MCP_MIRAVELO_TOKEN" } },
+      { auth: { mode: "none" } },
+    ])
+
+    expect(extras).toEqual(["MCP_MIRAVELO_TOKEN"])
+    expect(warnUnknownEnvVars({ MCP_MIRAVELO_TOKEN: "secret" }, extras)).toEqual([])
   })
 })

@@ -11,16 +11,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@miragon/mcp-toolkit-proxy-contract": "0.6.1",
-    "mcp-use": "1.32.1",
-    "zod": "4.3.6"
+    "@miragon/mcp-toolkit-proxy-contract": "0.7.2",
+    "mcp-use": "1.34.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "22.19.15",
-    "@types/react": "19.2.14",
+    "@types/react": "19.2.17",
     "@vitejs/plugin-react": "6.0.1",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "vite": "8.0.8"

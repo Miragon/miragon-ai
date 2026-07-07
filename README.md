@@ -52,6 +52,15 @@ docker run --rm -p 8400:8400 \
 The server speaks the streamable-HTTP MCP transport on `http://localhost:8400/mcp`. Add it to your
 MCP host (Claude Desktop, Claude Code, ChatGPT, …) as an HTTP/streamable server.
 
+**Prefer to build the image yourself?** You need a `GITHUB_TOKEN` (a PAT with `read:packages`, for
+the private `@miragon/*` toolkit) passed as a BuildKit secret; then run `miragon-ai-server` in place
+of the Docker Hub image above.
+
+```bash
+export GITHUB_TOKEN=ghp_xxx
+docker build --secret id=github_token,env=GITHUB_TOKEN -t miragon-ai-server .
+```
+
 **Want the whole stack on your machine?** The repo ships a Compose file with CIB Seven, the OTEL
 Collector, Prometheus and Grafana wired together — see
 [`docker/`](docker/) and [Local development](#local-development) below.
@@ -152,24 +161,28 @@ Example: `MCP_ACTIVE_MODULES=camunda7:read-only,analytics`.
 
 The most common variables — see [`docs/operations.md`](docs/operations.md) for the full reference.
 
-| Variable                                                  | Default                             | Description                                                                          |
-| --------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------ |
-| `PORT`                                                    | `8400`                              | HTTP port the MCP server listens on                                                  |
-| `MCP_ACTIVE_MODULES`                                      | all                                 | Comma-separated modules (`camunda7,analytics`), each with an optional toolset suffix |
-| `CAMUNDA_BASE_URL`                                        | `http://localhost:8410/engine-rest` | Single-engine REST base URL                                                          |
-| `CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE`           | —                                   | Register multiple engines (see [Multi-engine](#multi-engine))                        |
-| `CAMUNDA_COCKPIT_URL`                                     | derived                             | Cockpit web base for jump-out links                                                  |
-| `CAMUNDA_AUTH_TYPE`                                       | `none`                              | `basic`, `bearer`, or `none` (same auth for every engine)                            |
-| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` / `CAMUNDA_TOKEN` | —                                   | Credentials for the chosen auth type                                                 |
-| `PROMETHEUS_URL`                                          | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source                                      |
+| Variable                                                  | Default                             | Description                                                                           |
+| --------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `PORT`                                                    | `8400`                              | HTTP port the MCP server listens on                                                   |
+| `MCP_ACTIVE_MODULES`                                      | all                                 | Comma-separated modules (`camunda7,analytics`), each with an optional toolset suffix  |
+| `MCP_OAUTH`                                               | —                                   | JSON OAuth resource-server config (Keycloak / Auth0 / generic OIDC) protecting `/mcp` |
+| `CAMUNDA_BASE_URL`                                        | `http://localhost:8410/engine-rest` | Single-engine REST base URL                                                           |
+| `CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE`           | —                                   | Register multiple engines (see [Multi-engine](#multi-engine))                         |
+| `CAMUNDA_COCKPIT_URL`                                     | derived                             | Cockpit web base for jump-out links                                                   |
+| `CAMUNDA_AUTH_TYPE`                                       | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without an `auth`  |
+| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` / `CAMUNDA_TOKEN` | —                                   | Credentials for `basic`/`bearer`; `passthrough` forwards each caller's bearer token   |
+| `PROMETHEUS_URL`                                          | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source                                       |
 
 ### Multi-engine
 
 The server can route to several CIB Seven instances. Tag each engine in its metrics plugin
-(`ENGINE_ID`), register them in the server (`CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE`), and the
+(`ENGINE_ID`), register them in the server (`CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE` —
+`ENGINE_ID` must match the registered `id`, or that engine's analytics come back empty), and the
 host picks one per session via the `camunda7_engine` tool (`list` / `select` / `current`). Every
 operations tool also accepts a per-call `engine` override. Analytics tools take an optional `engine`
-filter to aggregate or compare. Full walkthrough in [`docs/operations.md`](docs/operations.md).
+filter to aggregate or compare. Each engine entry may carry its own `auth`
+(`{type, username?, password?, token?}`); entries without one use the global `CAMUNDA_*` settings.
+Full walkthrough in [`docs/operations.md`](docs/operations.md).
 
 ## Engine metrics plugin
 
@@ -188,6 +201,7 @@ export GITHUB_TOKEN=ghp_xxx           # PAT with read:packages — the @miragon/
 pnpm install --frozen-lockfile
 
 docker compose -f docker/docker-compose.yml up -d   # CIB Seven, OTEL, Prometheus, Grafana
+cp .env.example .env                                 # dev defaults: engine on :8410, Prometheus on :8460
 pnpm dev                                             # miravelo example upstream + gateway on :8400
 ```
 

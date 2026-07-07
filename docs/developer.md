@@ -30,6 +30,7 @@ docker compose -f docker/docker-compose.yml up -d
 ## Run the gateway
 
 ```bash
+cp .env.example .env   # dev defaults: engine on :8410, Prometheus on :8460
 pnpm dev
 ```
 
