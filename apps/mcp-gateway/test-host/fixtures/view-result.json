@@ -1,0 +1,15 @@
+{
+  "toolInput": {
+    "layout": { "rows": [] },
+    "title": "Host-Sim Fixture View"
+  },
+  "result": {
+    "content": [{ "type": "text", "text": "Host-sim fixture view rendered" }],
+    "structuredContent": {
+      "title": "Host-Sim Fixture View",
+      "context": { "keys": {}, "stepIds": [], "stepData": {}, "errors": [] },
+      "layout": { "rows": [] },
+      "builderAvailable": false
+    }
+  }
+}

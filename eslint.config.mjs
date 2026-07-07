@@ -11,12 +11,23 @@ const bundledUiFiles = [
   "packages/mcp-cibseven/src/widgets/**/*.{ts,tsx}",
 ]
 
-// Gateway tests live outside src/ (not part of the build tsconfig) and get
-// their type information from the dedicated tsconfig.test.json project.
-const gatewayTestFiles = ["apps/mcp-gateway/test/**/*.ts"]
+// Gateway tests (and the Playwright host simulation) live outside src/ (not
+// part of the build tsconfig) and get their type information from the
+// dedicated tsconfig.test.json project.
+const gatewayTestFiles = ["apps/mcp-gateway/test/**/*.ts", "apps/mcp-gateway/test-host/**/*.ts"]
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/node_modules/**", "**/generated/**", "vendor/**"] },
+  {
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/generated/**",
+      "vendor/**",
+      // Plain-node static server for the Playwright host simulation — not part
+      // of any tsconfig project, deliberately untyped.
+      "apps/mcp-gateway/test-host/serve.mjs",
+    ],
+  },
 
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,

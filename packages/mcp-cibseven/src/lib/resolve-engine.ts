@@ -4,12 +4,25 @@ import {
   createBackendRegistry,
   type BackendRegistry,
 } from "@miragon/mcp-toolkit-core/tools"
-import type { Client } from "@miragon-ai/client-cibseven"
+import type { Camunda7AuthType, Client } from "@miragon-ai/client-cibseven"
+
+/**
+ * Per-engine auth override. An engine that carries one is authenticated with
+ * exactly these fields; engines without one fall back to the module-wide
+ * config ([[Camunda7PluginConfig]]) — the two are never mixed field-by-field.
+ */
+export interface EngineAuth {
+  type: Camunda7AuthType
+  username?: string
+  password?: string
+  token?: string
+}
 
 export interface EngineEntry {
   id: string
   baseUrl: string
   cockpitUrl?: string
+  auth?: EngineAuth
 }
 
 /** Per-engine metadata carried on each backend-registry entry. */

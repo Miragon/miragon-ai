@@ -8,7 +8,30 @@ import {
   installToolCallNameCapture,
 } from "@miragon/mcp-toolkit-core/tools"
 import { parseProxyConfigEnv } from "@miragon/mcp-toolkit-proxy-contract"
-import { getAppConfig, getPlugins } from "./setup.js"
+import {
+  getAppConfig,
+  getPlugins,
+  proxySecretEnvVarNames,
+  warnPrometheusDefault,
+  warnUnknownEnvVars,
+} from "./setup.js"
+import {
+  getOAuthConfigFromEnv,
+  installAuthorizeRedirectAllowlist,
+  oauthSecretEnvVarNames,
+} from "./oauth.js"
+
+// mcp-use ships anonymized telemetry (PostHog + Scarf) enabled by default —
+// an ops gateway must not phone home unless explicitly opted in.
+process.env.MCP_USE_ANONYMIZED_TELEMETRY ??= "false"
+
+const proxies = parseProxyConfigEnv(process.env.MCP_PROXIES)
+
+// Surface CAMUNDA_*/MCP_* typos at boot instead of silently ignoring them —
+// secrets named inside MCP_PROXIES entries and MCP_OAUTH belong to the
+// allowlist.
+warnUnknownEnvVars(process.env, [...proxySecretEnvVarNames(proxies), ...oauthSecretEnvVarNames()])
+warnPrometheusDefault()
 
 const DIST_DIR = import.meta.filename.endsWith(".ts")
   ? path.join(import.meta.dirname, "..", "dist")
@@ -16,7 +39,7 @@ const DIST_DIR = import.meta.filename.endsWith(".ts")
 
 const HTML_PATH = path.join(DIST_DIR, "mcp-app.html")
 
-const app = await createFrameworkApp({
+const frameworkOptions = {
   name: "automation-mcp",
   version: "0.1.0",
   host: "0.0.0.0",
@@ -30,7 +53,7 @@ const app = await createFrameworkApp({
   // but our plugin factories return `AppPlugin<MCPServer>`. The framework invokes
   // `registerTools(MCPServer)` at runtime, so the narrowing is sound.
   plugins: getPlugins() as AppPlugin[],
-  proxies: parseProxyConfigEnv(process.env.MCP_PROXIES),
+  proxies,
   appConfig: getAppConfig(),
   app: {
     // resourceUri omitted: createFrameworkApp content-hashes htmlPath into a
@@ -49,7 +72,24 @@ const app = await createFrameworkApp({
       ? createFileSystemDashboardStore({ dir: process.env.MCP_DASHBOARD_DIR })
       : undefined,
   },
-})
+}
+
+// MCP_OAUTH turns the gateway into an OAuth resource server: mcp-use rejects
+// /mcp requests without a valid bearer token (401 + WWW-Authenticate) and
+// serves the .well-known discovery metadata. Combined with
+// CAMUNDA_AUTH_TYPE=passthrough the validated token is forwarded to the
+// engine per call. Two createFrameworkApp calls because its oauth/no-oauth
+// overloads are distinct (the oauth one types ctx.auth as non-nullable).
+const { provider: oauth, redirectAllowlist } = getOAuthConfigFromEnv()
+const app = oauth
+  ? await createFrameworkApp({ ...frameworkOptions, oauth })
+  : await createFrameworkApp(frameworkOptions)
+
+// oidc-proxy mounts proxy /authorize+/callback+/token; enforce the redirect
+// allowlist before mcp-use handles /authorize (see installAuthorizeRedirectAllowlist).
+if (redirectAllowlist) {
+  installAuthorizeRedirectAllowlist(app, redirectAllowlist)
+}
 
 // --- Tool-call logging -------------------------------------------------
 // One log line per tools/call with tool name, duration, and outcome.

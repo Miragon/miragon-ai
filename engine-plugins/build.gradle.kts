@@ -11,8 +11,8 @@ allprojects {
     // published coordinate is `ai.miragon.mcp:<engine>-<artifact>`. Keeps one group as
     // more engines are added.
     group = "ai.miragon.mcp"
-    // version comes from gradle.properties so the publish workflow can match
-    // it against the `engine-plugins-v*` git tag.
+    // version comes from gradle.properties, bumped in lockstep by release-please
+    // (extra-file in the root release-please-config.json).
 
     repositories {
         mavenCentral()
@@ -66,7 +66,7 @@ subprojects {
     // set `archiveClassifier = ""`, so the shadow jar IS the main artefact and
     // `components["shadow"]` keeps bundled `implementation` dependencies out
     // of the POM. Target is the GitHub Packages Maven registry of this repo;
-    // CI runs `./gradlew publish` on `engine-plugins-v*` tags.
+    // `publish-to-maven.yml` runs `./gradlew publish` from the release train.
     plugins.withId("com.gradleup.shadow") {
         apply(plugin = "maven-publish")
 

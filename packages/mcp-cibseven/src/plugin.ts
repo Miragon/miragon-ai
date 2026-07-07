@@ -9,11 +9,18 @@ import { registerUserProfileTools } from "./tools/user-profile.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"
 import { createEngineRegistry, type EngineEntry } from "./lib/resolve-engine.js"
+import { resolveMcpBearerToken } from "./lib/mcp-auth.js"
 import { createInMemoryProfileStore, type ProfileStore } from "./lib/profile-store.js"
 import { withToolsetFilter } from "./lib/toolsets.js"
 
 export interface Camunda7PluginConfig {
   engines: EngineEntry[]
+  /**
+   * Fallback auth for engines without a per-engine `auth` entry.
+   * `passthrough` forwards the bearer token each MCP client presents to this
+   * server on to the engine per call ([[resolveMcpBearerToken]]) — no static
+   * credentials; requires an MCP host that sends an `Authorization` header.
+   */
   authType?: Camunda7AuthType
   username?: string
   password?: string
@@ -58,15 +65,27 @@ export function createPlugin(
   shared: Camunda7SharedResources = {},
 ): AppPlugin<MCPServer> {
   const profileStore = shared.profileStore ?? createInMemoryProfileStore()
-  const registry = createEngineRegistry(config.engines, (e) =>
-    createCamunda7Client({
-      baseUrl: e.baseUrl,
-      authType: config.authType,
+  const registry = createEngineRegistry(config.engines, (e) => {
+    // Per-engine auth wins wholesale; mixing its fields with the module-wide
+    // fallback would make a partial entry silently inherit foreign credentials.
+    const auth = e.auth ?? {
+      type: config.authType ?? "none",
       username: config.username,
       password: config.password,
       token: config.token,
-    }),
-  )
+    }
+    return createCamunda7Client({
+      baseUrl: e.baseUrl,
+      authType: auth.type,
+      username: auth.username,
+      password: auth.password,
+      token: auth.token,
+      // The clients are built once at boot and cached in the registry; for
+      // passthrough the interceptor re-reads the current MCP request's token
+      // on every engine call, so the caching stays correct.
+      tokenProvider: auth.type === "passthrough" ? resolveMcpBearerToken : undefined,
+    })
+  })
 
   const incidentIssueConfig = {
     repository: config.incidentIssueRepository,

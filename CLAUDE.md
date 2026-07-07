@@ -33,7 +33,7 @@ pnpm install --frozen-lockfile       # @miragon/* resolves via npm.pkg.github.co
 
 pnpm build                           # turbo build across the monorepo (runs `generate` first)
 pnpm typecheck                       # tsc --noEmit everywhere, incl. widget/UI tsconfigs
-pnpm test                            # vitest (packages with tests: mcp-cibseven, client-analytics)
+pnpm test                            # vitest across the workspace
 pnpm lint                            # eslint per package (`pnpm lint:fix` to autofix)
 pnpm format:check                    # prettier check (`pnpm format` to write)
 pnpm generate                        # regenerate the CIB Seven SDK from the OpenAPI spec
@@ -113,8 +113,15 @@ render widgets manually.
   model-bounded labels (definition key, activity id, engine id …) — never instance ids,
   business keys, or variable values.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
-  `0.5.0` everywhere). Updates are deliberate version bumps across all packages — never
+  `0.8.0` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.
+- **The widget `_meta` contract comes from the toolkit — never hand-write the
+  dual-protocol keys.** `uiMeta({ resourceUri, title, … })` emits the full ext-apps/Apps
+  SDK contract (`ui/resourceUri`, `openai/outputTemplate`, `openai/toolInvocation/*`,
+  `openai/widgetAccessible`, `openai/resultCanProduceWidget`) for widget-rendering
+  tools; app-only `*_data` feeds stay free of those keys on purpose. Guarded by
+  `apps/mcp-gateway/test/widget-meta.test.ts` (unit) and
+  `apps/mcp-gateway/test/widget-contract.e2e.test.ts` (on the wire).
 - **The proxy-contract manifest is the federation contract to upstreams.** Upstream MCP
   servers expose `get-module-manifest` (validated by `ModuleManifestSchema` from
   `@miragon/mcp-toolkit-proxy-contract`) to contribute steps and widgets; the gateway
@@ -123,39 +130,47 @@ render widgets manually.
 
 ## Releases & toolkit contributions
 
-- **npm packages release via changesets.** Add a changeset (`pnpm changeset`) when changing
-  a publishable package; on push to `main` the `release.yml` workflow opens/updates a
-  Version PR and, once merged, publishes to npm.pkg.github.com (`access: restricted`).
-  Publication candidates are `client-cibseven` and `client-analytics`; the gateway,
-  widget-shell, mcp-cibseven and mcp-analytics are `"private": true` **and** in the
-  changesets `ignore` list until the distribution decision (#118) — don't flip either
-  without that decision.
-- **Engine plugins release via git tag.** Bump `version` in `engine-plugins/gradle.properties`,
-  push a matching `engine-plugins-v<version>` tag, and `engine-plugins-publish.yml` runs
+- **Everything releases through one release-please train.** Conventional commits on
+  `main` drive `release-please.yml`, which opens/updates a single Release PR (root
+  component, tag `v<version>`); release-please bumps the root, gateway,
+  client-cibseven and client-analytics `package.json`s plus
+  `engine-plugins/gradle.properties` in lockstep (`extra-files` in
+  `release-please-config.json`). Merging the PR creates the release; the publish
+  workflows then wait for manual approval of the `release` environment gate.
+- **No npm publish exists today.** `client-cibseven`/`client-analytics` carry a
+  `publishConfig` for npm.pkg.github.com (`access: restricted`) but no CI job publishes
+  them; the gateway, widget-shell, mcp-cibseven and mcp-analytics are `"private": true`.
+  Don't flip `private` or add a publish job without the distribution decision (#118).
+- **Engine plugins publish via `publish-to-maven.yml`** (called from the release train):
   `./gradlew publish` against GitHub Packages Maven. All engine plugins share the umbrella
   group `ai.miragon.mcp` with the engine carried in the artifactId (`<engine>-<artifact>`);
   the cibseven metrics plugin publishes as `ai.miragon.mcp:cibseven-history-metrics`
   (shadow jar).
-- **MCP server image releases via git tag.** The gateway ships as a container: push a
-  `server-v<version>` tag (matching `version` in `apps/mcp-gateway/package.json`) and
-  `server-publish.yml` builds the root `Dockerfile` and pushes
-  `ghcr.io/miragon/miragon-ai-server:<version>` (and `:latest`) to GHCR.
+- **The server image publishes via `publish-to-docker.yml`** (same train): builds the
+  root `Dockerfile` and pushes `docker.io/miragon/miragon-ai-server:<version>` and
+  `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
+  to `apps/mcp-gateway/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
-  exactly pinned dependency (`save-exact`, currently `0.5.0`). Toolkit changes happen in
+  exactly pinned dependency (`save-exact`, currently `0.8.0`). Toolkit changes happen in
   that repo and arrive here as a deliberate, repo-wide version bump — and since the
   toolkit is `0.x`, treat every minor bump as potentially breaking.
+- **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,
+  point temporary `overrides` in `pnpm-workspace.yaml` at the `file:` tarballs (park any
+  `patchedDependencies` entry for the same package while doing so), run the full bar plus
+  `test:host`, then revert the workspace yaml + lockfile. Never commit the overrides.
 
 ## Verification — what each check actually covers
 
-| Check             | Coverage                                                                                                                                                 |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm build`      | tsc emit of server code + the gateway's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                  |
-| `pnpm typecheck`  | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-cibseven/mcp-analytics, `tsc -p tsconfig.ui.json` in the gateway |
-| `pnpm test`       | Vitest unit tests (lib + query logic); **no widget rendering, no HTTP**                                                                                  |
-| `pnpm lint`       | ESLint over each package's `src`                                                                                                                         |
-| `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                      |
-| Manual            | `docker compose -f docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`     |
+| Check             | Coverage                                                                                                                                                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`      | tsc emit of server code + the gateway's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                        |
+| `pnpm typecheck`  | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-cibseven/mcp-analytics, `tsc -p tsconfig.ui.json` in the gateway                                                                                       |
+| `pnpm test`       | Vitest unit tests (lib + query logic) **plus** the gateway e2e smoke + widget wire-contract tests (in-process boot, loopback HTTP); **no widget rendering**                                                                                    |
+| `pnpm lint`       | ESLint over each package's `src` (gateway also `test`/`test-host`)                                                                                                                                                                             |
+| `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                            |
+| `test:host`       | `pnpm --filter @miragon-ai/mcp-gateway test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin |
+| Manual            | `docker compose -f docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                           |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
-every change; widgets additionally need a manual render check via the inspector since no
-automated check renders them.
+every change; widget changes additionally need `test:host` plus a manual render check via
+the inspector (real widget data paths are not covered by the host simulation's fixture).

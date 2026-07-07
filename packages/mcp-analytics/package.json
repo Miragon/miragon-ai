@@ -29,13 +29,13 @@
     "@miragon-ai/client-analytics": "workspace:*",
     "@miragon-ai/client-cibseven": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
-    "@miragon/mcp-toolkit-core": "0.6.1",
-    "@miragon/mcp-toolkit-proxy-contract": "0.6.1",
-    "zod": "4.3.6"
+    "@miragon/mcp-toolkit-core": "0.8.0",
+    "@miragon/mcp-toolkit-proxy-contract": "0.8.0",
+    "zod": "4.4.3"
   },
   "peerDependencies": {
-    "mcp-use": "1.32.1",
-    "react": "19.2.5"
+    "mcp-use": "1.34.1",
+    "react": "19.2.7"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -43,11 +43,11 @@
     }
   },
   "devDependencies": {
-    "@miragon/mcp-toolkit-ui": "0.6.1",
-    "@types/react": "19.2.14",
+    "@miragon/mcp-toolkit-ui": "0.8.0",
+    "@types/react": "19.2.17",
     "bpmn-js": "18.14.0",
-    "mcp-use": "1.32.1",
-    "react": "19.2.5",
+    "mcp-use": "1.34.1",
+    "react": "19.2.7",
     "typescript": "5.9.3",
     "vitest": "4.1.4"
   }

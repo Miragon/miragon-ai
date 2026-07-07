@@ -18,3 +18,5 @@ examples/cibseven-example/build/
 .DS_STORE
 .claude/scheduled_tasks.lock
 .claude/logs/
+# Playwright host-simulation output
+apps/mcp-gateway/test-results/
