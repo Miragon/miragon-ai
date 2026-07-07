@@ -55,7 +55,7 @@ When a page approaches the limit, condense — don't extend.
 - **English only.** No German.
 - Prefer tables for structured data (env vars, modules, skills) — easier to
   scan than prose paragraphs.
-- Link to source files (`Dockerfile`, `docker/docker-compose.yml`, root
+- Link to source files (`Dockerfile`, `playground/docker/docker-compose.yml`, root
   `README.md`, `.github/workflows/ci.yml`) instead of inlining their content.
 - One Mermaid diagram on the architecture page. Don't add more diagrams unless
   they earn their place.

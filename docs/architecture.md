@@ -65,12 +65,11 @@ served by the engine REST history API, not the metrics.
 
 ## Repository layout
 
-| Path                | Description                                                 |
-| ------------------- | ----------------------------------------------------------- |
-| `apps/mcp-gateway/` | The MCP gateway entry point and the widget bundle.          |
-| `packages/`         | Reusable libraries — clients, MCP plugins, widget-shell.    |
-| `engine-plugins/`   | Kotlin OTEL plugins (process metrics).                      |
-| `examples/`         | Standalone showcases (miravelo-upstream, cibseven-example). |
-| `docker/`           | Compose stack: engine, OTEL Collector, Prometheus, Grafana. |
+| Path                | Description                                              |
+| ------------------- | -------------------------------------------------------- |
+| `apps/mcp-gateway/` | The MCP gateway entry point and the widget bundle.       |
+| `packages/`         | Reusable libraries — clients, MCP plugins, widget-shell. |
+| `engine-plugins/`   | Kotlin OTEL plugins (process metrics).                   |
+| `playground/`       | Demo env: showcases, Compose stack, Fly.io deployment.   |
 
 For deeper detail, the root [`README.md`](https://github.com/miragon/miragon-ai/blob/main/README.md) keeps the full module table and tool list.

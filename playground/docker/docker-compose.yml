@@ -5,7 +5,7 @@ services:
   # Identifies itself as `prod-a` via the `engine_id` metric attribute.
   cibseven:
     build:
-      context: ../examples/cibseven-example
+      context: ../cibseven-example
       dockerfile: Dockerfile
     ports:
       - "8410:8410"
@@ -40,7 +40,7 @@ services:
   cibseven-b:
     profiles: [multi-engine]
     build:
-      context: ../examples/cibseven-example
+      context: ../cibseven-example
       dockerfile: Dockerfile
     ports:
       - "8411:8410"
@@ -88,6 +88,8 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.128.0
     command: ["--config=/etc/otel-collector-config.yaml"]
+    environment:
+      - DEPLOY_ENV=docker-local
     volumes:
       - ./otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
@@ -119,6 +121,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     environment:
+      - PROMETHEUS_URL=http://prometheus:9090
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
@@ -138,7 +141,7 @@ services:
   mcp-server:
     profiles: [full]
     build:
-      context: ..
+      context: ../..
       dockerfile: Dockerfile
       secrets:
         - github_token

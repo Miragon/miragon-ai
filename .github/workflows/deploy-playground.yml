@@ -1,0 +1,73 @@
+name: Deploy Playground
+
+# Deploys the playground stack (playground/) to Fly.io — one Fly app per
+# service, see playground/fly/deploy.sh. Manual trigger only: the playground
+# is a demo environment, not part of the release train.
+#
+# Required repo secret: FLY_API_TOKEN — an org-scoped Fly deploy token
+# (`fly tokens create org`), stored including the leading `FlyV1 ` prefix.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which app to deploy"
+        type: choice
+        default: all
+        options:
+          - all
+          - otel
+          - engine
+          - miravelo
+          - prometheus
+          - grafana
+          - gateway
+
+permissions:
+  contents: read
+  packages: read
+
+# Never run two deploys of the shared playground environment at once.
+concurrency:
+  group: deploy-playground
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy playground to Fly.io
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7.0.0
+
+      - uses: actions/setup-java@v5.3.0
+        if: ${{ inputs.target == 'all' || inputs.target == 'engine' }}
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      # The engine Dockerfile copies the pre-built jar from build/libs.
+      - name: Build engine jar
+        if: ${{ inputs.target == 'all' || inputs.target == 'engine' }}
+        working-directory: playground/cibseven-example
+        run: ./gradlew bootJar
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+      # superfly/flyctl-actions has no exact-version release tags beyond 1.5,
+      # so pin by commit SHA instead (repo convention: no floating tags). The
+      # flyctl binary is pinned via `version` and must be bumped manually —
+      # Dependabot only updates the action SHA.
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+        with:
+          version: 0.4.67
+
+      - name: Deploy
+        run: ./playground/fly/deploy.sh "${{ inputs.target }}"
+        env:
+          # Build secret for the gateway/miravelo images (private @miragon
+          # packages on npm.pkg.github.com).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Org that owns the playground apps (repo variable, optional).
+          FLY_ORG: ${{ vars.FLY_ORG || 'personal' }}

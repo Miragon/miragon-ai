@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: examples/cibseven-example
+        working-directory: playground/cibseven-example
     steps:
       - uses: actions/checkout@v7.0.0
 

@@ -47,7 +47,9 @@ try {
 const server = new MCPServer({
   name: "miravelo-upstream",
   version: "0.0.1",
-  host: "0.0.0.0",
+  // "::" (dual-stack) on Fly.io, where the gateway connects over the
+  // IPv6-only private network; plain IPv4 locally.
+  host: process.env.UPSTREAM_MIRAVELO_HOST ?? "0.0.0.0",
 })
 
 const customerSchema = z.object({

@@ -73,7 +73,7 @@ describe("metrics contract", () => {
   })
 
   it("covers every camunda_* metric used in the Prometheus alert rules", () => {
-    const alerts = readFileSync(join(repoRoot, "docker/prometheus/alerts.yml"), "utf8")
+    const alerts = readFileSync(join(repoRoot, "playground/docker/prometheus/alerts.yml"), "utf8")
     const used = extractSeries(alerts)
     expect(used.length).toBeGreaterThan(0)
     for (const series of used) {
@@ -82,7 +82,7 @@ describe("metrics contract", () => {
   })
 
   it("covers every camunda_* metric used in the Grafana dashboards", () => {
-    const dashboardsDir = join(repoRoot, "docker/grafana/dashboards")
+    const dashboardsDir = join(repoRoot, "playground/docker/grafana/dashboards")
     const dashboards = readdirSync(dashboardsDir).filter((f) => f.endsWith(".json"))
     expect(dashboards.length).toBeGreaterThan(0)
     for (const file of dashboards) {
@@ -112,7 +112,7 @@ describe("metrics contract", () => {
     const texts = readdirSync(queriesDir)
       .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
       .map((f) => stripComments(readFileSync(join(queriesDir, f), "utf8")))
-    texts.push(readFileSync(join(repoRoot, "docker/prometheus/alerts.yml"), "utf8"))
+    texts.push(readFileSync(join(repoRoot, "playground/docker/prometheus/alerts.yml"), "utf8"))
 
     const knownValues = new Map<string, Set<string>>()
     for (const m of contract.metrics) {

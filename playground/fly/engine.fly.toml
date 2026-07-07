@@ -1,0 +1,38 @@
+# CIB Seven playground engine (seeded, with live traffic + OTEL metrics).
+# Private-only: no [http_service]/[[services]] section means Fly never
+# allocates a public IP; the gateway reaches it via 6PN (…engine.internal).
+# The machine never auto-stops (no Fly Proxy in the path), which the stack
+# needs anyway: live traffic and metric export must run continuously.
+# Build context: playground/cibseven-example — run `./gradlew bootJar` first
+# (the Dockerfile copies build/libs/cibseven-example.jar).
+app = "miragon-ai-playground-engine"
+primary_region = "fra"
+
+[build]
+  # Resolved relative to this fly.toml (flyctl rule); the build context
+  # stays the working directory deploy.sh cd's into.
+  dockerfile = "../cibseven-example/Dockerfile"
+
+[env]
+  SPRING_PROFILES_ACTIVE = "seed-presentation"
+  METRICS_ENABLED = "true"
+  ENGINE_ID = "prod-a"
+  LIVE_TRAFFIC_ENABLED = "true"
+  OTEL_SERVICE_NAME = "cibseven-engine-a"
+  OTEL_EXPORTER_OTLP_ENDPOINT = "http://miragon-ai-playground-otel.internal:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf"
+  OTEL_METRIC_EXPORT_INTERVAL = "15000"
+  OTEL_TRACES_EXPORTER = "none"
+
+[checks.engine_rest]
+  type = "http"
+  port = 8410
+  path = "/engine-rest/engine"
+  interval = "15s"
+  timeout = "5s"
+  # Boot seeds ~600 process instances before the REST API is fully responsive.
+  grace_period = "120s"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"

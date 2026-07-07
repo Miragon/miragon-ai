@@ -12,5 +12,5 @@
 engine-plugins/.gradle
 engine-plugins/build
 engine-plugins/**/build
-examples/cibseven-example/.gradle
-examples/cibseven-example/build
+playground/cibseven-example/.gradle
+playground/cibseven-example/build

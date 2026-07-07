@@ -8,7 +8,7 @@ database. Those series are what the [analytics module](../packages/mcp-analytics
 
 Published to **GitHub Packages Maven** as `ai.miragon.mcp:cibseven-history-metrics` (released via
 release-please together with the server image). A runnable showcase that consumes this plugin lives
-in [`../examples/cibseven-example/`](../examples/cibseven-example/) as a separate Gradle build
+in [`../playground/cibseven-example/`](../playground/cibseven-example/) as a separate Gradle build
 (composite via `includeBuild`).
 
 The metric names and labels it emits are governed by the
