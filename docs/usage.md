@@ -6,14 +6,16 @@ the assistant takes the right steps without you having to spell each one out.
 
 ## Connect your assistant
 
-Add an HTTP MCP server pointing at `http://localhost:8400` (or wherever you've
-deployed it). For Claude Desktop:
+Add an HTTP MCP server pointing at your deployment — or at the hosted
+[playground](https://miragon-ai-playground.fly.dev/mcp) to try it without any
+setup (`https://miragon-ai-playground.fly.dev/mcp` — also works as a claude.ai
+custom connector). For Claude Desktop:
 
 ```json
 {
   "mcpServers": {
     "miragon-ai": {
-      "url": "http://localhost:8400"
+      "url": "https://miragon-ai-playground.fly.dev/mcp"
     }
   }
 }

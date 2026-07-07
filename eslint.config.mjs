@@ -50,6 +50,7 @@ export default tseslint.config(
             "packages/client-cibseven/openapi-ts.config.ts",
             "packages/widget-shell/vitest.config.ts",
             "docs/.vitepress/config.ts",
+            "docs/.vitepress/theme/index.ts",
           ],
         },
         tsconfigRootDir: import.meta.dirname,

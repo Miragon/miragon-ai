@@ -6,12 +6,32 @@ export default withMermaid({
     "AI-driven process management for Camunda 7 / CIB Seven via the Model Context Protocol.",
   cleanUrls: true,
   lastUpdated: true,
+  // The miragon.ai brand is dark-only — no light theme, no toggle.
+  appearance: "force-dark",
+  head: [
+    ["link", { rel: "icon", type: "image/png", href: "/favicon.png" }],
+    ["meta", { name: "theme-color", content: "#00e676" }],
+  ],
+  // Preload the self-hosted Inter Variable (hashed filename, so a static
+  // head link can't point at it — see vitepress.dev site-config#transformhead).
+  transformHead({ assets }) {
+    const inter = assets.find((file) => /inter-latin-wght-normal\.[\w-]+\.woff2/.test(file))
+    if (inter) {
+      return [
+        ["link", { rel: "preload", href: inter, as: "font", type: "font/woff2", crossorigin: "" }],
+      ]
+    }
+  },
   themeConfig: {
+    logo: { src: "/logo.svg", alt: "Miragon" },
+    // The wordmark already reads MIRAGON — no text next to it.
+    siteTitle: false,
     nav: [
       { text: "Architecture", link: "/architecture" },
       { text: "Developers", link: "/developer" },
       { text: "Operations", link: "/operations" },
       { text: "Usage", link: "/usage" },
+      { text: "Playground", link: "https://miragon-ai-playground.fly.dev/mcp" },
     ],
     sidebar: [
       {
@@ -38,7 +58,7 @@ export default withMermaid({
     socialLinks: [
       {
         icon: "github",
-        link: "https://github.com/miragon/miragon-ai",
+        link: "https://github.com/Miragon/miragon-ai",
       },
     ],
     search: {

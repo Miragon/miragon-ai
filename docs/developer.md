@@ -1,6 +1,14 @@
 # Getting Started
 
-A working development environment in five commands.
+A working development environment in five commands — or zero, if you start
+with the hosted playground.
+
+## Try it first — no install
+
+Point any MCP client at the [playground](https://miragon-ai-playground.fly.dev/mcp)
+(`https://miragon-ai-playground.fly.dev/mcp`): a seeded engine, live traffic,
+and the full analytics stack. See [Start in 30 seconds](/#start-in-30-seconds).
+Everything below is for running your own stack.
 
 ## Prerequisites
 
