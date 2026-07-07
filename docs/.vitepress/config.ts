@@ -6,8 +6,8 @@ export default withMermaid({
     "AI-driven process management for Camunda 7 / CIB Seven via the Model Context Protocol.",
   cleanUrls: true,
   lastUpdated: true,
-  // The miragon.ai brand is dark-only — no light theme, no toggle.
-  appearance: "force-dark",
+  // Doc pages offer the normal light/dark toggle; the landing page alone
+  // always carries the dark miragon.ai brand (scoped in theme/custom.css).
   head: [
     ["link", { rel: "icon", type: "image/png", href: "/favicon.png" }],
     ["meta", { name: "theme-color", content: "#00e676" }],

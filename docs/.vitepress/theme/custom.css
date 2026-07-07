@@ -1,22 +1,77 @@
 /**
  * miragon.ai brand for the docs — tokens lifted from the marketing site
- * (miragon-ai-website/src/global.css). The site is dark-only, hence
- * appearance: "force-dark" in config.ts; overrides target :root and .dark
- * so they win regardless of load order.
+ * (miragon-ai-website/src/global.css and LandingPage.module.css).
  *
- * Brand: green #00e676 (primary) + blue #3d5af1 (gradient partner),
- * blacks #000/#0a0a0a/#141414, hairline white-alpha borders, pill buttons
- * with black text, Inter Variable.
+ * Scoping:
+ * - Doc pages stay on the normal VitePress surfaces with the light/dark
+ *   toggle; only the brand accents (green scale), fonts, and pill buttons
+ *   apply everywhere.
+ * - The landing page (`:root:has(.VPHome)`) always carries the full dark
+ *   brand — black surfaces, green→blue hero gradient, glow, orbital hero
+ *   animation, fade-up entrances — regardless of the chosen appearance.
  */
 
-:root,
-.dark {
-  /* Typography — same stacks as the marketing site */
+/* ── Global: typography ─────────────────────────────────────────────── */
+
+:root {
   --vp-font-family-base:
     "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --vp-font-family-mono: "SF Mono", ui-monospace, "Menlo", "Fira Code", "Courier New", monospace;
+}
 
-  /* Brand scale */
+.vp-doc h1 {
+  letter-spacing: -0.03em;
+}
+.vp-doc h2 {
+  letter-spacing: -0.02em;
+}
+
+/* ── Global: brand scale ────────────────────────────────────────────── */
+/* Light mode needs darker greens for contrast on white; the signature
+   #00e676 stays as the solid button background (black label) in both. */
+
+:root {
+  --vp-c-brand-1: #00754b;
+  --vp-c-brand-2: #008757;
+  --vp-c-brand-3: #00e676;
+  --vp-c-brand-soft: rgba(0, 230, 118, 0.14);
+}
+
+.dark {
+  --vp-c-brand-1: #00e676;
+  --vp-c-brand-2: #00b388;
+  --vp-c-brand-3: #00e676;
+  --vp-c-brand-soft: rgba(0, 230, 118, 0.16);
+}
+
+/* ── Global: buttons (pill + green/black, Nav.module.css .btnPrimary) ── */
+
+:root,
+.dark {
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #000000;
+  --vp-button-brand-bg: #00e676;
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #000000;
+  --vp-button-brand-hover-bg: rgba(0, 230, 118, 0.85);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #000000;
+  --vp-button-brand-active-bg: #00b388;
+}
+
+.VPButton {
+  border-radius: 999px !important;
+  font-weight: 600;
+}
+
+/* ── Landing page only: the full dark brand ─────────────────────────── */
+/* .VPHome exists only on the home layout; :has() lets the black theme
+   apply there independently of the light/dark toggle. */
+
+:root:has(.VPHome) {
+  color-scheme: dark;
+
+  /* Brand scale (dark values, regardless of toggle) */
   --vp-c-brand-1: #00e676;
   --vp-c-brand-2: #00b388;
   --vp-c-brand-3: #00e676;
@@ -38,18 +93,7 @@
   --vp-c-divider: rgba(255, 255, 255, 0.08);
   --vp-c-gutter: rgba(255, 255, 255, 0.08);
 
-  /* Primary buttons: green pill, black label (Nav.module.css .btnPrimary) */
-  --vp-button-brand-border: transparent;
-  --vp-button-brand-text: #000000;
-  --vp-button-brand-bg: #00e676;
-  --vp-button-brand-hover-border: transparent;
-  --vp-button-brand-hover-text: #000000;
-  --vp-button-brand-hover-bg: rgba(0, 230, 118, 0.85);
-  --vp-button-brand-active-border: transparent;
-  --vp-button-brand-active-text: #000000;
-  --vp-button-brand-active-bg: #00b388;
-
-  /* Secondary buttons: ghost pill (transparent + hairline border) */
+  /* Ghost secondary buttons on dark */
   --vp-button-alt-border: rgba(255, 255, 255, 0.12);
   --vp-button-alt-text: #f5f5f7;
   --vp-button-alt-bg: transparent;
@@ -60,7 +104,7 @@
   --vp-button-alt-active-text: #f5f5f7;
   --vp-button-alt-active-bg: rgba(255, 255, 255, 0.1);
 
-  /* Hero: signature green→blue gradient on the name line */
+  /* Hero: signature green→blue gradient name + ambient glow */
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: linear-gradient(135deg, #00e676 0%, #3d5af1 100%);
   --vp-home-hero-image-background-image: radial-gradient(
@@ -72,26 +116,19 @@
   --vp-home-hero-image-filter: blur(80px);
 }
 
-/* Pill buttons everywhere (site signature: border-radius 999px, weight 600) */
-.VPButton {
-  border-radius: 999px !important;
-  font-weight: 600;
+/* The toggle has no effect on the forced-dark landing — hide it there. */
+:root:has(.VPHome) .VPNavBarAppearance {
+  display: none;
 }
 
-/* Tight negative tracking like the marketing headlines */
-.VPHero .name,
-.VPHero .text {
+/* Tight marketing-style tracking on the hero */
+:root:has(.VPHome) .VPHero .name,
+:root:has(.VPHome) .VPHero .text {
   letter-spacing: -0.04em;
 }
-.vp-doc h1 {
-  letter-spacing: -0.03em;
-}
-.vp-doc h2 {
-  letter-spacing: -0.02em;
-}
 
-/* Feature cards: #141414 cards, 20px radius, hairline border, hover lift */
-.VPFeature {
+/* Feature cards: #141414, 20px radius, hairline border, hover lift */
+:root:has(.VPHome) .VPFeature {
   background-color: #141414;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
@@ -99,7 +136,59 @@
     background-color 0.25s,
     border-color 0.25s;
 }
-.VPFeature:hover {
+:root:has(.VPHome) .VPFeature:hover {
   background-color: #1a1a1a;
   border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ── Landing entrances (LandingPage.module.css fadeUp pattern) ──────── */
+
+@keyframes mgn-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:root:has(.VPHome) .VPHero .name {
+  animation: mgn-fade-up 0.8s ease both;
+}
+:root:has(.VPHome) .VPHero .text {
+  animation: mgn-fade-up 0.8s 0.1s ease both;
+}
+:root:has(.VPHome) .VPHero .tagline {
+  animation: mgn-fade-up 0.8s 0.2s ease both;
+}
+:root:has(.VPHome) .VPHero .actions {
+  animation: mgn-fade-up 0.8s 0.25s ease both;
+}
+:root:has(.VPHome) .VPHero .image {
+  animation: mgn-fade-up 1s 0.35s ease both;
+}
+:root:has(.VPHome) .VPFeatures .item {
+  animation: mgn-fade-up 0.7s 0.45s ease both;
+}
+:root:has(.VPHome) .VPFeatures .item:nth-child(2) {
+  animation-delay: 0.52s;
+}
+:root:has(.VPHome) .VPFeatures .item:nth-child(3) {
+  animation-delay: 0.59s;
+}
+:root:has(.VPHome) .VPFeatures .item:nth-child(4) {
+  animation-delay: 0.66s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:has(.VPHome) .VPHero .name,
+  :root:has(.VPHome) .VPHero .text,
+  :root:has(.VPHome) .VPHero .tagline,
+  :root:has(.VPHome) .VPHero .actions,
+  :root:has(.VPHome) .VPHero .image,
+  :root:has(.VPHome) .VPFeatures .item {
+    animation: none;
+  }
 }
