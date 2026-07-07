@@ -195,7 +195,7 @@ export function getOAuthConfigFromEnv(
         // URL; without MCP_URL it advertises http://localhost:8400 and the
         // login flow fails for any non-local client.
         console.warn(
-          "[automation-mcp] MCP_OAUTH provider 'oidc-proxy' needs MCP_URL set to the public base URL, and <MCP_URL>/oauth/callback registered as a redirect URI on the IdP client.",
+          "[miragon-ai] MCP_OAUTH provider 'oidc-proxy' needs MCP_URL set to the public base URL, and <MCP_URL>/oauth/callback registered as a redirect URI on the IdP client.",
         )
       }
       return {
