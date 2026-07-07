@@ -15,10 +15,10 @@ export default defineConfig({
       throwOnError: true,
       // Runtime defaults (headers, throwOnError, responseStyle) shared by the
       // generated default client and `createCamunda7Client` — see src/hey-api.ts.
-      // The specifier is emitted verbatim into src/generated/client.gen.ts, so
-      // it must be relative to the generated output root (and use the build's
-      // `.js` module extension).
-      runtimeConfigPath: "../hey-api.js",
+      // openapi-ts resolves this path relative to the package root (cwd) and
+      // then emits the computed relative import into
+      // src/generated/client.gen.ts (keeping the build's `.js` extension).
+      runtimeConfigPath: "./src/hey-api.js",
     },
   ],
 })
