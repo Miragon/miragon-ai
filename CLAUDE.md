@@ -113,8 +113,15 @@ render widgets manually.
   model-bounded labels (definition key, activity id, engine id …) — never instance ids,
   business keys, or variable values.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
-  `0.7.2` everywhere). Updates are deliberate version bumps across all packages — never
+  `0.8.0` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.
+- **The widget `_meta` contract comes from the toolkit — never hand-write the
+  dual-protocol keys.** `uiMeta({ resourceUri, title, … })` emits the full ext-apps/Apps
+  SDK contract (`ui/resourceUri`, `openai/outputTemplate`, `openai/toolInvocation/*`,
+  `openai/widgetAccessible`, `openai/resultCanProduceWidget`) for widget-rendering
+  tools; app-only `*_data` feeds stay free of those keys on purpose. Guarded by
+  `apps/mcp-gateway/test/widget-meta.test.ts` (unit) and
+  `apps/mcp-gateway/test/widget-contract.e2e.test.ts` (on the wire).
 - **The proxy-contract manifest is the federation contract to upstreams.** Upstream MCP
   servers expose `get-module-manifest` (validated by `ModuleManifestSchema` from
   `@miragon/mcp-toolkit-proxy-contract`) to contribute steps and widgets; the gateway
@@ -144,21 +151,26 @@ render widgets manually.
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-gateway/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
-  exactly pinned dependency (`save-exact`, currently `0.7.2`). Toolkit changes happen in
+  exactly pinned dependency (`save-exact`, currently `0.8.0`). Toolkit changes happen in
   that repo and arrive here as a deliberate, repo-wide version bump — and since the
   toolkit is `0.x`, treat every minor bump as potentially breaking.
+- **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,
+  point temporary `overrides` in `pnpm-workspace.yaml` at the `file:` tarballs (park any
+  `patchedDependencies` entry for the same package while doing so), run the full bar plus
+  `test:host`, then revert the workspace yaml + lockfile. Never commit the overrides.
 
 ## Verification — what each check actually covers
 
-| Check             | Coverage                                                                                                                                                 |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm build`      | tsc emit of server code + the gateway's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                  |
-| `pnpm typecheck`  | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-cibseven/mcp-analytics, `tsc -p tsconfig.ui.json` in the gateway |
-| `pnpm test`       | Vitest unit tests (lib + query logic); **no widget rendering, no HTTP**                                                                                  |
-| `pnpm lint`       | ESLint over each package's `src`                                                                                                                         |
-| `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                      |
-| Manual            | `docker compose -f docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`     |
+| Check             | Coverage                                                                                                                                                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`      | tsc emit of server code + the gateway's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                        |
+| `pnpm typecheck`  | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-cibseven/mcp-analytics, `tsc -p tsconfig.ui.json` in the gateway                                                                                       |
+| `pnpm test`       | Vitest unit tests (lib + query logic) **plus** the gateway e2e smoke + widget wire-contract tests (in-process boot, loopback HTTP); **no widget rendering**                                                                                    |
+| `pnpm lint`       | ESLint over each package's `src` (gateway also `test`/`test-host`)                                                                                                                                                                             |
+| `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                            |
+| `test:host`       | `pnpm --filter @miragon-ai/mcp-gateway test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin |
+| Manual            | `docker compose -f docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                           |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
-every change; widgets additionally need a manual render check via the inspector since no
-automated check renders them.
+every change; widget changes additionally need `test:host` plus a manual render check via
+the inspector (real widget data paths are not covered by the host simulation's fixture).

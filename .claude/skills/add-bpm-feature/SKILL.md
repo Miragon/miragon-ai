@@ -121,7 +121,10 @@ silently absent somewhere**:
 Then register the widget tool in `src/widget-tools.ts` (this file is the documented
 exception that uses `server.tool()` directly):
 
-- `show_*` tools: `_meta: { ui: { resourceUri } }`, resolve the engine via
+- `show_*` tools: `_meta: buildUiMeta({ resourceUri })` (`uiMeta` from
+  `@miragon/mcp-toolkit-core`) — since toolkit 0.8.0 it emits the full dual-protocol
+  widget contract (`ui/resourceUri`, `openai/outputTemplate`, `openai/toolInvocation/*`,
+  …) that ext-apps hosts key on; **never add those keys by hand**. Resolve the engine via
   `resolveEngine(args.engine, registry)`, return
   `buildSingleWidgetView({ widget, app: "camunda7", dataType, data, title, summary })` or
   `buildComposedView(...)` (both from `@miragon-ai/widget-shell/server`). The
@@ -137,6 +140,8 @@ exception that uses `server.tool()` directly):
 
 ```bash
 pnpm build && pnpm typecheck && pnpm test && pnpm lint
+# for widget/shell changes additionally:
+pnpm --filter @miragon-ai/mcp-gateway test:host
 ```
 
 `pnpm typecheck` is the **only** automated check that type-checks widget `.tsx` code
