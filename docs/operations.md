@@ -1,7 +1,5 @@
 # Operations
 
-Everything you need to run the platform somewhere other than your laptop.
-
 ## Deployment artifact
 
 A single Docker image. Released builds are published to Docker Hub at
@@ -115,6 +113,7 @@ tool surfaces the same gauges + firing alerts in one call.
 ## CI/CD
 
 `.github/workflows/ci.yml` runs parallel jobs on every push — TypeScript
-(build, test, lint, format), Kotlin engine plugins, and the CIB Seven example.
-The private `@miragon` packages install via the workflow's built-in
-`GITHUB_TOKEN` (`packages: read`).
+(build, test, lint, format), Kotlin engine plugins, and the CIB Seven example —
+installing the private `@miragon` packages via the built-in `GITHUB_TOKEN`.
+This docs site deploys to Netlify (root `netlify.toml`; docs-only pnpm
+install, so no registry credential is needed there).

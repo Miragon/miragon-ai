@@ -61,3 +61,7 @@ URL: https://miragon-ai-playground.fly.dev/mcp
 Then ask: _"Which processes have open incidents right now?"_ — and drill into
 the interactive widgets. Ready for your own stack? Head to
 [For Developers](/developer).
+
+<CockpitToConversation />
+
+<BrandContact />

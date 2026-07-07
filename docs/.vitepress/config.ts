@@ -65,5 +65,12 @@ export default withMermaid({
       provider: "local",
     },
     outline: { level: [2, 3] },
+    // Shown on pages without a sidebar (the landing page) — mirrors the
+    // marketing site's footer incl. the legally required German links.
+    footer: {
+      message:
+        '<a href="https://www.miragon.io/datenschutz/" target="_blank" rel="noopener noreferrer">Privacy</a> · <a href="https://www.miragon.io/impressum/" target="_blank" rel="noopener noreferrer">Impressum</a>',
+      copyright: "© 2022–2026 Miragon GmbH",
+    },
   },
 })

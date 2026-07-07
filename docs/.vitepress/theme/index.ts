@@ -7,6 +7,8 @@ import { h } from "vue"
 import type { Theme } from "vitepress"
 import DefaultTheme from "vitepress/theme-without-fonts"
 import OrbitalVisual from "./OrbitalVisual.vue"
+import CockpitToConversation from "./CockpitToConversation.vue"
+import BrandContact from "./BrandContact.vue"
 import "@fontsource-variable/inter"
 import "./custom.css"
 
@@ -16,5 +18,10 @@ export default {
     return h(DefaultTheme.Layout, null, {
       "home-hero-image": () => h(OrbitalVisual),
     })
+  },
+  enhanceApp({ app }) {
+    // Landing-page sections used from index.md
+    app.component("CockpitToConversation", CockpitToConversation)
+    app.component("BrandContact", BrandContact)
   },
 } satisfies Theme
