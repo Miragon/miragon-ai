@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  '@miragon/mcp-toolkit-core@0.7.2':
-    hash: e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80
-    path: patches/@miragon__mcp-toolkit-core@0.7.2.patch
-
 importers:
 
   .:
@@ -74,11 +69,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/mcp-cibseven
       '@miragon/mcp-toolkit-core':
-        specifier: 0.7.2
-        version: 0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3)
+        specifier: 0.8.0
+        version: 0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3)
       '@miragon/mcp-toolkit-proxy-contract':
-        specifier: 0.7.2
-        version: 0.7.2(zod@4.4.3)
+        specifier: 0.8.0
+        version: 0.8.0(zod@4.4.3)
       mcp-use:
         specifier: 1.34.1
         version: 1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6)
@@ -87,8 +82,8 @@ importers:
         version: 4.4.3
     devDependencies:
       '@miragon/mcp-toolkit-ui':
-        specifier: 0.7.2
-        version: 0.7.2(@miragon/mcp-toolkit-core@0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
+        specifier: 0.8.0
+        version: 0.8.0(@miragon/mcp-toolkit-core@0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
       '@playwright/test':
         specifier: 1.61.1
         version: 1.61.1
@@ -159,8 +154,8 @@ importers:
   examples/miravelo-upstream:
     dependencies:
       '@miragon/mcp-toolkit-proxy-contract':
-        specifier: 0.7.2
-        version: 0.7.2(zod@4.4.3)
+        specifier: 0.8.0
+        version: 0.8.0(zod@4.4.3)
       mcp-use:
         specifier: 1.34.1
         version: 1.34.1(7d404abb839ec06db963391a50b79d5a)
@@ -237,18 +232,18 @@ importers:
         specifier: workspace:*
         version: link:../widget-shell
       '@miragon/mcp-toolkit-core':
-        specifier: 0.7.2
-        version: 0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)
+        specifier: 0.8.0
+        version: 0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)
       '@miragon/mcp-toolkit-proxy-contract':
-        specifier: 0.7.2
-        version: 0.7.2(zod@4.4.3)
+        specifier: 0.8.0
+        version: 0.8.0(zod@4.4.3)
       zod:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
       '@miragon/mcp-toolkit-ui':
-        specifier: 0.7.2
-        version: 0.7.2(@miragon/mcp-toolkit-core@0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
+        specifier: 0.8.0
+        version: 0.8.0(@miragon/mcp-toolkit-core@0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
       '@types/react':
         specifier: 19.2.17
         version: 19.2.17
@@ -277,18 +272,18 @@ importers:
         specifier: workspace:*
         version: link:../widget-shell
       '@miragon/mcp-toolkit-core':
-        specifier: 0.7.2
-        version: 0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)
+        specifier: 0.8.0
+        version: 0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)
       '@miragon/mcp-toolkit-proxy-contract':
-        specifier: 0.7.2
-        version: 0.7.2(zod@4.4.3)
+        specifier: 0.8.0
+        version: 0.8.0(zod@4.4.3)
       zod:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
       '@miragon/mcp-toolkit-ui':
-        specifier: 0.7.2
-        version: 0.7.2(@miragon/mcp-toolkit-core@0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
+        specifier: 0.8.0
+        version: 0.8.0(@miragon/mcp-toolkit-core@0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
       '@testing-library/react':
         specifier: 16.3.2
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -320,14 +315,14 @@ importers:
   packages/widget-shell:
     devDependencies:
       '@miragon/mcp-toolkit-core':
-        specifier: 0.7.2
-        version: 0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)
+        specifier: 0.8.0
+        version: 0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)
       '@miragon/mcp-toolkit-proxy-contract':
-        specifier: 0.7.2
-        version: 0.7.2(zod@4.4.3)
+        specifier: 0.8.0
+        version: 0.8.0(zod@4.4.3)
       '@miragon/mcp-toolkit-ui':
-        specifier: 0.7.2
-        version: 0.7.2(@miragon/mcp-toolkit-core@0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
+        specifier: 0.8.0
+        version: 0.8.0(@miragon/mcp-toolkit-core@0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
       '@tanstack/react-query':
         specifier: 5.100.11
         version: 5.100.11(react@19.2.7)
@@ -1486,23 +1481,23 @@ packages:
   '@mermaid-js/parser@0.3.0':
     resolution: {integrity: sha512-HsvL6zgE5sUPGgkIDlmAWR1HTNHz2Iy11BAWPTa4Jjabkpguy4Ze2gzfLrg6pdRuBvFwgUYyxiaNqZwrEEXepA==}
 
-  '@miragon/mcp-toolkit-core@0.7.2':
-    resolution: {integrity: sha512-nP9Pr4jmTrVzkPzsFVF+YxKbVBl6pcytvKbka02M1GOanyOMR3+aVvXeLZR9Ppo6tyz++4+kNW1myPxXperV/g==, tarball: https://npm.pkg.github.com/download/@miragon/mcp-toolkit-core/0.7.2/cad4bd507b3458b9c5cafe56ac9fbf254c33d1e4}
+  '@miragon/mcp-toolkit-core@0.8.0':
+    resolution: {integrity: sha512-lrwkiBqkk8iJzZSB45/nKlJAqeYQ/eHqmQqkBBaPcQsH+GdZ9pAB8ef2DRbsIrEozUOeZ2IG9kxSZdExR1kqeQ==, tarball: https://npm.pkg.github.com/download/@miragon/mcp-toolkit-core/0.8.0/410b2f6ff1903e3a4710870bd684558cbc94ade9}
     peerDependencies:
-      '@miragon/mcp-toolkit-proxy-contract': 0.7.2
+      '@miragon/mcp-toolkit-proxy-contract': 0.8.0
       '@modelcontextprotocol/sdk': 1.29.0
       mcp-use: 1.34.1
       zod: 4.4.3
 
-  '@miragon/mcp-toolkit-proxy-contract@0.7.2':
-    resolution: {integrity: sha512-BGWpZQ4b6qFw5Dijg7jviTNLZ9z8jWhvJ83f6ymO57UjEOZWDHZqPAxaLvtWqw77+G677xWFES3jfaTNdmYezw==, tarball: https://npm.pkg.github.com/download/@miragon/mcp-toolkit-proxy-contract/0.7.2/60c0fe874e8338e5574b2281e4c400ee8498986e}
+  '@miragon/mcp-toolkit-proxy-contract@0.8.0':
+    resolution: {integrity: sha512-huH++lrh1n3pMthVamphzusjrxOI+lgqDyESvHGDiyRHCXQwzQEVOoyFmX5Bq0Id/NbUye0npRXIr0vWsp+ryA==, tarball: https://npm.pkg.github.com/download/@miragon/mcp-toolkit-proxy-contract/0.8.0/aa5a55383a0c610b9e4d8fadab1d657373e10c14}
     peerDependencies:
       zod: 4.4.3
 
-  '@miragon/mcp-toolkit-ui@0.7.2':
-    resolution: {integrity: sha512-58lexX4/xGZoka3mPh1+AnlkZV0n8UvHXTv86pgb+7jCu8r7ZPEGUHgx+JFb9yVYQoJJpQxr6SUuT/zaviFnhQ==, tarball: https://npm.pkg.github.com/download/@miragon/mcp-toolkit-ui/0.7.2/8fc329f7b449c8e1dcf375346a6850a29bdd05e4}
+  '@miragon/mcp-toolkit-ui@0.8.0':
+    resolution: {integrity: sha512-LyCcY8OZ7wPdTETvpyDgYGLtTOFfrudgOsZ4rLaMKZFQkS7Fj/wyqTIdvTEvRqihjZhxpym8/wPv5WeNDwjdvQ==, tarball: https://npm.pkg.github.com/download/@miragon/mcp-toolkit-ui/0.8.0/46992009a4403476c04aaa3e3d3a9ba5b13a076c}
     peerDependencies:
-      '@miragon/mcp-toolkit-core': 0.7.2
+      '@miragon/mcp-toolkit-core': 0.8.0
       mcp-use: 1.34.1
       react: 19.2.7
       react-dom: 19.2.7
@@ -8576,29 +8571,29 @@ snapshots:
     dependencies:
       langium: 3.0.0
 
-  '@miragon/mcp-toolkit-core@0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3)':
+  '@miragon/mcp-toolkit-core@0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3)':
     dependencies:
-      '@miragon/mcp-toolkit-proxy-contract': 0.7.2(zod@4.4.3)
+      '@miragon/mcp-toolkit-proxy-contract': 0.8.0(zod@4.4.3)
       '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
       mcp-use: 1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6)
       zod: 4.4.3
 
-  '@miragon/mcp-toolkit-core@0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)':
+  '@miragon/mcp-toolkit-core@0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)':
     dependencies:
-      '@miragon/mcp-toolkit-proxy-contract': 0.7.2(zod@4.4.3)
+      '@miragon/mcp-toolkit-proxy-contract': 0.8.0(zod@4.4.3)
       '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
       mcp-use: 1.34.1(c469d8acb8e2472473408540055895b7)
       zod: 4.4.3
 
-  '@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3)':
+  '@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3)':
     dependencies:
       zod: 4.4.3
 
-  '@miragon/mcp-toolkit-ui@0.7.2(@miragon/mcp-toolkit-core@0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)':
+  '@miragon/mcp-toolkit-ui@0.8.0(@miragon/mcp-toolkit-core@0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)':
     dependencies:
       '@base-ui/react': 1.6.0(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@fontsource-variable/geist': 5.2.9
-      '@miragon/mcp-toolkit-core': 0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3)
+      '@miragon/mcp-toolkit-core': 0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3)
       '@tanstack/react-query': 5.101.2(react@19.2.7)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
@@ -8616,11 +8611,11 @@ snapshots:
       - '@types/react-dom'
       - date-fns
 
-  '@miragon/mcp-toolkit-ui@0.7.2(@miragon/mcp-toolkit-core@0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)':
+  '@miragon/mcp-toolkit-ui@0.8.0(@miragon/mcp-toolkit-core@0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)':
     dependencies:
       '@base-ui/react': 1.6.0(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@fontsource-variable/geist': 5.2.9
-      '@miragon/mcp-toolkit-core': 0.7.2(patch_hash=e04da6cdd6d80c011111e3e9fe434d843724839d031c3f412f18f9136040ff80)(@miragon/mcp-toolkit-proxy-contract@0.7.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)
+      '@miragon/mcp-toolkit-core': 0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(zod@4.4.3)
       '@tanstack/react-query': 5.101.2(react@19.2.7)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
