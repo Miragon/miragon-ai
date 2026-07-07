@@ -24,8 +24,7 @@
       // Desktop, which forward the tool-result notification WITHOUT
       // structuredContent — the regression that made every widget hang on its
       // loading skeleton. The spec inspects `window.__hostLog`.
-      const strip =
-        new URLSearchParams(location.search).get("structuredContent") === "strip"
+      const strip = new URLSearchParams(location.search).get("structuredContent") === "strip"
       const TOOL_NAME = "render-view"
 
       window.__hostLog = { toolCalls: [], initialized: false, errors: [] }
