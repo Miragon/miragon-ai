@@ -157,19 +157,24 @@ async function handleSend() {
 }
 
 let pollTimer: ReturnType<typeof setInterval> | undefined
+let cancelled = false
 
-onMounted(() => {
-  if (!document.querySelector('script[src*="calendly"]')) {
-    const script = document.createElement("script")
-    script.src = "https://assets.calendly.com/assets/external/widget.js"
-    script.async = true
-    document.body.appendChild(script)
-  }
+function ensureScript() {
+  if (document.querySelector('script[src*="calendly"]')) return
+  const script = document.createElement("script")
+  script.src = "https://assets.calendly.com/assets/external/widget.js"
+  script.async = true
+  document.body.appendChild(script)
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer)
   let attempts = 0
   pollTimer = setInterval(() => {
     attempts++
+    if (cancelled) return
     const Calendly = (window as unknown as { Calendly?: { initInlineWidget?: Function } }).Calendly
-    if (Calendly?.initInlineWidget && calendlyRef.value) {
+    if (Calendly?.initInlineWidget && calendlyRef.value && !calendlyReady.value) {
       clearInterval(pollTimer)
       calendlyReady.value = true
       Calendly.initInlineWidget({ url: CALENDLY_URL, parentElement: calendlyRef.value })
@@ -177,9 +182,35 @@ onMounted(() => {
       clearInterval(pollTimer)
     }
   }, 100)
+}
+
+onMounted(() => {
+  ensureScript()
+  startPolling()
+
+  // The consentmanager CMP (loaded via head, see config.ts) autoblocks the
+  // Calendly script until the visitor consents — retry once consent arrives
+  // (same pattern as the marketing site's ContactSection).
+  const cmp = (window as unknown as { __cmp?: Function }).__cmp
+  if (typeof cmp === "function") {
+    try {
+      cmp("addEventListener", [
+        "consent",
+        () => {
+          if (cancelled) return
+          ensureScript()
+          startPolling()
+        },
+        false,
+      ])
+    } catch {
+      /* noop */
+    }
+  }
 })
 
 onBeforeUnmount(() => {
+  cancelled = true
   if (pollTimer) clearInterval(pollTimer)
 })
 </script>

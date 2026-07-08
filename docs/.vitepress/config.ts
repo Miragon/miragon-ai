@@ -9,6 +9,21 @@ export default withMermaid({
   // Doc pages offer the normal light/dark toggle; the landing page alone
   // always carries the dark miragon.ai brand (scoped in theme/custom.css).
   head: [
+    // consentmanager.net cookie consent with autoblocking, same setup as the
+    // marketing site (miragon-ai-website/index.html) — blocks third-party
+    // scripts (e.g. the Calendly embed) until the visitor consents.
+    ["script", {}, 'window.cmp_setlang = "EN";'],
+    [
+      "script",
+      {
+        type: "text/javascript",
+        "data-cmp-ab": "1",
+        src: "https://cdn.consentmanager.net/delivery/autoblocking/47e2555f7ae3.js?cmplang=EN",
+        "data-cmp-host": "c.delivery.consentmanager.net",
+        "data-cmp-cdn": "cdn.consentmanager.net",
+        "data-cmp-codesrc": "0",
+      },
+    ],
     ["link", { rel: "icon", type: "image/png", href: "/favicon.png" }],
     ["meta", { name: "theme-color", content: "#00e676" }],
   ],
