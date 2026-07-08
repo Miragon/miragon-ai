@@ -3,7 +3,7 @@
 # workspace): the package pins exact dependency versions, and the private
 # @miragon registry needs GITHUB_TOKEN — passed as a BuildKit secret, same as
 # the root Dockerfile. Deployed via playground/fly/deploy.sh.
-FROM node:26-slim@sha256:191ef878ecb351d68b78219593de18bd8942afd59af59f29960dc4b24805a3f1
+FROM node:26-slim@sha256:a1d9d671994fc2d26e297ac56b4b1522a8bc7fa71c43b14cd1b1fe6c5116f7dc
 
 RUN npm install -g pnpm@10.32.1
 ENV CI=true
