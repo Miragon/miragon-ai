@@ -8,6 +8,7 @@ import type { Theme } from "vitepress"
 import DefaultTheme from "vitepress/theme-without-fonts"
 import OrbitalVisual from "./OrbitalVisual.vue"
 import CockpitToConversation from "./CockpitToConversation.vue"
+import TryItOut from "./TryItOut.vue"
 import BrandContact from "./BrandContact.vue"
 import LegalFooter from "./LegalFooter.vue"
 import "@fontsource-variable/inter"
@@ -26,6 +27,7 @@ export default {
   enhanceApp({ app }) {
     // Landing-page sections used from index.md
     app.component("CockpitToConversation", CockpitToConversation)
+    app.component("TryItOut", TryItOut)
     app.component("BrandContact", BrandContact)
   },
 } satisfies Theme

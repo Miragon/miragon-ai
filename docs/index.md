@@ -65,4 +65,6 @@ the interactive widgets. Ready for your own stack? Head to
 
 <CockpitToConversation />
 
+<TryItOut />
+
 <BrandContact />
