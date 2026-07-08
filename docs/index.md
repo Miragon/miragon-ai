@@ -7,11 +7,12 @@ hero:
   tagline: "One MCP server, two modules, a fleet of widgets: drive Camunda 7 and CIB Seven from any MCP host — operations, analytics, and incident response in natural language."
   actions:
     - theme: brand
+      text: Try it out
+      link: "https://inspector.manufact.com/inspector?server=https%3A%2F%2Fmiragon-ai-playground.fly.dev%2Fmcp&tab=chat"
+      target: _blank
+    - theme: alt
       text: Start in 30 seconds
       link: "#start-in-30-seconds"
-    - theme: alt
-      text: Playground
-      link: https://miragon-ai-playground.fly.dev/mcp
     - theme: alt
       text: GitHub
       link: https://github.com/Miragon/miragon-ai
