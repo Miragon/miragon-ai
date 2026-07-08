@@ -16,9 +16,9 @@ const INSPECTOR_URL =
       <div class="orb" aria-hidden="true" />
 
       <p class="eyebrow"><span class="dot" />Live playground</p>
-      <h2 class="title">See it for yourself.</h2>
+      <h2 class="title">Talk to your processes.</h2>
       <p class="desc">
-        No install, no login. Open the hosted playground in an MCP chat and talk to a live, seeded
+        No install, no login. Open the hosted playground in an MCP chat, connected to a live, seeded
         CIB Seven engine — ask a question and watch the interactive widgets render.
       </p>
 
