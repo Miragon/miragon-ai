@@ -11,8 +11,8 @@ hero:
       link: "https://inspector.manufact.com/inspector?server=https%3A%2F%2Fmiragon-ai-playground.fly.dev%2Fmcp&tab=chat"
       target: _blank
     - theme: alt
-      text: Start in 30 seconds
-      link: "#start-in-30-seconds"
+      text: Connect Claude
+      link: "#connect-your-claude"
     - theme: alt
       text: GitHub
       link: https://github.com/Miragon/miragon-ai
@@ -36,7 +36,9 @@ features:
     linkText: Run it in production
 ---
 
-## Start in 30 seconds {#start-in-30-seconds}
+<TryItOut />
+
+## Connect your Claude in 30 seconds {#connect-your-claude}
 
 The hosted [playground](https://miragon-ai-playground.fly.dev/mcp) runs a seeded
 CIB Seven engine with live traffic and the full analytics stack — nothing to

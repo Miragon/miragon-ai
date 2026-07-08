@@ -7,7 +7,7 @@ with the hosted playground.
 
 Point any MCP client at the [playground](https://miragon-ai-playground.fly.dev/mcp)
 (`https://miragon-ai-playground.fly.dev/mcp`): a seeded engine, live traffic,
-and the full analytics stack. See [Start in 30 seconds](/#start-in-30-seconds).
+and the full analytics stack. See [Connect your Claude in 30 seconds](/#connect-your-claude).
 Everything below is for running your own stack.
 
 ## Prerequisites
