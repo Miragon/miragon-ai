@@ -94,6 +94,13 @@
             {{ submitting ? "Sending…" : "Send message" }}
           </button>
           <p v-if="error" class="errorMsg" role="alert">{{ error }}</p>
+          <p class="privacyNote">
+            We only use your details to answer your enquiry. Submissions are processed by Netlify
+            (USA). See our
+            <a href="https://www.miragon.io/datenschutz/" target="_blank" rel="noopener noreferrer"
+              >privacy policy</a
+            >.
+          </p>
         </form>
       </div>
     </div>
@@ -384,6 +391,20 @@ onBeforeUnmount(() => {
 .sendBtn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.privacyNote {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6e6e73;
+}
+.privacyNote a {
+  color: #98989d;
+  text-decoration: underline;
+}
+.privacyNote a:hover {
+  color: #00e676;
 }
 
 .sentMsg {
