@@ -1,0 +1,15 @@
+# Fly.io image for Prometheus — Fly Machines cannot bind-mount config files,
+# so the config and the (contract-checked, shared) alert rules are baked in.
+# Deployed via playground/fly/deploy.sh with playground/fly/prometheus.fly.toml.
+FROM prom/prometheus:v3.1.0
+
+COPY prometheus.fly.yml /etc/prometheus/prometheus.yml
+COPY alerts.yml /etc/prometheus/alerts.yml
+
+# The TSDB lives on a Fly volume, which is mounted root-owned; run as root so
+# the server can write to it (acceptable for the playground).
+USER root
+
+# "[::]" binds dual-stack so the gateway can reach Prometheus over Fly's
+# IPv6-only private network (6PN).
+CMD ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=30d", "--web.listen-address=[::]:9090"]

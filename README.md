@@ -63,7 +63,7 @@ docker build --secret id=github_token,env=GITHUB_TOKEN -t miragon-ai-server .
 
 **Want the whole stack on your machine?** The repo ships a Compose file with CIB Seven, the OTEL
 Collector, Prometheus and Grafana wired together — see
-[`docker/`](docker/) and [Local development](#local-development) below.
+[`playground/docker/`](playground/docker/) and [Local development](#local-development) below.
 
 ## How it works
 
@@ -114,8 +114,7 @@ A pnpm + Turbo monorepo. The gateway composes the two modules and serves them as
 | [`packages/client-analytics/`](packages/client-analytics) | `@miragon-ai/client-analytics`            | Prometheus client, PromQL query functions + metrics contract            |
 | [`packages/widget-shell/`](packages/widget-shell)         | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
 | [`engine-plugins/`](engine-plugins)                       | `ai.miragon.mcp:cibseven-history-metrics` | Kotlin OTEL metrics plugin for CIB Seven (Java 21)                      |
-| [`docker/`](docker)                                       | —                                         | Compose stack: CIB Seven, OTEL Collector, Prometheus, Grafana           |
-| [`examples/`](examples)                                   | —                                         | Federated upstream + a runnable CIB Seven showcase                      |
+| [`playground/`](playground)                               | —                                         | Demo env: CIB Seven showcase, upstream, Compose stack, Fly.io deploy    |
 | [`docs/`](docs)                                           | `@miragon-ai/docs`                        | VitePress documentation site                                            |
 
 ## Tools
@@ -190,7 +189,7 @@ The analytics module needs `camunda_*` series in Prometheus. The Kotlin plugin i
 [`engine-plugins/`](engine-plugins) emits them as OpenTelemetry instruments from inside the CIB Seven
 runtime — no engine-side database. It publishes to GitHub Packages Maven as
 `ai.miragon.mcp:cibseven-history-metrics`. See [`engine-plugins/README.md`](engine-plugins/README.md)
-and the runnable [`examples/cibseven-example/`](examples/cibseven-example).
+and the runnable [`playground/cibseven-example/`](playground/cibseven-example).
 
 ## Local development
 
@@ -200,7 +199,7 @@ Run the full stack — infra in Docker, the server from source with hot reload.
 export GITHUB_TOKEN=ghp_xxx           # PAT with read:packages — the @miragon/* toolkit is private
 pnpm install --frozen-lockfile
 
-docker compose -f docker/docker-compose.yml up -d   # CIB Seven, OTEL, Prometheus, Grafana
+docker compose -f playground/docker/docker-compose.yml up -d   # CIB Seven, OTEL, Prometheus, Grafana
 cp .env.example .env                                 # dev defaults: engine on :8410, Prometheus on :8460
 pnpm dev                                             # miravelo example upstream + gateway on :8400
 ```

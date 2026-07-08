@@ -1,7 +1,5 @@
 # Operations
 
-Everything you need to run the platform somewhere other than your laptop.
-
 ## Deployment artifact
 
 A single Docker image. Released builds are published to Docker Hub at
@@ -25,8 +23,9 @@ BuildKit secret for the private `@miragon` packages):
 docker build --secret id=github_token,env=GITHUB_TOKEN -t miragon-ai-server .
 ```
 
-`docker/docker-compose.yml` is the fully wired demo (`--profile full` adds the
-server to the engine/OTEL/Prometheus/Grafana stack — export `GITHUB_TOKEN`).
+`playground/docker/docker-compose.yml` is the fully wired local demo
+(`--profile full` adds the server — export `GITHUB_TOKEN`); `playground/README.md`
+covers deploying the same stack to Fly.io (`deploy-playground.yml`, manual).
 
 ## Security
 
@@ -82,7 +81,8 @@ variables.
 ## External services
 
 The server expects **Camunda 7 / CIB Seven** and **Prometheus** (scraping the
-OTEL Collector's metrics); **Grafana** is optional (`:8470`, `docker/grafana/`).
+OTEL Collector's metrics); **Grafana** is optional (`:8470`,
+`playground/docker/grafana/`).
 
 ## Metrics pipeline
 
@@ -106,13 +106,14 @@ migrations). No suffix exposes all tools; unknown toolsets warn and fail open.
 HTTP transport logs structured JSON to stdout. Metrics flow engine → OTEL
 Collector → Prometheus (scrape) → Grafana: event-driven counters/histograms
 (throughput, durations) plus point-in-time gauges (running WIP, open incidents,
-job/task backlog). Alert rules ship in `docker/prometheus/alerts.yml` (wire an
+job/task backlog). Alert rules ship in `playground/docker/prometheus/alerts.yml` (wire an
 Alertmanager under `alerting:` to route them); the `analytics_engine_health`
 tool surfaces the same gauges + firing alerts in one call.
 
 ## CI/CD
 
 `.github/workflows/ci.yml` runs parallel jobs on every push — TypeScript
-(build, test, lint, format), Kotlin engine plugins, and the CIB Seven example.
-The private `@miragon` packages install via the workflow's built-in
-`GITHUB_TOKEN` (`packages: read`).
+(build, test, lint, format), Kotlin engine plugins, and the CIB Seven example —
+installing the private `@miragon` packages via the built-in `GITHUB_TOKEN`.
+This docs site deploys to Netlify (root `netlify.toml`; docs-only pnpm
+install, so no registry credential is needed there).

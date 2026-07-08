@@ -1,0 +1,24 @@
+# Netlify deployment of the docs site (docs/ → VitePress), mirroring how
+# miragon-ai-website deploys. Base stays at the repo root so the pnpm
+# workspace install works; all paths below resolve relative to it.
+#
+# One-time site setup in the Netlify UI:
+# - Forms > Enable form detection (the landing-page contact form posts to
+#   Netlify Forms; detection runs during deploy post-processing)
+# - Keep "Pretty URLs" post-processing OFF (VitePress cleanUrls links
+#   extensionless URLs; Netlify already serves /foo from foo.html) and
+#   HTML "Auto Minify" OFF (it strips comments Vue needs for hydration).
+
+[build]
+  command = "pnpm docs:build"
+  publish = "docs/.vitepress/dist"
+
+[build.environment]
+  # Install only the docs package (+ its workspace deps — none), so the
+  # private @miragon/* packages of other workspace packages are never
+  # fetched and no registry credential is needed on Netlify.
+  PNPM_FLAGS = "--filter @miragon-ai/docs..."
+  # .npmrc references ${GITHUB_TOKEN}; pnpm fails config expansion when the
+  # variable is entirely unset, even if nothing hits npm.pkg.github.com.
+  GITHUB_TOKEN = "unused"
+  NODE_VERSION = "22"

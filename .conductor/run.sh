@@ -16,6 +16,6 @@ fi
 # Default compose stack = infra only (CIB Seven, OTEL Collector, Prometheus, Grafana).
 # The bundled MCP server lives behind the `full` profile and is intentionally not
 # started here so `pnpm dev` can bind port 8400 without a conflict.
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f playground/docker/docker-compose.yml up -d
 
 exec pnpm dev

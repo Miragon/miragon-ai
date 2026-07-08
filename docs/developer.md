@@ -1,6 +1,14 @@
 # Getting Started
 
-A working development environment in five commands.
+A working development environment in five commands — or zero, if you start
+with the hosted playground.
+
+## Try it first — no install
+
+Point any MCP client at the [playground](https://miragon-ai-playground.fly.dev/mcp)
+(`https://miragon-ai-playground.fly.dev/mcp`): a seeded engine, live traffic,
+and the full analytics stack. See [Start in 30 seconds](/#start-in-30-seconds).
+Everything below is for running your own stack.
 
 ## Prerequisites
 
@@ -24,7 +32,7 @@ pnpm install
 The default Compose stack brings up CIB Seven, the OTEL Collector, Prometheus, and Grafana — but **not** the Node MCP gateway, so port `8400` stays free for `pnpm dev`.
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f playground/docker/docker-compose.yml up -d
 ```
 
 ## Run the gateway

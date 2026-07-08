@@ -1,0 +1,8 @@
+# The image only needs the bootJar output; keep the build context small.
+.gradle
+build/*
+!build/libs
+src
+gradle
+gradlew
+gradlew.bat

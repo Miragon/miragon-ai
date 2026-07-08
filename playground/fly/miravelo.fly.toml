@@ -1,0 +1,29 @@
+# Miravelo mock upstream — federated MCP server contributing a step + remote
+# widget via get-module-manifest. Private-only and always-on: the gateway
+# discovers the module manifest at boot, so the upstream must be reachable
+# whenever the gateway (re)starts.
+# Build context: playground/miravelo-upstream (needs the github_token build
+# secret for @miragon/mcp-toolkit-proxy-contract).
+app = "miragon-ai-playground-miravelo"
+primary_region = "fra"
+
+[build]
+  # Resolved relative to this fly.toml (flyctl rule); the build context
+  # stays the working directory deploy.sh cd's into.
+  dockerfile = "../miravelo-upstream/Dockerfile"
+
+[env]
+  UPSTREAM_MIRAVELO_PORT = "8401"
+  # Dual-stack bind so the gateway can reach this app over 6PN (IPv6).
+  UPSTREAM_MIRAVELO_HOST = "::"
+
+[checks.mcp]
+  type = "tcp"
+  port = 8401
+  interval = "15s"
+  timeout = "5s"
+  grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

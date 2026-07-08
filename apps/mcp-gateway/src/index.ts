@@ -40,7 +40,7 @@ const DIST_DIR = import.meta.filename.endsWith(".ts")
 const HTML_PATH = path.join(DIST_DIR, "mcp-app.html")
 
 const frameworkOptions = {
-  name: "automation-mcp",
+  name: "miragon-ai",
   version: "0.1.0",
   host: "0.0.0.0",
   baseUrl: process.env.MCP_URL,
@@ -57,7 +57,7 @@ const frameworkOptions = {
   appConfig: getAppConfig(),
   app: {
     // resourceUri omitted: createFrameworkApp content-hashes htmlPath into a
-    // cache-busting ui://automation-mcp/mcp-app.<hash>.html (with a stable dev
+    // cache-busting ui://miragon-ai/mcp-app.<hash>.html (with a stable dev
     // fallback when the bundle isn't built yet) — the same derivation this file
     // used to do by hand. Pass an explicit resourceUri only to pin it.
     htmlPath: HTML_PATH,
@@ -112,11 +112,11 @@ app.use("mcp:tools/call", async (_ctx, next) => {
       result !== null &&
       (result as { isError?: unknown }).isError === true
     console.log(
-      `[automation-mcp] tools/call ${toolName} ${isError ? "error" : "ok"} in ${Date.now() - start}ms`,
+      `[miragon-ai] tools/call ${toolName} ${isError ? "error" : "ok"} in ${Date.now() - start}ms`,
     )
     return result
   } catch (error) {
-    console.log(`[automation-mcp] tools/call ${toolName} error in ${Date.now() - start}ms`)
+    console.log(`[miragon-ai] tools/call ${toolName} error in ${Date.now() - start}ms`)
     throw error
   }
 })

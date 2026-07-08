@@ -160,7 +160,7 @@ export function warnPrometheusDefault(env: NodeJS.ProcessEnv = process.env): boo
     modules.split(",").some((entry) => entry.trim().split(":")[0] === "analytics")
   if (!analyticsActive) return false
   console.warn(
-    "[automation-mcp] PROMETHEUS_URL is not set — defaulting to http://localhost:9090. The repo's Compose stack publishes Prometheus on :8460 (PROMETHEUS_URL=http://localhost:8460).",
+    "[miragon-ai] PROMETHEUS_URL is not set — defaulting to http://localhost:9090. The repo's Compose stack publishes Prometheus on :8460 (PROMETHEUS_URL=http://localhost:8460).",
   )
   return true
 }
@@ -215,7 +215,7 @@ export function warnUnknownEnvVars(
   )
   for (const name of unknown) {
     console.warn(
-      `[automation-mcp] Unknown environment variable "${name}" — the gateway does not read it; check for a typo (see docs/operations.md).`,
+      `[miragon-ai] Unknown environment variable "${name}" — the gateway does not read it; check for a typo (see docs/operations.md).`,
     )
   }
   return unknown
@@ -296,7 +296,7 @@ function getActiveModules(): ActiveModule[] {
     })
     .filter(({ name }) => {
       if (!MODULE_REGISTRY[name]) {
-        console.warn(`[automation-mcp] Unknown module "${name}" in MCP_ACTIVE_MODULES — skipping`)
+        console.warn(`[miragon-ai] Unknown module "${name}" in MCP_ACTIVE_MODULES — skipping`)
         return false
       }
       return true
@@ -307,7 +307,7 @@ function getActiveAppEntries(): AppConfigEntry[] {
   return getActiveModules().map(({ name, toolset }) => {
     if (toolset && !MODULE_REGISTRY[name].supportsToolsets) {
       console.warn(
-        `[automation-mcp] Module "${name}" has no toolsets — ignoring ":${toolset}" and exposing all tools`,
+        `[miragon-ai] Module "${name}" has no toolsets — ignoring ":${toolset}" and exposing all tools`,
       )
       toolset = undefined
     }

@@ -9,6 +9,12 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
+    "@braintree/sanitize-url": "7.1.2",
+    "@fontsource-variable/inter": "5.2.8",
+    "cytoscape": "3.33.3",
+    "cytoscape-cose-bilkent": "4.1.0",
+    "dayjs": "1.11.20",
+    "debug": "4.4.3",
     "mermaid": "11.4.1",
     "vitepress": "1.5.0",
     "vitepress-plugin-mermaid": "2.0.17"

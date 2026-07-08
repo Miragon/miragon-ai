@@ -12,18 +12,17 @@ plus the private `@miragon/mcp-toolkit-*` packages) for Camunda 7 / CIB Seven BP
 operations and Prometheus-backed process analytics, including interactive React widgets
 (MCP Apps).
 
-| Path                          | Contents                                                                               |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| `apps/mcp-gateway/`           | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`          |
-| `packages/mcp-cibseven/`      | camunda7 module: operations tools, widget tools, widgets, pipeline steps               |
-| `packages/mcp-analytics/`     | analytics module: Prometheus-backed tools, dashboards, comparison widgets              |
-| `packages/client-cibseven/`   | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)   |
-| `packages/client-analytics/`  | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas              |
-| `packages/widget-shell/`      | Shared widget plumbing: `adaptDataWidget`, `buildSingleWidgetView`/`buildComposedView` |
-| `engine-plugins/`             | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                 |
-| `examples/miravelo-upstream/` | Federated upstream example implementing the proxy-contract manifest                    |
-| `docker/`                     | Compose stack: CIB Seven engines, OTEL Collector, Prometheus, Grafana                  |
-| `docs/`                       | VitePress docs site (see the `docs-style` skill before editing)                        |
+| Path                         | Contents                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------- |
+| `apps/mcp-gateway/`          | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`          |
+| `packages/mcp-cibseven/`     | camunda7 module: operations tools, widget tools, widgets, pipeline steps               |
+| `packages/mcp-analytics/`    | analytics module: Prometheus-backed tools, dashboards, comparison widgets              |
+| `packages/client-cibseven/`  | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)   |
+| `packages/client-analytics/` | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas              |
+| `packages/widget-shell/`     | Shared widget plumbing: `adaptDataWidget`, `buildSingleWidgetView`/`buildComposedView` |
+| `engine-plugins/`            | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                 |
+| `playground/`                | Demo env: CIB Seven showcase engine, federated upstream, Compose stack, Fly.io deploy  |
+| `docs/`                      | VitePress docs site (see the `docs-style` skill before editing)                        |
 
 ## Commands
 
@@ -39,7 +38,7 @@ pnpm format:check                    # prettier check (`pnpm format` to write)
 pnpm generate                        # regenerate the CIB Seven SDK from the OpenAPI spec
 
 # Run the server locally (needs the Docker infra + a .env file, see .env.example):
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f playground/docker/docker-compose.yml up -d
 pnpm dev                             # miravelo example upstream + MCP gateway on :8400
 
 # Kotlin engine plugins (Java 21):
@@ -105,8 +104,8 @@ render widgets manually.
   Prometheus as `camunda_*` series (`promName`, e.g. `camunda.activity.ended` →
   `camunda_activity_ended_total`). Consumers — the TS queries (via `METRIC_NAMES` in
   `packages/client-analytics/src/metric-names.ts`, never raw strings), the alert rules
-  (`docker/prometheus/alerts.yml`), and the Grafana dashboards
-  (`docker/grafana/dashboards/*.json`) — are checked against the contract by tests on
+  (`playground/docker/prometheus/alerts.yml`), and the Grafana dashboards
+  (`playground/docker/grafana/dashboards/*.json`) — are checked against the contract by tests on
   both sides: `packages/client-analytics/src/metrics-contract.test.ts` (vitest) and
   `engine-plugins/cibseven-history-metrics/.../MetricsContractTest.kt` (Gradle). A
   rename that skips the contract or a consumer fails one of them. Only attach
@@ -126,7 +125,7 @@ render widgets manually.
   servers expose `get-module-manifest` (validated by `ModuleManifestSchema` from
   `@miragon/mcp-toolkit-proxy-contract`) to contribute steps and widgets; the gateway
   discovers them via `MCP_PROXIES` (`parseProxyConfigEnv`). See
-  `examples/miravelo-upstream/server.ts` for the reference implementation.
+  `playground/miravelo-upstream/server.ts` for the reference implementation.
 
 ## Releases & toolkit contributions
 
@@ -169,7 +168,7 @@ render widgets manually.
 | `pnpm lint`       | ESLint over each package's `src` (gateway also `test`/`test-host`)                                                                                                                                                                             |
 | `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                            |
 | `test:host`       | `pnpm --filter @miragon-ai/mcp-gateway test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin |
-| Manual            | `docker compose -f docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                           |
+| Manual            | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
 every change; widget changes additionally need `test:host` plus a manual render check via

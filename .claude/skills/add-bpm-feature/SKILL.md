@@ -146,6 +146,6 @@ pnpm --filter @miragon-ai/mcp-gateway test:host
 
 `pnpm typecheck` is the **only** automated check that type-checks widget `.tsx` code
 (`tsc -p tsconfig.widgets.json`) — never skip it. For widgets also do a manual render
-check: `docker compose -f docker/docker-compose.yml up -d`, `pnpm dev`, then call the
+check: `docker compose -f playground/docker/docker-compose.yml up -d`, `pnpm dev`, then call the
 tool in the inspector at `http://localhost:8400/inspector`. Run `pnpm format:check`
 (or `pnpm format`) before committing.

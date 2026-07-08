@@ -51,9 +51,15 @@ updates:
           - "minor"
           - "major"
 
-  # Docker images — compose stack
+  # Docker images — playground: compose stack, Fly variants, engine + upstream
   - package-ecosystem: "docker"
-    directory: "/docker"
+    directories:
+      - "/playground/docker"
+      - "/playground/docker/otel"
+      - "/playground/docker/prometheus"
+      - "/playground/docker/grafana"
+      - "/playground/cibseven-example"
+      - "/playground/miravelo-upstream"
     schedule:
       interval: "weekly"
     reviewers:
