@@ -5,6 +5,10 @@
   props map 1:1 onto this platform's modules (operations tools, analytics,
   incident resolution). Rendered on the (always dark) landing page only.
 -->
+<script setup lang="ts">
+import OrbitalVisual from "./OrbitalVisual.vue"
+</script>
+
 <template>
   <section class="c2c">
     <span class="label">AI-Native Platform</span>
@@ -17,36 +21,39 @@
           single conversation. No cockpit. No tab hunt.
         </p>
       </div>
-      <div class="features">
-        <div class="feature">
-          <span class="chip">Pulse</span>
-          <div>
-            <span class="role">Operations</span>
-            <p class="text">
-              Ask where any instance stands, what went wrong, which variables are set. No cockpit,
-              no click path.
-            </p>
-          </div>
+      <!-- One reliable engine at the center, the orbiting tools it replaces. -->
+      <div class="orbit" aria-hidden="true"><OrbitalVisual /></div>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <span class="chip">Pulse</span>
+        <div>
+          <span class="role">Operations</span>
+          <p class="text">
+            Ask where any instance stands, what went wrong, which variables are set. No cockpit, no
+            click path.
+          </p>
         </div>
-        <div class="feature">
-          <span class="chip">Insight</span>
-          <div>
-            <span class="role">Management</span>
-            <p class="text">
-              KPIs, throughput times, bottlenecks — delivered in the conversation. No dashboard to
-              open, no filter to set.
-            </p>
-          </div>
+      </div>
+      <div class="feature">
+        <span class="chip">Insight</span>
+        <div>
+          <span class="role">Management</span>
+          <p class="text">
+            KPIs, throughput times, bottlenecks — delivered in the conversation. No dashboard to
+            open, no filter to set.
+          </p>
         </div>
-        <div class="feature">
-          <span class="chip">Resolve</span>
-          <div>
-            <span class="role">Development</span>
-            <p class="text">
-              Incidents analyzed, root causes identified, fixes proposed. No on-call panic, no 3am
-              pages.
-            </p>
-          </div>
+      </div>
+      <div class="feature">
+        <span class="chip">Resolve</span>
+        <div>
+          <span class="role">Development</span>
+          <p class="text">
+            Incidents analyzed, root causes identified, fixes proposed. No on-call panic, no 3am
+            pages.
+          </p>
         </div>
       </div>
     </div>
@@ -105,6 +112,24 @@
   line-height: 1.75;
   color: #98989d;
   margin: 0;
+}
+
+.orbit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.orbit :deep(.orbital) {
+  max-width: 340px;
+}
+@media (max-width: 900px) {
+  .orbit {
+    display: none;
+  }
+}
+
+.features {
+  margin-top: 40px;
 }
 
 .feature {

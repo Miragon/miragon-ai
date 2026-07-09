@@ -127,18 +127,57 @@
   letter-spacing: -0.04em;
 }
 
-/* Feature cards: #141414, 20px radius, hairline border, hover lift */
+/* The hero image slot holds a full conversation panel, not a logo — free it
+   from VitePress' fixed 320px logo container so it flows in normal height
+   (otherwise it overflows and the hero text overlaps it on mobile). The
+   panel carries its own glow, so drop the default hero image backdrop. */
+:root:has(.VPHome) .VPHero .image-container {
+  width: auto;
+  height: auto;
+  transform: none;
+  padding: 0;
+}
+:root:has(.VPHome) .VPHero .image-bg {
+  display: none;
+}
+@media (min-width: 960px) {
+  :root:has(.VPHome) .VPHero .image {
+    min-width: 440px;
+  }
+}
+/* On mobile, lead with the headline (what is this?) then the demo panel. */
+@media (max-width: 959px) {
+  :root:has(.VPHome) .VPHero .main {
+    order: 1;
+  }
+  :root:has(.VPHome) .VPHero .image {
+    order: 2;
+    margin-top: 40px;
+  }
+}
+
+/* Feature cards → quiet editorial directory: no fill, a top hairline that
+   turns brand-green on hover, so they recede behind the hero signature
+   instead of competing with it as four more boxes. */
 :root:has(.VPHome) .VPFeature {
-  background-color: #141414;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  transition:
-    background-color 0.25s,
-    border-color 0.25s;
+  background-color: transparent;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  padding: 22px 0 0;
+  transition: border-color 0.25s;
 }
 :root:has(.VPHome) .VPFeature:hover {
-  background-color: #1a1a1a;
-  border-color: rgba(255, 255, 255, 0.12);
+  background-color: transparent;
+  border-top-color: #00e676;
+}
+:root:has(.VPHome) .VPFeature .title {
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+:root:has(.VPHome) .VPFeature .details {
+  font-size: 13.5px;
+  line-height: 1.6;
 }
 
 /* ── Landing entrances (LandingPage.module.css fadeUp pattern) ──────── */

@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: Miragon AI Platform
-  text: Your processes, one conversation away.
-  tagline: "One MCP server, two modules, a fleet of widgets: drive Camunda 7 and CIB Seven from any MCP host — operations, analytics, and incident response in natural language."
+  name: Your processes,
+  text: one conversation away.
+  tagline: "An MCP server for Camunda 7 / CIB Seven — run operations, analytics, and incident response by asking, with every answer rendered as an interactive widget right in the chat."
   actions:
     - theme: brand
       text: Try it out
