@@ -8,6 +8,10 @@
 -->
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
+// Clicking the input opens the real playground in the MCP inspector — same
+// destination as the hero's "Try it out" button.
+const INSPECTOR_URL =
+  "https://inspector.manufact.com/inspector?server=https%3A%2F%2Fmiragon-ai-playground.fly.dev%2Fmcp&tab=chat"
 const shown = ref(false)
 onMounted(() => {
   // next frame → CSS transitions run (stagger-in); reduced-motion shows final state
@@ -59,10 +63,11 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="input">
+      <a class="input" :href="INSPECTOR_URL" target="_blank" rel="noopener noreferrer">
         <span class="caret" />
         <span class="ph">Ask a follow-up…</span>
-      </div>
+        <span class="go" aria-hidden="true">↗</span>
+      </a>
     </div>
   </div>
 </template>
@@ -284,6 +289,15 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
   background: #141414;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.input:hover {
+  border-color: rgba(0, 230, 118, 0.45);
+  background: #161616;
 }
 .caret {
   width: 2px;
@@ -294,6 +308,19 @@ onMounted(() => {
 .ph {
   font-size: 13px;
   color: #56565b;
+  transition: color 0.2s;
+}
+.input:hover .ph {
+  color: #98989d;
+}
+.go {
+  margin-left: auto;
+  font-size: 13px;
+  color: #56565b;
+  transition: color 0.2s;
+}
+.input:hover .go {
+  color: #00e676;
 }
 
 @keyframes hc-pulse {
