@@ -1,10 +1,12 @@
-import { Alert, AlertDescription, Badge } from "@miragon/mcp-toolkit-ui"
+import { Badge } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
   DrillButton,
   KpiGrid,
+  ViewDataState,
   WidgetHeader,
   WidgetShell,
+  formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
 import { ModelContext } from "mcp-use/react"
 import type { ClusterDetailData } from "../view-models.js"
@@ -13,15 +15,6 @@ import { CAMUNDA7_CLUSTER_DETAIL_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
 import { remediatePrompt } from "./remediation.js"
 import { useT } from "../messages/use-t.js"
-
-function formatTimestamp(iso: string | null): string {
-  if (!iso) return "—"
-  try {
-    return new Date(iso).toLocaleString()
-  } catch {
-    return iso
-  }
-}
 
 /**
  * Grounding line: the agent knows exactly which failure cluster the operator
@@ -80,17 +73,13 @@ export function ClusterDetailView({
   )
 
   if (!data) {
-    if (error) {
-      return (
-        <Alert variant="destructive">
-          <AlertDescription>{error.message}</AlertDescription>
-        </Alert>
-      )
-    }
     return (
-      <div className="text-muted-foreground p-2 text-sm">
-        {loading ? t("clusterDetail.loading") : t("clusterDetail.noData")}
-      </div>
+      <ViewDataState
+        loading={loading}
+        error={error}
+        loadingText={t("clusterDetail.loading")}
+        emptyText={t("clusterDetail.noData")}
+      />
     )
   }
 

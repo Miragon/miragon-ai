@@ -1,9 +1,9 @@
 import { z } from "zod"
-import { engineFilterShape } from "./shared.js"
+import { engineFilterShape, isoDatetimeString, periodField } from "./shared.js"
 
 export const analyzePerformanceInput = z.object({
   processDefinitionKey: z.string().describe("Process definition key to analyze"),
-  period: z.enum(["1d", "3d", "7d", "14d", "30d"]).default("7d").describe("Analysis time period"),
+  period: periodField,
   includeActivityBreakdown: z
     .boolean()
     .default(true)
@@ -13,10 +13,10 @@ export const analyzePerformanceInput = z.object({
 
 export const comparePeriodsInput = z.object({
   processDefinitionKey: z.string().describe("Process definition key to compare"),
-  periodAFrom: z.string().describe("Period A start (ISO datetime)"),
-  periodATo: z.string().describe("Period A end (ISO datetime)"),
-  periodBFrom: z.string().describe("Period B start (ISO datetime)"),
-  periodBTo: z.string().describe("Period B end (ISO datetime)"),
+  periodAFrom: isoDatetimeString.describe("Period A start (ISO datetime)"),
+  periodATo: isoDatetimeString.describe("Period A end (ISO datetime)"),
+  periodBFrom: isoDatetimeString.describe("Period B start (ISO datetime)"),
+  periodBTo: isoDatetimeString.describe("Period B end (ISO datetime)"),
   includeActivityBreakdown: z.boolean().default(false).describe("Include per-activity comparison"),
   ...engineFilterShape,
 })

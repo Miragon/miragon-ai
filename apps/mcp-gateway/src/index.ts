@@ -121,4 +121,10 @@ app.use("mcp:tools/call", async (_ctx, next) => {
   }
 })
 
-await app.listen(Number(process.env.PORT ?? 8400))
+// `||` (not `??`): an empty `PORT=` assignment from an env_file must fall back
+// to 8400 — `Number("")` is 0, which would bind a random OS-assigned port.
+const port = Number(process.env.PORT?.trim() || 8400)
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error(`[miragon-ai] invalid PORT "${process.env.PORT}" — expected an integer 1-65535`)
+}
+await app.listen(port)

@@ -159,6 +159,25 @@ describe("comparePeriods", () => {
     ])
   })
 
+  it("rejects unparsable period timestamps before any PromQL is sent", async () => {
+    const instant = vi.fn(async (): Promise<PromSample[]> => [])
+
+    await expect(
+      comparePeriods(
+        { instant },
+        {
+          processDefinitionKey: "order",
+          periodAFrom: "last week",
+          periodATo: PERIOD_A.to,
+          periodBFrom: PERIOD_B.from,
+          periodBTo: PERIOD_B.to,
+          includeActivityBreakdown: false,
+        },
+      ),
+    ).rejects.toThrow(/periodAFrom "last week" is not a parseable ISO datetime/)
+    expect(instant).not.toHaveBeenCalled()
+  })
+
   it("sorts the optional activity comparison by activity id, then period", async () => {
     const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
       if (q.includes("camunda_activity_ended_total")) {

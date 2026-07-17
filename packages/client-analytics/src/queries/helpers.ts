@@ -5,6 +5,21 @@ import { METRIC_NAMES as M } from "../metric-names.js"
 export const round1 = (n: number) => Math.round(n * 10) / 10
 
 /**
+ * Parse an ISO datetime into epoch seconds. Throws a caller-readable error
+ * instead of letting a NaN reach PromQL as `[NaNs] @ NaN` (Prometheus would
+ * answer with an opaque parse error).
+ */
+export function parseIsoSeconds(value: string, field: string): number {
+  const ms = Date.parse(value)
+  if (!Number.isFinite(ms)) {
+    throw new Error(
+      `${field} "${value}" is not a parseable ISO datetime (expected e.g. 2026-07-01T12:00:00Z)`,
+    )
+  }
+  return Math.round(ms / 1000)
+}
+
+/**
  * Value of the first sample, or 0 when the query returned no series.
  * (health.ts keeps its own rounding variant on purpose — gauges there are
  * integer counts, while the KPI modules round selectively per field.)

@@ -1,6 +1,5 @@
 import { useState } from "react"
 import {
-  Badge,
   Button,
   Input,
   Table,
@@ -15,41 +14,6 @@ import {
 import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
 import { refreshCockpitData } from "./refresh.js"
-
-export function Section({
-  title,
-  count,
-  defaultOpen = false,
-  onToggle,
-  children,
-}: {
-  title: string
-  count?: number
-  defaultOpen?: boolean
-  /** Notified when the disclosure opens/closes — lets callers lazy-mount content. */
-  onToggle?: (open: boolean) => void
-  children: React.ReactNode
-}) {
-  return (
-    <details
-      open={defaultOpen || undefined}
-      onToggle={(e) => onToggle?.((e.currentTarget as HTMLDetailsElement).open)}
-    >
-      <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
-        <svg
-          className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
-          viewBox="0 0 16 16"
-          fill="currentColor"
-        >
-          <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
-        </svg>
-        <h3 className="text-lg font-medium">{title}</h3>
-        {count !== undefined && <Badge variant="secondary">{count}</Badge>}
-      </summary>
-      <div className="mt-2">{children}</div>
-    </details>
-  )
-}
 
 export function formatVariableValue(value: unknown, type?: string): string {
   if (value === null || value === undefined) return "—"

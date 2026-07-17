@@ -3,6 +3,7 @@ import type { MCPServer } from "mcp-use/server"
 import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
 import {
   buildComposedView,
+  buildDataFeedResult,
   buildSingleWidgetView,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
@@ -323,7 +324,7 @@ export function registerWidgetTools(
         frequency: heat.frequency,
         durationSec: heat.durationSec,
       }
-      return { content: [{ type: "text", text: JSON.stringify(data) }], structuredContent: data }
+      return buildDataFeedResult(data)
     }),
   )
 }

@@ -11,11 +11,18 @@ import {
   Alert,
   AlertTitle,
   AlertDescription,
-  Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { WidgetShell, AskAiButton } from "@miragon-ai/widget-shell/widgets"
+import {
+  AskAiButton,
+  QueryFallback,
+  Section,
+  TableSkeleton,
+  WidgetShell,
+  formatTimestamp,
+  truncate,
+} from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
-import { formatDate, truncate, useFailureDashboardSelfFetch } from "./lib.js"
+import { useFailureDashboardSelfFetch } from "./lib.js"
 import { useT } from "../../messages/use-t.js"
 
 export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboardData | null }) {
@@ -25,10 +32,12 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
   if (!data) {
     return (
       <WidgetShell>
-        <div className="rounded-lg border p-4" aria-busy="true">
-          <Skeleton className="mb-3 h-5 w-40" />
-          <Skeleton className="h-32 w-full" />
-        </div>
+        <QueryFallback
+          isError={fallbackQuery.isError}
+          error={fallbackQuery.error}
+          errorTitle={t("aCommon.loadError")}
+          skeleton={<TableSkeleton />}
+        />
       </WidgetShell>
     )
   }
@@ -52,20 +61,13 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
 
   return (
     <WidgetShell>
-      <details open>
-        <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
-          <svg
-            aria-hidden="true"
-            className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-          >
-            <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
-          </svg>
-          <h3 className="text-lg font-medium">{t("aErrorPatterns.heading")}</h3>
-          <Badge variant="destructive">{data.errorPatterns.length}</Badge>
-        </summary>
-        <div className="mt-3 rounded-lg border">
+      <Section
+        title={t("aErrorPatterns.heading")}
+        count={data.errorPatterns.length}
+        badgeVariant="destructive"
+        defaultOpen
+      >
+        <div className="rounded-lg border">
           <Table aria-label={t("aErrorPatterns.tableAriaLabel")}>
             <TableHeader>
               <TableRow>
@@ -119,10 +121,10 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
                     <Badge variant="destructive">{pattern.incidentCount}</Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {formatDate(pattern.firstOccurrence)}
+                    {formatTimestamp(pattern.firstOccurrence)}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {formatDate(pattern.lastOccurrence)}
+                    {formatTimestamp(pattern.lastOccurrence)}
                   </TableCell>
                   <TableCell className="text-right">
                     <AskAiButton
@@ -137,7 +139,7 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
             </TableBody>
           </Table>
         </div>
-      </details>
+      </Section>
     </WidgetShell>
   )
 }

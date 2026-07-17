@@ -12,6 +12,8 @@ import {
   OpenInCockpitLink,
   SectionHeading,
   StatusBadge,
+  VersionChip,
+  WidgetHeader,
   WidgetShell,
   type BpmnHeatmapData,
   type KpiCell,
@@ -205,35 +207,23 @@ export function ProcessDetailView({
 
   return (
     <>
-      <header className="flex flex-wrap items-start justify-between gap-6">
-        <div className="min-w-0">
-          <div
-            className={`mb-3 grid size-11 place-items-center rounded-xl text-xl ${
-              headerTone === "critical"
-                ? "bg-critical-soft text-critical"
-                : "bg-m-blue-soft text-m-blue"
-            }`}
-          >
-            ⊞
-          </div>
-          {data.openIncidents > 0 && (
-            <div className="mb-3">
-              <StatusBadge tone="critical">
-                {data.openIncidents === 1
-                  ? t("processDetail.openIncidentsBadgeOne", { count: data.openIncidents })
-                  : t("processDetail.openIncidentsBadgeOther", { count: data.openIncidents })}
-              </StatusBadge>
-            </div>
-          )}
-          <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">
-            {title}
-            {data.version !== null && (
-              <span className="border-border bg-muted text-muted-foreground ml-2 inline-block rounded border px-2 py-0.5 align-middle font-mono text-xs font-medium">
-                v{data.version}
-              </span>
-            )}
-          </h1>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+      <WidgetHeader
+        size="detail"
+        icon="⊞"
+        iconTone={headerTone}
+        badge={
+          data.openIncidents > 0 ? (
+            <StatusBadge tone="critical">
+              {data.openIncidents === 1
+                ? t("processDetail.openIncidentsBadgeOne", { count: data.openIncidents })
+                : t("processDetail.openIncidentsBadgeOther", { count: data.openIncidents })}
+            </StatusBadge>
+          ) : undefined
+        }
+        title={title}
+        titleSuffix={data.version !== null ? <VersionChip version={data.version} /> : undefined}
+        sub={
+          <>
             <span className="font-mono text-xs">{data.processDefinitionKey}</span>
             {data.runningInstances !== null && (
               <>
@@ -248,10 +238,10 @@ export function ProcessDetailView({
             {cockpitUrl && (
               <OpenInCockpitLink url={cockpitUrl} label={t("processDetail.openInCockpit")} />
             )}
-          </div>
-        </div>
-        <AskAiButton prompt={analyzePrompt} variant="primary" />
-      </header>
+          </>
+        }
+        actions={<AskAiButton prompt={analyzePrompt} variant="primary" />}
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <DrillButton

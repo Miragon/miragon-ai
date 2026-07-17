@@ -2,33 +2,12 @@ import type { Client } from "@miragon-ai/client-cibseven"
 import type { ProcessDetailActivity, ProcessDetailData } from "../view-models.js"
 import {
   getActivityStatistics,
-  getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
-  getProcessDefinitionStatistics,
 } from "@miragon-ai/client-cibseven/sdk"
 
 import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
 import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"
-
-interface DefinitionInfo {
-  id: string
-  key: string
-  name: string | null
-  version: number | null
-}
-
-interface DefinitionStatsRow {
-  id?: string | null
-  instances?: number | null
-  failedJobs?: number | null
-  incidents?: Array<{ incidentCount?: number | null }> | null
-  definition?: {
-    id?: string | null
-    key?: string | null
-    name?: string | null
-    version?: number | null
-  } | null
-}
+import { fetchSingleDefinitionInfo } from "./definition-info.js"
 
 interface ActivityStatsRow {
   id?: string | null
@@ -36,61 +15,6 @@ interface ActivityStatsRow {
   instances?: number | null
   failedJobs?: number | null
   incidents?: Array<{ incidentCount?: number | null }> | null
-}
-
-async function fetchDefinitionInfo(
-  client: Client,
-  key: string,
-): Promise<{ info: DefinitionInfo | null; runningInstances: number | null }> {
-  // Cluster-wide statistics carries running instances + name/version per
-  // definition in a single round-trip. Same trick used by the incident builder.
-  const stats = (await getProcessDefinitionStatistics({
-    client,
-    query: {},
-  }).catch(() => [])) as unknown as DefinitionStatsRow[]
-
-  let best: { info: DefinitionInfo; instances: number | null } | null = null
-  for (const row of Array.isArray(stats) ? stats : []) {
-    const def = row.definition
-    if (!def?.key || def.key !== key) continue
-    const candidate: DefinitionInfo = {
-      id: def.id ?? "",
-      key: def.key,
-      name: def.name ?? null,
-      version: typeof def.version === "number" ? def.version : null,
-    }
-    if (
-      !best ||
-      (candidate.version !== null &&
-        (best.info.version === null || candidate.version > best.info.version))
-    ) {
-      best = { info: candidate, instances: row.instances ?? null }
-    }
-  }
-  if (best) return { info: best.info, runningInstances: best.instances }
-
-  // Fallback: the definition has no running instances (or stats are unavailable)
-  // — fetch via /process-definition.
-  const defs = (await getProcessDefinitions({
-    client,
-    query: { keysIn: key, latestVersion: true },
-  }).catch(() => [])) as unknown as Array<{
-    id?: string
-    key?: string
-    name?: string | null
-    version?: number
-  }>
-  const d = (Array.isArray(defs) ? defs : [])[0]
-  if (!d?.key) return { info: null, runningInstances: null }
-  return {
-    info: {
-      id: d.id ?? "",
-      key: d.key,
-      name: d.name ?? null,
-      version: typeof d.version === "number" ? d.version : null,
-    },
-    runningInstances: 0,
-  }
 }
 
 interface BuildOptions {
@@ -103,7 +27,10 @@ export async function buildProcessDetailData(
   client: Client,
   options: BuildOptions,
 ): Promise<ProcessDetailData> {
-  const { info, runningInstances } = await fetchDefinitionInfo(client, options.processDefinitionKey)
+  const { info, runningInstances } = await fetchSingleDefinitionInfo(
+    client,
+    options.processDefinitionKey,
+  )
   const processDefinitionId = info?.id ?? null
 
   const [activityStats, xmlResponse] = await Promise.all([

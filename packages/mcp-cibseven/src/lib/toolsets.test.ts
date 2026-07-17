@@ -104,3 +104,48 @@ describe("withToolsetFilter over the real camunda7 tool surface", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "does-not-exist"'))
   })
 })
+
+/** The full tool surface with annotations, for structural (list-free) assertions. */
+function recordedConfigs(): Config[] {
+  const configs: Config[] = []
+  const recorder = Object.assign((config: Config) => configs.push(config), {
+    getRegisteredTools: () => [],
+  }) as unknown as Register
+  registerEngineTools(recorder, createInMemoryProfileStore())
+  registerTools(recorder)
+  registerIncidentIssueTools(recorder, {})
+  return configs
+}
+
+/**
+ * Structural guards: unlike the hand-maintained lists above, these derive the
+ * expectation from each tool's OWN annotations — a future tool that forgets
+ * its ADMIN_ONLY_TOOLS entry or mis-declares readOnlyHint fails here without
+ * anyone updating a test list.
+ */
+describe("toolset rule holds structurally for every registered tool", () => {
+  it("every destructiveHint tool is kept out of operations (i.e. is admin-only)", () => {
+    const operations = new Set(toolNamesFor("operations"))
+    const destructive = recordedConfigs().filter((c) => c.annotations?.destructiveHint === true)
+    // Sanity: the surface does carry destructive tools — otherwise this test is vacuous.
+    expect(destructive.length).toBeGreaterThanOrEqual(4)
+    for (const config of destructive) {
+      expect(
+        operations.has(config.name),
+        `${config.name} carries destructiveHint but is advertised in operations — add it to ADMIN_ONLY_TOOLS`,
+      ).toBe(false)
+    }
+  })
+
+  it("read-only advertises only readOnlyHint tools (plus session infrastructure)", () => {
+    const byName = new Map(recordedConfigs().map((c) => [c.name, c]))
+    for (const name of toolNamesFor("read-only")) {
+      const config = byName.get(name)
+      const allowed = config?.annotations?.readOnlyHint === true || name === "camunda7_engine"
+      expect(
+        allowed,
+        `${name} is advertised in read-only but does not declare readOnlyHint: true`,
+      ).toBe(true)
+    }
+  })
+})

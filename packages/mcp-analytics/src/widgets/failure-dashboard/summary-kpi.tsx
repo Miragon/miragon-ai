@@ -1,5 +1,5 @@
-import { Card, CardContent, Alert, AlertDescription, Skeleton } from "@miragon/mcp-toolkit-ui"
-import { WidgetShell, AskAiButton } from "@miragon-ai/widget-shell/widgets"
+import { Card, CardContent, Skeleton } from "@miragon/mcp-toolkit-ui"
+import { AskAiButton, KpiGrid, QueryFallback, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 import { useFailureDashboardSelfFetch } from "./lib.js"
 import { useT } from "../../messages/use-t.js"
@@ -35,26 +35,27 @@ export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboar
   if (!data) {
     return (
       <WidgetShell>
-        {fallbackQuery.isError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div
-            className="grid grid-cols-3 gap-4"
-            aria-label={t("aFailureSummary.loadingAriaLabel")}
-            aria-busy="true"
-          >
-            {[0, 1, 2].map((i) => (
-              <Card key={i} className="gap-0 py-0 shadow-none">
-                <CardContent className="space-y-2 p-4">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-7 w-16" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <QueryFallback
+          isError={fallbackQuery.isError}
+          error={fallbackQuery.error}
+          errorTitle={t("aCommon.loadError")}
+          skeleton={
+            <div
+              className="grid grid-cols-3 gap-4"
+              aria-label={t("aFailureSummary.loadingAriaLabel")}
+              aria-busy="true"
+            >
+              {[0, 1, 2].map((i) => (
+                <Card key={i} className="gap-0 py-0 shadow-none">
+                  <CardContent className="space-y-2 p-4">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-7 w-16" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          }
+        />
       </WidgetShell>
     )
   }
@@ -63,32 +64,31 @@ export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboar
       <div className="mb-4 flex items-center justify-end">
         <AskAiButton variant="primary" prompt={buildAnalyzeFailuresPrompt(data)} />
       </div>
-      <div className="grid grid-cols-3 gap-4" aria-label={t("aFailureSummary.summaryAriaLabel")}>
-        <Card className="bg-critical-soft gap-0 py-0 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-critical text-sm font-medium">
-              {t("aFailureSummary.totalIncidents")}
-            </p>
-            <p className="text-critical text-2xl font-bold">{data.totalIncidents}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-warning-soft gap-0 py-0 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-warning text-sm font-medium">
-              {t("aFailureSummary.uniqueErrorPatterns")}
-            </p>
-            <p className="text-warning text-2xl font-bold">{data.uniqueErrorPatterns}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-m-blue-soft gap-0 py-0 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-m-blue text-sm font-medium">{t("aFailureSummary.mostAffected")}</p>
-            <p className="text-m-blue truncate font-mono text-lg font-bold">
-              {data.mostAffectedProcess ?? "—"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <KpiGrid
+        variant="soft"
+        ariaLabel={t("aFailureSummary.summaryAriaLabel")}
+        cells={[
+          {
+            label: t("aFailureSummary.totalIncidents"),
+            value: data.totalIncidents,
+            tone: "critical",
+          },
+          {
+            label: t("aFailureSummary.uniqueErrorPatterns"),
+            value: data.uniqueErrorPatterns,
+            tone: "warning",
+          },
+          {
+            label: t("aFailureSummary.mostAffected"),
+            value: (
+              <span className="block truncate font-mono text-lg">
+                {data.mostAffectedProcess ?? "—"}
+              </span>
+            ),
+            tone: "info",
+          },
+        ]}
+      />
     </WidgetShell>
   )
 }

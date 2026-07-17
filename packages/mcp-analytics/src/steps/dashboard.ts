@@ -1,5 +1,5 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import { queries, type Period, type PrometheusClient } from "@miragon-ai/client-analytics"
+import { PERIODS, queries, type Period, type PrometheusClient } from "@miragon-ai/client-analytics"
 
 interface AnalyticsAppConfig {
   client: PrometheusClient
@@ -26,7 +26,7 @@ export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
     {
       key: "analytics:period",
       description: "Time window. Defaults to '7d'.",
-      enum: ["1d", "3d", "7d", "14d", "30d"],
+      enum: [...PERIODS],
     },
   ],
   produces: ["analytics:dashboardData"],
@@ -36,9 +36,7 @@ export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
       | string
       | undefined
     const periodRaw = (context.keys["analytics:period"] as string | undefined) ?? "7d"
-    const period: Period = (["1d", "3d", "7d", "14d", "30d"] as const).includes(periodRaw as Period)
-      ? (periodRaw as Period)
-      : "7d"
+    const period: Period = PERIODS.includes(periodRaw as Period) ? (periodRaw as Period) : "7d"
 
     const data = await queries.dashboardData(ch, { processDefinitionKey, period })
 

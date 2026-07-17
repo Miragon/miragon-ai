@@ -1,12 +1,14 @@
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
   OpenInCockpitLink,
   StatusBadge,
+  VersionChip,
+  ViewDataState,
+  WidgetHeader,
   WidgetShell,
+  formatTime,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
-import { formatTime } from "../../lib/format-time.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
 import { useT } from "../../messages/use-t.js"
@@ -32,15 +34,12 @@ export function ProcessDetailHeader({
   if (!data) {
     return (
       <WidgetShell>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="text-muted-foreground p-2 text-sm">
-            {loading ? t("procIncHeader.loading") : t("procIncHeader.noData")}
-          </div>
-        )}
+        <ViewDataState
+          loading={loading}
+          error={error}
+          loadingText={t("procIncHeader.loading")}
+          emptyText={t("procIncHeader.noData")}
+        />
       </WidgetShell>
     )
   }
@@ -53,9 +52,10 @@ export function ProcessDetailHeader({
 
   return (
     <WidgetShell>
-      <header className="flex flex-wrap items-start justify-between gap-6">
-        <div className="min-w-0">
-          <div className="mb-3 flex items-center gap-3">
+      <WidgetHeader
+        size="detail"
+        badge={
+          <div className="flex items-center gap-3">
             <div className="bg-critical-soft text-critical grid size-11 place-items-center rounded-xl text-xl">
               ⚠
             </div>
@@ -65,15 +65,11 @@ export function ProcessDetailHeader({
                 : t("procIncHeader.openIncidentsOther", { count: remainingCount })}
             </StatusBadge>
           </div>
-          <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">
-            {title}
-            {data.version !== null && (
-              <span className="border-border bg-muted text-muted-foreground ml-2 inline-block rounded border px-2 py-0.5 align-middle font-mono text-xs font-medium">
-                v{data.version}
-              </span>
-            )}
-          </h1>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+        }
+        title={title}
+        titleSuffix={data.version !== null ? <VersionChip version={data.version} /> : undefined}
+        sub={
+          <>
             <span className="font-mono text-xs">{data.processDefinitionKey}</span>
             {data.runningInstances !== null && (
               <>
@@ -98,10 +94,10 @@ export function ProcessDetailHeader({
             {cockpitUrl && (
               <OpenInCockpitLink url={cockpitUrl} label={t("procIncHeader.openInCockpit")} />
             )}
-          </div>
-        </div>
-        <AskAiButton prompt={triagePrompt} variant="primary" />
-      </header>
+          </>
+        }
+        actions={<AskAiButton prompt={triagePrompt} variant="primary" />}
+      />
     </WidgetShell>
   )
 }

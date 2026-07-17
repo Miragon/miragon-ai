@@ -3,6 +3,7 @@ import type { MCPServer } from "mcp-use/server"
 import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
 import {
   buildComposedView,
+  buildDataFeedResult as rawData,
   buildSingleWidgetView,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
@@ -14,13 +15,8 @@ import {
 } from "@miragon-ai/client-cibseven/schemas"
 import {
   getProcessDefinitions,
-  getProcessInstance,
-  getActivityInstanceTree,
-  getIncidents,
   getHistoricActivityInstances,
   getHistoricProcessInstances,
-  getProcessDefinitionBpmn20Xml,
-  getActivityStatistics,
 } from "@miragon-ai/client-cibseven/sdk"
 import {
   buildCockpitDashboardData,
@@ -40,7 +36,7 @@ import {
 } from "./data/incident-panel-data.js"
 import { buildProcessDetailData } from "./data/process-detail-data.js"
 import { buildIncidentDetailData } from "./data/incident-detail-data.js"
-import { collectActiveActivityIds, collectIncidentActivityIds } from "./lib/activity-tree.js"
+import { buildBpmnViewerData } from "./data/bpmn-viewer-data.js"
 import {
   CAMUNDA7_CLUSTER_DETAIL_DATA,
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
@@ -53,8 +49,10 @@ import {
   CAMUNDA7_PROCESS_DETAIL_DATA,
   CAMUNDA7_PROCESS_INCIDENTS_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
+  CAMUNDA7_SHOW_BPMN_VIEWER,
   CAMUNDA7_SHOW_CLUSTER_DETAIL,
   CAMUNDA7_SHOW_ENGINE_HEALTH,
+  CAMUNDA7_SHOW_HISTORY_TIMELINE,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
   CAMUNDA7_SHOW_INSTANCE_DETAIL,
@@ -77,18 +75,6 @@ import { localizeFor } from "./lib/server-locale.js"
 const incidentsDashboardFilterShape = {
   processDefinitionKey: listProcessInstancesInput.shape.processDefinitionKey,
   incidentType: listIncidentsInput.shape.incidentType,
-}
-
-/**
- * Plain (no-UI) tool result carrying JSON data. The cockpit data feeds use this
- * so the app's in-widget `callTool` gets the data back — a widget-tool result
- * (with `_meta.ui.resourceUri`) is rendered by the host instead of being returned.
- */
-function rawData(data: unknown) {
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(data) }],
-    structuredContent: data as Record<string, unknown>,
-  }
 }
 
 /**
@@ -335,10 +321,9 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
-      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
-      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
       const data = await buildIncidentsDashboardData(client, {
-        baseUrl: engineEntry?.baseUrl ?? "",
+        baseUrl,
         cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
         incidentType: args.incidentType,
@@ -374,10 +359,9 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
-      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
-      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
       const data = await buildProcessIncidentsData(client, {
-        baseUrl: engineEntry?.baseUrl ?? "",
+        baseUrl,
         cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
       })
@@ -418,10 +402,9 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
-      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
-      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
       const data = await buildIncidentDetailData(client, {
-        baseUrl: engineEntry?.baseUrl ?? "",
+        baseUrl,
         cockpitUrl,
         incidentId: args.incidentId,
       })
@@ -457,10 +440,9 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
-      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
-      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
       const data = await buildProcessDetailData(client, {
-        baseUrl: engineEntry?.baseUrl ?? "",
+        baseUrl,
         cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
       })
@@ -482,7 +464,7 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "camunda7_show_history_timeline",
+      name: CAMUNDA7_SHOW_HISTORY_TIMELINE,
       title: "History Timeline",
       description: "Show activity timeline for a process instance.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
@@ -635,7 +617,7 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "camunda7_show_bpmn_viewer",
+      name: CAMUNDA7_SHOW_BPMN_VIEWER,
       title: "BPMN Diagram Viewer",
       description:
         "Show an interactive BPMN diagram. Pass `processInstanceId` to overlay active activities, incidents, and failed-job counts for a running instance, or pass `processDefinitionKey` (with optional `version`) to view the diagram of a process definition without instance overlays.",
@@ -672,125 +654,47 @@ export function registerWidgetTools(
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
-      const renderEmpty = (processInstanceId: string | null) =>
+      // Shared builder with the `camunda7:load-bpmn-viewer` step — the two
+      // render paths must stay in sync (data/bpmn-viewer-data.ts).
+      const data = await buildBpmnViewerData(client, engineId, {
+        processInstanceId: args.processInstanceId,
+        processDefinitionKey: args.processDefinitionKey,
+        version: args.version,
+      })
+
+      const view = (summary: string) =>
         buildComposedView({
           app: "camunda7",
           title: "BPMN Viewer",
           layout: [{ row: [{ widget: "camunda7:bpmn-viewer" }] }],
-          entries: [
-            {
-              dataType: "camunda7:bpmnViewer",
-              data: {
-                bpmnXml: "",
-                processInstanceId,
-                processDefinitionId: null,
-                activeActivityIds: [],
-                incidentActivityIds: [],
-                activityStats: [],
-                engineId,
-              },
-            },
-          ],
-          summary: t("c7sum.bpmnViewer.empty"),
+          entries: [{ dataType: "camunda7:bpmnViewer", data }],
+          summary,
         })
 
-      let definitionId: string | null = null
-      let processInstanceId: string | null = null
-
-      if (args.processInstanceId) {
-        processInstanceId = args.processInstanceId
-        const instance = (await getProcessInstance({
-          client,
-          path: { id: args.processInstanceId },
-        })) as { definitionId?: string } | null
-        definitionId = instance?.definitionId ?? null
-      } else if (args.processDefinitionKey) {
-        const matches = await getProcessDefinitions({
-          client,
-          query: {
-            key: args.processDefinitionKey,
-            version: args.version,
-            latestVersion: args.version === undefined ? true : undefined,
-            maxResults: 1,
-          },
-        })
-        const first = Array.isArray(matches) ? (matches[0] as { id?: string } | undefined) : null
-        definitionId = first?.id ?? null
+      if (!data.processDefinitionId) {
+        return view(t("c7sum.bpmnViewer.empty"))
       }
-
-      if (!definitionId) {
-        return renderEmpty(processInstanceId)
-      }
-
-      const [xmlResponse, activityTree, incidents, stats] = await Promise.all([
-        getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } }).catch(() => null),
-        processInstanceId
-          ? getActivityInstanceTree({ client, path: { id: processInstanceId } }).catch(() => null)
-          : Promise.resolve(null),
-        processInstanceId
-          ? getIncidents({
-              client,
-              query: { processInstanceId, maxResults: 200 },
-            }).catch(() => [])
-          : Promise.resolve([]),
-        getActivityStatistics({
-          client,
-          path: { id: definitionId },
-          query: { failedJobs: true },
-        }).catch(() => []),
-      ])
-
-      const bpmnXml = (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? ""
-
-      const activeActivityIds = processInstanceId ? collectActiveActivityIds(activityTree) : []
-      const incidentActivityIds = processInstanceId ? collectIncidentActivityIds(incidents) : []
-
-      const statRows = Array.isArray(stats)
-        ? (stats as Array<{ id?: string | null; instances?: number; failedJobs?: number }>)
-        : []
-      const activityStats = statRows.map((s) => ({
-        id: s.id ?? "",
-        instances: s.instances ?? 0,
-        failedJobs: s.failedJobs ?? 0,
-      }))
 
       // Model summary only — the (often tens-of-KB) bpmnXml must never reach
       // the text channel; the widget renders it from structuredContent.
-      const totalFailedJobs = activityStats.reduce((sum, s) => sum + s.failedJobs, 0)
-      const target = processInstanceId
-        ? t("c7sum.bpmnViewer.targetInstance", { processInstanceId })
-        : t("c7sum.bpmnViewer.targetDefinition", { definitionId })
-      const overlayInfo = processInstanceId
+      const totalFailedJobs = data.activityStats.reduce((sum, s) => sum + s.failedJobs, 0)
+      const target = data.processInstanceId
+        ? t("c7sum.bpmnViewer.targetInstance", { processInstanceId: data.processInstanceId })
+        : t("c7sum.bpmnViewer.targetDefinition", { definitionId: data.processDefinitionId })
+      const overlayInfo = data.processInstanceId
         ? t("c7sum.bpmnViewer.overlays", {
-            activeActivities: activeActivityIds.length,
-            incidentActivities: incidentActivityIds.length,
+            activeActivities: data.activeActivityIds.length,
+            incidentActivities: data.incidentActivityIds.length,
             failedJobs: totalFailedJobs,
           })
         : t("c7sum.bpmnViewer.noOverlays")
-      return buildComposedView({
-        app: "camunda7",
-        title: "BPMN Viewer",
-        layout: [{ row: [{ widget: "camunda7:bpmn-viewer" }] }],
-        entries: [
-          {
-            dataType: "camunda7:bpmnViewer",
-            data: {
-              bpmnXml,
-              processInstanceId,
-              processDefinitionId: definitionId,
-              activeActivityIds,
-              incidentActivityIds,
-              activityStats,
-              engineId,
-            },
-          },
-        ],
-        summary: t("c7sum.bpmnViewer", {
+      return view(
+        t("c7sum.bpmnViewer", {
           target,
           overlayInfo,
-          xmlUnavailable: bpmnXml ? "" : t("c7sum.bpmnViewer.xmlUnavailable"),
+          xmlUnavailable: data.bpmnXml ? "" : t("c7sum.bpmnViewer.xmlUnavailable"),
         }),
-      })
+      )
     }),
   )
 
@@ -906,10 +810,9 @@ export function registerWidgetTools(
       _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
-      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
       const data = await buildProcessDetailData(client, {
-        baseUrl: engineEntry?.baseUrl ?? "",
+        baseUrl,
         cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
       })
@@ -1017,10 +920,9 @@ export function registerWidgetTools(
       _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
-      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
       const data = await buildIncidentsDashboardData(client, {
-        baseUrl: engineEntry?.baseUrl ?? "",
+        baseUrl,
         cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
         incidentType: args.incidentType,
@@ -1043,10 +945,9 @@ export function registerWidgetTools(
       _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
-      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
       const data = await buildProcessIncidentsData(client, {
-        baseUrl: engineEntry?.baseUrl ?? "",
+        baseUrl,
         cockpitUrl,
         processDefinitionKey: args.processDefinitionKey,
       })
@@ -1068,10 +969,9 @@ export function registerWidgetTools(
       _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
-      const engineEntry = registry.engines.find((e) => e.id === engineId)
+      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
       const data = await buildIncidentDetailData(client, {
-        baseUrl: engineEntry?.baseUrl ?? "",
+        baseUrl,
         cockpitUrl,
         incidentId: args.incidentId,
       })

@@ -1,4 +1,8 @@
 import { z } from "zod"
+import { PERIODS } from "../prometheus.js"
+
+/** Canonical `period` input field, derived from PERIOD_RANGE. */
+export const periodField = z.enum(PERIODS).default("7d").describe("Analysis time period")
 
 /**
  * Optional `engine` filter spread into every analytics tool's input schema.
@@ -9,6 +13,15 @@ import { z } from "zod"
  *   - One id → restricts to one engine.
  *   - Array  → restricts to that subset (e.g. for prod-only or A-vs-B compare).
  */
+/**
+ * ISO-datetime input field. Validates parseability at the tool boundary so an
+ * LLM-supplied value like "last week" fails with a readable message instead of
+ * reaching PromQL as `@ NaN`.
+ */
+export const isoDatetimeString = z.string().refine((v) => Number.isFinite(Date.parse(v)), {
+  message: "Not a parseable ISO datetime (expected e.g. 2026-07-01T12:00:00Z)",
+})
+
 export const engineFilterShape = {
   engine: z
     .union([z.string(), z.array(z.string())])

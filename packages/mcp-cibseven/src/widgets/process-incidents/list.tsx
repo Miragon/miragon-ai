@@ -1,6 +1,11 @@
 import { useState } from "react"
-import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import { GroupCard, SectionHeading, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { useToolMutation } from "@miragon/mcp-toolkit-ui"
+import {
+  GroupCard,
+  SectionHeading,
+  ViewDataState,
+  WidgetShell,
+} from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
@@ -35,15 +40,12 @@ export function ActivityIncidentList({
   if (!data) {
     return (
       <WidgetShell>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="text-muted-foreground p-2 text-sm">
-            {loading ? t("procIncList.loading") : t("procIncList.noData")}
-          </div>
-        )}
+        <ViewDataState
+          loading={loading}
+          error={error}
+          loadingText={t("procIncList.loading")}
+          emptyText={t("procIncList.noData")}
+        />
       </WidgetShell>
     )
   }
