@@ -2,22 +2,21 @@
 
 A self-contained demo environment for the Miragon AI Platform: a seeded
 CIB Seven engine with live traffic, the full metric-first analytics stack,
-a federated mock upstream, and the MCP gateway on top. Run it locally with
-Docker Compose, or deploy the whole stack to Fly.io with one workflow.
+and the MCP gateway on top. Run it locally with Docker Compose, or deploy
+the whole stack to Fly.io with one workflow.
 
-| Path                 | Contents                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `cibseven-example/`  | Spring Boot CIB Seven engine: seeded Miravelo Leasing processes, live traffic, OTEL metrics |
-| `miravelo-upstream/` | Mock CRM/leasing MCP upstream — federated step + remote widget (see its README)             |
-| `docker/`            | Compose stack: engine(s), OTEL Collector, Prometheus, Grafana, optional gateway             |
-| `fly/`               | Fly.io deployment: one `*.fly.toml` per app + `deploy.sh`                                   |
+| Path                | Contents                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `cibseven-example/` | Spring Boot CIB Seven engine: seeded Miravelo Leasing processes, live traffic, OTEL metrics |
+| `docker/`           | Compose stack: engine(s), OTEL Collector, Prometheus, Grafana, optional gateway             |
+| `fly/`              | Fly.io deployment: one `*.fly.toml` per app + `deploy.sh`                                   |
 
 ## Run locally
 
 ```sh
 docker compose -f playground/docker/docker-compose.yml up -d   # infra: engine, OTEL, Prometheus, Grafana
-cp .env.example .env                                           # dev defaults: Prometheus :8460, miravelo proxy
-pnpm dev                                                       # miravelo upstream + MCP gateway on :8400
+cp .env.example .env                                           # dev defaults: Prometheus :8460
+pnpm dev                                                       # MCP gateway on :8400
 ```
 
 - MCP endpoint: `http://localhost:8400/mcp`, inspector: `http://localhost:8400/inspector`
@@ -28,7 +27,7 @@ pnpm dev                                                       # miravelo upstre
 
 ## Deploy to Fly.io
 
-The stack maps to six Fly apps in one org, wired over Fly's private 6PN
+The stack maps to five Fly apps in one org, wired over Fly's private 6PN
 network. Only the gateway is public — everything else has no public IP.
 
 | Fly app                            | Service        | Exposure                                             |
@@ -38,7 +37,6 @@ network. Only the gateway is public — everything else has no public IP.
 | `miragon-ai-playground-otel`       | OTEL Collector | private (`….internal:4318` / `:9464`)                |
 | `miragon-ai-playground-prometheus` | Prometheus     | private (`….internal:9090`), 3 GB volume             |
 | `miragon-ai-playground-grafana`    | Grafana        | private — `flyctl proxy 8470:3000 -a <app>`          |
-| `miragon-ai-playground-miravelo`   | Mock upstream  | private (`….internal:8401`)                          |
 
 ### Via GitHub Actions (recommended)
 
@@ -56,8 +54,8 @@ One-time setup:
 ```sh
 fly auth login
 (cd playground/cibseven-example && ./gradlew bootJar)   # engine image copies the jar
-export GITHUB_TOKEN=ghp_xxx                             # read:packages, for gateway + miravelo builds
-./playground/fly/deploy.sh all                          # or: otel|engine|miravelo|prometheus|grafana|gateway
+export GITHUB_TOKEN=ghp_xxx                             # read:packages, for the gateway build
+./playground/fly/deploy.sh all                          # or: otel|engine|prometheus|grafana|gateway
 ```
 
 First deploy creates the apps and the Prometheus volume. Afterwards, point an

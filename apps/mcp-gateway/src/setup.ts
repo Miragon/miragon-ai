@@ -169,14 +169,12 @@ export function warnPrometheusDefault(env: NodeJS.ProcessEnv = process.env): boo
 /**
  * All CAMUNDA_- and MCP-prefixed variables the gateway (or its docs) define. Foreign
  * prefixes owned by dependencies are exempt: `MCP_USE_*` (mcp-use itself),
- * `MCP_PROXY_*` (proxy secrets named inside MCP_PROXIES entries),
  * `MCP_INSPECTOR_*` (the dev inspector).
  */
 const KNOWN_ENV_VARS = new Set([
   "MCP_URL",
   "MCP_OAUTH",
   "MCP_ACTIVE_MODULES",
-  "MCP_PROXIES",
   "MCP_DASHBOARD_DIR",
   "MCP_PROFILE_DIR",
   "CAMUNDA_ENGINES_FILE",
@@ -195,7 +193,7 @@ const KNOWN_ENV_VARS = new Set([
   "MCP_DEBUG_LEVEL",
 ])
 
-const FOREIGN_ENV_PREFIXES = ["MCP_USE_", "MCP_PROXY_", "MCP_INSPECTOR_"]
+const FOREIGN_ENV_PREFIXES = ["MCP_USE_", "MCP_INSPECTOR_"]
 
 /**
  * Reports unknown CAMUNDA_- and MCP-prefixed variables at boot so a typo
@@ -220,21 +218,6 @@ export function warnUnknownEnvVars(
     )
   }
   return unknown
-}
-
-/**
- * Env-var names referenced inside `MCP_PROXIES` entries — the auth modes name
- * their secrets via `…EnvVar` fields, and the toolkit's proxy layer reads
- * them from the environment. [[warnUnknownEnvVars]] must not report them.
- */
-export function proxySecretEnvVarNames(proxies: readonly unknown[]): string[] {
-  return proxies.flatMap((proxy) => {
-    const auth = (proxy as { auth?: Record<string, unknown> }).auth
-    if (!auth) return []
-    return Object.entries(auth)
-      .filter(([key, value]) => key.endsWith("EnvVar") && typeof value === "string")
-      .map(([, value]) => value as string)
-  })
 }
 
 /**

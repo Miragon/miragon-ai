@@ -4,25 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Automation MCP</title>
-    <!--
-      Importmap shim for upstream-hosted (remote) widget bundles. Each remote
-      widget bundle imports `react` / `react/jsx-runtime` (externalised in its
-      Vite build); the data: URLs below redirect those imports to re-exports
-      of `globalThis.React` / `globalThis.ReactDOM`, which `main.tsx` populates
-      from the host's own React. Same React instance → hooks + context work.
-      Without this, the dynamic `import()` of a Blob-URL'd remote bundle fails
-      to resolve "react/jsx-runtime" and the widget silently never mounts.
-    -->
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "data:text/javascript,const R=globalThis.React;export default R;export const createElement=R.createElement,Fragment=R.Fragment,useState=R.useState,useEffect=R.useEffect,useMemo=R.useMemo,useCallback=R.useCallback,useRef=R.useRef,useContext=R.useContext,useReducer=R.useReducer,useLayoutEffect=R.useLayoutEffect,useImperativeHandle=R.useImperativeHandle,useId=R.useId,useTransition=R.useTransition,useDeferredValue=R.useDeferredValue,useSyncExternalStore=R.useSyncExternalStore,createContext=R.createContext,StrictMode=R.StrictMode,Suspense=R.Suspense,forwardRef=R.forwardRef,memo=R.memo,lazy=R.lazy,Children=R.Children,isValidElement=R.isValidElement,cloneElement=R.cloneElement,Component=R.Component,PureComponent=R.PureComponent,version=R.version;",
-          "react/jsx-runtime": "data:text/javascript,const R=globalThis.React;export const Fragment=R.Fragment;export function jsx(t,p,k){return R.createElement(t,k==null?p:Object.assign({},p,{key:k}))}export const jsxs=jsx;",
-          "react-dom": "data:text/javascript,const R=globalThis.ReactDOM;export default R;export const createRoot=R.createRoot,hydrateRoot=R.hydrateRoot;",
-          "react-dom/client": "data:text/javascript,const R=globalThis.ReactDOM;export const createRoot=R.createRoot,hydrateRoot=R.hydrateRoot;"
-        }
-      }
-    </script>
   </head>
   <body style="font-family: ui-sans-serif, system-ui, sans-serif !important; padding: 0; margin: 0">
     <div id="root"></div>

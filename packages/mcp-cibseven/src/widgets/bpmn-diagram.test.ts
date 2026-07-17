@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { applyHighlights, dedupe } from "./bpmn-diagram.js"
+import { applyHighlights, dedupe, HIGHLIGHT_COLORS, HIGHLIGHT_CSS } from "./bpmn-highlights.js"
 
 interface MarkerCall {
   activityId: string
@@ -147,6 +147,19 @@ describe("applyHighlights — overlays", () => {
     ])
     expect(o.calls).toHaveLength(1)
     expect(o.calls[0].activityId).toBe("C")
+  })
+})
+
+describe("HIGHLIGHT_COLORS", () => {
+  it("is the single source for every color in the injected highlight CSS", () => {
+    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.running.fill)
+    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.running.stroke)
+    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.openTask.fill)
+    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.openTask.stroke)
+    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.incident.fill)
+    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.incident.stroke)
+    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.instanceBadge)
+    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.incidentBadge)
   })
 })
 

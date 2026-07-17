@@ -28,8 +28,7 @@
   "dependencies": {
     "@miragon-ai/client-cibseven": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
-    "@miragon/mcp-toolkit-core": "0.8.0",
-    "@miragon/mcp-toolkit-proxy-contract": "0.8.0",
+    "@miragon/mcp-toolkit-core": "0.9.0",
     "zod": "4.4.3"
   },
   "peerDependencies": {
@@ -42,7 +41,7 @@
     }
   },
   "devDependencies": {
-    "@miragon/mcp-toolkit-ui": "0.8.0",
+    "@miragon/mcp-toolkit-ui": "0.9.0",
     "@testing-library/react": "16.3.2",
     "@types/react": "19.2.17",
     "bpmn-js": "18.14.0",

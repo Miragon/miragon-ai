@@ -42,7 +42,7 @@ cp .env.example .env   # dev defaults: engine on :8410, Prometheus on :8460
 pnpm dev
 ```
 
-This starts the Miravelo upstream on `:8401` and the MCP gateway on `:8400`.
+This starts the MCP gateway on `:8400`.
 Connect any MCP host to `http://localhost:8400` and call a tool.
 
 ## Common tasks

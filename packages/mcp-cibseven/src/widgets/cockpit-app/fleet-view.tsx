@@ -8,6 +8,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
+import { severityTone } from "../cockpit-dashboard/lib.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
@@ -26,7 +27,9 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
   const s = q.data?.summary
   const incidents = s?.totalIncidents ?? 0
   const failed = s?.totalFailedJobs ?? 0
-  const tone: ToneVariant = incidents > 0 ? "critical" : failed > 0 ? "warning" : "success"
+  // Same severity ladder as the per-definition rows — including the neutral
+  // tone for an idle engine (0 running instances), which must not read as green.
+  const tone: ToneVariant = severityTone(failed, incidents, s?.totalRunningInstances ?? 0)
 
   return (
     <button

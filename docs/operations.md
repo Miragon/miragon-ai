@@ -34,8 +34,7 @@ By default the MCP endpoint is unauthenticated — any client that reaches port
 or set `MCP_OAUTH` to make the gateway an OAuth resource server: bearer tokens
 on `/mcp` are validated against your IdP (Keycloak, Auth0, or generic
 OIDC/JWKS), unauthenticated requests get 401, and the `.well-known` discovery
-metadata is served. Set `MCP_URL` so advertised URLs are right; it is also
-required when an `MCP_PROXIES` entry uses `auth.mode: "oauth2"`.
+metadata is served. Set `MCP_URL` so advertised URLs are right.
 
 For an IdP without Dynamic Client Registration, `provider: "oidc-proxy"` uses a
 pre-registered `clientId`/`clientSecret` and brokers the login through the
@@ -45,7 +44,7 @@ IdP, and `allowedRedirectUris` — the exact MCP-client callbacks the gateway's
 runs (its proxy otherwise forwards the auth code to any `redirect_uri`).
 
 `CAMUNDA_AUTH_TYPE=passthrough` forwards each caller's bearer token to the
-engine per request (never to upstream proxies or Prometheus). With `MCP_OAUTH`
+engine per request (never to Prometheus). With `MCP_OAUTH`
 the gateway validates the token and the engine enforces the caller's
 permissions — which needs an engine with REST auth enabled; a default engine
 accepts anonymous requests and ignores the token.
@@ -58,7 +57,6 @@ accepts anonymous requests and ignores the token.
 | `MCP_URL`                               | —                                   | Public base URL the server advertises (resource URIs, OAuth callbacks)                                                                                                                      |
 | `MCP_OAUTH`                             | —                                   | JSON OAuth resource-server config; providers `keycloak`, `auth0`, `oidc`, `oidc-proxy` — full field lists in [`.env.example`](https://github.com/Miragon/miragon-ai/blob/main/.env.example) |
 | `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated `module` or `module:toolset` entries; e.g. `camunda7:read-only,analytics`                                                                                                   |
-| `MCP_PROXIES`                           | —                                   | JSON array of upstream MCP proxies, `[{name, label, upstreamUrl, auth, upstreamModules?}]` (`upstreamModules: true` enables module discovery)                                               |
 | `MCP_DASHBOARD_DIR` / `MCP_PROFILE_DIR` | in-memory                           | Directories persisting saved dashboards / user profiles across restarts                                                                                                                     |
 | `CAMUNDA_ENGINES_FILE`                  | —                                   | Path to a JSON file with the engine list `[{id, baseUrl, cockpitUrl?, auth?}, ...]`; highest precedence                                                                                     |
 | `CAMUNDA_ENGINES_JSON`                  | —                                   | Same engine array as inline JSON; ignored when `CAMUNDA_ENGINES_FILE` is set                                                                                                                |

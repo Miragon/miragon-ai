@@ -33,7 +33,7 @@ import { useViewData } from "./use-view-data.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, VariablesTable } from "./instance-sections.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
-import { HistoryTimeline } from "./incident-detail/history-timeline.js"
+import { HistoryTimelineView } from "./history-timeline.js"
 import { useT } from "../messages/use-t.js"
 
 export type { IncidentDetailData }
@@ -251,7 +251,7 @@ export function IncidentDetailWidget({
           </TabsContent>
 
           <TabsContent value="history" className="pt-4">
-            <HistoryTimeline entries={data.history} />
+            <HistoryTimelineView variant="table" activities={data.history} />
           </TabsContent>
         </Tabs>
       </section>

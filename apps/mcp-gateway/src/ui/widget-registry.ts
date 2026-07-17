@@ -6,8 +6,8 @@ import { GenericDataTableWidget, GenericKpiGridWidget } from "@miragon-ai/widget
 export const widgetRegistry: Record<string, WidgetComponent> = {
   ...camunda7Widgets,
   ...analyticsWidgets,
-  // Generic shell widgets — the render-view targets any module/upstream can
-  // feed via props.dataKey (catalogued in ../shell-widgets.ts).
+  // Generic shell widgets — the render-view/builder composition targets any
+  // module can feed via props.dataKey (catalogued in ../shell-widgets.ts).
   "shell:kpi-grid": GenericKpiGridWidget,
   "shell:data-table": GenericDataTableWidget,
 }

@@ -94,7 +94,6 @@ export const EXPECTED_TOOLS: readonly string[] = [
   "get-framework-manifest",
   "list-dashboards",
   "load-dashboard",
-  "read-widget-bundle",
   "refresh-view",
   "render-view",
   "save-dashboard",

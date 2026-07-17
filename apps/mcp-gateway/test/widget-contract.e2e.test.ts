@@ -4,7 +4,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { uiMeta } from "@miragon/mcp-toolkit-core"
 import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
-import { parseProxyConfigEnv } from "@miragon/mcp-toolkit-proxy-contract"
 import { MCPClient, type MCPSession } from "mcp-use/client"
 import type { McpServerInstance } from "mcp-use/server"
 import { getAppConfig, getPlugins } from "../src/setup.js"
@@ -65,7 +64,6 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
     vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
     vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
     vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
-    vi.stubEnv("MCP_PROXIES", undefined)
 
     app = await createFrameworkApp({
       name: "automation-mcp",
@@ -73,7 +71,6 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
       host: "127.0.0.1",
       baseUrl: BASE_URL,
       plugins: getPlugins() as AppPlugin[],
-      proxies: parseProxyConfigEnv(process.env.MCP_PROXIES),
       appConfig: getAppConfig(),
       app: {
         resourceUri: RESOURCE_URI,
