@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { AppDefinition } from "@miragon/mcp-toolkit-core"
+import { PERIODS } from "@miragon-ai/client-analytics"
 import { loadDashboardStep, loadFailureDashboardStep } from "./steps/index.js"
 
 const dashboardPropsSchema = z.toJSONSchema(
@@ -11,7 +12,7 @@ const dashboardPropsSchema = z.toJSONSchema(
         "Scope the dashboard to a single process definition (e.g. 'miraveloLeasing'). When omitted, all processes are aggregated.",
       ),
     period: z
-      .enum(["1d", "3d", "7d", "14d", "30d"])
+      .enum(PERIODS)
       .optional()
       .describe("Time window for the self-fetch when no upstream pipeline step populates data."),
   }),

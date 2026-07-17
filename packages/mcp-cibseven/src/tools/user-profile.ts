@@ -1,7 +1,12 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
 import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
-import { buildSingleWidgetView } from "@miragon-ai/widget-shell/server"
+import {
+  buildDataFeedResult as rawData,
+  buildSingleWidgetView,
+  withToolErrors,
+} from "@miragon-ai/widget-shell/server"
+import { isCamunda7Toolset, isToolInToolset } from "../lib/toolsets.js"
 import {
   CAMUNDA7_SAVE_USER_PROFILE,
   CAMUNDA7_SHOW_USER_PROFILE,
@@ -17,14 +22,6 @@ import type { ProfileStore } from "../lib/profile-store.js"
 import { resolveProfileKey } from "../lib/resolve-profile-key.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { translator } from "../messages/index.js"
-
-/** Plain (no-UI) tool result carrying JSON for the widget's in-app `callTool`. */
-function rawData(data: unknown) {
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(data) }],
-    structuredContent: data as Record<string, unknown>,
-  }
-}
 
 /**
  * One-line, model-facing summary of a profile — localized to the profile's own
@@ -54,12 +51,17 @@ function summarize(p: UserProfile): string {
  * All three resolve the profile key from the request (auth user id → session id)
  * and never talk to an engine; the engine *registry* is read only for the full
  * configured engine list the settings UI offers as availability checkboxes.
+ *
+ * The save tool is a durable write (file-backed profile store), so it honors
+ * the deployment's toolset like every registrar write: absent in `read-only`,
+ * present in `operations`/`admin`. The two view tools are always registered.
  */
 export function registerUserProfileTools(
   server: MCPServer,
   store: ProfileStore,
   registry: EngineRegistry,
   resourceUri: string,
+  toolset?: string,
 ): void {
   const uiMeta = buildUiMeta({ resourceUri })
 
@@ -83,7 +85,7 @@ export function registerUserProfileTools(
       schema: z.object({}),
       _meta: uiMeta,
     },
-    async (_params, ctx) => {
+    withToolErrors(async (_params, ctx) => {
       const view = await loadView(ctx)
       return buildSingleWidgetView({
         widget: "camunda7:user-profile",
@@ -93,7 +95,7 @@ export function registerUserProfileTools(
         title: "Profile & Settings",
         summary: summarize(view.profile),
       })
-    },
+    }),
   )
 
   server.tool(
@@ -106,8 +108,18 @@ export function registerUserProfileTools(
       schema: z.object({}),
       _meta: APP_ONLY_META,
     },
-    async (_params, ctx) => rawData(await loadView(ctx)),
+    withToolErrors(async (_params, ctx) => rawData(await loadView(ctx))),
   )
+
+  // Same rule as `withToolsetFilter`: unknown toolset names fail open.
+  const saveAnnotations = { idempotentHint: true }
+  if (
+    toolset !== undefined &&
+    isCamunda7Toolset(toolset) &&
+    !isToolInToolset({ name: CAMUNDA7_SAVE_USER_PROFILE, annotations: saveAnnotations }, toolset)
+  ) {
+    return
+  }
 
   server.tool(
     {
@@ -115,19 +127,19 @@ export function registerUserProfileTools(
       title: "Save user profile",
       description:
         'Update the current session\'s user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like "switch the UI to German" (language: "de") or "only let me pick the prod engines" (allowedEngineIds). Engine availability is curation, not access control.',
-      annotations: { idempotentHint: true },
+      annotations: saveAnnotations,
       schema: userProfileSaveInput,
       // No `_meta.ui`: this is a normal model-visible tool returning a text
       // summary; the widget also calls it and reads the updated profile back
       // from structuredContent.
     },
-    async (params, ctx) => {
+    withToolErrors(async (params, ctx) => {
       const key = resolveProfileKey(ctx) ?? "anonymous"
       const saved = await store.save(key, params)
       return {
         content: [{ type: "text" as const, text: summarize(saved) }],
         structuredContent: saved as unknown as Record<string, unknown>,
       }
-    },
+    }),
   )
 }

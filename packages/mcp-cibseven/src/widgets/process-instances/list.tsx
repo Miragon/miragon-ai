@@ -10,6 +10,9 @@ import {
   LivePill,
   StatusBadge,
   TONE_DOT,
+  TableEmptyState,
+  Td,
+  Th,
   WidgetHeader,
   WidgetShell,
   useDebouncedValue,
@@ -51,14 +54,14 @@ function InstanceRow({
   const tone = rowTone(row)
   return (
     <tr className="hover:bg-muted transition-colors">
-      <td className="border-border border-b px-4 py-3 align-middle">
+      <Td>
         <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
           <span className={`size-1.5 rounded-full ${TONE_DOT[tone]}`} />
           <span className="truncate">{row.businessKey ?? "—"}</span>
         </div>
         <div className="text-muted-foreground mt-0.5 font-mono text-xs">{row.id}</div>
-      </td>
-      <td className="border-border border-b px-4 py-3 align-middle">
+      </Td>
+      <Td>
         {row.version !== null ? (
           <span className="border-border bg-muted text-muted-foreground inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
             v{row.version}
@@ -66,8 +69,8 @@ function InstanceRow({
         ) : (
           <span className="text-muted-foreground font-mono text-xs">—</span>
         )}
-      </td>
-      <td className="border-border border-b px-4 py-3 align-middle">
+      </Td>
+      <Td>
         {row.suspended ? (
           <StatusBadge tone="warning">{t("processInstances.stateSuspended")}</StatusBadge>
         ) : (
@@ -75,15 +78,15 @@ function InstanceRow({
             {t("processInstances.stateRunning")}
           </span>
         )}
-      </td>
-      <td className="border-border border-b px-4 py-3 text-right align-middle">
+      </Td>
+      <Td align="right">
         {row.hasIncident ? (
           <CountPill tone="critical">!</CountPill>
         ) : (
           <span className="text-muted-foreground font-mono text-xs">—</span>
         )}
-      </td>
-      <td className="border-border border-b px-4 py-3 text-right align-middle">
+      </Td>
+      <Td align="right">
         <div className="inline-flex items-center justify-end gap-1">
           {row.hasIncident && (
             <AskAiButton
@@ -100,7 +103,7 @@ function InstanceRow({
             {t("processInstances.openButton")}
           </DrillButton>
         </div>
-      </td>
+      </Td>
     </tr>
   )
 }
@@ -238,9 +241,7 @@ export function ProcessInstancesView({
       />
 
       {paged.items.length === 0 ? (
-        <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
-          {t("processInstances.noMatch")}
-        </div>
+        <TableEmptyState>{t("processInstances.noMatch")}</TableEmptyState>
       ) : (
         <>
           <table
@@ -249,31 +250,11 @@ export function ProcessInstancesView({
           >
             <thead className="bg-muted">
               <tr>
-                <th
-                  scope="col"
-                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-                >
-                  {t("processInstances.colBusinessKey")}
-                </th>
-                <th
-                  scope="col"
-                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-                >
-                  {t("processInstances.colVersion")}
-                </th>
-                <th
-                  scope="col"
-                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-                >
-                  {t("processInstances.colState")}
-                </th>
-                <th
-                  scope="col"
-                  className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
-                >
-                  {t("processInstances.colIncident")}
-                </th>
-                <th scope="col" className="border-border border-y px-4 py-2.5" />
+                <Th>{t("processInstances.colBusinessKey")}</Th>
+                <Th>{t("processInstances.colVersion")}</Th>
+                <Th>{t("processInstances.colState")}</Th>
+                <Th align="right">{t("processInstances.colIncident")}</Th>
+                <Th plain />
               </tr>
             </thead>
             <tbody>

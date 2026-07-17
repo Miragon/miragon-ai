@@ -36,3 +36,15 @@ export const buildSingleWidgetView = (input: SingleWidgetViewInput): ViewResult 
 
 export const buildComposedView = (input: ComposedViewInput): ViewResult =>
   buildComposedViewCore(input)
+
+/**
+ * Plain (no-UI) tool result for an app-only `*_data` feed: the JSON payload as
+ * text AND as structuredContent, deliberately free of widget `_meta` keys — a
+ * widget-tool result (`ui.resourceUri`) would be rendered by the host instead
+ * of being returned to the in-widget `callTool()` (architecture invariant 5).
+ * The single shared implementation for every module's data feeds.
+ */
+export const buildDataFeedResult = (data: unknown): ViewResult => ({
+  content: [{ type: "text", text: JSON.stringify(data) }],
+  structuredContent: data as Record<string, unknown>,
+})

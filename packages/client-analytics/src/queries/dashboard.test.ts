@@ -208,4 +208,25 @@ describe("failureDashboardData", () => {
       },
     ])
   })
+
+  it("computes totals over ALL patterns while capping the list at the top 50", async () => {
+    // 60 distinct patterns, counts 60..1 — the KPI must not stop at the cap.
+    const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
+      if (q.includes("incident_type")) {
+        return Array.from({ length: 60 }, (_, i) => ({
+          metric: { process_definition_key: `proc-${i}`, incident_type: `type-${i}` },
+          value: 60 - i,
+        }))
+      }
+      return []
+    })
+
+    const res = await failureDashboardData({ instant }, {})
+
+    expect(res.errorPatterns).toHaveLength(50)
+    expect(res.uniqueErrorPatterns).toBe(60)
+    // 60+59+…+1 = 1830, including the 10 sliced-off tail patterns.
+    expect(res.totalIncidents).toBe(1830)
+    expect(res.errorPatterns[0].incidentCount).toBe(60)
+  })
 })

@@ -31,6 +31,7 @@
     "@miragon-ai/client-cibseven": "workspace:*",
     "@miragon-ai/mcp-analytics": "workspace:*",
     "@miragon-ai/mcp-cibseven": "workspace:*",
+    "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "0.8.0",
     "@miragon/mcp-toolkit-proxy-contract": "0.8.0",
     "mcp-use": "1.34.1",

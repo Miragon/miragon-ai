@@ -31,6 +31,15 @@ describe("engineMatcher", () => {
   it("escapes engine ids", () => {
     expect(engineMatcher('a"b')).toBe('engine_id="a\\"b"')
   })
+
+  it("escapes regex metacharacters in the =~ list matcher (literal match only)", () => {
+    // A dot must not act as a wildcard, and a pipe in an id must not split the
+    // matcher into two alternatives. The regex backslash is itself doubled for
+    // the PromQL string literal (Go escape rules), so the wire text carries
+    // `\\.` and RE2 sees `\.`.
+    expect(engineMatcher(["engine.prod-1"])).toBe('engine_id=~"engine\\\\.prod-1"')
+    expect(engineMatcher(["a|b", "c+d"])).toBe('engine_id=~"a\\\\|b|c\\\\+d"')
+  })
 })
 
 describe("selector", () => {

@@ -1,5 +1,4 @@
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { KpiGrid, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { KpiGrid, ViewDataState, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
@@ -26,15 +25,12 @@ export function ProcessIncidentKpi({
   if (!data) {
     return (
       <WidgetShell>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="text-muted-foreground p-2 text-sm">
-            {loading ? t("procIncKpi.loading") : t("procIncKpi.noData")}
-          </div>
-        )}
+        <ViewDataState
+          loading={loading}
+          error={error}
+          loadingText={t("procIncKpi.loading")}
+          emptyText={t("procIncKpi.noData")}
+        />
       </WidgetShell>
     )
   }

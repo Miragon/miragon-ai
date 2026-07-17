@@ -200,6 +200,8 @@ describe("mcp-gateway E2E toolset filtering (camunda7:read-only)", () => {
       "camunda7_set_job_retries",
       "camunda7_correlate_message",
       "camunda7_throw_signal",
+      // durable profile write (registered via the widget-tools path, not the registrar)
+      "camunda7_save_user_profile",
     ]
     for (const tool of forbidden) {
       expect(names, `${tool} must not be advertised in camunda7:read-only`).not.toContain(tool)

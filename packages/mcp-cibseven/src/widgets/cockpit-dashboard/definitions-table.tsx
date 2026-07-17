@@ -1,9 +1,12 @@
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import {
   CountPill,
   DrillButton,
   SectionHeading,
   TONE_DOT,
+  TableEmptyState,
+  Td,
+  Th,
+  ViewDataState,
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
@@ -25,34 +28,34 @@ function ProcessRow({
   const t = useT()
   return (
     <tr className="hover:bg-muted transition-colors">
-      <td className="border-border border-b px-4 py-3 align-middle">
+      <Td>
         <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
           <span className={`size-1.5 rounded-full ${TONE_DOT[row.tone]}`} />
           <span className="truncate">{row.name ?? row.key}</span>
         </div>
         <div className="text-muted-foreground mt-0.5 font-mono text-xs">{row.key}</div>
-      </td>
-      <td className="border-border border-b px-4 py-3 align-middle">
+      </Td>
+      <Td>
         <span className="border-border bg-muted text-muted-foreground inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
           v{row.version}
         </span>
-      </td>
-      <td className="border-border text-muted-foreground border-b px-4 py-3 text-right align-middle font-mono text-xs tabular-nums">
+      </Td>
+      <Td align="right" className="text-muted-foreground font-mono text-xs tabular-nums">
         {row.instances.toLocaleString()}
-      </td>
-      <td className="border-border border-b px-4 py-3 text-right align-middle">
+      </Td>
+      <Td align="right">
         {row.failedJobs > 0 ? (
           <CountPill tone="warning">{row.failedJobs}</CountPill>
         ) : (
           <span className="text-muted-foreground font-mono text-xs">0</span>
         )}
-      </td>
-      <td className="border-border border-b px-4 py-3 text-right align-middle">
+      </Td>
+      <Td align="right">
         <CountPill tone={row.totalIncidents > 0 ? "critical" : "success"}>
           {row.totalIncidents}
         </CountPill>
-      </td>
-      <td className="border-border border-b px-4 py-3 align-middle">
+      </Td>
+      <Td>
         <div className="flex items-center justify-end gap-1.5">
           <DrillButton
             onDrill={() => onViewInstances(row.key)}
@@ -67,7 +70,7 @@ function ProcessRow({
             {t("cockpitDefs.openAction")}
           </DrillButton>
         </div>
-      </td>
+      </Td>
     </tr>
   )
 }
@@ -93,17 +96,13 @@ export function ProcessDefinitionsTableView({
   )
 
   if (!data) {
-    if (error) {
-      return (
-        <Alert variant="destructive">
-          <AlertDescription>{error.message}</AlertDescription>
-        </Alert>
-      )
-    }
     return (
-      <div className="text-muted-foreground p-2 text-sm">
-        {loading ? t("cockpitDefs.loading") : t("cockpitDefs.noData")}
-      </div>
+      <ViewDataState
+        loading={loading}
+        error={error}
+        loadingText={t("cockpitDefs.loading")}
+        emptyText={t("cockpitDefs.noData")}
+      />
     )
   }
 
@@ -117,44 +116,17 @@ export function ProcessDefinitionsTableView({
       />
 
       {rows.length === 0 ? (
-        <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
-          {t("cockpitDefs.emptyState")}
-        </div>
+        <TableEmptyState>{t("cockpitDefs.emptyState")}</TableEmptyState>
       ) : (
         <table className="w-full border-collapse text-sm" aria-label={t("cockpitDefs.tableAria")}>
           <thead className="bg-muted">
             <tr>
-              <th
-                scope="col"
-                className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-              >
-                {t("cockpitDefs.colProcess")}
-              </th>
-              <th
-                scope="col"
-                className="border-border text-muted-foreground border-y px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide"
-              >
-                {t("cockpitDefs.colVersion")}
-              </th>
-              <th
-                scope="col"
-                className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
-              >
-                {t("cockpitDefs.colRunning")}
-              </th>
-              <th
-                scope="col"
-                className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
-              >
-                {t("cockpitDefs.colFailedJobs")}
-              </th>
-              <th
-                scope="col"
-                className="border-border text-muted-foreground border-y px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide"
-              >
-                {t("cockpitDefs.colIncidents")}
-              </th>
-              <th scope="col" className="border-border border-y px-4 py-2.5" />
+              <Th>{t("cockpitDefs.colProcess")}</Th>
+              <Th>{t("cockpitDefs.colVersion")}</Th>
+              <Th align="right">{t("cockpitDefs.colRunning")}</Th>
+              <Th align="right">{t("cockpitDefs.colFailedJobs")}</Th>
+              <Th align="right">{t("cockpitDefs.colIncidents")}</Th>
+              <Th plain />
             </tr>
           </thead>
           <tbody>

@@ -1,9 +1,8 @@
 import { Alert, AlertDescription, Badge, Card, CardContent } from "@miragon/mcp-toolkit-ui"
-import { AskAiButton, SectionHeading } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, SectionHeading, formatTimestamp } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "../../view-models.js"
 
-import { formatTimestamp } from "../../lib/format-time.js"
 import { useT } from "../../messages/use-t.js"
 
 export function FailureTab({

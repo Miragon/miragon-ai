@@ -210,7 +210,9 @@ export async function failureDashboardData(
     ch.instant(`sum by (process_definition_key)(${M.jobsFailed}${sel})`),
   ])
 
-  const errorPatterns: ErrorPatternItem[] = patterns
+  // Totals are computed over ALL patterns; only the list itself is capped at
+  // the top 50 for display.
+  const allPatterns: ErrorPatternItem[] = patterns
     .map((s) => ({
       incidentMessage: s.metric.incident_type ?? "",
       activityId: "",
@@ -222,7 +224,7 @@ export async function failureDashboardData(
     }))
     .filter((p) => p.incidentCount > 0)
     .sort((a, b) => b.incidentCount - a.incidentCount)
-    .slice(0, 50)
+  const errorPatterns = allPatterns.slice(0, 50)
 
   const runningBy = byLabel(runningByKey, "process_definition_key")
   const incidentBy = byLabel(incidentsByKey, "process_definition_key")
@@ -243,10 +245,10 @@ export async function failureDashboardData(
     .filter((p) => p.incidentCount > 0)
     .sort((a, b) => b.incidentCount - a.incidentCount)
 
-  const totalIncidents = errorPatterns.reduce((s, p) => s + p.incidentCount, 0)
+  const totalIncidents = allPatterns.reduce((s, p) => s + p.incidentCount, 0)
   return {
     totalIncidents,
-    uniqueErrorPatterns: errorPatterns.length,
+    uniqueErrorPatterns: allPatterns.length,
     mostAffectedProcess:
       processBreakdown.length > 0 ? processBreakdown[0].processDefinitionKey : null,
     errorPatterns,

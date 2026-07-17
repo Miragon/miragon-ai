@@ -1,8 +1,6 @@
-import { CountPill } from "@miragon-ai/widget-shell/widgets"
+import { CountPill, formatTimestamp } from "@miragon-ai/widget-shell/widgets"
 
 import type { ProcessIncidentsActivity } from "../../view-models.js"
-
-import { formatTimestamp } from "../../lib/format-time.js"
 
 export function ActivitySummary({
   activity,

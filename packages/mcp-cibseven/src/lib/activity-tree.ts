@@ -1,8 +1,9 @@
 /**
  * Helpers for flattening Camunda activity-instance trees into the activity-id
  * lists the BPMN diagram needs for highlighting active tokens and incident
- * activities. Used by both `camunda7_show_instance_detail` and
- * `camunda7_show_bpmn_viewer` so the two widgets stay in sync.
+ * activities. Used by `camunda7_show_instance_detail` and by the shared BPMN
+ * viewer builder (`data/bpmn-viewer-data.ts`, behind both the widget tool and
+ * the pipeline step) so every render path stays in sync.
  */
 
 interface TreeNode {

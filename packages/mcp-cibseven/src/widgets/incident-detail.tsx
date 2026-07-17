@@ -17,7 +17,13 @@ import {
   OpenInCockpitLink,
   SectionHeading,
   StatusBadge,
+  VersionChip,
+  ViewDataState,
+  WidgetHeader,
   WidgetShell,
+  formatDate,
+  formatTime,
+  truncate,
 } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "../view-models.js"
@@ -28,14 +34,9 @@ import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ActivityNode, VariablesTable } from "./instance-sections.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
 import { HistoryTimeline } from "./incident-detail/history-timeline.js"
-import { formatDate, formatTime } from "../lib/format-time.js"
 import { useT } from "../messages/use-t.js"
 
 export type { IncidentDetailData }
-
-function truncateMessage(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max)}…` : text
-}
 
 export function IncidentDetailWidget({
   data: initialData = null,
@@ -67,15 +68,12 @@ export function IncidentDetailWidget({
   if (!data) {
     return (
       <WidgetShell>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="text-muted-foreground p-2 text-sm">
-            {loading ? t("incidentDetail.loading") : t("incidentDetail.noData")}
-          </div>
-        )}
+        <ViewDataState
+          loading={loading}
+          error={error}
+          loadingText={t("incidentDetail.loading")}
+          emptyText={t("incidentDetail.noData")}
+        />
       </WidgetShell>
     )
   }
@@ -107,15 +105,16 @@ export function IncidentDetailWidget({
             `${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}` +
             `${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}, ` +
             `engine ${data.engineId ?? "default"}.`,
-          `Message: ${incidentMessage ? `"${truncateMessage(incidentMessage, 160)}"` : "(none reported)"}.`,
+          `Message: ${incidentMessage ? `"${truncate(incidentMessage, 160)}"` : "(none reported)"}.`,
           `Act via camunda7_resolve_incident / camunda7_set_job_retries` +
             `${data.job ? ` (job ${data.job.id}, ${data.job.retries} retries left)` : ""}; ` +
             `full instance context via camunda7_show_instance_detail.`,
         ].join(" ")}
       />
-      <header className="flex flex-wrap items-start justify-between gap-6">
-        <div className="min-w-0">
-          <div className="mb-3 flex items-center gap-3">
+      <WidgetHeader
+        size="detail"
+        badge={
+          <div className="flex items-center gap-3">
             <div className="bg-critical-soft text-critical grid size-11 place-items-center rounded-xl text-xl">
               ⚠
             </div>
@@ -123,14 +122,14 @@ export function IncidentDetailWidget({
               {resolved ? t("incidentDetail.resolved") : data.incidentType}
             </StatusBadge>
           </div>
-          <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">{title}</h1>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+        }
+        title={title}
+        sub={
+          <>
             <span>
               {data.processDefinitionName ?? data.processDefinitionKey}
               {data.processDefinitionVersion !== null && (
-                <span className="border-border bg-muted text-muted-foreground ml-2 inline-block rounded border px-2 py-0.5 align-middle font-mono text-xs font-medium">
-                  v{data.processDefinitionVersion}
-                </span>
+                <VersionChip version={data.processDefinitionVersion} />
               )}
             </span>
             <span className="text-muted-foreground">·</span>
@@ -149,13 +148,15 @@ export function IncidentDetailWidget({
                 label={t("incidentDetail.openInstanceInCockpit")}
               />
             )}
-          </div>
-        </div>
-        <AskAiButton
-          variant="primary"
-          prompt={`Diagnose CIB Seven incident \`${data.incidentId}\` (type \`${data.incidentType}\`) at activity ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on process instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey} v${data.processDefinitionVersion} (definition \`${data.processDefinitionId}\`${data.businessKey ? `, business key ${data.businessKey}` : ""}), engine \`${data.engineId ?? "default"}\`. Error: ${data.incidentMessage ?? data.job?.exceptionMessage ?? "(none reported)"}. Use camunda7_instance_detail_data and camunda7_get_process_instance_variables for context, read the stacktrace${data.job ? ` on job ${data.job.id}` : ""}, and use camunda7_list_incidents + camunda7_query_historic_activity_instances to check whether other instances of \`${data.processDefinitionKey}\` fail the same way at ${data.activityId}. Then state: (1) the most likely root cause, (2) whether a plain retry will succeed or just re-fail, and (3) the concrete recommended fix (retry, variable correction, instance modification, or escalation).`}
-        />
-      </header>
+          </>
+        }
+        actions={
+          <AskAiButton
+            variant="primary"
+            prompt={`Diagnose CIB Seven incident \`${data.incidentId}\` (type \`${data.incidentType}\`) at activity ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on process instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey} v${data.processDefinitionVersion} (definition \`${data.processDefinitionId}\`${data.businessKey ? `, business key ${data.businessKey}` : ""}), engine \`${data.engineId ?? "default"}\`. Error: ${data.incidentMessage ?? data.job?.exceptionMessage ?? "(none reported)"}. Use camunda7_instance_detail_data and camunda7_get_process_instance_variables for context, read the stacktrace${data.job ? ` on job ${data.job.id}` : ""}, and use camunda7_list_incidents + camunda7_query_historic_activity_instances to check whether other instances of \`${data.processDefinitionKey}\` fail the same way at ${data.activityId}. Then state: (1) the most likely root cause, (2) whether a plain retry will succeed or just re-fail, and (3) the concrete recommended fix (retry, variable correction, instance modification, or escalation).`}
+          />
+        }
+      />
 
       <KpiGrid
         boxed

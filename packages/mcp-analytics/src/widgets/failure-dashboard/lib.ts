@@ -14,16 +14,3 @@ export function useFailureDashboardSelfFetch(initialData: FailureDashboardData |
     { enabled: !initialData },
   )
 }
-
-export function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString()
-  } catch {
-    return iso
-  }
-}
-
-export function truncate(s: string, max: number): string {
-  if (!s) return "—"
-  return s.length > max ? s.slice(0, max) + "…" : s
-}

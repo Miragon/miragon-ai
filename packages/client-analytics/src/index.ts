@@ -4,6 +4,7 @@ export {
   engineMatcher,
   selector,
   PERIOD_RANGE,
+  PERIODS,
   type PrometheusConfig,
   type PrometheusClient,
   type PromSample,

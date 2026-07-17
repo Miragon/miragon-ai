@@ -145,6 +145,42 @@ describe("buildIncidentsDashboardData", () => {
     }
   })
 
+  it("compares offset-format engine timestamps by instant, not lexicographically", async () => {
+    // Cutoff instant: 2026-04-24T12:00:00Z. The engine emits local-offset
+    // timestamps (`…+0200`), which do NOT order lexicographically against a
+    // Zulu cutoff string — both failure directions are locked in here.
+    const now = new Date("2026-04-25T12:00:00.000Z")
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    try {
+      mockedGetIncidents.mockResolvedValueOnce([
+        // 14:00Z → inside the window, but the string sorts BELOW the cutoff.
+        incident({ id: "in", activityId: "A1", incidentTimestamp: "2026-04-24T11:00:00.000-0300" }),
+        // 11:00Z → outside the window, but the string sorts ABOVE the cutoff.
+        incident({
+          id: "out",
+          activityId: "A1",
+          incidentTimestamp: "2026-04-24T13:00:00.000+0200",
+        }),
+      ] as never)
+      mockedGetStats.mockResolvedValueOnce([] as never)
+
+      const data = await buildIncidentsDashboardData(fakeClient, {
+        baseUrl: "http://localhost:8080/engine-rest",
+      })
+
+      expect(data.last24hCount).toBe(1)
+      const a1 = data.processes[0].activities[0]
+      expect(a1.last24hCount).toBe(1)
+      // min/max also order by instant: 14:00Z is the LATER instant even though
+      // its string sorts below the "+0200" one.
+      expect(a1.latestIncident).toBe("2026-04-24T11:00:00.000-0300")
+      expect(a1.firstSeen).toBe("2026-04-24T13:00:00.000+0200")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("falls back to getProcessDefinitions when stats omit a definition", async () => {
     mockedGetIncidents.mockResolvedValueOnce([incident({ id: "i1" })] as never)
     mockedGetStats.mockResolvedValueOnce([] as never) // stats outage / no instances

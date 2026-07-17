@@ -10,6 +10,7 @@ import {
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
+import { ViewDataState } from "@miragon-ai/widget-shell/widgets"
 
 import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_USER_PROFILE_DATA } from "../tool-names.js"
 import {
@@ -125,15 +126,13 @@ export function UserProfileWidget({ data: initialData = null }: { data?: UserPro
   if (!view) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="text-muted-foreground text-sm">
-            {loading ? t("profile.loading") : t("profile.none")}
-          </div>
-        )}
+        <ViewDataState
+          loading={loading}
+          error={error}
+          loadingText={t("profile.loading")}
+          emptyText={t("profile.none")}
+          className="text-muted-foreground text-sm"
+        />
       </div>
     )
   }

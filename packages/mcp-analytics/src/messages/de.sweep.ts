@@ -32,6 +32,7 @@ export const deSweep: MessageCatalog = {
   "aClusterCompare.noData": "Keine Vergleichsdaten.",
   "aClusterCompare.tableLabel": "Metrikvergleich vor/nach dem Deployment",
   "aClusterCompare.title": "Vor/Nach dem Deployment",
+  "aCommon.loadError": "Daten konnten nicht geladen werden",
   "aComparison.metricColumnHeader": "Metrik",
   "aDefBreakdown.avgDuration": "Durchschnitt {duration}",
   "aDefBreakdown.completedCount": "{count} abgeschlossen",

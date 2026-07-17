@@ -1,10 +1,9 @@
 import type { AnalyticsDashboardData, FailureDashboardData } from "@miragon-ai/client-analytics"
-import type { BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
+import { formatDuration, truncate, type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
 import type { DescribeForModel } from "@miragon-ai/widget-shell/ui"
 import type { ClusterCompareData } from "./cluster-compare.js"
 import type { VersionCompareData } from "./version-compare.js"
 import type { EngineCompareData } from "./engine-compare.js"
-import { formatDuration } from "./analytics-dashboard/lib.js"
 
 /**
  * Model-context descriptions for every analytics widget, attached centrally via
@@ -193,10 +192,6 @@ function maxEntry(values: Record<string, number>): [string, number] | null {
     if (!best || value > best[1]) best = [key, value]
   }
   return best
-}
-
-function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max)}…` : text
 }
 
 export const describeBpmnHeatmap: DescribeForModel<BpmnHeatmapData> = (data) => {

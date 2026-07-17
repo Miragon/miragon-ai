@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { SectionHeading, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { SectionHeading, ViewDataState, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { BpmnDiagram, type BpmnHighlight } from "../bpmn-diagram.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
@@ -39,15 +39,12 @@ export function ProcessIncidentFlow({
   if (!data) {
     return (
       <WidgetShell>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="text-muted-foreground p-2 text-sm">
-            {loading ? t("procIncFlow.loading") : t("procIncFlow.noDataAvailable")}
-          </div>
-        )}
+        <ViewDataState
+          loading={loading}
+          error={error}
+          loadingText={t("procIncFlow.loading")}
+          emptyText={t("procIncFlow.noDataAvailable")}
+        />
       </WidgetShell>
     )
   }

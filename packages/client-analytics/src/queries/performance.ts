@@ -7,7 +7,7 @@ import {
   type PrometheusClient,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
-import { byLabel, first, kpiQueries, round1 } from "./helpers.js"
+import { byLabel, first, kpiQueries, parseIsoSeconds, round1 } from "./helpers.js"
 
 export interface PerformanceKPI {
   process_definition_key: string
@@ -191,8 +191,8 @@ export async function comparePeriods(
     engine?: EngineFilterInput
   },
 ): Promise<PeriodComparisonResult> {
-  const a = promWindow(params.periodAFrom, params.periodATo)
-  const b = promWindow(params.periodBFrom, params.periodBTo)
+  const a = promWindow("periodA", params.periodAFrom, params.periodATo)
+  const b = promWindow("periodB", params.periodBFrom, params.periodBTo)
   const [kpiA, kpiB] = await Promise.all([
     periodKpi(ch, params.processDefinitionKey, "Period A", a, params.engine),
     periodKpi(ch, params.processDefinitionKey, "Period B", b, params.engine),
@@ -215,12 +215,11 @@ interface PromWindow {
   rangeExpr: string
 }
 
-function promWindow(from: string, to: string): PromWindow {
-  const fromMs = Date.parse(from)
-  const toMs = Date.parse(to)
-  const durationSec = Math.max(1, Math.round((toMs - fromMs) / 1000))
-  const at = Math.round(toMs / 1000)
-  return { rangeExpr: `[${durationSec}s] @ ${at}` }
+function promWindow(name: "periodA" | "periodB", from: string, to: string): PromWindow {
+  const fromSec = parseIsoSeconds(from, `${name}From`)
+  const toSec = parseIsoSeconds(to, `${name}To`)
+  const durationSec = Math.max(1, toSec - fromSec)
+  return { rangeExpr: `[${durationSec}s] @ ${toSec}` }
 }
 
 async function periodKpi(

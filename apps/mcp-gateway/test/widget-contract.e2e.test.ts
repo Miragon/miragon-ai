@@ -124,6 +124,38 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
     }
   })
 
+  it("carries widget _meta on every *_show_* tool (name-based — catches a forgotten uiMeta)", () => {
+    // The meta-derived filter above can only check tools that HAVE meta; a
+    // show tool that forgot `uiMeta(...)` would silently drop out of it and
+    // hang on the host's loading skeleton. The naming convention is the
+    // invariant we can enforce unconditionally.
+    const showTools = tools.filter((t) => t.name.includes("_show_"))
+    expect(showTools.length).toBeGreaterThanOrEqual(10)
+    for (const tool of showTools) {
+      const ui = uiBlock(toolMeta(tool))
+      expect(ui.resourceUri, `${tool.name}: show tools must render the app resource`).toBe(
+        RESOURCE_URI,
+      )
+      expect(ui.visibility, `${tool.name}: show tools must stay model-visible`).toBeUndefined()
+    }
+  })
+
+  it("marks every *_data feed app-only (name-based — catches a forgotten APP_ONLY_META)", () => {
+    const dataTools = tools.filter((t) => t.name.endsWith("_data"))
+    expect(dataTools.length).toBeGreaterThanOrEqual(5)
+    for (const tool of dataTools) {
+      const ui = uiBlock(toolMeta(tool))
+      expect(
+        Array.isArray(ui.visibility) && ui.visibility.includes("app"),
+        `${tool.name}: *_data feeds must carry visibility ["app"] — a model-visible feed ` +
+          `would be rendered by the host instead of feeding the in-widget callTool`,
+      ).toBe(true)
+      expect(ui.resourceUri, `${tool.name}: *_data feeds must not carry a resourceUri`).toBe(
+        undefined,
+      )
+    }
+  })
+
   it("keeps app-only tools (*_data feeds, refresh-view) free of widget keys", () => {
     const appOnlyTools = tools.filter((t) => {
       const ui = t._meta ? uiBlock(t._meta) : {}

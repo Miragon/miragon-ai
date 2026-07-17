@@ -32,6 +32,7 @@ export const enSweep: MessageCatalog = {
   "aClusterCompare.noData": "No comparison data.",
   "aClusterCompare.tableLabel": "Pre/post deployment metric comparison",
   "aClusterCompare.title": "Pre/Post deployment",
+  "aCommon.loadError": "Failed to load data",
   "aComparison.metricColumnHeader": "Metric",
   "aDefBreakdown.avgDuration": "avg {duration}",
   "aDefBreakdown.completedCount": "{count} completed",

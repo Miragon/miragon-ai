@@ -4,8 +4,6 @@ import {
   Card,
   CardContent,
   Badge,
-  Alert,
-  AlertDescription,
   Table,
   TableHeader,
   TableBody,
@@ -17,26 +15,19 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "../view-models.js"
-import { AskAiButton, ListFooter, usePagedViewData } from "@miragon-ai/widget-shell/widgets"
+import {
+  AskAiButton,
+  ListFooter,
+  ViewDataState,
+  formatTimestamp,
+  truncate,
+  usePagedViewData,
+} from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { refreshCockpitData } from "./refresh.js"
 import { useT } from "../messages/use-t.js"
 
 export type { JobPanelData }
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "\u2014"
-  try {
-    return new Date(iso).toLocaleString()
-  } catch {
-    return iso
-  }
-}
-
-function truncate(s: string | null, max: number): string {
-  if (!s) return "\u2014"
-  return s.length > max ? s.slice(0, max) + "\u2026" : s
-}
 
 export function JobPanelWidget({
   data: initialData = null,
@@ -66,15 +57,13 @@ export function JobPanelWidget({
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        {paged.error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{paged.error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="text-muted-foreground text-sm">
-            {paged.loading ? t("jobPanel.loading") : t("jobPanel.noData")}
-          </div>
-        )}
+        <ViewDataState
+          loading={paged.loading}
+          error={paged.error}
+          loadingText={t("jobPanel.loading")}
+          emptyText={t("jobPanel.noData")}
+          className="text-muted-foreground text-sm"
+        />
       </div>
     )
   }
@@ -208,7 +197,7 @@ export function JobPanelWidget({
                           )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {formatDate(job.createTime)}
+                          {formatTimestamp(job.createTime)}
                         </TableCell>
                         <TableCell>
                           {job.retries === 0 && !retried && (

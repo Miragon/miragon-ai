@@ -154,12 +154,12 @@ export function FleetView({
           <AskAiButton
             variant="subtle"
             label={t("fleet.failureAnalysis")}
-            prompt={`Analyze failures across the entire CIB Seven fleet (engines ${idList}). Use analytics_show_failure_dashboard({engineId: [${idArray}]}) to group incidents fleet-wide by error pattern, activity and process definition. Tell me the dominant cross-engine failure cluster, whether it is isolated to one engine or systemic across the fleet, and the highest-leverage remediation.`}
+            prompt={`Analyze failures across the entire CIB Seven fleet (engines ${idList}). Use analytics_show_failure_dashboard({engine: [${idArray}]}) to group incidents fleet-wide by error pattern, activity and process definition. Tell me the dominant cross-engine failure cluster, whether it is isolated to one engine or systemic across the fleet, and the highest-leverage remediation.`}
           />
           <AskAiButton
             variant="subtle"
             label={t("fleet.performance")}
-            prompt={`Give me a fleet-wide process-performance overview across CIB Seven engines ${idList}. Use analytics_show_dashboard({engineId: [${idArray}], period: "7d"}) for the aggregate throughput / duration / incident picture, then call out the worst-performing process definitions across the fleet and the main bottleneck.`}
+            prompt={`Give me a fleet-wide process-performance overview across CIB Seven engines ${idList}. Use analytics_show_dashboard({engine: [${idArray}], period: "7d"}) for the aggregate throughput / duration / incident picture, then call out the worst-performing process definitions across the fleet and the main bottleneck.`}
           />
         </div>
       </section>

@@ -1,10 +1,13 @@
 import { useState } from "react"
 import { Badge } from "@miragon/mcp-toolkit-ui"
-import { AskAiButton, DrillButton, OpenInCockpitLink } from "@miragon-ai/widget-shell/widgets"
+import {
+  AskAiButton,
+  DrillButton,
+  OpenInCockpitLink,
+  formatTimestamp,
+} from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentInstance } from "../../view-models.js"
-
-import { formatTimestamp } from "../../lib/format-time.js"
 import { useT } from "../../messages/use-t.js"
 
 const INCIDENT_PREVIEW_COUNT = 5
