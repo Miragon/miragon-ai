@@ -4,10 +4,11 @@ import { TableEmptyState, Td, Th } from "./table.js"
 import type { ToneVariant } from "./tone-utils.js"
 
 /**
- * Module-agnostic widgets for the federation path: an upstream (or any
- * pipeline step) produces a context key with plain data, and a `render-view`
- * layout cell points a generic widget at it via `props.dataKey` — no custom
- * widget bundle needed for a standard KPI row or data table.
+ * Module-agnostic widgets — the standard composition targets for
+ * `render-view` and the visual builder: any module or pipeline step produces
+ * a context key with plain data, and a layout cell points a generic widget at
+ * it via `props.dataKey` — no custom widget needed for a standard KPI row or
+ * data table.
  *
  * Registered by the gateway under the `shell:` namespace (see
  * `apps/mcp-gateway/src/shell-widgets.ts`). All texts arrive via props —
