@@ -1,10 +1,15 @@
-export interface HeatmapZoomControlsProps {
+export interface BpmnZoomControlsProps {
   onZoomIn: () => void
   onZoomOut: () => void
   onFit: () => void
 }
 
-export function HeatmapZoomControls({ onZoomIn, onZoomOut, onFit }: HeatmapZoomControlsProps) {
+/**
+ * The shared floating zoom button bar rendered bottom-right over a BPMN
+ * canvas. One class set for every BPMN widget so the controls cannot drift
+ * between the plain diagram and the heatmap.
+ */
+export function BpmnZoomControls({ onZoomIn, onZoomOut, onFit }: BpmnZoomControlsProps) {
   const buttons = [
     { label: "+", onClick: onZoomIn, title: "Zoom in" },
     { label: "⊡", onClick: onFit, title: "Fit to viewport" },
@@ -15,6 +20,7 @@ export function HeatmapZoomControls({ onZoomIn, onZoomOut, onFit }: HeatmapZoomC
       {buttons.map(({ label, onClick, title }) => (
         <button
           key={label}
+          type="button"
           onClick={onClick}
           title={title}
           aria-label={title}

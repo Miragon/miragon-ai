@@ -63,8 +63,8 @@ describe("HistoryTimelineWidget (fixture render)", () => {
     expect(screen.getByText("Review Invoice")).toBeTruthy()
     expect(screen.getByText("userTask")).toBeTruthy()
 
-    // Duration formatting: 120_000ms → "2.0m".
-    expect(screen.getByText("2.0m")).toBeTruthy()
+    // Duration formatting via the shared widget-shell helper: 120_000ms → "2m 0s".
+    expect(screen.getByText("2m 0s")).toBeTruthy()
   })
 
   it("renders the empty state when data is null", () => {

@@ -23,6 +23,7 @@ import {
 import { useT } from "../messages/use-t.js"
 import { CAMUNDA7_PROCESS_DETAIL_DATA } from "../tool-names.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
+import { HIGHLIGHT_COLORS } from "./bpmn-highlights.js"
 import { useNav } from "./navigation.js"
 
 type FlowMode = "live" | "frequency" | "duration"
@@ -329,7 +330,7 @@ export function ProcessDetailView({
                   <span className="inline-flex items-center gap-1.5">
                     <span
                       className="inline-block size-2.5 rounded-full"
-                      style={{ background: "#3b82f6" }}
+                      style={{ background: HIGHLIGHT_COLORS.instanceBadge }}
                       aria-hidden
                     />
                     {t("processDetail.legendRunningTokens")}
@@ -337,7 +338,7 @@ export function ProcessDetailView({
                   <span className="inline-flex items-center gap-1.5">
                     <span
                       className="inline-block size-2.5 rounded-full"
-                      style={{ background: "#ef4444" }}
+                      style={{ background: HIGHLIGHT_COLORS.incidentBadge }}
                       aria-hidden
                     />
                     {t("processDetail.legendIncidentsFailedJobs")}

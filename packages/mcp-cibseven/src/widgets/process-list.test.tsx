@@ -52,7 +52,12 @@ describe("ProcessListWidget (fixture render)", () => {
 
     expect(screen.getByText("Process Definitions")).toBeTruthy()
 
-    // Named definition: name heading, mono key line, and active status.
+    // Renders the canonical definitions-table look (shared with the cockpit).
+    expect(
+      screen.getByRole("table", { name: "Deployed process definitions with version and status" }),
+    ).toBeTruthy()
+
+    // Named definition: name cell, mono key line, and active status.
     expect(screen.getByText("Invoice Process")).toBeTruthy()
     expect(screen.getByText("invoice")).toBeTruthy()
     expect(screen.getByText("Active")).toBeTruthy()

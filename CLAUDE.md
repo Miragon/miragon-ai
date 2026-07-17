@@ -12,17 +12,17 @@ plus the private `@miragon/mcp-toolkit-*` packages) for Camunda 7 / CIB Seven BP
 operations and Prometheus-backed process analytics, including interactive React widgets
 (MCP Apps).
 
-| Path                         | Contents                                                                               |
-| ---------------------------- | -------------------------------------------------------------------------------------- |
-| `apps/mcp-gateway/`          | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`          |
-| `packages/mcp-cibseven/`     | camunda7 module: operations tools, widget tools, widgets, pipeline steps               |
-| `packages/mcp-analytics/`    | analytics module: Prometheus-backed tools, dashboards, comparison widgets              |
-| `packages/client-cibseven/`  | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)   |
-| `packages/client-analytics/` | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas              |
-| `packages/widget-shell/`     | Shared widget plumbing: `adaptDataWidget`, `buildSingleWidgetView`/`buildComposedView` |
-| `engine-plugins/`            | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                 |
-| `playground/`                | Demo env: CIB Seven showcase engine, federated upstream, Compose stack, Fly.io deploy  |
-| `docs/`                      | VitePress docs site (see the `docs-style` skill before editing)                        |
+| Path                         | Contents                                                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `apps/mcp-gateway/`          | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                   |
+| `packages/mcp-cibseven/`     | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                        |
+| `packages/mcp-analytics/`    | analytics module: Prometheus-backed tools, dashboards, comparison widgets                                       |
+| `packages/client-cibseven/`  | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                            |
+| `packages/client-analytics/` | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                       |
+| `packages/widget-shell/`     | Shared widget kit: UI primitives (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders (`/server`) |
+| `engine-plugins/`            | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                          |
+| `playground/`                | Demo env: CIB Seven showcase engine, federated upstream, Compose stack, Fly.io deploy                           |
+| `docs/`                      | VitePress docs site (see the `docs-style` skill before editing)                                                 |
 
 ## Commands
 
@@ -52,6 +52,10 @@ pnpm docs:dev                        # local dev server; pnpm docs:build to buil
 inspector UI at `http://localhost:8400/inspector` — use the inspector to call tools and
 render widgets manually.
 
+If generated SDK files look wrong (e.g. `client.gen.ts` importing `./src/hey-api.js`
+instead of `../hey-api.js`), the shared turbo cache replayed a poisoned `generate`
+output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-cibseven --force`.
+
 ## Architecture invariants
 
 1. **New operations tools go through the registrar — never raw `server.tool()`.** Add the
@@ -64,13 +68,19 @@ render widgets manually.
    See `camunda7_list_process_instances` in
    `packages/mcp-cibseven/src/tools/process-instances.ts` for the canonical shape.
    Destructive/admin tools must also be listed in `src/lib/toolsets.ts` (`ADMIN_ONLY_TOOLS`)
-   so the `camunda7:read-only|operations|admin` toolset filtering stays correct.
+   so the `camunda7:read-only|operations|admin` toolset filtering stays correct —
+   `src/lib/toolsets.test.ts` enforces the rule structurally over every registered tool
+   (`destructiveHint` ⇒ admin-only, read-only ⇒ `readOnlyHint`), so get the annotations
+   right rather than editing the test. Tools registered outside the registrar (the
+   widget-tools path) that perform durable writes must honor the toolset themselves —
+   pattern: `camunda7_save_user_profile` in `src/tools/user-profile.ts`.
 
 2. **Never talk to an engine directly.** All engine access goes through
    `resolveEngine`/`withEngine` (`packages/mcp-cibseven/src/lib/`), which implements the
    multi-engine routing precedence: per-call `engine` override > sticky session selection
    (`camunda7_engine`, action `"select"`) > the single configured default. Constructing or
-   caching a client yourself breaks multi-engine routing.
+   caching a client yourself breaks multi-engine routing. `resolveEngine` already returns
+   `baseUrl`/`cockpitUrl` — never fish them out of `registry.engines` yourself.
 
 3. **Widget registration is a four-link chain** — a widget that misses a link is silently
    absent somewhere:
@@ -80,6 +90,9 @@ render widgets manually.
      `camunda7Widgets`/`analyticsWidgets`; verify your widget actually arrives there)
    - `packages/mcp-cibseven/src/tool-names.ts` — the tool-name constant for every
      `show_*`/`*_data` tool, so in-widget navigation stays rename-safe
+
+   Links 1↔2 are guarded by `src/widgets/catalogue-sync.test.ts` (both modules have
+   one); link 3 you still verify by hand.
 
 4. **The `dedupe` array in `apps/mcp-gateway/vite.config.ts` is load-bearing — never
    remove or trim it.** Without it each widget package bundles its own React/toolkit
@@ -93,7 +106,26 @@ render widgets manually.
    - `*_data` feeds (also in `widget-tools.ts`, `_meta: { ui: { visibility: ["app"] } }`,
      **no** `resourceUri`): app-only JSON for in-widget refresh/navigation — SEP-1865
      hosts hide them from the LLM, and a widget-tool result would be rendered by the
-     host instead of returned to the in-widget `callTool()`
+     host instead of returned to the in-widget `callTool()`. Feeds return
+     `buildDataFeedResult(data)` from `@miragon-ai/widget-shell/server` — the single
+     implementation of this invariant
+
+6. **Widgets compose from the shared kit (`@miragon-ai/widget-shell/widgets`) — never
+   re-inline its primitives.** `ViewDataState` for the loading/error/no-data guard;
+   `QueryFallback` + `TableSkeleton` for self-fetching widgets (a missing `isError`
+   branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime`/
+   `formatDuration`/`truncate` for all formatting (canonical duration style "3m 7s");
+   `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
+   `WidgetShell` for structure; `useBpmnViewer` + `BpmnZoomControls` for BPMN, with
+   highlight/legend colors from `HIGHLIGHT_COLORS`
+   (`packages/mcp-cibseven/src/widgets/bpmn-highlights.ts`).
+
+7. **Shared server data paths are single-sourced.** Definition name/version/instance
+   lookups come from `packages/mcp-cibseven/src/data/definition-info.ts`;
+   `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step — never
+   fork them. Analytics periods derive from `PERIODS`/`PERIOD_RANGE` (client-analytics)
+   — no hardcoded enum copies (the copy in `mcp-cibseven/src/lib/profile-constants.ts`
+   is a deliberate module-boundary exception).
 
 ## Contracts
 
@@ -106,11 +138,14 @@ render widgets manually.
   `packages/client-analytics/src/metric-names.ts`, never raw strings), the alert rules
   (`playground/docker/prometheus/alerts.yml`), and the Grafana dashboards
   (`playground/docker/grafana/dashboards/*.json`) — are checked against the contract by tests on
-  both sides: `packages/client-analytics/src/metrics-contract.test.ts` (vitest) and
-  `engine-plugins/cibseven-history-metrics/.../MetricsContractTest.kt` (Gradle). A
-  rename that skips the contract or a consumer fails one of them. Only attach
-  model-bounded labels (definition key, activity id, engine id …) — never instance ids,
-  business keys, or variable values.
+  both sides: `packages/client-analytics/src/metrics-contract.test.ts` (vitest — also
+  covers the Grafana dashboards incl. regex matchers, per-metric `sum by (…)` grouping
+  labels, and a dead-entry check with a documented allowlist) and
+  `engine-plugins/cibseven-history-metrics/.../MetricsContractTest.kt` (Gradle — also
+  checks the label keys each instrument attaches). A rename that skips the contract or
+  a consumer fails one of them; don't weaken these guards to make a change pass. Only
+  attach model-bounded labels (definition key, activity id, engine id …) — never
+  instance ids, business keys, or variable values.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
   `0.8.0` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.
@@ -120,12 +155,18 @@ render widgets manually.
   `openai/widgetAccessible`, `openai/resultCanProduceWidget`) for widget-rendering
   tools; app-only `*_data` feeds stay free of those keys on purpose. Guarded by
   `apps/mcp-gateway/test/widget-meta.test.ts` (unit) and
-  `apps/mcp-gateway/test/widget-contract.e2e.test.ts` (on the wire).
+  `apps/mcp-gateway/test/widget-contract.e2e.test.ts` (on the wire, **by name**: every
+  `*_show_*` tool must carry the widget `_meta`, every `*_data` feed must be app-only —
+  the naming convention is load-bearing; don't weaken the name checks).
 - **The proxy-contract manifest is the federation contract to upstreams.** Upstream MCP
   servers expose `get-module-manifest` (validated by `ModuleManifestSchema` from
   `@miragon/mcp-toolkit-proxy-contract`) to contribute steps and widgets; the gateway
   discovers them via `MCP_PROXIES` (`parseProxyConfigEnv`). See
-  `playground/miravelo-upstream/server.ts` for the reference implementation.
+  `playground/miravelo-upstream/server.ts` for the reference implementation. The generic
+  `shell:kpi-grid`/`shell:data-table` widgets (`apps/mcp-gateway/src/shell-widgets.ts`)
+  are always registered — upstream modules should reference them for standard KPI
+  rows/tables (manifest v2 `hostWidget`, toolkit ≥0.9) instead of shipping widget
+  bundles of their own.
 
 ## Releases & toolkit contributions
 

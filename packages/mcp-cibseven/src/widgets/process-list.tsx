@@ -1,7 +1,11 @@
-import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { AskAiButton, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
+import { Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { AskAiButton, WidgetShell, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
 import type { ProcessListData } from "../view-models.js"
+import {
+  ProcessDefinitionsTableView,
+  type ProcessDefinitionsTableRow,
+} from "./process-definitions-table-view.js"
 
 export type { ProcessListData }
 
@@ -36,7 +40,7 @@ export function ProcessListWidget({
 
   if (!data) {
     return (
-      <div className="bg-card text-card-foreground p-6">
+      <WidgetShell>
         {fallbackQuery.isError ? (
           <Alert variant="destructive">
             <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
@@ -44,12 +48,25 @@ export function ProcessListWidget({
         ) : (
           <p className="text-muted-foreground text-sm">{t("processList.loading")}</p>
         )}
-      </div>
+      </WidgetShell>
     )
   }
 
+  // Count-less adapter over the canonical definitions table: the count columns
+  // and drill buttons are simply absent; a status column (active/suspended)
+  // and the per-row Ask-AI handoff take their place.
+  const rows: ProcessDefinitionsTableRow[] = data.definitions.map((def) => ({
+    id: def.id,
+    key: def.key,
+    name: def.name,
+    version: def.version,
+    tone: def.suspended ? "warning" : "success",
+    versionTag: def.versionTag,
+    suspended: def.suspended,
+  }))
+
   return (
-    <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
+    <WidgetShell>
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">{t("processList.heading")}</h2>
         <Badge variant="secondary">
@@ -57,39 +74,30 @@ export function ProcessListWidget({
         </Badge>
       </div>
 
-      <div className="grid gap-3">
-        {data.definitions.map((def) => (
-          <Card key={def.id} className="gap-0 py-0 shadow-none">
-            <CardContent className="flex items-center justify-between p-4">
-              <div>
-                <h3 className="font-medium">{def.name ?? def.key}</h3>
-                <p className="text-muted-foreground font-mono text-sm">{def.key}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-muted-foreground text-sm">v{def.version}</span>
-                {def.versionTag && (
-                  <Badge variant="secondary" className="bg-primary/10 text-primary">
-                    {def.versionTag}
-                  </Badge>
-                )}
-                {def.suspended ? (
-                  <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
-                    {t("processList.statusSuspended")}
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="bg-success/10 text-success-foreground">
-                    {t("processList.statusActive")}
-                  </Badge>
-                )}
-                <AskAiButton
-                  variant="subtle"
-                  prompt={`Assess the operational health of process definition \`${def.key}\` (version v${def.version}${def.versionTag ? ", tag " + def.versionTag : ""}) on engine ${data.engineId}. First call analytics_analyze_process_performance with processDefinitionKey="${def.key}", period="7d", includeActivityBreakdown=true to get throughput, P50/P95 duration and the incident-based failure rate with a per-activity breakdown. Then call camunda7_list_incidents with processDefinitionId filtered to this definition (resolve the id from \`${def.key}\` v${def.version} via camunda7_list_process_definitions if needed) to see live open incidents. Summarise: is this definition healthy or degraded, which activities are the worst offenders, the dominant incident message(s), and the single most likely root cause. End with one concrete recommended next step (e.g. retry jobs, fix variable, redeploy). Do not mutate anything.`}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+      <ProcessDefinitionsTableView
+        rows={rows}
+        ariaLabel={t("processList.tableAria")}
+        emptyText={t("processList.emptyState")}
+        status={{
+          header: t("processList.colStatus"),
+          render: (row) =>
+            row.suspended ? (
+              <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
+                {t("processList.statusSuspended")}
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="bg-success/10 text-success-foreground">
+                {t("processList.statusActive")}
+              </Badge>
+            ),
+        }}
+        renderActions={(row) => (
+          <AskAiButton
+            variant="subtle"
+            prompt={`Assess the operational health of process definition \`${row.key}\` (version v${row.version}${row.versionTag ? ", tag " + row.versionTag : ""}) on engine ${data.engineId}. First call analytics_analyze_process_performance with processDefinitionKey="${row.key}", period="7d", includeActivityBreakdown=true to get throughput, P50/P95 duration and the incident-based failure rate with a per-activity breakdown. Then call camunda7_list_incidents with processDefinitionId filtered to this definition (resolve the id from \`${row.key}\` v${row.version} via camunda7_list_process_definitions if needed) to see live open incidents. Summarise: is this definition healthy or degraded, which activities are the worst offenders, the dominant incident message(s), and the single most likely root cause. End with one concrete recommended next step (e.g. retry jobs, fix variable, redeploy). Do not mutate anything.`}
+          />
+        )}
+      />
+    </WidgetShell>
   )
 }
