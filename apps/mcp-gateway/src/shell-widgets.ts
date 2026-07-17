@@ -4,13 +4,13 @@ import type { MCPServer } from "mcp-use/server"
 
 /**
  * The `shell` module: generic, module-agnostic widgets every deployment gets.
- * They render plain data from ANY context key (named via `props.dataKey`), so
- * an upstream module manifest — whose steps can only produce keys under its
- * own namespace — can feed a standard KPI row or data table without shipping
- * a widget bundle:
+ * They render plain data from ANY context key (named via `props.dataKey`) —
+ * the standard composition targets for `render-view` and the visual builder,
+ * so any module or pipeline step can feed a KPI row or data table without
+ * shipping a dedicated widget:
  *
- *   step:   produces ["miravelo:kpis"]
- *   layout: { widget: "shell:kpi-grid", props: { dataKey: "miravelo:kpis" } }
+ *   step:   produces ["camunda7:kpis"]
+ *   layout: { widget: "shell:kpi-grid", props: { dataKey: "camunda7:kpis" } }
  *
  * The components live in the shared widget kit
  * (`@miragon-ai/widget-shell/widgets`, see `generic-widgets.tsx`); this file
@@ -60,7 +60,7 @@ export const shellDefinition: AppDefinition = {
     {
       id: "shell:kpi-grid",
       description:
-        "Generic KPI strip. Renders the cells found under props.dataKey — lets any module or upstream step feed a standard KPI row without shipping its own widget.",
+        "Generic KPI strip. Renders the cells found under props.dataKey — lets any module or pipeline step feed a standard KPI row without shipping its own widget.",
       requires: [],
       consumes: [],
       size: "half",

@@ -3,7 +3,6 @@ import path from "node:path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
-import { parseProxyConfigEnv } from "@miragon/mcp-toolkit-proxy-contract"
 import { MCPClient, type MCPSession } from "mcp-use/client"
 import type { McpServerInstance } from "mcp-use/server"
 import { getAppConfig, getPlugins } from "../src/setup.js"
@@ -50,14 +49,13 @@ describe("mcp-gateway E2E smoke", () => {
     vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
     vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
     vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
-    vi.stubEnv("MCP_PROXIES", undefined)
 
     app = await createFrameworkApp({
       name: "automation-mcp",
       version: "0.1.0",
       host: "127.0.0.1",
       plugins: getPlugins() as AppPlugin[],
-      proxies: parseProxyConfigEnv(process.env.MCP_PROXIES),
+      proxies: [],
       appConfig: getAppConfig(),
       app: {
         resourceUri: "ui://automation-mcp/mcp-app.e2e.html",
@@ -150,14 +148,13 @@ describe("mcp-gateway E2E toolset filtering (camunda7:read-only)", () => {
     vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
     vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
     vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:read-only")
-    vi.stubEnv("MCP_PROXIES", undefined)
 
     app = await createFrameworkApp({
       name: "automation-mcp",
       version: "0.1.0",
       host: "127.0.0.1",
       plugins: getPlugins() as AppPlugin[],
-      proxies: parseProxyConfigEnv(process.env.MCP_PROXIES),
+      proxies: [],
       appConfig: getAppConfig(),
       app: {
         resourceUri: "ui://automation-mcp/mcp-app.e2e-read-only.html",

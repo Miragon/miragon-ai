@@ -114,7 +114,7 @@ A pnpm + Turbo monorepo. The gateway composes the two modules and serves them as
 | [`packages/client-analytics/`](packages/client-analytics) | `@miragon-ai/client-analytics`            | Prometheus client, PromQL query functions + metrics contract            |
 | [`packages/widget-shell/`](packages/widget-shell)         | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
 | [`engine-plugins/`](engine-plugins)                       | `ai.miragon.mcp:cibseven-history-metrics` | Kotlin OTEL metrics plugin for CIB Seven (Java 21)                      |
-| [`playground/`](playground)                               | —                                         | Demo env: CIB Seven showcase, upstream, Compose stack, Fly.io deploy    |
+| [`playground/`](playground)                               | —                                         | Demo env: CIB Seven showcase, Compose stack, Fly.io deploy              |
 | [`docs/`](docs)                                           | `@miragon-ai/docs`                        | VitePress documentation site                                            |
 
 ## Tools
@@ -201,7 +201,7 @@ pnpm install --frozen-lockfile
 
 docker compose -f playground/docker/docker-compose.yml up -d   # CIB Seven, OTEL, Prometheus, Grafana
 cp .env.example .env                                 # dev defaults: engine on :8410, Prometheus on :8460
-pnpm dev                                             # miravelo example upstream + gateway on :8400
+pnpm dev                                             # MCP gateway on :8400
 ```
 
 `pnpm dev` also serves the `mcp-use` inspector at `http://localhost:8400/inspector` — call tools and

@@ -16,10 +16,12 @@ is `private` and not published to npm.
   bundle (React, Tailwind, all widgets) exposed as the MCP resource `ui://automation-mcp/mcp-app.html`.
   The `dedupe` array in [`vite.config.ts`](vite.config.ts) is load-bearing — it keeps a single React /
   toolkit instance so in-widget `useCallTool()` works.
-- **Federates upstreams** — discovers proxy upstreams from `MCP_PROXIES` and pulls in their
-  manifest-contributed steps and widgets via the proxy-contract.
 - **Serves HTTP** — streamable-HTTP MCP on `:8400/mcp`, plus the `mcp-use` inspector on `:8400/inspector`
   in dev.
+
+The server is self-contained (tools + widget UI in one endpoint). Aggregating it with other MCP
+servers is the job of an external MCP gateway (e.g. agentgateway) in front — there is no built-in
+upstream/proxy federation.
 
 ## Run
 

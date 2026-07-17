@@ -33,7 +33,6 @@
     "@miragon-ai/mcp-cibseven": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "0.8.0",
-    "@miragon/mcp-toolkit-proxy-contract": "0.8.0",
     "mcp-use": "1.34.1",
     "zod": "4.4.3"
   },

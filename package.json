@@ -17,9 +17,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
-    "dev:miravelo-upstream": "pnpm --filter @miragon-ai/miravelo-upstream dev",
-    "dev:mcp-gateway": "wait-on -t 30000 tcp:${UPSTREAM_MIRAVELO_PORT:-8401} && pnpm --filter @miragon-ai/mcp-gateway dev",
-    "dev": "dotenv -e .env -- concurrently -n miravelo,gateway -c magenta,cyan --kill-others-on-fail \"pnpm run dev:miravelo-upstream\" \"pnpm run dev:mcp-gateway\"",
+    "dev": "dotenv -e .env -- pnpm --filter @miragon-ai/mcp-gateway dev",
     "docs:dev": "pnpm --filter @miragon-ai/docs dev",
     "docs:build": "pnpm --filter @miragon-ai/docs build",
     "docs:preview": "pnpm --filter @miragon-ai/docs preview"

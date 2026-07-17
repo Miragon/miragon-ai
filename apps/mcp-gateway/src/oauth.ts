@@ -87,8 +87,7 @@ const oidcProxySchema = z
     // Present-but-empty is rejected (a `${VAR}` that resolved to ""); omit the
     // field entirely for a public client.
     clientSecret: z.string().min(1).optional(),
-    // …or name another env var holding the secret, mirroring the MCP_PROXIES
-    // `…EnvVar` convention.
+    // …or name another env var holding the secret (`…EnvVar` convention).
     clientSecretEnvVar: z.string().min(1).optional(),
     // The exact redirect_uris the gateway's /authorize will accept. Required:
     // it is the safeguard against the interception vector described above.

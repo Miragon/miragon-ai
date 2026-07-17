@@ -17,7 +17,6 @@ on:
           - all
           - otel
           - engine
-          - miravelo
           - prometheus
           - grafana
           - gateway
@@ -66,8 +65,8 @@ jobs:
       - name: Deploy
         run: ./playground/fly/deploy.sh "${{ inputs.target }}"
         env:
-          # Build secret for the gateway/miravelo images (private @miragon
-          # packages on npm.pkg.github.com).
+          # Build secret for the gateway image (private @miragon packages on
+          # npm.pkg.github.com).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Org that owns the playground apps (repo variable, optional).
           FLY_ORG: ${{ vars.FLY_ORG || 'personal' }}

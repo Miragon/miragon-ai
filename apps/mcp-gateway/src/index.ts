@@ -7,14 +7,7 @@ import {
   createFrameworkApp,
   installToolCallNameCapture,
 } from "@miragon/mcp-toolkit-core/tools"
-import { parseProxyConfigEnv } from "@miragon/mcp-toolkit-proxy-contract"
-import {
-  getAppConfig,
-  getPlugins,
-  proxySecretEnvVarNames,
-  warnPrometheusDefault,
-  warnUnknownEnvVars,
-} from "./setup.js"
+import { getAppConfig, getPlugins, warnPrometheusDefault, warnUnknownEnvVars } from "./setup.js"
 import {
   getOAuthConfigFromEnv,
   installAuthorizeRedirectAllowlist,
@@ -25,12 +18,9 @@ import {
 // an ops gateway must not phone home unless explicitly opted in.
 process.env.MCP_USE_ANONYMIZED_TELEMETRY ??= "false"
 
-const proxies = parseProxyConfigEnv(process.env.MCP_PROXIES)
-
 // Surface CAMUNDA_*/MCP_* typos at boot instead of silently ignoring them —
-// secrets named inside MCP_PROXIES entries and MCP_OAUTH belong to the
-// allowlist.
-warnUnknownEnvVars(process.env, [...proxySecretEnvVarNames(proxies), ...oauthSecretEnvVarNames()])
+// secrets named inside MCP_OAUTH belong to the allowlist.
+warnUnknownEnvVars(process.env, oauthSecretEnvVarNames())
 warnPrometheusDefault()
 
 const DIST_DIR = import.meta.filename.endsWith(".ts")
@@ -44,16 +34,13 @@ const frameworkOptions = {
   version: "0.1.0",
   host: "0.0.0.0",
   baseUrl: process.env.MCP_URL,
-  // Upstream proxies with `auth.mode: "oauth2"` mount their OAuth callback
-  // routes on this server, so the public base URL doubles as the callback
-  // base. When MCP_URL is unset and such a proxy is configured, the toolkit
-  // still fails fast with its "callbackBaseUrl is required" error.
-  callbackBaseUrl: process.env.MCP_URL,
   // Cast: toolkit's `plugins: AppPlugin[]` is unparameterized (TServer = unknown),
   // but our plugin factories return `AppPlugin<MCPServer>`. The framework invokes
   // `registerTools(MCPServer)` at runtime, so the narrowing is sound.
   plugins: getPlugins() as AppPlugin[],
-  proxies,
+  // Federation is handled by an external MCP gateway in front of this server;
+  // [] until the toolkit drops the option.
+  proxies: [],
   appConfig: getAppConfig(),
   app: {
     // resourceUri omitted: createFrameworkApp content-hashes htmlPath into a

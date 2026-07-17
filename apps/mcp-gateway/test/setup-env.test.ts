@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   getAppConfig,
   getPlugins,
-  proxySecretEnvVarNames,
   warnPrometheusDefault,
   warnUnknownEnvVars,
 } from "../src/setup.js"
@@ -288,7 +287,6 @@ describe("warnUnknownEnvVars", () => {
     const unknown = warnUnknownEnvVars({
       MCP_OAUTH: "{}",
       MCP_USE_ANONYMIZED_TELEMETRY: "false",
-      MCP_PROXY_MIRAVELO_TOKEN: "secret",
       MCP_INSPECTOR_FRAME_ANCESTORS: "*",
       MCP_DEBUG_LEVEL: "debug",
       PATH: "/usr/bin",
@@ -298,13 +296,9 @@ describe("warnUnknownEnvVars", () => {
     expect(unknown).toEqual([])
   })
 
-  it("accepts proxy-secret names declared in MCP_PROXIES via the extra allowlist", () => {
-    const extras = proxySecretEnvVarNames([
-      { auth: { mode: "bearer", tokenEnvVar: "MCP_MIRAVELO_TOKEN" } },
-      { auth: { mode: "none" } },
-    ])
-
-    expect(extras).toEqual(["MCP_MIRAVELO_TOKEN"])
-    expect(warnUnknownEnvVars({ MCP_MIRAVELO_TOKEN: "secret" }, extras)).toEqual([])
+  it("accepts extra secret names (e.g. from MCP_OAUTH) via the extra allowlist", () => {
+    expect(
+      warnUnknownEnvVars({ MCP_IDP_CLIENT_SECRET: "secret" }, ["MCP_IDP_CLIENT_SECRET"]),
+    ).toEqual([])
   })
 })

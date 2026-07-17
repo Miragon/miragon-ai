@@ -21,7 +21,7 @@ operations and Prometheus-backed process analytics, including interactive React 
 | `packages/client-analytics/` | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                       |
 | `packages/widget-shell/`     | Shared widget kit: UI primitives (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders (`/server`) |
 | `engine-plugins/`            | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                          |
-| `playground/`                | Demo env: CIB Seven showcase engine, federated upstream, Compose stack, Fly.io deploy                           |
+| `playground/`                | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                               |
 | `docs/`                      | VitePress docs site (see the `docs-style` skill before editing)                                                 |
 
 ## Commands
@@ -39,7 +39,7 @@ pnpm generate                        # regenerate the CIB Seven SDK from the Ope
 
 # Run the server locally (needs the Docker infra + a .env file, see .env.example):
 docker compose -f playground/docker/docker-compose.yml up -d
-pnpm dev                             # miravelo example upstream + MCP gateway on :8400
+pnpm dev                             # MCP gateway on :8400
 
 # Kotlin engine plugins (Java 21):
 cd engine-plugins && ./gradlew build # compile + unit tests + Konsist architecture tests
@@ -158,15 +158,13 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
   `apps/mcp-gateway/test/widget-contract.e2e.test.ts` (on the wire, **by name**: every
   `*_show_*` tool must carry the widget `_meta`, every `*_data` feed must be app-only —
   the naming convention is load-bearing; don't weaken the name checks).
-- **The proxy-contract manifest is the federation contract to upstreams.** Upstream MCP
-  servers expose `get-module-manifest` (validated by `ModuleManifestSchema` from
-  `@miragon/mcp-toolkit-proxy-contract`) to contribute steps and widgets; the gateway
-  discovers them via `MCP_PROXIES` (`parseProxyConfigEnv`). See
-  `playground/miravelo-upstream/server.ts` for the reference implementation. The generic
-  `shell:kpi-grid`/`shell:data-table` widgets (`apps/mcp-gateway/src/shell-widgets.ts`)
-  are always registered — upstream modules should reference them for standard KPI
-  rows/tables (manifest v2 `hostWidget`, toolkit ≥0.9) instead of shipping widget
-  bundles of their own.
+- **Federation/aggregation happens in an external MCP gateway (agentgateway) IN FRONT of
+  this server; this repo builds one self-contained MCP server including its UI.** No
+  upstream/proxy mechanics in the code (the `proxies: []` in `src/index.ts` stays empty
+  until the toolkit drops the option). The generic `shell:kpi-grid`/`shell:data-table`
+  widgets (`apps/mcp-gateway/src/shell-widgets.ts`) are always registered — they are the
+  standard `render-view`/builder composition targets for KPI rows/tables, fed via
+  `props.dataKey`.
 
 ## Releases & toolkit contributions
 

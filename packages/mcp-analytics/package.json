@@ -30,7 +30,6 @@
     "@miragon-ai/client-cibseven": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "0.8.0",
-    "@miragon/mcp-toolkit-proxy-contract": "0.8.0",
     "zod": "4.4.3"
   },
   "peerDependencies": {

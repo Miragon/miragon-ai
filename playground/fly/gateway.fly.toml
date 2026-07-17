@@ -16,7 +16,6 @@ primary_region = "fra"
   # auth); the engine is private-only (6PN), so this guards nothing sensitive.
   CAMUNDA_ENGINES_JSON = '[{"id":"prod-a","baseUrl":"http://miragon-ai-playground-engine.internal:8410/engine-rest","auth":{"type":"basic","username":"demo","password":"demo"}}]'
   PROMETHEUS_URL = "http://miragon-ai-playground-prometheus.internal:9090"
-  MCP_PROXIES = '[{"name":"miravelo","label":"Miravelo","upstreamUrl":"http://miragon-ai-playground-miravelo.internal:8401/mcp","auth":{"mode":"none"},"upstreamModules":true}]'
 
 [http_service]
   internal_port = 8400
