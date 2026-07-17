@@ -71,7 +71,6 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
       host: "127.0.0.1",
       baseUrl: BASE_URL,
       plugins: getPlugins() as AppPlugin[],
-      proxies: [],
       appConfig: getAppConfig(),
       app: {
         resourceUri: RESOURCE_URI,

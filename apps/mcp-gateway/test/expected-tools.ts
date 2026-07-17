@@ -94,9 +94,6 @@ export const EXPECTED_TOOLS: readonly string[] = [
   "get-framework-manifest",
   "list-dashboards",
   "load-dashboard",
-  // Federation-era framework tool still registered by the pinned toolkit
-  // 0.8.0; the 0.9.0 pin bump removes it — drop this entry then.
-  "read-widget-bundle",
   "refresh-view",
   "render-view",
   "save-dashboard",

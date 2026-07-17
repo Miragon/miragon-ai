@@ -147,7 +147,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
   attach model-bounded labels (definition key, activity id, engine id …) — never
   instance ids, business keys, or variable values.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
-  `0.8.0` everywhere). Updates are deliberate version bumps across all packages — never
+  `0.9.0` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.
 - **The widget `_meta` contract comes from the toolkit — never hand-write the
   dual-protocol keys.** `uiMeta({ resourceUri, title, … })` emits the full ext-apps/Apps
@@ -189,7 +189,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-gateway/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
-  exactly pinned dependency (`save-exact`, currently `0.8.0`). Toolkit changes happen in
+  exactly pinned dependency (`save-exact`, currently `0.9.0`). Toolkit changes happen in
   that repo and arrive here as a deliberate, repo-wide version bump — and since the
   toolkit is `0.x`, treat every minor bump as potentially breaking.
 - **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,

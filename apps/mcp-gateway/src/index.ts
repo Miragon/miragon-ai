@@ -38,9 +38,6 @@ const frameworkOptions = {
   // but our plugin factories return `AppPlugin<MCPServer>`. The framework invokes
   // `registerTools(MCPServer)` at runtime, so the narrowing is sound.
   plugins: getPlugins() as AppPlugin[],
-  // Federation is handled by an external MCP gateway in front of this server;
-  // [] until the toolkit drops the option.
-  proxies: [],
   appConfig: getAppConfig(),
   app: {
     // resourceUri omitted: createFrameworkApp content-hashes htmlPath into a

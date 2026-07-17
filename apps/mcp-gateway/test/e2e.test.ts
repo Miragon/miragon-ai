@@ -55,7 +55,6 @@ describe("mcp-gateway E2E smoke", () => {
       version: "0.1.0",
       host: "127.0.0.1",
       plugins: getPlugins() as AppPlugin[],
-      proxies: [],
       appConfig: getAppConfig(),
       app: {
         resourceUri: "ui://automation-mcp/mcp-app.e2e.html",
@@ -154,7 +153,6 @@ describe("mcp-gateway E2E toolset filtering (camunda7:read-only)", () => {
       version: "0.1.0",
       host: "127.0.0.1",
       plugins: getPlugins() as AppPlugin[],
-      proxies: [],
       appConfig: getAppConfig(),
       app: {
         resourceUri: "ui://automation-mcp/mcp-app.e2e-read-only.html",
