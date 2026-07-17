@@ -40,6 +40,7 @@
   "devDependencies": {
     "@miragon/mcp-toolkit-ui": "0.8.0",
     "@playwright/test": "1.61.1",
+    "@tanstack/react-query": "5.100.11",
     "@tailwindcss/vite": "4.3.1",
     "@types/node": "22.19.15",
     "@types/react": "19.2.17",

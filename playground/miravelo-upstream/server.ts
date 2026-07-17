@@ -113,6 +113,18 @@ const manifest: ModuleManifest = {
       bundle: bundleUri,
       size: "full",
     },
+    // schemaVersion-2 host-widget reference: reuses the gateway's generic
+    // `shell:kpi-grid` for the customer record instead of shipping a second
+    // bundle — the reference pattern for upstream modules that just need a
+    // standard visualization. Preset props merge UNDER each layout cell's own
+    // props (the cell wins).
+    {
+      id: "miravelo:customer-kpis",
+      requires: ["miravelo:customer"],
+      hostWidget: "shell:kpi-grid",
+      props: { dataKey: "miravelo:customer", boxed: true },
+      size: "half",
+    },
   ],
 }
 

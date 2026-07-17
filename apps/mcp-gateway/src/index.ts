@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import path from "node:path"
-import type { AppPlugin } from "@miragon/mcp-toolkit-core"
+import { TOOLKIT_VERSION, type AppPlugin } from "@miragon/mcp-toolkit-core"
 import {
   createFileSystemDashboardStore,
   createFrameworkApp,
@@ -55,6 +55,16 @@ const frameworkOptions = {
   plugins: getPlugins() as AppPlugin[],
   proxies,
   appConfig: getAppConfig(),
+  // Shared runtimes this host actually exposes to upstream widget bundles
+  // (importmap shims in mcp-app.html + exposeSharedRuntime in src/ui/main.tsx).
+  // An upstream manifest requiring a runtime not declared here is skipped
+  // fail-soft at discovery. Versions: mcp-use pin (package.json), toolkit pin
+  // via TOOLKIT_VERSION, react-query pin from the widget stack.
+  hostRuntime: {
+    mcpUseReact: "1.34.1",
+    toolkitUi: TOOLKIT_VERSION,
+    reactQuery: "5.100.11",
+  },
   app: {
     // resourceUri omitted: createFrameworkApp content-hashes htmlPath into a
     // cache-busting ui://miragon-ai/mcp-app.<hash>.html (with a stable dev
