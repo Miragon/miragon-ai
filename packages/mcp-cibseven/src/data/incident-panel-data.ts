@@ -10,13 +10,13 @@ import type {
 } from "../view-models.js"
 import {
   getIncidents,
-  getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
 } from "@miragon-ai/client-cibseven/sdk"
 
 import { buildInstanceCockpitUrl, buildProcessCockpitUrl } from "../lib/cockpit-url.js"
 import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"
+import { fetchDefinitionInfo } from "./definition-info.js"
 
 interface IncidentRow {
   id: string
@@ -28,13 +28,6 @@ interface IncidentRow {
   incidentMessage: string | null
   incidentTimestamp: string
   configuration: string | null
-}
-
-interface DefinitionInfo {
-  id: string
-  key: string
-  name: string | null
-  version: number | null
 }
 
 interface DefinitionStatsRow {
@@ -96,72 +89,6 @@ async function fetchIncidents(
   return { rows, byKey }
 }
 
-async function fetchDefinitionInfo(
-  client: Client,
-  keys: string[],
-): Promise<Map<string, { info: DefinitionInfo; instances: number | null }>> {
-  if (keys.length === 0) return new Map()
-
-  // Cluster-wide statistics: gives running instances + name/version per definition in a single call.
-  const stats = (await getProcessDefinitionStatistics({
-    client,
-    query: {},
-  }).catch(() => [])) as unknown as DefinitionStatsRow[]
-
-  const wantedKeys = new Set(keys)
-  const byKey = new Map<string, { info: DefinitionInfo; instances: number | null }>()
-  for (const row of Array.isArray(stats) ? stats : []) {
-    const def = row.definition
-    if (!def?.key || !wantedKeys.has(def.key)) continue
-    const existing = byKey.get(def.key)
-    const candidate: DefinitionInfo = {
-      id: def.id ?? "",
-      key: def.key,
-      name: def.name ?? null,
-      version: typeof def.version === "number" ? def.version : null,
-    }
-    // Prefer the latest version for the same key.
-    if (
-      !existing ||
-      (candidate.version !== null &&
-        (existing.info.version === null || candidate.version > existing.info.version))
-    ) {
-      byKey.set(def.key, { info: candidate, instances: row.instances ?? null })
-    }
-  }
-
-  // Fallback for keys not in stats (e.g. all instances ended) — fetch via /process-definition.
-  const missing = keys.filter((k) => !byKey.has(k))
-  if (missing.length > 0) {
-    const defs = (await getProcessDefinitions({
-      client,
-      query: {
-        keysIn: missing.join(","),
-        latestVersion: true,
-      },
-    }).catch(() => [])) as unknown as Array<{
-      id?: string
-      key?: string
-      name?: string | null
-      version?: number
-    }>
-    for (const d of Array.isArray(defs) ? defs : []) {
-      if (!d.key) continue
-      byKey.set(d.key, {
-        info: {
-          id: d.id ?? "",
-          key: d.key,
-          name: d.name ?? null,
-          version: typeof d.version === "number" ? d.version : null,
-        },
-        instances: 0,
-      })
-    }
-  }
-
-  return byKey
-}
-
 interface IncidentInstanceContext {
   cockpitUrl: string | undefined
   baseUrl: string
@@ -190,14 +117,40 @@ function toIncidentInstance(r: IncidentRow, ctx: IncidentInstanceContext): Incid
   }
 }
 
+/**
+ * Compare epoch millis, not strings: the engine emits timestamps with its
+ * local UTC offset (e.g. `…+0200`), which do not order lexicographically
+ * against a Zulu `toISOString()` cutoff (same rule as health-data.ts).
+ */
+function isOnOrAfter(timestamp: string, cutoffMs: number): boolean {
+  const ms = Date.parse(timestamp)
+  return Number.isFinite(ms) && ms >= cutoffMs
+}
+
 function maxTimestamp(values: string[]): string | null {
-  if (values.length === 0) return null
-  return values.reduce((max, v) => (v > max ? v : max), values[0])
+  let best: string | null = null
+  let bestMs = -Infinity
+  for (const v of values) {
+    const ms = Date.parse(v)
+    if (Number.isFinite(ms) && ms > bestMs) {
+      best = v
+      bestMs = ms
+    }
+  }
+  return best
 }
 
 function minTimestamp(values: string[]): string | null {
-  if (values.length === 0) return null
-  return values.reduce((min, v) => (v < min ? v : min), values[0])
+  let best: string | null = null
+  let bestMs = Infinity
+  for (const v of values) {
+    const ms = Date.parse(v)
+    if (Number.isFinite(ms) && ms < bestMs) {
+      best = v
+      bestMs = ms
+    }
+  }
+  return best
 }
 
 interface BuildOverviewOptions {
@@ -214,7 +167,7 @@ export async function buildIncidentsDashboardData(
   const { byKey, rows } = await fetchIncidents(client, options)
   const definitionInfo = await fetchDefinitionInfo(client, [...byKey.keys()])
 
-  const cutoff = new Date(Date.now() - DAY_MS).toISOString()
+  const cutoffMs = Date.now() - DAY_MS
   let last24hTotal = 0
   let affectedActivityTotal = 0
 
@@ -240,12 +193,12 @@ export async function buildIncidentsDashboardData(
         activityName: null,
         representativeMessage: incidents[0].incidentMessage,
         incidentCount: incidents.length,
-        last24hCount: incidents.filter((i) => i.incidentTimestamp >= cutoff).length,
+        last24hCount: incidents.filter((i) => isOnOrAfter(i.incidentTimestamp, cutoffMs)).length,
         firstSeen: minTimestamp(incidents.map((i) => i.incidentTimestamp)),
         latestIncident: maxTimestamp(incidents.map((i) => i.incidentTimestamp)),
       }))
 
-    const last24hCount = group.filter((r) => r.incidentTimestamp >= cutoff).length
+    const last24hCount = group.filter((r) => isOnOrAfter(r.incidentTimestamp, cutoffMs)).length
     last24hTotal += last24hCount
     affectedActivityTotal += activities.length
 
@@ -312,7 +265,7 @@ export async function buildProcessIncidentsData(
   const activityNames = bpmnXml ? extractActivityNames(bpmnXml) : {}
   const totalActivityCount = bpmnXml ? countBpmnActivities(bpmnXml) : null
 
-  const cutoff = new Date(Date.now() - DAY_MS).toISOString()
+  const cutoffMs = Date.now() - DAY_MS
 
   const incidentCtx: IncidentInstanceContext = {
     cockpitUrl: options.cockpitUrl,
@@ -360,7 +313,7 @@ export async function buildProcessIncidentsData(
     ),
     runningInstances,
     incidentCount: group.length,
-    last24hCount: group.filter((r) => r.incidentTimestamp >= cutoff).length,
+    last24hCount: group.filter((r) => isOnOrAfter(r.incidentTimestamp, cutoffMs)).length,
     totalActivityCount,
     latestIncident: maxTimestamp(group.map((r) => r.incidentTimestamp)),
     activities,

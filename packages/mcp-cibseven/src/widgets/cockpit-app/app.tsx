@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import { ModelContext, useWidget } from "mcp-use/react"
-import { Alert, AlertDescription, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
-import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { ViewDataState, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "../../view-models.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
 import { camunda7BaseWidgets } from "../registry.js"
@@ -210,23 +210,16 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   }
 
   // ── Loading / error / empty ───────────────────────────────────────────────
-  if (enginesQuery.isError) {
+  if (enginesQuery.isError || engines.length === 0) {
     return (
       <WidgetShell>
-        <Alert variant="destructive">
-          <AlertDescription>{enginesQuery.error.message}</AlertDescription>
-        </Alert>
-      </WidgetShell>
-    )
-  }
-  if (engines.length === 0) {
-    return (
-      <WidgetShell>
-        <div className="text-muted-foreground p-6 text-sm">
-          {enginesQuery.data === undefined
-            ? translator(locale, "cockpit.loading.engines")
-            : translator(locale, "cockpit.empty.engines")}
-        </div>
+        <ViewDataState
+          loading={enginesQuery.data === undefined}
+          error={enginesQuery.error}
+          loadingText={translator(locale, "cockpit.loading.engines")}
+          emptyText={translator(locale, "cockpit.empty.engines")}
+          className="text-muted-foreground p-6 text-sm"
+        />
       </WidgetShell>
     )
   }

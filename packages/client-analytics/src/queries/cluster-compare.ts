@@ -7,6 +7,7 @@ import {
 } from "../prometheus.js"
 import {
   compareKpiDelta,
+  parseIsoSeconds,
   queryCompareKpis,
   type CompareKpiDelta,
   type CompareKpis,
@@ -55,7 +56,7 @@ export async function clusterCompare(
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
   const before = Math.max(1, Math.floor(params.windowBeforeDays))
   const after = Math.max(1, Math.floor(params.windowAfterDays))
-  const deployTs = Math.round(Date.parse(params.deploymentTimestamp) / 1000)
+  const deployTs = parseIsoSeconds(params.deploymentTimestamp, "deploymentTimestamp")
 
   const beforeWin = { from: deployTs - before * DAY, to: deployTs }
   const afterWin = { from: deployTs, to: deployTs + after * DAY }

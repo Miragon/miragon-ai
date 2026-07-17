@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
 import { WidgetShell, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
+import { CAMUNDA7_SHOW_BPMN_VIEWER } from "../../tool-names.js"
 import { useT } from "../../messages/use-t.js"
 import { BpmnViewerHeader } from "./header.js"
 import { BpmnViewerLegend } from "./legend.js"
@@ -35,7 +36,7 @@ export function BpmnViewerWidget({
       processDefinitionKey ?? null,
       version ?? null,
     ],
-    "camunda7_show_bpmn_viewer",
+    CAMUNDA7_SHOW_BPMN_VIEWER,
     queryArgs,
     { enabled: !initialData && canSelfFetch },
   )

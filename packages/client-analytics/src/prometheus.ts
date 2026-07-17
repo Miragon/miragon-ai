@@ -63,6 +63,15 @@ export function escapeLabelValue(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
 }
 
+/**
+ * Escape RE2 metacharacters so a value matches literally inside a `=~"…"`
+ * matcher. Without this, an id like `engine.prod` also matches `engineXprod`,
+ * and one containing `|` silently splits into two alternatives.
+ */
+function escapeRegexValue(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
 export type EngineFilterInput = string | string[] | undefined
 
 /**
@@ -74,7 +83,7 @@ export function engineMatcher(engine: EngineFilterInput): string | undefined {
   if (engine === undefined || engine === null) return undefined
   if (Array.isArray(engine)) {
     if (engine.length === 0) return undefined
-    return `engine_id=~"${engine.map(escapeLabelValue).join("|")}"`
+    return `engine_id=~"${engine.map((e) => escapeLabelValue(escapeRegexValue(e))).join("|")}"`
   }
   if (engine.length === 0) return undefined
   return `engine_id="${escapeLabelValue(engine)}"`
@@ -102,3 +111,10 @@ export const PERIOD_RANGE = {
   "30d": "30d",
 } as const
 export type Period = keyof typeof PERIOD_RANGE
+
+/**
+ * The period values as a tuple, derived from {@link PERIOD_RANGE} — the single
+ * source of truth for every `z.enum`/step-enum/type that offers the periods.
+ * Adding a period to PERIOD_RANGE propagates everywhere.
+ */
+export const PERIODS = Object.keys(PERIOD_RANGE) as [Period, ...Period[]]

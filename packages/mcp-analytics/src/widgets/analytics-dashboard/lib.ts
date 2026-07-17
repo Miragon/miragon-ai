@@ -1,16 +1,7 @@
 import { useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
-import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
+import type { AnalyticsDashboardData, Period } from "@miragon-ai/client-analytics"
 
-export function formatDuration(ms: number | null): string {
-  if (ms == null) return "-"
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
-  if (ms < 3600000) return `${(ms / 60000).toFixed(1)}min`
-  if (ms < 86400000) return `${(ms / 3600000).toFixed(1)}h`
-  return `${(ms / 86400000).toFixed(1)}d`
-}
-
-export type AnalyticsDashboardPeriod = "1d" | "3d" | "7d" | "14d" | "30d"
+export type AnalyticsDashboardPeriod = Period
 
 export interface DashboardScopeProps {
   processDefinitionKey?: string

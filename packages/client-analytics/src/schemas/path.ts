@@ -1,9 +1,9 @@
 import { z } from "zod"
-import { engineFilterShape } from "./shared.js"
+import { engineFilterShape, periodField } from "./shared.js"
 
 export const elementBottleneckInput = z.object({
   processDefinitionKey: z.string().describe("Process definition key to analyze"),
-  period: z.enum(["1d", "3d", "7d", "14d", "30d"]).default("7d").describe("Analysis time period"),
+  period: periodField,
   minBucketSize: z
     .number()
     .int()

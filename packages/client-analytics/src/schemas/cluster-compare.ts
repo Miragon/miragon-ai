@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { engineFilterShape } from "./shared.js"
+import { engineFilterShape, isoDatetimeString } from "./shared.js"
 
 export const clusterCompareInput = z.object({
   processDefinitionKey: z
@@ -10,10 +10,9 @@ export const clusterCompareInput = z.object({
     .string()
     .optional()
     .describe("Restrict incident count to a single BPMN element (optional)"),
-  deploymentTimestamp: z
-    .string()
-    .min(1)
-    .describe("Deployment timestamp (ISO datetime). Pulled from camunda7_get_deployment."),
+  deploymentTimestamp: isoDatetimeString.describe(
+    "Deployment timestamp (ISO datetime). Pulled from camunda7_get_deployment.",
+  ),
   windowBeforeDays: z
     .number()
     .int()

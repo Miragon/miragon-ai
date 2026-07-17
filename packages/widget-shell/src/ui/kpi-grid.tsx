@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { TONE_TEXT, type ToneVariant } from "./tone-utils.js"
+import { TONE_SOFT, TONE_TEXT, type ToneVariant } from "./tone-utils.js"
 
 const TREND_TONE: Record<"up" | "down" | "flat", string> = {
   up: "text-critical",
@@ -49,22 +49,45 @@ export interface KpiGridHeader {
  * optional `header` row carries a group label (matches the `.kpi-block`
  * pattern in the cockpit-overview mockup). When unboxed (default), the
  * strip uses the lighter `border-y` look used by the incidents dashboard.
+ *
+ * `variant="soft"` renders each cell as a tone-tinted card (TONE_SOFT
+ * background + foreground) in a gap grid instead of the bordered strip —
+ * the failure-dashboard summary look. `boxed`/`header` don't apply there.
  */
 export function KpiGrid({
   cells,
   boxed = false,
   header,
+  variant = "strip",
+  ariaLabel,
 }: {
   cells: KpiCell[]
   boxed?: boolean
   header?: KpiGridHeader
+  variant?: "strip" | "soft"
+  ariaLabel?: string
 }) {
   const cols = Math.min(Math.max(cells.length, 1), 6)
   const colClass = COL_CLASS[cols] ?? "grid-cols-4"
+  if (variant === "soft") {
+    return (
+      <div className={`grid ${colClass} gap-4`} aria-label={ariaLabel}>
+        {cells.map((cell, idx) => (
+          <div
+            key={idx}
+            className={`rounded-xl p-4 ${cell.tone ? TONE_SOFT[cell.tone] : "bg-muted text-muted-foreground"}`}
+          >
+            <div className="text-sm font-medium">{cell.label}</div>
+            <div className="mt-1 text-2xl font-bold tabular-nums">{cell.value}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
   const wrapperClass = boxed ? "border-border overflow-hidden rounded-lg border" : ""
   const stripClass = boxed ? "" : "border-border border-y"
   return (
-    <div className={wrapperClass}>
+    <div className={wrapperClass} aria-label={ariaLabel}>
       {header && (
         <div className="border-border bg-muted text-muted-foreground flex items-center gap-2 border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">
           <span>{header.label}</span>

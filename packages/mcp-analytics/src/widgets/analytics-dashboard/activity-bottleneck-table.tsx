@@ -10,9 +10,15 @@ import {
   AlertDescription,
   Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { AskAiButton, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import {
+  AskAiButton,
+  QueryFallback,
+  Section,
+  WidgetShell,
+  formatDuration,
+} from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
-import { formatDuration, useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
+import { useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
 import { useT } from "../../messages/use-t.js"
 
 export function ActivityBottleneckTable({
@@ -31,17 +37,18 @@ export function ActivityBottleneckTable({
   if (!data) {
     return (
       <WidgetShell>
-        {fallbackQuery.isError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full rounded" />
-            ))}
-          </div>
-        )}
+        <QueryFallback
+          isError={fallbackQuery.isError}
+          error={fallbackQuery.error}
+          errorTitle={t("aCommon.loadError")}
+          skeleton={
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full rounded" />
+              ))}
+            </div>
+          }
+        />
       </WidgetShell>
     )
   }
@@ -58,20 +65,8 @@ export function ActivityBottleneckTable({
 
   return (
     <WidgetShell>
-      <details open>
-        <summary className="focus-visible:ring-ring flex cursor-pointer list-none items-center gap-2 rounded outline-none focus-visible:ring-2 [&::-webkit-details-marker]:hidden">
-          <svg
-            className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
-          </svg>
-          <h3 className="text-lg font-medium">{t("aBottleneck.heading")}</h3>
-          <Badge variant="secondary">{data.activityBreakdown.length}</Badge>
-        </summary>
-        <div className="border-border mt-3 rounded-lg border">
+      <Section title={t("aBottleneck.heading")} count={data.activityBreakdown.length} defaultOpen>
+        <div className="border-border rounded-lg border">
           <Table aria-label={t("aBottleneck.tableLabel")}>
             <TableHeader>
               <TableRow>
@@ -118,7 +113,7 @@ export function ActivityBottleneckTable({
             </TableBody>
           </Table>
         </div>
-      </details>
+      </Section>
     </WidgetShell>
   )
 }

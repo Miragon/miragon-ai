@@ -10,13 +10,13 @@ import {
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
-import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, Section, ViewDataState } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData, OpenUserTask } from "../view-models.js"
 import { CAMUNDA7_INSTANCE_DETAIL_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
-import { ActivityNode, Section, VariablesTable } from "./instance-sections.js"
+import { ActivityNode, VariablesTable } from "./instance-sections.js"
 import { TaskCompleteForm } from "./task-complete-form.js"
 import { ConfirmDialog } from "./confirm-dialog.js"
 import { refreshCockpitData } from "./refresh.js"
@@ -145,15 +145,13 @@ export function InstanceDetailWidget({
   if (!data) {
     return (
       <div className="bg-card text-card-foreground p-6">
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="text-muted-foreground text-sm">
-            {loading ? t("instanceDetail.loading") : t("instanceDetail.noData")}
-          </div>
-        )}
+        <ViewDataState
+          loading={loading}
+          error={error}
+          loadingText={t("instanceDetail.loading")}
+          emptyText={t("instanceDetail.noData")}
+          className="text-muted-foreground text-sm"
+        />
       </div>
     )
   }

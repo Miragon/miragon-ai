@@ -2,7 +2,7 @@ import { Alert, AlertDescription, Badge } from "@miragon/mcp-toolkit-ui"
 
 import type { IncidentDetailHistoryEntry } from "../../view-models.js"
 
-import { formatDuration, formatTimestamp } from "../../lib/format-time.js"
+import { formatDuration, formatTimestamp } from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../../messages/use-t.js"
 
 export function HistoryTimeline({ entries }: { entries: IncidentDetailHistoryEntry[] }) {

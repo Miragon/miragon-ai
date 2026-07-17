@@ -113,10 +113,15 @@ export class UnknownEngineError extends Error {
 export function resolveEngine(
   override: string | undefined,
   registry: EngineRegistry,
-): { client: Client; engineId: string; cockpitUrl?: string } {
+): { client: Client; engineId: string; baseUrl: string; cockpitUrl?: string } {
   try {
     const backend = registry.backends.resolve(override)
-    return { client: backend.client, engineId: backend.id, cockpitUrl: backend.meta?.cockpitUrl }
+    return {
+      client: backend.client,
+      engineId: backend.id,
+      baseUrl: backend.meta?.baseUrl ?? "",
+      cockpitUrl: backend.meta?.cockpitUrl,
+    }
   } catch (e) {
     if (e instanceof BackendNotSelectedError) throw new EngineNotSelectedError(registry.engines)
     if (e instanceof UnknownBackendError)
@@ -140,14 +145,11 @@ export interface Camunda7StepAppConfig {
  * Resolve the engine for a pipeline step. Steps have no per-call `engine`
  * argument, so they honour an optional `camunda7:engine` view key, then fall
  * back to the sticky session selection or the only configured engine (same
- * precedence as {@link resolveEngine}). Also returns the engine's `baseUrl`
- * (for the data builders that render Cockpit deep-links).
+ * precedence as {@link resolveEngine}).
  */
 export function resolveStepEngine(
   appConfig: Camunda7StepAppConfig,
   override?: string,
 ): { client: Client; engineId: string; baseUrl: string; cockpitUrl?: string } {
-  const { client, engineId, cockpitUrl } = resolveEngine(override, appConfig.registry)
-  const baseUrl = appConfig.registry.engines.find((e) => e.id === engineId)?.baseUrl ?? ""
-  return { client, engineId, baseUrl, cockpitUrl }
+  return resolveEngine(override, appConfig.registry)
 }

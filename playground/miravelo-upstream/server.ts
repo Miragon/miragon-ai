@@ -10,6 +10,7 @@ import {
 import { z } from "zod"
 
 import { listKnownCustomers, lookupCustomer } from "./data.js"
+import { customerSchema } from "./shared/customer.js"
 
 /**
  * Mock CRM/leasing upstream for the Miravelo showcase.
@@ -50,27 +51,6 @@ const server = new MCPServer({
   // "::" (dual-stack) on Fly.io, where the gateway connects over the
   // IPv6-only private network; plain IPv4 locally.
   host: process.env.UPSTREAM_MIRAVELO_HOST ?? "0.0.0.0",
-})
-
-const customerSchema = z.object({
-  customerId: z.string(),
-  name: z.string(),
-  email: z.string(),
-  segment: z.enum(["PRIVATE", "BUSINESS", "STUDENT"]),
-  region: z.enum(["EU", "US", "APAC"]),
-  channel: z.enum(["ONLINE", "BRANCH", "FAX"]),
-  accountManager: z.string(),
-  customerSince: z.string(),
-  application: z.object({
-    bikeModel: z.enum(["city", "cargo", "trail", "road"]),
-    leaseAmount: z.number(),
-    leaseTermMonths: z.union([z.literal(12), z.literal(24), z.literal(36), z.literal(48)]),
-    creditScore: z.number(),
-    postalCode: z.string(),
-    priorityFlag: z.boolean(),
-    submittedAt: z.string(),
-  }),
-  notes: z.string(),
 })
 
 server.tool(

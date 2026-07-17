@@ -6,9 +6,15 @@ import {
   AlertDescription,
   Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { TONE_TEXT, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import {
+  QueryFallback,
+  Section,
+  TONE_TEXT,
+  WidgetShell,
+  formatDuration,
+} from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
-import { formatDuration, useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
+import { useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
 import { useT } from "../../messages/use-t.js"
 
 export function ProcessDefinitionBreakdown({
@@ -27,17 +33,18 @@ export function ProcessDefinitionBreakdown({
   if (!data) {
     return (
       <WidgetShell>
-        {fallbackQuery.isError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg" />
-            ))}
-          </div>
-        )}
+        <QueryFallback
+          isError={fallbackQuery.isError}
+          error={fallbackQuery.error}
+          errorTitle={t("aCommon.loadError")}
+          skeleton={
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
+            </div>
+          }
+        />
       </WidgetShell>
     )
   }
@@ -54,20 +61,12 @@ export function ProcessDefinitionBreakdown({
 
   return (
     <WidgetShell>
-      <details open>
-        <summary className="focus-visible:ring-ring flex cursor-pointer list-none items-center gap-2 rounded outline-none focus-visible:ring-2 [&::-webkit-details-marker]:hidden">
-          <svg
-            className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
-          </svg>
-          <h3 className="text-lg font-medium">{t("aDefBreakdown.heading")}</h3>
-          <Badge variant="secondary">{data.definitionBreakdown.length}</Badge>
-        </summary>
-        <div className="mt-3 flex flex-col gap-2">
+      <Section
+        title={t("aDefBreakdown.heading")}
+        count={data.definitionBreakdown.length}
+        defaultOpen
+      >
+        <div className="flex flex-col gap-2">
           {data.definitionBreakdown.map((def) => (
             <Card key={def.processDefinitionKey} className="gap-0 py-0 shadow-none">
               <CardContent className="flex items-center justify-between p-3">
@@ -95,7 +94,7 @@ export function ProcessDefinitionBreakdown({
             </Card>
           ))}
         </div>
-      </details>
+      </Section>
     </WidgetShell>
   )
 }

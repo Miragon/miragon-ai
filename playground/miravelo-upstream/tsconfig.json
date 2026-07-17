@@ -14,5 +14,5 @@
     "lib": ["ES2022", "DOM"],
     "types": ["node"]
   },
-  "include": ["server.ts", "data.ts", "widget/**/*.ts", "widget/**/*.tsx"]
+  "include": ["server.ts", "data.ts", "shared/**/*.ts", "widget/**/*.ts", "widget/**/*.tsx"]
 }

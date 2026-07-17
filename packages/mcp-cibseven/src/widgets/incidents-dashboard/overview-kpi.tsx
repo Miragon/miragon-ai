@@ -1,20 +1,16 @@
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
   KpiGrid,
   LivePill,
+  ViewDataState,
   WidgetHeader,
   WidgetShell,
+  formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
 import type { IncidentsDashboardData } from "../../view-models.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
 import { useT } from "../../messages/use-t.js"
-
-function formatTimestamp(iso: string | null): string {
-  if (!iso) return "—"
-  return new Date(iso).toLocaleString()
-}
 
 /** Shell-less incidents KPI header. Reused standalone and in the cockpit app. */
 export function IncidentOverviewKpiView({
@@ -36,17 +32,13 @@ export function IncidentOverviewKpiView({
   const t = useT()
 
   if (!data) {
-    if (error) {
-      return (
-        <Alert variant="destructive">
-          <AlertDescription>{error.message}</AlertDescription>
-        </Alert>
-      )
-    }
     return (
-      <div className="text-muted-foreground p-2 text-sm">
-        {loading ? t("incidentsKpi.loading") : t("incidentsKpi.noData")}
-      </div>
+      <ViewDataState
+        loading={loading}
+        error={error}
+        loadingText={t("incidentsKpi.loading")}
+        emptyText={t("incidentsKpi.noData")}
+      />
     )
   }
 

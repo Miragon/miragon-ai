@@ -1,5 +1,11 @@
-import { Alert, AlertDescription, Skeleton } from "@miragon/mcp-toolkit-ui"
-import { AskAiButton, KpiGrid, WidgetHeader, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { Skeleton } from "@miragon/mcp-toolkit-ui"
+import {
+  AskAiButton,
+  KpiGrid,
+  QueryFallback,
+  WidgetHeader,
+  WidgetShell,
+} from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/client-analytics"
 import { useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
 import { useT } from "../../messages/use-t.js"
@@ -21,20 +27,21 @@ export function ExecutionSummaryKpi({
     return (
       <WidgetShell>
         <WidgetHeader icon="▤" iconTone="info" title={t("aExecSummary.title")} />
-        {fallbackQuery.isError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <div className="border-border grid grid-cols-2 gap-px overflow-hidden rounded-lg border sm:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-card px-5 py-4">
-                <Skeleton className="h-3 w-16" />
-                <Skeleton className="mt-2 h-7 w-12" />
-              </div>
-            ))}
-          </div>
-        )}
+        <QueryFallback
+          isError={fallbackQuery.isError}
+          error={fallbackQuery.error}
+          errorTitle={t("aCommon.loadError")}
+          skeleton={
+            <div className="border-border grid grid-cols-2 gap-px overflow-hidden rounded-lg border sm:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="bg-card px-5 py-4">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="mt-2 h-7 w-12" />
+                </div>
+              ))}
+            </div>
+          }
+        />
       </WidgetShell>
     )
   }

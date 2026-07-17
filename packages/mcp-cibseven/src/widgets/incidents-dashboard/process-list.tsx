@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react"
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 
 import type {
   IncidentsDashboardActivity,
@@ -21,7 +20,10 @@ import {
   OpenInCockpitLink,
   SectionHeading,
   TONE_DOT,
+  TableEmptyState,
+  ViewDataState,
   WidgetShell,
+  formatTimestamp,
   type FilterChip,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
@@ -39,11 +41,6 @@ function severityTone(unfilteredIncidentCount: number): ToneVariant {
 
 interface DisplayProcess extends IncidentsDashboardProcess {
   tone: ToneVariant
-}
-
-function formatTimestamp(iso: string | null): string {
-  if (!iso) return "—"
-  return new Date(iso).toLocaleString()
 }
 
 function ProcessSummary({
@@ -242,17 +239,13 @@ export function IncidentProcessListView({
   }, [data, search, activeChip])
 
   if (!data) {
-    if (error) {
-      return (
-        <Alert variant="destructive">
-          <AlertDescription>{error.message}</AlertDescription>
-        </Alert>
-      )
-    }
     return (
-      <div className="text-muted-foreground p-2 text-sm">
-        {loading ? t("incidentsList.loading") : t("incidentsList.noData")}
-      </div>
+      <ViewDataState
+        loading={loading}
+        error={error}
+        loadingText={t("incidentsList.loading")}
+        emptyText={t("incidentsList.noData")}
+      />
     )
   }
 
@@ -301,11 +294,11 @@ export function IncidentProcessListView({
         />
 
         {filteredProcesses.length === 0 ? (
-          <div className="border-border text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
+          <TableEmptyState>
             {data.processes.length === 0
               ? t("incidentsList.noOpenIncidents")
               : t("incidentsList.noMatch")}
-          </div>
+          </TableEmptyState>
         ) : (
           filteredProcesses.map((p) => (
             <GroupCard

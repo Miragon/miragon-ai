@@ -381,7 +381,7 @@ function stringifyValue(value: unknown): string {
   return JSON.stringify(value)
 }
 
-function coerceValue(raw: string, type?: string): unknown {
+export function coerceValue(raw: string, type?: string): unknown {
   if (raw === "") return ""
   if (!type || type === "String") return raw
   if (type === "Boolean") {
@@ -391,7 +391,10 @@ function coerceValue(raw: string, type?: string): unknown {
   }
   if (type === "Long" || type === "Integer") {
     if (!/^-?\d+$/.test(raw)) return undefined
-    return Number(raw)
+    const num = Number(raw)
+    // Beyond 2^53 `Number()` silently rounds to the nearest double — refuse
+    // (field shows "invalid") instead of writing a corrupted value to the engine.
+    return Number.isSafeInteger(num) ? num : undefined
   }
   if (type === "Double") {
     const num = Number(raw)

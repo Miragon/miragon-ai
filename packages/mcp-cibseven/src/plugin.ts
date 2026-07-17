@@ -117,8 +117,9 @@ export function createPlugin(
       })
       // Profile tools render/own the settings widget and need the same
       // resourceUri; the engine registry is read only for the configured engine
-      // list the settings UI offers as availability checkboxes.
-      registerUserProfileTools(server, profileStore, registry, resourceUri)
+      // list the settings UI offers as availability checkboxes. The toolset is
+      // threaded through so the durable save tool stays out of `read-only`.
+      registerUserProfileTools(server, profileStore, registry, resourceUri, config.toolset)
     },
   }
 }

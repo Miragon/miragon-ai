@@ -1,8 +1,11 @@
 /**
- * Locale-aware timestamp formatting helpers used across widgets.
+ * Locale-aware formatting helpers shared by every widget module. Each helper
+ * returns an em-dash for null/undefined/empty input so callers can render
+ * directly into a table cell without per-row branching.
  *
- * Each helper returns an em-dash for null/undefined input so callers can
- * render directly into a table cell without per-row branching.
+ * THE single source for timestamp/duration/truncate rendering — the modules'
+ * former local copies drifted into three different duration styles ("3m 7s" /
+ * "3.1m" / "3.1min"); the canonical style is the compact "3m 7s" family below.
  */
 
 const EMPTY = "—"
@@ -38,4 +41,10 @@ export function formatDuration(ms: number | null | undefined): string {
   const h = Math.floor(m / 60)
   const remM = m % 60
   return `${h}h ${remM}m`
+}
+
+/** Truncate with an ellipsis; em-dash for null/empty input. */
+export function truncate(value: string | null | undefined, max: number): string {
+  if (!value) return EMPTY
+  return value.length > max ? value.slice(0, max) + "…" : value
 }

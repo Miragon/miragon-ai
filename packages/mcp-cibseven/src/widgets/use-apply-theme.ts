@@ -3,8 +3,10 @@ import { useEffect } from "react"
 /**
  * Apply the profile theme to the widget document by toggling the `.dark` class
  * on `<html>`, which flips the toolkit's CSS variables (and every `dark:`
- * Tailwind variant). `"system"` (or any unknown value) follows the OS
- * `prefers-color-scheme` live via `matchMedia`. Runs inside the widget iframe —
+ * Tailwind variant). `"system"`, `undefined` (profile still loading or feed
+ * unavailable) and any unknown value follow the OS `prefers-color-scheme`
+ * live via `matchMedia` — the profile default IS `"system"`, so an absent
+ * profile must not force light. Runs inside the widget iframe —
  * it themes our rendered document, not the host chrome. Accepts a loose `string`
  * so the gateway can pass a profile field straight from an untyped feed.
  */
@@ -18,11 +20,11 @@ export function useApplyTheme(theme: string | undefined): void {
       apply(true)
       return
     }
-    if (theme === "light" || theme === undefined) {
+    if (theme === "light") {
       apply(false)
       return
     }
-    // "system": resolve against the OS preference and keep it in sync.
+    // "system" / undefined: resolve against the OS preference and keep it in sync.
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       apply(false)
       return

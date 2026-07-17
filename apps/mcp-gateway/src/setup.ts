@@ -11,6 +11,7 @@ import {
   type ProfileStore,
 } from "@miragon-ai/mcp-cibseven"
 import { createPlugin as createAnalyticsPlugin } from "@miragon-ai/mcp-analytics"
+import { createShellPlugin } from "./shell-widgets.js"
 import { createCamunda7Client, type Client as Camunda7Client } from "@miragon-ai/client-cibseven"
 
 // Incomplete credentials must fail the boot, not silently degrade to
@@ -370,7 +371,12 @@ function buildSharedResources(entries: AppConfigEntry[]): SharedResources {
 export function getPlugins(): AppPlugin<MCPServer>[] {
   const entries = getActiveAppEntries()
   const shared = buildSharedResources(entries)
-  return entries
-    .filter((entry) => MODULE_REGISTRY[entry.app])
-    .map((entry) => MODULE_REGISTRY[entry.app].createPlugin(entry.config, shared))
+  return [
+    // Always-on generic widgets (`shell:*`) — no tools, no steps, so they are
+    // deliberately outside the MCP_ACTIVE_MODULES selection.
+    createShellPlugin(),
+    ...entries
+      .filter((entry) => MODULE_REGISTRY[entry.app])
+      .map((entry) => MODULE_REGISTRY[entry.app].createPlugin(entry.config, shared)),
+  ]
 }

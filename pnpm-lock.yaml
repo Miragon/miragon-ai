@@ -68,6 +68,9 @@ importers:
       '@miragon-ai/mcp-cibseven':
         specifier: workspace:*
         version: link:../../packages/mcp-cibseven
+      '@miragon-ai/widget-shell':
+        specifier: workspace:*
+        version: link:../../packages/widget-shell
       '@miragon/mcp-toolkit-core':
         specifier: 0.8.0
         version: 0.8.0(@miragon/mcp-toolkit-proxy-contract@0.8.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(zod@4.4.3)
