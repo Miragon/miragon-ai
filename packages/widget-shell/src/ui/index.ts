@@ -28,3 +28,14 @@ export {
   type BpmnHeatmapData,
   type BpmnHeatmapProps,
 } from "./bpmn-heatmap.js"
+export {
+  useBpmnViewer,
+  type UseBpmnViewerOptions,
+  type UseBpmnViewerResult,
+  type BpmnCanvas,
+  type BpmnOverlays,
+  type BpmnElementRegistry,
+  type BpmnEventBus,
+  type BpmnViewerWithGet,
+} from "./use-bpmn-viewer.js"
+export { BpmnZoomControls, type BpmnZoomControlsProps } from "./bpmn-zoom-controls.js"

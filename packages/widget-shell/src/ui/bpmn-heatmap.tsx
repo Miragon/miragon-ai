@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react"
-import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
 import {
   Alert,
   AlertDescription,
@@ -14,33 +13,10 @@ import {
   buildHeatPoints,
   drawHeatLayer,
   HEAT_GRADIENT_CSS,
-  type BpmnElement,
   type HeatPoint,
 } from "./bpmn-heatmap/heat-utils.js"
-import { HeatmapZoomControls } from "./bpmn-heatmap/zoom-controls.js"
-
-interface BpmnCanvas {
-  zoom(mode: "fit-viewport"): void
-  zoom(level: number): void
-  zoom(): number
-  viewbox(): { x: number; y: number; width: number; height: number; scale: number }
-  getContainer(): HTMLElement
-}
-
-interface ElementRegistry {
-  getAll: () => BpmnElement[]
-}
-
-interface EventBus {
-  on: (event: string, fn: () => void) => void
-  off: (event: string, fn: () => void) => void
-}
-
-interface BpmnViewerWithGet {
-  get: ((service: "canvas") => BpmnCanvas) &
-    ((service: "elementRegistry") => ElementRegistry) &
-    ((service: "eventBus") => EventBus)
-}
+import { BpmnZoomControls } from "./bpmn-zoom-controls.js"
+import { useBpmnViewer } from "./use-bpmn-viewer.js"
 
 export interface BpmnHeatmapProps {
   bpmnXml: string
@@ -66,41 +42,19 @@ export function BpmnHeatmap({
   height = 480,
   diagramRadius = 55,
 }: BpmnHeatmapProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
   const heatCanvasRef = useRef<HTMLCanvasElement>(null)
-  const viewerRef = useRef<NavigatedViewer | null>(null)
   const redrawRef = useRef<(() => void) | null>(null)
-  const [importError, setImportError] = useState<string | null>(null)
   // Latest heat inputs, read by redraw() so we can repaint without re-importing.
   const dataRef = useRef({ nodeFrequencies, edgeFrequencies, diagramRadius })
   dataRef.current = { nodeFrequencies, edgeFrequencies, diagramRadius }
 
-  useEffect(() => {
-    if (!containerRef.current || !bpmnXml) return
-
-    const viewer = new NavigatedViewer({ container: containerRef.current })
-    viewerRef.current = viewer
-    let cancelled = false
-    let cleanupRedraw: (() => void) | null = null
-    const gradientLut = buildGradientLut()
-    setImportError(null)
-
-    void (async () => {
-      try {
-        await viewer.importXML(bpmnXml)
-      } catch (err) {
-        if (cancelled) return
-        setImportError(err instanceof Error ? err.message : "Failed to render the BPMN diagram.")
-        return
-      }
-      if (cancelled) return
-      const bpmn = viewer as unknown as BpmnViewerWithGet
-      const canvas = bpmn.get("canvas")
-      canvas.zoom("fit-viewport")
-      canvas.zoom(canvas.zoom() * 0.95)
-
-      const elementRegistry = bpmn.get("elementRegistry")
-      const eventBus = bpmn.get("eventBus")
+  const { containerRef, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
+    bpmnXml,
+    onImported: (viewer) => {
+      const gradientLut = buildGradientLut()
+      const canvas = viewer.get("canvas")
+      const elementRegistry = viewer.get("elementRegistry")
+      const eventBus = viewer.get("eventBus")
 
       const redraw = () => {
         const heatCanvas = heatCanvasRef.current
@@ -151,50 +105,22 @@ export function BpmnHeatmap({
       const onChange = () => redraw()
       eventBus.on("canvas.viewbox.changed", onChange)
       eventBus.on("canvas.resized", onChange)
+      // Resize only repaints the overlay — the operator's pan/zoom is kept.
       const ro = new ResizeObserver(() => redraw())
       if (containerRef.current) ro.observe(containerRef.current)
-      cleanupRedraw = () => {
+      return () => {
         eventBus.off("canvas.viewbox.changed", onChange)
         eventBus.off("canvas.resized", onChange)
         ro.disconnect()
         redrawRef.current = null
       }
-    })()
-
-    return () => {
-      cancelled = true
-      cleanupRedraw?.()
-      viewerRef.current = null
-      viewer.destroy()
-    }
-  }, [bpmnXml])
+    },
+  })
 
   // Repaint the overlay when the heat values change (toggle) — viewer stays mounted.
   useEffect(() => {
     redrawRef.current?.()
   }, [nodeFrequencies, edgeFrequencies, diagramRadius])
-
-  function getCanvas(): BpmnCanvas | null {
-    if (!viewerRef.current) return null
-    return (viewerRef.current as unknown as BpmnViewerWithGet).get("canvas")
-  }
-
-  function handleZoomIn() {
-    const canvas = getCanvas()
-    if (canvas) canvas.zoom(canvas.zoom() * 1.1)
-  }
-
-  function handleZoomOut() {
-    const canvas = getCanvas()
-    if (canvas) canvas.zoom(canvas.zoom() * 0.9)
-  }
-
-  function handleFit() {
-    const canvas = getCanvas()
-    if (!canvas) return
-    canvas.zoom("fit-viewport")
-    canvas.zoom(canvas.zoom() * 0.95)
-  }
 
   return (
     <div className="relative w-full" style={{ height: `${height}px` }}>
@@ -216,7 +142,7 @@ export function BpmnHeatmap({
           <AlertDescription>{importError}</AlertDescription>
         </Alert>
       ) : (
-        <HeatmapZoomControls onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onFit={handleFit} />
+        <BpmnZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onFit={fit} />
       )}
     </div>
   )

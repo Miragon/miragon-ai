@@ -1,10 +1,35 @@
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { TONE_DOT, AskAiButton } from "@miragon-ai/widget-shell/widgets"
+import {
+  TONE_DOT,
+  AskAiButton,
+  WidgetShell,
+  formatDuration,
+  formatTimestamp,
+} from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
 
 export type { HistoryTimelineData }
 export type HistoryActivity = HistoryTimelineData["activities"][number]
+
+/**
+ * Row contract of the history family — the one shape every historic-activity
+ * rendering in this module shares. Both `ActivityData` (historic activity
+ * instances) and `IncidentDetailHistoryEntry` (incident detail's history tab)
+ * satisfy it structurally, so either source renders through
+ * {@link HistoryTimelineView} without mapping.
+ */
+export interface HistoryEntry {
+  id: string
+  activityId: string
+  activityName: string | null
+  activityType: string
+  startTime: string
+  endTime: string | null
+  durationInMillis: number | null
+  assignee?: string | null
+  canceled?: boolean
+}
 
 // Categorical dot colors per BPMN activity type. Start/end map to the brand
 // success/critical tones; the remaining categories use a distinct, deduplicated
@@ -25,33 +50,107 @@ const ACTIVITY_COLORS: Record<string, string> = {
 }
 const ACTIVITY_COLOR_FALLBACK = TONE_DOT.neutral
 
-function formatDuration(ms: number | null): string {
-  if (ms == null) return "running"
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
-  if (ms < 3600000) return `${(ms / 60000).toFixed(1)}m`
-  return `${(ms / 3600000).toFixed(1)}h`
+/**
+ * Compact table look of the family: a `role="table"` grid with Started /
+ * Duration / Status columns for dense embeddings (the incident detail's
+ * history tab). Same {@link HistoryEntry} rows and shared format helpers as
+ * the rich timeline.
+ */
+function HistoryTable({ entries }: { entries: HistoryEntry[] }) {
+  const t = useT()
+  return (
+    <div
+      role="table"
+      aria-label={t("incidentHistory.tableAriaLabel")}
+      className="border-border rounded-lg border"
+    >
+      <div
+        role="row"
+        className="border-border text-muted-foreground bg-muted grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide"
+      >
+        <span role="columnheader">{t("incidentHistory.columnActivity")}</span>
+        <span role="columnheader" className="text-right">
+          {t("incidentHistory.columnStarted")}
+        </span>
+        <span role="columnheader" className="text-right">
+          {t("incidentHistory.columnDuration")}
+        </span>
+        <span role="columnheader" className="text-right">
+          {t("incidentHistory.columnStatus")}
+        </span>
+      </div>
+      {entries.map((entry) => (
+        <div
+          key={entry.id}
+          role="row"
+          className="border-border hover:bg-card grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b px-4 py-2 text-sm last:border-b-0"
+        >
+          <div className="min-w-0">
+            <div className="text-foreground truncate font-medium">
+              {entry.activityName ?? entry.activityId}
+            </div>
+            <div className="text-muted-foreground truncate font-mono text-xs">
+              {entry.activityType}
+            </div>
+          </div>
+          <span className="text-muted-foreground text-right font-mono text-xs">
+            {formatTimestamp(entry.startTime)}
+          </span>
+          <span className="text-muted-foreground text-right font-mono text-xs">
+            {formatDuration(entry.durationInMillis)}
+          </span>
+          <span className="text-right">
+            {entry.canceled ? (
+              <Badge variant="secondary">{t("incidentHistory.statusCanceled")}</Badge>
+            ) : entry.endTime ? (
+              <Badge variant="secondary">{t("incidentHistory.statusCompleted")}</Badge>
+            ) : (
+              <Badge variant="default">{t("incidentHistory.statusRunning")}</Badge>
+            )}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 /**
- * Shell-less activity timeline. Reused as the standalone history widget and as a
- * lazily-loaded "Audit log" section inside the instance detail. Pass
- * `processInstance` to show the summary header (omitted when embedded).
+ * Shell-less activity history — THE component family for historic activity
+ * instances. Two variants of the same rows and formatting:
+ *  - `"timeline"` (default): the rich vertical dot timeline with duration
+ *    outlier detection and Ask-AI affordances. Reused as the standalone
+ *    history widget and as the lazily-loaded "Audit log" section inside the
+ *    instance detail; pass `processInstance` to show the summary header
+ *    (omitted when embedded).
+ *  - `"table"`: the compact Started/Duration/Status grid used by the incident
+ *    detail's history tab.
  */
 export function HistoryTimelineView({
   activities,
   processInstance,
   engineId,
   totalActivities,
+  variant = "timeline",
 }: {
-  activities: HistoryActivity[]
+  activities: HistoryEntry[]
   processInstance?: HistoryTimelineData["processInstance"]
   engineId?: string
   totalActivities?: number
+  variant?: "timeline" | "table"
 }) {
   const t = useT()
   if (activities.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t("historyTimeline.empty")}</p>
+    return variant === "table" ? (
+      <Alert>
+        <AlertDescription>{t("incidentHistory.empty")}</AlertDescription>
+      </Alert>
+    ) : (
+      <p className="text-muted-foreground text-sm">{t("historyTimeline.empty")}</p>
+    )
+  }
+
+  if (variant === "table") {
+    return <HistoryTable entries={activities} />
   }
 
   // Duration outliers: only surface the per-row "Why so long here?" explain
@@ -128,7 +227,9 @@ export function HistoryTimelineView({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground text-xs">
-                      {formatDuration(activity.durationInMillis)}
+                      {activity.durationInMillis == null
+                        ? t("incidentHistory.statusRunning")
+                        : formatDuration(activity.durationInMillis)}
                     </span>
                     {isOutlier(activity.durationInMillis) && (
                       <AskAiButton
@@ -153,22 +254,22 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
   const t = useT()
   if (!data) {
     return (
-      <div className="bg-card text-card-foreground p-6">
+      <WidgetShell>
         <Alert>
           <AlertDescription>{t("historyTimeline.noData")}</AlertDescription>
         </Alert>
-      </div>
+      </WidgetShell>
     )
   }
 
   return (
-    <div className="bg-card text-card-foreground p-6">
+    <WidgetShell>
       <HistoryTimelineView
         activities={data.activities}
         processInstance={data.processInstance}
         engineId={data.engineId}
         totalActivities={data.totalActivities}
       />
-    </div>
+    </WidgetShell>
   )
 }

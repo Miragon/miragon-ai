@@ -21,7 +21,8 @@ helpers from `src/prometheus.ts` — never concatenate label values by hand:
 - `escapeLabelValue(value)` — escapes `\` and `"` for use inside a label matcher
 - `engineMatcher(engine)` — optional `engine_id="…"` / `engine_id=~"a|b"` fragment
 - `selector(...matchers)` — assembles `{…}`, dropping empties
-- `PERIOD_RANGE` / `Period` — the allowed windows (`1d`–`30d`, capped at retention)
+- `PERIOD_RANGE` / `PERIODS` / `Period` — the allowed windows (`1d`–`30d`, capped at
+  retention); derive anything period-shaped from these — never copy the enum
 
 Reference shape (from `elementBottleneck` in `src/queries/element.ts`):
 
@@ -47,7 +48,10 @@ append `_sum`/`_count`/`_bucket` at the call site. The single source of truth is
 change the contract first, then the Kotlin plugin
 (`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt` /
 `EngineStateMetrics.kt`), `METRIC_NAMES`, and any alert rules / Grafana dashboards —
-contract tests on both sides enforce consistency. Keep labels model-bounded (never
+contract tests on both sides enforce consistency: the TS side also checks the Grafana
+dashboards (incl. regex matchers), `sum by (…)` grouping labels, and dead contract
+entries (documented allowlist in the test); the Kotlin side checks the label keys each
+instrument attaches. Don't weaken these guards. Keep labels model-bounded (never
 instance ids, business keys, variable values).
 
 ## Step 2 — PromQL snapshot test
@@ -76,8 +80,9 @@ Also cover the mapping logic (ranking, thresholds, rounding, null fields).
 
 Add the tool's input schema to `packages/client-analytics/src/schemas/<topic>.ts` and
 export it from `src/schemas/index.ts`. Reuse `engineFilterShape` from
-`src/schemas/shared.ts` for the optional `engine` filter and `.describe()` every field
-(see `elementBottleneckInput` in `src/schemas/path.ts`).
+`src/schemas/shared.ts` for the optional `engine` filter and `periodField` for the
+`period` input (derived from `PERIODS` — never redeclare the period enum), and
+`.describe()` every field (see `elementBottleneckInput` in `src/schemas/path.ts`).
 
 ## Step 4 — tool in mcp-analytics
 
@@ -120,9 +125,25 @@ The widget chain mirrors the camunda7 module:
 4. The host map `apps/mcp-gateway/src/ui/widget-registry.ts` spreads
    `analyticsWidgets` — verify your widget arrives there.
 5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with
-   `_meta: { ui: { resourceUri } }`, returning `buildComposedView(...)` /
-   `buildSingleWidgetView(...)` from `@miragon-ai/widget-shell/server` (see
-   `analytics_show_dashboard`).
+   `_meta: buildUiMeta({ resourceUri })` (`uiMeta` from `@miragon/mcp-toolkit-core`),
+   returning `buildComposedView(...)` / `buildSingleWidgetView(...)` from
+   `@miragon-ai/widget-shell/server` (see `analytics_show_dashboard`). An app-only
+   `*_data` feed gets `_meta: APP_ONLY_META` (**no** `resourceUri`) and returns
+   `buildDataFeedResult(data)`.
+
+Rules while building:
+
+- Compose the component from `@miragon-ai/widget-shell/widgets` — `ViewDataState` for
+  the loading/error/no-data guard, `Section`, `Th`/`Td`/`TableEmptyState`,
+  `WidgetHeader`, `KpiGrid` (incl. `variant="soft"`), `WidgetShell`; formatting via
+  `formatTimestamp`/`formatDuration`/`truncate`/… (canonical duration style "3m 7s") —
+  never re-inline these primitives or write local format helpers.
+- Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`)
+  — a missing `isError` branch means an eternal skeleton.
+- Naming is load-bearing: `apps/mcp-gateway/test/widget-contract.e2e.test.ts` enforces
+  the widget `_meta` on every `*_show_*` tool and app-only visibility on every `*_data`
+  feed **by name**; `src/widgets/catalogue-sync.test.ts` keeps `definition.ts` ↔
+  `analyticsWidgets` in sync.
 
 ## Step 6 — verify
 

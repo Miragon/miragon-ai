@@ -10,7 +10,7 @@ import {
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
-import { ViewDataState } from "@miragon-ai/widget-shell/widgets"
+import { ViewDataState, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 
 import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_USER_PROFILE_DATA } from "../tool-names.js"
 import {
@@ -125,7 +125,7 @@ export function UserProfileWidget({ data: initialData = null }: { data?: UserPro
 
   if (!view) {
     return (
-      <div className="bg-card text-card-foreground p-6">
+      <WidgetShell>
         <ViewDataState
           loading={loading}
           error={error}
@@ -133,14 +133,21 @@ export function UserProfileWidget({ data: initialData = null }: { data?: UserPro
           emptyText={t("profile.none")}
           className="text-muted-foreground text-sm"
         />
-      </div>
+      </WidgetShell>
     )
   }
 
-  return <ProfilePanel view={view} />
+  return (
+    <WidgetShell>
+      <ProfilePanel view={view} />
+    </WidgetShell>
+  )
 }
 
-/** The form body — localized via `useT` (locale from the global ProfileGate). */
+/**
+ * The shell-less form body — localized via `useT` (locale from the global
+ * ProfileGate). Wrapped in `WidgetShell` by `UserProfileWidget` above.
+ */
 function ProfilePanel({ view }: { view: UserProfileView }) {
   const t = useT()
   const dashboardsQuery = useToolQuery<{ items: DashboardSummary[] }>(
@@ -221,7 +228,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
   const allEnginesAllowed = form.allowedEngineIds.length >= engines.length
 
   return (
-    <div className="bg-card text-card-foreground flex flex-col gap-5 p-6">
+    <>
       <ModelContext
         content={`Support is on the MiragonAI profile & settings panel. Current preferences — language ${form.language}, theme ${form.theme}, ${allEnginesAllowed ? "all engines available" : `${form.allowedEngineIds.length} engine(s) available`}. Preferences can be changed here or via camunda7_save_user_profile.`}
       />
@@ -407,6 +414,6 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           </Field>
         </Section>
       </div>
-    </div>
+    </>
   )
 }

@@ -83,7 +83,9 @@ Non-negotiables:
 - Destructive/admin-grade tools (delete, modify, suspension, deployments, migrations,
   batches) must be added to `ADMIN_ONLY_TOOLS` in `src/lib/toolsets.ts` so the
   `camunda7:read-only|operations|admin` toolset filtering stays correct — `read-only`
-  membership is derived from `readOnlyHint: true`.
+  membership is derived from `readOnlyHint: true`. `src/lib/toolsets.test.ts` enforces
+  the rule structurally over every registered tool (`destructiveHint` ⇒ admin-only,
+  read-only ⇒ `readOnlyHint`) — get the annotations right; never edit the test to pass.
 
 ### Annotation conventions
 
@@ -104,8 +106,23 @@ Only when you created a new `src/tools/<domain>.ts`: add
 ## Step 4 — widget path (only for UI features)
 
 Widget components live in `packages/mcp-cibseven/src/widgets/` and receive their data as
-a `data` prop. The registration chain has **four links — miss one and the widget is
-silently absent somewhere**:
+a `data` prop. Compose them from the shared kit `@miragon-ai/widget-shell/widgets` —
+never re-inline these primitives:
+
+- `ViewDataState` — the loading/error/no-data guard (no inline Alert/loading ternary)
+- Self-fetching widgets: skeleton + error via `QueryFallback` (+ `TableSkeleton`) — a
+  missing `isError` branch means an eternal skeleton
+- `formatTimestamp`/`formatDate`/`formatTime`/`formatDuration`/`truncate` — no local
+  format helpers (canonical duration style "3m 7s")
+- `Section` (collapsibles); `Th`/`Td`/`TableEmptyState` (tables); `WidgetHeader`
+  (`badge`/`titleSuffix`/`size="detail"`) + `VersionChip` (hero/detail headers);
+  `KpiGrid` (KPI strips, incl. `variant="soft"`); `WidgetShell` (page container — split
+  into View + Shell only when the body is embedded elsewhere)
+- BPMN: viewer lifecycle via `useBpmnViewer` + `BpmnZoomControls`; highlight/legend
+  colors via `HIGHLIGHT_COLORS` from `src/widgets/bpmn-highlights.ts`
+
+The registration chain has **four links — miss one and the widget is silently absent
+somewhere**:
 
 1. `src/widgets/registry.ts` — map the component to its dataType:
    `"camunda7:my-widget": adaptDataWidget(MyWidget, "camunda7:myData")`
@@ -118,6 +135,9 @@ silently absent somewhere**:
 4. `src/tool-names.ts` — add a `CAMUNDA7_SHOW_*` / `CAMUNDA7_*_DATA` constant for every
    new widget tool, so `host.showWidget(...)` call sites stay rename-safe.
 
+Links 1↔2 are guarded by `src/widgets/catalogue-sync.test.ts`; link 3 you verify by
+hand.
+
 Then register the widget tool in `src/widget-tools.ts` (this file is the documented
 exception that uses `server.tool()` directly):
 
@@ -125,16 +145,28 @@ exception that uses `server.tool()` directly):
   `@miragon/mcp-toolkit-core`) — since toolkit 0.8.0 it emits the full dual-protocol
   widget contract (`ui/resourceUri`, `openai/outputTemplate`, `openai/toolInvocation/*`,
   …) that ext-apps hosts key on; **never add those keys by hand**. Resolve the engine via
-  `resolveEngine(args.engine, registry)`, return
+  `resolveEngine(args.engine, registry)` — it already returns `baseUrl`/`cockpitUrl`;
+  never fish them out of `registry.engines`. Return
   `buildSingleWidgetView({ widget, app: "camunda7", dataType, data, title, summary })` or
   `buildComposedView(...)` (both from `@miragon-ai/widget-shell/server`). The
   `summary` is the model-facing text channel (1-2 sentences, key figures, no raw
   data) — the full payload travels only in `structuredContent`.
 - `*_data` feeds: `_meta: appOnlyMeta` (= `{ ui: { visibility: ["app"] } }`,
   SEP-1865 — hides the tool from the LLM on conforming hosts; **no**
-  `resourceUri`) — return `rawData(data)` so the in-widget `callTool()` gets
-  JSON back instead of the host rendering a new widget. Wrap every handler in
-  `withToolErrors` (from `@miragon-ai/widget-shell/server`).
+  `resourceUri`) — return `buildDataFeedResult(data)` (from
+  `@miragon-ai/widget-shell/server`, aliased `rawData` in `widget-tools.ts`) so the
+  in-widget `callTool()` gets JSON back instead of the host rendering a new widget.
+  Wrap every handler in `withToolErrors` (from `@miragon-ai/widget-shell/server`).
+- Shared data paths: definition name/version/instance lookups come from
+  `src/data/definition-info.ts`; the BPMN viewer payload comes from
+  `src/data/bpmn-viewer-data.ts`, which feeds BOTH the widget tool and the pipeline
+  step (`steps/bpmn-viewer.ts`) — never fork either.
+- The `show_*`/`*_data` naming is load-bearing:
+  `apps/mcp-gateway/test/widget-contract.e2e.test.ts` enforces the widget `_meta` on
+  every `*_show_*` tool and app-only visibility on every `*_data` feed **by name**.
+- A widget-path tool that performs a durable write must honor the toolset itself —
+  follow `camunda7_save_user_profile` in `src/tools/user-profile.ts`
+  (`isCamunda7Toolset` + `isToolInToolset`, failing open on unknown toolset names).
 
 ## Step 5 — verify
 

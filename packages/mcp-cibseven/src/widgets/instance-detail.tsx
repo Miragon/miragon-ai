@@ -10,7 +10,7 @@ import {
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
-import { AskAiButton, Section, ViewDataState } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, Section, ViewDataState, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData, OpenUserTask } from "../view-models.js"
 import { CAMUNDA7_INSTANCE_DETAIL_DATA } from "../tool-names.js"
@@ -144,7 +144,7 @@ export function InstanceDetailWidget({
 
   if (!data) {
     return (
-      <div className="bg-card text-card-foreground p-6">
+      <WidgetShell>
         <ViewDataState
           loading={loading}
           error={error}
@@ -152,7 +152,7 @@ export function InstanceDetailWidget({
           emptyText={t("instanceDetail.noData")}
           className="text-muted-foreground text-sm"
         />
-      </div>
+      </WidgetShell>
     )
   }
 
@@ -208,7 +208,7 @@ export function InstanceDetailWidget({
   const engineId = engine ?? data.engineId ?? "the current engine"
 
   return (
-    <div className="bg-card text-card-foreground flex flex-col gap-5 p-6">
+    <WidgetShell>
       {/* Keep the agent aware of what the operator is looking at, so "Analyze"
           and any follow-up question resolve against this instance for free. */}
       <ModelContext
@@ -441,6 +441,6 @@ export function InstanceDetailWidget({
         pending={cancelMutation.isPending}
         onConfirm={handleCancel}
       />
-    </div>
+    </WidgetShell>
   )
 }

@@ -19,6 +19,7 @@ import {
   AskAiButton,
   ListFooter,
   ViewDataState,
+  WidgetShell,
   formatTimestamp,
   truncate,
   usePagedViewData,
@@ -56,7 +57,7 @@ export function JobPanelWidget({
 
   if (!data) {
     return (
-      <div className="bg-card text-card-foreground p-6">
+      <WidgetShell>
         <ViewDataState
           loading={paged.loading}
           error={paged.error}
@@ -64,7 +65,7 @@ export function JobPanelWidget({
           emptyText={t("jobPanel.noData")}
           className="text-muted-foreground text-sm"
         />
-      </div>
+      </WidgetShell>
     )
   }
 
@@ -89,7 +90,7 @@ export function JobPanelWidget({
   }
 
   return (
-    <div className="bg-card text-card-foreground flex flex-col gap-4 p-6">
+    <WidgetShell>
       {/* Rendered in-component (not via the adapter's describeForModel) because
           this widget self-fetches in the cockpit, where the adapter has no data. */}
       <ModelContext
@@ -252,6 +253,6 @@ export function JobPanelWidget({
       {jobs.length === 0 && (
         <p className="text-muted-foreground py-4 text-center text-sm">{t("jobPanel.noJobs")}</p>
       )}
-    </div>
+    </WidgetShell>
   )
 }
