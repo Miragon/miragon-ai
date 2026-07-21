@@ -1,5 +1,6 @@
 export { createPlugin } from "./plugin.js"
 export type { Camunda7PluginConfig, Camunda7SharedResources } from "./plugin.js"
+export { camunda7Module, camunda7ConfigSchema, createBpmnXmlFetcher } from "./module.js"
 export {
   createInMemoryProfileStore,
   createFileSystemProfileStore,

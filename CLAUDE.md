@@ -12,17 +12,17 @@ plus the private `@miragon/mcp-toolkit-*` packages) for Camunda 7 / CIB Seven BP
 operations and Prometheus-backed process analytics, including interactive React widgets
 (MCP Apps).
 
-| Path                         | Contents                                                                                                        |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `apps/mcp-server-camunda7/`  | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                   |
-| `packages/mcp-camunda7/`     | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                        |
-| `packages/mcp-analytics/`    | analytics module: Prometheus-backed tools, dashboards, comparison widgets                                       |
-| `packages/client-camunda7/`  | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                            |
-| `packages/client-analytics/` | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                       |
-| `packages/widget-shell/`     | Shared widget kit: UI primitives (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders (`/server`) |
-| `engine-plugins/`            | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                          |
-| `playground/`                | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                               |
-| `docs/`                      | VitePress docs site (see the `docs-style` skill before editing)                                                 |
+| Path                         | Contents                                                                                                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/mcp-server-camunda7/`  | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                                                                   |
+| `packages/mcp-camunda7/`     | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                                                                        |
+| `packages/mcp-analytics/`    | analytics module: Prometheus-backed tools, dashboards, comparison widgets                                                                                       |
+| `packages/client-camunda7/`  | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                                                                            |
+| `packages/client-analytics/` | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                                                                       |
+| `packages/widget-shell/`     | Shared widget kit: UI primitives incl. `useApplyTheme` (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders + the `shell:*` catalogue (`/server`) |
+| `engine-plugins/`            | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                                                                          |
+| `playground/`                | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                                                                               |
+| `docs/`                      | VitePress docs site (see the `docs-style` skill before editing)                                                                                                 |
 
 ## Commands
 
@@ -127,6 +127,23 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    — no hardcoded enum copies (the copy in `mcp-camunda7/src/lib/profile-constants.ts`
    is a deliberate module-boundary exception).
 
+8. **Modules are self-contained peers; the app is a thin composition root.**
+   `mcp-*` packages never import each other. Each module exports its definition in
+   `src/module.ts` (config schema, `configFromEnv`, `knownEnvVars`, `bootWarnings`,
+   plugin factory) conforming structurally to the app-owned port in
+   `apps/mcp-server-camunda7/src/module-contract.ts`; the app's `setup.ts` only selects
+   modules (`MCP_ACTIVE_MODULES`) and wires `SharedResources` (profile store +
+   `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap;
+   analytics has NO engine-SDK dependency). Apps own no domain UI: widget catalogues and
+   components live in packages. Cross-module UI is tiered: `shell:*` widgets via
+   `props.dataKey`; raw tool-name strings with graceful degradation (reference:
+   `process-detail.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
+   dedicated package created with the first real view — never in the app, never as
+   module-to-module imports. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
+   per-engine runtime config, never separate apps; a different _dialect_ (Flowable)
+   would be a new module + client + app. Extract shared packages on the second concrete
+   consumer, never speculatively.
+
 ## Contracts
 
 - **`packages/client-analytics/metrics-contract.json` is the single source of truth for
@@ -162,7 +179,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
   this server; this repo builds one self-contained MCP server including its UI.** No
   upstream/proxy mechanics in the code (the `proxies: []` in `src/index.ts` stays empty
   until the toolkit drops the option). The generic `shell:kpi-grid`/`shell:data-table`
-  widgets (`apps/mcp-server-camunda7/src/shell-widgets.ts`) are always registered — they are the
+  widgets (catalogue + components in `@miragon-ai/widget-shell`) are always registered — they are the
   standard `render-view`/builder composition targets for KPI rows/tables, fed via
   `props.dataKey`.
 

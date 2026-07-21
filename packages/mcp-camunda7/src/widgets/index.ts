@@ -16,10 +16,6 @@ import type { ProcessInstancesData } from "./process-instances/list.js"
 import { camunda7BaseWidgets } from "./registry.js"
 import { CockpitApp } from "./cockpit-app/app.js"
 
-// The theme applier is reused by the server app's global ProfileGate to apply the
-// profile theme document-wide (cockpit + standalone widgets alike).
-export { useApplyTheme } from "./use-apply-theme.js"
-
 export type {
   ProcessListData,
   IncidentsDashboardData,

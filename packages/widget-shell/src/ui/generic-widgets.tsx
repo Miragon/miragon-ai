@@ -11,7 +11,7 @@ import type { ToneVariant } from "./tone-utils.js"
  * data table.
  *
  * Registered by the server app under the `shell:` namespace (see
- * `apps/mcp-server-camunda7/src/shell-widgets.ts`). All texts arrive via props —
+ * `../shell-catalogue.ts`, exported via `@miragon-ai/widget-shell/server`). All texts arrive via props —
  * the shell carries no module i18n.
  */
 

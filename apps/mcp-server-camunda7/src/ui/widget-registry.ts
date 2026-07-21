@@ -7,7 +7,7 @@ export const widgetRegistry: Record<string, WidgetComponent> = {
   ...camunda7Widgets,
   ...analyticsWidgets,
   // Generic shell widgets — the render-view/builder composition targets any
-  // module can feed via props.dataKey (catalogued in ../shell-widgets.ts).
+  // module can feed via props.dataKey (catalogue: @miragon-ai/widget-shell/server).
   "shell:kpi-grid": GenericKpiGridWidget,
   "shell:data-table": GenericDataTableWidget,
 }

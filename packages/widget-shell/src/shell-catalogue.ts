@@ -12,10 +12,10 @@ import type { MCPServer } from "mcp-use/server"
  *   step:   produces ["camunda7:kpis"]
  *   layout: { widget: "shell:kpi-grid", props: { dataKey: "camunda7:kpis" } }
  *
- * The components live in the shared widget kit
- * (`@miragon-ai/widget-shell/widgets`, see `generic-widgets.tsx`); this file
- * only carries their catalogue metadata and is registered unconditionally in
- * `setup.ts` (no tools, no steps — nothing to filter per toolset).
+ * Components live next door in `src/ui/generic-widgets.tsx` (exported via
+ * `@miragon-ai/widget-shell/widgets`); this file carries their catalogue
+ * metadata so host apps register the plugin without owning any domain UI
+ * (no tools, no steps — nothing to filter per toolset).
  */
 
 const kpiGridPropsSchema = z.toJSONSchema(

@@ -7,7 +7,7 @@ import {
   createFrameworkApp,
   installToolCallNameCapture,
 } from "@miragon/mcp-toolkit-core/tools"
-import { getAppConfig, getPlugins, warnPrometheusDefault, warnUnknownEnvVars } from "./setup.js"
+import { emitBootWarnings, getAppConfig, getPlugins, warnUnknownEnvVars } from "./setup.js"
 import {
   getOAuthConfigFromEnv,
   installAuthorizeRedirectAllowlist,
@@ -21,7 +21,7 @@ process.env.MCP_USE_ANONYMIZED_TELEMETRY ??= "false"
 // Surface CAMUNDA_*/MCP_* typos at boot instead of silently ignoring them —
 // secrets named inside MCP_OAUTH belong to the allowlist.
 warnUnknownEnvVars(process.env, oauthSecretEnvVarNames())
-warnPrometheusDefault()
+emitBootWarnings()
 
 const DIST_DIR = import.meta.filename.endsWith(".ts")
   ? path.join(import.meta.dirname, "..", "dist")

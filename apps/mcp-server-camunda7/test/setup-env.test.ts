@@ -2,12 +2,7 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import {
-  getAppConfig,
-  getPlugins,
-  warnPrometheusDefault,
-  warnUnknownEnvVars,
-} from "../src/setup.js"
+import { emitBootWarnings, getAppConfig, getPlugins, warnUnknownEnvVars } from "../src/setup.js"
 
 const FILE_ENGINES = [{ id: "from-file", baseUrl: "http://file.example/engine-rest" }]
 const JSON_ENGINES = [{ id: "from-json", baseUrl: "http://json.example/engine-rest" }]
@@ -244,15 +239,17 @@ describe("setup.ts PROMETHEUS_URL boot hint", () => {
   it("warns when PROMETHEUS_URL is unset (default does not match the compose stack)", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-    expect(warnPrometheusDefault({})).toBe(true)
+    const warnings = emitBootWarnings({})
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain("PROMETHEUS_URL")
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("PROMETHEUS_URL"))
   })
 
   it("stays silent when PROMETHEUS_URL is set or the analytics module is inactive", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-    expect(warnPrometheusDefault({ PROMETHEUS_URL: "http://localhost:8460" })).toBe(false)
-    expect(warnPrometheusDefault({ MCP_ACTIVE_MODULES: "camunda7" })).toBe(false)
+    expect(emitBootWarnings({ PROMETHEUS_URL: "http://localhost:8460" })).toEqual([])
+    expect(emitBootWarnings({ MCP_ACTIVE_MODULES: "camunda7" })).toEqual([])
     expect(warn).not.toHaveBeenCalled()
   })
 

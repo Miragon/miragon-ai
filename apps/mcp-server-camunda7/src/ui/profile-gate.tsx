@@ -1,7 +1,7 @@
 import { type ReactNode } from "react"
 import { useWidget } from "mcp-use/react"
 import { AppQueryProvider, LocaleProvider, useToolQuery } from "@miragon/mcp-toolkit-ui"
-import { useApplyTheme } from "@miragon-ai/mcp-camunda7/widgets"
+import { useApplyTheme } from "@miragon-ai/widget-shell/widgets"
 
 /**
  * Stable name of the camunda7 user-profile feed (app-only `*_data` tool).
