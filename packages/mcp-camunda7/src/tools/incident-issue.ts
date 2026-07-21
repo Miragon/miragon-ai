@@ -144,7 +144,7 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
     "",
     "### Process Engine",
     "",
-    "CIB Seven",
+    engine.provider.branding.displayName,
     "",
     cockpitLink ? `### Cockpit\n\n${cockpitLink}\n` : "",
     "_Drafted via the `camunda7_format_incident_issue` MCP tool._",

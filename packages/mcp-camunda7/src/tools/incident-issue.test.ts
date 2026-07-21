@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildIncidentIssuePayload, condenseStacktrace } from "./incident-issue.js"
-import { cibsevenProvider } from "../providers/index.js"
+import { cibsevenProvider, operatonProvider } from "../providers/index.js"
 
 /** Engine link with an explicit cockpit base (CIB Seven flavor). */
 const engineWithCockpit = (cockpitUrl: string) => ({
@@ -115,6 +115,17 @@ describe("buildIncidentIssuePayload", () => {
     expect(result.body).toContain(
       "http://localhost:8080/webapp/#/seven/auth/process/invoice/7/pi-42?tab=incidents",
     )
+  })
+
+  it("names the resolved engine's vendor in the Process Engine section", () => {
+    const result = buildIncidentIssuePayload({
+      incident: baseIncident,
+      processDefinition: baseDefinition,
+      engine: { baseUrl: "http://op.example/engine-rest", provider: operatonProvider },
+      repository: null,
+    })
+    expect(result.body).toContain("### Process Engine\nOperaton")
+    expect(result.body).not.toContain("CIB Seven")
   })
 
   it("returns null suggestedRepository and a draft-only nextStep when no repo is configured", () => {
