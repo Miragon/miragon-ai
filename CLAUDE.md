@@ -179,8 +179,8 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
   the naming convention is load-bearing; don't weaken the name checks).
 - **Federation/aggregation happens in an external MCP gateway (agentgateway) IN FRONT of
   this server; this repo builds one self-contained MCP server including its UI.** No
-  upstream/proxy mechanics in the code (the `proxies: []` in `src/index.ts` stays empty
-  until the toolkit drops the option). The generic `shell:kpi-grid`/`shell:data-table`
+  upstream/proxy mechanics in the code — don't reintroduce a proxies/upstream option
+  (federation was deliberately dropped in #162). The generic `shell:kpi-grid`/`shell:data-table`
   widgets (catalogue + components in `@miragon-ai/widget-shell`) are always registered — they are the
   standard `render-view`/builder composition targets for KPI rows/tables, fed via
   `props.dataKey`.

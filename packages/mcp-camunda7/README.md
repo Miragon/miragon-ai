@@ -4,7 +4,8 @@ The **camunda7 module** for [Miragon AI](../../README.md): Camunda 7 / CIB Seven
 `camunda7_*` MCP tools, plus the interactive cockpit widgets (MCP Apps). Built on
 [`@miragon-ai/client-camunda7`](../client-camunda7) and the `@miragon/mcp-toolkit-*` packages.
 
-The server loads this module as `camunda7`. The package is `private` and not published to npm.
+The server loads this module as `camunda7` via `camunda7Module` (`src/module.ts`), which conforms
+structurally to the app's `ModuleDefinition` port. The package is `private` and not published to npm.
 
 ## What it provides
 
@@ -18,6 +19,10 @@ The server loads this module as `camunda7`. The package is `private` and not pub
   viewer, history timeline, job panel) wired in `registry.ts` via `adaptDataWidget`.
 - **Multi-engine routing** — every tool resolves its engine through `withEngine` / `resolveEngine`
   (`src/lib/`): per-call override → sticky session selection → single configured default.
+- **Engine providers** (`src/engine-provider.ts`, `src/providers/`) — each engine entry carries a
+  vendor `flavor` (`cibseven` | `operaton` | `camunda7`, default `cibseven`) resolved to an
+  `EngineProvider` holding only the real vendor differences: cockpit routes, branding, client hook.
+  Mixed-vendor fleets run in one server.
 - **Toolset filtering** — `src/lib/toolsets.ts` narrows the surface to `read-only` / `operations` /
   `admin`.
 
@@ -31,15 +36,18 @@ in [`@miragon-ai/client-camunda7`](../client-camunda7), tools register via the r
 
 ## Layout
 
-| Path                  | Contents                                                                |
-| --------------------- | ----------------------------------------------------------------------- |
-| `src/tools/`          | Registrar operations tools, one file per domain (`index.ts` wires them) |
-| `src/widget-tools.ts` | `show_*` widget tools and `*_data` feeds                                |
-| `src/widgets/`        | React widgets + `registry.ts` (component → dataType)                    |
-| `src/definition.ts`   | Widget metadata (`id`, `requires`, `size`, `propsSchema`)               |
-| `src/tool-names.ts`   | Tool-name constants for rename-safe in-widget navigation                |
-| `src/lib/`            | `with-engine.ts` (engine routing), `toolsets.ts`                        |
-| `src/steps/`          | Pipeline steps contributed to the server                                |
+| Path                     | Contents                                                                  |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `src/tools/`             | Registrar operations tools, one file per domain (`index.ts` wires them)   |
+| `src/widget-tools.ts`    | `show_*` widget tools and `*_data` feeds                                  |
+| `src/widgets/`           | React widgets + `registry.ts` (component → dataType)                      |
+| `src/definition.ts`      | Widget metadata (`id`, `requires`, `size`, `propsSchema`)                 |
+| `src/tool-names.ts`      | Tool-name constants for rename-safe in-widget navigation                  |
+| `src/lib/`               | `with-engine.ts` (engine routing), `cockpit-url.ts`, `toolsets.ts`        |
+| `src/module.ts`          | `camunda7Module` (config schema, env mapping) + `createBpmnXmlFetcher`    |
+| `src/engine-provider.ts` | The vendor provider port (`EngineProvider`, `CockpitRef`)                 |
+| `src/providers/`         | `cibseven` / `operaton` / `camunda7` providers (cockpit routes, branding) |
+| `src/steps/`             | Pipeline steps contributed to the server                                  |
 
 ## Verify
 

@@ -12,9 +12,8 @@ Two scenarios (both must pass):
 | `strip`  | claude.ai / Claude Desktop: tool-result WITHOUT `structuredContent` | shell recovers via **exactly one** `tools/call` re-execution, then renders |
 
 The `strip` scenario is the acceptance gate for the widget-contract
-migration: it must stay green with the interim fallback in `src/ui/main.tsx`
-removed (the recovery then lives in `@miragon/mcp-toolkit-ui`'s
-`useToolResultRecovery`).
+recovery, which lives in `@miragon/mcp-toolkit-ui`'s
+`useToolResultRecovery` (toolkit ≥ 0.8.0).
 
 Run it:
 

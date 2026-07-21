@@ -28,8 +28,9 @@ panels straight into the chat. Built on [mcp-use](https://github.com/mcp-use/mcp
   cluster / version / engine comparison, and a live engine-health snapshot, as `analytics_*` tools.
 - **Interactive widgets (MCP Apps)** — cockpit dashboard, process & incident panels, BPMN viewer,
   heatmaps and history timeline rendered for the user while the model gets a compact summary.
-- **Multi-engine routing** — talk to several CIB Seven instances at once with sticky per-session
-  engine selection; analytics aggregate or compare across engines.
+- **Multi-engine routing** — talk to several engines at once (CIB Seven, Operaton and Camunda 7
+  mixed in one fleet) with sticky per-session engine selection; analytics aggregate or compare
+  across engines.
 - **Toolset scoping** — narrow the surface to `read-only`, `operations`, or `admin` per deployment.
 - **Self-hostable** — a single multi-arch (amd64/arm64) image on Docker Hub, plus a drop-in OTEL
   metrics plugin for the engine.
@@ -174,13 +175,16 @@ The most common variables — see [`docs/operations.md`](docs/operations.md) for
 
 ### Multi-engine
 
-The server can route to several CIB Seven instances. Tag each engine in its metrics plugin
+The server can route to several engines — CIB Seven, Operaton and Camunda 7 mixed in one fleet.
+Tag each engine in its metrics plugin
 (`ENGINE_ID`), register them in the server (`CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE` —
 `ENGINE_ID` must match the registered `id`, or that engine's analytics come back empty), and the
 host picks one per session via the `camunda7_engine` tool (`list` / `select` / `current`). Every
 operations tool also accepts a per-call `engine` override. Analytics tools take an optional `engine`
 filter to aggregate or compare. Each engine entry may carry its own `auth`
 (`{type, username?, password?, token?}`); entries without one use the global `CAMUNDA_*` settings.
+Entries may also declare their vendor via `flavor` (`cibseven` | `operaton` | `camunda7`, default
+`cibseven`), which selects the engine's cockpit-link routes and display name.
 Full walkthrough in [`docs/operations.md`](docs/operations.md).
 
 ## Engine metrics plugin

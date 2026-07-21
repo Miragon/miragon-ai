@@ -16,7 +16,7 @@ Everything below is for running your own stack.
 - **pnpm 10.32.1** (pinned via `packageManager`; `corepack enable` picks it up automatically)
 - **Java 21** + [jenv](https://www.jenv.be/) (only needed to build the Kotlin engine plugins)
 - **Docker** (for Camunda, the OTEL Collector, and Prometheus)
-- A GitHub PAT with `read:packages` scope (for the private `@miragon/mcp-toolkit-*` packages on GitHub Packages — see the [root README](https://github.com/miragon/miragon-ai/blob/main/README.md#setup) for the token setup)
+- A GitHub PAT with `read:packages` scope (for the private `@miragon/mcp-toolkit-*` packages on GitHub Packages — see the [root README](https://github.com/miragon/miragon-ai/blob/main/README.md#local-development) for the token setup)
 
 ## Clone and install
 
@@ -43,7 +43,7 @@ pnpm dev
 ```
 
 This starts the MCP server on `:8400`.
-Connect any MCP host to `http://localhost:8400` and call a tool.
+Connect any MCP host to `http://localhost:8400/mcp` and call a tool.
 
 ## Common tasks
 

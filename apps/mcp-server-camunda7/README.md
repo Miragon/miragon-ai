@@ -12,8 +12,12 @@ is `private` and not published to npm.
 
 - **Composes modules** — loads the modules named in `MCP_ACTIVE_MODULES` (default: all), each with an
   optional toolset suffix (`camunda7:read-only`, …), and merges their tools, widgets and pipeline steps.
+  Modules self-describe via their `src/module.ts` (`configFromEnv`, `knownEnvVars`, `bootWarnings`,
+  plugin factory) against the app-owned port in [`src/module-contract.ts`](src/module-contract.ts) —
+  the app only selects modules and wires shared resources.
 - **Bundles the widget UI** — Vite + `vite-plugin-singlefile` builds `mcp-app.html`, a self-contained
-  bundle (React, Tailwind, all widgets) exposed as the MCP resource `ui://automation-mcp/mcp-app.html`.
+  bundle (React, Tailwind, all widgets) exposed as the MCP resource `ui://miragon-ai/mcp-app.<hash>.html`
+  (content-hashed by `createFrameworkApp` for cache busting).
   The `dedupe` array in [`vite.config.ts`](vite.config.ts) is load-bearing — it keeps a single React /
   toolkit instance so in-widget `useCallTool()` works.
 - **Serves HTTP** — streamable-HTTP MCP on `:8400/mcp`, plus the `mcp-use` inspector on `:8400/inspector`
@@ -43,9 +47,11 @@ Configuration is entirely environment-driven — see
 
 ## Layout
 
-| Path             | Contents                                                                          |
-| ---------------- | --------------------------------------------------------------------------------- |
-| `src/index.ts`   | Server entry — builds the mcp-use server, mounts modules, starts HTTP             |
-| `src/ui/`        | Widget host bundle: `widget-registry.ts` (the host map) + `McpAppView` dispatcher |
-| `vite.config.ts` | Single-file widget bundle config (keep the `dedupe` array)                        |
-| `Dockerfile`     | Lives at the repo root; multi-stage build that produces the published image       |
+| Path                     | Contents                                                                                                 |
+| ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `src/index.ts`           | Server entry — builds the mcp-use server, mounts modules, starts HTTP                                    |
+| `src/module-contract.ts` | App-owned port: `ModuleDefinition` + `SharedResources { profileStore, fetchBpmnXml? }`                   |
+| `src/setup.ts`           | Module selection (`MCP_ACTIVE_MODULES`), env-typo warner + boot warnings from the modules, shared wiring |
+| `src/ui/`                | Widget host bundle: `widget-registry.ts` (the host map) + `McpAppView` dispatcher                        |
+| `vite.config.ts`         | Single-file widget bundle config (keep the `dedupe` array)                                               |
+| `Dockerfile`             | Lives at the repo root; multi-stage build that produces the published image                              |
