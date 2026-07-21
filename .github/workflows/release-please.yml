@@ -59,7 +59,7 @@ jobs:
       dry_run: ${{ inputs.dry_run == true }}
 
   publish-docker:
-    name: Publish gateway image to Docker Hub
+    name: Publish server image to Docker Hub
     needs: [release-please, gate]
     uses: ./.github/workflows/publish-to-docker.yml
     secrets: inherit

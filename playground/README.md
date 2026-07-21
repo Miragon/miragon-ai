@@ -2,13 +2,13 @@
 
 A self-contained demo environment for the Miragon AI Platform: a seeded
 CIB Seven engine with live traffic, the full metric-first analytics stack,
-and the MCP gateway on top. Run it locally with Docker Compose, or deploy
+and the MCP server on top. Run it locally with Docker Compose, or deploy
 the whole stack to Fly.io with one workflow.
 
 | Path                | Contents                                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------- |
 | `cibseven-example/` | Spring Boot CIB Seven engine: seeded Miravelo Leasing processes, live traffic, OTEL metrics |
-| `docker/`           | Compose stack: engine(s), OTEL Collector, Prometheus, Grafana, optional gateway             |
+| `docker/`           | Compose stack: engine(s), OTEL Collector, Prometheus, Grafana, optional server              |
 | `fly/`              | Fly.io deployment: one `*.fly.toml` per app + `deploy.sh`                                   |
 
 ## Run locally
@@ -16,23 +16,23 @@ the whole stack to Fly.io with one workflow.
 ```sh
 docker compose -f playground/docker/docker-compose.yml up -d   # infra: engine, OTEL, Prometheus, Grafana
 cp .env.example .env                                           # dev defaults: Prometheus :8460
-pnpm dev                                                       # MCP gateway on :8400
+pnpm dev                                                       # MCP server on :8400
 ```
 
 - MCP endpoint: `http://localhost:8400/mcp`, inspector: `http://localhost:8400/inspector`
 - Grafana: `http://localhost:8470`, Prometheus: `http://localhost:8460`, engine: `http://localhost:8410`
 - Compose profiles: `--profile multi-engine` (second engine on :8411),
-  `--profile full` (containerized gateway on :8400), `--profile dev` (plain
+  `--profile full` (containerized server on :8400), `--profile dev` (plain
   CIB Seven image, no analytics)
 
 ## Deploy to Fly.io
 
 The stack maps to five Fly apps in one org, wired over Fly's private 6PN
-network. Only the gateway is public — everything else has no public IP.
+network. Only the server is public — everything else has no public IP.
 
 | Fly app                            | Service        | Exposure                                             |
 | ---------------------------------- | -------------- | ---------------------------------------------------- |
-| `miragon-ai-playground`            | MCP gateway    | public — `https://miragon-ai-playground.fly.dev/mcp` |
+| `miragon-ai-playground`            | MCP server     | public — `https://miragon-ai-playground.fly.dev/mcp` |
 | `miragon-ai-playground-engine`     | CIB Seven      | private (`….internal:8410`)                          |
 | `miragon-ai-playground-otel`       | OTEL Collector | private (`….internal:4318` / `:9464`)                |
 | `miragon-ai-playground-prometheus` | Prometheus     | private (`….internal:9090`), 3 GB volume             |
@@ -54,8 +54,8 @@ One-time setup:
 ```sh
 fly auth login
 (cd playground/cibseven-example && ./gradlew bootJar)   # engine image copies the jar
-export GITHUB_TOKEN=ghp_xxx                             # read:packages, for the gateway build
-./playground/fly/deploy.sh all                          # or: otel|engine|prometheus|grafana|gateway
+export GITHUB_TOKEN=ghp_xxx                             # read:packages, for the server build
+./playground/fly/deploy.sh all                          # or: otel|engine|prometheus|grafana|server
 ```
 
 First deploy creates the apps and the Prometheus volume. Afterwards, point an
@@ -66,11 +66,11 @@ MCP client (e.g. claude.ai custom connector) at
 
 - The MCP endpoint is **unauthenticated** by default — it exposes demo data
   on a throwaway engine. To put OAuth in front, set the `MCP_OAUTH` config as
-  a Fly secret on the gateway app (`fly secrets set MCP_OAUTH='…' -a
+  a Fly secret on the server app (`fly secrets set MCP_OAUTH='…' -a
 miragon-ai-playground`, see `.env.example`).
 - The engine keeps its H2 database in memory: every engine restart reseeds
   (~600 instances) and live traffic keeps metrics moving. Prometheus history
   survives restarts on its volume.
 - Everything runs single-machine (`--ha=false`), sized for demos, roughly
-  $15–25/month; the gateway scales to zero when idle. Tear down with
+  $15–25/month; the server scales to zero when idle. Tear down with
   `fly apps destroy <app>` per app.

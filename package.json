@@ -17,7 +17,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
-    "dev": "dotenv -e .env -- pnpm --filter @miragon-ai/mcp-gateway dev",
+    "dev": "dotenv -e .env -- pnpm --filter @miragon-ai/mcp-server-camunda7 dev",
     "docs:dev": "pnpm --filter @miragon-ai/docs dev",
     "docs:build": "pnpm --filter @miragon-ai/docs build",
     "docs:preview": "pnpm --filter @miragon-ai/docs preview"

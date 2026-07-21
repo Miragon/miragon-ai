@@ -4,7 +4,7 @@ The **analytics module** for [Miragon AI](../../README.md): Prometheus-backed pr
 `analytics_*` MCP tools, plus dashboard and comparison widgets. Built on
 [`@miragon-ai/client-analytics`](../client-analytics) and the `@miragon/mcp-toolkit-*` packages.
 
-The gateway loads this module as `analytics`. The package is `private` and not published to npm.
+The server loads this module as `analytics`. The package is `private` and not published to npm.
 
 ## What it provides
 
@@ -20,7 +20,7 @@ The gateway loads this module as `analytics`. The package is `private` and not p
 
 These tools read the `camunda_*` series emitted by the
 [engine metrics plugin](../../engine-plugins). Per-instance drill-down (search by variable) is **not**
-metric-backed — use the `camunda7_query_historic_*` tools in the [camunda7 module](../mcp-cibseven).
+metric-backed — use the `camunda7_query_historic_*` tools in the [camunda7 module](../mcp-camunda7).
 
 ## Adding an analytics capability
 
@@ -38,4 +38,4 @@ and labels are governed by the
 | `src/widget-tools.ts` | `show_*` dashboard/comparison widget tools |
 | `src/widgets/`        | React dashboard + comparison widgets       |
 | `src/definition.ts`   | Widget metadata                            |
-| `src/steps/`          | Pipeline steps contributed to the gateway  |
+| `src/steps/`          | Pipeline steps contributed to the server   |

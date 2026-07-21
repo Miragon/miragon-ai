@@ -31,21 +31,21 @@ covers deploying the same stack to Fly.io (`deploy-playground.yml`, manual).
 
 By default the MCP endpoint is unauthenticated — any client that reaches port
 `8400` gets full tool access. Protect it with an authenticating reverse proxy,
-or set `MCP_OAUTH` to make the gateway an OAuth resource server: bearer tokens
+or set `MCP_OAUTH` to make the server an OAuth resource server: bearer tokens
 on `/mcp` are validated against your IdP (Keycloak, Auth0, or generic
 OIDC/JWKS), unauthenticated requests get 401, and the `.well-known` discovery
 metadata is served. Set `MCP_URL` so advertised URLs are right.
 
 For an IdP without Dynamic Client Registration, `provider: "oidc-proxy"` uses a
 pre-registered `clientId`/`clientSecret` and brokers the login through the
-gateway. It requires `MCP_URL`, `<MCP_URL>/oauth/callback` registered at the
-IdP, and `allowedRedirectUris` — the exact MCP-client callbacks the gateway's
+server. It requires `MCP_URL`, `<MCP_URL>/oauth/callback` registered at the
+IdP, and `allowedRedirectUris` — the exact MCP-client callbacks the server's
 `/authorize` accepts. That allowlist is mandatory and enforced before mcp-use
 runs (its proxy otherwise forwards the auth code to any `redirect_uri`).
 
 `CAMUNDA_AUTH_TYPE=passthrough` forwards each caller's bearer token to the
 engine per request (never to Prometheus). With `MCP_OAUTH`
-the gateway validates the token and the engine enforces the caller's
+the server validates the token and the engine enforces the caller's
 permissions — which needs an engine with REST auth enabled; a default engine
 accepts anonymous requests and ignores the token.
 
@@ -67,7 +67,7 @@ accepts anonymous requests and ignores the token.
 | `CAMUNDA_TOKEN`                         | —                                   | Required for `bearer` (enforced at boot)                                                                                                                                                    |
 | `CAMUNDA_INCIDENT_ISSUE_REPO`           | —                                   | Default `owner/repo` for the GitHub-issue tool                                                                                                                                              |
 | `CAMUNDA_HEALTH_CRITICAL_*`             | `50` / `25`                         | `…_INCIDENTS` / `…_CLUSTER_SIZE` — thresholds for the engine-health `critical` verdict                                                                                                      |
-| `PROMETHEUS_URL`                        | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source (the repo's Compose stack publishes `:8460`; the gateway warns at boot when unset)                                                          |
+| `PROMETHEUS_URL`                        | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source (the repo's Compose stack publishes `:8460`; the server warns at boot when unset)                                                           |
 
 Unknown `CAMUNDA_*`/`MCP_*` variables are reported at boot (typos aren't
 silently ignored); mcp-use telemetry is off by default

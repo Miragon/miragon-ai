@@ -103,14 +103,14 @@ never instance ids or variable values).
 
 ## Modules & packages
 
-A pnpm + Turbo monorepo. The gateway composes the two modules and serves them as one MCP endpoint.
+A pnpm + Turbo monorepo. The server composes the two modules and serves them as one MCP endpoint.
 
 | Path                                                      | Package                                   | Role                                                                    |
 | --------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
-| [`apps/mcp-gateway/`](apps/mcp-gateway)                   | `@miragon-ai/mcp-gateway`                 | The MCP host: composes modules, bundles widgets, serves HTTP on `:8400` |
-| [`packages/mcp-cibseven/`](packages/mcp-cibseven)         | `@miragon-ai/mcp-cibseven`                | Camunda 7 operations tools, widget tools, and React widgets             |
+| [`apps/mcp-server-camunda7/`](apps/mcp-server-camunda7)   | `@miragon-ai/mcp-server-camunda7`         | The MCP host: composes modules, bundles widgets, serves HTTP on `:8400` |
+| [`packages/mcp-camunda7/`](packages/mcp-camunda7)         | `@miragon-ai/mcp-camunda7`                | Camunda 7 operations tools, widget tools, and React widgets             |
 | [`packages/mcp-analytics/`](packages/mcp-analytics)       | `@miragon-ai/mcp-analytics`               | Prometheus-backed analytics tools and dashboard widgets                 |
-| [`packages/client-cibseven/`](packages/client-cibseven)   | `@miragon-ai/client-cibseven`             | Generated CIB Seven REST SDK + MCP-oriented Zod schemas                 |
+| [`packages/client-camunda7/`](packages/client-camunda7)   | `@miragon-ai/client-camunda7`             | Generated CIB Seven REST SDK + MCP-oriented Zod schemas                 |
 | [`packages/client-analytics/`](packages/client-analytics) | `@miragon-ai/client-analytics`            | Prometheus client, PromQL query functions + metrics contract            |
 | [`packages/widget-shell/`](packages/widget-shell)         | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
 | [`engine-plugins/`](engine-plugins)                       | `ai.miragon.mcp:cibseven-history-metrics` | Kotlin OTEL metrics plugin for CIB Seven (Java 21)                      |
@@ -201,7 +201,7 @@ pnpm install --frozen-lockfile
 
 docker compose -f playground/docker/docker-compose.yml up -d   # CIB Seven, OTEL, Prometheus, Grafana
 cp .env.example .env                                 # dev defaults: engine on :8410, Prometheus on :8460
-pnpm dev                                             # MCP gateway on :8400
+pnpm dev                                             # MCP server on :8400
 ```
 
 `pnpm dev` also serves the `mcp-use` inspector at `http://localhost:8400/inspector` — call tools and

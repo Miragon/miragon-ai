@@ -1,7 +1,7 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use/server"
 import { createPrometheusClient } from "@miragon-ai/client-analytics"
-import type { Client as Camunda7Client } from "@miragon-ai/client-cibseven"
+import type { Client as Camunda7Client } from "@miragon-ai/client-camunda7"
 import { registerTools } from "./tools/index.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"

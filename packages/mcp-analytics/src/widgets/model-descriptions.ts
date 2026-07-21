@@ -8,7 +8,7 @@ import type { EngineCompareData } from "./engine-compare.js"
 /**
  * Model-context descriptions for every analytics widget, attached centrally via
  * `adaptDataWidget(..., describe)` in `widgets/index.ts`. Each line follows the
- * house pattern from `mcp-cibseven/.../process-instances/list.tsx`: view
+ * house pattern from `mcp-camunda7/.../process-instances/list.tsx`: view
  * identity + active filters + the headline number(s) a user is most likely to
  * ask about, plus the natural follow-up tool(s).
  *

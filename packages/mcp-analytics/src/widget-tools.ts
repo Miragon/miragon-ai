@@ -8,8 +8,8 @@ import {
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { queries, schemas, type PrometheusClient } from "@miragon-ai/client-analytics"
-import type { Client as Camunda7Client } from "@miragon-ai/client-cibseven"
-import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-cibseven/sdk"
+import type { Client as Camunda7Client } from "@miragon-ai/client-camunda7"
+import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-camunda7/sdk"
 import { localizeFor, type LocaleSource } from "./server-locale.js"
 
 export interface AnalyticsWidgetToolsOptions {

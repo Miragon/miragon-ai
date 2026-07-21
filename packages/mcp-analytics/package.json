@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@miragon-ai/client-analytics": "workspace:*",
-    "@miragon-ai/client-cibseven": "workspace:*",
+    "@miragon-ai/client-camunda7": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "0.9.0",
     "zod": "4.4.3"

@@ -1,7 +1,7 @@
 # @miragon-ai/widget-shell
 
 Shared widget plumbing for the [Miragon AI](../../README.md) MCP App widgets. It is the common base
-both widget modules ([`mcp-cibseven`](../mcp-cibseven), [`mcp-analytics`](../mcp-analytics)) build on,
+both widget modules ([`mcp-camunda7`](../mcp-camunda7), [`mcp-analytics`](../mcp-analytics)) build on,
 so every widget gets the same data-loading, refresh and view-composition behaviour.
 
 `private` and not published to npm — an internal monorepo package.
@@ -25,13 +25,13 @@ so every widget gets the same data-loading, refresh and view-composition behavio
 | `./widgets` | Shared widget UI primitives                                               |
 
 The `@miragon/mcp-toolkit-*`, React and `@tanstack/react-query` deps are **peer dependencies** — they
-must resolve to a single instance across the host bundle (see the `dedupe` array in the gateway's
+must resolve to a single instance across the host bundle (see the `dedupe` array in the server app's
 `vite.config.ts`), otherwise the React contexts diverge and in-widget queries hang.
 
 ## Where it fits
 
 ```
-mcp-cibseven / mcp-analytics widgets
+mcp-camunda7 / mcp-analytics widgets
             │  use
             ▼
    @miragon-ai/widget-shell   ──  adaptDataWidget · view builders · UI primitives

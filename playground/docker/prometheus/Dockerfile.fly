@@ -10,7 +10,7 @@ COPY alerts.yml /etc/prometheus/alerts.yml
 # the server can write to it (acceptable for the playground).
 USER root
 
-# "[::]" binds dual-stack so the gateway can reach Prometheus over Fly's
+# "[::]" binds dual-stack so the server can reach Prometheus over Fly's
 # IPv6-only private network (6PN).
 #
 # --web.enable-admin-api exposes the TSDB admin endpoints (delete_series /

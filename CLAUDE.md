@@ -14,10 +14,10 @@ operations and Prometheus-backed process analytics, including interactive React 
 
 | Path                         | Contents                                                                                                        |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `apps/mcp-gateway/`          | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                   |
-| `packages/mcp-cibseven/`     | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                        |
+| `apps/mcp-server-camunda7/`  | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                   |
+| `packages/mcp-camunda7/`     | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                        |
 | `packages/mcp-analytics/`    | analytics module: Prometheus-backed tools, dashboards, comparison widgets                                       |
-| `packages/client-cibseven/`  | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                            |
+| `packages/client-camunda7/`  | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                            |
 | `packages/client-analytics/` | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                       |
 | `packages/widget-shell/`     | Shared widget kit: UI primitives (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders (`/server`) |
 | `engine-plugins/`            | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                          |
@@ -39,7 +39,7 @@ pnpm generate                        # regenerate the CIB Seven SDK from the Ope
 
 # Run the server locally (needs the Docker infra + a .env file, see .env.example):
 docker compose -f playground/docker/docker-compose.yml up -d
-pnpm dev                             # MCP gateway on :8400
+pnpm dev                             # MCP server on :8400
 
 # Kotlin engine plugins (Java 21):
 cd engine-plugins && ./gradlew build # compile + unit tests + Konsist architecture tests
@@ -54,19 +54,19 @@ render widgets manually.
 
 If generated SDK files look wrong (e.g. `client.gen.ts` importing `./src/hey-api.js`
 instead of `../hey-api.js`), the shared turbo cache replayed a poisoned `generate`
-output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-cibseven --force`.
+output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-camunda7 --force`.
 
 ## Architecture invariants
 
 1. **New operations tools go through the registrar — never raw `server.tool()`.** Add the
-   Zod input schema in `packages/client-cibseven/src/schemas/`, then register the tool in
-   `packages/mcp-cibseven/src/tools/<domain>.ts` via the `register` callback created by
+   Zod input schema in `packages/client-camunda7/src/schemas/`, then register the tool in
+   `packages/mcp-camunda7/src/tools/<domain>.ts` via the `register` callback created by
    `createToolRegistrar` (wired in `src/tools/index.ts`). Every registrar tool carries a
    `category` matching its domain file (e.g. `"process-instances"`, `"tasks"`;
    `"analytics"` for the analytics module). Spread `...engineParamShape` into the input
    schema and wrap the handler in `withEngine(...)` (both from `src/lib/with-engine.ts`).
    See `camunda7_list_process_instances` in
-   `packages/mcp-cibseven/src/tools/process-instances.ts` for the canonical shape.
+   `packages/mcp-camunda7/src/tools/process-instances.ts` for the canonical shape.
    Destructive/admin tools must also be listed in `src/lib/toolsets.ts` (`ADMIN_ONLY_TOOLS`)
    so the `camunda7:read-only|operations|admin` toolset filtering stays correct —
    `src/lib/toolsets.test.ts` enforces the rule structurally over every registered tool
@@ -76,7 +76,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
    pattern: `camunda7_save_user_profile` in `src/tools/user-profile.ts`.
 
 2. **Never talk to an engine directly.** All engine access goes through
-   `resolveEngine`/`withEngine` (`packages/mcp-cibseven/src/lib/`), which implements the
+   `resolveEngine`/`withEngine` (`packages/mcp-camunda7/src/lib/`), which implements the
    multi-engine routing precedence: per-call `engine` override > sticky session selection
    (`camunda7_engine`, action `"select"`) > the single configured default. Constructing or
    caching a client yourself breaks multi-engine routing. `resolveEngine` already returns
@@ -84,17 +84,17 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
 
 3. **Widget registration is a four-link chain** — a widget that misses a link is silently
    absent somewhere:
-   - `packages/mcp-cibseven/src/widgets/registry.ts` — component → dataType via `adaptDataWidget`
-   - `packages/mcp-cibseven/src/definition.ts` — widget metadata (`id`, `requires`, `size`, `propsSchema`)
-   - `apps/mcp-gateway/src/ui/widget-registry.ts` — the host bundle map (spreads
+   - `packages/mcp-camunda7/src/widgets/registry.ts` — component → dataType via `adaptDataWidget`
+   - `packages/mcp-camunda7/src/definition.ts` — widget metadata (`id`, `requires`, `size`, `propsSchema`)
+   - `apps/mcp-server-camunda7/src/ui/widget-registry.ts` — the host bundle map (spreads
      `camunda7Widgets`/`analyticsWidgets`; verify your widget actually arrives there)
-   - `packages/mcp-cibseven/src/tool-names.ts` — the tool-name constant for every
+   - `packages/mcp-camunda7/src/tool-names.ts` — the tool-name constant for every
      `show_*`/`*_data` tool, so in-widget navigation stays rename-safe
 
    Links 1↔2 are guarded by `src/widgets/catalogue-sync.test.ts` (both modules have
    one); link 3 you still verify by hand.
 
-4. **The `dedupe` array in `apps/mcp-gateway/vite.config.ts` is load-bearing — never
+4. **The `dedupe` array in `apps/mcp-server-camunda7/vite.config.ts` is load-bearing — never
    remove or trim it.** Without it each widget package bundles its own React/toolkit
    instance, the React contexts no longer match, `useCallTool()` is undefined, and every
    in-widget query hangs on "Loading…".
@@ -118,13 +118,13 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
    `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
    `WidgetShell` for structure; `useBpmnViewer` + `BpmnZoomControls` for BPMN, with
    highlight/legend colors from `HIGHLIGHT_COLORS`
-   (`packages/mcp-cibseven/src/widgets/bpmn-highlights.ts`).
+   (`packages/mcp-camunda7/src/widgets/bpmn-highlights.ts`).
 
 7. **Shared server data paths are single-sourced.** Definition name/version/instance
-   lookups come from `packages/mcp-cibseven/src/data/definition-info.ts`;
+   lookups come from `packages/mcp-camunda7/src/data/definition-info.ts`;
    `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step — never
    fork them. Analytics periods derive from `PERIODS`/`PERIOD_RANGE` (client-analytics)
-   — no hardcoded enum copies (the copy in `mcp-cibseven/src/lib/profile-constants.ts`
+   — no hardcoded enum copies (the copy in `mcp-camunda7/src/lib/profile-constants.ts`
    is a deliberate module-boundary exception).
 
 ## Contracts
@@ -154,15 +154,15 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
   SDK contract (`ui/resourceUri`, `openai/outputTemplate`, `openai/toolInvocation/*`,
   `openai/widgetAccessible`, `openai/resultCanProduceWidget`) for widget-rendering
   tools; app-only `*_data` feeds stay free of those keys on purpose. Guarded by
-  `apps/mcp-gateway/test/widget-meta.test.ts` (unit) and
-  `apps/mcp-gateway/test/widget-contract.e2e.test.ts` (on the wire, **by name**: every
+  `apps/mcp-server-camunda7/test/widget-meta.test.ts` (unit) and
+  `apps/mcp-server-camunda7/test/widget-contract.e2e.test.ts` (on the wire, **by name**: every
   `*_show_*` tool must carry the widget `_meta`, every `*_data` feed must be app-only —
   the naming convention is load-bearing; don't weaken the name checks).
 - **Federation/aggregation happens in an external MCP gateway (agentgateway) IN FRONT of
   this server; this repo builds one self-contained MCP server including its UI.** No
   upstream/proxy mechanics in the code (the `proxies: []` in `src/index.ts` stays empty
   until the toolkit drops the option). The generic `shell:kpi-grid`/`shell:data-table`
-  widgets (`apps/mcp-gateway/src/shell-widgets.ts`) are always registered — they are the
+  widgets (`apps/mcp-server-camunda7/src/shell-widgets.ts`) are always registered — they are the
   standard `render-view`/builder composition targets for KPI rows/tables, fed via
   `props.dataKey`.
 
@@ -170,14 +170,14 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
 
 - **Everything releases through one release-please train.** Conventional commits on
   `main` drive `release-please.yml`, which opens/updates a single Release PR (root
-  component, tag `v<version>`); release-please bumps the root, gateway,
-  client-cibseven and client-analytics `package.json`s plus
+  component, tag `v<version>`); release-please bumps the root, the server app,
+  client-camunda7 and client-analytics `package.json`s plus
   `engine-plugins/gradle.properties` in lockstep (`extra-files` in
   `release-please-config.json`). Merging the PR creates the release; the publish
   workflows then wait for manual approval of the `release` environment gate.
-- **No npm publish exists today.** `client-cibseven`/`client-analytics` carry a
+- **No npm publish exists today.** `client-camunda7`/`client-analytics` carry a
   `publishConfig` for npm.pkg.github.com (`access: restricted`) but no CI job publishes
-  them; the gateway, widget-shell, mcp-cibseven and mcp-analytics are `"private": true`.
+  them; the server app, widget-shell, mcp-camunda7 and mcp-analytics are `"private": true`.
   Don't flip `private` or add a publish job without the distribution decision (#118).
 - **Engine plugins publish via `publish-to-maven.yml`** (called from the release train):
   `./gradlew publish` against GitHub Packages Maven. All engine plugins share the umbrella
@@ -187,7 +187,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
 - **The server image publishes via `publish-to-docker.yml`** (same train): builds the
   root `Dockerfile` and pushes `docker.io/miragon/miragon-ai-server:<version>` and
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
-  to `apps/mcp-gateway/package.json`).
+  to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
   exactly pinned dependency (`save-exact`, currently `0.9.0`). Toolkit changes happen in
   that repo and arrive here as a deliberate, repo-wide version bump — and since the
@@ -199,15 +199,15 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ci
 
 ## Verification — what each check actually covers
 
-| Check             | Coverage                                                                                                                                                                                                                                       |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm build`      | tsc emit of server code + the gateway's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                        |
-| `pnpm typecheck`  | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-cibseven/mcp-analytics, `tsc -p tsconfig.ui.json` in the gateway                                                                                       |
-| `pnpm test`       | Vitest unit tests (lib + query logic) **plus** the gateway e2e smoke + widget wire-contract tests (in-process boot, loopback HTTP); **no widget rendering**                                                                                    |
-| `pnpm lint`       | ESLint over each package's `src` (gateway also `test`/`test-host`)                                                                                                                                                                             |
-| `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                            |
-| `test:host`       | `pnpm --filter @miragon-ai/mcp-gateway test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin |
-| Manual            | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                |
+| Check             | Coverage                                                                                                                                                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm build`      | tsc emit of server code + the server app's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                             |
+| `pnpm typecheck`  | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-camunda7/mcp-analytics, `tsc -p tsconfig.ui.json` in the server app                                                                                            |
+| `pnpm test`       | Vitest unit tests (lib + query logic) **plus** the server app e2e smoke + widget wire-contract tests (in-process boot, loopback HTTP); **no widget rendering**                                                                                         |
+| `pnpm lint`       | ESLint over each package's `src` (the server app also `test`/`test-host`)                                                                                                                                                                              |
+| `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                    |
+| `test:host`       | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin |
+| Manual            | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                        |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
 every change; widget changes additionally need `test:host` plus a manual render check via

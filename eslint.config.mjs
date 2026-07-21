@@ -6,15 +6,15 @@ import reactHooks from "eslint-plugin-react-hooks"
 // compiled by Vite/the bundler) and get their type information from the
 // dedicated tsconfig.widgets.json / tsconfig.ui.json projects instead.
 const bundledUiFiles = [
-  "apps/mcp-gateway/src/ui/**/*.{ts,tsx}",
+  "apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}",
   "packages/mcp-analytics/src/widgets/**/*.{ts,tsx}",
-  "packages/mcp-cibseven/src/widgets/**/*.{ts,tsx}",
+  "packages/mcp-camunda7/src/widgets/**/*.{ts,tsx}",
 ]
 
-// Gateway tests (and the Playwright host simulation) live outside src/ (not
+// Server tests (and the Playwright host simulation) live outside src/ (not
 // part of the build tsconfig) and get their type information from the
 // dedicated tsconfig.test.json project.
-const gatewayTestFiles = ["apps/mcp-gateway/test/**/*.ts", "apps/mcp-gateway/test-host/**/*.ts"]
+const serverTestFiles = ["apps/mcp-server-camunda7/test/**/*.ts", "apps/mcp-server-camunda7/test-host/**/*.ts"]
 
 export default tseslint.config(
   {
@@ -25,7 +25,7 @@ export default tseslint.config(
       "vendor/**",
       // Plain-node static server for the Playwright host simulation — not part
       // of any tsconfig project, deliberately untyped.
-      "apps/mcp-gateway/test-host/serve.mjs",
+      "apps/mcp-server-camunda7/test-host/serve.mjs",
     ],
   },
 
@@ -34,20 +34,20 @@ export default tseslint.config(
 
   // Typed linting via the project service for everything the package tsconfigs cover
   {
-    ignores: [...bundledUiFiles, ...gatewayTestFiles],
+    ignores: [...bundledUiFiles, ...serverTestFiles],
     languageOptions: {
       parserOptions: {
         projectService: {
           // Standalone config files that are not part of any tsconfig
           allowDefaultProject: [
             "vitest.shared.ts",
-            "apps/mcp-gateway/vite.config.ts",
-            "apps/mcp-gateway/vitest.config.ts",
+            "apps/mcp-server-camunda7/vite.config.ts",
+            "apps/mcp-server-camunda7/vitest.config.ts",
             "packages/mcp-analytics/vitest.config.ts",
-            "packages/mcp-cibseven/vitest.config.ts",
+            "packages/mcp-camunda7/vitest.config.ts",
             "packages/client-analytics/vitest.config.ts",
-            "packages/client-cibseven/vitest.config.ts",
-            "packages/client-cibseven/openapi-ts.config.ts",
+            "packages/client-camunda7/vitest.config.ts",
+            "packages/client-camunda7/openapi-ts.config.ts",
             "packages/widget-shell/vitest.config.ts",
             "docs/.vitepress/config.ts",
             "docs/.vitepress/theme/index.ts",
@@ -64,21 +64,21 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         project: [
-          "apps/mcp-gateway/tsconfig.ui.json",
+          "apps/mcp-server-camunda7/tsconfig.ui.json",
           "packages/mcp-analytics/tsconfig.widgets.json",
-          "packages/mcp-cibseven/tsconfig.widgets.json",
+          "packages/mcp-camunda7/tsconfig.widgets.json",
         ],
         tsconfigRootDir: import.meta.dirname,
       },
     },
   },
 
-  // Gateway test files: typed via the dedicated test tsconfig project
+  // Server test files: typed via the dedicated test tsconfig project
   {
-    files: gatewayTestFiles,
+    files: serverTestFiles,
     languageOptions: {
       parserOptions: {
-        project: ["apps/mcp-gateway/tsconfig.test.json"],
+        project: ["apps/mcp-server-camunda7/tsconfig.test.json"],
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -105,7 +105,7 @@ export default tseslint.config(
 
   // React hooks for all UI/widget code
   {
-    files: ["apps/mcp-gateway/src/**/*.{ts,tsx}", "packages/**/src/**/*.{ts,tsx}"],
+    files: ["apps/mcp-server-camunda7/src/**/*.{ts,tsx}", "packages/**/src/**/*.{ts,tsx}"],
     plugins: { "react-hooks": reactHooks },
     rules: reactHooks.configs["recommended-latest"].rules,
   },

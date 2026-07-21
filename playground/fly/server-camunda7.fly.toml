@@ -1,0 +1,39 @@
+# Automation MCP server — the only public app of the playground stack.
+# Build context: repo root (monorepo Dockerfile, needs the github_token build
+# secret for the private @miragon packages). Deploy via playground/fly/deploy.sh.
+app = "miragon-ai-playground"
+primary_region = "fra"
+
+[build]
+  # Resolved relative to this fly.toml (flyctl rule); the build context
+  # stays the working directory deploy.sh cd's into.
+  dockerfile = "../../Dockerfile"
+
+[env]
+  PORT = "8400"
+  MCP_URL = "https://miragon-ai-playground.fly.dev"
+  # demo/demo is the engine's seeded admin user (its REST API does not enforce
+  # auth); the engine is private-only (6PN), so this guards nothing sensitive.
+  CAMUNDA_ENGINES_JSON = '[{"id":"prod-a","baseUrl":"http://miragon-ai-playground-engine.internal:8410/engine-rest","auth":{"type":"basic","username":"demo","password":"demo"}}]'
+  PROMETHEUS_URL = "http://miragon-ai-playground-prometheus.internal:9090"
+
+[http_service]
+  internal_port = 8400
+  force_https = true
+  # The server may scale to zero; Fly Proxy wakes it on the next MCP request.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+# Port-level liveness, mirroring the Dockerfile HEALTHCHECK (avoids coupling
+# to a specific HTTP route).
+[checks.tcp]
+  type = "tcp"
+  port = 8400
+  interval = "15s"
+  timeout = "5s"
+  grace_period = "30s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

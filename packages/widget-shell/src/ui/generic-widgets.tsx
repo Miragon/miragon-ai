@@ -10,8 +10,8 @@ import type { ToneVariant } from "./tone-utils.js"
  * it via `props.dataKey` — no custom widget needed for a standard KPI row or
  * data table.
  *
- * Registered by the gateway under the `shell:` namespace (see
- * `apps/mcp-gateway/src/shell-widgets.ts`). All texts arrive via props —
+ * Registered by the server app under the `shell:` namespace (see
+ * `apps/mcp-server-camunda7/src/shell-widgets.ts`). All texts arrive via props —
  * the shell carries no module i18n.
  */
 

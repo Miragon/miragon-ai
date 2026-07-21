@@ -9,7 +9,7 @@ Collector exports them to Prometheus so the analytics module can query them.
 
 ```mermaid
 flowchart LR
-  Host[MCP Host<br/>Claude · ChatGPT] -->|MCP / HTTP| Server[MCP Gateway<br/>:8400]
+  Host[MCP Host<br/>Claude · ChatGPT] -->|MCP / HTTP| Server[MCP Server<br/>:8400]
 
   subgraph Modules
     Cibseven[cibseven<br/>tools + widgets]
@@ -32,13 +32,13 @@ flowchart LR
 
 ## Modules
 
-| Module                                        | Role                                                                                                                                                   |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **MCP Gateway** (`apps/mcp-gateway/`)         | Hosts the HTTP transport on port `8400`, loads modules from `MCP_ACTIVE_MODULES`, and serves a single-file React widget bundle.                        |
-| **cibseven** (`packages/mcp-cibseven/`)       | Wraps the Camunda 7 / CIB Seven REST API via an OpenAPI-generated client. Exposes process, task, incident, deployment, and history tools plus widgets. |
-| **analytics** (`packages/mcp-analytics/`)     | Queries Prometheus via PromQL for performance, failure, bottleneck, and version/cluster comparison. Tools + dashboard, failure, and compare widgets.   |
-| **engine-plugins** (`engine-plugins/`)        | Kotlin OTEL plugins for CIB Seven: a process-metrics emitter. Independent build (Java 21, Gradle). No engine-side database.                            |
-| **widgets** (`apps/mcp-gateway/mcp-app.html`) | A single Vite-built HTML bundle containing React, Tailwind, and every widget. The MCP host renders it inline when a tool returns `{ widget, data }`.   |
+| Module                                                | Role                                                                                                                                                   |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **MCP Server** (`apps/mcp-server-camunda7/`)          | Hosts the HTTP transport on port `8400`, loads modules from `MCP_ACTIVE_MODULES`, and serves a single-file React widget bundle.                        |
+| **cibseven** (`packages/mcp-camunda7/`)               | Wraps the Camunda 7 / CIB Seven REST API via an OpenAPI-generated client. Exposes process, task, incident, deployment, and history tools plus widgets. |
+| **analytics** (`packages/mcp-analytics/`)             | Queries Prometheus via PromQL for performance, failure, bottleneck, and version/cluster comparison. Tools + dashboard, failure, and compare widgets.   |
+| **engine-plugins** (`engine-plugins/`)                | Kotlin OTEL plugins for CIB Seven: a process-metrics emitter. Independent build (Java 21, Gradle). No engine-side database.                            |
+| **widgets** (`apps/mcp-server-camunda7/mcp-app.html`) | A single Vite-built HTML bundle containing React, Tailwind, and every widget. The MCP host renders it inline when a tool returns `{ widget, data }`.   |
 
 ## External systems
 
@@ -65,11 +65,11 @@ served by the engine REST history API, not the metrics.
 
 ## Repository layout
 
-| Path                | Description                                              |
-| ------------------- | -------------------------------------------------------- |
-| `apps/mcp-gateway/` | The MCP gateway entry point and the widget bundle.       |
-| `packages/`         | Reusable libraries — clients, MCP plugins, widget-shell. |
-| `engine-plugins/`   | Kotlin OTEL plugins (process metrics).                   |
-| `playground/`       | Demo env: showcases, Compose stack, Fly.io deployment.   |
+| Path                        | Description                                              |
+| --------------------------- | -------------------------------------------------------- |
+| `apps/mcp-server-camunda7/` | The MCP server entry point and the widget bundle.        |
+| `packages/`                 | Reusable libraries — clients, MCP plugins, widget-shell. |
+| `engine-plugins/`           | Kotlin OTEL plugins (process metrics).                   |
+| `playground/`               | Demo env: showcases, Compose stack, Fly.io deployment.   |
 
 For deeper detail, the root [`README.md`](https://github.com/miragon/miragon-ai/blob/main/README.md) keeps the full module table and tool list.

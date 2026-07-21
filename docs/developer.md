@@ -29,20 +29,20 @@ pnpm install
 
 ## Start the infrastructure
 
-The default Compose stack brings up CIB Seven, the OTEL Collector, Prometheus, and Grafana — but **not** the Node MCP gateway, so port `8400` stays free for `pnpm dev`.
+The default Compose stack brings up CIB Seven, the OTEL Collector, Prometheus, and Grafana — but **not** the Node MCP server, so port `8400` stays free for `pnpm dev`.
 
 ```bash
 docker compose -f playground/docker/docker-compose.yml up -d
 ```
 
-## Run the gateway
+## Run the server
 
 ```bash
 cp .env.example .env   # dev defaults: engine on :8410, Prometheus on :8460
 pnpm dev
 ```
 
-This starts the MCP gateway on `:8400`.
+This starts the MCP server on `:8400`.
 Connect any MCP host to `http://localhost:8400` and call a tool.
 
 ## Common tasks
