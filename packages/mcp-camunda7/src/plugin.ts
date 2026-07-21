@@ -1,7 +1,8 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { MCPServer } from "mcp-use/server"
-import { createCamunda7Client, type Camunda7AuthType } from "@miragon-ai/client-camunda7"
+import type { Camunda7AuthType } from "@miragon-ai/client-camunda7"
+import { providerForEntry } from "./providers/index.js"
 import { registerTools } from "./tools/index.js"
 import { registerIncidentIssuePrompt, registerIncidentIssueTools } from "./tools/incident-issue.js"
 import { registerEngineTools } from "./tools/engines.js"
@@ -9,7 +10,6 @@ import { registerUserProfileTools } from "./tools/user-profile.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"
 import { createEngineRegistry, type EngineEntry } from "./lib/resolve-engine.js"
-import { resolveMcpBearerToken } from "./lib/mcp-auth.js"
 import { createInMemoryProfileStore, type ProfileStore } from "./lib/profile-store.js"
 import { withToolsetFilter } from "./lib/toolsets.js"
 
@@ -74,17 +74,9 @@ export function createPlugin(
       password: config.password,
       token: config.token,
     }
-    return createCamunda7Client({
-      baseUrl: e.baseUrl,
-      authType: auth.type,
-      username: auth.username,
-      password: auth.password,
-      token: auth.token,
-      // The clients are built once at boot and cached in the registry; for
-      // passthrough the interceptor re-reads the current MCP request's token
-      // on every engine call, so the caching stays correct.
-      tokenProvider: auth.type === "passthrough" ? resolveMcpBearerToken : undefined,
-    })
+    // The vendor provider owns client construction (identical across C7
+    // vendors today — `providers/create-client.ts`).
+    return providerForEntry(e).createClient(e, auth)
   })
 
   const incidentIssueConfig = {

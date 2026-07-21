@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { cibsevenProvider } from "../providers/index.js"
 
 vi.mock("@miragon-ai/client-camunda7/sdk", () => ({
   getActivityStatistics: vi.fn(),
@@ -51,6 +52,7 @@ describe("buildProcessDetailData", () => {
     ] as never)
 
     const data = await buildProcessDetailData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl,
       processDefinitionKey: "K1",
     })
@@ -67,6 +69,7 @@ describe("buildProcessDetailData", () => {
     ] as never)
 
     const data = await buildProcessDetailData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl,
       processDefinitionKey: "K2",
     })
@@ -86,6 +89,7 @@ describe("buildProcessDetailData", () => {
     mockedGetDefs.mockResolvedValueOnce([] as never)
 
     const data = await buildProcessDetailData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl,
       processDefinitionKey: "missing",
     })
@@ -121,6 +125,7 @@ describe("buildProcessDetailData", () => {
     ] as never)
 
     const data = await buildProcessDetailData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl,
       processDefinitionKey: "K3",
     })
@@ -154,6 +159,7 @@ describe("buildProcessDetailData", () => {
     } as never)
 
     const data = await buildProcessDetailData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl,
       processDefinitionKey: "K4",
     })
@@ -168,6 +174,7 @@ describe("buildProcessDetailData", () => {
     mockedGetDefs.mockRejectedValueOnce(new Error("network"))
 
     const data = await buildProcessDetailData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl,
       processDefinitionKey: "K5",
     })

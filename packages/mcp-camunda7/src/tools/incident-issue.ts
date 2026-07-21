@@ -14,6 +14,7 @@ import type {
 import type { MCPServer } from "mcp-use/server"
 import { z } from "zod"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { buildInstanceCockpitUrl, type EngineLink } from "../lib/cockpit-url.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
@@ -58,7 +59,8 @@ interface BuildIssueInput {
   processDefinition?: ProcessDefinitionDto | null
   /** Raw exception stacktrace (typically `getStacktrace` for the failed job). */
   stacktrace?: string | null
-  cockpitUrl?: string
+  /** Resolved-engine link context for the cockpit deep link (see `lib/cockpit-url.ts`). */
+  engine: EngineLink
   repository: string | null
 }
 
@@ -72,18 +74,26 @@ const ISSUE_LABELS = ["bug", "incident"]
  * the SDK.
  */
 export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssuePayload {
-  const { incident, processInstance, processDefinition, stacktrace, cockpitUrl, repository } = input
+  const { incident, processInstance, processDefinition, stacktrace, engine, repository } = input
   const incidentType = incident.incidentType ?? "unknown"
   const definitionKey = processDefinition?.key ?? "unknown-process"
   const title = `[Bug]: Engine incident (${incidentType}) in ${definitionKey}`
   const condensedStack = stacktrace ? condenseStacktrace(stacktrace) : null
 
-  const cockpitLink = buildCockpitInstanceLink({
-    cockpitUrl,
-    processDefinitionKey: processDefinition?.key,
-    processDefinitionVersion: processDefinition?.version,
-    processInstanceId: incident.processInstanceId ?? processInstance?.id,
-  })
+  const instanceId = incident.processInstanceId ?? processInstance?.id
+  const cockpitLink =
+    processDefinition?.key && instanceId
+      ? buildInstanceCockpitUrl(
+          engine,
+          {
+            key: processDefinition.key,
+            version: processDefinition.version ?? null,
+            definitionId: incident.processDefinitionId ?? null,
+            instanceId,
+          },
+          { tab: "incidents" },
+        )
+      : null
 
   const body = [
     "### Description",
@@ -270,19 +280,6 @@ export function condenseStacktrace(raw: string): string {
   return out.join("\n")
 }
 
-function buildCockpitInstanceLink(args: {
-  cockpitUrl?: string
-  processDefinitionKey?: string | null
-  processDefinitionVersion?: number | null
-  processInstanceId?: string | null
-}): string | null {
-  const { cockpitUrl, processDefinitionKey, processDefinitionVersion, processInstanceId } = args
-  if (!cockpitUrl || !processDefinitionKey || !processInstanceId) return null
-  const version = processDefinitionVersion ?? "latest"
-  const base = cockpitUrl.replace(/\/+$/, "")
-  return `${base}/#/seven/auth/process/${processDefinitionKey}/${version}/${processInstanceId}?tab=incidents`
-}
-
 export function registerIncidentIssueTools(register: Register, config: IncidentIssueConfig) {
   register({
     name: "camunda7_format_incident_issue",
@@ -293,7 +290,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
       "(their issue tracker via whatever integration is available, the optional prefilled GitHub URL, or copy-paste).",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...formatIncidentIssueInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args, { cockpitUrl }) => {
+    handler: withEngine(async (client, args, { baseUrl, cockpitUrl, provider }) => {
       // The OpenAPI SDK types describe a `{data, error}` envelope, but the
       // shared client (see `client.ts`) is built with `responseStyle: "data"`
       // + `throwOnError: true` — so at runtime the call returns the raw DTO.
@@ -338,7 +335,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
         processInstance,
         processDefinition,
         stacktrace,
-        cockpitUrl,
+        engine: { baseUrl, cockpitUrl, provider },
         repository,
       })
     }),

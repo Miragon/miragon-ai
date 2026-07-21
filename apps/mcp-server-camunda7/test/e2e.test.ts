@@ -115,7 +115,14 @@ describe("mcp-server-camunda7 E2E smoke", () => {
     const result = await session.callTool("camunda7_engine", { action: "list" })
     expect(result.isError).toBeFalsy()
     expect(textPayload(result)).toEqual({
-      engines: [{ id: "default", baseUrl: "http://localhost:1" }],
+      engines: [
+        {
+          id: "default",
+          baseUrl: "http://localhost:1",
+          flavor: "cibseven",
+          engineName: "CIB Seven",
+        },
+      ],
       currentSelection: null,
       profileDefaultEngineId: null,
     })

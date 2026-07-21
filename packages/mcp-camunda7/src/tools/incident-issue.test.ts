@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest"
 import { buildIncidentIssuePayload, condenseStacktrace } from "./incident-issue.js"
+import { cibsevenProvider } from "../providers/index.js"
+
+/** Engine link with an explicit cockpit base (CIB Seven flavor). */
+const engineWithCockpit = (cockpitUrl: string) => ({
+  baseUrl: "http://engine.internal/api",
+  cockpitUrl,
+  provider: cibsevenProvider,
+})
+
+/** No cockpitUrl and a baseUrl without /engine-rest suffix — no link derivable. */
+const engineWithoutCockpit = { baseUrl: "http://engine.internal/api", provider: cibsevenProvider }
 
 describe("condenseStacktrace", () => {
   it("keeps user frames and drops framework frames, noting how many were trimmed", () => {
@@ -73,7 +84,7 @@ describe("buildIncidentIssuePayload", () => {
       incident: baseIncident,
       processDefinition: baseDefinition,
       processInstance: { id: "pi-42" },
-      cockpitUrl: "http://localhost:8080/webapp",
+      engine: engineWithCockpit("http://localhost:8080/webapp"),
       repository: "Miragon/miragon-ai",
     })
 
@@ -110,6 +121,7 @@ describe("buildIncidentIssuePayload", () => {
     const result = buildIncidentIssuePayload({
       incident: baseIncident,
       processDefinition: baseDefinition,
+      engine: engineWithoutCockpit,
       repository: null,
     })
     expect(result.suggestedRepository).toBeNull()
@@ -124,6 +136,7 @@ describe("buildIncidentIssuePayload", () => {
     const result = buildIncidentIssuePayload({
       incident: baseIncident,
       processDefinition: baseDefinition,
+      engine: engineWithoutCockpit,
       repository: "Miragon/miragon-ai",
     })
     expect(result.prefilledUrl).not.toBeNull()
@@ -139,6 +152,7 @@ describe("buildIncidentIssuePayload", () => {
     const result = buildIncidentIssuePayload({
       incident: { ...baseIncident, incidentMessage: huge },
       processDefinition: baseDefinition,
+      engine: engineWithoutCockpit,
       repository: "owner/repo",
     })
     expect(result.prefilledUrl!.length).toBeLessThan(8000)
@@ -152,6 +166,7 @@ describe("buildIncidentIssuePayload", () => {
     const result = buildIncidentIssuePayload({
       incident: baseIncident,
       processDefinition: baseDefinition,
+      engine: engineWithoutCockpit,
       repository: "owner/repo",
     })
     expect(result.body).not.toContain("### Cockpit")
@@ -160,6 +175,7 @@ describe("buildIncidentIssuePayload", () => {
   it("falls back gracefully when the engine omits message / activity / definition", () => {
     const result = buildIncidentIssuePayload({
       incident: { id: "inc-x", incidentType: "failedExternalTask" },
+      engine: engineWithoutCockpit,
       repository: "owner/repo",
     })
     expect(result.title).toBe("[Bug]: Engine incident (failedExternalTask) in unknown-process")
@@ -183,6 +199,7 @@ describe("buildIncidentIssuePayload", () => {
       incident: baseIncident,
       processDefinition: baseDefinition,
       stacktrace,
+      engine: engineWithoutCockpit,
       repository: "owner/repo",
     })
     expect(result.body).toContain("Stacktrace (condensed")
@@ -202,6 +219,7 @@ describe("buildIncidentIssuePayload", () => {
       incident: baseIncident,
       processDefinition: baseDefinition,
       stacktrace: null,
+      engine: engineWithoutCockpit,
       repository: "owner/repo",
     })
     expect(result.body).toContain("_No stacktrace available._")
@@ -211,7 +229,7 @@ describe("buildIncidentIssuePayload", () => {
     const result = buildIncidentIssuePayload({
       incident: baseIncident,
       processDefinition: baseDefinition,
-      cockpitUrl: "http://localhost:8080/webapp///",
+      engine: engineWithCockpit("http://localhost:8080/webapp///"),
       repository: "owner/repo",
     })
     expect(result.body).toContain(

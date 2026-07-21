@@ -48,7 +48,9 @@ second engine dialect cheap:
 - **App = one product per engine dialect.** `apps/mcp-server-camunda7` is the
   thin composition root of the Camunda-7-dialect product (camunda7 +
   analytics). Engine _vendors_ of that dialect (CIB Seven, Operaton, Camunda 7)
-  are per-engine runtime configuration — never separate apps. A different
+  are per-engine runtime configuration (`flavor` on the engine entry, resolved
+  to an `EngineProvider` carrying only the real differences: cockpit routes,
+  branding, client hook) — never separate apps. A different
   dialect (e.g. Flowable, with its own REST API) would be its own module,
   client, and app.
 - **Modules are peers.** `mcp-*` packages never import each other. Cross-module

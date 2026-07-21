@@ -140,7 +140,9 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    `process-detail.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
    dedicated package created with the first real view — never in the app, never as
    module-to-module imports. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
-   per-engine runtime config, never separate apps; a different _dialect_ (Flowable)
+   per-engine runtime config (`flavor` → `EngineProvider` in
+   `packages/mcp-camunda7/src/providers/` — the port holds ONLY real differences:
+   cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)
    would be a new module + client + app. Extract shared packages on the second concrete
    consumer, never speculatively.
 

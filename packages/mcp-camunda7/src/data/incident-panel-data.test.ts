@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { cibsevenProvider } from "../providers/index.js"
 
 vi.mock("@miragon-ai/client-camunda7/sdk", () => ({
   getIncidents: vi.fn(),
@@ -103,6 +104,7 @@ describe("buildIncidentsDashboardData", () => {
     ] as never)
 
     const data = await buildIncidentsDashboardData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl: "http://localhost:8080/engine-rest",
     })
 
@@ -131,6 +133,7 @@ describe("buildIncidentsDashboardData", () => {
       mockedGetStats.mockResolvedValueOnce([] as never)
 
       const data = await buildIncidentsDashboardData(fakeClient, {
+        provider: cibsevenProvider,
         baseUrl: "http://localhost:8080/engine-rest",
       })
 
@@ -166,6 +169,7 @@ describe("buildIncidentsDashboardData", () => {
       mockedGetStats.mockResolvedValueOnce([] as never)
 
       const data = await buildIncidentsDashboardData(fakeClient, {
+        provider: cibsevenProvider,
         baseUrl: "http://localhost:8080/engine-rest",
       })
 
@@ -189,6 +193,7 @@ describe("buildIncidentsDashboardData", () => {
     ] as never)
 
     const data = await buildIncidentsDashboardData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl: "http://localhost:8080/engine-rest",
     })
 
@@ -202,6 +207,7 @@ describe("buildIncidentsDashboardData", () => {
     mockedGetIncidents.mockResolvedValueOnce([] as never)
 
     const data = await buildIncidentsDashboardData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl: "http://localhost:8080/engine-rest",
     })
 
@@ -241,6 +247,7 @@ describe("buildProcessIncidentsData", () => {
     } as never)
 
     const data = await buildProcessIncidentsData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl: "http://localhost:8080/engine-rest",
       processDefinitionKey: "K1",
     })
@@ -283,6 +290,7 @@ describe("buildProcessIncidentsData", () => {
     mockedGetStats.mockResolvedValue([] as never)
 
     const data = await buildProcessIncidentsData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl: "http://localhost:8080/engine-rest",
       processDefinitionKey: "K1",
     })
@@ -329,6 +337,7 @@ describe("buildProcessIncidentsData", () => {
     ] as never)
 
     const data = await buildProcessIncidentsData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl: "http://localhost:8080/engine-rest",
       processDefinitionKey: "K1",
     })
@@ -356,6 +365,7 @@ describe("buildProcessIncidentsData", () => {
     mockedGetBpmn.mockResolvedValueOnce({ bpmn20Xml: "" } as never)
 
     const data = await buildProcessIncidentsData(fakeClient, {
+      provider: cibsevenProvider,
       baseUrl: "http://localhost:8080/engine-rest",
       processDefinitionKey: "K1",
     })

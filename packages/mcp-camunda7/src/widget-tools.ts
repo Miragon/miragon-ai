@@ -321,10 +321,14 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
-      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
       const data = await buildIncidentsDashboardData(client, {
         baseUrl,
         cockpitUrl,
+        provider,
         processDefinitionKey: args.processDefinitionKey,
         incidentType: args.incidentType,
       })
@@ -359,10 +363,14 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
-      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
       const data = await buildProcessIncidentsData(client, {
         baseUrl,
         cockpitUrl,
+        provider,
         processDefinitionKey: args.processDefinitionKey,
       })
       return buildComposedView({
@@ -402,10 +410,14 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
-      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
       const data = await buildIncidentDetailData(client, {
         baseUrl,
         cockpitUrl,
+        provider,
         incidentId: args.incidentId,
       })
       return buildSingleWidgetView({
@@ -440,10 +452,14 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
-      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
       const data = await buildProcessDetailData(client, {
         baseUrl,
         cockpitUrl,
+        provider,
         processDefinitionKey: args.processDefinitionKey,
       })
       return buildSingleWidgetView({
@@ -810,10 +826,14 @@ export function registerWidgetTools(
       _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
       const data = await buildProcessDetailData(client, {
         baseUrl,
         cockpitUrl,
+        provider,
         processDefinitionKey: args.processDefinitionKey,
       })
       return rawData({ ...data, engineId })
@@ -920,10 +940,14 @@ export function registerWidgetTools(
       _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
       const data = await buildIncidentsDashboardData(client, {
         baseUrl,
         cockpitUrl,
+        provider,
         processDefinitionKey: args.processDefinitionKey,
         incidentType: args.incidentType,
       })
@@ -945,10 +969,14 @@ export function registerWidgetTools(
       _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
       const data = await buildProcessIncidentsData(client, {
         baseUrl,
         cockpitUrl,
+        provider,
         processDefinitionKey: args.processDefinitionKey,
       })
       return rawData({ ...data, engineId })
@@ -969,10 +997,14 @@ export function registerWidgetTools(
       _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl } = resolveEngine(args.engine, registry)
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
       const data = await buildIncidentDetailData(client, {
         baseUrl,
         cockpitUrl,
+        provider,
         incidentId: args.incidentId,
       })
       return rawData({ ...data, engineId })

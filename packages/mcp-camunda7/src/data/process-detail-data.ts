@@ -6,6 +6,7 @@ import {
 } from "@miragon-ai/client-camunda7/sdk"
 
 import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
+import type { EngineProvider } from "../engine-provider.js"
 import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"
 import { fetchSingleDefinitionInfo } from "./definition-info.js"
 
@@ -20,6 +21,7 @@ interface ActivityStatsRow {
 interface BuildOptions {
   baseUrl: string
   cockpitUrl?: string
+  provider: EngineProvider
   processDefinitionKey: string
 }
 
@@ -88,10 +90,12 @@ export async function buildProcessDetailData(
     version: info?.version ?? null,
     bpmnXml,
     cockpitUrl: buildProcessCockpitUrl(
-      options.cockpitUrl,
-      options.baseUrl,
-      options.processDefinitionKey,
-      info?.version ?? null,
+      { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
+      {
+        key: options.processDefinitionKey,
+        version: info?.version ?? null,
+        definitionId: info?.id ?? null,
+      },
     ),
     runningInstances,
     openIncidents,

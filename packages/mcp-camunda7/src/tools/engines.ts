@@ -1,6 +1,7 @@
 import { z } from "zod"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { UnknownEngineError, type EngineRegistry, type EngineEntry } from "../lib/resolve-engine.js"
+import { providerForEntry } from "../providers/index.js"
 import type { ProfileStore } from "../lib/profile-store.js"
 import { resolveProfileKey } from "../lib/resolve-profile-key.js"
 
@@ -71,11 +72,16 @@ export function registerEngineTools(register: Register, profileStore: ProfileSto
               ? profile.defaultEngineId
               : null
           return {
-            engines: available.map((e) => ({
-              id: e.id,
-              baseUrl: e.baseUrl,
-              ...(e.cockpitUrl ? { cockpitUrl: e.cockpitUrl } : {}),
-            })),
+            engines: available.map((e) => {
+              const provider = providerForEntry(e)
+              return {
+                id: e.id,
+                baseUrl: e.baseUrl,
+                flavor: provider.flavor,
+                engineName: provider.branding.displayName,
+                ...(e.cockpitUrl ? { cockpitUrl: e.cockpitUrl } : {}),
+              }
+            }),
             currentSelection: reg.backends.getSelected() ?? null,
             profileDefaultEngineId,
           }

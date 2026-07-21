@@ -15,7 +15,7 @@ export const loadIncidentsDashboardStep: PipelineStepDefinition<Camunda7StepAppC
   requires: [],
   produces: ["camunda7:incidentsDashboardData"],
   execute: async (context, appConfig) => {
-    const { client, baseUrl, cockpitUrl } = resolveStepEngine(
+    const { client, baseUrl, cockpitUrl, provider } = resolveStepEngine(
       appConfig,
       context.keys["camunda7:engine"] as string | undefined,
     )
@@ -25,6 +25,7 @@ export const loadIncidentsDashboardStep: PipelineStepDefinition<Camunda7StepAppC
     const data = await buildIncidentsDashboardData(client, {
       baseUrl,
       cockpitUrl,
+      provider,
       processDefinitionKey,
       incidentType,
     })
@@ -48,7 +49,7 @@ export const loadProcessIncidentsStep: PipelineStepDefinition<Camunda7StepAppCon
   requires: ["camunda7:processDefinitionKey"],
   produces: ["camunda7:processIncidentsData"],
   execute: async (context, appConfig) => {
-    const { client, baseUrl, cockpitUrl } = resolveStepEngine(
+    const { client, baseUrl, cockpitUrl, provider } = resolveStepEngine(
       appConfig,
       context.keys["camunda7:engine"] as string | undefined,
     )
@@ -57,6 +58,7 @@ export const loadProcessIncidentsStep: PipelineStepDefinition<Camunda7StepAppCon
     const data = await buildProcessIncidentsData(client, {
       baseUrl,
       cockpitUrl,
+      provider,
       processDefinitionKey,
     })
 

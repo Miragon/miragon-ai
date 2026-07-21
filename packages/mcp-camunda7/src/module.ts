@@ -2,10 +2,9 @@ import fs from "node:fs"
 import { z } from "zod"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use/server"
-import { createCamunda7Client } from "@miragon-ai/client-camunda7"
 import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-camunda7/sdk"
 import { createPlugin, type Camunda7SharedResources } from "./plugin.js"
-import { resolveMcpBearerToken } from "./lib/mcp-auth.js"
+import { providerForEntry } from "./providers/index.js"
 
 /**
  * Self-contained module definition for host apps: config schema, env mapping,
@@ -41,6 +40,8 @@ const engineSchema = z.object({
     ),
   baseUrl: z.string().url(),
   cockpitUrl: z.string().url().optional(),
+  /** Engine vendor of the C7 dialect (selects the provider). Default: "cibseven". */
+  flavor: z.enum(["cibseven", "operaton", "camunda7"]).optional(),
   /** Per-engine override; engines without one use the global CAMUNDA_* auth. */
   auth: engineAuthSchema.optional(),
 })
@@ -181,16 +182,9 @@ export function createBpmnXmlFetcher(
     password: parsed.password,
     token: parsed.token,
   }
-  const client = createCamunda7Client({
-    baseUrl: primary.baseUrl,
-    authType: auth.type,
-    username: auth.username,
-    password: auth.password,
-    token: auth.token,
-    // Same passthrough semantics as the plugin's registry clients — without it
-    // the XML fetch would silently 401 behind a passthrough deployment.
-    tokenProvider: auth.type === "passthrough" ? resolveMcpBearerToken : undefined,
-  })
+  // Same client construction (incl. passthrough semantics) as the plugin's
+  // registry clients — via the entry's vendor provider.
+  const client = providerForEntry(primary).createClient(primary, auth)
   return async (processDefinitionKey) => {
     const xmlResp = (await getProcessDefinitionBpmn20XmlByKey({
       client,

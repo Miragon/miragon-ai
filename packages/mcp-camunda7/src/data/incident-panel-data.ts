@@ -15,6 +15,7 @@ import {
 } from "@miragon-ai/client-camunda7/sdk"
 
 import { buildInstanceCockpitUrl, buildProcessCockpitUrl } from "../lib/cockpit-url.js"
+import type { EngineProvider } from "../engine-provider.js"
 import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"
 import { fetchDefinitionInfo } from "./definition-info.js"
 
@@ -92,8 +93,10 @@ async function fetchIncidents(
 interface IncidentInstanceContext {
   cockpitUrl: string | undefined
   baseUrl: string
+  provider: EngineProvider
   processDefinitionKey: string
   version: number | null
+  definitionId: string | null
   /** Cockpit tab to open on the instance page. Drill-in from an incident
    *  list defaults to `"incidents"` — operator is debugging failures. */
   tab: string
@@ -107,11 +110,13 @@ function toIncidentInstance(r: IncidentRow, ctx: IncidentInstanceContext): Incid
     incidentMessage: r.incidentMessage ?? null,
     incidentTimestamp: r.incidentTimestamp,
     cockpitInstanceUrl: buildInstanceCockpitUrl(
-      ctx.cockpitUrl,
-      ctx.baseUrl,
-      ctx.processDefinitionKey,
-      ctx.version,
-      r.processInstanceId,
+      { baseUrl: ctx.baseUrl, cockpitUrl: ctx.cockpitUrl, provider: ctx.provider },
+      {
+        key: ctx.processDefinitionKey,
+        version: ctx.version,
+        definitionId: ctx.definitionId,
+        instanceId: r.processInstanceId,
+      },
       { tab: ctx.tab },
     ),
   }
@@ -156,6 +161,7 @@ function minTimestamp(values: string[]): string | null {
 interface BuildOverviewOptions {
   baseUrl: string
   cockpitUrl?: string
+  provider: EngineProvider
   processDefinitionKey?: string
   incidentType?: string
 }
@@ -213,10 +219,8 @@ export async function buildIncidentsDashboardData(
       last24hCount,
       latestIncident: maxTimestamp(group.map((r) => r.incidentTimestamp)),
       cockpitUrl: buildProcessCockpitUrl(
-        options.cockpitUrl,
-        options.baseUrl,
-        key,
-        def?.version ?? null,
+        { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
+        { key, version: def?.version ?? null, definitionId: def?.id ?? null },
         { tab: "incidents" },
       ),
       activities,
@@ -236,6 +240,7 @@ export async function buildIncidentsDashboardData(
 interface BuildDetailOptions {
   baseUrl: string
   cockpitUrl?: string
+  provider: EngineProvider
   processDefinitionKey: string
 }
 
@@ -270,8 +275,10 @@ export async function buildProcessIncidentsData(
   const incidentCtx: IncidentInstanceContext = {
     cockpitUrl: options.cockpitUrl,
     baseUrl: options.baseUrl,
+    provider: options.provider,
     processDefinitionKey: options.processDefinitionKey,
     version: def?.version ?? null,
+    definitionId: def?.id ?? null,
     tab: "incidents",
   }
 
@@ -305,10 +312,12 @@ export async function buildProcessIncidentsData(
     version: def?.version ?? null,
     bpmnXml,
     cockpitUrl: buildProcessCockpitUrl(
-      options.cockpitUrl,
-      options.baseUrl,
-      options.processDefinitionKey,
-      def?.version ?? null,
+      { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
+      {
+        key: options.processDefinitionKey,
+        version: def?.version ?? null,
+        definitionId: def?.id ?? null,
+      },
       { tab: "incidents" },
     ),
     runningInstances,

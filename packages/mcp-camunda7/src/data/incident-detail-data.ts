@@ -19,12 +19,14 @@ import {
 } from "@miragon-ai/client-camunda7/sdk"
 
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
+import type { EngineProvider } from "../engine-provider.js"
 import { extractActivityNames } from "../lib/bpmn-parse.js"
 import { processDefinitionKeyFromId } from "./incident-panel-data.js"
 
 interface BuildOptions {
   baseUrl: string
   cockpitUrl?: string
+  provider: EngineProvider
   incidentId: string
 }
 
@@ -265,11 +267,13 @@ export async function buildIncidentDetailData(
   const cockpitInstanceUrl =
     processInstanceId && processDefinitionKey
       ? buildInstanceCockpitUrl(
-          options.cockpitUrl,
-          options.baseUrl,
-          processDefinitionKey,
-          processDefinitionVersion,
-          processInstanceId,
+          { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
+          {
+            key: processDefinitionKey,
+            version: processDefinitionVersion,
+            definitionId: processDefinitionId,
+            instanceId: processInstanceId,
+          },
           { tab: "variables" },
         )
       : null

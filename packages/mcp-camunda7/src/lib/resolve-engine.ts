@@ -4,31 +4,21 @@ import {
   createBackendRegistry,
   type BackendRegistry,
 } from "@miragon/mcp-toolkit-core/tools"
-import type { Camunda7AuthType, Client } from "@miragon-ai/client-camunda7"
+import type { Client } from "@miragon-ai/client-camunda7"
+import type { EngineProvider } from "../engine-provider.js"
+import { providerForEntry } from "../providers/index.js"
 
-/**
- * Per-engine auth override. An engine that carries one is authenticated with
- * exactly these fields; engines without one fall back to the module-wide
- * config ([[Camunda7PluginConfig]]) — the two are never mixed field-by-field.
- */
-export interface EngineAuth {
-  type: Camunda7AuthType
-  username?: string
-  password?: string
-  token?: string
-}
-
-export interface EngineEntry {
-  id: string
-  baseUrl: string
-  cockpitUrl?: string
-  auth?: EngineAuth
-}
+// Engine-config vocabulary lives next to the provider port; re-exported here
+// so existing importers keep their stable path.
+export type { EngineAuth, EngineEntry, EngineFlavor } from "../engine-provider.js"
+import type { EngineEntry } from "../engine-provider.js"
 
 /** Per-engine metadata carried on each backend-registry entry. */
 export interface EngineMeta {
   baseUrl: string
   cockpitUrl?: string
+  /** The vendor provider resolved from the entry's `flavor` at boot. */
+  provider: EngineProvider
 }
 
 /**
@@ -57,7 +47,9 @@ export function createEngineRegistry(
     engines.map((e) => ({
       id: e.id,
       client: clientFor(e),
-      meta: { baseUrl: e.baseUrl, cockpitUrl: e.cockpitUrl },
+      // providerForEntry throws on an unknown flavor — a misconfigured engine
+      // fails the boot instead of producing silently wrong cockpit links.
+      meta: { baseUrl: e.baseUrl, cockpitUrl: e.cockpitUrl, provider: providerForEntry(e) },
     })),
     { label: "engine", ...opts },
   )
@@ -113,7 +105,13 @@ export class UnknownEngineError extends Error {
 export function resolveEngine(
   override: string | undefined,
   registry: EngineRegistry,
-): { client: Client; engineId: string; baseUrl: string; cockpitUrl?: string } {
+): {
+  client: Client
+  engineId: string
+  baseUrl: string
+  cockpitUrl?: string
+  provider: EngineProvider
+} {
   try {
     const backend = registry.backends.resolve(override)
     return {
@@ -121,6 +119,9 @@ export function resolveEngine(
       engineId: backend.id,
       baseUrl: backend.meta?.baseUrl ?? "",
       cockpitUrl: backend.meta?.cockpitUrl,
+      // Meta is always set by createEngineRegistry; the fallback only guards
+      // registries built outside it (tests) and resolves to the default flavor.
+      provider: backend.meta?.provider ?? providerForEntry({ id: backend.id }),
     }
   } catch (e) {
     if (e instanceof BackendNotSelectedError) throw new EngineNotSelectedError(registry.engines)
@@ -150,6 +151,12 @@ export interface Camunda7StepAppConfig {
 export function resolveStepEngine(
   appConfig: Camunda7StepAppConfig,
   override?: string,
-): { client: Client; engineId: string; baseUrl: string; cockpitUrl?: string } {
+): {
+  client: Client
+  engineId: string
+  baseUrl: string
+  cockpitUrl?: string
+  provider: EngineProvider
+} {
   return resolveEngine(override, appConfig.registry)
 }

@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { Client } from "@miragon-ai/client-camunda7"
+import type { EngineProvider } from "../engine-provider.js"
 import { resolveEngine, type EngineRegistry } from "./resolve-engine.js"
 
 /**
@@ -18,7 +19,10 @@ export const engineParamShape = {
 
 export interface EngineContext {
   engineId: string
+  baseUrl: string
   cockpitUrl?: string
+  /** Vendor provider of the resolved engine (cockpit routes, branding). */
+  provider: EngineProvider
 }
 
 /**
@@ -31,7 +35,7 @@ export function withEngine<TArgs extends { engine?: string }, TResult>(
   fn: (client: Client, args: TArgs, ctx: EngineContext) => Promise<TResult>,
 ): (registry: EngineRegistry, args: TArgs) => Promise<TResult> {
   return async (registry, args) => {
-    const { client, engineId, cockpitUrl } = resolveEngine(args.engine, registry)
-    return fn(client, args, { engineId, cockpitUrl })
+    const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(args.engine, registry)
+    return fn(client, args, { engineId, baseUrl, cockpitUrl, provider })
   }
 }
