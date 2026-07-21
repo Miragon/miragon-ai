@@ -1,23 +1,23 @@
 [versions]
 # Language / platform
-kotlin = "2.3.20"
-spring-boot = "3.5.6"
+kotlin = "2.4.10"
+spring-boot = "4.1.0"
 spring-dependency-management = "1.1.7"
 
 # Build tooling
-shadow = "9.4.1"
+shadow = "9.6.0"
 ktlint = "14.2.0"
 
 # Quality / testing
 konsist = "0.17.3"
-junit-jupiter = "5.11.4"
+junit-jupiter = "6.1.2"
 
 # Engine SDKs
 camunda7 = "7.24.0"
-cibseven = "2.1.0"
+cibseven = "2.2.0"
 
 # Runtime libraries
-opentelemetry-api = "1.61.0"
+opentelemetry-api = "1.64.0"
 
 [libraries]
 # BOM
