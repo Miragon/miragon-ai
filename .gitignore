@@ -19,4 +19,4 @@ playground/cibseven-example/build/
 .claude/scheduled_tasks.lock
 .claude/logs/
 # Playwright host-simulation output
-apps/mcp-gateway/test-results/
+apps/mcp-server-camunda7/test-results/

@@ -31,43 +31,43 @@ covers deploying the same stack to Fly.io (`deploy-playground.yml`, manual).
 
 By default the MCP endpoint is unauthenticated — any client that reaches port
 `8400` gets full tool access. Protect it with an authenticating reverse proxy,
-or set `MCP_OAUTH` to make the gateway an OAuth resource server: bearer tokens
+or set `MCP_OAUTH` to make the server an OAuth resource server: bearer tokens
 on `/mcp` are validated against your IdP (Keycloak, Auth0, or generic
 OIDC/JWKS), unauthenticated requests get 401, and the `.well-known` discovery
 metadata is served. Set `MCP_URL` so advertised URLs are right.
 
 For an IdP without Dynamic Client Registration, `provider: "oidc-proxy"` uses a
 pre-registered `clientId`/`clientSecret` and brokers the login through the
-gateway. It requires `MCP_URL`, `<MCP_URL>/oauth/callback` registered at the
-IdP, and `allowedRedirectUris` — the exact MCP-client callbacks the gateway's
+server. It requires `MCP_URL`, `<MCP_URL>/oauth/callback` registered at the
+IdP, and `allowedRedirectUris` — the exact MCP-client callbacks the server's
 `/authorize` accepts. That allowlist is mandatory and enforced before mcp-use
 runs (its proxy otherwise forwards the auth code to any `redirect_uri`).
 
 `CAMUNDA_AUTH_TYPE=passthrough` forwards each caller's bearer token to the
 engine per request (never to Prometheus). With `MCP_OAUTH`
-the gateway validates the token and the engine enforces the caller's
+the server validates the token and the engine enforces the caller's
 permissions — which needs an engine with REST auth enabled; a default engine
 accepts anonymous requests and ignores the token.
 
 ## Environment variables
 
-| Variable                                | Default                             | Notes                                                                                                                                                                                       |
-| --------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                                  | `8400`                              | HTTP port the MCP server listens on                                                                                                                                                         |
-| `MCP_URL`                               | —                                   | Public base URL the server advertises (resource URIs, OAuth callbacks)                                                                                                                      |
-| `MCP_OAUTH`                             | —                                   | JSON OAuth resource-server config; providers `keycloak`, `auth0`, `oidc`, `oidc-proxy` — full field lists in [`.env.example`](https://github.com/Miragon/miragon-ai/blob/main/.env.example) |
-| `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated `module` or `module:toolset` entries; e.g. `camunda7:read-only,analytics`                                                                                                   |
-| `MCP_DASHBOARD_DIR` / `MCP_PROFILE_DIR` | in-memory                           | Directories persisting saved dashboards / user profiles across restarts                                                                                                                     |
-| `CAMUNDA_ENGINES_FILE`                  | —                                   | Path to a JSON file with the engine list `[{id, baseUrl, cockpitUrl?, auth?}, ...]`; highest precedence                                                                                     |
-| `CAMUNDA_ENGINES_JSON`                  | —                                   | Same engine array as inline JSON; ignored when `CAMUNDA_ENGINES_FILE` is set                                                                                                                |
-| `CAMUNDA_BASE_URL`                      | `http://localhost:8410/engine-rest` | Legacy single-engine REST endpoint (registered as id `default`); ignored when `CAMUNDA_ENGINES_*` is set                                                                                    |
-| `CAMUNDA_COCKPIT_URL`                   | derived                             | Used for jump-out links to Cockpit; multi-engine setups use per-engine `cockpitUrl` instead                                                                                                 |
-| `CAMUNDA_AUTH_TYPE`                     | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without a per-engine `auth`                                                                                              |
-| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` | —                                   | Required for `basic` (enforced at boot)                                                                                                                                                     |
-| `CAMUNDA_TOKEN`                         | —                                   | Required for `bearer` (enforced at boot)                                                                                                                                                    |
-| `CAMUNDA_INCIDENT_ISSUE_REPO`           | —                                   | Default `owner/repo` for the GitHub-issue tool                                                                                                                                              |
-| `CAMUNDA_HEALTH_CRITICAL_*`             | `50` / `25`                         | `…_INCIDENTS` / `…_CLUSTER_SIZE` — thresholds for the engine-health `critical` verdict                                                                                                      |
-| `PROMETHEUS_URL`                        | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source (the repo's Compose stack publishes `:8460`; the gateway warns at boot when unset)                                                          |
+| Variable                                | Default                             | Notes                                                                                                                                                                                                                                           |
+| --------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                  | `8400`                              | HTTP port the MCP server listens on                                                                                                                                                                                                             |
+| `MCP_URL`                               | —                                   | Public base URL the server advertises (resource URIs, OAuth callbacks)                                                                                                                                                                          |
+| `MCP_OAUTH`                             | —                                   | JSON OAuth resource-server config; providers `keycloak`, `auth0`, `oidc`, `oidc-proxy` — full field lists in [`.env.example`](https://github.com/Miragon/miragon-ai/blob/main/.env.example)                                                     |
+| `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated `module` or `module:toolset` entries; e.g. `camunda7:read-only,analytics`                                                                                                                                                       |
+| `MCP_DASHBOARD_DIR` / `MCP_PROFILE_DIR` | in-memory                           | Directories persisting saved dashboards / user profiles across restarts                                                                                                                                                                         |
+| `CAMUNDA_ENGINES_FILE`                  | —                                   | Path to a JSON file with the engine list `[{id, baseUrl, cockpitUrl?, flavor?, auth?}, ...]`; highest precedence                                                                                                                                |
+| `CAMUNDA_ENGINES_JSON`                  | —                                   | Same engine array as inline JSON; ignored when `CAMUNDA_ENGINES_FILE` is set. Entries take an optional `flavor` (`cibseven` \| `operaton` \| `camunda7`, default `cibseven`) selecting the vendor's cockpit-link routes — mixed fleets are fine |
+| `CAMUNDA_BASE_URL`                      | `http://localhost:8410/engine-rest` | Legacy single-engine REST endpoint (registered as id `default`); ignored when `CAMUNDA_ENGINES_*` is set                                                                                                                                        |
+| `CAMUNDA_COCKPIT_URL`                   | derived                             | Used for jump-out links to Cockpit; multi-engine setups use per-engine `cockpitUrl` instead                                                                                                                                                     |
+| `CAMUNDA_AUTH_TYPE`                     | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without a per-engine `auth`                                                                                                                                                  |
+| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` | —                                   | Required for `basic` (enforced at boot)                                                                                                                                                                                                         |
+| `CAMUNDA_TOKEN`                         | —                                   | Required for `bearer` (enforced at boot)                                                                                                                                                                                                        |
+| `CAMUNDA_INCIDENT_ISSUE_REPO`           | —                                   | Default `owner/repo` for the GitHub-issue tool                                                                                                                                                                                                  |
+| `CAMUNDA_HEALTH_CRITICAL_*`             | `50` / `25`                         | `…_INCIDENTS` / `…_CLUSTER_SIZE` — thresholds for the engine-health `critical` verdict                                                                                                                                                          |
+| `PROMETHEUS_URL`                        | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source (the repo's Compose stack publishes `:8460`; the server warns at boot when unset)                                                                                                               |
 
 Unknown `CAMUNDA_*`/`MCP_*` variables are reported at boot (typos aren't
 silently ignored); mcp-use telemetry is off by default

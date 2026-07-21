@@ -11,10 +11,14 @@
       "extra-files": [
         { "type": "generic", "path": "engine-plugins/gradle.properties" },
         { "type": "json", "path": "package.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "apps/mcp-gateway/package.json", "jsonpath": "$.version" },
         {
           "type": "json",
-          "path": "packages/client-cibseven/package.json",
+          "path": "apps/mcp-server-camunda7/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/client-camunda7/package.json",
           "jsonpath": "$.version"
         },
         {

@@ -2,7 +2,7 @@ import { getRequestContext } from "mcp-use/server"
 import { translator } from "./messages/index.js"
 
 /**
- * Minimal structural view of the gateway's profile store — just enough to read
+ * Minimal structural view of the server app's profile store — just enough to read
  * the active locale. The camunda7 `ProfileStore` satisfies this without
  * analytics depending on the camunda7 module.
  */

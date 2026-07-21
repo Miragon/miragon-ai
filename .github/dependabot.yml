@@ -73,7 +73,7 @@ updates:
           - "minor"
           - "major"
 
-  # Docker image — root Dockerfile (gateway), keeps the pinned base digest current
+  # Docker image — root Dockerfile (server), keeps the pinned base digest current
   - package-ecosystem: "docker"
     directory: "/"
     schedule:

@@ -133,7 +133,7 @@ services:
 
   # Automation MCP server (Node). Opt-in via the `full` profile so the
   # default `docker compose up` brings up infra only — leaving port 8400
-  # free for a locally-run gateway (`pnpm -F @miragon-ai/mcp-gateway dev`).
+  # free for a locally-run server (`pnpm -F @miragon-ai/mcp-server-camunda7 dev`).
   # Use: docker compose --profile full up -d
   # Building the image needs GITHUB_TOKEN exported in the host shell — the
   # build mounts it as a BuildKit secret to fetch the private @miragon

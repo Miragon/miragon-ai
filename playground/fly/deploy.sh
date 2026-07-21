@@ -2,9 +2,9 @@
 # Deploys the playground stack to Fly.io — one Fly app per service, wired over
 # the org's private 6PN network. Used by .github/workflows/deploy-playground.yml
 # and runnable locally (needs flyctl, a Fly token, and GITHUB_TOKEN for the
-# gateway image build).
+# server image build).
 #
-# Usage: playground/fly/deploy.sh [all|otel|engine|prometheus|grafana|gateway]
+# Usage: playground/fly/deploy.sh [all|otel|engine|prometheus|grafana|server]
 #
 # Notes:
 # - Apps are created on first use, so the Fly token must be org-scoped
@@ -63,9 +63,9 @@ deploy_grafana() {
   deploy miragon-ai-playground-grafana playground/docker/grafana ../../fly/grafana.fly.toml
 }
 
-deploy_gateway() {
-  require_github_token "the gateway"
-  deploy miragon-ai-playground . playground/fly/gateway.fly.toml \
+deploy_server() {
+  require_github_token "the server"
+  deploy miragon-ai-playground . playground/fly/server-camunda7.fly.toml \
     --build-secret "github_token=$GITHUB_TOKEN"
 }
 
@@ -74,18 +74,18 @@ case "$TARGET" in
   engine) deploy_engine ;;
   prometheus) deploy_prometheus ;;
   grafana) deploy_grafana ;;
-  gateway) deploy_gateway ;;
+  server) deploy_server ;;
   all)
     # Order matters: the engine pushes to the Collector from boot, Prometheus
-    # scrapes it, and the gateway discovers engine + Prometheus.
+    # scrapes it, and the server discovers engine + Prometheus.
     deploy_otel
     deploy_engine
     deploy_prometheus
     deploy_grafana
-    deploy_gateway
+    deploy_server
     ;;
   *)
-    echo "unknown target: $TARGET (expected all|otel|engine|prometheus|grafana|gateway)" >&2
+    echo "unknown target: $TARGET (expected all|otel|engine|prometheus|grafana|server)" >&2
     exit 1
     ;;
 esac

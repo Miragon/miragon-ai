@@ -19,7 +19,7 @@ on:
           - engine
           - prometheus
           - grafana
-          - gateway
+          - server
 
 permissions:
   contents: read
@@ -65,7 +65,7 @@ jobs:
       - name: Deploy
         run: ./playground/fly/deploy.sh "${{ inputs.target }}"
         env:
-          # Build secret for the gateway image (private @miragon packages on
+          # Build secret for the server image (private @miragon packages on
           # npm.pkg.github.com).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Org that owns the playground apps (repo variable, optional).

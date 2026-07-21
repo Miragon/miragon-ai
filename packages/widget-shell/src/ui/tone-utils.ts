@@ -1,7 +1,7 @@
 /**
  * Single source of truth for severity/brand "tones" used across widgets.
  *
- * Tones map to the brand tokens defined in the gateway's globals.css
+ * Tones map to the brand tokens defined in the server app's globals.css
  * (`--color-critical`, `--color-warning`, `--color-m-green`, `--color-m-blue`)
  * plus the shadcn neutral ramp for the `neutral` tone. All tokens carry
  * light + dark variants, so these class strings re-theme automatically.

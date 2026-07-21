@@ -122,7 +122,7 @@ The widget chain mirrors the camunda7 module:
    `@miragon-ai/widget-shell/ui`).
 3. Add the widget entry (`id`, `description`, `requires`/`consumes`, `size`, optional
    `propsSchema`) to `src/definition.ts`.
-4. The host map `apps/mcp-gateway/src/ui/widget-registry.ts` spreads
+4. The host map `apps/mcp-server-camunda7/src/ui/widget-registry.ts` spreads
    `analyticsWidgets` — verify your widget arrives there.
 5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with
    `_meta: buildUiMeta({ resourceUri })` (`uiMeta` from `@miragon/mcp-toolkit-core`),
@@ -140,7 +140,7 @@ Rules while building:
   never re-inline these primitives or write local format helpers.
 - Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`)
   — a missing `isError` branch means an eternal skeleton.
-- Naming is load-bearing: `apps/mcp-gateway/test/widget-contract.e2e.test.ts` enforces
+- Naming is load-bearing: `apps/mcp-server-camunda7/test/widget-contract.e2e.test.ts` enforces
   the widget `_meta` on every `*_show_*` tool and app-only visibility on every `*_data`
   feed **by name**; `src/widgets/catalogue-sync.test.ts` keeps `definition.ts` ↔
   `analyticsWidgets` in sync.

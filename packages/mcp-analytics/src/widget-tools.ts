@@ -8,13 +8,19 @@ import {
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { queries, schemas, type PrometheusClient } from "@miragon-ai/client-analytics"
-import type { Client as Camunda7Client } from "@miragon-ai/client-cibseven"
-import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-cibseven/sdk"
 import { localizeFor, type LocaleSource } from "./server-locale.js"
+
+/**
+ * Engine-agnostic BPMN-XML lookup injected by the host app (which owns the
+ * engine client) — this module never talks to an engine itself. Resolves the
+ * latest deployed version's diagram XML for a process definition key, or
+ * `null` when unavailable.
+ */
+export type FetchBpmnXml = (processDefinitionKey: string) => Promise<string | null>
 
 export interface AnalyticsWidgetToolsOptions {
   /** Used by the BPMN heatmap to fetch the diagram XML. Absent → non-diagram fallback. */
-  camunda7Client?: Camunda7Client
+  fetchBpmnXml?: FetchBpmnXml
   /** Profile store for localizing model-facing summaries (locale → profile language). */
   profileStore?: LocaleSource
 }
@@ -58,24 +64,19 @@ export function registerWidgetTools(
   resourceUri: string,
   options: AnalyticsWidgetToolsOptions = {},
 ) {
-  const camunda7Client = options.camunda7Client
   // Resolve the request locale via `await localizeFor(profileStore)` inside each
   // handler to localize its model-facing `summary` (→ "en" when no store/session).
   const profileStore = options.profileStore
   const uiMeta = buildUiMeta({ resourceUri })
 
   /**
-   * Fetches the latest deployed version's BPMN XML for the heatmap overlay.
-   * Returns `null` without a camunda7 client or on any fetch error — the
-   * widget renders its non-diagram fallback in that case.
+   * Fetches the latest deployed version's BPMN XML for the heatmap overlay via
+   * the injected lookup. Returns `null` without an injected fetcher or on any
+   * fetch error — the widget renders its non-diagram fallback in that case.
    */
   async function fetchBpmnXml(processDefinitionKey: string): Promise<string | null> {
-    if (!camunda7Client) return null
-    const xmlResp = (await getProcessDefinitionBpmn20XmlByKey({
-      client: camunda7Client,
-      path: { key: processDefinitionKey },
-    }).catch(() => null)) as { bpmn20Xml?: string } | null
-    return xmlResp?.bpmn20Xml ?? null
+    if (!options.fetchBpmnXml) return null
+    return (await options.fetchBpmnXml(processDefinitionKey).catch(() => null)) ?? null
   }
 
   // --- Process Analytics Dashboard ---

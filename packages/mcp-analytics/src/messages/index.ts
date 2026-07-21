@@ -6,7 +6,7 @@ import { deServer } from "./de.server.js"
 
 /**
  * The analytics module's message catalogs, keyed by locale. The locale source is
- * the global gateway ProfileGate (`<LocaleProvider>`); `en` is the fallback.
+ * the global server ProfileGate (`<LocaleProvider>`); `en` is the fallback.
  * Analytics ships only the per-widget sweep catalogs today. Shared by server
  * summaries (`translator(locale, key)`) and widgets (`useT()`).
  */

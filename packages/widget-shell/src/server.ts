@@ -18,6 +18,7 @@ export type {
   SingleWidgetViewInput,
 } from "@miragon/mcp-toolkit-core"
 export { withToolErrors } from "@miragon/mcp-toolkit-core/tools"
+export { createShellPlugin, shellDefinition } from "./shell-catalogue.js"
 
 /**
  * mcp-use's raw `server.tool()` callback expects a result with an implicit
