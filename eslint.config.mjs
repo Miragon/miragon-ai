@@ -14,7 +14,10 @@ const bundledUiFiles = [
 // Server tests (and the Playwright host simulation) live outside src/ (not
 // part of the build tsconfig) and get their type information from the
 // dedicated tsconfig.test.json project.
-const serverTestFiles = ["apps/mcp-server-camunda7/test/**/*.ts", "apps/mcp-server-camunda7/test-host/**/*.ts"]
+const serverTestFiles = [
+  "apps/mcp-server-camunda7/test/**/*.ts",
+  "apps/mcp-server-camunda7/test-host/**/*.ts",
+]
 
 export default tseslint.config(
   {
