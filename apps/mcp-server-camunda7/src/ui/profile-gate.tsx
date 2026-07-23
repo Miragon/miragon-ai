@@ -1,4 +1,4 @@
-import { type ReactNode } from "react"
+import { useCallback, type ReactNode } from "react"
 import { useWidget } from "mcp-use/react"
 import { AppQueryProvider, LocaleProvider, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { useApplyTheme } from "@miragon-ai/widget-shell/widgets"
@@ -30,7 +30,10 @@ export function ProfileGate({ children }: { children: ReactNode }) {
   const { callTool } = useWidget()
   // Adapt the host bridge's `(name, Record<string, unknown>)` callTool to the
   // provider's `(name, object)` signature (a plain `{}` isn't a Record).
-  const callToolFn = (name: string, args: object) => callTool(name, args as Record<string, unknown>)
+  const callToolFn = useCallback(
+    (name: string, args: object) => callTool(name, args as Record<string, unknown>),
+    [callTool],
+  )
   return (
     <AppQueryProvider callTool={callToolFn}>
       <ProfileGateInner>{children}</ProfileGateInner>

@@ -9,13 +9,17 @@ export const de: MessageCatalog = {
   "cockpit.crumb.overview": "Übersicht",
   "cockpit.crumb.incidents": "Vorfälle",
   "cockpit.crumb.instances": "Instanzen",
-  "cockpit.crumb.instance": ({ id }) => `Instanz ${String(id)}…`,
-  "cockpit.crumb.incident": ({ id }) => `Vorfall ${String(id)}…`,
+  // Die {id} kommt bereits gekürzt an (Kit-`truncate` ergänzt die Ellipse).
+  "cockpit.crumb.instance": ({ id }) => `Instanz ${String(id)}`,
+  "cockpit.crumb.incident": ({ id }) => `Vorfall ${String(id)}`,
   "cockpit.crumb.cluster": ({ activity }) => `Cluster: ${String(activity)}`,
   "cockpit.loading.engines": "Engines werden geladen…",
   "cockpit.empty.engines": "Keine CIB-Seven-Engines konfiguriert.",
   "cockpit.nav.crossEngine": "Engine-übergreifend",
   "cockpit.nav.engine": "Engine",
+  "cockpit.aria.breadcrumb": "Breadcrumb-Navigation",
+  "cockpit.aria.sections": "Cockpit-Bereiche",
+  "cockpit.aria.activeEngine": "Aktive Engine",
   "cockpit.landing.title": "CIB Seven Cockpit",
   "cockpit.landing.subtitle": ({ count }) =>
     `${String(count)} Engines konfiguriert — eine Engine bedienen oder über die gesamte Flotte analysieren.`,
@@ -111,8 +115,6 @@ export const de: MessageCatalog = {
   "c7sum.historyTimeline":
     "Verlaufs-Zeitleiste für Prozessinstanz {processInstanceId}: {totalActivities} historische Aktivitäten{notFound}.",
   "c7sum.historyTimeline.notFound": " (keine historische Prozessinstanz gefunden)",
-  "c7sum.cockpitDashboard":
-    'Cockpit-Dashboard für Engine "{engineId}": {totalDefinitions} Definitionen, {totalRunningInstances} laufende Instanzen, {totalFailedJobs} fehlgeschlagene Jobs, {totalIncidents} offene Vorfälle.',
   "c7sum.engineHealth":
     'Engine "{engineId}" — {status}: {totalIncidents} offene Vorfälle über {affectedActivities} Aktivitäten, {runningInstances} laufende Instanzen.{topCluster}',
   "c7sum.engineHealth.topCluster":

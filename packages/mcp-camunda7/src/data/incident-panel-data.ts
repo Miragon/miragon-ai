@@ -9,6 +9,7 @@ import type {
   ProcessIncidentsData,
 } from "../view-models.js"
 import {
+  getActivityStatistics,
   getIncidents,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
@@ -259,12 +260,15 @@ export async function buildProcessIncidentsData(
 
   const processDefinitionId = def?.id || group[0]?.processDefinitionId || null
 
-  const xmlResponse = processDefinitionId
-    ? ((await getProcessDefinitionBpmn20Xml({
-        client,
-        path: { id: processDefinitionId },
-      }).catch(() => null)) as { bpmn20Xml?: string } | null)
-    : null
+  const [xmlResponse, failedJobs] = await Promise.all([
+    processDefinitionId
+      ? (getProcessDefinitionBpmn20Xml({
+          client,
+          path: { id: processDefinitionId },
+        }).catch(() => null) as Promise<{ bpmn20Xml?: string } | null>)
+      : Promise.resolve(null),
+    processDefinitionId ? fetchFailedJobCount(client, processDefinitionId) : Promise.resolve(null),
+  ])
   const bpmnXml = xmlResponse?.bpmn20Xml ?? null
 
   const activityNames = bpmnXml ? extractActivityNames(bpmnXml) : {}
@@ -323,11 +327,31 @@ export async function buildProcessIncidentsData(
     runningInstances,
     incidentCount: group.length,
     last24hCount: group.filter((r) => isOnOrAfter(r.incidentTimestamp, cutoffMs)).length,
+    failedJobs,
     totalActivityCount,
     latestIncident: maxTimestamp(group.map((r) => r.incidentTimestamp)),
     activities,
     siblingsWithIncidents,
   }
+}
+
+/**
+ * Failed-job count (no retries left) summed over the definition's activity
+ * statistics — the KPI the merged definition view surfaces next to the
+ * incident counts. Null (not 0) when the statistics call fails so the widget
+ * can render "unknown" instead of a false all-clear.
+ */
+async function fetchFailedJobCount(
+  client: Client,
+  processDefinitionId: string,
+): Promise<number | null> {
+  const stats = (await getActivityStatistics({
+    client,
+    path: { id: processDefinitionId },
+    query: { failedJobs: true },
+  }).catch(() => null)) as Array<{ failedJobs?: number | null }> | null
+  if (!Array.isArray(stats)) return null
+  return stats.reduce((sum, row) => sum + (row.failedJobs ?? 0), 0)
 }
 
 async function fetchSiblingsWithIncidents(

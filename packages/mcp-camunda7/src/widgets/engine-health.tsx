@@ -1,17 +1,14 @@
-import { useEffect, useState } from "react"
-import {
-  Alert,
-  AlertDescription,
-  Badge,
-  parseToolResult,
-  useCallTool,
-} from "@miragon/mcp-toolkit-ui"
+import { useEffect, useRef, useState } from "react"
+import { Alert, AlertDescription, parseToolResult, useCallTool } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
   DrillButton,
   KpiGrid,
+  RowCard,
+  StatusBadge,
   WidgetHeader,
   WidgetShell,
+  formatTime,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import { ModelContext } from "mcp-use/react"
@@ -20,6 +17,7 @@ import { useNav, type OnNavigate } from "./navigation.js"
 import { CAMUNDA7_ENGINE_HEALTH_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
 import { remediatePrompt, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
+import { fenceUntrusted } from "./lib/untrusted.js"
 import { useT } from "../messages/use-t.js"
 
 const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; glyph: string; labelKey: string }> = {
@@ -94,7 +92,7 @@ function triagePrompt(data: EngineHealthData, engine?: string): string {
 function diagnosePrompt(engine: string | undefined, message: string): string {
   const e = engine ? `engine "${engine}"` : "the configured engine"
   return (
-    `The engine health check for ${e} failed with: "${message}". Diagnose why the ` +
+    `The engine health check for ${e} failed with ${fenceUntrusted(message)}. Diagnose why the ` +
     `CIB Seven / Camunda 7 engine is not reachable, in plain language for a support ` +
     `operator. Start with camunda7_engine (action "list") to see the configured engines ` +
     `and their base URLs, then try a cheap read like camunda7_list_process_definitions(` +
@@ -103,14 +101,6 @@ function diagnosePrompt(engine: string | undefined, message: string): string {
     `failure / network issue. State the most likely cause and the concrete next step. ` +
     `Do not change anything.`
   )
-}
-
-function formatTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  } catch {
-    return iso
-  }
 }
 
 /** One cross-process incident cluster: deterministic facts + two handoffs (drill / ask). */
@@ -142,34 +132,38 @@ function ClusterRow({
       : (primaryKey ?? UNKNOWN)
 
   return (
-    <div className="border-border flex items-center justify-between gap-3 rounded-lg border p-3">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 text-sm font-medium">
+    <RowCard
+      title={
+        <>
           <span className="truncate font-mono">{cluster.activityId}</span>
-          <Badge variant="secondary">{cluster.incidentType}</Badge>
-        </div>
-        <p className="text-muted-foreground truncate text-xs">
+          <StatusBadge tone="critical">{cluster.incidentType}</StatusBadge>
+        </>
+      }
+      subtitle={
+        <>
           {t("engineHealth.clusterAffected", { count: cluster.incidentCount })}
           {cluster.last24hCount > 0
             ? ` · ${t("engineHealth.clusterNew24h", { count: cluster.last24hCount })}`
             : ""}{" "}
           · {scope}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        <DrillButton
-          onDrill={drill}
-          ariaLabel={t("engineHealth.clusterViewAria", { activity: cluster.activityId })}
-        >
-          {t("engineHealth.clusterView")}
-        </DrillButton>
-        <AskAiButton
-          variant="subtle"
-          label={t("engineHealth.clusterFix")}
-          prompt={remediatePrompt(cluster, engine)}
-        />
-      </div>
-    </div>
+        </>
+      }
+      actions={
+        <>
+          <DrillButton
+            onDrill={drill}
+            ariaLabel={t("engineHealth.clusterViewAria", { activity: cluster.activityId })}
+          >
+            {t("engineHealth.clusterOpen")}
+          </DrillButton>
+          <AskAiButton
+            variant="subtle"
+            label={t("engineHealth.clusterFix")}
+            prompt={remediatePrompt(cluster, engine)}
+          />
+        </>
+      }
+    />
   )
 }
 
@@ -213,21 +207,30 @@ export function EngineHealthView({
   // re-pull of the feed replaces it locally. Reset when the engine changes.
   const [live, setLive] = useState<EngineHealthData | null>(null)
   const [refreshing, setRefreshing] = useState(false)
-  useEffect(() => setLive(null), [engine])
+  // Request generation: an engine switch (or a newer refresh) invalidates every
+  // in-flight refresh, so a slow response for engine A can never setLive() A's
+  // snapshot while the view already shows engine B.
+  const refreshGen = useRef(0)
+  useEffect(() => {
+    refreshGen.current++
+    setLive(null)
+    setRefreshing(false)
+  }, [engine])
   const data = live ?? fetched
 
   async function refresh() {
     if (!callTool) return
+    const gen = ++refreshGen.current
     setRefreshing(true)
     try {
       const result = await callTool(CAMUNDA7_ENGINE_HEALTH_DATA, {
         engine: engine ?? data?.engineId,
       })
-      setLive(parseToolResult<EngineHealthData>(result))
+      if (gen === refreshGen.current) setLive(parseToolResult<EngineHealthData>(result))
     } catch {
       // Keep the last snapshot on a failed refresh; the next attempt can retry.
     } finally {
-      setRefreshing(false)
+      if (gen === refreshGen.current) setRefreshing(false)
     }
   }
 
@@ -238,11 +241,7 @@ export function EngineHealthView({
           <Alert variant="destructive">
             <AlertDescription>{error.message}</AlertDescription>
           </Alert>
-          <AskAiButton
-            variant="primary"
-            label={t("engineHealth.diagnoseWithAi")}
-            prompt={diagnosePrompt(engine, error.message)}
-          />
+          <AskAiButton variant="primary" prompt={diagnosePrompt(engine, error.message)} />
         </div>
       )
     }
@@ -276,7 +275,9 @@ export function EngineHealthView({
       {/* Ops trust: show how fresh the verdict is and let the operator re-pull
           it — during an active incident this is the screen they stare at. */}
       <div className="text-muted-foreground -mt-2 flex items-center gap-2 text-xs">
-        <span>{t("engineHealth.asOf", { time: formatTime(data.fetchedAt) })}</span>
+        <span>
+          {t("engineHealth.asOf", { time: formatTime(data.fetchedAt, { seconds: false }) })}
+        </span>
         <span aria-hidden="true">·</span>
         <button
           type="button"

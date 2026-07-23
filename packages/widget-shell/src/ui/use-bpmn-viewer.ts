@@ -39,6 +39,10 @@ export interface BpmnViewerWithGet {
 
 const FALLBACK_IMPORT_ERROR = "Failed to render the BPMN diagram."
 
+/** Zoom clamp — matches bpmn-js's own navigation limits, keeps ± buttons sane. */
+const ZOOM_MIN = 0.2
+const ZOOM_MAX = 4
+
 export interface UseBpmnViewerOptions {
   bpmnXml: string
   /**
@@ -108,12 +112,12 @@ export function useBpmnViewer({
 
   const zoomIn = useCallback(() => {
     const canvas = getCanvas()
-    if (canvas) canvas.zoom(canvas.zoom() * 1.1)
+    if (canvas) canvas.zoom(Math.min(ZOOM_MAX, canvas.zoom() * 1.1))
   }, [getCanvas])
 
   const zoomOut = useCallback(() => {
     const canvas = getCanvas()
-    if (canvas) canvas.zoom(canvas.zoom() * 0.9)
+    if (canvas) canvas.zoom(Math.max(ZOOM_MIN, canvas.zoom() * 0.9))
   }, [getCanvas])
 
   useEffect(() => {
@@ -136,8 +140,15 @@ export function useBpmnViewer({
       }
       if (cancelled) return
       fit()
-      const cleanup = onImportedRef.current?.(viewer as unknown as BpmnViewerWithGet)
-      importCleanup = typeof cleanup === "function" ? cleanup : null
+      // Decoration failures (e.g. no 2D canvas context for the heat LUT) must
+      // surface like import failures — outside this try they'd be a silent
+      // unhandled rejection and the widget would render an undecorated diagram.
+      try {
+        const cleanup = onImportedRef.current?.(viewer as unknown as BpmnViewerWithGet)
+        importCleanup = typeof cleanup === "function" ? cleanup : null
+      } catch (err) {
+        setImportError(err instanceof Error ? err.message : FALLBACK_IMPORT_ERROR)
+      }
     })()
 
     let rafId: number | null = null

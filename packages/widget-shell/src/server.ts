@@ -45,7 +45,7 @@ export const buildComposedView = (input: ComposedViewInput): ViewResult =>
  * of being returned to the in-widget `callTool()` (architecture invariant 5).
  * The single shared implementation for every module's data feeds.
  */
-export const buildDataFeedResult = (data: unknown): ViewResult => ({
+export const buildDataFeedResult = (data: Record<string, unknown>): ViewResult => ({
   content: [{ type: "text", text: JSON.stringify(data) }],
-  structuredContent: data as Record<string, unknown>,
+  structuredContent: data,
 })

@@ -16,7 +16,8 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./widgets": "./src/widgets/index.ts"
+    "./widgets": "./src/widgets/index.ts",
+    "./definition": "./src/definition.ts"
   },
   "scripts": {
     "build": "tsc",

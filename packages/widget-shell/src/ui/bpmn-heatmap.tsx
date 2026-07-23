@@ -18,6 +18,10 @@ import {
 import { BpmnZoomControls } from "./bpmn-zoom-controls.js"
 import { useBpmnViewer } from "./use-bpmn-viewer.js"
 
+// Stable default for the omitted-edges case: a `= {}` parameter default would
+// be a fresh identity per render and re-trigger the repaint effect every time.
+const EMPTY_EDGES: Record<string, number> = {}
+
 export interface BpmnHeatmapProps {
   bpmnXml: string
   /** Per-element heat value keyed by BPMN element id (frequency or duration). */
@@ -38,7 +42,7 @@ export interface BpmnHeatmapProps {
 export function BpmnHeatmap({
   bpmnXml,
   nodeFrequencies,
-  edgeFrequencies = {},
+  edgeFrequencies = EMPTY_EDGES,
   height = 480,
   diagramRadius = 55,
 }: BpmnHeatmapProps) {

@@ -108,7 +108,9 @@ export function registerUserProfileTools(
       schema: z.object({}),
       _meta: APP_ONLY_META,
     },
-    withToolErrors(async (_params, ctx) => rawData(await loadView(ctx))),
+    // Spread: the feed contract takes `Record<string, unknown>`, which the
+    // named `UserProfileView` interface doesn't structurally satisfy.
+    withToolErrors(async (_params, ctx) => rawData({ ...(await loadView(ctx)) })),
   )
 
   // Same rule as `withToolsetFilter`: unknown toolset names fail open.

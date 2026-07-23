@@ -23,7 +23,6 @@
   --color-m-blue-light: var(--m-blue-light);
   --color-m-blue-soft: var(--m-blue-soft);
   --color-m-green: var(--m-green);
-  --color-m-green-light: var(--m-green-light);
   --color-m-green-soft: var(--m-green-soft);
   --color-critical: var(--critical);
   --color-critical-soft: var(--critical-soft);
@@ -43,7 +42,6 @@
   --m-blue-light: #2e5ba8;
   --m-blue-soft: #eef3fa;
   --m-green: #2d8659;
-  --m-green-light: #4abe82;
   --m-green-soft: #eff7f2;
   --critical: #c2410c;
   --critical-soft: #fef0e6;
@@ -62,10 +60,9 @@
   /* Brand hues lifted for legibility on the dark card surface; the *-soft tints
      become deep, low-chroma backgrounds that pair with the lifted foreground. */
   --m-blue: #7aa7e0;
-  --m-blue-light: #2e5ba8;
+  --m-blue-light: #5b8ad0;
   --m-blue-soft: #16243a;
   --m-green: #5cc08a;
-  --m-green-light: #4abe82;
   --m-green-soft: #11271c;
   --critical: #f4926a;
   --critical-soft: #2e1a10;

@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { useWidget } from "mcp-use/react"
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { BpmnZoomControls, useBpmnViewer } from "@miragon-ai/widget-shell/widgets"
+import { useT } from "../messages/use-t.js"
 import { applyHighlights, HIGHLIGHT_CSS, type BpmnHighlight } from "./bpmn-highlights.js"
 
 // The highlight semantics (colors, CSS, priority rules) live in
@@ -27,7 +28,17 @@ function injectHighlightCss() {
   document.head.appendChild(style)
 }
 
-export function BpmnDiagram({ bpmnXml, height = 400, highlights = [] }: BpmnDiagramProps) {
+// Stable default: an inline `[]` default would mint a fresh identity per render
+// and, via `reimportKey`, force a full bpmn-js re-import for any non-memoizing
+// caller.
+const NO_HIGHLIGHTS: ReadonlyArray<BpmnHighlight> = []
+
+export function BpmnDiagram({
+  bpmnXml,
+  height = 400,
+  highlights = NO_HIGHLIGHTS,
+}: BpmnDiagramProps) {
+  const t = useT()
   const { displayMode } = useWidget()
 
   const { containerRef, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
@@ -52,14 +63,14 @@ export function BpmnDiagram({ bpmnXml, height = 400, highlights = [] }: BpmnDiag
       <div
         ref={containerRef}
         role="img"
-        aria-label="BPMN process diagram"
+        aria-label={t("bpmnDiagram.ariaLabel")}
         className="border-border rounded-lg border"
         style={{ height: `${height}px`, width: "100%" }}
       />
       {importError !== null && (
         <div className="absolute inset-0 grid place-items-center p-6">
           <Alert>
-            <AlertDescription>Unable to render the BPMN diagram.</AlertDescription>
+            <AlertDescription>{t("bpmnDiagram.renderError")}</AlertDescription>
           </Alert>
         </div>
       )}

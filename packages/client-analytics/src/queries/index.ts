@@ -1,3 +1,4 @@
+export type { CompareKpis, CompareKpiDelta } from "./helpers.js"
 export { analyzePerformance, comparePeriods } from "./performance.js"
 export type {
   PerformanceKPI,

@@ -2,6 +2,8 @@ import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-
 import {
   TONE_DOT,
   AskAiButton,
+  Td,
+  Th,
   WidgetShell,
   formatDuration,
   formatTimestamp,
@@ -51,65 +53,67 @@ const ACTIVITY_COLORS: Record<string, string> = {
 const ACTIVITY_COLOR_FALLBACK = TONE_DOT.neutral
 
 /**
- * Compact table look of the family: a `role="table"` grid with Started /
- * Duration / Status columns for dense embeddings (the incident detail's
- * history tab). Same {@link HistoryEntry} rows and shared format helpers as
- * the rich timeline.
+ * Compact table look of the family: a real `<table>` (kit `Th`/`Td`) with
+ * Started / Duration / Status columns for dense embeddings (the incident
+ * detail's history tab). Same {@link HistoryEntry} rows and shared format
+ * helpers as the rich timeline.
  */
 function HistoryTable({ entries }: { entries: HistoryEntry[] }) {
   const t = useT()
   return (
-    <div
-      role="table"
-      aria-label={t("incidentHistory.tableAriaLabel")}
-      className="border-border rounded-lg border"
-    >
-      <div
-        role="row"
-        className="border-border text-muted-foreground bg-muted grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide"
+    <div className="border-border overflow-x-auto rounded-lg border">
+      {/* Compact variant: py-2 overrides Td/Th's default padding, the wrapper
+          border replaces the header's own top edge, and the activity cell takes
+          the remaining width (w-full max-w-0) so long names truncate instead of
+          widening the table into horizontal scroll. */}
+      <table
+        className="w-full border-collapse text-sm [&_th]:border-t-0"
+        aria-label={t("incidentHistory.tableAriaLabel")}
       >
-        <span role="columnheader">{t("incidentHistory.columnActivity")}</span>
-        <span role="columnheader" className="text-right">
-          {t("incidentHistory.columnStarted")}
-        </span>
-        <span role="columnheader" className="text-right">
-          {t("incidentHistory.columnDuration")}
-        </span>
-        <span role="columnheader" className="text-right">
-          {t("incidentHistory.columnStatus")}
-        </span>
-      </div>
-      {entries.map((entry) => (
-        <div
-          key={entry.id}
-          role="row"
-          className="border-border hover:bg-card grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b px-4 py-2 text-sm last:border-b-0"
-        >
-          <div className="min-w-0">
-            <div className="text-foreground truncate font-medium">
-              {entry.activityName ?? entry.activityId}
-            </div>
-            <div className="text-muted-foreground truncate font-mono text-xs">
-              {entry.activityType}
-            </div>
-          </div>
-          <span className="text-muted-foreground text-right font-mono text-xs">
-            {formatTimestamp(entry.startTime)}
-          </span>
-          <span className="text-muted-foreground text-right font-mono text-xs">
-            {formatDuration(entry.durationInMillis)}
-          </span>
-          <span className="text-right">
-            {entry.canceled ? (
-              <Badge variant="secondary">{t("incidentHistory.statusCanceled")}</Badge>
-            ) : entry.endTime ? (
-              <Badge variant="secondary">{t("incidentHistory.statusCompleted")}</Badge>
-            ) : (
-              <Badge variant="default">{t("incidentHistory.statusRunning")}</Badge>
-            )}
-          </span>
-        </div>
-      ))}
+        <thead className="bg-muted">
+          <tr>
+            <Th className="py-2">{t("incidentHistory.columnActivity")}</Th>
+            <Th align="right" className="py-2">
+              {t("incidentHistory.columnStarted")}
+            </Th>
+            <Th align="right" className="py-2">
+              {t("incidentHistory.columnDuration")}
+            </Th>
+            <Th align="right" className="py-2">
+              {t("incidentHistory.columnStatus")}
+            </Th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr key={entry.id} className="hover:bg-card [&:last-child>td]:border-b-0">
+              <Td className="w-full max-w-0 py-2">
+                <div className="text-foreground truncate font-medium">
+                  {entry.activityName ?? entry.activityId}
+                </div>
+                <div className="text-muted-foreground truncate font-mono text-xs">
+                  {entry.activityType}
+                </div>
+              </Td>
+              <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
+                {formatTimestamp(entry.startTime)}
+              </Td>
+              <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
+                {formatDuration(entry.durationInMillis)}
+              </Td>
+              <Td align="right" className="py-2">
+                {entry.canceled ? (
+                  <Badge variant="secondary">{t("incidentHistory.statusCanceled")}</Badge>
+                ) : entry.endTime ? (
+                  <Badge variant="secondary">{t("incidentHistory.statusCompleted")}</Badge>
+                ) : (
+                  <Badge variant="default">{t("incidentHistory.statusRunning")}</Badge>
+                )}
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -182,7 +186,7 @@ export function HistoryTimelineView({
               <Badge variant="secondary">{processInstance.state}</Badge>
               <span>
                 {t("historyTimeline.started", {
-                  time: new Date(processInstance.startTime).toLocaleString(),
+                  time: formatTimestamp(processInstance.startTime),
                 })}
               </span>
               {processInstance.durationInMillis != null && (

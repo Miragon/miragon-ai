@@ -137,7 +137,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    analytics has NO engine-SDK dependency). Apps own no domain UI: widget catalogues and
    components live in packages. Cross-module UI is tiered: `shell:*` widgets via
    `props.dataKey`; raw tool-name strings with graceful degradation (reference:
-   `process-detail.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
+   `process-incidents/flow.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
    dedicated package created with the first real view — never in the app, never as
    module-to-module imports. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in

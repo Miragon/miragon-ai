@@ -5,8 +5,8 @@ import { ProcessListWidget } from "./process-list.js"
 import { IncidentOverviewKpi } from "./incidents-dashboard/overview-kpi.js"
 import { IncidentProcessList } from "./incidents-dashboard/process-list.js"
 import { ProcessDetailHeader } from "./process-incidents/header.js"
-import { ProcessIncidentKpi } from "./process-incidents/kpi.js"
-import { ProcessIncidentFlow } from "./process-incidents/flow.js"
+import { ProcessDefinitionKpi } from "./process-incidents/kpi.js"
+import { ProcessDefinitionFlow } from "./process-incidents/flow.js"
 import { ActivityIncidentList } from "./process-incidents/list.js"
 import { IncidentDetailWidget } from "./incident-detail.js"
 import { HistoryTimelineWidget } from "./history-timeline.js"
@@ -15,7 +15,6 @@ import { ClusterDetailWidget } from "./cluster-detail.js"
 import { EngineHealthVerdict } from "./engine-health.js"
 import { ProcessHealthKpi } from "./cockpit-dashboard/health-kpi.js"
 import { ProcessDefinitionsTable } from "./cockpit-dashboard/definitions-table.js"
-import { ProcessDetailWidget } from "./process-detail.js"
 import { BpmnViewerHeader } from "./bpmn-viewer/header.js"
 import { BpmnViewerLegend } from "./bpmn-viewer/legend.js"
 import { BpmnFlowViewer } from "./bpmn-viewer/flow.js"
@@ -68,9 +67,12 @@ export const camunda7BaseWidgets: Record<string, WidgetComponent> = {
     ProcessDetailHeader,
     "camunda7:processIncidents",
   ),
-  "camunda7:process-incident-kpi": adaptDataWidget(ProcessIncidentKpi, "camunda7:processIncidents"),
-  "camunda7:process-incident-flow": adaptDataWidget(
-    ProcessIncidentFlow,
+  "camunda7:process-definition-kpi": adaptDataWidget(
+    ProcessDefinitionKpi,
+    "camunda7:processIncidents",
+  ),
+  "camunda7:process-definition-flow": adaptDataWidget(
+    ProcessDefinitionFlow,
     "camunda7:processIncidents",
   ),
   "camunda7:activity-incident-list": adaptDataWidget(
@@ -91,7 +93,6 @@ export const camunda7BaseWidgets: Record<string, WidgetComponent> = {
     ProcessDefinitionsTable,
     "camunda7:cockpitDashboard",
   ),
-  "camunda7:process-detail": adaptDataWidget(ProcessDetailWidget, "camunda7:processDetail"),
   "camunda7:bpmn-viewer": adaptDataWidget(BpmnViewerWidget, "camunda7:bpmnViewer"),
   "camunda7:bpmn-viewer-header": adaptDataWidget(BpmnViewerHeader, "camunda7:bpmnViewer"),
   "camunda7:bpmn-viewer-legend": adaptDataWidget(BpmnViewerLegend, "camunda7:bpmnViewer"),

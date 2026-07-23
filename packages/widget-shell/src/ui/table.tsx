@@ -1,4 +1,6 @@
 import type { ReactNode } from "react"
+import { cn } from "./cn.js"
+import { MICRO_LABEL } from "./tone-utils.js"
 
 /**
  * Cockpit table primitives — the `th`/`td` class strings and the bordered
@@ -7,8 +9,7 @@ import type { ReactNode } from "react"
  * `<table>`/`<thead>`/`<tbody>` structure.
  */
 
-const TH_LABEL =
-  "border-border text-muted-foreground border-y px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide"
+const TH_LABEL = `border-border text-muted-foreground border-y px-4 py-2.5 ${MICRO_LABEL}`
 
 export function Th({
   align = "left",
@@ -26,7 +27,7 @@ export function Th({
     ? "border-border border-y px-4 py-2.5"
     : `${TH_LABEL} ${align === "right" ? "text-right" : "text-left"}`
   return (
-    <th scope="col" className={className ? `${base} ${className}` : base}>
+    <th scope="col" className={cn(base, className)}>
       {children}
     </th>
   )
@@ -41,8 +42,17 @@ export function Td({
   className?: string
   children?: ReactNode
 }) {
-  const base = `border-border border-b px-4 py-3 align-middle${align === "right" ? " text-right" : ""}`
-  return <td className={className ? `${base} ${className}` : base}>{children}</td>
+  return (
+    <td
+      className={cn(
+        "border-border border-b px-4 py-3 align-middle",
+        align === "right" && "text-right",
+        className,
+      )}
+    >
+      {children}
+    </td>
+  )
 }
 
 /** Bordered card shown in place of a table when there are no rows. */
@@ -65,7 +75,14 @@ export function VersionChip({
   version: number | string
   className?: string
 }) {
-  const base =
-    "border-border bg-muted text-muted-foreground ml-2 inline-block rounded border px-2 py-0.5 align-middle font-mono text-xs font-medium"
-  return <span className={className ? `${base} ${className}` : base}>v{version}</span>
+  return (
+    <span
+      className={cn(
+        "border-border bg-muted text-muted-foreground ml-2 inline-block rounded border px-2 py-0.5 align-middle font-mono text-xs font-medium",
+        className,
+      )}
+    >
+      v{version}
+    </span>
+  )
 }

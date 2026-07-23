@@ -1,8 +1,14 @@
-import { Alert, AlertDescription, Badge, Card, CardContent } from "@miragon/mcp-toolkit-ui"
-import { AskAiButton, SectionHeading, formatTimestamp } from "@miragon-ai/widget-shell/widgets"
+import { Alert, AlertDescription, Badge, Button, Card, CardContent } from "@miragon/mcp-toolkit-ui"
+import {
+  AskAiButton,
+  LogText,
+  SectionHeading,
+  formatTimestamp,
+} from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "../../view-models.js"
 
+import { fenceUntrusted } from "../lib/untrusted.js"
 import { useT } from "../../messages/use-t.js"
 
 export function FailureTab({
@@ -13,6 +19,7 @@ export function FailureTab({
   onRetry,
   retrying,
   retried,
+  retryError,
 }: {
   data: IncidentDetailData
   resolved: boolean
@@ -21,6 +28,7 @@ export function FailureTab({
   onRetry: () => void
   retrying: boolean
   retried: boolean
+  retryError?: string | null
 }) {
   const t = useT()
   const job = data.job
@@ -52,7 +60,9 @@ export function FailureTab({
             <div className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
               {t("incidentFailure.occurredAt")}
             </div>
-            <div className="text-sm">{formatTimestamp(data.incidentTimestamp)}</div>
+            <div className="text-muted-foreground font-mono text-xs">
+              {formatTimestamp(data.incidentTimestamp)}
+            </div>
           </div>
           {job && (
             <div>
@@ -72,37 +82,46 @@ export function FailureTab({
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {resolved ? (
-          <Badge variant="secondary">{t("incidentFailure.resolvedBadge")}</Badge>
-        ) : (
-          <button
-            type="button"
-            onClick={onResolve}
-            disabled={resolving}
-            aria-label={t("incidentFailure.resolveAria")}
-            className="bg-critical-soft text-critical hover:bg-critical/10 focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
-          >
-            <span aria-hidden="true">✓</span> {t("incidentFailure.resolveButton")}
-          </button>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <AskAiButton
+            variant="subtle"
+            label={t("incidentFailure.draftTicketLabel")}
+            prompt={`Draft an incident ticket for CIB Seven incident \`${data.incidentId}\` (${data.incidentType}) at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}${data.businessKey ? `, business key ${data.businessKey}` : ""}, engine \`${engineId}\`. Build the draft with camunda7_format_incident_issue({ incidentId: '${data.incidentId}' }), include the error (${fenceUntrusted(data.incidentMessage ?? job?.exceptionMessage)}) and stacktrace, and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
+          />
+          {job && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRetry}
+              disabled={retrying || retried}
+              title={t("incidentFailure.retryAria")}
+              aria-label={
+                retried ? t("incidentFailure.retriedAria") : t("incidentFailure.retryAria")
+              }
+            >
+              {retried ? t("incidentFailure.retriedButton") : t("incidentFailure.retryButton")}
+            </Button>
+          )}
+          {resolved ? (
+            <Badge variant="secondary">{t("incidentDetail.resolved")}</Badge>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onResolve}
+              disabled={resolving}
+              aria-label={t("incidentFailure.resolveAria")}
+            >
+              {t("incidentFailure.resolveButton")}
+            </Button>
+          )}
+        </div>
+        {retryError && (
+          <p role="alert" className="text-critical text-xs">
+            {t("incidentFailure.retryError", { message: retryError })}
+          </p>
         )}
-        {job && (
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={retrying || retried}
-            aria-label={retried ? t("incidentFailure.retriedAria") : t("incidentFailure.retryAria")}
-            className="bg-m-blue-soft text-m-blue hover:bg-m-blue/10 focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
-          >
-            <span aria-hidden="true">↻</span>{" "}
-            {retried ? t("incidentFailure.retriedButton") : t("incidentFailure.retryButton")}
-          </button>
-        )}
-        <AskAiButton
-          variant="subtle"
-          label={t("incidentFailure.draftTicketLabel")}
-          prompt={`Draft an incident ticket for CIB Seven incident \`${data.incidentId}\` (${data.incidentType}) at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey} v${data.processDefinitionVersion}${data.businessKey ? `, business key ${data.businessKey}` : ""}, engine \`${engineId}\`. Build the draft with camunda7_format_incident_issue({ incidentId: '${data.incidentId}' }), include the error (${data.incidentMessage ?? job?.exceptionMessage ?? "(none reported)"}) and stacktrace, and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
-        />
       </div>
 
       <div>
@@ -112,13 +131,11 @@ export function FailureTab({
             <AskAiButton
               variant="subtle"
               label={t("incidentFailure.explainErrorLabel")}
-              prompt={`Explain the failure on CIB Seven incident \`${data.incidentId}\` at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}, engine \`${engineId}\`. The reported error is: "${data.incidentMessage ?? job?.exceptionMessage ?? "(none reported)"}"${job?.stacktrace ? `, with a Java stacktrace on job ${job.id}` : ""}. In plain language: what does this exception mean, what most likely caused it here, and is it transient (safe to retry) or deterministic (will re-fail)? Read the full trace with camunda7_incident_detail_data({ incidentId: "${data.incidentId}" }) if needed. Explanation only — do not change anything.`}
+              prompt={`Explain the failure on CIB Seven incident \`${data.incidentId}\` at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}, engine \`${engineId}\`. The reported error is ${fenceUntrusted(data.incidentMessage ?? job?.exceptionMessage)}${job?.stacktrace ? `, with a Java stacktrace on job ${job.id}` : ""}. In plain language: what does this exception mean, what most likely caused it here, and is it transient (safe to retry) or deterministic (will re-fail)? Read the full trace with camunda7_incident_detail_data({ incidentId: "${data.incidentId}" }) if needed. Explanation only — do not change anything.`}
             />
           }
         />
-        <pre className="border-border bg-card text-foreground whitespace-pre-wrap break-words rounded-lg border p-3 font-mono text-xs">
-          {data.incidentMessage ?? job?.exceptionMessage ?? "—"}
-        </pre>
+        <LogText text={data.incidentMessage ?? job?.exceptionMessage} />
       </div>
 
       {job && (

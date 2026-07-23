@@ -17,11 +17,12 @@ export const CAMUNDA7_OPEN_COCKPIT = "camunda7_open_cockpit"
 // (_meta.ui.resourceUri) can't be used for this: the host renders it instead of
 // returning data to the in-widget callTool().
 export const CAMUNDA7_COCKPIT_OVERVIEW_DATA = "camunda7_cockpit_overview_data"
-export const CAMUNDA7_PROCESS_DETAIL_DATA = "camunda7_process_detail_data"
 export const CAMUNDA7_PROCESS_INSTANCES_DATA = "camunda7_process_instances_data"
 export const CAMUNDA7_INSTANCE_DETAIL_DATA = "camunda7_instance_detail_data"
 export const CAMUNDA7_JOBS_DATA = "camunda7_jobs_data"
 export const CAMUNDA7_INCIDENTS_DATA = "camunda7_incidents_data"
+// The ONE definition feed — powers every section of the merged definition view
+// (header, KPI strip, flow, activity incident list) under a shared query key.
 export const CAMUNDA7_PROCESS_INCIDENTS_DATA = "camunda7_process_incidents_data"
 export const CAMUNDA7_INCIDENT_DETAIL_DATA = "camunda7_incident_detail_data"
 // Standalone diagram + timeline views. The BPMN viewer self-fetches via its

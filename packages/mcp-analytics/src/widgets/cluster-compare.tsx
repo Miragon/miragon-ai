@@ -1,47 +1,15 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import type { ClusterCompareResult } from "@miragon-ai/client-analytics"
+import { AskAiButton, formatTimestamp } from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
 import {
   ComparisonCard,
   ComparisonEmptyState,
-  fmtPct,
-  fmtPp,
-  type ComparisonMetric,
+  buildComparisonMetrics,
+  describeDeltas,
 } from "./comparison-shared.js"
 
 export type ClusterCompareData = ClusterCompareResult | null
-
-const METRICS: Array<{
-  labelKey: string
-  value: (k: ClusterCompareResult["kpis"][number]) => string
-  delta: (d: ClusterCompareResult["delta"]) => { value: string; worseIfUp: boolean }
-}> = [
-  {
-    labelKey: "metricInstances",
-    value: (k) => String(k.instance_count),
-    delta: (d) => ({ value: fmtPct(d.instance_count_delta_pct), worseIfUp: false }),
-  },
-  {
-    labelKey: "metricFailureRate",
-    value: (k) => `${k.failure_rate_pct.toFixed(1)}%`,
-    delta: (d) => ({ value: fmtPp(d.failure_rate_delta_pp), worseIfUp: true }),
-  },
-  {
-    labelKey: "metricIncidentRate",
-    value: (k) => `${k.incident_rate_pct.toFixed(1)}%`,
-    delta: (d) => ({ value: fmtPp(d.incident_rate_delta_pp), worseIfUp: true }),
-  },
-  {
-    labelKey: "metricAvgDuration",
-    value: (k) => `${k.avg_duration_sec.toFixed(1)}s`,
-    delta: (d) => ({ value: fmtPct(d.avg_duration_delta_pct), worseIfUp: true }),
-  },
-  {
-    labelKey: "metricP95Duration",
-    value: (k) => `${k.p95_duration_sec.toFixed(1)}s`,
-    delta: (d) => ({ value: fmtPct(d.p95_duration_delta_pct), worseIfUp: true }),
-  },
-]
 
 export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
   const t = useT()
@@ -53,12 +21,13 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
     return <ComparisonEmptyState>{t("aClusterCompare.incompleteData")}</ComparisonEmptyState>
   }
 
-  const metrics: ComparisonMetric[] = METRICS.map((m) => ({
-    label: t(`aClusterCompare.${m.labelKey}`),
-    delta: m.delta(data.delta),
-    before: m.value(before),
-    after: m.value(after),
-  }))
+  const metrics = buildComparisonMetrics(t, before, after, data.delta)
+
+  const processScope = data.processDefinitionKey
+    ? `, scoped to process ${data.processDefinitionKey}`
+    : ""
+  const elementScope = data.elementId ? `, scoped to BPMN element ${data.elementId}` : ""
+  const interpretPrompt = `Interpret the pre/post deployment comparison around ${data.deploymentTimestamp} (-${data.windowDays.before}d baseline vs +${data.windowDays.after}d after)${processScope}${elementScope}. The on-screen deltas are: ${describeDeltas(data.delta)}. First call analytics_cluster_compare(deploymentTimestamp="${data.deploymentTimestamp}", windowBeforeDays=${data.windowDays.before}, windowAfterDays=${data.windowDays.after}${data.processDefinitionKey ? `, processDefinitionKey="${data.processDefinitionKey}"` : ""}) to confirm the numbers and the 'suppressed' flag, then call analytics_element_bottleneck to find which activity drives any regression. Tell me in 3-4 sentences: did the deployment cause a genuine regression or is it noise / low sample size, which metric (and element, if any) is responsible, and the single recommended next action (roll back the deployment, hold further rollouts, or accept).`
 
   return (
     <ComparisonCard
@@ -67,13 +36,19 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
       beforeLabel={t("aClusterCompare.beforeLabel")}
       afterLabel={t("aClusterCompare.afterLabel")}
       metrics={metrics}
+      actions={<AskAiButton prompt={interpretPrompt} variant="primary" />}
       badges={
         <>
           <Badge variant="secondary">
-            {t("aClusterCompare.deployBadge", { timestamp: data.deploymentTimestamp })}
+            {t("aClusterCompare.deployBadge", {
+              timestamp: formatTimestamp(data.deploymentTimestamp),
+            })}
           </Badge>
           <Badge variant="outline">
-            -{data.windowDays.before}d / +{data.windowDays.after}d
+            {t("aClusterCompare.windowBadge", {
+              before: data.windowDays.before,
+              after: data.windowDays.after,
+            })}
           </Badge>
           {data.processDefinitionKey && <Badge>{data.processDefinitionKey}</Badge>}
           {data.elementId && (

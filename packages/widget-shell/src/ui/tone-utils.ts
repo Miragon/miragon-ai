@@ -36,3 +36,6 @@ export const TONE_TEXT: Partial<Record<ToneVariant, string>> = {
   success: "text-m-green",
   info: "text-m-blue",
 }
+
+/** Micro-label typography — table headers, KPI strip headers, group labels. */
+export const MICRO_LABEL = "text-[11px] font-semibold uppercase tracking-wide"

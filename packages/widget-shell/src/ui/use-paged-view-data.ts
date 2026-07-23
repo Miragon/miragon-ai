@@ -56,45 +56,54 @@ export function usePagedViewData<TItem, TData>(opts: {
   const [extra, setExtra] = useState<TItem[]>([])
   const [loadingMore, setLoadingMore] = useState(false)
   const [moreError, setMoreError] = useState<Error | null>(null)
+  // A resolved page whose total lied short-circuits here: a page shorter than
+  // pageSize means the server is out of rows, whatever `total` claims.
+  const [exhausted, setExhausted] = useState(false)
 
-  // Latest filter identity, readable from an in-flight loadMore closure so a page
-  // that resolves after the filter changed can be discarded (see loadMore).
-  const argsKeyRef = useRef(argsKey)
+  // Monotonic request id: each loadMore captures the next id, each reset bumps
+  // it, and a resolved page is discarded unless its id is still current — an
+  // A→B→A filter round-trip must not append a stale-offset page (comparing the
+  // filter *value* would wrongly accept it).
+  const requestIdRef = useRef(0)
 
   // Render-phase reset: when the filter identity (or handed-in data) changes,
   // drop accumulated pages synchronously so we never show stale rows under a new
   // page-0 result.
   const [prevReset, setPrevReset] = useState(argsKey)
-  if (argsKey !== prevReset) {
+  const [prevInitialData, setPrevInitialData] = useState(initialData)
+  if (argsKey !== prevReset || initialData !== prevInitialData) {
     setPrevReset(argsKey)
+    setPrevInitialData(initialData)
     setExtra([])
     setMoreError(null)
-    argsKeyRef.current = argsKey
+    setExhausted(false)
+    requestIdRef.current++
   }
 
   const baseItems = useMemo(() => (first ? selectItems(first) : []), [first, selectItems])
   const items = useMemo(() => [...baseItems, ...extra], [baseItems, extra])
   const total = first ? selectTotal(first) : 0
-  const hasMore = !!first && items.length < total
+  const hasMore = !!first && !exhausted && items.length < total
 
   const loadMore = useCallback(() => {
     if (!first || loadingMore || !callTool) return
-    // Pin the filter this page belongs to; if it changes mid-flight, the resolved
-    // page is for the old filter and must NOT be appended onto the reset list.
-    const requestArgsKey = argsKey
+    const requestId = ++requestIdRef.current
     setLoadingMore(true)
+    setMoreError(null)
     void callTool(tool, { ...args, firstResult: items.length, maxResults: pageSize })
       .then((res) => {
-        if (requestArgsKey !== argsKeyRef.current) return
+        if (requestId !== requestIdRef.current) return
         const data = parseToolResult<TData>(res)
-        setExtra((prev) => [...prev, ...selectItems(data)])
+        const pageItems = selectItems(data)
+        if (pageItems.length < pageSize) setExhausted(true)
+        setExtra((prev) => [...prev, ...pageItems])
       })
       .catch((err: unknown) => {
-        if (requestArgsKey !== argsKeyRef.current) return
+        if (requestId !== requestIdRef.current) return
         setMoreError(err instanceof Error ? err : new Error(String(err)))
       })
       .finally(() => setLoadingMore(false))
-  }, [first, loadingMore, callTool, tool, args, argsKey, items.length, pageSize, selectItems])
+  }, [first, loadingMore, callTool, tool, args, items.length, pageSize, selectItems])
 
   return {
     items,

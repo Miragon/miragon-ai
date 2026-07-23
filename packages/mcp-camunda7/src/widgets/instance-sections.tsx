@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Button,
   Input,
@@ -13,6 +13,7 @@ import {
 
 import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
+import { coerceValue } from "./lib/coerce-value.js"
 import { refreshCockpitData } from "./refresh.js"
 
 export function formatVariableValue(value: unknown, type?: string): string {
@@ -45,43 +46,44 @@ function VariableRow({
   name,
   variable,
   instanceId,
+  engine,
   readOnly,
   onSaved,
 }: {
   name: string
   variable: VariableValue
   instanceId: string
+  engine?: string
   readOnly: boolean
   onSaved: (name: string, value: unknown) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState("")
+  const [editError, setEditError] = useState<string | null>(null)
   const setVarMutation = useToolMutation("camunda7_set_process_instance_variable")
   const t = useT()
 
   function startEdit() {
     const v = variable.value
     setEditValue(typeof v === "object" ? JSON.stringify(v) : formatVariableValue(v, variable.type))
+    setEditError(null)
+    // Clear a prior failed save so the stale server error doesn't reappear when
+    // the operator reopens the row.
+    setVarMutation.reset()
     setEditing(true)
   }
 
   function save() {
-    let parsed: unknown = editValue
-    if (variable.type === "Integer" || variable.type === "Long") {
-      const num = Number(editValue)
-      if (!isNaN(num)) parsed = num
-    } else if (variable.type === "Boolean") {
-      parsed = editValue === "true"
-    } else if (variable.type === "Json" || variable.type === "Object") {
-      try {
-        parsed = JSON.parse(editValue)
-      } catch {
-        /* keep as string */
-      }
-    } else if (variable.type === "Double") {
-      const num = Number(editValue)
-      if (!isNaN(num)) parsed = num
+    // coerceValue passes "" through for untyped/String variables only; an
+    // empty field is not a valid Integer/Boolean/Json either — both cases show
+    // the inline error instead of writing a mistyped value to the engine.
+    const typed = variable.type !== undefined && variable.type !== "String"
+    const parsed = typed && editValue === "" ? undefined : coerceValue(editValue, variable.type)
+    if (parsed === undefined) {
+      setEditError(t("instanceSections.invalidValue", { type: variable.type ?? "String" }))
+      return
     }
+    setEditError(null)
 
     setVarMutation.mutate(
       {
@@ -89,6 +91,7 @@ function VariableRow({
         variableName: name,
         value: parsed,
         type: variable.type,
+        engine,
       },
       {
         onSuccess: () => {
@@ -107,30 +110,48 @@ function VariableRow({
       <TableCell className="max-w-md whitespace-pre-wrap break-words font-mono text-xs">
         {editing ? (
           <form
-            className="flex items-center gap-1"
+            className="flex flex-col gap-1"
             onSubmit={(e) => {
               e.preventDefault()
               save()
             }}
           >
-            <Input
-              className="h-7 font-mono text-xs"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              autoFocus
-            />
-            <Button variant="outline" size="sm" type="submit" disabled={setVarMutation.isPending}>
-              {t("instanceSections.save")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              aria-label={t("instanceSections.cancelEditing")}
-              onClick={() => setEditing(false)}
-            >
-              X
-            </Button>
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-7 font-mono text-xs"
+                value={editValue}
+                onChange={(e) => {
+                  setEditValue(e.target.value)
+                  setEditError(null)
+                }}
+                aria-invalid={editError !== null}
+                autoFocus
+              />
+              <Button variant="outline" size="sm" type="submit" disabled={setVarMutation.isPending}>
+                {t("instanceSections.save")}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                aria-label={t("instanceSections.cancelEditing")}
+                onClick={() => setEditing(false)}
+              >
+                ×
+              </Button>
+            </div>
+            {editError && (
+              <p role="alert" className="text-destructive font-sans text-xs">
+                {editError}
+              </p>
+            )}
+            {/* Server-side rejection of a validly-parsed write — without this the
+                Save button just re-enables and the row stays silently in edit. */}
+            {!editError && setVarMutation.error && (
+              <p role="alert" className="text-destructive font-sans text-xs">
+                {t("instanceSections.saveError", { message: setVarMutation.error.message })}
+              </p>
+            )}
           </form>
         ) : (
           formatVariableValue(variable.value, variable.type)
@@ -150,14 +171,19 @@ function VariableRow({
 export function VariablesTable({
   variables,
   instanceId,
+  engine,
   readOnly = false,
 }: {
   variables: Record<string, VariableValue>
   instanceId: string
+  engine?: string
   readOnly?: boolean
 }) {
   const [localVars, setLocalVars] = useState<Map<string, unknown>>(new Map())
   const t = useT()
+  // The optimistic shadows only bridge the gap until the feed refetches —
+  // fresh server data (new `variables` identity) must win again.
+  useEffect(() => setLocalVars(new Map()), [variables])
   const entries = Object.entries(variables)
 
   function getVariable(name: string, original: VariableValue): VariableValue {
@@ -195,6 +221,7 @@ export function VariablesTable({
               name={name}
               variable={getVariable(name, variable)}
               instanceId={instanceId}
+              engine={engine}
               readOnly={readOnly}
               onSaved={handleSaved}
             />

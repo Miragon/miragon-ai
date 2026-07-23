@@ -1,6 +1,9 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use/server"
 import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
+// Feed payloads built as named interface types are spread at the call sites
+// (`rawData({ ...data })`): the feed contract takes `Record<string, unknown>`,
+// which interface types don't structurally satisfy.
 import {
   buildComposedView,
   buildDataFeedResult as rawData,
@@ -34,7 +37,6 @@ import {
   buildIncidentsDashboardData,
   buildProcessIncidentsData,
 } from "./data/incident-panel-data.js"
-import { buildProcessDetailData } from "./data/process-detail-data.js"
 import { buildIncidentDetailData } from "./data/incident-detail-data.js"
 import { buildBpmnViewerData } from "./data/bpmn-viewer-data.js"
 import {
@@ -46,7 +48,6 @@ import {
   CAMUNDA7_INSTANCE_DETAIL_DATA,
   CAMUNDA7_JOBS_DATA,
   CAMUNDA7_OPEN_COCKPIT,
-  CAMUNDA7_PROCESS_DETAIL_DATA,
   CAMUNDA7_PROCESS_INCIDENTS_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
   CAMUNDA7_SHOW_BPMN_VIEWER,
@@ -90,6 +91,35 @@ const appOnlyMeta = APP_ONLY_META
 function truncate(s: string, max: number): string {
   const flat = s.replace(/\s+/g, " ").trim()
   return flat.length > max ? `${flat.slice(0, max)}…` : flat
+}
+
+/**
+ * The ONE definition view (mirrors the cockpit's "process-detail" route in
+ * `widgets/cockpit-app/views.ts`): both show tools render this same composed
+ * layout — the entry point only decides the FOCUS, threaded through the layout
+ * cells as widget props (flow initial mode + no-incidents rendering).
+ */
+function definitionViewLayout(focus?: "incidents") {
+  return [
+    { row: [{ widget: "camunda7:process-detail-header" }] },
+    { row: [{ widget: "camunda7:process-definition-kpi" }] },
+    {
+      row: [
+        {
+          widget: "camunda7:process-definition-flow",
+          props: { initialMode: focus === "incidents" ? "incidents" : "frequency" },
+        },
+      ],
+    },
+    {
+      row: [
+        {
+          widget: "camunda7:activity-incident-list",
+          props: { emptyVariant: focus === "incidents" ? "siblings" : "note" },
+        },
+      ],
+    },
+  ]
 }
 
 export interface Camunda7WidgetToolsOptions {
@@ -353,7 +383,7 @@ export function registerWidgetTools(
       name: CAMUNDA7_SHOW_PROCESS_INCIDENTS,
       title: "Process Incidents",
       description:
-        "Per-process incident detail: header, KPIs, BPMN diagram with incident overlays, and activity-grouped incident table with per-incident actions (resolve, jump to Cockpit).",
+        "Open the unified process-definition view focused on its incidents: header, KPI strip, BPMN diagram in incident-overlay mode, and the activity-grouped incident table with per-incident actions (resolve, jump to Cockpit). Same view as camunda7_show_process_detail — this entry point sets the incident focus.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
@@ -375,12 +405,7 @@ export function registerWidgetTools(
       })
       return buildComposedView({
         app: "camunda7",
-        layout: [
-          { row: [{ widget: "camunda7:process-detail-header" }] },
-          { row: [{ widget: "camunda7:process-incident-kpi" }] },
-          { row: [{ widget: "camunda7:process-incident-flow" }] },
-          { row: [{ widget: "camunda7:activity-incident-list" }] },
-        ],
+        layout: definitionViewLayout("incidents"),
         entries: [{ dataType: "camunda7:processIncidents", data: { ...data, engineId } }],
         summary: t("c7sum.processIncidents", {
           processDefinitionKey: data.processDefinitionKey,
@@ -442,7 +467,7 @@ export function registerWidgetTools(
       name: CAMUNDA7_SHOW_PROCESS_DETAIL,
       title: "Process Definition Detail",
       description:
-        "Detail view for a single process definition: tinted header, boxed KPI grid, BPMN flow with incident overlays. Drill-in target from cockpit-dashboard rows; can hand off to camunda7_show_process_incidents for the per-incident table.",
+        "Open the unified process-definition view: header with actions, KPI strip (running instances, incidents, failed jobs), BPMN flow (incident overlays or execution heatmap) and the activity-grouped incident list. Drill-in target from cockpit-dashboard rows; camunda7_show_process_incidents opens the same view with incident focus.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to display"),
@@ -456,23 +481,23 @@ export function registerWidgetTools(
         args.engine,
         registry,
       )
-      const data = await buildProcessDetailData(client, {
+      const data = await buildProcessIncidentsData(client, {
         baseUrl,
         cockpitUrl,
         provider,
         processDefinitionKey: args.processDefinitionKey,
       })
-      return buildSingleWidgetView({
-        widget: "camunda7:process-detail",
+      return buildComposedView({
         app: "camunda7",
-        dataType: "camunda7:processDetail",
-        data: { ...data, engineId },
+        layout: definitionViewLayout(),
+        entries: [{ dataType: "camunda7:processIncidents", data: { ...data, engineId } }],
         summary: t("c7sum.processDetail", {
           processDefinitionKey: data.processDefinitionKey,
           version: data.version != null ? ` v${data.version}` : "",
-          runningInstances: data.runningInstances ?? 0,
-          openIncidents: data.openIncidents,
-          failedJobs: data.failedJobs,
+          // null = statistics unavailable — never report it as a confident 0.
+          runningInstances: data.runningInstances ?? "unknown",
+          openIncidents: data.incidentCount,
+          failedJobs: data.failedJobs ?? "unknown",
         }),
       })
     }),
@@ -770,7 +795,7 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
-      return rawData(await buildCockpitDashboardData(client, engineId))
+      return rawData({ ...(await buildCockpitDashboardData(client, engineId)) })
     }),
   )
 
@@ -786,7 +811,7 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
-      return rawData(await buildEngineHealthData(client, engineId, healthThresholds))
+      return rawData({ ...(await buildEngineHealthData(client, engineId, healthThresholds)) })
     }),
   )
 
@@ -802,41 +827,13 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
-      return rawData(
-        await buildClusterDetailData(client, engineId, {
+      return rawData({
+        ...(await buildClusterDetailData(client, engineId, {
           activityId: args.activityId,
           incidentType: args.incidentType,
           messageSignature: args.messageSignature,
-        }),
-      )
-    }),
-  )
-
-  server.tool(
-    {
-      name: CAMUNDA7_PROCESS_DETAIL_DATA,
-      title: "Process detail data (internal)",
-      description:
-        "Internal JSON feed (no UI) for a process definition's detail. Prefer camunda7_show_process_detail.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
-        processDefinitionKey: z.string().describe("Process definition key"),
-        ...engineParamShape,
-      }),
-      _meta: appOnlyMeta,
-    },
-    withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
-        args.engine,
-        registry,
-      )
-      const data = await buildProcessDetailData(client, {
-        baseUrl,
-        cockpitUrl,
-        provider,
-        processDefinitionKey: args.processDefinitionKey,
+        })),
       })
-      return rawData({ ...data, engineId })
     }),
   )
 
@@ -861,8 +858,8 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
-      return rawData(
-        await buildProcessInstancesData(client, engineId, {
+      return rawData({
+        ...(await buildProcessInstancesData(client, engineId, {
           processDefinitionKey: args.processDefinitionKey,
           active: args.active,
           suspended: args.suspended,
@@ -870,8 +867,8 @@ export function registerWidgetTools(
           businessKeyLike: args.businessKeyLike,
           firstResult: args.firstResult,
           maxResults: args.maxResults,
-        }),
-      )
+        })),
+      })
     }),
   )
 
@@ -890,11 +887,11 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
-      return rawData(
-        await buildInstanceDetailData(client, engineId, {
+      return rawData({
+        ...(await buildInstanceDetailData(client, engineId, {
           processInstanceId: args.processInstanceId,
-        }),
-      )
+        })),
+      })
     }),
   )
 
@@ -915,14 +912,14 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
-      return rawData(
-        await buildJobPanelData(client, engineId, {
+      return rawData({
+        ...(await buildJobPanelData(client, engineId, {
           processDefinitionKey: args.processDefinitionKey,
           failedOnly: args.failedOnly,
           firstResult: args.firstResult,
           maxResults: args.maxResults,
-        }),
-      )
+        })),
+      })
     }),
   )
 
@@ -960,7 +957,7 @@ export function registerWidgetTools(
       name: CAMUNDA7_PROCESS_INCIDENTS_DATA,
       title: "Process incidents data (internal)",
       description:
-        "Internal JSON feed (no UI) for a single definition's incidents — header, KPIs, BPMN overlays, activity-grouped incidents. Prefer camunda7_show_process_incidents.",
+        "Internal JSON feed (no UI) for the unified definition view — header, KPIs (incl. failed jobs), BPMN overlays, activity-grouped incidents. Prefer camunda7_show_process_detail / camunda7_show_process_incidents.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),

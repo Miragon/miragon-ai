@@ -1,4 +1,5 @@
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { cn } from "./cn.js"
 
 /**
  * The canonical loading / error / no-data boundary for widgets driven by
@@ -20,12 +21,13 @@ export function ViewDataState({
   error,
   loadingText,
   emptyText,
-  className = "text-muted-foreground p-2 text-sm",
+  className,
 }: {
   loading: boolean
   error: Error | null | undefined
   loadingText: string
   emptyText: string
+  /** Merged into the default text styling (tailwind-merge semantics). */
   className?: string
 }) {
   if (error) {
@@ -35,5 +37,9 @@ export function ViewDataState({
       </Alert>
     )
   }
-  return <div className={className}>{loading ? loadingText : emptyText}</div>
+  return (
+    <div className={cn("text-muted-foreground p-2 text-sm", className)}>
+      {loading ? loadingText : emptyText}
+    </div>
+  )
 }

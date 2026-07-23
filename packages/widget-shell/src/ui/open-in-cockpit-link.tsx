@@ -26,7 +26,7 @@ export function OpenInCockpitLink({
         e.preventDefault()
         host.openLink(url)
       }}
-      aria-label={`Open in CIB Seven Cockpit`}
+      aria-label={label}
       className={`border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border font-medium outline-none transition-colors focus-visible:ring-2 ${pad}`}
     >
       <span aria-hidden="true">▦</span>

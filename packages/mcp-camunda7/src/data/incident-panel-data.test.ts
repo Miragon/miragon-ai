@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { cibsevenProvider } from "../providers/index.js"
 
 vi.mock("@miragon-ai/client-camunda7/sdk", () => ({
+  getActivityStatistics: vi.fn(),
   getIncidents: vi.fn(),
   getProcessDefinitions: vi.fn(),
   getProcessDefinitionBpmn20Xml: vi.fn(),
@@ -9,6 +10,7 @@ vi.mock("@miragon-ai/client-camunda7/sdk", () => ({
 }))
 
 import {
+  getActivityStatistics,
   getIncidents,
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
@@ -25,6 +27,7 @@ const mockedGetIncidents = vi.mocked(getIncidents)
 const mockedGetStats = vi.mocked(getProcessDefinitionStatistics)
 const mockedGetBpmn = vi.mocked(getProcessDefinitionBpmn20Xml)
 const mockedGetDefs = vi.mocked(getProcessDefinitions)
+const mockedGetActivityStats = vi.mocked(getActivityStatistics)
 
 // --- Builder integration tests against a mocked SDK -------------------------
 
@@ -227,6 +230,7 @@ describe("buildProcessIncidentsData", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedGetDefs.mockResolvedValue([] as never)
+    mockedGetActivityStats.mockResolvedValue([] as never)
   })
 
   it("returns rich per-process detail with BPMN, activity names and Cockpit URLs", async () => {
@@ -245,6 +249,10 @@ describe("buildProcessIncidentsData", () => {
     mockedGetBpmn.mockResolvedValueOnce({
       bpmn20Xml: `<bpmn:userTask id="A1" name="Approve" /><bpmn:serviceTask id="A2" name="Send" />`,
     } as never)
+    mockedGetActivityStats.mockResolvedValueOnce([
+      { id: "A1", failedJobs: 2 },
+      { id: "A2", failedJobs: 1 },
+    ] as never)
 
     const data = await buildProcessIncidentsData(fakeClient, {
       provider: cibsevenProvider,
@@ -255,6 +263,7 @@ describe("buildProcessIncidentsData", () => {
     expect(data.processDefinitionName).toBe("Process 1")
     expect(data.version).toBe(5)
     expect(data.runningInstances).toBe(42)
+    expect(data.failedJobs).toBe(3)
     expect(data.bpmnXml).toContain("Approve")
     expect(data.activities).toHaveLength(2)
     expect(data.activities[0]).toMatchObject({
@@ -298,6 +307,8 @@ describe("buildProcessIncidentsData", () => {
     expect(data.incidentCount).toBe(0)
     expect(data.activities).toEqual([])
     expect(data.bpmnXml).toBe(null)
+    // No resolvable definition id → the failed-job count is unknown, not 0.
+    expect(data.failedJobs).toBe(null)
     expect(data.totalActivityCount).toBe(null)
     expect(data.latestIncident).toBe(null)
     expect(data.siblingsWithIncidents).toEqual([])

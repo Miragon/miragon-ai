@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
 import {
   AskAiButton,
@@ -8,9 +7,11 @@ import {
   FilterBar,
   ListFooter,
   LivePill,
+  QueryFallback,
   StatusBadge,
   TONE_DOT,
   TableEmptyState,
+  TableSkeleton,
   Td,
   Th,
   WidgetHeader,
@@ -32,6 +33,21 @@ export type { ProcessInstancesData }
 const CHIP_ALL = "all"
 const CHIP_INCIDENTS = "incidents"
 const CHIP_SUSPENDED = "suspended"
+
+type InstanceChip = typeof CHIP_ALL | typeof CHIP_INCIDENTS | typeof CHIP_SUSPENDED
+
+/**
+ * Client-side mirror of the `camunda7_process_instances_data` filter contract
+ * (paging args are owned by `usePagedViewData`).
+ */
+type InstancesFilterArgs = {
+  processDefinitionKey?: string
+  engine?: string
+  active?: boolean
+  suspended?: boolean
+  withIncidentsOnly?: boolean
+  businessKeyLike?: string
+}
 
 function rowTone(row: ProcessInstanceRow): ToneVariant {
   if (row.hasIncident) return "critical"
@@ -129,7 +145,7 @@ export function ProcessInstancesView({
   const t = useT()
   const go = useNav()
   const [search, setSearch] = useState("")
-  const [activeChip, setActiveChip] = useState<string>(CHIP_ALL)
+  const [activeChip, setActiveChip] = useState<InstanceChip>(CHIP_ALL)
   const debouncedSearch = useDebouncedValue(search.trim(), 300)
 
   const pdk = processDefinitionKey ?? initialData?.processDefinitionKey
@@ -141,7 +157,7 @@ export function ProcessInstancesView({
   const wantIncidents = activeChip === CHIP_INCIDENTS || !!withIncidentsOnly
   const wantSuspended = activeChip === CHIP_SUSPENDED || !!suspended
   const effectiveBusinessKey = debouncedSearch || businessKeyLike
-  const filterArgs: Record<string, unknown> = { processDefinitionKey: pdk, engine }
+  const filterArgs: InstancesFilterArgs = { processDefinitionKey: pdk, engine }
   if (active) filterArgs.active = true
   if (wantIncidents) filterArgs.withIncidentsOnly = true
   if (wantSuspended) filterArgs.suspended = true
@@ -163,23 +179,16 @@ export function ProcessInstancesView({
   const data = paged.firstPage
 
   if (!data) {
-    if (paged.error) {
-      return (
-        <Alert variant="destructive">
-          <AlertDescription>{paged.error.message}</AlertDescription>
-        </Alert>
-      )
+    if (!pdk) {
+      return <TableEmptyState>{t("processInstances.noDefinitionSelected")}</TableEmptyState>
     }
     return (
-      <Alert>
-        <AlertDescription>
-          {!pdk
-            ? t("processInstances.noDefinitionSelected")
-            : paged.loading
-              ? t("processInstances.loading")
-              : t("processInstances.noRunningInstances")}
-        </AlertDescription>
-      </Alert>
+      <QueryFallback
+        isError={!!paged.error}
+        error={paged.error}
+        errorTitle={t("processInstances.loadError")}
+        skeleton={<TableSkeleton />}
+      />
     )
   }
 
@@ -237,11 +246,13 @@ export function ProcessInstancesView({
         onSearchChange={setSearch}
         searchPlaceholder={t("processInstances.searchPlaceholder")}
         chips={chips}
-        onChipToggle={(id) => setActiveChip(id === activeChip ? CHIP_ALL : id)}
+        onChipToggle={(id) => setActiveChip(id === activeChip ? CHIP_ALL : (id as InstanceChip))}
       />
 
       {paged.items.length === 0 ? (
-        <TableEmptyState>{t("processInstances.noMatch")}</TableEmptyState>
+        <TableEmptyState>
+          {interacted ? t("processInstances.noMatch") : t("processInstances.noRunningInstances")}
+        </TableEmptyState>
       ) : (
         <>
           <table
@@ -269,6 +280,20 @@ export function ProcessInstancesView({
               ))}
             </tbody>
           </table>
+          {/* Load-more failures land here (page 0 failures render above): the
+              already-loaded rows stay visible, the failure is inline + retryable. */}
+          {paged.error && (
+            <div role="alert" className="text-critical flex items-center gap-2 text-xs">
+              <span>{t("processInstances.loadMoreError", { message: paged.error.message })}</span>
+              <button
+                type="button"
+                onClick={paged.loadMore}
+                className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
+              >
+                {t("processInstances.retryLoadMore")}
+              </button>
+            </div>
+          )}
           <ListFooter
             shown={paged.items.length}
             total={paged.total}
