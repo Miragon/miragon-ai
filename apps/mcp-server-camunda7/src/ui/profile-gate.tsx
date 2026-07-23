@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from "react"
+import { useCallback, useEffect, type ReactNode } from "react"
 import { useWidget } from "mcp-use/react"
 import { AppQueryProvider, LocaleProvider, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { useApplyTheme } from "@miragon-ai/widget-shell/widgets"
@@ -44,6 +44,13 @@ export function ProfileGate({ children }: { children: ReactNode }) {
 function ProfileGateInner({ children }: { children: ReactNode }) {
   const { data } = useToolQuery<ProfileFeed>(["profile-gate"], PROFILE_DATA_TOOL, {})
   const profile = data?.profile
+  const language = profile?.language ?? "en"
   useApplyTheme(profile?.theme)
-  return <LocaleProvider locale={profile?.language ?? "en"}>{children}</LocaleProvider>
+  // Keep the document language in sync with the profile locale — otherwise the
+  // iframe renders e.g. German text inside a document still declared `lang="en"`
+  // (mcp-app.html hardcodes it), which misleads screen readers and hyphenation.
+  useEffect(() => {
+    document.documentElement.lang = language
+  }, [language])
+  return <LocaleProvider locale={language}>{children}</LocaleProvider>
 }

@@ -69,7 +69,15 @@ function ProcessHeatmap({
     )
   }
   const values = mode === "frequency" ? q.data.frequency : q.data.durationSec
-  return <BpmnHeatmap bpmnXml={q.data.bpmnXml} nodeFrequencies={values} height={DIAGRAM_HEIGHT} />
+  return (
+    <BpmnHeatmap
+      bpmnXml={q.data.bpmnXml}
+      nodeFrequencies={values}
+      height={DIAGRAM_HEIGHT}
+      diagramAriaLabel={t("procIncFlow.heatmapDiagramAria")}
+      errorTitle={t("procIncFlow.heatmapErrorTitle")}
+    />
+  )
 }
 
 /**
@@ -176,7 +184,10 @@ export function ProcessDefinitionFlow({
                       ? t("procIncFlow.heatmapCaptionFrequency")
                       : t("procIncFlow.heatmapCaptionDuration")}
                   </span>
-                  <HeatmapLegend />
+                  <HeatmapLegend
+                    lessLabel={t("procIncFlow.legendLess")}
+                    moreLabel={t("procIncFlow.legendMore")}
+                  />
                 </div>
               ) : null}
             </div>

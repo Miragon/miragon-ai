@@ -47,14 +47,33 @@ export function describeDeltas(delta: CompareKpiDelta): string {
 const NEUTRAL_BAND = 0.05
 
 /**
+ * Classify a delta as "worse"/"better" — the good/bad judgment behind the tone
+ * color — or `undefined` for missing (null) / near-zero deltas. Surfaced to
+ * assistive tech so the judgment isn't conveyed by color alone: the visible
+ * `+/-` sign only carries direction, and the same "+5%" is bad for failure
+ * rate but good for throughput.
+ */
+export function judgmentFor(
+  value: number | null,
+  worseIfUp: boolean,
+): "worse" | "better" | undefined {
+  if (value === null || Math.abs(value) < NEUTRAL_BAND) return undefined
+  const bad = worseIfUp ? value > 0 : value < 0
+  return bad ? "worse" : "better"
+}
+
+/**
  * Map a numeric delta to a tone className. Returns `text-critical` when the
  * change is bad, `text-m-green` when it is good, and `undefined` for missing
  * (null) or near-zero deltas so the cell inherits the default foreground.
  */
 export function toneFor(value: number | null, worseIfUp: boolean): string | undefined {
-  if (value === null || Math.abs(value) < NEUTRAL_BAND) return undefined
-  const bad = worseIfUp ? value > 0 : value < 0
-  return bad ? TONE_TEXT.critical : TONE_TEXT.success
+  const judgment = judgmentFor(value, worseIfUp)
+  return judgment === "worse"
+    ? TONE_TEXT.critical
+    : judgment === "better"
+      ? TONE_TEXT.success
+      : undefined
 }
 
 type DeltaUnit = "pct" | "pp"
@@ -132,6 +151,29 @@ export function buildComparisonMetrics(
   }))
 }
 
+/**
+ * A single delta cell. The tone color carries the good/bad judgment for sighted
+ * users; the same judgment is repeated as sr-only text (and a `title`) so it
+ * isn't conveyed by color alone — see {@link judgmentFor}.
+ */
+function DeltaCell({ delta, t }: { delta: ComparisonMetric["delta"]; t: T }) {
+  const judgment = judgmentFor(delta.value, delta.worseIfUp)
+  const text = delta.unit === "pp" ? fmtPp(delta.value) : fmtPct(delta.value)
+  const judgmentLabel = judgment
+    ? judgment === "worse"
+      ? t("aComparison.deltaWorse")
+      : t("aComparison.deltaBetter")
+    : undefined
+  return (
+    <TableCell className={toneFor(delta.value, delta.worseIfUp)}>
+      <span title={judgmentLabel}>
+        {text}
+        {judgmentLabel && <span className="sr-only"> ({judgmentLabel})</span>}
+      </span>
+    </TableCell>
+  )
+}
+
 /** Neutral "no data" / "incomplete" treatment — destructive is reserved for errors. */
 export function ComparisonEmptyState({ children }: { children: ReactNode }) {
   return (
@@ -190,9 +232,7 @@ export function ComparisonCard({
                 <TableCell>{m.label}</TableCell>
                 <TableCell>{m.before}</TableCell>
                 <TableCell>{m.after}</TableCell>
-                <TableCell className={toneFor(m.delta.value, m.delta.worseIfUp)}>
-                  {m.delta.unit === "pp" ? fmtPp(m.delta.value) : fmtPct(m.delta.value)}
-                </TableCell>
+                <DeltaCell delta={m.delta} t={t} />
               </TableRow>
             ))}
           </TableBody>

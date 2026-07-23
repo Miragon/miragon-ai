@@ -34,14 +34,20 @@ export type KpiCell = KpiCellBase &
  * Bordered KPI strip — typically 4 cells across. Matches the `.kpis` block
  * in the Miragon mockup. Cells flow as columns; cell count adapts via
  * `grid-cols-N` (1–6; more than 6 cells wrap onto further rows).
+ *
+ * Responsive: 4+ cells fall back to 2 columns on narrow hosts (claude.ai inline
+ * / mobile iframes are frequently <500px, where five cells side-by-side leave
+ * ~40px of content each). Dividers come from a `gap-px` grid on a `bg-border`
+ * background (cells are `bg-card`), so they stay correct at any wrap — a
+ * per-cell border count tied to a fixed column would be wrong once it reflows.
  */
 const COL_CLASS: Record<number, string> = {
   1: "grid-cols-1",
   2: "grid-cols-2",
   3: "grid-cols-3",
-  4: "grid-cols-4",
-  5: "grid-cols-5",
-  6: "grid-cols-6",
+  4: "grid-cols-2 sm:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-5",
+  6: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6",
 }
 
 export interface KpiGridHeader {
@@ -181,16 +187,11 @@ export function KpiGrid({
           )}
         </div>
       )}
-      <div className={cn("grid", colClass, !boxed && "border-border border-y")}>
+      {/* gap-px on bg-border draws the dividers; cells are bg-card. This is
+          wrap-safe (every reflowed gap gets a divider) unlike per-cell borders
+          tied to a fixed column count. */}
+      <div className={cn("bg-border grid gap-px", colClass, !boxed && "border-border border-y")}>
         {cells.map((cell, idx) => {
-          // Cells beyond `cols` wrap; borders are computed per position so a
-          // wrapped grid doesn't end each row with a dangling divider.
-          const lastInRow = (idx + 1) % cols === 0
-          const lastCell = idx === cells.length - 1
-          const borderClass = cn(
-            !lastInRow && !lastCell && "border-border border-r",
-            idx >= cols && "border-border border-t",
-          )
           const body = <KpiCellBody cell={cell} variant="strip" />
           return cell.onClick ? (
             <button
@@ -198,15 +199,12 @@ export function KpiGrid({
               type="button"
               onClick={cell.onClick}
               aria-label={cell.ariaLabel}
-              className={cn(
-                "hover:bg-muted focus-visible:ring-ring cursor-pointer px-5 py-4 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset",
-                borderClass,
-              )}
+              className="bg-card hover:bg-muted focus-visible:ring-ring cursor-pointer px-5 py-4 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset"
             >
               {body}
             </button>
           ) : (
-            <div key={idx} className={cn("px-5 py-4", borderClass)}>
+            <div key={idx} className="bg-card px-5 py-4">
               {body}
             </div>
           )
@@ -249,16 +247,9 @@ export function KpiGridSkeleton({
       aria-busy="true"
       className={cn(boxed && "border-border overflow-hidden rounded-lg border")}
     >
-      <div className={cn("grid", colClass, !boxed && "border-border border-y")}>
+      <div className={cn("bg-border grid gap-px", colClass, !boxed && "border-border border-y")}>
         {Array.from({ length: cells }, (_, idx) => (
-          <div
-            key={idx}
-            className={cn(
-              "px-5 py-4",
-              (idx + 1) % cols !== 0 && idx !== cells - 1 && "border-border border-r",
-              idx >= cols && "border-border border-t",
-            )}
-          >
+          <div key={idx} className="bg-card px-5 py-4">
             <Skeleton className="h-3 w-16" />
             <Skeleton className="mt-2.5 h-7 w-14" />
           </div>

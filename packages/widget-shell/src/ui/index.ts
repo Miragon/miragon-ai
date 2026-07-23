@@ -34,6 +34,7 @@ export {
   BpmnHeatmapWidget,
   type BpmnHeatmapData,
   type BpmnHeatmapProps,
+  type BpmnHeatmapLabels,
 } from "./bpmn-heatmap.js"
 export {
   useBpmnViewer,

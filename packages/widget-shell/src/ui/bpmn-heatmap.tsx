@@ -22,6 +22,42 @@ import { useBpmnViewer } from "./use-bpmn-viewer.js"
 // be a fresh identity per render and re-trigger the repaint effect every time.
 const EMPTY_EDGES: Record<string, number> = {}
 
+/**
+ * All user-facing strings — the shell carries no module i18n, so callers
+ * (mcp-analytics / mcp-camunda7) inject `t()`-resolved values. Every field is
+ * optional; the English defaults keep the component usable on its own.
+ */
+export interface BpmnHeatmapLabels {
+  title?: string
+  window?: string
+  frequency?: string
+  duration?: string
+  frequencyLegend?: string
+  durationLegend?: string
+  noData?: string
+  bpmnUnavailable?: string
+  less?: string
+  more?: string
+  diagramAriaLabel?: string
+  errorTitle?: string
+}
+
+const DEFAULT_HEATMAP_LABELS: Required<BpmnHeatmapLabels> = {
+  title: "BPMN heatmap",
+  window: "window:",
+  frequency: "Frequency",
+  duration: "Duration",
+  frequencyLegend: "Executions per element",
+  durationLegend: "Avg duration per element (s)",
+  noData: "No heatmap data.",
+  bpmnUnavailable:
+    "BPMN diagram unavailable — the analytics module has no camunda7 client configured to fetch it.",
+  less: "Less",
+  more: "More",
+  diagramAriaLabel: "BPMN process diagram with an execution heat overlay",
+  errorTitle: "Diagram could not be rendered",
+}
+
 export interface BpmnHeatmapProps {
   bpmnXml: string
   /** Per-element heat value keyed by BPMN element id (frequency or duration). */
@@ -31,6 +67,10 @@ export interface BpmnHeatmapProps {
   height?: number
   /** Heat radius in diagram coordinates. Scales with zoom. */
   diagramRadius?: number
+  /** Accessible name for the diagram (localize per module; English fallback). */
+  diagramAriaLabel?: string
+  /** Title of the import-error alert (English fallback). */
+  errorTitle?: string
 }
 
 /**
@@ -45,6 +85,8 @@ export function BpmnHeatmap({
   edgeFrequencies = EMPTY_EDGES,
   height = 480,
   diagramRadius = 55,
+  diagramAriaLabel = DEFAULT_HEATMAP_LABELS.diagramAriaLabel,
+  errorTitle = DEFAULT_HEATMAP_LABELS.errorTitle,
 }: BpmnHeatmapProps) {
   const heatCanvasRef = useRef<HTMLCanvasElement>(null)
   const redrawRef = useRef<(() => void) | null>(null)
@@ -131,7 +173,7 @@ export function BpmnHeatmap({
       <div
         ref={containerRef}
         role="img"
-        aria-label="BPMN process diagram with an execution heat overlay"
+        aria-label={diagramAriaLabel}
         className="border-border absolute inset-0 size-full rounded-lg border"
       />
       <canvas
@@ -142,7 +184,7 @@ export function BpmnHeatmap({
       />
       {importError ? (
         <Alert className="absolute inset-x-3 top-3">
-          <AlertTitle>Diagram could not be rendered</AlertTitle>
+          <AlertTitle>{errorTitle}</AlertTitle>
           <AlertDescription>{importError}</AlertDescription>
         </Alert>
       ) : (
@@ -152,16 +194,22 @@ export function BpmnHeatmap({
   )
 }
 
-export function HeatmapLegend() {
+export function HeatmapLegend({
+  lessLabel = DEFAULT_HEATMAP_LABELS.less,
+  moreLabel = DEFAULT_HEATMAP_LABELS.more,
+}: {
+  lessLabel?: string
+  moreLabel?: string
+}) {
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="text-muted-foreground">Less</span>
+      <span className="text-muted-foreground">{lessLabel}</span>
       <div
         aria-hidden="true"
         className="h-3 w-32 rounded"
         style={{ background: HEAT_GRADIENT_CSS }}
       />
-      <span className="text-muted-foreground">More</span>
+      <span className="text-muted-foreground">{moreLabel}</span>
     </div>
   )
 }
@@ -183,61 +231,73 @@ type Mode = "frequency" | "duration"
  * the per-element heat values (both fetched up front). Node-only — metrics carry
  * no per-instance path data, so sequence flows are not heated.
  */
-export function BpmnHeatmapWidget({ data }: { data: BpmnHeatmapData | null }) {
+export function BpmnHeatmapWidget({
+  data,
+  labels,
+}: {
+  data: BpmnHeatmapData | null
+  labels?: BpmnHeatmapLabels
+}) {
   const [mode, setMode] = useState<Mode>("frequency")
+  const l = { ...DEFAULT_HEATMAP_LABELS, ...labels }
 
   if (!data) {
     return (
       <Alert>
-        <AlertDescription>No heatmap data.</AlertDescription>
+        <AlertDescription>{l.noData}</AlertDescription>
       </Alert>
     )
   }
   if (!data.bpmnXml) {
     return (
       <Alert>
-        <AlertDescription>
-          BPMN diagram unavailable — the analytics module has no camunda7 client configured to fetch
-          it.
-        </AlertDescription>
+        <AlertDescription>{l.bpmnUnavailable}</AlertDescription>
       </Alert>
     )
   }
 
   const values = mode === "frequency" ? data.frequency : data.durationSec
-  const legendLabel =
-    mode === "frequency" ? "Executions per element" : "Avg duration per element (s)"
+  const legendLabel = mode === "frequency" ? l.frequencyLegend : l.durationLegend
 
   return (
     <Card>
       <CardContent>
         <div className="mb-3 flex flex-wrap items-center gap-3">
-          <strong>BPMN heatmap</strong>
+          <strong>{l.title}</strong>
           <Badge>{data.processDefinitionKey}</Badge>
-          <Badge variant="outline">window: {data.period}</Badge>
+          <Badge variant="outline">
+            {l.window} {data.period}
+          </Badge>
           <div className="ml-auto flex gap-1">
             <Button
               size="sm"
               variant={mode === "frequency" ? "default" : "outline"}
+              aria-pressed={mode === "frequency"}
               onClick={() => setMode("frequency")}
             >
-              Frequency
+              {l.frequency}
             </Button>
             <Button
               size="sm"
               variant={mode === "duration" ? "default" : "outline"}
+              aria-pressed={mode === "duration"}
               onClick={() => setMode("duration")}
             >
-              Duration
+              {l.duration}
             </Button>
           </div>
         </div>
 
-        <BpmnHeatmap bpmnXml={data.bpmnXml} nodeFrequencies={values} />
+        <BpmnHeatmap
+          bpmnXml={data.bpmnXml}
+          nodeFrequencies={values}
+          diagramAriaLabel={l.diagramAriaLabel}
+          errorTitle={l.errorTitle}
+        />
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <span className="text-muted-foreground text-xs">{legendLabel}</span>
-          <HeatmapLegend />
+          <HeatmapLegend lessLabel={l.less} moreLabel={l.more} />
         </div>
       </CardContent>
     </Card>
