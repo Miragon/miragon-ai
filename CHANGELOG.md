@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.0.0](https://github.com/Miragon/miragon-ai/compare/v0.2.1...v1.0.0) (2026-07-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* drop upstream/proxy federation — an external MCP gateway takes over ([#162](https://github.com/Miragon/miragon-ai/issues/162))
+
+### Features
+
+* dialect-true package composition — renames, module contract, engine provider port ([#167](https://github.com/Miragon/miragon-ai/issues/167)) ([c1d737f](https://github.com/Miragon/miragon-ai/commit/c1d737f0299dda7a573bd453dcb887ad333bfe28))
+* **docs:** cookie consent via consentmanager, like the marketing site ([#151](https://github.com/Miragon/miragon-ai/issues/151)) ([c88b750](https://github.com/Miragon/miragon-ai/commit/c88b750ebf7c8e1a3aec010a86c917c0354cd0a7))
+* **docs:** hero "Try it out" button opens the MCP inspector ([#152](https://github.com/Miragon/miragon-ai/issues/152)) ([37b20dc](https://github.com/Miragon/miragon-ai/commit/37b20dcad09f85025b848ad0555a3ce670615157))
+* **docs:** prominent "Try it out" CTA with example prompt ([#153](https://github.com/Miragon/miragon-ai/issues/153)) ([5c63368](https://github.com/Miragon/miragon-ai/commit/5c6336811a2303c783c0f5a12b15a23876aca2e2))
+* **docs:** redesign the landing hero around a live conversation ([#154](https://github.com/Miragon/miragon-ai/issues/154)) ([fe654f9](https://github.com/Miragon/miragon-ai/commit/fe654f99c99b31278af7849fb6f0a9a61a9ce64e))
+* drop upstream/proxy federation — an external MCP gateway takes over ([#162](https://github.com/Miragon/miragon-ai/issues/162)) ([ad09d8a](https://github.com/Miragon/miragon-ai/commit/ad09d8a9293f9ef781e08b83a0bbbd5dbcd1fdad))
+* OAuth resource-server, engine token passthrough, per-engine auth ([#144](https://github.com/Miragon/miragon-ai/issues/144)) ([2ae5094](https://github.com/Miragon/miragon-ai/commit/2ae5094f6bbce49902c24e96391e3587837f2c91))
+* **playground:** reset the Fly.io playground nightly at midnight ([#157](https://github.com/Miragon/miragon-ai/issues/157)) ([c308742](https://github.com/Miragon/miragon-ai/commit/c3087421eeb7b938639181bf0fb1e96362a8c5fd))
+* replace examples/ with deployable playground (Compose + Fly.io) ([#146](https://github.com/Miragon/miragon-ai/issues/146)) ([cf09d6a](https://github.com/Miragon/miragon-ai/commit/cf09d6a381889dc73c50f41716da5b20b3f5c0f7))
+* repo-review remediation — bugfixes, shared widget primitives, generic shell widgets ([#158](https://github.com/Miragon/miragon-ai/issues/158)) ([51263b2](https://github.com/Miragon/miragon-ai/commit/51263b2f8f24fc48f9f9611910a049f21ab45e16))
+* UI review remediation — shared primitives, engine-safe mutations, a11y/i18n fixes ([#168](https://github.com/Miragon/miragon-ai/issues/168)) ([e673992](https://github.com/Miragon/miragon-ai/commit/e6739925f6d9e0f459d65b24182c6bab609fb72d))
+
 ## [0.2.1](https://github.com/Miragon/miragon-ai/compare/v0.2.0...v0.2.1) (2026-06-22)
 
 
