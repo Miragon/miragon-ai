@@ -14,13 +14,17 @@ export const en: MessageCatalog = {
   "cockpit.crumb.overview": "Overview",
   "cockpit.crumb.incidents": "Incidents",
   "cockpit.crumb.instances": "Instances",
-  "cockpit.crumb.instance": ({ id }) => `Instance ${String(id)}…`,
-  "cockpit.crumb.incident": ({ id }) => `Incident ${String(id)}…`,
+  // The {id} arrives pre-truncated (kit `truncate` appends the ellipsis).
+  "cockpit.crumb.instance": ({ id }) => `Instance ${String(id)}`,
+  "cockpit.crumb.incident": ({ id }) => `Incident ${String(id)}`,
   "cockpit.crumb.cluster": ({ activity }) => `Cluster: ${String(activity)}`,
   "cockpit.loading.engines": "Loading engines…",
   "cockpit.empty.engines": "No CIB Seven engines configured.",
   "cockpit.nav.crossEngine": "Cross-engine",
   "cockpit.nav.engine": "Engine",
+  "cockpit.aria.breadcrumb": "Breadcrumb",
+  "cockpit.aria.sections": "Cockpit sections",
+  "cockpit.aria.activeEngine": "Active engine",
   "cockpit.landing.title": "CIB Seven Cockpit",
   "cockpit.landing.subtitle": ({ count }) =>
     `${String(count)} engines configured — operate one engine, or analyze across the whole fleet.`,
@@ -116,8 +120,6 @@ export const en: MessageCatalog = {
   "c7sum.historyTimeline":
     "History timeline for process instance {processInstanceId}: {totalActivities} historic activities{notFound}.",
   "c7sum.historyTimeline.notFound": " (no historic process instance found)",
-  "c7sum.cockpitDashboard":
-    'Cockpit dashboard for engine "{engineId}": {totalDefinitions} definitions, {totalRunningInstances} running instances, {totalFailedJobs} failed jobs, {totalIncidents} open incidents.',
   "c7sum.engineHealth":
     'Engine "{engineId}" — {status}: {totalIncidents} open incidents across {affectedActivities} activities, {runningInstances} running instances.{topCluster}',
   "c7sum.engineHealth.topCluster":

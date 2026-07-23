@@ -1,18 +1,20 @@
-import { Badge } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
   DrillButton,
   KpiGrid,
-  ViewDataState,
+  LogText,
+  RowCard,
+  StatusBadge,
   WidgetHeader,
-  WidgetShell,
   formatTimestamp,
+  truncate,
+  useDetailView,
 } from "@miragon-ai/widget-shell/widgets"
 import { ModelContext } from "mcp-use/react"
 import type { ClusterDetailData } from "../view-models.js"
+import { DetailPage } from "./detail-page.js"
 import { useNav } from "./navigation.js"
 import { CAMUNDA7_CLUSTER_DETAIL_DATA } from "../tool-names.js"
-import { useViewData } from "./use-view-data.js"
 import { remediatePrompt } from "./remediation.js"
 import { useT } from "../messages/use-t.js"
 
@@ -58,158 +60,173 @@ export function ClusterDetailView({
   // Unlike the engine-health feed, this feed REQUIRES the cluster identity —
   // gate the self-fetch on it (the show tool path passes data instead).
   const ready = !!(activityId && incidentType)
-  const { data, loading, error } = useViewData<ClusterDetailData>(
+  const { data, guard } = useDetailView<ClusterDetailData>({
     initialData,
-    [
+    key: [
       "camunda7:cluster-detail",
       engine ?? null,
       activityId ?? null,
       incidentType ?? null,
       messageSignature ?? null,
     ],
-    CAMUNDA7_CLUSTER_DETAIL_DATA,
-    { engine, activityId, incidentType, messageSignature },
+    tool: CAMUNDA7_CLUSTER_DETAIL_DATA,
+    args: { engine, activityId, incidentType, messageSignature },
     ready,
-  )
+    loadingText: t("clusterDetail.loading"),
+    emptyText: t("clusterDetail.noData"),
+  })
 
-  if (!data) {
-    return (
-      <ViewDataState
-        loading={loading}
-        error={error}
-        loadingText={t("clusterDetail.loading")}
-        emptyText={t("clusterDetail.noData")}
-      />
-    )
-  }
+  if (!data) return guard
 
   const engineId = engine ?? data.engineId
 
   return (
-    <>
-      <ModelContext content={describeCluster(data)} />
-      <WidgetHeader
-        icon="⚠"
-        iconTone="critical"
-        title={data.activityId}
-        sub={
-          <span>
-            <Badge variant="secondary">{data.incidentType}</Badge>
-            <span className="ml-2">
-              {t("clusterDetail.affectedAcross", {
-                count: data.incidentCount,
-                keys: data.processDefinitionKeys.join(", ") || t("clusterDetail.unknownKeys"),
-              })}
+    <DetailPage
+      header={
+        <WidgetHeader
+          icon="⚠"
+          iconTone="critical"
+          title={data.activityId}
+          sub={
+            <span>
+              <StatusBadge tone="critical">{data.incidentType}</StatusBadge>
+              <span className="ml-2">
+                {t("clusterDetail.affectedAcross", {
+                  count: data.incidentCount,
+                  keys: data.processDefinitionKeys.join(", ") || t("clusterDetail.unknownKeys"),
+                })}
+              </span>
             </span>
-          </span>
-        }
-        actions={
-          <AskAiButton
-            variant="primary"
-            label={t("clusterDetail.fix")}
-            prompt={remediatePrompt(
-              {
-                activityId: data.activityId,
-                incidentType: data.incidentType,
-                incidentCount: data.incidentCount,
-                last24hCount: data.last24hCount,
-                processDefinitionKeys: data.processDefinitionKeys,
-                representativeMessage: data.representativeMessage,
-              },
-              engineId,
-            )}
-          />
-        }
-      />
+          }
+          actions={
+            <AskAiButton
+              variant="primary"
+              label={t("clusterDetail.fix")}
+              prompt={remediatePrompt(
+                {
+                  activityId: data.activityId,
+                  incidentType: data.incidentType,
+                  incidentCount: data.incidentCount,
+                  last24hCount: data.last24hCount,
+                  processDefinitionKeys: data.processDefinitionKeys,
+                  representativeMessage: data.representativeMessage,
+                },
+                engineId,
+              )}
+            />
+          }
+        />
+      }
+      kpi={
+        <KpiGrid
+          boxed
+          cells={[
+            { label: t("clusterDetail.kpiAffected"), value: data.incidentCount, tone: "critical" },
+            {
+              label: t("clusterDetail.kpiNewLastHour"),
+              value: data.lastHourCount,
+              tone: data.lastHourCount > 0 ? "critical" : undefined,
+            },
+            {
+              label: t("clusterDetail.kpiNew24h"),
+              value: data.last24hCount,
+              tone: data.last24hCount > 0 ? "warning" : undefined,
+            },
+            { label: t("clusterDetail.kpiFirstSeen"), value: formatTimestamp(data.firstSeen) },
+          ]}
+        />
+      }
+      /* Deliberately a single content block, no tabs: splitting the failure
+         message from the affected instances would separate the message from
+         its context. */
+      content={
+        <>
+          {data.representativeMessage && (
+            <div className="text-sm">
+              <span className="text-muted-foreground font-medium">
+                {t("clusterDetail.failureMessage")}
+              </span>
+              <LogText text={data.representativeMessage} className="mt-1" />
+            </div>
+          )}
 
-      <KpiGrid
-        boxed
-        cells={[
-          { label: t("clusterDetail.kpiAffected"), value: data.incidentCount, tone: "critical" },
-          {
-            label: t("clusterDetail.kpiNewLastHour"),
-            value: data.lastHourCount,
-            tone: data.lastHourCount > 0 ? "critical" : undefined,
-          },
-          {
-            label: t("clusterDetail.kpiNew24h"),
-            value: data.last24hCount,
-            tone: data.last24hCount > 0 ? "warning" : undefined,
-          },
-          { label: t("clusterDetail.kpiFirstSeen"), value: formatTimestamp(data.firstSeen) },
-        ]}
-      />
-
-      {data.representativeMessage && (
-        <details className="text-sm" open={data.representativeMessage.length <= 160}>
-          <summary className="text-muted-foreground cursor-pointer font-medium">
-            {t("clusterDetail.failureMessage")}
-          </summary>
-          <pre className="bg-muted mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded p-2 text-xs">
-            {data.representativeMessage}
-          </pre>
-        </details>
-      )}
-
-      <section aria-label={t("clusterDetail.affectedInstances")} className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold">
-          {t("clusterDetail.affectedInstances")}
-          {data.totalMatching > data.incidents.length
-            ? t("clusterDetail.showingOf", {
-                shown: data.incidents.length,
-                total: data.totalMatching,
-              })
-            : ""}
-        </h3>
-        {data.incidents.map((row) => (
-          <div
-            key={row.incidentId || row.processInstanceId}
-            className="border-border flex items-center justify-between gap-3 rounded-lg border p-3"
+          <section
+            aria-label={t("clusterDetail.affectedInstances")}
+            className="flex flex-col gap-2"
           >
-            <div className="min-w-0">
-              {/* Business key first — the operator's order number, not an engine UUID. */}
-              <p className="truncate text-sm font-medium">
-                {row.businessKey ??
-                  t("clusterDetail.instanceFallback", {
-                    id: row.processInstanceId.slice(0, 8),
-                  })}
-              </p>
-              <p className="text-muted-foreground truncate text-xs">
-                {row.processDefinitionKey} · {formatTimestamp(row.incidentTimestamp)}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <DrillButton
-                onDrill={() =>
-                  go({ type: "instance-detail", processInstanceId: row.processInstanceId })
+            <h3 className="text-sm font-semibold">
+              {t("clusterDetail.affectedInstances")}
+              {data.totalMatching > data.incidents.length
+                ? t("clusterDetail.showingOf", {
+                    shown: data.incidents.length,
+                    total: data.totalMatching,
+                  })
+                : ""}
+            </h3>
+            {data.incidents.map((row) => (
+              <RowCard
+                // The engine can report rows without an incident id — fall back to
+                // instance+timestamp so React keys stay unique per incident row.
+                key={row.incidentId || `${row.processInstanceId}-${row.incidentTimestamp}`}
+                title={
+                  /* Business key first — the operator's order number, not an engine UUID. */
+                  <span className="truncate">
+                    {row.businessKey ??
+                      t("clusterDetail.instanceFallback", {
+                        id: truncate(row.processInstanceId, 12),
+                      })}
+                  </span>
                 }
-                ariaLabel={t("clusterDetail.openInstanceAria", {
-                  ref: row.businessKey ?? row.processInstanceId,
-                })}
-              >
-                {t("clusterDetail.instance")}
-              </DrillButton>
-              <DrillButton
-                onDrill={() => go({ type: "incident-detail", incidentId: row.incidentId })}
-                ariaLabel={t("clusterDetail.openIncidentAria", {
-                  ref: row.businessKey ?? row.processInstanceId,
-                })}
-              >
-                {t("clusterDetail.incident")}
-              </DrillButton>
-            </div>
-          </div>
-        ))}
-        {data.incidents.length === 0 && (
-          <p className="text-muted-foreground py-2 text-sm">
-            {t("clusterDetail.noMatchingIncidents")}
-          </p>
-        )}
-      </section>
-    </>
+                subtitle={
+                  <>
+                    {row.processDefinitionKey} · {formatTimestamp(row.incidentTimestamp)}
+                  </>
+                }
+                actions={
+                  <>
+                    <DrillButton
+                      onDrill={() =>
+                        go({ type: "instance-detail", processInstanceId: row.processInstanceId })
+                      }
+                      ariaLabel={t("clusterDetail.openInstanceAria", {
+                        ref: row.businessKey ?? row.processInstanceId,
+                      })}
+                    >
+                      {t("clusterDetail.instance")}
+                    </DrillButton>
+                    {row.incidentId && (
+                      <DrillButton
+                        onDrill={() => go({ type: "incident-detail", incidentId: row.incidentId })}
+                        ariaLabel={t("clusterDetail.openIncidentAria", {
+                          ref: row.businessKey ?? row.processInstanceId,
+                        })}
+                      >
+                        {t("clusterDetail.incident")}
+                      </DrillButton>
+                    )}
+                  </>
+                }
+              />
+            ))}
+            {data.incidents.length === 0 && (
+              <p className="text-muted-foreground py-2 text-sm">
+                {t("clusterDetail.noMatchingIncidents")}
+              </p>
+            )}
+          </section>
+        </>
+      }
+    >
+      <ModelContext content={describeCluster(data)} />
+    </DetailPage>
   )
 }
 
+/**
+ * Shell-owning entry point registered in the widget registry. The
+ * {@link DetailPage} inside {@link ClusterDetailView} brings the WidgetShell
+ * (nesting-aware under the cockpit app), so this is a plain delegation.
+ */
 export function ClusterDetailWidget({
   data,
   engine,
@@ -224,14 +241,12 @@ export function ClusterDetailWidget({
   messageSignature?: string
 }) {
   return (
-    <WidgetShell>
-      <ClusterDetailView
-        data={data}
-        engine={engine}
-        activityId={activityId}
-        incidentType={incidentType}
-        messageSignature={messageSignature}
-      />
-    </WidgetShell>
+    <ClusterDetailView
+      data={data}
+      engine={engine}
+      activityId={activityId}
+      incidentType={incidentType}
+      messageSignature={messageSignature}
+    />
   )
 }

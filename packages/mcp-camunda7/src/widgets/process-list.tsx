@@ -1,5 +1,11 @@
-import { Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { AskAiButton, WidgetShell, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
+import { Badge } from "@miragon/mcp-toolkit-ui"
+import {
+  AskAiButton,
+  QueryFallback,
+  TableSkeleton,
+  WidgetShell,
+  useViewToolQuery,
+} from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
 import type { ProcessListData } from "../view-models.js"
 import {
@@ -41,13 +47,12 @@ export function ProcessListWidget({
   if (!data) {
     return (
       <WidgetShell>
-        {fallbackQuery.isError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{fallbackQuery.error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <p className="text-muted-foreground text-sm">{t("processList.loading")}</p>
-        )}
+        <QueryFallback
+          isError={fallbackQuery.isError}
+          error={fallbackQuery.error}
+          errorTitle={t("processList.loadError")}
+          skeleton={<TableSkeleton />}
+        />
       </WidgetShell>
     )
   }

@@ -1,8 +1,10 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
-import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, StatusBadge } from "@miragon-ai/widget-shell/widgets"
+import { useT } from "../../messages/use-t.js"
 
 export function BpmnViewerHeader({ data }: { data: BpmnViewerData | null }) {
+  const t = useT()
   if (!data) return null
   const totalActive = data.activeActivityIds.length
   const totalIncidents = data.incidentActivityIds.length
@@ -19,18 +21,22 @@ export function BpmnViewerHeader({ data }: { data: BpmnViewerData | null }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-xl font-semibold">BPMN Diagram</h2>
+        <h2 className="text-xl font-semibold">{t("bpmnHeader.title")}</h2>
         {data.processInstanceId && (
           <Badge variant="secondary" className="font-mono text-xs">
             {data.processInstanceId}
           </Badge>
         )}
         {totalActive > 0 && (
-          <Badge variant="secondary" className="bg-success/10 text-success-foreground">
-            {totalActive} active
+          <StatusBadge tone="success" className="py-0.5">
+            {t("bpmnHeader.activeCount", { count: totalActive })}
+          </StatusBadge>
+        )}
+        {totalIncidents > 0 && (
+          <Badge variant="destructive">
+            {t("bpmnHeader.incidentsCount", { count: totalIncidents })}
           </Badge>
         )}
-        {totalIncidents > 0 && <Badge variant="destructive">{totalIncidents} incidents</Badge>}
       </div>
       <AskAiButton prompt={analyzePrompt} variant="primary" />
     </div>

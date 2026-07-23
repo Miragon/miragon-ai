@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react"
+import { useEffect, useReducer } from "react"
 import { ModelContext, useWidget } from "mcp-use/react"
-import { useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
-import { ViewDataState, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { ViewDataState, WidgetShell, truncate } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "../../view-models.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
 import { camunda7BaseWidgets } from "../registry.js"
@@ -12,13 +12,6 @@ import { FleetView } from "./fleet-view.js"
 
 export type { CockpitAppData }
 
-/**
- * Top-level cockpit scope. Open Cockpit offers two ways in: operate a single
- * engine, or run cross-engine ("fleet") analyses. `landing` is the chooser shown
- * when more than one engine is configured.
- */
-type CockpitMode = "landing" | "engine" | "fleet"
-
 interface EnginesResult {
   engines: Array<{ id: string }>
   currentSelection: string | null
@@ -26,7 +19,7 @@ interface EnginesResult {
   profileDefaultEngineId?: string | null
 }
 
-/** Internal, client-side view state — mirrors NavIntent but drives the router. */
+/** Internal, client-side view state — the reducer's mapping of {@link NavIntent}. */
 type CockpitView =
   | { section: "overview" }
   | { section: "incidents" }
@@ -37,87 +30,179 @@ type CockpitView =
       incidentType: string
       messageSignature?: string
     }
-  | { section: "process-detail"; processDefinitionKey: string }
+  | { section: "process-detail"; processDefinitionKey: string; focus?: "incidents" }
   | { section: "process-instances"; processDefinitionKey: string }
-  | { section: "process-incidents"; processDefinitionKey: string }
   | { section: "instance-detail"; processInstanceId: string }
   | { section: "incident-detail"; incidentId: string }
 
 type TopSection = "overview" | "incidents" | "settings"
 
-const SECTIONS: Array<{ id: TopSection; label: string; icon: string }> = [
-  { id: "overview", label: "Overview", icon: "▦" },
-  { id: "incidents", label: "Incidents", icon: "⚠" },
-  { id: "settings", label: "Settings", icon: "⚙" },
+const SECTIONS: Array<{ id: TopSection; intent: NavIntent; icon: string }> = [
+  { id: "overview", intent: { type: "process-list" }, icon: "▦" },
+  { id: "incidents", intent: { type: "incidents" }, icon: "⚠" },
+  { id: "settings", intent: { type: "settings" }, icon: "⚙" },
 ]
 
-function topSectionOf(view: CockpitView): TopSection {
+function isTopSection(section: CockpitView["section"]): section is TopSection {
+  return section === "overview" || section === "incidents" || section === "settings"
+}
+
+/**
+ * Top-level cockpit scope. Open Cockpit offers two ways in: operate a single
+ * engine, or run cross-engine ("fleet") analyses. `landing` is the chooser shown
+ * when more than one engine is configured.
+ */
+type CockpitScope = { kind: "landing" } | { kind: "fleet" } | { kind: "engine"; engineId: string }
+
+/**
+ * The whole navigation state in one reducer: `scope` decides WHICH cockpit is
+ * shown (chooser / fleet / one engine) and is the single authority — no render
+ * path second-guesses it. `stack` is the real navigation history inside an
+ * engine; the breadcrumb renders it 1:1, so "back" always returns to the view
+ * the user actually came from.
+ */
+interface CockpitState {
+  scope: CockpitScope
+  stack: CockpitView[]
+}
+
+type CockpitAction =
+  | NavIntent
+  | { type: "enter-engine"; id: string }
+  | { type: "switch-engine"; id: string }
+  | { type: "to-fleet" }
+  | { type: "to-landing" }
+  | { type: "pop"; to?: number }
+
+const ROOT_STACK: CockpitView[] = [{ section: "overview" }]
+const INITIAL_STATE: CockpitState = { scope: { kind: "landing" }, stack: ROOT_STACK }
+
+/**
+ * Map the public {@link NavIntent} contract onto a view. Compile-checked
+ * exhaustive: a new intent variant fails the `satisfies never` below instead of
+ * silently no-oping in the cockpit.
+ */
+function intentToView(intent: NavIntent): CockpitView {
+  switch (intent.type) {
+    case "process-list":
+      return { section: "overview" }
+    case "incidents":
+      return { section: "incidents" }
+    case "settings":
+      return { section: "settings" }
+    case "cluster-detail":
+      return {
+        section: "cluster-detail",
+        activityId: intent.activityId,
+        incidentType: intent.incidentType,
+        messageSignature: intent.messageSignature,
+      }
+    case "process-detail":
+      return { section: "process-detail", processDefinitionKey: intent.processDefinitionKey }
+    case "process-instances":
+      return { section: "process-instances", processDefinitionKey: intent.processDefinitionKey }
+    // The "process-incidents" intent is a KEPT public contract (widgets emit
+    // it) — it lands on the SAME definition view, focused on incidents.
+    case "process-incidents":
+      return {
+        section: "process-detail",
+        processDefinitionKey: intent.processDefinitionKey,
+        focus: "incidents",
+      }
+    case "instance-detail":
+      return { section: "instance-detail", processInstanceId: intent.processInstanceId }
+    case "incident-detail":
+      return { section: "incident-detail", incidentId: intent.incidentId }
+  }
+  return intent satisfies never
+}
+
+/**
+ * Identity of a view on the stack — navigating to a view that is already in the
+ * trail pops back to it instead of growing an A→B→A loop. Deliberately IGNORES
+ * the definition view's `focus`: detail → incidents-focus on the same
+ * definition updates the stack entry in place instead of stacking a twin.
+ */
+function viewKey(view: CockpitView): string {
   switch (view.section) {
+    case "cluster-detail":
+      return `cluster-detail:${view.activityId}:${view.incidentType}:${view.messageSignature ?? ""}`
     case "process-detail":
     case "process-instances":
+      return `${view.section}:${view.processDefinitionKey}`
     case "instance-detail":
-      return "overview"
-    case "process-incidents":
+      return `instance-detail:${view.processInstanceId}`
     case "incident-detail":
-      return "incidents"
-    // The cluster drill comes from the overview's failure clusters and its
-    // breadcrumb anchors there — keep the sidebar consistent with that.
-    case "cluster-detail":
-      return "overview"
+      return `incident-detail:${view.incidentId}`
     default:
       return view.section
   }
 }
 
-interface Crumb {
-  label: string
-  view?: CockpitView
+function cockpitReducer(state: CockpitState, action: CockpitAction): CockpitState {
+  switch (action.type) {
+    case "enter-engine":
+    case "switch-engine":
+      // Same transition from two origins (chooser/fleet vs. in-app switcher):
+      // an engine change always restarts at the overview — drill state carried
+      // over would resolve ids that belong to another engine.
+      return { scope: { kind: "engine", engineId: action.id }, stack: ROOT_STACK }
+    case "to-fleet":
+      return { scope: { kind: "fleet" }, stack: ROOT_STACK }
+    case "to-landing":
+      return { scope: { kind: "landing" }, stack: ROOT_STACK }
+    case "pop": {
+      const to = Math.min(action.to ?? state.stack.length - 2, state.stack.length - 1)
+      return { ...state, stack: state.stack.slice(0, Math.max(to, 0) + 1) }
+    }
+    default: {
+      const view = intentToView(action)
+      // Top sections are roots, not drills — selecting one resets the trail.
+      if (isTopSection(view.section)) return { ...state, stack: [view] }
+      const key = viewKey(view)
+      const existing = state.stack.findIndex((v) => viewKey(v) === key)
+      if (existing >= 0) {
+        // Pop back to the existing entry, but adopt the incoming view's
+        // params — same identity, possibly a different focus (e.g.
+        // detail → incidents-focus on the same definition).
+        const stack = state.stack.slice(0, existing + 1)
+        stack[existing] = view
+        return { ...state, stack }
+      }
+      return { ...state, stack: [...state.stack, view] }
+    }
+  }
 }
 
-function breadcrumbOf(view: CockpitView, locale: string): Crumb[] {
+function crumbLabel(view: CockpitView, locale: string): string {
   const tr = (key: string, params?: Record<string, unknown>) => translator(locale, key, params)
   switch (view.section) {
+    case "overview":
+      return tr("cockpit.crumb.overview")
+    case "incidents":
+      return tr("cockpit.crumb.incidents")
+    case "settings":
+      return tr("cockpit.section.settings")
     case "process-detail":
-      return [
-        { label: tr("cockpit.crumb.overview"), view: { section: "overview" } },
-        { label: view.processDefinitionKey },
-      ]
+      return view.processDefinitionKey
     case "process-instances":
-      return [
-        { label: tr("cockpit.crumb.overview"), view: { section: "overview" } },
-        {
-          label: view.processDefinitionKey,
-          view: { section: "process-detail", processDefinitionKey: view.processDefinitionKey },
-        },
-        { label: tr("cockpit.crumb.instances") },
-      ]
-    case "process-incidents":
-      return [
-        { label: tr("cockpit.crumb.incidents"), view: { section: "incidents" } },
-        { label: view.processDefinitionKey },
-      ]
-    case "incident-detail":
-      return [
-        { label: tr("cockpit.crumb.incidents"), view: { section: "incidents" } },
-        { label: tr("cockpit.crumb.incident", { id: view.incidentId.slice(0, 8) }) },
-      ]
-    case "cluster-detail":
-      return [
-        { label: tr("cockpit.crumb.overview"), view: { section: "overview" } },
-        { label: tr("cockpit.crumb.cluster", { activity: view.activityId }) },
-      ]
+      return tr("cockpit.crumb.instances")
     case "instance-detail":
-      return [
-        { label: tr("cockpit.crumb.overview"), view: { section: "overview" } },
-        { label: tr("cockpit.crumb.instance", { id: view.processInstanceId.slice(0, 8) }) },
-      ]
-    default:
-      return []
+      return tr("cockpit.crumb.instance", { id: truncate(view.processInstanceId, 8) })
+    case "incident-detail":
+      return tr("cockpit.crumb.incident", { id: truncate(view.incidentId, 8) })
+    case "cluster-detail":
+      return tr("cockpit.crumb.cluster", { activity: view.activityId })
   }
 }
 
 export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const { requestDisplayMode, callTool } = useWidget()
+
+  // The query transport (AppQueryProvider). Absent when the host wires no
+  // callTool — then every useToolQuery stays disabled (pending forever), so the
+  // loading state below must not wait on the engines query.
+  const queryCallTool = useCallTool()
 
   // Authoritative engine source: the stable `camunda7_engine` tool's "list"
   // action (needs no selection itself). Decoupled from the open_cockpit
@@ -133,12 +218,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   // applied document-wide by the ProfileGate too, so the cockpit stays unaware.
   const locale = useLocale()
 
-  const [picked, setPicked] = useState<string | null>(null)
-  const [view, setView] = useState<CockpitView>({ section: "overview" })
-  // Start on the chooser so Open Cockpit always offers both ways in (operate an
-  // engine vs. cross-engine analyses). A single configured engine skips it (the
-  // chooser only renders when engines.length > 1).
-  const [mode, setMode] = useState<CockpitMode>("landing")
+  const [{ scope, stack }, dispatch] = useReducer(cockpitReducer, INITIAL_STATE)
 
   // App-like surface: ask the host for fullscreen once on mount.
   useEffect(() => {
@@ -147,74 +227,46 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     })
   }, [requestDisplayMode])
 
-  // Resolution order: explicit user pick → sticky session selection →
-  // profile default engine → open_cockpit hint → the only engine (if just one).
-  const engineId =
-    picked ??
-    enginesQuery.data?.currentSelection ??
-    enginesQuery.data?.profileDefaultEngineId ??
-    data?.engineId ??
-    (engines.length === 1 ? engines[0].id : null)
-
-  // Deterministic, client-side navigation — every view is hosted in-app and
-  // routed in-place via the router below (no LLM round-trip, no chat handoff).
-  const navigate: OnNavigate = (intent: NavIntent) => {
-    switch (intent.type) {
-      case "process-list":
-        setView({ section: "overview" })
-        return
-      case "incidents":
-        setView({ section: "incidents" })
-        return
-      case "cluster-detail":
-        setView({
-          section: "cluster-detail",
-          activityId: intent.activityId,
-          incidentType: intent.incidentType,
-          messageSignature: intent.messageSignature,
-        })
-        return
-      case "process-detail":
-        setView({ section: "process-detail", processDefinitionKey: intent.processDefinitionKey })
-        return
-      case "process-instances":
-        setView({ section: "process-instances", processDefinitionKey: intent.processDefinitionKey })
-        return
-      case "process-incidents":
-        setView({ section: "process-incidents", processDefinitionKey: intent.processDefinitionKey })
-        return
-      case "instance-detail":
-        setView({ section: "instance-detail", processInstanceId: intent.processInstanceId })
-        return
-      case "incident-detail":
-        setView({ section: "incident-detail", incidentId: intent.incidentId })
-        return
+  // A single configured engine skips the landing chooser — one-shot auto-enter
+  // once the engine list resolves.
+  const soleEngineId = engines.length === 1 ? engines[0].id : null
+  useEffect(() => {
+    if (scope.kind === "landing" && soleEngineId) {
+      dispatch({ type: "enter-engine", id: soleEngineId })
     }
-  }
+  }, [scope.kind, soleEngineId])
 
   // Pick (or switch) the active engine. The cockpit threads `engine` into its
   // own views explicitly, but we ALSO make the selection sticky for the session
   // so delegated/agentic paths (incidents, "ask AI" actions) use the same engine.
-  function chooseEngine(id: string) {
-    setPicked(id)
-    setView({ section: "overview" })
+  function stickySelect(id: string) {
     void callTool("camunda7_engine", { action: "select", engineId: id }).catch(() => {
       /* override on each call still works even if sticky selection fails */
     })
   }
-
-  // Enter a single engine's cockpit from the landing chooser or the fleet view.
   function enterEngine(id: string) {
-    chooseEngine(id)
-    setMode("engine")
+    dispatch({ type: "enter-engine", id })
+    stickySelect(id)
+  }
+  function switchEngine(id: string) {
+    dispatch({ type: "switch-engine", id })
+    stickySelect(id)
   }
 
+  // Deterministic, client-side navigation — every view is hosted in-app and
+  // routed in-place by the reducer (no LLM round-trip, no chat handoff). Nav
+  // intents from child widgets ARE reducer actions.
+  const navigate: OnNavigate = dispatch
+
   // ── Loading / error / empty ───────────────────────────────────────────────
-  if (enginesQuery.isError || engines.length === 0) {
+  // Only a truly empty engine list blocks the cockpit: with bootstrap engines
+  // from open_cockpit we proceed even if the engines query failed, and without
+  // a query transport the state must resolve instead of loading forever.
+  if (engines.length === 0) {
     return (
       <WidgetShell>
         <ViewDataState
-          loading={enginesQuery.data === undefined}
+          loading={!!queryCallTool && !enginesQuery.isError && enginesQuery.data === undefined}
           error={enginesQuery.error}
           loadingText={translator(locale, "cockpit.loading.engines")}
           emptyText={translator(locale, "cockpit.empty.engines")}
@@ -224,12 +276,20 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     )
   }
 
-  // The landing chooser: with more than one engine, Open Cockpit offers two ways
-  // in — operate a single engine, or run cross-engine analyses. A single engine
-  // skips it. Shown whenever no engine scope is resolved yet.
-  const needsChooser =
-    engines.length > 1 && (mode === "landing" || (mode === "engine" && !engineId))
-  if (needsChooser) {
+  if (scope.kind === "landing") {
+    // A single engine auto-enters via the effect above — bridge the one render
+    // before it lands.
+    if (engines.length === 1) {
+      return (
+        <WidgetShell>
+          <div className="text-muted-foreground p-6 text-sm">
+            {translator(locale, "cockpit.loading.engines")}
+          </div>
+        </WidgetShell>
+      )
+    }
+    // The landing chooser: with more than one engine, Open Cockpit offers two
+    // ways in — operate a single engine, or run cross-engine analyses.
     return (
       <WidgetShell>
         <div className="mx-auto flex max-w-2xl flex-col gap-6 py-10">
@@ -269,7 +329,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
             </div>
             <button
               type="button"
-              onClick={() => setMode("fleet")}
+              onClick={() => dispatch({ type: "to-fleet" })}
               className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-5 text-left outline-none focus-visible:ring-2"
             >
               <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
@@ -294,7 +354,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   }
 
   // ── Cross-engine (fleet) mode ─────────────────────────────────────────────
-  if (mode === "fleet") {
+  if (scope.kind === "fleet") {
     return (
       <WidgetShell>
         <ModelContext
@@ -306,12 +366,12 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         />
         {engines.length > 1 && (
           <nav
-            aria-label="Breadcrumb"
+            aria-label={translator(locale, "cockpit.aria.breadcrumb")}
             className="text-muted-foreground mb-4 flex items-center gap-1.5 text-sm"
           >
             <button
               type="button"
-              onClick={() => setMode("landing")}
+              onClick={() => dispatch({ type: "to-landing" })}
               className="hover:text-foreground focus-visible:ring-ring rounded outline-none focus-visible:ring-2"
             >
               {translator(locale, "cockpit.crumb.cockpit")}
@@ -327,53 +387,52 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     )
   }
 
-  // Safety net: every multi-engine no-scope path is handled by the chooser above,
-  // and a single engine resolves; this only guards the brief load window.
-  if (!engineId) {
-    return (
-      <WidgetShell>
-        <div className="text-muted-foreground p-6 text-sm">
-          {translator(locale, "cockpit.loading.engines")}
-        </div>
-      </WidgetShell>
-    )
-  }
-
-  const activeSection = topSectionOf(view)
-  const crumbs = breadcrumbOf(view, locale)
+  const engineId = scope.engineId
+  // The reducer never empties the stack (pop clamps to one element).
+  const current = stack[stack.length - 1]
+  // The sidebar highlights the ROOT of the trail — the section the user drilled
+  // in from stays active (every stack starts at a top section).
+  const rootSection = stack[0].section
+  const activeSection: TopSection =
+    rootSection === "incidents" || rootSection === "settings" ? rootSection : "overview"
 
   // The selected entity of the active view, surfaced in the app-level model
   // context so drill-down views whose widgets carry no leaf <ModelContext>
   // still resolve "this incident/process" follow-up questions correctly.
   const selectedEntity =
-    "incidentId" in view
-      ? ` Selected incident: ${view.incidentId}.`
-      : "processInstanceId" in view
-        ? ` Selected process instance: ${view.processInstanceId}.`
-        : "processDefinitionKey" in view
-          ? ` Selected process definition: ${view.processDefinitionKey}.`
+    "incidentId" in current
+      ? ` Selected incident: ${current.incidentId}.`
+      : "processInstanceId" in current
+        ? ` Selected process instance: ${current.processInstanceId}.`
+        : "processDefinitionKey" in current
+          ? ` Selected process definition: ${current.processDefinitionKey}.`
           : ""
 
   // Flatten the current route + resolved engine into the params bag every view
   // layout reads from. Each view picks only the ids it needs (see views.ts).
   const viewParams: ViewParams = {
     engine: engineId,
-    processDefinitionKey: "processDefinitionKey" in view ? view.processDefinitionKey : undefined,
-    processInstanceId: "processInstanceId" in view ? view.processInstanceId : undefined,
-    incidentId: "incidentId" in view ? view.incidentId : undefined,
-    activityId: "activityId" in view ? view.activityId : undefined,
-    incidentType: "incidentType" in view ? view.incidentType : undefined,
-    messageSignature: "messageSignature" in view ? view.messageSignature : undefined,
+    processDefinitionKey:
+      "processDefinitionKey" in current ? current.processDefinitionKey : undefined,
+    processInstanceId: "processInstanceId" in current ? current.processInstanceId : undefined,
+    incidentId: "incidentId" in current ? current.incidentId : undefined,
+    activityId: "activityId" in current ? current.activityId : undefined,
+    incidentType: "incidentType" in current ? current.incidentType : undefined,
+    messageSignature: "messageSignature" in current ? current.messageSignature : undefined,
+    focus: "focus" in current ? current.focus : undefined,
   }
 
   return (
     <WidgetShell>
       <ModelContext
-        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". Current view: ${view.section}.${selectedEntity} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
+        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". Current view: ${current.section}.${selectedEntity} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
       />
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">
-          <nav aria-label="Cockpit sections" className="flex flex-row flex-wrap gap-1 md:flex-col">
+          <nav
+            aria-label={translator(locale, "cockpit.aria.sections")}
+            className="flex flex-row flex-wrap gap-1 md:flex-col"
+          >
             {SECTIONS.map((s) => {
               const isActive = activeSection === s.id
               return (
@@ -381,7 +440,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                   key={s.id}
                   type="button"
                   aria-current={isActive ? "page" : undefined}
-                  onClick={() => setView({ section: s.id })}
+                  onClick={() => dispatch(s.intent)}
                   className={`focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2 ${
                     isActive
                       ? "bg-m-blue-soft text-m-blue font-semibold"
@@ -399,7 +458,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
             <div className="border-border mt-1 flex flex-col gap-2 border-t pt-3">
               <button
                 type="button"
-                onClick={() => setMode("fleet")}
+                onClick={() => dispatch({ type: "to-fleet" })}
                 className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2"
               >
                 <span aria-hidden="true">⤧</span>
@@ -408,9 +467,9 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               <label className="text-muted-foreground flex flex-col gap-1 px-3 text-[11px] font-medium">
                 {translator(locale, "cockpit.nav.engine")}
                 <select
-                  aria-label="Active engine"
+                  aria-label={translator(locale, "cockpit.aria.activeEngine")}
                   value={engineId}
-                  onChange={(e) => chooseEngine(e.target.value)}
+                  onChange={(e) => switchEngine(e.target.value)}
                   className="border-border bg-background text-foreground h-8 rounded-md border px-2 text-xs"
                 >
                   {engines.map((e) => (
@@ -425,27 +484,33 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         </aside>
 
         <main className="min-w-0 flex-1">
-          {crumbs.length > 0 && (
+          {/* The breadcrumb IS the stack — every crumb pops back to the view it
+              names, so drilling instance → back → next instance never re-drills
+              from the top. Roots (stack of one) render no trail. */}
+          {stack.length > 1 && (
             <nav
-              aria-label="Breadcrumb"
+              aria-label={translator(locale, "cockpit.aria.breadcrumb")}
               className="text-muted-foreground mb-4 flex flex-wrap items-center gap-1.5 text-sm"
             >
-              {crumbs.map((c, i) => (
-                <span key={i} className="inline-flex items-center gap-1.5">
-                  {i > 0 && <span aria-hidden="true">›</span>}
-                  {c.view ? (
-                    <button
-                      type="button"
-                      onClick={() => c.view && setView(c.view)}
-                      className="hover:text-foreground focus-visible:ring-ring rounded outline-none focus-visible:ring-2"
-                    >
-                      {c.label}
-                    </button>
-                  ) : (
-                    <span className="text-foreground font-medium">{c.label}</span>
-                  )}
-                </span>
-              ))}
+              {stack.map((v, i) => {
+                const label = crumbLabel(v, locale)
+                return (
+                  <span key={i} className="inline-flex items-center gap-1.5">
+                    {i > 0 && <span aria-hidden="true">›</span>}
+                    {i < stack.length - 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => dispatch({ type: "pop", to: i })}
+                        className="hover:text-foreground focus-visible:ring-ring rounded outline-none focus-visible:ring-2"
+                      >
+                        {label}
+                      </button>
+                    ) : (
+                      <span className="text-foreground font-medium">{label}</span>
+                    )}
+                  </span>
+                )
+              })}
             </nav>
           )}
 
@@ -455,7 +520,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               instead of a chat follow-up. */}
           <NavProvider value={navigate}>
             <WidgetRenderer
-              layout={cockpitViews[view.section](viewParams)}
+              layout={cockpitViews[current.section](viewParams)}
               keys={{}}
               errors={[]}
               widgets={camunda7BaseWidgets}

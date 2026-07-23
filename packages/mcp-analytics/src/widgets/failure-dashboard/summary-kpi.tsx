@@ -1,7 +1,13 @@
-import { Card, CardContent, Skeleton } from "@miragon/mcp-toolkit-ui"
-import { AskAiButton, KpiGrid, QueryFallback, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import {
+  AskAiButton,
+  KpiGrid,
+  KpiGridSkeleton,
+  WidgetHeader,
+  WidgetShell,
+} from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
 import { useFailureDashboardSelfFetch } from "./lib.js"
+import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
@@ -29,66 +35,50 @@ function buildAnalyzeFailuresPrompt(data: FailureDashboardData): string {
 
 export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboardData | null }) {
   const fallbackQuery = useFailureDashboardSelfFetch(initialData)
-  const data = initialData ?? fallbackQuery.data ?? null
   const t = useT()
 
-  if (!data) {
-    return (
-      <WidgetShell>
-        <QueryFallback
-          isError={fallbackQuery.isError}
-          error={fallbackQuery.error}
-          errorTitle={t("aCommon.loadError")}
-          skeleton={
-            <div
-              className="grid grid-cols-3 gap-4"
-              aria-label={t("aFailureSummary.loadingAriaLabel")}
-              aria-busy="true"
-            >
-              {[0, 1, 2].map((i) => (
-                <Card key={i} className="gap-0 py-0 shadow-none">
-                  <CardContent className="space-y-2 p-4">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-7 w-16" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          }
-        />
-      </WidgetShell>
-    )
-  }
   return (
-    <WidgetShell>
-      <div className="mb-4 flex items-center justify-end">
-        <AskAiButton variant="primary" prompt={buildAnalyzeFailuresPrompt(data)} />
-      </div>
-      <KpiGrid
-        variant="soft"
-        ariaLabel={t("aFailureSummary.summaryAriaLabel")}
-        cells={[
-          {
-            label: t("aFailureSummary.totalIncidents"),
-            value: data.totalIncidents,
-            tone: "critical",
-          },
-          {
-            label: t("aFailureSummary.uniqueErrorPatterns"),
-            value: data.uniqueErrorPatterns,
-            tone: "warning",
-          },
-          {
-            label: t("aFailureSummary.mostAffected"),
-            value: (
-              <span className="block truncate font-mono text-lg">
-                {data.mostAffectedProcess ?? "—"}
-              </span>
-            ),
-            tone: "info",
-          },
-        ]}
-      />
-    </WidgetShell>
+    <QueryGate
+      initialData={initialData}
+      query={fallbackQuery}
+      header={<WidgetHeader icon="⚠" iconTone="critical" title={t("aFailureSummary.title")} />}
+      skeleton={<KpiGridSkeleton cells={3} variant="soft" />}
+    >
+      {(data) => (
+        <WidgetShell>
+          <WidgetHeader
+            icon="⚠"
+            iconTone="critical"
+            title={t("aFailureSummary.title")}
+            actions={<AskAiButton variant="primary" prompt={buildAnalyzeFailuresPrompt(data)} />}
+          />
+          <KpiGrid
+            variant="soft"
+            ariaLabel={t("aFailureSummary.summaryAriaLabel")}
+            cells={[
+              {
+                label: t("aFailureSummary.totalIncidents"),
+                value: data.totalIncidents,
+                tone: "critical",
+              },
+              {
+                label: t("aFailureSummary.uniqueErrorPatterns"),
+                value: data.uniqueErrorPatterns,
+                tone: "warning",
+              },
+              {
+                label: t("aFailureSummary.mostAffected"),
+                value: (
+                  <span className="block truncate font-mono text-lg">
+                    {data.mostAffectedProcess ?? "—"}
+                  </span>
+                ),
+                tone: "info",
+              },
+            ]}
+          />
+        </WidgetShell>
+      )}
+    </QueryGate>
   )
 }

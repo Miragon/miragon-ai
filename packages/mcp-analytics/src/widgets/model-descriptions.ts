@@ -1,4 +1,8 @@
-import type { AnalyticsDashboardData, FailureDashboardData } from "@miragon-ai/client-analytics"
+import type {
+  AnalyticsDashboardData,
+  CompareKpiDelta,
+  FailureDashboardData,
+} from "@miragon-ai/client-analytics"
 import { formatDuration, truncate, type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
 import type { DescribeForModel } from "@miragon-ai/widget-shell/ui"
 import type { ClusterCompareData } from "./cluster-compare.js"
@@ -136,17 +140,12 @@ export const describeFailureRates: DescribeForModel<FailureDashboardData> = (dat
   )
 }
 
-/** The delta shape shared by the three compare queries. */
-interface CompareDelta {
-  instance_count_delta_pct: number | null
-  failure_rate_delta_pp: number | null
-  incident_rate_delta_pp: number | null
-  avg_duration_delta_pct: number | null
-  p95_duration_delta_pct: number | null
-}
-
-/** Names the single largest delta on screen — the number a user asks about first. */
-function mostNotableDelta(delta: CompareDelta): string {
+/**
+ * Names the single largest delta on screen — the number a user asks about
+ * first. The candidates list is hand-enumerated: a new `CompareKpiDelta` field
+ * must be added here too — the shared import alone does not auto-heal it.
+ */
+function mostNotableDelta(delta: CompareKpiDelta): string {
   const candidates = [
     { label: "failure rate", value: delta.failure_rate_delta_pp, unit: "pp" },
     { label: "incident rate", value: delta.incident_rate_delta_pp, unit: "pp" },

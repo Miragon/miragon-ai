@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { cn } from "./cn.js"
 import { TONE_SOFT, type ToneVariant } from "./tone-utils.js"
 
 export type { ToneVariant }
@@ -22,6 +23,7 @@ export function WidgetHeader({
   sub,
   actions,
   size = "default",
+  className,
 }: {
   icon?: ReactNode
   iconTone?: ToneVariant
@@ -33,13 +35,14 @@ export function WidgetHeader({
   sub?: ReactNode
   actions?: ReactNode
   size?: "default" | "detail"
+  className?: string
 }) {
   const h1Class =
     size === "detail"
       ? "text-foreground mb-1.5 text-2xl font-bold tracking-tight"
       : "text-foreground mb-1.5 text-3xl font-bold leading-tight tracking-tight"
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4">
+    <header className={cn("flex flex-wrap items-start justify-between gap-4", className)}>
       <div className="min-w-0">
         {icon && (
           <div

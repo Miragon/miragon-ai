@@ -82,7 +82,7 @@ describe("EngineHealthVerdict (fixture render)", () => {
     // Verdict header (title + deterministic headline) and the top-level AI handoff.
     expect(screen.getByText("Engine Overview")).toBeTruthy()
     expect(screen.getByText("Degraded — 51 open incidents across 3 activities")).toBeTruthy()
-    expect(screen.getByText("What should I do?")).toBeTruthy()
+    expect(screen.getByText("Analyze")).toBeTruthy()
 
     // KPI row.
     expect(screen.getByText("Running instances")).toBeTruthy()
@@ -99,7 +99,7 @@ describe("EngineHealthVerdict (fixture render)", () => {
 
     // Each cluster carries both launchpads: a deterministic drill + the guarded
     // remediation handoff to the agent.
-    expect(screen.getAllByText("View")).toHaveLength(2)
+    expect(screen.getAllByText("Open")).toHaveLength(2)
     expect(screen.getAllByText("Fix")).toHaveLength(2)
   })
 

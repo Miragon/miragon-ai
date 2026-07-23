@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ModelContext } from "mcp-use/react"
 import {
   Card,
@@ -17,11 +17,12 @@ import {
 import type { JobPanelData } from "../view-models.js"
 import {
   AskAiButton,
+  KpiGrid,
   ListFooter,
+  LogText,
   ViewDataState,
   WidgetShell,
   formatTimestamp,
-  truncate,
   usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
@@ -41,19 +42,38 @@ export function JobPanelWidget({
   failedOnly?: boolean
 }) {
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
+  const [retryError, setRetryError] = useState<{ jobId: string; message: string } | null>(null)
+  // null = derive from the first page size; a boolean pins the user's choice so
+  // loadMore crossing the threshold can't collapse the list under them.
+  const [jobsOpen, setJobsOpen] = useState<boolean | null>(null)
   const retryMutation = useToolMutation("camunda7_set_job_retries")
   const paged = usePagedViewData<JobPanelData["jobs"][number], JobPanelData>({
     initialData,
     key: ["camunda7:jobs", engine ?? null, failedOnly ?? null],
     tool: CAMUNDA7_JOBS_DATA,
     args: { engine, failedOnly },
-    pageSize: 50,
-    ready: !!engine,
+    // Always ready: the feed's `engine` is optional — resolveEngine falls back
+    // to the sticky session selection or the single configured engine (see the
+    // engine-health view for the same rule). Gating on `!!engine` would leave
+    // a composed render without props stuck on "No data available" forever.
+    ready: true,
     selectItems: (d) => d.jobs,
     selectTotal: (d) => d.totalCount,
+    pageSize: 50,
   })
   const t = useT()
   const data = paged.firstPage
+  // The optimistic retried-shadows only bridge the gap until the feed
+  // refetches — fresh server data (new page-0 identity) must win again.
+  useEffect(() => {
+    setRetriedIds(new Set())
+    setRetryError(null)
+  }, [data])
+  // Pin the disclosure to the FIRST page's size before any loadMore can grow
+  // `jobs.length` past the threshold (user toggles win from then on).
+  useEffect(() => {
+    if (data) setJobsOpen((prev) => prev ?? data.jobs.length <= 20)
+  }, [data])
 
   if (!data) {
     return (
@@ -63,7 +83,6 @@ export function JobPanelWidget({
           error={paged.error}
           loadingText={t("jobPanel.loading")}
           emptyText={t("jobPanel.noData")}
-          className="text-muted-foreground text-sm"
         />
       </WidgetShell>
     )
@@ -78,13 +97,19 @@ export function JobPanelWidget({
   const engineId = engine ?? data.engineId
 
   function handleRetry(jobId: string) {
+    setRetryError(null)
     retryMutation.mutate(
-      { jobId, retries: 1 },
+      { jobId, retries: 1, engine: engineId },
       {
         onSuccess: () => {
           setRetriedIds((prev) => new Set(prev).add(jobId))
           refreshCockpitData()
         },
+        onError: (error) =>
+          setRetryError({
+            jobId,
+            message: error instanceof Error ? error.message : String(error),
+          }),
       },
     )
   }
@@ -118,26 +143,22 @@ export function JobPanelWidget({
           />
         )}
       </div>
-      <div
-        className="grid grid-cols-2 gap-3 sm:grid-cols-3"
-        aria-label={t("jobPanel.summaryLabel")}
-      >
-        <div className="bg-muted rounded-lg p-4">
-          <p className="text-muted-foreground text-sm">{t("jobPanel.totalJobs")}</p>
-          <p className="text-2xl font-bold">{totalCount}</p>
-        </div>
-        <div className="bg-critical-soft rounded-lg p-4">
-          <p className="text-muted-foreground text-sm">{t("jobPanel.stuck")}</p>
-          <p className="text-critical text-2xl font-bold">{failedCount}</p>
-        </div>
-        <div className="bg-m-green-soft rounded-lg p-4">
-          <p className="text-muted-foreground text-sm">{t("jobPanel.healthy")}</p>
-          <p className="text-m-green text-2xl font-bold">{totalCount - failedCount}</p>
-        </div>
-      </div>
+      <KpiGrid
+        variant="soft"
+        className="grid-cols-2 gap-3 sm:grid-cols-3"
+        ariaLabel={t("jobPanel.summaryLabel")}
+        cells={[
+          { label: t("jobPanel.totalJobs"), value: totalCount },
+          { label: t("jobPanel.stuck"), value: failedCount, tone: "critical" },
+          { label: t("jobPanel.healthy"), value: totalCount - failedCount, tone: "success" },
+        ]}
+      />
 
       {jobs.length > 0 && (
-        <details open={jobs.length <= 20}>
+        <details
+          open={jobsOpen ?? jobs.length <= 20}
+          onToggle={(e) => setJobsOpen(e.currentTarget.open)}
+        >
           <summary className="text-muted-foreground mb-2 cursor-pointer text-sm font-medium">
             {t("jobPanel.jobsSummary", { count: jobs.length })}
           </summary>
@@ -184,20 +205,9 @@ export function JobPanelWidget({
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {job.exceptionMessage ? (
-                            <details>
-                              <summary className="text-destructive cursor-pointer text-sm">
-                                {truncate(job.exceptionMessage, 50)}
-                              </summary>
-                              <pre className="bg-muted mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded p-2 text-xs">
-                                {job.exceptionMessage}
-                              </pre>
-                            </details>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">{"\u2014"}</span>
-                          )}
+                          <LogText text={job.exceptionMessage} />
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
+                        <TableCell className="text-muted-foreground font-mono text-xs">
                           {formatTimestamp(job.createTime)}
                         </TableCell>
                         <TableCell>
@@ -225,10 +235,11 @@ export function JobPanelWidget({
                               </Button>
                             </div>
                           )}
-                          {retried && (
-                            <span className="text-muted-foreground text-xs">
-                              {t("jobPanel.retried")}
-                            </span>
+                          {retried && <Badge variant="secondary">{t("jobPanel.retried")}</Badge>}
+                          {retryError?.jobId === job.id && (
+                            <p role="alert" className="text-critical mt-1 text-xs">
+                              {t("jobPanel.retryError", { message: retryError.message })}
+                            </p>
                           )}
                         </TableCell>
                       </TableRow>

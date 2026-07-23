@@ -8,19 +8,19 @@ import type {
 
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
+import { GroupSummaryRow, IncidentGroupIcon } from "../group-summary-row.js"
 import { useViewData } from "../use-view-data.js"
 import { useT } from "../../messages/use-t.js"
 
 import {
   AskAiButton,
-  CountPill,
   DrillButton,
   FilterBar,
   GroupCard,
   OpenInCockpitLink,
   SectionHeading,
-  TONE_DOT,
   TableEmptyState,
+  VersionChip,
   ViewDataState,
   WidgetShell,
   formatTimestamp,
@@ -30,12 +30,17 @@ import {
 
 const TYPE_ALL = "all"
 const TYPE_LAST24H = "last24h"
+
+type IncidentChip = typeof TYPE_ALL | typeof TYPE_LAST24H
+
 /** Threshold above which a process is rendered with a "critical" tone in the
  *  process group cards. Computed from the unfiltered incident count so the
  *  visual severity stays stable when the user toggles a filter chip. */
 const CRITICAL_INCIDENT_THRESHOLD = 50
 
-function severityTone(unfilteredIncidentCount: number): ToneVariant {
+// Named for its semantics (sheer incident volume) — distinct from the
+// failed-jobs/incidents/instances severity ladder in cockpit-dashboard/lib.ts.
+function incidentVolumeTone(unfilteredIncidentCount: number): ToneVariant {
   return unfilteredIncidentCount >= CRITICAL_INCIDENT_THRESHOLD ? "critical" : "warning"
 }
 
@@ -59,24 +64,14 @@ function ProcessSummary({
   const cockpitUrl = process.cockpitUrl
 
   return (
-    <div
-      className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto_auto] items-center gap-4 px-4 py-3 ${
-        expanded ? "border-border border-b" : ""
-      }`}
-    >
-      <div className="min-w-0">
-        <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
-          <span className={`size-1.5 rounded-full ${TONE_DOT[tone]}`} />
-          <span className="truncate">
-            {process.processDefinitionName ?? process.processDefinitionKey}
-          </span>
-          {process.version !== null && (
-            <code className="text-muted-foreground font-mono text-xs font-normal">
-              v{process.version}
-            </code>
-          )}
-        </div>
-        <div className="text-muted-foreground font-mono text-xs">
+    <GroupSummaryRow
+      tone={tone}
+      title={process.processDefinitionName ?? process.processDefinitionKey}
+      titleSuffix={
+        process.version !== null ? <VersionChip version={process.version} className="ml-0" /> : null
+      }
+      subline={
+        <>
           {process.affectedActivityCount}{" "}
           {process.affectedActivityCount === 1
             ? t("incidentsList.activitySingular")
@@ -88,73 +83,61 @@ function ProcessSummary({
               })
             : t("incidentsList.instancesUnknown")}{" "}
           · {t("incidentsList.lastSeen", { time: formatTimestamp(process.latestIncident) })}
-        </div>
-      </div>
-      <div className="text-muted-foreground text-right text-xs tabular-nums">
-        <div className="text-foreground font-semibold">
-          {process.affectedActivityCount}
-          {process.totalActivityCount !== null && (
-            <span className="text-muted-foreground font-normal">
-              {" "}
-              /{process.totalActivityCount}
-            </span>
-          )}
-        </div>
-        <div>{t("incidentsList.activitiesLabel")}</div>
-      </div>
-      <div className="text-muted-foreground text-right text-xs tabular-nums">
-        <div className="text-foreground font-semibold">+{process.last24hCount}</div>
-        <div>{t("incidentsList.last24hLabel")}</div>
-      </div>
-      <CountPill tone={tone}>{process.incidentCount}</CountPill>
-      <AskAiButton
-        variant="subtle"
-        label={t("incidentsList.analyze")}
-        prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, version v${process.version ?? "n/a"}) on engine ${engineId}. ${process.affectedActivityCount} activity/activities are affected, ${process.last24hCount} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances ?? "unknown"} running instances. Use camunda7_list_incidents (filtered to processDefinitionKey ${process.processDefinitionKey}) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
-      />
-      <DrillButton
-        onDrill={onOpenDetail}
-        ariaLabel={t("incidentsList.openDetailAria", {
-          name: process.processDefinitionName ?? process.processDefinitionKey,
-        })}
-      >
-        {t("incidentsList.openDetail")}
-      </DrillButton>
-      {cockpitUrl ? <OpenInCockpitLink url={cockpitUrl} /> : <span />}
-      <span
-        aria-hidden="true"
-        className={`text-muted-foreground inline-block w-3 text-center text-xs transition-transform ${
-          expanded ? "rotate-90" : ""
-        }`}
-      >
-        ▶
-      </span>
-    </div>
+        </>
+      }
+      stats={[
+        {
+          value: (
+            <>
+              {process.affectedActivityCount}
+              {process.totalActivityCount !== null && (
+                <span className="text-muted-foreground font-normal">
+                  {" "}
+                  /{process.totalActivityCount}
+                </span>
+              )}
+            </>
+          ),
+          label: t("incidentsList.activitiesLabel"),
+        },
+        { value: `+${process.last24hCount}`, label: t("incidentsList.last24hLabel") },
+      ]}
+      count={process.incidentCount}
+      countTone={tone}
+      actions={
+        <>
+          <AskAiButton
+            variant="subtle"
+            label={t("incidentsList.analyze")}
+            prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, version v${process.version ?? "n/a"}) on engine ${engineId}. ${process.affectedActivityCount} activity/activities are affected, ${process.last24hCount} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances ?? "unknown"} running instances. Use camunda7_list_incidents (filtered to processDefinitionKey ${process.processDefinitionKey}) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
+          />
+          <DrillButton
+            onDrill={onOpenDetail}
+            ariaLabel={t("incidentsList.openDetailAria", {
+              name: process.processDefinitionName ?? process.processDefinitionKey,
+            })}
+          >
+            {t("incidentsList.open")}
+          </DrillButton>
+          {cockpitUrl ? <OpenInCockpitLink url={cockpitUrl} /> : <span />}
+        </>
+      }
+      expanded={expanded}
+    />
   )
 }
 
 function ActivityRow({ activity }: { activity: IncidentsDashboardActivity }) {
   const t = useT()
   return (
-    <div className="border-border text-foreground grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 border-b px-4 py-3 pl-7 last:border-b-0">
-      <div className="bg-critical-soft text-critical grid size-[18px] place-items-center rounded-full text-[10px] font-bold">
-        !
-      </div>
-      <div className="min-w-0">
-        <div className="text-foreground truncate text-sm font-semibold">
-          {activity.activityName ?? activity.activityId}
-        </div>
-        <div className="text-muted-foreground truncate font-mono text-xs">
-          {activity.representativeMessage ?? activity.activityId}
-        </div>
-      </div>
-      <div className="text-muted-foreground text-right font-mono text-[11px]">
-        {t("incidentsList.firstSeen")}
-        <br />
-        {formatTimestamp(activity.firstSeen)}
-      </div>
-      <CountPill tone="critical">{activity.incidentCount}</CountPill>
-    </div>
+    <GroupSummaryRow
+      icon={<IncidentGroupIcon />}
+      title={activity.activityName ?? activity.activityId}
+      subline={activity.representativeMessage ?? activity.activityId}
+      stats={[{ value: formatTimestamp(activity.firstSeen), label: t("incidentsList.firstSeen") }]}
+      count={activity.incidentCount}
+      className="border-border border-b pl-7 last:border-b-0"
+    />
   )
 }
 
@@ -194,7 +177,7 @@ export function IncidentProcessListView({
   )
 
   const [search, setSearch] = useState("")
-  const [activeChip, setActiveChip] = useState<string>(TYPE_ALL)
+  const [activeChip, setActiveChip] = useState<IncidentChip>(TYPE_ALL)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   const filteredProcesses = useMemo<DisplayProcess[]>(() => {
@@ -232,7 +215,7 @@ export function IncidentProcessListView({
           activities,
           incidentCount,
           affectedActivityCount: activities.length,
-          tone: severityTone(p.incidentCount),
+          tone: incidentVolumeTone(p.incidentCount),
         }
       })
       .filter((p): p is DisplayProcess => p !== null)
@@ -284,7 +267,7 @@ export function IncidentProcessListView({
         onSearchChange={setSearch}
         searchPlaceholder={t("incidentsList.searchPlaceholder")}
         chips={chips}
-        onChipToggle={(id) => setActiveChip(id === activeChip ? TYPE_ALL : id)}
+        onChipToggle={(id) => setActiveChip(id === activeChip ? TYPE_ALL : (id as IncidentChip))}
       />
 
       <section>

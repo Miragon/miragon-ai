@@ -7,12 +7,17 @@ import {
   useToolMutation,
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
+import { NativeSelect } from "@miragon-ai/widget-shell/widgets"
 
 import { useT } from "../messages/use-t.js"
 import type { TaskFormField, TaskFormSchema } from "../view-models.js"
+import { coerceValue } from "./lib/coerce-value.js"
 
 interface TaskCompleteFormProps {
   taskId: string
+  /** Engine the task lives on — threaded into the form fetch and the complete
+   * call so both target the viewed engine, not the session default. */
+  engine?: string
   /** Pre-fetched form schema, if the server already provided one. */
   formSchema?: TaskFormSchema | null
   onCompleted?: () => void
@@ -30,15 +35,16 @@ const TYPE_OPTIONS = ["String", "Boolean", "Long", "Double", "Json"]
 
 export function TaskCompleteForm({
   taskId,
+  engine,
   formSchema,
   onCompleted,
   onCancel,
 }: TaskCompleteFormProps) {
   const t = useT()
   const fetchedSchema = useToolQuery<TaskFormSchema>(
-    ["camunda7", "task-form"],
+    ["camunda7", "task-form", engine ?? null, taskId],
     "camunda7_get_task_form",
-    { taskId },
+    { taskId, engine },
     { enabled: !formSchema },
   )
 
@@ -60,6 +66,7 @@ export function TaskCompleteForm({
   return (
     <TaskCompleteFormBody
       taskId={taskId}
+      engine={engine}
       schema={schema}
       onCompleted={onCompleted}
       onCancel={onCancel}
@@ -69,12 +76,13 @@ export function TaskCompleteForm({
 
 interface BodyProps {
   taskId: string
+  engine?: string
   schema: TaskFormSchema
   onCompleted?: () => void
   onCancel?: () => void
 }
 
-function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyProps) {
+function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }: BodyProps) {
   const t = useT()
   const completeMutation = useToolMutation("camunda7_complete_task")
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() =>
@@ -123,7 +131,7 @@ function TaskCompleteFormBody({ taskId, schema, onCompleted, onCancel }: BodyPro
     }
 
     completeMutation.mutate(
-      { taskId, variables },
+      { taskId, variables, engine },
       {
         onSuccess: () => onCompleted?.(),
         onError: (error) => setSubmitError(error instanceof Error ? error.message : String(error)),
@@ -334,9 +342,9 @@ function ManualEntryRow({
         value={entry.name}
         onChange={(e) => onChange({ ...entry, name: e.target.value })}
       />
-      <select
+      <NativeSelect
         aria-label={t("taskForm.variableType")}
-        className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+        className="h-8 text-xs"
         value={entry.type}
         onChange={(e) => onChange({ ...entry, type: e.target.value })}
       >
@@ -345,7 +353,7 @@ function ManualEntryRow({
             {option}
           </option>
         ))}
-      </select>
+      </NativeSelect>
       <Input
         aria-label={t("taskForm.variableValue")}
         className="h-8 flex-1"
@@ -353,7 +361,13 @@ function ManualEntryRow({
         value={entry.value}
         onChange={(e) => onChange({ ...entry, value: e.target.value })}
       />
-      <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-label={t("taskForm.removeVariable")}
+        onClick={onRemove}
+      >
         ×
       </Button>
     </div>
@@ -379,33 +393,4 @@ function stringifyValue(value: unknown): string {
     return String(value)
   }
   return JSON.stringify(value)
-}
-
-export function coerceValue(raw: string, type?: string): unknown {
-  if (raw === "") return ""
-  if (!type || type === "String") return raw
-  if (type === "Boolean") {
-    if (raw === "true") return true
-    if (raw === "false") return false
-    return undefined
-  }
-  if (type === "Long" || type === "Integer") {
-    if (!/^-?\d+$/.test(raw)) return undefined
-    const num = Number(raw)
-    // Beyond 2^53 `Number()` silently rounds to the nearest double — refuse
-    // (field shows "invalid") instead of writing a corrupted value to the engine.
-    return Number.isSafeInteger(num) ? num : undefined
-  }
-  if (type === "Double") {
-    const num = Number(raw)
-    return Number.isFinite(num) ? num : undefined
-  }
-  if (type === "Json" || type === "Object") {
-    try {
-      return JSON.parse(raw)
-    } catch {
-      return undefined
-    }
-  }
-  return raw
 }

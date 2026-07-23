@@ -280,6 +280,12 @@ importers:
 
   packages/widget-shell:
     dependencies:
+      clsx:
+        specifier: 2.1.1
+        version: 2.1.1
+      tailwind-merge:
+        specifier: 3.3.1
+        version: 3.3.1
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -6229,6 +6235,9 @@ packages:
   tabbable@6.4.0:
     resolution: {integrity: sha512-05PUHKSNE8ou2dwIxTngl4EzcnsCDZGJ/iCLtDflR/SHB/ny14rXc+qU5P4mG9JkusiV7EivzY9Mhm55AzAvCg==}
 
+  tailwind-merge@3.3.1:
+    resolution: {integrity: sha512-gBXpgUm/3rp1lMZZrM/w7D8GKqshif0zAymAhbCyIt8KMe+0v9DQ7cdYLR4FHH/cKpdTXb+A/tKKU3eolfsI+g==}
+
   tailwind-merge@3.5.0:
     resolution: {integrity: sha512-I8K9wewnVDkL1NTGoqWmVEIlUcB9gFriAEkXkfCjX5ib8ezGxtR3xD7iZIxrfArjEsH7F1CHD4RFUtxefdqV/A==}
 
@@ -7757,25 +7766,25 @@ snapshots:
       - vue
       - yaml
 
-  '@mcp-use/cli@3.6.2(@cfworker/json-schema@4.1.1)(@types/node@25.6.0)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(express@5.2.1)(jiti@2.7.0)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-router@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.59.0)(rxjs@7.8.2)(vue@3.5.34(typescript@5.9.3))(yaml@2.8.3)':
+  '@mcp-use/cli@3.6.2(@cfworker/json-schema@4.1.1)(@types/node@22.19.15)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(express@5.2.1)(jiti@2.7.0)(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-router@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.59.0)(rxjs@7.8.2)(vue@3.5.34(typescript@5.9.3))(yaml@2.8.3)':
     dependencies:
-      '@mcp-use/inspector': 12.0.1(@cfworker/json-schema@4.1.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(express@5.2.1)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react-router@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rxjs@7.8.2)(vite@8.1.3(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))(vue@3.5.34(typescript@5.9.3))
-      '@tailwindcss/vite': 4.3.1(vite@8.1.3(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
-      '@vitejs/plugin-react': 6.0.1(vite@8.1.3(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      '@mcp-use/inspector': 12.0.1(@cfworker/json-schema@4.1.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(express@5.2.1)(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(react-dom@19.2.7(react@19.2.7))(react-router@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rxjs@7.8.2)(vite@8.1.3(@types/node@22.19.15)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))(vue@3.5.34(typescript@5.9.3))
+      '@tailwindcss/vite': 4.3.1(vite@8.1.3(@types/node@22.19.15)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitejs/plugin-react': 6.0.1(vite@8.1.3(@types/node@22.19.15)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
       chalk: 5.6.2
       chokidar: 5.0.0
       commander: 14.0.3
       dotenv: 17.4.2
       esbuild: 0.28.1
-      mcp-use: 1.34.1(1377a3fb4f2ec1a3b3eb1da455c547a7)
+      mcp-use: 1.34.1(8e40d1c93b3c3d08b48c36207d883b13)
       open: 11.0.0
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
       react-router-dom: 7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       tar: 7.5.16
       tsx: 4.21.0
-      vite: 8.1.3(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)
-      vite-plugin-singlefile: 2.3.2(rollup@4.59.0)(vite@8.1.3(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      vite: 8.1.3(@types/node@22.19.15)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)
+      vite-plugin-singlefile: 2.3.2(rollup@4.59.0)(vite@8.1.3(@types/node@22.19.15)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
       ws: 8.21.0
       zod: 4.3.5
     transitivePeerDependencies:
@@ -10657,7 +10666,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.4(@opentelemetry/api@1.9.0)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(happy-dom@20.10.2)(jsdom@29.0.0)(vite@8.0.8(@types/node@22.19.15)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@opentelemetry/api@1.9.0)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(happy-dom@20.10.2)(jsdom@29.0.0)(vite@8.1.3(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.4':
     dependencies:
@@ -12375,7 +12384,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 1.19.13(hono@4.12.25)
       '@mcp-ui/server': 6.1.0(@cfworker/json-schema@4.1.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod@4.3.5)
-      '@mcp-use/cli': 3.6.2(@cfworker/json-schema@4.1.1)(@types/node@25.6.0)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(express@5.2.1)(jiti@2.7.0)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-router@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.59.0)(rxjs@7.8.2)(vue@3.5.34(typescript@5.9.3))(yaml@2.8.3)
+      '@mcp-use/cli': 3.6.2(15fcbfe07f61f86ad95bacaab93c94b8)
       '@mcp-use/inspector': 12.0.1(@cfworker/json-schema@4.1.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(express@5.2.1)(mcp-use@1.34.1(c469d8acb8e2472473408540055895b7))(react-dom@19.2.7(react@19.2.7))(react-router@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rxjs@7.8.2)(vite@8.1.3(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))(vue@3.5.34(typescript@5.9.3))
       '@modelcontextprotocol/ext-apps': 1.0.1(@modelcontextprotocol/sdk@1.26.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod@4.3.5)
       '@modelcontextprotocol/sdk': 1.26.0(@cfworker/json-schema@4.1.1)(zod@4.3.5)
@@ -12430,7 +12439,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 1.19.13(hono@4.12.25)
       '@mcp-ui/server': 6.1.0(@cfworker/json-schema@4.1.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod@4.3.5)
-      '@mcp-use/cli': 3.6.2(607261684e07ebedc4d969f537314c54)
+      '@mcp-use/cli': 3.6.2(@cfworker/json-schema@4.1.1)(@types/node@22.19.15)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(express@5.2.1)(jiti@2.7.0)(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-router@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.59.0)(rxjs@7.8.2)(vue@3.5.34(typescript@5.9.3))(yaml@2.8.3)
       '@mcp-use/inspector': 12.0.1(@cfworker/json-schema@4.1.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(express@5.2.1)(mcp-use@1.34.1(b4381cea7fd321f4fc228fbb2cbfb6c6))(react-dom@19.2.7(react@19.2.7))(react-router@7.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rxjs@7.8.2)(vite@8.1.3(@types/node@22.19.15)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))(vue@3.5.34(typescript@5.9.3))
       '@modelcontextprotocol/ext-apps': 1.0.1(@modelcontextprotocol/sdk@1.26.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod@4.3.5)
       '@modelcontextprotocol/sdk': 1.26.0(@cfworker/json-schema@4.1.1)(zod@4.3.5)
@@ -13597,6 +13606,8 @@ snapshots:
     optional: true
 
   tabbable@6.4.0: {}
+
+  tailwind-merge@3.3.1: {}
 
   tailwind-merge@3.5.0: {}
 

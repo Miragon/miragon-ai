@@ -11,7 +11,8 @@ import { FailureRateTable } from "./failure-dashboard/failure-rate-table.js"
 import { ClusterCompareWidget, type ClusterCompareData } from "./cluster-compare.js"
 import { VersionCompareWidget, type VersionCompareData } from "./version-compare.js"
 import { EngineCompareWidget, type EngineCompareData } from "./engine-compare.js"
-import { BpmnHeatmapWidget, type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
+import { type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
+import { AnalyticsBpmnHeatmap } from "./bpmn-heatmap.js"
 import {
   describeActivityBottlenecks,
   describeBpmnHeatmap,
@@ -99,7 +100,7 @@ export const analyticsWidgets: Record<string, WidgetComponent> = {
     describeEngineCompare,
   ),
   "analytics:bpmn-heatmap": adaptDataWidget(
-    BpmnHeatmapWidget,
+    AnalyticsBpmnHeatmap,
     ANALYTICS_DATA_TYPES.bpmnHeatmap,
     describeBpmnHeatmap,
   ),

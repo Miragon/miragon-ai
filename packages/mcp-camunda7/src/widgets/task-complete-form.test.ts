@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { coerceValue } from "./task-complete-form.js"
+import { coerceValue } from "./lib/coerce-value.js"
 
 describe("coerceValue", () => {
   it("passes strings through and parses booleans strictly", () => {

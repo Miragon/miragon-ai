@@ -1,4 +1,4 @@
-import { type ReactNode } from "react"
+import { useCallback, useEffect, type ReactNode } from "react"
 import { useWidget } from "mcp-use/react"
 import { AppQueryProvider, LocaleProvider, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { useApplyTheme } from "@miragon-ai/widget-shell/widgets"
@@ -30,7 +30,10 @@ export function ProfileGate({ children }: { children: ReactNode }) {
   const { callTool } = useWidget()
   // Adapt the host bridge's `(name, Record<string, unknown>)` callTool to the
   // provider's `(name, object)` signature (a plain `{}` isn't a Record).
-  const callToolFn = (name: string, args: object) => callTool(name, args as Record<string, unknown>)
+  const callToolFn = useCallback(
+    (name: string, args: object) => callTool(name, args as Record<string, unknown>),
+    [callTool],
+  )
   return (
     <AppQueryProvider callTool={callToolFn}>
       <ProfileGateInner>{children}</ProfileGateInner>
@@ -41,6 +44,13 @@ export function ProfileGate({ children }: { children: ReactNode }) {
 function ProfileGateInner({ children }: { children: ReactNode }) {
   const { data } = useToolQuery<ProfileFeed>(["profile-gate"], PROFILE_DATA_TOOL, {})
   const profile = data?.profile
+  const language = profile?.language ?? "en"
   useApplyTheme(profile?.theme)
-  return <LocaleProvider locale={profile?.language ?? "en"}>{children}</LocaleProvider>
+  // Keep the document language in sync with the profile locale — otherwise the
+  // iframe renders e.g. German text inside a document still declared `lang="en"`
+  // (mcp-app.html hardcodes it), which misleads screen readers and hyphenation.
+  useEffect(() => {
+    document.documentElement.lang = language
+  }, [language])
+  return <LocaleProvider locale={language}>{children}</LocaleProvider>
 }

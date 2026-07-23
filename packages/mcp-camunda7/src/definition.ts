@@ -50,9 +50,25 @@ const bpmnViewerPropsSchema = z.toJSONSchema(
   }),
 )
 
-const processDetailPropsSchema = z.toJSONSchema(
+const processDefinitionFlowPropsSchema = z.toJSONSchema(
   z.object({
-    processDefinitionKey: z.string().describe("Process definition key to display."),
+    initialMode: z
+      .enum(["incidents", "frequency"])
+      .optional()
+      .describe(
+        'Initial diagram mode: "incidents" overlays (default) or the "frequency" execution heatmap.',
+      ),
+  }),
+)
+
+const activityIncidentListPropsSchema = z.toJSONSchema(
+  z.object({
+    emptyVariant: z
+      .enum(["siblings", "note"])
+      .optional()
+      .describe(
+        'No-incidents rendering: "note" (slim success note, default) or "siblings" (offer other processes with open incidents).',
+      ),
   }),
 )
 
@@ -143,19 +159,21 @@ export const definition: AppDefinition = {
       size: "full",
     },
     {
-      id: "camunda7:process-incident-kpi",
+      id: "camunda7:process-definition-kpi",
       requires: ["camunda7:processIncidentsData"],
       size: "full",
     },
     {
-      id: "camunda7:process-incident-flow",
+      id: "camunda7:process-definition-flow",
       requires: ["camunda7:processIncidentsData"],
       size: "full",
+      propsSchema: processDefinitionFlowPropsSchema,
     },
     {
       id: "camunda7:activity-incident-list",
       requires: ["camunda7:processIncidentsData"],
       size: "full",
+      propsSchema: activityIncidentListPropsSchema,
     },
     {
       // Self-fetching: loads camunda7_incident_detail_data for the given
@@ -195,14 +213,6 @@ export const definition: AppDefinition = {
       id: "camunda7:process-definitions-table",
       requires: ["camunda7:cockpitDashboardData"],
       size: "full",
-    },
-    {
-      // Self-fetching: loads camunda7_process_detail_data for the given
-      // processDefinitionKey (no pipeline step).
-      id: "camunda7:process-detail",
-      requires: [],
-      size: "full",
-      propsSchema: processDetailPropsSchema,
     },
     {
       // Self-fetching: loads camunda7_process_instances_data for the given

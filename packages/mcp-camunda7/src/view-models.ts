@@ -315,33 +315,7 @@ export interface IncidentsByProcess {
   incidentCount: number
 }
 
-// === Process definition detail (camunda7_show_process_detail)
-
-export interface ProcessDetailActivity {
-  activityId: string
-  activityName: string | null
-  /** Running token count at this activity — drives the diagram heatmap badges. */
-  instances: number
-  incidentCount: number
-  failedJobs: number
-}
-
-export interface ProcessDetailData {
-  processDefinitionKey: string
-  processDefinitionName: string | null
-  version: number | null
-  bpmnXml: string | null
-  cockpitUrl: string | null
-  runningInstances: number | null
-  openIncidents: number
-  failedJobs: number
-  totalActivityCount: number | null
-  affectedActivityCount: number
-  activities: ProcessDetailActivity[]
-  engineId?: string
-}
-
-// === Detail (camunda7_show_process_incidents)
+// === Unified definition view (camunda7_show_process_detail / camunda7_show_process_incidents)
 
 export interface ProcessIncidentsActivity {
   activityId: string
@@ -362,6 +336,9 @@ export interface ProcessIncidentsData {
   runningInstances: number | null
   incidentCount: number
   last24hCount: number
+  /** Jobs with no retries left across the definition — null when the activity
+   *  statistics are unavailable (e.g. the definition id could not be resolved). */
+  failedJobs: number | null
   totalActivityCount: number | null
   latestIncident: string | null
   activities: ProcessIncidentsActivity[]

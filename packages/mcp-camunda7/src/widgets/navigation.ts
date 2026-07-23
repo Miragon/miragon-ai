@@ -13,6 +13,7 @@ import {
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
   CAMUNDA7_SHOW_PROCESS_INSTANCES,
   CAMUNDA7_SHOW_PROCESS_LIST,
+  CAMUNDA7_SHOW_USER_PROFILE,
 } from "../tool-names.js"
 
 /**
@@ -29,6 +30,7 @@ import {
 export type NavIntent =
   | { type: "process-list" }
   | { type: "incidents" }
+  | { type: "settings" }
   | { type: "cluster-detail"; activityId: string; incidentType: string; messageSignature?: string }
   | { type: "process-detail"; processDefinitionKey: string }
   | { type: "process-instances"; processDefinitionKey: string }
@@ -56,6 +58,11 @@ export function navigateViaHost(host: HostActions, intent: NavIntent): void {
           CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
           "Show the incidents dashboard across all processes",
         ),
+      )
+      return
+    case "settings":
+      host.showWidget(
+        buildShowWidgetIntent(CAMUNDA7_SHOW_USER_PROFILE, "Open my profile & settings"),
       )
       return
     case "cluster-detail":
@@ -107,6 +114,9 @@ export function navigateViaHost(host: HostActions, intent: NavIntent): void {
       )
       return
   }
+  // Compile-checked exhaustiveness: a new NavIntent variant fails here instead
+  // of silently no-oping in the standalone transport.
+  return intent satisfies never
 }
 
 /**

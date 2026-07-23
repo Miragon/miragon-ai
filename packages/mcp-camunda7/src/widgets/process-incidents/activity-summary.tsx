@@ -1,6 +1,8 @@
-import { CountPill, formatTimestamp } from "@miragon-ai/widget-shell/widgets"
+import { formatTimestamp } from "@miragon-ai/widget-shell/widgets"
 
 import type { ProcessIncidentsActivity } from "../../view-models.js"
+import { GroupSummaryRow, IncidentGroupIcon } from "../group-summary-row.js"
+import { useT } from "../../messages/use-t.js"
 
 export function ActivitySummary({
   activity,
@@ -9,42 +11,18 @@ export function ActivitySummary({
   activity: ProcessIncidentsActivity
   expanded: boolean
 }) {
+  const t = useT()
   return (
-    <div
-      className={`grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 px-4 py-3 ${
-        expanded ? "border-border border-b" : ""
-      }`}
-    >
-      <div className="bg-critical-soft text-critical grid size-6 place-items-center rounded-md text-xs font-bold">
-        !
-      </div>
-      <div className="min-w-0">
-        <div className="text-foreground truncate text-sm font-semibold">
-          {activity.activityName ?? activity.activityId}
-        </div>
-        <div className="text-muted-foreground truncate font-mono text-xs">
-          {activity.representativeMessage ?? activity.activityId}
-        </div>
-      </div>
-      <div className="text-muted-foreground min-w-[80px] text-right text-xs tabular-nums">
-        <div className="text-foreground font-semibold">{formatTimestamp(activity.firstSeen)}</div>
-        <div>first seen</div>
-      </div>
-      <div className="text-muted-foreground min-w-[80px] text-right text-xs tabular-nums">
-        <div className="text-foreground font-semibold">
-          {formatTimestamp(activity.latestIncident)}
-        </div>
-        <div>latest</div>
-      </div>
-      <CountPill tone="critical">{activity.incidentCount}</CountPill>
-      <span
-        aria-hidden="true"
-        className={`text-muted-foreground inline-block w-3 text-center text-xs transition-transform ${
-          expanded ? "rotate-90" : ""
-        }`}
-      >
-        ▶
-      </span>
-    </div>
+    <GroupSummaryRow
+      icon={<IncidentGroupIcon />}
+      title={activity.activityName ?? activity.activityId}
+      subline={activity.representativeMessage ?? activity.activityId}
+      stats={[
+        { value: formatTimestamp(activity.firstSeen), label: t("procIncSummary.firstSeen") },
+        { value: formatTimestamp(activity.latestIncident), label: t("procIncSummary.latest") },
+      ]}
+      count={activity.incidentCount}
+      expanded={expanded}
+    />
   )
 }

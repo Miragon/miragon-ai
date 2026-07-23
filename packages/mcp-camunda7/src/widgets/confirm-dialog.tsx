@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 import {
+  Alert,
+  AlertDescription,
   Button,
   Dialog,
   DialogContent,
@@ -10,10 +12,11 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 
 /**
- * Controlled confirmation modal for destructive or mass actions originating in a
- * widget (cancel instance, batch-retry). Reversible single-entity actions
- * (suspend/activate, reassign, single retry) don't need it — a plain button is
- * enough. `children` is an optional extra body (e.g. a count summary or options).
+ * Controlled confirmation modal for engine-mutating actions originating in a
+ * widget: cancel instance, resolve incident, suspend/activate. Only benign,
+ * trivially reversible actions (single job retry, variable edit with its own
+ * inline flow) go without it. `children` is an optional extra body (e.g. a
+ * count summary or options).
  */
 export function ConfirmDialog({
   open,
@@ -21,8 +24,11 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  pendingLabel = "Working…",
   destructive = false,
   pending = false,
+  error = null,
   onConfirm,
   children,
 }: {
@@ -31,8 +37,13 @@ export function ConfirmDialog({
   title: string
   description?: ReactNode
   confirmLabel?: string
+  cancelLabel?: string
+  pendingLabel?: string
   destructive?: boolean
   pending?: boolean
+  /** Failure of the confirmed action — shown in the dialog so it can't be missed.
+   *  Callers reset the mutation when (re)opening so no stale error leaks in. */
+  error?: string | null
   onConfirm: () => void
   children?: ReactNode
 }) {
@@ -49,16 +60,21 @@ export function ConfirmDialog({
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         {children}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-            Cancel
+            {cancelLabel}
           </Button>
           <Button
             variant={destructive ? "destructive" : "default"}
             onClick={onConfirm}
             disabled={pending}
           >
-            {pending ? "Working…" : confirmLabel}
+            {pending ? pendingLabel : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

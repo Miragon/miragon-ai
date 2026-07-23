@@ -14,6 +14,9 @@ export interface ViewParams {
   activityId?: string
   incidentType?: string
   messageSignature?: string
+  /** Entry-point focus of the definition view: "incidents" opens the flow in
+   *  incident mode and keeps the explorative no-incidents empty state. */
+  focus?: "incidents"
 }
 
 /**
@@ -22,7 +25,7 @@ export interface ViewParams {
  * these generically through the toolkit `WidgetRenderer` — there is no per-view
  * loader code. Widgets receive their scope via the layout cell's `props` (engine
  * + ids), self-fetch under a shared query key (deduped to one call per data
- * type — so the 4-widget process-incidents view fetches once), and navigate
+ * type — so the 4-widget process-detail view fetches once), and navigate
  * through `useNav()`.
  *
  * To add a surface: register its widget(s) in `registry.ts`, make the widget
@@ -52,23 +55,46 @@ export const cockpitViews = {
       ],
     },
   ],
-  "process-detail": ({ engine, processDefinitionKey }: ViewParams): LayoutConfig => [
-    { row: [{ widget: "camunda7:process-detail", props: { processDefinitionKey, engine } }] },
-  ],
-  "process-instances": ({ engine, processDefinitionKey }: ViewParams): LayoutConfig => [
-    { row: [{ widget: "camunda7:process-instances", props: { processDefinitionKey, engine } }] },
-  ],
-  "process-incidents": ({ engine, processDefinitionKey }: ViewParams): LayoutConfig => [
+  // The ONE definition view — every entry point lands here; `focus` only
+  // steers the flow's initial mode and the list's no-incidents rendering.
+  // All four widgets self-fetch the shared ["camunda7:process-incidents", …]
+  // feed, deduped to a single call.
+  "process-detail": ({ engine, processDefinitionKey, focus }: ViewParams): LayoutConfig => [
     {
       row: [{ widget: "camunda7:process-detail-header", props: { processDefinitionKey, engine } }],
     },
-    { row: [{ widget: "camunda7:process-incident-kpi", props: { processDefinitionKey, engine } }] },
     {
-      row: [{ widget: "camunda7:process-incident-flow", props: { processDefinitionKey, engine } }],
+      row: [{ widget: "camunda7:process-definition-kpi", props: { processDefinitionKey, engine } }],
     },
     {
-      row: [{ widget: "camunda7:activity-incident-list", props: { processDefinitionKey, engine } }],
+      row: [
+        {
+          widget: "camunda7:process-definition-flow",
+          props: {
+            processDefinitionKey,
+            engine,
+            // Overview entry leads with the heatmap (the old detail view's
+            // identity); the incidents entry leads with the incident overlay.
+            initialMode: focus === "incidents" ? "incidents" : "frequency",
+          },
+        },
+      ],
     },
+    {
+      row: [
+        {
+          widget: "camunda7:activity-incident-list",
+          props: {
+            processDefinitionKey,
+            engine,
+            emptyVariant: focus === "incidents" ? "siblings" : "note",
+          },
+        },
+      ],
+    },
+  ],
+  "process-instances": ({ engine, processDefinitionKey }: ViewParams): LayoutConfig => [
+    { row: [{ widget: "camunda7:process-instances", props: { processDefinitionKey, engine } }] },
   ],
   "instance-detail": ({ engine, processInstanceId }: ViewParams): LayoutConfig => [
     { row: [{ widget: "camunda7:instance-detail", props: { processInstanceId, engine } }] },

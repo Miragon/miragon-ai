@@ -17,6 +17,8 @@ export * as queries from "./queries/index.js"
 export * as widgets from "./widgets.js"
 
 export type {
+  CompareKpis,
+  CompareKpiDelta,
   ErrorPatternRow,
   PerformanceKPI,
   ActivityBreakdownRow,

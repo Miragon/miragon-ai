@@ -58,7 +58,6 @@ export const EXPECTED_TOOLS: readonly string[] = [
   "camunda7_migrate_process_instances_async",
   "camunda7_modify_process_instance",
   "camunda7_open_cockpit",
-  "camunda7_process_detail_data",
   "camunda7_process_incidents_data",
   "camunda7_process_instances_data",
   "camunda7_query_historic_activity_instances",

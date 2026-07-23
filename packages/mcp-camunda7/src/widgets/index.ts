@@ -10,7 +10,6 @@ import type { ProcessListData } from "./process-list.js"
 import type { IncidentDetailData } from "./incident-detail.js"
 import type { HistoryTimelineData } from "./history-timeline.js"
 import type { InstanceDetailData } from "./instance-detail.js"
-import type { ProcessDetailData } from "./process-detail.js"
 import type { JobPanelData } from "./job-panel.js"
 import type { ProcessInstancesData } from "./process-instances/list.js"
 import { camunda7BaseWidgets } from "./registry.js"
@@ -24,7 +23,6 @@ export type {
   HistoryTimelineData,
   InstanceDetailData,
   CockpitDashboardData,
-  ProcessDetailData,
   BpmnViewerData,
   JobPanelData,
   ProcessInstancesData,
