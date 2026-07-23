@@ -1,23 +1,31 @@
 [versions]
 # Language / platform
-kotlin = "2.3.20"
-spring-boot = "3.5.6"
+kotlin = "2.4.10"
+# Spring Boot 4.1.0 (latest). CIB Seven 2.2.0's matrix officially lists 4.0.x, but
+# 4.1.0 boots and serves cleanly here — engine, REST and the Cockpit/Tasklist
+# webapp were all verified by actually running the cibseven-example app — once the
+# stray Spring Boot 3.5 webclient is excluded (see cibseven-example/build.gradle.kts:
+# it calls a Spring MVC method removed in Spring Framework 7). Fallback is 4.0.7
+# (top of the officially supported 4.0.x line). Consume the `-4` starters below.
+spring-boot = "4.1.0"
 spring-dependency-management = "1.1.7"
 
 # Build tooling
-shadow = "9.4.1"
+shadow = "9.6.0"
 ktlint = "14.2.0"
 
 # Quality / testing
 konsist = "0.17.3"
-junit-jupiter = "5.11.4"
+# Aligned with the Spring Boot 4 BOM (junit-jupiter 6.0.3) so the explicit
+# junit-jupiter-api matches the BOM-managed junit-platform-launcher (no skew).
+junit-jupiter = "6.0.3"
 
 # Engine SDKs
 camunda7 = "7.24.0"
-cibseven = "2.1.0"
+cibseven = "2.2.0"
 
 # Runtime libraries
-opentelemetry-api = "1.61.0"
+opentelemetry-api = "1.64.0"
 
 [libraries]
 # BOM
@@ -32,9 +40,12 @@ camunda7-engine = { module = "org.camunda.bpm:camunda-engine", version.ref = "ca
 camunda7-starter-rest = { module = "org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter-rest", version.ref = "camunda7" }
 camunda7-starter-webapp = { module = "org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter-webapp", version.ref = "camunda7" }
 cibseven-engine = { module = "org.cibseven.bpm:cibseven-engine", version.ref = "cibseven" }
-cibseven-starter = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter", version.ref = "cibseven" }
-cibseven-starter-rest = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter-rest", version.ref = "cibseven" }
-cibseven-starter-webapp = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter-webapp", version.ref = "cibseven" }
+# CIB Seven Spring Boot starters: the `-4` artifacts are the Spring Boot 4 build
+# (Jakarta EE 11 / Spring Framework 7). The suffix-less coordinates are the
+# Spring Boot 3.5 build — do not mix them with a Spring Boot 4 BOM.
+cibseven-starter = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter-4", version.ref = "cibseven" }
+cibseven-starter-rest = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter-rest-4", version.ref = "cibseven" }
+cibseven-starter-webapp = { module = "org.cibseven.bpm.springboot:cibseven-bpm-spring-boot-starter-webapp-4", version.ref = "cibseven" }
 cibseven-bpm-junit5 = { module = "org.cibseven.bpm:cibseven-bpm-junit5", version.ref = "cibseven" }
 cibseven-bpm-assert = { module = "org.cibseven.bpm:cibseven-bpm-assert", version.ref = "cibseven" }
 
