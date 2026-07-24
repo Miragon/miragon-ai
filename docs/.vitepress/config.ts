@@ -42,13 +42,29 @@ export default withMermaid({
     // The wordmark already reads MIRAGON — no text next to it.
     siteTitle: false,
     nav: [
-      { text: "Architecture", link: "/architecture" },
-      { text: "Developers", link: "/developer" },
-      { text: "Operations", link: "/operations" },
-      { text: "Usage", link: "/usage" },
+      { text: "Design", link: "/product/design" },
+      { text: "Operations", link: "/product/operations" },
+      {
+        text: "Docs",
+        // "Deployment" (not "Operations") for /operations so the DevOps doc
+        // doesn't collide with the Miragon AI Operations product page.
+        items: [
+          { text: "Architecture", link: "/architecture" },
+          { text: "For Developers", link: "/developer" },
+          { text: "Deployment", link: "/operations" },
+          { text: "Usage", link: "/usage" },
+        ],
+      },
       { text: "Playground", link: "https://miragon-ai-playground.fly.dev/mcp" },
     ],
     sidebar: [
+      {
+        text: "Products",
+        items: [
+          { text: "Miragon AI Design", link: "/product/design" },
+          { text: "Miragon AI Operations", link: "/product/operations" },
+        ],
+      },
       {
         text: "Overview",
         items: [{ text: "Introduction", link: "/" }],
