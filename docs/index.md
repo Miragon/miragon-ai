@@ -2,41 +2,25 @@
 layout: home
 
 hero:
-  name: Your processes,
-  text: one conversation away.
-  tagline: "An MCP server for Camunda 7 / CIB Seven — run operations, analytics, and incident response by asking, with every answer rendered as an interactive widget right in the chat."
+  name: Design it together.
+  text: Run it by conversation.
+  tagline: "One AI-native platform for Camunda 7 and CIB Seven, spanning the whole process lifecycle. Model as a team on a single live source, then operate the running engine in plain language — no cockpit tab-hunting, no hand-written PromQL."
   actions:
     - theme: brand
-      text: Try it out
+      text: Try the live playground
       link: "https://inspector.manufact.com/inspector?server=https%3A%2F%2Fmiragon-ai-playground.fly.dev%2Fmcp&tab=chat"
       target: _blank
     - theme: alt
-      text: Connect Claude
-      link: "#connect-your-claude"
+      text: See Miragon AI Design
+      link: /product/design
     - theme: alt
       text: GitHub
       link: https://github.com/Miragon/miragon-ai
-
-features:
-  - title: For End Users
-    details: Connect Claude, ask questions about your processes, fix incidents.
-    link: /usage
-    linkText: Start using it
-  - title: For Developers
-    details: Clone, install, and run the full stack locally in a few minutes.
-    link: /developer
-    linkText: Set up your machine
-  - title: Architecture
-    details: A one-page mental model of the server, modules, and external systems.
-    link: /architecture
-    linkText: See the diagram
-  - title: Operations
-    details: Deployment artifact, environment variables, and observability.
-    link: /operations
-    linkText: Run it in production
 ---
 
-<TryItOut />
+<ProductLineup />
+
+<CockpitToConversation />
 
 ## Connect your Claude in 30 seconds {#connect-your-claude}
 
@@ -65,6 +49,8 @@ Then ask: _"Which processes have open incidents right now?"_ — and drill into
 the interactive widgets. Ready for your own stack? Head to
 [For Developers](/developer).
 
-<CockpitToConversation />
+<TryItOut />
+
+<DocsDirectory />
 
 <BrandContact />

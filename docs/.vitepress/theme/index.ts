@@ -8,6 +8,10 @@ import type { Theme } from "vitepress"
 import DefaultTheme from "vitepress/theme-without-fonts"
 import HeroConversation from "./HeroConversation.vue"
 import CockpitToConversation from "./CockpitToConversation.vue"
+import ProductLineup from "./ProductLineup.vue"
+import DocsDirectory from "./DocsDirectory.vue"
+import OperationsPage from "./OperationsPage.vue"
+import DesignPage from "./DesignPage.vue"
 import TryItOut from "./TryItOut.vue"
 import BrandContact from "./BrandContact.vue"
 import LegalFooter from "./LegalFooter.vue"
@@ -28,7 +32,12 @@ export default {
   enhanceApp({ app }) {
     // Landing-page sections used from index.md
     app.component("CockpitToConversation", CockpitToConversation)
+    app.component("ProductLineup", ProductLineup)
+    app.component("DocsDirectory", DocsDirectory)
     app.component("TryItOut", TryItOut)
     app.component("BrandContact", BrandContact)
+    // Product pages used from docs/product/*.md
+    app.component("OperationsPage", OperationsPage)
+    app.component("DesignPage", DesignPage)
   },
 } satisfies Theme
