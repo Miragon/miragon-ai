@@ -3,19 +3,24 @@ import { Button, Table, TableBody, TableHeader, TableRow } from "@miragon/mcp-to
 import {
   AskAiButton,
   DrillButton,
+  ListFooter,
   LogText,
   OpenInCockpitLink,
   StatusBadge,
   Td,
   Th,
+  ViewDataState,
   formatTimestamp,
   truncate,
+  usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 
-import type { IncidentInstance } from "../../view-models.js"
+import type { ActivityIncidentsData, IncidentInstance } from "../../view-models.js"
+import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
 import { useT } from "../../messages/use-t.js"
 
-const INCIDENT_PREVIEW_COUNT = 5
+/** Page size — mirrors the feed's server default. */
+const INCIDENT_PAGE_SIZE = 10
 
 /** Failed resolve attempt, surfaced inline under the affected incident row. */
 export interface ResolveError {
@@ -31,6 +36,7 @@ export function IncidentTable({
   onResolve,
   onAnalyze,
   hideInstanceColumn = false,
+  previewCount,
 }: {
   incidents: IncidentInstance[]
   resolvedIds: Set<string>
@@ -43,10 +49,17 @@ export function IncidentTable({
    * every row already belongs to one known instance — the instance-detail view.
    */
   hideInstanceColumn?: boolean
+  /**
+   * Client-side preview cap with a one-shot "show more" expander — for
+   * embeddings whose rows are already fully present (instance detail).
+   * Omitted → every handed-in row renders (the paged wrapper owns the cap).
+   */
+  previewCount?: number
 }) {
   const t = useT()
   const [showAll, setShowAll] = useState(false)
-  const visible = showAll ? incidents : incidents.slice(0, INCIDENT_PREVIEW_COUNT)
+  const visible =
+    previewCount === undefined || showAll ? incidents : incidents.slice(0, previewCount)
   const hidden = incidents.length - visible.length
   // pl-12 keeps the cells aligned under the activity summary's icon column in
   // the grouped (per-activity) rendering; standalone the indent would float.
@@ -158,5 +171,103 @@ export function IncidentTable({
         </Button>
       )}
     </div>
+  )
+}
+
+/**
+ * Self-fetching, offset-paged wrapper of {@link IncidentTable} for one
+ * activity group of the definition view: pages `camunda7_activity_incidents_data`
+ * (exact /incident/count total) with the house Load-more pattern, so a group
+ * reaches every incident — not just the definition feed's 200-row scan window.
+ * Mounts lazily: GroupCard renders children only while expanded.
+ */
+export function PagedIncidentTable({
+  processDefinitionKey,
+  activityId,
+  engine,
+  resolvedIds,
+  pendingIds,
+  resolveError,
+  onResolve,
+  onAnalyze,
+}: {
+  processDefinitionKey: string
+  activityId: string
+  /** Explicit engine routing; omitted → the session's sticky engine. */
+  engine?: string
+  resolvedIds: Set<string>
+  pendingIds: Set<string>
+  resolveError: ResolveError | null
+  onResolve: (incidentId: string) => void
+  onAnalyze: (incidentId: string) => void
+}) {
+  const t = useT()
+  const args: Record<string, unknown> = { processDefinitionKey, activityId }
+  if (engine) args.engine = engine
+  const paged = usePagedViewData<IncidentInstance, ActivityIncidentsData>({
+    initialData: null,
+    key: ["camunda7:activity-incidents", engine ?? null, processDefinitionKey, activityId],
+    tool: CAMUNDA7_ACTIVITY_INCIDENTS_DATA,
+    args,
+    pageSize: INCIDENT_PAGE_SIZE,
+    ready: !!(processDefinitionKey && activityId),
+    selectItems: (d) => d.incidents,
+    selectTotal: (d) => d.totalCount,
+  })
+
+  if (!paged.firstPage) {
+    return (
+      <div className="bg-muted px-4 py-3">
+        <ViewDataState
+          loading={paged.loading}
+          error={paged.error}
+          loadingText={t("procIncTable.loading")}
+          emptyText={t("procIncTable.noIncidents")}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {paged.items.length === 0 ? (
+        <p className="bg-muted text-muted-foreground px-4 py-3 text-sm">
+          {t("procIncTable.noIncidents")}
+        </p>
+      ) : (
+        <IncidentTable
+          incidents={paged.items}
+          resolvedIds={resolvedIds}
+          pendingIds={pendingIds}
+          resolveError={resolveError}
+          onResolve={onResolve}
+          onAnalyze={onAnalyze}
+        />
+      )}
+      <div className="bg-muted px-3 pb-1">
+        {/* Load-more failures land here (page 0 failures render in the guard
+            above): loaded rows stay visible, the failure is inline + retryable. */}
+        {paged.error && (
+          <div role="alert" className="text-critical flex items-center gap-2 py-1 text-xs">
+            <span>{t("procIncTable.loadMoreError", { message: paged.error.message })}</span>
+            <button
+              type="button"
+              onClick={paged.loadMore}
+              className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
+            >
+              {t("procIncTable.retryLoadMore")}
+            </button>
+          </div>
+        )}
+        <ListFooter
+          shown={paged.items.length}
+          total={paged.total}
+          hasMore={paged.hasMore}
+          loadingMore={paged.loadingMore}
+          onLoadMore={paged.loadMore}
+          noun={t("procIncTable.footerNoun")}
+        />
+      </div>
+    </>
   )
 }

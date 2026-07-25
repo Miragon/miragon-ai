@@ -259,6 +259,7 @@ export function InstanceDetailWidget({
             onResolve={setConfirmResolveId}
             onAnalyze={(incidentId) => go({ type: "incident-detail", incidentId })}
             hideInstanceColumn
+            previewCount={5}
           />
         ),
     },

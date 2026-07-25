@@ -10,14 +10,13 @@ import {
   buildSingleWidgetView,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
-import type { ProcessListData, CockpitAppData, HistoryTimelineData } from "./view-models.js"
+import type { CockpitAppData, HistoryTimelineData } from "./view-models.js"
 import {
   listIncidentsInput,
   listProcessDefinitionsInput,
   listProcessInstancesInput,
 } from "@miragon-ai/client-camunda7/schemas"
 import {
-  getProcessDefinitions,
   getHistoricActivityInstances,
   getHistoricActivityInstancesCount,
   getHistoricProcessInstances,
@@ -27,6 +26,7 @@ import {
   buildInstanceDetailData,
   buildJobPanelData,
   buildProcessInstancesData,
+  buildProcessListData,
 } from "./data/cockpit-data.js"
 import {
   buildClusterDetailData,
@@ -35,12 +35,14 @@ import {
   type EngineHealthThresholds,
 } from "./data/health-data.js"
 import {
+  buildActivityIncidentsData,
   buildIncidentsDashboardData,
   buildProcessIncidentsData,
 } from "./data/incident-panel-data.js"
 import { buildIncidentDetailData } from "./data/incident-detail-data.js"
 import { buildBpmnViewerData } from "./data/bpmn-viewer-data.js"
 import {
+  CAMUNDA7_ACTIVITY_INCIDENTS_DATA,
   CAMUNDA7_CLUSTER_DETAIL_DATA,
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
   CAMUNDA7_ENGINE_HEALTH_DATA,
@@ -51,6 +53,7 @@ import {
   CAMUNDA7_OPEN_COCKPIT,
   CAMUNDA7_PROCESS_INCIDENTS_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
+  CAMUNDA7_PROCESS_LIST_DATA,
   CAMUNDA7_SHOW_BPMN_VIEWER,
   CAMUNDA7_SHOW_CLUSTER_DETAIL,
   CAMUNDA7_SHOW_ENGINE_HEALTH,
@@ -196,6 +199,13 @@ export function registerWidgetTools(
         key: listProcessDefinitionsInput.shape.key,
         nameLike: listProcessDefinitionsInput.shape.nameLike,
         latestVersion: listProcessDefinitionsInput.shape.latestVersion.default(true),
+        firstResult: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Offset for pagination (0-based)."),
+        maxResults: z.number().int().positive().optional().describe("Page size (default 50)."),
         ...engineParamShape,
       }),
       _meta: uiMeta,
@@ -203,23 +213,13 @@ export function registerWidgetTools(
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
-      const definitions = await getProcessDefinitions({
-        client,
-        query: {
-          key: args.key,
-          nameLike: args.nameLike,
-          latestVersion: args.latestVersion,
-          maxResults: 100,
-          sortBy: "name",
-          sortOrder: "asc",
-        },
+      const data = await buildProcessListData(client, engineId, {
+        key: args.key,
+        nameLike: args.nameLike,
+        latestVersion: args.latestVersion,
+        firstResult: args.firstResult,
+        maxResults: args.maxResults,
       })
-      const defArray = Array.isArray(definitions) ? definitions : []
-      const data: ProcessListData = {
-        definitions: defArray as ProcessListData["definitions"],
-        totalCount: defArray.length,
-        engineId,
-      }
       const filters = [
         args.key && `key "${args.key}"`,
         args.nameLike && `name like "${args.nameLike}"`,
@@ -916,6 +916,42 @@ export function registerWidgetTools(
 
   server.tool(
     {
+      name: CAMUNDA7_PROCESS_LIST_DATA,
+      title: "Process list data (internal)",
+      description:
+        "Internal JSON feed (no UI) for deployed process definitions, offset-paged. Prefer camunda7_show_process_list.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        key: listProcessDefinitionsInput.shape.key,
+        nameLike: listProcessDefinitionsInput.shape.nameLike,
+        latestVersion: listProcessDefinitionsInput.shape.latestVersion,
+        firstResult: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Offset for pagination (0-based)."),
+        maxResults: z.number().int().positive().optional().describe("Page size (default 50)."),
+        ...engineParamShape,
+      }),
+      _meta: appOnlyMeta,
+    },
+    withToolErrors(async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      return rawData({
+        ...(await buildProcessListData(client, engineId, {
+          key: args.key,
+          nameLike: args.nameLike,
+          latestVersion: args.latestVersion,
+          firstResult: args.firstResult,
+          maxResults: args.maxResults,
+        })),
+      })
+    }),
+  )
+
+  server.tool(
+    {
       name: CAMUNDA7_INSTANCE_DETAIL_DATA,
       title: "Instance detail data (internal)",
       description:
@@ -1017,6 +1053,45 @@ export function registerWidgetTools(
         cockpitUrl,
         provider,
         processDefinitionKey: args.processDefinitionKey,
+      })
+      return rawData({ ...data, engineId })
+    }),
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_ACTIVITY_INCIDENTS_DATA,
+      title: "Activity incidents data (internal)",
+      description:
+        "Internal JSON feed (no UI) for one activity's incident rows, offset-paged. Prefer camunda7_show_process_incidents.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: z.string().describe("Process definition key"),
+        activityId: z.string().describe("Activity id whose incidents to page"),
+        firstResult: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Offset for pagination (0-based)."),
+        maxResults: z.number().int().positive().optional().describe("Page size (default 10)."),
+        ...engineParamShape,
+      }),
+      _meta: appOnlyMeta,
+    },
+    withToolErrors(async (args) => {
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
+      const data = await buildActivityIncidentsData(client, {
+        baseUrl,
+        cockpitUrl,
+        provider,
+        processDefinitionKey: args.processDefinitionKey,
+        activityId: args.activityId,
+        firstResult: args.firstResult,
+        maxResults: args.maxResults,
       })
       return rawData({ ...data, engineId })
     }),

@@ -4,6 +4,7 @@ import { cibsevenProvider } from "../providers/index.js"
 vi.mock("@miragon-ai/client-camunda7/sdk", () => ({
   getActivityStatistics: vi.fn(),
   getIncidents: vi.fn(),
+  getIncidentsCount: vi.fn(),
   getProcessDefinitions: vi.fn(),
   getProcessDefinitionBpmn20Xml: vi.fn(),
   getProcessDefinitionStatistics: vi.fn(),
@@ -12,18 +13,21 @@ vi.mock("@miragon-ai/client-camunda7/sdk", () => ({
 import {
   getActivityStatistics,
   getIncidents,
+  getIncidentsCount,
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
 } from "@miragon-ai/client-camunda7/sdk"
 
 import {
+  buildActivityIncidentsData,
   buildIncidentsDashboardData,
   buildProcessIncidentsData,
   processDefinitionKeyFromId,
 } from "./incident-panel-data.js"
 
 const mockedGetIncidents = vi.mocked(getIncidents)
+const mockedGetIncidentsCount = vi.mocked(getIncidentsCount)
 const mockedGetStats = vi.mocked(getProcessDefinitionStatistics)
 const mockedGetBpmn = vi.mocked(getProcessDefinitionBpmn20Xml)
 const mockedGetDefs = vi.mocked(getProcessDefinitions)
@@ -79,6 +83,9 @@ describe("buildIncidentsDashboardData", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedGetDefs.mockResolvedValue([] as never)
+    // Count outage → the builder falls back to the scan-derived values, so
+    // the aggregation assertions below stay meaningful.
+    mockedGetIncidentsCount.mockResolvedValue({} as never)
   })
 
   it("aggregates incidents by process and activity, sorted desc", async () => {
@@ -231,6 +238,7 @@ describe("buildProcessIncidentsData", () => {
     vi.clearAllMocks()
     mockedGetDefs.mockResolvedValue([] as never)
     mockedGetActivityStats.mockResolvedValue([] as never)
+    mockedGetIncidentsCount.mockResolvedValue({} as never)
   })
 
   it("returns rich per-process detail with BPMN, activity names and Cockpit URLs", async () => {
@@ -271,25 +279,48 @@ describe("buildProcessIncidentsData", () => {
       activityName: "Approve",
       incidentCount: 2,
     })
-    expect(data.activities[0].incidents).toHaveLength(2)
     expect(data.totalActivityCount).toBe(2)
-    // Each instance carries only the lean six fields — confirm no extras.
-    expect(Object.keys(data.activities[0].incidents[0]).sort()).toEqual([
-      "cockpitInstanceUrl",
-      "id",
-      "incidentMessage",
-      "incidentTimestamp",
-      "incidentType",
-      "processInstanceId",
-    ])
     expect(data.cockpitUrl).toBe(
       "http://localhost:8080/webapp/#/seven/auth/process/K1/5?tab=incidents",
     )
-    // Per-incident cockpit URL nests the instance under the process route.
-    const firstIncident = data.activities[0].incidents[0]
-    expect(firstIncident.cockpitInstanceUrl).toBe(
-      `http://localhost:8080/webapp/#/seven/auth/process/K1/5/${encodeURIComponent(firstIncident.processInstanceId)}?tab=incidents`,
-    )
+  })
+
+  it("adds groups for activities whose incidents lie beyond the scan and prefers exact statistics counts", async () => {
+    mockedGetIncidents.mockResolvedValueOnce([
+      incident({ id: "i1", activityId: "A1", incidentTimestamp: "2026-04-03T00:00:00.000Z" }),
+    ] as never)
+    mockedGetStats.mockResolvedValueOnce([
+      {
+        id: "K1:1:abc",
+        instances: 42,
+        definition: { id: "K1:1:abc", key: "K1", name: "Process 1", version: 5 },
+      },
+    ] as never)
+    mockedGetBpmn.mockResolvedValueOnce({ bpmn20Xml: "" } as never)
+    // Statistics know MORE than the scan: A1 really has 300 incidents, and A9
+    // has 7 that never made it into the 200-row recency window.
+    mockedGetActivityStats.mockResolvedValueOnce([
+      { id: "A1", failedJobs: 0, incidents: [{ incidentType: "failedJob", incidentCount: 300 }] },
+      { id: "A9", failedJobs: 0, incidents: [{ incidentType: "failedJob", incidentCount: 7 }] },
+    ] as never)
+    mockedGetIncidentsCount.mockResolvedValue({ count: 307 } as never)
+
+    const data = await buildProcessIncidentsData(fakeClient, {
+      provider: cibsevenProvider,
+      baseUrl: "http://localhost:8080/engine-rest",
+      processDefinitionKey: "K1",
+    })
+
+    expect(data.incidentCount).toBe(307)
+    expect(data.activities.map((a) => [a.activityId, a.incidentCount])).toEqual([
+      ["A1", 300],
+      ["A9", 7],
+    ])
+    // The scan-only enrichment is present for A1 but absent for the
+    // beyond-scan group A9 — its rows come from the paged per-activity feed.
+    expect(data.activities[0].representativeMessage).toBe("boom")
+    expect(data.activities[1].representativeMessage).toBeNull()
+    expect(data.activities[1].firstSeen).toBeNull()
   })
 
   it("degrades gracefully when no incidents and no BPMN are available", async () => {
@@ -385,5 +416,79 @@ describe("buildProcessIncidentsData", () => {
     expect(data.siblingsWithIncidents).toEqual([])
     // Only the primary getIncidents call should have happened.
     expect(mockedGetIncidents).toHaveBeenCalledOnce()
+  })
+})
+
+describe("buildActivityIncidentsData", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockedGetDefs.mockResolvedValue([] as never)
+  })
+
+  it("pages one activity's rows engine-side and enriches them with Cockpit URLs", async () => {
+    mockedGetIncidents.mockResolvedValueOnce([
+      incident({ id: "i10", activityId: "A1", processInstanceId: "p10" }),
+      incident({ id: "i11", activityId: "A1", processInstanceId: "p11" }),
+    ] as never)
+    mockedGetIncidentsCount.mockResolvedValueOnce({ count: 25 } as never)
+    mockedGetStats.mockResolvedValueOnce([
+      {
+        id: "K1:1:abc",
+        instances: 42,
+        definition: { id: "K1:1:abc", key: "K1", name: "Process 1", version: 5 },
+      },
+    ] as never)
+
+    const data = await buildActivityIncidentsData(fakeClient, {
+      provider: cibsevenProvider,
+      baseUrl: "http://localhost:8080/engine-rest",
+      processDefinitionKey: "K1",
+      activityId: "A1",
+      firstResult: 10,
+      maxResults: 2,
+    })
+
+    // Offset + filters go to the engine, not a client slice.
+    const query = mockedGetIncidents.mock.calls[0]?.[0]?.query as Record<string, unknown>
+    expect(query).toMatchObject({
+      processDefinitionKeyIn: "K1",
+      activityId: "A1",
+      firstResult: 10,
+      maxResults: 2,
+      sortBy: "incidentTimestamp",
+      sortOrder: "desc",
+    })
+    expect(data.totalCount).toBe(25)
+    expect(data.incidents).toHaveLength(2)
+    // Each instance carries only the lean six fields — confirm no extras.
+    expect(Object.keys(data.incidents[0]).sort()).toEqual([
+      "cockpitInstanceUrl",
+      "id",
+      "incidentMessage",
+      "incidentTimestamp",
+      "incidentType",
+      "processInstanceId",
+    ])
+    // Per-incident cockpit URL nests the instance under the process route.
+    expect(data.incidents[0].cockpitInstanceUrl).toBe(
+      "http://localhost:8080/webapp/#/seven/auth/process/K1/5/p10?tab=incidents",
+    )
+  })
+
+  it("defaults to page 0 with the server page size and a scan-length fallback total", async () => {
+    mockedGetIncidents.mockResolvedValueOnce([incident({ id: "i1" })] as never)
+    mockedGetIncidentsCount.mockResolvedValueOnce({} as never) // count outage
+    mockedGetStats.mockResolvedValueOnce([] as never)
+
+    const data = await buildActivityIncidentsData(fakeClient, {
+      provider: cibsevenProvider,
+      baseUrl: "http://localhost:8080/engine-rest",
+      processDefinitionKey: "K1",
+      activityId: "A1",
+    })
+
+    const query = mockedGetIncidents.mock.calls[0]?.[0]?.query as Record<string, unknown>
+    expect(query).toMatchObject({ firstResult: 0, maxResults: 10 })
+    expect(data.totalCount).toBe(1)
   })
 })

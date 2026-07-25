@@ -14,7 +14,7 @@ import { useViewData } from "../use-view-data.js"
 import { refreshCockpitData } from "../refresh.js"
 import { ConfirmDialog } from "../confirm-dialog.js"
 import { ActivitySummary } from "./activity-summary.js"
-import { IncidentTable, type ResolveError } from "./incident-table.js"
+import { PagedIncidentTable, type ResolveError } from "./incident-table.js"
 import { EmptyStateWithSiblings } from "./empty-state.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -156,8 +156,13 @@ export function ActivityIncidentList({
                 <ActivitySummary activity={activity} expanded={expanded.has(activity.activityId)} />
               }
             >
-              <IncidentTable
-                incidents={activity.incidents}
+              {/* Rows come from the paged per-activity feed (mounted on
+                  expand), not the definition payload — the group reaches every
+                  incident, not just the 200-row recency scan. */}
+              <PagedIncidentTable
+                processDefinitionKey={data.processDefinitionKey}
+                activityId={activity.activityId}
+                engine={engineId}
                 resolvedIds={resolvedIds}
                 pendingIds={pendingIds}
                 resolveError={resolveError}
