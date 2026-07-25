@@ -3,6 +3,7 @@ import {
   TONE_DOT,
   AskAiButton,
   ListFooter,
+  TableEmptyState,
   Td,
   Th,
   WidgetShell,
@@ -146,12 +147,10 @@ export function HistoryTimelineView({
 }) {
   const t = useT()
   if (activities.length === 0) {
-    return variant === "table" ? (
-      <Alert>
-        <AlertDescription>{t("incidentHistory.empty")}</AlertDescription>
-      </Alert>
-    ) : (
-      <p className="text-muted-foreground text-sm">{t("historyTimeline.empty")}</p>
+    return (
+      <TableEmptyState>
+        {variant === "table" ? t("incidentHistory.empty") : t("historyTimeline.empty")}
+      </TableEmptyState>
     )
   }
 

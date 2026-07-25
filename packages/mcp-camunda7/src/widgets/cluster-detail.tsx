@@ -6,6 +6,7 @@ import {
   LogText,
   RowCard,
   StatusBadge,
+  TableEmptyState,
   ViewDataState,
   WidgetHeader,
   WidgetShell,
@@ -230,9 +231,7 @@ export function ClusterDetailView({
               />
             ))}
             {paged.items.length === 0 && (
-              <p className="text-muted-foreground py-2 text-sm">
-                {t("clusterDetail.noMatchingIncidents")}
-              </p>
+              <TableEmptyState>{t("clusterDetail.noMatchingIncidents")}</TableEmptyState>
             )}
             {/* Load-more failures land here (page 0 failures render in the
                 guard above): loaded rows stay visible, the failure is inline
