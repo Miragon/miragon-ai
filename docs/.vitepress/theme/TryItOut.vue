@@ -15,21 +15,21 @@ const INSPECTOR_URL =
       <div class="grad-line" aria-hidden="true" />
       <div class="orb" aria-hidden="true" />
 
-      <p class="eyebrow"><span class="dot" />Live playground</p>
+      <p class="eyebrow"><span class="dot" />See it live</p>
       <h2 class="title">Talk to your processes.</h2>
       <p class="desc">
-        No install, no login. Open the hosted playground in an MCP chat, connected to a live, seeded
-        CIB Seven engine — ask a question and watch the interactive widgets render.
+        No install, no login. Open the live demo, ask a question about your running processes, and
+        watch AI answer with clear, interactive views.
       </p>
 
       <a class="cta" :href="INSPECTOR_URL" target="_blank" rel="noopener noreferrer">
-        Try it out
+        Try the live demo
         <span class="arrow" aria-hidden="true">→</span>
       </a>
 
       <p class="hint">
         <span class="hint-label">Try asking</span>
-        <span class="prompt">Show me the Cockpit</span>
+        <span class="prompt">Where are my processes stuck?</span>
       </p>
     </div>
   </section>

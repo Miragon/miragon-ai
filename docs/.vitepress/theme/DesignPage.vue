@@ -65,8 +65,9 @@ const points = [
         <span class="eyebrow">Miragon AI Design · In development</span>
         <h1 class="hero-title">One live version,<span class="grad"> no merge hell</span>.</h1>
         <p class="hero-tagline">
-          The design-time counterpart to Operations: a live-collaboration platform for your Camunda
-          BPM landscape. We're building it in the open — here's the idea, and how it works.
+          The design-time counterpart to Operations: a live-collaboration platform for your process
+          models — standard BPMN, independent of the engine you run. We're building it in the open —
+          here's the idea, and how it works.
         </p>
         <div class="actions">
           <a class="btn primary" href="#contact">

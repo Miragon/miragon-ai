@@ -36,7 +36,7 @@ const pillars = [
 const steps = [
   {
     title: "Point a client at it",
-    text: "Connect any MCP-capable assistant — Claude, ChatGPT, Claude Code — to the Operations server sitting in front of your Camunda 7 / CIB Seven fleet.",
+    text: "Connect any MCP-capable assistant — Claude, ChatGPT, Claude Code — to the Operations server sitting in front of your Camunda 7, CIB Seven or Operaton fleet.",
   },
   {
     title: "Ask in plain language",
@@ -66,9 +66,9 @@ const widgets = [
         <span class="eyebrow">Miragon AI Operations · Live today</span>
         <h1 class="hero-title">From cockpit<span class="grad"> to conversation</span>.</h1>
         <p class="hero-tagline">
-          Your Camunda 7 / CIB Seven cockpit, tasklist, dashboard and monitoring tool collapse into
-          one conversation. Ask in plain language; get back an interactive widget and a straight
-          answer.
+          Your Camunda 7, CIB Seven and Operaton cockpit, tasklist, dashboard and monitoring tool
+          collapse into one conversation. Ask in plain language; get back an interactive widget and
+          a straight answer.
         </p>
         <div class="actions">
           <a class="btn primary" :href="INSPECTOR_URL" target="_blank" rel="noopener noreferrer">

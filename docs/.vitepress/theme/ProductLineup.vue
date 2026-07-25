@@ -1,17 +1,20 @@
 <!--
   Landing headline section: Miragon AI is one platform with two products across the
-  Camunda process lifecycle — Design (design-time, indigo, in development) and
-  Operations (run-time, green, live today). Each card links to its product page.
-  Design sits first so the row reads left→right as the lifecycle: design → operate.
+  process lifecycle — Design (design-time, indigo, in development) and Operations
+  (run-time, green, live today). Kept high-level and engine-agnostic for architects /
+  IT decision-makers; specific engines (CIB Seven, Operaton) live on the product pages.
+  Each card links to its product page. Design sits first so the row reads left→right
+  as the lifecycle: design → operate.
 -->
 <template>
-  <section class="lineup" aria-label="Products">
-    <span class="label">Two products, one lifecycle</span>
+  <section id="products" class="lineup" aria-label="Products">
+    <span class="label">One platform, two products</span>
     <div class="head">
-      <h2 class="title">Design the process. Operate the engine.</h2>
+      <h2 class="title">Design your processes. Operate them with AI.</h2>
       <p class="intro">
-        One platform for both halves of the Camunda lifecycle — model collaboratively, then operate
-        the live engine in plain language. From the first model to the 3am incident.
+        You standardized on your process platform because it's proven and trusted. Miragon AI keeps
+        that investment future-proof — adding AI across the whole lifecycle, from the first process
+        you model to the ones you run every day.
       </p>
     </div>
 
@@ -25,26 +28,14 @@
         </div>
         <h3 class="name">Miragon AI Design</h3>
         <p class="tagline">
-          Model your Camunda processes together on one always-live source — no check-out, no
-          branches, no merge hell.
+          Model your processes together on one always-live version — no checked-out copies, no
+          branches, no merge conflicts. Independent of the engine you run.
         </p>
         <ul class="bullets">
-          <li>
-            One live version everyone connects to — nothing is checked out, everyone sees the latest
-            state
-          </li>
-          <li>
-            Model from the web (bpmn-js canvas + Monaco docs) or from VS Code — the same live
-            document
-          </li>
-          <li>
-            Real-time presence: per-file avatars, remote cursors, soft “someone's editing this task”
-            locks
-          </li>
-          <li>
-            A release becomes a GitHub Pull Request — CODEOWNERS and branch protection decide what
-            ships
-          </li>
+          <li>One live version of every process — everyone works on the latest, together</li>
+          <li>Model in the browser or your IDE, always kept in sync</li>
+          <li>See who is working where, in real time</li>
+          <li>Governed releases through the review process your teams already trust</li>
         </ul>
         <span class="go">See the vision <span class="arrow" aria-hidden="true">→</span></span>
       </a>
@@ -65,23 +56,14 @@
         </div>
         <h3 class="name">Miragon AI Operations</h3>
         <p class="tagline">
-          Drive your running Camunda 7 / CIB Seven fleet in plain language — every answer an
-          interactive widget in the chat.
+          Run and monitor your live processes just by asking — every answer comes back clear and
+          visual, right in the conversation.
         </p>
         <ul class="bullets">
-          <li>An MCP server any AI assistant can drive — Claude, ChatGPT, Claude Code</li>
-          <li>
-            Inspect, start, suspend and migrate definitions and instances — work user &amp; external
-            tasks, resolve incidents and retry failed jobs
-          </li>
-          <li>
-            Prometheus-backed analytics: bottlenecks, failed instances, engine health, version
-            comparison
-          </li>
-          <li>
-            Multi-engine routing, toolset scoping, one self-hostable Docker image — plus a live
-            playground
-          </li>
+          <li>Ask about any running process in plain language — no cockpit, no query language</li>
+          <li>See process health, bottlenecks and failures at a glance</li>
+          <li>Diagnose and resolve incidents in the same conversation</li>
+          <li>Runs across your engines, self-hosted inside your own environment</li>
         </ul>
         <span class="go">Explore Operations <span class="arrow" aria-hidden="true">→</span></span>
       </a>
