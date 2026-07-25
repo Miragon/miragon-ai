@@ -272,6 +272,10 @@ export interface ClusterDetailArgs {
    * calling the show tool without a signature gets.
    */
   messageSignature?: string
+  /** 0-based offset into the matching rows (defaults to 0). */
+  firstResult?: number
+  /** Page size (defaults to {@link CLUSTER_DETAIL_ROWS}). */
+  maxResults?: number
 }
 
 /**
@@ -327,7 +331,13 @@ export async function buildClusterDetailData(
     defCounts.set(defKey, (defCounts.get(defKey) ?? 0) + 1)
   }
 
-  const page = matching.slice(0, CLUSTER_DETAIL_ROWS)
+  // Paging slices the in-memory matching set (not an engine-side offset): the
+  // messageSignature filter is client-side and the KPIs above need the full
+  // set anyway, so an offset re-query would change semantics without saving
+  // the scan. Bounded by INCIDENT_SCAN_LIMIT like everything else here.
+  const first = Math.max(0, args.firstResult ?? 0)
+  const pageSize = args.maxResults ?? CLUSTER_DETAIL_ROWS
+  const page = matching.slice(first, first + pageSize)
 
   // Business-key enrichment is best-effort: a failed lookup degrades to "—"
   // keys, it must not turn a working cluster view into a tool error.

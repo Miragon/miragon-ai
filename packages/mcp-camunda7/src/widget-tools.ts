@@ -19,6 +19,7 @@ import {
 import {
   getProcessDefinitions,
   getHistoricActivityInstances,
+  getHistoricActivityInstancesCount,
   getHistoricProcessInstances,
 } from "@miragon-ai/client-camunda7/sdk"
 import {
@@ -303,6 +304,12 @@ export function registerWidgetTools(
           .string()
           .optional()
           .describe("Filter by a substring of the business key."),
+        firstResult: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Offset for pagination (0-based)."),
         maxResults: z.number().optional().default(50),
         ...engineParamShape,
       }),
@@ -317,6 +324,7 @@ export function registerWidgetTools(
         suspended: args.suspended,
         withIncidentsOnly: args.withIncidentsOnly,
         businessKeyLike: args.businessKeyLike,
+        firstResult: args.firstResult,
         maxResults: args.maxResults,
       })
       return buildSingleWidgetView({
@@ -511,6 +519,13 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processInstanceId: z.string().describe("The process instance ID"),
+        firstResult: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Offset for pagination (0-based)."),
+        maxResults: z.number().int().positive().optional().describe("Page size (default 500)."),
         ...engineParamShape,
       }),
       _meta: uiMeta,
@@ -518,16 +533,23 @@ export function registerWidgetTools(
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
       const { client, engineId } = resolveEngine(args.engine, registry)
-      const [activities, instances] = await Promise.all([
+      const [activities, activitiesCount, instances] = await Promise.all([
         getHistoricActivityInstances({
           client,
           query: {
             processInstanceId: args.processInstanceId,
             sortBy: "startTime",
             sortOrder: "asc",
-            maxResults: 500,
+            firstResult: args.firstResult,
+            maxResults: args.maxResults ?? 500,
           },
         }),
+        // Honest total via /count — the page above is capped, so its length
+        // would silently understate long-running instances.
+        getHistoricActivityInstancesCount({
+          client,
+          query: { processInstanceId: args.processInstanceId },
+        }).catch(() => null),
         getHistoricProcessInstances({
           client,
           query: { processInstanceId: args.processInstanceId, maxResults: 1 },
@@ -545,7 +567,7 @@ export function registerWidgetTools(
       const data: HistoryTimelineData = {
         processInstance: inst,
         activities: actArray,
-        totalActivities: actArray.length,
+        totalActivities: (activitiesCount as { count?: number } | null)?.count ?? actArray.length,
         engineId,
       }
       return buildSingleWidgetView({
@@ -612,6 +634,13 @@ export function registerWidgetTools(
       .describe(
         "Normalized failure-message signature (as produced by the engine-health clusters). Omitted → all messages for this activity + type.",
       ),
+    firstResult: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe("Offset into the affected-instance rows for pagination (0-based)."),
+    maxResults: z.number().int().positive().optional().describe("Page size (default 50)."),
   }
 
   server.tool(
@@ -631,6 +660,8 @@ export function registerWidgetTools(
         activityId: args.activityId,
         incidentType: args.incidentType,
         messageSignature: args.messageSignature,
+        firstResult: args.firstResult,
+        maxResults: args.maxResults,
       })
       return buildSingleWidgetView({
         widget: "camunda7:cluster-detail",
@@ -749,6 +780,13 @@ export function registerWidgetTools(
       schema: z.object({
         processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
         failedOnly: z.boolean().optional().default(false).describe("Show only failed jobs"),
+        firstResult: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Offset for pagination (0-based)."),
+        maxResults: z.number().int().positive().optional().describe("Page size (default 50)."),
         ...engineParamShape,
       }),
       _meta: uiMeta,
@@ -759,6 +797,8 @@ export function registerWidgetTools(
       const data = await buildJobPanelData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
         failedOnly: args.failedOnly,
+        firstResult: args.firstResult,
+        maxResults: args.maxResults,
       })
       return buildSingleWidgetView({
         widget: "camunda7:job-panel",
@@ -832,6 +872,8 @@ export function registerWidgetTools(
           activityId: args.activityId,
           incidentType: args.incidentType,
           messageSignature: args.messageSignature,
+          firstResult: args.firstResult,
+          maxResults: args.maxResults,
         })),
       })
     }),

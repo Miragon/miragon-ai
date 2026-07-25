@@ -360,17 +360,6 @@ export interface IncidentDetailJob {
   dueDate: string | null
 }
 
-export interface IncidentDetailHistoryEntry {
-  id: string
-  activityId: string
-  activityName: string | null
-  activityType: string
-  startTime: string
-  endTime: string | null
-  durationInMillis: number | null
-  canceled: boolean
-}
-
 export interface IncidentDetailData {
   // Header
   incidentId: string
@@ -407,8 +396,10 @@ export interface IncidentDetailData {
   activityTree: ActivityTree | null
   variables: Record<string, VariableValue>
 
-  // History tab
-  history: IncidentDetailHistoryEntry[]
+  /** Total historic activity instances (KPI) — the History tab pages the rows
+   *  itself via `camunda7_query_historic_activity_instances`. Null when the
+   *  history API is unavailable (history level "none"). */
+  historyTotalCount: number | null
 
   engineId?: string
 }

@@ -2,21 +2,27 @@ import {
   AskAiButton,
   DrillButton,
   KpiGrid,
+  ListFooter,
   LogText,
   RowCard,
   StatusBadge,
+  ViewDataState,
   WidgetHeader,
+  WidgetShell,
   formatTimestamp,
   truncate,
-  useDetailView,
+  usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import { ModelContext } from "mcp-use/react"
-import type { ClusterDetailData } from "../view-models.js"
+import type { ClusterDetailData, ClusterIncidentRow } from "../view-models.js"
 import { DetailPage } from "./detail-page.js"
 import { useNav } from "./navigation.js"
 import { CAMUNDA7_CLUSTER_DETAIL_DATA } from "../tool-names.js"
 import { remediatePrompt } from "./remediation.js"
 import { useT } from "../messages/use-t.js"
+
+/** Page size — mirrors the server default (`CLUSTER_DETAIL_ROWS`). */
+const PAGE_SIZE = 50
 
 /**
  * Grounding line: the agent knows exactly which failure cluster the operator
@@ -57,26 +63,49 @@ export function ClusterDetailView({
 }) {
   const go = useNav()
   const t = useT()
+  // Cluster identity from props (cockpit drill) or the handed-in data
+  // (standalone show-tool render) — loadMore() must always carry it.
+  const clusterActivityId = activityId ?? initialData?.activityId
+  const clusterIncidentType = incidentType ?? initialData?.incidentType
+  const clusterSignature = messageSignature ?? initialData?.messageSignature ?? undefined
   // Unlike the engine-health feed, this feed REQUIRES the cluster identity —
   // gate the self-fetch on it (the show tool path passes data instead).
-  const ready = !!(activityId && incidentType)
-  const { data, guard } = useDetailView<ClusterDetailData>({
+  const ready = !!(clusterActivityId && clusterIncidentType)
+  const args: Record<string, unknown> = {}
+  if (engine) args.engine = engine
+  if (clusterActivityId) args.activityId = clusterActivityId
+  if (clusterIncidentType) args.incidentType = clusterIncidentType
+  if (clusterSignature) args.messageSignature = clusterSignature
+  const paged = usePagedViewData<ClusterIncidentRow, ClusterDetailData>({
     initialData,
     key: [
       "camunda7:cluster-detail",
       engine ?? null,
-      activityId ?? null,
-      incidentType ?? null,
-      messageSignature ?? null,
+      clusterActivityId ?? null,
+      clusterIncidentType ?? null,
+      clusterSignature ?? null,
     ],
     tool: CAMUNDA7_CLUSTER_DETAIL_DATA,
-    args: { engine, activityId, incidentType, messageSignature },
+    args,
+    pageSize: PAGE_SIZE,
     ready,
-    loadingText: t("clusterDetail.loading"),
-    emptyText: t("clusterDetail.noData"),
+    selectItems: (d) => d.incidents,
+    selectTotal: (d) => d.totalMatching,
   })
+  const data = paged.firstPage
 
-  if (!data) return guard
+  if (!data) {
+    return (
+      <WidgetShell>
+        <ViewDataState
+          loading={paged.loading}
+          error={paged.error}
+          loadingText={t("clusterDetail.loading")}
+          emptyText={t("clusterDetail.noData")}
+        />
+      </WidgetShell>
+    )
+  }
 
   const engineId = engine ?? data.engineId
 
@@ -154,16 +183,8 @@ export function ClusterDetailView({
             aria-label={t("clusterDetail.affectedInstances")}
             className="flex flex-col gap-2"
           >
-            <h3 className="text-sm font-semibold">
-              {t("clusterDetail.affectedInstances")}
-              {data.totalMatching > data.incidents.length
-                ? t("clusterDetail.showingOf", {
-                    shown: data.incidents.length,
-                    total: data.totalMatching,
-                  })
-                : ""}
-            </h3>
-            {data.incidents.map((row) => (
+            <h3 className="text-sm font-semibold">{t("clusterDetail.affectedInstances")}</h3>
+            {paged.items.map((row) => (
               <RowCard
                 // The engine can report rows without an incident id — fall back to
                 // instance+timestamp so React keys stay unique per incident row.
@@ -208,11 +229,34 @@ export function ClusterDetailView({
                 }
               />
             ))}
-            {data.incidents.length === 0 && (
+            {paged.items.length === 0 && (
               <p className="text-muted-foreground py-2 text-sm">
                 {t("clusterDetail.noMatchingIncidents")}
               </p>
             )}
+            {/* Load-more failures land here (page 0 failures render in the
+                guard above): loaded rows stay visible, the failure is inline
+                and retryable. */}
+            {paged.error && (
+              <div role="alert" className="text-critical flex items-center gap-2 text-xs">
+                <span>{t("clusterDetail.loadMoreError", { message: paged.error.message })}</span>
+                <button
+                  type="button"
+                  onClick={paged.loadMore}
+                  className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
+                >
+                  {t("clusterDetail.retryLoadMore")}
+                </button>
+              </div>
+            )}
+            <ListFooter
+              shown={paged.items.length}
+              total={paged.total}
+              hasMore={paged.hasMore}
+              loadingMore={paged.loadingMore}
+              onLoadMore={paged.loadMore}
+              noun={t("clusterDetail.footerNoun")}
+            />
           </section>
         </>
       }

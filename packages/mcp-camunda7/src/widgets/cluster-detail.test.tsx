@@ -56,11 +56,12 @@ describe("ClusterDetailWidget (fixture render)", () => {
     // Full sample failure message.
     expect(screen.getByText("Connection timeout to WMS after 30000ms")).toBeTruthy()
 
-    // Instance rows: business key first, UUID fallback when absent; the page
-    // note shows the capped count.
+    // Instance rows: business key first, UUID fallback when absent; the list
+    // footer shows the honest total plus an explicit Load-more control.
     expect(screen.getByText("ORDER-4711")).toBeTruthy()
     expect(screen.getByText(/Instance a1b2c3d4/)).toBeTruthy()
-    expect(screen.getByText(/showing 2 of 40/)).toBeTruthy()
+    expect(screen.getByText(/Showing 2 of 40 instances/)).toBeTruthy()
+    expect(screen.getByText("Load more")).toBeTruthy()
 
     // Each row drills deterministically to instance + incident detail.
     expect(screen.getAllByText("Instance")).toHaveLength(2)

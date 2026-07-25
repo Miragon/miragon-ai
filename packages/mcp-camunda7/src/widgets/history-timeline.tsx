@@ -2,11 +2,13 @@ import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-
 import {
   TONE_DOT,
   AskAiButton,
+  ListFooter,
   Td,
   Th,
   WidgetShell,
   formatDuration,
   formatTimestamp,
+  usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
@@ -16,8 +18,8 @@ export type HistoryActivity = HistoryTimelineData["activities"][number]
 
 /**
  * Row contract of the history family — the one shape every historic-activity
- * rendering in this module shares. Both `ActivityData` (historic activity
- * instances) and `IncidentDetailHistoryEntry` (incident detail's history tab)
+ * rendering in this module shares. Raw `ActivityData` rows (historic activity
+ * instances, also the `camunda7_query_historic_activity_instances` page items)
  * satisfy it structurally, so either source renders through
  * {@link HistoryTimelineView} without mapping.
  */
@@ -250,6 +252,88 @@ export function HistoryTimelineView({
           )
         })}
       </ol>
+    </div>
+  )
+}
+
+/** Page size for the self-paged history tabs (a timeline rarely exceeds one page). */
+const HISTORY_PAGE_SIZE = 100
+/** Registrar history query — returns a `{ items, totalCount }` pagination envelope. */
+const HISTORY_QUERY_TOOL = "camunda7_query_historic_activity_instances"
+
+/**
+ * Self-fetching, offset-paged entry into the history family: pages the
+ * registrar history query with the house Load-more pattern (usePagedViewData +
+ * ListFooter) instead of one capped fetch. Used by the instance detail's
+ * audit tab (`variant="timeline"`) and the incident detail's history tab
+ * (`variant="table"`); both mount lazily on first tab activation.
+ */
+export function PagedHistoryView({
+  processInstanceId,
+  engine,
+  variant = "timeline",
+}: {
+  processInstanceId: string
+  /** Explicit engine routing; omitted → the session's sticky engine. */
+  engine?: string
+  variant?: "timeline" | "table"
+}) {
+  const t = useT()
+  const args: Record<string, unknown> = {
+    processInstanceId,
+    sortBy: "startTime",
+    sortOrder: "asc",
+  }
+  if (engine) args.engine = engine
+  const paged = usePagedViewData<HistoryEntry, { items?: HistoryEntry[]; totalCount?: number }>({
+    initialData: null,
+    key: ["camunda7:instance-history", engine ?? null, processInstanceId],
+    tool: HISTORY_QUERY_TOOL,
+    args,
+    pageSize: HISTORY_PAGE_SIZE,
+    ready: !!processInstanceId,
+    selectItems: (d) => d.items ?? [],
+    selectTotal: (d) => d.totalCount ?? 0,
+  })
+
+  if (!paged.firstPage) {
+    if (paged.error) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {paged.error.message || t("historyTimeline.loadError")}
+          </AlertDescription>
+        </Alert>
+      )
+    }
+    return <p className="text-muted-foreground text-sm">{t("historyTimeline.loading")}</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <HistoryTimelineView variant={variant} activities={paged.items} />
+      {/* Load-more failures land here (page 0 failures render above): the
+          already-loaded rows stay visible, the failure is inline + retryable. */}
+      {paged.error && (
+        <div role="alert" className="text-critical flex items-center gap-2 text-xs">
+          <span>{t("historyTimeline.loadMoreError", { message: paged.error.message })}</span>
+          <button
+            type="button"
+            onClick={paged.loadMore}
+            className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
+          >
+            {t("historyTimeline.retryLoadMore")}
+          </button>
+        </div>
+      )}
+      <ListFooter
+        shown={paged.items.length}
+        total={paged.total}
+        hasMore={paged.hasMore}
+        loadingMore={paged.loadingMore}
+        onLoadMore={paged.loadMore}
+        noun={t("historyTimeline.footerNoun")}
+      />
     </div>
   )
 }

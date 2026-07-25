@@ -2,13 +2,12 @@ import type { Client } from "@miragon-ai/client-camunda7"
 import type {
   ActivityTree,
   IncidentDetailData,
-  IncidentDetailHistoryEntry,
   IncidentDetailJob,
   VariableValue,
 } from "../view-models.js"
 import {
   getActivityInstanceTree,
-  getHistoricActivityInstances,
+  getHistoricActivityInstancesCount,
   getIncident,
   getJobs,
   getProcessDefinitionBpmn20Xml,
@@ -117,17 +116,6 @@ interface RawJob {
   dueDate?: string | null
 }
 
-interface RawHistoricActivity {
-  id?: string | null
-  activityId?: string | null
-  activityName?: string | null
-  activityType?: string | null
-  startTime?: string | null
-  endTime?: string | null
-  durationInMillis?: number | null
-  canceled?: boolean | null
-}
-
 interface RawDefinition {
   id?: string | null
   key?: string | null
@@ -204,7 +192,7 @@ export async function buildIncidentDetailData(
   const incident = normalizeIncident(rawIncident, options.incidentId, rawRootCause ?? rawIncident)
   const { processInstanceId, processDefinitionId, jobId, activityId } = incident
 
-  const [rawInstance, activityTree, variables, xmlResponse, history, definitionMeta, job] =
+  const [rawInstance, activityTree, variables, xmlResponse, historyCount, definitionMeta, job] =
     await Promise.all([
       processInstanceId
         ? (getProcessInstance({ client, path: { id: processInstanceId } }).catch(
@@ -226,37 +214,20 @@ export async function buildIncidentDetailData(
             () => null,
           ) as Promise<{ bpmn20Xml?: string } | null>)
         : Promise.resolve(null),
+      // The History tab pages the rows itself (registrar history query); the
+      // payload only carries the honest total for the KPI. Degrades to null
+      // when history is disabled on the engine.
       processInstanceId
-        ? (getHistoricActivityInstances({
-            client,
-            query: {
-              processInstanceId,
-              sortBy: "startTime",
-              sortOrder: "asc",
-              maxResults: 200,
-            },
-          }).catch(() => []) as Promise<unknown>)
-        : Promise.resolve([]),
+        ? (getHistoricActivityInstancesCount({ client, query: { processInstanceId } }).catch(
+            () => null,
+          ) as Promise<{ count?: number } | null>)
+        : Promise.resolve(null),
       fetchDefinitionMeta(client, processDefinitionId),
       jobId ? fetchJob(client, jobId) : Promise.resolve(null),
     ])
 
   const bpmnXml = xmlResponse?.bpmn20Xml ?? null
   const activityNames = bpmnXml ? extractActivityNames(bpmnXml) : {}
-
-  const historyRows = (Array.isArray(history) ? history : []) as RawHistoricActivity[]
-  const historyEntries: IncidentDetailHistoryEntry[] = historyRows
-    .filter((h) => h.id && h.activityId)
-    .map((h) => ({
-      id: h.id ?? "",
-      activityId: h.activityId ?? "",
-      activityName: h.activityName ?? activityNames[h.activityId ?? ""] ?? null,
-      activityType: h.activityType ?? "unknown",
-      startTime: h.startTime ?? "",
-      endTime: h.endTime ?? null,
-      durationInMillis: typeof h.durationInMillis === "number" ? h.durationInMillis : null,
-      canceled: h.canceled === true,
-    }))
 
   const processDefinitionKey = processDefinitionId
     ? processDefinitionKeyFromId(processDefinitionId)
@@ -308,6 +279,6 @@ export async function buildIncidentDetailData(
     activityTree: activityTree as ActivityTree | null,
     variables: variables as Record<string, VariableValue>,
 
-    history: historyEntries,
+    historyTotalCount: typeof historyCount?.count === "number" ? historyCount.count : null,
   }
 }
