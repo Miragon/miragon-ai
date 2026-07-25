@@ -1,6 +1,6 @@
 <!--
   Landing headline section: Miragon AI is one platform with two products across the
-  process lifecycle — Design (design-time, indigo, in development) and Operations
+  process lifecycle: Design (design-time, indigo, in development) and Operations
   (run-time, green, live today). Kept high-level and engine-agnostic for architects /
   IT decision-makers; specific engines (CIB Seven, Operaton) live on the product pages.
   Each card links to its product page. Design sits first so the row reads left→right
@@ -13,13 +13,13 @@
       <h2 class="title">Design your processes. Operate them with AI.</h2>
       <p class="intro">
         You standardized on your process platform because it's proven and trusted. Miragon AI keeps
-        that investment future-proof — adding AI across the whole lifecycle, from the first process
+        that investment future-proof, adding AI across the whole lifecycle, from the first process
         you model to the ones you run every day.
       </p>
     </div>
 
     <div class="grid">
-      <!-- Design — design-time, indigo, in development -->
+      <!-- Design: design-time, indigo, in development -->
       <a class="card design" href="/product/design">
         <div class="grad-line" aria-hidden="true" />
         <div class="card-top">
@@ -28,11 +28,11 @@
         </div>
         <h3 class="name">Miragon AI Design</h3>
         <p class="tagline">
-          Model your processes together on one always-live version — no checked-out copies, no
+          Model your processes together on one always-live version: no checked-out copies, no
           branches, no merge conflicts. Independent of the engine you run.
         </p>
         <ul class="bullets">
-          <li>One live version of every process — everyone works on the latest, together</li>
+          <li>One live version of every process, so everyone works on the latest together</li>
           <li>Model in the browser or your IDE, always kept in sync</li>
           <li>See who is working where, in real time</li>
           <li>Governed releases through the review process your teams already trust</li>
@@ -47,7 +47,7 @@
         <span class="c-dot o" />
       </div>
 
-      <!-- Operations — run-time, green, live today -->
+      <!-- Operations: run-time, green, live today -->
       <a class="card ops" href="/product/operations">
         <div class="grad-line" aria-hidden="true" />
         <div class="card-top">
@@ -56,11 +56,11 @@
         </div>
         <h3 class="name">Miragon AI Operations</h3>
         <p class="tagline">
-          Run and monitor your live processes just by asking — every answer comes back clear and
+          Run and monitor your live processes just by asking. Every answer comes back clear and
           visual, right in the conversation.
         </p>
         <ul class="bullets">
-          <li>Ask about any running process in plain language — no cockpit, no query language</li>
+          <li>Ask about any running process in plain language: no cockpit, no query language</li>
           <li>See process health, bottlenecks and failures at a glance</li>
           <li>Diagnose and resolve incidents in the same conversation</li>
           <li>Runs across your engines, self-hosted inside your own environment</li>

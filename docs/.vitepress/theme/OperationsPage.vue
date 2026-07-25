@@ -14,7 +14,7 @@ const pillars = [
   {
     chip: "Operations",
     title: "The cockpit, by conversation",
-    text: "List and inspect definitions and instances. Start, modify, suspend and migrate. Work user and external tasks, deployments and history — from the same conversation you asked the question in.",
+    text: "List and inspect definitions and instances. Start, modify, suspend and migrate. Work user and external tasks, deployments and history, from the same conversation you asked the question in.",
   },
   {
     chip: "Analytics",
@@ -24,7 +24,7 @@ const pillars = [
   {
     chip: "Incidents",
     title: "Resolve incidents, retry jobs, in the chat",
-    text: "Find failing instances, read the incident, resolve it, and retry failed jobs without leaving the conversation — with the BPMN token highlighted exactly where it broke.",
+    text: "Find failing instances, read the incident, resolve it, and retry failed jobs without leaving the conversation, with the BPMN token highlighted exactly where it broke.",
   },
   {
     chip: "Multi-engine",
@@ -36,11 +36,11 @@ const pillars = [
 const steps = [
   {
     title: "Point a client at it",
-    text: "Connect any MCP-capable assistant — Claude, ChatGPT, Claude Code — to the Operations server sitting in front of your Camunda 7, CIB Seven or Operaton fleet.",
+    text: "Connect any MCP-capable assistant (Claude, ChatGPT, Claude Code) to the Operations server sitting in front of your Camunda 7, CIB Seven or Operaton fleet.",
   },
   {
     title: "Ask in plain language",
-    text: "Ask about definitions, instances, incidents or KPIs. Operations reads and acts on the right engine through multi-engine routing — nothing about your landscape has to change.",
+    text: "Ask about definitions, instances, incidents or KPIs. Operations reads and acts on the right engine through multi-engine routing. Nothing about your landscape has to change.",
   },
   {
     title: "Get a widget and a straight answer",
@@ -87,7 +87,7 @@ const widgets = [
       <p class="lead">
         Every question about a running engine turns into a hunt. Which cockpit tab shows suspended
         instances? What's the PromQL for element-level bottlenecks? Who's awake at 3am when a job
-        queue backs up? The information is all there — it's just scattered across four tools and a
+        queue backs up? The information is all there. It's just scattered across four tools and a
         query language. Operations replaces the hunt with a sentence.
       </p>
     </section>
@@ -124,7 +124,7 @@ const widgets = [
       <span class="label">Answers that render</span>
       <h2 class="block-title">Not walls of text. Interactive widgets.</h2>
       <p class="lead">
-        Answers render as MCP Apps right in the chat — read them at a glance, click into them for
+        Answers render as MCP Apps right in the chat. Read them at a glance, click into them for
         detail, while the assistant reasons over a lightweight summary of the same data.
       </p>
       <ul class="widget-list">
@@ -140,7 +140,7 @@ const widgets = [
         <p class="cta-eyebrow"><span class="dot" />Start now</p>
         <h2 class="cta-title">Stop hunting. Start asking.</h2>
         <p class="cta-body">
-          A live CIB Seven engine with seeded traffic is waiting in the playground — no install, no
+          A live CIB Seven engine with seeded traffic is waiting in the playground. No install, no
           signup wall. Point your MCP client at it and ask your first question, then take the same
           server self-hosted.
         </p>

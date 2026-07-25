@@ -1,6 +1,6 @@
 <!--
   Design-time signature: a live-feeling collaborative BPMN canvas that shows the
-  Miragon AI Design thesis in one frame — everyone models the same single live
+  Miragon AI Design thesis in one frame: everyone models the same single live
   version at once (remote cursors, presence, a soft element lock), and a release
   turns that live state into a pull request. Indigo-accented counterpart to the
   green HeroConversation (which is the Operations signature). Pure CSS + inline

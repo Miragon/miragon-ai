@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Bring AI to the stack
   text: your business already trusts.
-  tagline: "Miragon AI adds modern AI to the Camunda 7 and Activiti platform your organization already runs — future-proofing the investment you've made, with no rip-and-replace. Design your processes together, then operate them just by asking."
+  tagline: "Miragon AI adds modern AI to the Camunda 7 and Activiti platform your organization already runs, future-proofing the investment you've made, with no rip-and-replace. Design your processes together, then operate them just by asking."
   actions:
     - theme: brand
       text: Explore the platform

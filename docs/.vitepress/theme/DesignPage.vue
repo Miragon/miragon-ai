@@ -1,6 +1,6 @@
 <!--
   Miragon AI Design product page (route /product/design). Design-time product, indigo
-  accent, IN DEVELOPMENT — framing stays honest (no GA claims; CTA is a conversation, not
+  accent, IN DEVELOPMENT. Framing stays honest (no GA claims; CTA is a conversation, not
   a demo login). Uses the CollabCanvas signature (live co-modeling) as the hero visual.
   Rendered on a layout:home page, so it inherits the forced-dark brand.
 -->
@@ -11,29 +11,29 @@ const pillars = [
   {
     chip: "Live collaboration",
     title: "One live source, everyone on it",
-    text: "An always-on Live Host holds the single working state. Model from the bpmn-js web canvas with Monaco for YAML and Markdown docs, or from VS Code via the Miragon BPMN Modeler — the same live document, synced in real time, with avatars, remote cursors and soft element locks.",
+    text: "An always-on Live Host holds the single working state. Model from the bpmn-js web canvas with Monaco for YAML and Markdown docs, or from VS Code via the Miragon BPMN Modeler. It's the same live document, synced in real time, with avatars, remote cursors and soft element locks.",
   },
   {
     chip: "Git-governed releases",
     title: "A release is a Pull Request",
-    text: "A release turns the live state of one process into a GitHub Pull Request. Review and merge is the approval — governed by the CODEOWNERS and branch protection you already trust. No bespoke permission model: GitHub decides who can merge.",
+    text: "A release turns the live state of one process into a GitHub Pull Request. Review and merge is the approval, governed by the CODEOWNERS and branch protection you already trust. No bespoke permission model: GitHub decides who can merge.",
   },
   {
     chip: "Source of truth",
     title: "One read-only portal",
-    text: "A read-only portal is the surface for everyone who doesn't model — always showing the last released state of every process, never a half-finished draft or someone's branch.",
+    text: "A read-only portal is the surface for everyone who doesn't model. It always shows the last released state of every process, never a half-finished draft or someone's branch.",
   },
   {
     chip: "AI-native",
     title: "MCP reads both states",
-    text: "Because Design speaks MCP too, agents can read and reason about both your live work-in-progress (clearly labeled) and your released models — the same conversational surface that runs your engines can talk about the processes you're still shaping.",
+    text: "Because Design speaks MCP too, agents can read and reason about both your live work-in-progress (clearly labeled) and your released models. The same conversational surface that runs your engines can talk about the processes you're still shaping.",
   },
 ]
 
 const steps = [
   {
     title: "Model live, together",
-    text: "Everyone connects to the same live session from the web canvas or VS Code and always sees the latest state — no check-out, no branches.",
+    text: "Everyone connects to the same live session from the web canvas or VS Code and always sees the latest state: no check-out, no branches.",
   },
   {
     title: "Release as a Pull Request",
@@ -41,11 +41,11 @@ const steps = [
   },
   {
     title: "Review and merge",
-    text: "Review and merge is the approval, governed by CODEOWNERS and branch protection — GitHub decides who can ship.",
+    text: "Review and merge is the approval, governed by CODEOWNERS and branch protection. GitHub decides who can ship.",
   },
   {
     title: "Publish to the portal",
-    text: "The merged, released state lands in the read-only portal — the last-released source of truth for everyone who consumes processes.",
+    text: "The merged, released state lands in the read-only portal, the last-released source of truth for everyone who consumes processes.",
   },
 ]
 
@@ -66,8 +66,8 @@ const points = [
         <h1 class="hero-title">One live version,<span class="grad"> no merge hell</span>.</h1>
         <p class="hero-tagline">
           The design-time counterpart to Operations: a live-collaboration platform for your process
-          models — standard BPMN, independent of the engine you run. We're building it in the open —
-          here's the idea, and how it works.
+          models. Standard BPMN, independent of the engine you run. We're building it in the open.
+          Here's the idea, and how it works.
         </p>
         <div class="actions">
           <a class="btn primary" href="#contact">
@@ -88,7 +88,7 @@ const points = [
         work on it. That's where branches, stale copies and merge conflicts come from. Design
         inverts it: an always-on Live Host holds the single current working state, and everyone who
         models connects to the same live session. Nothing is checked out. There is exactly one live
-        version — no branches to reconcile, no merges to fight.
+        version: no branches to reconcile, no merges to fight.
       </p>
     </section>
 
@@ -125,7 +125,7 @@ const points = [
         <p class="lead">
           Per-file avatars show who's in. Remote cursors show where they are. Remote changes
           highlight as they happen, and soft element locks make it clear when someone is already
-          editing a task — collaboration you can watch, not a merge conflict you discover later.
+          editing a task. It's collaboration you can watch, not a merge conflict you discover later.
         </p>
       </div>
       <ul class="points">
@@ -140,7 +140,7 @@ const points = [
         <h2 class="status-title">Being built now. Come build it with us.</h2>
         <p class="status-body">
           Miragon AI Design is in active development in 2026 and not yet generally available.
-          Everything here describes the platform we're building and the mechanics behind it — React
+          Everything here describes the platform we're building and the mechanics behind it: React
           19, Vite, TanStack Router and Query, Tailwind, real-time sync over Hocuspocus and Yjs. If
           living on one live version instead of a pile of branches is how your team wants to work,
           request early access or book a call.
@@ -156,7 +156,7 @@ const points = [
         <p class="cta-eyebrow"><span class="dot" />Build it with us</p>
         <h2 class="cta-title">One live version of your BPM landscape. Let's build it.</h2>
         <p class="cta-body">
-          Design is in development — the honest ask is a conversation, not a demo login. Tell us how
+          Design is in development. The honest ask is a conversation, not a demo login. Tell us how
           your team models today and we'll show you where this is going.
         </p>
         <a class="btn primary big" href="#contact">
@@ -358,7 +358,7 @@ const points = [
   color: #98989d;
 }
 
-/* Flow — 4-step pipeline */
+/* Flow: 4-step pipeline */
 .flow {
   list-style: none;
   margin: 8px 0 0;
