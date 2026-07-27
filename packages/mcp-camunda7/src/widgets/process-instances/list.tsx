@@ -20,6 +20,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import { useState } from "react"
 import type { ProcessInstanceRow, ProcessInstancesData } from "../../view-models.js"
+import type { ProcessInstancesFilters } from "../../feed-contracts.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
@@ -36,17 +37,11 @@ const CHIP_SUSPENDED = "suspended"
 type InstanceChip = typeof CHIP_ALL | typeof CHIP_INCIDENTS | typeof CHIP_SUSPENDED
 
 /**
- * Client-side mirror of the `camunda7_process_instances_data` filter contract
- * (paging args are owned by `usePagedViewData`).
+ * The `camunda7_process_instances_data` filter contract, derived from the
+ * shared feed shapes (type-only import — no runtime zod here). Paging args
+ * are owned by `usePagedViewData`; `engine` by the resolve-engine override.
  */
-type InstancesFilterArgs = {
-  processDefinitionKey?: string
-  engine?: string
-  active?: boolean
-  suspended?: boolean
-  withIncidentsOnly?: boolean
-  businessKeyLike?: string
-}
+type InstancesFilterArgs = Partial<ProcessInstancesFilters> & { engine?: string }
 
 function rowTone(row: ProcessInstanceRow): ToneVariant {
   if (row.hasIncident) return "critical"

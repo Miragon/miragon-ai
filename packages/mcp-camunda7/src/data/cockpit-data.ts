@@ -24,6 +24,15 @@ import {
 } from "@miragon-ai/client-camunda7/sdk"
 import { buildTaskFormSchema } from "../tools/task-form.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "../lib/activity-tree.js"
+import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
+import type { EngineProvider } from "../engine-provider.js"
+import type {
+  JobsFilters,
+  PagingArgs,
+  ProcessInstancesFilters,
+  ProcessListFilters,
+} from "../feed-contracts.js"
+import { processDefinitionKeyFromId } from "./incident-panel-data.js"
 
 /**
  * Pure data builders shared by the `camunda7_show_*` widget tools AND the
@@ -134,14 +143,8 @@ export async function buildCockpitDashboardData(
   }
 }
 
-export interface ProcessListArgs {
-  key?: string
-  nameLike?: string
-  /** Defaults to true — one row per definition key. */
-  latestVersion?: boolean
-  firstResult?: number
-  maxResults?: number
-}
+/** Filters from the shared feed contract + paging; latestVersion defaults to true. */
+export type ProcessListArgs = ProcessListFilters & PagingArgs
 
 /**
  * One page of deployed process definitions with an honest total from
@@ -186,15 +189,7 @@ export async function buildProcessListData(
   }
 }
 
-export interface ProcessInstancesArgs {
-  processDefinitionKey: string
-  active?: boolean
-  suspended?: boolean
-  withIncidentsOnly?: boolean
-  businessKeyLike?: string
-  firstResult?: number
-  maxResults?: number
-}
+export type ProcessInstancesArgs = ProcessInstancesFilters & PagingArgs
 
 export async function buildProcessInstancesData(
   client: Client,
@@ -288,6 +283,8 @@ export async function buildInstanceDetailData(
   client: Client,
   engineId: string,
   args: { processInstanceId: string },
+  /** Cockpit-URL context for the per-incident jump-out links; absent → null links. */
+  urls?: { baseUrl: string; cockpitUrl?: string; provider: EngineProvider },
 ): Promise<InstanceDetailData> {
   const [instance, activityTree, variables, incidents, openTasksRaw] = await Promise.all([
     getProcessInstance({ client, path: { id: args.processInstanceId } }),
@@ -336,11 +333,47 @@ export async function buildInstanceDetailData(
     })),
   )
 
+  // Explicit mapping instead of a cast: the raw /incident rows carry no
+  // cockpitInstanceUrl — the old `as unknown as` silently shipped rows whose
+  // required url field was missing, so the per-incident Cockpit links never
+  // rendered on the instance detail.
+  const defKey = definitionId ? processDefinitionKeyFromId(definitionId) : null
+  const versionSegment = definitionId?.split(":")[1]
+  const defVersion = versionSegment && /^\d+$/.test(versionSegment) ? Number(versionSegment) : null
+  const incidentRows: InstanceDetailData["incidents"] = (
+    (Array.isArray(incidents) ? incidents : []) as Array<{
+      id?: string | null
+      processInstanceId?: string | null
+      incidentType?: string | null
+      incidentMessage?: string | null
+      incidentTimestamp?: string | null
+    }>
+  ).map((i) => ({
+    id: i.id ?? "",
+    processInstanceId: i.processInstanceId ?? args.processInstanceId,
+    incidentType: i.incidentType ?? "unknown",
+    incidentMessage: i.incidentMessage ?? null,
+    incidentTimestamp: i.incidentTimestamp ?? "",
+    cockpitInstanceUrl:
+      urls && defKey
+        ? buildInstanceCockpitUrl(
+            urls,
+            {
+              key: defKey,
+              version: defVersion,
+              definitionId: definitionId ?? null,
+              instanceId: args.processInstanceId,
+            },
+            { tab: "incidents" },
+          )
+        : null,
+  }))
+
   return {
     instance: instance as unknown as InstanceDetailData["instance"],
     activityTree: activityTree as unknown as InstanceDetailData["activityTree"],
     variables: variables as unknown as InstanceDetailData["variables"],
-    incidents: incidents as unknown as InstanceDetailData["incidents"],
+    incidents: incidentRows,
     bpmnXml,
     activeActivityIds: collectActiveActivityIds(activityTree),
     incidentActivityIds: collectIncidentActivityIds(incidents),
@@ -352,12 +385,7 @@ export async function buildInstanceDetailData(
 export async function buildJobPanelData(
   client: Client,
   engineId: string,
-  args: {
-    processDefinitionKey?: string
-    failedOnly?: boolean
-    firstResult?: number
-    maxResults?: number
-  },
+  args: JobsFilters & PagingArgs,
 ): Promise<JobPanelData> {
   const baseQuery = { processDefinitionKey: args.processDefinitionKey }
   // One page of jobs + two cheap /job/count calls so the KPIs and the "X of Y"
