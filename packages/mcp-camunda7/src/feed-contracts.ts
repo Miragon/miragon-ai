@@ -21,7 +21,12 @@ export type PagingArgs = z.infer<z.ZodObject<typeof pagingShape>>
 
 // ── process instances ─────────────────────────────────────────────────────
 export const processInstancesFilterShape = {
-  processDefinitionKey: z.string().describe("Process definition key whose instances to list"),
+  processDefinitionKey: z
+    .string()
+    .optional()
+    .describe(
+      "Process definition key whose instances to list. Omit for ALL running instances engine-wide.",
+    ),
   active: z.boolean().optional().describe("Only running (non-suspended) instances."),
   suspended: z.boolean().optional().describe("Only suspended instances."),
   withIncidentsOnly: z

@@ -300,7 +300,7 @@ export function registerWidgetTools(
       name: CAMUNDA7_SHOW_PROCESS_INSTANCES,
       title: "Process Instances",
       description:
-        "List the running process instances of a process definition as a filterable table (business key, version, suspended/incident state). Drill-in target from the cockpit definitions table and process-detail; each row opens camunda7_show_instance_detail.",
+        "List running process instances as a filterable table (business key, version, suspended/incident state). Scope to one definition via processDefinitionKey, or omit it for ALL running instances engine-wide. Drill-in target from the cockpit definitions table and process-detail; each row opens camunda7_show_instance_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         ...processInstancesFilterShape,
@@ -330,7 +330,7 @@ export function registerWidgetTools(
         title: "Process Instances",
         summary: t("c7sum.processInstances", {
           totalCount: data.totalCount,
-          processDefinitionKey: data.processDefinitionKey,
+          processDefinitionKey: data.processDefinitionKey ?? "(all definitions)",
           withIncidentCount: data.withIncidentCount,
           suspendedCount: data.suspendedCount,
           returnedCount: data.returnedCount,

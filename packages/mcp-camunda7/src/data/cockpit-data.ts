@@ -218,11 +218,16 @@ export async function buildProcessInstancesData(
       },
     }),
     getProcessInstancesCount({ client, query: filter }).catch(() => null),
-    getProcessDefinitions({
-      client,
-      query: { key: args.processDefinitionKey, latestVersion: true, maxResults: 1 },
-    }).catch(() => []),
-    // /incident filters by `processDefinitionKeyIn` (comma list); one key here.
+    // Display-name lookup only makes sense with a definition scope; the
+    // engine-wide list titles itself.
+    args.processDefinitionKey
+      ? getProcessDefinitions({
+          client,
+          query: { key: args.processDefinitionKey, latestVersion: true, maxResults: 1 },
+        }).catch(() => [])
+      : Promise.resolve([]),
+    // /incident filters by `processDefinitionKeyIn` (comma list); one key here,
+    // engine-wide when unscoped.
     getIncidents({
       client,
       query: { processDefinitionKeyIn: args.processDefinitionKey, maxResults: 2000 },
@@ -256,13 +261,14 @@ export async function buildProcessInstancesData(
     .map((i) => ({
       id: i.id,
       businessKey: i.businessKey ?? null,
+      processDefinitionKey: i.definitionId ? processDefinitionKeyFromId(i.definitionId) : null,
       version: parseVersion(i.definitionId),
       suspended: i.suspended ?? false,
       hasIncident: incidentInstanceIds.has(i.id),
     }))
 
   return {
-    processDefinitionKey: args.processDefinitionKey,
+    processDefinitionKey: args.processDefinitionKey ?? null,
     processDefinitionName: defArray[0]?.name ?? null,
     totalCount: (countRes as { count?: number } | null)?.count ?? instances.length,
     returnedCount: instances.length,

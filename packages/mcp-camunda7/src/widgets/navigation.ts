@@ -35,7 +35,8 @@ export type NavIntent =
   | { type: "settings" }
   | { type: "cluster-detail"; activityId: string; incidentType: string; messageSignature?: string }
   | { type: "process-detail"; processDefinitionKey: string }
-  | { type: "process-instances"; processDefinitionKey: string }
+  /** Omit the key for the engine-wide running-instances list. */
+  | { type: "process-instances"; processDefinitionKey?: string }
   | { type: "process-incidents"; processDefinitionKey: string }
   | { type: "instance-detail"; processInstanceId: string }
   | { type: "incident-detail"; incidentId: string }
@@ -92,7 +93,9 @@ export function navigateViaHost(host: HostActions, intent: NavIntent): void {
       host.showWidget(
         buildShowWidgetIntent(
           CAMUNDA7_SHOW_PROCESS_INSTANCES,
-          `Show the running instances for process \`${intent.processDefinitionKey}\``,
+          intent.processDefinitionKey
+            ? `Show the running instances for process \`${intent.processDefinitionKey}\``
+            : "Show all running process instances across all definitions",
         ),
       )
       return

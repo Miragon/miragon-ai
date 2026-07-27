@@ -149,6 +149,9 @@ export interface ProcessListData {
 export interface ProcessInstanceRow {
   id: string
   businessKey: string | null
+  /** Definition key this instance runs on (parsed from definitionId) — the
+   *  engine-wide list renders it as its own drillable column. */
+  processDefinitionKey: string | null
   /** Definition version this instance runs on (parsed from definitionId). */
   version: number | null
   suspended: boolean
@@ -176,7 +179,8 @@ export interface CockpitAppData {
 }
 
 export interface ProcessInstancesData {
-  processDefinitionKey: string
+  /** Null → the engine-wide list (no definition scope). */
+  processDefinitionKey: string | null
   processDefinitionName: string | null
   /** Total matching instances on the engine (may exceed `instances.length`). */
   totalCount: number

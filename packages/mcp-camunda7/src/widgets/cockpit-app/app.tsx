@@ -32,7 +32,7 @@ type CockpitView =
       messageSignature?: string
     }
   | { section: "process-detail"; processDefinitionKey: string; focus?: "incidents" }
-  | { section: "process-instances"; processDefinitionKey: string }
+  | { section: "process-instances"; processDefinitionKey?: string }
   | { section: "instance-detail"; processInstanceId: string }
   | { section: "incident-detail"; incidentId: string }
 
@@ -135,7 +135,7 @@ function viewKey(view: CockpitView): string {
       return `cluster-detail:${view.activityId}:${view.incidentType}:${view.messageSignature ?? ""}`
     case "process-detail":
     case "process-instances":
-      return `${view.section}:${view.processDefinitionKey}`
+      return `${view.section}:${view.processDefinitionKey ?? "*"}`
     case "instance-detail":
       return `instance-detail:${view.processInstanceId}`
     case "incident-detail":
