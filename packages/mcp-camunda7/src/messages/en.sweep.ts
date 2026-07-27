@@ -119,7 +119,6 @@ export const enSweep: MessageCatalog = {
   "fleet.incidents": "Incidents",
   "fleet.loading": "Loading…",
   "fleet.operate": "Operate",
-  "fleet.operateEngineAria": "Operate engine {name}",
   "fleet.performance": "Fleet performance",
   "fleet.processDefinitionsOne": "{count} process definition",
   "fleet.processDefinitionsOther": "{count} process definitions",

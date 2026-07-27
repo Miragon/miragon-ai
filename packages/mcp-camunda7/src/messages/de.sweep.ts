@@ -119,7 +119,6 @@ export const deSweep: MessageCatalog = {
   "fleet.incidents": "Vorfälle",
   "fleet.loading": "Wird geladen…",
   "fleet.operate": "Bedienen",
-  "fleet.operateEngineAria": "Engine {name} bedienen",
   "fleet.performance": "Flotten-Performance",
   "fleet.processDefinitionsOne": "{count} Prozessdefinition",
   "fleet.processDefinitionsOther": "{count} Prozessdefinitionen",

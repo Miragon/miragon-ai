@@ -1,4 +1,4 @@
-import { Button } from "@miragon/mcp-toolkit-ui"
+import { Button, useLocale } from "@miragon/mcp-toolkit-ui"
 import { useHostActions } from "./use-host-actions.js"
 
 /** Visual emphasis tiers — all render the SAME ✦ AI signature, only size/weight differ. */
@@ -13,10 +13,11 @@ export interface AskAiButtonProps {
    */
   prompt: string
   /**
-   * Button text. Default `"Analyze"` — the ✦ glyph already signals the AI
-   * handoff, so the primary entry needs no "…with AI" suffix. Override only for
-   * a different verb (`"Explain this error"`, `"Draft incident ticket"`,
-   * `"Prepare migration"`). For `icon` it moves to `aria-label`/`title`.
+   * Button text. Defaults to a locale-aware "Analyze"/"Analysieren" — the ✦
+   * glyph already signals the AI handoff, so the primary entry needs no
+   * "…with AI" suffix. Override only for a different verb (`"Explain this
+   * error"`, `"Draft incident ticket"`, `"Prepare migration"`). For `icon` it
+   * moves to `aria-label`/`title`.
    */
   label?: string
   /**
@@ -46,13 +47,18 @@ const AI_GLYPH = "✦"
  */
 export function AskAiButton({
   prompt,
-  label = "Analyze",
+  label,
   variant = "subtle",
   title,
   disabled,
   onSent,
 }: AskAiButtonProps) {
   const host = useHostActions()
+  const locale = useLocale()
+  // The kit has no message catalog of its own, so the default verb follows the
+  // ambient locale — otherwise every label-less call site leaks English into a
+  // localized cockpit.
+  const effectiveLabel = label ?? (locale.startsWith("de") ? "Analysieren" : "Analyze")
   const isIcon = variant === "icon"
   return (
     <Button
@@ -63,15 +69,15 @@ export function AskAiButton({
       // the primary surface entry gets the m-blue accent to stand out as AI-first.
       className={variant === "primary" ? "border-m-blue/40 text-m-blue" : undefined}
       disabled={disabled}
-      aria-label={isIcon ? (title ?? label) : undefined}
-      title={isIcon ? (title ?? label) : title}
+      aria-label={isIcon ? (title ?? effectiveLabel) : undefined}
+      title={isIcon ? (title ?? effectiveLabel) : title}
       onClick={() => {
         host.askAi(prompt)
         onSent?.()
       }}
     >
       <span aria-hidden>{AI_GLYPH}</span>
-      {!isIcon && label}
+      {!isIcon && effectiveLabel}
     </Button>
   )
 }

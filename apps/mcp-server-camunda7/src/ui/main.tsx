@@ -1,8 +1,8 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { McpUseProvider } from "mcp-use/react"
-import { McpAppView } from "@miragon/mcp-toolkit-ui/app"
 import { widgetRegistry } from "./widget-registry.js"
+import { LocalizedAppView } from "./app-view-labels.js"
 import { ProfileGate } from "./profile-gate.js"
 import "./globals.css"
 
@@ -13,7 +13,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <McpUseProvider>
       <ProfileGate>
-        <McpAppView widgets={widgetRegistry} />
+        <LocalizedAppView widgets={widgetRegistry} />
       </ProfileGate>
     </McpUseProvider>
   </StrictMode>,
