@@ -6,17 +6,17 @@ import type { JobPanelData } from "../view-models.js"
 import {
   AskAiButton,
   KpiGrid,
-  ListFooter,
+  ListTable,
   LogText,
   TableEmptyState,
   Td,
-  Th,
   ViewDataState,
   WidgetShell,
   formatTimestamp,
   usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
+import { CockpitListFooter } from "./list-footer.js"
 import { refreshCockpitData } from "./refresh.js"
 import { useT } from "../messages/use-t.js"
 
@@ -141,108 +141,85 @@ export function JobPanelWidget({
         <TableEmptyState>{t("jobPanel.noJobs")}</TableEmptyState>
       ) : (
         <>
-          <table className="w-full border-collapse text-sm" aria-label={t("jobPanel.tableLabel")}>
-            <thead className="bg-muted">
-              <tr>
-                <Th>{t("jobPanel.colActivity")}</Th>
-                <Th>{t("jobPanel.colProcess")}</Th>
-                <Th align="right">{t("jobPanel.colRetries")}</Th>
-                <Th>{t("jobPanel.colError")}</Th>
-                <Th align="right">{t("jobPanel.colCreated")}</Th>
-                <Th plain />
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((job) => {
-                const retried = retriedIds.has(job.id)
-                return (
-                  <tr
-                    key={job.id}
-                    className={retried ? "opacity-50" : "hover:bg-muted transition-colors"}
-                  >
-                    <Td>
-                      <span className="font-mono text-sm">{job.activityId ?? "\u2014"}</span>
-                    </Td>
-                    <Td>
-                      <span className="font-mono text-sm">
-                        {job.processDefinitionKey ?? "\u2014"}
-                      </span>
-                    </Td>
-                    <Td align="right">
-                      <Badge
-                        variant={
-                          retried ? "secondary" : job.retries === 0 ? "destructive" : "secondary"
-                        }
-                        className="tabular-nums"
-                      >
-                        {retried ? 1 : job.retries}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <LogText text={job.exceptionMessage} />
-                    </Td>
-                    <Td align="right" className="text-muted-foreground font-mono text-xs">
-                      {formatTimestamp(job.createTime)}
-                    </Td>
-                    <Td align="right">
-                      {job.retries === 0 && !retried && (
-                        <div className="inline-flex items-center justify-end gap-1">
-                          <AskAiButton
-                            variant="icon"
-                            label={t("jobPanel.explainFailure")}
-                            title={t("jobPanel.explainFailure")}
-                            prompt={`Explain why job ${job.id} failed on engine "${engineId}". It is on activity "${job.activityId}" of process "${job.processDefinitionKey}" (definition ${job.processDefinitionId}), instance ${job.processInstanceId}, retries=${job.retries}, created ${job.createTime}. Reported exception: "${job.exceptionMessage}". Steps: (1) read the full context with camunda7_get_process_instance({engine: "${engineId}", id: "${job.processInstanceId}"}) and camunda7_get_process_instance_variables for the input that reached this activity; (2) find the matching incident with camunda7_list_incidents({engine: "${engineId}", processInstanceId: "${job.processInstanceId}"}); (3) check camunda7_query_historic_activity_instances to see if activity "${job.activityId}" fails repeatedly. Then answer in plain language: what broke, whether it is transient (data/infra) or deterministic (code/config), and an explicit verdict — SAFE TO RETRY or WILL RE-FAIL — with one-line justification. Do not mutate anything.`}
-                          />
-                          <AskAiButton
-                            variant="icon"
-                            label={t("jobPanel.draftTicket")}
-                            title={t("jobPanel.draftTicket")}
-                            prompt={`Draft an incident ticket for the incident behind failed job ${job.id} on engine "${engineId}". This job has no incidentId directly, so first FIND the incident: call camunda7_list_incidents({ engine: "${engineId}", processInstanceId: "${job.processInstanceId}" }) and pick the incident for this job (activity "${job.activityId}" of process "${job.processDefinitionKey}", instance ${job.processInstanceId}; reported exception: "${job.exceptionMessage}"). Then build the draft with camunda7_format_incident_issue({ incidentId: "<found incident id>" }) and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={retryMutation.isPending}
-                            onClick={() => handleRetry(job.id)}
-                          >
-                            {t("jobPanel.retry")}
-                          </Button>
-                        </div>
-                      )}
-                      {retried && <Badge variant="secondary">{t("jobPanel.retried")}</Badge>}
-                      {retryError?.jobId === job.id && (
-                        <p role="alert" className="text-critical mt-1 text-xs">
-                          {t("jobPanel.retryError", { message: retryError.message })}
-                        </p>
-                      )}
-                    </Td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          {/* Load-more failures land here (page 0 failures render in the guard
-              above): loaded rows stay visible, the failure is inline + retryable. */}
-          {paged.error && (
-            <div role="alert" className="text-critical flex items-center gap-2 text-xs">
-              <span>{t("jobPanel.loadMoreError", { message: paged.error.message })}</span>
-              <button
-                type="button"
-                onClick={paged.loadMore}
-                className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
-              >
-                {t("jobPanel.retryLoadMore")}
-              </button>
-            </div>
-          )}
-          <ListFooter
-            shown={jobs.length}
-            total={paged.total}
-            hasMore={paged.hasMore}
-            loadingMore={paged.loadingMore}
-            onLoadMore={paged.loadMore}
-            noun={t("jobPanel.footerNoun")}
-          />
+          <ListTable
+            ariaLabel={t("jobPanel.tableLabel")}
+            columns={[
+              { label: t("jobPanel.colActivity") },
+              { label: t("jobPanel.colProcess") },
+              { label: t("jobPanel.colRetries"), align: "right" },
+              { label: t("jobPanel.colError") },
+              { label: t("jobPanel.colCreated"), align: "right" },
+              { plain: true },
+            ]}
+          >
+            {jobs.map((job) => {
+              const retried = retriedIds.has(job.id)
+              return (
+                <tr
+                  key={job.id}
+                  className={retried ? "opacity-50" : "hover:bg-muted transition-colors"}
+                >
+                  <Td>
+                    <span className="font-mono text-sm">{job.activityId ?? "\u2014"}</span>
+                  </Td>
+                  <Td>
+                    <span className="font-mono text-sm">
+                      {job.processDefinitionKey ?? "\u2014"}
+                    </span>
+                  </Td>
+                  <Td align="right">
+                    <Badge
+                      variant={
+                        retried ? "secondary" : job.retries === 0 ? "destructive" : "secondary"
+                      }
+                      className="tabular-nums"
+                    >
+                      {retried ? 1 : job.retries}
+                    </Badge>
+                  </Td>
+                  <Td>
+                    <LogText text={job.exceptionMessage} />
+                  </Td>
+                  <Td align="right" className="text-muted-foreground font-mono text-xs">
+                    {formatTimestamp(job.createTime)}
+                  </Td>
+                  <Td align="right">
+                    {job.retries === 0 && !retried && (
+                      <div className="inline-flex items-center justify-end gap-1">
+                        <AskAiButton
+                          variant="icon"
+                          label={t("jobPanel.explainFailure")}
+                          title={t("jobPanel.explainFailure")}
+                          prompt={`Explain why job ${job.id} failed on engine "${engineId}". It is on activity "${job.activityId}" of process "${job.processDefinitionKey}" (definition ${job.processDefinitionId}), instance ${job.processInstanceId}, retries=${job.retries}, created ${job.createTime}. Reported exception: "${job.exceptionMessage}". Steps: (1) read the full context with camunda7_get_process_instance({engine: "${engineId}", id: "${job.processInstanceId}"}) and camunda7_get_process_instance_variables for the input that reached this activity; (2) find the matching incident with camunda7_list_incidents({engine: "${engineId}", processInstanceId: "${job.processInstanceId}"}); (3) check camunda7_query_historic_activity_instances to see if activity "${job.activityId}" fails repeatedly. Then answer in plain language: what broke, whether it is transient (data/infra) or deterministic (code/config), and an explicit verdict — SAFE TO RETRY or WILL RE-FAIL — with one-line justification. Do not mutate anything.`}
+                        />
+                        <AskAiButton
+                          variant="icon"
+                          label={t("jobPanel.draftTicket")}
+                          title={t("jobPanel.draftTicket")}
+                          prompt={`Draft an incident ticket for the incident behind failed job ${job.id} on engine "${engineId}". This job has no incidentId directly, so first FIND the incident: call camunda7_list_incidents({ engine: "${engineId}", processInstanceId: "${job.processInstanceId}" }) and pick the incident for this job (activity "${job.activityId}" of process "${job.processDefinitionKey}", instance ${job.processInstanceId}; reported exception: "${job.exceptionMessage}"). Then build the draft with camunda7_format_incident_issue({ incidentId: "<found incident id>" }) and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={retryMutation.isPending}
+                          onClick={() => handleRetry(job.id)}
+                        >
+                          {t("jobPanel.retry")}
+                        </Button>
+                      </div>
+                    )}
+                    {retried && <Badge variant="secondary">{t("jobPanel.retried")}</Badge>}
+                    {retryError?.jobId === job.id && (
+                      <p role="alert" className="text-critical mt-1 text-xs">
+                        {t("jobPanel.retryError", { message: retryError.message })}
+                      </p>
+                    )}
+                  </Td>
+                </tr>
+              )
+            })}
+          </ListTable>
+          <CockpitListFooter paged={paged} noun={t("jobPanel.footerNoun")} />
         </>
       )}
     </WidgetShell>

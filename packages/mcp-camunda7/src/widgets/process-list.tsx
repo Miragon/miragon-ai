@@ -1,18 +1,16 @@
-import { useState } from "react"
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
   FilterBar,
-  ListFooter,
   QueryFallback,
   TableSkeleton,
   WidgetShell,
-  useDebouncedValue,
-  usePagedViewData,
+  usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
 import type { ProcessDefinition, ProcessListData } from "../view-models.js"
 import { CAMUNDA7_PROCESS_LIST_DATA } from "../tool-names.js"
+import { CockpitListFooter } from "./list-footer.js"
 import {
   ProcessDefinitionsTableView,
   type ProcessDefinitionsTableRow,
@@ -37,22 +35,18 @@ export function ProcessListWidget({
   latestVersion?: boolean
 }) {
   const t = useT()
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebouncedValue(search.trim(), 300)
-
-  // The search is SERVER-side (nameLike on the paged feed) so it covers all
-  // deployed definitions, not just the loaded page.
-  const effectiveNameLike = debouncedSearch || nameLike
   const args: Record<string, unknown> = {}
   if (processDefinitionKey) args.key = processDefinitionKey
-  if (effectiveNameLike) args.nameLike = effectiveNameLike
+  if (nameLike) args.nameLike = nameLike
   if (latestVersion !== undefined) args.latestVersion = latestVersion
 
-  // Once the operator searches, drop the handed-in page and self-fetch the
-  // server-filtered set (standalone data is only the unfiltered first page).
-  const interacted = debouncedSearch !== ""
-  const paged = usePagedViewData<ProcessDefinition, ProcessListData>({
-    initialData: interacted ? null : initialData,
+  // The search is SERVER-side (nameLike on the paged feed, overriding a
+  // handed-in prefilter) so it covers all deployed definitions.
+  const { paged, search, setSearch, interacted } = usePagedListView<
+    ProcessDefinition,
+    ProcessListData
+  >({
+    initialData,
     key: [
       "camunda7:process-list",
       processDefinitionKey ?? null,
@@ -61,6 +55,7 @@ export function ProcessListWidget({
     ],
     tool: CAMUNDA7_PROCESS_LIST_DATA,
     args,
+    searchArg: "nameLike",
     pageSize: PAGE_SIZE,
     ready: true,
     selectItems: (d) => d.definitions,
@@ -133,28 +128,7 @@ export function ProcessListWidget({
           />
         )}
       />
-      {/* Load-more failures land here (page 0 failures render above): the
-          already-loaded rows stay visible, the failure is inline + retryable. */}
-      {paged.error && (
-        <div role="alert" className="text-critical flex items-center gap-2 text-xs">
-          <span>{t("processList.loadMoreError", { message: paged.error.message })}</span>
-          <button
-            type="button"
-            onClick={paged.loadMore}
-            className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
-          >
-            {t("processList.retryLoadMore")}
-          </button>
-        </div>
-      )}
-      <ListFooter
-        shown={paged.items.length}
-        total={paged.total}
-        hasMore={paged.hasMore}
-        loadingMore={paged.loadingMore}
-        onLoadMore={paged.loadMore}
-        noun={t("processList.footerNoun")}
-      />
+      <CockpitListFooter paged={paged} noun={t("processList.footerNoun")} />
     </WidgetShell>
   )
 }

@@ -2,16 +2,16 @@ import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-
 import {
   TONE_DOT,
   AskAiButton,
-  ListFooter,
+  ListTable,
   TableEmptyState,
   Td,
-  Th,
   WidgetShell,
   formatDuration,
   formatTimestamp,
   usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
+import { CockpitListFooter } from "./list-footer.js"
 import { useT } from "../messages/use-t.js"
 
 export type { HistoryTimelineData }
@@ -69,54 +69,44 @@ function HistoryTable({ entries }: { entries: HistoryEntry[] }) {
           border replaces the header's own top edge, and the activity cell takes
           the remaining width (w-full max-w-0) so long names truncate instead of
           widening the table into horizontal scroll. */}
-      <table
-        className="w-full border-collapse text-sm [&_th]:border-t-0"
-        aria-label={t("incidentHistory.tableAriaLabel")}
+      <ListTable
+        className="[&_th]:border-t-0"
+        ariaLabel={t("incidentHistory.tableAriaLabel")}
+        columns={[
+          { label: t("incidentHistory.columnActivity"), className: "py-2" },
+          { label: t("incidentHistory.columnStarted"), align: "right", className: "py-2" },
+          { label: t("incidentHistory.columnDuration"), align: "right", className: "py-2" },
+          { label: t("incidentHistory.columnStatus"), align: "right", className: "py-2" },
+        ]}
       >
-        <thead className="bg-muted">
-          <tr>
-            <Th className="py-2">{t("incidentHistory.columnActivity")}</Th>
-            <Th align="right" className="py-2">
-              {t("incidentHistory.columnStarted")}
-            </Th>
-            <Th align="right" className="py-2">
-              {t("incidentHistory.columnDuration")}
-            </Th>
-            <Th align="right" className="py-2">
-              {t("incidentHistory.columnStatus")}
-            </Th>
+        {entries.map((entry) => (
+          <tr key={entry.id} className="hover:bg-card [&:last-child>td]:border-b-0">
+            <Td className="w-full max-w-0 py-2">
+              <div className="text-foreground truncate font-medium">
+                {entry.activityName ?? entry.activityId}
+              </div>
+              <div className="text-muted-foreground truncate font-mono text-xs">
+                {entry.activityType}
+              </div>
+            </Td>
+            <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
+              {formatTimestamp(entry.startTime)}
+            </Td>
+            <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
+              {formatDuration(entry.durationInMillis)}
+            </Td>
+            <Td align="right" className="py-2">
+              {entry.canceled ? (
+                <Badge variant="secondary">{t("incidentHistory.statusCanceled")}</Badge>
+              ) : entry.endTime ? (
+                <Badge variant="secondary">{t("incidentHistory.statusCompleted")}</Badge>
+              ) : (
+                <Badge variant="default">{t("incidentHistory.statusRunning")}</Badge>
+              )}
+            </Td>
           </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => (
-            <tr key={entry.id} className="hover:bg-card [&:last-child>td]:border-b-0">
-              <Td className="w-full max-w-0 py-2">
-                <div className="text-foreground truncate font-medium">
-                  {entry.activityName ?? entry.activityId}
-                </div>
-                <div className="text-muted-foreground truncate font-mono text-xs">
-                  {entry.activityType}
-                </div>
-              </Td>
-              <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
-                {formatTimestamp(entry.startTime)}
-              </Td>
-              <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
-                {formatDuration(entry.durationInMillis)}
-              </Td>
-              <Td align="right" className="py-2">
-                {entry.canceled ? (
-                  <Badge variant="secondary">{t("incidentHistory.statusCanceled")}</Badge>
-                ) : entry.endTime ? (
-                  <Badge variant="secondary">{t("incidentHistory.statusCompleted")}</Badge>
-                ) : (
-                  <Badge variant="default">{t("incidentHistory.statusRunning")}</Badge>
-                )}
-              </Td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        ))}
+      </ListTable>
     </div>
   )
 }
@@ -311,28 +301,7 @@ export function PagedHistoryView({
   return (
     <div className="flex flex-col gap-2">
       <HistoryTimelineView variant={variant} activities={paged.items} />
-      {/* Load-more failures land here (page 0 failures render above): the
-          already-loaded rows stay visible, the failure is inline + retryable. */}
-      {paged.error && (
-        <div role="alert" className="text-critical flex items-center gap-2 text-xs">
-          <span>{t("historyTimeline.loadMoreError", { message: paged.error.message })}</span>
-          <button
-            type="button"
-            onClick={paged.loadMore}
-            className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
-          >
-            {t("historyTimeline.retryLoadMore")}
-          </button>
-        </div>
-      )}
-      <ListFooter
-        shown={paged.items.length}
-        total={paged.total}
-        hasMore={paged.hasMore}
-        loadingMore={paged.loadingMore}
-        onLoadMore={paged.loadMore}
-        noun={t("historyTimeline.footerNoun")}
-      />
+      <CockpitListFooter paged={paged} noun={t("historyTimeline.footerNoun")} />
     </div>
   )
 }

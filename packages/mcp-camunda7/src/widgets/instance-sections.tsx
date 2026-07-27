@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Button, Input, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import { TableEmptyState, Td, Th } from "@miragon-ai/widget-shell/widgets"
+import { ListTable, TableEmptyState, Td } from "@miragon-ai/widget-shell/widgets"
 
 import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
@@ -193,31 +193,26 @@ export function VariablesTable({
   }
 
   return (
-    <table
-      className="w-full border-collapse text-sm"
-      aria-label={t("instanceSections.variablesTableLabel")}
+    <ListTable
+      ariaLabel={t("instanceSections.variablesTableLabel")}
+      columns={[
+        { label: t("instanceSections.columnName") },
+        { label: t("instanceSections.columnType") },
+        { label: t("instanceSections.columnValue") },
+        { plain: true },
+      ]}
     >
-      <thead className="bg-muted">
-        <tr>
-          <Th>{t("instanceSections.columnName")}</Th>
-          <Th>{t("instanceSections.columnType")}</Th>
-          <Th>{t("instanceSections.columnValue")}</Th>
-          <Th plain />
-        </tr>
-      </thead>
-      <tbody>
-        {entries.map(([name, variable]) => (
-          <VariableRow
-            key={name}
-            name={name}
-            variable={getVariable(name, variable)}
-            instanceId={instanceId}
-            engine={engine}
-            readOnly={readOnly}
-            onSaved={handleSaved}
-          />
-        ))}
-      </tbody>
-    </table>
+      {entries.map(([name, variable]) => (
+        <VariableRow
+          key={name}
+          name={name}
+          variable={getVariable(name, variable)}
+          instanceId={instanceId}
+          engine={engine}
+          readOnly={readOnly}
+          onSaved={handleSaved}
+        />
+      ))}
+    </ListTable>
   )
 }

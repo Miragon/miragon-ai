@@ -1,10 +1,8 @@
-import { useState } from "react"
 import {
   AskAiButton,
   DrillButton,
   FilterBar,
   KpiGrid,
-  ListFooter,
   LogText,
   RowCard,
   StatusBadge,
@@ -14,12 +12,12 @@ import {
   WidgetShell,
   formatTimestamp,
   truncate,
-  useDebouncedValue,
-  usePagedViewData,
+  usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
 import { ModelContext } from "mcp-use/react"
 import type { ClusterDetailData, ClusterIncidentRow } from "../view-models.js"
 import { DetailPage } from "./detail-page.js"
+import { CockpitListFooter } from "./list-footer.js"
 import { useNav } from "./navigation.js"
 import { CAMUNDA7_CLUSTER_DETAIL_DATA } from "../tool-names.js"
 import { remediatePrompt } from "./remediation.js"
@@ -67,8 +65,6 @@ export function ClusterDetailView({
 }) {
   const go = useNav()
   const t = useT()
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebouncedValue(search.trim(), 300)
   // Cluster identity from props (cockpit drill) or the handed-in data
   // (standalone show-tool render) — loadMore() must always carry it.
   const clusterActivityId = activityId ?? initialData?.activityId
@@ -84,11 +80,12 @@ export function ClusterDetailView({
   if (clusterSignature) args.messageSignature = clusterSignature
   // The business-key search is SERVER-side (the feed intersects with a
   // /process-instance lookup) so it covers the whole cluster, not just the
-  // loaded page. Once the operator searches, drop the handed-in page.
-  const interacted = debouncedSearch !== ""
-  if (interacted) args.businessKeyLike = debouncedSearch
-  const paged = usePagedViewData<ClusterIncidentRow, ClusterDetailData>({
-    initialData: interacted ? null : initialData,
+  // loaded page.
+  const { paged, search, setSearch, interacted } = usePagedListView<
+    ClusterIncidentRow,
+    ClusterDetailData
+  >({
+    initialData,
     key: [
       "camunda7:cluster-detail",
       engine ?? null,
@@ -98,6 +95,7 @@ export function ClusterDetailView({
     ],
     tool: CAMUNDA7_CLUSTER_DETAIL_DATA,
     args,
+    searchArg: "businessKeyLike",
     pageSize: PAGE_SIZE,
     ready,
     selectItems: (d) => d.incidents,
@@ -252,29 +250,7 @@ export function ClusterDetailView({
                 {interacted ? t("clusterDetail.noMatch") : t("clusterDetail.noMatchingIncidents")}
               </TableEmptyState>
             )}
-            {/* Load-more failures land here (page 0 failures render in the
-                guard above): loaded rows stay visible, the failure is inline
-                and retryable. */}
-            {paged.error && (
-              <div role="alert" className="text-critical flex items-center gap-2 text-xs">
-                <span>{t("clusterDetail.loadMoreError", { message: paged.error.message })}</span>
-                <button
-                  type="button"
-                  onClick={paged.loadMore}
-                  className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
-                >
-                  {t("clusterDetail.retryLoadMore")}
-                </button>
-              </div>
-            )}
-            <ListFooter
-              shown={paged.items.length}
-              total={paged.total}
-              hasMore={paged.hasMore}
-              loadingMore={paged.loadingMore}
-              onLoadMore={paged.loadMore}
-              noun={t("clusterDetail.footerNoun")}
-            />
+            <CockpitListFooter paged={paged} noun={t("clusterDetail.footerNoun")} />
           </section>
         </>
       }

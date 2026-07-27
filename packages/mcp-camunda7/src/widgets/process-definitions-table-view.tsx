@@ -1,10 +1,11 @@
 import type { ReactNode } from "react"
 import {
   CountPill,
+  ListTable,
   TONE_DOT,
   TableEmptyState,
   Td,
-  Th,
+  type ListTableColumn,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
@@ -62,71 +63,68 @@ export function ProcessDefinitionsTableView({
 
   const showCounts = rows.some((row) => row.counts !== undefined)
 
+  const columns: ListTableColumn[] = [
+    { label: t("cockpitDefs.colProcess") },
+    { label: t("cockpitDefs.colVersion") },
+    ...(status ? [{ label: status.header }] : []),
+    ...(showCounts
+      ? ([
+          { label: t("cockpitDefs.colRunning"), align: "right" },
+          { label: t("cockpitDefs.colFailedJobs"), align: "right" },
+          { label: t("cockpitDefs.colIncidents"), align: "right" },
+        ] satisfies ListTableColumn[])
+      : []),
+    ...(renderActions ? [{ plain: true }] : []),
+  ]
+
   return (
-    <table className="w-full border-collapse text-sm" aria-label={ariaLabel}>
-      <thead className="bg-muted">
-        <tr>
-          <Th>{t("cockpitDefs.colProcess")}</Th>
-          <Th>{t("cockpitDefs.colVersion")}</Th>
-          {status && <Th>{status.header}</Th>}
+    <ListTable ariaLabel={ariaLabel} columns={columns}>
+      {rows.map((row) => (
+        <tr key={row.id} className="hover:bg-muted transition-colors">
+          <Td>
+            <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
+              <span className={`size-1.5 rounded-full ${TONE_DOT[row.tone]}`} />
+              <span className="truncate">{row.name ?? row.key}</span>
+            </div>
+            <div className="text-muted-foreground mt-0.5 font-mono text-xs">{row.key}</div>
+          </Td>
+          <Td>
+            <span className="border-border bg-muted text-muted-foreground inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
+              v{row.version}
+            </span>
+            {row.versionTag && (
+              <span className="border-border bg-muted text-muted-foreground ml-1.5 inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
+                {row.versionTag}
+              </span>
+            )}
+          </Td>
+          {status && <Td>{status.render(row)}</Td>}
           {showCounts && (
             <>
-              <Th align="right">{t("cockpitDefs.colRunning")}</Th>
-              <Th align="right">{t("cockpitDefs.colFailedJobs")}</Th>
-              <Th align="right">{t("cockpitDefs.colIncidents")}</Th>
+              <Td align="right" className="text-muted-foreground font-mono text-xs tabular-nums">
+                {(row.counts?.instances ?? 0).toLocaleString()}
+              </Td>
+              <Td align="right">
+                {row.counts && row.counts.failedJobs > 0 ? (
+                  <CountPill tone="warning">{row.counts.failedJobs}</CountPill>
+                ) : (
+                  <span className="text-muted-foreground font-mono text-xs">0</span>
+                )}
+              </Td>
+              <Td align="right">
+                <CountPill tone={(row.counts?.totalIncidents ?? 0) > 0 ? "critical" : "success"}>
+                  {row.counts?.totalIncidents ?? 0}
+                </CountPill>
+              </Td>
             </>
           )}
-          {renderActions && <Th plain />}
+          {renderActions && (
+            <Td>
+              <div className="flex items-center justify-end gap-1.5">{renderActions(row)}</div>
+            </Td>
+          )}
         </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.id} className="hover:bg-muted transition-colors">
-            <Td>
-              <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                <span className={`size-1.5 rounded-full ${TONE_DOT[row.tone]}`} />
-                <span className="truncate">{row.name ?? row.key}</span>
-              </div>
-              <div className="text-muted-foreground mt-0.5 font-mono text-xs">{row.key}</div>
-            </Td>
-            <Td>
-              <span className="border-border bg-muted text-muted-foreground inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
-                v{row.version}
-              </span>
-              {row.versionTag && (
-                <span className="border-border bg-muted text-muted-foreground ml-1.5 inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
-                  {row.versionTag}
-                </span>
-              )}
-            </Td>
-            {status && <Td>{status.render(row)}</Td>}
-            {showCounts && (
-              <>
-                <Td align="right" className="text-muted-foreground font-mono text-xs tabular-nums">
-                  {(row.counts?.instances ?? 0).toLocaleString()}
-                </Td>
-                <Td align="right">
-                  {row.counts && row.counts.failedJobs > 0 ? (
-                    <CountPill tone="warning">{row.counts.failedJobs}</CountPill>
-                  ) : (
-                    <span className="text-muted-foreground font-mono text-xs">0</span>
-                  )}
-                </Td>
-                <Td align="right">
-                  <CountPill tone={(row.counts?.totalIncidents ?? 0) > 0 ? "critical" : "success"}>
-                    {row.counts?.totalIncidents ?? 0}
-                  </CountPill>
-                </Td>
-              </>
-            )}
-            {renderActions && (
-              <Td>
-                <div className="flex items-center justify-end gap-1.5">{renderActions(row)}</div>
-              </Td>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+      ))}
+    </ListTable>
   )
 }
