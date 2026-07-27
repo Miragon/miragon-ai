@@ -33,6 +33,10 @@ export const CAMUNDA7_INCIDENT_DETAIL_DATA = "camunda7_incident_detail_data"
 // for more than prompt hints.
 export const CAMUNDA7_SHOW_HISTORY_TIMELINE = "camunda7_show_history_timeline"
 export const CAMUNDA7_SHOW_BPMN_VIEWER = "camunda7_show_bpmn_viewer"
+// Feed twin of the BPMN viewer — the widget's self-fetch; calling the show
+// tool from inside the iframe is host-defined (a second rendered widget on
+// hosts honoring resultCanProduceWidget).
+export const CAMUNDA7_BPMN_VIEWER_DATA = "camunda7_bpmn_viewer_data"
 // AI-first engine overview: deterministic health verdict + cross-process
 // incident clusters. The cockpit overview's home base; self-fetches its feed.
 export const CAMUNDA7_SHOW_ENGINE_HEALTH = "camunda7_show_engine_health"

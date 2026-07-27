@@ -43,6 +43,7 @@ import { buildIncidentDetailData } from "./data/incident-detail-data.js"
 import { buildBpmnViewerData } from "./data/bpmn-viewer-data.js"
 import {
   CAMUNDA7_ACTIVITY_INCIDENTS_DATA,
+  CAMUNDA7_BPMN_VIEWER_DATA,
   CAMUNDA7_CLUSTER_DETAIL_DATA,
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
   CAMUNDA7_ENGINE_HEALTH_DATA,
@@ -88,8 +89,14 @@ const incidentsDashboardFilterShape = {
  * surface while keeping them callable from widgets via `callTool`; the
  * "Internal JSON feed" descriptions stay as fallback for non-conforming hosts.
  * Deliberately no `resourceUri` — the feeds must return JSON, not render UI.
+ *
+ * `openai/widgetAccessible` covers the Apps-SDK half of the dual contract:
+ * those hosts only allow in-widget callTool on tools carrying the key — a
+ * feed without it renders fine but every pagination/search/refresh is denied.
+ * The key does NOT render anything (no outputTemplate/resourceUri), so the
+ * feeds stay JSON-only.
  */
-const appOnlyMeta = APP_ONLY_META
+const appOnlyMeta = { ...APP_ONLY_META, "openai/widgetAccessible": true }
 
 /** One-line truncation for summaries (incident messages can be stacktrace-sized). */
 function truncate(s: string, max: number): string {
@@ -915,6 +922,33 @@ export function registerWidgetTools(
           businessKeyLike: args.businessKeyLike,
           firstResult: args.firstResult,
           maxResults: args.maxResults,
+        })),
+      })
+    }),
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_BPMN_VIEWER_DATA,
+      title: "BPMN viewer data (internal)",
+      description:
+        "Internal JSON feed (no UI) for the BPMN viewer — diagram XML plus live overlays. Prefer camunda7_show_bpmn_viewer.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processInstanceId: z.string().optional().describe("Instance to overlay live state for."),
+        processDefinitionKey: z.string().optional().describe("Definition for a static diagram."),
+        version: z.number().int().positive().optional(),
+        ...engineParamShape,
+      }),
+      _meta: appOnlyMeta,
+    },
+    withToolErrors(async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      return rawData({
+        ...(await buildBpmnViewerData(client, engineId, {
+          processInstanceId: args.processInstanceId,
+          processDefinitionKey: args.processDefinitionKey,
+          version: args.version,
         })),
       })
     }),

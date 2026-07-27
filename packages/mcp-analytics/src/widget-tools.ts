@@ -8,7 +8,19 @@ import {
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { queries, schemas, type PrometheusClient } from "@miragon-ai/client-analytics"
+import {
+  ANALYTICS_BPMN_HEATMAP_DATA,
+  ANALYTICS_DASHBOARD_DATA,
+  ANALYTICS_FAILURE_DASHBOARD_DATA,
+} from "./tool-names.js"
 import { localizeFor, type LocaleSource } from "./server-locale.js"
+
+/**
+ * App-only marker for the internal `*_data` feeds — same dual contract as the
+ * camunda7 module: SEP-1865 hosts hide the tool from the model,
+ * `openai/widgetAccessible` lets Apps-SDK hosts accept the in-widget callTool.
+ */
+const appOnlyMeta = { ...APP_ONLY_META, "openai/widgetAccessible": true }
 
 /**
  * Engine-agnostic BPMN-XML lookup injected by the host app (which owns the
@@ -304,16 +316,13 @@ export function registerWidgetTools(
 
   server.tool(
     {
-      name: "analytics_bpmn_heatmap_data",
+      name: ANALYTICS_BPMN_HEATMAP_DATA,
       title: "BPMN heatmap data (internal)",
       description:
         "Internal JSON feed (no UI) for the BPMN heatmap — per-element execution frequency + average duration over a window, plus the latest BPMN XML. Lets another widget (e.g. the CIB Seven cockpit) render the heatmap inline. Prefer analytics_show_bpmn_heatmap for a standalone view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object(heatmapInputShape),
-      // App-only (SEP-1865 visibility): hidden from the LLM on conforming
-      // hosts, still callable from widgets via `callTool`. No `resourceUri` —
-      // the feed returns JSON instead of rendering UI.
-      _meta: APP_ONLY_META,
+      _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
       const heat = await queries.elementHeat(ch, args)
@@ -326,6 +335,55 @@ export function registerWidgetTools(
         durationSec: heat.durationSec,
       }
       return buildDataFeedResult(data)
+    }),
+  )
+
+  // ── Per-view data feeds (plain, no UI) ──────────────────────────────────
+  // Backing the dashboard widgets' self-fetch. Self-fetching a show_* tool
+  // instead would be host-defined behavior: hosts honoring
+  // `resultCanProduceWidget` may render a second widget per refresh, and the
+  // show tool's localized model summary is generated for a call the model
+  // never sees.
+
+  server.tool(
+    {
+      name: ANALYTICS_DASHBOARD_DATA,
+      title: "Analytics dashboard data (internal)",
+      description:
+        "Internal JSON feed (no UI) for the analytics dashboard widgets' self-fetch. Prefer analytics_show_dashboard.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
+        period: schemas.elementBottleneckInput.shape.period,
+        ...schemas.engineFilterShape,
+      }),
+      _meta: appOnlyMeta,
+    },
+    withToolErrors(async (args) => {
+      const data = await queries.dashboardData(ch, {
+        processDefinitionKey: args.processDefinitionKey,
+        period: args.period,
+        engine: args.engine,
+      })
+      return buildDataFeedResult({ ...data })
+    }),
+  )
+
+  server.tool(
+    {
+      name: ANALYTICS_FAILURE_DASHBOARD_DATA,
+      title: "Failure dashboard data (internal)",
+      description:
+        "Internal JSON feed (no UI) for the failure dashboard widgets' self-fetch. Prefer analytics_show_failure_dashboard.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        ...schemas.engineFilterShape,
+      }),
+      _meta: appOnlyMeta,
+    },
+    withToolErrors(async (args) => {
+      const data = await queries.failureDashboardData(ch, { engine: args.engine })
+      return buildDataFeedResult({ ...data })
     }),
   )
 }
