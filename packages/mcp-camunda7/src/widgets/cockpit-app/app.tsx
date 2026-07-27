@@ -22,6 +22,7 @@ interface EnginesResult {
 /** Internal, client-side view state — the reducer's mapping of {@link NavIntent}. */
 type CockpitView =
   | { section: "overview" }
+  | { section: "process-list" }
   | { section: "incidents" }
   | { section: "settings" }
   | {
@@ -38,7 +39,7 @@ type CockpitView =
 type TopSection = "overview" | "incidents" | "settings"
 
 const SECTIONS: Array<{ id: TopSection; intent: NavIntent; icon: string }> = [
-  { id: "overview", intent: { type: "process-list" }, icon: "▦" },
+  { id: "overview", intent: { type: "overview" }, icon: "▦" },
   { id: "incidents", intent: { type: "incidents" }, icon: "⚠" },
   { id: "settings", intent: { type: "settings" }, icon: "⚙" },
 ]
@@ -84,8 +85,13 @@ const INITIAL_STATE: CockpitState = { scope: { kind: "landing" }, stack: ROOT_ST
  */
 function intentToView(intent: NavIntent): CockpitView {
   switch (intent.type) {
-    case "process-list":
+    case "overview":
       return { section: "overview" }
+    // A real drill view (the searchable, paged process list) — NOT the
+    // overview: the emitting KPIs sit ON the overview, so mapping the intent
+    // there made the click a visible no-op.
+    case "process-list":
+      return { section: "process-list" }
     case "incidents":
       return { section: "incidents" }
     case "settings":
@@ -179,6 +185,8 @@ function crumbLabel(view: CockpitView, locale: string): string {
   switch (view.section) {
     case "overview":
       return tr("cockpit.crumb.overview")
+    case "process-list":
+      return tr("cockpit.crumb.processList")
     case "incidents":
       return tr("cockpit.crumb.incidents")
     case "settings":

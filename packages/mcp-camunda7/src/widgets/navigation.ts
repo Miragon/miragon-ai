@@ -6,6 +6,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import {
   CAMUNDA7_SHOW_CLUSTER_DETAIL,
+  CAMUNDA7_SHOW_ENGINE_HEALTH,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
   CAMUNDA7_SHOW_INSTANCE_DETAIL,
@@ -28,6 +29,7 @@ import {
  * while the individual widgets keep their conversational drill-in behaviour.
  */
 export type NavIntent =
+  | { type: "overview" }
   | { type: "process-list" }
   | { type: "incidents" }
   | { type: "settings" }
@@ -47,6 +49,11 @@ export type OnNavigate = (intent: NavIntent) => void
  */
 export function navigateViaHost(host: HostActions, intent: NavIntent): void {
   switch (intent.type) {
+    case "overview":
+      host.showWidget(
+        buildShowWidgetIntent(CAMUNDA7_SHOW_ENGINE_HEALTH, "Show the engine overview"),
+      )
+      return
     case "process-list":
       host.showWidget(
         buildShowWidgetIntent(CAMUNDA7_SHOW_PROCESS_LIST, "Show all process definitions"),

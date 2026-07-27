@@ -3,6 +3,7 @@ import type { MessageCatalog } from "@miragon/mcp-toolkit-core"
 /** German message catalog. Missing keys fall back to {@link en} via the translator. */
 export const de: MessageCatalog = {
   // ── Cockpit shell ──────────────────────────────────────────────────────────
+  "cockpit.crumb.processList": "Alle Prozesse",
   "cockpit.section.overview": "Übersicht",
   "cockpit.section.incidents": "Vorfälle",
   "cockpit.section.settings": "Einstellungen",

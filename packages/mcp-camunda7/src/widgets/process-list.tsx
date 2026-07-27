@@ -22,11 +22,14 @@ const PAGE_SIZE = 50
 
 export function ProcessListWidget({
   data: initialData,
+  engine,
   processDefinitionKey,
   nameLike,
   latestVersion,
 }: {
   data: ProcessListData | null
+  /** Explicit engine routing (cockpit view); omitted → the payload's engine. */
+  engine?: string
   /** Filter by exact process definition key. */
   processDefinitionKey?: string
   /** Filter by partial process definition name. */
@@ -39,7 +42,7 @@ export function ProcessListWidget({
   // from the payload's echo — a page-2 fetch without `latestVersion` would
   // mix all versions into a latest-only page 0.
   const echoed = initialData?.filters
-  const feedEngine = initialData?.engineId
+  const feedEngine = engine ?? initialData?.engineId
   const effectiveKey = processDefinitionKey ?? echoed?.key
   const baseNameLike = nameLike ?? echoed?.nameLike
   const effectiveLatest = latestVersion ?? echoed?.latestVersion
