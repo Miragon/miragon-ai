@@ -95,6 +95,12 @@ export interface JobPanelData {
   totalCount: number
   failedCount: number
   jobs: Job[]
+  /** Filters this page was built with — standalone renders get only `data`,
+   *  so loadMore/search must rebuild the feed args from this echo. */
+  filters: {
+    processDefinitionKey?: string
+    failedOnly?: boolean
+  }
   engineId?: string
 }
 
@@ -128,12 +134,24 @@ export interface ProcessDefinition {
 export interface ProcessListData {
   definitions: ProcessDefinition[]
   totalCount: number
+  /** Filters this page was built with — standalone renders get only `data`,
+   *  so loadMore/search must rebuild the feed args from this echo (a page-2
+   *  fetch without `latestVersion` would mix all versions into a latest-only
+   *  page 0). */
+  filters: {
+    key?: string
+    nameLike?: string
+    latestVersion: boolean
+  }
   engineId?: string
 }
 
 export interface ProcessInstanceRow {
   id: string
   businessKey: string | null
+  /** Definition key this instance runs on (parsed from definitionId) — the
+   *  engine-wide list renders it as its own drillable column. */
+  processDefinitionKey: string | null
   /** Definition version this instance runs on (parsed from definitionId). */
   version: number | null
   suspended: boolean
@@ -161,7 +179,8 @@ export interface CockpitAppData {
 }
 
 export interface ProcessInstancesData {
-  processDefinitionKey: string
+  /** Null → the engine-wide list (no definition scope). */
+  processDefinitionKey: string | null
   processDefinitionName: string | null
   /** Total matching instances on the engine (may exceed `instances.length`). */
   totalCount: number

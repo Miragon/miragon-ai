@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url"
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
@@ -11,6 +12,24 @@ if (!INPUT) {
 export default defineConfig({
   plugins: [react(), tailwindcss(), viteSingleFile()],
   resolve: {
+    // Bundle-weight guards for the singlefile widget bundle (everything is
+    // base64/text-inlined, so unused weight is pure wire cost):
+    // - posthog-js: mcp-use dynamic-imports its telemetry client; the cockpit
+    //   sends none — a no-op stub saves ~180 KB minified.
+    // - geist: the full fontsource entry ships 5 subsets (incl. cyrillic +
+    //   vietnamese); the latin/latin-ext-only CSS saves ~100 KB of
+    //   incompressible base64 for an en/de product. Anchored regex so the
+    //   stub CSS's own `…/geist/files/*.woff2` urls keep resolving upstream.
+    alias: [
+      {
+        find: /^posthog-js$/,
+        replacement: fileURLToPath(new URL("./src/ui/posthog-stub.ts", import.meta.url)),
+      },
+      {
+        find: /^@fontsource-variable\/geist$/,
+        replacement: fileURLToPath(new URL("./src/ui/geist-latin.css", import.meta.url)),
+      },
+    ],
     // The widget packages (mcp-camunda7, widget-shell, mcp-analytics) and this
     // app each resolve their own pnpm instance of the toolkit/React/Query libs
     // (differing peer-dep hashes). Bundling multiple copies of @miragon/mcp-

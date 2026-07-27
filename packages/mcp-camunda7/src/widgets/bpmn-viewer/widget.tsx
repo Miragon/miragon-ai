@@ -1,7 +1,7 @@
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
-import { WidgetShell, useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
-import { CAMUNDA7_SHOW_BPMN_VIEWER } from "../../tool-names.js"
+import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { CAMUNDA7_BPMN_VIEWER_DATA } from "../../tool-names.js"
 import { useT } from "../../messages/use-t.js"
 import { BpmnViewerHeader } from "./header.js"
 import { BpmnViewerLegend } from "./legend.js"
@@ -27,16 +27,17 @@ export function BpmnViewerWidget({
 
   const canSelfFetch = Boolean(processInstanceId || processDefinitionKey)
 
-  // Self-fetch of a `show_*` tool: parse structuredContent-first — the text
-  // channel only carries the model summary since the text-channel diet.
-  const query = useViewToolQuery<BpmnViewerData>(
+  // Self-fetch of the app-only *_data feed — calling the show_* tool from
+  // inside the iframe is host-defined behavior (hosts honoring
+  // resultCanProduceWidget may render a second widget per refresh).
+  const query = useToolQuery<BpmnViewerData>(
     [
       "camunda7:bpmn-viewer",
       processInstanceId ?? null,
       processDefinitionKey ?? null,
       version ?? null,
     ],
-    CAMUNDA7_SHOW_BPMN_VIEWER,
+    CAMUNDA7_BPMN_VIEWER_DATA,
     queryArgs,
     { enabled: !initialData && canSelfFetch },
   )

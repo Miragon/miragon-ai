@@ -23,6 +23,13 @@ export function PagedListFooter<TItem, TData>({
 }) {
   return (
     <>
+      {/* Screen-reader progress announcement: the visual "Showing X of Y"
+          lives inside ListFooter without a live region, so a keyboard user
+          gets no feedback when Load more appends rows (the button is even
+          disabled under their focus while loading). */}
+      <span role="status" className="sr-only">
+        {paged.items.length} / {paged.total} {noun ?? ""}
+      </span>
       {paged.error && (
         <div role="alert" className="text-critical flex items-center gap-2 text-xs">
           <span>{loadMoreErrorText(paged.error.message)}</span>

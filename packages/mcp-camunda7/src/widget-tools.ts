@@ -11,11 +11,7 @@ import {
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import type { CockpitAppData, HistoryTimelineData } from "./view-models.js"
-import {
-  listIncidentsInput,
-  listProcessDefinitionsInput,
-  listProcessInstancesInput,
-} from "@miragon-ai/client-camunda7/schemas"
+import { listIncidentsInput, listProcessInstancesInput } from "@miragon-ai/client-camunda7/schemas"
 import {
   getHistoricActivityInstances,
   getHistoricActivityInstancesCount,
@@ -43,6 +39,7 @@ import { buildIncidentDetailData } from "./data/incident-detail-data.js"
 import { buildBpmnViewerData } from "./data/bpmn-viewer-data.js"
 import {
   CAMUNDA7_ACTIVITY_INCIDENTS_DATA,
+  CAMUNDA7_BPMN_VIEWER_DATA,
   CAMUNDA7_CLUSTER_DETAIL_DATA,
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
   CAMUNDA7_ENGINE_HEALTH_DATA,
@@ -69,6 +66,14 @@ import {
 } from "./tool-names.js"
 import { resolveEngine, type EngineRegistry } from "./lib/resolve-engine.js"
 import { engineParamShape } from "./lib/with-engine.js"
+import {
+  activityIncidentsFilterShape,
+  clusterDetailFilterShape,
+  jobsFilterShape,
+  pagingShape,
+  processInstancesFilterShape,
+  processListFilterShape,
+} from "./feed-contracts.js"
 import { createInMemoryProfileStore, type ProfileStore } from "./lib/profile-store.js"
 import { localizeFor } from "./lib/server-locale.js"
 
@@ -88,8 +93,14 @@ const incidentsDashboardFilterShape = {
  * surface while keeping them callable from widgets via `callTool`; the
  * "Internal JSON feed" descriptions stay as fallback for non-conforming hosts.
  * Deliberately no `resourceUri` — the feeds must return JSON, not render UI.
+ *
+ * `openai/widgetAccessible` covers the Apps-SDK half of the dual contract:
+ * those hosts only allow in-widget callTool on tools carrying the key — a
+ * feed without it renders fine but every pagination/search/refresh is denied.
+ * The key does NOT render anything (no outputTemplate/resourceUri), so the
+ * feeds stay JSON-only.
  */
-const appOnlyMeta = APP_ONLY_META
+const appOnlyMeta = { ...APP_ONLY_META, "openai/widgetAccessible": true }
 
 /** One-line truncation for summaries (incident messages can be stacktrace-sized). */
 function truncate(s: string, max: number): string {
@@ -196,16 +207,9 @@ export function registerWidgetTools(
       description: "Show deployed process definitions as a card grid view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        key: listProcessDefinitionsInput.shape.key,
-        nameLike: listProcessDefinitionsInput.shape.nameLike,
-        latestVersion: listProcessDefinitionsInput.shape.latestVersion.default(true),
-        firstResult: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe("Offset for pagination (0-based)."),
-        maxResults: z.number().int().positive().optional().describe("Page size (default 50)."),
+        ...processListFilterShape,
+        latestVersion: processListFilterShape.latestVersion.default(true),
+        ...pagingShape,
         ...engineParamShape,
       }),
       _meta: uiMeta,
@@ -256,10 +260,16 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args) => {
       const t = await localizeFor(profileStore)
-      const { client, engineId } = resolveEngine(args.engine, registry)
-      const data = await buildInstanceDetailData(client, engineId, {
-        processInstanceId: args.processInstanceId,
-      })
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
+      const data = await buildInstanceDetailData(
+        client,
+        engineId,
+        { processInstanceId: args.processInstanceId },
+        { baseUrl, cockpitUrl, provider },
+      )
       const state = data.instance.ended
         ? t("c7sum.state.ended")
         : data.instance.suspended
@@ -290,27 +300,12 @@ export function registerWidgetTools(
       name: CAMUNDA7_SHOW_PROCESS_INSTANCES,
       title: "Process Instances",
       description:
-        "List the running process instances of a process definition as a filterable table (business key, version, suspended/incident state). Drill-in target from the cockpit definitions table and process-detail; each row opens camunda7_show_instance_detail.",
+        "List running process instances as a filterable table (business key, version, suspended/incident state). Scope to one definition via processDefinitionKey, or omit it for ALL running instances engine-wide. Drill-in target from the cockpit definitions table and process-detail; each row opens camunda7_show_instance_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        processDefinitionKey: z.string().describe("Process definition key whose instances to list"),
-        active: z.boolean().optional().describe("Only running (non-suspended) instances."),
-        suspended: z.boolean().optional().describe("Only suspended instances."),
-        withIncidentsOnly: z
-          .boolean()
-          .optional()
-          .describe("Only instances that currently have an open incident."),
-        businessKeyLike: z
-          .string()
-          .optional()
-          .describe("Filter by a substring of the business key."),
-        firstResult: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe("Offset for pagination (0-based)."),
-        maxResults: z.number().optional().default(50),
+        ...processInstancesFilterShape,
+        firstResult: pagingShape.firstResult,
+        maxResults: pagingShape.maxResults.default(50),
         ...engineParamShape,
       }),
       _meta: uiMeta,
@@ -335,7 +330,7 @@ export function registerWidgetTools(
         title: "Process Instances",
         summary: t("c7sum.processInstances", {
           totalCount: data.totalCount,
-          processDefinitionKey: data.processDefinitionKey,
+          processDefinitionKey: data.processDefinitionKey ?? "(all definitions)",
           withIncidentCount: data.withIncidentCount,
           suspendedCount: data.suspendedCount,
           returnedCount: data.returnedCount,
@@ -625,27 +620,7 @@ export function registerWidgetTools(
   )
 
   // Shared by the cluster-detail show tool + its data feed.
-  const clusterDetailShape = {
-    activityId: z.string().describe("Activity id of the failure cluster."),
-    incidentType: z.string().describe('Incident type of the cluster, e.g. "failedJob".'),
-    messageSignature: z
-      .string()
-      .optional()
-      .describe(
-        "Normalized failure-message signature (as produced by the engine-health clusters). Omitted → all messages for this activity + type.",
-      ),
-    businessKeyLike: z
-      .string()
-      .optional()
-      .describe("Narrow the affected-instance list by a business-key substring."),
-    firstResult: z
-      .number()
-      .int()
-      .min(0)
-      .optional()
-      .describe("Offset into the affected-instance rows for pagination (0-based)."),
-    maxResults: z.number().int().positive().optional().describe("Page size (default 50)."),
-  }
+  const clusterDetailShape = { ...clusterDetailFilterShape, ...pagingShape }
 
   server.tool(
     {
@@ -783,15 +758,9 @@ export function registerWidgetTools(
         "Show jobs with a focus on failed jobs (no retries left). Displays error messages and retry status.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
-        failedOnly: z.boolean().optional().default(false).describe("Show only failed jobs"),
-        firstResult: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe("Offset for pagination (0-based)."),
-        maxResults: z.number().int().positive().optional().describe("Page size (default 50)."),
+        ...jobsFilterShape,
+        failedOnly: jobsFilterShape.failedOnly.default(false),
+        ...pagingShape,
         ...engineParamShape,
       }),
       _meta: uiMeta,
@@ -893,13 +862,8 @@ export function registerWidgetTools(
         "Internal JSON feed (no UI) for a definition's running instances. Prefer camunda7_show_process_instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        processDefinitionKey: z.string().describe("Process definition key"),
-        active: z.boolean().optional(),
-        suspended: z.boolean().optional(),
-        withIncidentsOnly: z.boolean().optional(),
-        businessKeyLike: z.string().optional(),
-        firstResult: z.number().optional().describe("Offset for pagination (0-based)"),
-        maxResults: z.number().optional(),
+        ...processInstancesFilterShape,
+        ...pagingShape,
         ...engineParamShape,
       }),
       _meta: appOnlyMeta,
@@ -922,22 +886,41 @@ export function registerWidgetTools(
 
   server.tool(
     {
+      name: CAMUNDA7_BPMN_VIEWER_DATA,
+      title: "BPMN viewer data (internal)",
+      description:
+        "Internal JSON feed (no UI) for the BPMN viewer — diagram XML plus live overlays. Prefer camunda7_show_bpmn_viewer.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      schema: z.object({
+        processInstanceId: z.string().optional().describe("Instance to overlay live state for."),
+        processDefinitionKey: z.string().optional().describe("Definition for a static diagram."),
+        version: z.number().int().positive().optional(),
+        ...engineParamShape,
+      }),
+      _meta: appOnlyMeta,
+    },
+    withToolErrors(async (args) => {
+      const { client, engineId } = resolveEngine(args.engine, registry)
+      return rawData({
+        ...(await buildBpmnViewerData(client, engineId, {
+          processInstanceId: args.processInstanceId,
+          processDefinitionKey: args.processDefinitionKey,
+          version: args.version,
+        })),
+      })
+    }),
+  )
+
+  server.tool(
+    {
       name: CAMUNDA7_PROCESS_LIST_DATA,
       title: "Process list data (internal)",
       description:
         "Internal JSON feed (no UI) for deployed process definitions, offset-paged. Prefer camunda7_show_process_list.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        key: listProcessDefinitionsInput.shape.key,
-        nameLike: listProcessDefinitionsInput.shape.nameLike,
-        latestVersion: listProcessDefinitionsInput.shape.latestVersion,
-        firstResult: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe("Offset for pagination (0-based)."),
-        maxResults: z.number().int().positive().optional().describe("Page size (default 50)."),
+        ...processListFilterShape,
+        ...pagingShape,
         ...engineParamShape,
       }),
       _meta: appOnlyMeta,
@@ -970,11 +953,17 @@ export function registerWidgetTools(
       _meta: appOnlyMeta,
     },
     withToolErrors(async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+        args.engine,
+        registry,
+      )
       return rawData({
-        ...(await buildInstanceDetailData(client, engineId, {
-          processInstanceId: args.processInstanceId,
-        })),
+        ...(await buildInstanceDetailData(
+          client,
+          engineId,
+          { processInstanceId: args.processInstanceId },
+          { baseUrl, cockpitUrl, provider },
+        )),
       })
     }),
   )
@@ -986,10 +975,8 @@ export function registerWidgetTools(
       description: "Internal JSON feed (no UI) for jobs. Prefer camunda7_show_job_panel.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        processDefinitionKey: z.string().optional(),
-        failedOnly: z.boolean().optional(),
-        firstResult: z.number().optional().describe("Offset for pagination (0-based)"),
-        maxResults: z.number().optional(),
+        ...jobsFilterShape,
+        ...pagingShape,
         ...engineParamShape,
       }),
       _meta: appOnlyMeta,
@@ -1072,15 +1059,8 @@ export function registerWidgetTools(
         "Internal JSON feed (no UI) for one activity's incident rows, offset-paged. Prefer camunda7_show_process_incidents.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
-        processDefinitionKey: z.string().describe("Process definition key"),
-        activityId: z.string().describe("Activity id whose incidents to page"),
-        firstResult: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe("Offset for pagination (0-based)."),
-        maxResults: z.number().int().positive().optional().describe("Page size (default 10)."),
+        ...activityIncidentsFilterShape,
+        ...pagingShape,
         ...engineParamShape,
       }),
       _meta: appOnlyMeta,

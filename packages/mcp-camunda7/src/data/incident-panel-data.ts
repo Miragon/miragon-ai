@@ -17,6 +17,7 @@ import {
   getProcessDefinitionStatistics,
 } from "@miragon-ai/client-camunda7/sdk"
 
+import type { ActivityIncidentsFilters, PagingArgs } from "../feed-contracts.js"
 import { buildInstanceCockpitUrl, buildProcessCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"
@@ -379,14 +380,8 @@ export async function buildProcessIncidentsData(
   }
 }
 
-export interface ActivityIncidentsArgs {
-  processDefinitionKey: string
-  activityId: string
-  /** 0-based offset into the activity's incident rows (defaults to 0). */
-  firstResult?: number
-  /** Page size (defaults to 10 — rows render inside a group card). */
-  maxResults?: number
-}
+/** Filters from the shared feed contract + paging (page size defaults to 10). */
+export type ActivityIncidentsArgs = ActivityIncidentsFilters & PagingArgs
 
 /** Server default page size of the per-activity incident feed. */
 const ACTIVITY_INCIDENTS_PAGE = 10

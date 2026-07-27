@@ -65,16 +65,18 @@ export function ClusterDetailView({
 }) {
   const go = useNav()
   const t = useT()
-  // Cluster identity from props (cockpit drill) or the handed-in data
-  // (standalone show-tool render) — loadMore() must always carry it.
+  // Cluster identity + engine from props (cockpit drill) or the handed-in
+  // data (standalone show-tool render) — loadMore() must always carry both,
+  // or it would page the sticky/default engine instead of the origin engine.
   const clusterActivityId = activityId ?? initialData?.activityId
   const clusterIncidentType = incidentType ?? initialData?.incidentType
   const clusterSignature = messageSignature ?? initialData?.messageSignature ?? undefined
+  const feedEngine = engine ?? initialData?.engineId
   // Unlike the engine-health feed, this feed REQUIRES the cluster identity —
   // gate the self-fetch on it (the show tool path passes data instead).
   const ready = !!(clusterActivityId && clusterIncidentType)
   const args: Record<string, unknown> = {}
-  if (engine) args.engine = engine
+  if (feedEngine) args.engine = feedEngine
   if (clusterActivityId) args.activityId = clusterActivityId
   if (clusterIncidentType) args.incidentType = clusterIncidentType
   if (clusterSignature) args.messageSignature = clusterSignature
@@ -88,7 +90,7 @@ export function ClusterDetailView({
     initialData,
     key: [
       "camunda7:cluster-detail",
-      engine ?? null,
+      feedEngine ?? null,
       clusterActivityId ?? null,
       clusterIncidentType ?? null,
       clusterSignature ?? null,

@@ -8,6 +8,7 @@ import type { MessageCatalog } from "@miragon/mcp-toolkit-core"
  */
 export const en: MessageCatalog = {
   // ── Cockpit shell ──────────────────────────────────────────────────────────
+  "cockpit.crumb.processList": "All processes",
   "cockpit.section.overview": "Overview",
   "cockpit.section.incidents": "Incidents",
   "cockpit.section.settings": "Settings",

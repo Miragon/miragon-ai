@@ -1,12 +1,14 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
+  DrillButton,
   FilterBar,
   QueryFallback,
   TableSkeleton,
   WidgetShell,
   usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
+import { useNav } from "./navigation.js"
 import { useT } from "../messages/use-t.js"
 import type { ProcessDefinition, ProcessListData } from "../view-models.js"
 import { CAMUNDA7_PROCESS_LIST_DATA } from "../tool-names.js"
@@ -22,11 +24,14 @@ const PAGE_SIZE = 50
 
 export function ProcessListWidget({
   data: initialData,
+  engine,
   processDefinitionKey,
   nameLike,
   latestVersion,
 }: {
   data: ProcessListData | null
+  /** Explicit engine routing (cockpit view); omitted → the payload's engine. */
+  engine?: string
   /** Filter by exact process definition key. */
   processDefinitionKey?: string
   /** Filter by partial process definition name. */
@@ -35,10 +40,20 @@ export function ProcessListWidget({
   latestVersion?: boolean
 }) {
   const t = useT()
+  const go = useNav()
+  // Standalone renders hand in only `data`, so the show tool's scope comes
+  // from the payload's echo — a page-2 fetch without `latestVersion` would
+  // mix all versions into a latest-only page 0.
+  const echoed = initialData?.filters
+  const feedEngine = engine ?? initialData?.engineId
+  const effectiveKey = processDefinitionKey ?? echoed?.key
+  const baseNameLike = nameLike ?? echoed?.nameLike
+  const effectiveLatest = latestVersion ?? echoed?.latestVersion
   const args: Record<string, unknown> = {}
-  if (processDefinitionKey) args.key = processDefinitionKey
-  if (nameLike) args.nameLike = nameLike
-  if (latestVersion !== undefined) args.latestVersion = latestVersion
+  if (feedEngine) args.engine = feedEngine
+  if (effectiveKey) args.key = effectiveKey
+  if (baseNameLike) args.nameLike = baseNameLike
+  if (effectiveLatest !== undefined) args.latestVersion = effectiveLatest
 
   // The search is SERVER-side (nameLike on the paged feed, overriding a
   // handed-in prefilter) so it covers all deployed definitions.
@@ -49,9 +64,10 @@ export function ProcessListWidget({
     initialData,
     key: [
       "camunda7:process-list",
-      processDefinitionKey ?? null,
-      nameLike ?? null,
-      latestVersion ?? null,
+      feedEngine ?? null,
+      effectiveKey ?? null,
+      baseNameLike ?? null,
+      effectiveLatest ?? null,
     ],
     tool: CAMUNDA7_PROCESS_LIST_DATA,
     args,
@@ -122,10 +138,26 @@ export function ProcessListWidget({
             ),
         }}
         renderActions={(row) => (
-          <AskAiButton
-            variant="subtle"
-            prompt={`Assess the operational health of process definition \`${row.key}\` (version v${row.version}${row.versionTag ? ", tag " + row.versionTag : ""}) on engine ${data.engineId}. First call analytics_analyze_process_performance with processDefinitionKey="${row.key}", period="7d", includeActivityBreakdown=true to get throughput, P50/P95 duration and the incident-based failure rate with a per-activity breakdown. Then call camunda7_list_incidents with processDefinitionId filtered to this definition (resolve the id from \`${row.key}\` v${row.version} via camunda7_list_process_definitions if needed) to see live open incidents. Summarise: is this definition healthy or degraded, which activities are the worst offenders, the dominant incident message(s), and the single most likely root cause. End with one concrete recommended next step (e.g. retry jobs, fix variable, redeploy). Do not mutate anything.`}
-          />
+          <>
+            <DrillButton
+              onDrill={() => go({ type: "process-instances", processDefinitionKey: row.key })}
+              ariaLabel={t("cockpitDefs.viewInstancesAria", { name: row.name ?? row.key })}
+            >
+              {t("cockpitDefs.instancesAction")}
+            </DrillButton>
+            <DrillButton
+              onDrill={() => go({ type: "process-detail", processDefinitionKey: row.key })}
+              ariaLabel={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
+            >
+              {t("cockpitDefs.openAction")}
+            </DrillButton>
+            <AskAiButton
+              variant="icon"
+              label={t("processList.healthCheckLabel")}
+              title={t("processList.healthCheckLabel")}
+              prompt={`Assess the operational health of process definition \`${row.key}\` (version v${row.version}${row.versionTag ? ", tag " + row.versionTag : ""}) on engine ${data.engineId}. First call analytics_analyze_process_performance with processDefinitionKey="${row.key}", period="7d", includeActivityBreakdown=true to get throughput, P50/P95 duration and the incident-based failure rate with a per-activity breakdown. Then call camunda7_list_incidents with processDefinitionId filtered to this definition (resolve the id from \`${row.key}\` v${row.version} via camunda7_list_process_definitions if needed) to see live open incidents. Summarise: is this definition healthy or degraded, which activities are the worst offenders, the dominant incident message(s), and the single most likely root cause. End with one concrete recommended next step (e.g. retry jobs, fix variable, redeploy). Do not mutate anything.`}
+            />
+          </>
         )}
       />
       <CockpitListFooter paged={paged} noun={t("processList.footerNoun")} />

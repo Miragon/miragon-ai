@@ -35,7 +35,9 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
     <button
       type="button"
       onClick={onEnter}
-      aria-label={t("fleet.operateEngineAria", { name: engineId })}
+      // No aria-label: it would REPLACE the accessible name and hide the KPI
+      // grid + error text from screen readers — the visible content (engine
+      // name, "Operate", counts) speaks for itself.
       className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-4 text-left outline-none transition-colors focus-visible:ring-2"
     >
       <div className="flex items-center justify-between gap-2">

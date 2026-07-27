@@ -296,7 +296,9 @@ export function EngineHealthView({
           {
             label: t("engineHealth.kpiRunningInstances"),
             value: summary.runningInstances,
-            onClick: () => go({ type: "process-list" }),
+            // The engine-wide instances list — NOT the definitions list: the
+            // KPI counts instances, so the drill must land on instances.
+            onClick: () => go({ type: "process-instances" }),
             ariaLabel: t("engineHealth.kpiRunningInstancesAria"),
           },
           {

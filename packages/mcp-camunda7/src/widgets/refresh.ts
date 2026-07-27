@@ -11,5 +11,15 @@ import { queryClient } from "@miragon/mcp-toolkit-ui"
  * import would hold different clients and the refetch would miss.
  */
 export function refreshCockpitData(): void {
-  void queryClient.invalidateQueries()
+  // Only the module data feeds — a blanket invalidateQueries() would also
+  // refetch host/profile plumbing and needlessly hammer the engine from every
+  // mounted widget after each mutation.
+  void queryClient.invalidateQueries({
+    predicate: (query) => {
+      const root = query.queryKey[0]
+      return (
+        typeof root === "string" && (root.startsWith("camunda7:") || root.startsWith("analytics:"))
+      )
+    },
+  })
 }

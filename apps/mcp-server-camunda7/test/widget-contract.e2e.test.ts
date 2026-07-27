@@ -137,11 +137,12 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
     }
   })
 
-  it("marks every *_data feed app-only (name-based — catches a forgotten APP_ONLY_META)", () => {
+  it("marks every *_data feed app-only + widget-accessible (name-based — catches a forgotten APP_ONLY_META)", () => {
     const dataTools = tools.filter((t) => t.name.endsWith("_data"))
     expect(dataTools.length).toBeGreaterThanOrEqual(5)
     for (const tool of dataTools) {
-      const ui = uiBlock(toolMeta(tool))
+      const meta = toolMeta(tool)
+      const ui = uiBlock(meta)
       expect(
         Array.isArray(ui.visibility) && ui.visibility.includes("app"),
         `${tool.name}: *_data feeds must carry visibility ["app"] — a model-visible feed ` +
@@ -150,6 +151,13 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
       expect(ui.resourceUri, `${tool.name}: *_data feeds must not carry a resourceUri`).toBe(
         undefined,
       )
+      // The Apps-SDK half of the dual contract: those hosts only allow
+      // in-widget callTool on tools carrying the key — a feed without it
+      // renders fine but every pagination/search/refresh is denied.
+      expect(
+        meta["openai/widgetAccessible"],
+        `${tool.name}: *_data feeds must be widget-accessible for Apps-SDK hosts`,
+      ).toBe(true)
     }
   })
 
@@ -165,16 +173,15 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
     for (const tool of appOnlyTools) {
       const meta = toolMeta(tool)
       const label = tool.name
-      // A widget-meta key on an app-only feed would make hosts render its
+      // A RENDERING key on an app-only feed would make hosts render its
       // result instead of returning it to the in-widget callTool (invariant 5).
+      // `openai/widgetAccessible` is deliberately NOT in this list: it renders
+      // nothing — it only authorizes the in-widget callTool on Apps-SDK hosts.
       expect(meta, `${label} must not advertise an output template`).not.toHaveProperty(
         "openai/outputTemplate",
       )
       expect(meta, `${label} must not carry the flat resource uri`).not.toHaveProperty(
         "ui/resourceUri",
-      )
-      expect(meta, `${label} must not be widget-accessible-marked`).not.toHaveProperty(
-        "openai/widgetAccessible",
       )
     }
   })

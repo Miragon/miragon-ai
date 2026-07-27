@@ -6,6 +6,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import {
   CAMUNDA7_SHOW_CLUSTER_DETAIL,
+  CAMUNDA7_SHOW_ENGINE_HEALTH,
   CAMUNDA7_SHOW_INCIDENT_DETAIL,
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
   CAMUNDA7_SHOW_INSTANCE_DETAIL,
@@ -28,12 +29,14 @@ import {
  * while the individual widgets keep their conversational drill-in behaviour.
  */
 export type NavIntent =
+  | { type: "overview" }
   | { type: "process-list" }
   | { type: "incidents" }
   | { type: "settings" }
   | { type: "cluster-detail"; activityId: string; incidentType: string; messageSignature?: string }
   | { type: "process-detail"; processDefinitionKey: string }
-  | { type: "process-instances"; processDefinitionKey: string }
+  /** Omit the key for the engine-wide running-instances list. */
+  | { type: "process-instances"; processDefinitionKey?: string }
   | { type: "process-incidents"; processDefinitionKey: string }
   | { type: "instance-detail"; processInstanceId: string }
   | { type: "incident-detail"; incidentId: string }
@@ -47,6 +50,11 @@ export type OnNavigate = (intent: NavIntent) => void
  */
 export function navigateViaHost(host: HostActions, intent: NavIntent): void {
   switch (intent.type) {
+    case "overview":
+      host.showWidget(
+        buildShowWidgetIntent(CAMUNDA7_SHOW_ENGINE_HEALTH, "Show the engine overview"),
+      )
+      return
     case "process-list":
       host.showWidget(
         buildShowWidgetIntent(CAMUNDA7_SHOW_PROCESS_LIST, "Show all process definitions"),
@@ -85,7 +93,9 @@ export function navigateViaHost(host: HostActions, intent: NavIntent): void {
       host.showWidget(
         buildShowWidgetIntent(
           CAMUNDA7_SHOW_PROCESS_INSTANCES,
-          `Show the running instances for process \`${intent.processDefinitionKey}\``,
+          intent.processDefinitionKey
+            ? `Show the running instances for process \`${intent.processDefinitionKey}\``
+            : "Show all running process instances across all definitions",
         ),
       )
       return

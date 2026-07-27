@@ -41,6 +41,11 @@ export const cockpitViews = {
     { row: [{ widget: "camunda7:engine-health", props: { engine } }] },
     { row: [{ widget: "camunda7:process-definitions-table", props: { engine } }] },
   ],
+  // Drill target of the overview KPIs (running instances / total processes):
+  // the searchable, paged process list as its own page.
+  "process-list": ({ engine }: ViewParams): LayoutConfig => [
+    { row: [{ widget: "camunda7:process-list", props: { engine } }] },
+  ],
   incidents: ({ engine }: ViewParams): LayoutConfig => [
     { row: [{ widget: "camunda7:incident-overview-kpi", props: { engine } }] },
     { row: [{ widget: "camunda7:incident-process-list", props: { engine } }] },

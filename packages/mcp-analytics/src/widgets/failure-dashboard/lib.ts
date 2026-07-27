@@ -1,15 +1,17 @@
-import { useViewToolQuery } from "@miragon-ai/widget-shell/widgets"
+import { useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type { FailureDashboardData } from "@miragon-ai/client-analytics"
+import { ANALYTICS_FAILURE_DASHBOARD_DATA } from "../../tool-names.js"
 
 // Centralised so the three failure widgets share one self-fetch contract. The
 // failure dashboard is point-in-time (live state gauges), so there is no period
-// scope — every widget self-fetches the same current snapshot. Self-fetches a
-// `show_*` tool, so it must parse structuredContent-first (`useViewToolQuery`) —
-// the text channel only carries the model summary since the text-channel diet.
+// scope — every widget self-fetches the same current snapshot. Self-fetches
+// the app-only *_data feed — calling the show_* tool from inside the iframe is
+// host-defined behavior (hosts honoring resultCanProduceWidget may render a
+// second widget per refresh).
 export function useFailureDashboardSelfFetch(initialData: FailureDashboardData | null) {
-  return useViewToolQuery<FailureDashboardData>(
+  return useToolQuery<FailureDashboardData>(
     ["analytics:failure-dashboard"],
-    "analytics_show_failure_dashboard",
+    ANALYTICS_FAILURE_DASHBOARD_DATA,
     {},
     { enabled: !initialData },
   )

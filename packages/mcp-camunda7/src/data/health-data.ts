@@ -13,6 +13,7 @@ import type {
   EngineHealthData,
   EngineHealthStatus,
 } from "../view-models.js"
+import type { ClusterDetailFilters, PagingArgs } from "../feed-contracts.js"
 import { processDefinitionKeyFromId } from "./incident-panel-data.js"
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -263,27 +264,14 @@ export async function buildEngineHealthData(
 /** How many affected incidents the cluster detail lists (the rest is counted). */
 const CLUSTER_DETAIL_ROWS = 50
 
-export interface ClusterDetailArgs {
-  activityId: string
-  incidentType: string
-  /**
-   * Message-signature filter from the overview cluster. Omitted (undefined) →
-   * no message filter, i.e. the broader activity+type group — what an agent
-   * calling the show tool without a signature gets.
-   */
-  messageSignature?: string
-  /**
-   * Business-key search over the affected instances. `/incident` has no
-   * business-key filter, so the builder resolves matching instance ids via
-   * `/process-instance?businessKeyLike=` and intersects with the cluster set —
-   * the KPIs keep describing the WHOLE cluster, only the list narrows.
-   */
-  businessKeyLike?: string
-  /** 0-based offset into the matching rows (defaults to 0). */
-  firstResult?: number
-  /** Page size (defaults to {@link CLUSTER_DETAIL_ROWS}). */
-  maxResults?: number
-}
+/**
+ * Filters from the shared feed contract + paging. `businessKeyLike`: the
+ * `/incident` API has no business-key filter, so the builder resolves matching
+ * instance ids via `/process-instance?businessKeyLike=` and intersects with
+ * the cluster set — the KPIs keep describing the WHOLE cluster, only the list
+ * narrows. `maxResults` defaults to {@link CLUSTER_DETAIL_ROWS}.
+ */
+export type ClusterDetailArgs = ClusterDetailFilters & PagingArgs
 
 /**
  * Drill-in for ONE failure cluster: server-side filter by activity + incident
