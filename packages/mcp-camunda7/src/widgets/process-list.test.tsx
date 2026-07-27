@@ -32,6 +32,7 @@ const PROCESS_LIST: ProcessListData = {
     },
   ],
   totalCount: 2,
+  filters: { latestVersion: true },
   engineId: "default",
 }
 

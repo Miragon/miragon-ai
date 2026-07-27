@@ -177,6 +177,11 @@ export async function buildProcessListData(
   return {
     definitions: defArray as ProcessListData["definitions"],
     totalCount: typeof count === "number" ? count : defArray.length,
+    filters: {
+      key: args.key,
+      nameLike: args.nameLike,
+      latestVersion: filters.latestVersion,
+    },
     engineId,
   }
 }
@@ -410,6 +415,10 @@ export async function buildJobPanelData(
     totalCount: args.failedOnly ? failedCount : allCount,
     failedCount,
     jobs,
+    filters: {
+      processDefinitionKey: args.processDefinitionKey,
+      failedOnly: args.failedOnly,
+    },
     engineId,
   }
 }

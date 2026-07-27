@@ -108,6 +108,21 @@ describe("usePagedViewData", () => {
     expect(result.current.items).toEqual(["a", "b"])
   })
 
+  it("drops accumulated pages when the self-fetched page 0 refetches", async () => {
+    // Self-fetch mode: page 0 from the query, one page appended.
+    mocks.useToolQuery.mockReturnValue({ data: page(["a", "b"], 4), isError: false, error: null })
+    mocks.callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 4)))
+    const { result, rerender } = setup({ initialData: null, args: {} })
+    act(() => result.current.loadMore())
+    await waitFor(() => expect(result.current.items).toEqual(["a", "b", "c", "d"]))
+
+    // A mutation invalidated the cache: page 0 refetches with shifted rows
+    // (one row resolved away). Keeping the appended page would duplicate "c".
+    mocks.useToolQuery.mockReturnValue({ data: page(["b", "c"], 3), isError: false, error: null })
+    rerender({ initialData: null, args: {} })
+    expect(result.current.items).toEqual(["b", "c"])
+  })
+
   it("drops accumulated pages when a fresh initialData identity is handed in", async () => {
     mocks.callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 5)))
     const { result, rerender } = setup({ initialData: page(["a", "b"], 5), args: {} })

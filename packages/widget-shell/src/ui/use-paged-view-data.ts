@@ -66,14 +66,18 @@ export function usePagedViewData<TItem, TData>(opts: {
   // filter *value* would wrongly accept it).
   const requestIdRef = useRef(0)
 
-  // Render-phase reset: when the filter identity (or handed-in data) changes,
-  // drop accumulated pages synchronously so we never show stale rows under a new
-  // page-0 result.
+  // Render-phase reset: when the filter identity or the PAGE-0 identity
+  // changes, drop accumulated pages synchronously so we never show stale rows
+  // under a new page-0 result. Page-0 identity covers both a changed
+  // `initialData` and a page-0 REFETCH (e.g. a mutation invalidated the
+  // cache): after a refetch the rows have shifted, so keeping the appended
+  // pages would duplicate or skip rows — collapsing back to one page is the
+  // consistent behavior.
   const [prevReset, setPrevReset] = useState(argsKey)
-  const [prevInitialData, setPrevInitialData] = useState(initialData)
-  if (argsKey !== prevReset || initialData !== prevInitialData) {
+  const [prevFirst, setPrevFirst] = useState<TData | null>(first)
+  if (argsKey !== prevReset || first !== prevFirst) {
     setPrevReset(argsKey)
-    setPrevInitialData(initialData)
+    setPrevFirst(first)
     setExtra([])
     setMoreError(null)
     setExhausted(false)

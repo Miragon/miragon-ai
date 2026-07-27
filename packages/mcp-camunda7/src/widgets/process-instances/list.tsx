@@ -146,26 +146,35 @@ export function ProcessInstancesView({
   const [activeChip, setActiveChip] = useState<InstanceChip>(CHIP_ALL)
 
   const pdk = processDefinitionKey ?? initialData?.processDefinitionKey
-  const resolvedEngine = engine ?? "default"
+  // Standalone renders hand in only `data` (no props), so the scope the show
+  // tool was called with must come from the payload's echo: loadMore/search
+  // must page the SAME engine and filter set as page 0 — not the sticky
+  // default and not an unfiltered view.
+  const echoed = initialData?.filters
+  const feedEngine = engine ?? initialData?.engineId
+  const resolvedEngine = feedEngine ?? "default"
 
   // Filters are SERVER-side: the chips and the search box re-query the feed
   // (search debounced by the scaffold) so they cover the whole result set, not
   // just the loaded page. Pagination is offset-based with an explicit
   // "Load more" (see footer).
-  const wantIncidents = activeChip === CHIP_INCIDENTS || !!withIncidentsOnly
-  const wantSuspended = activeChip === CHIP_SUSPENDED || !!suspended
-  const filterArgs: InstancesFilterArgs = { processDefinitionKey: pdk, engine }
-  if (active) filterArgs.active = true
+  const wantIncidents =
+    activeChip === CHIP_INCIDENTS || !!(withIncidentsOnly ?? echoed?.withIncidentsOnly)
+  const wantSuspended = activeChip === CHIP_SUSPENDED || !!(suspended ?? echoed?.suspended)
+  const baseBusinessKey = businessKeyLike ?? echoed?.businessKeyLike
+  const filterArgs: InstancesFilterArgs = { processDefinitionKey: pdk }
+  if (feedEngine) filterArgs.engine = feedEngine
+  if (active ?? echoed?.active) filterArgs.active = true
   if (wantIncidents) filterArgs.withIncidentsOnly = true
   if (wantSuspended) filterArgs.suspended = true
-  if (businessKeyLike) filterArgs.businessKeyLike = businessKeyLike
+  if (baseBusinessKey) filterArgs.businessKeyLike = baseBusinessKey
 
   const { paged, search, setSearch, debouncedSearch, interacted } = usePagedListView<
     ProcessInstanceRow,
     ProcessInstancesData
   >({
     initialData,
-    key: ["camunda7:process-instances", engine ?? null, pdk ?? null],
+    key: ["camunda7:process-instances", feedEngine ?? null, pdk ?? null],
     tool: CAMUNDA7_PROCESS_INSTANCES_DATA,
     args: filterArgs,
     // The operator's search overrides a handed-in businessKeyLike prefilter.

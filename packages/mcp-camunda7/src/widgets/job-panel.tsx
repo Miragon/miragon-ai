@@ -35,11 +35,22 @@ export function JobPanelWidget({
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
   const [retryError, setRetryError] = useState<{ jobId: string; message: string } | null>(null)
   const retryMutation = useToolMutation("camunda7_set_job_retries")
+  // Standalone renders hand in only `data`, so the show tool's scope comes
+  // from the payload's echo — loadMore must page the same engine and filter
+  // set as page 0 (incl. a processDefinitionKey filter the widget has no
+  // prop for).
+  const echoed = initialData?.filters
+  const feedEngine = engine ?? initialData?.engineId
+  const effectiveFailedOnly = failedOnly ?? echoed?.failedOnly
+  const args: Record<string, unknown> = {}
+  if (feedEngine) args.engine = feedEngine
+  if (effectiveFailedOnly !== undefined) args.failedOnly = effectiveFailedOnly
+  if (echoed?.processDefinitionKey) args.processDefinitionKey = echoed.processDefinitionKey
   const paged = usePagedViewData<JobPanelData["jobs"][number], JobPanelData>({
     initialData,
-    key: ["camunda7:jobs", engine ?? null, failedOnly ?? null],
+    key: ["camunda7:jobs", feedEngine ?? null, effectiveFailedOnly ?? null],
     tool: CAMUNDA7_JOBS_DATA,
-    args: { engine, failedOnly },
+    args,
     // Always ready: the feed's `engine` is optional — resolveEngine falls back
     // to the sticky session selection or the single configured engine (see the
     // engine-health view for the same rule). Gating on `!!engine` would leave
