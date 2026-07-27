@@ -99,6 +99,34 @@ describe("buildClusterDetailData paging", () => {
     expect(data.incidents.every((r) => r.incidentId.startsWith("i"))).toBe(true)
   })
 
+  it("narrows the list (not the KPIs) via the business-key search", async () => {
+    mockedGetIncidents.mockResolvedValue(incidents(80) as never)
+    // Search lookup: only p3 and p7 carry a matching business key; the later
+    // enrichment call returns the keys for the served page.
+    mockedGetProcessInstances
+      .mockResolvedValueOnce([{ id: "p3" }, { id: "p7" }] as never)
+      .mockResolvedValueOnce([
+        { id: "p3", businessKey: "ORDER-3" },
+        { id: "p7", businessKey: "ORDER-7" },
+      ] as never)
+
+    const data = await buildClusterDetailData(client, "eng1", {
+      ...args,
+      businessKeyLike: "ORDER",
+    })
+
+    // The search lookup goes to /process-instance with the substring filter.
+    const searchQuery = mockedGetProcessInstances.mock.calls[0]?.[0]?.query as {
+      businessKeyLike?: string
+    }
+    expect(searchQuery.businessKeyLike).toBe("ORDER")
+    // List + total narrow to the intersection; cluster KPIs stay cluster-wide.
+    expect(data.totalMatching).toBe(2)
+    expect(data.incidents.map((r) => r.processInstanceId)).toEqual(["p3", "p7"])
+    expect(data.incidents[0]?.businessKey).toBe("ORDER-3")
+    expect(data.incidentCount).toBe(80)
+  })
+
   it("enriches only the requested page with business keys", async () => {
     mockedGetIncidents.mockResolvedValue(incidents(80) as never)
     mockedGetProcessInstances.mockResolvedValue([{ id: "p50", businessKey: "ORDER-50" }] as never)

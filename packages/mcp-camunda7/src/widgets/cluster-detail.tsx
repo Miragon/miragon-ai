@@ -1,6 +1,8 @@
+import { useState } from "react"
 import {
   AskAiButton,
   DrillButton,
+  FilterBar,
   KpiGrid,
   ListFooter,
   LogText,
@@ -12,6 +14,7 @@ import {
   WidgetShell,
   formatTimestamp,
   truncate,
+  useDebouncedValue,
   usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import { ModelContext } from "mcp-use/react"
@@ -64,6 +67,8 @@ export function ClusterDetailView({
 }) {
   const go = useNav()
   const t = useT()
+  const [search, setSearch] = useState("")
+  const debouncedSearch = useDebouncedValue(search.trim(), 300)
   // Cluster identity from props (cockpit drill) or the handed-in data
   // (standalone show-tool render) — loadMore() must always carry it.
   const clusterActivityId = activityId ?? initialData?.activityId
@@ -77,8 +82,13 @@ export function ClusterDetailView({
   if (clusterActivityId) args.activityId = clusterActivityId
   if (clusterIncidentType) args.incidentType = clusterIncidentType
   if (clusterSignature) args.messageSignature = clusterSignature
+  // The business-key search is SERVER-side (the feed intersects with a
+  // /process-instance lookup) so it covers the whole cluster, not just the
+  // loaded page. Once the operator searches, drop the handed-in page.
+  const interacted = debouncedSearch !== ""
+  if (interacted) args.businessKeyLike = debouncedSearch
   const paged = usePagedViewData<ClusterIncidentRow, ClusterDetailData>({
-    initialData,
+    initialData: interacted ? null : initialData,
     key: [
       "camunda7:cluster-detail",
       engine ?? null,
@@ -185,6 +195,13 @@ export function ClusterDetailView({
             className="flex flex-col gap-2"
           >
             <h3 className="text-sm font-semibold">{t("clusterDetail.affectedInstances")}</h3>
+            <FilterBar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder={t("clusterDetail.searchPlaceholder")}
+              chips={[]}
+              onChipToggle={() => undefined}
+            />
             {paged.items.map((row) => (
               <RowCard
                 // The engine can report rows without an incident id — fall back to
@@ -231,7 +248,9 @@ export function ClusterDetailView({
               />
             ))}
             {paged.items.length === 0 && (
-              <TableEmptyState>{t("clusterDetail.noMatchingIncidents")}</TableEmptyState>
+              <TableEmptyState>
+                {interacted ? t("clusterDetail.noMatch") : t("clusterDetail.noMatchingIncidents")}
+              </TableEmptyState>
             )}
             {/* Load-more failures land here (page 0 failures render in the
                 guard above): loaded rows stay visible, the failure is inline

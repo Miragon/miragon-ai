@@ -272,6 +272,13 @@ export interface ClusterDetailArgs {
    * calling the show tool without a signature gets.
    */
   messageSignature?: string
+  /**
+   * Business-key search over the affected instances. `/incident` has no
+   * business-key filter, so the builder resolves matching instance ids via
+   * `/process-instance?businessKeyLike=` and intersects with the cluster set —
+   * the KPIs keep describing the WHOLE cluster, only the list narrows.
+   */
+  businessKeyLike?: string
   /** 0-based offset into the matching rows (defaults to 0). */
   firstResult?: number
   /** Page size (defaults to {@link CLUSTER_DETAIL_ROWS}). */
@@ -290,22 +297,43 @@ export async function buildClusterDetailData(
   args: ClusterDetailArgs,
 ): Promise<ClusterDetailData> {
   // Primary fetch — failures must propagate as tool errors (no silent []).
-  const incidentsRaw = await getIncidents({
-    client,
-    query: {
-      activityId: args.activityId,
-      incidentType: args.incidentType,
-      maxResults: INCIDENT_SCAN_LIMIT,
-      sortBy: "incidentTimestamp",
-      sortOrder: "desc",
-    },
-  })
+  // The business-key search resolves independently: matching instance ids come
+  // from /process-instance (the incident API has no business-key filter).
+  const [incidentsRaw, searchHitsRaw] = await Promise.all([
+    getIncidents({
+      client,
+      query: {
+        activityId: args.activityId,
+        incidentType: args.incidentType,
+        maxResults: INCIDENT_SCAN_LIMIT,
+        sortBy: "incidentTimestamp",
+        sortOrder: "desc",
+      },
+    }),
+    args.businessKeyLike
+      ? getProcessInstances({
+          client,
+          query: { businessKeyLike: args.businessKeyLike, maxResults: INCIDENT_SCAN_LIMIT },
+        })
+      : Promise.resolve(null),
+  ])
 
   const all = (Array.isArray(incidentsRaw) ? incidentsRaw : []) as IncidentLike[]
   const matching =
     args.messageSignature === undefined
       ? all
       : all.filter((i) => messageSignature(i.incidentMessage ?? null) === args.messageSignature)
+
+  // Search narrows the LIST (and its total), never the cluster KPIs below.
+  let listed = matching
+  if (searchHitsRaw !== null) {
+    const hitIds = new Set(
+      ((Array.isArray(searchHitsRaw) ? searchHitsRaw : []) as Array<{ id?: string | null }>)
+        .map((i) => i.id)
+        .filter((id): id is string => !!id),
+    )
+    listed = matching.filter((i) => i.processInstanceId && hitIds.has(i.processInstanceId))
+  }
 
   const nowMs = Date.now()
   const hourCutoffMs = nowMs - HOUR_MS
@@ -331,13 +359,14 @@ export async function buildClusterDetailData(
     defCounts.set(defKey, (defCounts.get(defKey) ?? 0) + 1)
   }
 
-  // Paging slices the in-memory matching set (not an engine-side offset): the
-  // messageSignature filter is client-side and the KPIs above need the full
-  // set anyway, so an offset re-query would change semantics without saving
-  // the scan. Bounded by INCIDENT_SCAN_LIMIT like everything else here.
+  // Paging slices the in-memory listed set (not an engine-side offset): the
+  // messageSignature/business-key filters are resolved here and the KPIs above
+  // need the full set anyway, so an offset re-query would change semantics
+  // without saving the scan. Bounded by INCIDENT_SCAN_LIMIT like everything
+  // else here.
   const first = Math.max(0, args.firstResult ?? 0)
   const pageSize = args.maxResults ?? CLUSTER_DETAIL_ROWS
-  const page = matching.slice(first, first + pageSize)
+  const page = listed.slice(first, first + pageSize)
 
   // Business-key enrichment is best-effort: a failed lookup degrades to "—"
   // keys, it must not turn a working cluster view into a tool error.
@@ -384,7 +413,7 @@ export async function buildClusterDetailData(
     processDefinitionKeys: [...defCounts.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k),
     representativeMessage: truncateMessage(matching[0]?.incidentMessage ?? null, 600),
     incidents,
-    totalMatching: matching.length,
+    totalMatching: listed.length,
     fetchedAt: new Date(nowMs).toISOString(),
     engineId,
   }

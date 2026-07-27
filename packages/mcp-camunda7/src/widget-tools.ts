@@ -634,6 +634,10 @@ export function registerWidgetTools(
       .describe(
         "Normalized failure-message signature (as produced by the engine-health clusters). Omitted → all messages for this activity + type.",
       ),
+    businessKeyLike: z
+      .string()
+      .optional()
+      .describe("Narrow the affected-instance list by a business-key substring."),
     firstResult: z
       .number()
       .int()
@@ -660,6 +664,7 @@ export function registerWidgetTools(
         activityId: args.activityId,
         incidentType: args.incidentType,
         messageSignature: args.messageSignature,
+        businessKeyLike: args.businessKeyLike,
         firstResult: args.firstResult,
         maxResults: args.maxResults,
       })
@@ -872,6 +877,7 @@ export function registerWidgetTools(
           activityId: args.activityId,
           incidentType: args.incidentType,
           messageSignature: args.messageSignature,
+          businessKeyLike: args.businessKeyLike,
           firstResult: args.firstResult,
           maxResults: args.maxResults,
         })),
