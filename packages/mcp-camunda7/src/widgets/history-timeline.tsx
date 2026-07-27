@@ -2,13 +2,16 @@ import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-
 import {
   TONE_DOT,
   AskAiButton,
+  ListTable,
+  TableEmptyState,
   Td,
-  Th,
   WidgetShell,
   formatDuration,
   formatTimestamp,
+  usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
+import { CockpitListFooter } from "./list-footer.js"
 import { useT } from "../messages/use-t.js"
 
 export type { HistoryTimelineData }
@@ -16,8 +19,8 @@ export type HistoryActivity = HistoryTimelineData["activities"][number]
 
 /**
  * Row contract of the history family — the one shape every historic-activity
- * rendering in this module shares. Both `ActivityData` (historic activity
- * instances) and `IncidentDetailHistoryEntry` (incident detail's history tab)
+ * rendering in this module shares. Raw `ActivityData` rows (historic activity
+ * instances, also the `camunda7_query_historic_activity_instances` page items)
  * satisfy it structurally, so either source renders through
  * {@link HistoryTimelineView} without mapping.
  */
@@ -66,54 +69,44 @@ function HistoryTable({ entries }: { entries: HistoryEntry[] }) {
           border replaces the header's own top edge, and the activity cell takes
           the remaining width (w-full max-w-0) so long names truncate instead of
           widening the table into horizontal scroll. */}
-      <table
-        className="w-full border-collapse text-sm [&_th]:border-t-0"
-        aria-label={t("incidentHistory.tableAriaLabel")}
+      <ListTable
+        className="[&_th]:border-t-0"
+        ariaLabel={t("incidentHistory.tableAriaLabel")}
+        columns={[
+          { label: t("incidentHistory.columnActivity"), className: "py-2" },
+          { label: t("incidentHistory.columnStarted"), align: "right", className: "py-2" },
+          { label: t("incidentHistory.columnDuration"), align: "right", className: "py-2" },
+          { label: t("incidentHistory.columnStatus"), align: "right", className: "py-2" },
+        ]}
       >
-        <thead className="bg-muted">
-          <tr>
-            <Th className="py-2">{t("incidentHistory.columnActivity")}</Th>
-            <Th align="right" className="py-2">
-              {t("incidentHistory.columnStarted")}
-            </Th>
-            <Th align="right" className="py-2">
-              {t("incidentHistory.columnDuration")}
-            </Th>
-            <Th align="right" className="py-2">
-              {t("incidentHistory.columnStatus")}
-            </Th>
+        {entries.map((entry) => (
+          <tr key={entry.id} className="hover:bg-card [&:last-child>td]:border-b-0">
+            <Td className="w-full max-w-0 py-2">
+              <div className="text-foreground truncate font-medium">
+                {entry.activityName ?? entry.activityId}
+              </div>
+              <div className="text-muted-foreground truncate font-mono text-xs">
+                {entry.activityType}
+              </div>
+            </Td>
+            <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
+              {formatTimestamp(entry.startTime)}
+            </Td>
+            <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
+              {formatDuration(entry.durationInMillis)}
+            </Td>
+            <Td align="right" className="py-2">
+              {entry.canceled ? (
+                <Badge variant="secondary">{t("incidentHistory.statusCanceled")}</Badge>
+              ) : entry.endTime ? (
+                <Badge variant="secondary">{t("incidentHistory.statusCompleted")}</Badge>
+              ) : (
+                <Badge variant="default">{t("incidentHistory.statusRunning")}</Badge>
+              )}
+            </Td>
           </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => (
-            <tr key={entry.id} className="hover:bg-card [&:last-child>td]:border-b-0">
-              <Td className="w-full max-w-0 py-2">
-                <div className="text-foreground truncate font-medium">
-                  {entry.activityName ?? entry.activityId}
-                </div>
-                <div className="text-muted-foreground truncate font-mono text-xs">
-                  {entry.activityType}
-                </div>
-              </Td>
-              <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
-                {formatTimestamp(entry.startTime)}
-              </Td>
-              <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
-                {formatDuration(entry.durationInMillis)}
-              </Td>
-              <Td align="right" className="py-2">
-                {entry.canceled ? (
-                  <Badge variant="secondary">{t("incidentHistory.statusCanceled")}</Badge>
-                ) : entry.endTime ? (
-                  <Badge variant="secondary">{t("incidentHistory.statusCompleted")}</Badge>
-                ) : (
-                  <Badge variant="default">{t("incidentHistory.statusRunning")}</Badge>
-                )}
-              </Td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        ))}
+      </ListTable>
     </div>
   )
 }
@@ -144,12 +137,10 @@ export function HistoryTimelineView({
 }) {
   const t = useT()
   if (activities.length === 0) {
-    return variant === "table" ? (
-      <Alert>
-        <AlertDescription>{t("incidentHistory.empty")}</AlertDescription>
-      </Alert>
-    ) : (
-      <p className="text-muted-foreground text-sm">{t("historyTimeline.empty")}</p>
+    return (
+      <TableEmptyState>
+        {variant === "table" ? t("incidentHistory.empty") : t("historyTimeline.empty")}
+      </TableEmptyState>
     )
   }
 
@@ -250,6 +241,67 @@ export function HistoryTimelineView({
           )
         })}
       </ol>
+    </div>
+  )
+}
+
+/** Page size for the self-paged history tabs (a timeline rarely exceeds one page). */
+const HISTORY_PAGE_SIZE = 100
+/** Registrar history query — returns a `{ items, totalCount }` pagination envelope. */
+const HISTORY_QUERY_TOOL = "camunda7_query_historic_activity_instances"
+
+/**
+ * Self-fetching, offset-paged entry into the history family: pages the
+ * registrar history query with the house Load-more pattern (usePagedViewData +
+ * ListFooter) instead of one capped fetch. Used by the instance detail's
+ * audit tab (`variant="timeline"`) and the incident detail's history tab
+ * (`variant="table"`); both mount lazily on first tab activation.
+ */
+export function PagedHistoryView({
+  processInstanceId,
+  engine,
+  variant = "timeline",
+}: {
+  processInstanceId: string
+  /** Explicit engine routing; omitted → the session's sticky engine. */
+  engine?: string
+  variant?: "timeline" | "table"
+}) {
+  const t = useT()
+  const args: Record<string, unknown> = {
+    processInstanceId,
+    sortBy: "startTime",
+    sortOrder: "asc",
+  }
+  if (engine) args.engine = engine
+  const paged = usePagedViewData<HistoryEntry, { items?: HistoryEntry[]; totalCount?: number }>({
+    initialData: null,
+    key: ["camunda7:instance-history", engine ?? null, processInstanceId],
+    tool: HISTORY_QUERY_TOOL,
+    args,
+    pageSize: HISTORY_PAGE_SIZE,
+    ready: !!processInstanceId,
+    selectItems: (d) => d.items ?? [],
+    selectTotal: (d) => d.totalCount ?? 0,
+  })
+
+  if (!paged.firstPage) {
+    if (paged.error) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {paged.error.message || t("historyTimeline.loadError")}
+          </AlertDescription>
+        </Alert>
+      )
+    }
+    return <p className="text-muted-foreground text-sm">{t("historyTimeline.loading")}</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <HistoryTimelineView variant={variant} activities={paged.items} />
+      <CockpitListFooter paged={paged} noun={t("historyTimeline.footerNoun")} />
     </div>
   )
 }

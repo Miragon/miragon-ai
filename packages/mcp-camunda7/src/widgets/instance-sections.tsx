@@ -1,15 +1,6 @@
 import { useEffect, useState } from "react"
-import {
-  Button,
-  Input,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  useToolMutation,
-} from "@miragon/mcp-toolkit-ui"
+import { Button, Input, useToolMutation } from "@miragon/mcp-toolkit-ui"
+import { ListTable, TableEmptyState, Td } from "@miragon-ai/widget-shell/widgets"
 
 import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
@@ -104,10 +95,10 @@ function VariableRow({
   }
 
   return (
-    <TableRow>
-      <TableCell className="font-mono text-sm">{name}</TableCell>
-      <TableCell className="text-muted-foreground text-xs">{variable.type ?? "—"}</TableCell>
-      <TableCell className="max-w-md whitespace-pre-wrap break-words font-mono text-xs">
+    <tr className="hover:bg-muted transition-colors">
+      <Td className="font-mono text-sm">{name}</Td>
+      <Td className="text-muted-foreground text-xs">{variable.type ?? "—"}</Td>
+      <Td className="max-w-md whitespace-pre-wrap break-words font-mono text-xs">
         {editing ? (
           <form
             className="flex flex-col gap-1"
@@ -156,15 +147,15 @@ function VariableRow({
         ) : (
           formatVariableValue(variable.value, variable.type)
         )}
-      </TableCell>
-      <TableCell className="w-16">
+      </Td>
+      <Td align="right" className="w-16">
         {!editing && !readOnly && (
           <Button variant="ghost" size="sm" onClick={startEdit}>
             {t("instanceSections.edit")}
           </Button>
         )}
-      </TableCell>
-    </TableRow>
+      </Td>
+    </tr>
   )
 }
 
@@ -198,36 +189,30 @@ export function VariablesTable({
   }
 
   if (entries.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t("instanceSections.noVariables")}</p>
+    return <TableEmptyState>{t("instanceSections.noVariables")}</TableEmptyState>
   }
 
   return (
-    <div className="rounded-lg border">
-      <Table aria-label={t("instanceSections.variablesTableLabel")}>
-        <TableHeader>
-          <TableRow>
-            <TableHead scope="col">{t("instanceSections.columnName")}</TableHead>
-            <TableHead scope="col">{t("instanceSections.columnType")}</TableHead>
-            <TableHead scope="col">{t("instanceSections.columnValue")}</TableHead>
-            <TableHead scope="col" className="w-16">
-              <span className="sr-only">{t("instanceSections.columnActions")}</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {entries.map(([name, variable]) => (
-            <VariableRow
-              key={name}
-              name={name}
-              variable={getVariable(name, variable)}
-              instanceId={instanceId}
-              engine={engine}
-              readOnly={readOnly}
-              onSaved={handleSaved}
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <ListTable
+      ariaLabel={t("instanceSections.variablesTableLabel")}
+      columns={[
+        { label: t("instanceSections.columnName") },
+        { label: t("instanceSections.columnType") },
+        { label: t("instanceSections.columnValue") },
+        { plain: true },
+      ]}
+    >
+      {entries.map(([name, variable]) => (
+        <VariableRow
+          key={name}
+          name={name}
+          variable={getVariable(name, variable)}
+          instanceId={instanceId}
+          engine={engine}
+          readOnly={readOnly}
+          onSaved={handleSaved}
+        />
+      ))}
+    </ListTable>
   )
 }

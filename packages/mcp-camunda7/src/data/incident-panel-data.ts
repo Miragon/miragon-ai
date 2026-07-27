@@ -1,5 +1,6 @@
 import type { Client } from "@miragon-ai/client-camunda7"
 import type {
+  ActivityIncidentsData,
   IncidentInstance,
   IncidentsByProcess,
   IncidentsDashboardActivity,
@@ -11,6 +12,7 @@ import type {
 import {
   getActivityStatistics,
   getIncidents,
+  getIncidentsCount,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
 } from "@miragon-ai/client-camunda7/sdk"
@@ -133,6 +135,20 @@ function isOnOrAfter(timestamp: string, cutoffMs: number): boolean {
   return Number.isFinite(ms) && ms >= cutoffMs
 }
 
+/** Defensive read of a `/…/count` response — null when the call failed. */
+function countFrom(res: unknown): number | null {
+  const count = (res as { count?: unknown } | null)?.count
+  return typeof count === "number" ? count : null
+}
+
+/**
+ * The engine emits/accepts `yyyy-MM-dd'T'HH:mm:ss.SSS±HHMM` — a literal "Z"
+ * suffix is not part of that contract (same rewrite as health-data.ts).
+ */
+function engineTimestamp(ms: number): string {
+  return new Date(ms).toISOString().replace("Z", "+0000")
+}
+
 function maxTimestamp(values: string[]): string | null {
   let best: string | null = null
   let bestMs = -Infinity
@@ -171,10 +187,23 @@ export async function buildIncidentsDashboardData(
   client: Client,
   options: BuildOverviewOptions,
 ): Promise<IncidentsDashboardData> {
-  const { byKey, rows } = await fetchIncidents(client, options)
-  const definitionInfo = await fetchDefinitionInfo(client, [...byKey.keys()])
-
   const cutoffMs = Date.now() - DAY_MS
+  // Honest engine-wide totals via /incident/count: the scan below is capped
+  // at 200 rows, so its length silently undercounts a busy engine. Count
+  // failures degrade to the scan-derived values instead of failing the feed.
+  const countFilters = {
+    processDefinitionKeyIn: options.processDefinitionKey,
+    incidentType: options.incidentType,
+  }
+  const [{ byKey, rows }, totalRes, last24hRes] = await Promise.all([
+    fetchIncidents(client, options),
+    getIncidentsCount({ client, query: countFilters }).catch(() => null),
+    getIncidentsCount({
+      client,
+      query: { ...countFilters, incidentTimestampAfter: engineTimestamp(cutoffMs) },
+    }).catch(() => null),
+  ])
+  const definitionInfo = await fetchDefinitionInfo(client, [...byKey.keys()])
   let last24hTotal = 0
   let affectedActivityTotal = 0
 
@@ -229,10 +258,10 @@ export async function buildIncidentsDashboardData(
   })
 
   return {
-    totalCount: rows.length,
+    totalCount: countFrom(totalRes) ?? rows.length,
     processCount: processes.length,
     affectedActivityCount: affectedActivityTotal,
-    last24hCount: last24hTotal,
+    last24hCount: countFrom(last24hRes) ?? last24hTotal,
     latestIncident: rows.length > 0 ? rows[0].incidentTimestamp : null,
     processes,
   }
@@ -249,9 +278,18 @@ export async function buildProcessIncidentsData(
   client: Client,
   options: BuildDetailOptions,
 ): Promise<ProcessIncidentsData> {
-  const { byKey } = await fetchIncidents(client, {
-    processDefinitionKey: options.processDefinitionKey,
-  })
+  const cutoffMs = Date.now() - DAY_MS
+  const countFilters = { processDefinitionKeyIn: options.processDefinitionKey }
+  const [{ byKey }, totalRes, last24hRes] = await Promise.all([
+    fetchIncidents(client, { processDefinitionKey: options.processDefinitionKey }),
+    // Honest per-definition totals via /incident/count — the recency scan is
+    // capped at 200 rows; count failures degrade to the scan-derived values.
+    getIncidentsCount({ client, query: countFilters }).catch(() => null),
+    getIncidentsCount({
+      client,
+      query: { ...countFilters, incidentTimestampAfter: engineTimestamp(cutoffMs) },
+    }).catch(() => null),
+  ])
 
   const group = byKey.get(options.processDefinitionKey) ?? []
   const definitionInfo = await fetchDefinitionInfo(client, [options.processDefinitionKey])
@@ -260,55 +298,59 @@ export async function buildProcessIncidentsData(
 
   const processDefinitionId = def?.id || group[0]?.processDefinitionId || null
 
-  const [xmlResponse, failedJobs] = await Promise.all([
+  const [xmlResponse, activityStats] = await Promise.all([
     processDefinitionId
       ? (getProcessDefinitionBpmn20Xml({
           client,
           path: { id: processDefinitionId },
         }).catch(() => null) as Promise<{ bpmn20Xml?: string } | null>)
       : Promise.resolve(null),
-    processDefinitionId ? fetchFailedJobCount(client, processDefinitionId) : Promise.resolve(null),
+    processDefinitionId
+      ? fetchActivityStats(client, processDefinitionId)
+      : Promise.resolve({ failedJobs: null, incidentCounts: null } satisfies ActivityStatsResult),
   ])
   const bpmnXml = xmlResponse?.bpmn20Xml ?? null
 
   const activityNames = bpmnXml ? extractActivityNames(bpmnXml) : {}
   const totalActivityCount = bpmnXml ? countBpmnActivities(bpmnXml) : null
 
-  const cutoffMs = Date.now() - DAY_MS
-
-  const incidentCtx: IncidentInstanceContext = {
-    cockpitUrl: options.cockpitUrl,
-    baseUrl: options.baseUrl,
-    provider: options.provider,
-    processDefinitionKey: options.processDefinitionKey,
-    version: def?.version ?? null,
-    definitionId: def?.id ?? null,
-    tab: "incidents",
-  }
-
-  const byActivity = new Map<string, IncidentInstance[]>()
+  const byActivity = new Map<string, IncidentRow[]>()
   for (const r of group) {
     const list = byActivity.get(r.activityId) ?? []
-    list.push(toIncidentInstance(r, incidentCtx))
+    list.push(r)
     byActivity.set(r.activityId, list)
   }
 
-  const activities: ProcessIncidentsActivity[] = [...byActivity.entries()]
-    .sort((a, b) => b[1].length - a[1].length)
-    .map(([activityId, incidents]) => ({
-      activityId,
-      activityName: activityNames[activityId] ?? null,
-      representativeMessage: incidents[0].incidentMessage,
-      incidentCount: incidents.length,
-      firstSeen: minTimestamp(incidents.map((i) => i.incidentTimestamp)),
-      latestIncident: maxTimestamp(incidents.map((i) => i.incidentTimestamp)),
-      incidents,
-    }))
+  // Group axis: the recency scan UNION the exact activity statistics — an
+  // activity whose incidents all lie beyond the 200-row scan still gets its
+  // group (count from statistics; rows come from the paged per-activity feed).
+  const activityIds = new Set<string>(byActivity.keys())
+  for (const id of activityStats.incidentCounts?.keys() ?? []) activityIds.add(id)
+
+  const activities: ProcessIncidentsActivity[] = [...activityIds]
+    .map((activityId) => {
+      const scanRows = byActivity.get(activityId) ?? []
+      return {
+        activityId,
+        activityName: activityNames[activityId] ?? null,
+        representativeMessage: scanRows[0]?.incidentMessage ?? null,
+        // Statistics are exact; a scan-only activity (statistics outage or
+        // race) falls back to its scanned row count.
+        incidentCount: activityStats.incidentCounts?.get(activityId) ?? scanRows.length,
+        firstSeen: minTimestamp(scanRows.map((i) => i.incidentTimestamp)),
+        latestIncident: maxTimestamp(scanRows.map((i) => i.incidentTimestamp)),
+      }
+    })
+    .sort((a, b) => b.incidentCount - a.incidentCount)
+
+  const incidentCount = countFrom(totalRes) ?? group.length
 
   // When the requested process has no open incidents, fetch the cluster-wide
   // incident set so the empty state can offer to jump to a process that does.
   const siblingsWithIncidents: IncidentsByProcess[] =
-    group.length === 0 ? await fetchSiblingsWithIncidents(client, options.processDefinitionKey) : []
+    incidentCount === 0
+      ? await fetchSiblingsWithIncidents(client, options.processDefinitionKey)
+      : []
 
   return {
     processDefinitionKey: options.processDefinitionKey,
@@ -325,9 +367,11 @@ export async function buildProcessIncidentsData(
       { tab: "incidents" },
     ),
     runningInstances,
-    incidentCount: group.length,
-    last24hCount: group.filter((r) => isOnOrAfter(r.incidentTimestamp, cutoffMs)).length,
-    failedJobs,
+    incidentCount,
+    last24hCount:
+      countFrom(last24hRes) ??
+      group.filter((r) => isOnOrAfter(r.incidentTimestamp, cutoffMs)).length,
+    failedJobs: activityStats.failedJobs,
     totalActivityCount,
     latestIncident: maxTimestamp(group.map((r) => r.incidentTimestamp)),
     activities,
@@ -335,23 +379,117 @@ export async function buildProcessIncidentsData(
   }
 }
 
+export interface ActivityIncidentsArgs {
+  processDefinitionKey: string
+  activityId: string
+  /** 0-based offset into the activity's incident rows (defaults to 0). */
+  firstResult?: number
+  /** Page size (defaults to 10 — rows render inside a group card). */
+  maxResults?: number
+}
+
+/** Server default page size of the per-activity incident feed. */
+const ACTIVITY_INCIDENTS_PAGE = 10
+
 /**
- * Failed-job count (no retries left) summed over the definition's activity
- * statistics — the KPI the merged definition view surfaces next to the
- * incident counts. Null (not 0) when the statistics call fails so the widget
- * can render "unknown" instead of a false all-clear.
+ * One page of an activity's incident rows — the paged feed behind each
+ * expanded activity group of the definition view. Engine-side offset paging
+ * (`/incident` supports firstResult/maxResults) with an exact total from
+ * `/incident/count`, so the group's Load-more footer is honest beyond the
+ * definition feed's 200-row recency scan.
  */
-async function fetchFailedJobCount(
+export async function buildActivityIncidentsData(
+  client: Client,
+  options: {
+    baseUrl: string
+    cockpitUrl?: string
+    provider: EngineProvider
+  } & ActivityIncidentsArgs,
+): Promise<Omit<ActivityIncidentsData, "engineId">> {
+  const query = {
+    processDefinitionKeyIn: options.processDefinitionKey,
+    activityId: options.activityId,
+  }
+  // Rows + count must propagate failures as tool errors (no silent []); the
+  // definition lookup is display enrichment and may degrade.
+  const [raw, countRes, definitionInfo] = await Promise.all([
+    getIncidents({
+      client,
+      query: {
+        ...query,
+        sortBy: "incidentTimestamp",
+        sortOrder: "desc",
+        firstResult: Math.max(0, options.firstResult ?? 0),
+        maxResults: options.maxResults ?? ACTIVITY_INCIDENTS_PAGE,
+      },
+    }),
+    getIncidentsCount({ client, query }),
+    fetchDefinitionInfo(client, [options.processDefinitionKey]),
+  ])
+
+  const def = definitionInfo.get(options.processDefinitionKey)?.info ?? null
+  const incidentCtx: IncidentInstanceContext = {
+    cockpitUrl: options.cockpitUrl,
+    baseUrl: options.baseUrl,
+    provider: options.provider,
+    processDefinitionKey: options.processDefinitionKey,
+    version: def?.version ?? null,
+    definitionId: def?.id ?? null,
+    tab: "incidents",
+  }
+
+  const rows = (Array.isArray(raw) ? raw : []) as Array<Omit<IncidentRow, "processDefinitionKey">>
+  const incidents = rows.map((r) =>
+    toIncidentInstance({ ...r, processDefinitionKey: options.processDefinitionKey }, incidentCtx),
+  )
+
+  return {
+    processDefinitionKey: options.processDefinitionKey,
+    activityId: options.activityId,
+    incidents,
+    totalCount: countFrom(countRes) ?? incidents.length,
+  }
+}
+
+interface ActivityStatsResult {
+  /** Failed jobs (no retries left) summed over all activities — null (not 0)
+   *  when the statistics call fails so the widget renders "unknown". */
+  failedJobs: number | null
+  /** Exact open-incident count per activity id (only activities with > 0);
+   *  null when the statistics call fails. */
+  incidentCounts: Map<string, number> | null
+}
+
+/**
+ * One activity-statistics call feeds two exact, scan-independent numbers of
+ * the merged definition view: the failed-job KPI and the per-activity
+ * incident counts shown on the group cards.
+ */
+async function fetchActivityStats(
   client: Client,
   processDefinitionId: string,
-): Promise<number | null> {
+): Promise<ActivityStatsResult> {
   const stats = (await getActivityStatistics({
     client,
     path: { id: processDefinitionId },
-    query: { failedJobs: true },
-  }).catch(() => null)) as Array<{ failedJobs?: number | null }> | null
-  if (!Array.isArray(stats)) return null
-  return stats.reduce((sum, row) => sum + (row.failedJobs ?? 0), 0)
+    query: { failedJobs: true, incidents: true },
+  }).catch(() => null)) as Array<{
+    id?: string | null
+    failedJobs?: number | null
+    incidents?: Array<{ incidentCount?: number | null }> | null
+  }> | null
+  if (!Array.isArray(stats)) return { failedJobs: null, incidentCounts: null }
+
+  let failedJobs = 0
+  const incidentCounts = new Map<string, number>()
+  for (const row of stats) {
+    failedJobs += row.failedJobs ?? 0
+    const count = Array.isArray(row.incidents)
+      ? row.incidents.reduce((sum, i) => sum + (i.incidentCount ?? 0), 0)
+      : 0
+    if (row.id && count > 0) incidentCounts.set(row.id, count)
+  }
+  return { failedJobs, incidentCounts }
 }
 
 async function fetchSiblingsWithIncidents(

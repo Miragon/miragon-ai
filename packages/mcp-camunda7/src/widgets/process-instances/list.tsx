@@ -1,11 +1,10 @@
-import { useState } from "react"
 import { ModelContext } from "mcp-use/react"
 import {
   AskAiButton,
   CountPill,
   DrillButton,
   FilterBar,
-  ListFooter,
+  ListTable,
   LivePill,
   QueryFallback,
   StatusBadge,
@@ -13,17 +12,17 @@ import {
   TableEmptyState,
   TableSkeleton,
   Td,
-  Th,
   WidgetHeader,
   WidgetShell,
-  useDebouncedValue,
-  usePagedViewData,
+  usePagedListView,
   type FilterChip,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
+import { useState } from "react"
 import type { ProcessInstanceRow, ProcessInstancesData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
+import { CockpitListFooter } from "../list-footer.js"
 import { useT } from "../../messages/use-t.js"
 
 const PAGE_SIZE = 50
@@ -144,33 +143,34 @@ export function ProcessInstancesView({
 }) {
   const t = useT()
   const go = useNav()
-  const [search, setSearch] = useState("")
   const [activeChip, setActiveChip] = useState<InstanceChip>(CHIP_ALL)
-  const debouncedSearch = useDebouncedValue(search.trim(), 300)
 
   const pdk = processDefinitionKey ?? initialData?.processDefinitionKey
   const resolvedEngine = engine ?? "default"
 
   // Filters are SERVER-side: the chips and the search box re-query the feed
-  // (search debounced) so they cover the whole result set, not just the loaded
-  // page. Pagination is offset-based with an explicit "Load more" (see footer).
+  // (search debounced by the scaffold) so they cover the whole result set, not
+  // just the loaded page. Pagination is offset-based with an explicit
+  // "Load more" (see footer).
   const wantIncidents = activeChip === CHIP_INCIDENTS || !!withIncidentsOnly
   const wantSuspended = activeChip === CHIP_SUSPENDED || !!suspended
-  const effectiveBusinessKey = debouncedSearch || businessKeyLike
   const filterArgs: InstancesFilterArgs = { processDefinitionKey: pdk, engine }
   if (active) filterArgs.active = true
   if (wantIncidents) filterArgs.withIncidentsOnly = true
   if (wantSuspended) filterArgs.suspended = true
-  if (effectiveBusinessKey) filterArgs.businessKeyLike = effectiveBusinessKey
+  if (businessKeyLike) filterArgs.businessKeyLike = businessKeyLike
 
-  // Once the operator searches/filters, drop the handed-in page and self-fetch
-  // the server-filtered set (standalone data is only the unfiltered first page).
-  const interacted = debouncedSearch !== "" || activeChip !== CHIP_ALL
-  const paged = usePagedViewData<ProcessInstanceRow, ProcessInstancesData>({
-    initialData: interacted ? null : initialData,
+  const { paged, search, setSearch, debouncedSearch, interacted } = usePagedListView<
+    ProcessInstanceRow,
+    ProcessInstancesData
+  >({
+    initialData,
     key: ["camunda7:process-instances", engine ?? null, pdk ?? null],
     tool: CAMUNDA7_PROCESS_INSTANCES_DATA,
     args: filterArgs,
+    // The operator's search overrides a handed-in businessKeyLike prefilter.
+    searchArg: "businessKeyLike",
+    filtersActive: activeChip !== CHIP_ALL,
     pageSize: PAGE_SIZE,
     ready: !!pdk,
     selectItems: (d) => d.instances,
@@ -255,53 +255,27 @@ export function ProcessInstancesView({
         </TableEmptyState>
       ) : (
         <>
-          <table
-            className="w-full border-collapse text-sm"
-            aria-label={t("processInstances.tableAriaLabel", { name: title })}
+          <ListTable
+            ariaLabel={t("processInstances.tableAriaLabel", { name: title })}
+            columns={[
+              { label: t("processInstances.colBusinessKey") },
+              { label: t("processInstances.colVersion") },
+              { label: t("processInstances.colState") },
+              { label: t("processInstances.colIncident"), align: "right" },
+              { plain: true },
+            ]}
           >
-            <thead className="bg-muted">
-              <tr>
-                <Th>{t("processInstances.colBusinessKey")}</Th>
-                <Th>{t("processInstances.colVersion")}</Th>
-                <Th>{t("processInstances.colState")}</Th>
-                <Th align="right">{t("processInstances.colIncident")}</Th>
-                <Th plain />
-              </tr>
-            </thead>
-            <tbody>
-              {paged.items.map((row) => (
-                <InstanceRow
-                  key={row.id}
-                  row={row}
-                  processDefinitionKey={data.processDefinitionKey}
-                  engine={resolvedEngine}
-                  onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
-                />
-              ))}
-            </tbody>
-          </table>
-          {/* Load-more failures land here (page 0 failures render above): the
-              already-loaded rows stay visible, the failure is inline + retryable. */}
-          {paged.error && (
-            <div role="alert" className="text-critical flex items-center gap-2 text-xs">
-              <span>{t("processInstances.loadMoreError", { message: paged.error.message })}</span>
-              <button
-                type="button"
-                onClick={paged.loadMore}
-                className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
-              >
-                {t("processInstances.retryLoadMore")}
-              </button>
-            </div>
-          )}
-          <ListFooter
-            shown={paged.items.length}
-            total={paged.total}
-            hasMore={paged.hasMore}
-            loadingMore={paged.loadingMore}
-            onLoadMore={paged.loadMore}
-            noun={t("processInstances.footerNoun")}
-          />
+            {paged.items.map((row) => (
+              <InstanceRow
+                key={row.id}
+                row={row}
+                processDefinitionKey={data.processDefinitionKey}
+                engine={resolvedEngine}
+                onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
+              />
+            ))}
+          </ListTable>
+          <CockpitListFooter paged={paged} noun={t("processInstances.footerNoun")} />
         </>
       )}
     </>

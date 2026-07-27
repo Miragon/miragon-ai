@@ -1,19 +1,24 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
+  FilterBar,
   QueryFallback,
   TableSkeleton,
   WidgetShell,
-  useViewToolQuery,
+  usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
-import type { ProcessListData } from "../view-models.js"
+import type { ProcessDefinition, ProcessListData } from "../view-models.js"
+import { CAMUNDA7_PROCESS_LIST_DATA } from "../tool-names.js"
+import { CockpitListFooter } from "./list-footer.js"
 import {
   ProcessDefinitionsTableView,
   type ProcessDefinitionsTableRow,
 } from "./process-definitions-table-view.js"
 
 export type { ProcessListData }
+
+const PAGE_SIZE = 50
 
 export function ProcessListWidget({
   data: initialData,
@@ -30,26 +35,40 @@ export function ProcessListWidget({
   latestVersion?: boolean
 }) {
   const t = useT()
-  const queryArgs: { key?: string; nameLike?: string; latestVersion?: boolean } = {}
-  if (processDefinitionKey) queryArgs.key = processDefinitionKey
-  if (nameLike) queryArgs.nameLike = nameLike
-  if (latestVersion !== undefined) queryArgs.latestVersion = latestVersion
-  // Self-fetch of a `show_*` tool: parse structuredContent-first — the text
-  // channel only carries the model summary since the text-channel diet.
-  const fallbackQuery = useViewToolQuery<ProcessListData>(
-    ["camunda7:process-list"],
-    "camunda7_show_process_list",
-    queryArgs,
-    { enabled: !initialData },
-  )
-  const data = initialData ?? fallbackQuery.data ?? null
+  const args: Record<string, unknown> = {}
+  if (processDefinitionKey) args.key = processDefinitionKey
+  if (nameLike) args.nameLike = nameLike
+  if (latestVersion !== undefined) args.latestVersion = latestVersion
+
+  // The search is SERVER-side (nameLike on the paged feed, overriding a
+  // handed-in prefilter) so it covers all deployed definitions.
+  const { paged, search, setSearch, interacted } = usePagedListView<
+    ProcessDefinition,
+    ProcessListData
+  >({
+    initialData,
+    key: [
+      "camunda7:process-list",
+      processDefinitionKey ?? null,
+      nameLike ?? null,
+      latestVersion ?? null,
+    ],
+    tool: CAMUNDA7_PROCESS_LIST_DATA,
+    args,
+    searchArg: "nameLike",
+    pageSize: PAGE_SIZE,
+    ready: true,
+    selectItems: (d) => d.definitions,
+    selectTotal: (d) => d.totalCount,
+  })
+  const data = paged.firstPage
 
   if (!data) {
     return (
       <WidgetShell>
         <QueryFallback
-          isError={fallbackQuery.isError}
-          error={fallbackQuery.error}
+          isError={!!paged.error}
+          error={paged.error}
           errorTitle={t("processList.loadError")}
           skeleton={<TableSkeleton />}
         />
@@ -60,7 +79,7 @@ export function ProcessListWidget({
   // Count-less adapter over the canonical definitions table: the count columns
   // and drill buttons are simply absent; a status column (active/suspended)
   // and the per-row Ask-AI handoff take their place.
-  const rows: ProcessDefinitionsTableRow[] = data.definitions.map((def) => ({
+  const rows: ProcessDefinitionsTableRow[] = paged.items.map((def) => ({
     id: def.id,
     key: def.key,
     name: def.name,
@@ -74,15 +93,21 @@ export function ProcessListWidget({
     <WidgetShell>
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">{t("processList.heading")}</h2>
-        <Badge variant="secondary">
-          {t("processList.deployedCount", { count: data.totalCount })}
-        </Badge>
+        <Badge variant="secondary">{t("processList.deployedCount", { count: paged.total })}</Badge>
       </div>
+
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={t("processList.searchPlaceholder")}
+        chips={[]}
+        onChipToggle={() => undefined}
+      />
 
       <ProcessDefinitionsTableView
         rows={rows}
         ariaLabel={t("processList.tableAria")}
-        emptyText={t("processList.emptyState")}
+        emptyText={interacted ? t("processList.noMatch") : t("processList.emptyState")}
         status={{
           header: t("processList.colStatus"),
           render: (row) =>
@@ -103,6 +128,7 @@ export function ProcessListWidget({
           />
         )}
       />
+      <CockpitListFooter paged={paged} noun={t("processList.footerNoun")} />
     </WidgetShell>
   )
 }

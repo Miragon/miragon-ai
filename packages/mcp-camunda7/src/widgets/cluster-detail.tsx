@@ -1,22 +1,30 @@
 import {
   AskAiButton,
   DrillButton,
+  FilterBar,
   KpiGrid,
   LogText,
   RowCard,
   StatusBadge,
+  TableEmptyState,
+  ViewDataState,
   WidgetHeader,
+  WidgetShell,
   formatTimestamp,
   truncate,
-  useDetailView,
+  usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
 import { ModelContext } from "mcp-use/react"
-import type { ClusterDetailData } from "../view-models.js"
+import type { ClusterDetailData, ClusterIncidentRow } from "../view-models.js"
 import { DetailPage } from "./detail-page.js"
+import { CockpitListFooter } from "./list-footer.js"
 import { useNav } from "./navigation.js"
 import { CAMUNDA7_CLUSTER_DETAIL_DATA } from "../tool-names.js"
 import { remediatePrompt } from "./remediation.js"
 import { useT } from "../messages/use-t.js"
+
+/** Page size — mirrors the server default (`CLUSTER_DETAIL_ROWS`). */
+const PAGE_SIZE = 50
 
 /**
  * Grounding line: the agent knows exactly which failure cluster the operator
@@ -57,26 +65,56 @@ export function ClusterDetailView({
 }) {
   const go = useNav()
   const t = useT()
+  // Cluster identity from props (cockpit drill) or the handed-in data
+  // (standalone show-tool render) — loadMore() must always carry it.
+  const clusterActivityId = activityId ?? initialData?.activityId
+  const clusterIncidentType = incidentType ?? initialData?.incidentType
+  const clusterSignature = messageSignature ?? initialData?.messageSignature ?? undefined
   // Unlike the engine-health feed, this feed REQUIRES the cluster identity —
   // gate the self-fetch on it (the show tool path passes data instead).
-  const ready = !!(activityId && incidentType)
-  const { data, guard } = useDetailView<ClusterDetailData>({
+  const ready = !!(clusterActivityId && clusterIncidentType)
+  const args: Record<string, unknown> = {}
+  if (engine) args.engine = engine
+  if (clusterActivityId) args.activityId = clusterActivityId
+  if (clusterIncidentType) args.incidentType = clusterIncidentType
+  if (clusterSignature) args.messageSignature = clusterSignature
+  // The business-key search is SERVER-side (the feed intersects with a
+  // /process-instance lookup) so it covers the whole cluster, not just the
+  // loaded page.
+  const { paged, search, setSearch, interacted } = usePagedListView<
+    ClusterIncidentRow,
+    ClusterDetailData
+  >({
     initialData,
     key: [
       "camunda7:cluster-detail",
       engine ?? null,
-      activityId ?? null,
-      incidentType ?? null,
-      messageSignature ?? null,
+      clusterActivityId ?? null,
+      clusterIncidentType ?? null,
+      clusterSignature ?? null,
     ],
     tool: CAMUNDA7_CLUSTER_DETAIL_DATA,
-    args: { engine, activityId, incidentType, messageSignature },
+    args,
+    searchArg: "businessKeyLike",
+    pageSize: PAGE_SIZE,
     ready,
-    loadingText: t("clusterDetail.loading"),
-    emptyText: t("clusterDetail.noData"),
+    selectItems: (d) => d.incidents,
+    selectTotal: (d) => d.totalMatching,
   })
+  const data = paged.firstPage
 
-  if (!data) return guard
+  if (!data) {
+    return (
+      <WidgetShell>
+        <ViewDataState
+          loading={paged.loading}
+          error={paged.error}
+          loadingText={t("clusterDetail.loading")}
+          emptyText={t("clusterDetail.noData")}
+        />
+      </WidgetShell>
+    )
+  }
 
   const engineId = engine ?? data.engineId
 
@@ -154,16 +192,15 @@ export function ClusterDetailView({
             aria-label={t("clusterDetail.affectedInstances")}
             className="flex flex-col gap-2"
           >
-            <h3 className="text-sm font-semibold">
-              {t("clusterDetail.affectedInstances")}
-              {data.totalMatching > data.incidents.length
-                ? t("clusterDetail.showingOf", {
-                    shown: data.incidents.length,
-                    total: data.totalMatching,
-                  })
-                : ""}
-            </h3>
-            {data.incidents.map((row) => (
+            <h3 className="text-sm font-semibold">{t("clusterDetail.affectedInstances")}</h3>
+            <FilterBar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder={t("clusterDetail.searchPlaceholder")}
+              chips={[]}
+              onChipToggle={() => undefined}
+            />
+            {paged.items.map((row) => (
               <RowCard
                 // The engine can report rows without an incident id — fall back to
                 // instance+timestamp so React keys stay unique per incident row.
@@ -208,11 +245,12 @@ export function ClusterDetailView({
                 }
               />
             ))}
-            {data.incidents.length === 0 && (
-              <p className="text-muted-foreground py-2 text-sm">
-                {t("clusterDetail.noMatchingIncidents")}
-              </p>
+            {paged.items.length === 0 && (
+              <TableEmptyState>
+                {interacted ? t("clusterDetail.noMatch") : t("clusterDetail.noMatchingIncidents")}
+              </TableEmptyState>
             )}
+            <CockpitListFooter paged={paged} noun={t("clusterDetail.footerNoun")} />
           </section>
         </>
       }

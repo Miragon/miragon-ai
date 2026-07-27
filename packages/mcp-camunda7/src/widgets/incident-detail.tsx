@@ -30,7 +30,7 @@ import { DetailPage } from "./detail-page.js"
 import { ActivityNode, VariablesTable } from "./instance-sections.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
 import { refreshCockpitData } from "./refresh.js"
-import { HistoryTimelineView } from "./history-timeline.js"
+import { PagedHistoryView } from "./history-timeline.js"
 import { fenceUntrusted } from "./lib/untrusted.js"
 import { useT } from "../messages/use-t.js"
 
@@ -192,7 +192,7 @@ export function IncidentDetailWidget({
             },
             {
               label: t("incidentDetail.kpiHistoryEvents"),
-              value: data.history.length,
+              value: data.historyTotalCount ?? "—",
             },
           ]}
         />
@@ -267,7 +267,15 @@ export function IncidentDetailWidget({
         {
           id: "history",
           label: t("incidentDetail.tabHistory"),
-          content: <HistoryTimelineView variant="table" activities={data.history} />,
+          /* Mounted on first tab activation — pages the registrar history
+             query itself instead of shipping capped rows in the payload. */
+          content: (
+            <PagedHistoryView
+              processInstanceId={data.processInstanceId}
+              engine={engineId}
+              variant="table"
+            />
+          ),
         },
       ]}
       defaultTab="failure"

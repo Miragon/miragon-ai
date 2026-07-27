@@ -1,8 +1,12 @@
+import { useState } from "react"
 import {
   DrillButton,
+  FilterBar,
+  ListFooter,
   SectionHeading,
   ViewDataState,
   WidgetShell,
+  useDebouncedValue,
 } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
@@ -15,10 +19,19 @@ import {
   type ProcessDefinitionsTableRow,
 } from "../process-definitions-table-view.js"
 
+/** Rows rendered per "Load more" step. */
+const PAGE_SIZE = 50
+
 /**
  * Shell-less cockpit definitions section. Reused standalone and in the cockpit
  * app. Thin adapter over the canonical {@link ProcessDefinitionsTableView}: it
  * contributes the per-definition operational counts plus the drill actions.
+ *
+ * Search + paging are CLIENT-side over the full statistics payload —
+ * deliberate: `/process-definition/statistics` is uncapped (the feed already
+ * carries every definition), has no filter/offset params, and the issue-first
+ * sort would be lost with engine-side name paging. The footer's total is the
+ * full filtered set, so it stays honest.
  */
 export function ProcessDefinitionsSection({
   data: initialData = null,
@@ -29,6 +42,15 @@ export function ProcessDefinitionsSection({
 }) {
   const t = useT()
   const go = useNav()
+  const [search, setSearch] = useState("")
+  const debouncedSearch = useDebouncedValue(search.trim().toLowerCase(), 300)
+  const [limit, setLimit] = useState(PAGE_SIZE)
+  // Render-phase reset: a changed search must not keep an expanded limit.
+  const [prevSearch, setPrevSearch] = useState(debouncedSearch)
+  if (debouncedSearch !== prevSearch) {
+    setPrevSearch(debouncedSearch)
+    setLimit(PAGE_SIZE)
+  }
   // Shares the health KPI's query key → deduped to a single fetch (see
   // health-kpi.tsx). Self-fetches in the cockpit; uses props standalone.
   const { data, loading, error } = useViewData<CockpitDashboardData>(
@@ -50,7 +72,7 @@ export function ProcessDefinitionsSection({
     )
   }
 
-  const rows: ProcessDefinitionsTableRow[] = buildRows(data).map((row) => ({
+  const allRows: ProcessDefinitionsTableRow[] = buildRows(data).map((row) => ({
     id: row.id,
     key: row.key,
     name: row.name,
@@ -62,17 +84,33 @@ export function ProcessDefinitionsSection({
       totalIncidents: row.totalIncidents,
     },
   }))
+  const filtered = debouncedSearch
+    ? allRows.filter(
+        (row) =>
+          (row.name ?? "").toLowerCase().includes(debouncedSearch) ||
+          row.key.toLowerCase().includes(debouncedSearch),
+      )
+    : allRows
+  const rows = filtered.slice(0, limit)
 
   return (
     <section>
       <SectionHeading
         title={t("cockpitDefs.heading")}
-        hint={t("cockpitDefs.deployedHint", { count: rows.length })}
+        hint={t("cockpitDefs.deployedHint", { count: allRows.length })}
+      />
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={t("cockpitDefs.searchPlaceholder")}
+        chips={[]}
+        onChipToggle={() => undefined}
+        className="mb-2"
       />
       <ProcessDefinitionsTableView
         rows={rows}
         ariaLabel={t("cockpitDefs.tableAria")}
-        emptyText={t("cockpitDefs.emptyState")}
+        emptyText={debouncedSearch ? t("cockpitDefs.noMatch") : t("cockpitDefs.emptyState")}
         renderActions={(row) => (
           <>
             <DrillButton
@@ -89,6 +127,13 @@ export function ProcessDefinitionsSection({
             </DrillButton>
           </>
         )}
+      />
+      <ListFooter
+        shown={rows.length}
+        total={filtered.length}
+        hasMore={rows.length < filtered.length}
+        onLoadMore={() => setLimit((prev) => prev + PAGE_SIZE)}
+        noun={t("cockpitDefs.footerNoun")}
       />
     </section>
   )

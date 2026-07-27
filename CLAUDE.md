@@ -118,7 +118,11 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
    `WidgetShell` for structure; `useBpmnViewer` + `BpmnZoomControls` for BPMN, with
    highlight/legend colors from `HIGHLIGHT_COLORS`
-   (`packages/mcp-camunda7/src/widgets/bpmn-highlights.ts`).
+   (`packages/mcp-camunda7/src/widgets/bpmn-highlights.ts`). Paged lists compose
+   `usePagedListView` (search + debounce + paging scaffold; feed must accept
+   `firstResult`/`maxResults` and return an honest total) + `ListTable` (the table
+   frame; rows stay hand-composed `<tr>` + `Td`) + `PagedListFooter` (in camunda7 via
+   the i18n-bound `CockpitListFooter`, `src/widgets/list-footer.tsx`).
 
 7. **Shared server data paths are single-sourced.** Definition name/version/instance
    lookups come from `packages/mcp-camunda7/src/data/definition-info.ts`;

@@ -121,6 +121,20 @@ never re-inline these primitives:
 - BPMN: viewer lifecycle via `useBpmnViewer` + `BpmnZoomControls`; highlight/legend
   colors via `HIGHLIGHT_COLORS` from `src/widgets/bpmn-highlights.ts`
 
+**Paged list recipe** (every list that can exceed one page follows it — reference:
+`src/widgets/process-instances/list.tsx`):
+
+1. Feed: accept `firstResult`/`maxResults` (+ server-side filter params like
+   `businessKeyLike`/`nameLike`) and return the full filtered total (via the matching
+   `/count` endpoint) so the footer is honest.
+2. Widget: `usePagedListView` (owns search state, 300 ms debounce, the server-side
+   `searchArg`, and the drop-initialData-on-interaction rule; chips go into
+   `filtersActive` + the `args`) → `FilterBar` → `ListTable` (frame + `Th` header row;
+   rows stay hand-composed `<tr>` + `Td`) or a `RowCard` stack → `TableEmptyState`
+   (distinguish "no match" when `interacted`) → `CockpitListFooter`
+   (`src/widgets/list-footer.tsx` — retryable load-more error + "Showing X of Y" +
+   Load more; deliberately not infinite scroll).
+
 The registration chain has **four links — miss one and the widget is silently absent
 somewhere**:
 

@@ -320,11 +320,24 @@ export interface IncidentsByProcess {
 export interface ProcessIncidentsActivity {
   activityId: string
   activityName: string | null
+  /** Newest scanned failure message — null when the activity only surfaced
+   *  via statistics (its incidents lie beyond the recency scan). */
   representativeMessage: string | null
+  /** Exact count from activity statistics when available, else the scan count. */
   incidentCount: number
   firstSeen: string | null
   latestIncident: string | null
+}
+
+/** One page of an activity's incident rows (camunda7_activity_incidents_data). */
+export interface ActivityIncidentsData {
+  processDefinitionKey: string
+  activityId: string
+  /** The requested page, newest first. */
   incidents: IncidentInstance[]
+  /** Exact total for this activity from /incident/count. */
+  totalCount: number
+  engineId: string
 }
 
 export interface ProcessIncidentsData {
@@ -358,17 +371,6 @@ export interface IncidentDetailJob {
    *  rejected the request or the incident is not job-backed. */
   stacktrace: string | null
   dueDate: string | null
-}
-
-export interface IncidentDetailHistoryEntry {
-  id: string
-  activityId: string
-  activityName: string | null
-  activityType: string
-  startTime: string
-  endTime: string | null
-  durationInMillis: number | null
-  canceled: boolean
 }
 
 export interface IncidentDetailData {
@@ -407,8 +409,10 @@ export interface IncidentDetailData {
   activityTree: ActivityTree | null
   variables: Record<string, VariableValue>
 
-  // History tab
-  history: IncidentDetailHistoryEntry[]
+  /** Total historic activity instances (KPI) — the History tab pages the rows
+   *  itself via `camunda7_query_historic_activity_instances`. Null when the
+   *  history API is unavailable (history level "none"). */
+  historyTotalCount: number | null
 
   engineId?: string
 }

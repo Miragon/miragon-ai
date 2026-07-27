@@ -24,6 +24,9 @@ export const CAMUNDA7_INCIDENTS_DATA = "camunda7_incidents_data"
 // The ONE definition feed — powers every section of the merged definition view
 // (header, KPI strip, flow, activity incident list) under a shared query key.
 export const CAMUNDA7_PROCESS_INCIDENTS_DATA = "camunda7_process_incidents_data"
+// Paged per-activity incident rows behind each expanded activity group of the
+// definition view (offset paging + exact /incident/count total).
+export const CAMUNDA7_ACTIVITY_INCIDENTS_DATA = "camunda7_activity_incidents_data"
 export const CAMUNDA7_INCIDENT_DETAIL_DATA = "camunda7_incident_detail_data"
 // Standalone diagram + timeline views. The BPMN viewer self-fetches via its
 // own show tool (widgets/bpmn-viewer/widget.tsx), so the constant is load-bearing
@@ -42,6 +45,9 @@ export const CAMUNDA7_CLUSTER_DETAIL_DATA = "camunda7_cluster_detail_data"
 export const CAMUNDA7_SHOW_INCIDENTS_DASHBOARD = "camunda7_show_incidents_dashboard"
 export const CAMUNDA7_SHOW_JOB_PANEL = "camunda7_show_job_panel"
 export const CAMUNDA7_SHOW_PROCESS_LIST = "camunda7_show_process_list"
+// Feed twin of the standalone process list (offset paging + /count total) —
+// the widget's self-fetch; a show-tool result would be rendered by the host.
+export const CAMUNDA7_PROCESS_LIST_DATA = "camunda7_process_list_data"
 // User profile & settings: the show tool renders the settings widget, the
 // _data feed backs the widget's self-fetch (app-only), and save persists a
 // partial preference update (model-visible, e.g. "switch the UI to German").

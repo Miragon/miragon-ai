@@ -1,13 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import {
-  Card,
-  CardContent,
-  Alert,
-  AlertDescription,
-  Button,
-  useToolMutation,
-  useToolQuery,
-} from "@miragon/mcp-toolkit-ui"
+import { Card, CardContent, Button, useToolMutation } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
 import {
   AskAiButton,
@@ -29,7 +21,7 @@ import { ConfirmDialog } from "./confirm-dialog.js"
 import { DetailPage, type DetailPageTab } from "./detail-page.js"
 import { refreshCockpitData } from "./refresh.js"
 import { useNav } from "./navigation.js"
-import { HistoryTimelineView, type HistoryActivity } from "./history-timeline.js"
+import { PagedHistoryView } from "./history-timeline.js"
 import { useT } from "../messages/use-t.js"
 
 export type { InstanceDetailData }
@@ -78,35 +70,6 @@ function OpenTaskCard({
       </CardContent>
     </Card>
   )
-}
-
-/**
- * The activity audit log is the heaviest query on this view, so it loads
- * lazily: the History tab mounts this component only on first activation
- * (inactive tab panels stay unmounted — see {@link DetailPage}).
- * Relies on the session's sticky engine (like the instance mutations above).
- * The query tool returns a pagination envelope — the timeline renders the page.
- */
-function InstanceAuditContent({ processInstanceId }: { processInstanceId: string }) {
-  const t = useT()
-  const q = useToolQuery<{ items: HistoryActivity[] }>(
-    ["camunda7:instance-history", processInstanceId],
-    "camunda7_query_historic_activity_instances",
-    { processInstanceId, sortBy: "startTime", sortOrder: "asc", maxResults: 500 },
-  )
-  if (q.isError) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>
-          {q.error?.message ?? t("instanceDetail.auditLoadError")}
-        </AlertDescription>
-      </Alert>
-    )
-  }
-  if (!q.data) {
-    return <p className="text-muted-foreground text-sm">{t("instanceDetail.auditLoading")}</p>
-  }
-  return <HistoryTimelineView activities={q.data.items ?? []} />
 }
 
 export function InstanceDetailWidget({
@@ -296,6 +259,7 @@ export function InstanceDetailWidget({
             onResolve={setConfirmResolveId}
             onAnalyze={(incidentId) => go({ type: "incident-detail", incidentId })}
             hideInstanceColumn
+            previewCount={5}
           />
         ),
     },
@@ -336,7 +300,7 @@ export function InstanceDetailWidget({
             />
           </div>
           {/* Mounted on first tab activation — the lazy-load point. */}
-          <InstanceAuditContent processInstanceId={instance.id} />
+          <PagedHistoryView processInstanceId={instance.id} engine={engineId} />
         </>
       ),
     },

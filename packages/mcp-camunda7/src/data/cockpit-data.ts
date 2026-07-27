@@ -4,10 +4,12 @@ import type {
   InstanceDetailData,
   JobPanelData,
   ProcessInstancesData,
+  ProcessListData,
   TaskData,
 } from "../view-models.js"
 import {
   getProcessDefinitions,
+  getProcessDefinitionsCount,
   getProcessInstance,
   getProcessInstances,
   getProcessInstancesCount,
@@ -128,6 +130,53 @@ export async function buildCockpitDashboardData(
       totalIncidents,
     },
     definitions,
+    engineId,
+  }
+}
+
+export interface ProcessListArgs {
+  key?: string
+  nameLike?: string
+  /** Defaults to true — one row per definition key. */
+  latestVersion?: boolean
+  firstResult?: number
+  maxResults?: number
+}
+
+/**
+ * One page of deployed process definitions with an honest total from
+ * `/process-definition/count` — shared by `camunda7_show_process_list` and
+ * its `camunda7_process_list_data` feed twin.
+ */
+export async function buildProcessListData(
+  client: Client,
+  engineId: string,
+  args: ProcessListArgs,
+): Promise<ProcessListData> {
+  const filters = {
+    key: args.key,
+    nameLike: args.nameLike,
+    latestVersion: args.latestVersion ?? true,
+  }
+  const [definitions, countRes] = await Promise.all([
+    getProcessDefinitions({
+      client,
+      query: {
+        ...filters,
+        firstResult: Math.max(0, args.firstResult ?? 0),
+        maxResults: args.maxResults ?? 50,
+        sortBy: "name",
+        sortOrder: "asc",
+      },
+    }),
+    // Count failures degrade to the page length instead of failing the list.
+    getProcessDefinitionsCount({ client, query: filters }).catch(() => null),
+  ])
+  const defArray = Array.isArray(definitions) ? definitions : []
+  const count = (countRes as { count?: unknown } | null)?.count
+  return {
+    definitions: defArray as ProcessListData["definitions"],
+    totalCount: typeof count === "number" ? count : defArray.length,
     engineId,
   }
 }
