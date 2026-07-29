@@ -14,6 +14,10 @@ export {
   createFileSystemProfileStore,
   type ProfileStore,
 } from "./lib/profile-store.js"
+export {
+  createPostgresProfileStore,
+  PROFILE_STORE_MIGRATIONS,
+} from "./lib/profile-store-postgres.js"
 export { resolveMcpBearerToken } from "./lib/mcp-auth.js"
 export type { UserProfile, UserProfilePreferences, UserProfileView } from "./lib/profile-schema.js"
 export type * from "./view-models.js"

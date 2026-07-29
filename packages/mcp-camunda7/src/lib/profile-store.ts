@@ -12,7 +12,9 @@ import {
  * Persistence for user profiles, keyed by the profile key (the MCP session id
  * today, an authenticated user id once auth lands — see {@link resolveProfileKey}).
  * Deliberately mirrors the toolkit's `DashboardStore` shape: an in-memory
- * default plus a one-file-per-record filesystem store selected by an env var.
+ * default plus a one-file-per-record filesystem store selected by an env var
+ * (and a postgres implementation in `profile-store-postgres.ts` selected by
+ * `DATABASE_URL` in the server app).
  * The key never identifies a person without auth, so there is no cross-key
  * ownership model — each key owns exactly its own record.
  */
@@ -35,8 +37,11 @@ function stripUndefined<T extends object>(obj: T): Partial<T> {
  * Merge a partial save over the previous record (or a fresh default), preserving
  * `id`/`userId`/`createdAt` and re-stamping `updatedAt`. Omitted input fields
  * keep their previous value so single-field updates don't wipe the rest.
+ * Shared by every store implementation (in-memory, filesystem, and the postgres
+ * sibling in `profile-store-postgres.ts`) so the merge semantics stay
+ * single-sourced.
  */
-function mergeProfile(
+export function mergeProfile(
   key: string,
   existing: UserProfile | undefined,
   input: UserProfileSaveInput,

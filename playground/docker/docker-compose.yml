@@ -131,6 +131,31 @@ services:
     depends_on:
       - prometheus
 
+  # Postgres — durable user settings + saved dashboards for the MCP server
+  # (opt-in via DATABASE_URL). Default profile so a locally-run server
+  # (`pnpm dev`) reaches it on localhost:8440. The init script creates a
+  # second database for the opt-in `pnpm test:pg` suites, so tests never touch
+  # the playground's own data. demo-grade credentials, matching demo/demo.
+  postgres:
+    image: postgres:18.1-alpine
+    environment:
+      - POSTGRES_USER=miragon
+      - POSTGRES_PASSWORD=miragon
+      - POSTGRES_DB=miragon
+    volumes:
+      # The 18+ image keeps PGDATA in a versioned subdirectory of
+      # /var/lib/postgresql — mount the parent, not .../data.
+      - postgres-data:/var/lib/postgresql
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "8440:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U miragon -d miragon"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
   # Automation MCP server (Node). Opt-in via the `full` profile so the
   # default `docker compose up` brings up infra only — leaving port 8400
   # free for a locally-run server (`pnpm -F @miragon-ai/mcp-server-camunda7 dev`).
@@ -160,11 +185,15 @@ services:
       - CAMUNDA_USERNAME=demo
       - CAMUNDA_PASSWORD=demo
       - PROMETHEUS_URL=http://prometheus:9090
+      # Durable user settings + dashboards (src/persistence/ in the server app).
+      - DATABASE_URL=postgres://miragon:miragon@postgres:5432/miragon
     depends_on:
       cibseven:
         condition: service_healthy
       prometheus:
         condition: service_started
+      postgres:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -180,6 +209,7 @@ services:
 
 volumes:
   prometheus-data:
+  postgres-data:
 
 secrets:
   github_token:

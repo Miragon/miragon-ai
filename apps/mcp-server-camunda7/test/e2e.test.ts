@@ -49,6 +49,11 @@ describe("mcp-server-camunda7 E2E smoke", () => {
     vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
     vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
     vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    // Persistence must stay in-memory regardless of the dev shell's env.
+    vi.stubEnv("DATABASE_URL", undefined)
+    vi.stubEnv("REDIS_URL", undefined)
+    vi.stubEnv("MCP_PROFILE_DIR", undefined)
+    vi.stubEnv("MCP_DASHBOARD_DIR", undefined)
 
     app = await createFrameworkApp({
       name: "automation-mcp",
@@ -154,6 +159,11 @@ describe("mcp-server-camunda7 E2E toolset filtering (camunda7:read-only)", () =>
     vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
     vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
     vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:read-only")
+    // Persistence must stay in-memory regardless of the dev shell's env.
+    vi.stubEnv("DATABASE_URL", undefined)
+    vi.stubEnv("REDIS_URL", undefined)
+    vi.stubEnv("MCP_PROFILE_DIR", undefined)
+    vi.stubEnv("MCP_DASHBOARD_DIR", undefined)
 
     app = await createFrameworkApp({
       name: "automation-mcp",
