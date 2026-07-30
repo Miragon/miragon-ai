@@ -41,7 +41,7 @@ export const en: MessageCatalog = {
   // ── Profile / settings panel ────────────────────────────────────────────────
   "profile.heading": "Profile & Settings",
   "profile.subtitle":
-    "Preferences for this session — engine availability, language, theme, dashboards and analytics defaults.",
+    "Preferences for this session — engine availability, language, theme and dashboards.",
   "profile.save": "Save",
   "profile.saving": "Saving…",
   "profile.saved": ({ time }) => `Saved ${String(time)}`,
@@ -52,7 +52,6 @@ export const en: MessageCatalog = {
   "profile.section.appearance": "Language & appearance",
   "profile.section.engines": "Engines",
   "profile.section.dashboards": "Dashboards",
-  "profile.section.analytics": "Analytics defaults",
 
   "profile.field.language": "Language",
   "profile.field.language.help":
@@ -73,20 +72,18 @@ export const en: MessageCatalog = {
   "profile.dashboards.unavailable": "Saved dashboards are unavailable.",
   "profile.dashboards.empty": "No saved dashboards yet.",
   "profile.field.defaultDashboard": "Default dashboard",
-  "profile.field.defaultDashboard.help": "Opened first when you enter the cockpit.",
+  "profile.field.defaultDashboard.help":
+    "Suggested to the AI as the dashboard to open first (load-dashboard).",
   "profile.dashboard.none": "(none)",
   "profile.field.pinnedDashboards": "Pinned dashboards",
   "profile.field.pinnedDashboards.help": "Shown first in dashboard pickers.",
 
-  "profile.field.analyticsPeriod": "Default period",
-  "profile.field.analyticsPeriod.help": "Default look-back window for analytics.",
-  "profile.field.minBucket": "Min bucket size",
-  "profile.field.minBucket.help": "Minimum activity-bucket size for aggregation.",
-
-  "profile.summary": ({ language, theme, engines, period }) =>
-    `User profile: language ${String(language)}, theme ${String(theme)}, ${String(engines)}, analytics window ${String(period)}.`,
+  "profile.summary": ({ language, theme, engines, defaultDashboard }) =>
+    `User profile: language ${String(language)}, theme ${String(theme)}, ${String(engines)}${String(defaultDashboard)}.`,
   "profile.summary.allEngines": "all engines",
   "profile.summary.someEngines": ({ count }) => `${String(count)} allowed engine(s)`,
+  "profile.summary.defaultDashboard": ({ id }) =>
+    `, default dashboard "${String(id)}" (open via load-dashboard)`,
 
   // ── Enumerated option labels ────────────────────────────────────────────────
   "theme.light": "Light",

@@ -113,6 +113,14 @@ export const definition: AppDefinition = {
       consumes: ["analytics:bpmnHeatmap"],
       size: "full",
     },
+    {
+      id: "analytics:settings",
+      description:
+        "The analytics module's settings section: default look-back period and minimum comparison bucket size, applied when analytics calls omit them.",
+      requires: [],
+      consumes: ["analytics:settings"],
+      size: "full",
+    },
   ],
 }
 

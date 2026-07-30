@@ -15,6 +15,11 @@ export const enServer: MessageCatalog = {
     "Failure dashboard: {totalIncidents} open incident(s) across {uniqueErrorPatterns} error pattern(s){mostAffected}.",
   "aSum.mostAffectedProcess": '; most affected process: "{key}"',
   "aSum.scopeForProcess": ' for "{key}"',
+  "aSum.settings":
+    "Analytics settings: default period {period}, min bucket size {minBucketSize}.{changeHint}",
+  "aSum.settingsChangeHint": " Change via analytics_save_settings.",
+  "aSum.settingsSaved":
+    "Analytics settings saved: default period {period}, min bucket size {minBucketSize}.",
   "aSum.versionCompare":
     'Version comparison for "{key}" v{versionA} vs v{versionB} over {windowDays}d: {delta}{suppressed}.',
 }

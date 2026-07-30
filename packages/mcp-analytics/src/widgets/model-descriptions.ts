@@ -8,6 +8,7 @@ import type { DescribeForModel } from "@miragon-ai/widget-shell/ui"
 import type { ClusterCompareData } from "./cluster-compare.js"
 import type { VersionCompareData } from "./version-compare.js"
 import type { EngineCompareData } from "./engine-compare.js"
+import type { AnalyticsSettingsViewData } from "./settings-section.js"
 
 /**
  * Model-context descriptions for every analytics widget, attached centrally via
@@ -44,7 +45,9 @@ function dashboardScope(
   props: Readonly<Record<string, unknown>>,
 ): string {
   const processDefinitionKey = strProp(props, "processDefinitionKey")
-  const period = strProp(props, "period") ?? "7d (default)"
+  // The show tool passes the RESOLVED period as a cell prop; a prop-less
+  // render self-fetches, where the feed applies the saved profile default.
+  const period = strProp(props, "period") ?? "the profile default period"
   const scope = processDefinitionKey
     ? `process "${processDefinitionKey}"`
     : `${data.definitionBreakdown.length} process definition(s)`
@@ -192,6 +195,12 @@ function maxEntry(values: Record<string, number>): [string, number] | null {
   }
   return best
 }
+
+export const describeAnalyticsSettings: DescribeForModel<AnalyticsSettingsViewData> = (data) =>
+  `Viewing the analytics settings section: default period ${data.settings.defaultPeriod}, ` +
+  `min bucket size ${data.settings.minBucketSize}. These apply whenever an analytics call ` +
+  `omits period/minBucketSize` +
+  `${data.canSave ? "; change them here or via analytics_save_settings" : " (read-only in this deployment)"}.`
 
 export const describeBpmnHeatmap: DescribeForModel<BpmnHeatmapData> = (data) => {
   const hottest = maxEntry(data.frequency)

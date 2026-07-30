@@ -1,4 +1,4 @@
-import { mkdtemp } from "node:fs/promises"
+import { mkdtemp, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import postgres from "postgres"
@@ -9,7 +9,11 @@ import {
   type ProfileStore,
 } from "./profile-store.js"
 import { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
-import { defaultUserProfile, userProfilePreferencesSchema } from "./profile-schema.js"
+import {
+  defaultUserProfile,
+  userProfilePreferencesSchema,
+  userProfileToolSaveInput,
+} from "./profile-schema.js"
 
 describe("defaultUserProfile", () => {
   it("returns a complete, defaulted profile for an unsaved key", () => {
@@ -19,9 +23,8 @@ describe("defaultUserProfile", () => {
       language: "en",
       theme: "system",
       pinnedDashboardIds: [],
-      analyticsDefaultPeriod: "7d",
-      analyticsMinBucketSize: 10,
-      schemaVersion: 1,
+      modules: {},
+      schemaVersion: 2,
     })
     expect(p.defaultEngineId).toBeUndefined()
     expect(p.allowedEngineIds).toBeUndefined()
@@ -32,9 +35,18 @@ describe("defaultUserProfile", () => {
       language: "en",
       theme: "system",
       pinnedDashboardIds: [],
-      analyticsDefaultPeriod: "7d",
-      analyticsMinBucketSize: 10,
+      modules: {},
     })
+  })
+})
+
+describe("userProfileToolSaveInput", () => {
+  // Zod 4 re-applies `.default()`s through `.partial()` — the save input must
+  // stay default-free so a single-field save doesn't materialize (and thereby
+  // persist) resets of every other preference at the tool boundary.
+  it("keeps omitted fields ABSENT instead of materializing defaults", () => {
+    expect(userProfileToolSaveInput.parse({ language: "de" })).toEqual({ language: "de" })
+    expect(userProfileToolSaveInput.parse({})).toEqual({})
   })
 })
 
@@ -75,12 +87,36 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
     expect(cleared.defaultEngineId).toBeUndefined()
   })
 
+  it("merges module slices per namespace without wiping other modules", async () => {
+    const store = await makeStore()
+    await store.save("sess-1", { modules: { analytics: { defaultPeriod: "30d" } } })
+    const updated = await store.save("sess-1", { modules: { other: { flag: true } } })
+    expect(updated.modules).toEqual({
+      analytics: { defaultPeriod: "30d" },
+      other: { flag: true },
+    })
+    // A save without `modules` leaves all slices untouched.
+    const untouched = await store.save("sess-1", { theme: "dark" })
+    expect(untouched.modules).toEqual(updated.modules)
+  })
+
   it("deletes a stored profile", async () => {
     const store = await makeStore()
     await store.save("sess-1", { theme: "dark" })
     expect(await store.delete("sess-1")).toBe(true)
     expect(await store.get("sess-1")).toBeUndefined()
     expect(await store.delete("sess-1")).toBe(false)
+  })
+
+  it("survives two concurrent saves of the same key (last-write-wins, no error)", async () => {
+    const store = await makeStore()
+    // The settings page has two independent save buttons — overlapping saves
+    // must both complete (per-call tmp files on the filesystem store).
+    await Promise.all([
+      store.save("sess-1", { theme: "dark" }),
+      store.save("sess-1", { language: "de" }),
+    ])
+    expect(await store.get("sess-1")).toBeDefined()
   })
 }
 
@@ -92,7 +128,46 @@ describe("createFileSystemProfileStore", () => {
   profileStoreContract(async () =>
     createFileSystemProfileStore({ dir: await mkdtemp(path.join(tmpdir(), "profile-store-")) }),
   )
+
+  it("upgrades a persisted v1 record on read (flat analytics fields → modules.analytics)", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
+    const store = createFileSystemProfileStore({ dir })
+    await writeFile(path.join(dir, "legacy.json"), JSON.stringify(V1_RECORD), "utf-8")
+
+    const migrated = await store.get("legacy")
+    expect(migrated).toMatchObject({
+      language: "de",
+      theme: "dark",
+      schemaVersion: 2,
+      modules: { analytics: { defaultPeriod: "30d", minBucketSize: 25 } },
+    })
+    expect(migrated).not.toHaveProperty("analyticsDefaultPeriod")
+  })
+
+  it("treats a record written by a NEWER build as absent instead of mangling it", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
+    const store = createFileSystemProfileStore({ dir })
+    await writeFile(
+      path.join(dir, "future.json"),
+      JSON.stringify({ ...V1_RECORD, schemaVersion: 99 }),
+      "utf-8",
+    )
+    expect(await store.get("future")).toBeUndefined()
+  })
 })
+
+/** A realistic record as the v1 build persisted it (flat analytics fields). */
+const V1_RECORD = {
+  id: "legacy",
+  language: "de",
+  theme: "dark",
+  pinnedDashboardIds: [],
+  analyticsDefaultPeriod: "30d",
+  analyticsMinBucketSize: 25,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  schemaVersion: 1,
+}
 
 // Opt-in integration slice (like test:host): needs a reachable Postgres, so it
 // only runs when TEST_DATABASE_URL is set — `pnpm test:pg` at the repo root
@@ -142,6 +217,20 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
     // Merged over defaults, not over the corrupt garbage.
     expect(saved.language).toBe("en")
     expect(await store.get("sess-corrupt")).toEqual(saved)
+  })
+
+  it("upgrades a v1 row on read (flat analytics fields → modules.analytics)", async () => {
+    const store = createPostgresProfileStore({ sql })
+    await sql`
+      INSERT INTO user_profiles (key, profile)
+      VALUES ('legacy', ${sql.json(V1_RECORD as unknown as postgres.JSONValue)})
+    `
+    const migrated = await store.get("legacy")
+    expect(migrated).toMatchObject({
+      language: "de",
+      schemaVersion: 2,
+      modules: { analytics: { defaultPeriod: "30d", minBucketSize: 25 } },
+    })
   })
 
   it("merges concurrent partial saves of the same key without losing fields", async () => {

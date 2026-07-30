@@ -42,7 +42,11 @@ export function ProfileGate({ children }: { children: ReactNode }) {
 }
 
 function ProfileGateInner({ children }: { children: ReactNode }) {
-  const { data } = useToolQuery<ProfileFeed>(["profile-gate"], PROFILE_DATA_TOOL, {})
+  // Key carries the module prefix ON PURPOSE: refreshCockpitData() only
+  // invalidates `camunda7:*`/`analytics:*` keys, and the gate MUST refetch
+  // after camunda7_save_user_profile — otherwise a saved language/theme change
+  // only shows up on the next widget render instead of flipping live.
+  const { data } = useToolQuery<ProfileFeed>(["camunda7:profile-gate"], PROFILE_DATA_TOOL, {})
   const profile = data?.profile
   const language = profile?.language ?? "en"
   useApplyTheme(profile?.theme)

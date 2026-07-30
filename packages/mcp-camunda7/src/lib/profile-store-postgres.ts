@@ -1,5 +1,6 @@
 import type postgres from "postgres"
-import { userProfileSchema, type UserProfile } from "./profile-schema.js"
+import { parseStoredProfile } from "./profile-migrations.js"
+import type { UserProfile } from "./profile-schema.js"
 import { mergeProfile, type ProfileStore } from "./profile-store.js"
 
 /**
@@ -43,11 +44,11 @@ export const PROFILE_STORE_MIGRATIONS: ReadonlyArray<{
 export function createPostgresProfileStore(options: { sql: postgres.Sql }): ProfileStore {
   const { sql } = options
 
-  const parseRow = (row: { profile: unknown } | undefined): UserProfile | undefined => {
-    if (!row) return undefined
-    const parsed = userProfileSchema.safeParse(row.profile)
-    return parsed.success ? parsed.data : undefined
-  }
+  // Version upgrades + schema validation are shared with the filesystem store
+  // via `parseStoredProfile` — older rows migrate on read, newer/corrupt rows
+  // read as absent.
+  const parseRow = (row: { profile: unknown } | undefined): UserProfile | undefined =>
+    row ? parseStoredProfile(row.profile) : undefined
 
   return {
     async get(key) {
@@ -58,6 +59,13 @@ export function createPostgresProfileStore(options: { sql: postgres.Sql }): Prof
     },
     async save(key, input) {
       return await sql.begin(async (tx) => {
+        // Advisory lock, not just SELECT…FOR UPDATE: a row that doesn't exist
+        // yet cannot be row-locked, so two concurrent FIRST saves of the same
+        // key would otherwise both merge over defaults and the second upsert
+        // would silently drop the first one's fields. The per-key transaction
+        // lock serializes creates and updates alike (same primitive as the
+        // app's migration runner).
+        await tx`SELECT pg_advisory_xact_lock(hashtextextended('user_profiles:' || ${key}, 0))`
         const rows = await tx<{ profile: unknown }[]>`
           SELECT profile FROM user_profiles WHERE key = ${key} FOR UPDATE
         `

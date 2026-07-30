@@ -170,8 +170,8 @@ export function registerWidgetTools(
       schema: z.object({ ...engineParamShape }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       // Thin bootstrap: resolve the engine (sticky selection or the only engine)
       // and hand the app the engine list. The app threads the chosen engineId
       // into every nested tool call via the `engine` override, so client-side
@@ -214,8 +214,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildProcessListData(client, engineId, {
         key: args.key,
@@ -258,8 +258,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
         args.engine,
         registry,
@@ -310,8 +310,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildProcessInstancesData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
@@ -352,8 +352,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
         args.engine,
         registry,
@@ -394,8 +394,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
         args.engine,
         registry,
@@ -436,8 +436,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
         args.engine,
         registry,
@@ -478,8 +478,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
         args.engine,
         registry,
@@ -525,8 +525,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const [activities, activitiesCount, instances] = await Promise.all([
         getHistoricActivityInstances({
@@ -590,8 +590,8 @@ export function registerWidgetTools(
       schema: z.object({ ...engineParamShape }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildEngineHealthData(client, engineId, healthThresholds)
       const top = data.clusters[0]
@@ -632,8 +632,8 @@ export function registerWidgetTools(
       schema: z.object({ ...clusterDetailShape, ...engineParamShape }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildClusterDetailData(client, engineId, {
         activityId: args.activityId,
@@ -703,8 +703,8 @@ export function registerWidgetTools(
         }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId } = resolveEngine(args.engine, registry)
       // Shared builder with the `camunda7:load-bpmn-viewer` step — the two
       // render paths must stay in sync (data/bpmn-viewer-data.ts).
@@ -765,8 +765,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const { client, engineId } = resolveEngine(args.engine, registry)
       const data = await buildJobPanelData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,

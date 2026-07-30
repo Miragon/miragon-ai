@@ -13,7 +13,8 @@ import {
   ANALYTICS_DASHBOARD_DATA,
   ANALYTICS_FAILURE_DASHBOARD_DATA,
 } from "./tool-names.js"
-import { localizeFor, type LocaleSource } from "./server-locale.js"
+import { localizeFor, type ProfileSource } from "./server-locale.js"
+import { optionalMinBucketSize, optionalPeriod, settingsFor } from "./settings.js"
 
 /**
  * App-only marker for the internal `*_data` feeds — same dual contract as the
@@ -33,8 +34,12 @@ export type FetchBpmnXml = (processDefinitionKey: string) => Promise<string | nu
 export interface AnalyticsWidgetToolsOptions {
   /** Used by the BPMN heatmap to fetch the diagram XML. Absent → non-diagram fallback. */
   fetchBpmnXml?: FetchBpmnXml
-  /** Profile store for localizing model-facing summaries (locale → profile language). */
-  profileStore?: LocaleSource
+  /**
+   * Profile store: locale for model-facing summaries plus the session's saved
+   * analytics defaults (`modules.analytics`) — the "explicit arg > saved
+   * setting > schema default" resolution for `period`/`minBucketSize`.
+   */
+  profileStore?: ProfileSource
 }
 
 /**
@@ -44,7 +49,7 @@ export interface AnalyticsWidgetToolsOptions {
  */
 const heatmapInputShape = {
   processDefinitionKey: schemas.elementBottleneckInput.shape.processDefinitionKey,
-  period: schemas.elementBottleneckInput.shape.period,
+  period: optionalPeriod,
   ...schemas.engineFilterShape,
 }
 
@@ -101,33 +106,42 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
-        period: schemas.elementBottleneckInput.shape.period,
+        period: optionalPeriod,
         ...schemas.engineFilterShape,
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
+      const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
       const data = await queries.dashboardData(ch, {
         processDefinitionKey: args.processDefinitionKey,
-        period: args.period,
+        period,
         engine: args.engine,
       })
+      // The RESOLVED scope travels as cell props so the widgets' model
+      // descriptions report the period actually queried (profile default
+      // included), not a guessed fallback.
+      const cellProps = {
+        period,
+        ...(args.processDefinitionKey ? { processDefinitionKey: args.processDefinitionKey } : {}),
+        ...(args.engine ? { engine: args.engine } : {}),
+      }
       return buildComposedView({
         app: "analytics",
         title: "Analytics Dashboard",
         layout: [
-          { row: [{ widget: "analytics:execution-summary-kpi" }] },
-          { row: [{ widget: "analytics:execution-performance-kpi" }] },
-          { row: [{ widget: "analytics:process-definition-breakdown" }] },
-          { row: [{ widget: "analytics:activity-bottleneck-table" }] },
+          { row: [{ widget: "analytics:execution-summary-kpi", props: cellProps }] },
+          { row: [{ widget: "analytics:execution-performance-kpi", props: cellProps }] },
+          { row: [{ widget: "analytics:process-definition-breakdown", props: cellProps }] },
+          { row: [{ widget: "analytics:activity-bottleneck-table", props: cellProps }] },
         ],
         entries: [{ dataType: "analytics:dashboard", data }],
         summary: t("aSum.dashboard", {
           scope: args.processDefinitionKey
             ? t("aSum.scopeForProcess", { key: args.processDefinitionKey })
             : "",
-          period: args.period,
+          period,
           totalCount: data.totalCount,
           completedCount: data.completedCount,
           runningCount: data.runningCount,
@@ -152,8 +166,8 @@ export function registerWidgetTools(
       }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
       const data = await queries.failureDashboardData(ch, {
         engine: args.engine,
       })
@@ -185,12 +199,17 @@ export function registerWidgetTools(
       description:
         "Visualize before/after KPI deltas around a deployment timestamp. Results are flagged `suppressed` when either window has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object(schemas.clusterCompareInput.shape),
+      schema: z.object({
+        ...schemas.clusterCompareInput.shape,
+        minBucketSize: optionalMinBucketSize,
+      }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
-      const data = await queries.clusterCompare(ch, args)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
+      const minBucketSize =
+        args.minBucketSize ?? (await settingsFor(profileStore, ctx)).minBucketSize
+      const data = await queries.clusterCompare(ch, { ...args, minBucketSize })
       return buildSingleWidgetView({
         widget: "analytics:cluster-compare",
         app: "analytics",
@@ -217,12 +236,17 @@ export function registerWidgetTools(
       description:
         "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object(schemas.versionCompareInput.shape),
+      schema: z.object({
+        ...schemas.versionCompareInput.shape,
+        minBucketSize: optionalMinBucketSize,
+      }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
-      const data = await queries.versionCompare(ch, args)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
+      const minBucketSize =
+        args.minBucketSize ?? (await settingsFor(profileStore, ctx)).minBucketSize
+      const data = await queries.versionCompare(ch, { ...args, minBucketSize })
       return buildSingleWidgetView({
         widget: "analytics:version-compare",
         app: "analytics",
@@ -249,12 +273,17 @@ export function registerWidgetTools(
       description:
         "Visualize KPI deltas between two CIB Seven engines (e.g. prod-a vs prod-b) over a shared time window. Optionally scope to one processDefinitionKey. Results are flagged `suppressed` when either engine has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object(schemas.engineCompareInput.shape),
+      schema: z.object({
+        ...schemas.engineCompareInput.shape,
+        minBucketSize: optionalMinBucketSize,
+      }),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
-      const data = await queries.engineCompare(ch, args)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
+      const minBucketSize =
+        args.minBucketSize ?? (await settingsFor(profileStore, ctx)).minBucketSize
+      const data = await queries.engineCompare(ch, { ...args, minBucketSize })
       return buildSingleWidgetView({
         widget: "analytics:engine-compare",
         app: "analytics",
@@ -286,9 +315,10 @@ export function registerWidgetTools(
       schema: z.object(heatmapInputShape),
       _meta: uiMeta,
     },
-    withToolErrors(async (args) => {
-      const t = await localizeFor(profileStore)
-      const heat = await queries.elementHeat(ch, args)
+    withToolErrors(async (args, ctx) => {
+      const t = await localizeFor(profileStore, ctx)
+      const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
+      const heat = await queries.elementHeat(ch, { ...args, period })
       const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
       // Model summary only — the bpmnXml must never reach the text channel;
       // the widget renders the diagram from structuredContent.
@@ -298,7 +328,7 @@ export function registerWidgetTools(
         dataType: "analytics:bpmnHeatmap",
         data: {
           processDefinitionKey: args.processDefinitionKey,
-          period: args.period,
+          period,
           bpmnXml,
           frequency: heat.frequency,
           durationSec: heat.durationSec,
@@ -306,7 +336,7 @@ export function registerWidgetTools(
         title: "BPMN Heatmap",
         summary: t("aSum.bpmnHeatmap", {
           key: args.processDefinitionKey,
-          period: args.period,
+          period,
           elementCount: Object.keys(heat.frequency).length,
           fallbackNote: bpmnXml ? "" : t("aSum.bpmnHeatmapNoXml"),
         }),
@@ -324,12 +354,13 @@ export function registerWidgetTools(
       schema: z.object(heatmapInputShape),
       _meta: appOnlyMeta,
     },
-    withToolErrors(async (args) => {
-      const heat = await queries.elementHeat(ch, args)
+    withToolErrors(async (args, ctx) => {
+      const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
+      const heat = await queries.elementHeat(ch, { ...args, period })
       const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
       const data = {
         processDefinitionKey: args.processDefinitionKey,
-        period: args.period,
+        period,
         bpmnXml,
         frequency: heat.frequency,
         durationSec: heat.durationSec,
@@ -354,15 +385,16 @@ export function registerWidgetTools(
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({
         processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
-        period: schemas.elementBottleneckInput.shape.period,
+        period: optionalPeriod,
         ...schemas.engineFilterShape,
       }),
       _meta: appOnlyMeta,
     },
-    withToolErrors(async (args) => {
+    withToolErrors(async (args, ctx) => {
+      const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
       const data = await queries.dashboardData(ch, {
         processDefinitionKey: args.processDefinitionKey,
-        period: args.period,
+        period,
         engine: args.engine,
       })
       return buildDataFeedResult({ ...data })

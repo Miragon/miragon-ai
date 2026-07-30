@@ -1,9 +1,10 @@
+import { randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { PROFILE_SCHEMA_VERSION } from "./profile-constants.js"
+import { parseStoredProfile } from "./profile-migrations.js"
 import {
   defaultUserProfile,
-  userProfileSchema,
   type UserProfile,
   type UserProfileSaveInput,
 } from "./profile-schema.js"
@@ -51,6 +52,9 @@ export function mergeProfile(
   const merged: UserProfile = {
     ...prev,
     ...stripUndefined(input),
+    // Module slices merge per module key: a save carrying `modules.analytics`
+    // replaces exactly that slice and leaves other modules' slices intact.
+    modules: { ...prev.modules, ...input.modules },
     id: key,
     userId: prev.userId,
     createdAt: prev.createdAt,
@@ -91,8 +95,11 @@ export function createInMemoryProfileStore(): ProfileStore {
 /**
  * Profiles stored as one JSON file per key under `dir` (`<encodeURIComponent
  * (key)>.json`). Selected when `MCP_PROFILE_DIR` is set so preferences survive
- * restarts. Locking is advisory — concurrent writes of the same key can race,
- * fine for the "single user clicking Save" workflow.
+ * restarts. Writes are atomic (temp file + rename in the same directory), so a
+ * crash mid-write can't truncate a record; concurrent saves of the same key
+ * still resolve last-write-wins — there is no cross-process lock, which is
+ * fine for the "single user clicking Save" workflow (the postgres store is the
+ * multi-instance answer).
  */
 export function createFileSystemProfileStore(options: { dir: string }): ProfileStore {
   const { dir } = options
@@ -107,16 +114,16 @@ export function createFileSystemProfileStore(options: { dir: string }): ProfileS
       throw err
     }
     // A corrupt/foreign file is treated as "not our record" rather than crashing
-    // the read path; the next save overwrites it with a valid record. Both the
-    // JSON syntax (e.g. a truncated write) and the schema are guarded here.
+    // the read path; the next save overwrites it with a valid record. JSON
+    // syntax errors are guarded here; version upgrades + schema validation live
+    // in `parseStoredProfile` (shared with the postgres store).
     let json: unknown
     try {
       json = JSON.parse(raw)
     } catch {
       return undefined
     }
-    const parsed = userProfileSchema.safeParse(json)
-    return parsed.success ? parsed.data : undefined
+    return parseStoredProfile(json)
   }
 
   return {
@@ -124,7 +131,14 @@ export function createFileSystemProfileStore(options: { dir: string }): ProfileS
     async save(key, input) {
       const record = mergeProfile(key, await readRecord(key), input, nowIso())
       await fs.mkdir(dir, { recursive: true })
-      await fs.writeFile(fileFor(key), JSON.stringify(record, null, 2), "utf-8")
+      const file = fileFor(key)
+      // Per-CALL unique tmp name: concurrent saves of the same key (the
+      // settings page has two independent save buttons) each rename their own
+      // tmp file, so the outcome is genuine last-write-wins instead of an
+      // ENOENT on the second rename.
+      const tmp = `${file}.${randomUUID()}.tmp`
+      await fs.writeFile(tmp, JSON.stringify(record, null, 2), "utf-8")
+      await fs.rename(tmp, file)
       return record
     },
     async delete(key) {

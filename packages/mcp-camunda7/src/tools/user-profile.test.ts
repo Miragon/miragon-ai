@@ -44,3 +44,31 @@ describe("registerUserProfileTools toolset filtering", () => {
     expect(registeredToolNames("nonsense")).toContain(CAMUNDA7_SAVE_USER_PROFILE)
   })
 })
+
+describe("anonymous round-trip", () => {
+  it("reads a keyless save back on the next load (shared anonymous record)", async () => {
+    const tool = vi.fn()
+    const server = { tool } as unknown as MCPServer
+    const registry = { engines: [] } as unknown as EngineRegistry
+    registerUserProfileTools(server, createInMemoryProfileStore(), registry, RESOURCE_URI)
+
+    type Handler = (
+      params: unknown,
+      ctx?: unknown,
+    ) => Promise<{
+      structuredContent?: Record<string, unknown>
+    }>
+    const handlerFor = (name: string): Handler => {
+      const call = tool.mock.calls.find((c) => (c[0] as { name: string }).name === name)
+      if (!call) throw new Error(`tool ${name} not registered`)
+      return call[1] as Handler
+    }
+
+    // No request context in tests → resolveProfileKey() is undefined → both
+    // paths must land on the SAME shared anonymous record.
+    await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" })
+    const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
+    const profile = result.structuredContent?.profile as { language: string } | undefined
+    expect(profile?.language).toBe("de")
+  })
+})

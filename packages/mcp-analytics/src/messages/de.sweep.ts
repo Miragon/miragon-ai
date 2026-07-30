@@ -105,6 +105,20 @@ export const deSweep: MessageCatalog = {
   "aHeatmap.noData": "Keine Heatmap-Daten.",
   "aHeatmap.title": "BPMN-Heatmap",
   "aHeatmap.window": "Zeitraum:",
+  "aSettings.heading": "Analyse-Einstellungen",
+  "aSettings.minBucket": "Min. Bucket-Größe",
+  "aSettings.minBucket.help":
+    "Minimale Instanzen pro Fenster, bevor Vergleichsergebnisse als unterdrückt markiert werden.",
+  "aSettings.period": "Standard-Zeitraum",
+  "aSettings.period.help":
+    "Standard-Rückblickfenster, wenn ein Analyse-Aufruf den Zeitraum weglässt.",
+  "aSettings.readOnly": "Einstellungen sind in diesem Deployment schreibgeschützt.",
+  "aSettings.save": "Speichern",
+  "aSettings.saveError": "Analyse-Einstellungen konnten nicht gespeichert werden.",
+  "aSettings.saved": "Gespeichert {time}",
+  "aSettings.saving": "Speichern…",
+  "aSettings.section": "Analyse-Standardwerte",
+  "aSettings.subtitle": "Standardwerte, wenn ein Analyse-Aufruf einen Wert weglässt.",
   "aVersionCompare.badgeElement": "Element: {element}",
   "aVersionCompare.badgeInsufficientSignal":
     "Unzureichendes Signal (mind. {min} Instanzen/Version)",
