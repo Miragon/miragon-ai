@@ -23,11 +23,12 @@ pnpm dev                                                       # MCP server on :
 - Grafana: `http://localhost:8470`, Prometheus: `http://localhost:8460`, engine: `http://localhost:8410`
 - Compose profiles: `--profile multi-engine` (second engine on :8411),
   `--profile full` (containerized server on :8400), `--profile dev` (plain
-  CIB Seven image, no analytics)
+  CIB Seven image, no analytics), `--profile auth` (Keycloak on :8480 for
+  trying `MCP_OAUTH` locally — see the commented block in `.env.example`)
 
 ## Deploy to Fly.io
 
-The stack maps to five Fly apps in one org, wired over Fly's private 6PN
+The stack maps to six Fly apps in one org, wired over Fly's private 6PN
 network. Only the server is public — everything else has no public IP.
 
 | Fly app                            | Service        | Exposure                                             |
@@ -37,6 +38,7 @@ network. Only the server is public — everything else has no public IP.
 | `miragon-ai-playground-otel`       | OTEL Collector | private (`….internal:4318` / `:9464`)                |
 | `miragon-ai-playground-prometheus` | Prometheus     | private (`….internal:9090`), 3 GB volume             |
 | `miragon-ai-playground-grafana`    | Grafana        | private — `flyctl proxy 8470:3000 -a <app>`          |
+| `miragon-ai-playground-postgres`   | Postgres       | private (`….internal:5432`), 1 GB volume             |
 
 ### Via GitHub Actions (recommended)
 
@@ -55,11 +57,11 @@ One-time setup:
 fly auth login
 (cd playground/cibseven-example && ./gradlew bootJar)   # engine image copies the jar
 export GITHUB_TOKEN=ghp_xxx                             # read:packages, for the server build
-./playground/fly/deploy.sh all                          # or: otel|engine|prometheus|grafana|server
+./playground/fly/deploy.sh all                          # or: otel|engine|prometheus|grafana|postgres|server
 ```
 
-First deploy creates the apps and the Prometheus volume. Afterwards, point an
-MCP client (e.g. claude.ai custom connector) at
+First deploy creates the apps and the Prometheus + Postgres volumes.
+Afterwards, point an MCP client (e.g. claude.ai custom connector) at
 `https://miragon-ai-playground.fly.dev/mcp`.
 
 ### Notes
@@ -71,6 +73,11 @@ miragon-ai-playground`, see `.env.example`).
 - The engine keeps its H2 database in memory: every engine restart reseeds
   (~600 instances) and live traffic keeps metrics moving. Prometheus history
   survives restarts on its volume.
+- User settings + saved dashboards persist to the Postgres app once its
+  secrets are set (one-time, see `fly/postgres.fly.toml`):
+  `fly secrets set POSTGRES_PASSWORD=<pw> -a miragon-ai-playground-postgres`
+  and the matching `DATABASE_URL` secret on `miragon-ai-playground`. Without
+  the `DATABASE_URL` secret the server keeps its in-memory stores.
 - Everything runs single-machine (`--ha=false`), sized for demos, roughly
   $15–25/month; the server scales to zero when idle. Tear down with
   `fly apps destroy <app>` per app.

@@ -16,6 +16,11 @@ export const deServer: MessageCatalog = {
     "Fehler-Dashboard: {totalIncidents} offene(r) Vorfall/Vorfälle über {uniqueErrorPatterns} Fehlermuster{mostAffected}.",
   "aSum.mostAffectedProcess": '; am stärksten betroffener Prozess: "{key}"',
   "aSum.scopeForProcess": ' für "{key}"',
+  "aSum.settings":
+    "Analyse-Einstellungen: Standard-Zeitraum {period}, min. Bucket-Größe {minBucketSize}.{changeHint}",
+  "aSum.settingsChangeHint": " Änderbar über analytics_save_settings.",
+  "aSum.settingsSaved":
+    "Analyse-Einstellungen gespeichert: Standard-Zeitraum {period}, min. Bucket-Größe {minBucketSize}.",
   "aSum.versionCompare":
     'Versionsvergleich für "{key}" v{versionA} vs. v{versionB} über {windowDays} d: {delta}{suppressed}.',
 }

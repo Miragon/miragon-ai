@@ -10,6 +10,7 @@ export const de: MessageCatalog = {
   "cockpit.crumb.overview": "Übersicht",
   "cockpit.crumb.incidents": "Vorfälle",
   "cockpit.crumb.instances": "Instanzen",
+  "cockpit.crumb.origin": "Start",
   // Die {id} kommt bereits gekürzt an (Kit-`truncate` ergänzt die Ellipse).
   "cockpit.crumb.instance": ({ id }) => `Instanz ${String(id)}`,
   "cockpit.crumb.incident": ({ id }) => `Vorfall ${String(id)}`,
@@ -36,7 +37,7 @@ export const de: MessageCatalog = {
   // ── Profil-/Einstellungs-Panel ──────────────────────────────────────────────
   "profile.heading": "Profil & Einstellungen",
   "profile.subtitle":
-    "Einstellungen für diese Sitzung — Engine-Verfügbarkeit, Sprache, Theme, Dashboards und Analyse-Standardwerte.",
+    "Einstellungen für diese Sitzung — Engine-Verfügbarkeit, Sprache, Theme und Dashboards.",
   "profile.save": "Speichern",
   "profile.saving": "Speichern…",
   "profile.saved": ({ time }) => `Gespeichert ${String(time)}`,
@@ -47,7 +48,6 @@ export const de: MessageCatalog = {
   "profile.section.appearance": "Sprache & Darstellung",
   "profile.section.engines": "Engines",
   "profile.section.dashboards": "Dashboards",
-  "profile.section.analytics": "Analyse-Standardwerte",
 
   "profile.field.language": "Sprache",
   "profile.field.language.help":
@@ -68,20 +68,18 @@ export const de: MessageCatalog = {
   "profile.dashboards.unavailable": "Gespeicherte Dashboards sind nicht verfügbar.",
   "profile.dashboards.empty": "Noch keine gespeicherten Dashboards.",
   "profile.field.defaultDashboard": "Standard-Dashboard",
-  "profile.field.defaultDashboard.help": "Wird beim Öffnen des Cockpits zuerst angezeigt.",
+  "profile.field.defaultDashboard.help":
+    "Wird der KI als zuerst zu öffnendes Dashboard vorgeschlagen (load-dashboard).",
   "profile.dashboard.none": "(keins)",
   "profile.field.pinnedDashboards": "Angepinnte Dashboards",
   "profile.field.pinnedDashboards.help": "Werden in Dashboard-Auswahlen zuerst angezeigt.",
 
-  "profile.field.analyticsPeriod": "Standard-Zeitraum",
-  "profile.field.analyticsPeriod.help": "Standard-Rückblickfenster für Analysen.",
-  "profile.field.minBucket": "Min. Bucket-Größe",
-  "profile.field.minBucket.help": "Minimale Aktivitäts-Bucket-Größe für die Aggregation.",
-
-  "profile.summary": ({ language, theme, engines, period }) =>
-    `Benutzerprofil: Sprache ${String(language)}, Theme ${String(theme)}, ${String(engines)}, Analyse-Zeitraum ${String(period)}.`,
+  "profile.summary": ({ language, theme, engines, defaultDashboard }) =>
+    `Benutzerprofil: Sprache ${String(language)}, Theme ${String(theme)}, ${String(engines)}${String(defaultDashboard)}.`,
   "profile.summary.allEngines": "alle Engines",
   "profile.summary.someEngines": ({ count }) => `${String(count)} erlaubte Engine(s)`,
+  "profile.summary.defaultDashboard": ({ id }) =>
+    `, Standard-Dashboard „${String(id)}" (öffnen mit load-dashboard)`,
 
   // ── Aufzählungs-Optionen ────────────────────────────────────────────────────
   "theme.light": "Hell",

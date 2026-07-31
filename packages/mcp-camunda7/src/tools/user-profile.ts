@@ -14,12 +14,16 @@ import {
 } from "../tool-names.js"
 import {
   defaultUserProfile,
-  userProfileSaveInput,
+  userProfileToolSaveInput,
   type UserProfile,
   type UserProfileView,
 } from "../lib/profile-schema.js"
 import type { ProfileStore } from "../lib/profile-store.js"
-import { resolveProfileKey } from "../lib/resolve-profile-key.js"
+import {
+  ANONYMOUS_PROFILE_KEY,
+  resolveAuthUserId,
+  resolveProfileKey,
+} from "../lib/resolve-profile-key.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { translator } from "../messages/index.js"
 
@@ -33,11 +37,14 @@ function summarize(p: UserProfile): string {
     p.allowedEngineIds && p.allowedEngineIds.length > 0
       ? translator(p.language, "profile.summary.someEngines", { count: p.allowedEngineIds.length })
       : translator(p.language, "profile.summary.allEngines")
+  const defaultDashboard = p.defaultDashboardId
+    ? translator(p.language, "profile.summary.defaultDashboard", { id: p.defaultDashboardId })
+    : ""
   return translator(p.language, "profile.summary", {
     language: p.language,
     theme: p.theme,
     engines,
-    period: p.analyticsDefaultPeriod,
+    defaultDashboard,
   })
 }
 
@@ -66,9 +73,13 @@ export function registerUserProfileTools(
   const uiMeta = buildUiMeta({ resourceUri })
 
   const loadView = async (ctx: unknown): Promise<UserProfileView> => {
+    // Same key precedence as the save path (resolveProfileKey maps stdio to
+    // the shared anonymous record), so a keyless save is read back instead of
+    // being write-only. Only an HTTP request without a session id resolves no
+    // key — that renders defaults.
     const key = resolveProfileKey(ctx)
     const profile =
-      (key ? await store.get(key) : undefined) ?? defaultUserProfile(key ?? "anonymous")
+      (key ? await store.get(key) : undefined) ?? defaultUserProfile(key ?? ANONYMOUS_PROFILE_KEY)
     return {
       profile,
       availableEngines: registry.engines.map((e) => ({ id: e.id, baseUrl: e.baseUrl })),
@@ -80,7 +91,7 @@ export function registerUserProfileTools(
       name: CAMUNDA7_SHOW_USER_PROFILE,
       title: "Profile & Settings",
       description:
-        "Open the user profile & settings panel for this MiragonAI session: language, theme, which engines are available + the default engine, dashboard preferences, and analytics defaults.",
+        "Open the user profile & settings panel for this MiragonAI session: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       schema: z.object({}),
       _meta: uiMeta,
@@ -132,14 +143,23 @@ export function registerUserProfileTools(
       description:
         'Update the current session\'s user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like "switch the UI to German" (language: "de") or "only let me pick the prod engines" (allowedEngineIds). Engine availability is curation, not access control.',
       annotations: saveAnnotations,
-      schema: userProfileSaveInput,
+      // Deliberately WITHOUT `modules`: foreign module slices are written
+      // through their owning module's save tool (e.g. analytics_save_settings).
+      schema: userProfileToolSaveInput,
       // No `_meta.ui`: this is a normal model-visible tool returning a text
       // summary; the widget also calls it and reads the updated profile back
       // from structuredContent.
     },
     withToolErrors(async (params, ctx) => {
-      const key = resolveProfileKey(ctx) ?? "anonymous"
-      const saved = await store.save(key, params)
+      const key = resolveProfileKey(ctx)
+      if (!key) {
+        // HTTP request without a session id: refuse instead of silently
+        // writing into a record shared across unrelated keyless clients.
+        throw new Error("No session identity (missing Mcp-Session-Id) — cannot save the profile.")
+      }
+      // Stamping the auth user id marks the record user-bound — exempt from
+      // the session-TTL cleanup.
+      const saved = await store.save(key, params, { userId: resolveAuthUserId(ctx) })
       return {
         content: [{ type: "text" as const, text: summarize(saved) }],
         structuredContent: saved as unknown as Record<string, unknown>,

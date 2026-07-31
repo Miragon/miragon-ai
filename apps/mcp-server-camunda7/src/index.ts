@@ -2,11 +2,8 @@
 
 import path from "node:path"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import {
-  createFileSystemDashboardStore,
-  createFrameworkApp,
-  installToolCallNameCapture,
-} from "@miragon/mcp-toolkit-core/tools"
+import { createFrameworkApp, installToolCallNameCapture } from "@miragon/mcp-toolkit-core/tools"
+import { initRuntime } from "./persistence/index.js"
 import { emitBootWarnings, getAppConfig, getPlugins, warnUnknownEnvVars } from "./setup.js"
 import {
   getOAuthConfigFromEnv,
@@ -23,6 +20,11 @@ process.env.MCP_USE_ANONYMIZED_TELEMETRY ??= "false"
 warnUnknownEnvVars(process.env, oauthSecretEnvVarNames())
 emitBootWarnings()
 
+// Select the persistence backends (Postgres when DATABASE_URL is set, else
+// filesystem/in-memory) and run pending DB migrations before the server
+// starts listening — the healthcheck grace periods cover this.
+const runtime = await initRuntime()
+
 const DIST_DIR = import.meta.filename.endsWith(".ts")
   ? path.join(import.meta.dirname, "..", "dist")
   : import.meta.dirname
@@ -37,8 +39,12 @@ const frameworkOptions = {
   // Cast: toolkit's `plugins: AppPlugin[]` is unparameterized (TServer = unknown),
   // but our plugin factories return `AppPlugin<MCPServer>`. The framework invokes
   // `registerTools(MCPServer)` at runtime, so the narrowing is sound.
-  plugins: getPlugins() as AppPlugin[],
+  plugins: getPlugins(runtime.profileStore) as AppPlugin[],
   appConfig: getAppConfig(),
+  // mcp-use pass-through (toolkit ≥0.10.0): Redis session/stream backends when
+  // REDIS_URL is set, so multiple instances share MCP sessions without sticky
+  // routing; undefined keeps mcp-use's defaults.
+  serverOptions: runtime.serverOptions,
   app: {
     // resourceUri omitted: createFrameworkApp content-hashes htmlPath into a
     // cache-busting ui://miragon-ai/mcp-app.<hash>.html (with a stable dev
@@ -49,12 +55,10 @@ const frameworkOptions = {
     // (get-builder-catalogue, save/load/list/delete-dashboard) opt-in, defaulting
     // off. We keep them on to preserve the server's tool surface.
     builder: true,
-    // Persist saved dashboards to disk when MCP_DASHBOARD_DIR is set so they
-    // survive restarts; otherwise the toolkit's default in-memory store is used
-    // (fine for dev, lost on restart).
-    dashboardStore: process.env.MCP_DASHBOARD_DIR
-      ? createFileSystemDashboardStore({ dir: process.env.MCP_DASHBOARD_DIR })
-      : undefined,
+    // Selected by initRuntime: Postgres when DATABASE_URL is set, filesystem
+    // when MCP_DASHBOARD_DIR is set, otherwise undefined — the toolkit then
+    // falls back to its in-memory store (fine for dev, lost on restart).
+    dashboardStore: runtime.dashboardStore,
   },
 }
 
@@ -111,4 +115,14 @@ const port = Number(process.env.PORT?.trim() || 8400)
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`[miragon-ai] invalid PORT "${process.env.PORT}" — expected an integer 1-65535`)
 }
+
+// Docker stop / Fly scale-to-zero send SIGTERM (Ctrl-C sends SIGINT): close
+// the DB pool instead of leaving Postgres to reap dead connections. `once` so
+// a second signal during shutdown still kills the process the default way.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(signal, () => {
+    void runtime.shutdown().finally(() => process.exit(0))
+  })
+}
+
 await app.listen(port)

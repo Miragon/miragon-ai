@@ -124,15 +124,16 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
     }
   })
 
-  it("warns and drops the toolset for modules without toolset support (fail-open)", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+  // Since analytics gained toolset support (`analytics:read-only` hides its
+  // settings save tool), no registered module exercises the "no toolsets —
+  // ignoring" fail-open branch anymore; the branch stays in setup.ts for
+  // future modules.
+  it("passes the toolset through for modules that support it (analytics:read-only)", () => {
     vi.stubEnv("MCP_ACTIVE_MODULES", "analytics:read-only")
 
     const analytics = activeApps().find((e) => e.app === "analytics")
     expect(analytics).toBeDefined()
-    expect(analytics?.config).not.toHaveProperty("toolset")
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Module "analytics" has no toolsets'))
-    warn.mockRestore()
+    expect(analytics?.config).toMatchObject({ toolset: "read-only" })
   })
 
   it("still skips unknown modules, with or without a toolset suffix", () => {

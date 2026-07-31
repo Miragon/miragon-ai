@@ -13,10 +13,6 @@ export type Locale = (typeof LOCALES)[number]
 export const THEMES = ["light", "dark", "system"] as const
 export type ThemePref = (typeof THEMES)[number]
 
-/** Default analytics look-back windows offered in the profile. */
-export const ANALYTICS_PERIODS = ["1d", "3d", "7d", "14d", "30d"] as const
-export type AnalyticsPeriod = (typeof ANALYTICS_PERIODS)[number]
-
 /**
  * Preferred operations role. A profile hint only — actual tool exposure is set
  * at the MCP connection via the `camunda7:read-only|operations|admin` toolset
@@ -26,5 +22,22 @@ export type AnalyticsPeriod = (typeof ANALYTICS_PERIODS)[number]
 export const ROLES = ["read-only", "operations", "admin"] as const
 export type Role = (typeof ROLES)[number]
 
-/** Bumped when the persisted profile shape changes in a migration-relevant way. */
-export const PROFILE_SCHEMA_VERSION = 1
+/**
+ * Shared fallback key for transports without any request context (stdio,
+ * tests) — see `resolveProfileKey`. Lives here (zod- and server-free) so the
+ * store's session-cleanup can exempt the record without importing the
+ * mcp-use-coupled resolver.
+ */
+export const ANONYMOUS_PROFILE_KEY = "anonymous"
+
+/**
+ * Bumped when the persisted profile shape changes in a migration-relevant way.
+ * Every bump needs a matching entry in `PROFILE_MIGRATIONS`
+ * (`profile-migrations.ts`) so older records upgrade on read instead of being
+ * silently reset to defaults.
+ *
+ * v2: the analytics preferences moved out of the flat camunda7-owned fields
+ * (`analyticsDefaultPeriod`/`analyticsMinBucketSize`) into the per-module
+ * `modules.analytics` slice (`defaultPeriod`/`minBucketSize`).
+ */
+export const PROFILE_SCHEMA_VERSION = 2

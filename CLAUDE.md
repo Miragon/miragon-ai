@@ -116,7 +116,8 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime`/
    `formatDuration`/`truncate` for all formatting (canonical duration style "3m 7s");
    `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
-   `WidgetShell` for structure; `useBpmnViewer` + `BpmnZoomControls` for BPMN, with
+   `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
+   settings sections; `useBpmnViewer` + `BpmnZoomControls` for BPMN, with
    highlight/legend colors from `HIGHLIGHT_COLORS`
    (`packages/mcp-camunda7/src/widgets/bpmn-highlights.ts`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
@@ -128,8 +129,10 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    lookups come from `packages/mcp-camunda7/src/data/definition-info.ts`;
    `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step — never
    fork them. Analytics periods derive from `PERIODS`/`PERIOD_RANGE` (client-analytics)
-   — no hardcoded enum copies (the copy in `mcp-camunda7/src/lib/profile-constants.ts`
-   is a deliberate module-boundary exception).
+   — no hardcoded enum copies. Profile records migrate on read through
+   `lib/profile-migrations.ts` (`parseStoredProfile`, shared by the filesystem and
+   postgres stores) — a `PROFILE_SCHEMA_VERSION` bump without a matching migration
+   entry silently resets stored preferences.
 
 8. **Modules are self-contained peers; the app is a thin composition root.**
    `mcp-*` packages never import each other. Each module exports its definition in
@@ -143,7 +146,17 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    `props.dataKey`; raw tool-name strings with graceful degradation (reference:
    `process-incidents/flow.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
    dedicated package created with the first real view — never in the app, never as
-   module-to-module imports. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
+   module-to-module imports. The settings page follows the same tiers: each module
+   owns its settings section (widget + `*_data` feed + save tool; reference:
+   `analytics:settings` + `mcp-analytics/src/settings-tools.ts` — the save tool honors
+   `analytics:read-only`), its slice persists under `profile.modules.<module>`
+   (validated fail-soft by the owning module — camunda7's save tool deliberately
+   excludes `modules`), and composed views reference foreign section widgets by raw
+   id — resolved through `HostWidgetsProvider` (host root) and dropped by
+   `filterLayoutToWidgets` when unresolvable, so a missing module's section disappears
+   instead of erroring. Save-input schemas at tool boundaries must be default-FREE
+   (zod 4 re-applies `.default()`s through `.partial()`, materializing omitted fields
+   into silent resets — see `userProfileToolSaveInput`/`analyticsSettingsSaveInput`). Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in
    `packages/mcp-camunda7/src/providers/` — the port holds ONLY real differences:
    cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)

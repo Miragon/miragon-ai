@@ -3,7 +3,7 @@ import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use/server"
 import { createPlugin } from "./plugin.js"
 import type { FetchBpmnXml } from "./widget-tools.js"
-import type { LocaleSource } from "./server-locale.js"
+import type { ProfileSource } from "./server-locale.js"
 
 /**
  * Self-contained module definition for host apps: everything the app needs to
@@ -13,11 +13,17 @@ import type { LocaleSource } from "./server-locale.js"
 
 const analyticsConfigSchema = z.object({
   url: z.string().default("http://localhost:9090"),
+  /**
+   * Optional toolset suffix from `MCP_ACTIVE_MODULES` (`analytics:read-only`).
+   * The module's tools are read-only by nature — the toolset only gates the
+   * one durable write, `analytics_save_settings`. Unknown names fail open.
+   */
+  toolset: z.string().optional(),
 })
 
 /** Cross-module resources the host app threads in (structural, app-owned). */
 interface AnalyticsModuleShared {
-  profileStore?: LocaleSource
+  profileStore?: ProfileSource
   fetchBpmnXml?: FetchBpmnXml
 }
 
@@ -36,7 +42,9 @@ export const analyticsModule = {
   /** This module's slice of the app's unknown-env-var typo warner. */
   knownEnvVars: ["PROMETHEUS_URL"] as const,
 
-  supportsToolsets: false,
+  // "analytics:read-only" hides the module's one durable write
+  // (analytics_save_settings); everything else is read-only anyway.
+  supportsToolsets: true,
 
   /**
    * Boot-time hints for active deployments. The code default (:9090) matches a
@@ -54,8 +62,9 @@ export const analyticsModule = {
     config: Record<string, unknown>,
     shared: AnalyticsModuleShared,
   ): AppPlugin<MCPServer> {
+    const parsed = analyticsConfigSchema.parse(config)
     return createPlugin({
-      ...analyticsConfigSchema.parse(config),
+      ...parsed,
       fetchBpmnXml: shared.fetchBpmnXml,
       profileStore: shared.profileStore,
     })

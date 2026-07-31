@@ -1,16 +1,11 @@
 import type { AppConfig, AppConfigEntry, AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use/server"
 
-import {
-  camunda7Module,
-  createBpmnXmlFetcher,
-  createFileSystemProfileStore,
-  createInMemoryProfileStore,
-  type ProfileStore,
-} from "@miragon-ai/mcp-camunda7"
+import { camunda7Module, createBpmnXmlFetcher, type ProfileStore } from "@miragon-ai/mcp-camunda7"
 import { analyticsModule } from "@miragon-ai/mcp-analytics"
 import { createShellPlugin } from "@miragon-ai/widget-shell/server"
 import type { ModuleDefinition, SharedResources } from "./module-contract.js"
+import { createDefaultProfileStore } from "./persistence/index.js"
 
 /**
  * The bundle definition: which modules THIS app composes. Each module brings
@@ -34,6 +29,13 @@ const APP_ENV_VARS = [
   "MCP_ACTIVE_MODULES",
   "MCP_DASHBOARD_DIR",
   "MCP_PROFILE_DIR",
+  "MCP_PROFILE_SESSION_TTL_DAYS",
+  // Postgres persistence for profiles + dashboards, and Redis MCP-session
+  // backends for multi-instance (both in src/persistence/). Listed for
+  // documentation; the ecosystem-standard unprefixed names are outside the
+  // CAMUNDA_*/MCP_* patterns the typo warner inspects anyway.
+  "DATABASE_URL",
+  "REDIS_URL",
   // mcp-use's own logger knob, consumed in-process (unprefixed, unlike the
   // rest of its MCP_USE_* family).
   "MCP_DEBUG_LEVEL",
@@ -147,16 +149,13 @@ export function getAppConfig(): AppConfig {
 /**
  * Cross-module wiring — the one thing that stays app-owned by design: which
  * module's capability reaches which other module is configuration knowledge
- * (see `module-contract.ts`).
+ * (see `module-contract.ts`). Store *selection* lives in
+ * `src/persistence/initRuntime`; this only distributes the chosen instance.
  */
-function buildSharedResources(entries: AppConfigEntry[]): SharedResources {
-  // One preference store for the whole server, regardless of which modules are
-  // active. Filesystem-backed when MCP_PROFILE_DIR is set so profiles survive
-  // restarts; otherwise in-memory (fine for dev, lost on restart).
-  const profileStore: ProfileStore = process.env.MCP_PROFILE_DIR
-    ? createFileSystemProfileStore({ dir: process.env.MCP_PROFILE_DIR })
-    : createInMemoryProfileStore()
-
+function buildSharedResources(
+  entries: AppConfigEntry[],
+  profileStore: ProfileStore,
+): SharedResources {
   // BPMN-XML lookup from the camunda7 module (its primary engine) for modules
   // that need diagram XML but must not depend on the engine SDK — most notably
   // the analytics heatmap. Absent when camunda7 is inactive (consumers degrade).
@@ -165,9 +164,16 @@ function buildSharedResources(entries: AppConfigEntry[]): SharedResources {
   return { profileStore, fetchBpmnXml: createBpmnXmlFetcher(camunda7Entry.config) }
 }
 
-export function getPlugins(): AppPlugin<MCPServer>[] {
+/**
+ * `index.ts` passes the store `initRuntime` selected (possibly Postgres); the
+ * default keeps argument-less callers (tests) on the filesystem/in-memory
+ * path without duplicating that selection here.
+ */
+export function getPlugins(
+  profileStore: ProfileStore = createDefaultProfileStore(),
+): AppPlugin<MCPServer>[] {
   const entries = getActiveAppEntries()
-  const shared = buildSharedResources(entries)
+  const shared = buildSharedResources(entries, profileStore)
   return [
     // Always-on generic widgets (`shell:*`) — no tools, no steps, so they are
     // deliberately outside the MCP_ACTIVE_MODULES selection. Catalogue +

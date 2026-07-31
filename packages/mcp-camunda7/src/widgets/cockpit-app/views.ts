@@ -1,4 +1,4 @@
-import type { LayoutConfig } from "@miragon/mcp-toolkit-core"
+import { normalizeLayout, type LayoutConfig, type RowDef } from "@miragon/mcp-toolkit-core"
 
 /**
  * Route parameters available to a cockpit view. Each field is optional; a given
@@ -107,9 +107,35 @@ export const cockpitViews = {
   "incident-detail": ({ engine, incidentId }: ViewParams): LayoutConfig => [
     { row: [{ widget: "camunda7:incident-detail", props: { incidentId, engine } }] },
   ],
-  // The profile/settings widget self-fetches the session's profile; it needs no
-  // route params (engine availability is part of the profile itself).
-  settings: (): LayoutConfig => [{ row: [{ widget: "camunda7:user-profile", props: {} }] }],
+  // The settings page composes one section per module. Each section widget
+  // self-fetches its own feed; the analytics id is a raw string on purpose
+  // (tier-2 cross-module reference, like the flow widget's heatmap feed) — the
+  // widget hides itself when its feed is unavailable, so the row degrades to
+  // nothing when the analytics module is inactive.
+  settings: (): LayoutConfig => [
+    { row: [{ widget: "camunda7:user-profile", props: {} }] },
+    { row: [{ widget: "analytics:settings", props: {} }] },
+  ],
 } satisfies Record<string, (params: ViewParams) => LayoutConfig>
 
 export type CockpitViewId = keyof typeof cockpitViews
+
+/**
+ * Drop layout cells whose widget id resolves to no component in `widgets`
+ * (cross-module ids in a host without the `HostWidgetsProvider`), then drop
+ * emptied rows — the tier-2 degradation for composed views: a missing module's
+ * section simply disappears instead of rendering an unknown-widget error.
+ */
+export function filterLayoutToWidgets(
+  layout: LayoutConfig,
+  widgets: Record<string, unknown>,
+): LayoutConfig {
+  const filterRows = (rows: RowDef[]): RowDef[] =>
+    rows
+      .map((r) => ({ ...r, row: r.row.filter((cell) => cell.widget in widgets) }))
+      .filter((r) => r.row.length > 0)
+  const normalized = normalizeLayout(layout)
+  return "tabs" in normalized
+    ? { tabs: normalized.tabs.map((tab) => ({ ...tab, rows: filterRows(tab.rows) })) }
+    : { rows: filterRows(normalized.rows) }
+}
