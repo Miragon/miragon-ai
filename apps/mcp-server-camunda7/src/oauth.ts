@@ -241,6 +241,46 @@ function resolveClientSecret(config: {
   return secret
 }
 
+const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"])
+
+function isLoopbackUrl(url: URL): boolean {
+  return LOOPBACK_HOSTNAMES.has(url.hostname)
+}
+
+/**
+ * The allowlist decision. Non-loopback entries match EXACTLY. Loopback
+ * entries follow RFC 8252 §7.3: native MCP clients (Claude Code, VS Code, the
+ * MCP inspector CLI) bind their callback to an ephemeral port per run, and
+ * the authorization server MUST accept variable ports on loopback redirects —
+ * so an allowlisted loopback entry matches any port and any loopback host
+ * (localhost/127.0.0.1/[::1]), as long as scheme and path agree. Loopback
+ * redirects land on the resource owner's own machine, which is exactly the
+ * case the RFC declares safe; remote interception targets stay exact-match.
+ */
+export function isAllowedRedirectUri(redirectUri: string, allowlist: readonly string[]): boolean {
+  if (allowlist.includes(redirectUri)) return true
+  let candidate: URL
+  try {
+    candidate = new URL(redirectUri)
+  } catch {
+    return false
+  }
+  if (!isLoopbackUrl(candidate)) return false
+  return allowlist.some((entry) => {
+    let allowed: URL
+    try {
+      allowed = new URL(entry)
+    } catch {
+      return false
+    }
+    return (
+      isLoopbackUrl(allowed) &&
+      allowed.protocol === candidate.protocol &&
+      allowed.pathname === candidate.pathname
+    )
+  })
+}
+
 /**
  * Guards the `oidc-proxy` `/authorize` route with a strict redirect_uri
  * allowlist, registered as a Hono middleware that runs BEFORE mcp-use's proxy
@@ -250,13 +290,13 @@ function resolveClientSecret(config: {
  * blob carries; pinning the accepted redirect_uris here — reading the same
  * source mcp-use does (query on GET, parsed body on POST) — closes that
  * interception path. Guarding `/authorize` is sufficient: the state blob can
- * then only ever carry an allowlisted uri.
+ * then only ever carry an allowlisted uri. Matching semantics live in
+ * [[isAllowedRedirectUri]] (exact, plus RFC 8252 variable-port loopback).
  */
 export function installAuthorizeRedirectAllowlist(
   app: Pick<McpServerInstance, "use">,
   allowlist: readonly string[],
 ): void {
-  const allowed = new Set(allowlist)
   app.use(async (c, next) => {
     if (c.req.path !== "/authorize") return next()
     // Read the same source mcp-use does: query on GET, parsed body on POST.
@@ -266,7 +306,7 @@ export function installAuthorizeRedirectAllowlist(
         : new URL(c.req.url).searchParams.get("redirect_uri")
     // A missing/malformed redirect_uri is mcp-use's own 400 to make; only a
     // present-but-disallowed value is the interception attempt we block.
-    if (typeof redirectUri === "string" && !allowed.has(redirectUri)) {
+    if (typeof redirectUri === "string" && !isAllowedRedirectUri(redirectUri, allowlist)) {
       return c.json(
         {
           error: "invalid_request",

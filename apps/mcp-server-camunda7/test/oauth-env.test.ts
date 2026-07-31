@@ -4,6 +4,7 @@ import {
   getOAuthConfigFromEnv,
   getOAuthProviderFromEnv,
   installAuthorizeRedirectAllowlist,
+  isAllowedRedirectUri,
   oauthSecretEnvVarNames,
 } from "../src/oauth.js"
 
@@ -244,5 +245,48 @@ describe("installAuthorizeRedirectAllowlist (against real mcp-use proxy routing)
     // mcp-use 302-redirects to the IdP's /authorize once the request is allowed.
     expect(res.status).toBe(302)
     expect(res.headers.get("location")).toContain("https://idp.example.com/authorize")
+  })
+
+  it("accepts an allowlisted LOOPBACK callback on any ephemeral port (RFC 8252)", async () => {
+    const handler = await proxyHandler(["http://localhost/callback"])
+    const res = await handler(
+      new Request(authorizeUrl("http://127.0.0.1:53187/callback"), { redirect: "manual" }),
+    )
+    expect(res.status).toBe(302)
+  })
+
+  it("still blocks loopback callbacks with a different path", async () => {
+    const handler = await proxyHandler(["http://localhost/callback"])
+    const res = await handler(
+      new Request(authorizeUrl("http://127.0.0.1:53187/evil"), { redirect: "manual" }),
+    )
+    expect(res.status).toBe(400)
+  })
+})
+
+describe("isAllowedRedirectUri", () => {
+  it("matches non-loopback entries EXACTLY (no port or path slack)", () => {
+    const allowlist = ["https://claude.ai/api/mcp/auth_callback"]
+    expect(isAllowedRedirectUri("https://claude.ai/api/mcp/auth_callback", allowlist)).toBe(true)
+    expect(isAllowedRedirectUri("https://claude.ai:8443/api/mcp/auth_callback", allowlist)).toBe(
+      false,
+    )
+    expect(isAllowedRedirectUri("https://claude.ai/api/mcp/other", allowlist)).toBe(false)
+    expect(isAllowedRedirectUri("not a url", allowlist)).toBe(false)
+  })
+
+  it("matches loopback entries across ports and loopback hosts, same scheme + path", () => {
+    const allowlist = ["http://localhost/callback"]
+    expect(isAllowedRedirectUri("http://localhost:49152/callback", allowlist)).toBe(true)
+    expect(isAllowedRedirectUri("http://127.0.0.1:65001/callback", allowlist)).toBe(true)
+    expect(isAllowedRedirectUri("http://[::1]:8080/callback", allowlist)).toBe(true)
+    expect(isAllowedRedirectUri("https://localhost:49152/callback", allowlist)).toBe(false)
+    expect(isAllowedRedirectUri("http://localhost:49152/other", allowlist)).toBe(false)
+    // A loopback CANDIDATE never piggybacks on a non-loopback entry.
+    expect(
+      isAllowedRedirectUri("http://localhost:49152/api/mcp/auth_callback", [
+        "https://claude.ai/api/mcp/auth_callback",
+      ]),
+    ).toBe(false)
   })
 })

@@ -39,9 +39,12 @@ metadata is served. Set `MCP_URL` so advertised URLs are right.
 For an IdP without Dynamic Client Registration, `provider: "oidc-proxy"` uses a
 pre-registered `clientId`/`clientSecret` and brokers the login through the
 server. It requires `MCP_URL`, `<MCP_URL>/oauth/callback` registered at the
-IdP, and `allowedRedirectUris` — the exact MCP-client callbacks the server's
+IdP, and `allowedRedirectUris` — the MCP-client callbacks the server's
 `/authorize` accepts. That allowlist is mandatory and enforced before mcp-use
 runs (its proxy otherwise forwards the auth code to any `redirect_uri`).
+Non-loopback entries match exactly; loopback entries match any port per
+RFC 8252 (native clients like Claude Code redirect to
+`http://localhost:<ephemeral>/callback` — allowlist `http://localhost/callback`).
 
 `CAMUNDA_AUTH_TYPE=passthrough` forwards each caller's bearer token to the
 engine per request (never to Prometheus). With `MCP_OAUTH`
