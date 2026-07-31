@@ -175,7 +175,9 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    outside the tool registrar gates itself against the module's declared toolset names
    (`allowsDurableWrites` in `mcp-analytics/src/toolsets.ts`, `isToolInToolset` in
    camunda7) — never an ad-hoc `toolset === "read-only"` compare, which fails open for
-   every other name. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
+   every other name — and carries that same decision into its view as `canSave`, so the
+   section renders disabled fields instead of a Save button whose click would resolve to
+   an unknown tool. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in
    `packages/mcp-camunda7/src/providers/` — the port holds ONLY real differences:
    cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)

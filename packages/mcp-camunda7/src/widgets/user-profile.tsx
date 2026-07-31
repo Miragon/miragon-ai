@@ -191,11 +191,15 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
   }
 
   const allEnginesAllowed = form.allowedEngineIds.length >= engines.length
+  // A read-only deployment never registered camunda7_save_user_profile — the
+  // fields stay visible but disabled, and the model must not be told about a
+  // write tool it cannot call.
+  const canSave = view.canSave
 
   return (
     <>
       <ModelContext
-        content={`Support is on the MiragonAI profile & settings panel. Current preferences — language ${form.language}, theme ${form.theme}, ${allEnginesAllowed ? "all engines available" : `${form.allowedEngineIds.length} engine(s) available`}${form.defaultDashboardId ? `, default dashboard "${form.defaultDashboardId}" (open it via load-dashboard when the user asks for their dashboard)` : ""}. Preferences can be changed here or via camunda7_save_user_profile.`}
+        content={`Support is on the MiragonAI profile & settings panel. Current preferences — language ${form.language}, theme ${form.theme}, ${allEnginesAllowed ? "all engines available" : `${form.allowedEngineIds.length} engine(s) available`}${form.defaultDashboardId ? `, default dashboard "${form.defaultDashboardId}" (open it via load-dashboard when the user asks for their dashboard)` : ""}. ${canSave ? "Preferences can be changed here or via camunda7_save_user_profile." : "Preferences are read-only in this deployment and cannot be changed."}`}
       />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -203,14 +207,18 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           <h2 className="text-xl font-semibold">{t("profile.heading")}</h2>
           <p className="text-muted-foreground mt-1 text-sm">{t("profile.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {savedAt && !save.isPending && (
-            <Badge variant="secondary">{t("profile.saved", { time: savedAt })}</Badge>
-          )}
-          <Button size="sm" onClick={handleSave} disabled={save.isPending}>
-            {save.isPending ? t("profile.saving") : t("profile.save")}
-          </Button>
-        </div>
+        {canSave ? (
+          <div className="flex items-center gap-2">
+            {savedAt && !save.isPending && (
+              <Badge variant="secondary">{t("profile.saved", { time: savedAt })}</Badge>
+            )}
+            <Button size="sm" onClick={handleSave} disabled={save.isPending}>
+              {save.isPending ? t("profile.saving") : t("profile.save")}
+            </Button>
+          </div>
+        ) : (
+          <span className={helpCls}>{t("profile.readOnly")}</span>
+        )}
       </div>
 
       {save.isError && (
@@ -227,6 +235,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           >
             <NativeSelect
               value={form.language}
+              disabled={!canSave}
               onChange={(e) => set("language", parseEnum(e.target.value, LOCALES) ?? form.language)}
             >
               {LOCALES.map((l) => (
@@ -239,6 +248,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           <SettingsField label={t("profile.field.theme")}>
             <NativeSelect
               value={form.theme}
+              disabled={!canSave}
               onChange={(e) => set("theme", parseEnum(e.target.value, THEMES) ?? form.theme)}
             >
               {THEMES.map((th) => (
@@ -251,6 +261,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           <SettingsField label={t("profile.field.role")} help={t("profile.field.role.help")}>
             <NativeSelect
               value={form.preferredRole}
+              disabled={!canSave}
               onChange={(e) => set("preferredRole", parseEnum(e.target.value, ROLES) ?? "")}
             >
               <option value="">{t("profile.role.unset")}</option>
@@ -276,6 +287,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                   <input
                     type="checkbox"
                     checked={form.allowedEngineIds.includes(e.id)}
+                    disabled={!canSave}
                     onChange={(ev) => toggleEngine(e.id, ev.target.checked)}
                   />
                   <span className="font-mono">{e.id}</span>
@@ -290,6 +302,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           >
             <NativeSelect
               value={form.defaultEngineId}
+              disabled={!canSave}
               onChange={(e) => set("defaultEngineId", e.target.value)}
             >
               <option value="">{t("profile.engine.auto")}</option>
@@ -317,6 +330,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
               >
                 <NativeSelect
                   value={form.defaultDashboardId}
+                  disabled={!canSave}
                   onChange={(e) => set("defaultDashboardId", e.target.value)}
                 >
                   <option value="">{t("profile.dashboard.none")}</option>
@@ -338,6 +352,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                       <input
                         type="checkbox"
                         checked={form.pinnedDashboardIds.includes(d.id)}
+                        disabled={!canSave}
                         onChange={(ev) => togglePinned(d.id, ev.target.checked)}
                       />
                       <span>{d.title ?? d.name}</span>

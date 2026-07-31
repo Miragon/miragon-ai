@@ -66,6 +66,7 @@ const PROFILE_FEED = {
     schemaVersion: 1,
   },
   availableEngines: [{ id: "prod-a", baseUrl: "http://localhost:1" }],
+  canSave: true,
 }
 
 const INSTANCES_FEED = {

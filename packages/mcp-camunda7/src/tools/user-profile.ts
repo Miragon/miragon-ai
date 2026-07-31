@@ -61,7 +61,9 @@ function summarize(p: UserProfile): string {
  *
  * The save tool is a durable write (file-backed profile store), so it honors
  * the deployment's toolset like every registrar write: absent in `read-only`,
- * present in `operations`/`admin`. The two view tools are always registered.
+ * present in `operations`/`admin`. The two view tools are always registered and
+ * carry the decision as `canSave`, so the panel's Save button and the tool
+ * surface can never disagree (mirrors analytics' `registerSettingsTools`).
  */
 export function registerUserProfileTools(
   server: MCPServer,
@@ -71,6 +73,17 @@ export function registerUserProfileTools(
   toolset?: string,
 ): void {
   const uiMeta = buildUiMeta({ resourceUri })
+
+  // The save tool is a durable write registered OUTSIDE the registrar, so it
+  // gates itself — same rule as `withToolsetFilter`: unknown toolset names fail
+  // open. Decided up front because the two view tools report the outcome as
+  // `canSave`, which is what hides the panel's Save button; a view that claimed
+  // otherwise would offer a write that resolves to an unknown tool.
+  const saveAnnotations = { idempotentHint: true }
+  const canSave =
+    toolset === undefined ||
+    !isCamunda7Toolset(toolset) ||
+    isToolInToolset({ name: CAMUNDA7_SAVE_USER_PROFILE, annotations: saveAnnotations }, toolset)
 
   const loadView = async (ctx: unknown): Promise<UserProfileView> => {
     // Same key precedence as the save path (resolveProfileKey maps stdio to
@@ -83,6 +96,7 @@ export function registerUserProfileTools(
     return {
       profile,
       availableEngines: registry.engines.map((e) => ({ id: e.id, baseUrl: e.baseUrl })),
+      canSave,
     }
   }
 
@@ -126,15 +140,7 @@ export function registerUserProfileTools(
     withToolErrors(async (_params, ctx) => rawData({ ...(await loadView(ctx)) })),
   )
 
-  // Same rule as `withToolsetFilter`: unknown toolset names fail open.
-  const saveAnnotations = { idempotentHint: true }
-  if (
-    toolset !== undefined &&
-    isCamunda7Toolset(toolset) &&
-    !isToolInToolset({ name: CAMUNDA7_SAVE_USER_PROFILE, annotations: saveAnnotations }, toolset)
-  ) {
-    return
-  }
+  if (!canSave) return
 
   server.tool(
     {

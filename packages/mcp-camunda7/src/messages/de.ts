@@ -42,6 +42,7 @@ export const de: MessageCatalog = {
   "profile.saving": "Speichern…",
   "profile.saved": ({ time }) => `Gespeichert ${String(time)}`,
   "profile.saveError": "Profil konnte nicht gespeichert werden.",
+  "profile.readOnly": "Einstellungen sind in diesem Deployment schreibgeschützt.",
   "profile.loading": "Laden…",
   "profile.none": "Kein Profil verfügbar",
 

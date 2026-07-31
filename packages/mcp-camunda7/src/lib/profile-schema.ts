@@ -106,6 +106,13 @@ export const userProfileToolSaveInput = userProfileSaveInput.omit({ modules: tru
 export interface UserProfileView {
   profile: UserProfile
   availableEngines: Array<{ id: string; baseUrl: string }>
+  /**
+   * False when the deployment's toolset drops `camunda7_save_user_profile`
+   * (`camunda7:read-only`) — the panel then renders disabled fields without a
+   * Save button, so the UI matches the tool surface instead of offering a
+   * write that resolves to an unknown tool.
+   */
+  canSave: boolean
 }
 
 /** A fully-defaulted profile for a key that has never been saved. */
