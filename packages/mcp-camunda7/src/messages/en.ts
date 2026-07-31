@@ -15,6 +15,7 @@ export const en: MessageCatalog = {
   "cockpit.crumb.overview": "Overview",
   "cockpit.crumb.incidents": "Incidents",
   "cockpit.crumb.instances": "Instances",
+  "cockpit.crumb.origin": "Start",
   // The {id} arrives pre-truncated (kit `truncate` appends the ellipsis).
   "cockpit.crumb.instance": ({ id }) => `Instance ${String(id)}`,
   "cockpit.crumb.incident": ({ id }) => `Incident ${String(id)}`,

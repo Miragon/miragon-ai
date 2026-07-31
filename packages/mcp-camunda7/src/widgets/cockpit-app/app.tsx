@@ -2,12 +2,21 @@ import { useEffect, useReducer } from "react"
 import { ModelContext, useWidget } from "mcp-use/react"
 import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
-import { ViewDataState, WidgetShell, truncate } from "@miragon-ai/widget-shell/widgets"
+import { ViewDataState, WidgetShell, useHostWidgets } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "../../view-models.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
+import {
+  buildViewParams,
+  describeCurrentView,
+  intentToView,
+  popTo,
+  pushView,
+  type CockpitView,
+} from "../nav-core.js"
 import { camunda7BaseWidgets } from "../registry.js"
 import { translator } from "../../messages/index.js"
-import { cockpitViews, type ViewParams } from "./views.js"
+import { NavBreadcrumb } from "./breadcrumb.js"
+import { cockpitViews, filterLayoutToWidgets } from "./views.js"
 import { FleetView } from "./fleet-view.js"
 
 export type { CockpitAppData }
@@ -18,23 +27,6 @@ interface EnginesResult {
   /** Profile default engine — landing hint when nothing is sticky-selected yet. */
   profileDefaultEngineId?: string | null
 }
-
-/** Internal, client-side view state — the reducer's mapping of {@link NavIntent}. */
-type CockpitView =
-  | { section: "overview" }
-  | { section: "process-list" }
-  | { section: "incidents" }
-  | { section: "settings" }
-  | {
-      section: "cluster-detail"
-      activityId: string
-      incidentType: string
-      messageSignature?: string
-    }
-  | { section: "process-detail"; processDefinitionKey: string; focus?: "incidents" }
-  | { section: "process-instances"; processDefinitionKey?: string }
-  | { section: "instance-detail"; processInstanceId: string }
-  | { section: "incident-detail"; incidentId: string }
 
 type TopSection = "overview" | "incidents" | "settings"
 
@@ -78,73 +70,6 @@ type CockpitAction =
 const ROOT_STACK: CockpitView[] = [{ section: "overview" }]
 const INITIAL_STATE: CockpitState = { scope: { kind: "landing" }, stack: ROOT_STACK }
 
-/**
- * Map the public {@link NavIntent} contract onto a view. Compile-checked
- * exhaustive: a new intent variant fails the `satisfies never` below instead of
- * silently no-oping in the cockpit.
- */
-function intentToView(intent: NavIntent): CockpitView {
-  switch (intent.type) {
-    case "overview":
-      return { section: "overview" }
-    // A real drill view (the searchable, paged process list) — NOT the
-    // overview: the emitting KPIs sit ON the overview, so mapping the intent
-    // there made the click a visible no-op.
-    case "process-list":
-      return { section: "process-list" }
-    case "incidents":
-      return { section: "incidents" }
-    case "settings":
-      return { section: "settings" }
-    case "cluster-detail":
-      return {
-        section: "cluster-detail",
-        activityId: intent.activityId,
-        incidentType: intent.incidentType,
-        messageSignature: intent.messageSignature,
-      }
-    case "process-detail":
-      return { section: "process-detail", processDefinitionKey: intent.processDefinitionKey }
-    case "process-instances":
-      return { section: "process-instances", processDefinitionKey: intent.processDefinitionKey }
-    // The "process-incidents" intent is a KEPT public contract (widgets emit
-    // it) — it lands on the SAME definition view, focused on incidents.
-    case "process-incidents":
-      return {
-        section: "process-detail",
-        processDefinitionKey: intent.processDefinitionKey,
-        focus: "incidents",
-      }
-    case "instance-detail":
-      return { section: "instance-detail", processInstanceId: intent.processInstanceId }
-    case "incident-detail":
-      return { section: "incident-detail", incidentId: intent.incidentId }
-  }
-  return intent satisfies never
-}
-
-/**
- * Identity of a view on the stack — navigating to a view that is already in the
- * trail pops back to it instead of growing an A→B→A loop. Deliberately IGNORES
- * the definition view's `focus`: detail → incidents-focus on the same
- * definition updates the stack entry in place instead of stacking a twin.
- */
-function viewKey(view: CockpitView): string {
-  switch (view.section) {
-    case "cluster-detail":
-      return `cluster-detail:${view.activityId}:${view.incidentType}:${view.messageSignature ?? ""}`
-    case "process-detail":
-    case "process-instances":
-      return `${view.section}:${view.processDefinitionKey ?? "*"}`
-    case "instance-detail":
-      return `instance-detail:${view.processInstanceId}`
-    case "incident-detail":
-      return `incident-detail:${view.incidentId}`
-    default:
-      return view.section
-  }
-}
-
 function cockpitReducer(state: CockpitState, action: CockpitAction): CockpitState {
   switch (action.type) {
     case "enter-engine":
@@ -157,50 +82,15 @@ function cockpitReducer(state: CockpitState, action: CockpitAction): CockpitStat
       return { scope: { kind: "fleet" }, stack: ROOT_STACK }
     case "to-landing":
       return { scope: { kind: "landing" }, stack: ROOT_STACK }
-    case "pop": {
-      const to = Math.min(action.to ?? state.stack.length - 2, state.stack.length - 1)
-      return { ...state, stack: state.stack.slice(0, Math.max(to, 0) + 1) }
-    }
+    case "pop":
+      return { ...state, stack: popTo(state.stack, action.to) }
     default: {
       const view = intentToView(action)
       // Top sections are roots, not drills — selecting one resets the trail.
+      // (Cockpit-only policy; the shared pushView deliberately never resets.)
       if (isTopSection(view.section)) return { ...state, stack: [view] }
-      const key = viewKey(view)
-      const existing = state.stack.findIndex((v) => viewKey(v) === key)
-      if (existing >= 0) {
-        // Pop back to the existing entry, but adopt the incoming view's
-        // params — same identity, possibly a different focus (e.g.
-        // detail → incidents-focus on the same definition).
-        const stack = state.stack.slice(0, existing + 1)
-        stack[existing] = view
-        return { ...state, stack }
-      }
-      return { ...state, stack: [...state.stack, view] }
+      return { ...state, stack: pushView(state.stack, view) }
     }
-  }
-}
-
-function crumbLabel(view: CockpitView, locale: string): string {
-  const tr = (key: string, params?: Record<string, unknown>) => translator(locale, key, params)
-  switch (view.section) {
-    case "overview":
-      return tr("cockpit.crumb.overview")
-    case "process-list":
-      return tr("cockpit.crumb.processList")
-    case "incidents":
-      return tr("cockpit.crumb.incidents")
-    case "settings":
-      return tr("cockpit.section.settings")
-    case "process-detail":
-      return view.processDefinitionKey
-    case "process-instances":
-      return tr("cockpit.crumb.instances")
-    case "instance-detail":
-      return tr("cockpit.crumb.instance", { id: truncate(view.processInstanceId, 8) })
-    case "incident-detail":
-      return tr("cockpit.crumb.incident", { id: truncate(view.incidentId, 8) })
-    case "cluster-detail":
-      return tr("cockpit.crumb.cluster", { activity: view.activityId })
   }
 }
 
@@ -225,6 +115,13 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   // shell strings here; the rendered leaf widgets read it the same way. Theme is
   // applied document-wide by the ProfileGate too, so the cockpit stays unaware.
   const locale = useLocale()
+
+  // The host root's full widget registry (HostWidgetsProvider) merged under
+  // this module's own widgets: composed views (the settings tab) reference
+  // other modules' section widgets by raw id (tier-2). Own ids always win, and
+  // a host without the provider degrades to camunda7-only rendering.
+  const hostWidgets = useHostWidgets()
+  const cockpitWidgets = { ...hostWidgets, ...camunda7BaseWidgets }
 
   const [{ scope, stack }, dispatch] = useReducer(cockpitReducer, INITIAL_STATE)
 
@@ -404,36 +301,10 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const activeSection: TopSection =
     rootSection === "incidents" || rootSection === "settings" ? rootSection : "overview"
 
-  // The selected entity of the active view, surfaced in the app-level model
-  // context so drill-down views whose widgets carry no leaf <ModelContext>
-  // still resolve "this incident/process" follow-up questions correctly.
-  const selectedEntity =
-    "incidentId" in current
-      ? ` Selected incident: ${current.incidentId}.`
-      : "processInstanceId" in current
-        ? ` Selected process instance: ${current.processInstanceId}.`
-        : "processDefinitionKey" in current
-          ? ` Selected process definition: ${current.processDefinitionKey}.`
-          : ""
-
-  // Flatten the current route + resolved engine into the params bag every view
-  // layout reads from. Each view picks only the ids it needs (see views.ts).
-  const viewParams: ViewParams = {
-    engine: engineId,
-    processDefinitionKey:
-      "processDefinitionKey" in current ? current.processDefinitionKey : undefined,
-    processInstanceId: "processInstanceId" in current ? current.processInstanceId : undefined,
-    incidentId: "incidentId" in current ? current.incidentId : undefined,
-    activityId: "activityId" in current ? current.activityId : undefined,
-    incidentType: "incidentType" in current ? current.incidentType : undefined,
-    messageSignature: "messageSignature" in current ? current.messageSignature : undefined,
-    focus: "focus" in current ? current.focus : undefined,
-  }
-
   return (
     <WidgetShell>
       <ModelContext
-        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". Current view: ${current.section}.${selectedEntity} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
+        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". ${describeCurrentView(current)} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
       />
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">
@@ -492,35 +363,12 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         </aside>
 
         <main className="min-w-0 flex-1">
-          {/* The breadcrumb IS the stack — every crumb pops back to the view it
-              names, so drilling instance → back → next instance never re-drills
-              from the top. Roots (stack of one) render no trail. */}
-          {stack.length > 1 && (
-            <nav
-              aria-label={translator(locale, "cockpit.aria.breadcrumb")}
-              className="text-muted-foreground mb-4 flex flex-wrap items-center gap-1.5 text-sm"
-            >
-              {stack.map((v, i) => {
-                const label = crumbLabel(v, locale)
-                return (
-                  <span key={i} className="inline-flex items-center gap-1.5">
-                    {i > 0 && <span aria-hidden="true">›</span>}
-                    {i < stack.length - 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => dispatch({ type: "pop", to: i })}
-                        className="hover:text-foreground focus-visible:ring-ring rounded outline-none focus-visible:ring-2"
-                      >
-                        {label}
-                      </button>
-                    ) : (
-                      <span className="text-foreground font-medium">{label}</span>
-                    )}
-                  </span>
-                )
-              })}
-            </nav>
-          )}
+          {/* Roots (stack of one) render no trail — NavBreadcrumb handles that. */}
+          <NavBreadcrumb
+            stack={stack}
+            locale={locale}
+            onPop={(to) => dispatch({ type: "pop", to })}
+          />
 
           {/* Every view is a layout of self-fetching widgets rendered through the
               toolkit renderer. The NavProvider is the client-side navigation
@@ -528,10 +376,13 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               instead of a chat follow-up. */}
           <NavProvider value={navigate}>
             <WidgetRenderer
-              layout={cockpitViews[current.section](viewParams)}
+              layout={filterLayoutToWidgets(
+                cockpitViews[current.section](buildViewParams(current, engineId)),
+                cockpitWidgets,
+              )}
               keys={{}}
               errors={[]}
-              widgets={camunda7BaseWidgets}
+              widgets={cockpitWidgets}
             />
           </NavProvider>
         </main>

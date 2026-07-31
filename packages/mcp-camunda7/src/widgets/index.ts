@@ -15,6 +15,8 @@ import type { ProcessInstancesData } from "./process-instances/list.js"
 import { camunda7BaseWidgets } from "./registry.js"
 import { CockpitApp } from "./cockpit-app/app.js"
 
+export { Camunda7StandaloneShell } from "./standalone-shell.js"
+
 export type {
   ProcessListData,
   IncidentsDashboardData,

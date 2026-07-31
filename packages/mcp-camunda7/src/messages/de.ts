@@ -10,6 +10,7 @@ export const de: MessageCatalog = {
   "cockpit.crumb.overview": "Übersicht",
   "cockpit.crumb.incidents": "Vorfälle",
   "cockpit.crumb.instances": "Instanzen",
+  "cockpit.crumb.origin": "Start",
   // Die {id} kommt bereits gekürzt an (Kit-`truncate` ergänzt die Ellipse).
   "cockpit.crumb.instance": ({ id }) => `Instanz ${String(id)}`,
   "cockpit.crumb.incident": ({ id }) => `Vorfall ${String(id)}`,
