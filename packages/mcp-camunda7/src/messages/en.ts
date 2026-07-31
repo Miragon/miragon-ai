@@ -47,6 +47,7 @@ export const en: MessageCatalog = {
   "profile.saving": "Saving…",
   "profile.saved": ({ time }) => `Saved ${String(time)}`,
   "profile.saveError": "Failed to save profile.",
+  "profile.readOnly": "Settings are read-only in this deployment.",
   "profile.loading": "Loading…",
   "profile.none": "No profile available",
 

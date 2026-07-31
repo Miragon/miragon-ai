@@ -71,6 +71,30 @@ second engine dialect cheap:
   package appears with the first cross-module view, a shared domain-widget
   package with a second dialect, a host-kit with a second app.
 
+## User settings
+
+Preferences live in one profile record per user, shared by every module and
+persisted in Postgres (`DATABASE_URL`), on disk (`MCP_PROFILE_DIR`), or in
+memory — in that order of precedence. The record is keyed by the authenticated
+user when the server runs with `MCP_OAUTH`, otherwise by the MCP session id.
+
+| Part                     | Owner       | Contents                                                        |
+| ------------------------ | ----------- | --------------------------------------------------------------- |
+| Core preferences         | camunda7    | Language, theme, engine availability + default, dashboard picks |
+| `modules.<module>` slice | that module | Whatever only it understands — e.g. the analytics look-back     |
+
+Each module owns its slice end to end: its own schema, its own save tool, and
+its own section on the settings page. Nothing central knows what a slice
+contains — the record only transports it, and a save merges per module key, so
+one module can never overwrite another's settings. Reads are fail-soft
+throughout: an unreadable slice or an unreachable store yields defaults rather
+than an error, so a profile-store hiccup can't break a call that only needs the
+engine or Prometheus.
+
+The settings page composes one section widget per module and resolves them at
+runtime, so a module that isn't mounted simply has no section instead of
+producing a broken tab.
+
 ## External systems
 
 | System                  | Purpose                                                                        | Default endpoint                    |

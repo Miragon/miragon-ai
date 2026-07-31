@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ANONYMOUS_PROFILE_KEY } from "./profile-constants.js"
+import { ANONYMOUS_PROFILE_KEY } from "@miragon-ai/widget-shell/server"
 import { createInMemoryProfileStore, type ProfileStore } from "./profile-store.js"
 import { localizeFor, resolveLocale } from "./server-locale.js"
 

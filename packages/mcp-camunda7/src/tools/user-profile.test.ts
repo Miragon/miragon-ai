@@ -11,13 +11,27 @@ import {
 
 const RESOURCE_URI = "ui://camunda7/widgets.html"
 
-function registeredToolNames(toolset?: string): string[] {
+type Handler = (
+  params: unknown,
+  ctx?: unknown,
+) => Promise<{ structuredContent?: Record<string, unknown> }>
+
+/** Register the triple against a mock server and expose what landed on it. */
+function register(toolset?: string) {
   const tool = vi.fn()
   const server = { tool } as unknown as MCPServer
   const registry = { engines: [] } as unknown as EngineRegistry
   registerUserProfileTools(server, createInMemoryProfileStore(), registry, RESOURCE_URI, toolset)
-  return tool.mock.calls.map((c) => (c[0] as { name: string }).name)
+  const names = tool.mock.calls.map((c) => (c[0] as { name: string }).name)
+  const handlerFor = (name: string): Handler => {
+    const call = tool.mock.calls.find((c) => (c[0] as { name: string }).name === name)
+    if (!call) throw new Error(`tool ${name} not registered`)
+    return call[1] as Handler
+  }
+  return { names, handlerFor }
 }
+
+const registeredToolNames = (toolset?: string): string[] => register(toolset).names
 
 describe("registerUserProfileTools toolset filtering", () => {
   it("registers all three tools when no toolset is configured", () => {
@@ -45,24 +59,38 @@ describe("registerUserProfileTools toolset filtering", () => {
   })
 })
 
+/**
+ * The panel's Save button is driven by `canSave`, not by probing the tool list,
+ * so the two must agree: a view claiming `canSave: true` in a deployment that
+ * never registered the save tool renders a button whose click resolves to an
+ * unknown tool.
+ */
+describe("canSave mirrors the registered tool surface", () => {
+  const feedCanSave = async (toolset?: string) => {
+    const { names, handlerFor } = register(toolset)
+    const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
+    return {
+      canSave: result.structuredContent?.canSave,
+      hasSaveTool: names.includes(CAMUNDA7_SAVE_USER_PROFILE),
+    }
+  }
+
+  it.each([undefined, "read-only", "operations", "admin", "nonsense"])(
+    "agrees with the save tool's presence (toolset: %s)",
+    async (toolset) => {
+      const { canSave, hasSaveTool } = await feedCanSave(toolset)
+      expect(canSave).toBe(hasSaveTool)
+    },
+  )
+
+  it("reports false in a read-only deployment", async () => {
+    expect((await feedCanSave("read-only")).canSave).toBe(false)
+  })
+})
+
 describe("anonymous round-trip", () => {
   it("reads a keyless save back on the next load (shared anonymous record)", async () => {
-    const tool = vi.fn()
-    const server = { tool } as unknown as MCPServer
-    const registry = { engines: [] } as unknown as EngineRegistry
-    registerUserProfileTools(server, createInMemoryProfileStore(), registry, RESOURCE_URI)
-
-    type Handler = (
-      params: unknown,
-      ctx?: unknown,
-    ) => Promise<{
-      structuredContent?: Record<string, unknown>
-    }>
-    const handlerFor = (name: string): Handler => {
-      const call = tool.mock.calls.find((c) => (c[0] as { name: string }).name === name)
-      if (!call) throw new Error(`tool ${name} not registered`)
-      return call[1] as Handler
-    }
+    const { handlerFor } = register()
 
     // No request context in tests → resolveProfileKey() is undefined → both
     // paths must land on the SAME shared anonymous record.

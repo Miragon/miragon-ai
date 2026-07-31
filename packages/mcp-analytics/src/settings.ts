@@ -33,6 +33,13 @@ export type AnalyticsSettings = z.infer<typeof analyticsSettingsSchema>
  * materialize omitted fields at the tool boundary and a "single-field" save
  * would silently reset the other saved value. With this shape, omitted keys
  * stay absent and the handler's merge keeps them unchanged.
+ *
+ * Spelled out by hand because the save descriptions differ from the schema's
+ * ("Omitted → unchanged" is what the model needs at a write boundary). When the
+ * descriptions can be shared, derive it instead:
+ * `z.object(withoutDefaults(analyticsSettingsSchema.shape)).partial()`
+ * (`withoutDefaults` from `@miragon-ai/widget-shell/server`) — which is what
+ * camunda7's `userProfileSaveInput` does.
  */
 export const analyticsSettingsSaveInput = z.object({
   defaultPeriod: z

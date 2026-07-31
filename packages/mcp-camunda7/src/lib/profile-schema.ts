@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { withoutDefaults } from "@miragon-ai/widget-shell/server"
 import { LOCALES, PROFILE_SCHEMA_VERSION, ROLES, THEMES } from "./profile-constants.js"
 
 /**
@@ -75,23 +76,6 @@ export const userProfileSchema = userProfilePreferencesSchema.extend({
 export type UserProfile = z.infer<typeof userProfileSchema>
 
 /**
- * Strip `.default()` wrappers from a shape, keeping each field's description.
- * Zod 4 re-applies defaults THROUGH `.partial()` on parse, so a defaulted
- * partial would materialize omitted fields at the tool boundary — a
- * "single-field" save would then silently reset every other defaulted
- * preference. The save input therefore must be default-free.
- */
-function withoutDefaults(shape: z.ZodRawShape): z.ZodRawShape {
-  return Object.fromEntries(
-    Object.entries(shape).map(([key, schema]) => {
-      if (!(schema instanceof z.ZodDefault)) return [key, schema]
-      const inner = schema.unwrap() as z.ZodType
-      return [key, schema.description ? inner.describe(schema.description) : inner]
-    }),
-  )
-}
-
-/**
  * Save input: any subset of the preferences. Omitted fields keep their current
  * value (the store merges over the existing record), so the model can do a
  * single-field update ("switch the UI to German") without resending everything
@@ -122,6 +106,13 @@ export const userProfileToolSaveInput = userProfileSaveInput.omit({ modules: tru
 export interface UserProfileView {
   profile: UserProfile
   availableEngines: Array<{ id: string; baseUrl: string }>
+  /**
+   * False when the deployment's toolset drops `camunda7_save_user_profile`
+   * (`camunda7:read-only`) — the panel then renders disabled fields without a
+   * Save button, so the UI matches the tool surface instead of offering a
+   * write that resolves to an unknown tool.
+   */
+  canSave: boolean
 }
 
 /** A fully-defaulted profile for a key that has never been saved. */
