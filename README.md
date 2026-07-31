@@ -53,13 +53,11 @@ docker run --rm -p 8400:8400 \
 The server speaks the streamable-HTTP MCP transport on `http://localhost:8400/mcp`. Add it to your
 MCP host (Claude Desktop, Claude Code, ChatGPT, …) as an HTTP/streamable server.
 
-**Prefer to build the image yourself?** You need a `GITHUB_TOKEN` (a PAT with `read:packages`, for
-the private `@miragon/*` toolkit) passed as a BuildKit secret; then run `miragon-ai-server` in place
-of the Docker Hub image above.
+**Prefer to build the image yourself?** No credentials needed — build it and run `miragon-ai-server`
+in place of the Docker Hub image above.
 
 ```bash
-export GITHUB_TOKEN=ghp_xxx
-docker build --secret id=github_token,env=GITHUB_TOKEN -t miragon-ai-server .
+docker build -t miragon-ai-server .
 ```
 
 **Want the whole stack on your machine?** The repo ships a Compose file with CIB Seven, the OTEL
@@ -200,7 +198,6 @@ and the runnable [`playground/cibseven-example/`](playground/cibseven-example).
 Run the full stack — infra in Docker, the server from source with hot reload.
 
 ```bash
-export GITHUB_TOKEN=ghp_xxx           # PAT with read:packages — the @miragon/* toolkit is private
 pnpm install --frozen-lockfile
 
 docker compose -f playground/docker/docker-compose.yml up -d   # CIB Seven, OTEL, Prometheus, Grafana

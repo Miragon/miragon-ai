@@ -10,7 +10,7 @@ section on the settings page).
 ## What this repo is
 
 "Automation MCP" — a pnpm + Turbo monorepo that ships an MCP server (built on `mcp-use`
-plus the private `@miragon/mcp-toolkit-*` packages) for Camunda 7 / CIB Seven BPM
+plus the `@miragon/mcp-toolkit-*` packages) for Camunda 7 / CIB Seven BPM
 operations and Prometheus-backed process analytics, including interactive React widgets
 (MCP Apps).
 
@@ -29,8 +29,7 @@ operations and Prometheus-backed process analytics, including interactive React 
 ## Commands
 
 ```bash
-export GITHUB_TOKEN=ghp_xxx          # PAT with read:packages — REQUIRED before install:
-pnpm install --frozen-lockfile       # @miragon/* resolves via npm.pkg.github.com (.npmrc)
+pnpm install --frozen-lockfile       # all deps are public; no registry credential needed
 
 pnpm build                           # turbo build across the monorepo (runs `generate` first)
 pnpm typecheck                       # tsc --noEmit everywhere, incl. widget/UI tsconfigs

@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Deploys the playground stack to Fly.io — one Fly app per service, wired over
 # the org's private 6PN network. Used by .github/workflows/deploy-playground.yml
-# and runnable locally (needs flyctl, a Fly token, and GITHUB_TOKEN for the
-# server image build).
+# and runnable locally (needs flyctl and a Fly token).
 #
 # Usage: playground/fly/deploy.sh [all|otel|engine|prometheus|grafana|postgres|server]
 #
@@ -35,13 +34,6 @@ deploy() {
   (cd "$ROOT/$context" && flyctl deploy --config "$config" --remote-only --ha=false "$@")
 }
 
-require_github_token() {
-  if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-    echo "GITHUB_TOKEN must be set (read:packages) to build $1" >&2
-    exit 1
-  fi
-}
-
 deploy_otel() {
   deploy miragon-ai-playground-otel playground/docker/otel ../../fly/otel.fly.toml
 }
@@ -70,9 +62,7 @@ deploy_postgres() {
 }
 
 deploy_server() {
-  require_github_token "the server"
-  deploy miragon-ai-playground . playground/fly/server-camunda7.fly.toml \
-    --build-secret "github_token=$GITHUB_TOKEN"
+  deploy miragon-ai-playground . playground/fly/server-camunda7.fly.toml
 }
 
 case "$TARGET" in
