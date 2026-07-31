@@ -56,6 +56,12 @@ With auth active, user profiles and saved dashboards scope to the
 authenticated user (`sub`) instead of the MCP session, so preferences follow
 the user across sessions and never expire.
 
+To try the `oidc-proxy` flow locally, `docker compose --profile auth up -d`
+adds a Keycloak on `localhost:8480` (realm `miragon`, client
+`miragon-ai-server`, user `demo`/`demo`) — the matching `MCP_OAUTH` block is
+commented out in `.env.example`. The deployed Fly playground has no IdP and
+runs unauthenticated.
+
 ## Environment variables
 
 | Variable                                | Default                             | Notes                                                                                                                                                                                                                                           |

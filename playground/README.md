@@ -23,7 +23,8 @@ pnpm dev                                                       # MCP server on :
 - Grafana: `http://localhost:8470`, Prometheus: `http://localhost:8460`, engine: `http://localhost:8410`
 - Compose profiles: `--profile multi-engine` (second engine on :8411),
   `--profile full` (containerized server on :8400), `--profile dev` (plain
-  CIB Seven image, no analytics)
+  CIB Seven image, no analytics), `--profile auth` (Keycloak on :8480 for
+  trying `MCP_OAUTH` locally — see the commented block in `.env.example`)
 
 ## Deploy to Fly.io
 

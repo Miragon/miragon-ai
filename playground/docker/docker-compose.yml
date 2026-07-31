@@ -156,6 +156,48 @@ services:
       retries: 12
       start_period: 10s
 
+  # Keycloak — the local IdP for the server's opt-in OAuth (MCP_OAUTH,
+  # provider "oidc-proxy": the server brokers MCP-client logins through its
+  # own /authorize + /token + /register with the pre-registered
+  # `miragon-ai-server` client). Opt-in via the `auth` profile — the plain
+  # `docker compose up` stays auth-free; with the profile a locally-run
+  # server reaches it on localhost:8480. `--import-realm` seeds the `miragon` realm
+  # (client + demo/demo user) from ./keycloak/realm-miragon.json on first
+  # boot. KC_HOSTNAME pins the issuer to the HOST url so tokens verify no
+  # matter how the container is reached. Admin console: localhost:8480
+  # (admin/admin, demo-grade like the rest of the stack).
+  # Use: docker compose --profile auth up -d
+  keycloak:
+    profiles: [auth]
+    image: quay.io/keycloak/keycloak:26.3
+    command: ["start-dev", "--import-realm"]
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME=http://localhost:8480
+      - KC_HTTP_ENABLED=true
+      - KC_HEALTH_ENABLED=true
+    volumes:
+      # No data volume ON PURPOSE: the image runs as uid 1000 and cannot chown
+      # a root-owned named volume, and the realm file IS the source of truth —
+      # a recreated container simply re-imports it (admin-console experiments
+      # are ephemeral, like the rest of the demo stack).
+      - ./keycloak/realm-miragon.json:/opt/keycloak/data/import/realm-miragon.json:ro
+    ports:
+      - "8480:8080"
+    healthcheck:
+      # The distroless-ish image ships no curl; the management port answers
+      # /health/ready once the realm import finished.
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q 'UP' <&3",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+
   # Automation MCP server (Node). Opt-in via the `full` profile so the
   # default `docker compose up` brings up infra only — leaving port 8400
   # free for a locally-run server (`pnpm -F @miragon-ai/mcp-server-camunda7 dev`).
