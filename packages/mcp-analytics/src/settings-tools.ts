@@ -20,6 +20,7 @@ import {
   settingsFor,
   type AnalyticsSettings,
 } from "./settings.js"
+import { allowsDurableWrites } from "./toolsets.js"
 
 /**
  * The analytics module's settings section — its own show/data/save tool triple
@@ -43,11 +44,11 @@ export function registerSettingsTools(
   toolset?: string,
 ): void {
   const uiMeta = buildUiMeta({ resourceUri })
-  // The save tool is a durable write, so it honors the deployment's toolset:
-  // "read-only" (the module's one restrictive toolset) drops it; unknown
-  // toolset names fail open, matching withToolsetFilter's semantics.
+  // The save tool is a durable write registered OUTSIDE the tool registrar, so
+  // it gates itself against the deployment's toolset (see `allowsDurableWrites`
+  // — declared names, unknown ones fail open like withToolsetFilter).
   const store = profileStore
-  const save = toolset === "read-only" ? undefined : store?.save?.bind(store)
+  const save = allowsDurableWrites(toolset) ? store?.save?.bind(store) : undefined
 
   const loadView = async (ctx: unknown): Promise<AnalyticsSettingsView> => ({
     settings: await settingsFor(store, ctx),

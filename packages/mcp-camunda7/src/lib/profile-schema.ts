@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { withoutDefaults } from "@miragon-ai/widget-shell/server"
 import { LOCALES, PROFILE_SCHEMA_VERSION, ROLES, THEMES } from "./profile-constants.js"
 
 /**
@@ -73,23 +74,6 @@ export const userProfileSchema = userProfilePreferencesSchema.extend({
 })
 
 export type UserProfile = z.infer<typeof userProfileSchema>
-
-/**
- * Strip `.default()` wrappers from a shape, keeping each field's description.
- * Zod 4 re-applies defaults THROUGH `.partial()` on parse, so a defaulted
- * partial would materialize omitted fields at the tool boundary — a
- * "single-field" save would then silently reset every other defaulted
- * preference. The save input therefore must be default-free.
- */
-function withoutDefaults(shape: z.ZodRawShape): z.ZodRawShape {
-  return Object.fromEntries(
-    Object.entries(shape).map(([key, schema]) => {
-      if (!(schema instanceof z.ZodDefault)) return [key, schema]
-      const inner = schema.unwrap() as z.ZodType
-      return [key, schema.description ? inner.describe(schema.description) : inner]
-    }),
-  )
-}
 
 /**
  * Save input: any subset of the preferences. Omitted fields keep their current

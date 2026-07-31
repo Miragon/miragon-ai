@@ -23,14 +23,6 @@ export const ROLES = ["read-only", "operations", "admin"] as const
 export type Role = (typeof ROLES)[number]
 
 /**
- * Shared fallback key for transports without any request context (stdio,
- * tests) — see `resolveProfileKey`. Lives here (zod- and server-free) so the
- * store's session-cleanup can exempt the record without importing the
- * mcp-use-coupled resolver.
- */
-export const ANONYMOUS_PROFILE_KEY = "anonymous"
-
-/**
  * Bumped when the persisted profile shape changes in a migration-relevant way.
  * Every bump needs a matching entry in `PROFILE_MIGRATIONS`
  * (`profile-migrations.ts`) so older records upgrade on read instead of being

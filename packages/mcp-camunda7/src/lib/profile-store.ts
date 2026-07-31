@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
-import { ANONYMOUS_PROFILE_KEY, PROFILE_SCHEMA_VERSION } from "./profile-constants.js"
+import { ANONYMOUS_PROFILE_KEY } from "@miragon-ai/widget-shell/server"
+import { PROFILE_SCHEMA_VERSION } from "./profile-constants.js"
 import { parseStoredProfile } from "./profile-migrations.js"
 import {
   defaultUserProfile,

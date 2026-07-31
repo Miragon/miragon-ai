@@ -19,6 +19,15 @@ export type {
 } from "@miragon/mcp-toolkit-core"
 export { withToolErrors } from "@miragon/mcp-toolkit-core/tools"
 export { createShellPlugin, shellDefinition } from "./shell-catalogue.js"
+export {
+  ANONYMOUS_PROFILE_KEY,
+  resolveAuthUserId,
+  resolveProfileKey,
+  withoutDefaults,
+  type ProfileAuthContext,
+  type ProfileSlice,
+  type ProfileSource,
+} from "./profile.js"
 
 /**
  * mcp-use's raw `server.tool()` callback expects a result with an implicit

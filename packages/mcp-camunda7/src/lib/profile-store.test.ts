@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import postgres from "postgres"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import { ANONYMOUS_PROFILE_KEY } from "./profile-constants.js"
+import { ANONYMOUS_PROFILE_KEY } from "@miragon-ai/widget-shell/server"
 import {
   createFileSystemProfileStore,
   createInMemoryProfileStore,

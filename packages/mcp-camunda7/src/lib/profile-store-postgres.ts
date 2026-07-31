@@ -1,5 +1,5 @@
 import type postgres from "postgres"
-import { ANONYMOUS_PROFILE_KEY } from "./profile-constants.js"
+import { ANONYMOUS_PROFILE_KEY } from "@miragon-ai/widget-shell/server"
 import { parseStoredProfile } from "./profile-migrations.js"
 import type { UserProfile } from "./profile-schema.js"
 import { mergeProfile, type ProfileStore } from "./profile-store.js"
