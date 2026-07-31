@@ -8,7 +8,7 @@ import {
 } from "./settings.js"
 import { registerSettingsTools } from "./settings-tools.js"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
-import type { ProfileSource } from "./server-locale.js"
+import { localizeFor, type ProfileSource } from "./server-locale.js"
 
 const RESOURCE_URI = "ui://analytics/widgets.html"
 
@@ -78,6 +78,20 @@ describe("settingsFor", () => {
       get: () => Promise.reject(new Error("connection refused")),
     }
     expect(await settingsFor(store)).toEqual({ defaultPeriod: "7d", minBucketSize: 10 })
+  })
+})
+
+describe("localizeFor", () => {
+  it("binds the translate to the profile language", async () => {
+    const store: ProfileSource = { get: () => Promise.resolve({ language: "de" }) }
+    const t = await localizeFor(store)
+    expect(t("aSettings.heading")).toBe("Analyse-Einstellungen")
+  })
+
+  it("falls back to English on a store OUTAGE, like settingsFor", async () => {
+    const store: ProfileSource = { get: () => Promise.reject(new Error("connection refused")) }
+    const t = await localizeFor(store)
+    expect(t("aSettings.heading")).toBe("Analytics Settings")
   })
 })
 

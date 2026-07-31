@@ -85,6 +85,37 @@ export function createDefaultProfileStore(env: NodeJS.ProcessEnv = process.env):
     : createInMemoryProfileStore()
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Expire SESSION-keyed profile records (no auth user stamped, not the shared
+ * anonymous record) at boot and once a day. Session ids die with their MCP
+ * session, so these rows are unreachable garbage — without a TTL a durable
+ * store grows one row per session forever. `MCP_PROFILE_SESSION_TTL_DAYS`
+ * tunes the window (default 30; `0` disables). Returns the stop function for
+ * the shutdown path; the timer is unref'd so it never holds the process open.
+ */
+function startSessionCleanup(store: ProfileStore, env: NodeJS.ProcessEnv): () => void {
+  const raw = env.MCP_PROFILE_SESSION_TTL_DAYS?.trim()
+  const ttlDays = raw === undefined || raw === "" ? 30 : Number.parseInt(raw, 10)
+  if (!Number.isFinite(ttlDays) || ttlDays <= 0) return () => {}
+
+  const run = async () => {
+    try {
+      const removed = await store.cleanupSessions(new Date(Date.now() - ttlDays * DAY_MS))
+      if (removed > 0) {
+        console.log(`[miragon-ai] expired ${removed} session profile(s) older than ${ttlDays}d`)
+      }
+    } catch (err) {
+      console.warn("[miragon-ai] session-profile cleanup failed:", err)
+    }
+  }
+  void run()
+  const timer = setInterval(() => void run(), DAY_MS)
+  timer.unref()
+  return () => clearInterval(timer)
+}
+
 /**
  * Select and initialize the persistence backends. Precedence: `DATABASE_URL`
  * (Postgres, both stores) beats the filesystem knobs `MCP_PROFILE_DIR`/
@@ -97,13 +128,16 @@ export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise
   const session = await initSessionBackends(env)
   const databaseUrl = env.DATABASE_URL?.trim()
   if (!databaseUrl) {
+    const profileStore = createDefaultProfileStore(env)
+    const stopCleanup = startSessionCleanup(profileStore, env)
     return {
-      profileStore: createDefaultProfileStore(env),
+      profileStore,
       dashboardStore: env.MCP_DASHBOARD_DIR
         ? createFileSystemDashboardStore({ dir: env.MCP_DASHBOARD_DIR })
         : undefined,
       serverOptions: session?.serverOptions,
       shutdown: async () => {
+        stopCleanup()
         await session?.close()
       },
     }
@@ -125,11 +159,14 @@ export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise
   }
   console.log("[miragon-ai] profile + dashboard stores: postgres")
 
+  const profileStore = createPostgresProfileStore({ sql })
+  const stopCleanup = startSessionCleanup(profileStore, env)
   return {
-    profileStore: createPostgresProfileStore({ sql }),
+    profileStore,
     dashboardStore: createPostgresDashboardStore({ sql }),
     serverOptions: session?.serverOptions,
     shutdown: async () => {
+      stopCleanup()
       await sql.end({ timeout: 5 })
       await session?.close()
     },

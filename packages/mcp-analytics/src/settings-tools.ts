@@ -7,7 +7,12 @@ import {
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
-import { localizeFor, resolveSettingsKey, type ProfileSource } from "./server-locale.js"
+import {
+  localizeFor,
+  resolveSettingsAuthUserId,
+  resolveSettingsKey,
+  type ProfileSource,
+} from "./server-locale.js"
 import {
   ANALYTICS_MODULE_KEY,
   analyticsSettingsSaveInput,
@@ -128,7 +133,13 @@ export function registerSettingsTools(
           : {}),
         ...params,
       }
-      await save(key, { modules: { [ANALYTICS_MODULE_KEY]: nextSlice } })
+      // Stamping the auth user id marks the record user-bound — exempt from
+      // the app's session-TTL cleanup.
+      await save(
+        key,
+        { modules: { [ANALYTICS_MODULE_KEY]: nextSlice } },
+        { userId: resolveSettingsAuthUserId(ctx) },
+      )
       const effective = parseAnalyticsSettings({ [ANALYTICS_MODULE_KEY]: nextSlice })
       const t = await localizeFor(store, ctx)
       return {

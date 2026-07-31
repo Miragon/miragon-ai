@@ -1,4 +1,5 @@
 import type postgres from "postgres"
+import { ANONYMOUS_PROFILE_KEY } from "./profile-constants.js"
 import { parseStoredProfile } from "./profile-migrations.js"
 import type { UserProfile } from "./profile-schema.js"
 import { mergeProfile, type ProfileStore } from "./profile-store.js"
@@ -57,7 +58,7 @@ export function createPostgresProfileStore(options: { sql: postgres.Sql }): Prof
       `
       return parseRow(rows[0])
     },
-    async save(key, input) {
+    async save(key, input, opts) {
       return await sql.begin(async (tx) => {
         // Advisory lock, not just SELECT…FOR UPDATE: a row that doesn't exist
         // yet cannot be row-locked, so two concurrent FIRST saves of the same
@@ -69,7 +70,7 @@ export function createPostgresProfileStore(options: { sql: postgres.Sql }): Prof
         const rows = await tx<{ profile: unknown }[]>`
           SELECT profile FROM user_profiles WHERE key = ${key} FOR UPDATE
         `
-        const record = mergeProfile(key, parseRow(rows[0]), input, new Date().toISOString())
+        const record = mergeProfile(key, parseRow(rows[0]), input, new Date().toISOString(), opts)
         // sql.json, not JSON.stringify: postgres.js serializes parameters by
         // the server-described type, and the jsonb serializer stringifies
         // itself — a pre-stringified value gets double-encoded into a jsonb
@@ -93,6 +94,20 @@ export function createPostgresProfileStore(options: { sql: postgres.Sql }): Prof
     async delete(key) {
       const result = await sql`DELETE FROM user_profiles WHERE key = ${key}`
       return result.count > 0
+    },
+    async cleanupSessions(olderThan) {
+      // Session-keyed rows only: `user_id` is stamped by the save path when
+      // the request carried an authenticated user, so user-bound records and
+      // the shared anonymous record never expire. Predicate mirrors
+      // `isExpiredSessionRecord` (SQL side of the same rule) — hence the
+      // constant, not a literal, so the two can't drift apart.
+      const result = await sql`
+        DELETE FROM user_profiles
+        WHERE user_id IS NULL
+          AND key <> ${ANONYMOUS_PROFILE_KEY}
+          AND updated_at < ${olderThan}
+      `
+      return result.count
     },
   }
 }

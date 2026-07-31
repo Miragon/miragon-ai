@@ -1,4 +1,5 @@
 import { getRequestContext } from "mcp-use/server"
+import { ANONYMOUS_PROFILE_KEY } from "./profile-constants.js"
 
 /**
  * The auth-carrying slice of an mcp-use tool-handler `ctx` (its second
@@ -16,9 +17,10 @@ export interface ProfileAuthContext {
  * save persists under this record and is read back on the next load, so a
  * local stdio user gets one working (shared) profile instead of write-only
  * saves that never surface again. HTTP requests missing a session id do NOT
- * map here (see {@link resolveProfileKey}).
+ * map here (see {@link resolveProfileKey}). Canonical value lives in
+ * profile-constants.ts; re-exported here for the resolver's call sites.
  */
-export const ANONYMOUS_PROFILE_KEY = "anonymous"
+export { ANONYMOUS_PROFILE_KEY }
 
 /**
  * Resolves the key a user profile hangs on — the single place that decides
@@ -43,12 +45,29 @@ export const ANONYMOUS_PROFILE_KEY = "anonymous"
  * the auth slice is read defensively here.
  */
 export function resolveProfileKey(ctx?: unknown): string | undefined {
-  const ctxUserId = (ctx as ProfileAuthContext | undefined)?.auth?.user?.userId
-  if (typeof ctxUserId === "string" && ctxUserId.length > 0) return ctxUserId
+  const userId = resolveAuthUserId(ctx)
+  if (userId) return userId
 
   const reqCtx = getRequestContext()
   if (!reqCtx) return ANONYMOUS_PROFILE_KEY
 
+  return reqCtx.req.header("Mcp-Session-Id") ?? reqCtx.req.header("mcp-session-id") ?? undefined
+}
+
+/**
+ * Just the authenticated-user half of {@link resolveProfileKey}: the user id
+ * from the tool-handler `ctx.auth`, or from the request context's `auth`
+ * variable (registrar handlers without a `ctx`), else `undefined`. Save paths
+ * use this to STAMP `userId` onto the persisted record — the marker that
+ * exempts a row from the session-TTL cleanup (a record without `userId` is
+ * session-keyed and expires; see `ProfileStore.cleanupSessions`).
+ */
+export function resolveAuthUserId(ctx?: unknown): string | undefined {
+  const ctxUserId = (ctx as ProfileAuthContext | undefined)?.auth?.user?.userId
+  if (typeof ctxUserId === "string" && ctxUserId.length > 0) return ctxUserId
+
+  const reqCtx = getRequestContext()
+  if (!reqCtx) return undefined
   try {
     const auth = (reqCtx as { get(key: string): unknown }).get("auth") as
       | ProfileAuthContext["auth"]
@@ -56,8 +75,7 @@ export function resolveProfileKey(ctx?: unknown): string | undefined {
     const userId = auth?.user?.userId
     if (typeof userId === "string" && userId.length > 0) return userId
   } catch {
-    // Context-variable access is best-effort — fall through to the session id.
+    // Context-variable access is best-effort.
   }
-
-  return reqCtx.req.header("Mcp-Session-Id") ?? reqCtx.req.header("mcp-session-id") ?? undefined
+  return undefined
 }

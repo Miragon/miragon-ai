@@ -29,6 +29,7 @@ const APP_ENV_VARS = [
   "MCP_ACTIVE_MODULES",
   "MCP_DASHBOARD_DIR",
   "MCP_PROFILE_DIR",
+  "MCP_PROFILE_SESSION_TTL_DAYS",
   // Postgres persistence for profiles + dashboards, and Redis MCP-session
   // backends for multi-instance (both in src/persistence/). Listed for
   // documentation; the ecosystem-standard unprefixed names are outside the

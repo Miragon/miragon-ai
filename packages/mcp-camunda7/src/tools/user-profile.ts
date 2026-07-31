@@ -19,7 +19,11 @@ import {
   type UserProfileView,
 } from "../lib/profile-schema.js"
 import type { ProfileStore } from "../lib/profile-store.js"
-import { ANONYMOUS_PROFILE_KEY, resolveProfileKey } from "../lib/resolve-profile-key.js"
+import {
+  ANONYMOUS_PROFILE_KEY,
+  resolveAuthUserId,
+  resolveProfileKey,
+} from "../lib/resolve-profile-key.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { translator } from "../messages/index.js"
 
@@ -153,7 +157,9 @@ export function registerUserProfileTools(
         // writing into a record shared across unrelated keyless clients.
         throw new Error("No session identity (missing Mcp-Session-Id) — cannot save the profile.")
       }
-      const saved = await store.save(key, params)
+      // Stamping the auth user id marks the record user-bound — exempt from
+      // the session-TTL cleanup.
+      const saved = await store.save(key, params, { userId: resolveAuthUserId(ctx) })
       return {
         content: [{ type: "text" as const, text: summarize(saved) }],
         structuredContent: saved as unknown as Record<string, unknown>,

@@ -52,6 +52,10 @@ the server validates the token and the engine enforces the caller's
 permissions — which needs an engine with REST auth enabled; a default engine
 accepts anonymous requests and ignores the token.
 
+With auth active, user profiles and saved dashboards scope to the
+authenticated user (`sub`) instead of the MCP session, so preferences follow
+the user across sessions and never expire.
+
 ## Environment variables
 
 | Variable                                | Default                             | Notes                                                                                                                                                                                                                                           |
@@ -62,6 +66,7 @@ accepts anonymous requests and ignores the token.
 | `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated `module` or `module:toolset` entries; e.g. `camunda7:read-only,analytics`                                                                                                                                                       |
 | `DATABASE_URL`                          | —                                   | Postgres for saved dashboards + user profiles (both stores; migrations run at boot). Beats `MCP_*_DIR`; the Compose stack ships an instance on host port `8440`                                                                                 |
 | `MCP_DASHBOARD_DIR` / `MCP_PROFILE_DIR` | in-memory                           | Directories persisting saved dashboards / user profiles across restarts — the file-based alternative when no `DATABASE_URL` is set                                                                                                              |
+| `MCP_PROFILE_SESSION_TTL_DAYS`          | `30`                                | Expiry for session-keyed profiles (no authenticated user), checked at boot + daily. User-bound profiles and the shared stdio `anonymous` record never expire. `0` disables                                                                      |
 | `REDIS_URL`                             | —                                   | Redis-backed MCP session sharing across multiple server instances (no sticky routing needed); single-instance deployments leave it unset                                                                                                        |
 | `CAMUNDA_ENGINES_FILE`                  | —                                   | Path to a JSON file with the engine list `[{id, baseUrl, cockpitUrl?, flavor?, auth?}, ...]`; highest precedence                                                                                                                                |
 | `CAMUNDA_ENGINES_JSON`                  | —                                   | Same engine array as inline JSON; ignored when `CAMUNDA_ENGINES_FILE` is set. Entries take an optional `flavor` (`cibseven` \| `operaton` \| `camunda7`, default `cibseven`) selecting the vendor's cockpit-link routes — mixed fleets are fine |

@@ -11,7 +11,11 @@ import { translator } from "./messages/index.js"
  */
 export interface ProfileSource {
   get(key: string): Promise<ProfileSlice | undefined>
-  save?(key: string, input: { modules: Record<string, unknown> }): Promise<ProfileSlice>
+  save?(
+    key: string,
+    input: { modules: Record<string, unknown> },
+    opts?: { userId?: string },
+  ): Promise<ProfileSlice>
 }
 
 /** The slice of the shared profile record this module reads. */
@@ -32,30 +36,53 @@ export interface ProfileSlice {
  * clients never cross-share one record.
  */
 export function resolveSettingsKey(ctx?: unknown): string | undefined {
+  const userId = resolveSettingsAuthUserId(ctx)
+  if (userId) return userId
+
+  const reqCtx = getRequestContext()
+  if (!reqCtx) return "anonymous"
+
+  return reqCtx.req.header("Mcp-Session-Id") ?? reqCtx.req.header("mcp-session-id") ?? undefined
+}
+
+/**
+ * Just the authenticated-user half of {@link resolveSettingsKey} — the save
+ * path stamps it onto the record (`opts.userId`), marking it user-bound and
+ * exempt from the app's session-TTL cleanup. Mirrors camunda7's
+ * `resolveAuthUserId` (module peers can't share the code).
+ */
+export function resolveSettingsAuthUserId(ctx?: unknown): string | undefined {
   type AuthSlice = { user?: { userId?: unknown } } | undefined
   const ctxUserId = (ctx as { auth?: AuthSlice } | undefined)?.auth?.user?.userId
   if (typeof ctxUserId === "string" && ctxUserId.length > 0) return ctxUserId
 
   const reqCtx = getRequestContext()
-  if (!reqCtx) return "anonymous"
-
+  if (!reqCtx) return undefined
   try {
     const auth = (reqCtx as { get(key: string): unknown }).get("auth") as AuthSlice
     const userId = auth?.user?.userId
     if (typeof userId === "string" && userId.length > 0) return userId
   } catch {
-    // Context-variable access is best-effort — fall through to the session id.
+    // Context-variable access is best-effort.
   }
-
-  return reqCtx.req.header("Mcp-Session-Id") ?? reqCtx.req.header("mcp-session-id") ?? undefined
+  return undefined
 }
 
-/** Resolve the active locale from the profile store, falling back to English. */
+/**
+ * Resolve the active locale from the profile store, falling back to English.
+ * Fail-soft on every axis — no store, no key, or a store OUTAGE — for the same
+ * reason `settingsFor` is: a profile-store hiccup must never fail an analytics
+ * read that only needs Prometheus.
+ */
 async function resolveLocale(store?: ProfileSource, ctx?: unknown): Promise<string> {
   if (!store) return "en"
   const key = resolveSettingsKey(ctx)
   if (!key) return "en"
-  return (await store.get(key))?.language ?? "en"
+  try {
+    return (await store.get(key))?.language ?? "en"
+  } catch {
+    return "en"
+  }
 }
 
 /** A locale-bound translate for analytics server summaries. */
