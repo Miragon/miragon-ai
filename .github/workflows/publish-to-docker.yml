@@ -24,7 +24,6 @@ on:
 
 permissions:
   contents: read
-  packages: read
   id-token: write
 
 env:
@@ -68,8 +67,6 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.IMAGE }}:latest
-          secrets: |
-            github_token=${{ secrets.GITHUB_TOKEN }}
           provenance: ${{ inputs.dry_run != true }}
           sbom: ${{ inputs.dry_run != true }}
           cache-from: type=gha

@@ -56,7 +56,6 @@ One-time setup:
 ```sh
 fly auth login
 (cd playground/cibseven-example && ./gradlew bootJar)   # engine image copies the jar
-export GITHUB_TOKEN=ghp_xxx                             # read:packages, for the server build
 ./playground/fly/deploy.sh all                          # or: otel|engine|prometheus|grafana|postgres|server
 ```
 

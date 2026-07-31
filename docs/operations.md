@@ -16,16 +16,16 @@ Releases are cut by release-please: merging the Release PR tags `v<version>`,
 and after manual approval `publish-to-docker.yml` builds the root `Dockerfile`
 and pushes `:<version>` and `:latest`.
 
-To build it yourself (needs `GITHUB_TOKEN`, a PAT with `read:packages`, as a
-BuildKit secret for the private `@miragon` packages):
+To build it yourself (no registry credential needed — all dependencies are
+public):
 
 ```bash
-docker build --secret id=github_token,env=GITHUB_TOKEN -t miragon-ai-server .
+docker build -t miragon-ai-server .
 ```
 
 `playground/docker/docker-compose.yml` is the fully wired local demo
-(`--profile full` adds the server — export `GITHUB_TOKEN`); `playground/README.md`
-covers deploying the same stack to Fly.io (`deploy-playground.yml`, manual).
+(`--profile full` adds the server); `playground/README.md` covers deploying the
+same stack to Fly.io (`deploy-playground.yml`, manual).
 
 ## Security
 
@@ -127,7 +127,6 @@ tool surfaces the same gauges + firing alerts in one call.
 ## CI/CD
 
 `.github/workflows/ci.yml` runs parallel jobs on every push — TypeScript
-(build, test, lint, format), Kotlin engine plugins, and the CIB Seven example —
-installing the private `@miragon` packages via the built-in `GITHUB_TOKEN`.
-This docs site deploys to Netlify (root `netlify.toml`; docs-only pnpm
-install, so no registry credential is needed there).
+(build, test, lint, format), Kotlin engine plugins, and the CIB Seven example.
+All npm dependencies are public, so no registry credential is involved. This
+docs site deploys to Netlify (root `netlify.toml`; docs-only pnpm install).

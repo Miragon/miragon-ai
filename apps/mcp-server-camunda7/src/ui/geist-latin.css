@@ -4,7 +4,10 @@
  * index.css also ships cyrillic, cyrillic-ext and vietnamese subsets; under
  * vite-singlefile every subset is base64-inlined into mcp-app.html (~100 KB of
  * gzip-incompressible wire weight) although the product ships en/de only.
- * Blocks copied verbatim from @fontsource-variable/geist@5.2.9 index.css.
+ * Blocks copied verbatim from @fontsource-variable/geist@5.3.0 index.css.
+ * The package is a direct devDependency so these `…/files/*.woff2` urls
+ * resolve from this app (pnpm keeps transitive deps off its resolution path)
+ * and get inlined instead of pointing at a 404.
  */
 
 /* geist-latin-ext-wght-normal */

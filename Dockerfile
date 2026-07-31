@@ -13,24 +13,19 @@ WORKDIR /app
 
 COPY pnpm-lock.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    --mount=type=secret,id=github_token \
-    GITHUB_TOKEN=$(cat /run/secrets/github_token) pnpm fetch
+    pnpm fetch
 
 COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY apps/ apps/
 COPY packages/ packages/
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    --mount=type=secret,id=github_token \
-    GITHUB_TOKEN=$(cat /run/secrets/github_token) pnpm install --frozen-lockfile --offline
+    pnpm install --frozen-lockfile --offline
 
 RUN --mount=type=cache,id=turbo-server,target=/app/.turbo \
-    --mount=type=secret,id=github_token \
-    GITHUB_TOKEN=$(cat /run/secrets/github_token) pnpm turbo build --filter=@miragon-ai/mcp-server-camunda7...
+    pnpm turbo build --filter=@miragon-ai/mcp-server-camunda7...
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    --mount=type=secret,id=github_token \
-    GITHUB_TOKEN=$(cat /run/secrets/github_token) \
     pnpm --filter @miragon-ai/mcp-server-camunda7 deploy --prod --legacy /app/deployed
 
 FROM base AS runtime

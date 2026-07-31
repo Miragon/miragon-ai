@@ -24,7 +24,6 @@ on:
 
 permissions:
   contents: read
-  packages: read
 
 # Never run two deploys of the shared playground environment at once.
 concurrency:
@@ -66,8 +65,5 @@ jobs:
       - name: Deploy
         run: ./playground/fly/deploy.sh "${{ inputs.target }}"
         env:
-          # Build secret for the server image (private @miragon packages on
-          # npm.pkg.github.com).
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Org that owns the playground apps (repo variable, optional).
           FLY_ORG: ${{ vars.FLY_ORG || 'personal' }}

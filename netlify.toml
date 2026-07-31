@@ -14,11 +14,7 @@
   publish = "docs/.vitepress/dist"
 
 [build.environment]
-  # Install only the docs package (+ its workspace deps — none), so the
-  # private @miragon/* packages of other workspace packages are never
-  # fetched and no registry credential is needed on Netlify.
+  # Install only the docs package (+ its workspace deps — none), so the deps of
+  # the other workspace packages are never fetched on Netlify.
   PNPM_FLAGS = "--filter @miragon-ai/docs..."
-  # .npmrc references ${GITHUB_TOKEN}; pnpm fails config expansion when the
-  # variable is entirely unset, even if nothing hits npm.pkg.github.com.
-  GITHUB_TOKEN = "unused"
   NODE_VERSION = "22"
