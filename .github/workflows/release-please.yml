@@ -24,6 +24,7 @@ jobs:
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
       tag_name: ${{ steps.rp.outputs.tag_name }}
+      packages_released: ${{ steps.rp.outputs['packages--release_created'] }}
     steps:
       - uses: actions/create-github-app-token@v3.2.0
         id: app-token
@@ -66,3 +67,23 @@ jobs:
     with:
       dry_run: ${{ inputs.dry_run == true }}
       version: ${{ needs.release-please.outputs.tag_name }}
+
+  publish-npm:
+    name: Publish ${{ matrix.package }} to npm
+    needs: release-please
+    if: ${{ needs.release-please.outputs.packages_released == 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - client-camunda7
+          - client-analytics
+          - widget-shell
+          - mcp-camunda7
+          - mcp-analytics
+    uses: ./.github/workflows/publish-npm-package.yml
+    with:
+      package: ${{ matrix.package }}

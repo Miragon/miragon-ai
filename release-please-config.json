@@ -1,12 +1,15 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "release-type": "simple",
-  "include-component-in-tag": false,
   "include-v-in-tag": true,
+  "separate-pull-requests": true,
   "draft": false,
+  "bootstrap-sha": "a4e55d11007111f01270fc1e236269d1972baf5f",
   "packages": {
     ".": {
+      "release-type": "simple",
       "package-name": "miragon-ai",
+      "component": "",
+      "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         { "type": "generic", "path": "engine-plugins/gradle.properties" },
@@ -15,7 +18,15 @@
           "type": "json",
           "path": "apps/mcp-server-camunda7/package.json",
           "jsonpath": "$.version"
-        },
+        }
+      ]
+    },
+    "packages": {
+      "release-type": "simple",
+      "component": "packages",
+      "include-component-in-tag": true,
+      "changelog-path": "packages/CHANGELOG.md",
+      "extra-files": [
         {
           "type": "json",
           "path": "packages/client-camunda7/package.json",
@@ -24,6 +35,21 @@
         {
           "type": "json",
           "path": "packages/client-analytics/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/widget-shell/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/mcp-camunda7/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/mcp-analytics/package.json",
           "jsonpath": "$.version"
         }
       ]

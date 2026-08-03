@@ -1,12 +1,14 @@
 {
   "name": "@miragon-ai/widget-shell",
-  "version": "0.1.0",
-  "private": true,
-  "license": "UNLICENSED",
+  "version": "0.0.0",
+  "description": "Shared widget kit for Miragon AI MCP Apps: UI primitives, view + data-feed builders, and the shell:* widget catalogue.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Miragon/miragon-ai.git",
     "directory": "packages/widget-shell"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "type": "module",
   "files": [

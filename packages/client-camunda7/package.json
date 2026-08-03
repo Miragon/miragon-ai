@@ -1,14 +1,14 @@
 {
   "name": "@miragon-ai/client-camunda7",
-  "version": "0.2.1",
+  "version": "0.0.0",
+  "description": "Generated CIB Seven / Camunda 7 REST SDK plus Zod input schemas.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Miragon/miragon-ai.git",
     "directory": "packages/client-camunda7"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "access": "public"
   },
   "files": [
     "dist"
