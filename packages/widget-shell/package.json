@@ -2,6 +2,19 @@
   "name": "@miragon-ai/widget-shell",
   "version": "0.0.0",
   "description": "Shared widget kit for Miragon AI MCP Apps: UI primitives, view + data-feed builders, and the shell:* widget catalogue.",
+  "keywords": [
+    "mcp",
+    "mcp-apps",
+    "widgets",
+    "react",
+    "ui",
+    "camunda"
+  ],
+  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/widget-shell#readme",
+  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "engines": {
+    "node": ">=22"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Miragon/miragon-ai.git",
