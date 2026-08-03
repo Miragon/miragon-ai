@@ -1,14 +1,20 @@
 {
   "name": "@miragon-ai/mcp-camunda7",
-  "version": "0.1.0",
-  "private": true,
-  "license": "UNLICENSED",
+  "version": "0.0.0",
+  "description": "Camunda 7 / CIB Seven MCP module: operations tools, widget tools, and cockpit widgets.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Miragon/miragon-ai.git",
     "directory": "packages/mcp-camunda7"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
+  "files": [
+    "dist",
+    "src"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {

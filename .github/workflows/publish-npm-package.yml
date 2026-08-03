@@ -1,0 +1,54 @@
+name: Publish npm package
+
+# Reusable workflow: publishes a single package under packages/ to the public
+# npm registry using OIDC trusted publishing (no NPM_TOKEN). Provenance is
+# attached automatically. The `id-token: write` permission and the `npm`
+# environment are what npm's trusted publishing exchanges for a short-lived
+# token — configure the trusted publisher for each package on npmjs.com first
+# (Settings → Trusted publisher → GitHub Actions, this repo + `release-please.yml`,
+# i.e. the CALLING workflow, not this one).
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: Package directory name under packages/
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.0.9
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      # Build the target package and its workspace dependencies only.
+      - run: pnpm --filter "@miragon-ai/${{ inputs.package }}..." run build
+
+      - name: Publish packages/${{ inputs.package }}
+        run: |
+          dir="packages/${{ inputs.package }}"
+          name="$(node -p "require('./$dir/package.json').name")"
+          version="$(node -p "require('./$dir/package.json').version")"
+          if npm view "$name@$version" version > /dev/null 2>&1; then
+            echo "$name@$version already published — skipping"
+          else
+            pnpm publish --filter "$name" --provenance --access public --no-git-checks
+          fi
