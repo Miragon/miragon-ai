@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/Miragon/miragon-ai/compare/v0.2.1...v0.2.2) (2026-08-03)
+
+
+### Bug Fixes
+
+* add missing npm metadata to published packages ([#182](https://github.com/Miragon/miragon-ai/issues/182)) ([69ff2bc](https://github.com/Miragon/miragon-ai/commit/69ff2bc9fe94b62a5c00418dcfc5817beeaf4e8d))
+
 ## [0.2.1](https://github.com/Miragon/miragon-ai/compare/v0.2.0...v0.2.1) (2026-06-22)
 
 

@@ -1,5 +1,5 @@
 {
-  ".": "0.2.1",
+  ".": "0.2.2",
   "packages/client-camunda7": "0.0.0",
   "packages/client-analytics": "0.0.0",
   "packages/widget-shell": "0.0.0",
