@@ -19,8 +19,9 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 export function registerEngineTools(register: Register, profileStore: ProfileStore): void {
   // The user-profile `allowedEngineIds` curates which engines the session may
   // pick from. An empty/absent allow-list means "all" — never lock the session
-  // out of every engine. Read off the session/auth key; with no key (stdio) the
-  // full list is returned. This is curation, not security: an explicit per-call
+  // out of every engine. resolveProfileKey (argument-less: registrar handlers
+  // get no ctx) resolves auth user id → session id → stdio-anonymous off the
+  // request context. This is curation, not security: an explicit per-call
   // `engine` override still reaches any configured engine.
   const allowedEnginesFor = async (reg: EngineRegistry): Promise<EngineEntry[]> => {
     const key = resolveProfileKey()

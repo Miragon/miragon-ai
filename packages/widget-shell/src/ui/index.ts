@@ -13,6 +13,8 @@ export { KpiGrid, KpiGridSkeleton, type KpiCell, type KpiGridHeader } from "./kp
 export { FilterBar, type FilterChip } from "./filter-bar.js"
 export { RowCard } from "./row-card.js"
 export { NativeSelect } from "./native-select.js"
+export { SettingsCard, SettingsField, SettingsInput } from "./settings.js"
+export { HostWidgetsProvider, useHostWidgets } from "./host-widgets.js"
 export { SegmentedControl, type SegmentedControlOption } from "./segmented-control.js"
 export { useDetailView } from "./use-detail-view.js"
 export { SectionHeading } from "@miragon/mcp-toolkit-ui"

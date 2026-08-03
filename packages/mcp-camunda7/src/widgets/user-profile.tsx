@@ -1,24 +1,26 @@
-import { cloneElement, useEffect, useId, useState, type ReactElement } from "react"
+import { useEffect, useState } from "react"
 import {
   Alert,
   AlertDescription,
   Badge,
   Button,
-  Card,
-  CardContent,
   useToolMutation,
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import { ModelContext } from "mcp-use/react"
-import { NativeSelect, WidgetShell, useDetailView } from "@miragon-ai/widget-shell/widgets"
+import {
+  NativeSelect,
+  SettingsCard,
+  SettingsField,
+  WidgetShell,
+  useDetailView,
+} from "@miragon-ai/widget-shell/widgets"
 
 import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_USER_PROFILE_DATA } from "../tool-names.js"
 import {
-  ANALYTICS_PERIODS,
   LOCALES,
   ROLES,
   THEMES,
-  type AnalyticsPeriod,
   type Locale,
   type Role,
   type ThemePref,
@@ -45,9 +47,6 @@ interface FormState {
   defaultEngineId: string
   defaultDashboardId: string
   pinnedDashboardIds: string[]
-  analyticsDefaultPeriod: AnalyticsPeriod
-  /** Raw input text — clamped/parsed only on save, so typing stays free. */
-  analyticsMinBucketSize: string
   preferredRole: "" | Role
 }
 
@@ -66,64 +65,11 @@ function fromProfile(p: UserProfile, engineIds: string[]): FormState {
     defaultEngineId: p.defaultEngineId ?? "",
     defaultDashboardId: p.defaultDashboardId ?? "",
     pinnedDashboardIds: p.pinnedDashboardIds ?? [],
-    analyticsDefaultPeriod: p.analyticsDefaultPeriod,
-    analyticsMinBucketSize: String(p.analyticsMinBucketSize),
     preferredRole: p.preferredRole ?? "",
   }
 }
 
-const labelCls = "text-foreground text-sm font-medium"
 const helpCls = "text-muted-foreground text-xs"
-const inputCls =
-  "border-border bg-background text-foreground h-9 rounded-md border px-2 text-sm outline-none focus-visible:ring-ring focus-visible:ring-2"
-
-function Field({
-  label,
-  help,
-  group = false,
-  children,
-}: {
-  label: string
-  help?: string
-  /** Checkbox-group fields: labelled via role="group" (no single control to point htmlFor at). */
-  group?: boolean
-  children: ReactElement<{ id?: string }>
-}) {
-  const id = useId()
-  const labelId = `${id}-label`
-  return (
-    <div className="flex flex-col gap-1.5">
-      {group ? (
-        <span id={labelId} className={labelCls}>
-          {label}
-        </span>
-      ) : (
-        <label htmlFor={id} className={labelCls}>
-          {label}
-        </label>
-      )}
-      {group ? (
-        <div role="group" aria-labelledby={labelId}>
-          {children}
-        </div>
-      ) : (
-        cloneElement(children, { id })
-      )}
-      {help && <span className={helpCls}>{help}</span>}
-    </div>
-  )
-}
-
-function SettingsCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Card className="gap-0 py-0 shadow-none">
-      <CardContent className="flex flex-col gap-4 p-4">
-        <h3 className="text-foreground text-sm font-semibold">{title}</h3>
-        {children}
-      </CardContent>
-    </Card>
-  )
-}
 
 /**
  * Profile & settings panel. Self-fetches the current session's profile +
@@ -164,7 +110,11 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
     "list-dashboards",
     {},
   )
-  const dashboards = dashboardsQuery.data?.items ?? []
+  const pinnedIds = view.profile.pinnedDashboardIds ?? []
+  // Pinned dashboards sort first — the one behavior the pin promises.
+  const dashboards = [...(dashboardsQuery.data?.items ?? [])].sort(
+    (a, b) => Number(pinnedIds.includes(b.id)) - Number(pinnedIds.includes(a.id)),
+  )
 
   const save = useToolMutation(CAMUNDA7_SAVE_USER_PROFILE)
   const [form, setForm] = useState<FormState>(() =>
@@ -228,8 +178,6 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
         defaultEngineId: form.defaultEngineId,
         defaultDashboardId: form.defaultDashboardId,
         pinnedDashboardIds: form.pinnedDashboardIds,
-        analyticsDefaultPeriod: form.analyticsDefaultPeriod,
-        analyticsMinBucketSize: Math.max(1, Number.parseInt(form.analyticsMinBucketSize, 10) || 1),
         // "" = unset → omit so the enum stays valid and the value is unchanged.
         ...(form.preferredRole ? { preferredRole: form.preferredRole } : {}),
       },
@@ -243,11 +191,15 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
   }
 
   const allEnginesAllowed = form.allowedEngineIds.length >= engines.length
+  // A read-only deployment never registered camunda7_save_user_profile — the
+  // fields stay visible but disabled, and the model must not be told about a
+  // write tool it cannot call.
+  const canSave = view.canSave
 
   return (
     <>
       <ModelContext
-        content={`Support is on the MiragonAI profile & settings panel. Current preferences — language ${form.language}, theme ${form.theme}, ${allEnginesAllowed ? "all engines available" : `${form.allowedEngineIds.length} engine(s) available`}. Preferences can be changed here or via camunda7_save_user_profile.`}
+        content={`Support is on the MiragonAI profile & settings panel. Current preferences — language ${form.language}, theme ${form.theme}, ${allEnginesAllowed ? "all engines available" : `${form.allowedEngineIds.length} engine(s) available`}${form.defaultDashboardId ? `, default dashboard "${form.defaultDashboardId}" (open it via load-dashboard when the user asks for their dashboard)` : ""}. ${canSave ? "Preferences can be changed here or via camunda7_save_user_profile." : "Preferences are read-only in this deployment and cannot be changed."}`}
       />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -255,14 +207,18 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           <h2 className="text-xl font-semibold">{t("profile.heading")}</h2>
           <p className="text-muted-foreground mt-1 text-sm">{t("profile.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {savedAt && !save.isPending && (
-            <Badge variant="secondary">{t("profile.saved", { time: savedAt })}</Badge>
-          )}
-          <Button size="sm" onClick={handleSave} disabled={save.isPending}>
-            {save.isPending ? t("profile.saving") : t("profile.save")}
-          </Button>
-        </div>
+        {canSave ? (
+          <div className="flex items-center gap-2">
+            {savedAt && !save.isPending && (
+              <Badge variant="secondary">{t("profile.saved", { time: savedAt })}</Badge>
+            )}
+            <Button size="sm" onClick={handleSave} disabled={save.isPending}>
+              {save.isPending ? t("profile.saving") : t("profile.save")}
+            </Button>
+          </div>
+        ) : (
+          <span className={helpCls}>{t("profile.readOnly")}</span>
+        )}
       </div>
 
       {save.isError && (
@@ -273,9 +229,13 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SettingsCard title={t("profile.section.appearance")}>
-          <Field label={t("profile.field.language")} help={t("profile.field.language.help")}>
+          <SettingsField
+            label={t("profile.field.language")}
+            help={t("profile.field.language.help")}
+          >
             <NativeSelect
               value={form.language}
+              disabled={!canSave}
               onChange={(e) => set("language", parseEnum(e.target.value, LOCALES) ?? form.language)}
             >
               {LOCALES.map((l) => (
@@ -284,10 +244,11 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                 </option>
               ))}
             </NativeSelect>
-          </Field>
-          <Field label={t("profile.field.theme")}>
+          </SettingsField>
+          <SettingsField label={t("profile.field.theme")}>
             <NativeSelect
               value={form.theme}
+              disabled={!canSave}
               onChange={(e) => set("theme", parseEnum(e.target.value, THEMES) ?? form.theme)}
             >
               {THEMES.map((th) => (
@@ -296,10 +257,11 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                 </option>
               ))}
             </NativeSelect>
-          </Field>
-          <Field label={t("profile.field.role")} help={t("profile.field.role.help")}>
+          </SettingsField>
+          <SettingsField label={t("profile.field.role")} help={t("profile.field.role.help")}>
             <NativeSelect
               value={form.preferredRole}
+              disabled={!canSave}
               onChange={(e) => set("preferredRole", parseEnum(e.target.value, ROLES) ?? "")}
             >
               <option value="">{t("profile.role.unset")}</option>
@@ -309,11 +271,11 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                 </option>
               ))}
             </NativeSelect>
-          </Field>
+          </SettingsField>
         </SettingsCard>
 
         <SettingsCard title={t("profile.section.engines")}>
-          <Field
+          <SettingsField
             label={t("profile.field.allowedEngines")}
             help={t("profile.field.allowedEngines.help")}
             group
@@ -325,6 +287,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                   <input
                     type="checkbox"
                     checked={form.allowedEngineIds.includes(e.id)}
+                    disabled={!canSave}
                     onChange={(ev) => toggleEngine(e.id, ev.target.checked)}
                   />
                   <span className="font-mono">{e.id}</span>
@@ -332,13 +295,14 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                 </label>
               ))}
             </div>
-          </Field>
-          <Field
+          </SettingsField>
+          <SettingsField
             label={t("profile.field.defaultEngine")}
             help={t("profile.field.defaultEngine.help")}
           >
             <NativeSelect
               value={form.defaultEngineId}
+              disabled={!canSave}
               onChange={(e) => set("defaultEngineId", e.target.value)}
             >
               <option value="">{t("profile.engine.auto")}</option>
@@ -350,7 +314,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                   </option>
                 ))}
             </NativeSelect>
-          </Field>
+          </SettingsField>
         </SettingsCard>
 
         <SettingsCard title={t("profile.section.dashboards")}>
@@ -360,12 +324,13 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
             <span className={helpCls}>{t("profile.dashboards.empty")}</span>
           ) : (
             <>
-              <Field
+              <SettingsField
                 label={t("profile.field.defaultDashboard")}
                 help={t("profile.field.defaultDashboard.help")}
               >
                 <NativeSelect
                   value={form.defaultDashboardId}
+                  disabled={!canSave}
                   onChange={(e) => set("defaultDashboardId", e.target.value)}
                 >
                   <option value="">{t("profile.dashboard.none")}</option>
@@ -375,8 +340,8 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                     </option>
                   ))}
                 </NativeSelect>
-              </Field>
-              <Field
+              </SettingsField>
+              <SettingsField
                 label={t("profile.field.pinnedDashboards")}
                 help={t("profile.field.pinnedDashboards.help")}
                 group
@@ -387,47 +352,16 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                       <input
                         type="checkbox"
                         checked={form.pinnedDashboardIds.includes(d.id)}
+                        disabled={!canSave}
                         onChange={(ev) => togglePinned(d.id, ev.target.checked)}
                       />
                       <span>{d.title ?? d.name}</span>
                     </label>
                   ))}
                 </div>
-              </Field>
+              </SettingsField>
             </>
           )}
-        </SettingsCard>
-
-        <SettingsCard title={t("profile.section.analytics")}>
-          <Field
-            label={t("profile.field.analyticsPeriod")}
-            help={t("profile.field.analyticsPeriod.help")}
-          >
-            <NativeSelect
-              value={form.analyticsDefaultPeriod}
-              onChange={(e) =>
-                set(
-                  "analyticsDefaultPeriod",
-                  parseEnum(e.target.value, ANALYTICS_PERIODS) ?? form.analyticsDefaultPeriod,
-                )
-              }
-            >
-              {ANALYTICS_PERIODS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </NativeSelect>
-          </Field>
-          <Field label={t("profile.field.minBucket")} help={t("profile.field.minBucket.help")}>
-            <input
-              type="number"
-              min={1}
-              className={inputCls}
-              value={form.analyticsMinBucketSize}
-              onChange={(e) => set("analyticsMinBucketSize", e.target.value)}
-            />
-          </Field>
         </SettingsCard>
       </div>
     </>

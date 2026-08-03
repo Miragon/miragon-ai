@@ -15,6 +15,16 @@ import type { ProcessInstancesData } from "./process-instances/list.js"
 import { camunda7BaseWidgets } from "./registry.js"
 import { CockpitApp } from "./cockpit-app/app.js"
 
+export { Camunda7StandaloneShell } from "./standalone-shell.js"
+
+/**
+ * The cockpit's view→layout catalogue. Exported so the host app can ASSERT over
+ * the composition — notably that `cockpitViews.settings` still lists every
+ * module's settings section (a hand-maintained cross-module list that no other
+ * check covers; see the app's `widget-registry.test.ts`).
+ */
+export { cockpitViews, filterLayoutToWidgets } from "./cockpit-app/views.js"
+
 export type {
   ProcessListData,
   IncidentsDashboardData,

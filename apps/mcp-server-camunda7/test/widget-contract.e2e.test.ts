@@ -64,6 +64,11 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
     vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
     vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
     vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    // Persistence must stay in-memory regardless of the dev shell's env.
+    vi.stubEnv("DATABASE_URL", undefined)
+    vi.stubEnv("REDIS_URL", undefined)
+    vi.stubEnv("MCP_PROFILE_DIR", undefined)
+    vi.stubEnv("MCP_DASHBOARD_DIR", undefined)
 
     app = await createFrameworkApp({
       name: "automation-mcp",

@@ -1,28 +1,58 @@
-import { getRequestContext } from "mcp-use/server"
+import {
+  resolveAuthUserId,
+  resolveProfileKey,
+  type ProfileSource,
+} from "@miragon-ai/widget-shell/server"
 import { translator } from "./messages/index.js"
 
 /**
- * Minimal structural view of the server app's profile store — just enough to read
- * the active locale. The camunda7 `ProfileStore` satisfies this without
- * analytics depending on the camunda7 module.
+ * The profile port + key resolution come from the shared server kit, NOT from a
+ * module-local copy: every module reads and writes the same profile record, so
+ * a divergent key precedence (or a differently-spelled anonymous fallback)
+ * would silently split a user's settings across two records. Re-exported under
+ * this module's names so the call sites read in analytics vocabulary.
+ *
+ * `ProfileSource` is the minimal read/write view a module needs — the locale
+ * plus its own slice under `modules.analytics`. camunda7's `ProfileStore`
+ * satisfies it structurally, without analytics depending on the camunda7
+ * module; `save` merges per module key on the store side, so writing
+ * `modules.analytics` never touches other modules' slices.
  */
-export interface LocaleSource {
-  get(key: string): Promise<{ language?: string } | undefined>
-}
+export type { ProfileSlice, ProfileSource } from "@miragon-ai/widget-shell/server"
 
-/** Read the MCP session id off the request context (mcp-use AsyncLocalStorage). */
-function sessionId(): string | undefined {
-  const ctx = getRequestContext()
-  if (!ctx) return undefined
-  return ctx.req.header("Mcp-Session-Id") ?? ctx.req.header("mcp-session-id") ?? undefined
-}
+/**
+ * Resolve the profile key for the in-flight request: the authenticated user id
+ * (off the tool-handler `ctx`, or off the request context's `auth` variable for
+ * handlers without a `ctx`), else the MCP session id (`Mcp-Session-Id` header),
+ * else the shared anonymous record when there is NO request context at all
+ * (stdio, tests). An HTTP request without a session id resolves `undefined` —
+ * reads fall back to defaults, saves fail visibly, so unrelated keyless clients
+ * never cross-share one record.
+ */
+export const resolveSettingsKey = resolveProfileKey
 
-/** Resolve the active locale from the profile store, falling back to English. */
-async function resolveLocale(store?: LocaleSource): Promise<string> {
+/**
+ * Just the authenticated-user half of {@link resolveSettingsKey} — the save
+ * path stamps it onto the record (`opts.userId`), marking it user-bound and
+ * exempt from the app's session-TTL cleanup.
+ */
+export const resolveSettingsAuthUserId = resolveAuthUserId
+
+/**
+ * Resolve the active locale from the profile store, falling back to English.
+ * Fail-soft on every axis — no store, no key, or a store OUTAGE — for the same
+ * reason `settingsFor` is: a profile-store hiccup must never fail an analytics
+ * read that only needs Prometheus.
+ */
+async function resolveLocale(store?: ProfileSource, ctx?: unknown): Promise<string> {
   if (!store) return "en"
-  const key = sessionId()
+  const key = resolveSettingsKey(ctx)
   if (!key) return "en"
-  return (await store.get(key))?.language ?? "en"
+  try {
+    return (await store.get(key))?.language ?? "en"
+  } catch {
+    return "en"
+  }
 }
 
 /** A locale-bound translate for analytics server summaries. */
@@ -30,9 +60,11 @@ export type ServerT = (key: string, params?: Record<string, unknown>) => string
 
 /**
  * Resolve the request locale and return a translate bound to it + the analytics
- * catalogs — `const t = await localizeFor(store); … summary: t("key", { … })`.
+ * catalogs — `const t = await localizeFor(store, ctx); … summary: t("key", { … })`.
+ * Pass the tool-handler `ctx` so an auth user id resolves the same record the
+ * save path writes.
  */
-export async function localizeFor(store?: LocaleSource): Promise<ServerT> {
-  const locale = await resolveLocale(store)
+export async function localizeFor(store?: ProfileSource, ctx?: unknown): Promise<ServerT> {
+  const locale = await resolveLocale(store, ctx)
   return (key, params) => translator(locale, key, params)
 }

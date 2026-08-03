@@ -1,11 +1,6 @@
 import { z } from "zod"
-import {
-  ANALYTICS_PERIODS,
-  LOCALES,
-  PROFILE_SCHEMA_VERSION,
-  ROLES,
-  THEMES,
-} from "./profile-constants.js"
+import { withoutDefaults } from "@miragon-ai/widget-shell/server"
+import { LOCALES, PROFILE_SCHEMA_VERSION, ROLES, THEMES } from "./profile-constants.js"
 
 /**
  * User-settable preferences — everything a person can change about their
@@ -44,22 +39,22 @@ export const userProfilePreferencesSchema = z.object({
   defaultDashboardId: z
     .string()
     .optional()
-    .describe("Saved-dashboard id the cockpit lands on when opened."),
-  analyticsDefaultPeriod: z
-    .enum(ANALYTICS_PERIODS)
-    .default("7d")
-    .describe("Default look-back window for analytics tools/widgets."),
-  analyticsMinBucketSize: z
-    .number()
-    .int()
-    .min(1)
-    .default(10)
-    .describe("Default minimum activity-bucket size for analytics aggregation."),
+    .describe(
+      "Saved-dashboard id suggested as the user's default — surfaced to the model (open via load-dashboard) and to pickers; the cockpit has no dashboards surface yet.",
+    ),
   preferredRole: z
     .enum(ROLES)
     .optional()
     .describe(
       "Preferred operations role (UI hint only; tool exposure is set by the connection toolset).",
+    ),
+  modules: z
+    .record(z.string(), z.unknown())
+    .default({})
+    .describe(
+      "Per-module settings slices, keyed by module name (e.g. `analytics`). Each module owns " +
+        "its slice's schema, validates it fail-soft on read, and writes it through its own " +
+        "save tool (e.g. `analytics_save_settings`) — this record only transports the slices.",
     ),
 })
 
@@ -83,10 +78,23 @@ export type UserProfile = z.infer<typeof userProfileSchema>
 /**
  * Save input: any subset of the preferences. Omitted fields keep their current
  * value (the store merges over the existing record), so the model can do a
- * single-field update ("switch the UI to German") without resending everything.
+ * single-field update ("switch the UI to German") without resending everything
+ * — guaranteed by the default-free shape: omitted keys stay ABSENT after the
+ * tool-boundary parse instead of coming back as materialized defaults.
+ * `modules` slices merge per module key — a save carrying `modules.analytics`
+ * replaces exactly that slice and leaves other modules' slices untouched.
+ *
+ * This is the STORE-level input. The `camunda7_save_user_profile` tool exposes
+ * it without `modules` (see `userProfileToolSaveInput`) — foreign slices are
+ * written through their owning module's save tool, not through camunda7's.
  */
-export const userProfileSaveInput = userProfilePreferencesSchema.partial()
-export type UserProfileSaveInput = z.infer<typeof userProfileSaveInput>
+export const userProfileSaveInput = z
+  .object(withoutDefaults(userProfilePreferencesSchema.shape))
+  .partial()
+export type UserProfileSaveInput = Partial<UserProfilePreferences>
+
+/** The camunda7 save tool's input: the preferences minus foreign module slices. */
+export const userProfileToolSaveInput = userProfileSaveInput.omit({ modules: true })
 
 /**
  * Composite payload the `show_user_profile` widget tool + `user_profile_data`
@@ -98,6 +106,13 @@ export type UserProfileSaveInput = z.infer<typeof userProfileSaveInput>
 export interface UserProfileView {
   profile: UserProfile
   availableEngines: Array<{ id: string; baseUrl: string }>
+  /**
+   * False when the deployment's toolset drops `camunda7_save_user_profile`
+   * (`camunda7:read-only`) — the panel then renders disabled fields without a
+   * Save button, so the UI matches the tool surface instead of offering a
+   * write that resolves to an unknown tool.
+   */
+  canSave: boolean
 }
 
 /** A fully-defaulted profile for a key that has never been saved. */

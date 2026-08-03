@@ -1,6 +1,6 @@
 # Automation MCP server — the only public app of the playground stack.
-# Build context: repo root (monorepo Dockerfile, needs the github_token build
-# secret for the private @miragon packages). Deploy via playground/fly/deploy.sh.
+# Build context: repo root (monorepo Dockerfile). Deploy via
+# playground/fly/deploy.sh.
 app = "miragon-ai-playground"
 primary_region = "fra"
 

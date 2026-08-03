@@ -131,20 +131,82 @@ services:
     depends_on:
       - prometheus
 
+  # Postgres — durable user settings + saved dashboards for the MCP server
+  # (opt-in via DATABASE_URL). Default profile so a locally-run server
+  # (`pnpm dev`) reaches it on localhost:8440. The init script creates a
+  # second database for the opt-in `pnpm test:pg` suites, so tests never touch
+  # the playground's own data. demo-grade credentials, matching demo/demo.
+  postgres:
+    image: postgres:18.1-alpine
+    environment:
+      - POSTGRES_USER=miragon
+      - POSTGRES_PASSWORD=miragon
+      - POSTGRES_DB=miragon
+    volumes:
+      # The 18+ image keeps PGDATA in a versioned subdirectory of
+      # /var/lib/postgresql — mount the parent, not .../data.
+      - postgres-data:/var/lib/postgresql
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "8440:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U miragon -d miragon"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  # Keycloak — the local IdP for the server's opt-in OAuth (MCP_OAUTH,
+  # provider "oidc-proxy": the server brokers MCP-client logins through its
+  # own /authorize + /token + /register with the pre-registered
+  # `miragon-ai-server` client). Opt-in via the `auth` profile — the plain
+  # `docker compose up` stays auth-free; with the profile a locally-run
+  # server reaches it on localhost:8480. `--import-realm` seeds the `miragon` realm
+  # (client + demo/demo user) from ./keycloak/realm-miragon.json on first
+  # boot. KC_HOSTNAME pins the issuer to the HOST url so tokens verify no
+  # matter how the container is reached. Admin console: localhost:8480
+  # (admin/admin, demo-grade like the rest of the stack).
+  # Use: docker compose --profile auth up -d
+  keycloak:
+    profiles: [auth]
+    image: quay.io/keycloak/keycloak:26.3
+    command: ["start-dev", "--import-realm"]
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME=http://localhost:8480
+      - KC_HTTP_ENABLED=true
+      - KC_HEALTH_ENABLED=true
+    volumes:
+      # No data volume ON PURPOSE: the image runs as uid 1000 and cannot chown
+      # a root-owned named volume, and the realm file IS the source of truth —
+      # a recreated container simply re-imports it (admin-console experiments
+      # are ephemeral, like the rest of the demo stack).
+      - ./keycloak/realm-miragon.json:/opt/keycloak/data/import/realm-miragon.json:ro
+    ports:
+      - "8480:8080"
+    healthcheck:
+      # The distroless-ish image ships no curl; the management port answers
+      # /health/ready once the realm import finished.
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q 'UP' <&3",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+
   # Automation MCP server (Node). Opt-in via the `full` profile so the
   # default `docker compose up` brings up infra only — leaving port 8400
   # free for a locally-run server (`pnpm -F @miragon-ai/mcp-server-camunda7 dev`).
   # Use: docker compose --profile full up -d
-  # Building the image needs GITHUB_TOKEN exported in the host shell — the
-  # build mounts it as a BuildKit secret to fetch the private @miragon
-  # packages from npm.pkg.github.com.
   mcp-server:
     profiles: [full]
     build:
       context: ../..
       dockerfile: Dockerfile
-      secrets:
-        - github_token
     ports:
       - "8400:8400"
     environment:
@@ -160,11 +222,15 @@ services:
       - CAMUNDA_USERNAME=demo
       - CAMUNDA_PASSWORD=demo
       - PROMETHEUS_URL=http://prometheus:9090
+      # Durable user settings + dashboards (src/persistence/ in the server app).
+      - DATABASE_URL=postgres://miragon:miragon@postgres:5432/miragon
     depends_on:
       cibseven:
         condition: service_healthy
       prometheus:
         condition: service_started
+      postgres:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -180,7 +246,4 @@ services:
 
 volumes:
   prometheus-data:
-
-secrets:
-  github_token:
-    environment: GITHUB_TOKEN
+  postgres-data:

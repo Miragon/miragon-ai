@@ -13,6 +13,7 @@ import { VersionCompareWidget, type VersionCompareData } from "./version-compare
 import { EngineCompareWidget, type EngineCompareData } from "./engine-compare.js"
 import { type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
 import { AnalyticsBpmnHeatmap } from "./bpmn-heatmap.js"
+import { AnalyticsSettingsWidget, type AnalyticsSettingsViewData } from "./settings-section.js"
 import {
   describeActivityBottlenecks,
   describeBpmnHeatmap,
@@ -34,6 +35,7 @@ export type {
   VersionCompareData,
   EngineCompareData,
   BpmnHeatmapData,
+  AnalyticsSettingsViewData,
 }
 
 export const ANALYTICS_DATA_TYPES = {
@@ -43,6 +45,7 @@ export const ANALYTICS_DATA_TYPES = {
   versionCompare: "analytics:versionCompare",
   engineCompare: "analytics:engineCompare",
   bpmnHeatmap: "analytics:bpmnHeatmap",
+  settings: "analytics:settings",
 } as const
 
 // Every widget passes a `describeForModel` so the model always knows the view,
@@ -104,4 +107,8 @@ export const analyticsWidgets: Record<string, WidgetComponent> = {
     ANALYTICS_DATA_TYPES.bpmnHeatmap,
     describeBpmnHeatmap,
   ),
+  // No describeForModel here: the widget renders its ModelContext inline (the
+  // settings tab mounts it without pipeline data, so only the component knows
+  // the self-fetched view).
+  "analytics:settings": adaptDataWidget(AnalyticsSettingsWidget, ANALYTICS_DATA_TYPES.settings),
 }
