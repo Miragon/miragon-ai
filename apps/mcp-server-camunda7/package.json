@@ -1,6 +1,6 @@
 {
   "name": "@miragon-ai/mcp-server-camunda7",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "private": true,
   "license": "UNLICENSED",
   "repository": {
