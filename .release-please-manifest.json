@@ -1,7 +1,7 @@
 {
   ".": "0.2.1",
   "packages/client-camunda7": "0.0.0",
-  "packages/client-analytics": "0.0.0",
+  "packages/client-analytics": "1.0.0",
   "packages/widget-shell": "0.0.0",
   "packages/mcp-camunda7": "0.0.0",
   "packages/mcp-analytics": "0.0.0"
