@@ -5,7 +5,6 @@
   "bump-minor-pre-major": true,
   "draft": false,
   "bootstrap-sha": "fc210e0965b5e3f40eb632e24b49e947eb7d538e",
-  "plugins": [{ "type": "node-workspace", "updatePeerDependencies": true }],
   "packages": {
     ".": {
       "release-type": "simple",
@@ -13,6 +12,7 @@
       "component": "",
       "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
+      "exclude-paths": ["packages"],
       "extra-files": [
         { "type": "generic", "path": "engine-plugins/gradle.properties" },
         { "type": "json", "path": "package.json", "jsonpath": "$.version" },

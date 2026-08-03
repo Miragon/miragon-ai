@@ -201,10 +201,10 @@ importers:
   packages/mcp-analytics:
     dependencies:
       '@miragon-ai/client-analytics':
-        specifier: 0.0.0
+        specifier: workspace:*
         version: link:../client-analytics
       '@miragon-ai/widget-shell':
-        specifier: 0.0.0
+        specifier: workspace:*
         version: link:../widget-shell
       '@miragon/mcp-toolkit-core':
         specifier: 0.10.1
@@ -238,10 +238,10 @@ importers:
   packages/mcp-camunda7:
     dependencies:
       '@miragon-ai/client-camunda7':
-        specifier: 0.0.0
+        specifier: workspace:*
         version: link:../client-camunda7
       '@miragon-ai/widget-shell':
-        specifier: 0.0.0
+        specifier: workspace:*
         version: link:../widget-shell
       '@miragon/mcp-toolkit-core':
         specifier: 0.10.1
