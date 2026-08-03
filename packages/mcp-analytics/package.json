@@ -2,6 +2,19 @@
   "name": "@miragon-ai/mcp-analytics",
   "version": "0.0.0",
   "description": "Prometheus-backed process-analytics MCP module: tools, dashboards, and comparison widgets.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "camunda",
+    "process-analytics",
+    "prometheus",
+    "widgets"
+  ],
+  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/mcp-analytics#readme",
+  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "engines": {
+    "node": ">=22"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Miragon/miragon-ai.git",

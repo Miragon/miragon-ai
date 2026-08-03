@@ -2,6 +2,20 @@
   "name": "@miragon-ai/mcp-camunda7",
   "version": "0.0.0",
   "description": "Camunda 7 / CIB Seven MCP module: operations tools, widget tools, and cockpit widgets.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "camunda",
+    "camunda7",
+    "cib-seven",
+    "bpmn",
+    "widgets"
+  ],
+  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/mcp-camunda7#readme",
+  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "engines": {
+    "node": ">=22"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Miragon/miragon-ai.git",

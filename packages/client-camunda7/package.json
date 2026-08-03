@@ -2,6 +2,20 @@
   "name": "@miragon-ai/client-camunda7",
   "version": "0.0.0",
   "description": "Generated CIB Seven / Camunda 7 REST SDK plus Zod input schemas.",
+  "keywords": [
+    "camunda",
+    "camunda7",
+    "cib-seven",
+    "bpmn",
+    "rest-client",
+    "sdk",
+    "mcp"
+  ],
+  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/client-camunda7#readme",
+  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "engines": {
+    "node": ">=22"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Miragon/miragon-ai.git",

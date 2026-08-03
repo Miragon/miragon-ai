@@ -2,6 +2,19 @@
   "name": "@miragon-ai/client-analytics",
   "version": "0.0.0",
   "description": "Prometheus client and PromQL query functions for Camunda process analytics, with Zod schemas.",
+  "keywords": [
+    "camunda",
+    "prometheus",
+    "promql",
+    "process-analytics",
+    "metrics",
+    "mcp"
+  ],
+  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/client-analytics#readme",
+  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "engines": {
+    "node": ">=22"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Miragon/miragon-ai.git",
