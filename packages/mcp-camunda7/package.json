@@ -47,8 +47,8 @@
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {
-    "@miragon-ai/client-camunda7": "0.0.0",
-    "@miragon-ai/widget-shell": "0.0.0",
+    "@miragon-ai/client-camunda7": "workspace:*",
+    "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "0.10.1",
     "zod": "4.4.3"
   },
