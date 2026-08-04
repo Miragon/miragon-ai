@@ -1,11 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "include-v-in-tag": true,
-  "separate-pull-requests": true,
   "bump-minor-pre-major": true,
   "draft": false,
   "bootstrap-sha": "fc210e0965b5e3f40eb632e24b49e947eb7d538e",
-  "plugins": [{ "type": "node-workspace", "updatePeerDependencies": true }],
   "packages": {
     ".": {
       "release-type": "simple",
@@ -20,33 +18,33 @@
           "type": "json",
           "path": "apps/mcp-server-camunda7/package.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/client-camunda7/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/client-analytics/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/widget-shell/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/mcp-camunda7/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/mcp-analytics/package.json",
+          "jsonpath": "$.version"
         }
       ]
-    },
-    "packages/client-camunda7": {
-      "release-type": "node",
-      "component": "client-camunda7",
-      "include-component-in-tag": true
-    },
-    "packages/client-analytics": {
-      "release-type": "node",
-      "component": "client-analytics",
-      "include-component-in-tag": true
-    },
-    "packages/widget-shell": {
-      "release-type": "node",
-      "component": "widget-shell",
-      "include-component-in-tag": true
-    },
-    "packages/mcp-camunda7": {
-      "release-type": "node",
-      "component": "mcp-camunda7",
-      "include-component-in-tag": true
-    },
-    "packages/mcp-analytics": {
-      "release-type": "node",
-      "component": "mcp-analytics",
-      "include-component-in-tag": true
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@miragon-ai/mcp-camunda7",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "Camunda 7 / CIB Seven MCP module: operations tools, widget tools, and cockpit widgets.",
   "keywords": [
     "mcp",
@@ -47,8 +47,8 @@
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {
-    "@miragon-ai/client-camunda7": "0.0.0",
-    "@miragon-ai/widget-shell": "0.0.0",
+    "@miragon-ai/client-camunda7": "workspace:*",
+    "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "0.10.1",
     "zod": "4.4.3"
   },
