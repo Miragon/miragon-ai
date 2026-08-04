@@ -76,7 +76,8 @@ runs unauthenticated.
 | `REDIS_URL`                             | —                                   | Redis-backed MCP session sharing across multiple server instances (no sticky routing needed); single-instance deployments leave it unset                                                                                                        |
 | `CAMUNDA_ENGINES_FILE`                  | —                                   | Path to a JSON file with the engine list `[{id, baseUrl, cockpitUrl?, flavor?, auth?}, ...]`; highest precedence                                                                                                                                |
 | `CAMUNDA_ENGINES_JSON`                  | —                                   | Same engine array as inline JSON; ignored when `CAMUNDA_ENGINES_FILE` is set. Entries take an optional `flavor` (`cibseven` \| `operaton` \| `camunda7`, default `cibseven`) selecting the vendor's cockpit-link routes — mixed fleets are fine |
-| `CAMUNDA_BASE_URL`                      | `http://localhost:8410/engine-rest` | Legacy single-engine REST endpoint (registered as id `default`); ignored when `CAMUNDA_ENGINES_*` is set                                                                                                                                        |
+| `CAMUNDA_BASE_URL`                      | `http://localhost:8410/engine-rest` | Legacy single-engine REST endpoint (registered as id `CAMUNDA_ENGINE_ID`); ignored when `CAMUNDA_ENGINES_*` is set                                                                                                                              |
+| `CAMUNDA_ENGINE_ID`                     | `default`                           | Engine id for the `CAMUNDA_BASE_URL` shorthand. Must match the engine container's `ENGINE_ID` (= the `engine_id` metric label) or every engine-scoped analytics query — BPMN heatmap, engine compare — comes back empty                         |
 | `CAMUNDA_COCKPIT_URL`                   | derived                             | Used for jump-out links to Cockpit; multi-engine setups use per-engine `cockpitUrl` instead                                                                                                                                                     |
 | `CAMUNDA_AUTH_TYPE`                     | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without a per-engine `auth`                                                                                                                                                  |
 | `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` | —                                   | Required for `basic` (enforced at boot)                                                                                                                                                                                                         |
@@ -88,9 +89,10 @@ runs unauthenticated.
 Unknown `CAMUNDA_*`/`MCP_*` variables are reported at boot (typos aren't
 silently ignored); mcp-use telemetry is off by default
 (`MCP_USE_ANONYMIZED_TELEMETRY=true` opts in). The engine container takes
-`METRICS_ENABLED`, `ENGINE_ID` (must match the id in `CAMUNDA_ENGINES_*`, or
-that engine's analytics come back empty), and the standard `OTEL_*` agent
-variables.
+`METRICS_ENABLED`, `ENGINE_ID` (must match `CAMUNDA_ENGINE_ID` or the id in
+`CAMUNDA_ENGINES_*`, or that engine's analytics come back empty — the heatmap
+then says so instead of rendering an uncolored diagram), and the standard
+`OTEL_*` agent variables.
 
 ## External services
 

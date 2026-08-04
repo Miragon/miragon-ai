@@ -85,10 +85,17 @@ export const camunda7ConfigSchema = z
  *   1. `CAMUNDA_ENGINES_FILE` — path to a JSON array (preferred at scale; fits ConfigMap workflows).
  *   2. `CAMUNDA_ENGINES_JSON` — inline JSON array.
  *   3. `CAMUNDA_BASE_URL` (+ `CAMUNDA_COCKPIT_URL`) — backward-compat single-engine,
- *      synthesized as `id: "default"`.
+ *      synthesized as `id: CAMUNDA_ENGINE_ID ?? "default"`.
  *
  * Falls back to the local default engine (`http://localhost:8410/engine-rest`)
  * when nothing is set.
+ *
+ * `CAMUNDA_ENGINE_ID` exists because the engine id is a JOIN KEY, not a label:
+ * the metrics plugin stamps its own `ENGINE_ID` onto every series as
+ * `engine_id`, and every analytics query scoped to an engine (the cockpit's
+ * BPMN heatmap, engine compare, …) matches on it. Without a way to name the
+ * single-engine shorthand, the only alignment option was switching to the JSON
+ * form — and a mismatch reads as "no data", not as a config error.
  */
 function loadEnginesFromEnv(env: NodeJS.ProcessEnv): unknown {
   const filePath = env.CAMUNDA_ENGINES_FILE?.trim()
@@ -100,17 +107,18 @@ function loadEnginesFromEnv(env: NodeJS.ProcessEnv): unknown {
   if (json) {
     return JSON.parse(json)
   }
+  const id = env.CAMUNDA_ENGINE_ID?.trim() || "default"
   const legacyBaseUrl = env.CAMUNDA_BASE_URL?.trim()
   if (legacyBaseUrl) {
     return [
       {
-        id: "default",
+        id,
         baseUrl: legacyBaseUrl,
         ...(env.CAMUNDA_COCKPIT_URL ? { cockpitUrl: env.CAMUNDA_COCKPIT_URL } : {}),
       },
     ]
   }
-  return [{ id: "default", baseUrl: "http://localhost:8410/engine-rest" }]
+  return [{ id, baseUrl: "http://localhost:8410/engine-rest" }]
 }
 
 export const camunda7Module = {
@@ -143,6 +151,7 @@ export const camunda7Module = {
     "CAMUNDA_ENGINES_FILE",
     "CAMUNDA_ENGINES_JSON",
     "CAMUNDA_BASE_URL",
+    "CAMUNDA_ENGINE_ID",
     "CAMUNDA_COCKPIT_URL",
     "CAMUNDA_AUTH_TYPE",
     "CAMUNDA_USERNAME",
