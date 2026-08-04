@@ -165,6 +165,7 @@ The most common variables — see [`docs/operations.md`](docs/operations.md) for
 | `MCP_ACTIVE_MODULES`                                      | all                                 | Comma-separated modules (`camunda7,analytics`), each with an optional toolset suffix  |
 | `MCP_OAUTH`                                               | —                                   | JSON OAuth resource-server config (Keycloak / Auth0 / generic OIDC) protecting `/mcp` |
 | `CAMUNDA_BASE_URL`                                        | `http://localhost:8410/engine-rest` | Single-engine REST base URL                                                           |
+| `CAMUNDA_ENGINE_ID`                                       | `default`                           | Id of that engine — must match the engine's `ENGINE_ID` or its analytics stay empty   |
 | `CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE`           | —                                   | Register multiple engines (see [Multi-engine](#multi-engine))                         |
 | `CAMUNDA_COCKPIT_URL`                                     | derived                             | Cockpit web base for jump-out links                                                   |
 | `CAMUNDA_AUTH_TYPE`                                       | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without an `auth`  |

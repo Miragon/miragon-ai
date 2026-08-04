@@ -103,6 +103,7 @@ export const enSweep: MessageCatalog = {
   "aHeatmap.less": "Less",
   "aHeatmap.more": "More",
   "aHeatmap.noData": "No heatmap data.",
+  "aHeatmap.noHeat": "No metric data in this window.",
   "aHeatmap.title": "BPMN heatmap",
   "aHeatmap.window": "window:",
   "aSettings.heading": "Analytics Settings",

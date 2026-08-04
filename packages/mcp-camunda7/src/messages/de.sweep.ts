@@ -346,6 +346,7 @@ export const deSweep: MessageCatalog = {
   "procIncFlow.heatmapErrorTitle": "Diagramm konnte nicht dargestellt werden",
   "procIncFlow.heatmapLoading": "Heatmap wird geladen…",
   "procIncFlow.heatmapNoDiagram": "Kein Diagramm für die Heatmap verfügbar.",
+  "procIncFlow.heatmapNoValues": "Keine Metrikdaten für diese Engine in diesem Zeitfenster.",
   "procIncFlow.heatmapUnavailable": "Heatmap konnte nicht geladen werden.",
   "procIncFlow.hintOfTotal": "{count} von {total} Aktivitäten fehlerhaft",
   "procIncFlow.hintPlural": "{count} Aktivitäten fehlerhaft",

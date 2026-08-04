@@ -217,6 +217,10 @@ services:
       # shell before `docker compose up`, or by overriding via a compose
       # override file.
       - CAMUNDA_BASE_URL=http://cibseven:8410/engine-rest
+      # Must stay in sync with the cibseven service's ENGINE_ID — that value is
+      # the `engine_id` metric label every engine-scoped analytics query (BPMN
+      # heatmap, engine compare) joins on. A mismatch is silent: empty results.
+      - CAMUNDA_ENGINE_ID=prod-a
       - CAMUNDA_COCKPIT_URL=http://localhost:8410/webapp
       - CAMUNDA_AUTH_TYPE=basic
       - CAMUNDA_USERNAME=demo

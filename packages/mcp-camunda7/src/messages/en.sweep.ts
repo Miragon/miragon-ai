@@ -345,6 +345,7 @@ export const enSweep: MessageCatalog = {
   "procIncFlow.heatmapErrorTitle": "Diagram could not be rendered",
   "procIncFlow.heatmapLoading": "Loading heatmap…",
   "procIncFlow.heatmapNoDiagram": "No diagram available for the heatmap.",
+  "procIncFlow.heatmapNoValues": "No metric data for this engine in this window.",
   "procIncFlow.heatmapUnavailable": "Failed to load the heatmap.",
   "procIncFlow.hintOfTotal": "{count} of {total} activities failing",
   "procIncFlow.hintPlural": "{count} activities failing",

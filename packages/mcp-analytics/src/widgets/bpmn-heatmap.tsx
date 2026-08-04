@@ -21,6 +21,7 @@ export function AnalyticsBpmnHeatmap({ data }: { data: BpmnHeatmapData | null })
         frequencyLegend: t("aHeatmap.frequencyLegend"),
         durationLegend: t("aHeatmap.durationLegend"),
         noData: t("aHeatmap.noData"),
+        noHeat: t("aHeatmap.noHeat"),
         bpmnUnavailable: t("aHeatmap.bpmnUnavailable"),
         less: t("aHeatmap.less"),
         more: t("aHeatmap.more"),

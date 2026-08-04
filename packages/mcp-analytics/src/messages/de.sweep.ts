@@ -103,6 +103,7 @@ export const deSweep: MessageCatalog = {
   "aHeatmap.less": "Weniger",
   "aHeatmap.more": "Mehr",
   "aHeatmap.noData": "Keine Heatmap-Daten.",
+  "aHeatmap.noHeat": "Keine Metrikdaten in diesem Zeitfenster.",
   "aHeatmap.title": "BPMN-Heatmap",
   "aHeatmap.window": "Zeitraum:",
   "aSettings.heading": "Analyse-Einstellungen",
