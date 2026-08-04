@@ -71,7 +71,7 @@ jobs:
   publish-npm:
     name: Publish ${{ matrix.package }} to npm
     needs: release-please
-    if: ${{ contains(needs.release-please.outputs.paths_released, 'packages/') }}
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     permissions:
       contents: read
       id-token: write

@@ -1,6 +1,6 @@
 {
   "name": "@miragon-ai/client-analytics",
-  "version": "0.0.0",
+  "version": "0.2.1",
   "description": "Prometheus client and PromQL query functions for Camunda process analytics, with Zod schemas.",
   "keywords": [
     "camunda",
