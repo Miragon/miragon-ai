@@ -76,6 +76,7 @@ function ProcessHeatmap({
       height={DIAGRAM_HEIGHT}
       diagramAriaLabel={t("procIncFlow.heatmapDiagramAria")}
       errorTitle={t("procIncFlow.heatmapErrorTitle")}
+      noHeatLabel={t("procIncFlow.heatmapNoValues")}
     />
   )
 }

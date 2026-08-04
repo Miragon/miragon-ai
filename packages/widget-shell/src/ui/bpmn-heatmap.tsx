@@ -35,6 +35,7 @@ export interface BpmnHeatmapLabels {
   frequencyLegend?: string
   durationLegend?: string
   noData?: string
+  noHeat?: string
   bpmnUnavailable?: string
   less?: string
   more?: string
@@ -50,6 +51,7 @@ const DEFAULT_HEATMAP_LABELS: Required<BpmnHeatmapLabels> = {
   frequencyLegend: "Executions per element",
   durationLegend: "Avg duration per element (s)",
   noData: "No heatmap data.",
+  noHeat: "No metric data in this window.",
   bpmnUnavailable:
     "BPMN diagram unavailable — the analytics module has no camunda7 client configured to fetch it.",
   less: "Less",
@@ -71,6 +73,13 @@ export interface BpmnHeatmapProps {
   diagramAriaLabel?: string
   /** Title of the import-error alert (English fallback). */
   errorTitle?: string
+  /**
+   * Shown over the diagram when NO element carries a positive value. Without
+   * it an empty result (window with no traffic, or a metrics `engine_id` that
+   * doesn't match the configured engine id) is indistinguishable from a
+   * rendered heatmap — the diagram just stays uncolored.
+   */
+  noHeatLabel?: string
 }
 
 /**
@@ -87,6 +96,7 @@ export function BpmnHeatmap({
   diagramRadius = 55,
   diagramAriaLabel = DEFAULT_HEATMAP_LABELS.diagramAriaLabel,
   errorTitle = DEFAULT_HEATMAP_LABELS.errorTitle,
+  noHeatLabel = DEFAULT_HEATMAP_LABELS.noHeat,
 }: BpmnHeatmapProps) {
   const heatCanvasRef = useRef<HTMLCanvasElement>(null)
   const redrawRef = useRef<(() => void) | null>(null)
@@ -168,6 +178,12 @@ export function BpmnHeatmap({
     redrawRef.current?.()
   }, [nodeFrequencies, edgeFrequencies, diagramRadius])
 
+  // Mirrors the `weight > 0` filter in buildHeatPoints: a map of zeros paints
+  // nothing, so it must read as "no data" too.
+  const hasHeat =
+    Object.values(nodeFrequencies).some((v) => v > 0) ||
+    Object.values(edgeFrequencies).some((v) => v > 0)
+
   return (
     <div className="relative w-full" style={{ height: `${height}px` }}>
       <div
@@ -188,7 +204,17 @@ export function BpmnHeatmap({
           <AlertDescription>{importError}</AlertDescription>
         </Alert>
       ) : (
-        <BpmnZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onFit={fit} />
+        <>
+          {hasHeat ? null : (
+            <div
+              role="status"
+              className="border-border bg-card text-muted-foreground pointer-events-none absolute left-3 top-3 rounded border px-2 py-1 text-xs shadow-sm"
+            >
+              {noHeatLabel}
+            </div>
+          )}
+          <BpmnZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onFit={fit} />
+        </>
       )}
     </div>
   )
@@ -293,6 +319,7 @@ export function BpmnHeatmapWidget({
           nodeFrequencies={values}
           diagramAriaLabel={l.diagramAriaLabel}
           errorTitle={l.errorTitle}
+          noHeatLabel={l.noHeat}
         />
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
