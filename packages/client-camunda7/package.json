@@ -1,6 +1,6 @@
 {
   "name": "@miragon-ai/client-camunda7",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Generated CIB Seven / Camunda 7 REST SDK plus Zod input schemas.",
   "keywords": [
     "camunda",
