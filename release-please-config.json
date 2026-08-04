@@ -26,27 +26,32 @@
     "packages/client-camunda7": {
       "release-type": "node",
       "component": "client-camunda7",
-      "include-component-in-tag": true
+      "include-component-in-tag": true,
+      "release-as": "0.1.0"
     },
     "packages/client-analytics": {
       "release-type": "node",
       "component": "client-analytics",
-      "include-component-in-tag": true
+      "include-component-in-tag": true,
+      "release-as": "0.1.0"
     },
     "packages/widget-shell": {
       "release-type": "node",
       "component": "widget-shell",
-      "include-component-in-tag": true
+      "include-component-in-tag": true,
+      "release-as": "0.1.0"
     },
     "packages/mcp-camunda7": {
       "release-type": "node",
       "component": "mcp-camunda7",
-      "include-component-in-tag": true
+      "include-component-in-tag": true,
+      "release-as": "0.1.0"
     },
     "packages/mcp-analytics": {
       "release-type": "node",
       "component": "mcp-analytics",
-      "include-component-in-tag": true
+      "include-component-in-tag": true,
+      "release-as": "0.1.0"
     }
   }
 }
