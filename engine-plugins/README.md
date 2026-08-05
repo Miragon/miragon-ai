@@ -6,7 +6,7 @@ that the OTEL Collector exports to Prometheus as `camunda_*` series — there is
 database. Those series are what the [analytics module](../packages/mcp-analytics) of
 [Miragon AI](../README.md) queries.
 
-Published to **GitHub Packages Maven** as `ai.miragon.mcp:cibseven-history-metrics` (released via
+Published to **Maven Central** as `io.miragon.mcp:cibseven-history-metrics` (released via
 release-please together with the server image). A runnable showcase that consumes this plugin lives
 in [`../playground/cibseven-example/`](../playground/cibseven-example/) as a separate Gradle build
 (composite via `includeBuild`).
@@ -17,23 +17,20 @@ The metric names and labels it emits are governed by the
 
 ## Consume it
 
+Available from Maven Central — no credentials or extra repository needed:
+
 ```kotlin
 repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/Miragon/miragon-ai")
-        credentials {
-            username = providers.gradleProperty("gpr.user").orNull ?: System.getenv("GITHUB_ACTOR")
-            password = providers.gradleProperty("gpr.key").orNull ?: System.getenv("GITHUB_TOKEN")
-        }
-    }
+    mavenCentral()
 }
 
 dependencies {
-    implementation("ai.miragon.mcp:cibseven-history-metrics:0.2.1")
+    implementation("io.miragon.mcp:cibseven-history-metrics:0.5.0")
 }
 ```
 
-GitHub Packages requires authentication even for reads — supply a token with `read:packages`.
+`opentelemetry-api` resolves transitively; the engine/Spring stack is `compileOnly`
+(provided by the CIB Seven runtime).
 
 ## Quality gates
 

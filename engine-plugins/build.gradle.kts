@@ -1,16 +1,18 @@
 plugins {
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.spring) apply false
-    alias(libs.plugins.shadow) apply false
+    alias(libs.plugins.maven.publish) apply false
     alias(libs.plugins.ktlint) apply false
 }
 
 allprojects {
     // Umbrella group shared by every engine-plugin module; the engine is carried in
     // the artifactId (the Gradle module name, e.g. `cibseven-history-metrics`), so the
-    // published coordinate is `ai.miragon.mcp:<engine>-<artifact>`. Keeps one group as
-    // more engines are added.
-    group = "ai.miragon.mcp"
+    // published coordinate is `io.miragon.mcp:<engine>-<artifact>`. Keeps one group as
+    // more engines are added. `io.miragon` is the Sonatype Central namespace already
+    // verified for the org (shared with bpmn-to-code); the Kotlin source package
+    // matches it (`io.miragon.mcp.*`).
+    group = "io.miragon.mcp"
     // version comes from gradle.properties, bumped in lockstep by release-please
     // (extra-file in the root release-please-config.json).
 
@@ -61,40 +63,9 @@ subprojects {
         useJUnitPlatform()
     }
 
-    // Publishing convention: every module that builds a shadow jar (the
-    // metrics engine plugin, not :konsist) publishes exactly that jar — the modules
-    // set `archiveClassifier = ""`, so the shadow jar IS the main artefact and
-    // `components["shadow"]` keeps bundled `implementation` dependencies out
-    // of the POM. Target is the GitHub Packages Maven registry of this repo;
-    // `publish-to-maven.yml` runs `./gradlew publish` from the release train.
-    plugins.withId("com.gradleup.shadow") {
-        apply(plugin = "maven-publish")
-
-        configure<PublishingExtension> {
-            publications {
-                create<MavenPublication>("maven") {
-                    from(components["shadow"])
-                    pom {
-                        url.set("https://github.com/Miragon/miragon-ai")
-                        licenses {
-                            license {
-                                name.set("MIT License")
-                                url.set("https://opensource.org/license/mit")
-                            }
-                        }
-                    }
-                }
-            }
-            repositories {
-                maven {
-                    name = "GitHubPackages"
-                    url = uri("https://maven.pkg.github.com/Miragon/miragon-ai")
-                    credentials {
-                        username = System.getenv("GITHUB_ACTOR")
-                        password = System.getenv("GITHUB_TOKEN")
-                    }
-                }
-            }
-        }
-    }
+    // Publishing to Maven Central (Sonatype Central Portal) is configured per
+    // publishable module via the Vanniktech Maven Publish plugin — see
+    // `cibseven-history-metrics/build.gradle.kts`. `konsist` is test-only and
+    // applies no publishing. `publish-to-maven.yml` runs
+    // `publishAndReleaseToMavenCentral` from the release train.
 }

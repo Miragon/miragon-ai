@@ -14,7 +14,6 @@ permissions:
   contents: write # release-please commits + tags; publish checks out the repo
   pull-requests: write # release-please opens/updates the Release PR
   issues: write # release-please manages release labels
-  packages: write # publish-to-maven publishes to GitHub Packages
   id-token: write # image provenance/SBOM attestation in publish-to-docker
 
 jobs:
@@ -52,7 +51,7 @@ jobs:
         run: echo "Release approved — proceeding to publish."
 
   publish-maven:
-    name: Publish engine plugins to GitHub Packages
+    name: Publish engine plugins to Maven Central
     needs: gate
     uses: ./.github/workflows/publish-to-maven.yml
     secrets: inherit

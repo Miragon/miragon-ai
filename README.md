@@ -112,7 +112,7 @@ A pnpm + Turbo monorepo. The server composes the two modules and serves them as 
 | [`packages/client-camunda7/`](packages/client-camunda7)   | `@miragon-ai/client-camunda7`             | Generated CIB Seven REST SDK + MCP-oriented Zod schemas                 |
 | [`packages/client-analytics/`](packages/client-analytics) | `@miragon-ai/client-analytics`            | Prometheus client, PromQL query functions + metrics contract            |
 | [`packages/widget-shell/`](packages/widget-shell)         | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
-| [`engine-plugins/`](engine-plugins)                       | `ai.miragon.mcp:cibseven-history-metrics` | Kotlin OTEL metrics plugin for CIB Seven (Java 21)                      |
+| [`engine-plugins/`](engine-plugins)                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin OTEL metrics plugin for CIB Seven (Java 21)                      |
 | [`playground/`](playground)                               | —                                         | Demo env: CIB Seven showcase, Compose stack, Fly.io deploy              |
 | [`docs/`](docs)                                           | `@miragon-ai/docs`                        | VitePress documentation site                                            |
 
@@ -190,8 +190,8 @@ Full walkthrough in [`docs/operations.md`](docs/operations.md).
 
 The analytics module needs `camunda_*` series in Prometheus. The Kotlin plugin in
 [`engine-plugins/`](engine-plugins) emits them as OpenTelemetry instruments from inside the CIB Seven
-runtime — no engine-side database. It publishes to GitHub Packages Maven as
-`ai.miragon.mcp:cibseven-history-metrics`. See [`engine-plugins/README.md`](engine-plugins/README.md)
+runtime — no engine-side database. It publishes to Maven Central as
+`io.miragon.mcp:cibseven-history-metrics`. See [`engine-plugins/README.md`](engine-plugins/README.md)
 and the runnable [`playground/cibseven-example/`](playground/cibseven-example).
 
 ## Local development
@@ -231,7 +231,7 @@ Build the site locally with `pnpm docs:dev`.
 Releases are automated with [release-please](https://github.com/googleapis/release-please): semantic
 commits on `main` open a Release PR; merging it tags the repo and publishes the
 [server image](https://hub.docker.com/r/miragon/miragon-ai-server) to Docker Hub and the engine
-plugin to GitHub Packages Maven.
+plugin to Maven Central.
 
 ## Contributing
 

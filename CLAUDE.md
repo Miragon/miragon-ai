@@ -235,11 +235,17 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
   `publishConfig` for npm.pkg.github.com (`access: restricted`) but no CI job publishes
   them; the server app, widget-shell, mcp-camunda7 and mcp-analytics are `"private": true`.
   Don't flip `private` or add a publish job without the distribution decision (#118).
-- **Engine plugins publish via `publish-to-maven.yml`** (called from the release train):
-  `./gradlew publish` against GitHub Packages Maven. All engine plugins share the umbrella
-  group `ai.miragon.mcp` with the engine carried in the artifactId (`<engine>-<artifact>`);
-  the cibseven metrics plugin publishes as `ai.miragon.mcp:cibseven-history-metrics`
-  (shadow jar).
+- **Engine plugins publish to Maven Central via `publish-to-maven.yml`** (called from the
+  release train): the Vanniktech Maven Publish plugin runs
+  `publishAndReleaseToMavenCentral` against the Sonatype Central Portal (thin jar +
+  sources + javadoc, GPG-signed; signing gated on `-PsignArtifacts=true`). Credentials
+  are `ORG_GRADLE_PROJECT_*` env vars (`mavenCentral{Username,Password}` +
+  `signingInMemoryKey{,Id,Password}`) from the `MIRAGON_SONATYPE_*` / `SIGNING_*` secrets.
+  All engine plugins share the umbrella group `io.miragon.mcp` (reusing the org's verified
+  `io.miragon` Central namespace) with the engine carried in the artifactId
+  (`<engine>-<artifact>`); the cibseven metrics plugin publishes as
+  `io.miragon.mcp:cibseven-history-metrics`. Per-module publishing config lives in the
+  module's own `build.gradle.kts` (`mavenPublishing { ... }`), not the root convention.
 - **The server image publishes via `publish-to-docker.yml`** (same train): builds the
   root `Dockerfile` and pushes `docker.io/miragon/miragon-ai-server:<version>` and
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
