@@ -11,22 +11,24 @@ ENV CI=true
 FROM base AS build
 WORKDIR /app
 
+# The pnpm store (/pnpm/store, derived from PNPM_HOME) must live IN the layer, never in a
+# `--mount=type=cache`: registry caches (`cache-to: type=gha`) persist layers but not cache
+# mounts, so a cache-hit on this step would skip `pnpm fetch` and leave the store empty —
+# the `--offline` install below then fails with ERR_PNPM_NO_OFFLINE_TARBALL.
 COPY pnpm-lock.yaml .npmrc ./
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm fetch
+RUN pnpm fetch
 
 COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY apps/ apps/
 COPY packages/ packages/
 
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --offline
+RUN pnpm install --frozen-lockfile --offline
 
+# Turbo's cache is a pure accelerator — an empty one only means a slower build.
 RUN --mount=type=cache,id=turbo-server,target=/app/.turbo \
     pnpm turbo build --filter=@miragon-ai/mcp-server-camunda7...
 
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm --filter @miragon-ai/mcp-server-camunda7 deploy --prod --legacy /app/deployed
+RUN pnpm --filter @miragon-ai/mcp-server-camunda7 deploy --prod --legacy /app/deployed
 
 FROM base AS runtime
 WORKDIR /app

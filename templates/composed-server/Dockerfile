@@ -12,21 +12,22 @@ ENV CI=true
 FROM base AS build
 WORKDIR /app
 
+# The pnpm store (/pnpm/store, derived from PNPM_HOME) must live IN the layer, never in a
+# `--mount=type=cache`: registry caches persist layers but not cache mounts, so a cache-hit
+# on this step would skip `pnpm fetch` and leave the store empty — the `--offline` install
+# below then fails with ERR_PNPM_NO_OFFLINE_TARBALL.
 COPY pnpm-lock.yaml .npmrc ./
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm fetch
+RUN pnpm fetch
 
 COPY package.json pnpm-workspace.yaml ./
 COPY server/ server/
 COPY modules/ modules/
 
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --offline
+RUN pnpm install --frozen-lockfile --offline
 
 RUN pnpm run build
 
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm --filter @acme/composed-mcp-server deploy --prod --legacy /app/deployed
+RUN pnpm --filter @acme/composed-mcp-server deploy --prod --legacy /app/deployed
 
 FROM base AS runtime
 WORKDIR /app
