@@ -42,7 +42,11 @@ const APP_ENV_VARS = [
   "MCP_DEBUG_LEVEL",
 ]
 
-const KNOWN_ENV_VARS = new Set([...APP_ENV_VARS, ...MODULES.flatMap((m) => [...m.knownEnvVars])])
+/** Exported for the `.env.example` guard in `test/env-example.test.ts`. */
+export const KNOWN_ENV_VARS = new Set([
+  ...APP_ENV_VARS,
+  ...MODULES.flatMap((m) => [...m.knownEnvVars]),
+])
 
 /**
  * Prefixes the typo warner watches, derived from every known var (NOTES_TITLE

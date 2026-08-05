@@ -7,8 +7,11 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm --filter \"./modules/**\" build && pnpm -r typecheck",
     "test": "pnpm --filter \"./modules/**\" build && pnpm -r test",
-    "dev": "pnpm --filter ./server dev",
+    "dev": "dotenv -e .env -- pnpm --filter ./server dev",
     "start": "pnpm --filter ./server start"
+  },
+  "devDependencies": {
+    "dotenv-cli": "11.0.0"
   },
   "packageManager": "pnpm@10.32.1"
 }

@@ -4,6 +4,8 @@ coverage/
 *.tsbuildinfo
 # mcp-use dev artifacts (tool-registry types)
 .mcp-use/
-# local credentials
+# local credentials — `.env.example` is the committed template and must survive
+# the wildcard below (it would otherwise match `.env.*`).
 .env
 .env.*
+!.env.example
