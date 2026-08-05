@@ -74,6 +74,15 @@ subprojects {
             publications {
                 create<MavenPublication>("maven") {
                     from(components["shadow"])
+                    pom {
+                        url.set("https://github.com/Miragon/miragon-ai")
+                        licenses {
+                            license {
+                                name.set("MIT License")
+                                url.set("https://opensource.org/license/mit")
+                            }
+                        }
+                    }
                 }
             }
             repositories {

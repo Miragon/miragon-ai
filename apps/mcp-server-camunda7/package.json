@@ -2,7 +2,7 @@
   "name": "@miragon-ai/mcp-server-camunda7",
   "version": "0.3.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Miragon/miragon-ai.git",

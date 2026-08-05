@@ -2,6 +2,7 @@
   "name": "@miragon-ai/widget-shell",
   "version": "0.3.0",
   "description": "Shared widget kit for Miragon AI MCP Apps: UI primitives, view + data-feed builders, and the shell:* widget catalogue.",
+  "license": "MIT",
   "keywords": [
     "mcp",
     "mcp-apps",
