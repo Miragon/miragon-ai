@@ -70,7 +70,7 @@ jobs:
 
   publish-npm:
     name: Publish ${{ matrix.package }} to npm
-    needs: release-please
+    needs: [release-please, gate]
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     permissions:
       contents: read
