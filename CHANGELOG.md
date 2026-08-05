@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/Miragon/miragon-ai/compare/v0.3.0...v0.4.0) (2026-08-05)
+
+
+### Features
+
+* align the single-engine id with the metrics engine_id label ([#201](https://github.com/Miragon/miragon-ai/issues/201)) ([7188ebc](https://github.com/Miragon/miragon-ai/commit/7188ebc9cccdc3c822dc4045dec1d33f06733968))
+* composed-server template — build your own server from the npm modules ([#203](https://github.com/Miragon/miragon-ai/issues/203)) ([fa4837f](https://github.com/Miragon/miragon-ai/commit/fa4837f2f5cc5359c731c8c458d4e444848f7217))
+
 ## [0.3.0](https://github.com/Miragon/miragon-ai/compare/v0.2.1...v0.3.0) (2026-08-04)
 
 
