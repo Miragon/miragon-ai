@@ -87,3 +87,17 @@ jobs:
     uses: ./.github/workflows/publish-npm-package.yml
     with:
       package: ${{ matrix.package }}
+
+  # After (not alongside) publish-npm: the mirror commits the release's pins
+  # plus a lockfile resolved from the public registry, so syncing before the
+  # packages are live would push an uninstallable template.
+  sync-template-mirror:
+    name: Sync composed-server template mirror
+    needs: [release-please, publish-npm]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/sync-template-mirror.yml
+    secrets: inherit
+    with:
+      tag_name: ${{ needs.release-please.outputs.tag_name }}

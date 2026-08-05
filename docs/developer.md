@@ -64,6 +64,10 @@ is a ready-to-copy pnpm workspace that composes them with an example custom
 module (tools, widget, guard tests included); its `README.md` documents the
 module contract and the invariants. CI runs the template against the
 workspace's packed packages on every change (`scripts/test-template.sh`).
+Each release also syncs it — tested against the published packages, with a
+committed lockfile — to the read-only mirror
+[`Miragon/miragon-ai-starter`](https://github.com/Miragon/miragon-ai-starter)
+("Use this template" ready; contribute here, not there).
 
 ## Documentation
 
