@@ -13,9 +13,12 @@ import { createProfileStore } from "./persistence.js"
  * its own config schema, env mapping and known env vars (see
  * `module-contract.ts`) — this file only selects, warns, and wires.
  *
- * Adding a module means touching exactly two lists: this one and the widget
- * spread in `src/ui/widget-registry.ts` (link 3 of the four-link widget
- * chain, guarded by `test/widget-registry.test.ts`).
+ * Adding a module touches four places (README "Adding your own module"):
+ * this list, the widget spread in `src/ui/widget-registry.ts` (link 3 of the
+ * four-link widget chain), a Tailwind `@source` entry in
+ * `src/ui/globals.css` (missing = silently unstyled widgets), and the
+ * module's `definition` in `test/widget-registry.test.ts` so the guard
+ * covers it.
  */
 const MODULES: readonly ModuleDefinition[] = [camunda7Module, analyticsModule, notesModule]
 
