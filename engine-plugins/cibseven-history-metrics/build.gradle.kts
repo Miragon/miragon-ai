@@ -1,14 +1,16 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.shadow)
+    alias(libs.plugins.maven.publish)
 }
 
-// Group is the `ai.miragon.mcp` umbrella inherited from the root build; the Gradle
+// Group is the `io.miragon.mcp` umbrella inherited from the root build; the Gradle
 // module name is the artifactId, so this publishes as
-// `ai.miragon.mcp:cibseven-history-metrics`.
+// `io.miragon.mcp:cibseven-history-metrics`.
 
 dependencies {
+    // Bundled into the plugin's transitive POM dependencies — the only runtime dep
+    // consumers need to resolve; the engine/spring stack is `compileOnly` (provided).
     implementation(libs.opentelemetry.api)
     compileOnly(libs.spring.boot.starter)
 
@@ -20,9 +22,44 @@ dependencies {
     testImplementation(project(":konsist"))
 }
 
-tasks.shadowJar {
-    archiveClassifier.set("")
-    mergeServiceFiles()
+// Publishes a thin jar (+ sources + javadoc) to the Sonatype Central Portal. Signing
+// is gated on `-PsignArtifacts=true` so local / dry-run builds need no GPG key.
+// Central Portal + signing credentials come from `ORG_GRADLE_PROJECT_*` env vars set
+// by `publish-to-maven.yml`.
+mavenPublishing {
+    publishToMavenCentral()
+    if (project.hasProperty("signArtifacts")) signAllPublications()
+    coordinates("io.miragon.mcp", "cibseven-history-metrics", version.toString())
+
+    pom {
+        name.set("cibseven-history-metrics")
+        description.set(
+            "CIB Seven history-event OTEL metrics plugin powering the Miragon AI analytics module",
+        )
+        inceptionYear.set("2026")
+        url.set("https://github.com/Miragon/miragon-ai")
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
+                distribution.set("https://opensource.org/licenses/MIT")
+            }
+        }
+        developers {
+            developer {
+                id.set("dominikhorn93")
+                name.set("Dominik Horn")
+                url.set("https://github.com/dominikhorn93")
+                organization.set("Miragon")
+                organizationUrl.set("https://miragon.io")
+            }
+        }
+        scm {
+            url.set("https://github.com/Miragon/miragon-ai")
+            connection.set("scm:git:git://github.com/Miragon/miragon-ai.git")
+            developerConnection.set("scm:git:ssh://git@github.com/Miragon/miragon-ai.git")
+        }
+    }
 }
 
 tasks.test {

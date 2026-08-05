@@ -16,7 +16,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("ai.miragon.mcp:cibseven-history-metrics")
+    implementation("io.miragon.mcp:cibseven-history-metrics")
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.jdbc)
@@ -64,20 +64,9 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-val pluginsBuild = gradle.includedBuild("engine-plugins")
-
-// shadowJar overwrites the regular `jar` output (archiveClassifier = "") in the
-// included build. Force compileKotlin to wait until shadowJar has finished
-// writing — otherwise the example reads a half-written archive mid-build.
-tasks.named("compileKotlin") {
-    dependsOn(pluginsBuild.task(":cibseven-history-metrics:shadowJar"))
-}
-
+// The plugin is consumed from the included (composite) build `engine-plugins` via the
+// `io.miragon.mcp:cibseven-history-metrics` coordinate above; Gradle substitutes it
+// with the module's normal `jar` and resolves `opentelemetry-api` transitively.
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("cibseven-example.jar")
-    dependsOn(pluginsBuild.task(":cibseven-history-metrics:shadowJar"))
-}
-
-tasks.named<Test>("test") {
-    dependsOn(pluginsBuild.task(":cibseven-history-metrics:shadowJar"))
 }
