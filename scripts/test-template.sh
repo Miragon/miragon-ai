@@ -19,21 +19,31 @@ PACKAGES=(client-camunda7 client-analytics widget-shell mcp-camunda7 mcp-analyti
 # The template's committed @miragon-ai pins must match the workspace versions —
 # release-please bumps both together via extra-files; a drifted pin means an
 # extra-files entry is missing and customers would install a stale release.
+# The toolkit family and mcp-use are checked too: they are pinned exactly
+# across the workspace (save-exact; a drifted second instance resurrects the
+# duplicate-React-context hang), but release-please does NOT bump them — a
+# repo-wide toolkit/mcp-use bump must include the template by hand.
 ROOT="$ROOT" node - <<'EOF'
 const fs = require("fs")
 const root = process.env.ROOT
+const read = (p) => JSON.parse(fs.readFileSync(p, "utf8"))
 const pkgs = ["client-camunda7", "client-analytics", "widget-shell", "mcp-camunda7", "mcp-analytics"]
 const versions = Object.fromEntries(
-  pkgs.map((p) => [
-    "@miragon-ai/" + p,
-    JSON.parse(fs.readFileSync(`${root}/packages/${p}/package.json`, "utf8")).version,
-  ]),
+  pkgs.map((p) => ["@miragon-ai/" + p, read(`${root}/packages/${p}/package.json`).version]),
 )
+// mcp-camunda7 declares toolkit-core (deps), toolkit-ui (devDeps) and
+// mcp-use (peer + devDeps), so its pins are the canonical ones.
+const camunda7 = read(`${root}/packages/mcp-camunda7/package.json`)
+for (const deps of [camunda7.dependencies, camunda7.peerDependencies, camunda7.devDependencies]) {
+  for (const [name, pin] of Object.entries(deps ?? {})) {
+    if (name.startsWith("@miragon/mcp-toolkit-") || name === "mcp-use") versions[name] = pin
+  }
+}
 const bad = []
 for (const file of ["server/package.json", "modules/mcp-notes/package.json"]) {
-  const pj = JSON.parse(fs.readFileSync(`${root}/templates/composed-server/${file}`, "utf8"))
-  for (const deps of [pj.dependencies ?? {}, pj.devDependencies ?? {}]) {
-    for (const [name, pin] of Object.entries(deps)) {
+  const pj = read(`${root}/templates/composed-server/${file}`)
+  for (const deps of [pj.dependencies, pj.devDependencies, pj.peerDependencies]) {
+    for (const [name, pin] of Object.entries(deps ?? {})) {
       if (versions[name] && pin !== versions[name]) {
         bad.push(`${file}: ${name} pinned ${pin}, workspace is ${versions[name]}`)
       }
@@ -42,7 +52,8 @@ for (const file of ["server/package.json", "modules/mcp-notes/package.json"]) {
 }
 if (bad.length) {
   console.error(
-    "Template pins drifted from the workspace versions (missing release-please extra-files entry?):\n" +
+    "Template pins drifted from the workspace versions (missing release-please extra-files " +
+      "entry, or a toolkit/mcp-use bump that skipped the template?):\n" +
       bad.join("\n"),
   )
   process.exit(1)
