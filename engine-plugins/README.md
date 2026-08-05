@@ -25,7 +25,7 @@ repositories {
 }
 
 dependencies {
-    implementation("io.miragon.mcp:cibseven-history-metrics:0.4.0")
+    implementation("io.miragon.mcp:cibseven-history-metrics:0.5.0")
 }
 ```
 
