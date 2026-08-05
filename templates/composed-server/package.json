@@ -1,0 +1,14 @@
+{
+  "name": "composed-mcp-server-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Template: compose your own MCP server from @miragon-ai modules plus your own custom modules.",
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm --filter \"./modules/**\" build && pnpm -r typecheck",
+    "test": "pnpm --filter \"./modules/**\" build && pnpm -r test",
+    "dev": "pnpm --filter ./server dev",
+    "start": "pnpm --filter ./server start"
+  },
+  "packageManager": "pnpm@10.32.1"
+}

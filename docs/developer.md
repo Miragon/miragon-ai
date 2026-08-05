@@ -54,6 +54,17 @@ Connect any MCP host to `http://localhost:8400/mcp` and call a tool.
 | `pnpm format`                 | Prettier                        |
 | `pnpm docs:dev`               | Run this docs site locally      |
 
+## Build your own server
+
+The modules ship on public npm — `@miragon-ai/mcp-camunda7`,
+`@miragon-ai/mcp-analytics`, `@miragon-ai/widget-shell` plus the two client
+packages, released in lockstep (pin one version across all of them).
+[`templates/composed-server/`](https://github.com/Miragon/miragon-ai/tree/main/templates/composed-server)
+is a ready-to-copy pnpm workspace that composes them with an example custom
+module (tools, widget, guard tests included); its `README.md` documents the
+module contract and the invariants. CI runs the template against the
+workspace's packed packages on every change (`scripts/test-template.sh`).
+
 ## Documentation
 
 - **You're reading it.** Edit any page under `docs/` and `pnpm docs:dev` hot-reloads.

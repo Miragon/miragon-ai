@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+**/.mcp-use
+**/.DS_Store
+coverage
+.env
+.env.*
+.git
