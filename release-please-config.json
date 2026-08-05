@@ -43,6 +43,26 @@
           "type": "json",
           "path": "packages/mcp-analytics/package.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "templates/composed-server/server/package.json",
+          "jsonpath": "$.dependencies['@miragon-ai/mcp-analytics']"
+        },
+        {
+          "type": "json",
+          "path": "templates/composed-server/server/package.json",
+          "jsonpath": "$.dependencies['@miragon-ai/mcp-camunda7']"
+        },
+        {
+          "type": "json",
+          "path": "templates/composed-server/server/package.json",
+          "jsonpath": "$.dependencies['@miragon-ai/widget-shell']"
+        },
+        {
+          "type": "json",
+          "path": "templates/composed-server/modules/mcp-notes/package.json",
+          "jsonpath": "$.dependencies['@miragon-ai/widget-shell']"
         }
       ]
     }

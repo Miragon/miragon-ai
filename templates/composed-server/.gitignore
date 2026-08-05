@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+# mcp-use dev artifacts (tool-registry types)
+.mcp-use/
+# local credentials
+.env
+.env.*

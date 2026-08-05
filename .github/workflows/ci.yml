@@ -56,6 +56,26 @@ jobs:
 
       - uses: Miragon/pin-npm-dependencies@v1.2.1
 
+  template:
+    name: Composed-server template (Build + Test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.0.9
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Packs the workspace packages and runs the template against the
+      # tarballs — the gate that templates/composed-server keeps compiling
+      # against what the release train will publish.
+      - run: ./scripts/test-template.sh
+
   kotlin:
     name: Kotlin (Build + Test)
     runs-on: ubuntu-latest

@@ -4,6 +4,9 @@ dist/
 coverage/
 *.tsbuildinfo
 .env
+# The template ships without a lockfile — customers generate and commit their
+# own after copying it out (its Dockerfile expects one).
+templates/composed-server/pnpm-lock.yaml
 miranum-ai/
 # Gradle
 engine-plugins/.gradle/

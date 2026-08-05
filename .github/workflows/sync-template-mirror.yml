@@ -1,0 +1,141 @@
+name: Sync template mirror
+
+# Mirrors templates/composed-server to the standalone template repository
+# after a release's npm publish. The monorepo stays the single source of
+# truth (release-please bumps the template pins in lockstep); the mirror is a
+# read-only convenience so customers get GitHub's "Use this template" button
+# and a committed pnpm-lock.yaml (which makes `docker build` work without a
+# prior local install). Before pushing, the template is installed and tested
+# against the REAL public registry — no tarball overrides — which is the one
+# check scripts/test-template.sh cannot perform.
+#
+# Runs after publish-npm on purpose: syncing on the release merge would
+# briefly advertise pins that are not on npm yet.
+#
+# One-time setup:
+#   1. Create the mirror repo (MIRROR_OWNER/MIRROR_NAME below) —
+#      auto-initialized (any README) so it has a default branch — and mark it
+#      as a template repository (Settings → Template repository).
+#   2. Grant the release-please GitHub App access to that repo (org Settings
+#      → GitHub Apps → Configure → Repository access). The push auth is a
+#      short-lived installation token minted from that app — no PAT.
+#   3. Bootstrap via workflow_dispatch with the latest release tag.
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: Release tag to mirror (e.g. v0.4.0)
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Release tag to mirror (e.g. v0.4.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  MIRROR_OWNER: Miragon
+  MIRROR_NAME: miragon-ai-starter
+
+jobs:
+  sync:
+    name: Test against npm + push mirror
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag_name }}
+
+      - uses: pnpm/action-setup@v6.0.9
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+
+      # npm's read replicas can lag the publish by a minute or two — a plain
+      # install would then resolve a 404 and fail the whole sync.
+      - name: Wait until the released packages are visible on npm
+        env:
+          TAG: ${{ inputs.tag_name }}
+        run: |
+          version="${TAG#v}"
+          deadline=$((SECONDS + 600))
+          for p in client-camunda7 client-analytics widget-shell mcp-camunda7 mcp-analytics; do
+            until npm view "@miragon-ai/$p@$version" version >/dev/null 2>&1; do
+              if ((SECONDS >= deadline)); then
+                echo "::error::@miragon-ai/$p@$version not visible on npm after 10 minutes"
+                exit 1
+              fi
+              echo "waiting for @miragon-ai/$p@$version ..."
+              sleep 15
+            done
+          done
+
+      # Same bar as scripts/test-template.sh, but resolved from the public
+      # registry. The generated pnpm-lock.yaml is kept for the mirror commit.
+      - name: Install + test the template against the public registry
+        run: |
+          WORK="$(mktemp -d)/composed-server"
+          rsync -a --exclude node_modules --exclude dist --exclude .mcp-use \
+            templates/composed-server/ "$WORK/"
+          cd "$WORK"
+          pnpm install --no-frozen-lockfile
+          pnpm build
+          pnpm typecheck
+          pnpm test
+          echo "WORK=$WORK" >> "$GITHUB_ENV"
+
+      # Minted right before the push so the 1h token lifetime never races the
+      # npm wait + test steps above. Same app as the release train, scoped
+      # down to the mirror repo.
+      - uses: actions/create-github-app-token@v3.2.0
+        id: mirror-token
+        with:
+          client-id: ${{ vars.RELEASE_PLEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          owner: ${{ env.MIRROR_OWNER }}
+          repositories: ${{ env.MIRROR_NAME }}
+
+      - uses: actions/checkout@v7.0.1
+        with:
+          repository: ${{ env.MIRROR_OWNER }}/${{ env.MIRROR_NAME }}
+          token: ${{ steps.mirror-token.outputs.token }}
+          path: mirror
+
+      # Mirror-only files (lockfile, LICENSE, README banner) are re-created
+      # after the --delete pass, so stale copies can never survive a sync.
+      - name: Assemble the mirror working tree
+        env:
+          TAG: ${{ inputs.tag_name }}
+        run: |
+          rsync -a --delete --exclude .git templates/composed-server/ mirror/
+          cp "$WORK/pnpm-lock.yaml" mirror/pnpm-lock.yaml
+          cp LICENSE mirror/LICENSE
+          {
+            echo "> [!NOTE]"
+            echo "> Read-only mirror of [\`templates/composed-server\`](https://github.com/Miragon/miragon-ai/tree/main/templates/composed-server)"
+            echo "> in [Miragon/miragon-ai](https://github.com/Miragon/miragon-ai), synced on every release (currently ${TAG})."
+            echo "> Please open issues and pull requests there."
+            echo ""
+            cat mirror/README.md
+          } > mirror/README.tmp
+          mv mirror/README.tmp mirror/README.md
+
+      - name: Commit and push
+        env:
+          TAG: ${{ inputs.tag_name }}
+        run: |
+          cd mirror
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Mirror already up to date — nothing to push."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: sync from Miragon/miragon-ai ${TAG}"
+          git push
