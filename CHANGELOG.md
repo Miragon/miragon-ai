@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/Miragon/miragon-ai/compare/v0.4.0...v0.5.0) (2026-08-05)
+
+
+### Features
+
+* give the composed-server template a loaded .env.example ([#208](https://github.com/Miragon/miragon-ai/issues/208)) ([5fc31fe](https://github.com/Miragon/miragon-ai/commit/5fc31fe4d0a442c93d6d5b82cd10fa85b67408bd))
+
+
+### Bug Fixes
+
+* **ci:** gate npm publish behind release approval ([#205](https://github.com/Miragon/miragon-ai/issues/205)) ([2a28651](https://github.com/Miragon/miragon-ai/commit/2a286516daf70d933d7fff931e2547db60032ecf))
+
 ## [0.4.0](https://github.com/Miragon/miragon-ai/compare/v0.3.0...v0.4.0) (2026-08-05)
 
 
