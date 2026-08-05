@@ -45,4 +45,4 @@ miragon.mcp.cibseven.history.metrics:
 logging:
   level:
     root: INFO
-    ai.miragon.mcp: DEBUG
+    io.miragon.mcp: DEBUG

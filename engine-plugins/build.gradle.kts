@@ -10,8 +10,8 @@ allprojects {
     // the artifactId (the Gradle module name, e.g. `cibseven-history-metrics`), so the
     // published coordinate is `io.miragon.mcp:<engine>-<artifact>`. Keeps one group as
     // more engines are added. `io.miragon` is the Sonatype Central namespace already
-    // verified for the org (shared with bpmn-to-code); the Kotlin source package stays
-    // `ai.miragon.mcp.*`.
+    // verified for the org (shared with bpmn-to-code); the Kotlin source package
+    // matches it (`io.miragon.mcp.*`).
     group = "io.miragon.mcp"
     // version comes from gradle.properties, bumped in lockstep by release-please
     // (extra-file in the root release-please-config.json).

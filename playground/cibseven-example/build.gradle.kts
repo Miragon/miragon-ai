@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.spring.dependency.management)
 }
 
-group = "ai.miragon.mcp.cibseven.example"
+group = "io.miragon.mcp.cibseven.example"
 version = "0.1.0"
 
 kotlin {
