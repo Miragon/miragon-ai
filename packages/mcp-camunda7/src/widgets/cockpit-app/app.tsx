@@ -94,6 +94,113 @@ function cockpitReducer(state: CockpitState, action: CockpitAction): CockpitStat
   }
 }
 
+function EnginesEmptyState({
+  hasTransport,
+  enginesQuery,
+}: {
+  hasTransport: boolean
+  enginesQuery: { isError: boolean; error: Error | null; data: unknown }
+}) {
+  const locale = useLocale()
+  return (
+    <WidgetShell>
+      <ViewDataState
+        loading={hasTransport && !enginesQuery.isError && enginesQuery.data === undefined}
+        error={enginesQuery.error}
+        loadingText={translator(locale, "cockpit.loading.engines")}
+        emptyText={translator(locale, "cockpit.empty.engines")}
+        className="text-muted-foreground p-6 text-sm"
+      />
+    </WidgetShell>
+  )
+}
+
+function LandingChooser({
+  engines,
+  onEnterEngine,
+  onOpenFleet,
+}: {
+  engines: Array<{ id: string }>
+  onEnterEngine: (id: string) => void
+  onOpenFleet: () => void
+}) {
+  const locale = useLocale()
+  // A single engine auto-enters via the effect in CockpitApp — bridge the one
+  // render before it lands.
+  if (engines.length === 1) {
+    return (
+      <WidgetShell>
+        <div className="text-muted-foreground p-6 text-sm">
+          {translator(locale, "cockpit.loading.engines")}
+        </div>
+      </WidgetShell>
+    )
+  }
+  // The landing chooser: with more than one engine, Open Cockpit offers two
+  // ways in — operate a single engine, or run cross-engine analyses.
+  return (
+    <WidgetShell>
+      <div className="mx-auto flex max-w-2xl flex-col gap-6 py-10">
+        <div className="text-center">
+          <h1 className="text-foreground text-2xl font-bold">
+            {translator(locale, "cockpit.landing.title")}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {translator(locale, "cockpit.landing.subtitle", { count: engines.length })}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
+            <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
+              ▦
+            </div>
+            <div>
+              <h2 className="text-foreground font-semibold">
+                {translator(locale, "cockpit.landing.operate.title")}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {translator(locale, "cockpit.landing.operate.desc")}
+              </p>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {engines.map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => onEnterEngine(e.id)}
+                  className="border-border bg-background text-foreground hover:bg-muted focus-visible:ring-ring rounded-md border px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2"
+                >
+                  {e.id} <span aria-hidden>→</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenFleet}
+            className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-5 text-left outline-none focus-visible:ring-2"
+          >
+            <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
+              ⤧
+            </div>
+            <div>
+              <h2 className="text-foreground font-semibold">
+                {translator(locale, "cockpit.landing.fleet.title")}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {translator(locale, "cockpit.landing.fleet.desc")}
+              </p>
+            </div>
+            <span className="text-m-blue mt-1 text-sm font-medium">
+              {translator(locale, "cockpit.landing.fleet.open")} <span aria-hidden>→</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </WidgetShell>
+  )
+}
+
 export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const { requestDisplayMode, callTool } = useWidget()
 
@@ -168,93 +275,16 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   // from open_cockpit we proceed even if the engines query failed, and without
   // a query transport the state must resolve instead of loading forever.
   if (engines.length === 0) {
-    return (
-      <WidgetShell>
-        <ViewDataState
-          loading={!!queryCallTool && !enginesQuery.isError && enginesQuery.data === undefined}
-          error={enginesQuery.error}
-          loadingText={translator(locale, "cockpit.loading.engines")}
-          emptyText={translator(locale, "cockpit.empty.engines")}
-          className="text-muted-foreground p-6 text-sm"
-        />
-      </WidgetShell>
-    )
+    return <EnginesEmptyState hasTransport={!!queryCallTool} enginesQuery={enginesQuery} />
   }
 
   if (scope.kind === "landing") {
-    // A single engine auto-enters via the effect above — bridge the one render
-    // before it lands.
-    if (engines.length === 1) {
-      return (
-        <WidgetShell>
-          <div className="text-muted-foreground p-6 text-sm">
-            {translator(locale, "cockpit.loading.engines")}
-          </div>
-        </WidgetShell>
-      )
-    }
-    // The landing chooser: with more than one engine, Open Cockpit offers two
-    // ways in — operate a single engine, or run cross-engine analyses.
     return (
-      <WidgetShell>
-        <div className="mx-auto flex max-w-2xl flex-col gap-6 py-10">
-          <div className="text-center">
-            <h1 className="text-foreground text-2xl font-bold">
-              {translator(locale, "cockpit.landing.title")}
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {translator(locale, "cockpit.landing.subtitle", { count: engines.length })}
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
-              <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
-                ▦
-              </div>
-              <div>
-                <h2 className="text-foreground font-semibold">
-                  {translator(locale, "cockpit.landing.operate.title")}
-                </h2>
-                <p className="text-muted-foreground text-sm">
-                  {translator(locale, "cockpit.landing.operate.desc")}
-                </p>
-              </div>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {engines.map((e) => (
-                  <button
-                    key={e.id}
-                    type="button"
-                    onClick={() => enterEngine(e.id)}
-                    className="border-border bg-background text-foreground hover:bg-muted focus-visible:ring-ring rounded-md border px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2"
-                  >
-                    {e.id} <span aria-hidden>→</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: "to-fleet" })}
-              className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-5 text-left outline-none focus-visible:ring-2"
-            >
-              <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
-                ⤧
-              </div>
-              <div>
-                <h2 className="text-foreground font-semibold">
-                  {translator(locale, "cockpit.landing.fleet.title")}
-                </h2>
-                <p className="text-muted-foreground text-sm">
-                  {translator(locale, "cockpit.landing.fleet.desc")}
-                </p>
-              </div>
-              <span className="text-m-blue mt-1 text-sm font-medium">
-                {translator(locale, "cockpit.landing.fleet.open")} <span aria-hidden>→</span>
-              </span>
-            </button>
-          </div>
-        </div>
-      </WidgetShell>
+      <LandingChooser
+        engines={engines}
+        onEnterEngine={enterEngine}
+        onOpenFleet={() => dispatch({ type: "to-fleet" })}
+      />
     )
   }
 

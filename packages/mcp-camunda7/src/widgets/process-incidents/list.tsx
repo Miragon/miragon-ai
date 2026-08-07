@@ -18,6 +18,34 @@ import { PagedIncidentTable, type ResolveError } from "./incident-table.js"
 import { EmptyStateWithSiblings } from "./empty-state.js"
 import { useT } from "../../messages/use-t.js"
 
+function NoIncidentsState({
+  data,
+  emptyVariant,
+  onJumpTo,
+}: {
+  data: ProcessIncidentsData
+  emptyVariant: "siblings" | "note"
+  onJumpTo: (processDefinitionKey: string) => void
+}) {
+  const t = useT()
+  const processName = data.processDefinitionName ?? data.processDefinitionKey
+  if (emptyVariant === "siblings") {
+    return (
+      <EmptyStateWithSiblings
+        processName={processName}
+        siblings={data.siblingsWithIncidents}
+        onJumpTo={onJumpTo}
+      />
+    )
+  }
+  return (
+    <div className="border-border bg-card flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm">
+      <span className={`size-1.5 rounded-full ${TONE_DOT.success}`} aria-hidden="true" />
+      <span className="text-foreground">{t("procIncList.noIncidentsNote", { processName })}</span>
+    </div>
+  )
+}
+
 export function ActivityIncidentList({
   data: initialData = null,
   processDefinitionKey,
@@ -130,22 +158,7 @@ export function ActivityIncidentList({
           }
         />
         {data.activities.length === 0 ? (
-          emptyVariant === "siblings" ? (
-            <EmptyStateWithSiblings
-              processName={data.processDefinitionName ?? data.processDefinitionKey}
-              siblings={data.siblingsWithIncidents}
-              onJumpTo={jumpToProcess}
-            />
-          ) : (
-            <div className="border-border bg-card flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm">
-              <span className={`size-1.5 rounded-full ${TONE_DOT.success}`} aria-hidden="true" />
-              <span className="text-foreground">
-                {t("procIncList.noIncidentsNote", {
-                  processName: data.processDefinitionName ?? data.processDefinitionKey,
-                })}
-              </span>
-            </div>
-          )
+          <NoIncidentsState data={data} emptyVariant={emptyVariant} onJumpTo={jumpToProcess} />
         ) : (
           data.activities.map((activity) => (
             <GroupCard

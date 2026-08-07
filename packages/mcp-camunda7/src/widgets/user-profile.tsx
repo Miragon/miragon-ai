@@ -100,6 +100,70 @@ export function UserProfileWidget({ data: initialData = null }: { data?: UserPro
   )
 }
 
+function DashboardsCardBody({
+  unavailable,
+  dashboards,
+  form,
+  canSave,
+  onSetDefault,
+  onTogglePinned,
+}: {
+  unavailable: boolean
+  dashboards: DashboardSummary[]
+  form: Pick<FormState, "defaultDashboardId" | "pinnedDashboardIds">
+  canSave: boolean
+  onSetDefault: (id: string) => void
+  onTogglePinned: (id: string, on: boolean) => void
+}) {
+  const t = useT()
+  if (unavailable) {
+    return <span className={helpCls}>{t("profile.dashboards.unavailable")}</span>
+  }
+  if (dashboards.length === 0) {
+    return <span className={helpCls}>{t("profile.dashboards.empty")}</span>
+  }
+  return (
+    <>
+      <SettingsField
+        label={t("profile.field.defaultDashboard")}
+        help={t("profile.field.defaultDashboard.help")}
+      >
+        <NativeSelect
+          value={form.defaultDashboardId}
+          disabled={!canSave}
+          onChange={(e) => onSetDefault(e.target.value)}
+        >
+          <option value="">{t("profile.dashboard.none")}</option>
+          {dashboards.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.title ?? d.name}
+            </option>
+          ))}
+        </NativeSelect>
+      </SettingsField>
+      <SettingsField
+        label={t("profile.field.pinnedDashboards")}
+        help={t("profile.field.pinnedDashboards.help")}
+        group
+      >
+        <div className="flex flex-col gap-1.5">
+          {dashboards.map((d) => (
+            <label key={d.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.pinnedDashboardIds.includes(d.id)}
+                disabled={!canSave}
+                onChange={(ev) => onTogglePinned(d.id, ev.target.checked)}
+              />
+              <span>{d.title ?? d.name}</span>
+            </label>
+          ))}
+        </div>
+      </SettingsField>
+    </>
+  )
+}
+
 /**
  * The shell-less form body — localized via `useT` (locale from the global
  * ProfileGate). Wrapped in `WidgetShell` by `UserProfileWidget` above.
@@ -319,50 +383,14 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
         </SettingsCard>
 
         <SettingsCard title={t("profile.section.dashboards")}>
-          {dashboardsQuery.isError ? (
-            <span className={helpCls}>{t("profile.dashboards.unavailable")}</span>
-          ) : dashboards.length === 0 ? (
-            <span className={helpCls}>{t("profile.dashboards.empty")}</span>
-          ) : (
-            <>
-              <SettingsField
-                label={t("profile.field.defaultDashboard")}
-                help={t("profile.field.defaultDashboard.help")}
-              >
-                <NativeSelect
-                  value={form.defaultDashboardId}
-                  disabled={!canSave}
-                  onChange={(e) => set("defaultDashboardId", e.target.value)}
-                >
-                  <option value="">{t("profile.dashboard.none")}</option>
-                  {dashboards.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.title ?? d.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </SettingsField>
-              <SettingsField
-                label={t("profile.field.pinnedDashboards")}
-                help={t("profile.field.pinnedDashboards.help")}
-                group
-              >
-                <div className="flex flex-col gap-1.5">
-                  {dashboards.map((d) => (
-                    <label key={d.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={form.pinnedDashboardIds.includes(d.id)}
-                        disabled={!canSave}
-                        onChange={(ev) => togglePinned(d.id, ev.target.checked)}
-                      />
-                      <span>{d.title ?? d.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </SettingsField>
-            </>
-          )}
+          <DashboardsCardBody
+            unavailable={dashboardsQuery.isError}
+            dashboards={dashboards}
+            form={form}
+            canSave={canSave}
+            onSetDefault={(id) => set("defaultDashboardId", id)}
+            onTogglePinned={togglePinned}
+          />
         </SettingsCard>
       </div>
     </>

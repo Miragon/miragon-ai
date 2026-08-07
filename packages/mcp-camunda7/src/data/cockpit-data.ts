@@ -191,20 +191,59 @@ export async function buildProcessListData(
 
 export type ProcessInstancesArgs = ProcessInstancesFilters & PagingArgs
 
-export async function buildProcessInstancesData(
-  client: Client,
-  engineId: string,
-  args: ProcessInstancesArgs,
-): Promise<ProcessInstancesData> {
-  // The Camunda REST API only accepts `true` for active/suspended/withIncident
-  // (a `false` is rejected), so only forward the flags when set.
-  const filter = {
+// The Camunda REST API only accepts `true` for active/suspended/withIncident
+// (a `false` is rejected), so only forward the flags when set.
+function toProcessInstanceFilter(args: ProcessInstancesArgs) {
+  return {
     processDefinitionKey: args.processDefinitionKey,
     active: args.active ? true : undefined,
     suspended: args.suspended ? true : undefined,
     withIncident: args.withIncidentsOnly ? true : undefined,
     businessKeyLike: args.businessKeyLike || undefined,
   }
+}
+
+// Camunda definition ids are `{key}:{version}:{deploymentId}`.
+function parseDefinitionVersion(definitionId: string | null | undefined): number | null {
+  const seg = definitionId?.split(":")[1]
+  const n = seg ? Number(seg) : NaN
+  return Number.isFinite(n) ? n : null
+}
+
+function toInstanceSummaries(
+  instancesRaw: unknown,
+  incidentsRaw: unknown,
+): ProcessInstancesData["instances"] {
+  const instanceArray = (Array.isArray(instancesRaw) ? instancesRaw : []) as Array<{
+    id?: string | null
+    definitionId?: string | null
+    businessKey?: string | null
+    suspended?: boolean | null
+  }>
+  const incidentArray = (Array.isArray(incidentsRaw) ? incidentsRaw : []) as Array<{
+    processInstanceId?: string | null
+  }>
+  const incidentInstanceIds = new Set(
+    incidentArray.map((i) => i.processInstanceId).filter((x): x is string => !!x),
+  )
+  return instanceArray
+    .filter((i): i is typeof i & { id: string } => !!i.id)
+    .map((i) => ({
+      id: i.id,
+      businessKey: i.businessKey ?? null,
+      processDefinitionKey: i.definitionId ? processDefinitionKeyFromId(i.definitionId) : null,
+      version: parseDefinitionVersion(i.definitionId),
+      suspended: i.suspended ?? false,
+      hasIncident: incidentInstanceIds.has(i.id),
+    }))
+}
+
+export async function buildProcessInstancesData(
+  client: Client,
+  engineId: string,
+  args: ProcessInstancesArgs,
+): Promise<ProcessInstancesData> {
+  const filter = toProcessInstanceFilter(args)
 
   const [instancesRaw, countRes, defsRaw, incidentsRaw] = await Promise.all([
     getProcessInstances({
@@ -234,38 +273,8 @@ export async function buildProcessInstancesData(
     }).catch(() => []),
   ])
 
-  const instanceArray = (Array.isArray(instancesRaw) ? instancesRaw : []) as Array<{
-    id?: string | null
-    definitionId?: string | null
-    businessKey?: string | null
-    suspended?: boolean | null
-  }>
   const defArray = (Array.isArray(defsRaw) ? defsRaw : []) as Array<{ name?: string | null }>
-  const incidentArray = (Array.isArray(incidentsRaw) ? incidentsRaw : []) as Array<{
-    processInstanceId?: string | null
-  }>
-
-  const incidentInstanceIds = new Set(
-    incidentArray.map((i) => i.processInstanceId).filter((x): x is string => !!x),
-  )
-
-  // Camunda definition ids are `{key}:{version}:{deploymentId}`.
-  const parseVersion = (definitionId: string | null | undefined): number | null => {
-    const seg = definitionId?.split(":")[1]
-    const n = seg ? Number(seg) : NaN
-    return Number.isFinite(n) ? n : null
-  }
-
-  const instances: ProcessInstancesData["instances"] = instanceArray
-    .filter((i): i is typeof i & { id: string } => !!i.id)
-    .map((i) => ({
-      id: i.id,
-      businessKey: i.businessKey ?? null,
-      processDefinitionKey: i.definitionId ? processDefinitionKeyFromId(i.definitionId) : null,
-      version: parseVersion(i.definitionId),
-      suspended: i.suspended ?? false,
-      hasIncident: incidentInstanceIds.has(i.id),
-    }))
+  const instances = toInstanceSummaries(instancesRaw, incidentsRaw)
 
   return {
     processDefinitionKey: args.processDefinitionKey ?? null,

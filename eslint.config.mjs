@@ -45,13 +45,6 @@ const complexityRatchet = {
   "packages/mcp-camunda7/src/widgets/job-panel.tsx": 19,
   "packages/mcp-camunda7/src/data/bpmn-viewer-data.ts": 18,
   "packages/mcp-camunda7/src/widgets/bpmn-viewer/widget.tsx": 18,
-  "packages/mcp-camunda7/src/widgets/user-profile.tsx": 17,
-  "packages/mcp-camunda7/src/data/cockpit-data.ts": 16,
-  "packages/mcp-camunda7/src/widgets/cockpit-app/app.tsx": 16,
-  "packages/mcp-camunda7/src/widgets/cockpit-app/fleet-view.tsx": 16,
-  "packages/mcp-camunda7/src/widgets/lib/coerce-value.ts": 16,
-  "packages/mcp-camunda7/src/widgets/process-incidents/flow.tsx": 16,
-  "packages/mcp-camunda7/src/widgets/process-incidents/list.tsx": 16,
 }
 
 // Frozen at current length rounded up to the next 10 lines.

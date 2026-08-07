@@ -11,6 +11,44 @@ import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { severityTone } from "../cockpit-dashboard/lib.js"
 import { useT } from "../../messages/use-t.js"
 
+function FleetEngineKpis({
+  summary,
+  incidents,
+  failed,
+}: {
+  summary: NonNullable<CockpitDashboardData["summary"]>
+  incidents: number
+  failed: number
+}) {
+  const t = useT()
+  return (
+    <div className="grid grid-cols-3 gap-2 text-sm">
+      <div>
+        <div className="text-muted-foreground text-[11px]">{t("fleet.running")}</div>
+        <div className="text-foreground font-mono font-semibold tabular-nums">
+          {summary.totalRunningInstances.toLocaleString()}
+        </div>
+      </div>
+      <div>
+        <div className="text-muted-foreground text-[11px]">{t("fleet.incidents")}</div>
+        <div>
+          <CountPill tone={incidents > 0 ? "critical" : "success"}>{incidents}</CountPill>
+        </div>
+      </div>
+      <div>
+        <div className="text-muted-foreground text-[11px]">{t("fleet.failedJobs")}</div>
+        <div>
+          {failed > 0 ? (
+            <CountPill tone="warning">{failed}</CountPill>
+          ) : (
+            <span className="text-muted-foreground font-mono text-xs">0</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /**
  * One health tile per engine. Self-fetches the same `camunda7_cockpit_overview_data`
  * feed the per-engine cockpit overview uses, under the SAME query key — so once an
@@ -55,30 +93,7 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
       ) : !s ? (
         <span className="text-muted-foreground text-xs">{t("fleet.loading")}</span>
       ) : (
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          <div>
-            <div className="text-muted-foreground text-[11px]">{t("fleet.running")}</div>
-            <div className="text-foreground font-mono font-semibold tabular-nums">
-              {s.totalRunningInstances.toLocaleString()}
-            </div>
-          </div>
-          <div>
-            <div className="text-muted-foreground text-[11px]">{t("fleet.incidents")}</div>
-            <div>
-              <CountPill tone={incidents > 0 ? "critical" : "success"}>{incidents}</CountPill>
-            </div>
-          </div>
-          <div>
-            <div className="text-muted-foreground text-[11px]">{t("fleet.failedJobs")}</div>
-            <div>
-              {failed > 0 ? (
-                <CountPill tone="warning">{failed}</CountPill>
-              ) : (
-                <span className="text-muted-foreground font-mono text-xs">0</span>
-              )}
-            </div>
-          </div>
-        </div>
+        <FleetEngineKpis summary={s} incidents={incidents} failed={failed} />
       )}
       {s && (
         <div className="text-muted-foreground text-[11px]">

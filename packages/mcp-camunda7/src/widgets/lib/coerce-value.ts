@@ -5,31 +5,46 @@
  * typo never reaches the engine as a mistyped value (e.g. the raw string
  * "abc" written with type Integer).
  */
-export function coerceValue(raw: string, type?: string): unknown {
-  if (raw === "") return ""
-  if (!type || type === "String") return raw
-  if (type === "Boolean") {
-    if (raw === "true") return true
-    if (raw === "false") return false
+
+function coerceBoolean(raw: string): unknown {
+  if (raw === "true") return true
+  if (raw === "false") return false
+  return undefined
+}
+
+function coerceWholeNumber(raw: string): unknown {
+  if (!/^-?\d+$/.test(raw)) return undefined
+  const num = Number(raw)
+  // Beyond 2^53 `Number()` silently rounds to the nearest double — refuse
+  // (field shows "invalid") instead of writing a corrupted value to the engine.
+  return Number.isSafeInteger(num) ? num : undefined
+}
+
+function coerceDouble(raw: string): unknown {
+  const num = Number(raw)
+  return Number.isFinite(num) ? num : undefined
+}
+
+function coerceJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw)
+  } catch {
     return undefined
   }
-  if (type === "Long" || type === "Integer") {
-    if (!/^-?\d+$/.test(raw)) return undefined
-    const num = Number(raw)
-    // Beyond 2^53 `Number()` silently rounds to the nearest double — refuse
-    // (field shows "invalid") instead of writing a corrupted value to the engine.
-    return Number.isSafeInteger(num) ? num : undefined
-  }
-  if (type === "Double") {
-    const num = Number(raw)
-    return Number.isFinite(num) ? num : undefined
-  }
-  if (type === "Json" || type === "Object") {
-    try {
-      return JSON.parse(raw)
-    } catch {
-      return undefined
-    }
-  }
-  return raw
+}
+
+const COERCERS: Record<string, (raw: string) => unknown> = {
+  Boolean: coerceBoolean,
+  Long: coerceWholeNumber,
+  Integer: coerceWholeNumber,
+  Double: coerceDouble,
+  Json: coerceJson,
+  Object: coerceJson,
+}
+
+export function coerceValue(raw: string, type?: string): unknown {
+  if (raw === "") return ""
+  if (!type) return raw
+  const coerce = COERCERS[type]
+  return coerce ? coerce(raw) : raw
 }
