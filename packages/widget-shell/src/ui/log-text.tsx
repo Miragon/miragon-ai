@@ -24,7 +24,7 @@ export function LogText({
   if (!text) return <span className="text-muted-foreground">—</span>
   if (text.length <= LOG_TEXT_PREVIEW) {
     return (
-      <p className={cn("text-muted-foreground break-words font-mono text-xs", className)}>{text}</p>
+      <p className={cn("text-muted-foreground font-mono text-xs break-words", className)}>{text}</p>
     )
   }
   return (
@@ -32,7 +32,7 @@ export function LogText({
       <summary className="text-muted-foreground cursor-pointer truncate font-mono text-xs">
         {truncate(text, LOG_TEXT_PREVIEW)}
       </summary>
-      <pre className="bg-muted border-border mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded border p-2 font-mono text-xs">
+      <pre className="bg-muted border-border mt-1 max-h-40 overflow-auto rounded border p-2 font-mono text-xs whitespace-pre-wrap">
         {text}
       </pre>
     </details>

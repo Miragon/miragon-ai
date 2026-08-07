@@ -85,7 +85,7 @@ describe("buildIncidentsDashboardData", () => {
     mockedGetDefs.mockResolvedValue([] as never)
     // Count outage → the builder falls back to the scan-derived values, so
     // the aggregation assertions below stay meaningful.
-    mockedGetIncidentsCount.mockResolvedValue({} as never)
+    mockedGetIncidentsCount.mockResolvedValue({})
   })
 
   it("aggregates incidents by process and activity, sorted desc", async () => {
@@ -238,7 +238,7 @@ describe("buildProcessIncidentsData", () => {
     vi.clearAllMocks()
     mockedGetDefs.mockResolvedValue([] as never)
     mockedGetActivityStats.mockResolvedValue([] as never)
-    mockedGetIncidentsCount.mockResolvedValue({} as never)
+    mockedGetIncidentsCount.mockResolvedValue({})
   })
 
   it("returns rich per-process detail with BPMN, activity names and Cockpit URLs", async () => {
@@ -256,7 +256,7 @@ describe("buildProcessIncidentsData", () => {
     ] as never)
     mockedGetBpmn.mockResolvedValueOnce({
       bpmn20Xml: `<bpmn:userTask id="A1" name="Approve" /><bpmn:serviceTask id="A2" name="Send" />`,
-    } as never)
+    })
     mockedGetActivityStats.mockResolvedValueOnce([
       { id: "A1", failedJobs: 2 },
       { id: "A2", failedJobs: 1 },
@@ -296,14 +296,14 @@ describe("buildProcessIncidentsData", () => {
         definition: { id: "K1:1:abc", key: "K1", name: "Process 1", version: 5 },
       },
     ] as never)
-    mockedGetBpmn.mockResolvedValueOnce({ bpmn20Xml: "" } as never)
+    mockedGetBpmn.mockResolvedValueOnce({ bpmn20Xml: "" })
     // Statistics know MORE than the scan: A1 really has 300 incidents, and A9
     // has 7 that never made it into the 200-row recency window.
     mockedGetActivityStats.mockResolvedValueOnce([
       { id: "A1", failedJobs: 0, incidents: [{ incidentType: "failedJob", incidentCount: 300 }] },
       { id: "A9", failedJobs: 0, incidents: [{ incidentType: "failedJob", incidentCount: 7 }] },
     ] as never)
-    mockedGetIncidentsCount.mockResolvedValue({ count: 307 } as never)
+    mockedGetIncidentsCount.mockResolvedValue({ count: 307 })
 
     const data = await buildProcessIncidentsData(fakeClient, {
       provider: cibsevenProvider,
@@ -404,7 +404,7 @@ describe("buildProcessIncidentsData", () => {
         definition: { id: "K1:1:abc", key: "K1", name: null, version: 1 },
       },
     ] as never)
-    mockedGetBpmn.mockResolvedValueOnce({ bpmn20Xml: "" } as never)
+    mockedGetBpmn.mockResolvedValueOnce({ bpmn20Xml: "" })
 
     const data = await buildProcessIncidentsData(fakeClient, {
       provider: cibsevenProvider,
@@ -430,7 +430,7 @@ describe("buildActivityIncidentsData", () => {
       incident({ id: "i10", activityId: "A1", processInstanceId: "p10" }),
       incident({ id: "i11", activityId: "A1", processInstanceId: "p11" }),
     ] as never)
-    mockedGetIncidentsCount.mockResolvedValueOnce({ count: 25 } as never)
+    mockedGetIncidentsCount.mockResolvedValueOnce({ count: 25 })
     mockedGetStats.mockResolvedValueOnce([
       {
         id: "K1:1:abc",
@@ -477,7 +477,7 @@ describe("buildActivityIncidentsData", () => {
 
   it("defaults to page 0 with the server page size and a scan-length fallback total", async () => {
     mockedGetIncidents.mockResolvedValueOnce([incident({ id: "i1" })] as never)
-    mockedGetIncidentsCount.mockResolvedValueOnce({} as never) // count outage
+    mockedGetIncidentsCount.mockResolvedValueOnce({}) // count outage
     mockedGetStats.mockResolvedValueOnce([] as never)
 
     const data = await buildActivityIncidentsData(fakeClient, {

@@ -49,7 +49,7 @@ describe("buildClusterDetailData paging", () => {
   const args = { activityId: "A1", incidentType: "failedJob" }
 
   it("returns the default first page of 50 with the full matching total", async () => {
-    mockedGetIncidents.mockResolvedValue(incidents(120) as never)
+    mockedGetIncidents.mockResolvedValue(incidents(120))
 
     const data = await buildClusterDetailData(client, "eng1", args)
 
@@ -60,7 +60,7 @@ describe("buildClusterDetailData paging", () => {
   })
 
   it("slices by firstResult/maxResults over the matching set", async () => {
-    mockedGetIncidents.mockResolvedValue(incidents(120) as never)
+    mockedGetIncidents.mockResolvedValue(incidents(120))
 
     const data = await buildClusterDetailData(client, "eng1", {
       ...args,
@@ -83,7 +83,7 @@ describe("buildClusterDetailData paging", () => {
     }))
     // Interleave so a raw-scan slice would pick up foreign rows.
     const mixed = matching.flatMap((m, n) => (other[n] ? [m, other[n]] : [m]))
-    mockedGetIncidents.mockResolvedValue(mixed as never)
+    mockedGetIncidents.mockResolvedValue(mixed)
 
     // "timeout calling 'WMS'" normalizes to this signature (lowercased,
     // quoted values masked) — the same shape the engine-health clusters emit.
@@ -100,7 +100,7 @@ describe("buildClusterDetailData paging", () => {
   })
 
   it("narrows the list (not the KPIs) via the business-key search", async () => {
-    mockedGetIncidents.mockResolvedValue(incidents(80) as never)
+    mockedGetIncidents.mockResolvedValue(incidents(80))
     // Search lookup: only p3 and p7 carry a matching business key; the later
     // enrichment call returns the keys for the served page.
     mockedGetProcessInstances
@@ -128,7 +128,7 @@ describe("buildClusterDetailData paging", () => {
   })
 
   it("enriches only the requested page with business keys", async () => {
-    mockedGetIncidents.mockResolvedValue(incidents(80) as never)
+    mockedGetIncidents.mockResolvedValue(incidents(80))
     mockedGetProcessInstances.mockResolvedValue([{ id: "p50", businessKey: "ORDER-50" }] as never)
 
     const data = await buildClusterDetailData(client, "eng1", {

@@ -144,7 +144,7 @@ export function useBpmnViewer({
       // surface like import failures — outside this try they'd be a silent
       // unhandled rejection and the widget would render an undecorated diagram.
       try {
-        const cleanup = onImportedRef.current?.(viewer as unknown as BpmnViewerWithGet)
+        const cleanup = onImportedRef.current?.(viewer)
         importCleanup = typeof cleanup === "function" ? cleanup : null
       } catch (err) {
         setImportError(err instanceof Error ? err.message : FALLBACK_IMPORT_ERROR)

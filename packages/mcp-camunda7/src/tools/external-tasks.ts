@@ -47,9 +47,7 @@ export function registerExternalTaskTools(register: Register) {
         path: { id: args.externalTaskId },
         body: {
           workerId: args.workerId,
-          variables: args.variables as
-            | Record<string, { value: unknown; type?: string }>
-            | undefined,
+          variables: args.variables,
         },
       })
       return { success: true, externalTaskId: args.externalTaskId }

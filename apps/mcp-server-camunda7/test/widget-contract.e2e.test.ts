@@ -90,7 +90,7 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
       mcpServers: { server: { url: `http://127.0.0.1:${port}/mcp` } },
     })
     session = await client.createSession("server")
-    tools = (await session.listTools()) as unknown as ToolEntry[]
+    tools = await session.listTools()
   })
 
   afterAll(async () => {

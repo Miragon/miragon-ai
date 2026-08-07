@@ -66,13 +66,13 @@ function FactsCard({ data }: { data: IncidentDetailData }) {
     <Card className="gap-0 py-0 shadow-none">
       <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2">
         <div>
-          <div className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+          <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             {t("incidentFailure.incidentType")}
           </div>
           <div className="font-mono text-sm">{data.incidentType}</div>
         </div>
         <div>
-          <div className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+          <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             {t("incidentFailure.activity")}
           </div>
           <div className="text-sm">
@@ -85,7 +85,7 @@ function FactsCard({ data }: { data: IncidentDetailData }) {
           </div>
         </div>
         <div>
-          <div className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+          <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             {t("incidentFailure.occurredAt")}
           </div>
           <div className="text-muted-foreground font-mono text-xs">
@@ -94,7 +94,7 @@ function FactsCard({ data }: { data: IncidentDetailData }) {
         </div>
         {job && (
           <div>
-            <div className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+            <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               {t("incidentFailure.job")}
             </div>
             <div className="flex items-center gap-2 text-sm">

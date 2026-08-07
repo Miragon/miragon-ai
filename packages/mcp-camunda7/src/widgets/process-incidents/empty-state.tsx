@@ -31,7 +31,7 @@ export function EmptyStateWithSiblings({
                 type="button"
                 key={s.processDefinitionKey}
                 onClick={() => onJumpTo(s.processDefinitionKey)}
-                className="border-border bg-muted text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium outline-none transition-colors focus-visible:ring-2"
+                className="border-border bg-muted text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-2"
               >
                 <span className="text-foreground">
                   {s.processDefinitionName ?? s.processDefinitionKey}

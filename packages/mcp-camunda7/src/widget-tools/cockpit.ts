@@ -262,7 +262,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       const data: HistoryTimelineData = {
         processInstance: inst,
         activities: actArray,
-        totalActivities: (activitiesCount as { count?: number } | null)?.count ?? actArray.length,
+        totalActivities: activitiesCount?.count ?? actArray.length,
         engineId,
       }
       return buildSingleWidgetView({

@@ -567,9 +567,7 @@ server.listen()
 
 ```typescript
 return widget({
-  props: {
-    /* visual data */
-  },
+  props: {/* visual data */},
   output: text("Concise summary for AI"), // AI only sees this
 })
 ```

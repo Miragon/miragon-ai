@@ -42,9 +42,7 @@ export function registerProcessInstanceTools(register: Register) {
         path: { key: args.processDefinitionKey },
         body: {
           businessKey: args.businessKey,
-          variables: args.variables as
-            | Record<string, { value: unknown; type?: string }>
-            | undefined,
+          variables: args.variables,
         },
       }),
     ),

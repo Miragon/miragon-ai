@@ -535,14 +535,7 @@ return (
         </div>
       )}
 
-      <button
-        onClick={() =>
-          callTool({
-            /* params */
-          })
-        }
-        disabled={isPending}
-      >
+      <button onClick={() => callTool({/* params */})} disabled={isPending}>
         Perform Action
       </button>
     </div>

@@ -76,7 +76,7 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
       // No aria-label: it would REPLACE the accessible name and hide the KPI
       // grid + error text from screen readers — the visible content (engine
       // name, "Operate", counts) speaks for itself.
-      className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-4 text-left outline-none transition-colors focus-visible:ring-2"
+      className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-4 text-left transition-colors outline-none focus-visible:ring-2"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-foreground inline-flex items-center gap-2 font-semibold">

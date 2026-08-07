@@ -40,7 +40,7 @@ export function SegmentedControl<V extends string>({
           onClick={() => onChange(option.value)}
           aria-pressed={value === option.value}
           className={cn(
-            "focus-visible:ring-ring [&:not(:last-child)]:border-border px-2.5 py-1 font-medium outline-none transition-colors focus-visible:ring-2 [&:not(:last-child)]:border-r",
+            "focus-visible:ring-ring [&:not(:last-child)]:border-border px-2.5 py-1 font-medium transition-colors outline-none focus-visible:ring-2 [&:not(:last-child)]:border-r",
             value === option.value
               ? "bg-m-blue-soft text-m-blue"
               : "text-muted-foreground hover:bg-muted hover:text-foreground",

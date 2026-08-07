@@ -33,8 +33,7 @@ export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
   execute: async (context, appConfig) => {
     const ch = appConfig.client
     const processDefinitionKey = context.keys["analytics:processDefinitionKey"] as
-      | string
-      | undefined
+      string | undefined
     const periodRaw = (context.keys["analytics:period"] as string | undefined) ?? "7d"
     const period: Period = PERIODS.includes(periodRaw as Period) ? (periodRaw as Period) : "7d"
 

@@ -180,9 +180,7 @@ async function fetchRootCauseIncident(
 ): Promise<RawIncident | null> {
   const rootId = rawIncident.rootCauseIncidentId
   return rootId && rootId !== rawIncident.id
-    ? ((await getIncident({ client, path: { id: rootId } }).catch(
-        () => null,
-      )) as unknown as RawIncident | null)
+    ? await getIncident({ client, path: { id: rootId } }).catch(() => null)
     : null
 }
 

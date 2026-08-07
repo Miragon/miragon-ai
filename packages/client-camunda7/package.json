@@ -60,8 +60,8 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "0.97.3",
+    "@hey-api/openapi-ts": "0.99.0",
     "typescript": "5.9.3",
-    "vitest": "4.1.4"
+    "vitest": "4.1.10"
   }
 }

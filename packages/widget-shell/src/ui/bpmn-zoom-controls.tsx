@@ -22,7 +22,7 @@ export function BpmnZoomControls({ onZoomIn, onZoomOut, onFit, className }: Bpmn
   return (
     <div
       className={cn(
-        "border-border bg-card absolute bottom-3 right-3 flex flex-col overflow-hidden rounded border shadow-sm",
+        "border-border bg-card absolute right-3 bottom-3 flex flex-col overflow-hidden rounded border shadow-sm",
         className,
       )}
     >
