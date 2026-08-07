@@ -25,10 +25,7 @@ export function Section({
   children: ReactNode
 }) {
   return (
-    <details
-      open={defaultOpen || undefined}
-      onToggle={(e) => onToggle?.((e.currentTarget as HTMLDetailsElement).open)}
-    >
+    <details open={defaultOpen || undefined} onToggle={(e) => onToggle?.(e.currentTarget.open)}>
       <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
         <svg
           aria-hidden="true"
