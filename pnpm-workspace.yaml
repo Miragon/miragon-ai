@@ -3,8 +3,73 @@ packages:
   - "packages/*"
   - "docs"
 
-# qs@6.15.1 (transitive via the Stryker toolchain) carries a moderate DoS
-# advisory (qs.stringify TypeError crash); pin to the patched line until the
-# dependents catch up.
+# Security overrides for TRANSITIVE dependencies with open Dependabot advisories.
+# Every dependent here pins its version exactly (mcp-use pins hono, @mcp-use/cli,
+# posthog-js …), so a bump of our own direct deps cannot move them — an override
+# is the only lever until the upstreams re-release.
+#
+# Caret ranges, not ">=": the fix has to stay inside the major line the dependents
+# were built against, otherwise the override silently turns into a breaking bump.
+# Shrink-only, same convention as the other ratchets: drop an entry once the
+# dependent ships the patched version itself, never widen one to make something pass.
 overrides:
+  # Reaches the server image (pnpm deploy --prod), so these are the ones that matter:
+
+  # CRITICAL arbitrary code execution + 8 more (DoS, prototype pollution, code
+  # generation gadgets). Via posthog-js → @opentelemetry/exporter-logs-otlp-http.
+  # 7.6.5 is already in the tree via langsmith, so this also dedupes.
+  protobufjs: "^7.6.5"
+  "@protobufjs/utf8": "^1.1.1"
+  # CRITICAL decompression/parse DoS + 4 more. Via @mcp-use/cli.
+  tar: "^7.5.21"
+  # memo() leaking SSR output across requests (cross-user data disclosure),
+  # hono/jsx context bleed, CORS ReDoS + 4 more. Via mcp-use and the MCP SDK.
+  hono: "^4.12.34"
+  # CSRF bypass, unauthenticated DoS, open redirect + 6 more. Via @mcp-use/inspector
+  # (as a peer) and react-router-dom; both resolve to the single overridden copy.
+  react-router: "^7.18.2"
+  # Host confusion (5 advisories) via ajv → ajv-formats.
+  fast-uri: "^3.1.5"
+  # Leading-zero octets resolved as decimal + XSS. Via @modelcontextprotocol/sdk
+  # → express-rate-limit.
+  ip-address: "^10.3.1"
+  # ReDoS + DoS via sequential optional parameters. Via express → router.
+  path-to-regexp: "^8.4.0"
+  # DoS on an invalid limit value. Via express.
+  body-parser: "^2.3.0"
+
+  # Build/dev toolchain only — never shipped, but cheap to keep clean:
+
+  # 16 advisories (proxy credential leaks, prototype pollution, ReDoS) via
+  # vitepress → @vueuse/integrations, where axios is an OPTIONAL peer that nothing
+  # in the docs actually imports. Raising the range drops it from the tree entirely
+  # rather than upgrading it — vitepress is already at its latest (1.6.4), so there
+  # is no upstream fix to wait for.
+  axios: "^1.18.0"
+  # Quadratic CPU consumption in !!omap / merge keys. Via @hey-api (pnpm generate).
+  "js-yaml": "^4.3.1"
+  # Exponential-time expansion. Only the 1.x line (via minimatch@3) is affected;
+  # the 5.x copy in the tree must not be dragged into this range.
+  "brace-expansion@1": "^1.1.16"
+  # Arbitrary file read via the esbuild dev server. Range-scoped selector: the
+  # 0.21.5 copy under vitepress's vite 5 must NOT be dragged along (vite 5 pins
+  # esbuild ^0.21 and would break), and 0.28.1 is already in the tree via vite 8.
+  "esbuild@>=0.27.3 <0.28.1": "0.28.1"
+
+  # qs@6.15.1 (transitive via the Stryker toolchain) carries a moderate DoS
+  # advisory (qs.stringify TypeError crash); pin to the patched line until the
+  # dependents catch up.
   qs: ">=6.15.3"
+# Six advisories are knowingly NOT overridden — each would need a major bump that
+# the dependent cannot take, and none of them is reachable from the shipped image:
+#   - vite 5.4.21 (3×) + esbuild 0.21.5, via vitepress 1.6.4, which pins vite ^5 and
+#     is already the latest release. All four are dev-server issues (`server.fs.deny`
+#     bypass, launch-editor UNC on Windows, optimized-deps `.map` traversal, dev-server
+#     CORS) and only surface while `pnpm docs:dev` runs locally.
+#   - @hono/node-server 1.19.x: fixed only in 2.x, and mcp-use pins 1.19.13. The flaw
+#     is a path traversal in `serve-static` on Windows; the image is Linux and does not
+#     serve static files through it.
+#   - @opentelemetry/core 1.30.1: fixed only in 2.8.0, pulled by langsmith's OTEL 0.57
+#     line. Unbounded allocation in W3C baggage propagation — no baggage headers reach it.
+# Revisit whenever mcp-use or vitepress releases; do not dismiss them in the Dependabot
+# UI, the open alert IS the reminder.
