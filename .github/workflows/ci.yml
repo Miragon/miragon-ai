@@ -35,6 +35,10 @@ jobs:
 
       - run: pnpm test
 
+      # Aggregated fitness report (architecture, ratchet debt, coverage,
+      # mutation scores) → job summary.
+      - run: pnpm fitness
+
   quality:
     name: Lint + Format
     runs-on: ubuntu-latest
@@ -55,6 +59,30 @@ jobs:
       - run: pnpm format:check
 
       - uses: Miragon/pin-npm-dependencies@v1.2.1
+
+  mutation:
+    name: Mutation (changed files)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          # mutation-diff.mjs diffs against the merge-base with the PR base.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6.0.9
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Cross-package imports in the suites resolve via each package's dist.
+      - run: pnpm build
+
+      - run: node scripts/mutation-diff.mjs origin/${{ github.base_ref }}
 
   template:
     name: Composed-server template (Build + Test)

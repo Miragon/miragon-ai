@@ -13,7 +13,8 @@ export const sharedConfig = defineConfig({
     coverage: {
       provider: "v8",
       enabled: true,
-      reporter: ["text-summary"],
+      // json-summary feeds scripts/fitness-report.mjs (pnpm fitness).
+      reporter: ["text-summary", "json-summary"],
       reportsDirectory: "./coverage",
     },
   },
