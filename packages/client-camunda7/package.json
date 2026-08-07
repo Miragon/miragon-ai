@@ -54,13 +54,16 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "generate": "openapi-ts",
-    "spec:refresh": "sh ./scripts/refresh-spec.sh"
+    "spec:refresh": "sh ./scripts/refresh-spec.sh",
+    "test:mutation": "stryker run"
   },
   "dependencies": {
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.99.0",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/vitest-runner": "9.6.1",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
   }

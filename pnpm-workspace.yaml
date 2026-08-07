@@ -2,3 +2,9 @@ packages:
   - "apps/*"
   - "packages/*"
   - "docs"
+
+# qs@6.15.1 (transitive via the Stryker toolchain) carries a moderate DoS
+# advisory (qs.stringify TypeError crash); pin to the patched line until the
+# dependents catch up.
+overrides:
+  qs: ">=6.15.3"
