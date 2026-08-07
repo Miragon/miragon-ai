@@ -23,7 +23,9 @@
     "dev": "dotenv -e .env -- pnpm --filter @miragon-ai/mcp-server-camunda7 dev",
     "docs:dev": "pnpm --filter @miragon-ai/docs dev",
     "docs:build": "pnpm --filter @miragon-ai/docs build",
-    "docs:preview": "pnpm --filter @miragon-ai/docs preview"
+    "docs:preview": "pnpm --filter @miragon-ai/docs preview",
+    "test:mutation": "node scripts/mutation-diff.mjs",
+    "fitness": "node scripts/fitness-report.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",

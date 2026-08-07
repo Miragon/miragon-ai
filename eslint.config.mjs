@@ -23,10 +23,10 @@ const serverTestFiles = [
 // measurement. Shrink-only lists — refactor a file below the global target
 // (complexity 15 / 400 effective lines), then DELETE its entry. Never raise
 // a value, never add an entry; new code gets the global budget.
-const complexityRatchet = {}
+export const complexityRatchet = {}
 
 // Frozen at current length rounded up to the next 10 lines.
-const maxLinesRatchet = {
+export const maxLinesRatchet = {
   "packages/mcp-camunda7/src/data/incident-panel-data.ts": 420,
   "packages/mcp-camunda7/src/data/incident-panel-data.test.ts": 420,
   "packages/mcp-camunda7/src/data/cockpit-data.ts": 410,
@@ -64,11 +64,16 @@ export default tseslint.config(
             "apps/mcp-server-camunda7/vite.config.ts",
             "apps/mcp-server-camunda7/vitest.config.ts",
             "packages/mcp-analytics/vitest.config.ts",
+            "packages/mcp-analytics/vitest.stryker.config.ts",
             "packages/mcp-camunda7/vitest.config.ts",
+            "packages/mcp-camunda7/vitest.stryker.config.ts",
             "packages/client-analytics/vitest.config.ts",
+            "packages/client-analytics/vitest.stryker.config.ts",
             "packages/client-camunda7/vitest.config.ts",
+            "packages/client-camunda7/vitest.stryker.config.ts",
             "packages/client-camunda7/openapi-ts.config.ts",
             "packages/widget-shell/vitest.config.ts",
+            "packages/widget-shell/vitest.stryker.config.ts",
             "docs/.vitepress/config.ts",
             "docs/.vitepress/theme/index.ts",
           ],
