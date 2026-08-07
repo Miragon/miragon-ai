@@ -21,7 +21,8 @@ import type { ActivityIncidentsFilters, PagingArgs } from "../feed-contracts.js"
 import { buildInstanceCockpitUrl, buildProcessCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"
-import { fetchDefinitionInfo } from "./definition-info.js"
+import type { DefinitionInfo } from "./definition-info.js"
+import { fetchDefinitionInfo, fetchSingleDefinitionInfo } from "./definition-info.js"
 
 interface IncidentRow {
   id: string
@@ -64,6 +65,18 @@ export function processDefinitionKeyFromId(id: string): string {
   return idx > 0 ? id.slice(0, idx) : id
 }
 
+/** Bucket scan rows by the given key (insertion order preserved per bucket). */
+function groupBy(rows: IncidentRow[], by: (r: IncidentRow) => string): Map<string, IncidentRow[]> {
+  const map = new Map<string, IncidentRow[]>()
+  for (const r of rows) {
+    const k = by(r)
+    const list = map.get(k) ?? []
+    list.push(r)
+    map.set(k, list)
+  }
+  return map
+}
+
 async function fetchIncidents(
   client: Client,
   options: { processDefinitionKey?: string; incidentType?: string },
@@ -84,14 +97,7 @@ async function fetchIncidents(
     processDefinitionKey: processDefinitionKeyFromId(r.processDefinitionId),
   }))
 
-  const byKey = new Map<string, IncidentRow[]>()
-  for (const row of rows) {
-    const list = byKey.get(row.processDefinitionKey) ?? []
-    list.push(row)
-    byKey.set(row.processDefinitionKey, list)
-  }
-
-  return { rows, byKey }
+  return { rows, byKey: groupBy(rows, (r) => r.processDefinitionKey) }
 }
 
 interface IncidentInstanceContext {
@@ -176,6 +182,19 @@ function minTimestamp(values: string[]): string | null {
   return best
 }
 
+/** Cockpit deep link to a definition's incidents tab. */
+function incidentsCockpitUrl(
+  options: { baseUrl: string; cockpitUrl?: string; provider: EngineProvider },
+  key: string,
+  def: DefinitionInfo | null,
+): string | null {
+  return buildProcessCockpitUrl(
+    { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
+    { key, version: def?.version ?? null, definitionId: def?.id ?? null },
+    { tab: "incidents" },
+  )
+}
+
 interface BuildOverviewOptions {
   baseUrl: string
   cockpitUrl?: string
@@ -214,12 +233,7 @@ export async function buildIncidentsDashboardData(
     const def = definitionInfo.get(key)?.info ?? null
     const runningInstances = definitionInfo.get(key)?.instances ?? null
 
-    const byActivity = new Map<string, IncidentRow[]>()
-    for (const r of group) {
-      const list = byActivity.get(r.activityId) ?? []
-      list.push(r)
-      byActivity.set(r.activityId, list)
-    }
+    const byActivity = groupBy(group, (r) => r.activityId)
 
     const activities: IncidentsDashboardActivity[] = [...byActivity.entries()]
       .sort((a, b) => b[1].length - a[1].length)
@@ -249,11 +263,7 @@ export async function buildIncidentsDashboardData(
       incidentCount: group.length,
       last24hCount,
       latestIncident: maxTimestamp(group.map((r) => r.incidentTimestamp)),
-      cockpitUrl: buildProcessCockpitUrl(
-        { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
-        { key, version: def?.version ?? null, definitionId: def?.id ?? null },
-        { tab: "incidents" },
-      ),
+      cockpitUrl: incidentsCockpitUrl(options, key, def),
       activities,
     }
   })
@@ -280,9 +290,10 @@ export async function buildProcessIncidentsData(
   options: BuildDetailOptions,
 ): Promise<ProcessIncidentsData> {
   const cutoffMs = Date.now() - DAY_MS
-  const countFilters = { processDefinitionKeyIn: options.processDefinitionKey }
+  const key = options.processDefinitionKey
+  const countFilters = { processDefinitionKeyIn: key }
   const [{ byKey }, totalRes, last24hRes] = await Promise.all([
-    fetchIncidents(client, { processDefinitionKey: options.processDefinitionKey }),
+    fetchIncidents(client, { processDefinitionKey: key }),
     // Honest per-definition totals via /incident/count — the recency scan is
     // capped at 200 rows; count failures degrade to the scan-derived values.
     getIncidentsCount({ client, query: countFilters }).catch(() => null),
@@ -292,41 +303,23 @@ export async function buildProcessIncidentsData(
     }).catch(() => null),
   ])
 
-  const group = byKey.get(options.processDefinitionKey) ?? []
-  const definitionInfo = await fetchDefinitionInfo(client, [options.processDefinitionKey])
-  const def = definitionInfo.get(options.processDefinitionKey)?.info ?? null
-  const runningInstances = definitionInfo.get(options.processDefinitionKey)?.instances ?? null
+  const group = byKey.get(key) ?? []
+  const { info: def, runningInstances } = await fetchSingleDefinitionInfo(client, key)
 
-  const processDefinitionId = def?.id || group[0]?.processDefinitionId || null
+  const processDefinitionId = detailDefinitionId(def, group)
 
-  const [xmlResponse, activityStats] = await Promise.all([
-    processDefinitionId
-      ? (getProcessDefinitionBpmn20Xml({
-          client,
-          path: { id: processDefinitionId },
-        }).catch(() => null) as Promise<{ bpmn20Xml?: string } | null>)
-      : Promise.resolve(null),
+  const [bpmnXml, activityStats] = await Promise.all([
+    processDefinitionId ? fetchBpmnXml(client, processDefinitionId) : Promise.resolve(null),
     processDefinitionId
       ? fetchActivityStats(client, processDefinitionId)
       : Promise.resolve({ failedJobs: null, incidentCounts: null } satisfies ActivityStatsResult),
   ])
-  const bpmnXml = xmlResponse?.bpmn20Xml ?? null
 
   const activityNames = bpmnXml ? extractActivityNames(bpmnXml) : {}
   const totalActivityCount = bpmnXml ? countBpmnActivities(bpmnXml) : null
 
-  const byActivity = new Map<string, IncidentRow[]>()
-  for (const r of group) {
-    const list = byActivity.get(r.activityId) ?? []
-    list.push(r)
-    byActivity.set(r.activityId, list)
-  }
-
-  // Group axis: the recency scan UNION the exact activity statistics — an
-  // activity whose incidents all lie beyond the 200-row scan still gets its
-  // group (count from statistics; rows come from the paged per-activity feed).
-  const activityIds = new Set<string>(byActivity.keys())
-  for (const id of activityStats.incidentCounts?.keys() ?? []) activityIds.add(id)
+  const byActivity = groupBy(group, (r) => r.activityId)
+  const activityIds = unionIds(byActivity, activityStats)
 
   const activities: ProcessIncidentsActivity[] = [...activityIds]
     .map((activityId) => {
@@ -349,24 +342,14 @@ export async function buildProcessIncidentsData(
   // When the requested process has no open incidents, fetch the cluster-wide
   // incident set so the empty state can offer to jump to a process that does.
   const siblingsWithIncidents: IncidentsByProcess[] =
-    incidentCount === 0
-      ? await fetchSiblingsWithIncidents(client, options.processDefinitionKey)
-      : []
+    incidentCount === 0 ? await fetchSiblingsWithIncidents(client, key) : []
 
   return {
-    processDefinitionKey: options.processDefinitionKey,
+    processDefinitionKey: key,
     processDefinitionName: def?.name ?? null,
     version: def?.version ?? null,
     bpmnXml,
-    cockpitUrl: buildProcessCockpitUrl(
-      { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
-      {
-        key: options.processDefinitionKey,
-        version: def?.version ?? null,
-        definitionId: def?.id ?? null,
-      },
-      { tab: "incidents" },
-    ),
+    cockpitUrl: incidentsCockpitUrl(options, key, def),
     runningInstances,
     incidentCount,
     last24hCount:
@@ -485,6 +468,32 @@ async function fetchActivityStats(
     if (row.id && count > 0) incidentCounts.set(row.id, count)
   }
   return { failedJobs, incidentCounts }
+}
+
+/** Definition id for the detail view's BPMN / statistics calls — prefers the
+ *  definition lookup, falls back to the id carried on a scanned incident row. */
+function detailDefinitionId(def: DefinitionInfo | null, group: IncidentRow[]): string | null {
+  return def?.id || group[0]?.processDefinitionId || null
+}
+
+/** Diagram XML of a definition — null when the fetch fails. */
+async function fetchBpmnXml(client: Client, processDefinitionId: string): Promise<string | null> {
+  const res = (await getProcessDefinitionBpmn20Xml({
+    client,
+    path: { id: processDefinitionId },
+  }).catch(() => null)) as { bpmn20Xml?: string } | null
+  return res?.bpmn20Xml ?? null
+}
+
+/**
+ * Group axis: the recency scan UNION the exact activity statistics — an
+ * activity whose incidents all lie beyond the 200-row scan still gets its
+ * group (count from statistics; rows come from the paged per-activity feed).
+ */
+function unionIds(groups: Map<string, IncidentRow[]>, stats: ActivityStatsResult): Set<string> {
+  const ids = new Set<string>(groups.keys())
+  for (const id of stats.incidentCounts?.keys() ?? []) ids.add(id)
+  return ids
 }
 
 async function fetchSiblingsWithIncidents(

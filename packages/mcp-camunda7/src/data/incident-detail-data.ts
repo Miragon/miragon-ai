@@ -169,6 +169,123 @@ async function fetchJob(client: Client, jobId: string): Promise<IncidentDetailJo
   }
 }
 
+/**
+ * Delegated incidents (sub-process failure propagated to the parent) have
+ * null `configuration`/`incidentMessage`. The real failure data lives on
+ * the root cause — fetch it and use it as the failure source.
+ */
+async function fetchRootCauseIncident(
+  client: Client,
+  rawIncident: RawIncident,
+): Promise<RawIncident | null> {
+  const rootId = rawIncident.rootCauseIncidentId
+  return rootId && rootId !== rawIncident.id
+    ? ((await getIncident({ client, path: { id: rootId } }).catch(
+        () => null,
+      )) as unknown as RawIncident | null)
+    : null
+}
+
+type IncidentContext = [
+  rawInstance: RawProcessInstance | null,
+  activityTree: unknown,
+  variables: unknown,
+  xmlResponse: { bpmn20Xml?: string } | null,
+  historyCount: { count?: number } | null,
+  definitionMeta: RawDefinition | null,
+  job: IncidentDetailJob | null,
+]
+
+function fetchIncidentContext(client: Client, incident: IncidentRecord): Promise<IncidentContext> {
+  const { processInstanceId, processDefinitionId, jobId } = incident
+  return Promise.all([
+    processInstanceId
+      ? (getProcessInstance({ client, path: { id: processInstanceId } }).catch(
+          () => null,
+        ) as Promise<RawProcessInstance | null>)
+      : Promise.resolve(null),
+    processInstanceId
+      ? (getActivityInstanceTree({ client, path: { id: processInstanceId } }).catch(
+          () => null,
+        ) as Promise<unknown>)
+      : Promise.resolve(null),
+    processInstanceId
+      ? (getProcessInstanceVariables({ client, path: { id: processInstanceId } }).catch(
+          () => ({}),
+        ) as Promise<unknown>)
+      : Promise.resolve({}),
+    processDefinitionId
+      ? (getProcessDefinitionBpmn20Xml({ client, path: { id: processDefinitionId } }).catch(
+          () => null,
+        ) as Promise<{ bpmn20Xml?: string } | null>)
+      : Promise.resolve(null),
+    // The History tab pages the rows itself (registrar history query); the
+    // payload only carries the honest total for the KPI. Degrades to null
+    // when history is disabled on the engine.
+    processInstanceId
+      ? (getHistoricActivityInstancesCount({ client, query: { processInstanceId } }).catch(
+          () => null,
+        ) as Promise<{ count?: number } | null>)
+      : Promise.resolve(null),
+    fetchDefinitionMeta(client, processDefinitionId),
+    jobId ? fetchJob(client, jobId) : Promise.resolve(null),
+  ])
+}
+
+function deriveDefinitionInfo(
+  definitionMeta: RawDefinition | null,
+  processDefinitionId: string,
+): {
+  processDefinitionKey: string
+  processDefinitionVersion: number | null
+  processDefinitionName: string | null
+} {
+  const processDefinitionKey = processDefinitionId
+    ? processDefinitionKeyFromId(processDefinitionId)
+    : ""
+  const processDefinitionVersion =
+    typeof definitionMeta?.version === "number" ? definitionMeta.version : null
+  return {
+    processDefinitionKey,
+    processDefinitionVersion,
+    processDefinitionName: definitionMeta?.name ?? null,
+  }
+}
+
+function deriveCockpitInstanceUrl(
+  options: BuildOptions,
+  incident: IncidentRecord,
+  processDefinitionKey: string,
+  processDefinitionVersion: number | null,
+): string | null {
+  const { processInstanceId, processDefinitionId } = incident
+  return processInstanceId && processDefinitionKey
+    ? buildInstanceCockpitUrl(
+        { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
+        {
+          key: processDefinitionKey,
+          version: processDefinitionVersion,
+          definitionId: processDefinitionId,
+          instanceId: processInstanceId,
+        },
+        { tab: "variables" },
+      )
+    : null
+}
+
+function toInstanceSummary(
+  rawInstance: RawProcessInstance | null,
+  incident: IncidentRecord,
+): IncidentDetailData["instance"] {
+  return {
+    id: rawInstance?.id ?? incident.processInstanceId,
+    definitionId: rawInstance?.definitionId ?? incident.processDefinitionId,
+    businessKey: rawInstance?.businessKey ?? null,
+    suspended: rawInstance?.suspended === true,
+    ended: rawInstance?.ended === true,
+  }
+}
+
 export async function buildIncidentDetailData(
   client: Client,
   options: BuildOptions,
@@ -178,76 +295,26 @@ export async function buildIncidentDetailData(
     path: { id: options.incidentId },
   })) as unknown as RawIncident
 
-  // Delegated incidents (sub-process failure propagated to the parent) have
-  // null `configuration`/`incidentMessage`. The real failure data lives on
-  // the root cause — fetch it and use it as the failure source.
-  const rootId = rawIncident.rootCauseIncidentId
-  const rawRootCause: RawIncident | null =
-    rootId && rootId !== rawIncident.id
-      ? ((await getIncident({ client, path: { id: rootId } }).catch(
-          () => null,
-        )) as unknown as RawIncident | null)
-      : null
+  const rawRootCause = await fetchRootCauseIncident(client, rawIncident)
 
   const incident = normalizeIncident(rawIncident, options.incidentId, rawRootCause ?? rawIncident)
-  const { processInstanceId, processDefinitionId, jobId, activityId } = incident
+  const { processInstanceId, processDefinitionId, activityId } = incident
 
   const [rawInstance, activityTree, variables, xmlResponse, historyCount, definitionMeta, job] =
-    await Promise.all([
-      processInstanceId
-        ? (getProcessInstance({ client, path: { id: processInstanceId } }).catch(
-            () => null,
-          ) as Promise<RawProcessInstance | null>)
-        : Promise.resolve(null),
-      processInstanceId
-        ? (getActivityInstanceTree({ client, path: { id: processInstanceId } }).catch(
-            () => null,
-          ) as Promise<unknown>)
-        : Promise.resolve(null),
-      processInstanceId
-        ? (getProcessInstanceVariables({ client, path: { id: processInstanceId } }).catch(
-            () => ({}),
-          ) as Promise<unknown>)
-        : Promise.resolve({}),
-      processDefinitionId
-        ? (getProcessDefinitionBpmn20Xml({ client, path: { id: processDefinitionId } }).catch(
-            () => null,
-          ) as Promise<{ bpmn20Xml?: string } | null>)
-        : Promise.resolve(null),
-      // The History tab pages the rows itself (registrar history query); the
-      // payload only carries the honest total for the KPI. Degrades to null
-      // when history is disabled on the engine.
-      processInstanceId
-        ? (getHistoricActivityInstancesCount({ client, query: { processInstanceId } }).catch(
-            () => null,
-          ) as Promise<{ count?: number } | null>)
-        : Promise.resolve(null),
-      fetchDefinitionMeta(client, processDefinitionId),
-      jobId ? fetchJob(client, jobId) : Promise.resolve(null),
-    ])
+    await fetchIncidentContext(client, incident)
 
   const bpmnXml = xmlResponse?.bpmn20Xml ?? null
   const activityNames = bpmnXml ? extractActivityNames(bpmnXml) : {}
 
-  const processDefinitionKey = processDefinitionId
-    ? processDefinitionKeyFromId(processDefinitionId)
-    : ""
-  const processDefinitionVersion =
-    typeof definitionMeta?.version === "number" ? definitionMeta.version : null
+  const { processDefinitionKey, processDefinitionVersion, processDefinitionName } =
+    deriveDefinitionInfo(definitionMeta, processDefinitionId)
 
-  const cockpitInstanceUrl =
-    processInstanceId && processDefinitionKey
-      ? buildInstanceCockpitUrl(
-          { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
-          {
-            key: processDefinitionKey,
-            version: processDefinitionVersion,
-            definitionId: processDefinitionId,
-            instanceId: processInstanceId,
-          },
-          { tab: "variables" },
-        )
-      : null
+  const cockpitInstanceUrl = deriveCockpitInstanceUrl(
+    options,
+    incident,
+    processDefinitionKey,
+    processDefinitionVersion,
+  )
 
   return {
     incidentId: incident.id,
@@ -259,7 +326,7 @@ export async function buildIncidentDetailData(
 
     processDefinitionKey,
     processDefinitionId,
-    processDefinitionName: definitionMeta?.name ?? null,
+    processDefinitionName,
     processDefinitionVersion,
     processInstanceId,
     businessKey: rawInstance?.businessKey ?? null,
@@ -269,13 +336,7 @@ export async function buildIncidentDetailData(
 
     job,
 
-    instance: {
-      id: rawInstance?.id ?? processInstanceId,
-      definitionId: rawInstance?.definitionId ?? processDefinitionId,
-      businessKey: rawInstance?.businessKey ?? null,
-      suspended: rawInstance?.suspended === true,
-      ended: rawInstance?.ended === true,
-    },
+    instance: toInstanceSummary(rawInstance, incident),
     activityTree: activityTree as ActivityTree | null,
     variables: variables as Record<string, VariableValue>,
 

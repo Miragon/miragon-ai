@@ -119,38 +119,59 @@ export function buildHeatPoints(
     if (SKIP_TYPES.has(type)) continue
 
     if (type === "bpmn:SequenceFlow") {
-      const srcId = bo.sourceRef?.id
-      const tgtId = bo.targetRef?.id
-      if (!srcId || !tgtId) continue
-      const flow = edgeFrequencies[`${srcId}->${tgtId}`] ?? 0
-      if (flow <= 0) continue
-      const waypoints = el.waypoints
-      if (!waypoints || waypoints.length < 2) continue
-      for (let i = 0; i < waypoints.length - 1; i++) {
-        const a = waypoints[i]
-        const b = waypoints[i + 1]
-        const dx = b.x - a.x
-        const dy = b.y - a.y
-        const len = Math.hypot(dx, dy)
-        const segments = Math.max(2, Math.ceil(len / 30))
-        for (let s = 0; s <= segments; s++) {
-          const t = s / segments
-          points.push({ x: a.x + dx * t, y: a.y + dy * t, weight: flow })
-        }
-      }
+      points.push(...sequenceFlowHeatPoints(el, bo, edgeFrequencies))
       continue
     }
 
-    const freq = nodeFrequencies[bo.id]
-    if (!freq || freq <= 0) continue
-    if (el.x == null || el.y == null || el.width == null || el.height == null) continue
-    points.push({
-      x: el.x + el.width / 2,
-      y: el.y + el.height / 2,
-      weight: freq,
-    })
+    const point = nodeHeatPoint(el, bo.id, nodeFrequencies)
+    if (point) points.push(point)
   }
   return points
+}
+
+/** Heat points sampled along a sequence flow's waypoint polyline. */
+function sequenceFlowHeatPoints(
+  el: BpmnElement,
+  bo: BusinessObject,
+  edgeFrequencies: Record<string, number>,
+): HeatPoint[] {
+  const srcId = bo.sourceRef?.id
+  const tgtId = bo.targetRef?.id
+  if (!srcId || !tgtId) return []
+  const flow = edgeFrequencies[`${srcId}->${tgtId}`] ?? 0
+  if (flow <= 0) return []
+  const waypoints = el.waypoints
+  if (!waypoints || waypoints.length < 2) return []
+  const points: HeatPoint[] = []
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i]
+    const b = waypoints[i + 1]
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const len = Math.hypot(dx, dy)
+    const segments = Math.max(2, Math.ceil(len / 30))
+    for (let s = 0; s <= segments; s++) {
+      const t = s / segments
+      points.push({ x: a.x + dx * t, y: a.y + dy * t, weight: flow })
+    }
+  }
+  return points
+}
+
+/** Single heat point at a shape's center, or `null` when it carries no heat. */
+function nodeHeatPoint(
+  el: BpmnElement,
+  id: string,
+  nodeFrequencies: Record<string, number>,
+): HeatPoint | null {
+  const freq = nodeFrequencies[id]
+  if (!freq || freq <= 0) return null
+  if (el.x == null || el.y == null || el.width == null || el.height == null) return null
+  return {
+    x: el.x + el.width / 2,
+    y: el.y + el.height / 2,
+    weight: freq,
+  }
 }
 
 export function drawHeatLayer(

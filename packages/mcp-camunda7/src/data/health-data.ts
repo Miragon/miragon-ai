@@ -110,6 +110,132 @@ function messageSignature(msg: string | null): string {
     .slice(0, 160)
 }
 
+interface IncidentScanAgg {
+  byCluster: Map<string, ClusterAcc>
+  activitySet: Set<string>
+  defSet: Set<string>
+  last24hIncidents: number
+  lastHourIncidents: number
+}
+
+interface IncidentFacts {
+  activityId: string
+  incidentType: string
+  signature: string
+  /** Cluster by activity + type + failure-message signature: same activity,
+   * same type, different exception = different root cause = its own cluster. */
+  clusterKey: string
+  defKey: string
+  ts: string
+  isRecent: boolean
+  isLastHour: boolean
+}
+
+/**
+ * Recency compares epoch millis, not strings: the engine emits timestamps with
+ * its local UTC offset (e.g. `…+0200`), which do not order lexicographically
+ * against a Zulu `toISOString()` cutoff.
+ */
+function deriveIncidentFacts(
+  inc: IncidentLike,
+  cutoffMs: number,
+  hourCutoffMs: number,
+): IncidentFacts {
+  const activityId = inc.activityId ?? UNKNOWN
+  const incidentType = inc.incidentType ?? "unknown"
+  const signature = messageSignature(inc.incidentMessage ?? null)
+  const defKey = inc.processDefinitionId
+    ? processDefinitionKeyFromId(inc.processDefinitionId)
+    : UNKNOWN
+  const ts = inc.incidentTimestamp ?? ""
+  const tsMs = ts === "" ? Number.NaN : Date.parse(ts)
+  return {
+    activityId,
+    incidentType,
+    signature,
+    clusterKey: `${activityId}::${incidentType}::${signature}`,
+    defKey,
+    ts,
+    isRecent: Number.isFinite(tsMs) && tsMs >= cutoffMs,
+    isLastHour: Number.isFinite(tsMs) && tsMs >= hourCutoffMs,
+  }
+}
+
+/** One pass over the incident scan: cluster by root-cause key and count the recency windows. */
+function clusterIncidents(incidents: IncidentLike[], nowMs: number): IncidentScanAgg {
+  const cutoffMs = nowMs - DAY_MS
+  const hourCutoffMs = nowMs - HOUR_MS
+  const byCluster = new Map<string, ClusterAcc>()
+  const activitySet = new Set<string>()
+  const defSet = new Set<string>()
+  let last24hIncidents = 0
+  let lastHourIncidents = 0
+
+  for (const inc of incidents) {
+    const facts = deriveIncidentFacts(inc, cutoffMs, hourCutoffMs)
+    activitySet.add(facts.activityId)
+    defSet.add(facts.defKey)
+    if (facts.isRecent) last24hIncidents += 1
+    if (facts.isLastHour) lastHourIncidents += 1
+
+    const acc =
+      byCluster.get(facts.clusterKey) ??
+      ({
+        activityId: facts.activityId,
+        incidentType: facts.incidentType,
+        signature: facts.signature,
+        count: 0,
+        last24h: 0,
+        keys: new Map<string, number>(),
+        sampleMessage: truncateMessage(inc.incidentMessage ?? null),
+        sampleIncidentId: inc.id ?? "",
+        latest: null,
+      } satisfies ClusterAcc)
+
+    acc.count += 1
+    if (facts.isRecent) acc.last24h += 1
+    acc.keys.set(facts.defKey, (acc.keys.get(facts.defKey) ?? 0) + 1)
+    if (facts.ts !== "" && (acc.latest === null || facts.ts > acc.latest)) acc.latest = facts.ts
+    byCluster.set(facts.clusterKey, acc)
+  }
+
+  return { byCluster, activitySet, defSet, last24hIncidents, lastHourIncidents }
+}
+
+function toClusterList(byCluster: Map<string, ClusterAcc>): EngineHealthCluster[] {
+  return [...byCluster.entries()]
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, MAX_CLUSTERS)
+    .map(([key, c]) => ({
+      id: key,
+      activityId: c.activityId,
+      incidentType: c.incidentType,
+      messageSignature: c.signature,
+      incidentCount: c.count,
+      last24hCount: c.last24h,
+      processDefinitionKeys: [...c.keys.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k),
+      representativeMessage: c.sampleMessage,
+      representativeIncidentId: c.sampleIncidentId,
+      latestIncident: c.latest,
+    }))
+}
+
+function healthHeadline(
+  status: EngineHealthData["status"],
+  totalIncidents: number,
+  runningInstances: number,
+  affectedActivities: number,
+): string {
+  if (totalIncidents === 0) {
+    return `Stable — no open incidents (${runningInstances} running instances)`
+  }
+  const statusLabel = status === "ok" ? "Stable" : status === "degraded" ? "Degraded" : "Critical"
+  return (
+    `${statusLabel} — ${totalIncidents} open incident${totalIncidents === 1 ? "" : "s"} ` +
+    `across ${affectedActivities} ${affectedActivities === 1 ? "activity" : "activities"}`
+  )
+}
+
 /**
  * Engine-wide health verdict for the AI-first cockpit overview. Purely
  * deterministic: it counts running instances + open incidents, then clusters
@@ -148,12 +274,7 @@ export async function buildEngineHealthData(
   ])
 
   const incidents = (Array.isArray(incidentsRaw) ? incidentsRaw : []) as IncidentLike[]
-  // Compare epoch millis, not strings: the engine emits timestamps with its
-  // local UTC offset (e.g. `…+0200`), which do not order lexicographically
-  // against a Zulu `toISOString()` cutoff.
   const nowMs = Date.now()
-  const cutoffMs = nowMs - DAY_MS
-  const hourCutoffMs = nowMs - HOUR_MS
 
   // Totals from definition statistics: one call gives running instances + the
   // deployed-definition count without a second round-trip.
@@ -166,67 +287,11 @@ export async function buildEngineHealthData(
     statRows.map((r) => r.definition?.key).filter((k): k is string => !!k),
   ).size
 
-  const byCluster = new Map<string, ClusterAcc>()
-  const activitySet = new Set<string>()
-  const defSet = new Set<string>()
-  let last24hIncidents = 0
-  let lastHourIncidents = 0
-
-  for (const inc of incidents) {
-    const activityId = inc.activityId ?? UNKNOWN
-    const incidentType = inc.incidentType ?? "unknown"
-    // Cluster by activity + type + failure-message signature: same activity,
-    // same type, different exception = different root cause = its own cluster.
-    const signature = messageSignature(inc.incidentMessage ?? null)
-    const key = `${activityId}::${incidentType}::${signature}`
-    const defKey = inc.processDefinitionId
-      ? processDefinitionKeyFromId(inc.processDefinitionId)
-      : UNKNOWN
-    const ts = inc.incidentTimestamp ?? ""
-    const tsMs = ts === "" ? Number.NaN : Date.parse(ts)
-    const isRecent = Number.isFinite(tsMs) && tsMs >= cutoffMs
-
-    activitySet.add(activityId)
-    defSet.add(defKey)
-    if (isRecent) last24hIncidents += 1
-    if (Number.isFinite(tsMs) && tsMs >= hourCutoffMs) lastHourIncidents += 1
-
-    const acc =
-      byCluster.get(key) ??
-      ({
-        activityId,
-        incidentType,
-        signature,
-        count: 0,
-        last24h: 0,
-        keys: new Map<string, number>(),
-        sampleMessage: truncateMessage(inc.incidentMessage ?? null),
-        sampleIncidentId: inc.id ?? "",
-        latest: null,
-      } satisfies ClusterAcc)
-
-    acc.count += 1
-    if (isRecent) acc.last24h += 1
-    acc.keys.set(defKey, (acc.keys.get(defKey) ?? 0) + 1)
-    if (ts !== "" && (acc.latest === null || ts > acc.latest)) acc.latest = ts
-    byCluster.set(key, acc)
-  }
-
-  const clusters: EngineHealthCluster[] = [...byCluster.entries()]
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, MAX_CLUSTERS)
-    .map(([key, c]) => ({
-      id: key,
-      activityId: c.activityId,
-      incidentType: c.incidentType,
-      messageSignature: c.signature,
-      incidentCount: c.count,
-      last24hCount: c.last24h,
-      processDefinitionKeys: [...c.keys.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k),
-      representativeMessage: c.sampleMessage,
-      representativeIncidentId: c.sampleIncidentId,
-      latestIncident: c.latest,
-    }))
+  const { byCluster, activitySet, defSet, last24hIncidents, lastHourIncidents } = clusterIncidents(
+    incidents,
+    nowMs,
+  )
+  const clusters = toClusterList(byCluster)
 
   // True engine-wide total from /incident/count — the scan above is capped at
   // INCIDENT_SCAN_LIMIT, so on a busy engine `incidents.length` would silently
@@ -234,12 +299,7 @@ export async function buildEngineHealthData(
   // alongside). Clusters + the 24h count still come from the most-recent scan.
   const totalIncidents = (countRes as { count?: number } | null)?.count ?? incidents.length
   const status = statusOf(totalIncidents, clusters[0]?.incidentCount ?? 0, thresholds)
-  const statusLabel = status === "ok" ? "Stable" : status === "degraded" ? "Degraded" : "Critical"
-  const headline =
-    totalIncidents === 0
-      ? `Stable — no open incidents (${runningInstances} running instances)`
-      : `${statusLabel} — ${totalIncidents} open incident${totalIncidents === 1 ? "" : "s"} ` +
-        `across ${activitySet.size} ${activitySet.size === 1 ? "activity" : "activities"}`
+  const headline = healthHeadline(status, totalIncidents, runningInstances, activitySet.size)
 
   return {
     status,
@@ -312,18 +372,72 @@ export async function buildClusterDetailData(
       ? all
       : all.filter((i) => messageSignature(i.incidentMessage ?? null) === args.messageSignature)
 
-  // Search narrows the LIST (and its total), never the cluster KPIs below.
-  let listed = matching
-  if (searchHitsRaw !== null) {
-    const hitIds = new Set(
-      ((Array.isArray(searchHitsRaw) ? searchHitsRaw : []) as Array<{ id?: string | null }>)
-        .map((i) => i.id)
-        .filter((id): id is string => !!id),
-    )
-    listed = matching.filter((i) => i.processInstanceId && hitIds.has(i.processInstanceId))
-  }
+  const listed = filterToSearchHits(matching, searchHitsRaw)
 
   const nowMs = Date.now()
+  const kpis = aggregateClusterKpis(matching, nowMs)
+
+  // Paging slices the in-memory listed set (not an engine-side offset): the
+  // messageSignature/business-key filters are resolved here and the KPIs above
+  // need the full set anyway, so an offset re-query would change semantics
+  // without saving the scan. Bounded by INCIDENT_SCAN_LIMIT like everything
+  // else here.
+  const first = Math.max(0, args.firstResult ?? 0)
+  const pageSize = args.maxResults ?? CLUSTER_DETAIL_ROWS
+  const page = listed.slice(first, first + pageSize)
+
+  const businessKeyById = await resolveBusinessKeys(client, page)
+
+  const incidents: ClusterIncidentRow[] = page.map((i) => ({
+    incidentId: i.id ?? "",
+    processInstanceId: i.processInstanceId ?? "",
+    businessKey: i.processInstanceId ? (businessKeyById.get(i.processInstanceId) ?? null) : null,
+    processDefinitionKey: i.processDefinitionId
+      ? processDefinitionKeyFromId(i.processDefinitionId)
+      : UNKNOWN,
+    incidentTimestamp: i.incidentTimestamp ?? "",
+  }))
+
+  return {
+    activityId: args.activityId,
+    incidentType: args.incidentType,
+    messageSignature: args.messageSignature ?? null,
+    incidentCount: matching.length,
+    lastHourCount: kpis.lastHourCount,
+    last24hCount: kpis.last24hCount,
+    firstSeen: kpis.firstSeen,
+    latestIncident: kpis.latestIncident,
+    processDefinitionKeys: [...kpis.defCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([k]) => k),
+    representativeMessage: truncateMessage(matching[0]?.incidentMessage ?? null, 600),
+    incidents,
+    totalMatching: listed.length,
+    fetchedAt: new Date(nowMs).toISOString(),
+    engineId,
+  }
+}
+
+/** Search narrows the LIST (and its total), never the cluster KPIs. */
+function filterToSearchHits(matching: IncidentLike[], searchHitsRaw: unknown): IncidentLike[] {
+  if (searchHitsRaw === null) return matching
+  const hitIds = new Set(
+    ((Array.isArray(searchHitsRaw) ? searchHitsRaw : []) as Array<{ id?: string | null }>)
+      .map((i) => i.id)
+      .filter((id): id is string => !!id),
+  )
+  return matching.filter((i) => i.processInstanceId && hitIds.has(i.processInstanceId))
+}
+
+interface ClusterKpis {
+  lastHourCount: number
+  last24hCount: number
+  firstSeen: string | null
+  latestIncident: string | null
+  defCounts: Map<string, number>
+}
+
+function aggregateClusterKpis(matching: IncidentLike[], nowMs: number): ClusterKpis {
   const hourCutoffMs = nowMs - HOUR_MS
   const dayCutoffMs = nowMs - DAY_MS
   let lastHourCount = 0
@@ -347,17 +461,17 @@ export async function buildClusterDetailData(
     defCounts.set(defKey, (defCounts.get(defKey) ?? 0) + 1)
   }
 
-  // Paging slices the in-memory listed set (not an engine-side offset): the
-  // messageSignature/business-key filters are resolved here and the KPIs above
-  // need the full set anyway, so an offset re-query would change semantics
-  // without saving the scan. Bounded by INCIDENT_SCAN_LIMIT like everything
-  // else here.
-  const first = Math.max(0, args.firstResult ?? 0)
-  const pageSize = args.maxResults ?? CLUSTER_DETAIL_ROWS
-  const page = listed.slice(first, first + pageSize)
+  return { lastHourCount, last24hCount, firstSeen, latestIncident, defCounts }
+}
 
-  // Business-key enrichment is best-effort: a failed lookup degrades to "—"
-  // keys, it must not turn a working cluster view into a tool error.
+/**
+ * Business-key enrichment is best-effort: a failed lookup degrades to "—"
+ * keys, it must not turn a working cluster view into a tool error.
+ */
+async function resolveBusinessKeys(
+  client: Client,
+  page: IncidentLike[],
+): Promise<Map<string, string | null>> {
   const instanceIds = [
     ...new Set(page.map((i) => i.processInstanceId).filter((x): x is string => !!x)),
   ]
@@ -368,7 +482,7 @@ export async function buildClusterDetailData(
           query: { processInstanceIds: instanceIds.join(","), maxResults: instanceIds.length },
         }).catch(() => [])
       : []
-  const businessKeyById = new Map(
+  return new Map(
     (
       (Array.isArray(instancesRaw) ? instancesRaw : []) as Array<{
         id?: string | null
@@ -378,31 +492,4 @@ export async function buildClusterDetailData(
       .filter((i): i is { id: string; businessKey: string | null } => !!i.id)
       .map((i) => [i.id, i.businessKey ?? null]),
   )
-
-  const incidents: ClusterIncidentRow[] = page.map((i) => ({
-    incidentId: i.id ?? "",
-    processInstanceId: i.processInstanceId ?? "",
-    businessKey: i.processInstanceId ? (businessKeyById.get(i.processInstanceId) ?? null) : null,
-    processDefinitionKey: i.processDefinitionId
-      ? processDefinitionKeyFromId(i.processDefinitionId)
-      : UNKNOWN,
-    incidentTimestamp: i.incidentTimestamp ?? "",
-  }))
-
-  return {
-    activityId: args.activityId,
-    incidentType: args.incidentType,
-    messageSignature: args.messageSignature ?? null,
-    incidentCount: matching.length,
-    lastHourCount,
-    last24hCount,
-    firstSeen,
-    latestIncident,
-    processDefinitionKeys: [...defCounts.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k),
-    representativeMessage: truncateMessage(matching[0]?.incidentMessage ?? null, 600),
-    incidents,
-    totalMatching: listed.length,
-    fetchedAt: new Date(nowMs).toISOString(),
-    engineId,
-  }
 }

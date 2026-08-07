@@ -57,43 +57,48 @@ export function extractEmbeddedFormFields(
   const fieldBlockRe = /<(?:[\w]+:)?formField\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:[\w]+:)?formField>)/g
 
   for (const match of formDataBlock.matchAll(fieldBlockRe)) {
-    const attrs = match[1] ?? ""
-    const inner = match[2] ?? ""
-
-    const id = readAttr(attrs, "id")
-    if (!id) continue
-
-    const label = readAttr(attrs, "label") ?? undefined
-    const rawType = readAttr(attrs, "type") ?? undefined
-    const type = rawType ? (CAMUNDA_TYPE_MAP[rawType.toLowerCase()] ?? rawType) : undefined
-
-    // Check for readonly custom property
-    const readonly = /camunda:property\b[^>]*\bid="readonly"[^>]*\bvalue="true"/.test(inner)
-
-    // Parse <camunda:values> for suggestedValues
-    const suggestedValues: string[] = []
-    const valuesBlockMatch = inner.match(
-      /<(?:[\w]+:)?values\b[^>]*>([\s\S]*?)<\/(?:[\w]+:)?values>/,
-    )
-    if (valuesBlockMatch) {
-      const valueRe = /<(?:[\w]+:)?value\b([^>]*?)\/>/g
-      for (const vm of (valuesBlockMatch[1] ?? "").matchAll(valueRe)) {
-        const name = readAttr(vm[1] ?? "", "name")
-        if (name) suggestedValues.push(name)
-      }
-    }
-
-    fields.push({
-      name: id,
-      label,
-      type,
-      readonly: readonly || undefined,
-      suggestedValues: suggestedValues.length > 0 ? suggestedValues : undefined,
-      source: "form-data",
-    })
+    const field = parseFormField(match[1] ?? "", match[2] ?? "")
+    if (field) fields.push(field)
   }
 
   return fields
+}
+
+/** Parse a single `<camunda:formField>` from its attribute string + inner XML. */
+function parseFormField(attrs: string, inner: string): TaskFormField | null {
+  const id = readAttr(attrs, "id")
+  if (!id) return null
+
+  const label = readAttr(attrs, "label") ?? undefined
+  const rawType = readAttr(attrs, "type") ?? undefined
+  const type = rawType ? (CAMUNDA_TYPE_MAP[rawType.toLowerCase()] ?? rawType) : undefined
+
+  // Check for readonly custom property
+  const readonly = /camunda:property\b[^>]*\bid="readonly"[^>]*\bvalue="true"/.test(inner)
+
+  const suggestedValues = parseSuggestedValues(inner)
+
+  return {
+    name: id,
+    label,
+    type,
+    readonly: readonly || undefined,
+    suggestedValues: suggestedValues.length > 0 ? suggestedValues : undefined,
+    source: "form-data",
+  }
+}
+
+/** Parse <camunda:values> for suggestedValues */
+function parseSuggestedValues(inner: string): string[] {
+  const suggestedValues: string[] = []
+  const valuesBlockMatch = inner.match(/<(?:[\w]+:)?values\b[^>]*>([\s\S]*?)<\/(?:[\w]+:)?values>/)
+  if (!valuesBlockMatch) return suggestedValues
+  const valueRe = /<(?:[\w]+:)?value\b([^>]*?)\/>/g
+  for (const vm of (valuesBlockMatch[1] ?? "").matchAll(valueRe)) {
+    const name = readAttr(vm[1] ?? "", "name")
+    if (name) suggestedValues.push(name)
+  }
+  return suggestedValues
 }
 
 function readAttr(attrs: string, name: string): string | null {

@@ -40,8 +40,28 @@ export async function fetchDefinitionInfo(
     query: {},
   }).catch(() => [])) as unknown as DefinitionStatsRow[]
 
-  const wantedKeys = new Set(keys)
-  const byKey = new Map<string, { info: DefinitionInfo; instances: number | null }>()
+  const byKey = collectStatsRows(stats, new Set(keys))
+
+  // Fallback for keys not in stats (e.g. all instances ended) — fetch via /process-definition.
+  const missing = keys.filter((k) => !byKey.has(k))
+  if (missing.length > 0) {
+    await fetchFallbackDefinitions(client, missing, byKey)
+  }
+
+  return byKey
+}
+
+interface DefinitionEntry {
+  info: DefinitionInfo
+  instances: number | null
+}
+
+/** Folds the cluster-wide statistics rows into a per-key map of wanted definitions. */
+function collectStatsRows(
+  stats: DefinitionStatsRow[],
+  wantedKeys: Set<string>,
+): Map<string, DefinitionEntry> {
+  const byKey = new Map<string, DefinitionEntry>()
   for (const row of Array.isArray(stats) ? stats : []) {
     const def = row.definition
     if (!def?.key || !wantedKeys.has(def.key)) continue
@@ -61,37 +81,39 @@ export async function fetchDefinitionInfo(
       byKey.set(def.key, { info: candidate, instances: row.instances ?? null })
     }
   }
-
-  // Fallback for keys not in stats (e.g. all instances ended) — fetch via /process-definition.
-  const missing = keys.filter((k) => !byKey.has(k))
-  if (missing.length > 0) {
-    const defs = (await getProcessDefinitions({
-      client,
-      query: {
-        keysIn: missing.join(","),
-        latestVersion: true,
-      },
-    }).catch(() => [])) as unknown as Array<{
-      id?: string
-      key?: string
-      name?: string | null
-      version?: number
-    }>
-    for (const d of Array.isArray(defs) ? defs : []) {
-      if (!d.key) continue
-      byKey.set(d.key, {
-        info: {
-          id: d.id ?? "",
-          key: d.key,
-          name: d.name ?? null,
-          version: typeof d.version === "number" ? d.version : null,
-        },
-        instances: 0,
-      })
-    }
-  }
-
   return byKey
+}
+
+/** Resolves the missing keys via `/process-definition` and records them into `byKey`. */
+async function fetchFallbackDefinitions(
+  client: Client,
+  missing: string[],
+  byKey: Map<string, DefinitionEntry>,
+): Promise<void> {
+  const defs = (await getProcessDefinitions({
+    client,
+    query: {
+      keysIn: missing.join(","),
+      latestVersion: true,
+    },
+  }).catch(() => [])) as unknown as Array<{
+    id?: string
+    key?: string
+    name?: string | null
+    version?: number
+  }>
+  for (const d of Array.isArray(defs) ? defs : []) {
+    if (!d.key) continue
+    byKey.set(d.key, {
+      info: {
+        id: d.id ?? "",
+        key: d.key,
+        name: d.name ?? null,
+        version: typeof d.version === "number" ? d.version : null,
+      },
+      instances: 0,
+    })
+  }
 }
 
 /** Single-key convenience over {@link fetchDefinitionInfo}. */

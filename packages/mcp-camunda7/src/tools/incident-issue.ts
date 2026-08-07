@@ -74,33 +74,71 @@ const ISSUE_LABELS = ["bug", "incident"]
  * the SDK.
  */
 export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssuePayload {
-  const { incident, processInstance, processDefinition, stacktrace, engine, repository } = input
+  const { incident, processDefinition, stacktrace, repository } = input
   const incidentType = incident.incidentType ?? "unknown"
   const definitionKey = processDefinition?.key ?? "unknown-process"
   const title = `[Bug]: Engine incident (${incidentType}) in ${definitionKey}`
   const condensedStack = stacktrace ? condenseStacktrace(stacktrace) : null
+  const cockpitLink = buildIssueCockpitLink(input)
 
+  const body = buildIssueBody(input, { incidentType, definitionKey, condensedStack, cockpitLink })
+
+  const prefilledUrl = repository
+    ? buildPrefilledIssueUrl(repository, title, body, ISSUE_LABELS)
+    : null
+
+  return {
+    title,
+    body,
+    labels: ISSUE_LABELS,
+    suggestedRepository: repository,
+    prefilledUrl,
+    nextStep: repository
+      ? `Present this draft to the user in the chat (title, full body, labels) for review and reuse. Do NOT file it anywhere on your own — the user decides where it goes. If they ask to file it, use whatever issue-tracker capability is available; for GitHub, repository "${repository}" is preconfigured and prefilledUrl offers one-click submission without any integration.`
+      : "Present this draft to the user in the chat (title, full body, labels) for review and reuse. Do NOT file it anywhere on your own — the user decides where it goes (their issue tracker, e-mail, or nowhere). Only file it if the user explicitly asks, using whatever issue-tracker capability is available.",
+  }
+}
+
+/** `failedActivityId` (set for job incidents) wins over the generic `activityId`. */
+function incidentActivityId(incident: IncidentDto): string {
+  return incident.failedActivityId ?? incident.activityId ?? "unknown"
+}
+
+/** Cockpit deep link to the instance's incidents tab — `null` when context is missing. */
+function buildIssueCockpitLink(input: BuildIssueInput): string | null {
+  const { incident, processInstance, processDefinition, engine } = input
   const instanceId = incident.processInstanceId ?? processInstance?.id
-  const cockpitLink =
-    processDefinition?.key && instanceId
-      ? buildInstanceCockpitUrl(
-          engine,
-          {
-            key: processDefinition.key,
-            version: processDefinition.version ?? null,
-            definitionId: incident.processDefinitionId ?? null,
-            instanceId,
-          },
-          { tab: "incidents" },
-        )
-      : null
+  return processDefinition?.key && instanceId
+    ? buildInstanceCockpitUrl(
+        engine,
+        {
+          key: processDefinition.key,
+          version: processDefinition.version ?? null,
+          definitionId: incident.processDefinitionId ?? null,
+          instanceId,
+        },
+        { tab: "incidents" },
+      )
+    : null
+}
 
-  const body = [
+interface IssueBodyContext {
+  incidentType: string
+  definitionKey: string
+  condensedStack: string | null
+  cockpitLink: string | null
+}
+
+/** Markdown body of the draft, section by section (see {@link buildIncidentIssuePayload}). */
+function buildIssueBody(input: BuildIssueInput, context: IssueBodyContext): string {
+  const { incident, engine } = input
+  const { incidentType, definitionKey, condensedStack, cockpitLink } = context
+  return [
     "### Description",
     "",
-    `Engine incident \`${incidentType}\` was raised on activity \`${
-      incident.failedActivityId ?? incident.activityId ?? "unknown"
-    }\` of process \`${definitionKey}\`.`,
+    `Engine incident \`${incidentType}\` was raised on activity \`${incidentActivityId(
+      incident,
+    )}\` of process \`${definitionKey}\`.`,
     "",
     incident.incidentMessage
       ? `Engine message:\n\n\`\`\`\n${incident.incidentMessage}\n\`\`\``
@@ -130,7 +168,7 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
     "| --- | --- |",
     `| Incident ID | \`${incident.id ?? "unknown"}\` |`,
     `| Incident type | \`${incidentType}\` |`,
-    `| Activity ID | \`${incident.failedActivityId ?? incident.activityId ?? "unknown"}\` |`,
+    `| Activity ID | \`${incidentActivityId(incident)}\` |`,
     `| Process definition key | \`${definitionKey}\` |`,
     `| Process definition ID | \`${incident.processDefinitionId ?? "unknown"}\` |`,
     `| Process instance ID | \`${incident.processInstanceId ?? "unknown"}\` |`,
@@ -151,21 +189,6 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
   ]
     .filter((line) => line !== "")
     .join("\n")
-
-  const prefilledUrl = repository
-    ? buildPrefilledIssueUrl(repository, title, body, ISSUE_LABELS)
-    : null
-
-  return {
-    title,
-    body,
-    labels: ISSUE_LABELS,
-    suggestedRepository: repository,
-    prefilledUrl,
-    nextStep: repository
-      ? `Present this draft to the user in the chat (title, full body, labels) for review and reuse. Do NOT file it anywhere on your own — the user decides where it goes. If they ask to file it, use whatever issue-tracker capability is available; for GitHub, repository "${repository}" is preconfigured and prefilledUrl offers one-click submission without any integration.`
-      : "Present this draft to the user in the chat (title, full body, labels) for review and reuse. Do NOT file it anywhere on your own — the user decides where it goes (their issue tracker, e-mail, or nowhere). Only file it if the user explicitly asks, using whatever issue-tracker capability is available.",
-  }
 }
 
 /**
