@@ -1,3 +1,7 @@
+# Grouping rule: patch + minor updates travel together per ecosystem, major updates get
+# their own pull request. A single breaking major otherwise turns the whole group red and
+# blocks every harmless bump in it (see #193: mcp-use 2, TypeScript 6, ESLint 10 and 25
+# more in one unmergeable PR).
 version: 2
 updates:
   # npm dependencies (pnpm monorepo)
@@ -5,6 +9,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # majors arrive as individual PRs — leave room next to the grouped one
+    open-pull-requests-limit: 10
     reviewers:
       - "dominikhorn93"
       - "emaarco"
@@ -15,7 +21,6 @@ updates:
         update-types:
           - "patch"
           - "minor"
-          - "major"
 
   # Gradle / Kotlin plugins
   - package-ecosystem: "gradle"
@@ -32,7 +37,6 @@ updates:
         update-types:
           - "patch"
           - "minor"
-          - "major"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -49,7 +53,6 @@ updates:
         update-types:
           - "patch"
           - "minor"
-          - "major"
 
   # Docker images — playground: compose stack, Fly variants, engine
   - package-ecosystem: "docker"
@@ -71,7 +74,6 @@ updates:
         update-types:
           - "patch"
           - "minor"
-          - "major"
 
   # Docker image — root Dockerfile (server), keeps the pinned base digest current
   - package-ecosystem: "docker"
@@ -88,4 +90,3 @@ updates:
         update-types:
           - "patch"
           - "minor"
-          - "major"
