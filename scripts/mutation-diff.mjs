@@ -15,6 +15,7 @@
  */
 import { execSync, spawnSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
+import picomatch from "picomatch"
 
 const base = process.argv[2] ?? "origin/main"
 const mergeBase = execSync(`git merge-base ${base} HEAD`, { encoding: "utf8" }).trim()
@@ -22,23 +23,18 @@ const changed = execSync(`git diff --name-only ${mergeBase} HEAD`, { encoding: "
   .split("\n")
   .filter(Boolean)
 
-/** Convert the simple globs used in stryker.config.json to a RegExp. */
-function globToRegExp(glob) {
-  const escaped = glob
-    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*\*\//g, "(?:.*/)?")
-    .replace(/\*\*/g, ".*")
-    .replace(/\*/g, "[^/]*")
-  return new RegExp(`^${escaped}$`)
-}
-
+/**
+ * Mirror Stryker's own `mutate` semantics. picomatch instead of a hand-rolled
+ * glob→RegExp: a home-grown converter silently under-scoped `**` to a single
+ * path segment, which quietly dropped nested files (e.g. widget-shell's
+ * src/ui/bpmn-heatmap/) out of the gate. Positives and negatives are matched
+ * separately on purpose — picomatch ORs an array, so passing `mutate` verbatim
+ * would make a single `!…` entry match everything else.
+ */
 function inMutateScope(relFile, mutatePatterns) {
   const positives = mutatePatterns.filter((p) => !p.startsWith("!"))
   const negatives = mutatePatterns.filter((p) => p.startsWith("!")).map((p) => p.slice(1))
-  return (
-    positives.some((p) => globToRegExp(p).test(relFile)) &&
-    !negatives.some((p) => globToRegExp(p).test(relFile))
-  )
+  return picomatch.isMatch(relFile, positives) && !picomatch.isMatch(relFile, negatives)
 }
 
 const byPackage = new Map()

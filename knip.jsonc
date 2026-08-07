@@ -18,9 +18,7 @@
       // builds), so knip cannot load it — the UI bundle entries are declared
       // explicitly instead and the vite plugin stays off.
       "vite": false,
-      "vitest": {
-        "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
-      },
+      // No stryker.config.json here: the diff gate only scans packages/*.
       "entry": [
         "src/ui/main.tsx",
         // Parsed statically as an entry (executing it needs INPUT, see above)
