@@ -1,0 +1,87 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // Dead-code fitness function (`pnpm lint:deadcode`, part of `pnpm lint`).
+  // Every ignore below is a documented exception — the list is shrink-only,
+  // same convention as the ESLint ratchet lists.
+
+  // Standalone customer-facing workspace OUTSIDE the pnpm workspace; verified
+  // by scripts/test-template.sh against packed tarballs, not this graph.
+  "ignore": ["templates/**"],
+
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.mjs", "vitest.shared.ts"],
+    },
+
+    "apps/mcp-server-camunda7": {
+      // vite.config.ts throws without the INPUT env var (per-widget bundle
+      // builds), so knip cannot load it — the UI bundle entries are declared
+      // explicitly instead and the vite plugin stays off.
+      "vite": false,
+      "vitest": {
+        "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
+      },
+      "entry": [
+        "src/ui/main.tsx",
+        // Parsed statically as an entry (executing it needs INPUT, see above)
+        // so its plugin imports count as used.
+        "vite.config.ts",
+        "test/**/*.test.ts",
+        "test-host/**/*.{ts,mjs}",
+      ],
+      "ignoreDependencies": [
+        // Referenced from src/ui/geist-latin.css (@font-face src url), which
+        // the module graph does not traverse.
+        "@fontsource-variable/geist",
+      ],
+    },
+
+    "packages/client-camunda7": {
+      "vitest": {
+        "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
+      },
+      // Generated CIB Seven SDK (pnpm generate) — its export surface mirrors
+      // the OpenAPI spec, not our usage.
+      "ignore": ["src/generated/**"],
+    },
+
+    "packages/client-analytics": {
+      "vitest": {
+        "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
+      },
+    },
+
+    "packages/mcp-camunda7": {
+      "vitest": {
+        "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
+      },
+    },
+
+    "packages/mcp-analytics": {
+      "vitest": {
+        "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
+      },
+    },
+
+    "packages/widget-shell": {
+      "vitest": {
+        "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
+      },
+    },
+
+    "docs": {
+      "ignoreDependencies": [
+        // Lazy-loaded mermaid diagram runtimes (mindmap → cytoscape*,
+        // timeline → dayjs, sanitize/debug) — imported by mermaid at render
+        // time, never by our code.
+        "@braintree/sanitize-url",
+        "cytoscape",
+        "cytoscape-cose-bilkent",
+        "dayjs",
+        "debug",
+        // Provided by vitepress; the theme imports it directly.
+        "vue",
+      ],
+    },
+  },
+}

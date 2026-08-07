@@ -123,5 +123,3 @@ export const definition: AppDefinition = {
     },
   ],
 }
-
-export default definition
