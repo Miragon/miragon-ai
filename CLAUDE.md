@@ -74,7 +74,9 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    (`destructiveHint` ⇒ admin-only, read-only ⇒ `readOnlyHint`), so get the annotations
    right rather than editing the test. Tools registered outside the registrar (the
    widget-tools path) that perform durable writes must honor the toolset themselves —
-   pattern: `camunda7_save_user_profile` in `src/tools/user-profile.ts`.
+   pattern: `camunda7_save_user_profile` in `src/tools/user-profile.ts`. An ESLint gate
+   (`no-restricted-syntax` in `eslint.config.mjs`) blocks raw `server.tool()` outside
+   exactly those widget-path files.
 
 2. **Never talk to an engine directly.** All engine access goes through
    `resolveEngine`/`withEngine` (`packages/mcp-camunda7/src/lib/`), which implements the
@@ -116,7 +118,9 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    re-inline its primitives.** `ViewDataState` for the loading/error/no-data guard;
    `QueryFallback` + `TableSkeleton` for self-fetching widgets (a missing `isError`
    branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime`/
-   `formatDuration`/`truncate` for all formatting (canonical duration style "3m 7s");
+   `formatDuration`/`truncate` for all formatting (canonical duration style "3m 7s";
+   an ESLint gate bans `Intl.DateTimeFormat`/`toLocaleDateString`/`toLocaleTimeString`
+   in widget code — `Number#toLocaleString` for counts stays allowed);
    `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
    `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
    settings sections; `useBpmnViewer` + `BpmnZoomControls` for BPMN, with
@@ -143,7 +147,11 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
      camunda7's `ProfileStore` still satisfies the port.
 
 8. **Modules are self-contained peers; the app is a thin composition root.**
-   `mcp-*` packages never import each other. Each module exports its definition in
+   `mcp-*` packages never import each other. The dependency edges of this invariant
+   (module peer-isolation, module→own-client only, leaf clients, foundation
+   widget-shell, packages never importing the app, no cross-package deep imports)
+   are machine-enforced by `.dependency-cruiser.cjs` via the root
+   `pnpm lint:architecture` (part of `pnpm lint`). Each module exports its definition in
    `src/module.ts` (config schema, `configFromEnv`, `knownEnvVars`, `bootWarnings`,
    plugin factory) conforming structurally to the app-owned port in
    `apps/mcp-server-camunda7/src/module-contract.ts`; the app's `setup.ts` only selects
@@ -266,7 +274,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
 | `pnpm build`      | tsc emit of server code + the server app's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                             |
 | `pnpm typecheck`  | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-camunda7/mcp-analytics, `tsc -p tsconfig.ui.json` in the server app                                                                                            |
 | `pnpm test`       | Vitest unit tests (lib + query logic) **plus** the server app e2e smoke + widget wire-contract tests (in-process boot, loopback HTTP); **no widget rendering**                                                                                         |
-| `pnpm lint`       | ESLint over each package's `src` (the server app also `test`/`test-host`)                                                                                                                                                                              |
+| `pnpm lint`       | ESLint over each package's `src` (the server app also `test`/`test-host`) incl. the pattern gates (registrar-only tools, widget-shell date formatting), then the root `lint:architecture` — dependency-cruiser rules from `.dependency-cruiser.cjs`    |
 | `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                    |
 | `test:host`       | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin |
 | Manual            | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                        |

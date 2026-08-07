@@ -15,6 +15,7 @@ import {
   SettingsField,
   SettingsInput,
   WidgetShell,
+  formatTime,
 } from "@miragon-ai/widget-shell/widgets"
 import { PERIODS, type Period } from "@miragon-ai/client-analytics"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "../tool-names.js"
@@ -116,7 +117,7 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
         defaultPeriod: form.defaultPeriod,
         minBucketSize: Math.max(1, Number.parseInt(form.minBucketSize, 10) || 1),
       },
-      { onSuccess: () => setSavedAt(new Date().toLocaleTimeString()) },
+      { onSuccess: () => setSavedAt(formatTime(new Date().toISOString())) },
     )
   }
 

@@ -116,4 +116,65 @@ export default tseslint.config(
     plugins: { "react-hooks": reactHooks },
     rules: reactHooks.configs["recommended-latest"].rules,
   },
+
+  // ── Architecture pattern gates ──────────────────────────────────────────
+  // The AST-checkable slices of the CLAUDE.md invariants; the dependency
+  // rules live in .dependency-cruiser.cjs (`pnpm lint:architecture`).
+
+  // Invariant 1: operations tools go through createToolRegistrar. Raw
+  // server.tool() is reserved for the widget-tools path (show_* / *_data
+  // feeds + module settings) — exactly the ignores list below. A durable
+  // write registered there must gate itself against the module's toolset.
+  {
+    files: ["packages/mcp-analytics/src/**/*.ts", "packages/mcp-camunda7/src/**/*.ts"],
+    ignores: [
+      "packages/mcp-analytics/src/widget-tools.ts",
+      "packages/mcp-analytics/src/settings-tools.ts",
+      "packages/mcp-camunda7/src/widget-tools.ts",
+      "packages/mcp-camunda7/src/tools/user-profile.ts",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.type='MemberExpression'][callee.property.name=/^(tool|registerTool)$/]",
+          message:
+            "Operations tools are registered through createToolRegistrar in src/tools/ (see .claude/skills/add-bpm-feature); raw server.tool() is reserved for the widget-tools files.",
+        },
+      ],
+    },
+  },
+
+  // Invariant 6: all date/time rendering in widgets goes through the
+  // widget-shell format helpers so every module renders timestamps the same
+  // way. Number#toLocaleString (thousands separators) is deliberately allowed.
+  {
+    files: [
+      "apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}",
+      "packages/mcp-analytics/src/widgets/**/*.{ts,tsx}",
+      "packages/mcp-camunda7/src/widgets/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            ":matches(NewExpression, CallExpression)[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
+          message:
+            "Use formatTimestamp/formatDate/formatTime from @miragon-ai/widget-shell/widgets — the single source for timestamp rendering (CLAUDE.md invariant 6).",
+        },
+        {
+          selector: "CallExpression[callee.property.name='toLocaleDateString']",
+          message:
+            "Use formatDate from @miragon-ai/widget-shell/widgets instead of Date#toLocaleDateString (CLAUDE.md invariant 6).",
+        },
+        {
+          selector: "CallExpression[callee.property.name='toLocaleTimeString']",
+          message:
+            "Use formatTime from @miragon-ai/widget-shell/widgets instead of Date#toLocaleTimeString (CLAUDE.md invariant 6).",
+        },
+      ],
+    },
+  },
 )

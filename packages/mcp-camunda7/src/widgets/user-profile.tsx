@@ -13,6 +13,7 @@ import {
   SettingsCard,
   SettingsField,
   WidgetShell,
+  formatTime,
   useDetailView,
 } from "@miragon-ai/widget-shell/widgets"
 
@@ -183,7 +184,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
       },
       {
         onSuccess: () => {
-          setSavedAt(new Date().toLocaleTimeString())
+          setSavedAt(formatTime(new Date().toISOString()))
           refreshCockpitData()
         },
       },
