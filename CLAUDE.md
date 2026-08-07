@@ -76,7 +76,8 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    widget-tools path) that perform durable writes must honor the toolset themselves —
    pattern: `camunda7_save_user_profile` in `src/tools/user-profile.ts`. An ESLint gate
    (`no-restricted-syntax` in `eslint.config.mjs`) blocks raw `server.tool()` outside
-   exactly those widget-path files.
+   exactly the widget-path files (in camunda7: `widget-tools.ts` + the `widget-tools/`
+   domain registrars + `tools/user-profile.ts`).
 
 2. **Never talk to an engine directly.** All engine access goes through
    `resolveEngine`/`withEngine` (`packages/mcp-camunda7/src/lib/`), which implements the

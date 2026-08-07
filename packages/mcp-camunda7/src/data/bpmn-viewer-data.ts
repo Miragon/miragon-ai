@@ -34,16 +34,45 @@ export async function buildBpmnViewerData(
   engineId: string,
   target: BpmnViewerTarget,
 ): Promise<BpmnViewerData> {
-  let definitionId: string | null = null
   const processInstanceId = target.processInstanceId ?? null
+  const definitionId = await resolveDefinitionId(client, target)
 
+  if (!definitionId) {
+    return emptyViewerData(processInstanceId, engineId)
+  }
+
+  const [xmlResponse, activityTree, incidents, stats] = await fetchViewerSources(
+    client,
+    definitionId,
+    processInstanceId,
+  )
+
+  const bpmnXml = (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? ""
+
+  return {
+    bpmnXml,
+    processInstanceId,
+    processDefinitionId: definitionId,
+    activeActivityIds: processInstanceId ? collectActiveActivityIds(activityTree) : [],
+    incidentActivityIds: processInstanceId ? collectIncidentActivityIds(incidents) : [],
+    activityStats: mapActivityStats(stats),
+    engineId,
+  }
+}
+
+/** Resolves the viewer target to a concrete definition id, `null` when nothing matches. */
+async function resolveDefinitionId(
+  client: Client,
+  target: BpmnViewerTarget,
+): Promise<string | null> {
   if (target.processInstanceId) {
     const instance = (await getProcessInstance({
       client,
       path: { id: target.processInstanceId },
     })) as { definitionId?: string } | null
-    definitionId = instance?.definitionId ?? null
-  } else if (target.processDefinitionKey) {
+    return instance?.definitionId ?? null
+  }
+  if (target.processDefinitionKey) {
     const matches = await getProcessDefinitions({
       client,
       query: {
@@ -54,22 +83,31 @@ export async function buildBpmnViewerData(
       },
     })
     const first = Array.isArray(matches) ? (matches[0] as { id?: string } | undefined) : null
-    definitionId = first?.id ?? null
+    return first?.id ?? null
   }
+  return null
+}
 
-  if (!definitionId) {
-    return {
-      bpmnXml: "",
-      processInstanceId,
-      processDefinitionId: null,
-      activeActivityIds: [],
-      incidentActivityIds: [],
-      activityStats: [],
-      engineId,
-    }
+/** The empty shape callers detect via `processDefinitionId === null`. */
+function emptyViewerData(processInstanceId: string | null, engineId: string): BpmnViewerData {
+  return {
+    bpmnXml: "",
+    processInstanceId,
+    processDefinitionId: null,
+    activeActivityIds: [],
+    incidentActivityIds: [],
+    activityStats: [],
+    engineId,
   }
+}
 
-  const [xmlResponse, activityTree, incidents, stats] = await Promise.all([
+/** Fetches XML + overlay sources in parallel; each source degrades to empty on failure. */
+function fetchViewerSources(
+  client: Client,
+  definitionId: string,
+  processInstanceId: string | null,
+) {
+  return Promise.all([
     getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } }).catch(() => null),
     processInstanceId
       ? getActivityInstanceTree({ client, path: { id: processInstanceId } }).catch(() => null)
@@ -86,23 +124,15 @@ export async function buildBpmnViewerData(
       query: { failedJobs: true },
     }).catch(() => []),
   ])
+}
 
-  const bpmnXml = (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? ""
+function mapActivityStats(stats: unknown): BpmnViewerData["activityStats"] {
   const statRows = Array.isArray(stats)
     ? (stats as Array<{ id?: string | null; instances?: number; failedJobs?: number }>)
     : []
-
-  return {
-    bpmnXml,
-    processInstanceId,
-    processDefinitionId: definitionId,
-    activeActivityIds: processInstanceId ? collectActiveActivityIds(activityTree) : [],
-    incidentActivityIds: processInstanceId ? collectIncidentActivityIds(incidents) : [],
-    activityStats: statRows.map((s) => ({
-      id: s.id ?? "",
-      instances: s.instances ?? 0,
-      failedJobs: s.failedJobs ?? 0,
-    })),
-    engineId,
-  }
+  return statRows.map((s) => ({
+    id: s.id ?? "",
+    instances: s.instances ?? 0,
+    failedJobs: s.failedJobs ?? 0,
+  }))
 }

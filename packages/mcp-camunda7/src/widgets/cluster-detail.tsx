@@ -44,6 +44,151 @@ function describeCluster(data: ClusterDetailData): string {
 }
 
 /**
+ * Cluster identity + engine from props (cockpit drill) or the handed-in
+ * data (standalone show-tool render) — loadMore() must always carry both,
+ * or it would page the sticky/default engine instead of the origin engine.
+ */
+function clusterFeedParams({
+  initialData,
+  engine,
+  activityId,
+  incidentType,
+  messageSignature,
+}: {
+  initialData: ClusterDetailData | null
+  engine?: string
+  activityId?: string
+  incidentType?: string
+  messageSignature?: string
+}) {
+  const clusterActivityId = activityId ?? initialData?.activityId
+  const clusterIncidentType = incidentType ?? initialData?.incidentType
+  const clusterSignature = messageSignature ?? initialData?.messageSignature ?? undefined
+  const feedEngine = engine ?? initialData?.engineId
+  // Unlike the engine-health feed, this feed REQUIRES the cluster identity —
+  // gate the self-fetch on it (the show tool path passes data instead).
+  const ready = !!(clusterActivityId && clusterIncidentType)
+  const args: Record<string, unknown> = {}
+  if (feedEngine) args.engine = feedEngine
+  if (clusterActivityId) args.activityId = clusterActivityId
+  if (clusterIncidentType) args.incidentType = clusterIncidentType
+  if (clusterSignature) args.messageSignature = clusterSignature
+  return { clusterActivityId, clusterIncidentType, clusterSignature, feedEngine, ready, args }
+}
+
+/** Header block: failing activity, incident-type badge, and the guarded "Fix" handoff. */
+function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: string }) {
+  const t = useT()
+  return (
+    <WidgetHeader
+      icon="⚠"
+      iconTone="critical"
+      title={data.activityId}
+      sub={
+        <span>
+          <StatusBadge tone="critical">{data.incidentType}</StatusBadge>
+          <span className="ml-2">
+            {t("clusterDetail.affectedAcross", {
+              count: data.incidentCount,
+              keys: data.processDefinitionKeys.join(", ") || t("clusterDetail.unknownKeys"),
+            })}
+          </span>
+        </span>
+      }
+      actions={
+        <AskAiButton
+          variant="primary"
+          label={t("clusterDetail.fix")}
+          prompt={remediatePrompt(
+            {
+              activityId: data.activityId,
+              incidentType: data.incidentType,
+              incidentCount: data.incidentCount,
+              last24hCount: data.last24hCount,
+              processDefinitionKeys: data.processDefinitionKeys,
+              representativeMessage: data.representativeMessage,
+            },
+            engineId,
+          )}
+        />
+      }
+    />
+  )
+}
+
+/** KPI row: affected total plus the last-hour / 24h freshness profile. */
+function ClusterKpis({ data }: { data: ClusterDetailData }) {
+  const t = useT()
+  return (
+    <KpiGrid
+      boxed
+      cells={[
+        { label: t("clusterDetail.kpiAffected"), value: data.incidentCount, tone: "critical" },
+        {
+          label: t("clusterDetail.kpiNewLastHour"),
+          value: data.lastHourCount,
+          tone: data.lastHourCount > 0 ? "critical" : undefined,
+        },
+        {
+          label: t("clusterDetail.kpiNew24h"),
+          value: data.last24hCount,
+          tone: data.last24hCount > 0 ? "warning" : undefined,
+        },
+        { label: t("clusterDetail.kpiFirstSeen"), value: formatTimestamp(data.firstSeen) },
+      ]}
+    />
+  )
+}
+
+/** One affected instance row with its instance/incident drill actions. */
+function IncidentRow({ row }: { row: ClusterIncidentRow }) {
+  const go = useNav()
+  const t = useT()
+  return (
+    <RowCard
+      title={
+        /* Business key first — the operator's order number, not an engine UUID. */
+        <span className="truncate">
+          {row.businessKey ??
+            t("clusterDetail.instanceFallback", {
+              id: truncate(row.processInstanceId, 12),
+            })}
+        </span>
+      }
+      subtitle={
+        <>
+          {row.processDefinitionKey} · {formatTimestamp(row.incidentTimestamp)}
+        </>
+      }
+      actions={
+        <>
+          <DrillButton
+            onDrill={() =>
+              go({ type: "instance-detail", processInstanceId: row.processInstanceId })
+            }
+            ariaLabel={t("clusterDetail.openInstanceAria", {
+              ref: row.businessKey ?? row.processInstanceId,
+            })}
+          >
+            {t("clusterDetail.instance")}
+          </DrillButton>
+          {row.incidentId && (
+            <DrillButton
+              onDrill={() => go({ type: "incident-detail", incidentId: row.incidentId })}
+              ariaLabel={t("clusterDetail.openIncidentAria", {
+                ref: row.businessKey ?? row.processInstanceId,
+              })}
+            >
+              {t("clusterDetail.incident")}
+            </DrillButton>
+          )}
+        </>
+      }
+    />
+  )
+}
+
+/**
  * Drill-in for ONE failure cluster — the middle layer between the engine
  * overview's cluster list and the single-incident detail. Shows the affected
  * instances business-key-first (the operator's "order number"), the full
@@ -63,23 +208,9 @@ export function ClusterDetailView({
   incidentType?: string
   messageSignature?: string
 }) {
-  const go = useNav()
   const t = useT()
-  // Cluster identity + engine from props (cockpit drill) or the handed-in
-  // data (standalone show-tool render) — loadMore() must always carry both,
-  // or it would page the sticky/default engine instead of the origin engine.
-  const clusterActivityId = activityId ?? initialData?.activityId
-  const clusterIncidentType = incidentType ?? initialData?.incidentType
-  const clusterSignature = messageSignature ?? initialData?.messageSignature ?? undefined
-  const feedEngine = engine ?? initialData?.engineId
-  // Unlike the engine-health feed, this feed REQUIRES the cluster identity —
-  // gate the self-fetch on it (the show tool path passes data instead).
-  const ready = !!(clusterActivityId && clusterIncidentType)
-  const args: Record<string, unknown> = {}
-  if (feedEngine) args.engine = feedEngine
-  if (clusterActivityId) args.activityId = clusterActivityId
-  if (clusterIncidentType) args.incidentType = clusterIncidentType
-  if (clusterSignature) args.messageSignature = clusterSignature
+  const { clusterActivityId, clusterIncidentType, clusterSignature, feedEngine, ready, args } =
+    clusterFeedParams({ initialData, engine, activityId, incidentType, messageSignature })
   // The business-key search is SERVER-side (the feed intersects with a
   // /process-instance lookup) so it covers the whole cluster, not just the
   // loaded page.
@@ -122,60 +253,8 @@ export function ClusterDetailView({
 
   return (
     <DetailPage
-      header={
-        <WidgetHeader
-          icon="⚠"
-          iconTone="critical"
-          title={data.activityId}
-          sub={
-            <span>
-              <StatusBadge tone="critical">{data.incidentType}</StatusBadge>
-              <span className="ml-2">
-                {t("clusterDetail.affectedAcross", {
-                  count: data.incidentCount,
-                  keys: data.processDefinitionKeys.join(", ") || t("clusterDetail.unknownKeys"),
-                })}
-              </span>
-            </span>
-          }
-          actions={
-            <AskAiButton
-              variant="primary"
-              label={t("clusterDetail.fix")}
-              prompt={remediatePrompt(
-                {
-                  activityId: data.activityId,
-                  incidentType: data.incidentType,
-                  incidentCount: data.incidentCount,
-                  last24hCount: data.last24hCount,
-                  processDefinitionKeys: data.processDefinitionKeys,
-                  representativeMessage: data.representativeMessage,
-                },
-                engineId,
-              )}
-            />
-          }
-        />
-      }
-      kpi={
-        <KpiGrid
-          boxed
-          cells={[
-            { label: t("clusterDetail.kpiAffected"), value: data.incidentCount, tone: "critical" },
-            {
-              label: t("clusterDetail.kpiNewLastHour"),
-              value: data.lastHourCount,
-              tone: data.lastHourCount > 0 ? "critical" : undefined,
-            },
-            {
-              label: t("clusterDetail.kpiNew24h"),
-              value: data.last24hCount,
-              tone: data.last24hCount > 0 ? "warning" : undefined,
-            },
-            { label: t("clusterDetail.kpiFirstSeen"), value: formatTimestamp(data.firstSeen) },
-          ]}
-        />
-      }
+      header={<ClusterHeader data={data} engineId={engineId} />}
+      kpi={<ClusterKpis data={data} />}
       /* Deliberately a single content block, no tabs: splitting the failure
          message from the affected instances would separate the message from
          its context. */
@@ -203,48 +282,11 @@ export function ClusterDetailView({
               onChipToggle={() => undefined}
             />
             {paged.items.map((row) => (
-              <RowCard
+              <IncidentRow
                 // The engine can report rows without an incident id — fall back to
                 // instance+timestamp so React keys stay unique per incident row.
                 key={row.incidentId || `${row.processInstanceId}-${row.incidentTimestamp}`}
-                title={
-                  /* Business key first — the operator's order number, not an engine UUID. */
-                  <span className="truncate">
-                    {row.businessKey ??
-                      t("clusterDetail.instanceFallback", {
-                        id: truncate(row.processInstanceId, 12),
-                      })}
-                  </span>
-                }
-                subtitle={
-                  <>
-                    {row.processDefinitionKey} · {formatTimestamp(row.incidentTimestamp)}
-                  </>
-                }
-                actions={
-                  <>
-                    <DrillButton
-                      onDrill={() =>
-                        go({ type: "instance-detail", processInstanceId: row.processInstanceId })
-                      }
-                      ariaLabel={t("clusterDetail.openInstanceAria", {
-                        ref: row.businessKey ?? row.processInstanceId,
-                      })}
-                    >
-                      {t("clusterDetail.instance")}
-                    </DrillButton>
-                    {row.incidentId && (
-                      <DrillButton
-                        onDrill={() => go({ type: "incident-detail", incidentId: row.incidentId })}
-                        ariaLabel={t("clusterDetail.openIncidentAria", {
-                          ref: row.businessKey ?? row.processInstanceId,
-                        })}
-                      >
-                        {t("clusterDetail.incident")}
-                      </DrillButton>
-                    )}
-                  </>
-                }
+                row={row}
               />
             ))}
             {paged.items.length === 0 && (

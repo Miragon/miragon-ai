@@ -130,6 +130,12 @@ export function applyHighlights(
   overlays: BpmnOverlays,
   highlights: ReadonlyArray<BpmnHighlight>,
 ) {
+  const { incidentIds, openTaskIds, activeIds } = collectMarkerIds(highlights)
+  applyMarkers(canvas, incidentIds, openTaskIds, activeIds)
+  applyCountOverlays(overlays, highlights)
+}
+
+function collectMarkerIds(highlights: ReadonlyArray<BpmnHighlight>) {
   const incidentIds: string[] = []
   const openTaskIds: string[] = []
   const activeIds: string[] = []
@@ -144,6 +150,15 @@ export function applyHighlights(
     }
   }
 
+  return { incidentIds, openTaskIds, activeIds }
+}
+
+function applyMarkers(
+  canvas: Pick<BpmnCanvas, "addMarker">,
+  incidentIds: ReadonlyArray<string>,
+  openTaskIds: ReadonlyArray<string>,
+  activeIds: ReadonlyArray<string>,
+) {
   const incidentSet = new Set(incidentIds)
   const openTaskSet = new Set(openTaskIds)
 
@@ -158,22 +173,31 @@ export function applyHighlights(
   for (const id of dedupe(incidentIds)) {
     safeAddMarker(canvas, id, "highlight-incident")
   }
+}
 
+function applyCountOverlays(overlays: BpmnOverlays, highlights: ReadonlyArray<BpmnHighlight>) {
   for (const h of highlights) {
     if (h.kind === "incident" && h.counts) {
       addRedCountOverlays(overlays, h.counts)
     } else if (h.kind === "failed-jobs") {
       addRedCountOverlays(overlays, h.counts)
     } else if (h.kind === "instance-count") {
-      for (const c of h.counts) {
-        const safeCount = Number(c.count) || 0
-        if (safeCount <= 0) continue
-        safeAddOverlay(overlays, c.activityId, {
-          position: { top: -14, right: -14 },
-          html: `<div class="bpmn-overlay-badge bpmn-overlay-badge--instance-count">${safeCount}</div>`,
-        })
-      }
+      addInstanceCountOverlays(overlays, h.counts)
     }
+  }
+}
+
+function addInstanceCountOverlays(
+  overlays: BpmnOverlays,
+  counts: ReadonlyArray<{ activityId: string; count: number }>,
+) {
+  for (const c of counts) {
+    const safeCount = Number(c.count) || 0
+    if (safeCount <= 0) continue
+    safeAddOverlay(overlays, c.activityId, {
+      position: { top: -14, right: -14 },
+      html: `<div class="bpmn-overlay-badge bpmn-overlay-badge--instance-count">${safeCount}</div>`,
+    })
   }
 }
 

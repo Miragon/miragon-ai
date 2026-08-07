@@ -23,41 +23,10 @@ const serverTestFiles = [
 // measurement. Shrink-only lists — refactor a file below the global target
 // (complexity 15 / 400 effective lines), then DELETE its entry. Never raise
 // a value, never add an entry; new code gets the global budget.
-const complexityRatchet = {
-  "packages/mcp-camunda7/src/widgets/instance-detail.tsx": 59,
-  "packages/mcp-camunda7/src/widgets/incident-detail.tsx": 44,
-  "packages/mcp-camunda7/src/widgets/process-instances/list.tsx": 37,
-  "packages/mcp-camunda7/src/data/health-data.ts": 36,
-  "packages/mcp-camunda7/src/data/incident-detail-data.ts": 33,
-  "packages/mcp-camunda7/src/data/incident-panel-data.ts": 32,
-  "packages/mcp-camunda7/src/widgets/incident-detail/failure-tab.tsx": 30,
-  "packages/mcp-camunda7/src/widgets/cluster-detail.tsx": 28,
-  "packages/mcp-camunda7/src/tools/incident-issue.ts": 27,
-  "packages/widget-shell/src/ui/bpmn-heatmap/heat-utils.ts": 26,
-  "packages/mcp-camunda7/src/widgets/standalone-shell.tsx": 24,
-  "packages/mcp-camunda7/src/data/definition-info.ts": 22,
-  "packages/mcp-camunda7/src/widgets/process-incidents/header.tsx": 22,
-  "packages/client-analytics/src/queries/dashboard.test.ts": 20,
-  "packages/mcp-camunda7/src/lib/bpmn-task-form.ts": 20,
-  "packages/mcp-camunda7/src/widgets/engine-health.tsx": 20,
-  "packages/mcp-camunda7/src/widgets/process-list.tsx": 20,
-  "packages/mcp-camunda7/src/widgets/bpmn-highlights.ts": 19,
-  "packages/mcp-camunda7/src/widgets/job-panel.tsx": 19,
-  "packages/mcp-camunda7/src/data/bpmn-viewer-data.ts": 18,
-  "packages/mcp-camunda7/src/widgets/bpmn-viewer/widget.tsx": 18,
-  "packages/mcp-camunda7/src/widgets/user-profile.tsx": 17,
-  "packages/mcp-camunda7/src/data/cockpit-data.ts": 16,
-  "packages/mcp-camunda7/src/widgets/cockpit-app/app.tsx": 16,
-  "packages/mcp-camunda7/src/widgets/cockpit-app/fleet-view.tsx": 16,
-  "packages/mcp-camunda7/src/widgets/lib/coerce-value.ts": 16,
-  "packages/mcp-camunda7/src/widgets/process-incidents/flow.tsx": 16,
-  "packages/mcp-camunda7/src/widgets/process-incidents/list.tsx": 16,
-}
+const complexityRatchet = {}
 
 // Frozen at current length rounded up to the next 10 lines.
 const maxLinesRatchet = {
-  "packages/mcp-camunda7/src/widget-tools.ts": 1030,
-  "packages/mcp-camunda7/src/widgets/instance-detail.tsx": 470,
   "packages/mcp-camunda7/src/data/incident-panel-data.ts": 420,
   "packages/mcp-camunda7/src/data/incident-panel-data.test.ts": 420,
   "packages/mcp-camunda7/src/data/cockpit-data.ts": 410,
@@ -175,6 +144,7 @@ export default tseslint.config(
       "packages/mcp-analytics/src/widget-tools.ts",
       "packages/mcp-analytics/src/settings-tools.ts",
       "packages/mcp-camunda7/src/widget-tools.ts",
+      "packages/mcp-camunda7/src/widget-tools/**",
       "packages/mcp-camunda7/src/tools/user-profile.ts",
     ],
     rules: {

@@ -22,6 +22,36 @@ export type { ProcessListData }
 
 const PAGE_SIZE = 50
 
+// Standalone renders hand in only `data`, so the show tool's scope comes
+// from the payload's echo — a page-2 fetch without `latestVersion` would
+// mix all versions into a latest-only page 0.
+function deriveProcessListScope(
+  initialData: ProcessListData | null,
+  props: {
+    engine?: string
+    processDefinitionKey?: string
+    nameLike?: string
+    latestVersion?: boolean
+  },
+) {
+  const echoed = initialData?.filters
+  return {
+    feedEngine: props.engine ?? initialData?.engineId,
+    effectiveKey: props.processDefinitionKey ?? echoed?.key,
+    baseNameLike: props.nameLike ?? echoed?.nameLike,
+    effectiveLatest: props.latestVersion ?? echoed?.latestVersion,
+  }
+}
+
+function buildProcessListArgs(scope: ReturnType<typeof deriveProcessListScope>) {
+  const args: Record<string, unknown> = {}
+  if (scope.feedEngine) args.engine = scope.feedEngine
+  if (scope.effectiveKey) args.key = scope.effectiveKey
+  if (scope.baseNameLike) args.nameLike = scope.baseNameLike
+  if (scope.effectiveLatest !== undefined) args.latestVersion = scope.effectiveLatest
+  return args
+}
+
 export function ProcessListWidget({
   data: initialData,
   engine,
@@ -41,19 +71,14 @@ export function ProcessListWidget({
 }) {
   const t = useT()
   const go = useNav()
-  // Standalone renders hand in only `data`, so the show tool's scope comes
-  // from the payload's echo — a page-2 fetch without `latestVersion` would
-  // mix all versions into a latest-only page 0.
-  const echoed = initialData?.filters
-  const feedEngine = engine ?? initialData?.engineId
-  const effectiveKey = processDefinitionKey ?? echoed?.key
-  const baseNameLike = nameLike ?? echoed?.nameLike
-  const effectiveLatest = latestVersion ?? echoed?.latestVersion
-  const args: Record<string, unknown> = {}
-  if (feedEngine) args.engine = feedEngine
-  if (effectiveKey) args.key = effectiveKey
-  if (baseNameLike) args.nameLike = baseNameLike
-  if (effectiveLatest !== undefined) args.latestVersion = effectiveLatest
+  const scope = deriveProcessListScope(initialData, {
+    engine,
+    processDefinitionKey,
+    nameLike,
+    latestVersion,
+  })
+  const { feedEngine, effectiveKey, baseNameLike, effectiveLatest } = scope
+  const args = buildProcessListArgs(scope)
 
   // The search is SERVER-side (nameLike on the paged feed, overriding a
   // handed-in prefilter) so it covers all deployed definitions.

@@ -49,6 +49,50 @@ function isViewResult(output: unknown): boolean {
   return "layout" in output || "context" in output
 }
 
+/** Per-call `engine` override from the rendered tool call's arguments. */
+function engineFromToolInput(toolInput: unknown): string | undefined {
+  const rawInputEngine = (toolInput as { engine?: unknown } | null)?.engine
+  return typeof rawInputEngine === "string" && rawInputEngine ? rawInputEngine : undefined
+}
+
+/** Sticky selection, or the sole configured engine (the cockpit's pattern). */
+function engineFromQuery(queried: EnginesResult | undefined): string | undefined {
+  return (
+    queried?.currentSelection ??
+    (queried && queried.engines.length === 1 ? queried.engines[0].id : undefined)
+  )
+}
+
+// Engine unresolvable — no in-widget tool transport at all, the engines
+// query failed, or it settled without a determinable engine (multi-engine
+// without a sticky selection). Fall back to the conversational transport:
+// the agent's tool call resolves the engine server-side. This is the only
+// path where the shell still emits a prompt. Decided on settled data only
+// (`isFetching` guards the enable-transition refetch).
+function isEngineUnresolvable({
+  needsEngine,
+  engineId,
+  queryCallTool,
+  enginesQuery,
+  queried,
+  queriedEngineId,
+}: {
+  needsEngine: boolean
+  engineId: string | undefined
+  queryCallTool: unknown
+  enginesQuery: { isFetching: boolean; isError: boolean }
+  queried: EnginesResult | undefined
+  queriedEngineId: string | undefined
+}): boolean {
+  return (
+    needsEngine &&
+    !engineId &&
+    (!queryCallTool ||
+      (!enginesQuery.isFetching &&
+        (enginesQuery.isError || (queried !== undefined && !queriedEngineId))))
+  )
+}
+
 /**
  * Client-side drill-in for standalone widget renders — the counterpart to the
  * cockpit app's router for everything rendered OUTSIDE the cockpit. Wraps the
@@ -103,9 +147,7 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
   const drillWidgets = { ...hostWidgets, ...camunda7BaseWidgets }
 
   const stepEngineId = useMemo(() => findStepEngineId(output), [output])
-  const rawInputEngine = (toolInput as { engine?: unknown } | null)?.engine
-  const toolInputEngine =
-    typeof rawInputEngine === "string" && rawInputEngine ? rawInputEngine : undefined
+  const toolInputEngine = engineFromToolInput(toolInput)
   // Third engine source, only consulted once a drill happens without an engine
   // echo: sticky selection or sole engine (the cockpit's pattern). Cached by
   // the toolkit's singleton query client.
@@ -116,27 +158,21 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
     { enabled: stack.length > 0 && !stepEngineId && !toolInputEngine },
   )
   const queried = enginesQuery.data
-  const queriedEngineId =
-    queried?.currentSelection ??
-    (queried && queried.engines.length === 1 ? queried.engines[0].id : undefined)
+  const queriedEngineId = engineFromQuery(queried)
   const engineId = stepEngineId ?? toolInputEngine ?? queriedEngineId
 
   const current = stack.length > 0 ? stack[stack.length - 1] : undefined
   // The settings view reads no route params — it must not block on an engine.
   const needsEngine = current !== undefined && current.section !== "settings"
 
-  // Engine unresolvable — no in-widget tool transport at all, the engines
-  // query failed, or it settled without a determinable engine (multi-engine
-  // without a sticky selection). Fall back to the conversational transport:
-  // the agent's tool call resolves the engine server-side. This is the only
-  // path where the shell still emits a prompt. Decided on settled data only
-  // (`isFetching` guards the enable-transition refetch).
-  const engineUnresolvable =
-    needsEngine &&
-    !engineId &&
-    (!queryCallTool ||
-      (!enginesQuery.isFetching &&
-        (enginesQuery.isError || (queried !== undefined && !queriedEngineId))))
+  const engineUnresolvable = isEngineUnresolvable({
+    needsEngine,
+    engineId,
+    queryCallTool,
+    enginesQuery,
+    queried,
+    queriedEngineId,
+  })
   useEffect(() => {
     if (engineUnresolvable && current) {
       // Derived from the view on top of the stack — a stored "last intent"

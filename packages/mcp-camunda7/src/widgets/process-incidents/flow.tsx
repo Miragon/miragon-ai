@@ -81,6 +81,52 @@ function ProcessHeatmap({
   )
 }
 
+function activityHint(t: ReturnType<typeof useT>, affected: number, total: number | null): string {
+  if (total !== null) return t("procIncFlow.hintOfTotal", { count: affected, total })
+  return affected === 1
+    ? t("procIncFlow.hintSingular", { count: affected })
+    : t("procIncFlow.hintPlural", { count: affected })
+}
+
+function FlowModeToolbar({
+  options,
+  mode,
+  onChange,
+  heatmapUnavailable,
+}: {
+  options: SegmentedControlOption<FlowMode>[]
+  mode: FlowMode
+  onChange: (mode: FlowMode) => void
+  heatmapUnavailable: boolean
+}) {
+  const t = useT()
+  return (
+    <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+      <SegmentedControl<FlowMode>
+        options={options}
+        value={mode}
+        onChange={onChange}
+        ariaLabel={t("procIncFlow.modeAria")}
+      />
+      {heatmapUnavailable ? (
+        <span className="text-muted-foreground text-xs">{t("procIncFlow.heatmapUnavailable")}</span>
+      ) : mode !== "incidents" ? (
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-xs">
+            {mode === "frequency"
+              ? t("procIncFlow.heatmapCaptionFrequency")
+              : t("procIncFlow.heatmapCaptionDuration")}
+          </span>
+          <HeatmapLegend
+            lessLabel={t("procIncFlow.legendLess")}
+            moreLabel={t("procIncFlow.legendMore")}
+          />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 /**
  * The one BPMN widget of the unified definition view. Three modes behind a
  * kit SegmentedControl: "incidents" (live incident overlays from the shared
@@ -154,44 +200,16 @@ export function ProcessDefinitionFlow({
       <section>
         <SectionHeading
           title={t("procIncFlow.title")}
-          hint={
-            data.totalActivityCount !== null
-              ? t("procIncFlow.hintOfTotal", {
-                  count: affectedActivityCount,
-                  total: data.totalActivityCount,
-                })
-              : affectedActivityCount === 1
-                ? t("procIncFlow.hintSingular", { count: affectedActivityCount })
-                : t("procIncFlow.hintPlural", { count: affectedActivityCount })
-          }
+          hint={activityHint(t, affectedActivityCount, data.totalActivityCount)}
         />
         {data.bpmnXml ? (
           <>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-              <SegmentedControl<FlowMode>
-                options={modeOptions}
-                value={mode}
-                onChange={setMode}
-                ariaLabel={t("procIncFlow.modeAria")}
-              />
-              {heatmapUnavailable ? (
-                <span className="text-muted-foreground text-xs">
-                  {t("procIncFlow.heatmapUnavailable")}
-                </span>
-              ) : mode !== "incidents" ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs">
-                    {mode === "frequency"
-                      ? t("procIncFlow.heatmapCaptionFrequency")
-                      : t("procIncFlow.heatmapCaptionDuration")}
-                  </span>
-                  <HeatmapLegend
-                    lessLabel={t("procIncFlow.legendLess")}
-                    moreLabel={t("procIncFlow.legendMore")}
-                  />
-                </div>
-              ) : null}
-            </div>
+            <FlowModeToolbar
+              options={modeOptions}
+              mode={mode}
+              onChange={setMode}
+              heatmapUnavailable={heatmapUnavailable}
+            />
             {mode === "incidents" ? (
               <BpmnDiagram bpmnXml={data.bpmnXml} height={DIAGRAM_HEIGHT} highlights={highlights} />
             ) : (
