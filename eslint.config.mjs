@@ -27,7 +27,6 @@ const complexityRatchet = {}
 
 // Frozen at current length rounded up to the next 10 lines.
 const maxLinesRatchet = {
-  "packages/mcp-camunda7/src/widget-tools.ts": 1030,
   "packages/mcp-camunda7/src/data/incident-panel-data.ts": 420,
   "packages/mcp-camunda7/src/data/incident-panel-data.test.ts": 420,
   "packages/mcp-camunda7/src/data/cockpit-data.ts": 410,
@@ -145,6 +144,7 @@ export default tseslint.config(
       "packages/mcp-analytics/src/widget-tools.ts",
       "packages/mcp-analytics/src/settings-tools.ts",
       "packages/mcp-camunda7/src/widget-tools.ts",
+      "packages/mcp-camunda7/src/widget-tools/**",
       "packages/mcp-camunda7/src/tools/user-profile.ts",
     ],
     rules: {
