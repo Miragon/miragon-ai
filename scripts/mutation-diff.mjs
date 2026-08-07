@@ -14,8 +14,11 @@
  * Usage: node scripts/mutation-diff.mjs [baseRef]   (default origin/main)
  */
 import { execSync, spawnSync } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, rmSync } from "node:fs"
 import picomatch from "picomatch"
+
+/** Gitignored, per-package, wiped before every gate run — see below. */
+const GATE_INCREMENTAL_FILE = ".stryker-tmp/diff-gate-incremental.json"
 
 const base = process.argv[2] ?? "origin/main"
 const mergeBase = execSync(`git merge-base ${base} HEAD`, { encoding: "utf8" }).trim()
@@ -68,9 +71,23 @@ for (const [pkg, files] of byPackage) {
     continue
   }
   console.log(`mutation-diff: ${pkg} → ${files.length} file(s)\n  ${files.join("\n  ")}`)
+  // Off the package's incremental cache, on a throwaway file wiped every run:
+  // that cache would fold the OTHER files' cached results back into the score
+  // and the gate would pass locally on a file that fails on CI's fresh
+  // checkout. Also keeps reports/mutation-report.json scoped to the diff.
+  rmSync(`${pkg}/${GATE_INCREMENTAL_FILE}`, { force: true })
   const result = spawnSync(
     "pnpm",
-    ["--filter", `./${pkg}`, "run", "test:mutation", "--mutate", files.join(",")],
+    [
+      "--filter",
+      `./${pkg}`,
+      "run",
+      "test:mutation",
+      "--mutate",
+      files.join(","),
+      "--incrementalFile",
+      GATE_INCREMENTAL_FILE,
+    ],
     { stdio: "inherit" },
   )
   if (result.status !== 0) failed = true
