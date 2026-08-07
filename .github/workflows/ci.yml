@@ -109,7 +109,11 @@ jobs:
   fitness:
     name: Fitness report
     needs: [typescript, mutation]
-    if: always() && needs.typescript.result == 'success'
+    # `!cancelled()` rather than `always()`: the report should still run when
+    # the mutation gate went red or was skipped, but not after a cancelled run
+    # — pushing to a PR branch cancels the previous one (see `concurrency`),
+    # and `always()` would spend a runner on install + build for it anyway.
+    if: ${{ !cancelled() && needs.typescript.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
