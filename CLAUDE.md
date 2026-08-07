@@ -269,16 +269,21 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
 
 ## Verification — what each check actually covers
 
-| Check             | Coverage                                                                                                                                                                                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm build`      | tsc emit of server code + the server app's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                             |
-| `pnpm typecheck`  | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-camunda7/mcp-analytics, `tsc -p tsconfig.ui.json` in the server app                                                                                            |
-| `pnpm test`       | Vitest unit tests (lib + query logic) **plus** the server app e2e smoke + widget wire-contract tests (in-process boot, loopback HTTP); **no widget rendering**                                                                                         |
-| `pnpm lint`       | ESLint over each package's `src` (the server app also `test`/`test-host`) incl. the pattern gates (registrar-only tools, widget-shell date formatting), then the root `lint:architecture` — dependency-cruiser rules from `.dependency-cruiser.cjs`    |
-| `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                    |
-| `test:host`       | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin |
-| Manual            | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                        |
+| Check             | Coverage                                                                                                                                                                                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`      | tsc emit of server code + the server app's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                               |
+| `pnpm typecheck`  | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-camunda7/mcp-analytics, `tsc -p tsconfig.ui.json` in the server app                                                                                              |
+| `pnpm test`       | Vitest unit tests (lib + query logic) **plus** the server app e2e smoke + widget wire-contract tests (in-process boot, loopback HTTP); **no widget rendering**; enforces the per-package coverage ratchet (frozen thresholds in each `vitest.config.ts`) |
+| `pnpm lint`       | ESLint over each package's `src` (the server app also `test`/`test-host`) incl. the pattern gates (registrar-only tools, widget-shell date formatting), then the root `lint:architecture` — dependency-cruiser rules from `.dependency-cruiser.cjs`      |
+| `./gradlew build` | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                      |
+| `test:host`       | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin   |
+| Manual            | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                          |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
 every change; widget changes additionally need `test:host` plus a manual render check via
 the inspector (real widget data paths are not covered by the host simulation's fixture).
+
+Ratchet rules are shrink-only: the complexity/max-lines offender lists in
+`eslint.config.mjs` (global budgets: complexity 15, 400 effective lines) and the coverage
+thresholds in each `vitest.config.ts` may only improve — delete a list entry or raise a
+threshold when you better a file, never the reverse, and never add new entries.
