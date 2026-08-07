@@ -100,7 +100,7 @@ export function IncidentTable({
                 </Td>
                 <Td
                   align="right"
-                  className="text-muted-foreground whitespace-nowrap font-mono text-xs"
+                  className="text-muted-foreground font-mono text-xs whitespace-nowrap"
                 >
                   {formatTimestamp(incident.incidentTimestamp)}
                 </Td>

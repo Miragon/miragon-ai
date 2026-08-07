@@ -20,12 +20,8 @@ export function registerMessageSignalTools(register: Register) {
         body: {
           messageName: args.messageName,
           businessKey: args.businessKey,
-          correlationKeys: args.correlationKeys as
-            | Record<string, { value: unknown; type?: string }>
-            | undefined,
-          processVariables: args.processVariables as
-            | Record<string, { value: unknown; type?: string }>
-            | undefined,
+          correlationKeys: args.correlationKeys,
+          processVariables: args.processVariables,
           resultEnabled: args.resultEnabled,
         },
       }),
@@ -44,9 +40,7 @@ export function registerMessageSignalTools(register: Register) {
         client,
         body: {
           name: args.name,
-          variables: args.variables as
-            | Record<string, { value: unknown; type?: string }>
-            | undefined,
+          variables: args.variables,
         },
       })
       return { success: true, signalName: args.name }

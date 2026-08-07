@@ -98,7 +98,7 @@ function VariableRow({
     <tr className="hover:bg-muted transition-colors">
       <Td className="font-mono text-sm">{name}</Td>
       <Td className="text-muted-foreground text-xs">{variable.type ?? "—"}</Td>
-      <Td className="max-w-md whitespace-pre-wrap break-words font-mono text-xs">
+      <Td className="max-w-md font-mono text-xs break-words whitespace-pre-wrap">
         {editing ? (
           <form
             className="flex flex-col gap-1"

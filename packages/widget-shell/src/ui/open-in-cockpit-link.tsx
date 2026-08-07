@@ -27,7 +27,7 @@ export function OpenInCockpitLink({
         host.openLink(url)
       }}
       aria-label={label}
-      className={`border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border font-medium outline-none transition-colors focus-visible:ring-2 ${pad}`}
+      className={`border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border font-medium transition-colors outline-none focus-visible:ring-2 ${pad}`}
     >
       <span aria-hidden="true">▦</span>
       {label}

@@ -153,8 +153,8 @@ describe.each(cases)("$tool pagination envelope", ({ tool, list, count, filterAr
 
   it("returns { items, totalCount, hasMore, nextOffset } when more pages exist", async () => {
     const page = [{ id: "a" }, { id: "b" }]
-    mockedList.mockResolvedValueOnce(page as never)
-    mockedCount.mockResolvedValueOnce({ count: 7 } as never)
+    mockedList.mockResolvedValueOnce(page)
+    mockedCount.mockResolvedValueOnce({ count: 7 })
 
     const result = await callTool(tool, { ...filterArgs, firstResult: 2, maxResults: 2 })
 
@@ -177,8 +177,8 @@ describe.each(cases)("$tool pagination envelope", ({ tool, list, count, filterAr
 
   it("reports hasMore=false without nextOffset when the page is the full result", async () => {
     const page = [{ id: "a" }]
-    mockedList.mockResolvedValueOnce(page as never)
-    mockedCount.mockResolvedValueOnce({ count: 1 } as never)
+    mockedList.mockResolvedValueOnce(page)
+    mockedCount.mockResolvedValueOnce({ count: 1 })
 
     const result = await callTool(tool, { ...filterArgs, firstResult: 0, maxResults: 20 })
 
@@ -194,7 +194,7 @@ describe("envelope degradation", () => {
 
   it("falls back to firstResult + items.length (hasMore=false) when the count is unusable", async () => {
     vi.mocked(sdk.getJobs).mockResolvedValueOnce([{ id: "j1" }, { id: "j2" }] as never)
-    vi.mocked(sdk.getJobsCount).mockResolvedValueOnce(undefined as never)
+    vi.mocked(sdk.getJobsCount).mockResolvedValueOnce(undefined)
 
     const result = await callTool("camunda7_list_jobs", { firstResult: 3, maxResults: 2 })
 
@@ -206,8 +206,8 @@ describe("envelope degradation", () => {
   })
 
   it("treats a non-array list response as an empty page", async () => {
-    vi.mocked(sdk.getIncidents).mockResolvedValueOnce(undefined as never)
-    vi.mocked(sdk.getIncidentsCount).mockResolvedValueOnce({ count: 0 } as never)
+    vi.mocked(sdk.getIncidents).mockResolvedValueOnce(undefined)
+    vi.mocked(sdk.getIncidentsCount).mockResolvedValueOnce({ count: 0 })
 
     const result = await callTool("camunda7_list_incidents", {})
 

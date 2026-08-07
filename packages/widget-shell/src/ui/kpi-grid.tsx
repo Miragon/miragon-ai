@@ -85,7 +85,7 @@ function KpiCellBody({ cell, variant }: { cell: KpiCell; variant: "strip" | "sof
           variant === "soft"
             ? "mt-1 text-2xl font-bold tabular-nums"
             : cn(
-                "mt-1.5 text-2xl font-bold tabular-nums leading-none tracking-tight",
+                "mt-1.5 text-2xl leading-none font-bold tracking-tight tabular-nums",
                 (cell.tone && TONE_TEXT[cell.tone]) || "text-foreground",
               )
         }
@@ -151,7 +151,7 @@ export function KpiGrid({
               onClick={cell.onClick}
               aria-label={cell.ariaLabel}
               className={cn(
-                "focus-visible:ring-ring cursor-pointer rounded-xl p-4 text-left outline-none transition-colors focus-visible:ring-2",
+                "focus-visible:ring-ring cursor-pointer rounded-xl p-4 text-left transition-colors outline-none focus-visible:ring-2",
                 toneClass,
               )}
             >
@@ -199,7 +199,7 @@ export function KpiGrid({
               type="button"
               onClick={cell.onClick}
               aria-label={cell.ariaLabel}
-              className="bg-card hover:bg-muted focus-visible:ring-ring cursor-pointer px-5 py-4 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset"
+              className="bg-card hover:bg-muted focus-visible:ring-ring cursor-pointer px-5 py-4 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset"
             >
               {body}
             </button>

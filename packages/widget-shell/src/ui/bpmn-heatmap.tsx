@@ -208,7 +208,7 @@ export function BpmnHeatmap({
           {hasHeat ? null : (
             <div
               role="status"
-              className="border-border bg-card text-muted-foreground pointer-events-none absolute left-3 top-3 rounded border px-2 py-1 text-xs shadow-sm"
+              className="border-border bg-card text-muted-foreground pointer-events-none absolute top-3 left-3 rounded border px-2 py-1 text-xs shadow-sm"
             >
               {noHeatLabel}
             </div>

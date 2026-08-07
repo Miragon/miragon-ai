@@ -110,8 +110,7 @@ export function resolveAuthUserId(ctx?: unknown): string | undefined {
   if (!reqCtx) return undefined
   try {
     const auth = (reqCtx as { get(key: string): unknown }).get("auth") as
-      | ProfileAuthContext["auth"]
-      | undefined
+      ProfileAuthContext["auth"] | undefined
     const userId = auth?.user?.userId
     if (typeof userId === "string" && userId.length > 0) return userId
   } catch {

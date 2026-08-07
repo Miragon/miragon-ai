@@ -350,7 +350,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                   type="button"
                   aria-current={isActive ? "page" : undefined}
                   onClick={() => dispatch(s.intent)}
-                  className={`focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2 ${
+                  className={`focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 ${
                     isActive
                       ? "bg-m-blue-soft text-m-blue font-semibold"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -368,7 +368,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               <button
                 type="button"
                 onClick={() => dispatch({ type: "to-fleet" })}
-                className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2"
               >
                 <span aria-hidden="true">⤧</span>
                 {translator(locale, "cockpit.nav.crossEngine")}

@@ -253,7 +253,7 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
     const store = createPostgresProfileStore({ sql })
     await sql`
       INSERT INTO user_profiles (key, profile)
-      VALUES ('legacy', ${sql.json(V1_RECORD as unknown as postgres.JSONValue)})
+      VALUES ('legacy', ${sql.json(V1_RECORD)})
     `
     const migrated = await store.get("legacy")
     expect(migrated).toMatchObject({

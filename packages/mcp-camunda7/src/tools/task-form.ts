@@ -83,9 +83,7 @@ export async function buildTaskFormSchema(
 }
 
 async function fetchTaskMeta(client: Client, taskId: string): Promise<TaskMeta | null> {
-  const result = (await getTask({ client, path: { id: taskId } }).catch(
-    () => null,
-  )) as unknown as TaskMeta | null
+  const result = await getTask({ client, path: { id: taskId } }).catch(() => null)
   return result
 }
 

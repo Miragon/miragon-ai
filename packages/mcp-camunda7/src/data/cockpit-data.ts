@@ -64,7 +64,7 @@ export async function buildCockpitDashboardData(
       client,
       query: { failedJobs: true, incidents: true },
     })
-    rows = Array.isArray(stats) ? (stats as typeof rows) : []
+    rows = Array.isArray(stats) ? stats : []
   } catch {
     const [defs, incidents] = await Promise.all([
       getProcessDefinitions({
@@ -279,7 +279,7 @@ export async function buildProcessInstancesData(
   return {
     processDefinitionKey: args.processDefinitionKey ?? null,
     processDefinitionName: defArray[0]?.name ?? null,
-    totalCount: (countRes as { count?: number } | null)?.count ?? instances.length,
+    totalCount: countRes?.count ?? instances.length,
     returnedCount: instances.length,
     withIncidentCount: instances.filter((i) => i.hasIncident).length,
     suspendedCount: instances.filter((i) => i.suspended).length,
@@ -451,8 +451,8 @@ export async function buildJobPanelData(
     createTime: j.createTime ?? null,
   }))
 
-  const failedCount = (failedCountRes as { count?: number } | null)?.count ?? 0
-  const allCount = (allCountRes as { count?: number } | null)?.count ?? jobs.length
+  const failedCount = failedCountRes?.count ?? 0
+  const allCount = allCountRes?.count ?? jobs.length
 
   return {
     totalCount: args.failedOnly ? failedCount : allCount,

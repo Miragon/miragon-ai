@@ -106,9 +106,7 @@ export function registerTaskTools(register: Register) {
         client,
         path: { id: args.taskId },
         body: {
-          variables: args.variables as
-            | Record<string, { value: unknown; type?: string }>
-            | undefined,
+          variables: args.variables,
         },
       })
       return { success: true, taskId: args.taskId }
