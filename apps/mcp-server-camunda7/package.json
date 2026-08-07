@@ -28,7 +28,6 @@
     "start": "cross-env NODE_ENV=production node dist/index.js"
   },
   "dependencies": {
-    "@miragon-ai/client-camunda7": "workspace:*",
     "@miragon-ai/mcp-analytics": "workspace:*",
     "@miragon-ai/mcp-camunda7": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
@@ -47,8 +46,6 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "@vitejs/plugin-react": "6.0.5",
-    "class-variance-authority": "0.7.1",
-    "clsx": "2.1.1",
     "cross-env": "10.1.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",

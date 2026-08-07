@@ -14,7 +14,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:pg": "TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgres://miragon:miragon@localhost:8440/miragon_test} pnpm --filter @miragon-ai/mcp-camunda7 --filter @miragon-ai/mcp-server-camunda7 run test",
-    "lint": "turbo run lint && pnpm lint:architecture",
+    "lint": "turbo run lint && pnpm lint:architecture && pnpm lint:deadcode",
     "lint:architecture": "depcruise apps/*/src packages/*/src --config .dependency-cruiser.cjs",
     "lint:fix": "turbo run lint:fix",
     "format": "prettier --write .",
@@ -25,7 +25,8 @@
     "docs:build": "pnpm --filter @miragon-ai/docs build",
     "docs:preview": "pnpm --filter @miragon-ai/docs preview",
     "test:mutation": "node scripts/mutation-diff.mjs",
-    "fitness": "node scripts/fitness-report.mjs"
+    "fitness": "node scripts/fitness-report.mjs",
+    "lint:deadcode": "knip --exclude exports,types,enumMembers"
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
@@ -36,6 +37,7 @@
     "eslint": "9.39.4",
     "eslint-plugin-react-hooks": "5.2.0",
     "husky": "9.1.7",
+    "knip": "6.32.0",
     "lint-staged": "15.5.2",
     "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "0.8.1",
