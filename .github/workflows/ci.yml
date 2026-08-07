@@ -131,8 +131,11 @@ jobs:
         with:
           name: coverage-summaries
 
-      # Absent on push-to-main runs, where the mutation job does not run at all.
+      # Optional: no artifact exists on push-to-main (the mutation job does not
+      # run) nor when the diff touched nothing inside a `mutate` allowlist. The
+      # report degrades to "— (no run)" in those cases instead of failing.
       - if: needs.mutation.result == 'success' || needs.mutation.result == 'failure'
+        continue-on-error: true
         uses: actions/download-artifact@v8.0.1
         with:
           name: mutation-reports
