@@ -17,7 +17,7 @@ import OrbitalVisual from "./OrbitalVisual.vue"
         <h3 class="title">From cockpit to conversation</h3>
         <p class="desc">
           Every role gets exactly what they need from any running process, just by asking. The
-          cockpit, the tasklist, the dashboard, the monitoring tool — all of it collapses into a
+          cockpit, the tasklist, the dashboard, the monitoring tool. All of it collapses into a
           single conversation. No cockpit. No tab hunt.
         </p>
       </div>
@@ -41,7 +41,7 @@ import OrbitalVisual from "./OrbitalVisual.vue"
         <div>
           <span class="role">Management</span>
           <p class="text">
-            KPIs, throughput times, bottlenecks — delivered in the conversation. No dashboard to
+            KPIs, throughput times, bottlenecks, delivered in the conversation. No dashboard to
             open, no filter to set.
           </p>
         </div>
