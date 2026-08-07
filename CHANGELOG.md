@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/Miragon/miragon-ai/compare/v0.5.0...v0.5.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* **docker:** keep the pnpm store in the image layer, not a cache mount ([#209](https://github.com/Miragon/miragon-ai/issues/209)) ([d9f6d7a](https://github.com/Miragon/miragon-ai/commit/d9f6d7aae1aa8346305fc6c3c0b36f54b9ee0fa8))
+
 ## [0.5.0](https://github.com/Miragon/miragon-ai/compare/v0.4.0...v0.5.0) (2026-08-05)
 
 

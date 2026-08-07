@@ -1,6 +1,6 @@
 {
   "name": "@miragon-ai/mcp-camunda7",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Camunda 7 / CIB Seven MCP module: operations tools, widget tools, and cockpit widgets.",
   "license": "MIT",
   "keywords": [
