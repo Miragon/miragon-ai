@@ -167,6 +167,136 @@ function ClusterRow({
   )
 }
 
+/** Error / loading / empty rendering for the missing-data case. */
+function HealthUnavailable({
+  engine,
+  loading,
+  error,
+}: {
+  engine?: string
+  loading: boolean
+  error: Error | null
+}) {
+  const t = useT()
+  if (error) {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+        <AskAiButton variant="primary" prompt={diagnosePrompt(engine, error.message)} />
+      </div>
+    )
+  }
+  return (
+    <div className="text-muted-foreground p-2 text-sm">
+      {loading ? t("engineHealth.loading") : t("engineHealth.noData")}
+    </div>
+  )
+}
+
+function HealthKpis({
+  summary,
+  status,
+  go,
+}: {
+  summary: EngineHealthData["summary"]
+  status: (typeof STATUS)[EngineHealthStatus]
+  go: OnNavigate
+}) {
+  const t = useT()
+  return (
+    <KpiGrid
+      boxed
+      header={{ label: t("engineHealth.kpiHealth"), badge: t(status.labelKey) }}
+      cells={[
+        {
+          label: t("engineHealth.kpiRunningInstances"),
+          value: summary.runningInstances,
+          // The engine-wide instances list — NOT the definitions list: the
+          // KPI counts instances, so the drill must land on instances.
+          onClick: () => go({ type: "process-instances" }),
+          ariaLabel: t("engineHealth.kpiRunningInstancesAria"),
+        },
+        {
+          label: t("engineHealth.kpiOpenIncidents"),
+          // The derivative beats the absolute during an active incident:
+          // "9 in the last hour" = burning now; fall back to the 24h count.
+          value: summary.totalIncidents,
+          fraction:
+            summary.lastHourIncidents > 0
+              ? ` ${t("engineHealth.kpiInLastHour", { count: summary.lastHourIncidents })}`
+              : summary.last24hIncidents > 0
+                ? ` ${t("engineHealth.kpiIn24h", { count: summary.last24hIncidents })}`
+                : undefined,
+          tone: summary.totalIncidents > 0 ? status.tone : undefined,
+          onClick: () => go({ type: "incidents" }),
+          ariaLabel: t("engineHealth.kpiOpenIncidentsAria"),
+        },
+        {
+          label: t("engineHealth.kpiAffectedActivities"),
+          value: summary.affectedActivities,
+          tone: summary.affectedActivities > 0 ? "warning" : undefined,
+        },
+        {
+          label: t("engineHealth.kpiAffectedProcesses"),
+          value: summary.affectedDefinitions,
+          fraction: ` /${summary.totalDefinitions}`,
+          tone: summary.affectedDefinitions > 0 ? "critical" : undefined,
+        },
+      ]}
+    />
+  )
+}
+
+/* Throughput makes the healthy state earn the screen: even with zero
+   incidents the operator sees the engine actually moving work. Hidden
+   when the history API is unavailable (counts degrade to null). */
+function Throughput24h({ summary }: { summary: EngineHealthData["summary"] }) {
+  const t = useT()
+  if (summary.started24h === null && summary.completed24h === null) return null
+  return (
+    <p className="text-muted-foreground text-xs">
+      {t("engineHealth.throughput24h")}{" "}
+      {summary.started24h !== null
+        ? t("engineHealth.throughputStarted", { count: summary.started24h.toLocaleString() })
+        : ""}
+      {summary.started24h !== null && summary.completed24h !== null ? " · " : ""}
+      {summary.completed24h !== null
+        ? t("engineHealth.throughputCompleted", {
+            count: summary.completed24h.toLocaleString(),
+          })
+        : ""}
+    </p>
+  )
+}
+
+function ClustersSection({
+  clusters,
+  engine,
+  engineId,
+  go,
+}: {
+  clusters: EngineHealthCluster[]
+  engine?: string
+  engineId: string
+  go: OnNavigate
+}) {
+  const t = useT()
+  if (clusters.length === 0) return null
+  return (
+    <section aria-label={t("engineHealth.clustersAria")} className="flex flex-col gap-2">
+      <h3 className="text-sm font-semibold">{t("engineHealth.clustersHeading")}</h3>
+      {clusters.map((cluster) => (
+        // Fall back to the engine the data was fetched against (standalone
+        // renders pass no `engine` prop) so the remediation prompt never
+        // inlines a placeholder as a tool-call engine id.
+        <ClusterRow key={cluster.id} cluster={cluster} engine={engine ?? engineId} go={go} />
+      ))}
+    </section>
+  )
+}
+
 /**
  * Shell-less AI-first engine overview. One component, two modes (like the cockpit
  * widgets): standalone the agent's data arrives via `data`; inside the cockpit
@@ -235,25 +365,10 @@ export function EngineHealthView({
   }
 
   if (!data) {
-    if (error) {
-      return (
-        <div className="flex flex-col items-start gap-3">
-          <Alert variant="destructive">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-          <AskAiButton variant="primary" prompt={diagnosePrompt(engine, error.message)} />
-        </div>
-      )
-    }
-    return (
-      <div className="text-muted-foreground p-2 text-sm">
-        {loading ? t("engineHealth.loading") : t("engineHealth.noData")}
-      </div>
-    )
+    return <HealthUnavailable engine={engine} loading={loading} error={error} />
   }
 
   const status = STATUS[data.status]
-  const { summary, clusters } = data
 
   return (
     <>
@@ -289,81 +404,11 @@ export function EngineHealthView({
         </button>
       </div>
 
-      <KpiGrid
-        boxed
-        header={{ label: t("engineHealth.kpiHealth"), badge: t(status.labelKey) }}
-        cells={[
-          {
-            label: t("engineHealth.kpiRunningInstances"),
-            value: summary.runningInstances,
-            // The engine-wide instances list — NOT the definitions list: the
-            // KPI counts instances, so the drill must land on instances.
-            onClick: () => go({ type: "process-instances" }),
-            ariaLabel: t("engineHealth.kpiRunningInstancesAria"),
-          },
-          {
-            label: t("engineHealth.kpiOpenIncidents"),
-            // The derivative beats the absolute during an active incident:
-            // "9 in the last hour" = burning now; fall back to the 24h count.
-            value: summary.totalIncidents,
-            fraction:
-              summary.lastHourIncidents > 0
-                ? ` ${t("engineHealth.kpiInLastHour", { count: summary.lastHourIncidents })}`
-                : summary.last24hIncidents > 0
-                  ? ` ${t("engineHealth.kpiIn24h", { count: summary.last24hIncidents })}`
-                  : undefined,
-            tone: summary.totalIncidents > 0 ? status.tone : undefined,
-            onClick: () => go({ type: "incidents" }),
-            ariaLabel: t("engineHealth.kpiOpenIncidentsAria"),
-          },
-          {
-            label: t("engineHealth.kpiAffectedActivities"),
-            value: summary.affectedActivities,
-            tone: summary.affectedActivities > 0 ? "warning" : undefined,
-          },
-          {
-            label: t("engineHealth.kpiAffectedProcesses"),
-            value: summary.affectedDefinitions,
-            fraction: ` /${summary.totalDefinitions}`,
-            tone: summary.affectedDefinitions > 0 ? "critical" : undefined,
-          },
-        ]}
-      />
+      <HealthKpis summary={data.summary} status={status} go={go} />
 
-      {/* Throughput makes the healthy state earn the screen: even with zero
-          incidents the operator sees the engine actually moving work. Hidden
-          when the history API is unavailable (counts degrade to null). */}
-      {(summary.started24h !== null || summary.completed24h !== null) && (
-        <p className="text-muted-foreground text-xs">
-          {t("engineHealth.throughput24h")}{" "}
-          {summary.started24h !== null
-            ? t("engineHealth.throughputStarted", { count: summary.started24h.toLocaleString() })
-            : ""}
-          {summary.started24h !== null && summary.completed24h !== null ? " · " : ""}
-          {summary.completed24h !== null
-            ? t("engineHealth.throughputCompleted", {
-                count: summary.completed24h.toLocaleString(),
-              })
-            : ""}
-        </p>
-      )}
+      <Throughput24h summary={data.summary} />
 
-      {clusters.length > 0 && (
-        <section aria-label={t("engineHealth.clustersAria")} className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold">{t("engineHealth.clustersHeading")}</h3>
-          {clusters.map((cluster) => (
-            // Fall back to the engine the data was fetched against (standalone
-            // renders pass no `engine` prop) so the remediation prompt never
-            // inlines a placeholder as a tool-call engine id.
-            <ClusterRow
-              key={cluster.id}
-              cluster={cluster}
-              engine={engine ?? data.engineId}
-              go={go}
-            />
-          ))}
-        </section>
-      )}
+      <ClustersSection clusters={data.clusters} engine={engine} engineId={data.engineId} go={go} />
     </>
   )
 }

@@ -22,6 +22,21 @@ import { useT } from "../messages/use-t.js"
 
 export type { JobPanelData }
 
+// Standalone renders hand in only `data`, so the show tool's scope comes
+// from the payload's echo — loadMore must page the same engine and filter
+// set as page 0 (incl. a processDefinitionKey filter the widget has no
+// prop for).
+function buildJobsFeed(initialData: JobPanelData | null, engine?: string, failedOnly?: boolean) {
+  const echoed = initialData?.filters
+  const feedEngine = engine ?? initialData?.engineId
+  const effectiveFailedOnly = failedOnly ?? echoed?.failedOnly
+  const args: Record<string, unknown> = {}
+  if (feedEngine) args.engine = feedEngine
+  if (effectiveFailedOnly !== undefined) args.failedOnly = effectiveFailedOnly
+  if (echoed?.processDefinitionKey) args.processDefinitionKey = echoed.processDefinitionKey
+  return { feedEngine, effectiveFailedOnly, args }
+}
+
 export function JobPanelWidget({
   data: initialData = null,
   engine,
@@ -35,17 +50,7 @@ export function JobPanelWidget({
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
   const [retryError, setRetryError] = useState<{ jobId: string; message: string } | null>(null)
   const retryMutation = useToolMutation("camunda7_set_job_retries")
-  // Standalone renders hand in only `data`, so the show tool's scope comes
-  // from the payload's echo — loadMore must page the same engine and filter
-  // set as page 0 (incl. a processDefinitionKey filter the widget has no
-  // prop for).
-  const echoed = initialData?.filters
-  const feedEngine = engine ?? initialData?.engineId
-  const effectiveFailedOnly = failedOnly ?? echoed?.failedOnly
-  const args: Record<string, unknown> = {}
-  if (feedEngine) args.engine = feedEngine
-  if (effectiveFailedOnly !== undefined) args.failedOnly = effectiveFailedOnly
-  if (echoed?.processDefinitionKey) args.processDefinitionKey = echoed.processDefinitionKey
+  const { feedEngine, effectiveFailedOnly, args } = buildJobsFeed(initialData, engine, failedOnly)
   const paged = usePagedViewData<JobPanelData["jobs"][number], JobPanelData>({
     initialData,
     key: ["camunda7:jobs", feedEngine ?? null, effectiveFailedOnly ?? null],

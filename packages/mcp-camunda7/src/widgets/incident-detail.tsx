@@ -1,25 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { ModelContext } from "mcp-use/react"
-import {
-  Alert,
-  AlertDescription,
-  Card,
-  CardContent,
-  useToolMutation,
-} from "@miragon/mcp-toolkit-ui"
-import {
-  AskAiButton,
-  KpiGrid,
-  OpenInCockpitLink,
-  SectionHeading,
-  StatusBadge,
-  VersionChip,
-  WidgetHeader,
-  formatDate,
-  formatTime,
-  truncate,
-  useDetailView,
-} from "@miragon-ai/widget-shell/widgets"
+import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-ui"
+import { SectionHeading, truncate, useDetailView } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "../view-models.js"
 
@@ -27,14 +9,31 @@ import { CAMUNDA7_INCIDENT_DETAIL_DATA } from "../tool-names.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ConfirmDialog } from "./confirm-dialog.js"
 import { DetailPage } from "./detail-page.js"
-import { ActivityNode, VariablesTable } from "./instance-sections.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
+import { IncidentDetailHeader } from "./incident-detail/header.js"
+import { InstanceTab } from "./incident-detail/instance-tab.js"
+import { IncidentKpis } from "./incident-detail/kpis.js"
 import { refreshCockpitData } from "./refresh.js"
 import { PagedHistoryView } from "./history-timeline.js"
-import { fenceUntrusted } from "./lib/untrusted.js"
 import { useT } from "../messages/use-t.js"
 
 export type { IncidentDetailData }
+
+function modelSummary(data: IncidentDetailData, resolved: boolean): string {
+  const incidentMessage = data.incidentMessage ?? data.job?.exceptionMessage
+  return [
+    `Viewing CIB Seven incident ${data.incidentId} (type ${data.incidentType}` +
+      `${resolved ? ", marked resolved in this session" : ""}) at activity ` +
+      `${data.activityName ?? data.activityId} (${data.activityId}) on process instance ` +
+      `${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}` +
+      `${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}, ` +
+      `engine ${data.engineId ?? "default"}.`,
+    `Message: ${incidentMessage ? `"${truncate(incidentMessage, 160)}"` : "(none reported)"}.`,
+    `Act via camunda7_resolve_incident / camunda7_set_job_retries` +
+      `${data.job ? ` (job ${data.job.id}, ${data.job.retries} retries left)` : ""}; ` +
+      `full instance context via camunda7_show_instance_detail.`,
+  ].join(" ")
+}
 
 export function IncidentDetailWidget({
   data: initialData = null,
@@ -108,95 +107,10 @@ export function IncidentDetailWidget({
     )
   }
 
-  const title = data.activityName ?? data.activityId
-  const cockpitInstanceUrl = data.cockpitInstanceUrl
-
-  const incidentMessage = data.incidentMessage ?? data.job?.exceptionMessage
-
   return (
     <DetailPage
-      header={
-        <WidgetHeader
-          size="detail"
-          badge={
-            <div className="flex items-center gap-3">
-              <div className="bg-critical-soft text-critical grid size-11 place-items-center rounded-xl text-xl">
-                ⚠
-              </div>
-              <StatusBadge tone={resolved ? "neutral" : "critical"}>
-                {resolved ? t("incidentDetail.resolved") : data.incidentType}
-              </StatusBadge>
-            </div>
-          }
-          title={title}
-          sub={
-            <>
-              <span>
-                {data.processDefinitionName ?? data.processDefinitionKey}
-                {data.processDefinitionVersion !== null && (
-                  <VersionChip version={data.processDefinitionVersion} />
-                )}
-              </span>
-              <span className="text-muted-foreground">·</span>
-              <span className="font-mono text-xs">{data.processInstanceId}</span>
-              {data.businessKey && (
-                <>
-                  <span className="text-muted-foreground">·</span>
-                  <span>
-                    {t("incidentDetail.businessKeyLabel")} {data.businessKey}
-                  </span>
-                </>
-              )}
-              {cockpitInstanceUrl && (
-                <OpenInCockpitLink
-                  url={cockpitInstanceUrl}
-                  label={t("incidentDetail.openInstanceInCockpit")}
-                />
-              )}
-            </>
-          }
-          actions={
-            <AskAiButton
-              variant="primary"
-              prompt={`Diagnose CIB Seven incident \`${data.incidentId}\` (type \`${data.incidentType}\`) at activity ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on process instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""} (definition \`${data.processDefinitionId}\`${data.businessKey ? `, business key ${data.businessKey}` : ""}), engine \`${data.engineId ?? "default"}\`. Error: ${fenceUntrusted(data.incidentMessage ?? data.job?.exceptionMessage)}. Use camunda7_instance_detail_data and camunda7_get_process_instance_variables for context, read the stacktrace${data.job ? ` on job ${data.job.id}` : ""}, and use camunda7_list_incidents + camunda7_query_historic_activity_instances to check whether other instances of \`${data.processDefinitionKey}\` fail the same way at ${data.activityId}. Then state: (1) the most likely root cause, (2) whether a plain retry will succeed or just re-fail, and (3) the concrete recommended fix (retry, variable correction, instance modification, or escalation).`}
-            />
-          }
-        />
-      }
-      kpi={
-        <KpiGrid
-          boxed
-          header={{
-            label: t("incidentDetail.kpiHeaderLabel"),
-            badge: t("incidentDetail.kpiHeaderBadge"),
-          }}
-          cells={[
-            {
-              label: t("incidentDetail.kpiType"),
-              value: data.incidentType,
-              tone: resolved ? "success" : "critical",
-            },
-            {
-              label: t("incidentDetail.kpiRetriesLeft"),
-              value: data.job?.retries ?? "—",
-              tone:
-                data.job && data.job.retries > 0 ? "success" : data.job ? "critical" : undefined,
-            },
-            {
-              label: t("incidentDetail.kpiDate"),
-              value: formatDate(data.incidentTimestamp),
-            },
-            {
-              label: t("incidentDetail.kpiTime"),
-              value: formatTime(data.incidentTimestamp),
-            },
-            {
-              label: t("incidentDetail.kpiHistoryEvents"),
-              value: data.historyTotalCount ?? "—",
-            },
-          ]}
-        />
-      }
+      header={<IncidentDetailHeader data={data} resolved={resolved} />}
+      kpi={<IncidentKpis data={data} resolved={resolved} />}
       diagram={
         <section>
           <SectionHeading
@@ -235,34 +149,7 @@ export function IncidentDetailWidget({
         {
           id: "instance",
           label: t("incidentDetail.tabInstance"),
-          content: (
-            <div className="flex flex-col gap-4">
-              {data.activityTree && (
-                <div>
-                  <SectionHeading title={t("incidentDetail.activityTreeTitle")} />
-                  <Card className="gap-0 py-0 shadow-none">
-                    <CardContent className="p-3">
-                      <ActivityNode node={data.activityTree} />
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-              <div>
-                <SectionHeading
-                  title={t("incidentDetail.variablesTitle")}
-                  hint={t("incidentDetail.variablesHint", {
-                    count: Object.keys(data.variables).length,
-                  })}
-                />
-                <VariablesTable
-                  variables={data.variables}
-                  instanceId={data.processInstanceId}
-                  engine={engineId}
-                  readOnly={data.instance.ended}
-                />
-              </div>
-            </div>
-          ),
+          content: <InstanceTab data={data} engineId={engineId} />,
         },
         {
           id: "history",
@@ -282,20 +169,7 @@ export function IncidentDetailWidget({
     >
       {/* Rendered in-component (not via the adapter's describeForModel) because
           this widget self-fetches in the cockpit, where the adapter has no data. */}
-      <ModelContext
-        content={[
-          `Viewing CIB Seven incident ${data.incidentId} (type ${data.incidentType}` +
-            `${resolved ? ", marked resolved in this session" : ""}) at activity ` +
-            `${data.activityName ?? data.activityId} (${data.activityId}) on process instance ` +
-            `${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}` +
-            `${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}, ` +
-            `engine ${data.engineId ?? "default"}.`,
-          `Message: ${incidentMessage ? `"${truncate(incidentMessage, 160)}"` : "(none reported)"}.`,
-          `Act via camunda7_resolve_incident / camunda7_set_job_retries` +
-            `${data.job ? ` (job ${data.job.id}, ${data.job.retries} retries left)` : ""}; ` +
-            `full instance context via camunda7_show_instance_detail.`,
-        ].join(" ")}
-      />
+      <ModelContext content={modelSummary(data, resolved)} />
 
       <ConfirmDialog
         open={confirmResolve}

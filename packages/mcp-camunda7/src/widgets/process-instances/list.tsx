@@ -5,14 +5,12 @@ import {
   DrillButton,
   FilterBar,
   ListTable,
-  LivePill,
   QueryFallback,
   StatusBadge,
   TONE_DOT,
   TableEmptyState,
   TableSkeleton,
   Td,
-  WidgetHeader,
   WidgetShell,
   usePagedListView,
   type FilterChip,
@@ -24,6 +22,7 @@ import type { ProcessInstancesFilters } from "../../feed-contracts.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
+import { InstancesHeader } from "./list-header.js"
 import { useT } from "../../messages/use-t.js"
 
 const PAGE_SIZE = 50
@@ -143,6 +142,96 @@ function InstanceRow({
   )
 }
 
+function deriveInstancesScope({
+  initialData,
+  processDefinitionKey,
+  engine,
+}: {
+  initialData: ProcessInstancesData | null
+  processDefinitionKey?: string
+  engine?: string
+}) {
+  const pdk = processDefinitionKey ?? initialData?.processDefinitionKey
+  // Standalone renders hand in only `data` (no props), so the scope the show
+  // tool was called with must come from the payload's echo: loadMore/search
+  // must page the SAME engine and filter set as page 0 — not the sticky
+  // default and not an unfiltered view.
+  const echoed = initialData?.filters
+  const feedEngine = engine ?? initialData?.engineId
+  const resolvedEngine = feedEngine ?? "default"
+  return { pdk, echoed, feedEngine, resolvedEngine }
+}
+
+// Filters are SERVER-side: the chips and the search box re-query the feed
+// (search debounced by the scaffold) so they cover the whole result set, not
+// just the loaded page. Pagination is offset-based with an explicit
+// "Load more" (see footer).
+function deriveInstancesFilters({
+  activeChip,
+  echoed,
+  active,
+  suspended,
+  withIncidentsOnly,
+  businessKeyLike,
+}: {
+  activeChip: InstanceChip
+  echoed: ProcessInstancesData["filters"] | undefined
+  active?: boolean
+  suspended?: boolean
+  withIncidentsOnly?: boolean
+  businessKeyLike?: string
+}) {
+  const wantActive = active ?? echoed?.active
+  const wantIncidents =
+    activeChip === CHIP_INCIDENTS || !!(withIncidentsOnly ?? echoed?.withIncidentsOnly)
+  const wantSuspended = activeChip === CHIP_SUSPENDED || !!(suspended ?? echoed?.suspended)
+  const baseBusinessKey = businessKeyLike ?? echoed?.businessKeyLike
+  return { wantActive, wantIncidents, wantSuspended, baseBusinessKey }
+}
+
+function buildInstancesFilterArgs(
+  scope: ReturnType<typeof deriveInstancesScope>,
+  filters: ReturnType<typeof deriveInstancesFilters>,
+): InstancesFilterArgs {
+  // No definition scope → the ENGINE-WIDE running-instances list (the
+  // overview's "Running instances" KPI drills here).
+  const filterArgs: InstancesFilterArgs = {}
+  if (scope.pdk) filterArgs.processDefinitionKey = scope.pdk
+  if (scope.feedEngine) filterArgs.engine = scope.feedEngine
+  if (filters.wantActive) filterArgs.active = true
+  if (filters.wantIncidents) filterArgs.withIncidentsOnly = true
+  if (filters.wantSuspended) filterArgs.suspended = true
+  if (filters.baseBusinessKey) filterArgs.businessKeyLike = filters.baseBusinessKey
+  return filterArgs
+}
+
+function describeInstancesView({
+  loadedCount,
+  total,
+  scopedKey,
+  title,
+  resolvedEngine,
+  activeChip,
+  debouncedSearch,
+}: {
+  loadedCount: number
+  total: number
+  scopedKey: string | null
+  title: string
+  resolvedEngine: string
+  activeChip: InstanceChip
+  debouncedSearch: string
+}) {
+  return [
+    `Viewing ${loadedCount} of ${total} running instances ${
+      scopedKey ? `of process "${title}" (${scopedKey})` : "across ALL process definitions"
+    } on engine ${resolvedEngine}${
+      activeChip !== CHIP_ALL ? ` — filtered to "${activeChip}"` : ""
+    }${debouncedSearch ? ` — business key matching "${debouncedSearch}"` : ""}.`,
+    `Drill into one with camunda7_show_instance_detail (processInstanceId); act with camunda7_set_process_instance_suspension (suspended true/false) / camunda7_delete_process_instance / camunda7_set_job_retries.`,
+  ].join(" ")
+}
+
 /** Shell-less running-instances list. Reused standalone and in the cockpit app. */
 export function ProcessInstancesView({
   data: initialData = null,
@@ -165,32 +254,19 @@ export function ProcessInstancesView({
   const go = useNav()
   const [activeChip, setActiveChip] = useState<InstanceChip>(CHIP_ALL)
 
-  const pdk = processDefinitionKey ?? initialData?.processDefinitionKey
-  // Standalone renders hand in only `data` (no props), so the scope the show
-  // tool was called with must come from the payload's echo: loadMore/search
-  // must page the SAME engine and filter set as page 0 — not the sticky
-  // default and not an unfiltered view.
-  const echoed = initialData?.filters
-  const feedEngine = engine ?? initialData?.engineId
-  const resolvedEngine = feedEngine ?? "default"
-
-  // Filters are SERVER-side: the chips and the search box re-query the feed
-  // (search debounced by the scaffold) so they cover the whole result set, not
-  // just the loaded page. Pagination is offset-based with an explicit
-  // "Load more" (see footer).
-  const wantIncidents =
-    activeChip === CHIP_INCIDENTS || !!(withIncidentsOnly ?? echoed?.withIncidentsOnly)
-  const wantSuspended = activeChip === CHIP_SUSPENDED || !!(suspended ?? echoed?.suspended)
-  const baseBusinessKey = businessKeyLike ?? echoed?.businessKeyLike
-  // No definition scope → the ENGINE-WIDE running-instances list (the
-  // overview's "Running instances" KPI drills here).
-  const filterArgs: InstancesFilterArgs = {}
-  if (pdk) filterArgs.processDefinitionKey = pdk
-  if (feedEngine) filterArgs.engine = feedEngine
-  if (active ?? echoed?.active) filterArgs.active = true
-  if (wantIncidents) filterArgs.withIncidentsOnly = true
-  if (wantSuspended) filterArgs.suspended = true
-  if (baseBusinessKey) filterArgs.businessKeyLike = baseBusinessKey
+  const scope = deriveInstancesScope({ initialData, processDefinitionKey, engine })
+  const { pdk, feedEngine, resolvedEngine } = scope
+  const filterArgs = buildInstancesFilterArgs(
+    scope,
+    deriveInstancesFilters({
+      activeChip,
+      echoed: scope.echoed,
+      active,
+      suspended,
+      withIncidentsOnly,
+      businessKeyLike,
+    }),
+  )
 
   const { paged, search, setSearch, debouncedSearch, interacted } = usePagedListView<
     ProcessInstanceRow,
@@ -243,42 +319,21 @@ export function ProcessInstancesView({
       {/* Keep the agent aware of what the operator is looking at so it can offer
           the obvious next steps (drill into an instance, retry/suspend, etc.). */}
       <ModelContext
-        content={[
-          `Viewing ${paged.items.length} of ${paged.total} running instances ${
-            scopedKey ? `of process "${title}" (${scopedKey})` : "across ALL process definitions"
-          } on engine ${resolvedEngine}${
-            activeChip !== CHIP_ALL ? ` — filtered to "${activeChip}"` : ""
-          }${debouncedSearch ? ` — business key matching "${debouncedSearch}"` : ""}.`,
-          `Drill into one with camunda7_show_instance_detail (processInstanceId); act with camunda7_set_process_instance_suspension (suspended true/false) / camunda7_delete_process_instance / camunda7_set_job_retries.`,
-        ].join(" ")}
+        content={describeInstancesView({
+          loadedCount: paged.items.length,
+          total: paged.total,
+          scopedKey,
+          title,
+          resolvedEngine,
+          activeChip,
+          debouncedSearch,
+        })}
       />
-      <WidgetHeader
-        icon="▶"
-        iconTone="info"
+      <InstancesHeader
         title={title}
-        sub={
-          <>
-            <LivePill tone="info">
-              {t("processInstances.runningCount", { count: paged.total.toLocaleString() })}
-            </LivePill>
-            {scopedKey && (
-              <>
-                <span className="text-muted-foreground">·</span>
-                <span className="font-mono text-xs">{scopedKey}</span>
-              </>
-            )}
-          </>
-        }
-        actions={
-          <AskAiButton
-            variant="primary"
-            prompt={
-              scopedKey
-                ? `Triage the running instances of CIB Seven process "${title}" (key ${scopedKey}, engine ${resolvedEngine}). There are ${paged.total} running instances total. Use camunda7_list_incidents (processDefinitionKey ${scopedKey}) and camunda7_query_historic_activity_instances to group the incidents by failed activity and incident type, identify the dominant failure mode, and tell me how many instances are likely fixable by a job retry vs. needing a variable change or modification. Give me a prioritized triage: which cluster to fix first and the single recommended remediation per cluster. Do not mutate anything yet — recommendations only.`
-                : `Triage the running process instances on CIB Seven engine ${resolvedEngine} — ${paged.total} across all definitions. Use camunda7_list_incidents (engine ${resolvedEngine}) to group the current failures by process definition, failed activity and incident type, identify which definitions carry the most incident-affected instances, and tell me how many are likely fixable by a job retry vs. needing a variable change or modification. Give me a prioritized triage per definition. Do not mutate anything yet — recommendations only.`
-            }
-          />
-        }
+        scopedKey={scopedKey}
+        total={paged.total}
+        resolvedEngine={resolvedEngine}
       />
 
       <FilterBar

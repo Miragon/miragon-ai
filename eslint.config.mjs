@@ -23,24 +23,11 @@ const serverTestFiles = [
 // measurement. Shrink-only lists — refactor a file below the global target
 // (complexity 15 / 400 effective lines), then DELETE its entry. Never raise
 // a value, never add an entry; new code gets the global budget.
-const complexityRatchet = {
-  "packages/mcp-camunda7/src/widgets/instance-detail.tsx": 59,
-  "packages/mcp-camunda7/src/widgets/incident-detail.tsx": 44,
-  "packages/mcp-camunda7/src/widgets/process-instances/list.tsx": 37,
-  "packages/mcp-camunda7/src/widgets/incident-detail/failure-tab.tsx": 30,
-  "packages/mcp-camunda7/src/widgets/cluster-detail.tsx": 28,
-  "packages/mcp-camunda7/src/widgets/standalone-shell.tsx": 24,
-  "packages/mcp-camunda7/src/widgets/process-incidents/header.tsx": 22,
-  "packages/mcp-camunda7/src/widgets/engine-health.tsx": 20,
-  "packages/mcp-camunda7/src/widgets/process-list.tsx": 20,
-  "packages/mcp-camunda7/src/widgets/job-panel.tsx": 19,
-  "packages/mcp-camunda7/src/widgets/bpmn-viewer/widget.tsx": 18,
-}
+const complexityRatchet = {}
 
 // Frozen at current length rounded up to the next 10 lines.
 const maxLinesRatchet = {
   "packages/mcp-camunda7/src/widget-tools.ts": 1030,
-  "packages/mcp-camunda7/src/widgets/instance-detail.tsx": 470,
   "packages/mcp-camunda7/src/data/incident-panel-data.ts": 420,
   "packages/mcp-camunda7/src/data/incident-panel-data.test.ts": 420,
   "packages/mcp-camunda7/src/data/cockpit-data.ts": 410,
