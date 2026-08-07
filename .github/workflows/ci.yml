@@ -35,9 +35,17 @@ jobs:
 
       - run: pnpm test
 
-      # Aggregated fitness report (architecture, ratchet debt, coverage,
-      # mutation scores) → job summary.
-      - run: pnpm fitness
+      # Handed to the `fitness` job, which owns the aggregated report. Both
+      # globs split at the repo root, so the artifact keeps the apps/ and
+      # packages/ prefixes and unpacks over the checkout as-is.
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: coverage-summaries
+          path: |
+            apps/*/coverage/coverage-summary.json
+            packages/*/coverage/coverage-summary.json
+          if-no-files-found: error
+          retention-days: 1
 
   quality:
     name: Lint + Format
@@ -70,7 +78,7 @@ jobs:
           # mutation-diff.mjs diffs against the merge-base with the PR base.
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v6.0.9
+      - uses: pnpm/action-setup@v6.0.10
 
       - uses: actions/setup-node@v7.0.0
         with:
@@ -83,6 +91,61 @@ jobs:
       - run: pnpm build
 
       - run: node scripts/mutation-diff.mjs origin/${{ github.base_ref }}
+
+      # Only packages/* carry a stryker.config.json, so the artifact root is
+      # `packages` — the fitness job unpacks it there again. Uploaded even on a
+      # red gate so the report still shows the score that failed.
+      - if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: mutation-reports
+          path: packages/*/reports/mutation-report.json
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # Aggregated fitness report (architecture, ratchet debt, coverage, mutation
+  # scores) → job summary. Separate job because coverage and mutation scores
+  # are produced by two different jobs; it consumes both as artifacts.
+  fitness:
+    name: Fitness report
+    needs: [typescript, mutation]
+    # `!cancelled()` rather than `always()`: the report should still run when
+    # the mutation gate went red or was skipped, but not after a cancelled run
+    # — pushing to a PR branch cancels the previous one (see `concurrency`),
+    # and `always()` would spend a runner on install + build for it anyway.
+    if: ${{ !cancelled() && needs.typescript.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.0.10
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # depcruise resolves workspace imports through each package's dist; an
+      # unbuilt tree would report "0 violations" it never actually measured.
+      - run: pnpm build
+
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: coverage-summaries
+
+      # Optional: no artifact exists on push-to-main (the mutation job does not
+      # run) nor when the diff touched nothing inside a `mutate` allowlist. The
+      # report degrades to "— (no run)" in those cases instead of failing.
+      - if: needs.mutation.result == 'success' || needs.mutation.result == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: mutation-reports
+          path: packages
+
+      - run: pnpm fitness
 
   template:
     name: Composed-server template (Build + Test)

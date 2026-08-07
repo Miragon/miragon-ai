@@ -65,7 +65,12 @@ function mutationScore(reportPath) {
     }
   }
   const valid = detected + undetected
-  return valid === 0 ? null : (detected / valid) * 100
+  // The file count travels with the score on purpose: on CI the report comes
+  // from the diff gate and covers only the files the PR touched, which reads
+  // as a package-wide number otherwise.
+  return valid === 0
+    ? null
+    : { pct: (detected / valid) * 100, files: Object.keys(report.files).length }
 }
 
 put("| Package | Lines | Branches | Functions | Mutation score |")
@@ -79,13 +84,13 @@ for (const dir of pkgDirs) {
   const score = mutationScore(mutPath)
   put(
     `| ${name} | ${pct(cov?.lines?.pct)} | ${pct(cov?.branches?.pct)} | ${pct(cov?.functions?.pct)} | ${
-      score === null ? "— (no run)" : pct(score)
+      score === null ? "— (no run)" : `${pct(score.pct)} (${score.files} file(s))`
     } |`,
   )
 }
 put()
 put(
-  "_Coverage from the last `pnpm test`; mutation scores from the last Stryker run per package (`pnpm --filter <pkg> run test:mutation`). Missing rows: no artifacts yet._",
+  "_Coverage from the last `pnpm test`. Mutation scores from the last Stryker run per package — on CI that is the diff gate, so the score covers only the files listed next to it, not the package's whole `mutate` allowlist. Missing rows: no artifacts yet._",
 )
 
 const report = lines.join("\n")

@@ -41,6 +41,9 @@ importers:
       lint-staged:
         specifier: 15.5.2
         version: 15.5.2
+      picomatch:
+        specifier: 4.0.5
+        version: 4.0.5
       prettier:
         specifier: 3.9.6
         version: 3.9.6
