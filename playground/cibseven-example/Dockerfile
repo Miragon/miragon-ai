@@ -2,12 +2,9 @@ FROM eclipse-temurin:25-jre
 
 WORKDIR /app
 
-# Download OpenTelemetry Java agent
-ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar /opt/otel/opentelemetry-javaagent.jar
-
+# Metrics ship via the app-internal Micrometer OTLP registry
+# (management.otlp.metrics.export in application.yml) — no OTEL Java agent.
 COPY build/libs/cibseven-example.jar app.jar
-
-ENV JAVA_OPTS="-javaagent:/opt/otel/opentelemetry-javaagent.jar"
 
 EXPOSE 8410
 

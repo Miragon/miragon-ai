@@ -91,8 +91,8 @@ silently ignored); mcp-use telemetry is off by default
 (`MCP_USE_ANONYMIZED_TELEMETRY=true` opts in). The engine container takes
 `METRICS_ENABLED`, `ENGINE_ID` (must match `CAMUNDA_ENGINE_ID` or the id in
 `CAMUNDA_ENGINES_*`, or that engine's analytics come back empty — the heatmap
-then says so instead of rendering an uncolored diagram), and the standard
-`OTEL_*` agent variables.
+then says so instead of rendering an uncolored diagram), plus
+`OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_SERVICE_NAME` for the OTLP push.
 
 ## External services
 
@@ -103,10 +103,12 @@ OTEL Collector's metrics); **Grafana** is optional (`:8470`,
 ## Metrics pipeline
 
 The Kotlin plugin (`engine-plugins/cibseven-history-metrics`) runs inside the
-CIB Seven runtime and emits process metrics from the history-event stream via
-the OTEL agent (no sampling); the Collector exports them to Prometheus, which
-the analytics module queries over PromQL. Per-instance drill-down is not
-metric-backed — use the `camunda7_query_historic_*` tools.
+CIB Seven runtime and records history-event metrics (no sampling) into
+Micrometer's global registry — any Micrometer export works: OTLP push to the
+Collector (`micrometer-registry-otlp`, the playground default), an Actuator
+Prometheus scrape, or the OTEL agent's Micrometer bridge. The analytics module
+queries Prometheus over PromQL. Per-instance drill-down is not metric-backed —
+use the `camunda7_query_historic_*` tools.
 
 ## Module activation
 
@@ -119,10 +121,10 @@ migrations). No suffix exposes all tools; unknown toolsets warn and fail open.
 
 ## Observability
 
-HTTP transport logs structured JSON to stdout. Metrics flow engine → OTEL
-Collector → Prometheus (scrape) → Grafana: event-driven counters/histograms
-(throughput, durations) plus point-in-time gauges (running WIP, open incidents,
-job/task backlog). Alert rules ship in `playground/docker/prometheus/alerts.yml` (wire an
+HTTP transport logs structured JSON to stdout. Metrics flow engine (OTLP push)
+→ OTEL Collector → Prometheus (scrape) → Grafana: event-driven
+counters/histograms (throughput, durations) plus point-in-time gauges (running
+WIP, open incidents, job/task backlog). Alert rules ship in `playground/docker/prometheus/alerts.yml` (wire an
 Alertmanager under `alerting:` to route them); the `analytics_engine_health`
 tool surfaces the same gauges + firing alerts in one call.
 

@@ -1,6 +1,7 @@
 package io.miragon.mcp.cibseven
 
-import io.opentelemetry.api.common.Attributes
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tags
 import org.cibseven.bpm.engine.impl.history.event.HistoricActivityInstanceEventEntity
 import org.cibseven.bpm.engine.impl.history.event.HistoricIncidentEventEntity
 import org.cibseven.bpm.engine.impl.history.event.HistoricProcessInstanceEventEntity
@@ -9,15 +10,16 @@ import org.cibseven.bpm.engine.impl.history.event.HistoryEvent
 import org.cibseven.bpm.engine.impl.history.handler.HistoryEventHandler
 
 /**
- * Translates the engine's history-event stream into OTEL metrics ([ProcessMetrics]).
+ * Translates the engine's history-event stream into Micrometer metrics
+ * ([ProcessMetrics]).
  *
  * Implements the engine's `HistoryEventHandler` SPI, but instead of persisting
- * events it records aggregated OTEL metrics — so no event store is needed.
- * History events fire for every instance and are not sampled, so counters and
- * histograms see 100 % of traffic.
+ * events it records aggregated Micrometer metrics — so no event store is
+ * needed. History events fire for every instance and are not sampled, so
+ * counters and histograms see 100 % of traffic.
  *
  * Durations come straight from the engine-computed `durationInMillis` on the
- * end/complete events; only model-bounded attributes are attached (see the
+ * end/complete events; only model-bounded tags are attached (see the
  * cardinality contract on [ProcessMetrics]).
  *
  * Backdated/replayed events are skipped: bulk seeding pins the engine clock into
@@ -25,7 +27,9 @@ import org.cibseven.bpm.engine.impl.history.handler.HistoryEventHandler
  * rate/duration window. Metrics represent live operation; the resulting
  * instances still show up in the state gauges, which query the engine directly.
  */
-class MetricsHistoryEventHandler(private val engineId: String) : HistoryEventHandler {
+class MetricsHistoryEventHandler(private val engineId: String, registry: MeterRegistry) : HistoryEventHandler {
+
+    private val metrics = ProcessMetrics(registry)
 
     override fun handleEvent(historyEvent: HistoryEvent) {
         if (isBackdated(historyEvent)) return
@@ -43,18 +47,15 @@ class MetricsHistoryEventHandler(private val engineId: String) : HistoryEventHan
     }
 
     private fun onProcessInstance(e: HistoricProcessInstanceEventEntity) {
-        val attrs = Attributes.builder()
-            .put("process_definition_key", e.processDefinitionKey.orEmpty())
-            .put("process_definition_version", versionOf(e.processDefinitionId))
-            .put("engine_id", engineId)
-            .put("tenant_id", e.tenantId.orEmpty())
-            .build()
+        val tags = Tags.of("process_definition_key", e.processDefinitionKey.orEmpty())
+            .and("process_definition_version", versionOf(e.processDefinitionId))
+            .and("engine_id", engineId)
+            .and("tenant_id", e.tenantId.orEmpty())
         when (e.eventType) {
-            EVENT_START -> ProcessMetrics.processStarted.add(1, attrs)
+            EVENT_START -> metrics.processStarted(tags)
             EVENT_END -> {
-                val ended = attrs.toBuilder().put("state", e.state.orEmpty()).build()
-                ProcessMetrics.processEnded.add(1, ended)
-                e.durationInMillis?.let { ProcessMetrics.processDuration.record(it / MILLIS_PER_SECOND, attrs) }
+                metrics.processEnded(tags.and("state", e.state.orEmpty()))
+                e.durationInMillis?.let { metrics.processDuration(it / MILLIS_PER_SECOND, tags) }
             }
         }
     }
@@ -62,41 +63,35 @@ class MetricsHistoryEventHandler(private val engineId: String) : HistoryEventHan
     private fun onActivityInstance(e: HistoricActivityInstanceEventEntity) {
         // Only completed activities carry a duration and a stable count.
         if (e.eventType != EVENT_END) return
-        val attrs = Attributes.builder()
-            .put("process_definition_key", e.processDefinitionKey.orEmpty())
-            .put("activity_id", e.activityId.orEmpty())
-            .put("activity_type", e.activityType.orEmpty())
-            .put("engine_id", engineId)
-            .build()
-        ProcessMetrics.activityEnded.add(1, attrs)
-        e.durationInMillis?.let { ProcessMetrics.activityDuration.record(it / MILLIS_PER_SECOND, attrs) }
+        val tags = Tags.of("process_definition_key", e.processDefinitionKey.orEmpty())
+            .and("activity_id", e.activityId.orEmpty())
+            .and("activity_type", e.activityType.orEmpty())
+            .and("engine_id", engineId)
+        metrics.activityEnded(tags)
+        e.durationInMillis?.let { metrics.activityDuration(it / MILLIS_PER_SECOND, tags) }
     }
 
     private fun onTaskInstance(e: HistoricTaskInstanceEventEntity) {
-        val attrs = Attributes.builder()
-            .put("process_definition_key", e.processDefinitionKey.orEmpty())
-            .put("task_definition_key", e.taskDefinitionKey.orEmpty())
-            .put("engine_id", engineId)
-            .build()
+        val tags = Tags.of("process_definition_key", e.processDefinitionKey.orEmpty())
+            .and("task_definition_key", e.taskDefinitionKey.orEmpty())
+            .and("engine_id", engineId)
         when (e.eventType) {
-            EVENT_CREATE -> ProcessMetrics.taskCreated.add(1, attrs)
+            EVENT_CREATE -> metrics.taskCreated(tags)
             EVENT_COMPLETE -> {
-                ProcessMetrics.taskCompleted.add(1, attrs)
-                e.durationInMillis?.let { ProcessMetrics.taskDuration.record(it / MILLIS_PER_SECOND, attrs) }
+                metrics.taskCompleted(tags)
+                e.durationInMillis?.let { metrics.taskDuration(it / MILLIS_PER_SECOND, tags) }
             }
         }
     }
 
     private fun onIncident(e: HistoricIncidentEventEntity) {
-        val attrs = Attributes.builder()
-            .put("process_definition_key", e.processDefinitionKey.orEmpty())
-            .put("activity_id", e.activityId.orEmpty())
-            .put("incident_type", e.incidentType.orEmpty())
-            .put("engine_id", engineId)
-            .build()
+        val tags = Tags.of("process_definition_key", e.processDefinitionKey.orEmpty())
+            .and("activity_id", e.activityId.orEmpty())
+            .and("incident_type", e.incidentType.orEmpty())
+            .and("engine_id", engineId)
         when (e.eventType) {
-            EVENT_CREATE -> ProcessMetrics.incidentCreated.add(1, attrs)
-            EVENT_RESOLVE -> ProcessMetrics.incidentResolved.add(1, attrs)
+            EVENT_CREATE -> metrics.incidentCreated(tags)
+            EVENT_RESOLVE -> metrics.incidentResolved(tags)
         }
     }
 

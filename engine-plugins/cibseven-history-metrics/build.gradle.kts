@@ -11,11 +11,13 @@ plugins {
 dependencies {
     // Bundled into the plugin's transitive POM dependencies — the only runtime dep
     // consumers need to resolve; the engine/spring stack is `compileOnly` (provided).
-    implementation(libs.opentelemetry.api)
+    implementation(libs.micrometer.core)
     compileOnly(libs.spring.boot.starter)
 
-    // CIB Seven Engine SDK — provided at runtime by the engine
+    // CIB Seven Engine SDK — provided at runtime by the engine. The contract test
+    // drives real history events and a mocked engine, so tests need it too.
     compileOnly(libs.cibseven.engine)
+    testImplementation(libs.cibseven.engine)
 
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.jackson.databind)
@@ -34,7 +36,7 @@ mavenPublishing {
     pom {
         name.set("cibseven-history-metrics")
         description.set(
-            "CIB Seven history-event OTEL metrics plugin powering the Miragon AI analytics module",
+            "CIB Seven history-event Micrometer metrics plugin powering the Miragon AI analytics module",
         )
         inceptionYear.set("2026")
         url.set("https://github.com/Miragon/miragon-ai")
@@ -63,9 +65,9 @@ mavenPublishing {
 }
 
 tasks.test {
-    // MetricsContractTest reads the shared Kotlin<->TS metric contract (and the
-    // plugin sources) at runtime — declare the contract as a task input so a
-    // contract change re-runs the otherwise up-to-date test task.
+    // MetricsContractTest reads the shared Kotlin<->TS metric contract at
+    // runtime — declare the contract as a task input so a contract change
+    // re-runs the otherwise up-to-date test task.
     inputs.file(rootProject.layout.projectDirectory.file("../packages/client-analytics/metrics-contract.json"))
         .withPathSensitivity(PathSensitivity.NONE)
 }
