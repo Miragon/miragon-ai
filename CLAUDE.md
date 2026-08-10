@@ -197,9 +197,11 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
 - **`packages/client-analytics/metrics-contract.json` is the single source of truth for
   metric names and labels — when changing a metric, change it here first.** The Kotlin
   plugin (`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt`,
-  `EngineStateMetrics.kt`) emits the OTEL instruments (`otelName`) that surface in
-  Prometheus as `camunda_*` series (`promName`, e.g. `camunda.activity.ended` →
-  `camunda_activity_ended_total`). Consumers — the TS queries (via `METRIC_NAMES` in
+  `EngineStateMetrics.kt`) emits Micrometer meters whose dotted names (`otelName` —
+  also the OTLP wire name on the push path) surface in Prometheus as `camunda_*`
+  series (`promName`, e.g. `camunda.activity.ended` →
+  `camunda_activity_ended_total`; durations carry base unit `seconds`, spelled out
+  so every export path appends the same `_seconds` suffix). Consumers — the TS queries (via `METRIC_NAMES` in
   `packages/client-analytics/src/metric-names.ts`, never raw strings), the alert rules
   (`playground/docker/prometheus/alerts.yml`), and the Grafana dashboards
   (`playground/docker/grafana/dashboards/*.json`) — are checked against the contract by tests on

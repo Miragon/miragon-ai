@@ -1,90 +1,95 @@
 package io.miragon.mcp.cibseven
 
-import io.opentelemetry.api.GlobalOpenTelemetry
-import io.opentelemetry.api.metrics.DoubleHistogram
-import io.opentelemetry.api.metrics.LongCounter
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.DistributionSummary
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tags
 
 /**
- * OTEL instruments for process analytics, emitted straight from the engine's
- * history-event stream (100 % coverage, never sampled). The OTEL Collector is
- * the sole export path — these become Prometheus series.
- *
- * Uses [GlobalOpenTelemetry], which the OTEL Java agent populates at startup.
- * Without the agent every instrument is a no-op, so the plugin is safe to load
- * unconditionally. Initialized lazily on the first history event — long after
- * the agent has installed the global provider.
+ * Micrometer meters for process analytics, emitted straight from the engine's
+ * history-event stream (100 % coverage, never sampled). Records into the given
+ * [MeterRegistry] — the plugin passes Micrometer's global composite registry,
+ * so any export path the host application configures (Spring Boot Actuator
+ * scrape or OTLP push, the OTEL Java agent's Micrometer bridge) receives the
+ * meters. Without any export registry every recording is a no-op, so the
+ * plugin is safe to load unconditionally.
  *
  * ## Resulting Prometheus names
- * The Collector's Prometheus exporter lowercases, replaces `.` with `_`, appends
- * the unit (`s` → `_seconds`) and `_total` to monotonic counters. So
- * `camunda.process.instance.duration` (unit `s`) surfaces as
- * `camunda_process_instance_duration_seconds{_bucket,_sum,_count}` and
- * `camunda.process.instance.started` as `camunda_process_instance_started_total`.
+ * Both export paths converge on the same Prometheus series: the OTEL
+ * Collector's Prometheus exporter and Micrometer's own Prometheus registry
+ * lowercase, replace `.` with `_`, append the unit and `_total` to monotonic
+ * counters. So `camunda.process.instance.duration` (base unit `seconds`)
+ * surfaces as `camunda_process_instance_duration_seconds{_bucket,_sum,_count}`
+ * and `camunda.process.instance.started` as
+ * `camunda_process_instance_started_total`. The base unit is deliberately the
+ * spelled-out `seconds` (not UCUM `s`) because both exporters append it
+ * verbatim; durations are recorded as plain seconds (a [DistributionSummary],
+ * not a Micrometer `Timer`, whose base time unit would vary per registry).
  *
  * ## Cardinality contract
- * Only model-bounded attributes are attached (definition key/version, activity
+ * Only model-bounded tags are attached (definition key/version, activity
  * id/type, task key, incident type, engine id, tenant, instance state). NEVER
  * attach instance ids, business keys, variable values or raw incident messages —
  * they explode the time-series count. See [MetricsHistoryEventHandler].
  */
-object ProcessMetrics {
-    private val meter = GlobalOpenTelemetry.getMeter("cibseven-process-metrics")
-
-    /** Process/activity durations: sub-second activities up to multi-hour processes. */
-    private val DURATION_BUCKETS_SECONDS =
-        listOf(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, 600.0, 1800.0, 3600.0)
-
-    /** Human task cycle times: minutes to weeks. */
-    private val TASK_BUCKETS_SECONDS =
-        listOf(60.0, 300.0, 900.0, 1800.0, 3600.0, 14400.0, 43200.0, 86400.0, 259200.0, 604800.0)
+class ProcessMetrics(private val registry: MeterRegistry) {
 
     // --- Process instance ---
-    val processStarted: LongCounter = meter.counterBuilder("camunda.process.instance.started")
-        .setDescription("Process instances started")
-        .build()
+    fun processStarted(tags: Tags) = counter("camunda.process.instance.started", "Process instances started", tags)
 
-    val processEnded: LongCounter = meter.counterBuilder("camunda.process.instance.ended")
-        .setDescription("Process instances ended, by terminal state")
-        .build()
+    fun processEnded(tags: Tags) = counter("camunda.process.instance.ended", "Process instances ended, by terminal state", tags)
 
-    val processDuration: DoubleHistogram = meter.histogramBuilder("camunda.process.instance.duration")
-        .setDescription("End-to-end process instance duration")
-        .setUnit("s")
-        .setExplicitBucketBoundariesAdvice(DURATION_BUCKETS_SECONDS)
-        .build()
+    fun processDuration(seconds: Double, tags: Tags) =
+        durationSummary("camunda.process.instance.duration", "End-to-end process instance duration", DURATION_BUCKETS_SECONDS, tags)
+            .record(seconds)
 
     // --- Activity instance (heatmap + bottleneck) ---
-    val activityEnded: LongCounter = meter.counterBuilder("camunda.activity.ended")
-        .setDescription("Activity instances completed")
-        .build()
+    fun activityEnded(tags: Tags) = counter("camunda.activity.ended", "Activity instances completed", tags)
 
-    val activityDuration: DoubleHistogram = meter.histogramBuilder("camunda.activity.duration")
-        .setDescription("Activity instance execution time")
-        .setUnit("s")
-        .setExplicitBucketBoundariesAdvice(DURATION_BUCKETS_SECONDS)
-        .build()
+    fun activityDuration(seconds: Double, tags: Tags) =
+        durationSummary("camunda.activity.duration", "Activity instance execution time", DURATION_BUCKETS_SECONDS, tags)
+            .record(seconds)
 
     // --- User task ---
-    val taskCreated: LongCounter = meter.counterBuilder("camunda.usertask.created")
-        .setDescription("User tasks created")
-        .build()
+    fun taskCreated(tags: Tags) = counter("camunda.usertask.created", "User tasks created", tags)
 
-    val taskCompleted: LongCounter = meter.counterBuilder("camunda.usertask.completed")
-        .setDescription("User tasks completed")
-        .build()
+    fun taskCompleted(tags: Tags) = counter("camunda.usertask.completed", "User tasks completed", tags)
 
-    val taskDuration: DoubleHistogram = meter.histogramBuilder("camunda.usertask.duration")
-        .setDescription("User task cycle time")
-        .setUnit("s")
-        .setExplicitBucketBoundariesAdvice(TASK_BUCKETS_SECONDS)
-        .build()
+    fun taskDuration(seconds: Double, tags: Tags) =
+        durationSummary("camunda.usertask.duration", "User task cycle time", TASK_BUCKETS_SECONDS, tags)
+            .record(seconds)
 
     // --- Incident (failure analysis) ---
-    val incidentCreated: LongCounter = meter.counterBuilder("camunda.incident.created")
-        .setDescription("Incidents created")
-        .build()
+    fun incidentCreated(tags: Tags) = counter("camunda.incident.created", "Incidents created", tags)
 
-    val incidentResolved: LongCounter = meter.counterBuilder("camunda.incident.resolved")
-        .setDescription("Incidents resolved")
-        .build()
+    fun incidentResolved(tags: Tags) = counter("camunda.incident.resolved", "Incidents resolved", tags)
+
+    // `register` is idempotent — it returns the existing meter for a known
+    // (name, tags) pair, so the per-event lookup is a cheap map hit.
+    private fun counter(name: String, description: String, tags: Tags) = Counter.builder(name)
+        .description(description)
+        .tags(tags)
+        .register(registry)
+        .increment()
+
+    private fun durationSummary(name: String, description: String, buckets: DoubleArray, tags: Tags): DistributionSummary =
+        DistributionSummary.builder(name)
+            .description(description)
+            .baseUnit("seconds")
+            // SLOs materialise as explicit histogram buckets on every export
+            // path (Micrometer's OTLP registry never falls back to an
+            // exponential histogram when SLOs are set).
+            .serviceLevelObjectives(*buckets)
+            .tags(tags)
+            .register(registry)
+
+    private companion object {
+        /** Process/activity durations: sub-second activities up to multi-hour processes. */
+        val DURATION_BUCKETS_SECONDS =
+            doubleArrayOf(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, 600.0, 1800.0, 3600.0)
+
+        /** Human task cycle times: minutes to weeks. */
+        val TASK_BUCKETS_SECONDS =
+            doubleArrayOf(60.0, 300.0, 900.0, 1800.0, 3600.0, 14400.0, 43200.0, 86400.0, 259200.0, 604800.0)
+    }
 }

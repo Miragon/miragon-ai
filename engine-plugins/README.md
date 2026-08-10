@@ -1,9 +1,11 @@
-# Engine plugins — Kotlin OTEL metrics for CIB Seven
+# Engine plugins — Kotlin Micrometer metrics for CIB Seven
 
-Multi-module Gradle build (Java 21) containing the CIB Seven OTEL process-metrics plugin
-(`cibseven-history-metrics`). It runs inside the CIB Seven runtime and emits OpenTelemetry metrics
-that the OTEL Collector exports to Prometheus as `camunda_*` series — there is no engine-side
-database. Those series are what the [analytics module](../packages/mcp-analytics) of
+Multi-module Gradle build (Java 21) containing the CIB Seven process-metrics plugin
+(`cibseven-history-metrics`). It runs inside the CIB Seven runtime and records Micrometer metrics
+into the global registry, so any Micrometer export path surfaces them in Prometheus as `camunda_*`
+series — an OTLP push via `micrometer-registry-otlp` through the OTEL Collector (the playground
+default), an Actuator Prometheus scrape, or the OTEL Java agent's Micrometer bridge. There is no
+engine-side database. Those series are what the [analytics module](../packages/mcp-analytics) of
 [Miragon AI](../README.md) queries.
 
 Published to **Maven Central** as `io.miragon.mcp:cibseven-history-metrics` (released via
@@ -29,8 +31,17 @@ dependencies {
 }
 ```
 
-`opentelemetry-api` resolves transitively; the engine/Spring stack is `compileOnly`
+`micrometer-core` resolves transitively; the engine/Spring stack is `compileOnly`
 (provided by the CIB Seven runtime).
+
+For the OTLP push path on Spring Boot 4, additionally add
+`spring-boot-starter-actuator`, `io.micrometer:micrometer-registry-otlp` and
+`org.springframework.boot:spring-boot-opentelemetry` — Boot 4 gates the OTLP
+export auto-configuration on that last module's `OpenTelemetryProperties`, so
+without it the export silently never activates. Then set
+`management.otlp.metrics.export.url`; see
+[`../playground/cibseven-example/`](../playground/cibseven-example/) for a
+working setup.
 
 ## Quality gates
 

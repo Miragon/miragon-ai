@@ -23,7 +23,7 @@ const ms = (sec: number) => Math.round(sec * 1000)
 
 /**
  * Aggregated dashboard KPIs + activity / definition breakdowns over a rolling
- * window, from OTEL metrics. Shared by the dashboard pipeline step and the
+ * window, from the engine's process metrics. Shared by the dashboard pipeline step and the
  * `analytics_show_dashboard` widget tool. `failedCount`/`failureRatePct` are
  * incident-based (consistent with every other analytics tool, so the numbers
  * reconcile tool-to-tool); `incidentCount` is the currently-open net

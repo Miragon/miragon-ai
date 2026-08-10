@@ -2,60 +2,113 @@ package io.miragon.mcp.cibseven
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.micrometer.core.instrument.Meter
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.search.RequiredSearch
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import org.cibseven.bpm.engine.ProcessEngine
+import org.cibseven.bpm.engine.impl.history.event.HistoricActivityInstanceEventEntity
+import org.cibseven.bpm.engine.impl.history.event.HistoricIncidentEventEntity
+import org.cibseven.bpm.engine.impl.history.event.HistoricProcessInstanceEventEntity
+import org.cibseven.bpm.engine.impl.history.event.HistoricTaskInstanceEventEntity
+import org.cibseven.bpm.engine.management.IncidentStatistics
+import org.cibseven.bpm.engine.management.ProcessDefinitionStatistics
+import org.cibseven.bpm.engine.repository.ProcessDefinition
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.RETURNS_DEEP_STUBS
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.Date
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Kotlin side of the Kotlin<->TS metric contract. Verifies that the OTEL
- * instruments declared in [ProcessMetrics] / [EngineStateMetrics] (and the
- * label keys attached in [MetricsHistoryEventHandler] / [EngineStateMetrics])
- * stay in sync with `packages/client-analytics/metrics-contract.json` — the
- * single source of truth consumed by the TS queries, the Prometheus alert
- * rules and the Grafana dashboards. A rename on either side fails this test.
+ * Kotlin side of the Kotlin<->TS metric contract. Verifies that the meters the
+ * plugin actually emits ([ProcessMetrics] via [MetricsHistoryEventHandler],
+ * [EngineStateMetrics]) stay in sync with
+ * `packages/client-analytics/metrics-contract.json` — the single source of
+ * truth consumed by the TS queries, the Prometheus alert rules and the Grafana
+ * dashboards. A rename on either side fails this test.
  *
- * The instrument names/labels are extracted from the plugin sources (the OTEL
- * no-op API exposes no instrument metadata at runtime), so the test needs the
- * repo checkout — which is exactly the contract-test scenario.
+ * Unlike the OTEL no-op API, Micrometer exposes every registered meter with
+ * its full metadata at runtime — so the test drives real history events and a
+ * mocked engine into a [SimpleMeterRegistry] and compares actual emissions
+ * (names, types, units, tag keys, tag values) against the contract, instead of
+ * regex-scanning the plugin sources.
  */
 class MetricsContractTest {
 
     private val mapper = ObjectMapper()
 
-    private val repoRoot: Path = findRepoRoot()
-    private val contractFile: Path = repoRoot.resolve(CONTRACT_PATH)
-    private val sourceDir: Path =
-        repoRoot.resolve("engine-plugins/cibseven-history-metrics/src/main/kotlin/io/miragon/mcp/cibseven")
-
     private val contract: List<JsonNode> by lazy {
-        mapper.readTree(contractFile.toFile()).path("metrics").toList()
+        mapper.readTree(findRepoRoot().resolve(CONTRACT_PATH).toFile()).path("metrics").toList()
     }
 
-    private fun source(name: String): String = Files.readString(sourceDir.resolve(name))
+    /** Every meter the plugin emits, produced by exercising both emitters for real. */
+    private val registry: MeterRegistry by lazy {
+        SimpleMeterRegistry().also {
+            emitHistoryMetrics(it)
+            refreshStateGauges(it)
+        }
+    }
+
+    /**
+     * Emitted meters by name. SimpleMeterRegistry surfaces SLO buckets as a
+     * synthetic `<name>.histogram` gauge per bucket (registries with a native
+     * histogram type — Prometheus, OTLP — fold them into the summary itself),
+     * so those are representation details, not contract-relevant meters.
+     */
+    private fun emittedMeters(): Map<String, List<Meter>> = registry.meters
+        .filterNot { it.id.name.endsWith(".histogram") && it.id.getTag("le") != null }
+        .groupBy { it.id.name }
 
     @Test
-    fun `every emitted instrument is declared in the contract and vice versa`() {
-        val emitted = parseInstruments()
+    fun `every emitted meter is declared in the contract and vice versa`() {
+        val emitted = emittedMeters()
         val declared = contract.associateBy { it.path("otelName").asText() }
 
         assertEquals(
             declared.keys,
             emitted.keys,
-            "Instrument names in ProcessMetrics/EngineStateMetrics must match metrics-contract.json",
+            "Meters emitted by ProcessMetrics/EngineStateMetrics must match metrics-contract.json",
         )
 
-        for ((otelName, instrument) in emitted) {
-            val metric = declared.getValue(otelName)
-            assertEquals(metric.path("type").asText(), instrument.type, "type of $otelName")
-            assertEquals(metric.path("unit").asText(), instrument.unit, "unit of $otelName")
+        for ((name, meters) in emitted) {
+            val metric = declared.getValue(name)
+            // The contract declares the OTLP-style unit ("s"); Micrometer
+            // carries the spelled-out base unit ("seconds") that both the
+            // Collector and the Prometheus registry append verbatim.
+            val expectedBaseUnit = when (val unit = metric.path("unit").asText()) {
+                "" -> null
+                "s" -> "seconds"
+                else -> unit
+            }
+            for (meter in meters) {
+                assertEquals(metric.path("type").asText(), typeOf(meter), "type of $name")
+                assertEquals(expectedBaseUnit, meter.id.baseUnit, "base unit of $name")
+            }
         }
     }
 
     @Test
-    fun `contract promName follows the collector's Prometheus normalisation`() {
+    fun `every meter attaches exactly the label keys its contract entry declares`() {
+        val emitted = emittedMeters()
+        for (metric in contract) {
+            val name = metric.path("otelName").asText()
+            val declared = metric.path("labels").map { it.asText() }.toSet()
+            val meters = emitted[name] ?: error("no meter emitted for $name")
+            for (meter in meters) {
+                assertEquals(declared, meter.id.tags.map { it.key }.toSet(), "label keys attached to $name")
+            }
+        }
+    }
+
+    @Test
+    fun `contract promName follows the Prometheus normalisation`() {
         for (metric in contract) {
             val otelName = metric.path("otelName").asText()
             var expected = otelName.replace('.', '_')
@@ -66,28 +119,8 @@ class MetricsContractTest {
     }
 
     @Test
-    fun `every instrument attaches exactly the label keys its contract entry declares`() {
-        val attached = parseAttachedLabels()
-        val declared = contract.associate { m ->
-            m.path("otelName").asText() to m.path("labels").map { it.asText() }.toSet()
-        }
-
-        assertEquals(
-            declared.keys,
-            attached.keys,
-            "Every contract metric must have label attribution in the plugin sources (and vice versa)",
-        )
-        for ((otelName, labels) in attached) {
-            assertEquals(declared.getValue(otelName), labels, "label keys attached to $otelName")
-        }
-    }
-
-    @Test
     fun `usertask status values match the contract knownValues`() {
-        val emitted = Regex("""statusAttrs\("([^"]+)"\)""")
-            .findAll(source("EngineStateMetrics.kt"))
-            .map { it.groupValues[1] }
-            .toSet()
+        val emitted = registry.find("camunda.usertasks.open").gauges().map { it.id.getTag("status") }.toSet()
         val declared = contract
             .single { it.path("otelName").asText() == "camunda.usertasks.open" }
             .path("knownValues").path("status")
@@ -97,138 +130,144 @@ class MetricsContractTest {
         assertEquals(declared, emitted, "status values of camunda.usertasks.open")
     }
 
-    /** name -> (type, unit) for every meter builder call in the plugin sources. */
-    private fun parseInstruments(): Map<String, Instrument> {
-        val src = source("ProcessMetrics.kt") + source("EngineStateMetrics.kt")
-        val builders = Regex("""(counterBuilder|histogramBuilder|gaugeBuilder)\("([^"]+)"\)""")
-            .findAll(src)
-            .toList()
-        assertTrue(builders.isNotEmpty(), "no instrument builders found — did the source layout change?")
-
-        return builders.associate { match ->
-            val type = when (match.groupValues[1]) {
-                "counterBuilder" -> "counter"
-                "histogramBuilder" -> "histogram"
-                else -> "gauge"
-            }
-            // The builder chain ends at .build() / .buildObserver(); setUnit lives in between.
-            val chainEnd = src.indexOf(".build", startIndex = match.range.last).let {
-                if (it == -1) src.length else it
-            }
-            val chain = src.substring(match.range.last, chainEnd)
-            val unit = Regex("""setUnit\("([^"]+)"\)""").find(chain)?.groupValues?.get(1) ?: ""
-            match.groupValues[2] to Instrument(type, unit)
-        }
+    @Test
+    fun `durations are recorded in seconds`() {
+        val summary = RequiredSearch.`in`(registry).name("camunda.process.instance.duration").summary()
+        assertEquals(1, summary.count(), "one process end event carried a duration")
+        assertEquals(3.0, summary.totalAmount(), "3000 ms must be recorded as 3 s")
     }
 
-    private data class Instrument(val type: String, val unit: String)
-
-    /**
-     * otelName -> label keys attached at the add()/record() call sites, resolved
-     * per instrument by scanning the emitting sources (same source-scanning
-     * approach as [parseInstruments]): [MetricsHistoryEventHandler] for the
-     * history-event counters/histograms, [EngineStateMetrics] for the gauges.
-     * A label attached to the wrong instrument fails the per-metric comparison.
-     */
-    private fun parseAttachedLabels(): Map<String, Set<String>> = historyHandlerLabels() + engineStateLabels()
-
-    /** Label keys of every `.put("…", …)` call in a builder-chain snippet. */
-    private fun putKeys(chain: String): Set<String> = Regex("""\.put\("([^"]+)"""").findAll(chain).map { it.groupValues[1] }.toSet()
-
-    /**
-     * [MetricsHistoryEventHandler]: each handler method builds local
-     * `Attributes` values (optionally augmented via `toBuilder()`) and passes
-     * one to a [ProcessMetrics] instrument. Scoped per method so the
-     * identically named `attrs` variables don't bleed into each other.
-     */
-    private fun historyHandlerLabels(): Map<String, Set<String>> {
-        val instrumentByField = Regex("""val\s+(\w+)\s*:\s*\w+\s*=\s*meter\.\w+Builder\("([^"]+)"\)""")
-            .findAll(source("ProcessMetrics.kt"))
-            .associate { it.groupValues[1] to it.groupValues[2] }
-        assertTrue(instrumentByField.isNotEmpty(), "no instrument fields found in ProcessMetrics.kt")
-
-        val result = mutableMapOf<String, MutableSet<String>>()
-        for (method in source("MetricsHistoryEventHandler.kt").split(Regex("""(?=private fun )"""))) {
-            val attrsVars = mutableMapOf<String, Set<String>>()
-            Regex("""val\s+(\w+)\s*=\s*Attributes\.builder\(\)(.*?)\.build\(\)""", RegexOption.DOT_MATCHES_ALL)
-                .findAll(method)
-                .forEach { attrsVars[it.groupValues[1]] = putKeys(it.groupValues[2]) }
-            Regex("""val\s+(\w+)\s*=\s*(\w+)\.toBuilder\(\)(.*?)\.build\(\)""", RegexOption.DOT_MATCHES_ALL)
-                .findAll(method)
-                .forEach { m ->
-                    val base = attrsVars[m.groupValues[2]]
-                        ?: error("toBuilder() base `${m.groupValues[2]}` not resolvable in MetricsHistoryEventHandler.kt")
-                    attrsVars[m.groupValues[1]] = base + putKeys(m.groupValues[3])
-                }
-            // `ProcessMetrics.<field>.add(1, attrs)` / `.record(…, attrs)` — the
-            // attributes argument is always a simple local variable.
-            Regex("""ProcessMetrics\.(\w+)\.(?:add|record)\([^,]*,\s*(\w+)\)""")
-                .findAll(method)
-                .forEach { m ->
-                    val otelName = instrumentByField[m.groupValues[1]]
-                        ?: error("unknown ProcessMetrics field `${m.groupValues[1]}`")
-                    val labels = attrsVars[m.groupValues[2]]
-                        ?: error("attributes variable `${m.groupValues[2]}` not resolvable for $otelName")
-                    result.getOrPut(otelName) { mutableSetOf() } += labels
-                }
-        }
-        assertTrue(result.isNotEmpty(), "no instrument usages found in MetricsHistoryEventHandler.kt")
-        return result
-    }
-
-    /**
-     * [EngineStateMetrics]: every observer's `record(value, attrs)` call, with
-     * the attributes resolved from the shared `engineAttrs` val, the
-     * `keyAttrs`/`statusAttrs` helpers, or an inline `Attributes.builder()`
-     * chain within the call.
-     */
-    private fun engineStateLabels(): Map<String, Set<String>> {
-        val src = source("EngineStateMetrics.kt")
-        val observers = Regex("""val\s+(\w+)\s*=\s*meter\.gaugeBuilder\("([^"]+)"\)""")
-            .findAll(src)
-            .associate { it.groupValues[1] to it.groupValues[2] }
-        assertTrue(observers.isNotEmpty(), "no gauge observers found in EngineStateMetrics.kt")
-
-        val namedAttrs = buildMap {
-            Regex("""val\s+(\w+)\s*:\s*Attributes\s*=\s*Attributes\.builder\(\)(.*?)\.build\(\)""", RegexOption.DOT_MATCHES_ALL)
-                .findAll(src)
-                .forEach { put(it.groupValues[1], putKeys(it.groupValues[2])) }
-            Regex("""fun\s+(\w+)\([^)]*\):\s*Attributes\s*=\s*Attributes\.builder\(\)(.*?)\.build\(\)""", RegexOption.DOT_MATCHES_ALL)
-                .findAll(src)
-                .forEach { put(it.groupValues[1], putKeys(it.groupValues[2])) }
-        }
-
-        val result = mutableMapOf<String, MutableSet<String>>()
-        for (call in Regex("""(\w+)\.record\(""").findAll(src)) {
-            val otelName = observers[call.groupValues[1]] ?: continue
-            val args = argumentsOf(src, call.range.last)
-            val labels = putKeys(args) +
-                namedAttrs.filterKeys { name -> Regex("""\b${Regex.escape(name)}\b""").containsMatchIn(args) }
-                    .values.flatten()
-            assertTrue(labels.isNotEmpty(), "no attribute source found for `${call.groupValues[1]}.record(…)`")
-            result.getOrPut(otelName) { mutableSetOf() } += labels
-        }
-        assertEquals(
-            observers.values.toSet(),
-            result.keys,
-            "every gauge observer must have at least one attributed record() call",
+    @Test
+    fun `backdated events are skipped`() {
+        val backdatedRegistry = SimpleMeterRegistry()
+        MetricsHistoryEventHandler(ENGINE_ID, backdatedRegistry).handleEvent(
+            HistoricProcessInstanceEventEntity().apply {
+                eventType = "start"
+                processDefinitionKey = "loan"
+                processDefinitionId = "loan:3:uuid"
+                startTime = Date(System.currentTimeMillis() - 10 * 60 * 1000)
+            },
         )
-        return result
+        assertTrue(backdatedRegistry.meters.isEmpty(), "backdated (seeded/replayed) events must not be counted")
     }
 
-    /** The argument list of the call whose opening parenthesis is at [openParen] (balanced). */
-    private fun argumentsOf(src: String, openParen: Int): String {
-        var depth = 0
-        for (i in openParen until src.length) {
-            when (src[i]) {
-                '(' -> depth++
-                ')' -> if (--depth == 0) return src.substring(openParen + 1, i)
-            }
-        }
-        error("unbalanced parentheses at offset $openParen")
+    private fun typeOf(meter: Meter): String = when (meter.id.type) {
+        Meter.Type.COUNTER -> "counter"
+        Meter.Type.DISTRIBUTION_SUMMARY -> "histogram"
+        Meter.Type.GAUGE -> "gauge"
+        else -> error("unexpected meter type ${meter.id.type} for ${meter.id.name}")
+    }
+
+    /** One history event per emitting code path, timestamped now (not backdated). */
+    private fun emitHistoryMetrics(registry: MeterRegistry) {
+        val handler = MetricsHistoryEventHandler(ENGINE_ID, registry)
+        val now = Date()
+
+        handler.handleEvent(
+            HistoricProcessInstanceEventEntity().apply {
+                eventType = "start"
+                processDefinitionKey = "loan"
+                processDefinitionId = "loan:3:uuid"
+                tenantId = "tenant-1"
+                startTime = now
+            },
+        )
+        handler.handleEvent(
+            HistoricProcessInstanceEventEntity().apply {
+                eventType = "end"
+                processDefinitionKey = "loan"
+                processDefinitionId = "loan:3:uuid"
+                tenantId = "tenant-1"
+                state = "COMPLETED"
+                startTime = now
+                endTime = now
+                durationInMillis = 3000L
+            },
+        )
+        handler.handleEvent(
+            HistoricActivityInstanceEventEntity().apply {
+                eventType = "end"
+                processDefinitionKey = "loan"
+                activityId = "Activity_Approve"
+                activityType = "userTask"
+                startTime = now
+                endTime = now
+                durationInMillis = 1500L
+            },
+        )
+        handler.handleEvent(
+            HistoricTaskInstanceEventEntity().apply {
+                eventType = "create"
+                processDefinitionKey = "loan"
+                taskDefinitionKey = "Activity_Approve"
+                startTime = now
+            },
+        )
+        handler.handleEvent(
+            HistoricTaskInstanceEventEntity().apply {
+                eventType = "complete"
+                processDefinitionKey = "loan"
+                taskDefinitionKey = "Activity_Approve"
+                startTime = now
+                endTime = now
+                durationInMillis = 60_000L
+            },
+        )
+        handler.handleEvent(
+            HistoricIncidentEventEntity().apply {
+                eventType = "create"
+                processDefinitionKey = "loan"
+                activityId = "Activity_Approve"
+                incidentType = "failedJob"
+                createTime = now
+            },
+        )
+        handler.handleEvent(
+            HistoricIncidentEventEntity().apply {
+                eventType = "resolve"
+                processDefinitionKey = "loan"
+                activityId = "Activity_Approve"
+                incidentType = "failedJob"
+                createTime = now
+                endTime = now
+            },
+        )
+    }
+
+    /** One state tick against a mocked engine that yields at least one row per gauge. */
+    private fun refreshStateGauges(registry: MeterRegistry) {
+        val engine = mock(ProcessEngine::class.java, RETURNS_DEEP_STUBS)
+
+        val incident = mock(IncidentStatistics::class.java)
+        `when`(incident.incidentType).thenReturn("failedJob")
+        `when`(incident.incidentCount).thenReturn(2)
+        val stat = mock(ProcessDefinitionStatistics::class.java)
+        `when`(stat.key).thenReturn("loan")
+        `when`(stat.instances).thenReturn(4)
+        `when`(stat.failedJobs).thenReturn(1)
+        `when`(stat.incidentStatistics).thenReturn(listOf(incident))
+        `when`(
+            engine.managementService.createProcessDefinitionStatisticsQuery().includeFailedJobs().includeIncidents().list(),
+        ).thenReturn(listOf(stat))
+
+        `when`(engine.managementService.createJobQuery().executable().count()).thenReturn(3L)
+        `when`(engine.managementService.createJobQuery().suspended().count()).thenReturn(1L)
+        `when`(engine.managementService.createJobQuery().duedateHigherThan(any()).count()).thenReturn(2L)
+
+        `when`(engine.taskService.createTaskQuery().count()).thenReturn(5L)
+        `when`(engine.taskService.createTaskQuery().taskUnassigned().count()).thenReturn(2L)
+
+        val definition = mock(ProcessDefinition::class.java)
+        `when`(definition.key).thenReturn("loan")
+        `when`(engine.repositoryService.createProcessDefinitionQuery().list()).thenReturn(listOf(definition))
+
+        `when`(engine.externalTaskService.createExternalTaskQuery().count()).thenReturn(7L)
+
+        EngineStateMetrics(engine, ENGINE_ID, registry).refresh()
     }
 
     private companion object {
+        const val ENGINE_ID = "test-engine"
         const val CONTRACT_PATH = "packages/client-analytics/metrics-contract.json"
 
         /**

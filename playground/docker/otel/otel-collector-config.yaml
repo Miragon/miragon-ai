@@ -24,9 +24,10 @@ processors:
 
 exporters:
   # Process analytics metrics — exposed for Prometheus to scrape. This is the
-  # sole export path for the metric-first analytics stack; the engine emits
-  # OTEL metrics, the Collector serves them here. Names are normalised to
-  # Prometheus convention (dots → underscores, unit + `_total` suffixes).
+  # sole export path for the metric-first analytics stack; the engine pushes
+  # Micrometer metrics over OTLP, the Collector serves them here. Names are
+  # normalised to Prometheus convention (dots → underscores, unit + `_total`
+  # suffixes).
   prometheus:
     endpoint: "[::]:9464"
     send_timestamps: true

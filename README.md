@@ -32,8 +32,8 @@ panels straight into the chat. Built on [mcp-use](https://github.com/mcp-use/mcp
   mixed in one fleet) with sticky per-session engine selection; analytics aggregate or compare
   across engines.
 - **Toolset scoping** — narrow the surface to `read-only`, `operations`, or `admin` per deployment.
-- **Self-hostable** — a single multi-arch (amd64/arm64) image on Docker Hub, plus a drop-in OTEL
-  metrics plugin for the engine.
+- **Self-hostable** — a single multi-arch (amd64/arm64) image on Docker Hub, plus a drop-in
+  Micrometer metrics plugin for the engine.
 
 ## Quick start
 
@@ -112,7 +112,7 @@ A pnpm + Turbo monorepo. The server composes the two modules and serves them as 
 | [`packages/client-camunda7/`](packages/client-camunda7)   | `@miragon-ai/client-camunda7`             | Generated CIB Seven REST SDK + MCP-oriented Zod schemas                 |
 | [`packages/client-analytics/`](packages/client-analytics) | `@miragon-ai/client-analytics`            | Prometheus client, PromQL query functions + metrics contract            |
 | [`packages/widget-shell/`](packages/widget-shell)         | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
-| [`engine-plugins/`](engine-plugins)                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin OTEL metrics plugin for CIB Seven (Java 21)                      |
+| [`engine-plugins/`](engine-plugins)                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin Micrometer metrics plugin for CIB Seven (Java 21)                |
 | [`playground/`](playground)                               | —                                         | Demo env: CIB Seven showcase, Compose stack, Fly.io deploy              |
 | [`docs/`](docs)                                           | `@miragon-ai/docs`                        | VitePress documentation site                                            |
 
@@ -189,8 +189,9 @@ Full walkthrough in [`docs/operations.md`](docs/operations.md).
 ## Engine metrics plugin
 
 The analytics module needs `camunda_*` series in Prometheus. The Kotlin plugin in
-[`engine-plugins/`](engine-plugins) emits them as OpenTelemetry instruments from inside the CIB Seven
-runtime — no engine-side database. It publishes to Maven Central as
+[`engine-plugins/`](engine-plugins) records them as Micrometer meters from inside the CIB Seven
+runtime — no engine-side database; export via Micrometer's OTLP registry (the playground default),
+an Actuator Prometheus scrape, or the OTEL Java agent's Micrometer bridge. It publishes to Maven Central as
 `io.miragon.mcp:cibseven-history-metrics`. See [`engine-plugins/README.md`](engine-plugins/README.md)
 and the runnable [`playground/cibseven-example/`](playground/cibseven-example).
 

@@ -25,7 +25,9 @@ camunda7 = "7.24.0"
 cibseven = "2.2.0"
 
 # Runtime libraries
-opentelemetry-api = "1.64.0"
+# Aligned with the Spring Boot 4.1 BOM (micrometer.version) — pinned explicitly so
+# the published POM carries a concrete version for consumers outside this build.
+micrometer = "1.17.0"
 
 [libraries]
 # BOM
@@ -50,11 +52,17 @@ cibseven-bpm-junit5 = { module = "org.cibseven.bpm:cibseven-bpm-junit5", version
 cibseven-bpm-assert = { module = "org.cibseven.bpm:cibseven-bpm-assert", version.ref = "cibseven" }
 
 # Runtime libraries (explicit versions)
-opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry-api" }
+micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
 
 # BOM-managed (version resolved from spring-boot-bom — listed for discoverability)
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
+micrometer-registry-otlp = { module = "io.micrometer:micrometer-registry-otlp" }
 spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+# Spring Boot 4 gates OtlpMetricsExportAutoConfiguration on this module's
+# OpenTelemetryProperties (resource attributes) — without it the OTLP export
+# silently never activates.
+spring-boot-opentelemetry = { module = "org.springframework.boot:spring-boot-opentelemetry" }
 spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }

@@ -5,11 +5,11 @@ CIB Seven engine with live traffic, the full metric-first analytics stack,
 and the MCP server on top. Run it locally with Docker Compose, or deploy
 the whole stack to Fly.io with one workflow.
 
-| Path                | Contents                                                                                    |
-| ------------------- | ------------------------------------------------------------------------------------------- |
-| `cibseven-example/` | Spring Boot CIB Seven engine: seeded Miravelo Leasing processes, live traffic, OTEL metrics |
-| `docker/`           | Compose stack: engine(s), OTEL Collector, Prometheus, Grafana, optional server              |
-| `fly/`              | Fly.io deployment: one `*.fly.toml` per app + `deploy.sh`                                   |
+| Path                | Contents                                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `cibseven-example/` | Spring Boot CIB Seven engine: seeded Miravelo Leasing processes, live traffic, Micrometer metrics (OTLP push) |
+| `docker/`           | Compose stack: engine(s), OTEL Collector, Prometheus, Grafana, optional server                                |
+| `fly/`              | Fly.io deployment: one `*.fly.toml` per app + `deploy.sh`                                                     |
 
 ## Run locally
 

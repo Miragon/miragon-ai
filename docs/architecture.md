@@ -2,8 +2,9 @@
 
 The platform is a single Node.js MCP server that exposes Camunda 7 / CIB Seven
 operations and Prometheus-backed analytics to any MCP host (Claude, ChatGPT, …).
-A Kotlin plugin in the engine emits process metrics via OpenTelemetry; the OTEL
-Collector exports them to Prometheus so the analytics module can query them.
+A Kotlin plugin in the engine emits process metrics via Micrometer, pushed over
+OTLP; the OTEL Collector exports them to Prometheus so the analytics module can
+query them.
 
 ## At a glance
 
@@ -22,8 +23,8 @@ flowchart LR
   Camunda7 -->|REST| Engine[(Camunda 7 / CIB Seven)]
   Analytics -->|PromQL| Prom[(Prometheus)]
 
-  Engine -. OTEL metrics .-> Plugin[Kotlin metrics plugin]
-  Plugin --> Collector[OTEL Collector]
+  Engine -. history events .-> Plugin[Kotlin metrics plugin]
+  Plugin -- OTLP --> Collector[OTEL Collector]
   Collector --> Prom
   Prom --> Grafana[Grafana dashboards]
 
@@ -37,7 +38,7 @@ flowchart LR
 | **MCP Server** (`apps/mcp-server-camunda7/`)          | Hosts the HTTP transport on port `8400`, loads modules from `MCP_ACTIVE_MODULES`, and serves a single-file React widget bundle.                        |
 | **camunda7** (`packages/mcp-camunda7/`)               | Wraps the Camunda 7 / CIB Seven REST API via an OpenAPI-generated client. Exposes process, task, incident, deployment, and history tools plus widgets. |
 | **analytics** (`packages/mcp-analytics/`)             | Queries Prometheus via PromQL for performance, failure, bottleneck, and version/cluster comparison. Tools + dashboard, failure, and compare widgets.   |
-| **engine-plugins** (`engine-plugins/`)                | Kotlin OTEL plugins for CIB Seven: a process-metrics emitter. Independent build (Java 21, Gradle). No engine-side database.                            |
+| **engine-plugins** (`engine-plugins/`)                | Kotlin Micrometer plugins for CIB Seven: a process-metrics emitter. Independent build (Java 21, Gradle). No engine-side database.                      |
 | **widgets** (`apps/mcp-server-camunda7/mcp-app.html`) | A single Vite-built HTML bundle containing React, Tailwind, and every widget. The MCP host renders it inline when a tool returns `{ widget, data }`.   |
 
 ## Composition rules
@@ -116,8 +117,8 @@ producing a broken tab.
    React component from the shared bundle and feeds it the `data`.
 
 Process metrics originate in the engine: the Kotlin plugin maps history events
-to OTEL counters/histograms (100 % coverage, model-bounded labels), the Collector
-serves them, and Prometheus stores them. Per-instance drill-down (search) is
+to Micrometer counters/histograms (100 % coverage, model-bounded labels), the
+Collector receives them over OTLP, and Prometheus stores them. Per-instance drill-down (search) is
 served by the engine REST history API, not the metrics.
 
 ## Repository layout
@@ -126,7 +127,7 @@ served by the engine REST history API, not the metrics.
 | --------------------------- | -------------------------------------------------------- |
 | `apps/mcp-server-camunda7/` | The MCP server entry point and the widget bundle.        |
 | `packages/`                 | Reusable libraries — clients, MCP plugins, widget-shell. |
-| `engine-plugins/`           | Kotlin OTEL plugins (process metrics).                   |
+| `engine-plugins/`           | Kotlin Micrometer plugins (process metrics).             |
 | `playground/`               | Demo env: showcases, Compose stack, Fly.io deployment.   |
 
 For deeper detail, the root [`README.md`](https://github.com/miragon/miragon-ai/blob/main/README.md) keeps the full module table and tool list.
