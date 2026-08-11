@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/Miragon/miragon-ai/compare/v0.5.1...v0.6.0) (2026-08-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* MCP_OAUTH providers "oidc"/"oidc-proxy" now fail the boot (upstream removed jwksVerifier/oauthProxy); REDIS_URL session sharing is ignored (the pluggable backend seam is gone); persisted user settings and the sticky engine selection require MCP_OAUTH (stateless HTTP has no session ids).
+
+### Features
+
+* **engine-plugins:** record process metrics via Micrometer ([#226](https://github.com/Miragon/miragon-ai/issues/226)) ([abe2b9c](https://github.com/Miragon/miragon-ai/commit/abe2b9c8b73b7e885934e6729d87a8c3b607872b))
+* migrate to @miragon/mcp-toolkit 1.1.0 on mcp-use 2 ([#239](https://github.com/Miragon/miragon-ai/issues/239)) ([538ce47](https://github.com/Miragon/miragon-ai/commit/538ce47ba2ac01929b3411d0e097dcece021df0e))
+
 ## [0.5.1](https://github.com/Miragon/miragon-ai/compare/v0.5.0...v0.5.1) (2026-08-07)
 
 

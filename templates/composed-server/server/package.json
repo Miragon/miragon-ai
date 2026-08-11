@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@acme/mcp-notes": "workspace:*",
-    "@miragon-ai/mcp-analytics": "0.5.1",
-    "@miragon-ai/mcp-camunda7": "0.5.1",
-    "@miragon-ai/widget-shell": "0.5.1",
+    "@miragon-ai/mcp-analytics": "0.6.0",
+    "@miragon-ai/mcp-camunda7": "0.6.0",
+    "@miragon-ai/widget-shell": "0.6.0",
     "@miragon/mcp-toolkit-core": "1.1.0",
     "mcp-use": "2.1.0",
     "zod": "4.4.3"
