@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
-    "@types/node": "22.19.15",
+    "@types/node": "26.2.0",
     "@vitest/coverage-v8": "4.1.10",
     "dependency-cruiser": "18.1.1",
     "dotenv-cli": "11.0.0",
