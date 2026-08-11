@@ -54,7 +54,7 @@
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "mcp-use": "1.34.5",
+    "mcp-use": "2.0.4",
     "react": "19.2.8"
   },
   "peerDependenciesMeta": {
@@ -68,7 +68,7 @@
     "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/react": "19.2.18",
     "bpmn-js": "18.22.1",
-    "mcp-use": "1.34.5",
+    "mcp-use": "2.0.4",
     "react": "19.2.8",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
