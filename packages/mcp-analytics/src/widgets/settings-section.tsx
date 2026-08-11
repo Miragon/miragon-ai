@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import {
   Alert,
   AlertDescription,
@@ -16,6 +16,7 @@ import {
   SettingsInput,
   WidgetShell,
   formatTime,
+  useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 import { PERIODS, type Period } from "@miragon-ai/client-analytics"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "../tool-names.js"
@@ -103,13 +104,12 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
   // mirrors user-profile.tsx; the feed carries no updatedAt, so the values
   // themselves are the stamp.
   const settingsStamp = `${view.settings.defaultPeriod}|${view.settings.minBucketSize}`
-  useEffect(() => {
+  useResetOnChange(settingsStamp, () =>
     setForm({
       defaultPeriod: view.settings.defaultPeriod,
       minBucketSize: String(view.settings.minBucketSize),
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settingsStamp])
+    }),
+  )
 
   function handleSave() {
     save.mutate(

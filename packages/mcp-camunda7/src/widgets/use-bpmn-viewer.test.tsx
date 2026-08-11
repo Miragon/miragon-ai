@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { useEffect } from "react"
 import { cleanup, render, waitFor } from "@testing-library/react"
 import { useBpmnViewer, type BpmnViewerWithGet } from "@miragon-ai/widget-shell/widgets"
 
@@ -61,8 +62,19 @@ function Harness({
   reimportKey?: unknown
   onImported?: (viewer: BpmnViewerWithGet) => void | (() => void)
 }) {
-  latest = useBpmnViewer({ bpmnXml: xml, reimportKey, onImported })
-  return <div ref={latest.containerRef} />
+  // Destructured at the call like the real widgets do — the container ref is
+  // only ever handed to JSX, never read during render.
+  const { containerRef, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
+    bpmnXml: xml,
+    reimportKey,
+    onImported,
+  })
+  // Published to the suite from an effect, so the render itself stays pure —
+  // every assertion below reads it after the commit anyway.
+  useEffect(() => {
+    latest = { containerRef, importError, zoomIn, zoomOut, fit }
+  })
+  return <div ref={containerRef} />
 }
 
 afterEach(() => {

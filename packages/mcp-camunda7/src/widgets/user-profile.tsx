@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import {
   Alert,
   AlertDescription,
@@ -15,6 +15,7 @@ import {
   WidgetShell,
   formatTime,
   useDetailView,
+  useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 
 import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_USER_PROFILE_DATA } from "../tool-names.js"
@@ -191,16 +192,14 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
   const [savedAt, setSavedAt] = useState<string | null>(null)
 
   // Re-sync the baseline after a save (the feed refetches via refreshCockpitData).
-  const profileStamp = view.profile.updatedAt
-  useEffect(() => {
+  useResetOnChange(view.profile.updatedAt, () =>
     setForm(
       fromProfile(
         view.profile,
         view.availableEngines.map((e) => e.id),
       ),
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profileStamp])
+    ),
+  )
 
   const engines = view.availableEngines
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>

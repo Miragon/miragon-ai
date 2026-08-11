@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useToolMutation } from "@miragon/mcp-toolkit-ui"
 import {
   GroupCard,
@@ -6,6 +6,7 @@ import {
   TONE_DOT,
   ViewDataState,
   WidgetShell,
+  useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
@@ -81,9 +82,7 @@ export function ActivityIncidentList({
 
   // The optimistic grey-out only bridges until the feed refetches — fresh data
   // is server truth, so stale "resolved" marks must not survive it.
-  useEffect(() => {
-    setResolvedIds(new Set())
-  }, [data])
+  useResetOnChange(data, () => setResolvedIds(new Set()))
 
   if (!data) {
     return (

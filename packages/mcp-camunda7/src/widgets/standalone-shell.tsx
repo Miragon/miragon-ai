@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext, WidgetRenderer, useHostBridge } from "@miragon/mcp-toolkit-ui/app"
-import { useHostActions, useHostWidgets, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import {
+  useHostActions,
+  useHostWidgets,
+  useResetOnChange,
+  WidgetShell,
+} from "@miragon-ai/widget-shell/widgets"
 import { translator } from "../messages/index.js"
 import { NavBreadcrumb } from "./cockpit-app/breadcrumb.js"
 import { cockpitViews, filterLayoutToWidgets } from "./cockpit-app/views.js"
@@ -126,12 +131,9 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
   // fullscreen follow-up) obsoletes the drill trail — reset so the fresh
   // origin render becomes visible. Identity-checked and guarded to complete
   // view results so transient host-global re-emissions don't clear the trail.
-  const lastOutputRef = useRef(output)
-  useEffect(() => {
-    if (output === lastOutputRef.current) return
-    lastOutputRef.current = output
+  useResetOnChange(output, () => {
     if (isViewResult(output)) setStack([])
-  }, [output])
+  })
 
   // Same registry composition as the cockpit app: the host root's full widget
   // map (HostWidgetsProvider) under this module's own widgets, so a drilled
@@ -168,11 +170,16 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
     queried,
     queriedEngineId,
   })
+  // Handing the drill back to the host is a call OUT to an external system, so
+  // it belongs in an effect — and emptying the trail is the other half of that
+  // same handover, not a derived value we could compute during render. The one
+  // extra render this costs is a dead-end path (the drill is leaving anyway).
   useEffect(() => {
     if (engineUnresolvable && current) {
       // Derived from the view on top of the stack — a stored "last intent"
       // would go stale the moment the user pops the breadcrumb.
       navigateViaHost(host, viewToIntent(current))
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- half of the handover above
       setStack([])
     }
   }, [engineUnresolvable, current, host])

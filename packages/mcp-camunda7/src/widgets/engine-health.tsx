@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { Alert, AlertDescription, parseToolResult, useCallTool } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
@@ -9,6 +9,7 @@ import {
   WidgetHeader,
   WidgetShell,
   formatTime,
+  useResetOnChange,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
@@ -297,6 +298,13 @@ function ClustersSection({
   )
 }
 
+/** Locally refreshed snapshot, tagged with the engine generation it belongs to. */
+interface RefreshState {
+  gen: number
+  live: EngineHealthData | null
+  refreshing: boolean
+}
+
 /**
  * Shell-less AI-first engine overview. One component, two modes (like the cockpit
  * widgets): standalone the agent's data arrives via `data`; inside the cockpit
@@ -335,32 +343,40 @@ export function EngineHealthView({
   // Manual refresh that works in BOTH modes: standalone the initial data is a
   // conversation snapshot (the self-fetch query is disabled), so a direct
   // re-pull of the feed replaces it locally. Reset when the engine changes.
-  const [live, setLive] = useState<EngineHealthData | null>(null)
-  const [refreshing, setRefreshing] = useState(false)
-  // Request generation: an engine switch (or a newer refresh) invalidates every
-  // in-flight refresh, so a slow response for engine A can never setLive() A's
-  // snapshot while the view already shows engine B.
-  const refreshGen = useRef(0)
-  useEffect(() => {
-    refreshGen.current++
-    setLive(null)
-    setRefreshing(false)
-  }, [engine])
+  //
+  // Request generation: an engine switch invalidates every in-flight refresh, so
+  // a slow response for engine A can never show A's snapshot while the view
+  // already displays engine B. It lives in state (not a ref) so the reset can
+  // run in the render phase — a discarded render then leaves no trace, and the
+  // cleared snapshot lands in the same commit as the new engine. Overlapping
+  // refreshes for one engine need no generation of their own: the button is
+  // disabled while one is in flight.
+  const [refreshState, setRefreshState] = useState<RefreshState>({
+    gen: 0,
+    live: null,
+    refreshing: false,
+  })
+  useResetOnChange(engine, () =>
+    setRefreshState((prev) => ({ gen: prev.gen + 1, live: null, refreshing: false })),
+  )
+  const { live, refreshing } = refreshState
   const data = live ?? fetched
 
   async function refresh() {
     if (!callTool) return
-    const gen = ++refreshGen.current
-    setRefreshing(true)
+    const gen = refreshState.gen
+    const current = (prev: RefreshState) => prev.gen === gen
+    setRefreshState((prev) => (current(prev) ? { ...prev, refreshing: true } : prev))
     try {
       const result = await callTool(CAMUNDA7_ENGINE_HEALTH_DATA, {
         engine: engine ?? data?.engineId,
       })
-      if (gen === refreshGen.current) setLive(parseToolResult<EngineHealthData>(result))
+      const snapshot = parseToolResult<EngineHealthData>(result)
+      setRefreshState((prev) => (current(prev) ? { ...prev, live: snapshot } : prev))
     } catch {
       // Keep the last snapshot on a failed refresh; the next attempt can retry.
     } finally {
-      if (gen === refreshGen.current) setRefreshing(false)
+      setRefreshState((prev) => (current(prev) ? { ...prev, refreshing: false } : prev))
     }
   }
 

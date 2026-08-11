@@ -154,12 +154,14 @@ export function ProcessDefinitionFlow({
   )
   const [mode, setMode] = useState<FlowMode>(initialMode)
   const [heatmapUnavailable, setHeatmapUnavailable] = useState(false)
-  const markHeatmapUnavailable = useCallback(() => setHeatmapUnavailable(true), [])
   // Analytics absent → fall back to the incident overlays; the two heatmap
-  // mode buttons disappear (with a hint), never an error surface.
-  useEffect(() => {
-    if (heatmapUnavailable) setMode("incidents")
-  }, [heatmapUnavailable])
+  // mode buttons disappear (with a hint), never an error surface. Both halves
+  // belong to the same transition, so they happen together in the handler —
+  // deriving the fallback in an effect would commit an empty heatmap first.
+  const markHeatmapUnavailable = useCallback(() => {
+    setHeatmapUnavailable(true)
+    setMode("incidents")
+  }, [])
 
   const highlights = useMemo<BpmnHighlight[]>(() => {
     const activities = data?.activities ?? []

@@ -101,8 +101,13 @@ export function BpmnHeatmap({
   const heatCanvasRef = useRef<HTMLCanvasElement>(null)
   const redrawRef = useRef<(() => void) | null>(null)
   // Latest heat inputs, read by redraw() so we can repaint without re-importing.
+  // Synced in an effect (not during render) so a discarded render can't leak
+  // into the ref; declared before the repaint effect below, so redraw() always
+  // sees the values of the commit that triggered it.
   const dataRef = useRef({ nodeFrequencies, edgeFrequencies, diagramRadius })
-  dataRef.current = { nodeFrequencies, edgeFrequencies, diagramRadius }
+  useEffect(() => {
+    dataRef.current = { nodeFrequencies, edgeFrequencies, diagramRadius }
+  })
 
   const { containerRef, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
     bpmnXml,
