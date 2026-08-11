@@ -42,6 +42,9 @@ export default tseslint.config(
       // Plain-node static server for the Playwright host simulation — not part
       // of any tsconfig project, deliberately untyped.
       "apps/mcp-server-camunda7/test-host/serve.mjs",
+      // Widget-bundle stand-in read (never executed) by the in-process e2e
+      // boots — data, not code; not part of any tsconfig project.
+      "apps/mcp-server-camunda7/test/fixtures/**",
       // Standalone customer-facing workspace, outside the root pnpm workspace
       // and its tsconfig projects — verified by scripts/test-template.sh
       // (build + typecheck + tests) instead of the repo's typed linting.

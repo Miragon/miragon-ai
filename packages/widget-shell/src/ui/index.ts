@@ -1,5 +1,5 @@
 export { cn } from "./cn.js"
-export { WidgetShell } from "./widget-shell.js"
+export { DisplayModeProvider, WidgetShell, useHostDisplayMode } from "./widget-shell.js"
 export { WidgetHeader } from "./widget-header.js"
 export { ViewDataState } from "./view-data-state.js"
 export { Section } from "./section.js"

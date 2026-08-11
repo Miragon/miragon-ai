@@ -1,6 +1,7 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 import { createPrometheusClient } from "@miragon-ai/client-analytics"
+import { installMcpRequestContext } from "@miragon-ai/widget-shell/server"
 import { registerTools } from "./tools/index.js"
 import { registerSettingsTools } from "./settings-tools.js"
 import { registerWidgetTools, type FetchBpmnXml } from "./widget-tools.js"
@@ -34,14 +35,18 @@ export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer
     definition,
     appConfig: { client },
     registerTools: (server) => {
+      // Ambient per-request context (session id, auth) that profile-key/locale
+      // resolution reads — idempotent, so a host that already installed it is
+      // fine.
+      installMcpRequestContext(server)
       registerTools(server, client, config.profileStore)
     },
-    registerWidgetTools: (server, resourceUri) => {
-      registerWidgetTools(server, client, resourceUri, {
+    registerWidgetTools: (server) => {
+      registerWidgetTools(server, client, {
         fetchBpmnXml: config.fetchBpmnXml,
         profileStore: config.profileStore,
       })
-      registerSettingsTools(server, resourceUri, config.profileStore, config.toolset)
+      registerSettingsTools(server, config.profileStore, config.toolset)
     },
   }
 }

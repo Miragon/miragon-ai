@@ -77,11 +77,13 @@ Every widget must appear in four places, or it is silently absent somewhere:
 
 - **Plain tools** (`src/tools.ts`, via `createToolRegistrar`): JSON for the
   model.
-- **Widget tools** (`*_show_*`, `_meta: uiMeta({ resourceUri })`): render a
-  widget for the user, return a summary for the model.
-- **Data feeds** (`*_data`, `_meta: { ...APP_ONLY_META, "openai/widgetAccessible": true }`,
-  result via `buildDataFeedResult`): app-only JSON for in-widget
-  refresh/self-fetch — hosts hide them from the model.
+- **Widget tools** (`*_show_*`, a `view` binding named after the tool +
+  `_meta: appsSdkMeta({ resourceUri: viewResourceUri(name), title })`): render
+  a widget for the user, return a summary for the model.
+- **Data feeds** (`*_data`, `visibility: "app"` +
+  `_meta: { "openai/widgetAccessible": true }`, result via
+  `buildDataFeedResult`): app-only JSON for in-widget refresh/self-fetch —
+  hosts hide them from the model.
 
 The `_show_`/`_data` **naming is load-bearing**: the wire-level test
 (`server/test/widget-contract.e2e.test.ts`) asserts the widget `_meta` contract
@@ -92,10 +94,11 @@ by name across ALL composed modules, including yours.
 - **`resolve.dedupe` in `server/vite.config.ts` is load-bearing.** Without it,
   each widget package bundles its own React/toolkit instance, the React
   contexts no longer match, and every in-widget query hangs on "Loading…".
-- **One deduped Vite bundle.** All widgets compile into a single
-  `dist/mcp-app.html` (`vite-plugin-singlefile`); modules cannot be loaded at
-  runtime. `MCP_ACTIVE_MODULES` selects modules at runtime — all widgets stay
-  bundled, inactive modules just register no tools.
+- **One deduped Vite bundle.** All widgets compile into one two-file bundle
+  (`dist/mcp-app.js` + `dist/mcp-app.css`, served through mcp-use 2's
+  `app.bundle` views); modules cannot be loaded at runtime.
+  `MCP_ACTIVE_MODULES` selects modules at runtime — all widgets stay bundled,
+  inactive modules just register no tools.
 - **Exact version pins** (`save-exact` in `.npmrc`). Upgrade all `@miragon-ai/*`
   packages together to one version; treat every `@miragon/mcp-toolkit-*` minor
   as potentially breaking (0.x) and keep it at the version the `@miragon-ai`

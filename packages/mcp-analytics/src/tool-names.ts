@@ -3,10 +3,10 @@
  * rename in `widget-tools.ts` trips a TS error at every call site (same rule
  * as the camunda7 module's tool-names.ts).
  */
-// Per-view data-only feeds (no UI, app-only via _meta.ui.visibility) backing
-// each widget's own self-fetch. A widget tool (_meta.ui.resourceUri) can't be
-// used for this: the host renders it instead of returning data to the
-// in-widget callTool().
+// Per-view data-only feeds (no UI, app-only via `visibility: "app"`) backing
+// each widget's own self-fetch. A widget tool (view-bound) can't be used for
+// this: the host renders it instead of returning data to the in-widget
+// callTool().
 export const ANALYTICS_DASHBOARD_DATA = "analytics_dashboard_data"
 export const ANALYTICS_FAILURE_DASHBOARD_DATA = "analytics_failure_dashboard_data"
 // Cross-module consumers (camunda7's process-incidents flow) reference this

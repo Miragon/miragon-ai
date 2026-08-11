@@ -14,7 +14,7 @@ import {
   truncate,
   usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
-import { ModelContext } from "mcp-use/react"
+import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import type { ClusterDetailData, ClusterIncidentRow } from "../view-models.js"
 import { DetailPage } from "./detail-page.js"
 import { CockpitListFooter } from "./list-footer.js"
@@ -299,7 +299,7 @@ export function ClusterDetailView({
         </>
       }
     >
-      <ModelContext content={describeCluster(data)} />
+      <HostModelContext content={describeCluster(data)}>{null}</HostModelContext>
     </DetailPage>
   )
 }

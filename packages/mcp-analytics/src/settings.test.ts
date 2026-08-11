@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
+import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import {
   analyticsSettingsSaveInput,
   analyticsSettingsSchema,
@@ -9,8 +10,6 @@ import {
 import { registerSettingsTools } from "./settings-tools.js"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
 import { localizeFor, type ProfileSource } from "./server-locale.js"
-
-const RESOURCE_URI = "ui://analytics/widgets.html"
 
 describe("analyticsSettingsSchema", () => {
   it("fills every default from an empty object", () => {
@@ -99,7 +98,7 @@ describe("registerSettingsTools", () => {
   function registeredToolNames(store?: ProfileSource, toolset?: string): string[] {
     const tool = vi.fn()
     const server = { tool } as unknown as MCPServer
-    registerSettingsTools(server, RESOURCE_URI, store, toolset)
+    registerSettingsTools(server, store, toolset)
     return tool.mock.calls.map((c) => (c[0] as { name: string }).name)
   }
 
@@ -147,7 +146,7 @@ describe("registerSettingsTools", () => {
       },
     }
     const tool = vi.fn()
-    registerSettingsTools({ tool } as unknown as MCPServer, RESOURCE_URI, store)
+    registerSettingsTools({ tool } as unknown as MCPServer, store)
     type Handler = (
       params: unknown,
       ctx?: unknown,
@@ -181,7 +180,7 @@ describe("registerSettingsTools", () => {
       },
     }
     const tool = vi.fn()
-    registerSettingsTools({ tool } as unknown as MCPServer, RESOURCE_URI, store)
+    registerSettingsTools({ tool } as unknown as MCPServer, store)
     const call = tool.mock.calls.find(
       (c) => (c[0] as { name: string }).name === ANALYTICS_SAVE_SETTINGS,
     )
@@ -192,5 +191,42 @@ describe("registerSettingsTools", () => {
     expect(records.get("anonymous")).toEqual({
       modules: { analytics: { defaultPeriod: "30d", minBucketSize: 5 } },
     })
+  })
+
+  // HTTP without OAuth: mcp-use 2 issues no MCP session ids, so the ambient
+  // request info exists but carries no identity — the section must go
+  // read-only and the save tool must refuse with an actionable cause.
+  it("identity gating: canSave false + save refusal without identity, true with an auth user", async () => {
+    const tool = vi.fn()
+    registerSettingsTools({ tool } as unknown as MCPServer, {
+      get: () => Promise.resolve(undefined),
+      save: () => Promise.resolve({}),
+    })
+    type Handler = (
+      params: unknown,
+      ctx?: unknown,
+    ) => Promise<{
+      structuredContent?: Record<string, unknown>
+      content?: Array<{ text?: string }>
+      isError?: boolean
+    }>
+    const handlerFor = (name: string): Handler => {
+      const call = tool.mock.calls.find((c) => (c[0] as { name: string }).name === name)
+      if (!call) throw new Error(`tool ${name} not registered`)
+      return call[1] as Handler
+    }
+
+    const bare = await runWithMcpRequestInfo({}, () => handlerFor(ANALYTICS_SETTINGS_DATA)({}))
+    expect(bare.structuredContent?.canSave).toBe(false)
+    const refused = await runWithMcpRequestInfo({}, () =>
+      handlerFor(ANALYTICS_SAVE_SETTINGS)({ defaultPeriod: "30d" }),
+    )
+    expect(refused.isError).toBe(true)
+    expect(refused.content?.[0]?.text).toContain("MCP_OAUTH")
+
+    const authed = await runWithMcpRequestInfo({ authUserId: "user-7" }, () =>
+      handlerFor(ANALYTICS_SETTINGS_DATA)({}),
+    )
+    expect(authed.structuredContent?.canSave).toBe(true)
   })
 })

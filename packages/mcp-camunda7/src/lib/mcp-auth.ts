@@ -1,4 +1,4 @@
-import { getRequestContext } from "mcp-use/server"
+import { getMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 
 /**
  * Resolves the bearer token of the MCP request currently being handled — the
@@ -6,8 +6,11 @@ import { getRequestContext } from "mcp-use/server"
  * client presents to this server is forwarded to the engine per call, so the
  * engine enforces the caller's own permissions.
  *
- * Reads the `Authorization` header off the Hono request context that mcp-use
- * propagates via AsyncLocalStorage into every tool handler (the same source
+ * Reads the raw `Authorization` header off the repo-owned ambient request
+ * info (`getMcpRequestInfo`, `@miragon-ai/widget-shell/server`) — the
+ * AsyncLocalStorage installed once per server via `installMcpRequestContext`
+ * (mcp-use 2.x dropped the 1.x `getRequestContext` store; the plugin's
+ * `registerTools` installs the replacement, the same source
  * [[resolveProfileKey]] reads the session id from). Every engine call in this
  * module happens inside a `tools/call` request — including widget `*_data`
  * feeds and pipeline steps, which the host performs over its own MCP
@@ -25,9 +28,7 @@ import { getRequestContext } from "mcp-use/server"
  * ORIGINAL request's context and thus the original token.
  */
 export function resolveMcpBearerToken(): string | undefined {
-  const reqCtx = getRequestContext()
-  if (!reqCtx) return undefined
-  const header = reqCtx.req.header("Authorization") ?? reqCtx.req.header("authorization")
+  const header = getMcpRequestInfo()?.authorization
   if (!header) return undefined
   const match = /^Bearer\s+(\S.*)$/i.exec(header.trim())
   return match ? match[1] : undefined

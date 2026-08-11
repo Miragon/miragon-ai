@@ -5,8 +5,8 @@
   "clients": [
     {
       "clientId": "miragon-ai-server",
-      "name": "Automation MCP server (oidc-proxy client)",
-      "description": "Pre-registered confidential client the MCP server's oidc-proxy mode uses to broker MCP-client logins. Secret is demo-grade, matching the stack's demo/demo convention.",
+      "name": "Automation MCP server (pre-registered client)",
+      "description": "Pre-registered client for MCP clients without DCR (claude mcp add --client-id ... --client-secret ... / claude.ai connector advanced OAuth). Redirect URIs: claude.ai + loopback on any port (demo-grade wildcard).",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,
@@ -15,9 +15,9 @@
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "http://localhost:8400/oauth/callback",
-        "http://localhost:8401/oauth/callback",
-        "http://localhost:8402/oauth/callback"
+        "https://claude.ai/api/mcp/auth_callback",
+        "http://localhost*",
+        "http://127.0.0.1*"
       ],
       "webOrigins": ["+"],
       "attributes": {
@@ -46,7 +46,135 @@
       "emailVerified": true,
       "firstName": "Demo",
       "lastName": "User",
-      "credentials": [{ "type": "password", "value": "demo", "temporary": false }]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo",
+          "temporary": false
+        }
+      ]
     }
-  ]
+  ],
+  "components": {
+    "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy": [
+      {
+        "name": "Trusted Hosts",
+        "providerId": "trusted-hosts",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "trusted-hosts": ["localhost", "127.0.0.1"],
+          "host-sending-registration-request-must-match": ["false"],
+          "client-uris-must-match": ["true"]
+        }
+      }
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "basic",
+      "description": "Subject + username claims for access tokens. Keycloak does NOT auto-create its built-in scopes when a realm import defines clientScopes, and mcp-use's Keycloak provider rejects any token without sub ('Missing Keycloak subject').",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "Subject (sub)",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "preferred_username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "profile",
+      "description": "Standard OIDC profile scope. Defined here because a realm import with clientScopes suppresses Keycloak's built-ins, and MCP clients request 'openid email profile' — a missing scope fails authorization with invalid_scope.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "email",
+      "description": "Standard OIDC email scope (see the profile scope's note on suppressed built-ins).",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp-resource",
+      "description": "Stamps the MCP server's canonical resource URL into aud \u2014 mcp-use 2 rejects tokens without it (RFC 8707).",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp-resource-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "http://localhost:8400/mcp",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": ["basic", "profile", "email", "mcp-resource"]
 }

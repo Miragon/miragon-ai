@@ -2,18 +2,12 @@ import { fileURLToPath } from "node:url"
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
-import { viteSingleFile } from "vite-plugin-singlefile"
-
-const INPUT = process.env.INPUT
-if (!INPUT) {
-  throw new Error("INPUT environment variable is not set")
-}
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), viteSingleFile()],
+  plugins: [react(), tailwindcss()],
   resolve: {
-    // Bundle-weight guards for the singlefile widget bundle (everything is
-    // base64/text-inlined, so unused weight is pure wire cost):
+    // Bundle-weight guards for the widget bundle (assets are inlined via
+    // `assetsInlineLimit`, so unused weight is pure wire cost):
     // - posthog-js: mcp-use dynamic-imports its telemetry client; the cockpit
     //   sends none — a no-op stub saves ~180 KB minified.
     // - geist: the full fontsource entry ships 5 subsets (incl. cyrillic +
@@ -37,6 +31,8 @@ export default defineConfig({
     // sets the AppQueryProvider's CallToolContext, but a widget's useToolQuery
     // (its package's copy) reads a *different* context → useCallTool() is
     // undefined → every in-widget query is disabled and hangs on "Loading…".
+    // Same trap since mcp-use 2 for the module-scoped view runtime in
+    // `mcp-use/react` (the guide's "hooks require a browser view" crash).
     // Dedupe collapses them to a single instance so the context matches.
     dedupe: [
       "react",
@@ -48,8 +44,19 @@ export default defineConfig({
     ],
   },
   build: {
+    // Two-file output (ES module + stylesheet) for createFrameworkApp's
+    // `app.bundle` — the mcp-use 2 native-view shape (the 1.x single-file
+    // HTML via vite-plugin-singlefile is gone). Assets stay inlined so the
+    // bundle remains self-contained inside the sandboxed view iframe.
+    assetsInlineLimit: 100_000_000,
+    cssCodeSplit: false,
     rollupOptions: {
-      input: INPUT,
+      input: fileURLToPath(new URL("./src/ui/main.tsx", import.meta.url)),
+      output: {
+        entryFileNames: "mcp-app.js",
+        assetFileNames: "mcp-app.[ext]",
+        inlineDynamicImports: true,
+      },
     },
     outDir: "dist",
     emptyOutDir: false,

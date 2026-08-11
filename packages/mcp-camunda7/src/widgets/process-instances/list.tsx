@@ -1,4 +1,4 @@
-import { ModelContext } from "mcp-use/react"
+import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
   AskAiButton,
   CountPill,
@@ -318,7 +318,7 @@ export function ProcessInstancesView({
     <>
       {/* Keep the agent aware of what the operator is looking at so it can offer
           the obvious next steps (drill into an instance, retry/suspend, etc.). */}
-      <ModelContext
+      <HostModelContext
         content={describeInstancesView({
           loadedCount: paged.items.length,
           total: paged.total,
@@ -328,7 +328,9 @@ export function ProcessInstancesView({
           activeChip,
           debouncedSearch,
         })}
-      />
+      >
+        {null}
+      </HostModelContext>
       <InstancesHeader
         title={title}
         scopedKey={scopedKey}

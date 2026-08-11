@@ -11,9 +11,10 @@ export default mergeConfig(
       testTimeout: 30_000,
       hookTimeout: 30_000,
       coverage: {
-        // Ratchet: frozen 2 points under the 2026-08-07 baseline. Raise when
-        // you push coverage up; never lower.
-        thresholds: { statements: 48, branches: 51, functions: 53, lines: 50 },
+        // Ratchet: frozen 2 points under the 2026-08-10 baseline (toolkit-1.0
+        // migration added the persistence-runtime suite). Raise when you push
+        // coverage up; never lower.
+        thresholds: { statements: 58, branches: 60, functions: 63, lines: 60 },
       },
     },
   }),

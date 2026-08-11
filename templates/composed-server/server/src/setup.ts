@@ -1,5 +1,5 @@
 import type { AppConfig, AppConfigEntry, AppPlugin } from "@miragon/mcp-toolkit-core"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 
 import { camunda7Module, createBpmnXmlFetcher, type ProfileStore } from "@miragon-ai/mcp-camunda7"
 import { analyticsModule } from "@miragon-ai/mcp-analytics"

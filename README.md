@@ -159,18 +159,18 @@ Example: `MCP_ACTIVE_MODULES=camunda7:read-only,analytics`.
 
 The most common variables — see [`docs/operations.md`](docs/operations.md) for the full reference.
 
-| Variable                                                  | Default                             | Description                                                                           |
-| --------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------- |
-| `PORT`                                                    | `8400`                              | HTTP port the MCP server listens on                                                   |
-| `MCP_ACTIVE_MODULES`                                      | all                                 | Comma-separated modules (`camunda7,analytics`), each with an optional toolset suffix  |
-| `MCP_OAUTH`                                               | —                                   | JSON OAuth resource-server config (Keycloak / Auth0 / generic OIDC) protecting `/mcp` |
-| `CAMUNDA_BASE_URL`                                        | `http://localhost:8410/engine-rest` | Single-engine REST base URL                                                           |
-| `CAMUNDA_ENGINE_ID`                                       | `default`                           | Id of that engine — must match the engine's `ENGINE_ID` or its analytics stay empty   |
-| `CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE`           | —                                   | Register multiple engines (see [Multi-engine](#multi-engine))                         |
-| `CAMUNDA_COCKPIT_URL`                                     | derived                             | Cockpit web base for jump-out links                                                   |
-| `CAMUNDA_AUTH_TYPE`                                       | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without an `auth`  |
-| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` / `CAMUNDA_TOKEN` | —                                   | Credentials for `basic`/`bearer`; `passthrough` forwards each caller's bearer token   |
-| `PROMETHEUS_URL`                                          | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source                                       |
+| Variable                                                  | Default                             | Description                                                                                                                               |
+| --------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                                    | `8400`                              | HTTP port the MCP server listens on                                                                                                       |
+| `MCP_ACTIVE_MODULES`                                      | all                                 | Comma-separated modules (`camunda7,analytics`), each with an optional toolset suffix                                                      |
+| `MCP_OAUTH`                                               | —                                   | JSON OAuth resource-server config (Keycloak / Auth0; the 1.x generic-OIDC/oidc-proxy modes were removed with mcp-use 2) protecting `/mcp` |
+| `CAMUNDA_BASE_URL`                                        | `http://localhost:8410/engine-rest` | Single-engine REST base URL                                                                                                               |
+| `CAMUNDA_ENGINE_ID`                                       | `default`                           | Id of that engine — must match the engine's `ENGINE_ID` or its analytics stay empty                                                       |
+| `CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE`           | —                                   | Register multiple engines (see [Multi-engine](#multi-engine))                                                                             |
+| `CAMUNDA_COCKPIT_URL`                                     | derived                             | Cockpit web base for jump-out links                                                                                                       |
+| `CAMUNDA_AUTH_TYPE`                                       | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without an `auth`                                                      |
+| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` / `CAMUNDA_TOKEN` | —                                   | Credentials for `basic`/`bearer`; `passthrough` forwards each caller's bearer token                                                       |
+| `PROMETHEUS_URL`                                          | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source                                                                                           |
 
 ### Multi-engine
 
@@ -207,7 +207,7 @@ cp .env.example .env                                 # dev defaults: engine on :
 pnpm dev                                             # MCP server on :8400
 ```
 
-`pnpm dev` also serves the `mcp-use` inspector at `http://localhost:8400/inspector` — call tools and
+`pnpm dev` also serves the `mcp-use` inspector at `http://localhost:8400/mcp/inspector` — call tools and
 render widgets by hand. The minimum bar for any change:
 
 ```bash

@@ -1,5 +1,5 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 import { createNotesStore } from "./notes-store.js"
 import { registerTools } from "./tools.js"
 import { registerWidgetTools } from "./widget-tools.js"
@@ -18,8 +18,8 @@ export function createPlugin(config: NotesPluginConfig): AppPlugin<MCPServer> {
     registerTools: (server) => {
       registerTools(server, store)
     },
-    registerWidgetTools: (server, resourceUri) => {
-      registerWidgetTools(server, store, resourceUri, config.title)
+    registerWidgetTools: (server) => {
+      registerWidgetTools(server, store, config.title)
     },
   }
 }

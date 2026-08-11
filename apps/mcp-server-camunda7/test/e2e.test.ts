@@ -3,12 +3,12 @@ import path from "node:path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
-import { MCPClient, type MCPSession } from "mcp-use/client"
-import type { McpServerInstance } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 import { getAppConfig, getPlugins } from "../src/setup.js"
 import { EXPECTED_TOOLS } from "./expected-tools.js"
 
-const FIXTURE_HTML = path.join(import.meta.dirname, "fixtures", "mcp-app.html")
+const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
 
 /** Reserve a free TCP port by binding to port 0 and releasing it again. */
 async function getFreePort(): Promise<number> {
@@ -22,6 +22,13 @@ async function getFreePort(): Promise<number> {
   })
 }
 
+/** Modern-envelope MCP client against the in-process server (mcp-use 2 wire). */
+async function connectClient(port: number): Promise<Client> {
+  const client = new Client({ name: "e2e-test", version: "0.0.0" })
+  await client.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`)))
+  return client
+}
+
 function textPayload(result: { content?: unknown }): unknown {
   const content = result.content as Array<{ type: string; text?: string }> | undefined
   const text = content?.find((c) => c.type === "text")?.text
@@ -30,16 +37,15 @@ function textPayload(result: { content?: unknown }): unknown {
 }
 
 /**
- * E2E smoke test: boots the real server server in-process (same plugin set
- * and env wiring as `src/index.ts`, minus the built UI bundle) and speaks the
- * MCP protocol to it over streamable HTTP. This is the only test that covers
- * tool *registration* — plugin.ts wiring, setup.ts module activation and the
+ * E2E smoke test: boots the real server in-process (same plugin set and env
+ * wiring as `src/index.ts`, with a stand-in widget bundle) and speaks the MCP
+ * protocol to it over streamable HTTP. This is the only test that covers tool
+ * *registration* — plugin.ts wiring, setup.ts module activation and the
  * framework tool trio — rather than the tool implementations.
  */
 describe("mcp-server-camunda7 E2E smoke", () => {
-  let app: McpServerInstance<false>
-  let client: MCPClient
-  let session: MCPSession
+  let app: MCPServer
+  let client: Client
 
   beforeAll(async () => {
     // Dummy engine: tools that only hit the in-memory EngineRegistry keep
@@ -62,8 +68,7 @@ describe("mcp-server-camunda7 E2E smoke", () => {
       plugins: getPlugins() as AppPlugin[],
       appConfig: getAppConfig(),
       app: {
-        resourceUri: "ui://automation-mcp/mcp-app.e2e.html",
-        htmlPath: FIXTURE_HTML,
+        bundle: { jsPath: FIXTURE_JS },
         // Match src/index.ts: keep the opt-in builder/dashboard tools registered
         // so the EXPECTED_TOOLS snapshot covers the full surface.
         builder: true,
@@ -71,21 +76,17 @@ describe("mcp-server-camunda7 E2E smoke", () => {
     })
     const port = await getFreePort()
     await app.listen(port)
-
-    client = MCPClient.fromDict({
-      mcpServers: { server: { url: `http://127.0.0.1:${port}/mcp` } },
-    })
-    session = await client.createSession("server")
+    client = await connectClient(port)
   })
 
   afterAll(async () => {
-    await client?.closeAllSessions()
+    await client?.close()
     await app?.close()
     vi.unstubAllEnvs()
   })
 
   it("exposes exactly the expected tool surface (tools/list snapshot)", async () => {
-    const tools = await session.listTools()
+    const { tools } = await client.listTools()
     const names = tools.map((t) => t.name).sort()
     expect(names).toEqual([...EXPECTED_TOOLS])
   })
@@ -101,7 +102,7 @@ describe("mcp-server-camunda7 E2E smoke", () => {
       "camunda7_query_historic_task_instances",
       "camunda7_query_historic_variable_instances",
     ]
-    const tools = await session.listTools()
+    const { tools } = await client.listTools()
     for (const name of paginatedTools) {
       const tool = tools.find((t) => t.name === name)
       expect(tool, `${name} should be exposed`).toBeDefined()
@@ -117,7 +118,10 @@ describe("mcp-server-camunda7 E2E smoke", () => {
   })
 
   it("answers camunda7_engine (action list) from the engine registry without a live engine", async () => {
-    const result = await session.callTool("camunda7_engine", { action: "list" })
+    const result = await client.callTool({
+      name: "camunda7_engine",
+      arguments: { action: "list" },
+    })
     expect(result.isError).toBeFalsy()
     expect(textPayload(result)).toEqual({
       engines: [
@@ -134,7 +138,7 @@ describe("mcp-server-camunda7 E2E smoke", () => {
   })
 
   it("answers get-framework-manifest with the active modules", async () => {
-    const result = await session.callTool("get-framework-manifest", {})
+    const result = await client.callTool({ name: "get-framework-manifest", arguments: {} })
     expect(result.isError).toBeFalsy()
     const manifest = JSON.stringify(textPayload(result))
     expect(manifest).toContain("camunda7")
@@ -149,9 +153,8 @@ describe("mcp-server-camunda7 E2E smoke", () => {
  * filter) is covered end to end, not just the filter in isolation.
  */
 describe("mcp-server-camunda7 E2E toolset filtering (camunda7:read-only)", () => {
-  let app: McpServerInstance<false>
-  let client: MCPClient
-  let session: MCPSession
+  let app: MCPServer
+  let client: Client
 
   beforeAll(async () => {
     vi.stubEnv("CAMUNDA_BASE_URL", "http://localhost:1")
@@ -172,28 +175,23 @@ describe("mcp-server-camunda7 E2E toolset filtering (camunda7:read-only)", () =>
       plugins: getPlugins() as AppPlugin[],
       appConfig: getAppConfig(),
       app: {
-        resourceUri: "ui://automation-mcp/mcp-app.e2e-read-only.html",
-        htmlPath: FIXTURE_HTML,
+        bundle: { jsPath: FIXTURE_JS },
         builder: true,
       },
     })
     const port = await getFreePort()
     await app.listen(port)
-
-    client = MCPClient.fromDict({
-      mcpServers: { server: { url: `http://127.0.0.1:${port}/mcp` } },
-    })
-    session = await client.createSession("server")
+    client = await connectClient(port)
   })
 
   afterAll(async () => {
-    await client?.closeAllSessions()
+    await client?.close()
     await app?.close()
     vi.unstubAllEnvs()
   })
 
   it("advertises no destructive or engine-write tools, but keeps queries + engine selection", async () => {
-    const tools = await session.listTools()
+    const { tools } = await client.listTools()
     const names = tools.map((t) => t.name)
 
     const forbidden = [

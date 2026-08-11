@@ -11,11 +11,11 @@
  * single source, imported by both the profile store's owner (camunda7) and
  * every module that keeps a `profile.modules.<module>` slice.
  *
- * Lives on the `/server` path only — `getRequestContext` pulls in mcp-use,
- * which must never reach the widget bundle.
+ * Lives on the `/server` path only — the ambient request info pulls in
+ * `node:async_hooks`, which must never reach the widget bundle.
  */
-import { getRequestContext } from "mcp-use/server"
 import { z } from "zod"
+import { getMcpRequestInfo } from "./request-context.js"
 
 /**
  * Shared fallback key for transports without any request context (stdio,
@@ -29,12 +29,22 @@ export const ANONYMOUS_PROFILE_KEY = "anonymous"
 
 /**
  * The auth-carrying slice of an mcp-use tool-handler `ctx` (its second
- * argument). mcp-use populates `ctx.auth.user` from the connection's auth
- * middleware; it's absent until an auth layer is wired, which is exactly the
- * fallback {@link resolveProfileKey} handles.
+ * argument). mcp-use populates `ctx.auth.user` from the OAuth provider; it's
+ * absent until an auth layer is wired, which is exactly the fallback
+ * {@link resolveProfileKey} handles. The 2.x provider user objects carry the
+ * subject as `id` (Keycloak/Auth0/…); `userId` is kept as the legacy 1.x
+ * spelling so stored records and custom providers keep resolving.
  */
 export interface ProfileAuthContext {
-  auth?: { user?: { userId?: unknown } }
+  auth?: { user?: { userId?: unknown; id?: unknown } }
+}
+
+/** First non-empty string among the user object's id spellings. */
+function userIdOf(user: { userId?: unknown; id?: unknown } | undefined): string | undefined {
+  for (const candidate of [user?.userId, user?.id]) {
+    if (typeof candidate === "string" && candidate.length > 0) return candidate
+  }
+  return undefined
 }
 
 /**
@@ -67,18 +77,23 @@ export interface ProfileSlice {
  * "whose profile is this", shared by every module. Auth-ready by precedence:
  *
  *   1. the authenticated user id — from the tool-handler `ctx.auth.user.userId`
- *      when a `ctx` is passed, otherwise from the `auth` variable on the Hono
- *      request context (the exact object mcp-use derives `ctx.auth` from), so
- *      registrar handlers without a `ctx` still resolve the auth user;
- *   2. otherwise the MCP session id (`Mcp-Session-Id` header, read off the Hono
- *      request context mcp-use propagates via AsyncLocalStorage) — the same
- *      source the toolkit's engine selection keys off, so a profile and its
- *      sticky engine share a lifetime;
+ *      when a `ctx` is passed, otherwise from the ambient request info
+ *      (`request-context.ts` — the repo-owned mcp-use-2.x replacement for the
+ *      removed request-context AsyncLocalStorage), so registrar handlers
+ *      without a `ctx` still resolve the auth user;
+ *   2. otherwise the MCP session id (transport session / `Mcp-Session-Id`
+ *      header, from the same ambient info) — the same source the engine
+ *      selection keys off, so a profile and its sticky engine share a
+ *      lifetime. mcp-use 2 itself issues no session ids (stateless HTTP
+ *      serving), so this rung only matches when a fronting gateway stamps
+ *      the header;
  *   3. {@link ANONYMOUS_PROFILE_KEY} when there is NO request context at all
  *      (stdio transport, tests) — the deliberate shared record;
- *   4. `undefined` for an HTTP request WITHOUT a session id — deliberately NOT
+ *   4. `undefined` for an HTTP request WITHOUT any identity — deliberately NOT
  *      the shared record, so unrelated keyless clients never cross-share one
- *      profile: reads fall back to defaults, saves fail visibly.
+ *      profile: reads fall back to defaults, saves fail visibly. Since
+ *      mcp-use 2 this is the NORM for un-authenticated HTTP deployments —
+ *      persistent settings need `MCP_OAUTH` (or a session-stamping gateway).
  *
  * `ctx` is typed `unknown` so the mcp-use handler context (whose exact shape
  * isn't part of the stable surface) passes without a cast at the call site —
@@ -88,35 +103,25 @@ export function resolveProfileKey(ctx?: unknown): string | undefined {
   const userId = resolveAuthUserId(ctx)
   if (userId) return userId
 
-  const reqCtx = getRequestContext()
-  if (!reqCtx) return ANONYMOUS_PROFILE_KEY
+  const info = getMcpRequestInfo()
+  if (!info) return ANONYMOUS_PROFILE_KEY
 
-  return reqCtx.req.header("Mcp-Session-Id") ?? reqCtx.req.header("mcp-session-id") ?? undefined
+  return info.sessionId
 }
 
 /**
  * Just the authenticated-user half of {@link resolveProfileKey}: the user id
- * from the tool-handler `ctx.auth`, or from the request context's `auth`
- * variable (registrar handlers without a `ctx`), else `undefined`. Save paths
+ * from the tool-handler `ctx.auth`, or from the ambient request info
+ * (registrar handlers without a `ctx`), else `undefined`. Save paths
  * use this to STAMP `userId` onto the persisted record — the marker that
  * exempts a row from the session-TTL cleanup (a record without `userId` is
  * session-keyed and expires).
  */
 export function resolveAuthUserId(ctx?: unknown): string | undefined {
-  const ctxUserId = (ctx as ProfileAuthContext | undefined)?.auth?.user?.userId
-  if (typeof ctxUserId === "string" && ctxUserId.length > 0) return ctxUserId
+  const ctxUserId = userIdOf((ctx as ProfileAuthContext | undefined)?.auth?.user)
+  if (ctxUserId) return ctxUserId
 
-  const reqCtx = getRequestContext()
-  if (!reqCtx) return undefined
-  try {
-    const auth = (reqCtx as { get(key: string): unknown }).get("auth") as
-      ProfileAuthContext["auth"] | undefined
-    const userId = auth?.user?.userId
-    if (typeof userId === "string" && userId.length > 0) return userId
-  } catch {
-    // Context-variable access is best-effort.
-  }
-  return undefined
+  return getMcpRequestInfo()?.authUserId
 }
 
 /**

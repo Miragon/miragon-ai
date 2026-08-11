@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import { z } from "zod"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/client-camunda7/sdk"
 import { createPlugin, type Camunda7SharedResources } from "./plugin.js"
 import { providerForEntry } from "./providers/index.js"

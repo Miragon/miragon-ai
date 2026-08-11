@@ -11,7 +11,7 @@ import type {
   ProcessDefinitionDto,
   ProcessInstanceDto,
 } from "@miragon-ai/client-camunda7/types"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 import { z } from "zod"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { buildInstanceCockpitUrl, type EngineLink } from "../lib/cockpit-url.js"

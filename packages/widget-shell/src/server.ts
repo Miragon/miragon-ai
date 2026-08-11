@@ -28,6 +28,13 @@ export {
   type ProfileSlice,
   type ProfileSource,
 } from "./profile.js"
+export {
+  getMcpRequestInfo,
+  installMcpRequestContext,
+  runWithMcpRequestInfo,
+  type McpMiddlewareHost,
+  type McpRequestInfo,
+} from "./request-context.js"
 
 /**
  * mcp-use's raw `server.tool()` callback expects a result with an implicit

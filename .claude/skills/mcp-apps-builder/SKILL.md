@@ -15,6 +15,17 @@ description: |
   Always consult the relevant reference files BEFORE implementing MCP features.
 ---
 
+> **⚠️ mcp-use 2.x (since 2026-08):** this repo now runs `mcp-use@2.1.0` /
+> `@miragon/mcp-toolkit-*@1.1.0`. Several idioms taught below are 1.x-only and
+> NO LONGER APPLY here: `mcp-use/server` imports (use the `mcp-use` root),
+> `schema:` on `server.tool` (use `inputSchema:`), `McpUseProvider`/`useWidget`
+> (use `bootstrapView` + the toolkit `HostBridge`), and any hand-stamped
+> `_meta.ui`/`uiMeta`-style widget meta (widget tools bind a native
+> `view: { name }`; mcp-use owns the `ui` namespace). The house skills
+> (`add-bpm-feature`, `add-analytics-feature`, `add-settings-section`) and the
+> toolkit's `docs/guides/migrating-to-mcp-use-2.md` are authoritative where
+> they disagree with this file.
+
 # IMPORTANT: How to Use This Skill
 
 > **In this repository, the repo-specific skills take precedence:** consult

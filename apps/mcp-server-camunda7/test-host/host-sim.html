@@ -16,7 +16,7 @@
     </style>
   </head>
   <body>
-    <iframe id="app" src="/app/mcp-app.html" title="widget under test"></iframe>
+    <iframe id="app" src="/app.html" title="widget under test"></iframe>
     <script>
       // Minimal SEP-1865 (ext-apps) host: answers ui/initialize, delivers the
       // tool lifecycle notifications, and serves tools/call requests from the
@@ -44,7 +44,7 @@
         post({
           jsonrpc: "2.0",
           method: "ui/notifications/host-context-changed",
-          params: { toolInfo: { tool: { name: TOOL_NAME } } },
+          params: { toolInfo: { tool: { name: TOOL_NAME, inputSchema: { type: "object" } } } },
         })
         const result = clone(fixture.result)
         if (strip) delete result.structuredContent
@@ -76,11 +76,15 @@
             jsonrpc: "2.0",
             id: m.id,
             result: {
+              // mcp-use 2's guest runtime validates the initialize result
+              // strictly: protocolVersion and toolInfo.tool.inputSchema are
+              // required (the 1.x guest tolerated their absence).
+              protocolVersion: "2025-11-21",
               hostInfo: { name: "host-sim", version: "0.0.0" },
               hostContext: {
                 theme: "light",
                 displayMode: "inline",
-                toolInfo: { tool: { name: TOOL_NAME } },
+                toolInfo: { tool: { name: TOOL_NAME, inputSchema: { type: "object" } } },
               },
               hostCapabilities: { serverTools: {} },
             },

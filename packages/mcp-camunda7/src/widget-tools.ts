@@ -1,5 +1,4 @@
-import type { MCPServer } from "mcp-use/server"
-import { uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
+import type { MCPServer } from "mcp-use"
 import { DEFAULT_HEALTH_THRESHOLDS, type EngineHealthThresholds } from "./data/health-data.js"
 import type { EngineRegistry } from "./lib/resolve-engine.js"
 import { createInMemoryProfileStore, type ProfileStore } from "./lib/profile-store.js"
@@ -24,10 +23,8 @@ export interface Camunda7WidgetToolsOptions {
 export function registerWidgetTools(
   server: MCPServer,
   registry: EngineRegistry,
-  resourceUri: string,
   options: Camunda7WidgetToolsOptions = {},
 ) {
-  const uiMeta = buildUiMeta({ resourceUri })
   const healthThresholds: EngineHealthThresholds = {
     ...DEFAULT_HEALTH_THRESHOLDS,
     ...options.healthThresholds,
@@ -37,7 +34,7 @@ export function registerWidgetTools(
   // in-memory store (→ locale "en") when none is injected (tests/embeds).
   const profileStore = options.profileStore ?? createInMemoryProfileStore()
 
-  const ctx: WidgetToolsContext = { server, registry, uiMeta, healthThresholds, profileStore }
+  const ctx: WidgetToolsContext = { server, registry, healthThresholds, profileStore }
   registerCockpitWidgetTools(ctx)
   registerInstanceWidgetTools(ctx)
   registerIncidentWidgetTools(ctx)

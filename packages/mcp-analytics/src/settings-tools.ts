@@ -1,6 +1,5 @@
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 import { z } from "zod"
-import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
 import {
   buildDataFeedResult,
   buildSingleWidgetView,
@@ -21,6 +20,7 @@ import {
   type AnalyticsSettings,
 } from "./settings.js"
 import { allowsDurableWrites } from "./toolsets.js"
+import { appOnly, showToolBinding } from "./widget-tool-shared.js"
 
 /**
  * The analytics module's settings section — its own show/data/save tool triple
@@ -33,17 +33,20 @@ import { allowsDurableWrites } from "./toolsets.js"
 /** What the settings widget renders: the effective slice + whether saving is wired. */
 export interface AnalyticsSettingsView {
   settings: AnalyticsSettings
-  /** False without a writable store or in a read-only toolset — the widget hides Save. */
+  /**
+   * False without a writable store, in a read-only toolset, or when the
+   * request carries no resolvable profile identity (mcp-use 2 issues no MCP
+   * session ids — identity comes from OAuth or a gateway-stamped
+   * `Mcp-Session-Id`) — the widget hides Save.
+   */
   canSave: boolean
 }
 
 export function registerSettingsTools(
   server: MCPServer,
-  resourceUri: string,
   profileStore?: ProfileSource,
   toolset?: string,
 ): void {
-  const uiMeta = buildUiMeta({ resourceUri })
   // The save tool is a durable write registered OUTSIDE the tool registrar, so
   // it gates itself against the deployment's toolset (see `allowsDurableWrites`
   // — declared names, unknown ones fail open like withToolsetFilter).
@@ -52,7 +55,10 @@ export function registerSettingsTools(
 
   const loadView = async (ctx: unknown): Promise<AnalyticsSettingsView> => ({
     settings: await settingsFor(store, ctx),
-    canSave: Boolean(save),
+    // Store/toolset gate AND per-request identity: without a profile key the
+    // save tool refuses, so the section must render read-only instead of a
+    // Save button whose click errors.
+    canSave: Boolean(save) && resolveSettingsKey(ctx) !== undefined,
   })
 
   const summarize = async (ctx: unknown, view: AnalyticsSettingsView): Promise<string> => {
@@ -71,8 +77,8 @@ export function registerSettingsTools(
       description:
         "Open the analytics settings section for this session: the default look-back period and the minimum comparison bucket size applied when analytics calls omit them.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({}),
-      _meta: uiMeta,
+      inputSchema: z.object({}),
+      ...showToolBinding("analytics_show_settings", "Analytics Settings"),
     },
     withToolErrors(async (_params, ctx) => {
       const view = await loadView(ctx)
@@ -94,8 +100,8 @@ export function registerSettingsTools(
       description:
         "Internal JSON feed (no UI) for the analytics settings section's self-fetch. Prefer analytics_show_settings.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({}),
-      _meta: { ...APP_ONLY_META, "openai/widgetAccessible": true },
+      inputSchema: z.object({}),
+      ...appOnly,
     },
     withToolErrors(async (_params, ctx) => buildDataFeedResult({ ...(await loadView(ctx)) })),
   )
@@ -112,15 +118,16 @@ export function registerSettingsTools(
       description:
         "Update the session's analytics defaults. Only the provided fields change; omitted fields keep their value. The saved defaults apply whenever an analytics call omits `period` or `minBucketSize`.",
       annotations: { idempotentHint: true },
-      schema: analyticsSettingsSaveInput,
-      // No `_meta.ui`: a normal model-visible tool; the settings widget also
-      // calls it and reads the saved slice back from structuredContent.
+      inputSchema: analyticsSettingsSaveInput,
+      // No view binding / app visibility: a normal model-visible tool; the
+      // settings widget also calls it and reads the saved slice back from
+      // structuredContent.
     },
     withToolErrors(async (params, ctx) => {
       const key = resolveSettingsKey(ctx)
       if (!key) {
         throw new Error(
-          "No session identity (missing Mcp-Session-Id) — cannot save analytics settings.",
+          "No caller identity to save analytics settings under (mcp-use 2 issues no MCP session ids) — configure MCP_OAUTH so settings persist per user.",
         )
       }
       // Merge over the RAW stored slice, not the parsed one: unknown fields a

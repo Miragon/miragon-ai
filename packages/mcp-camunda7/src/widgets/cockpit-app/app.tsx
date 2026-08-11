@@ -1,7 +1,6 @@
 import { useEffect, useReducer } from "react"
-import { ModelContext, useWidget } from "mcp-use/react"
 import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
-import { WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
+import { HostModelContext, WidgetRenderer, useHostBridge } from "@miragon/mcp-toolkit-ui/app"
 import { ViewDataState, WidgetShell, useHostWidgets } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "../../view-models.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
@@ -202,7 +201,11 @@ function LandingChooser({
 }
 
 export function CockpitApp({ data }: { data: CockpitAppData | null }) {
-  const { requestDisplayMode, callTool } = useWidget()
+  // Host-portable tool transport for imperative calls (sticky engine select).
+  // Requesting fullscreen is no longer a widget concern since mcp-use 2.x:
+  // the HostBridge carries no `requestDisplayMode`, and the app shell
+  // (`McpAppView`) owns the fullscreen affordance instead.
+  const { callTool } = useHostBridge()
 
   // The query transport (AppQueryProvider). Absent when the host wires no
   // callTool — then every useToolQuery stays disabled (pending forever), so the
@@ -231,13 +234,6 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const cockpitWidgets = { ...hostWidgets, ...camunda7BaseWidgets }
 
   const [{ scope, stack }, dispatch] = useReducer(cockpitReducer, INITIAL_STATE)
-
-  // App-like surface: ask the host for fullscreen once on mount.
-  useEffect(() => {
-    void requestDisplayMode("fullscreen").catch(() => {
-      /* host may decline; inline still works */
-    })
-  }, [requestDisplayMode])
 
   // A single configured engine skips the landing chooser — one-shot auto-enter
   // once the engine list resolves.
@@ -292,13 +288,15 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   if (scope.kind === "fleet") {
     return (
       <WidgetShell>
-        <ModelContext
+        <HostModelContext
           content={`Support is in the consolidated CIB Seven cockpit in CROSS-ENGINE (fleet) mode across engines: ${engines
             .map((e) => e.id)
             .join(
               ", ",
             )}. Offer cross-engine analyses (compare engines, fleet-wide failure & performance) via the analytics tools; drilling into an engine switches to that engine's single-engine cockpit.`}
-        />
+        >
+          {null}
+        </HostModelContext>
         {engines.length > 1 && (
           <nav
             aria-label={translator(locale, "cockpit.aria.breadcrumb")}
@@ -333,9 +331,11 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
 
   return (
     <WidgetShell>
-      <ModelContext
+      <HostModelContext
         content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". ${describeCurrentView(current)} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
-      />
+      >
+        {null}
+      </HostModelContext>
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">
           <nav

@@ -1,7 +1,10 @@
 import { useEffect } from "react"
-import { useWidget } from "mcp-use/react"
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
-import { BpmnZoomControls, useBpmnViewer } from "@miragon-ai/widget-shell/widgets"
+import {
+  BpmnZoomControls,
+  useBpmnViewer,
+  useHostDisplayMode,
+} from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
 import { applyHighlights, HIGHLIGHT_CSS, type BpmnHighlight } from "./bpmn-highlights.js"
 
@@ -39,7 +42,7 @@ export function BpmnDiagram({
   highlights = NO_HIGHLIGHTS,
 }: BpmnDiagramProps) {
   const t = useT()
-  const { displayMode } = useWidget()
+  const displayMode = useHostDisplayMode()
 
   const { containerRef, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
     bpmnXml,

@@ -13,11 +13,11 @@ off a four-link registration chain. Follow the steps for the path you need.
 
 ## Step 0 — pick the render path
 
-| You need…                                | Path                                                       |
-| ---------------------------------------- | ---------------------------------------------------------- |
-| JSON data for the model                  | Registrar tool in `src/tools/<domain>.ts` (Steps 1–3)      |
-| A widget rendered for the user + summary | `show_*` widget tool in `widget-tools.ts` (Step 4)         |
-| App-only JSON for in-widget refresh/nav  | `*_data` feed in `widget-tools.ts`, `appOnlyMeta` (Step 4) |
+| You need…                                | Path                                                      |
+| ---------------------------------------- | --------------------------------------------------------- |
+| JSON data for the model                  | Registrar tool in `src/tools/<domain>.ts` (Steps 1–3)     |
+| A widget rendered for the user + summary | `show_*` widget tool in `widget-tools.ts` (Step 4)        |
+| App-only JSON for in-widget refresh/nav  | `*_data` feed in `widget-tools.ts`, `...appOnly` (Step 4) |
 
 ## Step 1 — input schema in client-camunda7
 
@@ -155,19 +155,22 @@ hand.
 Then register the widget tool in `src/widget-tools.ts` (this file is the documented
 exception that uses `server.tool()` directly):
 
-- `show_*` tools: `_meta: buildUiMeta({ resourceUri })` (`uiMeta` from
-  `@miragon/mcp-toolkit-core`) — since toolkit 0.8.0 it emits the full dual-protocol
-  widget contract (`ui/resourceUri`, `openai/outputTemplate`, `openai/toolInvocation/*`,
-  …) that ext-apps hosts key on; **never add those keys by hand**. Resolve the engine via
+- `show_*` tools: spread `...showToolBinding(TOOL_NAME_CONST, "Title")` (from
+  `./widget-tools/shared.js`) into the definition and use `inputSchema:` (mcp-use 2
+  field name) — the helper binds a native mcp-use view named after the tool
+  (`view: { name }`, mcp-use then emits all `_meta.ui.*` keys and the
+  `ui://views/<tool>.html` resource itself), adds the required passthrough
+  `outputSchema`, and stamps the Apps-SDK half via `appsSdkMeta`; **never write
+  `_meta.ui` keys by hand** (mcp-use owns and overwrites that namespace). Resolve the engine via
   `resolveEngine(args.engine, registry)` — it already returns `baseUrl`/`cockpitUrl`;
   never fish them out of `registry.engines`. Return
   `buildSingleWidgetView({ widget, app: "camunda7", dataType, data, title, summary })` or
   `buildComposedView(...)` (both from `@miragon-ai/widget-shell/server`). The
   `summary` is the model-facing text channel (1-2 sentences, key figures, no raw
   data) — the full payload travels only in `structuredContent`.
-- `*_data` feeds: `_meta: appOnlyMeta` (= `{ ui: { visibility: ["app"] } }`,
-  SEP-1865 — hides the tool from the LLM on conforming hosts; **no**
-  `resourceUri`) — return `buildDataFeedResult(data)` (from
+- `*_data` feeds: spread `...appOnly` (from `./widget-tools/shared.js` — the native
+  `visibility: "app"` field, emitted as SEP-1865 `_meta.ui.visibility: ["app"]`, plus
+  `openai/widgetAccessible`; **no** view binding) — return `buildDataFeedResult(data)` (from
   `@miragon-ai/widget-shell/server`, aliased `rawData` in `widget-tools.ts`) so the
   in-widget `callTool()` gets JSON back instead of the host rendering a new widget.
   Wrap every handler in `withToolErrors` (from `@miragon-ai/widget-shell/server`).

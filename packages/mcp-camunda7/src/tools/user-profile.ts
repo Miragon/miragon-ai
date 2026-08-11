@@ -1,6 +1,5 @@
 import { z } from "zod"
-import type { MCPServer } from "mcp-use/server"
-import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
+import type { MCPServer } from "mcp-use"
 import {
   buildDataFeedResult as rawData,
   buildSingleWidgetView,
@@ -25,6 +24,7 @@ import {
   resolveProfileKey,
 } from "../lib/resolve-profile-key.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { appOnly, showToolBinding } from "../widget-tools/shared.js"
 import { translator } from "../messages/index.js"
 
 /**
@@ -69,11 +69,8 @@ export function registerUserProfileTools(
   server: MCPServer,
   store: ProfileStore,
   registry: EngineRegistry,
-  resourceUri: string,
   toolset?: string,
 ): void {
-  const uiMeta = buildUiMeta({ resourceUri })
-
   // The save tool is a durable write registered OUTSIDE the registrar, so it
   // gates itself — same rule as `withToolsetFilter`: unknown toolset names fail
   // open. Decided up front because the two view tools report the outcome as
@@ -88,15 +85,20 @@ export function registerUserProfileTools(
   const loadView = async (ctx: unknown): Promise<UserProfileView> => {
     // Same key precedence as the save path (resolveProfileKey maps stdio to
     // the shared anonymous record), so a keyless save is read back instead of
-    // being write-only. Only an HTTP request without a session id resolves no
-    // key — that renders defaults.
+    // being write-only. An HTTP request without any identity resolves no key —
+    // that renders defaults, and since mcp-use 2 issues no MCP session ids it
+    // is the NORM for un-authenticated HTTP deployments (identity comes from
+    // OAuth or a gateway-stamped Mcp-Session-Id).
     const key = resolveProfileKey(ctx)
     const profile =
       (key ? await store.get(key) : undefined) ?? defaultUserProfile(key ?? ANONYMOUS_PROFILE_KEY)
     return {
       profile,
       availableEngines: registry.engines.map((e) => ({ id: e.id, baseUrl: e.baseUrl })),
-      canSave,
+      // Toolset gate (decided up front) AND per-request identity: without a
+      // profile key the save tool refuses, so the panel must render read-only
+      // instead of a Save button whose click errors.
+      canSave: canSave && key !== undefined,
     }
   }
 
@@ -107,8 +109,8 @@ export function registerUserProfileTools(
       description:
         "Open the user profile & settings panel for this MiragonAI session: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({}),
-      _meta: uiMeta,
+      inputSchema: z.object({}),
+      ...showToolBinding(CAMUNDA7_SHOW_USER_PROFILE, "Profile & Settings"),
     },
     withToolErrors(async (_params, ctx) => {
       const view = await loadView(ctx)
@@ -130,10 +132,10 @@ export function registerUserProfileTools(
       description:
         "Internal JSON feed (no UI) for the current session's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({}),
-      // widgetAccessible: Apps-SDK hosts only allow in-widget callTool on
-      // tools carrying the key (same dual contract as the widget-tools feeds).
-      _meta: { ...APP_ONLY_META, "openai/widgetAccessible": true },
+      inputSchema: z.object({}),
+      // visibility "app" + widgetAccessible: same dual app-only contract as
+      // the widget-tools feeds (see `widget-tools/shared.ts`).
+      ...appOnly,
     },
     // Spread: the feed contract takes `Record<string, unknown>`, which the
     // named `UserProfileView` interface doesn't structurally satisfy.
@@ -151,17 +153,19 @@ export function registerUserProfileTools(
       annotations: saveAnnotations,
       // Deliberately WITHOUT `modules`: foreign module slices are written
       // through their owning module's save tool (e.g. analytics_save_settings).
-      schema: userProfileToolSaveInput,
-      // No `_meta.ui`: this is a normal model-visible tool returning a text
-      // summary; the widget also calls it and reads the updated profile back
-      // from structuredContent.
+      inputSchema: userProfileToolSaveInput,
+      // No `view`/`visibility`: this is a normal model-visible tool returning
+      // a text summary; the widget also calls it and reads the updated profile
+      // back from structuredContent.
     },
     withToolErrors(async (params, ctx) => {
       const key = resolveProfileKey(ctx)
       if (!key) {
-        // HTTP request without a session id: refuse instead of silently
+        // HTTP request without any identity: refuse instead of silently
         // writing into a record shared across unrelated keyless clients.
-        throw new Error("No session identity (missing Mcp-Session-Id) — cannot save the profile.")
+        throw new Error(
+          "No caller identity to save the profile under (mcp-use 2 issues no MCP session ids) — configure MCP_OAUTH so settings persist per user.",
+        )
       }
       // Stamping the auth user id marks the record user-bound — exempt from
       // the session-TTL cleanup.

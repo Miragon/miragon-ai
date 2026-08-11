@@ -45,7 +45,7 @@ import {
   type WidgetToolsContext,
   clusterDetailShape,
   incidentsDashboardFilterShape,
-  appOnlyMeta,
+  appOnly,
 } from "./shared.js"
 
 /** The app-only `*_data` JSON feeds (SEP-1865) behind every widget above. */
@@ -64,8 +64,8 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the cockpit overview — per-definition stats. Prefer camunda7_open_cockpit.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({ ...engineParamShape }),
-      _meta: appOnlyMeta,
+      inputSchema: z.object({ ...engineParamShape }),
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -80,8 +80,8 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the engine health verdict + incident clusters. Prefer camunda7_show_engine_health / camunda7_open_cockpit.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({ ...engineParamShape }),
-      _meta: appOnlyMeta,
+      inputSchema: z.object({ ...engineParamShape }),
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -96,8 +96,8 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for one failure cluster's detail. Prefer camunda7_show_cluster_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({ ...clusterDetailShape, ...engineParamShape }),
-      _meta: appOnlyMeta,
+      inputSchema: z.object({ ...clusterDetailShape, ...engineParamShape }),
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -121,12 +121,12 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for a definition's running instances. Prefer camunda7_show_process_instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...processInstancesFilterShape,
         ...pagingShape,
         ...engineParamShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -151,13 +151,13 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the BPMN viewer — diagram XML plus live overlays. Prefer camunda7_show_bpmn_viewer.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         processInstanceId: z.string().optional().describe("Instance to overlay live state for."),
         processDefinitionKey: z.string().optional().describe("Definition for a static diagram."),
         version: z.number().int().positive().optional(),
         ...engineParamShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -178,12 +178,12 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for deployed process definitions, offset-paged. Prefer camunda7_show_process_list.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...processListFilterShape,
         ...pagingShape,
         ...engineParamShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -206,11 +206,11 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for a single process instance. Prefer camunda7_show_instance_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         processInstanceId: z.string().describe("The process instance ID"),
         ...engineParamShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
@@ -234,12 +234,12 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       title: "Jobs data (internal)",
       description: "Internal JSON feed (no UI) for jobs. Prefer camunda7_show_job_panel.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...jobsFilterShape,
         ...pagingShape,
         ...engineParamShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId } = resolveEngine(args.engine, registry)
@@ -261,11 +261,11 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the incidents dashboard — open incidents grouped by process. Prefer camunda7_show_incidents_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...incidentsDashboardFilterShape,
         ...engineParamShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
@@ -290,11 +290,11 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the unified definition view — header, KPIs (incl. failed jobs), BPMN overlays, activity-grouped incidents. Prefer camunda7_show_process_detail / camunda7_show_process_incidents.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
         ...engineParamShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
@@ -318,12 +318,12 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for one activity's incident rows, offset-paged. Prefer camunda7_show_process_incidents.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...activityIncidentsFilterShape,
         ...pagingShape,
         ...engineParamShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
@@ -350,11 +350,11 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for a single incident — stacktrace, BPMN with the failing activity, variables, activity tree, history. Prefer camunda7_show_incident_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         incidentId: z.string().describe("The incident ID to inspect"),
         ...engineParamShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(

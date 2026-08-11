@@ -1,10 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { MCPServer, jwksVerifier, oauthProxy } from "mcp-use/server"
 import {
   getOAuthConfigFromEnv,
   getOAuthProviderFromEnv,
-  installAuthorizeRedirectAllowlist,
-  isAllowedRedirectUri,
   oauthSecretEnvVarNames,
 } from "../src/oauth.js"
 
@@ -30,25 +27,64 @@ describe("getOAuthProviderFromEnv", () => {
   })
 
   // Exact assertions on purpose: the Keycloak factory does raw string
-  // interpolation without validation, so swapped serverUrl/realm arguments
-  // would still construct — only exact endpoint values catch that.
+  // interpolation of serverUrl/realm, so swapped arguments would still
+  // construct — only exact endpoint values catch that.
   it("builds a Keycloak provider with the exact realm endpoints", () => {
     const provider = getOAuthProviderFromEnv(
       JSON.stringify({
         provider: "keycloak",
         serverUrl: "https://kc.example.com",
         realm: "platform",
-        audience: "https://mcp.example.com/mcp",
       }),
     )
     expect(provider).toBeDefined()
-    expect(provider!.getIssuer()).toBe("https://kc.example.com/realms/platform")
-    expect(provider!.getAuthEndpoint()).toBe(
+    expect(provider!.oauthMetadata.issuer).toBe("https://kc.example.com/realms/platform")
+    expect(provider!.oauthMetadata.authorization_endpoint).toBe(
       "https://kc.example.com/realms/platform/protocol/openid-connect/auth",
     )
-    expect(provider!.getTokenEndpoint()).toBe(
+    expect(provider!.oauthMetadata.token_endpoint).toBe(
       "https://kc.example.com/realms/platform/protocol/openid-connect/token",
     )
+  })
+
+  it("mirrors the 2.x user id as the 1.x userId spelling (dashboard/profile scoping)", () => {
+    // The toolkit's dashboard tools scope by ctx.auth.user.userId; the 2.x
+    // providers expose only `id`. Without the mirror, extractUserId yields
+    // undefined and per-user dashboard scoping collapses (cross-user
+    // list/load/delete). The mirror also keeps 1.x user-keyed records
+    // (key = token sub via userId) resolving unchanged.
+    const provider = getOAuthProviderFromEnv(
+      JSON.stringify({
+        provider: "keycloak",
+        serverUrl: "https://kc.example.com",
+        realm: "platform",
+      }),
+    )
+    const extra = provider!.mapAuthInfo({
+      token: "t",
+      clientId: "c",
+      scopes: [],
+      extra: { payload: { sub: "user-123", realm_access: { roles: [] } } },
+    })
+    expect(extra.user).toMatchObject({ id: "user-123", userId: "user-123" })
+  })
+
+  it("warns about (and otherwise ignores) the 1.x audience knob", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      const provider = getOAuthProviderFromEnv(
+        JSON.stringify({
+          provider: "keycloak",
+          serverUrl: "https://kc.example.com",
+          realm: "platform",
+          audience: "https://mcp.example.com/mcp",
+        }),
+      )
+      expect(provider).toBeDefined()
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("audience"))
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it("builds an Auth0 provider from the bare tenant domain", () => {
@@ -56,96 +92,48 @@ describe("getOAuthProviderFromEnv", () => {
       JSON.stringify({
         provider: "auth0",
         domain: "tenant.auth0.com",
-        audience: "https://mcp.example.com/mcp",
       }),
     )
     expect(provider).toBeDefined()
-    expect(provider!.getIssuer()).toBe("https://tenant.auth0.com/")
-    expect(provider!.getAuthEndpoint()).toBe("https://tenant.auth0.com/authorize")
-    expect(provider!.getTokenEndpoint()).toBe("https://tenant.auth0.com/oauth/token")
-  })
-
-  it("builds a generic OIDC provider from issuer + JWKS + endpoints", async () => {
-    const provider = getOAuthProviderFromEnv(
-      JSON.stringify({
-        provider: "oidc",
-        issuer: "https://idp.example.com",
-        jwksUrl: "https://idp.example.com/jwks",
-        authEndpoint: "https://idp.example.com/authorize",
-        tokenEndpoint: "https://idp.example.com/token",
-      }),
+    expect(provider!.oauthMetadata.issuer).toBe("https://tenant.auth0.com/")
+    expect(provider!.oauthMetadata.authorization_endpoint).toBe(
+      "https://tenant.auth0.com/authorize",
     )
-    expect(provider).toBeDefined()
-    expect(provider!.getIssuer()).toBe("https://idp.example.com")
-    expect(provider!.getAuthEndpoint()).toBe("https://idp.example.com/authorize")
-    expect(provider!.getTokenEndpoint()).toBe("https://idp.example.com/token")
-    // Pins that verifyToken is actually wired to the jwksVerifier: a
-    // non-JWT must be rejected (and must not need any network to be).
-    await expect(provider!.verifyToken("not-a-jwt")).rejects.toThrow()
+    expect(provider!.oauthMetadata.token_endpoint).toBe("https://tenant.auth0.com/oauth/token")
   })
 
-  it("builds an oidc-proxy provider and exposes the redirect allowlist", async () => {
-    vi.stubEnv("MCP_URL", "https://mcp.example.com")
-    const { provider, redirectAllowlist } = getOAuthConfigFromEnv(
-      JSON.stringify({ ...OIDC_PROXY_BASE, clientSecret: "s3cret" }),
-    )
-    expect(provider).toBeDefined()
-    const proxy = provider as unknown as { type?: string; clientId?: string; clientSecret?: string }
-    expect(proxy.type).toBe("proxy")
-    expect(proxy.clientId).toBe("mcp-server-camunda7")
-    expect(proxy.clientSecret).toBe("s3cret")
-    expect(redirectAllowlist).toEqual(["https://claude.ai/api/mcp/auth_callback"])
-    await expect(provider!.verifyToken("not-a-jwt")).rejects.toThrow()
+  // mcp-use 2 removed jwksVerifier/oauthProxy — the modes built on them must
+  // fail the boot loudly instead of coming up unauthenticated.
+  it("rejects the oidc provider with an actionable capability error", () => {
+    expect(() =>
+      getOAuthProviderFromEnv(
+        JSON.stringify({
+          provider: "oidc",
+          issuer: "https://idp.example.com",
+          jwksUrl: "https://idp.example.com/jwks",
+          authEndpoint: "https://idp.example.com/authorize",
+          tokenEndpoint: "https://idp.example.com/token",
+        }),
+      ),
+    ).toThrow(/not supported on mcp-use 2/)
   })
 
-  it("oidc-proxy: requires allowedRedirectUris (the interception safeguard)", () => {
+  it("rejects the oidc-proxy provider with an actionable capability error", () => {
+    expect(() =>
+      getOAuthConfigFromEnv(JSON.stringify({ ...OIDC_PROXY_BASE, clientSecret: "s3cret" })),
+    ).toThrow(/not supported on mcp-use 2/)
+  })
+
+  it("oidc-proxy: still schema-validates before the capability error (config typos stay precise)", () => {
     // JSON.stringify drops the `undefined` key → config without allowedRedirectUris.
     expect(() =>
       getOAuthConfigFromEnv(JSON.stringify({ ...OIDC_PROXY_BASE, allowedRedirectUris: undefined })),
-    ).toThrow()
-    expect(() =>
-      getOAuthConfigFromEnv(JSON.stringify({ ...OIDC_PROXY_BASE, allowedRedirectUris: [] })),
-    ).toThrow()
-  })
-
-  it("oidc-proxy: resolves the client secret from a referenced env var, failing fast when unset", () => {
-    vi.stubEnv("MY_IDP_SECRET", "from-env")
-    expect(
-      (
-        getOAuthConfigFromEnv(
-          JSON.stringify({ ...OIDC_PROXY_BASE, clientSecretEnvVar: "MY_IDP_SECRET" }),
-        ).provider as unknown as { clientSecret?: string }
-      ).clientSecret,
-    ).toBe("from-env")
-
-    expect(() =>
-      getOAuthConfigFromEnv(
-        JSON.stringify({ ...OIDC_PROXY_BASE, clientSecretEnvVar: "MISSING_SECRET_VAR" }),
-      ),
-    ).toThrow(/MISSING_SECRET_VAR/)
-  })
-
-  it("oidc-proxy: rejects a present-but-empty clientSecret and both-secret-forms", () => {
-    expect(() =>
-      getOAuthConfigFromEnv(JSON.stringify({ ...OIDC_PROXY_BASE, clientSecret: "" })),
-    ).toThrow()
+    ).toThrow(/allowedRedirectUris/i)
     expect(() =>
       getOAuthConfigFromEnv(
         JSON.stringify({ ...OIDC_PROXY_BASE, clientSecret: "a", clientSecretEnvVar: "B" }),
       ),
     ).toThrow(/not both/)
-  })
-
-  it("oidc-proxy: exempts its own clientSecretEnvVar from the stray-MCP_USE_OAUTH_ guard", () => {
-    vi.stubEnv("MCP_USE_OAUTH_MY_SECRET", "shh")
-    expect(
-      getOAuthConfigFromEnv(
-        JSON.stringify({ ...OIDC_PROXY_BASE, clientSecretEnvVar: "MCP_USE_OAUTH_MY_SECRET" }),
-      ).provider,
-    ).toBeDefined()
-    expect(
-      oauthSecretEnvVarNames(JSON.stringify({ clientSecretEnvVar: "MCP_USE_OAUTH_MY_SECRET" })),
-    ).toEqual(["MCP_USE_OAUTH_MY_SECRET"])
   })
 
   it("rejects invalid JSON with an actionable message", () => {
@@ -160,10 +148,6 @@ describe("getOAuthProviderFromEnv", () => {
         JSON.stringify({ provider: "keycloak", serverUrl: "https://kc.example.com" }),
       ),
     ).toThrow()
-    // auth0 without the mandatory audience
-    expect(() =>
-      getOAuthProviderFromEnv(JSON.stringify({ provider: "auth0", domain: "tenant.auth0.com" })),
-    ).toThrow()
   })
 
   it("rejects a scheme-prefixed auth0 domain at boot instead of 401ing later", () => {
@@ -172,7 +156,6 @@ describe("getOAuthProviderFromEnv", () => {
         JSON.stringify({
           provider: "auth0",
           domain: "https://tenant.auth0.com",
-          audience: "https://mcp.example.com/mcp",
         }),
       ),
     ).toThrow(/bare hostname/)
@@ -190,103 +173,12 @@ describe("getOAuthProviderFromEnv", () => {
       ),
     ).toThrow(/MCP_USE_OAUTH_KEYCLOAK_AUDIENCE/)
   })
-})
 
-/**
- * The security-critical test: exercise the allowlist against the REAL mcp-use
- * proxy routing. Without the guard, mcp-use's /authorize forwards the
- * authorization code to any http/https redirect_uri (auth-code interception).
- */
-describe("installAuthorizeRedirectAllowlist (against real mcp-use proxy routing)", () => {
-  async function proxyHandler(allowlist: string[]) {
-    const server = new MCPServer({
-      name: "test",
-      version: "0.0.0",
-      oauth: oauthProxy({
-        issuer: "https://idp.example.com",
-        authEndpoint: "https://idp.example.com/authorize",
-        tokenEndpoint: "https://idp.example.com/token",
-        clientId: "gw",
-        clientSecret: "s",
-        verifyToken: jwksVerifier({
-          jwksUrl: "https://idp.example.com/jwks",
-          issuer: "https://idp.example.com",
-        }),
-      }),
-    })
-    installAuthorizeRedirectAllowlist(server, allowlist)
-    return server.getHandler()
-  }
-
-  function authorizeUrl(redirectUri: string): string {
-    const q = new URLSearchParams({
-      client_id: "gw",
-      response_type: "code",
-      redirect_uri: redirectUri,
-      code_challenge: "abc",
-      code_challenge_method: "S256",
-    })
-    return `http://localhost/authorize?${q.toString()}`
-  }
-
-  it("blocks an /authorize with a redirect_uri outside the allowlist", async () => {
-    const handler = await proxyHandler(["https://claude.ai/api/mcp/auth_callback"])
-    const res = await handler(
-      new Request(authorizeUrl("https://attacker.example/cb"), { redirect: "manual" }),
-    )
-    expect(res.status).toBe(400)
-  })
-
-  it("lets an allowlisted redirect_uri through to the IdP redirect", async () => {
-    const handler = await proxyHandler(["https://claude.ai/api/mcp/auth_callback"])
-    const res = await handler(
-      new Request(authorizeUrl("https://claude.ai/api/mcp/auth_callback"), { redirect: "manual" }),
-    )
-    // mcp-use 302-redirects to the IdP's /authorize once the request is allowed.
-    expect(res.status).toBe(302)
-    expect(res.headers.get("location")).toContain("https://idp.example.com/authorize")
-  })
-
-  it("accepts an allowlisted LOOPBACK callback on any ephemeral port (RFC 8252)", async () => {
-    const handler = await proxyHandler(["http://localhost/callback"])
-    const res = await handler(
-      new Request(authorizeUrl("http://127.0.0.1:53187/callback"), { redirect: "manual" }),
-    )
-    expect(res.status).toBe(302)
-  })
-
-  it("still blocks loopback callbacks with a different path", async () => {
-    const handler = await proxyHandler(["http://localhost/callback"])
-    const res = await handler(
-      new Request(authorizeUrl("http://127.0.0.1:53187/evil"), { redirect: "manual" }),
-    )
-    expect(res.status).toBe(400)
-  })
-})
-
-describe("isAllowedRedirectUri", () => {
-  it("matches non-loopback entries EXACTLY (no port or path slack)", () => {
-    const allowlist = ["https://claude.ai/api/mcp/auth_callback"]
-    expect(isAllowedRedirectUri("https://claude.ai/api/mcp/auth_callback", allowlist)).toBe(true)
-    expect(isAllowedRedirectUri("https://claude.ai:8443/api/mcp/auth_callback", allowlist)).toBe(
-      false,
-    )
-    expect(isAllowedRedirectUri("https://claude.ai/api/mcp/other", allowlist)).toBe(false)
-    expect(isAllowedRedirectUri("not a url", allowlist)).toBe(false)
-  })
-
-  it("matches loopback entries across ports and loopback hosts, same scheme + path", () => {
-    const allowlist = ["http://localhost/callback"]
-    expect(isAllowedRedirectUri("http://localhost:49152/callback", allowlist)).toBe(true)
-    expect(isAllowedRedirectUri("http://127.0.0.1:65001/callback", allowlist)).toBe(true)
-    expect(isAllowedRedirectUri("http://[::1]:8080/callback", allowlist)).toBe(true)
-    expect(isAllowedRedirectUri("https://localhost:49152/callback", allowlist)).toBe(false)
-    expect(isAllowedRedirectUri("http://localhost:49152/other", allowlist)).toBe(false)
-    // A loopback CANDIDATE never piggybacks on a non-loopback entry.
+  it("exempts the config's own clientSecretEnvVar from the stray-env guard and reports it", () => {
     expect(
-      isAllowedRedirectUri("http://localhost:49152/api/mcp/auth_callback", [
-        "https://claude.ai/api/mcp/auth_callback",
-      ]),
-    ).toBe(false)
+      oauthSecretEnvVarNames(JSON.stringify({ clientSecretEnvVar: "MCP_USE_OAUTH_MY_SECRET" })),
+    ).toEqual(["MCP_USE_OAUTH_MY_SECRET"])
+    expect(oauthSecretEnvVarNames(undefined)).toEqual([])
+    expect(oauthSecretEnvVarNames("{broken")).toEqual([])
   })
 })

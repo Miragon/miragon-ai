@@ -1,6 +1,6 @@
 import { useCallback, useEffect, type ReactNode } from "react"
-import { useWidget } from "mcp-use/react"
 import { AppQueryProvider, LocaleProvider, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { useHostBridge } from "@miragon/mcp-toolkit-ui/app"
 import { useApplyTheme } from "@miragon-ai/widget-shell/widgets"
 
 /**
@@ -21,13 +21,14 @@ interface ProfileFeed {
  * `show_*` renders — is localized and themed with zero per-widget wiring.
  *
  * `useToolQuery` needs a `callTool` from an `AppQueryProvider`; we thread the
- * one from `useWidget()` (the host bridge) here. `McpAppView` sets up its own
- * `AppQueryProvider` for its widgets — both share the toolkit's singleton query
- * client, so this nests cleanly. Defaults to English / system when the feed is
- * unavailable (e.g. the camunda7 module is disabled).
+ * one from `useHostBridge()` (installed by `McpUseHostBridgeProvider` at the
+ * bundle root) here. `McpAppView` sets up its own `AppQueryProvider` for its
+ * widgets — both share the toolkit's singleton query client, so this nests
+ * cleanly. Defaults to English / system when the feed is unavailable (e.g.
+ * the camunda7 module is disabled).
  */
 export function ProfileGate({ children }: { children: ReactNode }) {
-  const { callTool } = useWidget()
+  const { callTool } = useHostBridge()
   // Adapt the host bridge's `(name, Record<string, unknown>)` callTool to the
   // provider's `(name, object)` signature (a plain `{}` isn't a Record).
   const callToolFn = useCallback(

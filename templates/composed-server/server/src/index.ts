@@ -2,7 +2,9 @@
 
 import path from "node:path"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import { createFrameworkApp, installToolCallNameCapture } from "@miragon/mcp-toolkit-core/tools"
+import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
+import type { MCPServer } from "mcp-use"
+import { installMcpRequestContext } from "@miragon-ai/widget-shell/server"
 import { createDashboardStore, createProfileStore, startSessionCleanup } from "./persistence.js"
 import { emitBootWarnings, getAppConfig, getPlugins, warnUnknownEnvVars } from "./setup.js"
 
@@ -21,23 +23,28 @@ const DIST_DIR = import.meta.filename.endsWith(".ts")
   ? path.join(import.meta.dirname, "..", "dist")
   : import.meta.dirname
 
-const HTML_PATH = path.join(DIST_DIR, "mcp-app.html")
-
-const app = await createFrameworkApp({
+// Explicit annotation: default-exporting the instance makes its type public
+// API, and the inferred type reaches into hono internals TS cannot name
+// portably (TS2742). `unknown` user slot = createFrameworkApp's return shape.
+const app: MCPServer<unknown> = await createFrameworkApp({
   name: "acme-mcp",
   version: "0.1.0",
   host: "0.0.0.0",
-  baseUrl: process.env.MCP_URL,
+  // No baseUrl since mcp-use 2: the serving origin is resolved per request
+  // (or from MCP_URL, which mcp-use reads itself for offline derivations).
   // Cast: toolkit's `plugins: AppPlugin[]` is unparameterized (TServer = unknown),
   // but our plugin factories return `AppPlugin<MCPServer>`. The framework invokes
   // `registerTools(MCPServer)` at runtime, so the narrowing is sound.
   plugins: getPlugins(profileStore) as AppPlugin[],
   appConfig: getAppConfig(),
   app: {
-    // resourceUri omitted: createFrameworkApp content-hashes htmlPath into a
-    // cache-busting ui://acme-mcp/mcp-app.<hash>.html (with a stable dev
-    // fallback when the bundle isn't built yet).
-    htmlPath: HTML_PATH,
+    // The compiled widget bundle (ES module + stylesheet — the mcp-use 2
+    // native-view shape; the 1.x single-file HTML is gone). Read ONCE at
+    // boot: after rebuilding the bundle, restart the host.
+    bundle: {
+      jsPath: path.join(DIST_DIR, "mcp-app.js"),
+      cssPath: path.join(DIST_DIR, "mcp-app.css"),
+    },
     // Visual builder + dashboard-persistence tools (get-builder-catalogue,
     // save/load/list/delete-dashboard) — opt-in since toolkit 0.4.0.
     builder: true,
@@ -45,14 +52,22 @@ const app = await createFrameworkApp({
   },
 })
 
+// Ambient per-request info (session id, auth user, Authorization header) for
+// the consumers that cannot receive a handler `ctx` — most notably the
+// profile-key resolution in registrar handlers. Idempotent — the
+// camunda7/analytics plugins install it too.
+installMcpRequestContext(app)
+
 // --- Tool-call logging -------------------------------------------------
 // One log line per tools/call with tool name, duration, and outcome.
 // Arguments and results are deliberately not logged — they can carry
 // credentials or PII (e.g. process variables).
-const resolveToolName = installToolCallNameCapture(app)
-
-app.use("mcp:tools/call", async (_ctx, next) => {
-  const toolName = resolveToolName() ?? "unknown"
+//
+// mcp-use 2 delivers the tool name on `ctx.params.name` and fires this
+// middleware once per call (batch entries individually) — the 1.x HTTP-layer
+// name capture is gone with the problem it worked around.
+app.use("mcp:tools/call", async (ctx, next) => {
+  const toolName = (ctx.params as { name?: string } | undefined)?.name ?? "unknown"
   const start = Date.now()
   try {
     const result = await next()
@@ -70,11 +85,31 @@ app.use("mcp:tools/call", async (_ctx, next) => {
   }
 })
 
-// `||` (not `??`): an empty `PORT=` assignment from an env_file must fall back
-// to 8400 — `Number("")` is 0, which would bind a random OS-assigned port.
-const port = Number(process.env.PORT?.trim() || 8400)
-if (!Number.isInteger(port) || port < 1 || port > 65535) {
-  throw new Error(`[acme-mcp] invalid PORT "${process.env.PORT}" — expected an integer 1-65535`)
+// `mcp-use dev` (the dev CLI since mcp-use 2) imports this entry, takes the
+// default-exported server, and owns the socket + process lifecycle itself —
+// it sets MCP_USE_DEV_CLI before loading the entry and rejects an entry
+// without a default export. Self-serving below stays for production
+// (`node dist/index.js`) and direct `node src/index.ts` runs.
+if (process.env.MCP_USE_DEV_CLI) {
+  // The dev CLI also unconditionally primes its own views manifest (built
+  // from the optional `views/` directory — EMPTY in this template, which
+  // bundles views itself) onto the entry's export, and mcp-use rejects a
+  // second prime after createFrameworkApp already primed the registry from
+  // `app.bundle`. Swallow the CLI's empty prime — the bundle prime is the
+  // complete one. Scoped to the dev CLI so a genuine double-prime still
+  // fails loudly.
+  ;(app as unknown as { __primeViews: () => void }).__primeViews = () => {}
 }
 
-await app.listen(port)
+export default app
+
+if (!process.env.MCP_USE_DEV_CLI) {
+  // `||` (not `??`): an empty `PORT=` assignment from an env_file must fall back
+  // to 8400 — `Number("")` is 0, which would bind a random OS-assigned port.
+  const port = Number(process.env.PORT?.trim() || 8400)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`[acme-mcp] invalid PORT "${process.env.PORT}" — expected an integer 1-65535`)
+  }
+
+  await app.listen(port)
+}

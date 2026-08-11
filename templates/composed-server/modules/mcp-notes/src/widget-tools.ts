@@ -1,6 +1,6 @@
 import { z } from "zod"
-import type { MCPServer } from "mcp-use/server"
-import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
+import type { MCPServer } from "mcp-use"
+import { appsSdkMeta, viewResourceUri } from "@miragon/mcp-toolkit-core"
 import {
   buildDataFeedResult,
   buildSingleWidgetView,
@@ -10,11 +10,37 @@ import { NOTES_LIST_DATA } from "./tool-names.js"
 import type { NotesStore } from "./notes-store.js"
 
 /**
- * App-only marker for the internal `*_data` feed — same dual contract as the
- * camunda7/analytics modules: SEP-1865 hosts hide the tool from the model,
- * `openai/widgetAccessible` lets Apps-SDK hosts accept the in-widget callTool.
+ * Binding for a model-visible `*_show_*` tool — same house pattern as the
+ * camunda7/analytics modules (module-local on purpose: modules are peers).
+ * The view name IS the tool name: mcp-use derives the entire MCP Apps half of
+ * the wire contract (`_meta.ui.resourceUri`, flat `ui/resourceUri`, resource
+ * CSP) from the first-class `view` binding — never stamp `ui` keys by hand,
+ * mcp-use overwrites that namespace on `tools/list`. What mcp-use does NOT
+ * derive is the OpenAI Apps SDK half (`openai/*`): `appsSdkMeta` builds it,
+ * pointing `openai/outputTemplate` at the same `ui://views/<name>.html`
+ * resource. The `outputSchema` is required by mcp-use for any view-bound
+ * tool; `passthrough` matches the free-form `structuredContent` the
+ * widget-shell view builders return.
  */
-const appOnlyMeta = { ...APP_ONLY_META, "openai/widgetAccessible": true }
+function showToolBinding(name: string, title: string) {
+  return {
+    view: { name },
+    outputSchema: z.object({}).passthrough(),
+    _meta: appsSdkMeta({ resourceUri: viewResourceUri(name), title }),
+  }
+}
+
+/**
+ * Marker for the internal `*_data` feed: mcp-use's native `visibility: "app"`
+ * hides the tool from the model (SEP-1865), while the hand-stamped
+ * `openai/widgetAccessible` lets Apps SDK hosts accept the in-widget
+ * `callTool`. Deliberately no `view` binding — the feed must return JSON,
+ * not render UI.
+ */
+const appOnly = {
+  visibility: "app" as const,
+  _meta: { "openai/widgetAccessible": true },
+}
 
 /** Inputs shared by `notes_show_notes` and its `notes_list_data` feed. */
 const notesInputShape = {
@@ -24,14 +50,7 @@ const notesInputShape = {
     .describe("Case-insensitive filter matched against title, text, and tags."),
 }
 
-export function registerWidgetTools(
-  server: MCPServer,
-  store: NotesStore,
-  resourceUri: string,
-  title: string,
-) {
-  const uiMeta = buildUiMeta({ resourceUri })
-
+export function registerWidgetTools(server: MCPServer, store: NotesStore, title: string) {
   // Render path 2 of 3: renders the widget for the user AND returns a short
   // summary for the model. The `_show_` naming is load-bearing — the server's
   // widget-contract e2e test asserts the widget `_meta` on it by name.
@@ -42,8 +61,8 @@ export function registerWidgetTools(
       description:
         "Show the team's operations notes as an interactive list. Optional case-insensitive filter over title, text, and tags.",
       annotations: { readOnlyHint: true, idempotentHint: true },
-      schema: z.object(notesInputShape),
-      _meta: uiMeta,
+      inputSchema: z.object(notesInputShape),
+      ...showToolBinding("notes_show_notes", "Team Notes"),
     },
     withToolErrors(async (args) => {
       const notes = store.list(args)
@@ -71,8 +90,8 @@ export function registerWidgetTools(
       description:
         "Internal JSON feed (no UI) for the notes widget's self-fetch. Prefer notes_show_notes.",
       annotations: { readOnlyHint: true, idempotentHint: true },
-      schema: z.object(notesInputShape),
-      _meta: appOnlyMeta,
+      inputSchema: z.object(notesInputShape),
+      ...appOnly,
     },
     withToolErrors(async (args) => buildDataFeedResult({ title, notes: store.list(args) })),
   )
