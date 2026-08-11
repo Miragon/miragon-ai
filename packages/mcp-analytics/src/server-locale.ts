@@ -22,12 +22,13 @@ export type { ProfileSlice, ProfileSource } from "@miragon-ai/widget-shell/serve
 
 /**
  * Resolve the profile key for the in-flight request: the authenticated user id
- * (off the tool-handler `ctx`, or off the request context's `auth` variable for
- * handlers without a `ctx`), else the MCP session id (`Mcp-Session-Id` header),
- * else the shared anonymous record when there is NO request context at all
- * (stdio, tests). An HTTP request without a session id resolves `undefined` —
- * reads fall back to defaults, saves fail visibly, so unrelated keyless clients
- * never cross-share one record.
+ * (off the tool-handler `ctx`, or off the ambient request info for handlers
+ * without a `ctx`), else the MCP session id (a gateway-stamped
+ * `Mcp-Session-Id` — mcp-use 2 issues none itself), else the shared anonymous
+ * record when there is NO request context at all (stdio, tests). An HTTP
+ * request without any identity resolves `undefined` — reads fall back to
+ * defaults, saves fail visibly, so unrelated keyless clients never cross-share
+ * one record.
  */
 export const resolveSettingsKey = resolveProfileKey
 

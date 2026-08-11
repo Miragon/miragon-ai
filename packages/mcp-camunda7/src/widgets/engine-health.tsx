@@ -11,7 +11,7 @@ import {
   formatTime,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
-import { ModelContext } from "mcp-use/react"
+import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import type { EngineHealthCluster, EngineHealthData, EngineHealthStatus } from "../view-models.js"
 import { useNav, type OnNavigate } from "./navigation.js"
 import { CAMUNDA7_ENGINE_HEALTH_DATA } from "../tool-names.js"
@@ -372,7 +372,7 @@ export function EngineHealthView({
 
   return (
     <>
-      <ModelContext content={describeHealth(data, engine)} />
+      <HostModelContext content={describeHealth(data, engine)}>{null}</HostModelContext>
       <WidgetHeader
         icon={status.glyph}
         iconTone={status.tone}

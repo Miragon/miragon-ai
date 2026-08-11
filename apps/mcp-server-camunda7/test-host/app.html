@@ -4,9 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Automation MCP</title>
+    <!-- Mirrors the view HTML mcp-use serves for the app.bundle since 2.x:
+         one ES module + one stylesheet (dist/mcp-app.js / dist/mcp-app.css),
+         mounted by the bundle's own bootstrapView call. -->
+    <link rel="stylesheet" href="/app/mcp-app.css" />
   </head>
   <body style="font-family: ui-sans-serif, system-ui, sans-serif !important; padding: 0; margin: 0">
     <div id="root"></div>
-    <script type="module" src="./src/ui/main.tsx"></script>
+    <script type="module" src="/app/mcp-app.js"></script>
   </body>
 </html>

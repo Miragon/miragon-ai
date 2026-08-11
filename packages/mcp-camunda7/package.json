@@ -15,7 +15,7 @@
   "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/mcp-camunda7#readme",
   "bugs": "https://github.com/Miragon/miragon-ai/issues",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.22.2"
   },
   "repository": {
     "type": "git",
@@ -51,11 +51,11 @@
   "dependencies": {
     "@miragon-ai/client-camunda7": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
-    "@miragon/mcp-toolkit-core": "0.10.1",
+    "@miragon/mcp-toolkit-core": "1.1.0",
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "mcp-use": "1.34.5",
+    "mcp-use": "2.1.0",
     "react": "19.2.8"
   },
   "peerDependenciesMeta": {
@@ -64,14 +64,14 @@
     }
   },
   "devDependencies": {
-    "@miragon/mcp-toolkit-ui": "0.10.1",
+    "@miragon/mcp-toolkit-ui": "1.1.0",
     "@stryker-mutator/core": "9.6.1",
     "@stryker-mutator/vitest-runner": "9.6.1",
     "@testing-library/react": "16.3.2",
     "@types/react": "19.2.18",
     "bpmn-js": "18.22.1",
     "happy-dom": "20.11.1",
-    "mcp-use": "1.34.5",
+    "mcp-use": "2.1.0",
     "postgres": "3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",

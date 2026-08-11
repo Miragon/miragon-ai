@@ -1,12 +1,6 @@
-import {
-  jwksVerifier,
-  oauthAuth0Provider,
-  oauthCustomProvider,
-  oauthKeycloakProvider,
-  oauthProxy,
-  type McpServerInstance,
-  type OAuthProvider,
-} from "mcp-use/server"
+import type { OAuthProvider } from "mcp-use/oauth"
+import { oauthKeycloakProvider } from "mcp-use/oauth/keycloak"
+import { oauthAuth0Provider } from "mcp-use/oauth/auth0"
 import { z } from "zod"
 
 /**
@@ -15,11 +9,14 @@ import { z } from "zod"
  * with 401 + `WWW-Authenticate` otherwise, and serves the `.well-known`
  * discovery metadata). The server never mints tokens.
  *
- * For `keycloak` / `auth0` / `oidc` it only validates — MCP clients talk to
- * the IdP directly (Dynamic Client Registration). For `oidc-proxy` (IdPs
- * without DCR) mcp-use additionally brokers the login flow through the
- * server's own `/authorize` + `/token` + `/register` using a pre-registered
- * client; [[installAuthorizeRedirectAllowlist]] guards it (see there).
+ * mcp-use 2.x ships per-IdP providers (`mcp-use/oauth/keycloak`, `…/auth0`)
+ * that verify tokens against the IdP's JWKS and validate the RFC 8707
+ * resource audience against the server's own canonical MCP URL — the 1.x
+ * `audience` knob and the generic `jwksVerifier` are gone upstream. The
+ * `oidc` and `oidc-proxy` providers relied on exactly those removed
+ * primitives (`jwksVerifier`, `oauthProxy`), so they currently fail the boot
+ * with an actionable error instead of silently coming up unauthenticated
+ * (see [[getOAuthConfigFromEnv]]).
  *
  * Combined with `CAMUNDA_AUTH_TYPE=passthrough`, the validated token is then
  * forwarded to the engine per call, giving end-to-end user identity: server
@@ -29,53 +26,41 @@ const keycloakSchema = z.object({
   provider: z.literal("keycloak"),
   serverUrl: z.string().url(),
   realm: z.string().min(1),
-  /** Expected `aud` claim; strongly recommended (see docs/operations.md). */
+  /**
+   * 1.x-era expected `aud` claim. mcp-use 2 validates the RFC 8707 resource
+   * audience (the server's canonical MCP URL) instead and offers no custom
+   * `aud` override — the value is accepted for config compatibility and
+   * reported as ignored at boot.
+   */
   audience: z.string().optional(),
 })
 
 const auth0Schema = z.object({
   provider: z.literal("auth0"),
-  // Bare hostname, no scheme/path: mcp-use builds `https://${domain}` itself,
-  // and a scheme-prefixed value would boot fine but yield the garbage issuer
-  // `https://https://…` — every request then 401s with an obscure fetch error.
+  // Bare hostname, no scheme/path: mcp-use accepts a domain or issuer URL,
+  // but the bare form is the one both major versions agree on.
   domain: z
     .string()
     .min(1)
     .refine((d) => !d.includes("://") && !d.includes("/"), {
       message: 'domain must be a bare hostname, e.g. "tenant.eu.auth0.com" (no scheme, no path)',
     }),
-  // Mandatory for Auth0: without an audience Auth0 issues opaque tokens that
-  // cannot be verified against the JWKS.
-  audience: z.string().min(1),
+  /** See the keycloak `audience` note — accepted, reported as ignored. */
+  audience: z.string().min(1).optional(),
 })
 
+// Retained so a 1.x deployment gets a precise boot error (schema-validated
+// config, then the capability error below) instead of a generic parse failure.
 const oidcSchema = z.object({
   provider: z.literal("oidc"),
   issuer: z.string().url(),
   jwksUrl: z.string().url(),
-  // Back the server's local /authorize + /token compatibility routes
-  // (302-redirect / server-side POST). Discovery metadata is NOT built from
-  // these values — mcp-use proxies it live from `${issuer}/.well-known/*`,
-  // so the server needs outbound reachability to the issuer. Copy both
-  // URLs from the IdP's own .well-known document.
   authEndpoint: z.string().url(),
   tokenEndpoint: z.string().url(),
   audience: z.string().optional(),
   scopesSupported: z.array(z.string()).optional(),
 })
 
-// A pre-registered (confidential or public) client for IdPs WITHOUT Dynamic
-// Client Registration. mcp-use serves its own /register (handing MCP clients
-// the fixed clientId), proxies /authorize to the IdP, and injects the client
-// credentials at token exchange — clients never see the secret.
-//
-// SECURITY: mcp-use 1.33.0's proxy /authorize accepts ANY http/https
-// redirect_uri, stores it in an UNSIGNED state blob, and /oauth/callback later
-// forwards the authorization code to it verbatim — an authorization-code
-// interception vector. `allowedRedirectUris` is therefore REQUIRED and
-// enforced at the server before mcp-use sees the request
-// ([[installAuthorizeRedirectAllowlist]]); it must list the exact callback
-// URLs of the MCP clients you allow (as a real IdP would pin them).
 const oidcProxySchema = z
   .object({
     provider: z.literal("oidc-proxy"),
@@ -84,13 +69,8 @@ const oidcProxySchema = z
     authEndpoint: z.string().url(),
     tokenEndpoint: z.string().url(),
     clientId: z.string().min(1),
-    // Present-but-empty is rejected (a `${VAR}` that resolved to ""); omit the
-    // field entirely for a public client.
     clientSecret: z.string().min(1).optional(),
-    // …or name another env var holding the secret (`…EnvVar` convention).
     clientSecretEnvVar: z.string().min(1).optional(),
-    // The exact redirect_uris the server's /authorize will accept. Required:
-    // it is the safeguard against the interception vector described above.
     allowedRedirectUris: z.array(z.string().url()).min(1),
     audience: z.string().optional(),
     scopes: z.array(z.string()).optional(),
@@ -109,19 +89,14 @@ const oauthConfigSchema = z.discriminatedUnion("provider", [
 export type McpOAuthConfig = z.infer<typeof oauthConfigSchema>
 
 export interface McpOAuthSetup {
-  provider?: OAuthProvider
-  /**
-   * For `oidc-proxy` only: the redirect_uris the server's `/authorize` accepts.
-   * `undefined` for every other provider (they mount no proxy routes).
-   */
-  redirectAllowlist?: string[]
+  provider?: OAuthProvider<unknown>
 }
 
 /**
- * Builds the mcp-use OAuth provider (and, for `oidc-proxy`, the redirect
- * allowlist) from `MCP_OAUTH`. Unset/empty → `{}` (endpoint stays
- * unauthenticated — reverse-proxy deployments). Invalid JSON or schema
- * violations throw at boot: a deployment that asked for auth must never
+ * Builds the mcp-use OAuth provider from `MCP_OAUTH`. Unset/empty → `{}` (the
+ * endpoint stays unauthenticated — reverse-proxy deployments). Invalid JSON,
+ * schema violations, or a provider mcp-use 2 cannot back (`oidc`,
+ * `oidc-proxy`) throw at boot: a deployment that asked for auth must never
  * silently come up without it.
  */
 export function getOAuthConfigFromEnv(
@@ -140,12 +115,10 @@ export function getOAuthConfigFromEnv(
   }
   const config = oauthConfigSchema.parse(json)
 
-  // mcp-use's provider factories silently fall back to their own
-  // MCP_USE_OAUTH_* env vars for omitted fields (e.g. the Keycloak factory
-  // reads MCP_USE_OAUTH_KEYCLOAK_AUDIENCE when `audience` is unset — a stray
-  // variable would then 401 every request with nothing in MCP_OAUTH
-  // explaining why). MCP_OAUTH is the single config surface: fail fast. The
-  // config's own clientSecretEnvVar is exempt — it is consumed here.
+  // mcp-use's provider factories used to silently fall back to their own
+  // MCP_USE_OAUTH_* env vars for omitted fields. MCP_OAUTH is the single
+  // config surface: fail fast on strays. The config's own clientSecretEnvVar
+  // is exempt — it is consumed here.
   const ownSecretVar = "clientSecretEnvVar" in config ? config.clientSecretEnvVar : undefined
   const strayEnv = Object.keys(process.env).filter(
     (k) => k.startsWith("MCP_USE_OAUTH_") && k !== ownSecretVar,
@@ -156,167 +129,69 @@ export function getOAuthConfigFromEnv(
     )
   }
 
+  if ("audience" in config && config.audience) {
+    console.warn(
+      "[miragon-ai] MCP_OAUTH `audience` is ignored since mcp-use 2 — token audience is validated against the server's canonical MCP resource URL (RFC 8707) instead.",
+    )
+  }
+
   switch (config.provider) {
     case "keycloak":
       return {
-        provider: oauthKeycloakProvider({
-          serverUrl: config.serverUrl,
-          realm: config.realm,
-          audience: config.audience,
-        }),
+        provider: withLegacyUserId(
+          oauthKeycloakProvider({
+            serverUrl: config.serverUrl,
+            realm: config.realm,
+          }),
+        ),
       }
     case "auth0":
       return {
-        provider: oauthAuth0Provider({
-          domain: config.domain,
-          audience: config.audience,
-        }),
+        provider: withLegacyUserId(
+          oauthAuth0Provider({
+            domain: config.domain,
+          }),
+        ),
       }
     case "oidc":
-      return {
-        provider: oauthCustomProvider({
-          issuer: config.issuer,
-          authEndpoint: config.authEndpoint,
-          tokenEndpoint: config.tokenEndpoint,
-          jwksUrl: config.jwksUrl,
-          audience: config.audience,
-          scopesSupported: config.scopesSupported,
-          verifyToken: jwksVerifier({
-            jwksUrl: config.jwksUrl,
-            issuer: config.issuer,
-            audience: config.audience,
-          }),
-        }),
-      }
     case "oidc-proxy":
-      if (!process.env.MCP_URL?.trim()) {
-        // Proxy mode advertises discovery + callback URLs from the server base
-        // URL; without MCP_URL it advertises http://localhost:8400 and the
-        // login flow fails for any non-local client.
-        console.warn(
-          "[miragon-ai] MCP_OAUTH provider 'oidc-proxy' needs MCP_URL set to the public base URL, and <MCP_URL>/oauth/callback registered as a redirect URI on the IdP client.",
-        )
-      }
-      return {
-        provider: oauthProxy({
-          issuer: config.issuer,
-          authEndpoint: config.authEndpoint,
-          tokenEndpoint: config.tokenEndpoint,
-          clientId: config.clientId,
-          clientSecret: resolveClientSecret(config),
-          scopes: config.scopes,
-          verifyToken: jwksVerifier({
-            jwksUrl: config.jwksUrl,
-            issuer: config.issuer,
-            audience: config.audience,
-          }),
-        }),
-        redirectAllowlist: config.allowedRedirectUris,
-      }
+      // mcp-use 2 removed the generic building blocks these modes were made
+      // of (`jwksVerifier` for `oidc`, the `/authorize`+`/token` broker
+      // `oauthProxy` for DCR-less IdPs). Failing loudly beats booting an ops
+      // server without the auth the deployment asked for.
+      throw new Error(
+        `MCP_OAUTH provider "${config.provider}" is not supported on mcp-use 2 (upstream removed jwksVerifier/oauthProxy). ` +
+          'Use provider "keycloak" or "auth0", or front the server with an OAuth-terminating gateway.',
+      )
   }
 }
 
-/** Back-compat accessor — the provider without the proxy allowlist. */
+/**
+ * Mirror the 2.x provider user's `id` (the token subject) as the 1.x `userId`
+ * spelling. Load-bearing, not cosmetic: the toolkit's dashboard tools scope
+ * every list/load/delete by `ctx.auth.user.userId` — with the 2.x providers'
+ * `id`-only user object that extraction yields `undefined`, which collapses
+ * per-user scoping into "everyone sees (and can delete) everything". It also
+ * keeps existing user-keyed profile/dashboard rows (stored under the 1.x
+ * `userId` = token sub) resolving to the same records.
+ */
+function withLegacyUserId<TUser extends { id: string }>(
+  provider: OAuthProvider<TUser>,
+): OAuthProvider<TUser & { userId: string }> {
+  return {
+    ...provider,
+    mapAuthInfo: (authInfo) => {
+      const extra = provider.mapAuthInfo(authInfo)
+      return { ...extra, user: { ...extra.user, userId: extra.user.id } }
+    },
+  }
+}
+
+/** Back-compat accessor — the provider half of [[getOAuthConfigFromEnv]]. */
 export function getOAuthProviderFromEnv(
   raw: string | undefined = process.env.MCP_OAUTH,
-): OAuthProvider | undefined {
+): OAuthProvider<unknown> | undefined {
   return getOAuthConfigFromEnv(raw).provider
-}
-
-function resolveClientSecret(config: {
-  clientSecret?: string
-  clientSecretEnvVar?: string
-}): string | undefined {
-  if (config.clientSecret) return config.clientSecret
-  if (!config.clientSecretEnvVar) return undefined
-  const secret = process.env[config.clientSecretEnvVar]?.trim()
-  // A named-but-missing secret must fail the boot — the server would
-  // otherwise come up as a public client and every token exchange would fail
-  // with an IdP error that says nothing about the actual cause.
-  if (!secret) {
-    throw new Error(
-      `MCP_OAUTH names clientSecretEnvVar "${config.clientSecretEnvVar}", but that environment variable is not set.`,
-    )
-  }
-  return secret
-}
-
-const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"])
-
-function isLoopbackUrl(url: URL): boolean {
-  return LOOPBACK_HOSTNAMES.has(url.hostname)
-}
-
-/**
- * The allowlist decision. Non-loopback entries match EXACTLY. Loopback
- * entries follow RFC 8252 §7.3: native MCP clients (Claude Code, VS Code, the
- * MCP inspector CLI) bind their callback to an ephemeral port per run, and
- * the authorization server MUST accept variable ports on loopback redirects —
- * so an allowlisted loopback entry matches any port and any loopback host
- * (localhost/127.0.0.1/[::1]), as long as scheme and path agree. Loopback
- * redirects land on the resource owner's own machine, which is exactly the
- * case the RFC declares safe; remote interception targets stay exact-match.
- */
-export function isAllowedRedirectUri(redirectUri: string, allowlist: readonly string[]): boolean {
-  if (allowlist.includes(redirectUri)) return true
-  let candidate: URL
-  try {
-    candidate = new URL(redirectUri)
-  } catch {
-    return false
-  }
-  if (!isLoopbackUrl(candidate)) return false
-  return allowlist.some((entry) => {
-    let allowed: URL
-    try {
-      allowed = new URL(entry)
-    } catch {
-      return false
-    }
-    return (
-      isLoopbackUrl(allowed) &&
-      allowed.protocol === candidate.protocol &&
-      allowed.pathname === candidate.pathname
-    )
-  })
-}
-
-/**
- * Guards the `oidc-proxy` `/authorize` route with a strict redirect_uri
- * allowlist, registered as a Hono middleware that runs BEFORE mcp-use's proxy
- * handler (verified: a server `use()` middleware intercepts `/authorize`
- * ahead of the mounted route). mcp-use itself only checks the scheme and then
- * forwards the authorization code to whatever redirect_uri an unsigned state
- * blob carries; pinning the accepted redirect_uris here — reading the same
- * source mcp-use does (query on GET, parsed body on POST) — closes that
- * interception path. Guarding `/authorize` is sufficient: the state blob can
- * then only ever carry an allowlisted uri. Matching semantics live in
- * [[isAllowedRedirectUri]] (exact, plus RFC 8252 variable-port loopback).
- */
-export function installAuthorizeRedirectAllowlist(
-  app: Pick<McpServerInstance, "use">,
-  allowlist: readonly string[],
-): void {
-  app.use(async (c, next) => {
-    if (c.req.path !== "/authorize") return next()
-    // Read the same source mcp-use does: query on GET, parsed body on POST.
-    const redirectUri =
-      c.req.method === "POST"
-        ? (await c.req.parseBody()).redirect_uri
-        : new URL(c.req.url).searchParams.get("redirect_uri")
-    // A missing/malformed redirect_uri is mcp-use's own 400 to make; only a
-    // present-but-disallowed value is the interception attempt we block.
-    if (typeof redirectUri === "string" && !isAllowedRedirectUri(redirectUri, allowlist)) {
-      return c.json(
-        {
-          error: "invalid_request",
-          error_description: "redirect_uri is not in the configured allowlist",
-        },
-        400,
-      )
-    }
-    return next()
-  })
 }
 
 /**

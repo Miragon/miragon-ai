@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ModelContext } from "mcp-use/react"
+import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import { Badge, Button, useToolMutation } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "../view-models.js"
@@ -117,7 +117,7 @@ export function JobPanelWidget({
     <WidgetShell>
       {/* Rendered in-component (not via the adapter's describeForModel) because
           this widget self-fetches in the cockpit, where the adapter has no data. */}
-      <ModelContext
+      <HostModelContext
         content={[
           `Viewing the Job Management panel on engine "${engineId}"` +
             `${failedOnly ? " filtered to failed jobs only" : ""}: ` +
@@ -126,7 +126,9 @@ export function JobPanelWidget({
           `Retry one with camunda7_set_job_retries, all failed ones via ` +
             `camunda7_set_job_retries_batch; matching incidents via camunda7_list_incidents.`,
         ].join(" ")}
-      />
+      >
+        {null}
+      </HostModelContext>
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-semibold">{t("jobPanel.title")}</h2>

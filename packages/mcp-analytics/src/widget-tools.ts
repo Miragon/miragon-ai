@@ -1,6 +1,5 @@
 import { z } from "zod"
-import type { MCPServer } from "mcp-use/server"
-import { APP_ONLY_META, uiMeta as buildUiMeta } from "@miragon/mcp-toolkit-core"
+import type { MCPServer } from "mcp-use"
 import {
   buildComposedView,
   buildDataFeedResult,
@@ -15,13 +14,7 @@ import {
 } from "./tool-names.js"
 import { localizeFor, type ProfileSource } from "./server-locale.js"
 import { optionalMinBucketSize, optionalPeriod, settingsFor } from "./settings.js"
-
-/**
- * App-only marker for the internal `*_data` feeds — same dual contract as the
- * camunda7 module: SEP-1865 hosts hide the tool from the model,
- * `openai/widgetAccessible` lets Apps-SDK hosts accept the in-widget callTool.
- */
-const appOnlyMeta = { ...APP_ONLY_META, "openai/widgetAccessible": true }
+import { appOnly, showToolBinding } from "./widget-tool-shared.js"
 
 /**
  * Engine-agnostic BPMN-XML lookup injected by the host app (which owns the
@@ -78,13 +71,11 @@ const suppressedNote = (suppressed: boolean) =>
 export function registerWidgetTools(
   server: MCPServer,
   ch: PrometheusClient,
-  resourceUri: string,
   options: AnalyticsWidgetToolsOptions = {},
 ) {
   // Resolve the request locale via `await localizeFor(profileStore)` inside each
   // handler to localize its model-facing `summary` (→ "en" when no store/session).
   const profileStore = options.profileStore
-  const uiMeta = buildUiMeta({ resourceUri })
 
   /**
    * Fetches the latest deployed version's BPMN XML for the heatmap overlay via
@@ -104,12 +95,12 @@ export function registerWidgetTools(
       description:
         "Show aggregated process metrics and KPIs from Prometheus with per-activity bottleneck breakdown.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
         period: optionalPeriod,
         ...schemas.engineFilterShape,
       }),
-      _meta: uiMeta,
+      ...showToolBinding("analytics_show_dashboard", "Process Analytics Dashboard"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
@@ -161,10 +152,10 @@ export function registerWidgetTools(
       description:
         "Show current incident/failure state from Prometheus, grouped by incident type, activity, and process definition (point-in-time — what is failing right now).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...schemas.engineFilterShape,
       }),
-      _meta: uiMeta,
+      ...showToolBinding("analytics_show_failure_dashboard", "Failure Analysis Dashboard"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
@@ -199,11 +190,11 @@ export function registerWidgetTools(
       description:
         "Visualize before/after KPI deltas around a deployment timestamp. Results are flagged `suppressed` when either window has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...schemas.clusterCompareInput.shape,
         minBucketSize: optionalMinBucketSize,
       }),
-      _meta: uiMeta,
+      ...showToolBinding("analytics_show_cluster_compare", "Pre/Post Deployment Comparison"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
@@ -236,11 +227,11 @@ export function registerWidgetTools(
       description:
         "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...schemas.versionCompareInput.shape,
         minBucketSize: optionalMinBucketSize,
       }),
-      _meta: uiMeta,
+      ...showToolBinding("analytics_show_version_compare", "Process Version Comparison"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
@@ -273,11 +264,11 @@ export function registerWidgetTools(
       description:
         "Visualize KPI deltas between two CIB Seven engines (e.g. prod-a vs prod-b) over a shared time window. Optionally scope to one processDefinitionKey. Results are flagged `suppressed` when either engine has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...schemas.engineCompareInput.shape,
         minBucketSize: optionalMinBucketSize,
       }),
-      _meta: uiMeta,
+      ...showToolBinding("analytics_show_engine_compare", "Engine Comparison"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
@@ -312,8 +303,8 @@ export function registerWidgetTools(
       description:
         "Render a process definition's BPMN diagram with a per-element heat overlay from metrics, with a Frequency↔Duration toggle (traversal count vs average duration per element). Node-level only — sequence-flow/edge heat is not available from metrics — and rendered on the latest deployed version's diagram (activity metrics carry no version label). Needs the camunda7 client to fetch the BPMN XML; otherwise the widget shows a fallback.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object(heatmapInputShape),
-      _meta: uiMeta,
+      inputSchema: z.object(heatmapInputShape),
+      ...showToolBinding("analytics_show_bpmn_heatmap", "BPMN Heatmap"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
@@ -351,8 +342,8 @@ export function registerWidgetTools(
       description:
         "Internal JSON feed (no UI) for the BPMN heatmap — per-element execution frequency + average duration over a window, plus the latest BPMN XML. Lets another widget (e.g. the CIB Seven cockpit) render the heatmap inline. Prefer analytics_show_bpmn_heatmap for a standalone view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object(heatmapInputShape),
-      _meta: appOnlyMeta,
+      inputSchema: z.object(heatmapInputShape),
+      ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
@@ -383,12 +374,12 @@ export function registerWidgetTools(
       description:
         "Internal JSON feed (no UI) for the analytics dashboard widgets' self-fetch. Prefer analytics_show_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
         period: optionalPeriod,
         ...schemas.engineFilterShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
@@ -408,10 +399,10 @@ export function registerWidgetTools(
       description:
         "Internal JSON feed (no UI) for the failure dashboard widgets' self-fetch. Prefer analytics_show_failure_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...schemas.engineFilterShape,
       }),
-      _meta: appOnlyMeta,
+      ...appOnly,
     },
     withToolErrors(async (args) => {
       const data = await queries.failureDashboardData(ch, { engine: args.engine })

@@ -1,8 +1,9 @@
 # @miragon-ai/mcp-server-camunda7
 
 The MCP host for [Miragon AI](../../README.md). It composes the `camunda7` and `analytics` modules
-into a single [mcp-use](https://github.com/mcp-use/mcp-use) server, bundles every React widget into a
-single-file HTML resource, and serves the streamable-HTTP MCP transport on port `8400`.
+into a single [mcp-use](https://github.com/mcp-use/mcp-use) server, bundles every React widget into
+one Vite bundle served as per-tool view resources, and serves the streamable-HTTP MCP transport on
+port `8400`.
 
 This is the deployable artifact: it ships as the Docker image
 [`miragon/miragon-ai-server`](https://hub.docker.com/r/miragon/miragon-ai-server). The package itself
@@ -15,12 +16,12 @@ is `private` and not published to npm.
   Modules self-describe via their `src/module.ts` (`configFromEnv`, `knownEnvVars`, `bootWarnings`,
   plugin factory) against the app-owned port in [`src/module-contract.ts`](src/module-contract.ts) —
   the app only selects modules and wires shared resources.
-- **Bundles the widget UI** — Vite + `vite-plugin-singlefile` builds `mcp-app.html`, a self-contained
-  bundle (React, Tailwind, all widgets) exposed as the MCP resource `ui://miragon-ai/mcp-app.<hash>.html`
-  (content-hashed by `createFrameworkApp` for cache busting).
+- **Bundles the widget UI** — Vite builds the two-file bundle `dist/mcp-app.js` + `dist/mcp-app.css`,
+  a self-contained bundle (React, Tailwind, all widgets). mcp-use serves it behind one
+  `ui://views/<tool>.html` view resource per widget tool (derived from each tool's `view` binding).
   The `dedupe` array in [`vite.config.ts`](vite.config.ts) is load-bearing — it keeps a single React /
   toolkit instance so in-widget `useCallTool()` works.
-- **Serves HTTP** — streamable-HTTP MCP on `:8400/mcp`, plus the `mcp-use` inspector on `:8400/inspector`
+- **Serves HTTP** — streamable-HTTP MCP on `:8400/mcp`; the `mcp-use` inspector (`:8400/mcp/inspector`) ships with `mcp-use dev` only, never with the production entrypoint
   in dev.
 
 The server is self-contained (tools + widget UI in one endpoint). Aggregating it with other MCP
@@ -37,7 +38,7 @@ docker run --rm -p 8400:8400 \
   docker.io/miragon/miragon-ai-server:latest
 
 # From source (local dev — needs the Docker infra; see the root README)
-pnpm dev          # build:ui + mcp-use dev on :8400, with the inspector
+pnpm dev          # build:ui + mcp-use dev on :8400, inspector at /mcp/inspector
 pnpm build        # build:ui (Vite widget bundle) + build:server (tsc)
 pnpm start        # run the compiled server from dist/
 ```

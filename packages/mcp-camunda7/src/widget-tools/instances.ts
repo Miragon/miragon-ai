@@ -18,11 +18,11 @@ import { resolveEngine } from "../lib/resolve-engine.js"
 import { engineParamShape } from "../lib/with-engine.js"
 import { jobsFilterShape, pagingShape } from "../feed-contracts.js"
 import { localizeFor } from "../lib/server-locale.js"
-import { type WidgetToolsContext } from "./shared.js"
+import { type WidgetToolsContext, showToolBinding } from "./shared.js"
 
 /** Single-instance drill-downs: instance detail, BPMN viewer, job panel. */
 export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
-  const { server, registry, uiMeta, profileStore } = ctx
+  const { server, registry, profileStore } = ctx
 
   server.tool(
     {
@@ -31,11 +31,11 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Show detailed view of a single process instance with activity tree, variables, and incidents.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         processInstanceId: z.string().describe("The process instance ID to inspect"),
         ...engineParamShape,
       }),
-      _meta: uiMeta,
+      ...showToolBinding(CAMUNDA7_SHOW_INSTANCE_DETAIL, "Process Instance Detail"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
@@ -81,7 +81,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Show an interactive BPMN diagram. Pass `processInstanceId` to overlay active activities, incidents, and failed-job counts for a running instance, or pass `processDefinitionKey` (with optional `version`) to view the diagram of a process definition without instance overlays.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z
+      inputSchema: z
         .object({
           processInstanceId: z
             .string()
@@ -108,7 +108,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
           message: "`version` requires `processDefinitionKey`.",
           path: ["version"],
         }),
-      _meta: uiMeta,
+      ...showToolBinding(CAMUNDA7_SHOW_BPMN_VIEWER, "BPMN Diagram Viewer"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
@@ -164,13 +164,13 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Show jobs with a focus on failed jobs (no retries left). Displays error messages and retry status.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      schema: z.object({
+      inputSchema: z.object({
         ...jobsFilterShape,
         failedOnly: jobsFilterShape.failedOnly.default(false),
         ...pagingShape,
         ...engineParamShape,
       }),
-      _meta: uiMeta,
+      ...showToolBinding(CAMUNDA7_SHOW_JOB_PANEL, "Job Management Panel"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)

@@ -124,11 +124,14 @@ The widget chain mirrors the camunda7 module:
    `propsSchema`) to `src/definition.ts`.
 4. The host map `apps/mcp-server-camunda7/src/ui/widget-registry.ts` spreads
    `analyticsWidgets` — verify your widget arrives there.
-5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with
-   `_meta: buildUiMeta({ resourceUri })` (`uiMeta` from `@miragon/mcp-toolkit-core`),
-   returning `buildComposedView(...)` / `buildSingleWidgetView(...)` from
-   `@miragon-ai/widget-shell/server` (see `analytics_show_dashboard`). An app-only
-   `*_data` feed gets `_meta: APP_ONLY_META` (**no** `resourceUri`) and returns
+5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with `inputSchema:`
+   and spread `...showToolBinding(TOOL_NAME, "Title")` (from
+   `./widget-tool-shared.js` — native `view` binding named after the tool + required
+   passthrough `outputSchema` + the Apps-SDK `_meta` half; never hand-write
+   `_meta.ui` keys, mcp-use owns them), returning `buildComposedView(...)` /
+   `buildSingleWidgetView(...)` from `@miragon-ai/widget-shell/server` (see
+   `analytics_show_dashboard`). An app-only `*_data` feed spreads `...appOnly`
+   (`visibility: "app"` + `openai/widgetAccessible`, **no** view binding) and returns
    `buildDataFeedResult(data)`.
 
 Rules while building:

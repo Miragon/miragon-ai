@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { ModelContext, useWidget } from "mcp-use/react"
 import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
-import { WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
+import { HostModelContext, WidgetRenderer, useHostBridge } from "@miragon/mcp-toolkit-ui/app"
 import { useHostActions, useHostWidgets, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import { translator } from "../messages/index.js"
 import { NavBreadcrumb } from "./cockpit-app/breadcrumb.js"
@@ -47,12 +46,6 @@ export function findStepEngineId(toolOutput: unknown): string | undefined {
 function isViewResult(output: unknown): boolean {
   if (!output || typeof output !== "object") return false
   return "layout" in output || "context" in output
-}
-
-/** Per-call `engine` override from the rendered tool call's arguments. */
-function engineFromToolInput(toolInput: unknown): string | undefined {
-  const rawInputEngine = (toolInput as { engine?: unknown } | null)?.engine
-  return typeof rawInputEngine === "string" && rawInputEngine ? rawInputEngine : undefined
 }
 
 /** Sticky selection, or the sole configured engine (the cockpit's pattern). */
@@ -106,7 +99,7 @@ function isEngineUnresolvable({
  *   toolkit renderer; the view's widgets self-fetch their `*_data` feeds. The
  *   origin stays mounted (hidden), so "back" is instant and loses no state.
  * - Like the cockpit, the shell compensates for chat-free navigation with an
- *   app-level `<ModelContext>` naming the current view — silent navigation
+ *   app-level `<HostModelContext>` naming the current view — silent navigation
  *   must never leave the model blind (the origin's own model context stays
  *   registered; contexts are additive).
  *
@@ -115,10 +108,13 @@ function isEngineUnresolvable({
  * widgets never call `useNav()` and render unchanged.
  */
 export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
-  // `output` is the rendered tool result's structuredContent (SEP-1865);
-  // `toolInput` the arguments the model passed — delivered even by hosts that
-  // strip structuredContent, so the per-call `engine` override survives there.
-  const { output, toolInput } = useWidget()
+  // The rendered tool result's structuredContent (SEP-1865), via the
+  // host-portable bridge (the mcp-use view adapter maps it to the rendering
+  // tool's output; the fixture harness to its `data` prop). The 1.x
+  // `toolInput` fallback is gone with `useWidget()` — a per-call `engine`
+  // override now only survives through the payload's engine echo below.
+  const bridge = useHostBridge()
+  const output = bridge.getWidgetData<unknown>()
   const host = useHostActions()
   const locale = useLocale()
   // Absent when the host wires no in-widget tools/call — drills then cannot
@@ -147,19 +143,18 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
   const drillWidgets = { ...hostWidgets, ...camunda7BaseWidgets }
 
   const stepEngineId = useMemo(() => findStepEngineId(output), [output])
-  const toolInputEngine = engineFromToolInput(toolInput)
-  // Third engine source, only consulted once a drill happens without an engine
+  // Second engine source, only consulted once a drill happens without an engine
   // echo: sticky selection or sole engine (the cockpit's pattern). Cached by
   // the toolkit's singleton query client.
   const enginesQuery = useToolQuery<EnginesResult>(
     ["camunda7:engines"],
     "camunda7_engine",
     { action: "list" },
-    { enabled: stack.length > 0 && !stepEngineId && !toolInputEngine },
+    { enabled: stack.length > 0 && !stepEngineId },
   )
   const queried = enginesQuery.data
   const queriedEngineId = engineFromQuery(queried)
-  const engineId = stepEngineId ?? toolInputEngine ?? queriedEngineId
+  const engineId = stepEngineId ?? queriedEngineId
 
   const current = stack.length > 0 ? stack[stack.length - 1] : undefined
   // The settings view reads no route params — it must not block on an engine.
@@ -209,9 +204,11 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
           />
           {!needsEngine || engineId ? (
             <>
-              <ModelContext
+              <HostModelContext
                 content={`${describeCurrentView(current)} The user drilled here client-side from this turn's widget (no chat turn); the origin view is still reachable via the breadcrumb.`}
-              />
+              >
+                {null}
+              </HostModelContext>
               <WidgetRenderer
                 layout={filterLayoutToWidgets(
                   cockpitViews[current.section](buildViewParams(current, engineId ?? "")),

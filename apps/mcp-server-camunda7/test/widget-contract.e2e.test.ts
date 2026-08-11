@@ -2,25 +2,13 @@ import net from "node:net"
 import path from "node:path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import { uiMeta } from "@miragon/mcp-toolkit-core"
+import { VIEW_RESOURCE_URI_PREFIX, viewResourceUri } from "@miragon/mcp-toolkit-core"
 import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
-import { MCPClient, type MCPSession } from "mcp-use/client"
-import type { McpServerInstance } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 import { getAppConfig, getPlugins } from "../src/setup.js"
 
-const FIXTURE_HTML = path.join(import.meta.dirname, "fixtures", "mcp-app.html")
-const RESOURCE_URI = "ui://automation-mcp/mcp-app.widget-contract.html"
-const BASE_URL = "http://127.0.0.1:8400"
-
-/**
- * Whether the installed toolkit already emits the full dual-protocol widget
- * contract (toolkit >= 0.8.0, or a tarball-override candidate). On 0.7.2 —
- * even with the interim `patches/` fix, which covers only four keys — this is
- * false and the suite is skipped; it activates automatically with the toolkit
- * bump and then becomes the wire-level regression gate.
- */
-const FULL_CONTRACT =
-  "openai/toolInvocation/invoking" in uiMeta({ resourceUri: "ui://contract-probe" })
+const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
 
 /** Reserve a free TCP port by binding to port 0 and releasing it again. */
 async function getFreePort(): Promise<number> {
@@ -48,15 +36,17 @@ function uiBlock(meta: Record<string, unknown>): Record<string, unknown> {
 /**
  * Wire-level widget-contract assertions: what ext-apps hosts (Claude Desktop /
  * claude.ai) actually see on tools/list, resources/list and resources/read.
- * This is the contract whose absence made every widget hang on its loading
- * skeleton — see the dual-protocol keys in `uiMeta` (toolkit) and the
- * `_meta.ui.csp` on the app resource.
+ * Since mcp-use 2 the MCP Apps half (`_meta.ui.*`, the `ui://views/<tool>.html`
+ * resources, the CSP) is emitted natively from each tool's `view`/`visibility`
+ * binding — one view PER TOOL instead of 1.x's single shared app resource —
+ * while the toolkit stamps the Apps SDK half (`openai/*`). This is the
+ * contract whose absence made every widget hang on its loading skeleton.
  */
-describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", () => {
-  let app: McpServerInstance<false>
-  let client: MCPClient
-  let session: MCPSession
+describe("widget wire contract (dual-protocol _meta)", () => {
+  let app: MCPServer
+  let client: Client
   let tools: ToolEntry[]
+  let serverOrigin: string
 
   beforeAll(async () => {
     vi.stubEnv("CAMUNDA_BASE_URL", "http://localhost:1")
@@ -74,27 +64,24 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
       name: "automation-mcp",
       version: "0.1.0",
       host: "127.0.0.1",
-      baseUrl: BASE_URL,
       plugins: getPlugins() as AppPlugin[],
       appConfig: getAppConfig(),
       app: {
-        resourceUri: RESOURCE_URI,
-        htmlPath: FIXTURE_HTML,
+        bundle: { jsPath: FIXTURE_JS },
         builder: true,
       },
     })
     const port = await getFreePort()
     await app.listen(port)
+    serverOrigin = `http://127.0.0.1:${port}`
 
-    client = MCPClient.fromDict({
-      mcpServers: { server: { url: `http://127.0.0.1:${port}/mcp` } },
-    })
-    session = await client.createSession("server")
-    tools = await session.listTools()
+    client = new Client({ name: "widget-contract-test", version: "0.0.0" })
+    await client.connect(new StreamableHTTPClientTransport(new URL(`${serverOrigin}/mcp`)))
+    tools = (await client.listTools()).tools
   })
 
   afterAll(async () => {
-    await client?.closeAllSessions()
+    await client?.close()
     await app?.close()
     vi.unstubAllEnvs()
   })
@@ -104,7 +91,7 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
       const meta = t._meta
       if (!meta) return false
       const ui = uiBlock(meta)
-      return ui.resourceUri === RESOURCE_URI && ui.visibility === undefined
+      return typeof ui.resourceUri === "string" && ui.visibility === undefined
     })
     // render-view plus the camunda7/analytics show_* tools.
     expect(widgetTools.length).toBeGreaterThanOrEqual(3)
@@ -112,9 +99,13 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
 
     for (const tool of widgetTools) {
       const meta = toolMeta(tool)
+      const ui = uiBlock(meta)
       const label = tool.name
-      expect(meta["ui/resourceUri"], `${label}: ui/resourceUri`).toBe(RESOURCE_URI)
-      expect(meta["openai/outputTemplate"], `${label}: outputTemplate`).toBe(RESOURCE_URI)
+      // The view is named after the tool → per-tool view resource uri.
+      expect(ui.resourceUri, `${label}: ui.resourceUri`).toBe(viewResourceUri(tool.name))
+      expect(meta["openai/outputTemplate"], `${label}: outputTemplate`).toBe(
+        viewResourceUri(tool.name),
+      )
       expect(meta["openai/widgetAccessible"], `${label}: widgetAccessible`).toBe(true)
       expect(meta["openai/resultCanProduceWidget"], `${label}: resultCanProduceWidget`).toBe(true)
       expect(meta["openai/toolInvocation/invoking"], `${label}: invoking`).toEqual(
@@ -126,30 +117,30 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
     }
   })
 
-  it("carries widget _meta on every *_show_* tool (name-based — catches a forgotten uiMeta)", () => {
+  it("carries widget _meta on every *_show_* tool (name-based — catches a forgotten view binding)", () => {
     // The meta-derived filter above can only check tools that HAVE meta; a
-    // show tool that forgot `uiMeta(...)` would silently drop out of it and
+    // show tool that forgot its view binding would silently drop out of it and
     // hang on the host's loading skeleton. The naming convention is the
     // invariant we can enforce unconditionally.
     const showTools = tools.filter((t) => t.name.includes("_show_"))
     expect(showTools.length).toBeGreaterThanOrEqual(10)
     for (const tool of showTools) {
       const ui = uiBlock(toolMeta(tool))
-      expect(ui.resourceUri, `${tool.name}: show tools must render the app resource`).toBe(
-        RESOURCE_URI,
+      expect(ui.resourceUri, `${tool.name}: show tools must bind their own view`).toBe(
+        viewResourceUri(tool.name),
       )
       expect(ui.visibility, `${tool.name}: show tools must stay model-visible`).toBeUndefined()
     }
   })
 
-  it("marks every *_data feed app-only + widget-accessible (name-based — catches a forgotten APP_ONLY_META)", () => {
+  it("marks every *_data feed app-only + widget-accessible (name-based — catches a forgotten visibility)", () => {
     const dataTools = tools.filter((t) => t.name.endsWith("_data"))
     expect(dataTools.length).toBeGreaterThanOrEqual(5)
     for (const tool of dataTools) {
       const meta = toolMeta(tool)
       const ui = uiBlock(meta)
       expect(
-        Array.isArray(ui.visibility) && ui.visibility.includes("app"),
+        Array.isArray(ui.visibility) && (ui.visibility as unknown[]).includes("app"),
         `${tool.name}: *_data feeds must carry visibility ["app"] — a model-visible feed ` +
           `would be rendered by the host instead of feeding the in-widget callTool`,
       ).toBe(true)
@@ -169,9 +160,9 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
   it("keeps app-only tools (*_data feeds, refresh-view) free of widget keys", () => {
     const appOnlyTools = tools.filter((t) => {
       const ui = t._meta ? uiBlock(t._meta) : {}
-      return Array.isArray(ui.visibility) && ui.visibility.includes("app")
+      return Array.isArray(ui.visibility) && (ui.visibility as unknown[]).includes("app")
     })
-    // refresh-view, read-widget-bundle plus the *_data feeds.
+    // refresh-view plus the *_data feeds.
     expect(appOnlyTools.length).toBeGreaterThanOrEqual(3)
     expect(appOnlyTools.map((t) => t.name)).toContain("refresh-view")
 
@@ -191,31 +182,33 @@ describe.skipIf(!FULL_CONTRACT)("widget wire contract (dual-protocol _meta)", ()
     }
   })
 
-  it("lists the app resource with the mcp-app profile mimeType", async () => {
-    const { resources } = await session.listResources()
-    const appResource = resources.find((r) => r.uri === RESOURCE_URI)
-    expect(appResource, "app resource should be listed").toBeDefined()
-    // No `_meta` assertion on the LISTING: mcp-use 1.34.1 drops a resource
-    // definition's `_meta` when replaying registrations into per-session SDK
-    // servers (native mcpApps listings lose it the same way). Ext-apps hosts
-    // read the CSP from the resources/read CONTENTS — asserted below.
-    expect(appResource!.mimeType).toBe("text/html;profile=mcp-app")
+  it("lists one view resource per view-bound tool with the mcp-app profile mimeType", async () => {
+    const { resources } = await client.listResources()
+    const viewResources = resources.filter((r) => r.uri.startsWith(VIEW_RESOURCE_URI_PREFIX))
+    const showTools = tools.filter((t) => t.name.includes("_show_"))
+    for (const tool of showTools) {
+      const resource = viewResources.find((r) => r.uri === viewResourceUri(tool.name))
+      expect(resource, `view resource for ${tool.name} should be listed`).toBeDefined()
+      expect(resource!.mimeType).toBe("text/html;profile=mcp-app")
+    }
   })
 
-  it("returns the widget html with the mcp-app profile and _meta.ui.csp from resources/read", async () => {
-    const { contents } = await session.readResource(RESOURCE_URI)
+  it("returns view html embedding the bundle with the request-resolved csp from resources/read", async () => {
+    const uri = viewResourceUri("camunda7_open_cockpit")
+    const { contents } = await client.readResource({ uri })
     const content = contents[0] as {
       uri: string
       mimeType?: string
       text?: string
       _meta?: Record<string, unknown>
     }
-    expect(content.uri).toBe(RESOURCE_URI)
+    expect(content.uri).toBe(uri)
     expect(content.mimeType).toBe("text/html;profile=mcp-app")
     expect(content.text).toContain("<html")
 
     const csp = uiBlock(content._meta ?? {}).csp as Record<string, string[]> | undefined
     expect(csp, "read contents should carry _meta.ui.csp").toBeTruthy()
-    expect(csp!.connectDomains).toContain(BASE_URL)
+    // mcp-use appends the request-resolved server origin itself since 2.x.
+    expect(csp!.connectDomains).toContain(serverOrigin)
   })
 })

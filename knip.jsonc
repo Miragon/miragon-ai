@@ -14,23 +14,30 @@
     },
 
     "apps/mcp-server-camunda7": {
-      // vite.config.ts throws without the INPUT env var (per-widget bundle
-      // builds), so knip cannot load it — the UI bundle entries are declared
-      // explicitly instead and the vite plugin stays off.
+      // The UI bundle entries are declared explicitly and the vite plugin
+      // stays off (historical: the pre-2.x config needed an INPUT env var);
+      // the explicit list is stable and cheap to keep.
       "vite": false,
       // No stryker.config.json here: the diff gate only scans packages/*.
       "entry": [
         "src/ui/main.tsx",
-        // Parsed statically as an entry (executing it needs INPUT, see above)
-        // so its plugin imports count as used.
+        // Parsed statically as an entry so its plugin imports count as used.
         "vite.config.ts",
         "test/**/*.test.ts",
         "test-host/**/*.{ts,mjs}",
       ],
+      // Widget-bundle stand-in read at runtime via a path (never imported) by
+      // the in-process e2e boots — invisible to the module graph.
+      "ignore": ["test/fixtures/**"],
       "ignoreDependencies": [
         // Referenced from src/ui/geist-latin.css (@font-face src url), which
         // the module graph does not traverse.
         "@fontsource-variable/geist",
+        // Deliberate resolution pin, never imported: mcp-use 2's graph peers
+        // on lucide-react (built-in inspector); without one version pinned
+        // next to the toolkit, pnpm splits mcp-use into two peer instances
+        // and the view runtime exists twice (migration guide §1).
+        "lucide-react",
       ],
     },
 

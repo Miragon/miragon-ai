@@ -1,20 +1,16 @@
 import { describe, expect, it } from "vitest"
-import { runWithContext } from "mcp-use/server"
+import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import { resolveMcpBearerToken } from "./mcp-auth.js"
 
 /**
- * Minimal stand-in for the Hono context mcp-use stores in its
- * AsyncLocalStorage — [[resolveMcpBearerToken]] only touches `req.header()`.
+ * [[resolveMcpBearerToken]] reads the raw `Authorization` header value off the
+ * repo-owned ambient request info — `runWithMcpRequestInfo` is that store's
+ * test seam (mirrors mcp-use 1.x `runWithContext`).
  */
-function fakeContext(headers: Record<string, string>) {
-  const lookup = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]))
-  return {
-    req: { header: (name: string) => lookup[name.toLowerCase()] },
-  } as unknown as Parameters<typeof runWithContext>[0]
-}
-
-function resolveUnder(headers: Record<string, string>): Promise<string | undefined> {
-  return runWithContext(fakeContext(headers), async () => resolveMcpBearerToken())
+function resolveUnder(authorization?: string): string | undefined {
+  return runWithMcpRequestInfo(authorization ? { authorization } : {}, () =>
+    resolveMcpBearerToken(),
+  )
 }
 
 describe("resolveMcpBearerToken", () => {
@@ -22,23 +18,23 @@ describe("resolveMcpBearerToken", () => {
     expect(resolveMcpBearerToken()).toBeUndefined()
   })
 
-  it("extracts the bearer token from the Authorization header", async () => {
-    await expect(resolveUnder({ Authorization: "Bearer tok-123" })).resolves.toBe("tok-123")
+  it("extracts the bearer token from the Authorization header", () => {
+    expect(resolveUnder("Bearer tok-123")).toBe("tok-123")
   })
 
-  it("matches the Bearer scheme case-insensitively", async () => {
-    await expect(resolveUnder({ Authorization: "bearer tok-123" })).resolves.toBe("tok-123")
+  it("matches the Bearer scheme case-insensitively", () => {
+    expect(resolveUnder("bearer tok-123")).toBe("tok-123")
   })
 
-  it("returns undefined without an Authorization header", async () => {
-    await expect(resolveUnder({})).resolves.toBeUndefined()
+  it("returns undefined without an Authorization header", () => {
+    expect(resolveUnder()).toBeUndefined()
   })
 
-  it("ignores non-Bearer schemes instead of forwarding them", async () => {
-    await expect(resolveUnder({ Authorization: "Basic ZGVtbzpkZW1v" })).resolves.toBeUndefined()
+  it("ignores non-Bearer schemes instead of forwarding them", () => {
+    expect(resolveUnder("Basic ZGVtbzpkZW1v")).toBeUndefined()
   })
 
-  it("ignores a bare scheme without a token", async () => {
-    await expect(resolveUnder({ Authorization: "Bearer " })).resolves.toBeUndefined()
+  it("ignores a bare scheme without a token", () => {
+    expect(resolveUnder("Bearer ")).toBeUndefined()
   })
 })

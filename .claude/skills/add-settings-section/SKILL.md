@@ -128,11 +128,11 @@ as an optional config field; without it the section stays read-only.
 
 Three render paths, three tools — model them on `registerSettingsTools`:
 
-| Tool                     | `_meta`                                                 | Returns                                              |
-| ------------------------ | ------------------------------------------------------- | ---------------------------------------------------- |
-| `<module>_show_settings` | `uiMeta({ resourceUri })`                               | `buildSingleWidgetView({…})` + summary for the model |
-| `<module>_settings_data` | `{ ...APP_ONLY_META, "openai/widgetAccessible": true }` | `buildDataFeedResult(view)`                          |
-| `<module>_save_settings` | none (plain model-visible tool)                         | text summary + `structuredContent` = effective slice |
+| Tool                     | Binding / `_meta`                                                       | Returns                                              |
+| ------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------- |
+| `<module>_show_settings` | `...showToolBinding(name, title)` (view binding + Apps-SDK `_meta`)     | `buildSingleWidgetView({…})` + summary for the model |
+| `<module>_settings_data` | `...appOnly` (`visibility: "app"` + `openai/widgetAccessible`, no view) | `buildDataFeedResult(view)`                          |
+| `<module>_save_settings` | none (plain model-visible tool)                                         | text summary + `structuredContent` = effective slice |
 
 Two rules the save tool must honor:
 

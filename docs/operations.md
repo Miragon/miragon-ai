@@ -32,19 +32,18 @@ same stack to Fly.io (`deploy-playground.yml`, manual).
 By default the MCP endpoint is unauthenticated — any client that reaches port
 `8400` gets full tool access. Protect it with an authenticating reverse proxy,
 or set `MCP_OAUTH` to make the server an OAuth resource server: bearer tokens
-on `/mcp` are validated against your IdP (Keycloak, Auth0, or generic
-OIDC/JWKS), unauthenticated requests get 401, and the `.well-known` discovery
-metadata is served. Set `MCP_URL` so advertised URLs are right.
+on `/mcp` are validated against your IdP (Keycloak or Auth0), unauthenticated
+requests get 401, and the `.well-known` discovery metadata is served. Token
+audience is validated against the server's canonical MCP URL (RFC 8707) — the
+IdP must issue tokens whose `aud` includes it (e.g. a Keycloak audience
+mapper; the playground realm seeds one as the `mcp-resource` client scope).
+Set `MCP_URL` so advertised URLs are right.
 
-For an IdP without Dynamic Client Registration, `provider: "oidc-proxy"` uses a
-pre-registered `clientId`/`clientSecret` and brokers the login through the
-server. It requires `MCP_URL`, `<MCP_URL>/oauth/callback` registered at the
-IdP, and `allowedRedirectUris` — the MCP-client callbacks the server's
-`/authorize` accepts. That allowlist is mandatory and enforced before mcp-use
-runs (its proxy otherwise forwards the auth code to any `redirect_uri`).
-Non-loopback entries match exactly; loopback entries match any port per
-RFC 8252 (native clients like Claude Code redirect to
-`http://localhost:<ephemeral>/callback` — allowlist `http://localhost/callback`).
+The 1.x providers `oidc` and `oidc-proxy` are gone: mcp-use 2 removed the
+generic JWKS verifier and the OAuth proxy broker they were built on, so both
+now fail the boot with an actionable error instead of coming up
+unauthenticated. For an IdP without Dynamic Client Registration, front the
+server with an OAuth-terminating gateway.
 
 `CAMUNDA_AUTH_TYPE=passthrough` forwards each caller's bearer token to the
 engine per request (never to Prometheus). With `MCP_OAUTH`
@@ -53,14 +52,13 @@ permissions — which needs an engine with REST auth enabled; a default engine
 accepts anonymous requests and ignores the token.
 
 With auth active, user profiles and saved dashboards scope to the
-authenticated user (`sub`) instead of the MCP session, so preferences follow
-the user across sessions and never expire.
+authenticated user (`sub`) and never expire. Without auth there is no caller
+identity — mcp-use 2 issues no MCP session ids — so settings reads return
+defaults and saves plus the sticky engine selection refuse (boot warning).
 
-To try the `oidc-proxy` flow locally, `docker compose --profile auth up -d`
-adds a Keycloak on `localhost:8480` (realm `miragon`, client
-`miragon-ai-server`, user `demo`/`demo`) — the matching `MCP_OAUTH` block is
-commented out in `.env.example`. The deployed Fly playground has no IdP and
-runs unauthenticated.
+To try it locally, `docker compose --profile auth up -d` adds a Keycloak on
+`localhost:8480` (realm `miragon`, user `demo`/`demo`; the matching `MCP_OAUTH`
+block is commented out in `.env.example`). The Fly playground runs unauthenticated.
 
 ## Environment variables
 
@@ -68,12 +66,12 @@ runs unauthenticated.
 | --------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                                  | `8400`                              | HTTP port the MCP server listens on                                                                                                                                                                                                             |
 | `MCP_URL`                               | —                                   | Public base URL the server advertises (resource URIs, OAuth callbacks)                                                                                                                                                                          |
-| `MCP_OAUTH`                             | —                                   | JSON OAuth resource-server config; providers `keycloak`, `auth0`, `oidc`, `oidc-proxy` — full field lists in [`.env.example`](https://github.com/Miragon/miragon-ai/blob/main/.env.example)                                                     |
+| `MCP_OAUTH`                             | —                                   | JSON OAuth resource-server config; providers `keycloak`, `auth0` (`oidc`/`oidc-proxy` were removed with mcp-use 2 and fail the boot) — full field lists in [`.env.example`](https://github.com/Miragon/miragon-ai/blob/main/.env.example)       |
 | `MCP_ACTIVE_MODULES`                    | all                                 | Comma-separated `module` or `module:toolset` entries; e.g. `camunda7:read-only,analytics`                                                                                                                                                       |
 | `DATABASE_URL`                          | —                                   | Postgres for saved dashboards + user profiles (both stores; migrations run at boot). Beats `MCP_*_DIR`; the Compose stack ships an instance on host port `8440`                                                                                 |
 | `MCP_DASHBOARD_DIR` / `MCP_PROFILE_DIR` | in-memory                           | Directories persisting saved dashboards / user profiles across restarts — the file-based alternative when no `DATABASE_URL` is set                                                                                                              |
-| `MCP_PROFILE_SESSION_TTL_DAYS`          | `30`                                | Expiry for session-keyed profiles (no authenticated user), checked at boot + daily. User-bound profiles and the shared stdio `anonymous` record never expire. `0` disables                                                                      |
-| `REDIS_URL`                             | —                                   | Redis-backed MCP session sharing across multiple server instances (no sticky routing needed); single-instance deployments leave it unset                                                                                                        |
+| `MCP_PROFILE_SESSION_TTL_DAYS`          | `30`                                | Expiry for session-keyed profiles (gateway-stamped `Mcp-Session-Id` or 1.x leftovers), checked at boot + daily. User-bound profiles and the shared stdio `anonymous` record never expire. `0` disables                                          |
+| `REDIS_URL`                             | —                                   | Ignored since mcp-use 2 (the pluggable session-backend seam was removed upstream; the server warns at boot). Sessions are instance-local — scale out only with sticky routing                                                                   |
 | `CAMUNDA_ENGINES_FILE`                  | —                                   | Path to a JSON file with the engine list `[{id, baseUrl, cockpitUrl?, flavor?, auth?}, ...]`; highest precedence                                                                                                                                |
 | `CAMUNDA_ENGINES_JSON`                  | —                                   | Same engine array as inline JSON; ignored when `CAMUNDA_ENGINES_FILE` is set. Entries take an optional `flavor` (`cibseven` \| `operaton` \| `camunda7`, default `cibseven`) selecting the vendor's cockpit-link routes — mixed fleets are fine |
 | `CAMUNDA_BASE_URL`                      | `http://localhost:8410/engine-rest` | Legacy single-engine REST endpoint (registered as id `CAMUNDA_ENGINE_ID`); ignored when `CAMUNDA_ENGINES_*` is set                                                                                                                              |

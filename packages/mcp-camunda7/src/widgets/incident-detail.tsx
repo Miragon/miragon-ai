@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ModelContext } from "mcp-use/react"
+import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-ui"
 import { SectionHeading, truncate, useDetailView } from "@miragon-ai/widget-shell/widgets"
 
@@ -169,7 +169,7 @@ export function IncidentDetailWidget({
     >
       {/* Rendered in-component (not via the adapter's describeForModel) because
           this widget self-fetches in the cockpit, where the adapter has no data. */}
-      <ModelContext content={modelSummary(data, resolved)} />
+      <HostModelContext content={modelSummary(data, resolved)}>{null}</HostModelContext>
 
       <ConfirmDialog
         open={confirmResolve}

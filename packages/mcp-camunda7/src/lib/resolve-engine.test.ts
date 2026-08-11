@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest"
+import { runWithMcpRequestInfo, type McpRequestInfo } from "@miragon-ai/widget-shell/server"
 import type { Client } from "@miragon-ai/client-camunda7"
 import {
   createEngineRegistry,
+  resolveEngine,
   resolveStepEngine,
   EngineNotSelectedError,
   UnknownEngineError,
@@ -83,5 +85,56 @@ describe("resolveStepEngine", () => {
   it("throws UnknownEngineError when the override names a non-existent engine", () => {
     const { appConfig } = harness(MULTI)
     expect(() => resolveStepEngine(appConfig, "gamma")).toThrow(UnknownEngineError)
+  })
+})
+
+/**
+ * The production identity resolver (no `opts` seam): since mcp-use 2 issues no
+ * MCP session ids, the sticky selection must key off the ambient request
+ * info's auth user — with the session id (a gateway-stamped `Mcp-Session-Id`)
+ * only as fallback, mirroring resolveProfileKey so a selection and the profile
+ * share a lifetime.
+ */
+describe("sticky selection identity (ambient request info)", () => {
+  const registryOf = () =>
+    createEngineRegistry(MULTI, (e) => ({ __engine: e.id }) as unknown as Client)
+  const under = <T>(info: McpRequestInfo, fn: () => T): T => runWithMcpRequestInfo(info, fn)
+
+  it("keys the selection off the auth user id when no session id exists (OAuth deployments)", () => {
+    const registry = registryOf()
+    under({ authUserId: "user-1" }, () => registry.backends.select("beta"))
+    expect(under({ authUserId: "user-1" }, () => resolveEngine(undefined, registry)).engineId).toBe(
+      "beta",
+    )
+    // Another user must not inherit the selection.
+    expect(() => under({ authUserId: "user-2" }, () => resolveEngine(undefined, registry))).toThrow(
+      EngineNotSelectedError,
+    )
+  })
+
+  it("prefers the auth user over a session id (profile-key parity)", () => {
+    const registry = registryOf()
+    under({ authUserId: "user-1", sessionId: "sess-a" }, () => registry.backends.select("beta"))
+    // Same user, different session: still resolves — the selection is
+    // user-scoped, not session-scoped, exactly like the profile record.
+    expect(
+      under({ authUserId: "user-1", sessionId: "sess-b" }, () => resolveEngine(undefined, registry))
+        .engineId,
+    ).toBe("beta")
+  })
+
+  it("falls back to a gateway-stamped session id without auth", () => {
+    const registry = registryOf()
+    under({ sessionId: "sess-a" }, () => registry.backends.select("alpha"))
+    expect(under({ sessionId: "sess-a" }, () => resolveEngine(undefined, registry)).engineId).toBe(
+      "alpha",
+    )
+  })
+
+  it("has no sticky selection without any identity (bare HTTP, no OAuth)", () => {
+    const registry = registryOf()
+    expect(() => under({}, () => resolveEngine(undefined, registry))).toThrow(
+      EngineNotSelectedError,
+    )
   })
 })

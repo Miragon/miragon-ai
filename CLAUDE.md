@@ -50,7 +50,8 @@ pnpm docs:dev                        # local dev server; pnpm docs:build to buil
 ```
 
 `pnpm dev` serves the MCP endpoint at `http://localhost:8400/mcp` and the `mcp-use`
-inspector UI at `http://localhost:8400/inspector` — use the inspector to call tools and
+inspector UI at `http://localhost:8400/mcp/inspector` (served by `mcp-use dev` only —
+the production entrypoint mounts no inspector) — use the inspector to call tools and
 render widgets manually.
 
 If generated SDK files look wrong (e.g. `client.gen.ts` importing `./src/hey-api.js`
@@ -106,10 +107,13 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
 
 5. **There are three render paths — pick deliberately:**
    - Registrar tools (`src/tools/`): plain JSON data _for the model_
-   - Widget tools (`widget-tools.ts`, `show_*`, `_meta: { ui: { resourceUri } }`):
-     render a widget for the user + return a summary for the model
-   - `*_data` feeds (also in `widget-tools.ts`, `_meta: { ui: { visibility: ["app"] } }`,
-     **no** `resourceUri`): app-only JSON for in-widget refresh/navigation — SEP-1865
+   - Widget tools (`widget-tools.ts`, `show_*`, spread `...showToolBinding(name, title)`
+     from the module's shared helper — a `view` binding named after the tool +
+     `outputSchema` + the Apps-SDK `_meta` half): render a widget for the user +
+     return a summary for the model
+   - `*_data` feeds (also in `widget-tools.ts`, spread `...appOnly` — the native
+     `visibility: "app"` field + `openai/widgetAccessible`, **no** view binding):
+     app-only JSON for in-widget refresh/navigation — SEP-1865
      hosts hide them from the LLM, and a widget-tool result would be rendered by the
      host instead of returned to the in-widget `callTool()`. Feeds return
      `buildDataFeedResult(data)` from `@miragon-ai/widget-shell/server` — the single
@@ -214,13 +218,17 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
   attach model-bounded labels (definition key, activity id, engine id …) — never
   instance ids, business keys, or variable values.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
-  `0.10.1` everywhere). Updates are deliberate version bumps across all packages — never
+  `1.1.0` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.
-- **The widget `_meta` contract comes from the toolkit — never hand-write the
-  dual-protocol keys.** `uiMeta({ resourceUri, title, … })` emits the full ext-apps/Apps
-  SDK contract (`ui/resourceUri`, `openai/outputTemplate`, `openai/toolInvocation/*`,
-  `openai/widgetAccessible`, `openai/resultCanProduceWidget`) for widget-rendering
-  tools; app-only `*_data` feeds stay free of those keys on purpose. Guarded by
+- **The widget `_meta` contract is split since mcp-use 2 — never hand-write the
+  `ui` half.** mcp-use emits the MCP-Apps keys (`_meta.ui.resourceUri`, flat
+  `ui/resourceUri`, `_meta.ui.visibility`, the view resources `ui://views/<tool>.html`)
+  natively from the tool's first-class `view`/`visibility` fields and OVERWRITES the
+  `ui` namespace on tools/list; the toolkit's `appsSdkMeta({ resourceUri:
+viewResourceUri(name), title })` stamps only the `openai/*` half
+  (`openai/outputTemplate`, `openai/toolInvocation/*`, `openai/widgetAccessible`,
+  `openai/resultCanProduceWidget`). App-only `*_data` feeds stay free of the rendering
+  keys on purpose. Guarded by
   `apps/mcp-server-camunda7/test/widget-meta.test.ts` (unit) and
   `apps/mcp-server-camunda7/test/widget-contract.e2e.test.ts` (on the wire, **by name**: every
   `*_show_*` tool must carry the widget `_meta`, every `*_data` feed must be app-only —
@@ -262,9 +270,10 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
-  exactly pinned dependency (`save-exact`, currently `0.10.1`). Toolkit changes happen in
-  that repo and arrive here as a deliberate, repo-wide version bump — and since the
-  toolkit is `0.x`, treat every minor bump as potentially breaking.
+  exactly pinned dependency (`save-exact`, currently `1.1.0`). Toolkit changes happen in
+  that repo and arrive here as a deliberate, repo-wide version bump — since 1.0 the
+  toolkit follows semver (breaking changes arrive as major bumps; the exact pin makes
+  every bump deliberate either way).
 - **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,
   point temporary `overrides` in `pnpm-workspace.yaml` at the `file:` tarballs (park any
   `patchedDependencies` entry for the same package while doing so), run the full bar plus
@@ -282,7 +291,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
 | `pnpm fitness`       | Aggregated fitness report — architecture graph, ratchet debt, per-package coverage + mutation scores (diff-scoped in CI — the file count next to each score says over what); its own CI job, fed by the test + mutation jobs' artifacts                                                                                               |
 | `./gradlew build`    | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                                                                                                   |
 | `test:host`          | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin                                                                                |
-| Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/inspector`                                                                                                                                                                       |
+| Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only)                                                                                                                                                 |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
 every change; widget changes additionally need `test:host` plus a manual render check via

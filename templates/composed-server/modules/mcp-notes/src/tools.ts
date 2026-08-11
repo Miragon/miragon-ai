@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { NotesStore } from "./notes-store.js"
 

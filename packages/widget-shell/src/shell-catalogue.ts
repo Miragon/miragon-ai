@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { AppPlugin, AppDefinition } from "@miragon/mcp-toolkit-core"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 
 /**
  * The `shell` module: generic, module-agnostic widgets every deployment gets.

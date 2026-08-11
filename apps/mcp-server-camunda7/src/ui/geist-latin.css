@@ -2,7 +2,7 @@
  * Latin + latin-ext subsets of Geist Variable ONLY — aliased over the full
  * `@fontsource-variable/geist` entry (see vite.config.ts). The upstream
  * index.css also ships cyrillic, cyrillic-ext and vietnamese subsets; under
- * vite-singlefile every subset is base64-inlined into mcp-app.html (~100 KB of
+ * `assetsInlineLimit` every subset is base64-inlined into the widget bundle (~100 KB of
  * gzip-incompressible wire weight) although the product ships en/de only.
  * Blocks copied verbatim from @fontsource-variable/geist@5.3.0 index.css.
  * The package is a direct devDependency so these `…/files/*.woff2` urls

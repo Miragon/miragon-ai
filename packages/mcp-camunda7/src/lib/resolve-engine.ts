@@ -4,6 +4,7 @@ import {
   createBackendRegistry,
   type BackendRegistry,
 } from "@miragon/mcp-toolkit-core/tools"
+import { getMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import type { Client } from "@miragon-ai/client-camunda7"
 import type { EngineProvider } from "../engine-provider.js"
 import { providerForEntry } from "../providers/index.js"
@@ -25,8 +26,9 @@ export interface EngineMeta {
  * Session-aware engine routing for the camunda7 module. Wraps the toolkit's
  * generic {@link BackendRegistry} — the single source of truth for the
  * per-session engine selection (override > sticky > single-default precedence,
- * lazy-TTL eviction, session id read from the MCP request context) — alongside
- * the static configured engine list for listing and the cockpit-count reads.
+ * lazy-TTL eviction, session id read from the repo-owned ambient request info
+ * installed via `installMcpRequestContext`) — alongside the static configured
+ * engine list for listing and the cockpit-count reads.
  */
 export interface EngineRegistry {
   backends: BackendRegistry<Client, EngineMeta>
@@ -51,7 +53,22 @@ export function createEngineRegistry(
       // fails the boot instead of producing silently wrong cockpit links.
       meta: { baseUrl: e.baseUrl, cockpitUrl: e.cockpitUrl, provider: providerForEntry(e) },
     })),
-    { label: "engine", ...opts },
+    // The toolkit registry no longer reads the session id itself (mcp-use 2
+    // dropped the ambient request context) — inject the repo-owned store's
+    // identity. Auth user FIRST, mirroring resolveProfileKey, so a selection
+    // and the profile share a lifetime: mcp-use 2 issues no MCP session ids
+    // (stateless HTTP serving), leaving the authenticated user as the only
+    // built-in identity; the session-id rung still serves gateway-stamped
+    // `Mcp-Session-Id` headers. Without either there is no sticky selection
+    // (per-call `engine` still works); `opts` stays the overriding test seam.
+    {
+      label: "engine",
+      getSessionId: () => {
+        const info = getMcpRequestInfo()
+        return info?.authUserId ?? info?.sessionId
+      },
+      ...opts,
+    },
   )
   return { backends, engines }
 }

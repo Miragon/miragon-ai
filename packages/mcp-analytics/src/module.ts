@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 import { createPlugin } from "./plugin.js"
 import type { FetchBpmnXml } from "./widget-tools.js"
 import type { ProfileSource } from "./server-locale.js"

@@ -1,6 +1,6 @@
 # Widget host simulation (`pnpm --filter @miragon-ai/mcp-server-camunda7 test:host`)
 
-Playwright gate that loads the **built** widget bundle (`dist/mcp-app.html`)
+Playwright gate that loads the **built** widget bundle (`app.html` wrapping `dist/mcp-app.js` + `.css`; the shim must answer `ui/initialize` with `protocolVersion: "2025-11-21"` and a `toolInfo.tool.inputSchema`)
 in an iframe behind a minimal SEP-1865 (ext-apps) host shim and drives the
 tool lifecycle over postMessage — no MCP server, no engines, no network.
 

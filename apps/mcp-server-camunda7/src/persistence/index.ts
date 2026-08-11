@@ -1,8 +1,5 @@
 import { createFileSystemDashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
-import { RedisSessionStore, RedisStreamManager } from "mcp-use/server"
-import type { ServerConfig } from "mcp-use/server"
-import { createClient } from "redis"
 import {
   createFileSystemProfileStore,
   createInMemoryProfileStore,
@@ -21,55 +18,31 @@ import { runMigrations } from "./migrations.js"
  * Everything the composition root wires that depends on the deployment's
  * persistence choice. `initRuntime` below is the ONLY place environment
  * variables are translated into backend selections — a customer packaging
- * that needs a different mix (other database, other session backends) either
- * sets different env vars or replaces this one module; the store factories
- * themselves are pure and injectable.
+ * that needs a different mix (other database) either sets different env vars
+ * or replaces this one module; the store factories themselves are pure and
+ * injectable.
  */
 export interface RuntimeBackends {
   profileStore: ProfileStore
   /** `undefined` lets the toolkit fall back to its in-memory default. */
   dashboardStore: DashboardStore | undefined
-  /**
-   * mcp-use session/stream backends, passed through the toolkit's
-   * `serverOptions`; `undefined` keeps mcp-use's defaults (in-memory in
-   * production, filesystem in dev).
-   */
-  serverOptions: Pick<ServerConfig, "sessionStore" | "streamManager"> | undefined
-  /** Closes owned resources (DB pool, Redis); wired to SIGTERM/SIGINT in index.ts. */
+  /** Closes owned resources (DB pool); wired to SIGTERM/SIGINT in index.ts. */
   shutdown(): Promise<void>
 }
 
 /**
- * Redis-backed MCP session metadata + cross-instance SSE push, opt-in via
- * `REDIS_URL`. This is what lets several server instances share sessions
- * WITHOUT sticky routing: any instance recovers a session it finds in the
- * store, and notifications route to the instance holding the SSE stream via
- * Pub/Sub. Single-instance deployments simply leave `REDIS_URL` unset.
+ * mcp-use 1.x accepted pluggable Redis session/stream backends
+ * (`RedisSessionStore`/`RedisStreamManager` via `serverOptions`) for
+ * multi-instance session sharing without sticky routing. mcp-use 2 removed
+ * that seam — sessions are instance-local again. Warn instead of silently
+ * ignoring the knob so a multi-instance deployment learns it needs sticky
+ * routing (or an upstream session-sharing successor) before scaling out.
  */
-async function initSessionBackends(
-  env: NodeJS.ProcessEnv,
-): Promise<
-  { serverOptions: RuntimeBackends["serverOptions"]; close(): Promise<void> } | undefined
-> {
-  const redisUrl = env.REDIS_URL?.trim()
-  if (!redisUrl) return undefined
-
-  const client = createClient({ url: redisUrl })
-  // The stream manager needs a dedicated subscriber connection — a node-redis
-  // client in subscriber mode cannot publish.
-  const pubSubClient = client.duplicate()
-  await client.connect()
-  await pubSubClient.connect()
-  console.log("[miragon-ai] MCP session backends: redis")
-
-  return {
-    serverOptions: {
-      sessionStore: new RedisSessionStore({ client }),
-      streamManager: new RedisStreamManager({ client, pubSubClient }),
-    },
-    close: async () => {
-      await Promise.allSettled([pubSubClient.close(), client.close()])
-    },
+function warnIgnoredRedisUrl(env: NodeJS.ProcessEnv): void {
+  if (env.REDIS_URL?.trim()) {
+    console.warn(
+      "[miragon-ai] REDIS_URL is set, but mcp-use 2 no longer accepts pluggable session/stream backends — ignoring it. Multi-instance deployments need sticky routing until an upstream successor exists.",
+    )
   }
 }
 
@@ -125,7 +98,7 @@ function startSessionCleanup(store: ProfileStore, env: NodeJS.ProcessEnv): () =>
  * small tables.
  */
 export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise<RuntimeBackends> {
-  const session = await initSessionBackends(env)
+  warnIgnoredRedisUrl(env)
   const databaseUrl = env.DATABASE_URL?.trim()
   if (!databaseUrl) {
     const profileStore = createDefaultProfileStore(env)
@@ -135,10 +108,8 @@ export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise
       dashboardStore: env.MCP_DASHBOARD_DIR
         ? createFileSystemDashboardStore({ dir: env.MCP_DASHBOARD_DIR })
         : undefined,
-      serverOptions: session?.serverOptions,
       shutdown: async () => {
         stopCleanup()
-        await session?.close()
       },
     }
   }
@@ -164,11 +135,9 @@ export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise
   return {
     profileStore,
     dashboardStore: createPostgresDashboardStore({ sql }),
-    serverOptions: session?.serverOptions,
     shutdown: async () => {
       stopCleanup()
       await sql.end({ timeout: 5 })
-      await session?.close()
     },
   }
 }

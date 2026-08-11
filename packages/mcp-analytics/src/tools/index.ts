@@ -1,4 +1,4 @@
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
 import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { PrometheusClient } from "@miragon-ai/client-analytics"
 import type { ProfileSource } from "../server-locale.js"

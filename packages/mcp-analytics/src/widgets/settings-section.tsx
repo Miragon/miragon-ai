@@ -7,7 +7,7 @@ import {
   useToolMutation,
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
-import { ModelContext } from "mcp-use/react"
+import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
   NativeSelect,
   QueryFallback,
@@ -122,12 +122,10 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
   }
 
   return (
-    <>
-      {/* Inline (not via adaptDataWidget): the cockpit settings tab renders
-          this widget without pipeline data, and only the mounted component
-          knows the self-fetched view. */}
-      <ModelContext content={describeAnalyticsSettings(view, {})} />
-
+    /* Inline (not via adaptDataWidget): the cockpit settings tab renders this
+       widget without pipeline data, and only the mounted component knows the
+       self-fetched view. HostModelContext renders its children unchanged. */
+    <HostModelContext content={describeAnalyticsSettings(view, {})}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">{t("aSettings.heading")}</h2>
@@ -187,6 +185,6 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
           )}
         </SettingsCard>
       </div>
-    </>
+    </HostModelContext>
   )
 }

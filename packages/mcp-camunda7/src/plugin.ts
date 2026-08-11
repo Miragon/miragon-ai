@@ -1,6 +1,7 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import type { MCPServer } from "mcp-use/server"
+import type { MCPServer } from "mcp-use"
+import { installMcpRequestContext } from "@miragon-ai/widget-shell/server"
 import type { Camunda7AuthType } from "@miragon-ai/client-camunda7"
 import { providerForEntry } from "./providers/index.js"
 import { registerTools } from "./tools/index.js"
@@ -93,6 +94,10 @@ export function createPlugin(
       engines: config.engines,
     },
     registerTools: (server) => {
+      // Ambient request info FIRST: passthrough auth (resolveMcpBearerToken),
+      // profile-key resolution and the sticky engine selection all read it.
+      // Idempotent — the host may install it too.
+      installMcpRequestContext(server)
       // One registrar for the whole module, wrapped in the toolset filter so a
       // `camunda7:read-only` / `:operations` / `:admin` deployment only
       // advertises its subset (no toolset = everything, unchanged default).
@@ -102,16 +107,16 @@ export function createPlugin(
       registerIncidentIssueTools(register, incidentIssueConfig)
       registerIncidentIssuePrompt(server, incidentIssueConfig)
     },
-    registerWidgetTools: (server, resourceUri) => {
-      registerWidgetTools(server, registry, resourceUri, {
+    registerWidgetTools: (server) => {
+      registerWidgetTools(server, registry, {
         healthThresholds: config.healthThresholds,
         profileStore,
       })
-      // Profile tools render/own the settings widget and need the same
-      // resourceUri; the engine registry is read only for the configured engine
-      // list the settings UI offers as availability checkboxes. The toolset is
-      // threaded through so the durable save tool stays out of `read-only`.
-      registerUserProfileTools(server, profileStore, registry, resourceUri, config.toolset)
+      // Profile tools render/own the settings widget; the engine registry is
+      // read only for the configured engine list the settings UI offers as
+      // availability checkboxes. The toolset is threaded through so the
+      // durable save tool stays out of `read-only`.
+      registerUserProfileTools(server, profileStore, registry, config.toolset)
     },
   }
 }
