@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Button, Input, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import { ListTable, TableEmptyState, Td } from "@miragon-ai/widget-shell/widgets"
+import { ListTable, TableEmptyState, Td, useResetOnChange } from "@miragon-ai/widget-shell/widgets"
 
 import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
@@ -174,7 +174,7 @@ export function VariablesTable({
   const t = useT()
   // The optimistic shadows only bridge the gap until the feed refetches —
   // fresh server data (new `variables` identity) must win again.
-  useEffect(() => setLocalVars(new Map()), [variables])
+  useResetOnChange(variables, () => setLocalVars(new Map()))
   const entries = Object.entries(variables)
 
   function getVariable(name: string, original: VariableValue): VariableValue {

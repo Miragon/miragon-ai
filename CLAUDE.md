@@ -134,7 +134,13 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total) + `ListTable` (the table
    frame; rows stay hand-composed `<tr>` + `Td`) + `PagedListFooter` (in camunda7 via
-   the i18n-bound `CockpitListFooter`, `src/widgets/list-footer.tsx`).
+   the i18n-bound `CockpitListFooter`, `src/widgets/list-footer.tsx`). Optimistic
+   local state (resolved marks, variable shadows, form baselines) is dropped with
+   `useResetOnChange(data, reset)` — React's render-phase "adjust state when a prop
+   changes"; `useEffect(reset, [data])` is the shape `react-hooks/set-state-in-effect`
+   rejects, and it commits the stale shadow once before correcting it. Refs are never
+   written during render (`react-hooks/refs`): a discarded render still mutates them,
+   so anything a guard reads belongs in state — see `usePagedViewData`'s generation.
 
 7. **Shared server data paths are single-sourced.** Definition name/version/instance
    lookups come from `packages/mcp-camunda7/src/data/definition-info.ts`;

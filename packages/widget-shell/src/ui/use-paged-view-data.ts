@@ -1,6 +1,25 @@
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useToolQuery, useCallTool } from "@miragon/mcp-toolkit-ui"
 import { parseToolResult } from "./parse-tool-result.js"
+
+/**
+ * The pages appended after page 0, tagged with the reset generation they belong
+ * to. Every reset starts a new generation, and a resolved page is applied only
+ * while its generation is still current — an A→B→A filter round-trip must not
+ * append a stale-offset page (comparing the filter *value* would wrongly accept
+ * it). The generation lives in state rather than a ref so the render-phase reset
+ * stays replay-safe: a discarded render leaves no trace.
+ */
+interface PagedState<TItem> {
+  gen: number
+  items: TItem[]
+  /**
+   * A resolved page whose total lied short-circuits here: a page shorter than
+   * pageSize means the server is out of rows, whatever `total` claims.
+   */
+  exhausted: boolean
+  error: Error | null
+}
 
 export interface PagedViewData<TItem, TData = unknown> {
   /** Accumulated items across all loaded pages. */
@@ -53,18 +72,13 @@ export function usePagedViewData<TItem, TData>(opts: {
   )
   const first = initialData ?? page0.data ?? null
 
-  const [extra, setExtra] = useState<TItem[]>([])
+  const [pages, setPages] = useState<PagedState<TItem>>({
+    gen: 0,
+    items: [],
+    exhausted: false,
+    error: null,
+  })
   const [loadingMore, setLoadingMore] = useState(false)
-  const [moreError, setMoreError] = useState<Error | null>(null)
-  // A resolved page whose total lied short-circuits here: a page shorter than
-  // pageSize means the server is out of rows, whatever `total` claims.
-  const [exhausted, setExhausted] = useState(false)
-
-  // Monotonic request id: each loadMore captures the next id, each reset bumps
-  // it, and a resolved page is discarded unless its id is still current — an
-  // A→B→A filter round-trip must not append a stale-offset page (comparing the
-  // filter *value* would wrongly accept it).
-  const requestIdRef = useRef(0)
 
   // Render-phase reset: when the filter identity or the PAGE-0 identity
   // changes, drop accumulated pages synchronously so we never show stale rows
@@ -78,36 +92,42 @@ export function usePagedViewData<TItem, TData>(opts: {
   if (argsKey !== prevReset || first !== prevFirst) {
     setPrevReset(argsKey)
     setPrevFirst(first)
-    setExtra([])
-    setMoreError(null)
-    setExhausted(false)
-    requestIdRef.current++
+    setPages((prev) => ({ gen: prev.gen + 1, items: [], exhausted: false, error: null }))
   }
 
   const baseItems = useMemo(() => (first ? selectItems(first) : []), [first, selectItems])
-  const items = useMemo(() => [...baseItems, ...extra], [baseItems, extra])
+  const items = useMemo(() => [...baseItems, ...pages.items], [baseItems, pages.items])
   const total = first ? selectTotal(first) : 0
-  const hasMore = !!first && !exhausted && items.length < total
+  const hasMore = !!first && !pages.exhausted && items.length < total
 
+  const gen = pages.gen
   const loadMore = useCallback(() => {
     if (!first || loadingMore || !callTool) return
-    const requestId = ++requestIdRef.current
     setLoadingMore(true)
-    setMoreError(null)
+    setPages((prev) => (prev.gen === gen ? { ...prev, error: null } : prev))
     void callTool(tool, { ...args, firstResult: items.length, maxResults: pageSize })
       .then((res) => {
-        if (requestId !== requestIdRef.current) return
         const data = parseToolResult<TData>(res)
         const pageItems = selectItems(data)
-        if (pageItems.length < pageSize) setExhausted(true)
-        setExtra((prev) => [...prev, ...pageItems])
+        setPages((prev) =>
+          prev.gen === gen
+            ? {
+                ...prev,
+                items: [...prev.items, ...pageItems],
+                exhausted: prev.exhausted || pageItems.length < pageSize,
+              }
+            : prev,
+        )
       })
       .catch((err: unknown) => {
-        if (requestId !== requestIdRef.current) return
-        setMoreError(err instanceof Error ? err : new Error(String(err)))
+        setPages((prev) =>
+          prev.gen === gen
+            ? { ...prev, error: err instanceof Error ? err : new Error(String(err)) }
+            : prev,
+        )
       })
       .finally(() => setLoadingMore(false))
-  }, [first, loadingMore, callTool, tool, args, items.length, pageSize, selectItems])
+  }, [first, loadingMore, callTool, tool, args, items.length, pageSize, selectItems, gen])
 
   return {
     items,
@@ -117,6 +137,6 @@ export function usePagedViewData<TItem, TData>(opts: {
     loadMore,
     loading: !first && ready && !page0.isError,
     loadingMore,
-    error: page0.error ?? moreError,
+    error: page0.error ?? pages.error,
   }
 }

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useToolMutation } from "@miragon/mcp-toolkit-ui"
+import { useResetOnChange } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData } from "../../view-models.js"
 import type { ResolveError } from "../process-incidents/incident-table.js"
@@ -30,11 +31,13 @@ export function useInstanceActions({
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const suspensionMutation = useToolMutation("camunda7_set_process_instance_suspension")
   const cancelMutation = useToolMutation("camunda7_delete_process_instance")
-  // The suspend/activate override only bridges the gap until the feed
-  // refetches — fresh server data must win again.
-  useEffect(() => setSuspendedOverride(null), [data])
-  // Same rule for the optimistic resolved marks (mirrors process-incidents/list).
-  useEffect(() => setResolvedIds(new Set()), [data])
+  // The suspend/activate override and the optimistic resolved marks (mirrors
+  // process-incidents/list) only bridge the gap until the feed refetches —
+  // fresh server data must win again.
+  useResetOnChange(data, () => {
+    setSuspendedOverride(null)
+    setResolvedIds(new Set())
+  })
 
   const isSuspended = suspendedOverride ?? data?.instance.suspended ?? false
   // Standalone (camunda7_show_instance_detail) the `engine` prop is undefined; fall

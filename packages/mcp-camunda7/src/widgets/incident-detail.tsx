@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import { SectionHeading, truncate, useDetailView } from "@miragon-ai/widget-shell/widgets"
+import {
+  SectionHeading,
+  truncate,
+  useDetailView,
+  useResetOnChange,
+} from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "../view-models.js"
 
@@ -61,10 +66,10 @@ export function IncidentDetailWidget({
   })
   // The optimistic resolved/retried flags only bridge the gap until the feed
   // refetches — fresh server data must win again.
-  useEffect(() => {
+  useResetOnChange(data, () => {
     setResolved(false)
     setRetried(false)
-  }, [data])
+  })
 
   const highlights = useMemo<BpmnHighlight[]>(
     () => [{ kind: "incident", activityIds: data ? [data.activityId] : [] }],

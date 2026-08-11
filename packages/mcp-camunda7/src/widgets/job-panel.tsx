@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import { Badge, Button, useToolMutation } from "@miragon/mcp-toolkit-ui"
 
@@ -14,6 +14,7 @@ import {
   WidgetShell,
   formatTimestamp,
   usePagedViewData,
+  useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { CockpitListFooter } from "./list-footer.js"
@@ -69,10 +70,10 @@ export function JobPanelWidget({
   const data = paged.firstPage
   // The optimistic retried-shadows only bridge the gap until the feed
   // refetches — fresh server data (new page-0 identity) must win again.
-  useEffect(() => {
+  useResetOnChange(data, () => {
     setRetriedIds(new Set())
     setRetryError(null)
-  }, [data])
+  })
 
   if (!data) {
     return (

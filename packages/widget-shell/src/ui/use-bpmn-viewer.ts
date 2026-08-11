@@ -95,8 +95,13 @@ export function useBpmnViewer({
   const viewerRef = useRef<NavigatedViewer | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   // Latest callback, read at import time so identity changes don't remount.
+  // Synced in an effect (not during render) so a discarded render can't leak
+  // into the ref; declared before the mount effect below, so the ref is already
+  // current by the time an import can read it.
   const onImportedRef = useRef(onImported)
-  onImportedRef.current = onImported
+  useEffect(() => {
+    onImportedRef.current = onImported
+  })
 
   const getCanvas = useCallback((): BpmnCanvas | null => {
     if (!viewerRef.current) return null
