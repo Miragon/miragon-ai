@@ -20,7 +20,7 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.widgets.json"
   },
   "dependencies": {
-    "@miragon-ai/widget-shell": "0.6.0",
+    "@miragon-ai/widget-shell": "0.7.0",
     "@miragon/mcp-toolkit-core": "1.1.0",
     "zod": "4.4.3"
   },

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.0](https://github.com/Miragon/miragon-ai/compare/v0.6.0...v0.7.0) (2026-08-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **analytics:** `analytics_engine_compare` and `analytics_show_engine_compare` reject calls without `processDefinitionKey`.
+
+### Features
+
+* **analytics:** cross-engine landscape; engine_compare requires a process key ([#242](https://github.com/Miragon/miragon-ai/issues/242)) ([0faf5fb](https://github.com/Miragon/miragon-ai/commit/0faf5fb0649ef779ca667add82b962a7efe731a0))
+
 ## [0.6.0](https://github.com/Miragon/miragon-ai/compare/v0.5.1...v0.6.0) (2026-08-11)
 
 
