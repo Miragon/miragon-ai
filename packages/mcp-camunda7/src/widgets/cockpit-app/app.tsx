@@ -289,11 +289,11 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     return (
       <WidgetShell>
         <HostModelContext
-          content={`Support is in the consolidated CIB Seven cockpit in CROSS-ENGINE (fleet) mode across engines: ${engines
+          content={`Support is in the consolidated CIB Seven cockpit in CROSS-ENGINE mode across engines: ${engines
             .map((e) => e.id)
             .join(
               ", ",
-            )}. Offer cross-engine analyses (compare engines, fleet-wide failure & performance) via the analytics tools; drilling into an engine switches to that engine's single-engine cockpit.`}
+            )}. This is an OVERVIEW across engines, not a ranking between them: the engines run different process definitions, so per-engine failure rates or durations describe each engine's process mix rather than the engine. Offer the cross-engine landscape (analytics_engine_landscape — what runs where, absolute load, job backlog), fleet-wide failure & performance analyses, and per-engine health. A like-for-like engine KPI comparison (analytics_engine_compare) is only sound for a process definition deployed on several engines and requires that processDefinitionKey. Drilling into an engine switches to that engine's single-engine cockpit.`}
         >
           {null}
         </HostModelContext>
@@ -315,7 +315,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
             </span>
           </nav>
         )}
-        <FleetView engines={engines} onEnterEngine={enterEngine} />
+        <FleetView engines={engines} onEnterEngine={enterEngine} widgets={cockpitWidgets} />
       </WidgetShell>
     )
   }

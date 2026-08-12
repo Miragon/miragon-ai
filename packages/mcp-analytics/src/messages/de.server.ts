@@ -11,11 +11,15 @@ export const deServer: MessageCatalog = {
   "aSum.dashboard":
     "Analyse-Dashboard{scope} über {period}: {totalCount} Instanzen — {completedCount} abgeschlossen, {runningCount} laufend, {failedCount} fehlgeschlagen ({failureRatePct} % Fehlerquote, {incidentCount} Vorfälle).",
   "aSum.engineCompare":
-    'Engine-Vergleich "{engineA}" vs. "{engineB}"{scope} über {windowDays} d: {delta}{suppressed}.',
+    'Engine-Vergleich des Prozesses "{key}" auf "{engineA}" vs. "{engineB}" über {windowDays} d: {delta}{suppressed}.',
+  "aSum.engineLandscape":
+    "Engine-übergreifende Übersicht: {engineCount} Engine(s) ({reportingEngineCount} mit Metriken), {processKeyCount} Prozessdefinition(en), {runningInstances} laufende Instanz(en), {openIncidents} offene(r) Vorfall/Vorfälle.{shared}",
   "aSum.failureDashboard":
     "Fehler-Dashboard: {totalIncidents} offene(r) Vorfall/Vorfälle über {uniqueErrorPatterns} Fehlermuster{mostAffected}.",
   "aSum.mostAffectedProcess": '; am stärksten betroffener Prozess: "{key}"',
   "aSum.scopeForProcess": ' für "{key}"',
+  "aSum.sharedKeys":
+    " Auf mehreren Engines deployt (die einzigen belastbaren Engine-Vergleiche): {keys}.",
   "aSum.settings":
     "Analyse-Einstellungen: Standard-Zeitraum {period}, min. Bucket-Größe {minBucketSize}.{changeHint}",
   "aSum.settingsChangeHint": " Änderbar über analytics_save_settings.",

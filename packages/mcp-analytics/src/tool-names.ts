@@ -12,6 +12,10 @@ export const ANALYTICS_FAILURE_DASHBOARD_DATA = "analytics_failure_dashboard_dat
 // Cross-module consumers (camunda7's process-incidents flow) reference this
 // feed by raw string with graceful degradation — keep the name stable.
 export const ANALYTICS_BPMN_HEATMAP_DATA = "analytics_bpmn_heatmap_data"
+// Backs the cross-engine landscape widget's self-fetch. Also referenced by
+// camunda7's cross-engine cockpit mode through the widget id (tier-2), so the
+// section disappears with the module instead of erroring.
+export const ANALYTICS_ENGINE_LANDSCAPE_DATA = "analytics_engine_landscape_data"
 // Settings section: the widget self-fetches the feed and writes via the save
 // tool; both live in settings-tools.ts.
 export const ANALYTICS_SETTINGS_DATA = "analytics_settings_data"

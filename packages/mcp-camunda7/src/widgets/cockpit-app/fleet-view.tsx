@@ -1,4 +1,5 @@
 import { useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { WidgetRenderer, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import {
   AskAiButton,
   CountPill,
@@ -10,6 +11,7 @@ import type { CockpitDashboardData } from "../../view-models.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { severityTone } from "../cockpit-dashboard/lib.js"
 import { useT } from "../../messages/use-t.js"
+import { filterLayoutToWidgets } from "./views.js"
 
 function FleetEngineKpis({
   summary,
@@ -106,26 +108,65 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
   )
 }
 
+/** Widget id of the analytics module's cross-engine landscape (tier-2 raw reference). */
+const LANDSCAPE_WIDGET = "analytics:engine-landscape"
+
 /**
- * The cross-engine ("fleet") cockpit mode. A landscape view ACROSS all configured
- * engines: a self-fetched health tile per engine (drill in to operate it) plus the
- * cross-engine AI analyses (compare engines, fleet-wide failures/performance) that
- * the single-engine cockpit can't answer. The deep comparisons are agentic handoffs
- * — they run the analytics `*_compare` / `show_*` tools, which aggregate over the
- * whole fleet via an engineId array.
+ * The analytics module's cross-engine landscape, composed by raw widget id.
+ * Tier-2 cross-module UI (architecture invariant 8): the id is a string, not an
+ * import — `filterLayoutToWidgets` drops the cell when the analytics module is
+ * inactive, so the section disappears instead of erroring.
+ */
+function LandscapeSection({
+  engineIds,
+  widgets,
+}: {
+  engineIds: string[]
+  widgets: Record<string, WidgetComponent>
+}) {
+  const t = useT()
+  const layout = filterLayoutToWidgets(
+    // The FULL engine list travels as a prop so an engine that reports no
+    // metrics at all still shows up in the landscape instead of silently
+    // dropping out of the overview.
+    [{ row: [{ widget: LANDSCAPE_WIDGET, props: { engine: engineIds } }] }],
+    widgets,
+  )
+  if (!(LANDSCAPE_WIDGET in widgets)) return null
+  return (
+    <section>
+      <SectionHeading title={t("fleet.landscape.title")} hint={t("fleet.landscape.hint")} />
+      <WidgetRenderer layout={layout} keys={{}} errors={[]} widgets={widgets} />
+    </section>
+  )
+}
+
+/**
+ * The cross-engine ("fleet") cockpit mode — an OVERVIEW across all configured
+ * engines, not a scoreboard between them. Engines host different processes, so
+ * ranking them by failure rate or duration would rank their process mixes; the
+ * landscape section therefore shows what runs where plus absolute load and the
+ * process-independent job backlog, and offers the KPI comparison only for the
+ * definitions that actually run on more than one engine.
+ *
+ * Composed from a self-fetched health tile per engine (drill in to operate it),
+ * the analytics landscape widget, and the fleet-wide AI analyses the
+ * single-engine cockpit can't answer.
  */
 export function FleetView({
   engines,
   onEnterEngine,
+  widgets,
 }: {
   engines: Array<{ id: string }>
   onEnterEngine: (id: string) => void
+  /** Host widget registry — resolves the analytics landscape section (tier-2). */
+  widgets: Record<string, WidgetComponent>
 }) {
   const t = useT()
   const ids = engines.map((e) => e.id)
   const idList = ids.join(", ")
   const idArray = ids.map((id) => `"${id}"`).join(", ")
-  const [a, b] = ids
 
   return (
     <div className="flex flex-col gap-6">
@@ -145,7 +186,7 @@ export function FleetView({
         </div>
         <AskAiButton
           variant="primary"
-          prompt={`Triage the whole CIB Seven fleet across engines ${idList}. For each engine call analytics_engine_health (engineId per engine) for the live ops snapshot, and use analytics_engine_compare to rank the engines against each other. Identify which engine is in the worst shape and why (running WIP, open incidents, dead jobs, failure/incident rate), name the single most urgent cross-engine problem, and tell me where to start. Then give a one-line health verdict per engine. Recommend only — do not mutate anything.`}
+          prompt={`Give me a cross-engine overview of the CIB Seven fleet (engines ${idList}). Start with analytics_engine_landscape({engine: [${idArray}]}) for the landscape: which process definitions run on which engine, the absolute load per engine (running instances, open incidents, failed jobs) and the engine-owned job backlog. Then call analytics_engine_health per engine for the live ops snapshot. Important: do NOT rank the engines by failure rate, incident rate or duration — the engines run different processes, so those aggregates describe each engine's process mix rather than the engine itself. Judge engines against each other only on the process-independent signals (executable/suspended job backlog, open external tasks, whether an engine reports metrics at all) and on absolute counts of trouble. Tell me: where the most work and the most trouble physically sit, whether any engine has a job backlog the others don't, whether any engine is silent, and where to start. If the landscape reports sharedProcessKeys (a definition deployed on several engines), that is the ONE place a like-for-like KPI comparison holds — use analytics_engine_compare with that processDefinitionKey. Recommend only — do not mutate anything.`}
         />
       </header>
 
@@ -158,28 +199,23 @@ export function FleetView({
         </div>
       </section>
 
+      <LandscapeSection engineIds={ids} widgets={widgets} />
+
       <section>
         <SectionHeading
           title={t("fleet.fleetAnalyses.title")}
           hint={t("fleet.fleetAnalyses.hint")}
         />
         <div className="flex flex-wrap items-center gap-2">
-          {a && b && (
-            <AskAiButton
-              variant="subtle"
-              label={t("fleet.compareEngines")}
-              prompt={`Compare the CIB Seven engines ${a} vs ${b} over the last 7 days. Use analytics_show_engine_compare({engineA: "${a}", engineB: "${b}", windowDays: 7}) to render the side-by-side KPIs, then interpret the deltas (failure rate, incident rate, avg/p95 duration): which engine is healthier and by how much, whether the gap is significant (watch the 'suppressed' low-sample flag), and the single recommended action.${ids.length > 2 ? ` Note: ${ids.length} engines are configured (${idList}); after this pair, compare the remaining engines too.` : ""}`}
-            />
-          )}
           <AskAiButton
             variant="subtle"
             label={t("fleet.failureAnalysis")}
-            prompt={`Analyze failures across the entire CIB Seven fleet (engines ${idList}). Use analytics_show_failure_dashboard({engine: [${idArray}]}) to group incidents fleet-wide by error pattern, activity and process definition. Tell me the dominant cross-engine failure cluster, whether it is isolated to one engine or systemic across the fleet, and the highest-leverage remediation.`}
+            prompt={`Analyze failures across the entire CIB Seven fleet (engines ${idList}). Use analytics_show_failure_dashboard({engine: [${idArray}]}) to group incidents fleet-wide by error pattern, activity and process definition. Tell me the dominant cross-engine failure cluster, whether it is isolated to one engine or systemic across the fleet, and the highest-leverage remediation. Attribute a cluster to an engine only when the same process definition also runs elsewhere without it — otherwise the difference is the process, not the engine.`}
           />
           <AskAiButton
             variant="subtle"
             label={t("fleet.performance")}
-            prompt={`Give me a fleet-wide process-performance overview across CIB Seven engines ${idList}. Use analytics_show_dashboard({engine: [${idArray}], period: "7d"}) for the aggregate throughput / duration / incident picture, then call out the worst-performing process definitions across the fleet and the main bottleneck.`}
+            prompt={`Give me a fleet-wide process-performance overview across CIB Seven engines ${idList}. Use analytics_show_dashboard({engine: [${idArray}], period: "7d"}) for the aggregate throughput / duration / incident picture, then call out the worst-performing process definitions across the fleet and the main bottleneck. Rank PROCESSES, not engines — a per-engine average over a different set of processes is not a statement about the engine.`}
           />
         </div>
       </section>

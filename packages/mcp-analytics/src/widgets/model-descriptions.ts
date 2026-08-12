@@ -8,6 +8,7 @@ import type { DescribeForModel } from "@miragon-ai/widget-shell/ui"
 import type { ClusterCompareData } from "./cluster-compare.js"
 import type { VersionCompareData } from "./version-compare.js"
 import type { EngineCompareData } from "./engine-compare.js"
+import type { EngineLandscapeData } from "./engine-landscape.js"
 import type { AnalyticsSettingsViewData } from "./settings-section.js"
 
 /**
@@ -182,11 +183,38 @@ export const describeVersionCompare: DescribeForModel<VersionCompareData> = (dat
   `Confirm with analytics_version_compare; find the driving activity with analytics_element_bottleneck.`
 
 export const describeEngineCompare: DescribeForModel<EngineCompareData> = (data) =>
-  `Comparing engines "${data.engineA}" vs "${data.engineB}"` +
-  `${data.processDefinitionKey ? ` for process "${data.processDefinitionKey}"` : ""} over ` +
-  `${data.windowDays}d${data.elementId ? `, element ${data.elementId}` : ""}: ` +
+  `Comparing process "${data.processDefinitionKey}" on engine "${data.engineA}" (baseline) vs ` +
+  `"${data.engineB}" over ${data.windowDays}d` +
+  `${data.elementId ? `, element ${data.elementId}` : ""}: ` +
   `${mostNotableDelta(data.delta)}${suppressedNote(data.suppressed)}. ` +
-  `Confirm with analytics_engine_compare; per-engine ops snapshot via analytics_engine_health.`
+  `The process is held fixed, so the delta is attributable to the engine rather than to a ` +
+  `different workload. Confirm with analytics_engine_compare; per-engine ops snapshot via ` +
+  `analytics_engine_health; the cross-engine picture via analytics_engine_landscape.`
+
+export const describeEngineLandscape: DescribeForModel<EngineLandscapeData> = (data) => {
+  const { totals } = data
+  const silent = data.engines.filter((e) => !e.reporting).map((e) => e.engineId)
+  const busiest = [...data.engines].sort((a, b) => b.runningInstances - a.runningInstances)[0]
+  const backlog = [...data.engines].sort((a, b) => b.executableJobs - a.executableJobs)[0]
+  return (
+    `Viewing the cross-engine landscape: ${totals.engineCount} engine(s), ` +
+    `${totals.processKeyCount} process definition(s), ${totals.runningInstances} running ` +
+    `instance(s), ${totals.openIncidents} open incident(s)` +
+    `${silent.length ? `; reporting NO metrics: ${silent.join(", ")}` : ""}` +
+    `${busiest ? `; most running work on "${busiest.engineId}" (${busiest.runningInstances})` : ""}` +
+    `${backlog && backlog.executableJobs > 0 ? `; largest job backlog on "${backlog.engineId}" (${backlog.executableJobs} executable)` : ""}. ` +
+    `These are absolute counts and the process-independent job backlog on purpose: engines run ` +
+    `different process mixes, so per-engine failure rates or durations would describe the mix, ` +
+    `not the engine. ` +
+    (data.sharedProcessKeys.length
+      ? `A KPI comparison is only sound for the definition(s) deployed on several engines: ` +
+        `${data.sharedProcessKeys.join(", ")} — use analytics_engine_compare with that ` +
+        `processDefinitionKey. `
+      : `No definition runs on more than one engine, so there is no valid engine-vs-engine KPI ` +
+        `comparison here. `) +
+    `Per-engine ops detail via analytics_engine_health.`
+  )
+}
 
 function maxEntry(values: Record<string, number>): [string, number] | null {
   let best: [string, number] | null = null

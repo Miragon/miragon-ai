@@ -11,6 +11,7 @@
     "src/settings.ts",
     "src/toolsets.ts",
     "src/tools/engine-compare.ts",
+    "src/tools/engine-landscape.ts",
     "src/tools/health.ts",
     "src/tools/performance.ts"
   ],

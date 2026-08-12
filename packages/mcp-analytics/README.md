@@ -11,13 +11,28 @@ structurally to the app's `ModuleDefinition` port. The package is `private` and 
 
 - **Analytics tools** (`src/tools/`) — `analyze_process_performance`, `compare_execution_periods`,
   `element_bottleneck`, `find_failed_instances`, `cluster_compare`, `version_compare`,
-  `engine_compare`, and `engine_health` (a live WIP / incidents / backlog / alerts snapshot). All
-  carry the `analytics` category and run PromQL through
+  `engine_landscape`, `engine_compare`, and `engine_health` (a live WIP / incidents / backlog /
+  alerts snapshot). All carry the `analytics` category and run PromQL through
   [`@miragon-ai/client-analytics`](../client-analytics).
 - **Widgets** (`src/widgets/`) — `show_dashboard`, `show_failure_dashboard`, `show_cluster_compare`,
-  `show_version_compare`, `show_engine_compare`, `show_bpmn_heatmap`.
+  `show_version_compare`, `show_engine_landscape`, `show_engine_compare`, `show_bpmn_heatmap`.
 - **Engine-aware** — every tool accepts an optional `engine` filter (single id or list) so a single
-  dashboard can aggregate or compare across CIB Seven instances; analytics are session-independent.
+  dashboard can aggregate across CIB Seven instances; analytics are session-independent.
+
+### Cross-engine: overview, not scoreboard
+
+Engines host different process definitions, so a failure rate, incident rate or duration aggregated
+per engine describes that engine's **process mix**, not the engine — the same aggregation can even
+invert the per-process truth. Two consequences run through the module:
+
+- `engine_landscape` is the cross-engine view. It reports the process × engine inventory, absolute
+  counts (running instances, open incidents, failed jobs) and the engine-owned job backlog
+  (`jobs_executable`, `jobs_suspended`, `jobs_due_future`, `external_tasks_open`) — the one metric
+  family whose contract labels are `engine_id` only, so no process mix can confound it. Pass the
+  full configured engine list to surface engines that report nothing (`reporting: false`).
+- `engine_compare` **requires** a `processDefinitionKey`. Holding the process fixed on both sides is
+  what makes a delta attributable to the engine; `engine_landscape.sharedProcessKeys` lists the
+  definitions that qualify.
 
 These tools read the `camunda_*` series emitted by the
 [engine metrics plugin](../../engine-plugins). Per-instance drill-down (search by variable) is **not**

@@ -13,8 +13,9 @@ import {
   ANALYTICS_FAILURE_DASHBOARD_DATA,
 } from "./tool-names.js"
 import { localizeFor, type ProfileSource } from "./server-locale.js"
-import { optionalMinBucketSize, optionalPeriod, settingsFor } from "./settings.js"
+import { optionalPeriod, settingsFor } from "./settings.js"
 import { appOnly, showToolBinding } from "./widget-tool-shared.js"
+import { registerComparisonWidgetTools } from "./widget-tools/comparisons.js"
 
 /**
  * Engine-agnostic BPMN-XML lookup injected by the host app (which owns the
@@ -45,28 +46,6 @@ const heatmapInputShape = {
   period: optionalPeriod,
   ...schemas.engineFilterShape,
 }
-
-/** Formats a nullable comparison delta ("+12.5%", "-3pp", "n/a") for summaries. */
-function fmtDelta(value: number | null, unit: string): string {
-  if (value == null) return "n/a"
-  return `${value > 0 ? "+" : ""}${value}${unit}`
-}
-
-/** Shared delta shape of the three compare queries, for one-line summaries. */
-function compareDeltaSummary(delta: {
-  failure_rate_delta_pp: number | null
-  avg_duration_delta_pct: number | null
-  p95_duration_delta_pct: number | null
-}): string {
-  return (
-    `failure rate ${fmtDelta(delta.failure_rate_delta_pp, "pp")}, ` +
-    `avg duration ${fmtDelta(delta.avg_duration_delta_pct, "%")}, ` +
-    `p95 ${fmtDelta(delta.p95_duration_delta_pct, "%")}`
-  )
-}
-
-const suppressedNote = (suppressed: boolean) =>
-  suppressed ? " — flagged suppressed (sample below minBucketSize)" : ""
 
 export function registerWidgetTools(
   server: MCPServer,
@@ -182,118 +161,7 @@ export function registerWidgetTools(
     }),
   )
 
-  // --- Cluster Compare (Pre/Post deployment diff) ---
-  server.tool(
-    {
-      name: "analytics_show_cluster_compare",
-      title: "Pre/Post Deployment Comparison",
-      description:
-        "Visualize before/after KPI deltas around a deployment timestamp. Results are flagged `suppressed` when either window has fewer than minBucketSize instances.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
-        ...schemas.clusterCompareInput.shape,
-        minBucketSize: optionalMinBucketSize,
-      }),
-      ...showToolBinding("analytics_show_cluster_compare", "Pre/Post Deployment Comparison"),
-    },
-    withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
-      const minBucketSize =
-        args.minBucketSize ?? (await settingsFor(profileStore, ctx)).minBucketSize
-      const data = await queries.clusterCompare(ch, { ...args, minBucketSize })
-      return buildSingleWidgetView({
-        widget: "analytics:cluster-compare",
-        app: "analytics",
-        dataType: "analytics:clusterCompare",
-        data,
-        title: "Cluster Compare",
-        summary: t("aSum.clusterCompare", {
-          scope: data.processDefinitionKey
-            ? t("aSum.scopeForProcess", { key: data.processDefinitionKey })
-            : "",
-          deploymentTimestamp: data.deploymentTimestamp,
-          delta: compareDeltaSummary(data.delta),
-          suppressed: suppressedNote(data.suppressed),
-        }),
-      })
-    }),
-  )
-
-  // --- Version Compare (v1 vs v2 of one process) ---
-  server.tool(
-    {
-      name: "analytics_show_version_compare",
-      title: "Process Version Comparison",
-      description:
-        "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
-        ...schemas.versionCompareInput.shape,
-        minBucketSize: optionalMinBucketSize,
-      }),
-      ...showToolBinding("analytics_show_version_compare", "Process Version Comparison"),
-    },
-    withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
-      const minBucketSize =
-        args.minBucketSize ?? (await settingsFor(profileStore, ctx)).minBucketSize
-      const data = await queries.versionCompare(ch, { ...args, minBucketSize })
-      return buildSingleWidgetView({
-        widget: "analytics:version-compare",
-        app: "analytics",
-        dataType: "analytics:versionCompare",
-        data,
-        title: "Version Compare",
-        summary: t("aSum.versionCompare", {
-          key: data.processDefinitionKey,
-          versionA: data.versionA,
-          versionB: data.versionB,
-          windowDays: data.windowDays,
-          delta: compareDeltaSummary(data.delta),
-          suppressed: suppressedNote(data.suppressed),
-        }),
-      })
-    }),
-  )
-
-  // --- Engine Compare (engine A vs engine B across the fleet) ---
-  server.tool(
-    {
-      name: "analytics_show_engine_compare",
-      title: "Engine Comparison",
-      description:
-        "Visualize KPI deltas between two CIB Seven engines (e.g. prod-a vs prod-b) over a shared time window. Optionally scope to one processDefinitionKey. Results are flagged `suppressed` when either engine has fewer than minBucketSize instances.",
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
-        ...schemas.engineCompareInput.shape,
-        minBucketSize: optionalMinBucketSize,
-      }),
-      ...showToolBinding("analytics_show_engine_compare", "Engine Comparison"),
-    },
-    withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
-      const minBucketSize =
-        args.minBucketSize ?? (await settingsFor(profileStore, ctx)).minBucketSize
-      const data = await queries.engineCompare(ch, { ...args, minBucketSize })
-      return buildSingleWidgetView({
-        widget: "analytics:engine-compare",
-        app: "analytics",
-        dataType: "analytics:engineCompare",
-        data,
-        title: "Engine Compare",
-        summary: t("aSum.engineCompare", {
-          engineA: data.engineA,
-          engineB: data.engineB,
-          scope: data.processDefinitionKey
-            ? t("aSum.scopeForProcess", { key: data.processDefinitionKey })
-            : "",
-          windowDays: data.windowDays,
-          delta: compareDeltaSummary(data.delta),
-          suppressed: suppressedNote(data.suppressed),
-        }),
-      })
-    }),
-  )
+  registerComparisonWidgetTools({ server, ch, profileStore })
 
   // --- BPMN Heatmap (per-element frequency + duration on the diagram) ---
   server.tool(

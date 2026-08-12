@@ -8,6 +8,7 @@ import { registerElementTools } from "./element.js"
 import { registerClusterCompareTools } from "./cluster-compare.js"
 import { registerVersionCompareTools } from "./version-compare.js"
 import { registerEngineCompareTools } from "./engine-compare.js"
+import { registerEngineLandscapeTools } from "./engine-landscape.js"
 import { registerHealthTools } from "./health.js"
 
 /**
@@ -30,5 +31,6 @@ export function registerTools(
   registerClusterCompareTools(register, profileStore)
   registerVersionCompareTools(register, profileStore)
   registerEngineCompareTools(register, profileStore)
+  registerEngineLandscapeTools(register)
   registerHealthTools(register)
 }

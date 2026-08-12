@@ -150,6 +150,7 @@ export default tseslint.config(
     files: ["packages/mcp-analytics/src/**/*.ts", "packages/mcp-camunda7/src/**/*.ts"],
     ignores: [
       "packages/mcp-analytics/src/widget-tools.ts",
+      "packages/mcp-analytics/src/widget-tools/**",
       "packages/mcp-analytics/src/settings-tools.ts",
       "packages/mcp-camunda7/src/widget-tools.ts",
       "packages/mcp-camunda7/src/widget-tools/**",

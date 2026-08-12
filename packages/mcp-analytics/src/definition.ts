@@ -18,6 +18,17 @@ const dashboardPropsSchema = z.toJSONSchema(
   }),
 )
 
+const engineLandscapePropsSchema = z.toJSONSchema(
+  z.object({
+    engine: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .describe(
+        "Engine ids to include in the landscape. Pass all configured ids so engines reporting no metrics stay visible; when omitted, only engines with Prometheus series appear.",
+      ),
+  }),
+)
+
 export const definition: AppDefinition = {
   name: "analytics",
   steps: [loadDashboardStep, loadFailureDashboardStep],
@@ -100,10 +111,19 @@ export const definition: AppDefinition = {
     {
       id: "analytics:engine-compare",
       description:
-        "Side-by-side comparison of KPIs (failure/incident rate, duration, throughput) across two engines (e.g. prod-a vs prod-b).",
+        "Side-by-side comparison of KPIs (failure/incident rate, duration, throughput) for ONE process definition as it runs on two engines (e.g. prod-a vs prod-b). Requires a processDefinitionKey — see analytics:engine-landscape for which definitions qualify.",
       requires: [],
       consumes: ["analytics:engineCompare"],
       size: "full",
+    },
+    {
+      id: "analytics:engine-landscape",
+      description:
+        "Cross-engine overview: the process × engine inventory matrix, absolute load per engine (running instances, incidents, failed jobs) and the process-independent job backlog. Counts rather than rates, because engines run different process mixes; highlights the definitions deployed on several engines as the valid comparison targets.",
+      requires: [],
+      consumes: ["analytics:engineLandscape"],
+      size: "full",
+      propsSchema: engineLandscapePropsSchema,
     },
     {
       id: "analytics:bpmn-heatmap",

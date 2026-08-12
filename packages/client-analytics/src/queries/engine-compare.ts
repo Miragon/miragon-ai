@@ -16,7 +16,7 @@ export type EngineCompareDelta = CompareKpiDelta
 export interface EngineCompareResult {
   engineA: string
   engineB: string
-  processDefinitionKey: string | null
+  processDefinitionKey: string
   windowDays: number
   elementId: string | null
   minBucketSize: number
@@ -26,21 +26,33 @@ export interface EngineCompareResult {
 }
 
 /**
- * Side-by-side comparison of two CIB Seven engines over a shared rolling window,
- * from OTEL metrics. The engine is a metric label (`engine_id`) and all engines
- * write to one Prometheus, so this is an exact partition with no per-engine DB
- * fan-out — the fleet/cluster comparison the metric path is built for. Optionally
- * scope to one `processDefinitionKey`. `failed_count` / `failure_rate_pct` are
- * incident-based (consistent across the analytics tools); `incident_count` is the
- * same signal optionally scoped to `elementId`.
+ * Side-by-side comparison of ONE process definition as it runs on two engines,
+ * over a shared rolling window. The engine is a metric label (`engine_id`) and
+ * all engines write to one Prometheus, so the partition is exact with no
+ * per-engine DB fan-out.
+ *
+ * `processDefinitionKey` is required by design. Comparing two engines' entire
+ * workloads would compare their PROCESS MIXES: engines host different
+ * processes, so an engine running an inherently error-prone process reads
+ * "worse" no matter how healthy it is — a textbook confound (the same
+ * aggregation can even invert the per-process truth, Simpson's paradox).
+ * Holding the process fixed is what makes a delta attributable to the engine.
+ * The cross-engine picture without that scope is `engineLandscape`, which
+ * reports mix-independent signals instead (absolute load, engine-owned job
+ * backlog) and names the keys deployed on several engines — the valid inputs
+ * here.
+ *
+ * `failed_count` / `failure_rate_pct` are incident-based (consistent across the
+ * analytics tools); `incident_count` is the same signal optionally scoped to
+ * `elementId`.
  */
 export async function engineCompare(
   ch: PrometheusClient,
   params: {
+    processDefinitionKey: string
     engineA: string
     engineB: string
     windowDays: number
-    processDefinitionKey?: string
     elementId?: string
     minBucketSize: number
   },
@@ -58,7 +70,7 @@ export async function engineCompare(
   return {
     engineA: params.engineA,
     engineB: params.engineB,
-    processDefinitionKey: params.processDefinitionKey ?? null,
+    processDefinitionKey: params.processDefinitionKey,
     windowDays,
     elementId: params.elementId ?? null,
     minBucketSize: minBucket,
@@ -70,15 +82,13 @@ export async function engineCompare(
 
 async function engineKpi(
   ch: PrometheusClient,
-  params: { processDefinitionKey?: string; elementId?: string },
+  params: { processDefinitionKey: string; elementId?: string },
   bucket: "engineA" | "engineB",
   engineId: string,
   range: string,
 ): Promise<EngineCompareKpi> {
   const engine = `engine_id="${escapeLabelValue(engineId)}"`
-  const keyMatcher = params.processDefinitionKey
-    ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
-    : undefined
+  const keyMatcher = `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
   const sel = selector(keyMatcher, engine)
   const completedSel = selector(keyMatcher, `state="COMPLETED"`, engine)
   const incidentSel = selector(
