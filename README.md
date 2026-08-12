@@ -139,9 +139,16 @@ BPM operations across these domains (`category`): `engines`, `process-definition
 
 Prometheus-backed analysis over PromQL: `analyze_process_performance`, `compare_execution_periods`,
 `element_bottleneck`, `find_failed_instances`, `cluster_compare`, `version_compare`,
-`engine_compare`, and `engine_health` (a live WIP / incidents / backlog / alerts snapshot). Widgets:
-`show_dashboard`, `show_failure_dashboard`, `show_cluster_compare`, `show_version_compare`,
-`show_engine_compare`, `show_bpmn_heatmap`.
+`engine_landscape` (the cross-engine overview: what runs where, load and job backlog per engine),
+`engine_compare` (one process definition on two engines), and `engine_health` (a live WIP /
+incidents / backlog / alerts snapshot). Widgets: `show_dashboard`, `show_failure_dashboard`,
+`show_cluster_compare`, `show_version_compare`, `show_engine_landscape`, `show_engine_compare`,
+`show_bpmn_heatmap`.
+
+Across engines the tools report counts, never per-engine rates: engines host different process
+definitions, so an aggregated failure rate or duration describes that engine's process mix rather
+than the engine. `engine_compare` therefore requires a `processDefinitionKey` — `engine_landscape`
+lists the definitions deployed on more than one engine as its valid inputs.
 
 ### Toolsets
 

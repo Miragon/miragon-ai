@@ -23,9 +23,10 @@ function mockClient() {
 }
 
 describe("engineCompare", () => {
-  it("computes per-engine KPIs and the B-vs-A delta", async () => {
+  it("computes per-engine KPIs and the B-vs-A delta for one process", async () => {
     const { ch } = mockClient()
     const res = await engineCompare(ch, {
+      processDefinitionKey: "order",
       engineA: "prod-a",
       engineB: "prod-b",
       windowDays: 14,
@@ -35,7 +36,7 @@ describe("engineCompare", () => {
     expect(res).toMatchObject({
       engineA: "prod-a",
       engineB: "prod-b",
-      processDefinitionKey: null,
+      processDefinitionKey: "order",
       windowDays: 14,
       elementId: null,
       minBucketSize: 10,
@@ -79,6 +80,7 @@ describe("engineCompare", () => {
   it("flags the comparison as suppressed when one engine misses minBucketSize", async () => {
     const { ch } = mockClient()
     const res = await engineCompare(ch, {
+      processDefinitionKey: "order",
       engineA: "prod-a",
       engineB: "prod-b",
       windowDays: 14,
@@ -91,7 +93,13 @@ describe("engineCompare", () => {
     const instant = vi.fn(async (): Promise<PromSample[]> => [])
     const res = await engineCompare(
       { instant },
-      { engineA: "prod-a", engineB: "prod-b", windowDays: 7, minBucketSize: 1 },
+      {
+        processDefinitionKey: "order",
+        engineA: "prod-a",
+        engineB: "prod-b",
+        windowDays: 7,
+        minBucketSize: 1,
+      },
     )
     expect(res.suppressed).toBe(true)
     expect(res.delta.instance_count_delta_pct).toBeNull()
@@ -99,13 +107,13 @@ describe("engineCompare", () => {
     expect(res.delta.p95_duration_delta_pct).toBeNull()
   })
 
-  it("partitions every query by exactly one engine_id", async () => {
+  it("partitions every query by exactly one engine_id and always holds the process fixed", async () => {
     const { ch, instant } = mockClient()
     await engineCompare(ch, {
+      processDefinitionKey: "order",
       engineA: "prod-a",
       engineB: "prod-b",
       windowDays: 14,
-      processDefinitionKey: "order",
       minBucketSize: 10,
     })
     const queries = instant.mock.calls.map((c) => c[0])
@@ -114,6 +122,8 @@ describe("engineCompare", () => {
     const bQueries = queries.filter((q) => q.includes('engine_id="prod-b"'))
     expect(aQueries).toHaveLength(6)
     expect(bQueries).toHaveLength(6)
+    // The scope that makes the delta attributable to the engine rather than to
+    // a different process mix — never absent.
     expect(queries.every((q) => q.includes('process_definition_key="order"'))).toBe(true)
     expect(queries.every((q) => q.includes("[14d]"))).toBe(true)
   })

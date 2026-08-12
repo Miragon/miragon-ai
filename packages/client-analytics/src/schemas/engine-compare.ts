@@ -1,6 +1,12 @@
 import { z } from "zod"
 
 export const engineCompareInput = z.object({
+  processDefinitionKey: z
+    .string()
+    .min(1)
+    .describe(
+      "The process definition key to compare on both engines — REQUIRED. Engines run different process mixes, so comparing their whole workloads measures the mix, not the engines; scoping to ONE process is what makes the delta attributable. Discover keys deployed on several engines with analytics_engine_landscape (field `sharedProcessKeys`).",
+    ),
   engineA: z
     .string()
     .min(1)
@@ -15,12 +21,6 @@ export const engineCompareInput = z.object({
     .max(30)
     .default(14)
     .describe("Look-back window applied to both engines, in days (max 30 — Prometheus retention)."),
-  processDefinitionKey: z
-    .string()
-    .optional()
-    .describe(
-      "Restrict to a single process definition (optional; otherwise compares all processes on each engine).",
-    ),
   elementId: z
     .string()
     .optional()

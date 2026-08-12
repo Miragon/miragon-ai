@@ -10,11 +10,15 @@ export const enServer: MessageCatalog = {
   "aSum.dashboard":
     "Analytics dashboard{scope} over {period}: {totalCount} instances — {completedCount} completed, {runningCount} running, {failedCount} failed ({failureRatePct}% failure rate, {incidentCount} incidents).",
   "aSum.engineCompare":
-    'Engine comparison "{engineA}" vs "{engineB}"{scope} over {windowDays}d: {delta}{suppressed}.',
+    'Engine comparison of process "{key}" on "{engineA}" vs "{engineB}" over {windowDays}d: {delta}{suppressed}.',
+  "aSum.engineLandscape":
+    "Cross-engine landscape: {engineCount} engine(s) ({reportingEngineCount} reporting metrics), {processKeyCount} process definition(s), {runningInstances} running instance(s), {openIncidents} open incident(s).{shared}",
   "aSum.failureDashboard":
     "Failure dashboard: {totalIncidents} open incident(s) across {uniqueErrorPatterns} error pattern(s){mostAffected}.",
   "aSum.mostAffectedProcess": '; most affected process: "{key}"',
   "aSum.scopeForProcess": ' for "{key}"',
+  "aSum.sharedKeys":
+    " Deployed on several engines (the only sound engine-vs-engine comparisons): {keys}.",
   "aSum.settings":
     "Analytics settings: default period {period}, min bucket size {minBucketSize}.{changeHint}",
   "aSum.settingsChangeHint": " Change via analytics_save_settings.",

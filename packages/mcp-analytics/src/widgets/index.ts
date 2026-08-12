@@ -11,6 +11,7 @@ import { FailureRateTable } from "./failure-dashboard/failure-rate-table.js"
 import { ClusterCompareWidget, type ClusterCompareData } from "./cluster-compare.js"
 import { VersionCompareWidget, type VersionCompareData } from "./version-compare.js"
 import { EngineCompareWidget, type EngineCompareData } from "./engine-compare.js"
+import { EngineLandscapeWidget, type EngineLandscapeData } from "./engine-landscape.js"
 import { type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
 import { AnalyticsBpmnHeatmap } from "./bpmn-heatmap.js"
 import { AnalyticsSettingsWidget, type AnalyticsSettingsViewData } from "./settings-section.js"
@@ -20,6 +21,7 @@ import {
   describeClusterCompare,
   describeDefinitionBreakdown,
   describeEngineCompare,
+  describeEngineLandscape,
   describeErrorPatterns,
   describeExecutionPerformance,
   describeExecutionSummary,
@@ -34,6 +36,7 @@ export type {
   ClusterCompareData,
   VersionCompareData,
   EngineCompareData,
+  EngineLandscapeData,
   BpmnHeatmapData,
   AnalyticsSettingsViewData,
 }
@@ -44,6 +47,7 @@ export const ANALYTICS_DATA_TYPES = {
   clusterCompare: "analytics:clusterCompare",
   versionCompare: "analytics:versionCompare",
   engineCompare: "analytics:engineCompare",
+  engineLandscape: "analytics:engineLandscape",
   bpmnHeatmap: "analytics:bpmnHeatmap",
   settings: "analytics:settings",
 } as const
@@ -101,6 +105,11 @@ export const analyticsWidgets: Record<string, WidgetComponent> = {
     EngineCompareWidget,
     ANALYTICS_DATA_TYPES.engineCompare,
     describeEngineCompare,
+  ),
+  "analytics:engine-landscape": adaptDataWidget(
+    EngineLandscapeWidget,
+    ANALYTICS_DATA_TYPES.engineLandscape,
+    describeEngineLandscape,
   ),
   "analytics:bpmn-heatmap": adaptDataWidget(
     AnalyticsBpmnHeatmap,

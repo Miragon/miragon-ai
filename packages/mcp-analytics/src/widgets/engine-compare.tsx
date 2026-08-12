@@ -23,11 +23,10 @@ export function EngineCompareWidget({ data }: { data: EngineCompareData }) {
 
   const metrics = buildComparisonMetrics(t, a, b, data.delta)
 
-  const processScope = data.processDefinitionKey
-    ? `, scoped to process ${data.processDefinitionKey}`
-    : ""
   const elementScope = data.elementId ? `, scoped to BPMN element ${data.elementId}` : ""
-  const interpretPrompt = `Interpret the engine comparison of ${data.engineA} (baseline) vs ${data.engineB} over a ${data.windowDays}-day window${processScope}${elementScope}. The on-screen deltas are: ${describeDeltas(data.delta)}. First call analytics_engine_compare(engineA="${data.engineA}", engineB="${data.engineB}", windowDays=${data.windowDays}${data.processDefinitionKey ? `, processDefinitionKey="${data.processDefinitionKey}"` : ""}) to confirm the numbers and the 'suppressed' flag, then call analytics_engine_health for both engines' live operational snapshot. Tell me in 3-4 sentences: does ${data.engineB} genuinely perform worse than ${data.engineA} or is the difference noise / uneven load, which metric drives the gap, and the single recommended next action (rebalance load, investigate the weaker engine, or accept).`
+  // The process is fixed on both sides, so the remaining question is genuinely
+  // about the engines — not about which workload each of them happens to run.
+  const interpretPrompt = `Interpret the comparison of process "${data.processDefinitionKey}" running on engine ${data.engineA} (baseline) vs ${data.engineB} over a ${data.windowDays}-day window${elementScope}. The on-screen deltas are: ${describeDeltas(data.delta)}. First call analytics_engine_compare(processDefinitionKey="${data.processDefinitionKey}", engineA="${data.engineA}", engineB="${data.engineB}", windowDays=${data.windowDays}) to confirm the numbers and the 'suppressed' flag, then call analytics_engine_health for both engines' live operational snapshot. Since the same process is measured on both engines, a real gap points at the engine or its environment (load, resources, workers, configuration) rather than at a different workload. Tell me in 3-4 sentences: does ${data.engineB} genuinely run this process worse than ${data.engineA} or is the difference noise, which metric drives the gap, and the single recommended next action.`
 
   return (
     <ComparisonCard
@@ -42,7 +41,7 @@ export function EngineCompareWidget({ data }: { data: EngineCompareData }) {
           <Badge variant="secondary">
             {data.engineA} ↔ {data.engineB}
           </Badge>
-          {data.processDefinitionKey && <Badge>{data.processDefinitionKey}</Badge>}
+          <Badge>{data.processDefinitionKey}</Badge>
           <Badge variant="outline">
             {t("aEngineCompare.windowBadge", { days: data.windowDays })}
           </Badge>

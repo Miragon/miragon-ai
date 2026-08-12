@@ -223,6 +223,19 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
   a consumer fails one of them; don't weaken these guards to make a change pass. Only
   attach model-bounded labels (definition key, activity id, engine id …) — never
   instance ids, business keys, or variable values.
+- **Never aggregate a RATE across engines.** Engines host different process definitions,
+  so a failure rate, incident rate or duration summed per `engine_id` measures that
+  engine's process mix, not the engine — the aggregate can even invert the per-process
+  truth. Cross-engine views therefore report absolute counts plus the engine-owned
+  backlog gauges (`jobs_executable`, `jobs_suspended`, `jobs_due_future`,
+  `external_tasks_open` — the family whose contract labels are `engine_id` ONLY, so no
+  mix can confound them): `queries/engine-landscape.ts` + `analytics:engine-landscape`,
+  surfaced in camunda7's cross-engine cockpit mode by raw widget id (tier-2). A
+  like-for-like engine KPI comparison exists only with the process held fixed, which is
+  why `engineCompare`/`analytics_engine_compare` REQUIRE a `processDefinitionKey`
+  (`sharedProcessKeys` from the landscape are its valid inputs) — don't make it optional
+  again. The tool descriptions carry this rule to the model and are asserted in
+  `src/tools/engine-{compare,landscape}.test.ts`.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
   `1.1.0` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.

@@ -1,21 +1,27 @@
 import { describe, expect, it } from "vitest"
+import { z } from "zod"
 import type { PrometheusClient } from "@miragon-ai/client-analytics"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import { registerEngineCompareTools } from "./engine-compare.js"
 
-type Handler = ToolConfig<PrometheusClient>["handler"]
+type Config = ToolConfig<PrometheusClient>
 
-/** Registrar stand-in that captures each tool's handler instead of an MCPServer. */
-function captureHandlers(registerModule: (register: never) => void): Map<string, Handler> {
-  const handlers = new Map<string, Handler>()
+/** Registrar stand-in that captures each tool's full config instead of an MCPServer. */
+function captureConfigs(registerModule: (register: never) => void): Map<string, Config> {
+  const configs = new Map<string, Config>()
   const register = Object.assign(
-    (config: ToolConfig<PrometheusClient>) => {
-      handlers.set(config.name, config.handler)
+    (config: Config) => {
+      configs.set(config.name, config)
     },
     { getRegisteredTools: (): RegisteredToolMeta[] => [] },
   )
   registerModule(register as never)
-  return handlers
+  return configs
+}
+
+function captureHandlers(registerModule: (register: never) => void) {
+  const configs = captureConfigs(registerModule)
+  return new Map([...configs].map(([name, c]) => [name, c.handler]))
 }
 
 /** PrometheusClient that records every instant PromQL string and returns no samples. */
@@ -47,8 +53,10 @@ describe("analytics_engine_compare PromQL", () => {
   it("partitions every query by engine_id and applies the shared window", async () => {
     const handlers = captureHandlers(registerEngineCompareTools)
     const { client, queries } = recordingClient()
+    const key = 'process_definition_key="order"'
 
     await handlers.get("analytics_engine_compare")!(client, {
+      processDefinitionKey: "order",
       engineA: "prod-a",
       engineB: "prod-b",
       windowDays: 14,
@@ -57,15 +65,15 @@ describe("analytics_engine_compare PromQL", () => {
 
     expect(queries).toEqual([
       ...kpiQueries(
-        '{engine_id="prod-a"}',
-        '{state="COMPLETED",engine_id="prod-a"}',
-        '{engine_id="prod-a"}',
+        `{${key},engine_id="prod-a"}`,
+        `{${key},state="COMPLETED",engine_id="prod-a"}`,
+        `{${key},engine_id="prod-a"}`,
         "14d",
       ),
       ...kpiQueries(
-        '{engine_id="prod-b"}',
-        '{state="COMPLETED",engine_id="prod-b"}',
-        '{engine_id="prod-b"}',
+        `{${key},engine_id="prod-b"}`,
+        `{${key},state="COMPLETED",engine_id="prod-b"}`,
+        `{${key},engine_id="prod-b"}`,
         "14d",
       ),
     ])
@@ -92,5 +100,61 @@ describe("analytics_engine_compare PromQL", () => {
       `sum(increase(camunda_incident_created_total{${key},activity_id="Task_check",engine_id="prod-a"}[7d]))`,
       `sum(increase(camunda_incident_created_total{${key},activity_id="Task_check",engine_id="prod-b"}[7d]))`,
     ])
+  })
+
+  it("prefers an explicit minBucketSize over the resolved setting", async () => {
+    const handlers = captureHandlers(registerEngineCompareTools)
+    const { client } = recordingClient()
+
+    const explicit = (await handlers.get("analytics_engine_compare")!(client, {
+      processDefinitionKey: "order",
+      engineA: "prod-a",
+      engineB: "prod-b",
+      windowDays: 7,
+      minBucketSize: 3,
+    })) as { minBucketSize: number }
+    const fallback = (await handlers.get("analytics_engine_compare")!(client, {
+      processDefinitionKey: "order",
+      engineA: "prod-a",
+      engineB: "prod-b",
+      windowDays: 7,
+    })) as { minBucketSize: number }
+
+    // "explicit arg > saved setting > schema default": without a store or a
+    // resolvable profile key the registrar path lands on the schema default.
+    expect(explicit.minBucketSize).toBe(3)
+    expect(fallback.minBucketSize).toBe(10)
+  })
+})
+
+describe("analytics_engine_compare registration", () => {
+  const config = captureConfigs(registerEngineCompareTools).get("analytics_engine_compare")!
+
+  it("registers under the analytics category as a read-only external read", () => {
+    expect(config.category).toBe("analytics")
+    // toolsets.test.ts derives admin-only status from these; a read that lost
+    // `readOnlyHint` would silently change the toolset surface.
+    expect(config.annotations).toEqual({
+      readOnlyHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+    })
+  })
+
+  it("tells the model why the process scope is mandatory", () => {
+    // The description is the only place a model learns that an unscoped
+    // engine-vs-engine comparison measures the process mix — losing it turns
+    // the tool back into the apples-to-oranges comparison it replaced.
+    expect(config.description).toContain("processDefinitionKey is required")
+    expect(config.description).toContain("process mixes")
+    expect(config.description).toContain("analytics_engine_landscape")
+  })
+
+  it("requires processDefinitionKey at the schema boundary", () => {
+    const parsed = z.object(config.inputSchema).safeParse({
+      engineA: "prod-a",
+      engineB: "prod-b",
+    })
+    expect(parsed.success).toBe(false)
   })
 })
