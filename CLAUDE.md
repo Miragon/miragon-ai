@@ -260,7 +260,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
   again. The tool descriptions carry this rule to the model and are asserted in
   `src/tools/engine-{compare,landscape}.test.ts`.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
-  `1.1.0` everywhere). Updates are deliberate version bumps across all packages — never
+  `2.0.0` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.
 - **The widget `_meta` contract is split since mcp-use 2 — never hand-write the
   `ui` half.** mcp-use emits the MCP-Apps keys (`_meta.ui.resourceUri`, flat
@@ -318,7 +318,7 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
-  exactly pinned dependency (`save-exact`, currently `1.1.0`). Toolkit changes happen in
+  exactly pinned dependency (`save-exact`, currently `2.0.0`). Toolkit changes happen in
   that repo and arrive here as a deliberate, repo-wide version bump — since 1.0 the
   toolkit follows semver (breaking changes arrive as major bumps; the exact pin makes
   every bump deliberate either way).
