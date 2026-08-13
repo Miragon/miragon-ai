@@ -38,7 +38,7 @@ must resolve to a single instance across the host bundle (see the `dedupe` array
 ## Where it fits
 
 ```
-mcp-camunda7 / mcp-analytics widgets
+camunda7-connector / analytics-connector widgets
             │  use
             ▼
    @miragon-ai/widget-shell   ──  adaptDataWidget · view builders · UI primitives

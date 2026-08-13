@@ -24,7 +24,7 @@ const EMPTY_EDGES: Record<string, number> = {}
 
 /**
  * All user-facing strings — the shell carries no module i18n, so callers
- * (mcp-analytics / mcp-camunda7) inject `t()`-resolved values. Every field is
+ * (analytics-connector / camunda7-connector) inject `t()`-resolved values. Every field is
  * optional; the English defaults keep the component usable on its own.
  */
 export interface BpmnHeatmapLabels {

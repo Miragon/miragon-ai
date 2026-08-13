@@ -24,7 +24,7 @@ export default defineConfig({
         replacement: fileURLToPath(new URL("./src/ui/geist-latin.css", import.meta.url)),
       },
     ],
-    // The widget packages (mcp-camunda7, widget-shell, mcp-analytics) and this
+    // The widget packages (camunda7-connector, widget-shell, analytics-connector) and this
     // app each resolve their own pnpm instance of the toolkit/React/Query libs
     // (differing peer-dep hashes). Bundling multiple copies of @miragon/mcp-
     // toolkit-ui gives each its own React context: McpAppView (this app's copy)
