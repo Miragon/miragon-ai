@@ -170,7 +170,10 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    their SDK leaves at `packages/connectors/<family>/<name>-client`
    (npm `@miragon-ai/<name>-client`), foundation packages under `packages/core/`
    — a new package that follows the convention is covered by the dependency rules
-   without touching them; one that breaks it silently falls OUT of the rules.
+   without touching them; one that breaks it would silently fall OUT of the rules,
+   which is why the convention itself is gated: `scripts/check-package-naming.mjs`
+   (`pnpm lint:naming`, part of `pnpm lint`) fails on any workspace package whose
+   directory or npm name breaks the pattern.
    The dependency edges of this invariant
    (connector peer-isolation, connector→own-client only, leaf clients, foundation
    core, packages never importing the app, no cross-package deep imports)
