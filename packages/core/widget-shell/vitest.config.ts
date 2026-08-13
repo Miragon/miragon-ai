@@ -7,9 +7,10 @@ export default mergeConfig(
     test: {
       include: ["src/**/*.test.{ts,tsx}"],
       coverage: {
-        // Ratchet: frozen 2 points under the 2026-08-07 baseline. Raise when
-        // you push coverage up; never lower.
-        thresholds: { statements: 68, branches: 76, functions: 82, lines: 70 },
+        // Ratchet: frozen 2 points under the 2026-08-13 baseline (the
+        // profile-store/composition/base-pattern extractions moved their tests
+        // in with them). Raise when you push coverage up; never lower.
+        thresholds: { statements: 80, branches: 84, functions: 87, lines: 81 },
       },
     },
   }),
