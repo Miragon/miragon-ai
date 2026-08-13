@@ -5,6 +5,7 @@ import { z } from "zod"
 import {
   buildComposedView,
   buildSingleWidgetView,
+  showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { buildClusterDetailData, buildEngineHealthData } from "../data/health-data.js"
@@ -29,7 +30,6 @@ import {
   incidentsDashboardFilterShape,
   truncate,
   definitionViewLayout,
-  showToolBinding,
 } from "./shared.js"
 
 /** Incident triage: dashboard, per-definition views, detail, engine health, clusters. */

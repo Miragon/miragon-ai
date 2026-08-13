@@ -1,8 +1,12 @@
 import type { MCPServer } from "mcp-use"
 import { z } from "zod"
 import {
+  appOnly,
   buildDataFeedResult,
   buildSingleWidgetView,
+  mergeRawSlice,
+  requireProfileKey,
+  showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
@@ -20,7 +24,6 @@ import {
   type AnalyticsSettings,
 } from "./settings.js"
 import { allowsDurableWrites } from "./toolsets.js"
-import { appOnly, showToolBinding } from "./widget-tool-shared.js"
 
 /**
  * The analytics module's settings section — its own show/data/save tool triple
@@ -124,23 +127,11 @@ export function registerSettingsTools(
       // structuredContent.
     },
     withToolErrors(async (params, ctx) => {
-      const key = resolveSettingsKey(ctx)
-      if (!key) {
-        throw new Error(
-          "No caller identity to save analytics settings under (mcp-use 2 issues no MCP session ids) — configure MCP_OAUTH so settings persist per user.",
-        )
-      }
-      // Merge over the RAW stored slice, not the parsed one: unknown fields a
-      // newer build may have written survive, and defaults are not silently
-      // materialized into storage for fields the caller never set.
-      const rawModules = (await store.get(key))?.modules
-      const rawSlice = rawModules?.[ANALYTICS_MODULE_KEY]
-      const nextSlice: Record<string, unknown> = {
-        ...(typeof rawSlice === "object" && rawSlice !== null
-          ? (rawSlice as Record<string, unknown>)
-          : {}),
-        ...params,
-      }
+      // Keyless refusal + raw-slice merge are the shared slice-write contract
+      // (`@miragon-ai/widget-shell/server`) — every module's save tool uses
+      // the same pair.
+      const key = requireProfileKey(ctx)
+      const nextSlice = await mergeRawSlice(store, key, ANALYTICS_MODULE_KEY, params)
       // Stamping the auth user id marks the record user-bound — exempt from
       // the app's session-TTL cleanup.
       await save(

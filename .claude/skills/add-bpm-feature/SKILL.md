@@ -156,7 +156,7 @@ Then register the widget tool in `src/widget-tools.ts` (this file is the documen
 exception that uses `server.tool()` directly):
 
 - `show_*` tools: spread `...showToolBinding(TOOL_NAME_CONST, "Title")` (from
-  `./widget-tools/shared.js`) into the definition and use `inputSchema:` (mcp-use 2
+  `@miragon-ai/widget-shell/server`) into the definition and use `inputSchema:` (mcp-use 2
   field name) — the helper binds a native mcp-use view named after the tool
   (`view: { name }`, mcp-use then emits all `_meta.ui.*` keys and the
   `ui://views/<tool>.html` resource itself), adds the required passthrough
@@ -168,7 +168,7 @@ exception that uses `server.tool()` directly):
   `buildComposedView(...)` (both from `@miragon-ai/widget-shell/server`). The
   `summary` is the model-facing text channel (1-2 sentences, key figures, no raw
   data) — the full payload travels only in `structuredContent`.
-- `*_data` feeds: spread `...appOnly` (from `./widget-tools/shared.js` — the native
+- `*_data` feeds: spread `...appOnly` (from `@miragon-ai/widget-shell/server` — the native
   `visibility: "app"` field, emitted as SEP-1865 `_meta.ui.visibility: ["app"]`, plus
   `openai/widgetAccessible`; **no** view binding) — return `buildDataFeedResult(data)` (from
   `@miragon-ai/widget-shell/server`, aliased `rawData` in `widget-tools.ts`) so the

@@ -1,8 +1,12 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use"
 import {
+  appOnly,
   buildDataFeedResult as rawData,
   buildSingleWidgetView,
+  mergeRawSlice,
+  requireProfileKey,
+  showToolBinding,
   withToolErrors,
   type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
@@ -22,7 +26,6 @@ import {
 } from "../lib/profile-schema.js"
 import { resolveAuthUserId, resolveProfileKey } from "../lib/resolve-profile-key.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
-import { appOnly, showToolBinding } from "../widget-tools/shared.js"
 import { translator } from "../messages/index.js"
 
 /**
@@ -156,26 +159,12 @@ export function registerUserProfileTools(
       // back from structuredContent.
     },
     withToolErrors(async (params, ctx) => {
-      const key = resolveProfileKey(ctx)
-      if (!key) {
-        // HTTP request without any identity: refuse instead of silently
-        // writing into a record shared across unrelated keyless clients.
-        throw new Error(
-          "No caller identity to save the profile under (mcp-use 2 issues no MCP session ids) — configure MCP_OAUTH so settings persist per user.",
-        )
-      }
+      // Keyless refusal + raw-slice merge are the shared slice-write contract
+      // (`@miragon-ai/widget-shell/server`) — every module's save tool uses
+      // the same pair.
+      const key = requireProfileKey(ctx)
       const { language, theme, ...sliceInput } = params
-      // Merge over the RAW stored slice, not the parsed one (mirrors
-      // analytics_save_settings): unknown fields a newer build may have
-      // written survive, and defaults are not silently materialized into
-      // storage for fields the caller never set.
-      const rawSlice = (await store.get(key))?.modules?.[CAMUNDA7_MODULE_KEY]
-      const nextSlice: Record<string, unknown> = {
-        ...(typeof rawSlice === "object" && rawSlice !== null
-          ? (rawSlice as Record<string, unknown>)
-          : {}),
-        ...sliceInput,
-      }
+      const nextSlice = await mergeRawSlice(store, key, CAMUNDA7_MODULE_KEY, sliceInput)
       // The settings UI sends an empty string for the "(auto)"/"(none)" option
       // of an optional id field — that clears the stored value.
       for (const field of ["defaultEngineId", "defaultDashboardId"]) {

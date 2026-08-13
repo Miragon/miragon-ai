@@ -1,9 +1,11 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use"
 import {
+  appOnly,
   buildComposedView,
   buildDataFeedResult,
   buildSingleWidgetView,
+  showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { queries, schemas, type PrometheusClient } from "@miragon-ai/analytics-client"
@@ -14,7 +16,6 @@ import {
 } from "./tool-names.js"
 import { localizeFor, type ProfileSource } from "./server-locale.js"
 import { optionalPeriod, settingsFor } from "./settings.js"
-import { appOnly, showToolBinding } from "./widget-tool-shared.js"
 import { registerComparisonWidgetTools } from "./widget-tools/comparisons.js"
 
 /**

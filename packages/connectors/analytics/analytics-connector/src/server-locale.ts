@@ -1,7 +1,7 @@
 import {
+  createLocalizeFor,
   resolveAuthUserId,
   resolveProfileKey,
-  type ProfileSource,
 } from "@miragon-ai/widget-shell/server"
 import { translator } from "./messages/index.js"
 
@@ -39,33 +39,14 @@ export const resolveSettingsKey = resolveProfileKey
  */
 export const resolveSettingsAuthUserId = resolveAuthUserId
 
-/**
- * Resolve the active locale from the profile store, falling back to English.
- * Fail-soft on every axis — no store, no key, or a store OUTAGE — for the same
- * reason `settingsFor` is: a profile-store hiccup must never fail an analytics
- * read that only needs Prometheus.
- */
-async function resolveLocale(store?: ProfileSource, ctx?: unknown): Promise<string> {
-  if (!store) return "en"
-  const key = resolveSettingsKey(ctx)
-  if (!key) return "en"
-  try {
-    return (await store.get(key))?.language ?? "en"
-  } catch {
-    return "en"
-  }
-}
-
 /** A locale-bound translate for analytics server summaries. */
-export type ServerT = (key: string, params?: Record<string, unknown>) => string
+export type { ServerT } from "@miragon-ai/widget-shell/server"
 
 /**
  * Resolve the request locale and return a translate bound to it + the analytics
  * catalogs — `const t = await localizeFor(store, ctx); … summary: t("key", { … })`.
  * Pass the tool-handler `ctx` so an auth user id resolves the same record the
- * save path writes.
+ * save path writes. Locale resolution + the fail-soft rules (no store, no key,
+ * store OUTAGE → English) come from the shared `createLocalizeFor`.
  */
-export async function localizeFor(store?: ProfileSource, ctx?: unknown): Promise<ServerT> {
-  const locale = await resolveLocale(store, ctx)
-  return (key, params) => translator(locale, key, params)
-}
+export const localizeFor = createLocalizeFor(translator)

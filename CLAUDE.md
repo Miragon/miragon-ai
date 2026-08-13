@@ -108,7 +108,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
 5. **There are three render paths — pick deliberately:**
    - Registrar tools (`src/tools/`): plain JSON data _for the model_
    - Widget tools (`widget-tools.ts`, `show_*`, spread `...showToolBinding(name, title)`
-     from the module's shared helper — a `view` binding named after the tool +
+     from `@miragon-ai/widget-shell/server` — a `view` binding named after the tool +
      `outputSchema` + the Apps-SDK `_meta` half): render a widget for the user +
      return a summary for the model
    - `*_data` feeds (also in `widget-tools.ts`, spread `...appOnly` — the native

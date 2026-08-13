@@ -5,6 +5,7 @@ import { z } from "zod"
 import {
   buildComposedView,
   buildSingleWidgetView,
+  showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { buildInstanceDetailData, buildJobPanelData } from "../data/cockpit-data.js"
@@ -18,7 +19,7 @@ import { resolveEngine } from "../lib/resolve-engine.js"
 import { engineParamShape } from "../lib/with-engine.js"
 import { jobsFilterShape, pagingShape } from "../feed-contracts.js"
 import { localizeFor } from "../lib/server-locale.js"
-import { type WidgetToolsContext, showToolBinding } from "./shared.js"
+import { type WidgetToolsContext } from "./shared.js"
 
 /** Single-instance drill-downs: instance detail, BPMN viewer, job panel. */
 export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {

@@ -1,5 +1,6 @@
 import type { createToolRegistrar, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import type { z } from "zod"
+import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
 import type { EngineRegistry } from "./resolve-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
@@ -8,12 +9,17 @@ type ZodRawShape = Record<string, z.ZodType>
 /**
  * Named tool subsets a deployment can pick via `MCP_ACTIVE_MODULES`, e.g.
  * `camunda7:read-only`. No suffix means "all tools" (unchanged default).
+ * The vocabulary skeleton (typed guard + the fail-open rule for unknown
+ * names) is the shared `createToolsetVocabulary`; the names and the filter
+ * semantics below stay module-owned.
  */
 export const CAMUNDA7_TOOLSETS = ["read-only", "operations", "admin"] as const
 export type Camunda7Toolset = (typeof CAMUNDA7_TOOLSETS)[number]
 
+const vocabulary = createToolsetVocabulary("camunda7", CAMUNDA7_TOOLSETS)
+
 export function isCamunda7Toolset(value: string): value is Camunda7Toolset {
-  return (CAMUNDA7_TOOLSETS as readonly string[]).includes(value)
+  return vocabulary.isKnown(value)
 }
 
 /**
@@ -74,16 +80,12 @@ export function isToolInToolset(
  * server's `MCP_ACTIVE_MODULES` semantics for unknown modules.
  */
 export function withToolsetFilter(register: Register, toolset?: string): Register {
-  if (toolset === undefined) return register
-  if (!isCamunda7Toolset(toolset)) {
-    console.warn(
-      `[mcp-camunda7] Unknown toolset "${toolset}" — exposing all tools. ` +
-        `Known toolsets: ${CAMUNDA7_TOOLSETS.join(", ")}`,
-    )
-    return register
-  }
+  // `resolve` implements the shared fail-open rule: no toolset stays silent,
+  // an unknown name warns — both expose everything.
+  const known = vocabulary.resolve(toolset)
+  if (known === undefined) return register
   const filtered = <TShape extends ZodRawShape>(config: ToolConfig<EngineRegistry, TShape>) => {
-    if (isToolInToolset(config, toolset)) register(config)
+    if (isToolInToolset(config, known)) register(config)
   }
   return Object.assign(filtered, { getRegisteredTools: () => register.getRegisteredTools() })
 }

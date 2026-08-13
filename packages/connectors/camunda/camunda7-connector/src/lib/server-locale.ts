@@ -1,38 +1,23 @@
-import type { ProfileStore } from "@miragon-ai/widget-shell/server"
-import { resolveProfileKey } from "./resolve-profile-key.js"
+import { createLocalizeFor, resolveProfileLocale } from "@miragon-ai/widget-shell/server"
+import type { ProfileSource, ServerT } from "@miragon-ai/widget-shell/server"
 import { translator } from "../messages/index.js"
 
 /**
- * Resolve the active locale for the in-flight request from the user profile
- * (`resolveProfileKey` → `ProfileStore.language`). Pass the tool-handler `ctx`
- * so the lookup follows the SAME key precedence as the save path (auth user id
- * → session id → stdio-anonymous) — without it, a profile saved under an auth
- * user id would be missed and the summary silently falls back to English.
- *
- * Fail-soft on a store OUTAGE too: with `DATABASE_URL` the store is a network
- * call, and this runs as the first `await` of every widget tool — a Postgres
- * hiccup must degrade the summary to English, never fail a tool whose data
- * comes from the engine.
+ * The per-request locale resolution + fail-soft rules live in the shared
+ * server kit (`resolveProfileLocale`/`createLocalizeFor`) — this file only
+ * binds them to THIS module's catalogs. Pass the tool-handler `ctx` so the
+ * lookup follows the same key precedence as the save path.
  */
-export async function resolveLocale(store: ProfileStore, ctx?: unknown): Promise<string> {
-  const key = resolveProfileKey(ctx)
-  if (!key) return "en"
-  try {
-    return (await store.get(key))?.language ?? "en"
-  } catch {
-    return "en"
-  }
-}
+export type { ServerT }
 
-/** A locale-bound translate for server summaries: `t(key, params?) => string`. */
-export type ServerT = (key: string, params?: Record<string, unknown>) => string
+export async function resolveLocale(store: ProfileSource, ctx?: unknown): Promise<string> {
+  return resolveProfileLocale(store, ctx)
+}
 
 /**
  * Resolve the request locale and return a translate bound to it + the camunda7
  * catalogs — so a tool handler localizes its model-facing summary with
  * `const t = await localizeFor(store, ctx); … summary: t("key", { … })`.
  */
-export async function localizeFor(store: ProfileStore, ctx?: unknown): Promise<ServerT> {
-  const locale = await resolveLocale(store, ctx)
-  return (key, params) => translator(locale, key, params)
-}
+export const localizeFor: (store?: ProfileSource, ctx?: unknown) => Promise<ServerT> =
+  createLocalizeFor(translator)

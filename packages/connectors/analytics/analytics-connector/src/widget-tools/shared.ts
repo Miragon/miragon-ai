@@ -6,8 +6,8 @@ import type { ProfileSource } from "../server-locale.js"
  * Everything the per-domain widget-tool registrars need, handed over by the
  * `widget-tools.ts` entry — mirrors camunda7's `WidgetToolsContext`. The
  * `_meta`/view bindings are NOT passed through: each registration spreads
- * `showToolBinding()` / `appOnly` from `widget-tool-shared.js` itself, so the
- * dual-protocol contract stays in one place.
+ * `showToolBinding()` / `appOnly` from `@miragon-ai/widget-shell/server`
+ * itself, so the dual-protocol contract stays in one place.
  */
 export interface AnalyticsWidgetToolsContext {
   server: MCPServer

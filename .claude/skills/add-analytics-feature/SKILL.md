@@ -126,7 +126,7 @@ The widget chain mirrors the camunda7 module:
    `analyticsWidgets` — verify your widget arrives there.
 5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with `inputSchema:`
    and spread `...showToolBinding(TOOL_NAME, "Title")` (from
-   `./widget-tool-shared.js` — native `view` binding named after the tool + required
+   `@miragon-ai/widget-shell/server` — native `view` binding named after the tool + required
    passthrough `outputSchema` + the Apps-SDK `_meta` half; never hand-write
    `_meta.ui` keys, mcp-use owns them), returning `buildComposedView(...)` /
    `buildSingleWidgetView(...)` from `@miragon-ai/widget-shell/server` (see

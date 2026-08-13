@@ -2,6 +2,7 @@ export { cn } from "./cn.js"
 // Zod-free profile option sets (select/checkbox option lists in settings
 // widgets) — safe for the UI bundle; the zod record schema stays on /server.
 export { LOCALES, THEMES, type Locale, type ThemePref } from "../profile-constants.js"
+export { createUseT, type T } from "./create-use-t.js"
 export { DisplayModeProvider, WidgetShell, useHostDisplayMode } from "./widget-shell.js"
 export { WidgetHeader } from "./widget-header.js"
 export { ViewDataState } from "./view-data-state.js"

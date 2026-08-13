@@ -1,14 +1,15 @@
 import { z } from "zod"
 import {
+  appOnly,
   buildDataFeedResult,
   buildSingleWidgetView,
+  showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { queries, schemas } from "@miragon-ai/analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
 import { localizeFor } from "../server-locale.js"
 import { optionalMinBucketSize, settingsFor } from "../settings.js"
-import { appOnly, showToolBinding } from "../widget-tool-shared.js"
 import { compareDeltaSummary, suppressedNote, type AnalyticsWidgetToolsContext } from "./shared.js"
 
 /**

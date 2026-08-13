@@ -58,6 +58,16 @@ export {
   type ProfileStore,
 } from "./profile-store.js"
 export { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
+export { appOnly, showToolBinding } from "./widget-tool-bindings.js"
+export { createToolsetVocabulary, type ToolsetVocabulary } from "./toolsets.js"
+export {
+  createLocalizeFor,
+  resolveProfileLocale,
+  type ServerT,
+  type Translator,
+} from "./server-locale.js"
+export { mergeRawSlice, requireProfileKey } from "./profile-slice.js"
+export { catalogueSyncIssues } from "./catalogue-sync.js"
 
 /**
  * mcp-use's raw `server.tool()` callback expects a result with an implicit

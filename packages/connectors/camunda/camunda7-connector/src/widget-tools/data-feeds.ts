@@ -2,7 +2,11 @@ import { z } from "zod"
 // Feed payloads built as named interface types are spread at the call sites
 // (`rawData({ ...data })`): the feed contract takes `Record<string, unknown>`,
 // which interface types don't structurally satisfy.
-import { buildDataFeedResult as rawData, withToolErrors } from "@miragon-ai/widget-shell/server"
+import {
+  appOnly,
+  buildDataFeedResult as rawData,
+  withToolErrors,
+} from "@miragon-ai/widget-shell/server"
 import {
   buildCockpitDashboardData,
   buildInstanceDetailData,
@@ -45,7 +49,6 @@ import {
   type WidgetToolsContext,
   clusterDetailShape,
   incidentsDashboardFilterShape,
-  appOnly,
 } from "./shared.js"
 
 /** The app-only `*_data` JSON feeds (SEP-1865) behind every widget above. */

@@ -5,6 +5,7 @@ import { z } from "zod"
 import {
   buildComposedView,
   buildSingleWidgetView,
+  showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import type { CockpitAppData, HistoryTimelineData } from "../view-models.js"
@@ -30,7 +31,7 @@ import {
   processListFilterShape,
 } from "../feed-contracts.js"
 import { localizeFor } from "../lib/server-locale.js"
-import { type WidgetToolsContext, definitionViewLayout, showToolBinding } from "./shared.js"
+import { type WidgetToolsContext, definitionViewLayout } from "./shared.js"
 
 /** The cockpit entry + the definition/instance list & detail show-tools. */
 export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {

@@ -10,11 +10,15 @@
  * name, never against an ad-hoc string comparison that would silently fail open
  * the day a second restrictive toolset is added.
  */
+import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
+
 export const ANALYTICS_TOOLSETS = ["read-only"] as const
 export type AnalyticsToolset = (typeof ANALYTICS_TOOLSETS)[number]
 
+const vocabulary = createToolsetVocabulary("analytics", ANALYTICS_TOOLSETS)
+
 export function isAnalyticsToolset(value: string): value is AnalyticsToolset {
-  return (ANALYTICS_TOOLSETS as readonly string[]).includes(value)
+  return vocabulary.isKnown(value)
 }
 
 /** Toolsets that forbid durable writes (today: the module's only one). */
@@ -25,18 +29,13 @@ const READ_ONLY_TOOLSETS: ReadonlySet<AnalyticsToolset> = new Set(["read-only"])
  * (`analytics_save_settings`). Registered outside the tool registrar, that save
  * has to gate itself — the registrar's `withToolsetFilter` never sees it.
  *
- * `undefined` (no toolset configured) and unknown names register everything,
+ * `vocabulary.resolve` carries the shared fail-open rule: `undefined` (no
+ * toolset configured) and unknown names (warned) register everything,
  * consistent with the server's `MCP_ACTIVE_MODULES` semantics for unknown
  * modules.
  */
 export function allowsDurableWrites(toolset?: string): boolean {
-  if (toolset === undefined) return true
-  if (!isAnalyticsToolset(toolset)) {
-    console.warn(
-      `[mcp-analytics] Unknown toolset "${toolset}" — exposing all tools. ` +
-        `Known toolsets: ${ANALYTICS_TOOLSETS.join(", ")}`,
-    )
-    return true
-  }
-  return !READ_ONLY_TOOLSETS.has(toolset)
+  const known = vocabulary.resolve(toolset)
+  if (known === undefined) return true
+  return !READ_ONLY_TOOLSETS.has(known)
 }
