@@ -72,7 +72,7 @@ const tools = captureTools(
 
 const fakeClient = { fake: true } as unknown as Client
 
-/** Single-engine registry → resolveEngine falls back to it without a session. */
+/** Single-engine registry → resolveEngine falls back to it without a saved default. */
 const registry: EngineRegistry = createEngineRegistry(
   [{ id: "default", baseUrl: "http://localhost:8080/engine-rest" }],
   () => fakeClient,
