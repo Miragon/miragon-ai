@@ -177,9 +177,13 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    are machine-enforced by `.dependency-cruiser.cjs` via the root
    `pnpm lint:architecture` (part of `pnpm lint`). Each module exports its definition in
    `src/module.ts` (config schema, `configFromEnv`, `knownEnvVars`, `bootWarnings`,
-   plugin factory) conforming structurally to the app-owned port in
-   `apps/mcp-server-camunda7/src/module-contract.ts`; the app's `setup.ts` only selects
-   modules (`MCP_ACTIVE_MODULES`) and wires `SharedResources` (profile store +
+   plugin factory) conforming STRUCTURALLY (no import) to the port. The port SHAPE
+   (`ComposableModule<TShared>`) and the whole composition-root machinery
+   (`composeModules`: `MCP_ACTIVE_MODULES` parsing incl. `module:toolset` suffix,
+   env-typo warner with prefixes derived from every known var, boot warnings,
+   AppConfig/plugin assembly) live in `@miragon-ai/widget-shell/server`; the app's
+   `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
+   only declares the module list and wires `SharedResources` (profile store +
    `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap;
    analytics has NO engine-SDK dependency). Apps own no domain UI: widget catalogues and
    components live in packages. Cross-module UI is tiered: `shell:*` widgets via

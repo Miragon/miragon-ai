@@ -1,13 +1,11 @@
-import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import type { MCPServer } from "mcp-use"
-import type { ProfileSource, ProfileStore } from "@miragon-ai/widget-shell/server"
+import type { ComposableModule, ProfileSource, ProfileStore } from "@miragon-ai/widget-shell/server"
 import type { FetchBpmnXml } from "@miragon-ai/analytics-connector"
 
 /**
  * Compile-time proof that the concrete profile store this app wires still
  * satisfies the narrow port foreign modules consume
  * (`@miragon-ai/widget-shell/server`). Modules are peers: they take the store
- * structurally and never import camunda7, so nothing else would catch a
+ * structurally and never import each other, so nothing else would catch a
  * `ProfileStore` change that breaks e.g. the analytics settings section — it
  * would surface as a runtime failure in a module the change never touched.
  */
@@ -40,23 +38,11 @@ export interface SharedResources {
 }
 
 /**
- * The app-owned port every mounted module satisfies (structurally — modules
- * do not import this file). A module brings its whole config surface itself:
- * schema validation inside `createPlugin`, env mapping, its slice of the
- * env-typo warner, and optional boot-time hints. The app is left with module
- * selection (`MCP_ACTIVE_MODULES`) and cross-module wiring only.
+ * The port every mounted module satisfies (structurally — modules do not
+ * import this file, and your own module doesn't have to either). The port
+ * SHAPE (`ComposableModule`) and the selection machinery live in
+ * `@miragon-ai/widget-shell/server`; what stays app-owned is this
+ * instantiation with THIS app's `SharedResources` plus the module list and
+ * cross-module wiring in `setup.ts`.
  */
-export interface ModuleDefinition {
-  /** Module key used in `MCP_ACTIVE_MODULES` and as the `activeApps` entry name. */
-  name: string
-  /** Pure env → raw-config mapping; must not read `process.env` or perform I/O side effects beyond config sources. */
-  configFromEnv(env: NodeJS.ProcessEnv): Record<string, unknown>
-  /** Env vars this module reads — composed into the app's unknown-var typo warner. */
-  knownEnvVars: readonly string[]
-  /** Whether the module understands the `module:toolset` suffix syntax. */
-  supportsToolsets: boolean
-  /** Optional boot-time hints (returned, and logged by the app) for active deployments. */
-  bootWarnings?(env: NodeJS.ProcessEnv): string[]
-  /** Validates the raw config and builds the plugin; receives the shared resources. */
-  createPlugin(config: Record<string, unknown>, shared: SharedResources): AppPlugin<MCPServer>
-}
+export type ModuleDefinition = ComposableModule<SharedResources>

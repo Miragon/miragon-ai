@@ -1,10 +1,10 @@
 import { createFileSystemDashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import {
-  createFileSystemProfileStore,
-  createInMemoryProfileStore,
   createPostgresProfileStore,
   PROFILE_STORE_MIGRATIONS,
+  profileStoreFromEnv,
+  startProfileSessionCleanup,
   type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
 import {
@@ -47,47 +47,17 @@ function warnIgnoredRedisUrl(env: NodeJS.ProcessEnv): void {
 }
 
 /**
- * The non-database profile store selection — filesystem when
- * `MCP_PROFILE_DIR` is set, in-memory otherwise. Also the default `setup.ts`
- * falls back to when `getPlugins()` is called without an explicit store
- * (tests), so the selection logic exists exactly once.
+ * The non-database profile store selection — the shared `profileStoreFromEnv`
+ * (filesystem when `MCP_PROFILE_DIR` is set, in-memory otherwise). Also the
+ * default `setup.ts` falls back to when `getPlugins()` is called without an
+ * explicit store (tests), so the selection logic exists exactly once.
  */
 export function createDefaultProfileStore(env: NodeJS.ProcessEnv = process.env): ProfileStore {
-  return env.MCP_PROFILE_DIR
-    ? createFileSystemProfileStore({ dir: env.MCP_PROFILE_DIR })
-    : createInMemoryProfileStore()
+  return profileStoreFromEnv(env)
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000
-
-/**
- * Expire SESSION-keyed profile records (no auth user stamped, not the shared
- * anonymous record) at boot and once a day. Session ids die with their MCP
- * session, so these rows are unreachable garbage — without a TTL a durable
- * store grows one row per session forever. `MCP_PROFILE_SESSION_TTL_DAYS`
- * tunes the window (default 30; `0` disables). Returns the stop function for
- * the shutdown path; the timer is unref'd so it never holds the process open.
- */
-function startSessionCleanup(store: ProfileStore, env: NodeJS.ProcessEnv): () => void {
-  const raw = env.MCP_PROFILE_SESSION_TTL_DAYS?.trim()
-  const ttlDays = raw === undefined || raw === "" ? 30 : Number.parseInt(raw, 10)
-  if (!Number.isFinite(ttlDays) || ttlDays <= 0) return () => {}
-
-  const run = async () => {
-    try {
-      const removed = await store.cleanupSessions(new Date(Date.now() - ttlDays * DAY_MS))
-      if (removed > 0) {
-        console.log(`[miragon-ai] expired ${removed} session profile(s) older than ${ttlDays}d`)
-      }
-    } catch (err) {
-      console.warn("[miragon-ai] session-profile cleanup failed:", err)
-    }
-  }
-  void run()
-  const timer = setInterval(() => void run(), DAY_MS)
-  timer.unref()
-  return () => clearInterval(timer)
-}
+const startSessionCleanup = (store: ProfileStore, env: NodeJS.ProcessEnv): (() => void) =>
+  startProfileSessionCleanup(store, { env, label: "miragon-ai" })
 
 /**
  * Select and initialize the persistence backends. Precedence: `DATABASE_URL`

@@ -59,6 +59,13 @@ export {
 } from "./profile-store.js"
 export { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
 export { appOnly, showToolBinding } from "./widget-tool-bindings.js"
+export {
+  composeModules,
+  type ActiveModuleRef,
+  type ComposableModule,
+  type ModuleComposition,
+} from "./composition.js"
+export { profileStoreFromEnv, startProfileSessionCleanup } from "./profile-store-env.js"
 export { createToolsetVocabulary, type ToolsetVocabulary } from "./toolsets.js"
 export {
   createLocalizeFor,
