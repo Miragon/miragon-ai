@@ -25,7 +25,9 @@ export const camunda7SettingsSchema = z.object({
   defaultEngineId: z
     .string()
     .optional()
-    .describe("Engine the cockpit opens on when none is sticky-selected yet."),
+    .describe(
+      'Default engine: operations tools route here when no per-call `engine` override is given, and the cockpit lands on it. Saved via the settings page or `camunda7_engine` action "select".',
+    ),
   allowedEngineIds: z
     .array(z.string())
     .optional()

@@ -14,7 +14,7 @@ export const loadJobsStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   requires: [],
   produces: ["camunda7:jobPanelData"],
   execute: async (context, appConfig) => {
-    const { client, engineId } = resolveStepEngine(
+    const { client, engineId } = await resolveStepEngine(
       appConfig,
       context.keys["camunda7:engine"] as string | undefined,
     )

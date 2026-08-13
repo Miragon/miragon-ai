@@ -82,10 +82,13 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
 
 2. **Never talk to an engine directly.** All engine access goes through
    `resolveEngine`/`withEngine` (`packages/connectors/camunda/camunda7-connector/src/lib/`), which implements the
-   multi-engine routing precedence: per-call `engine` override > sticky session selection
-   (`camunda7_engine`, action `"select"`) > the single configured default. Constructing or
-   caching a client yourself breaks multi-engine routing. `resolveEngine` already returns
-   `baseUrl`/`cockpitUrl` — never fish them out of `registry.engines` yourself.
+   multi-engine routing precedence: per-call `engine` override > the caller's saved default
+   engine (`profile.modules.camunda7.defaultEngineId`, written by `camunda7_engine` action
+   `"select"` and the settings page — resolution is single-sourced in
+   `lib/engine-preferences.ts`) > the single configured default. There is deliberately NO
+   in-memory session selection (replica-unsafe; mcp-use 2 issues no session ids). Constructing
+   or caching a client yourself breaks multi-engine routing. `resolveEngine` (async) already
+   returns `baseUrl`/`cockpitUrl` — never fish them out of `registry.engines` yourself.
 
 3. **Widget registration is a four-link chain** — a widget that misses a link is silently
    absent somewhere:

@@ -11,6 +11,7 @@ import { registerUserProfileTools } from "./tools/user-profile.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"
 import { createEngineRegistry, type EngineEntry } from "./lib/resolve-engine.js"
+import { profileDefaultEngineId } from "./lib/engine-preferences.js"
 import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import { withToolsetFilter } from "./lib/toolsets.js"
 
@@ -66,19 +67,29 @@ export function createPlugin(
   shared: Camunda7SharedResources = {},
 ): AppPlugin<MCPServer> {
   const profileStore = shared.profileStore ?? createInMemoryProfileStore()
-  const registry = createEngineRegistry(config.engines, (e) => {
-    // Per-engine auth wins wholesale; mixing its fields with the module-wide
-    // fallback would make a partial entry silently inherit foreign credentials.
-    const auth = e.auth ?? {
-      type: config.authType ?? "none",
-      username: config.username,
-      password: config.password,
-      token: config.token,
-    }
-    // The vendor provider owns client construction (identical across C7
-    // vendors today — `providers/create-client.ts`).
-    return providerForEntry(e).createClient(e, auth)
-  })
+  const registry = createEngineRegistry(
+    config.engines,
+    (e) => {
+      // Per-engine auth wins wholesale; mixing its fields with the module-wide
+      // fallback would make a partial entry silently inherit foreign credentials.
+      const auth = e.auth ?? {
+        type: config.authType ?? "none",
+        username: config.username,
+        password: config.password,
+        token: config.token,
+      }
+      // The vendor provider owns client construction (identical across C7
+      // vendors today — `providers/create-client.ts`).
+      return providerForEntry(e).createClient(e, auth)
+    },
+    {
+      // Per-call fallback when no `engine` override is given: the caller's
+      // saved default (`profile.modules.camunda7.defaultEngineId`), read off
+      // the ambient request identity — the same store the settings tools
+      // write, so "select" and the settings page feed the same routing.
+      defaultEngineId: () => profileDefaultEngineId(profileStore, config.engines),
+    },
+  )
 
   const incidentIssueConfig = {
     repository: config.incidentIssueRepository,
@@ -94,15 +105,18 @@ export function createPlugin(
       engines: config.engines,
     },
     registerTools: (server) => {
-      // Ambient request info FIRST: passthrough auth (resolveMcpBearerToken),
-      // profile-key resolution and the sticky engine selection all read it.
-      // Idempotent — the host may install it too.
+      // Ambient request info FIRST: passthrough auth (resolveMcpBearerToken)
+      // and profile-key resolution (which also feeds the default-engine
+      // lookup) read it. Idempotent — the host may install it too.
       installMcpRequestContext(server)
       // One registrar for the whole module, wrapped in the toolset filter so a
       // `camunda7:read-only` / `:operations` / `:admin` deployment only
       // advertises its subset (no toolset = everything, unchanged default).
       const register = withToolsetFilter(createToolRegistrar(server, registry), config.toolset)
-      registerEngineTools(register, profileStore)
+      // The toolset is threaded through so the durable "select" action (a
+      // profile write) can gate itself — the tool as a whole stays registered
+      // in every toolset for the read actions.
+      registerEngineTools(register, profileStore, config.toolset)
       registerTools(register)
       registerIncidentIssueTools(register, incidentIssueConfig)
       registerIncidentIssuePrompt(server, incidentIssueConfig)

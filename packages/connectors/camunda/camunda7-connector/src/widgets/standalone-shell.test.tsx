@@ -163,7 +163,7 @@ describe("Camunda7StandaloneShell", () => {
     const actions: HostActionLog[] = []
     renderShell(
       {
-        camunda7_engine: { engines: [{ id: "prod-a" }], currentSelection: "prod-a" },
+        camunda7_engine: { engines: [{ id: "prod-a" }], defaultEngineId: "prod-a" },
         camunda7_process_instances_data: INSTANCES_FEED,
       },
       actions,
@@ -202,8 +202,8 @@ describe("Camunda7StandaloneShell", () => {
     const actions: HostActionLog[] = []
     renderShell(
       {
-        // Multi-engine, nothing sticky-selected: the shell cannot pick one.
-        camunda7_engine: { engines: [{ id: "a" }, { id: "b" }], currentSelection: null },
+        // Multi-engine, no default saved: the shell cannot pick one.
+        camunda7_engine: { engines: [{ id: "a" }, { id: "b" }], defaultEngineId: null },
       },
       actions,
     )

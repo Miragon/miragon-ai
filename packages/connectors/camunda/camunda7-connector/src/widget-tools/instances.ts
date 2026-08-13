@@ -40,7 +40,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+      const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
       )
@@ -113,7 +113,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       // Shared builder with the `camunda7:load-bpmn-viewer` step — the two
       // render paths must stay in sync (data/bpmn-viewer-data.ts).
       const data = await buildBpmnViewerData(client, engineId, {
@@ -175,7 +175,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       const data = await buildJobPanelData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
         failedOnly: args.failedOnly,

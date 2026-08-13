@@ -7,7 +7,7 @@ export const periodField = z.enum(PERIODS).default("7d").describe("Analysis time
 /**
  * Optional `engine` filter spread into every analytics tool's input schema.
  * Same parameter name as the camunda7 operations tools' per-call override,
- * but stateless (no sticky session) and with subset support:
+ * but without a saved default and with subset support:
  *
  *   - Omitted → aggregates across all engines (cross-engine view, the default).
  *   - One id → restricts to one engine.

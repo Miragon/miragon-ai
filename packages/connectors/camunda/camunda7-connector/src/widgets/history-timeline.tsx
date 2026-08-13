@@ -263,7 +263,7 @@ export function PagedHistoryView({
   variant = "timeline",
 }: {
   processInstanceId: string
-  /** Explicit engine routing; omitted → the session's sticky engine. */
+  /** Explicit engine routing; omitted → the caller's saved default engine. */
   engine?: string
   variant?: "timeline" | "table"
 }) {

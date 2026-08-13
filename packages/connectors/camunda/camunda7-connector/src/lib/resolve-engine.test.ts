@@ -1,5 +1,4 @@
-import { describe, it, expect } from "vitest"
-import { runWithMcpRequestInfo, type McpRequestInfo } from "@miragon-ai/widget-shell/server"
+import { describe, it, expect, vi } from "vitest"
 import type { Client } from "@miragon-ai/camunda7-client"
 import {
   createEngineRegistry,
@@ -21,31 +20,27 @@ const MULTI = [
 ]
 
 /**
- * Build the step appConfig with an injectable session id so sticky selection is
- * driven deterministically — the backend registry otherwise reads the in-flight
- * MCP request context, which doesn't exist in a unit test. The TTL/eviction and
- * per-session isolation mechanics themselves are the toolkit's concern (covered
- * by backend-registry.test.ts); here we pin the camunda7 adapter contract.
+ * Build the step appConfig with an injectable default-engine lookup — the seam
+ * production wires to the profile store (`profileDefaultEngineId`). The
+ * profile plumbing itself (identity, allow-list) is covered by
+ * `engine-preferences` via the engines-tool tests; here we pin the camunda7
+ * resolution contract: override > saved default > single configured engine.
  */
-function harness(engines: Array<{ id: string; baseUrl: string; cockpitUrl?: string }>) {
-  let session: string | undefined
+function harness(
+  engines: Array<{ id: string; baseUrl: string; cockpitUrl?: string }>,
+  defaultEngineId?: () => Promise<string | undefined>,
+) {
   const registry = createEngineRegistry(engines, (e) => ({ __engine: e.id }) as unknown as Client, {
-    getSessionId: () => session,
+    defaultEngineId,
   })
   const appConfig: Camunda7StepAppConfig = { registry, engines }
-  return {
-    appConfig,
-    select: (id: string, sid = "s1") => {
-      session = sid
-      registry.backends.select(id)
-    },
-  }
+  return { appConfig, registry }
 }
 
 describe("resolveStepEngine", () => {
-  it("resolves the only engine (with its baseUrl) when one is configured and nothing is selected", () => {
+  it("resolves the only engine (with its baseUrl) when one is configured and no default is saved", async () => {
     const { appConfig } = harness(SINGLE)
-    const { client, engineId, baseUrl, cockpitUrl } = resolveStepEngine(appConfig)
+    const { client, engineId, baseUrl, cockpitUrl } = await resolveStepEngine(appConfig)
     expect(engineId).toBe("default")
     expect(engineIdOf(client)).toBe("default")
     // Regression guard: the step must get a real client carrying a non-empty
@@ -54,87 +49,59 @@ describe("resolveStepEngine", () => {
     expect(cockpitUrl).toBe("http://e1/cockpit")
   })
 
-  it("honours the sticky session selection in a multi-engine setup", () => {
-    const h = harness(MULTI)
-    h.select("beta")
-    const { client, engineId, baseUrl } = resolveStepEngine(h.appConfig)
+  it("honours the saved default engine in a multi-engine setup", async () => {
+    const { appConfig } = harness(MULTI, () => Promise.resolve("beta"))
+    const { client, engineId, baseUrl } = await resolveStepEngine(appConfig)
     expect(engineId).toBe("beta")
     expect(engineIdOf(client)).toBe("beta")
     expect(baseUrl).toBe("http://beta/engine-rest")
   })
 
-  it("lets an explicit override (the camunda7:engine view key) win over the sticky selection", () => {
-    const h = harness(MULTI)
-    h.select("beta")
-    const { client, engineId, cockpitUrl } = resolveStepEngine(h.appConfig, "alpha")
+  it("lets an explicit override (the camunda7:engine view key) win over the saved default", async () => {
+    const lookup = vi.fn(() => Promise.resolve("beta"))
+    const { appConfig } = harness(MULTI, lookup)
+    const { client, engineId, cockpitUrl } = await resolveStepEngine(appConfig, "alpha")
     expect(engineId).toBe("alpha")
     expect(engineIdOf(client)).toBe("alpha")
     expect(cockpitUrl).toBe("http://alpha/cockpit")
+    // An explicit override must not even consult the profile — the lookup is
+    // a per-call store read that would be pure waste here.
+    expect(lookup).not.toHaveBeenCalled()
   })
 
-  it("throws a clear EngineNotSelectedError for multi-engine with no selection and no override", () => {
+  it("throws a clear EngineNotSelectedError for multi-engine with no default and no override", async () => {
     const { appConfig } = harness(MULTI)
-    expect(() => resolveStepEngine(appConfig)).toThrow(EngineNotSelectedError)
+    await expect(resolveStepEngine(appConfig)).rejects.toThrow(EngineNotSelectedError)
     // The message must name the selectable ids — the error path serialises
     // only code + message, so this is the LLM's one shot at seeing them.
-    expect(() => resolveStepEngine(appConfig)).toThrow(
-      'No engine selected for this session. Available engines: alpha, beta. Call camunda7_engine with action "select" first.',
+    await expect(resolveStepEngine(appConfig)).rejects.toThrow(
+      'No engine specified and no default engine saved. Available engines: alpha, beta. Pass the per-call `engine` parameter, or save a default with camunda7_engine action "select".',
     )
   })
 
-  it("throws UnknownEngineError when the override names a non-existent engine", () => {
+  it("throws UnknownEngineError when the override names a non-existent engine", async () => {
     const { appConfig } = harness(MULTI)
-    expect(() => resolveStepEngine(appConfig, "gamma")).toThrow(UnknownEngineError)
+    await expect(resolveStepEngine(appConfig, "gamma")).rejects.toThrow(UnknownEngineError)
   })
 })
 
-/**
- * The production identity resolver (no `opts` seam): since mcp-use 2 issues no
- * MCP session ids, the sticky selection must key off the ambient request
- * info's auth user — with the session id (a gateway-stamped `Mcp-Session-Id`)
- * only as fallback, mirroring resolveProfileKey so a selection and the profile
- * share a lifetime.
- */
-describe("sticky selection identity (ambient request info)", () => {
-  const registryOf = () =>
-    createEngineRegistry(MULTI, (e) => ({ __engine: e.id }) as unknown as Client)
-  const under = <T>(info: McpRequestInfo, fn: () => T): T => runWithMcpRequestInfo(info, fn)
-
-  it("keys the selection off the auth user id when no session id exists (OAuth deployments)", () => {
-    const registry = registryOf()
-    under({ authUserId: "user-1" }, () => registry.backends.select("beta"))
-    expect(under({ authUserId: "user-1" }, () => resolveEngine(undefined, registry)).engineId).toBe(
-      "beta",
-    )
-    // Another user must not inherit the selection.
-    expect(() => under({ authUserId: "user-2" }, () => resolveEngine(undefined, registry))).toThrow(
-      EngineNotSelectedError,
-    )
+describe("saved-default validation", () => {
+  it("ignores a stale saved default that names a no-longer-configured engine", async () => {
+    // A removed engine must degrade to "no default" (NotSelected with the
+    // real ids), never fail every call with UnknownEngineError.
+    const { registry } = harness(MULTI, () => Promise.resolve("gone"))
+    await expect(resolveEngine(undefined, registry)).rejects.toThrow(EngineNotSelectedError)
   })
 
-  it("prefers the auth user over a session id (profile-key parity)", () => {
-    const registry = registryOf()
-    under({ authUserId: "user-1", sessionId: "sess-a" }, () => registry.backends.select("beta"))
-    // Same user, different session: still resolves — the selection is
-    // user-scoped, not session-scoped, exactly like the profile record.
-    expect(
-      under({ authUserId: "user-1", sessionId: "sess-b" }, () => resolveEngine(undefined, registry))
-        .engineId,
-    ).toBe("beta")
+  it("falls back to the sole configured engine when the saved default is stale", async () => {
+    const { registry } = harness(SINGLE, () => Promise.resolve("gone"))
+    const { engineId } = await resolveEngine(undefined, registry)
+    expect(engineId).toBe("default")
   })
 
-  it("falls back to a gateway-stamped session id without auth", () => {
-    const registry = registryOf()
-    under({ sessionId: "sess-a" }, () => registry.backends.select("alpha"))
-    expect(under({ sessionId: "sess-a" }, () => resolveEngine(undefined, registry)).engineId).toBe(
-      "alpha",
-    )
-  })
-
-  it("has no sticky selection without any identity (bare HTTP, no OAuth)", () => {
-    const registry = registryOf()
-    expect(() => under({}, () => resolveEngine(undefined, registry))).toThrow(
-      EngineNotSelectedError,
-    )
+  it("resolves without any default lookup wired (tests, minimal registries)", async () => {
+    const registry = createEngineRegistry(SINGLE, (e) => ({ __engine: e.id }) as unknown as Client)
+    const { engineId } = await resolveEngine(undefined, registry)
+    expect(engineId).toBe("default")
   })
 })

@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 
 The camunda7 module never registers operations tools with raw `server.tool()`. Tools go
 through the toolkit registrar; engine access goes through `withEngine`/`resolveEngine`
-(per-call `engine` override > sticky session selection > single default). Widgets hang
+(per-call `engine` override > saved default engine (profile) > single default). Widgets hang
 off a four-link registration chain. Follow the steps for the path you need.
 
 ## Step 0 — pick the render path
@@ -162,7 +162,7 @@ exception that uses `server.tool()` directly):
   `ui://views/<tool>.html` resource itself), adds the required passthrough
   `outputSchema`, and stamps the Apps-SDK half via `appsSdkMeta`; **never write
   `_meta.ui` keys by hand** (mcp-use owns and overwrites that namespace). Resolve the engine via
-  `resolveEngine(args.engine, registry)` — it already returns `baseUrl`/`cockpitUrl`;
+  `await resolveEngine(args.engine, registry)` — it already returns `baseUrl`/`cockpitUrl`;
   never fish them out of `registry.engines`. Return
   `buildSingleWidgetView({ widget, app: "camunda7", dataType, data, title, summary })` or
   `buildComposedView(...)` (both from `@miragon-ai/widget-shell/server`). The

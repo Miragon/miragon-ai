@@ -58,7 +58,7 @@ export function JobPanelWidget({
     tool: CAMUNDA7_JOBS_DATA,
     args,
     // Always ready: the feed's `engine` is optional — resolveEngine falls back
-    // to the sticky session selection or the single configured engine (see the
+    // to the caller's saved default engine or the single configured engine (see the
     // engine-health view for the same rule). Gating on `!!engine` would leave
     // a composed render without props stuck on "No data available" forever.
     ready: true,

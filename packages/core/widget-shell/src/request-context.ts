@@ -8,10 +8,10 @@
  * `createWidgetToolRegistrar`) receive `(client, args)` WITHOUT a ctx, and the
  * camunda7 REST client's passthrough-auth interceptor runs deep inside a
  * hey-api call chain — neither can thread a per-call `ctx` through. This store
- * restores the 1.x semantics for exactly the three ambient consumers:
- * profile-key resolution ([[resolveProfileKey]]), the sticky engine selection
- * (`getSessionId` on the toolkit backend registry), and the passthrough bearer
- * token (`resolveMcpBearerToken`).
+ * restores the 1.x semantics for exactly the two ambient consumers:
+ * profile-key resolution ([[resolveProfileKey]] — which also feeds the
+ * per-call default-engine lookup) and the passthrough bearer token
+ * (`resolveMcpBearerToken`).
  *
  * Installed once per server via [[installMcpRequestContext]] (idempotent) —
  * the composition root (`index.ts` of the host app) calls it right after

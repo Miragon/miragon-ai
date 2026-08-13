@@ -12,7 +12,7 @@ export const loadProcessDefinitionsStep: PipelineStepDefinition<Camunda7StepAppC
   requires: [],
   produces: ["camunda7:definitions"],
   execute: async (context, appConfig) => {
-    const { client } = resolveStepEngine(
+    const { client } = await resolveStepEngine(
       appConfig,
       context.keys["camunda7:engine"] as string | undefined,
     )

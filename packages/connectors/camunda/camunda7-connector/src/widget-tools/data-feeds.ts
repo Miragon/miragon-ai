@@ -71,7 +71,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       return rawData({ ...(await buildCockpitDashboardData(client, engineId)) })
     }),
   )
@@ -87,7 +87,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       return rawData({ ...(await buildEngineHealthData(client, engineId, healthThresholds)) })
     }),
   )
@@ -103,7 +103,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       return rawData({
         ...(await buildClusterDetailData(client, engineId, {
           activityId: args.activityId,
@@ -132,7 +132,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       return rawData({
         ...(await buildProcessInstancesData(client, engineId, {
           processDefinitionKey: args.processDefinitionKey,
@@ -163,7 +163,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       return rawData({
         ...(await buildBpmnViewerData(client, engineId, {
           processInstanceId: args.processInstanceId,
@@ -189,7 +189,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       return rawData({
         ...(await buildProcessListData(client, engineId, {
           key: args.key,
@@ -216,7 +216,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+      const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
       )
@@ -245,7 +245,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       return rawData({
         ...(await buildJobPanelData(client, engineId, {
           processDefinitionKey: args.processDefinitionKey,
@@ -271,7 +271,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+      const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
       )
@@ -300,7 +300,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+      const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
       )
@@ -329,7 +329,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+      const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
       )
@@ -360,7 +360,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       ...appOnly,
     },
     withToolErrors(async (args) => {
-      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+      const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
       )

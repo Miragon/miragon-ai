@@ -14,6 +14,7 @@ import {
 } from "../nav-core.js"
 import { camunda7BaseWidgets } from "../registry.js"
 import { translator } from "../../messages/index.js"
+import { CAMUNDA7_ENGINE } from "../../tool-names.js"
 import { NavBreadcrumb } from "./breadcrumb.js"
 import { cockpitViews, filterLayoutToWidgets } from "./views.js"
 import { FleetView } from "./fleet-view.js"
@@ -22,9 +23,8 @@ export type { CockpitAppData }
 
 interface EnginesResult {
   engines: Array<{ id: string }>
-  currentSelection: string | null
-  /** Profile default engine — landing hint when nothing is sticky-selected yet. */
-  profileDefaultEngineId?: string | null
+  /** The caller's saved default engine (profile) — null when none is saved. */
+  defaultEngineId: string | null
 }
 
 type TopSection = "overview" | "incidents" | "settings"
@@ -201,7 +201,7 @@ function LandingChooser({
 }
 
 export function CockpitApp({ data }: { data: CockpitAppData | null }) {
-  // Host-portable tool transport for imperative calls (sticky engine select).
+  // Host-portable tool transport for imperative calls (saving the default engine).
   // Requesting fullscreen is no longer a widget concern since mcp-use 2.x:
   // the HostBridge carries no `requestDisplayMode`, and the app shell
   // (`McpAppView`) owns the fullscreen affordance instead.
@@ -213,10 +213,10 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const queryCallTool = useCallTool()
 
   // Authoritative engine source: the stable `camunda7_engine` tool's "list"
-  // action (needs no selection itself). Decoupled from the open_cockpit
+  // action (needs no saved default itself). Decoupled from the open_cockpit
   // bootstrap so the picker/switcher work regardless of how the app was
   // launched.
-  const enginesQuery = useToolQuery<EnginesResult>(["camunda7:engines"], "camunda7_engine", {
+  const enginesQuery = useToolQuery<EnginesResult>(["camunda7:engines"], CAMUNDA7_ENGINE, {
     action: "list",
   })
   const engines = enginesQuery.data?.engines ?? data?.engines ?? []
@@ -245,20 +245,23 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   }, [scope.kind, soleEngineId])
 
   // Pick (or switch) the active engine. The cockpit threads `engine` into its
-  // own views explicitly, but we ALSO make the selection sticky for the session
-  // so delegated/agentic paths (incidents, "ask AI" actions) use the same engine.
-  function stickySelect(id: string) {
-    void callTool("camunda7_engine", { action: "select", engineId: id }).catch(() => {
-      /* override on each call still works even if sticky selection fails */
+  // own views explicitly, but we ALSO save it as the caller's default engine
+  // (profile) so delegated/agentic paths (incidents, "ask AI" actions) and the
+  // next cockpit landing use the engine the user is looking at. Fails soft:
+  // without a caller identity or under a read-only toolset the save refuses,
+  // and the per-call override keeps everything working.
+  function saveDefaultEngine(id: string) {
+    void callTool(CAMUNDA7_ENGINE, { action: "select", engineId: id }).catch(() => {
+      /* override on each call still works even if the default cannot be saved */
     })
   }
   function enterEngine(id: string) {
     dispatch({ type: "enter-engine", id })
-    stickySelect(id)
+    saveDefaultEngine(id)
   }
   function switchEngine(id: string) {
     dispatch({ type: "switch-engine", id })
-    stickySelect(id)
+    saveDefaultEngine(id)
   }
 
   // Deterministic, client-side navigation — every view is hosted in-app and

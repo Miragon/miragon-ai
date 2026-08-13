@@ -97,7 +97,7 @@ const engineHealthPropsSchema = z.toJSONSchema(
       .string()
       .optional()
       .describe(
-        "Engine id to assess. Omitted → the session's sticky selection or the single configured engine.",
+        "Engine id to assess. Omitted → the caller's saved default engine or the single configured engine.",
       ),
   }),
 )
@@ -115,7 +115,7 @@ const clusterDetailPropsSchema = z.toJSONSchema(
     engine: z
       .string()
       .optional()
-      .describe("Engine id. Omitted → sticky selection or single default."),
+      .describe("Engine id. Omitted → saved default engine or single default."),
   }),
 )
 

@@ -1,52 +1,64 @@
 import { z } from "zod"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import { mergeRawSlice, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import { UnknownEngineError, type EngineRegistry, type EngineEntry } from "../lib/resolve-engine.js"
 import { providerForEntry } from "../providers/index.js"
-import type { ProfileStore } from "@miragon-ai/widget-shell/server"
-import { parseCamunda7Settings } from "../lib/profile-schema.js"
-import { resolveProfileKey } from "../lib/resolve-profile-key.js"
+import { allowedEngines, profileDefaultEngineId } from "../lib/engine-preferences.js"
+import { parseCamunda7Settings, CAMUNDA7_MODULE_KEY } from "../lib/profile-schema.js"
+import { resolveAuthUserId, resolveProfileKey } from "../lib/resolve-profile-key.js"
+import { isToolInToolset, resolveCamunda7Toolset } from "../lib/toolsets.js"
+import { CAMUNDA7_ENGINE, CAMUNDA7_SAVE_USER_PROFILE } from "../tool-names.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 /**
  * Registers the consolidated engine-management tool that lets the MCP host
- * discover available engines and pick which one operations tools route to
- * for this session:
+ * discover available engines and save which one operations tools route to
+ * when no per-call `engine` override is given:
  *
- *   - `camunda7_engine` action `"list"`    → list registered engines.
- *   - `camunda7_engine` action `"select"`  → set the sticky engine for this session.
- *   - `camunda7_engine` action `"current"` → report which engine is currently sticky.
+ *   - `camunda7_engine` action `"list"`    → list registered engines + the saved default.
+ *   - `camunda7_engine` action `"select"`  → save an engine as the caller's default
+ *     (`profile.modules.camunda7.defaultEngineId` — durable, same identity as all settings).
+ *   - `camunda7_engine` action `"current"` → report the saved default engine.
  */
-export function registerEngineTools(register: Register, profileStore: ProfileStore): void {
-  // The user-profile `allowedEngineIds` curates which engines the session may
-  // pick from. An empty/absent allow-list means "all" — never lock the session
-  // out of every engine. resolveProfileKey (argument-less: registrar handlers
-  // get no ctx) resolves auth user id → session id → stdio-anonymous off the
-  // request context. This is curation, not security: an explicit per-call
-  // `engine` override still reaches any configured engine.
+export function registerEngineTools(
+  register: Register,
+  profileStore: ProfileStore,
+  toolset?: string,
+): void {
+  // "select" writes the SAME profile field the settings save tool owns, so it
+  // shares exactly that tool's toolset decision — never the engine tool's own
+  // name, which the session-infrastructure allowance keeps registered in every
+  // toolset for the read actions (see SESSION_INFRASTRUCTURE_TOOLS).
+  const resolvedToolset = resolveCamunda7Toolset(toolset)
+  const canSaveDefault =
+    resolvedToolset === undefined ||
+    isToolInToolset(
+      { name: CAMUNDA7_SAVE_USER_PROFILE, annotations: { idempotentHint: true } },
+      resolvedToolset,
+    )
+
+  // The user-profile `allowedEngineIds` curates which engines the caller may
+  // pick from (shared rule: `allowedEngines`). resolveProfileKey
+  // (argument-less: registrar handlers get no ctx) resolves auth user id →
+  // session id → stdio-anonymous off the request context.
   const allowedEnginesFor = async (reg: EngineRegistry): Promise<EngineEntry[]> => {
     const key = resolveProfileKey()
     const profile = key ? await profileStore.get(key) : undefined
-    const allowed = parseCamunda7Settings(profile).allowedEngineIds
-    if (!allowed || allowed.length === 0) return reg.engines
-    const filtered = reg.engines.filter((e) => allowed.includes(e.id))
-    // Guard against a stale allow-list that no longer matches any configured
-    // engine — fall back to all rather than rendering an empty picker.
-    return filtered.length > 0 ? filtered : reg.engines
+    return allowedEngines(parseCamunda7Settings(profile), reg.engines)
   }
 
   register({
-    name: "camunda7_engine",
+    name: CAMUNDA7_ENGINE,
     category: "engines",
     description:
-      "Manage which CIB Seven / Camunda 7 engine this MCP session talks to. " +
-      'action="list" returns the engines available to this profile, the current sticky selection, ' +
-      "and the profile's default engine (if set; a hint for the cockpit's landing engine, not a selection); " +
-      'action="select" (requires engineId) makes that engine the sticky default for all ' +
-      "subsequent operations tool calls in this session until selected again; " +
-      'action="current" reports the sticky selection (or null). ' +
-      "With more than one engine configured, list then select before calling operations tools — " +
-      "or pass the per-call `engine` parameter to override the sticky selection for a single call.",
+      "Manage which CIB Seven / Camunda 7 engine operations tools talk to. " +
+      'action="list" returns the engines available to this profile and the saved default engine (if any); ' +
+      'action="select" (requires engineId) saves that engine as the caller\'s default — ' +
+      "all subsequent operations tool calls without a per-call `engine` override route to it " +
+      "(a durable per-user setting, the same field the settings page edits); " +
+      'action="current" reports the saved default engine (or null). ' +
+      "With more than one engine configured, pass the per-call `engine` parameter or save a default first.",
     annotations: { idempotentHint: true },
     inputSchema: {
       action: z
@@ -62,18 +74,6 @@ export function registerEngineTools(register: Register, profileStore: ProfileSto
       switch (action) {
         case "list": {
           const available = await allowedEnginesFor(reg)
-          // The cockpit seeds its landing engine from the profile default when
-          // nothing is sticky-selected yet (and the default is still available).
-          // Kept on its own field: `currentSelection` stays the *actual* sticky
-          // selection so it agrees with action "current" and the engine
-          // operations route — a non-sticky default must not read as selected.
-          const key = resolveProfileKey()
-          const profile = key ? await profileStore.get(key) : undefined
-          const settings = parseCamunda7Settings(profile)
-          const profileDefaultEngineId =
-            settings.defaultEngineId && available.some((e) => e.id === settings.defaultEngineId)
-              ? settings.defaultEngineId
-              : null
           return {
             engines: available.map((e) => {
               const provider = providerForEntry(e)
@@ -85,8 +85,10 @@ export function registerEngineTools(register: Register, profileStore: ProfileSto
                 ...(e.cockpitUrl ? { cockpitUrl: e.cockpitUrl } : {}),
               }
             }),
-            currentSelection: reg.backends.getSelected() ?? null,
-            profileDefaultEngineId,
+            // The saved default (validated against the allowed engines) — the
+            // engine operations tools use when no per-call override is given,
+            // and the cockpit's landing engine.
+            defaultEngineId: (await profileDefaultEngineId(profileStore, reg.engines)) ?? null,
           }
         }
         case "select": {
@@ -105,11 +107,38 @@ export function registerEngineTools(register: Register, profileStore: ProfileSto
                 "Update your profile (camunda7_save_user_profile) to widen allowedEngineIds.",
             )
           }
-          reg.backends.select(id)
-          return { selected: id }
+          if (!canSaveDefault) {
+            throw new Error(
+              "This deployment's toolset does not allow saving a default engine (durable write) — " +
+                "pass the per-call `engine` parameter instead.",
+            )
+          }
+          // Keyless refusal mirrors requireProfileKey (the shared slice-write
+          // contract) with the select-specific remediation: the per-call
+          // override needs no identity at all.
+          const key = resolveProfileKey()
+          if (!key) {
+            throw new Error(
+              "No caller identity to save a default engine under (mcp-use 2 issues no MCP session ids) — " +
+                "pass the per-call `engine` parameter instead, or configure MCP_OAUTH so the default persists per user.",
+            )
+          }
+          const nextSlice = await mergeRawSlice(profileStore, key, CAMUNDA7_MODULE_KEY, {
+            defaultEngineId: id,
+          })
+          // Stamping the auth user id marks the record user-bound — exempt
+          // from the session-TTL cleanup (same pair as every settings save).
+          await profileStore.save(
+            key,
+            { modules: { [CAMUNDA7_MODULE_KEY]: nextSlice } },
+            { userId: resolveAuthUserId() },
+          )
+          return { defaultEngineId: id }
         }
         case "current":
-          return { engineId: reg.backends.getSelected() ?? null }
+          return {
+            defaultEngineId: (await profileDefaultEngineId(profileStore, reg.engines)) ?? null,
+          }
       }
     },
   })

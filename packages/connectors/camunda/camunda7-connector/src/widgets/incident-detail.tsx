@@ -79,8 +79,8 @@ export function IncidentDetailWidget({
   if (!data) return guard
 
   // Mutations must target the exact engine this incident was fetched from (the
-  // prop in the cockpit, the server-resolved id standalone) — never the session
-  // default, which can differ if the sticky select raced or failed.
+  // prop in the cockpit, the server-resolved id standalone) — never the caller's
+  // default engine, which can differ if the default-engine save raced or failed.
   const engineId = engine ?? data.engineId
 
   function handleResolve() {

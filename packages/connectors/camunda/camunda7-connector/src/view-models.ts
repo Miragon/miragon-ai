@@ -166,11 +166,11 @@ export interface CockpitEngineInfo {
 
 /**
  * Bootstrap payload for the consolidated cockpit app (`camunda7_open_cockpit`).
- * Carries the resolved engine (sticky selection or the only configured engine)
- * plus the full engine list so the app can offer a switcher / picker. The app
- * threads the chosen `engineId` into every nested tool call via the `engine`
- * override, so client-side navigation works regardless of the session's sticky
- * selection.
+ * Carries the resolved engine (the caller's saved default or the only
+ * configured engine) plus the full engine list so the app can offer a
+ * switcher / picker. The app threads the chosen `engineId` into every nested
+ * tool call via the `engine` override, so client-side navigation works
+ * regardless of the saved default.
  */
 export interface CockpitAppData {
   /** Resolved engine id, or null when the user must pick (multiple engines, none selected). */

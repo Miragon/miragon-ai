@@ -54,7 +54,7 @@ accepts anonymous requests and ignores the token.
 With auth active, user profiles and saved dashboards scope to the
 authenticated user (`sub`) and never expire. Without auth there is no caller
 identity — mcp-use 2 issues no MCP session ids — so settings reads return
-defaults and saves plus the sticky engine selection refuse (boot warning).
+defaults and saves, incl. the default engine, refuse (boot warning).
 
 To try it locally, `docker compose --profile auth up -d` adds a Keycloak on
 `localhost:8480` (realm `miragon`, user `demo`/`demo`; the matching `MCP_OAUTH`
@@ -112,7 +112,7 @@ use the `camunda7_query_historic_*` tools.
 
 Disable a module by listing only the ones you want, e.g.
 `MCP_ACTIVE_MODULES=camunda7`. The camunda7 module also takes a toolset suffix
-to narrow the tool surface: `camunda7:read-only` (queries + engine selection),
+to narrow the tool surface: `camunda7:read-only` (queries + engine discovery),
 `camunda7:operations` (adds start/complete/claim/variables/retries/messages),
 `camunda7:admin` (everything, incl. delete/modify/suspension, deployments,
 migrations). No suffix exposes all tools; unknown toolsets warn and degrade to

@@ -21,7 +21,9 @@ function toolNamesFor(toolset?: string): string[] {
     getRegisteredTools: () => [],
   }) as unknown as Register
   const register = withToolsetFilter(recorder, toolset)
-  registerEngineTools(register, createInMemoryProfileStore())
+  // The toolset is threaded through like production wiring (plugin.ts): the
+  // engine tool stays registered everywhere, its durable "select" self-gates.
+  registerEngineTools(register, createInMemoryProfileStore(), toolset)
   registerTools(register)
   registerIncidentIssueTools(register, {})
   return names.sort()

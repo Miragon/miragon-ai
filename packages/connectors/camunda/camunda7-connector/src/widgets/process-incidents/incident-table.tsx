@@ -193,7 +193,7 @@ export function PagedIncidentTable({
 }: {
   processDefinitionKey: string
   activityId: string
-  /** Explicit engine routing; omitted → the session's sticky engine. */
+  /** Explicit engine routing; omitted → the caller's saved default engine. */
   engine?: string
   resolvedIds: Set<string>
   pendingIds: Set<string>

@@ -8,7 +8,7 @@ function authHeader(client: Client): string | null {
 }
 
 describe("createPlugin per-engine auth", () => {
-  it("builds each engine's client from its own auth, falling back to the module-wide config", () => {
+  it("builds each engine's client from its own auth, falling back to the module-wide config", async () => {
     const plugin = createPlugin({
       engines: [
         { id: "a", baseUrl: "http://a.example/engine-rest" },
@@ -25,14 +25,14 @@ describe("createPlugin per-engine auth", () => {
     })
     const { registry } = plugin.appConfig as unknown as Camunda7StepAppConfig
 
-    expect(authHeader(resolveEngine("a", registry).client)).toBe(
+    expect(authHeader((await resolveEngine("a", registry)).client)).toBe(
       `Basic ${Buffer.from("demo:secret").toString("base64")}`,
     )
-    expect(authHeader(resolveEngine("b", registry).client)).toBe("Bearer tok-b")
-    expect(authHeader(resolveEngine("c", registry).client)).toBeNull()
+    expect(authHeader((await resolveEngine("b", registry)).client)).toBe("Bearer tok-b")
+    expect(authHeader((await resolveEngine("c", registry)).client)).toBeNull()
   })
 
-  it("does not mix per-engine auth fields with the module-wide credentials", () => {
+  it("does not mix per-engine auth fields with the module-wide credentials", async () => {
     const plugin = createPlugin({
       engines: [
         // Declares its own auth but no token — must NOT inherit the global
@@ -45,6 +45,6 @@ describe("createPlugin per-engine auth", () => {
     })
     const { registry } = plugin.appConfig as unknown as Camunda7StepAppConfig
 
-    expect(authHeader(resolveEngine("solo", registry).client)).toBeNull()
+    expect(authHeader((await resolveEngine("solo", registry)).client)).toBeNull()
   })
 })

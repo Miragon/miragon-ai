@@ -14,7 +14,7 @@ export const loadCockpitDashboardStep: PipelineStepDefinition<Camunda7StepAppCon
   requires: [],
   produces: ["camunda7:cockpitDashboardData"],
   execute: async (context, appConfig) => {
-    const { client, engineId } = resolveStepEngine(
+    const { client, engineId } = await resolveStepEngine(
       appConfig,
       context.keys["camunda7:engine"] as string | undefined,
     )

@@ -63,7 +63,8 @@ export const de: MessageCatalog = {
     "Aus welchen Engines du wählen kannst. Alle abwählen = alle erlauben. Kuratierung, keine Zugriffskontrolle.",
   "profile.engines.none": "Keine Engines konfiguriert.",
   "profile.field.defaultEngine": "Standard-Engine",
-  "profile.field.defaultEngine.help": "Die Engine, mit der das Cockpit öffnet.",
+  "profile.field.defaultEngine.help":
+    "Die Engine, die Tools und Cockpit verwenden, wenn keine explizit gewählt ist.",
   "profile.engine.auto": "(automatisch)",
 
   "profile.dashboards.unavailable": "Gespeicherte Dashboards sind nicht verfügbar.",

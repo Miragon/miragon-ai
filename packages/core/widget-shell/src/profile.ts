@@ -82,11 +82,9 @@ export interface ProfileSlice {
  *      removed request-context AsyncLocalStorage), so registrar handlers
  *      without a `ctx` still resolve the auth user;
  *   2. otherwise the MCP session id (transport session / `Mcp-Session-Id`
- *      header, from the same ambient info) — the same source the engine
- *      selection keys off, so a profile and its sticky engine share a
- *      lifetime. mcp-use 2 itself issues no session ids (stateless HTTP
- *      serving), so this rung only matches when a fronting gateway stamps
- *      the header;
+ *      header, from the same ambient info). mcp-use 2 itself issues no
+ *      session ids (stateless HTTP serving), so this rung only matches when
+ *      a fronting gateway stamps the header;
  *   3. {@link ANONYMOUS_PROFILE_KEY} when there is NO request context at all
  *      (stdio transport, tests) — the deliberate shared record;
  *   4. `undefined` for an HTTP request WITHOUT any identity — deliberately NOT

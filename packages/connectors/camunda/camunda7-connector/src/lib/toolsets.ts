@@ -51,9 +51,12 @@ const ADMIN_ONLY_TOOLS: ReadonlySet<string> = new Set([
 
 /**
  * Tools included in every toolset even though they are not engine-read-only.
- * `camunda7_engine` (action "select") only mutates this MCP session's sticky
- * engine selection — never engine state — and without it a read-only
- * multi-engine deployment could not route its queries.
+ * `camunda7_engine` never mutates engine state and must stay discoverable
+ * everywhere: its `list`/`current` actions are the reads a read-only
+ * multi-engine deployment needs to route queries (per-call `engine` override),
+ * and the durable `select` action (a profile write of `defaultEngineId`)
+ * gates itself against the toolset inside the handler — it shares the
+ * `camunda7_save_user_profile` decision, see `registerEngineTools`.
  */
 const SESSION_INFRASTRUCTURE_TOOLS: ReadonlySet<string> = new Set(["camunda7_engine"])
 

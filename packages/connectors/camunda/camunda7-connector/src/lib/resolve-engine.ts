@@ -4,7 +4,6 @@ import {
   createBackendRegistry,
   type BackendRegistry,
 } from "@miragon/mcp-toolkit-core/tools"
-import { getMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import type { Client } from "@miragon-ai/camunda7-client"
 import type { EngineProvider } from "../engine-provider.js"
 import { providerForEntry } from "../providers/index.js"
@@ -23,27 +22,38 @@ export interface EngineMeta {
 }
 
 /**
- * Session-aware engine routing for the camunda7 module. Wraps the toolkit's
- * generic {@link BackendRegistry} — the single source of truth for the
- * per-session engine selection (override > sticky > single-default precedence,
- * lazy-TTL eviction, session id read from the repo-owned ambient request info
- * installed via `installMcpRequestContext`) — alongside the static configured
- * engine list for listing and the cockpit-count reads.
+ * Engine routing for the camunda7 module. Wraps the toolkit's generic
+ * {@link BackendRegistry} (id validation, single-default fallback) alongside
+ * the static configured engine list and the injected default-engine lookup.
+ *
+ * There is deliberately NO per-session selection state: mcp-use 2 serves HTTP
+ * statelessly (no MCP session ids), and in-memory selection state would break
+ * behind any load balancer with more than one replica. The durable equivalent
+ * is the profile's `modules.camunda7.defaultEngineId`, surfaced here as
+ * {@link EngineRegistry.defaultEngineId} and consulted per call by
+ * [[resolveEngine]] when no explicit override is given.
  */
 export interface EngineRegistry {
   backends: BackendRegistry<Client, EngineMeta>
   engines: EngineEntry[]
+  /**
+   * The caller's saved default engine (undefined when none is saved or no
+   * caller identity resolves). Injected by the plugin so this module's lib
+   * stays free of profile plumbing; async because it reads the profile store.
+   */
+  defaultEngineId?: () => Promise<string | undefined>
 }
 
 /**
  * Builds an {@link EngineRegistry} from the configured engines and a factory
- * that creates the REST client for each. `opts` is a test seam mirroring the
- * toolkit registry's injectable session/clock; production callers omit it.
+ * that creates the REST client for each. `opts.defaultEngineId` is the saved
+ * per-user default lookup (see [[profileDefaultEngineId]]); tests inject a
+ * stub, production wires the profile-store read.
  */
 export function createEngineRegistry(
   engines: EngineEntry[],
   clientFor: (engine: EngineEntry) => Client,
-  opts?: { getSessionId?: () => string | undefined; now?: () => number },
+  opts?: { defaultEngineId?: () => Promise<string | undefined> },
 ): EngineRegistry {
   const backends = createBackendRegistry<Client, EngineMeta>(
     engines.map((e) => ({
@@ -53,44 +63,31 @@ export function createEngineRegistry(
       // fails the boot instead of producing silently wrong cockpit links.
       meta: { baseUrl: e.baseUrl, cockpitUrl: e.cockpitUrl, provider: providerForEntry(e) },
     })),
-    // The toolkit registry no longer reads the session id itself (mcp-use 2
-    // dropped the ambient request context) — inject the repo-owned store's
-    // identity. Auth user FIRST, mirroring resolveProfileKey, so a selection
-    // and the profile share a lifetime: mcp-use 2 issues no MCP session ids
-    // (stateless HTTP serving), leaving the authenticated user as the only
-    // built-in identity; the session-id rung still serves gateway-stamped
-    // `Mcp-Session-Id` headers. Without either there is no sticky selection
-    // (per-call `engine` still works); `opts` stays the overriding test seam.
-    {
-      label: "engine",
-      getSessionId: () => {
-        const info = getMcpRequestInfo()
-        return info?.authUserId ?? info?.sessionId
-      },
-      ...opts,
-    },
+    { label: "engine" },
   )
-  return { backends, engines }
+  return { backends, engines, defaultEngineId: opts?.defaultEngineId }
 }
 
 /**
- * Thrown when an operations tool is invoked but no engine has been selected
- * for the current MCP session and the registry holds more than one engine.
+ * Thrown when an operations tool is invoked without a per-call `engine`, no
+ * default engine is saved for the caller, and the registry holds more than
+ * one engine.
  *
  * The message lists the available engine ids because the error path only
  * serialises code + message (the structured `availableEngines` field never
  * reaches the model) — naming them here saves the LLM a
- * `camunda7_engine` (action "list") roundtrip before it can pick one and
- * select it.
+ * `camunda7_engine` (action "list") roundtrip before it can pick one.
  */
 export class EngineNotSelectedError extends Error {
   readonly code = "ENGINE_NOT_SELECTED" as const
   readonly availableEngines: EngineEntry[]
   constructor(availableEngines: EngineEntry[]) {
     super(
-      `No engine selected for this session. Available engines: ${availableEngines
+      `No engine specified and no default engine saved. Available engines: ${availableEngines
         .map((e) => e.id)
-        .join(", ")}. Call camunda7_engine with action "select" first.`,
+        .join(
+          ", ",
+        )}. Pass the per-call \`engine\` parameter, or save a default with camunda7_engine action "select".`,
     )
     this.name = "EngineNotSelectedError"
     this.availableEngines = availableEngines
@@ -112,25 +109,36 @@ export class UnknownEngineError extends Error {
 }
 
 /**
- * Resolves an engine for the current tool call (precedence: explicit `override`
- * > sticky session selection > the only configured engine, else throws). Thin
- * adapter over the toolkit backend registry that re-exposes the camunda7
- * ergonomic shape and re-throws the toolkit's failures as the module's own
- * `EngineNotSelectedError` / `UnknownEngineError` so the error contract (codes,
- * `availableEngines`, the `camunda7_engine` remediation hint) is preserved.
+ * The caller's saved default, validated against the CONFIGURED engines: a
+ * stored id that no longer matches any engine degrades to "no default"
+ * (single-default fallback or {@link EngineNotSelectedError}) instead of
+ * failing every call on a stale preference.
  */
-export function resolveEngine(
+async function savedDefault(registry: EngineRegistry): Promise<string | undefined> {
+  const id = await registry.defaultEngineId?.()
+  return id && registry.engines.some((e) => e.id === id) ? id : undefined
+}
+
+/**
+ * Resolves an engine for the current tool call (precedence: explicit `override`
+ * > the caller's saved default engine > the only configured engine, else
+ * throws). Thin adapter over the toolkit backend registry that re-exposes the
+ * camunda7 ergonomic shape and re-throws the toolkit's failures as the
+ * module's own `EngineNotSelectedError` / `UnknownEngineError` so the error
+ * contract (codes, `availableEngines`, the remediation hint) is preserved.
+ */
+export async function resolveEngine(
   override: string | undefined,
   registry: EngineRegistry,
-): {
+): Promise<{
   client: Client
   engineId: string
   baseUrl: string
   cockpitUrl?: string
   provider: EngineProvider
-} {
+}> {
   try {
-    const backend = registry.backends.resolve(override)
+    const backend = registry.backends.resolve(override ?? (await savedDefault(registry)))
     return {
       client: backend.client,
       engineId: backend.id,
@@ -162,18 +170,18 @@ export interface Camunda7StepAppConfig {
 /**
  * Resolve the engine for a pipeline step. Steps have no per-call `engine`
  * argument, so they honour an optional `camunda7:engine` view key, then fall
- * back to the sticky session selection or the only configured engine (same
- * precedence as {@link resolveEngine}).
+ * back to the caller's saved default engine or the only configured engine
+ * (same precedence as {@link resolveEngine}).
  */
 export function resolveStepEngine(
   appConfig: Camunda7StepAppConfig,
   override?: string,
-): {
+): Promise<{
   client: Client
   engineId: string
   baseUrl: string
   cockpitUrl?: string
   provider: EngineProvider
-} {
+}> {
   return resolveEngine(override, appConfig.registry)
 }

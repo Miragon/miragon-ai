@@ -99,7 +99,7 @@ export function ActivityIncidentList({
 
   // Mutations must target the exact engine this data was fetched from (the prop
   // in the cockpit, the server-resolved id standalone) — never fall back to the
-  // session default, which can differ if the sticky select raced or failed.
+  // caller's default engine, which can differ if the default-engine save raced or failed.
   const engineId = engine ?? data.engineId
 
   function jumpToProcess(processDefinitionKey: string) {

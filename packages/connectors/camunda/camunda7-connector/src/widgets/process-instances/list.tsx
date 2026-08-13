@@ -154,7 +154,7 @@ function deriveInstancesScope({
   const pdk = processDefinitionKey ?? initialData?.processDefinitionKey
   // Standalone renders hand in only `data` (no props), so the scope the show
   // tool was called with must come from the payload's echo: loadMore/search
-  // must page the SAME engine and filter set as page 0 — not the sticky
+  // must page the SAME engine and filter set as page 0 — not the saved
   // default and not an unfiltered view.
   const echoed = initialData?.filters
   const feedEngine = engine ?? initialData?.engineId

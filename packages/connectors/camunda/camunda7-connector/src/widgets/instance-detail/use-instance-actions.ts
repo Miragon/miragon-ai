@@ -42,8 +42,8 @@ export function useInstanceActions({
   const isSuspended = suspendedOverride ?? data?.instance.suspended ?? false
   // Standalone (camunda7_show_instance_detail) the `engine` prop is undefined; fall
   // back to the engine the data was fetched against — mutations (and the AI
-  // prompts) must target the exact engine this data came from, never the session
-  // default, which can differ if the sticky select raced or failed.
+  // prompts) must target the exact engine this data came from, never the caller's
+  // default engine, which can differ if the default-engine save raced or failed.
   const engineId = engine ?? data?.engineId
 
   function handleResolve(incidentId: string) {

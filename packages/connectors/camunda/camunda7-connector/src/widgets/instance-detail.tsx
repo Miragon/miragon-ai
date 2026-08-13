@@ -49,7 +49,7 @@ export function InstanceDetailWidget({
   const variableEntries = Object.entries(variables)
   const activeIncidents = (incidents ?? []).filter((i) => !actions.resolvedIds.has(i.id))
   // When neither the prop nor the fetched id is known the prompts omit the engine
-  // clause entirely (the sticky session engine applies) — never inline a
+  // clause entirely (the saved default engine applies) — never inline a
   // placeholder as if it were an engine id.
   const engineClause = engineId ? `, engine ${engineId}` : ""
 

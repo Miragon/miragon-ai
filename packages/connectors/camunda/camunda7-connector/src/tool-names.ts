@@ -58,3 +58,7 @@ export const CAMUNDA7_PROCESS_LIST_DATA = "camunda7_process_list_data"
 export const CAMUNDA7_SHOW_USER_PROFILE = "camunda7_show_user_profile"
 export const CAMUNDA7_USER_PROFILE_DATA = "camunda7_user_profile_data"
 export const CAMUNDA7_SAVE_USER_PROFILE = "camunda7_save_user_profile"
+// Engine management (list / select / current). Widgets call it for the engine
+// list and to save the default engine on an in-cockpit switch, so the name is
+// load-bearing beyond prompt hints.
+export const CAMUNDA7_ENGINE = "camunda7_engine"

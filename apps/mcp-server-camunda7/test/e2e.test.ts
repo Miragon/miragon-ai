@@ -132,8 +132,7 @@ describe("mcp-server-camunda7 E2E smoke", () => {
           engineName: "CIB Seven",
         },
       ],
-      currentSelection: null,
-      profileDefaultEngineId: null,
+      defaultEngineId: null,
     })
   })
 

@@ -16,7 +16,7 @@ export const loadHistoryTimelineStep: PipelineStepDefinition<Camunda7StepAppConf
   requires: ["camunda7:processInstanceId"],
   produces: ["camunda7:historyProcessInstance", "camunda7:historyActivities"],
   execute: async (context, appConfig) => {
-    const { client } = resolveStepEngine(
+    const { client } = await resolveStepEngine(
       appConfig,
       context.keys["camunda7:engine"] as string | undefined,
     )

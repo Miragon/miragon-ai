@@ -21,10 +21,12 @@ import {
 } from "./nav-core.js"
 import { navigateViaHost, NavProvider, type OnNavigate } from "./navigation.js"
 import { camunda7BaseWidgets } from "./registry.js"
+import { CAMUNDA7_ENGINE } from "../tool-names.js"
 
 interface EnginesResult {
   engines: Array<{ id: string }>
-  currentSelection: string | null
+  /** The caller's saved default engine (profile) — null when none is saved. */
+  defaultEngineId: string | null
 }
 
 /**
@@ -53,17 +55,17 @@ function isViewResult(output: unknown): boolean {
   return "layout" in output || "context" in output
 }
 
-/** Sticky selection, or the sole configured engine (the cockpit's pattern). */
+/** The saved default engine, or the sole configured one (the cockpit's pattern). */
 function engineFromQuery(queried: EnginesResult | undefined): string | undefined {
   return (
-    queried?.currentSelection ??
+    queried?.defaultEngineId ??
     (queried && queried.engines.length === 1 ? queried.engines[0].id : undefined)
   )
 }
 
 // Engine unresolvable — no in-widget tool transport at all, the engines
 // query failed, or it settled without a determinable engine (multi-engine
-// without a sticky selection). Fall back to the conversational transport:
+// without a saved default). Fall back to the conversational transport:
 // the agent's tool call resolves the engine server-side. This is the only
 // path where the shell still emits a prompt. Decided on settled data only
 // (`isFetching` guards the enable-transition refetch).
@@ -146,11 +148,11 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
 
   const stepEngineId = useMemo(() => findStepEngineId(output), [output])
   // Second engine source, only consulted once a drill happens without an engine
-  // echo: sticky selection or sole engine (the cockpit's pattern). Cached by
+  // echo: saved default or sole engine (the cockpit's pattern). Cached by
   // the toolkit's singleton query client.
   const enginesQuery = useToolQuery<EnginesResult>(
     ["camunda7:engines"],
-    "camunda7_engine",
+    CAMUNDA7_ENGINE,
     { action: "list" },
     { enabled: stack.length > 0 && !stepEngineId },
   )

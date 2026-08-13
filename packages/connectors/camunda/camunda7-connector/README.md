@@ -18,7 +18,7 @@ structurally to the app's `ModuleDefinition` port. The package is `private` and 
 - **Widgets** (`src/widgets/`) — React components (cockpit dashboard, process & incident panels, BPMN
   viewer, history timeline, job panel) wired in `registry.ts` via `adaptDataWidget`.
 - **Multi-engine routing** — every tool resolves its engine through `withEngine` / `resolveEngine`
-  (`src/lib/`): per-call override → sticky session selection → single configured default.
+  (`src/lib/`): per-call override → saved default engine (profile) → single configured default.
 - **Engine providers** (`src/engine-provider.ts`, `src/providers/`) — each engine entry carries a
   vendor `flavor` (`cibseven` | `operaton` | `camunda7`, default `cibseven`) resolved to an
   `EngineProvider` holding only the real vendor differences: cockpit routes, branding, client hook.

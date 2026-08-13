@@ -123,8 +123,8 @@ export function mergeProfile(
 
 /**
  * Process-local store. The default when `MCP_PROFILE_DIR` is unset — fine for
- * dev and stateless deployments; everything is lost on restart (same trade-off
- * as the session-sticky engine selection it complements).
+ * dev and single-instance deployments; everything is lost on restart, and
+ * behind a load balancer each replica sees its own records.
  */
 export function createInMemoryProfileStore(): ProfileStore {
   const byKey = new Map<string, ProfileRecord>()

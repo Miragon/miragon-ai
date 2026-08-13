@@ -49,15 +49,16 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      // Thin bootstrap: resolve the engine (sticky selection or the only engine)
-      // and hand the app the engine list. The app threads the chosen engineId
-      // into every nested tool call via the `engine` override, so client-side
-      // navigation works without relying on the session's sticky selection.
+      // Thin bootstrap: resolve the engine (the caller's saved default or the
+      // only engine) and hand the app the engine list — this is what makes the
+      // cockpit LAND on the profile's default engine. The app threads the
+      // chosen engineId into every nested tool call via the `engine` override,
+      // so client-side navigation never depends on the saved default.
       let engineId: string | null = null
       try {
-        engineId = resolveEngine(args.engine, registry).engineId
+        engineId = (await resolveEngine(args.engine, registry)).engineId
       } catch {
-        // Multiple engines, none selected → the app renders an engine picker.
+        // Multiple engines, no default saved → the app renders an engine picker.
         engineId = null
       }
       const data: CockpitAppData = {
@@ -93,7 +94,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       const data = await buildProcessListData(client, engineId, {
         key: args.key,
         nameLike: args.nameLike,
@@ -139,7 +140,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       const data = await buildProcessInstancesData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
         active: args.active,
@@ -181,7 +182,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId, baseUrl, cockpitUrl, provider } = resolveEngine(
+      const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
       )
@@ -228,7 +229,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry)
       const [activities, activitiesCount, instances] = await Promise.all([
         getHistoricActivityInstances({
           client,

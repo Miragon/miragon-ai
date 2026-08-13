@@ -325,7 +325,7 @@ export function EngineHealthView({
   const callTool = useCallTool()
   // Always ready: unlike the per-process widgets (whose feeds require an id),
   // the health feed's `engine` is optional — resolveEngine falls back to the
-  // sticky session selection or the single configured engine. Gating on
+  // caller's saved default engine or the single configured engine. Gating on
   // `!!engine` would leave a composed render without props stuck on
   // "No data available" forever.
   const {

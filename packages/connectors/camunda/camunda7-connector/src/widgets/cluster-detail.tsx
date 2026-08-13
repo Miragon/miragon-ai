@@ -46,7 +46,7 @@ function describeCluster(data: ClusterDetailData): string {
 /**
  * Cluster identity + engine from props (cockpit drill) or the handed-in
  * data (standalone show-tool render) — loadMore() must always carry both,
- * or it would page the sticky/default engine instead of the origin engine.
+ * or it would page the caller's default engine instead of the origin engine.
  */
 function clusterFeedParams({
   initialData,
