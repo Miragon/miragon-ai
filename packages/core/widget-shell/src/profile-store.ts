@@ -1,33 +1,42 @@
 import { randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
-import { ANONYMOUS_PROFILE_KEY } from "@miragon-ai/widget-shell/server"
+import { ANONYMOUS_PROFILE_KEY } from "./profile.js"
 import { PROFILE_SCHEMA_VERSION } from "./profile-constants.js"
 import { parseStoredProfile } from "./profile-migrations.js"
 import {
-  defaultUserProfile,
-  type UserProfile,
-  type UserProfileSaveInput,
-} from "./profile-schema.js"
+  defaultProfileRecord,
+  type ProfileRecord,
+  type ProfileRecordSaveInput,
+} from "./profile-record.js"
 
 /**
  * Persistence for user profiles, keyed by the profile key (the authenticated
  * user id when the deployment runs with `MCP_OAUTH`, else the MCP session id —
- * see {@link resolveProfileKey}). Deliberately mirrors the toolkit's
- * `DashboardStore` shape: an in-memory default plus a one-file-per-record
- * filesystem store selected by an env var (and a postgres implementation in
- * `profile-store-postgres.ts` selected by `DATABASE_URL` in the server app).
- * There is no cross-key ownership model — each key owns exactly its own
- * record; the auth layer keeps unrelated callers on different keys.
+ * see {@link resolveProfileKey} in `profile.ts`). Deliberately mirrors the
+ * toolkit's `DashboardStore` shape: an in-memory default plus a
+ * one-file-per-record filesystem store selected by an env var (and a postgres
+ * implementation in `profile-store-postgres.ts` selected by `DATABASE_URL` in
+ * the composition root). There is no cross-key ownership model — each key owns
+ * exactly its own record; the auth layer keeps unrelated callers on different
+ * keys.
+ *
+ * The full store interface is for COMPOSITION ROOTS (apps wiring
+ * `SharedResources`); modules consume the narrow {@link ProfileSource} port
+ * instead — which this interface satisfies structurally.
  */
 export interface ProfileStore {
-  get(key: string): Promise<UserProfile | undefined>
+  get(key: string): Promise<ProfileRecord | undefined>
   /**
    * Merge `input` over the existing record (or defaults); stamps `updatedAt`.
    * `opts.userId` (the authenticated user, when known) marks the record as
    * user-bound — the marker that exempts it from {@link cleanupSessions}.
    */
-  save(key: string, input: UserProfileSaveInput, opts?: ProfileSaveOptions): Promise<UserProfile>
+  save(
+    key: string,
+    input: ProfileRecordSaveInput,
+    opts?: ProfileSaveOptions,
+  ): Promise<ProfileRecord>
   delete(key: string): Promise<boolean>
   /**
    * Delete SESSION-keyed records (no `userId`, not the shared anonymous
@@ -57,17 +66,19 @@ function stripUndefined<T extends object>(obj: T): Partial<T> {
  * keep their previous value so single-field updates don't wipe the rest.
  * Shared by every store implementation (in-memory, filesystem, and the postgres
  * sibling in `profile-store-postgres.ts`) so the merge semantics stay
- * single-sourced.
+ * single-sourced. Record-agnostic on purpose — module-specific normalization
+ * (e.g. camunda7's "empty string clears the field") happens at the owning
+ * module's save-tool boundary, inside its slice.
  */
 export function mergeProfile(
   key: string,
-  existing: UserProfile | undefined,
-  input: UserProfileSaveInput,
+  existing: ProfileRecord | undefined,
+  input: ProfileRecordSaveInput,
   now: string,
   opts?: ProfileSaveOptions,
-): UserProfile {
-  const prev = existing ?? defaultUserProfile(key)
-  const merged: UserProfile = {
+): ProfileRecord {
+  const prev = existing ?? defaultProfileRecord(key)
+  return {
     ...prev,
     ...stripUndefined(input),
     // Module slices merge per module key: a save carrying `modules.analytics`
@@ -81,11 +92,6 @@ export function mergeProfile(
     updatedAt: now,
     schemaVersion: PROFILE_SCHEMA_VERSION,
   }
-  // The settings UI sends an empty string for the "(auto)"/"(none)" option of an
-  // optional id field — normalise that to "unset" so the field can be cleared.
-  if (merged.defaultEngineId === "") merged.defaultEngineId = undefined
-  if (merged.defaultDashboardId === "") merged.defaultDashboardId = undefined
-  return merged
 }
 
 /**
@@ -94,7 +100,7 @@ export function mergeProfile(
  * as the session-sticky engine selection it complements).
  */
 export function createInMemoryProfileStore(): ProfileStore {
-  const byKey = new Map<string, UserProfile>()
+  const byKey = new Map<string, ProfileRecord>()
   return {
     get(key) {
       return Promise.resolve(byKey.get(key))
@@ -120,7 +126,11 @@ export function createInMemoryProfileStore(): ProfileStore {
 }
 
 /** The one cleanup predicate all store implementations share. */
-export function isExpiredSessionRecord(key: string, record: UserProfile, olderThan: Date): boolean {
+export function isExpiredSessionRecord(
+  key: string,
+  record: ProfileRecord,
+  olderThan: Date,
+): boolean {
   if (key === ANONYMOUS_PROFILE_KEY) return false
   if (record.userId) return false
   const updatedAt = Date.parse(record.updatedAt)
@@ -140,7 +150,7 @@ export function createFileSystemProfileStore(options: { dir: string }): ProfileS
   const { dir } = options
   const fileFor = (key: string) => path.join(dir, `${encodeURIComponent(key)}.json`)
 
-  const readRecord = async (key: string): Promise<UserProfile | undefined> => {
+  const readRecord = async (key: string): Promise<ProfileRecord | undefined> => {
     let raw: string
     try {
       raw = await fs.readFile(fileFor(key), "utf-8")

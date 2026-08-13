@@ -295,9 +295,6 @@ importers:
       mcp-use:
         specifier: 2.1.0
         version: 2.1.0(@base-ui/react@1.6.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@types/node@26.2.0)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.2.8))(markdown-to-jsx@9.7.15(react@19.2.8)(vue@3.5.41(typescript@5.9.3)))(motion@12.38.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react-resizable-panels@4.10.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(sonner@2.0.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(tailwind-merge@3.6.0)(tsx@4.21.0)(yaml@2.9.0)(zod@4.4.3)
-      postgres:
-        specifier: 3.4.9
-        version: 3.4.9
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -353,6 +350,9 @@ importers:
       mcp-use:
         specifier: 2.1.0
         version: 2.1.0(@base-ui/react@1.6.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@types/node@26.2.0)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.2.8))(markdown-to-jsx@9.7.15(react@19.2.8)(vue@3.5.41(typescript@5.9.3)))(motion@12.38.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react-resizable-panels@4.10.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(sonner@2.0.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(tailwind-merge@3.6.0)(tsx@4.21.0)(yaml@2.9.0)(zod@4.4.3)
+      postgres:
+        specifier: 3.4.9
+        version: 3.4.9
       react:
         specifier: 19.2.8
         version: 19.2.8

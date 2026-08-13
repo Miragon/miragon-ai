@@ -1,27 +1,26 @@
 import { z } from "zod"
-import { withoutDefaults } from "@miragon-ai/widget-shell/server"
-import { LOCALES, PROFILE_SCHEMA_VERSION, ROLES, THEMES } from "./profile-constants.js"
+import {
+  LOCALES,
+  THEMES,
+  withoutDefaults,
+  type Locale,
+  type ProfileRecord,
+  type ThemePref,
+} from "@miragon-ai/widget-shell/server"
+import { ROLES } from "./profile-constants.js"
+
+/** Slice key under `profile.modules.<module>` — this module's name. */
+export const CAMUNDA7_MODULE_KEY = "camunda7"
 
 /**
- * User-settable preferences — everything a person can change about their
- * MiragonAI session. Identity (`id`/`userId`) and server-managed metadata
- * (`createdAt`/`updatedAt`/`schemaVersion`) live on {@link userProfileSchema},
- * not here, so the save tool and the widget form share exactly this shape.
- *
- * Every field has a default, so a brand-new key (never saved) still yields a
- * complete, renderable profile via {@link defaultUserProfile}.
+ * The camunda7-owned slice of the shared profile record
+ * (`profile.modules.camunda7`) — everything this connector persists per user.
+ * The cross-module preferences (`language`, `theme`) live on the record itself
+ * (`profileRecordSchema` in `@miragon-ai/widget-shell/server`); this module
+ * validates its slice fail-soft on read and writes it through its own save
+ * tool, mirroring analytics' settings slice.
  */
-export const userProfilePreferencesSchema = z.object({
-  language: z
-    .enum(LOCALES)
-    .default("en")
-    .describe(
-      "UI + summary language. Also steers the language of tool summaries returned to the model.",
-    ),
-  theme: z
-    .enum(THEMES)
-    .default("system")
-    .describe('Theme preference: "light", "dark" or "system".'),
+export const camunda7SettingsSchema = z.object({
   defaultEngineId: z
     .string()
     .optional()
@@ -48,53 +47,75 @@ export const userProfilePreferencesSchema = z.object({
     .describe(
       "Preferred operations role (UI hint only; tool exposure is set by the connection toolset).",
     ),
-  modules: z
-    .record(z.string(), z.unknown())
-    .default({})
-    .describe(
-      "Per-module settings slices, keyed by module name (e.g. `analytics`). Each module owns " +
-        "its slice's schema, validates it fail-soft on read, and writes it through its own " +
-        "save tool (e.g. `analytics_save_settings`) — this record only transports the slices.",
-    ),
 })
 
-export type UserProfilePreferences = z.infer<typeof userProfilePreferencesSchema>
+export type Camunda7Settings = z.infer<typeof camunda7SettingsSchema>
 
 /**
- * The persisted profile record: the preferences plus identity and
- * server-managed metadata. `id` is the profile key (the MCP session id today,
- * an authenticated user id once auth lands — see {@link resolveProfileKey}).
+ * Fail-soft slice parse: absent slice, garbage, or fields a different build
+ * wrote all degrade to the schema defaults instead of failing the read path —
+ * the same contract as analytics' `parseAnalyticsSettings`.
  */
-export const userProfileSchema = userProfilePreferencesSchema.extend({
-  id: z.string(),
-  userId: z.string().optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  schemaVersion: z.literal(PROFILE_SCHEMA_VERSION).default(PROFILE_SCHEMA_VERSION),
-})
-
-export type UserProfile = z.infer<typeof userProfileSchema>
+export function parseCamunda7Settings(
+  record: { modules?: Record<string, unknown> } | undefined,
+): Camunda7Settings {
+  const slice = record?.modules?.[CAMUNDA7_MODULE_KEY]
+  const parsed = camunda7SettingsSchema.safeParse(slice ?? {})
+  return parsed.success ? parsed.data : camunda7SettingsSchema.parse({})
+}
 
 /**
- * Save input: any subset of the preferences. Omitted fields keep their current
- * value (the store merges over the existing record), so the model can do a
- * single-field update ("switch the UI to German") without resending everything
- * — guaranteed by the default-free shape: omitted keys stay ABSENT after the
- * tool-boundary parse instead of coming back as materialized defaults.
- * `modules` slices merge per module key — a save carrying `modules.analytics`
- * replaces exactly that slice and leaves other modules' slices untouched.
- *
- * This is the STORE-level input. The `camunda7_save_user_profile` tool exposes
- * it without `modules` (see `userProfileToolSaveInput`) — foreign slices are
- * written through their owning module's save tool, not through camunda7's.
+ * The flat profile VIEW this module's settings panel and summaries work with:
+ * the record's cross-module preferences merged with the parsed camunda7 slice.
+ * A read-side projection only — the STORED shape is the widget-shell
+ * `ProfileRecord` with the engine/dashboard fields inside `modules.camunda7`.
  */
-export const userProfileSaveInput = z
-  .object(withoutDefaults(userProfilePreferencesSchema.shape))
+export interface UserProfile extends Camunda7Settings {
+  language: Locale
+  theme: ThemePref
+  /** Record stamp — the widget's baseline-resync key after a save. */
+  updatedAt: string
+}
+
+export function toUserProfile(record: ProfileRecord): UserProfile {
+  return {
+    language: record.language,
+    theme: record.theme,
+    updatedAt: record.updatedAt,
+    ...parseCamunda7Settings(record),
+  }
+}
+
+/** A fully-defaulted profile view for a key that has never been saved. */
+export function defaultUserProfile(): UserProfile {
+  return {
+    language: "en",
+    theme: "system",
+    updatedAt: new Date().toISOString(),
+    ...camunda7SettingsSchema.parse({}),
+  }
+}
+
+/**
+ * The `camunda7_save_user_profile` tool's input: any subset of the flat
+ * preferences (cross-module `language`/`theme` + this module's slice fields).
+ * Default-FREE on purpose — zod 4 re-applies `.default()`s through
+ * `.partial()`, materializing omitted fields into silent resets (see
+ * `withoutDefaults` in `@miragon-ai/widget-shell/server`). Deliberately
+ * WITHOUT a `modules` passthrough: foreign module slices are written through
+ * their owning module's save tool.
+ */
+export const userProfileToolSaveInput = z
+  .object({
+    language: z
+      .enum(LOCALES)
+      .describe(
+        "UI + summary language. Also steers the language of tool summaries returned to the model.",
+      ),
+    theme: z.enum(THEMES).describe('Theme preference: "light", "dark" or "system".'),
+    ...withoutDefaults(camunda7SettingsSchema.shape),
+  })
   .partial()
-export type UserProfileSaveInput = Partial<UserProfilePreferences>
-
-/** The camunda7 save tool's input: the preferences minus foreign module slices. */
-export const userProfileToolSaveInput = userProfileSaveInput.omit({ modules: true })
 
 /**
  * Composite payload the `show_user_profile` widget tool + `user_profile_data`
@@ -113,18 +134,4 @@ export interface UserProfileView {
    * write that resolves to an unknown tool.
    */
   canSave: boolean
-}
-
-/** A fully-defaulted profile for a key that has never been saved. */
-export function defaultUserProfile(key: string): UserProfile {
-  const prefs = userProfilePreferencesSchema.parse({})
-  const now = new Date().toISOString()
-  return {
-    ...prefs,
-    id: key,
-    userId: undefined,
-    createdAt: now,
-    updatedAt: now,
-    schemaVersion: PROFILE_SCHEMA_VERSION,
-  }
 }

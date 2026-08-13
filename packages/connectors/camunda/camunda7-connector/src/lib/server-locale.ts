@@ -1,4 +1,4 @@
-import type { ProfileStore } from "./profile-store.js"
+import type { ProfileStore } from "@miragon-ai/widget-shell/server"
 import { resolveProfileKey } from "./resolve-profile-key.js"
 import { translator } from "../messages/index.js"
 

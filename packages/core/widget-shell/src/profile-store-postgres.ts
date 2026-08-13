@@ -1,14 +1,14 @@
 import type postgres from "postgres"
-import { ANONYMOUS_PROFILE_KEY } from "@miragon-ai/widget-shell/server"
+import { ANONYMOUS_PROFILE_KEY } from "./profile.js"
 import { parseStoredProfile } from "./profile-migrations.js"
-import type { UserProfile } from "./profile-schema.js"
+import type { ProfileRecord } from "./profile-record.js"
 import { mergeProfile, type ProfileStore } from "./profile-store.js"
 
 /**
- * DDL owned by this store, executed by the server app's migration runner
+ * DDL owned by this store, executed by the composition root's migration runner
  * (which tracks applied names in its `schema_migrations` table). The full
  * profile record lives in one JSONB column — it is tiny (<1 KB) and its shape
- * is governed by `userProfileSchema`/`schemaVersion`, not by table columns.
+ * is governed by `profileRecordSchema`/`schemaVersion`, not by table columns.
  * `user_id` is mirrored out for the future session→user migration once auth
  * lands (see `resolveProfileKey`).
  */
@@ -31,12 +31,12 @@ export const PROFILE_STORE_MIGRATIONS: ReadonlyArray<{
 
 /**
  * Profiles stored one row per key in the `user_profiles` table. Selected when
- * `DATABASE_URL` is set (see the server app's persistence wiring); the caller
- * owns the `sql` client's lifecycle, so this package carries no runtime
+ * `DATABASE_URL` is set (see the composition root's persistence wiring); the
+ * caller owns the `sql` client's lifecycle, so this package carries no runtime
  * dependency on the driver.
  *
  * Reads keep the filesystem store's fail-soft semantics: a row whose JSONB
- * fails `userProfileSchema` is treated as "no record" and the next save
+ * fails `profileRecordSchema` is treated as "no record" and the next save
  * overwrites it. Saves run the shared `mergeProfile` inside a
  * `SELECT … FOR UPDATE` transaction, so concurrent partial updates of the same
  * key serialize instead of losing fields — safe for multiple server instances
@@ -48,7 +48,7 @@ export function createPostgresProfileStore(options: { sql: postgres.Sql }): Prof
   // Version upgrades + schema validation are shared with the filesystem store
   // via `parseStoredProfile` — older rows migrate on read, newer/corrupt rows
   // read as absent.
-  const parseRow = (row: { profile: unknown } | undefined): UserProfile | undefined =>
+  const parseRow = (row: { profile: unknown } | undefined): ProfileRecord | undefined =>
     row ? parseStoredProfile(row.profile) : undefined
 
   return {

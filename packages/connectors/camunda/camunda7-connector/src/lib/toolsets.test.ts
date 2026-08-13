@@ -4,7 +4,7 @@ import { registerEngineTools } from "../tools/engines.js"
 import { registerTools } from "../tools/index.js"
 import { registerIncidentIssueTools } from "../tools/incident-issue.js"
 import type { EngineRegistry } from "./resolve-engine.js"
-import { createInMemoryProfileStore } from "./profile-store.js"
+import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
 import { withToolsetFilter } from "./toolsets.js"
 
 type Register = Parameters<typeof registerTools>[0]

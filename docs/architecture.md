@@ -81,10 +81,10 @@ persisted in Postgres (`DATABASE_URL`), on disk (`MCP_PROFILE_DIR`), or in
 memory — in that order of precedence. The record is keyed by the authenticated
 user when the server runs with `MCP_OAUTH`, otherwise by the MCP session id.
 
-| Part                     | Owner       | Contents                                                        |
-| ------------------------ | ----------- | --------------------------------------------------------------- |
-| Core preferences         | camunda7    | Language, theme, engine availability + default, dashboard picks |
-| `modules.<module>` slice | that module | Whatever only it understands — e.g. the analytics look-back     |
+| Part                     | Owner        | Contents                                                          |
+| ------------------------ | ------------ | ----------------------------------------------------------------- |
+| Core record + store      | widget-shell | Language, theme, record metadata, the slice transport, the stores |
+| `modules.<module>` slice | that module  | Whatever only it understands — e.g. camunda7's engine picks       |
 
 Each module owns its slice end to end: its own schema, its own save tool, and
 its own section on the settings page. Nothing central knows what a slice

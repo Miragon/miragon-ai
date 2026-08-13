@@ -9,24 +9,21 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
+  LOCALES,
   NativeSelect,
   SettingsCard,
   SettingsField,
+  THEMES,
   WidgetShell,
   formatTime,
   useDetailView,
   useResetOnChange,
+  type Locale,
+  type ThemePref,
 } from "@miragon-ai/widget-shell/widgets"
 
 import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_USER_PROFILE_DATA } from "../tool-names.js"
-import {
-  LOCALES,
-  ROLES,
-  THEMES,
-  type Locale,
-  type Role,
-  type ThemePref,
-} from "../lib/profile-constants.js"
+import { ROLES, type Role } from "../lib/profile-constants.js"
 import type { UserProfile, UserProfileView } from "../lib/profile-schema.js"
 import { useT } from "../messages/use-t.js"
 import { refreshCockpitData } from "./refresh.js"

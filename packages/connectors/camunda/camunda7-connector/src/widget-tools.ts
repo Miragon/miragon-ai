@@ -1,7 +1,7 @@
 import type { MCPServer } from "mcp-use"
 import { DEFAULT_HEALTH_THRESHOLDS, type EngineHealthThresholds } from "./data/health-data.js"
 import type { EngineRegistry } from "./lib/resolve-engine.js"
-import { createInMemoryProfileStore, type ProfileStore } from "./lib/profile-store.js"
+import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import type { WidgetToolsContext } from "./widget-tools/shared.js"
 import { registerCockpitWidgetTools } from "./widget-tools/cockpit.js"
 import { registerInstanceWidgetTools } from "./widget-tools/instances.js"

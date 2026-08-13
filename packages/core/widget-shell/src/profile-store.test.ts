@@ -3,51 +3,27 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import postgres from "postgres"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import { ANONYMOUS_PROFILE_KEY } from "@miragon-ai/widget-shell/server"
+import { ANONYMOUS_PROFILE_KEY } from "./profile.js"
 import {
   createFileSystemProfileStore,
   createInMemoryProfileStore,
   type ProfileStore,
 } from "./profile-store.js"
 import { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
-import {
-  defaultUserProfile,
-  userProfilePreferencesSchema,
-  userProfileToolSaveInput,
-} from "./profile-schema.js"
+import { defaultProfileRecord } from "./profile-record.js"
 
-describe("defaultUserProfile", () => {
-  it("returns a complete, defaulted profile for an unsaved key", () => {
-    const p = defaultUserProfile("sess-1")
+describe("defaultProfileRecord", () => {
+  it("returns a complete, defaulted record for an unsaved key", () => {
+    const p = defaultProfileRecord("sess-1")
     expect(p).toMatchObject({
       id: "sess-1",
       language: "en",
       theme: "system",
-      pinnedDashboardIds: [],
       modules: {},
-      schemaVersion: 2,
+      schemaVersion: 3,
     })
-    expect(p.defaultEngineId).toBeUndefined()
-    expect(p.allowedEngineIds).toBeUndefined()
-  })
-
-  it("the preferences schema fills every default from an empty object", () => {
-    expect(userProfilePreferencesSchema.parse({})).toEqual({
-      language: "en",
-      theme: "system",
-      pinnedDashboardIds: [],
-      modules: {},
-    })
-  })
-})
-
-describe("userProfileToolSaveInput", () => {
-  // Zod 4 re-applies `.default()`s through `.partial()` — the save input must
-  // stay default-free so a single-field save doesn't materialize (and thereby
-  // persist) resets of every other preference at the tool boundary.
-  it("keeps omitted fields ABSENT instead of materializing defaults", () => {
-    expect(userProfileToolSaveInput.parse({ language: "de" })).toEqual({ language: "de" })
-    expect(userProfileToolSaveInput.parse({})).toEqual({})
+    expect(p.userId).toBeUndefined()
+    expect(p.createdAt).toBe(p.updatedAt)
   })
 })
 
@@ -65,27 +41,18 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
   it("creates, then merges partial updates without wiping other fields", async () => {
     const store = await makeStore()
 
-    const created = await store.save("sess-1", { language: "de", allowedEngineIds: ["prod-a"] })
+    const created = await store.save("sess-1", { language: "de" })
     expect(created.language).toBe("de")
-    expect(created.allowedEngineIds).toEqual(["prod-a"])
     // Untouched fields keep their defaults.
     expect(created.theme).toBe("system")
 
-    // A single-field update must not reset language/allowedEngineIds.
+    // A single-field update must not reset language.
     const updated = await store.save("sess-1", { theme: "dark" })
     expect(updated.theme).toBe("dark")
     expect(updated.language).toBe("de")
-    expect(updated.allowedEngineIds).toEqual(["prod-a"])
     // createdAt is preserved across saves; updatedAt advances (or is unchanged).
     expect(updated.createdAt).toBe(created.createdAt)
     expect(updated.updatedAt >= created.updatedAt).toBe(true)
-  })
-
-  it('clears an optional id field when an empty string ("(auto)") is saved', async () => {
-    const store = await makeStore()
-    await store.save("sess-1", { defaultEngineId: "prod-a" })
-    const cleared = await store.save("sess-1", { defaultEngineId: "" })
-    expect(cleared.defaultEngineId).toBeUndefined()
   })
 
   it("merges module slices per namespace without wiping other modules", async () => {
@@ -99,6 +66,19 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
     // A save without `modules` leaves all slices untouched.
     const untouched = await store.save("sess-1", { theme: "dark" })
     expect(untouched.modules).toEqual(updated.modules)
+  })
+
+  it("replaces exactly the saved module slice, leaving siblings intact", async () => {
+    const store = await makeStore()
+    await store.save("sess-1", {
+      modules: { camunda7: { defaultEngineId: "prod-a" }, analytics: { defaultPeriod: "30d" } },
+    })
+    const updated = await store.save("sess-1", { modules: { camunda7: { pinned: ["d1"] } } })
+    // Per-key REPLACE (the owning module merges within its slice itself).
+    expect(updated.modules).toEqual({
+      camunda7: { pinned: ["d1"] },
+      analytics: { defaultPeriod: "30d" },
+    })
   })
 
   it("deletes a stored profile", async () => {
@@ -159,7 +139,7 @@ describe("createFileSystemProfileStore", () => {
     createFileSystemProfileStore({ dir: await mkdtemp(path.join(tmpdir(), "profile-store-")) }),
   )
 
-  it("upgrades a persisted v1 record on read (flat analytics fields → modules.analytics)", async () => {
+  it("upgrades a persisted v1 record on read (flat fields → module slices)", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
     const store = createFileSystemProfileStore({ dir })
     await writeFile(path.join(dir, "legacy.json"), JSON.stringify(V1_RECORD), "utf-8")
@@ -168,10 +148,37 @@ describe("createFileSystemProfileStore", () => {
     expect(migrated).toMatchObject({
       language: "de",
       theme: "dark",
-      schemaVersion: 2,
-      modules: { analytics: { defaultPeriod: "30d", minBucketSize: 25 } },
+      schemaVersion: 3,
+      modules: {
+        analytics: { defaultPeriod: "30d", minBucketSize: 25 },
+        camunda7: { pinnedDashboardIds: [] },
+      },
     })
     expect(migrated).not.toHaveProperty("analyticsDefaultPeriod")
+    expect(migrated).not.toHaveProperty("pinnedDashboardIds")
+  })
+
+  it("upgrades a persisted v2 record on read (flat camunda7 fields → modules.camunda7)", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
+    const store = createFileSystemProfileStore({ dir })
+    await writeFile(path.join(dir, "v2.json"), JSON.stringify(V2_RECORD), "utf-8")
+
+    const migrated = await store.get("v2")
+    expect(migrated).toMatchObject({
+      language: "de",
+      schemaVersion: 3,
+      modules: {
+        analytics: { defaultPeriod: "14d" },
+        camunda7: {
+          defaultEngineId: "prod-a",
+          allowedEngineIds: ["prod-a", "prod-b"],
+          pinnedDashboardIds: ["d1"],
+          preferredRole: "operations",
+        },
+      },
+    })
+    expect(migrated).not.toHaveProperty("defaultEngineId")
+    expect(migrated).not.toHaveProperty("allowedEngineIds")
   })
 
   it("treats a record written by a NEWER build as absent instead of mangling it", async () => {
@@ -199,12 +206,27 @@ const V1_RECORD = {
   schemaVersion: 1,
 }
 
+/** A realistic record as the v2 build persisted it (flat camunda7 fields). */
+const V2_RECORD = {
+  id: "v2",
+  language: "de",
+  theme: "dark",
+  defaultEngineId: "prod-a",
+  allowedEngineIds: ["prod-a", "prod-b"],
+  pinnedDashboardIds: ["d1"],
+  preferredRole: "operations",
+  modules: { analytics: { defaultPeriod: "14d" } },
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  schemaVersion: 2,
+}
+
 // Opt-in integration slice (like test:host): needs a reachable Postgres, so it
 // only runs when TEST_DATABASE_URL is set — `pnpm test:pg` at the repo root
 // points it at the compose stack's dedicated test database. An own schema
-// isolates it from the app package's suite sharing that database.
+// isolates it from the other packages' suites sharing that database.
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL
-const TEST_SCHEMA = "mcp_camunda7_profile_store_test"
+const TEST_SCHEMA = "widget_shell_profile_store_test"
 
 describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
   let sql: postgres.Sql
@@ -249,7 +271,7 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
     expect(await store.get("sess-corrupt")).toEqual(saved)
   })
 
-  it("upgrades a v1 row on read (flat analytics fields → modules.analytics)", async () => {
+  it("upgrades a v1 row on read (flat fields → module slices)", async () => {
     const store = createPostgresProfileStore({ sql })
     await sql`
       INSERT INTO user_profiles (key, profile)
@@ -258,7 +280,7 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
     const migrated = await store.get("legacy")
     expect(migrated).toMatchObject({
       language: "de",
-      schemaVersion: 2,
+      schemaVersion: 3,
       modules: { analytics: { defaultPeriod: "30d", minBucketSize: 25 } },
     })
   })

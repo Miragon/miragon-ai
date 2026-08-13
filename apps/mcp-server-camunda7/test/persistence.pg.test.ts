@@ -2,7 +2,7 @@ import postgres from "postgres"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { DashboardOwnershipError } from "@miragon/mcp-toolkit-core/tools"
 import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
-import { PROFILE_STORE_MIGRATIONS } from "@miragon-ai/camunda7-connector"
+import { PROFILE_STORE_MIGRATIONS } from "@miragon-ai/widget-shell/server"
 import {
   createPostgresDashboardStore,
   DASHBOARD_STORE_MIGRATIONS,

@@ -1,7 +1,6 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
-import type { ProfileSource } from "@miragon-ai/widget-shell/server"
-import type { ProfileStore } from "@miragon-ai/camunda7-connector"
+import type { ProfileSource, ProfileStore } from "@miragon-ai/widget-shell/server"
 import type { FetchBpmnXml } from "@miragon-ai/analytics-connector"
 
 /**

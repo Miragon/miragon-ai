@@ -6,25 +6,30 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 
 # add-settings-section — module-owned user settings
 
-Settings live in ONE profile record per user/session, shared by all modules
-(`packages/connectors/camunda/camunda7-connector/src/lib/profile-schema.ts`). Each module owns a **slice** under
-`profile.modules.<module>`: the profile only transports it, the module owns its schema,
-validates it fail-soft on read, and writes it through its own save tool. The store merges
-per module key, so a save of `modules.<yours>` never touches another module's slice.
+Settings live in ONE profile record per user/session, shared by all modules. The record
+and its store are CORE (`packages/core/widget-shell/src/profile-record.ts` +
+`profile-store*.ts`, exported from `@miragon-ai/widget-shell/server`) and connector-free:
+`language`, `theme`, metadata, and the `profile.modules.<module>` transport. Each module
+owns a **slice** under `profile.modules.<module>`: the record only transports it, the
+module owns its schema, validates it fail-soft on read, and writes it through its own
+save tool. The store merges per module key, so a save of `modules.<yours>` never touches
+another module's slice.
 
-Reference implementation — read it before writing anything:
+Reference implementations — read one before writing anything:
 `packages/connectors/analytics/analytics-connector/src/settings.ts` + `settings-tools.ts` +
-`src/widgets/settings-section.tsx`.
+`src/widgets/settings-section.tsx` (pure slice), or camunda7's
+`src/lib/profile-schema.ts` + `src/tools/user-profile.ts` (slice + the cross-module
+`language`/`theme` fields behind one flat tool input).
 
 **Decide first: slice or core preference?** A setting only your module understands
-(analysis window, threshold) is a slice — everything below applies. A setting the whole
-server acts on (`language`, `theme`, engine availability) belongs in
-`userProfilePreferencesSchema` instead: add the field there, bump
-`PROFILE_SCHEMA_VERSION` in `lib/profile-constants.ts`, add the matching entry to
-`PROFILE_MIGRATIONS` in `lib/profile-migrations.ts` (a bump without a migration silently
-resets stored preferences), and extend the camunda7 profile widget. Don't put
-module-specific vocabulary into the core schema — v1→v2 moved the analytics fields out of
-it for exactly that reason.
+(analysis window, threshold, engine availability) is a slice — everything below applies.
+Only a setting EVERY module acts on (like `language`/`theme`) belongs on the core record
+in `profileRecordSchema` (`packages/core/widget-shell/src/profile-record.ts`): add the
+field there, bump `PROFILE_SCHEMA_VERSION` in `profile-constants.ts`, add the matching
+entry to `PROFILE_MIGRATIONS` in `profile-migrations.ts` (a bump without a migration
+silently resets stored preferences). Don't put module vocabulary into the core record —
+v2 moved the analytics fields and v3 the camunda7 engine/dashboard fields out of it for
+exactly that reason.
 
 ## Step 1 — the slice schema (`src/settings.ts`)
 
@@ -105,10 +110,11 @@ import {
 ```
 
 `ProfileSource` is the narrow read/write view a module gets: the locale plus its own
-slice, and `save?` for a `modules` patch. camunda7's `ProfileStore` satisfies it
-structurally (asserted at compile time in the app's `module-contract.ts`), so nobody has
-to import the camunda7 module. Alias them to your module's vocabulary if the call sites
-read better that way (`export const resolveSettingsKey = resolveProfileKey`).
+slice, and `save?` for a `modules` patch. The full `ProfileStore`
+(`@miragon-ai/widget-shell/server`) satisfies it structurally (asserted at compile time
+in the app's `module-contract.ts`) — modules stick to the narrow port, composition roots
+wire the full store. Alias them to your module's vocabulary if the call sites read
+better that way (`export const resolveSettingsKey = resolveProfileKey`).
 
 `resolveProfileKey(ctx)` precedence: auth user id (`ctx.auth.user.userId`, else the
 request context's `auth` var) > the `Mcp-Session-Id` header > `ANONYMOUS_PROFILE_KEY`
@@ -241,7 +247,7 @@ committing.
 
 ## Anti-patterns
 
-- Putting module vocabulary into `userProfilePreferencesSchema` instead of the slice.
+- Putting module vocabulary into the core `profileRecordSchema` instead of the slice.
 - `.partial()` over a defaulted schema at the tool boundary (silent resets).
 - Parsing the slice before merging in the save path (loses newer builds' fields).
 - Reading `profile.modules.<other>` — foreign slices are their owner's business.

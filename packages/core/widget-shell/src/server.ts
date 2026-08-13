@@ -35,6 +35,29 @@ export {
   type McpMiddlewareHost,
   type McpRequestInfo,
 } from "./request-context.js"
+export {
+  LOCALES,
+  PROFILE_SCHEMA_VERSION,
+  THEMES,
+  type Locale,
+  type ThemePref,
+} from "./profile-constants.js"
+export {
+  defaultProfileRecord,
+  profileRecordSchema,
+  type ProfileRecord,
+  type ProfileRecordSaveInput,
+} from "./profile-record.js"
+export { parseStoredProfile } from "./profile-migrations.js"
+export {
+  createFileSystemProfileStore,
+  createInMemoryProfileStore,
+  isExpiredSessionRecord,
+  mergeProfile,
+  type ProfileSaveOptions,
+  type ProfileStore,
+} from "./profile-store.js"
+export { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
 
 /**
  * mcp-use's raw `server.tool()` callback expects a result with an implicit

@@ -11,7 +11,7 @@ import { registerUserProfileTools } from "./tools/user-profile.js"
 import { registerWidgetTools } from "./widget-tools.js"
 import { definition } from "./definition.js"
 import { createEngineRegistry, type EngineEntry } from "./lib/resolve-engine.js"
-import { createInMemoryProfileStore, type ProfileStore } from "./lib/profile-store.js"
+import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import { withToolsetFilter } from "./lib/toolsets.js"
 
 export interface Camunda7PluginConfig {

@@ -4,6 +4,7 @@ import {
   buildDataFeedResult as rawData,
   buildSingleWidgetView,
   withToolErrors,
+  type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
 import { isCamunda7Toolset, isToolInToolset } from "../lib/toolsets.js"
 import {
@@ -12,17 +13,14 @@ import {
   CAMUNDA7_USER_PROFILE_DATA,
 } from "../tool-names.js"
 import {
+  CAMUNDA7_MODULE_KEY,
   defaultUserProfile,
+  toUserProfile,
   userProfileToolSaveInput,
   type UserProfile,
   type UserProfileView,
 } from "../lib/profile-schema.js"
-import type { ProfileStore } from "../lib/profile-store.js"
-import {
-  ANONYMOUS_PROFILE_KEY,
-  resolveAuthUserId,
-  resolveProfileKey,
-} from "../lib/resolve-profile-key.js"
+import { resolveAuthUserId, resolveProfileKey } from "../lib/resolve-profile-key.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { appOnly, showToolBinding } from "../widget-tools/shared.js"
 import { translator } from "../messages/index.js"
@@ -59,7 +57,7 @@ function summarize(p: UserProfile): string {
  * and never talk to an engine; the engine *registry* is read only for the full
  * configured engine list the settings UI offers as availability checkboxes.
  *
- * The save tool is a durable write (file-backed profile store), so it honors
+ * The save tool is a durable write (shared profile store), so it honors
  * the deployment's toolset like every registrar write: absent in `read-only`,
  * present in `operations`/`admin`. The two view tools are always registered and
  * carry the decision as `canSave`, so the panel's Save button and the tool
@@ -90,10 +88,9 @@ export function registerUserProfileTools(
     // is the NORM for un-authenticated HTTP deployments (identity comes from
     // OAuth or a gateway-stamped Mcp-Session-Id).
     const key = resolveProfileKey(ctx)
-    const profile =
-      (key ? await store.get(key) : undefined) ?? defaultUserProfile(key ?? ANONYMOUS_PROFILE_KEY)
+    const record = key ? await store.get(key) : undefined
     return {
-      profile,
+      profile: record ? toUserProfile(record) : defaultUserProfile(),
       availableEngines: registry.engines.map((e) => ({ id: e.id, baseUrl: e.baseUrl })),
       // Toolset gate (decided up front) AND per-request identity: without a
       // profile key the save tool refuses, so the panel must render read-only
@@ -151,8 +148,8 @@ export function registerUserProfileTools(
       description:
         'Update the current session\'s user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like "switch the UI to German" (language: "de") or "only let me pick the prod engines" (allowedEngineIds). Engine availability is curation, not access control.',
       annotations: saveAnnotations,
-      // Deliberately WITHOUT `modules`: foreign module slices are written
-      // through their owning module's save tool (e.g. analytics_save_settings).
+      // The flat input is a tool-API convenience; the handler splits it into
+      // the record's cross-module fields and this module's own slice.
       inputSchema: userProfileToolSaveInput,
       // No `view`/`visibility`: this is a normal model-visible tool returning
       // a text summary; the widget also calls it and reads the updated profile
@@ -167,12 +164,34 @@ export function registerUserProfileTools(
           "No caller identity to save the profile under (mcp-use 2 issues no MCP session ids) — configure MCP_OAUTH so settings persist per user.",
         )
       }
+      const { language, theme, ...sliceInput } = params
+      // Merge over the RAW stored slice, not the parsed one (mirrors
+      // analytics_save_settings): unknown fields a newer build may have
+      // written survive, and defaults are not silently materialized into
+      // storage for fields the caller never set.
+      const rawSlice = (await store.get(key))?.modules?.[CAMUNDA7_MODULE_KEY]
+      const nextSlice: Record<string, unknown> = {
+        ...(typeof rawSlice === "object" && rawSlice !== null
+          ? (rawSlice as Record<string, unknown>)
+          : {}),
+        ...sliceInput,
+      }
+      // The settings UI sends an empty string for the "(auto)"/"(none)" option
+      // of an optional id field — that clears the stored value.
+      for (const field of ["defaultEngineId", "defaultDashboardId"]) {
+        if (nextSlice[field] === "") delete nextSlice[field]
+      }
       // Stamping the auth user id marks the record user-bound — exempt from
       // the session-TTL cleanup.
-      const saved = await store.save(key, params, { userId: resolveAuthUserId(ctx) })
+      const saved = await store.save(
+        key,
+        { language, theme, modules: { [CAMUNDA7_MODULE_KEY]: nextSlice } },
+        { userId: resolveAuthUserId(ctx) },
+      )
+      const profile = toUserProfile(saved)
       return {
-        content: [{ type: "text" as const, text: summarize(saved) }],
-        structuredContent: saved as unknown as Record<string, unknown>,
+        content: [{ type: "text" as const, text: summarize(profile) }],
+        structuredContent: profile as unknown as Record<string, unknown>,
       }
     }),
   )

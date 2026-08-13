@@ -1,16 +1,17 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
-import type { ProfileSource } from "@miragon-ai/widget-shell/server"
-import type { ProfileStore } from "@miragon-ai/camunda7-connector"
+import type { ProfileSource, ProfileStore } from "@miragon-ai/widget-shell/server"
 import type { FetchBpmnXml } from "@miragon-ai/analytics-connector"
 
 /**
  * Compile-time proof that the concrete profile store this app wires still
  * satisfies the narrow port foreign modules consume
- * (`@miragon-ai/widget-shell/server`). Modules are peers: they take the store
- * structurally and never import camunda7, so nothing else would catch a
- * `ProfileStore` change that breaks e.g. the analytics settings section — it
- * would surface as a runtime failure in a module the change never touched.
+ * (`@miragon-ai/widget-shell/server`). Modules take the store structurally and
+ * never import each other, so nothing else would catch a `ProfileStore` change
+ * that breaks e.g. the analytics settings section — it would surface as a
+ * runtime failure in a module the change never touched. Both types live in
+ * widget-shell since the store extraction; the assertion keeps guarding the
+ * seam regardless of where either side moves next.
  */
 type Assert<T extends true> = T
 export type ProfileStoreSatisfiesModulePort = Assert<

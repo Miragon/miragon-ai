@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
 import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import { registerUserProfileTools } from "./user-profile.js"
-import { createInMemoryProfileStore } from "../lib/profile-store.js"
+import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import {
   CAMUNDA7_SAVE_USER_PROFILE,

@@ -2,7 +2,8 @@ import { z } from "zod"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { UnknownEngineError, type EngineRegistry, type EngineEntry } from "../lib/resolve-engine.js"
 import { providerForEntry } from "../providers/index.js"
-import type { ProfileStore } from "../lib/profile-store.js"
+import type { ProfileStore } from "@miragon-ai/widget-shell/server"
+import { parseCamunda7Settings } from "../lib/profile-schema.js"
 import { resolveProfileKey } from "../lib/resolve-profile-key.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
@@ -26,7 +27,7 @@ export function registerEngineTools(register: Register, profileStore: ProfileSto
   const allowedEnginesFor = async (reg: EngineRegistry): Promise<EngineEntry[]> => {
     const key = resolveProfileKey()
     const profile = key ? await profileStore.get(key) : undefined
-    const allowed = profile?.allowedEngineIds
+    const allowed = parseCamunda7Settings(profile).allowedEngineIds
     if (!allowed || allowed.length === 0) return reg.engines
     const filtered = reg.engines.filter((e) => allowed.includes(e.id))
     // Guard against a stale allow-list that no longer matches any configured
@@ -68,9 +69,10 @@ export function registerEngineTools(register: Register, profileStore: ProfileSto
           // operations route — a non-sticky default must not read as selected.
           const key = resolveProfileKey()
           const profile = key ? await profileStore.get(key) : undefined
+          const settings = parseCamunda7Settings(profile)
           const profileDefaultEngineId =
-            profile?.defaultEngineId && available.some((e) => e.id === profile.defaultEngineId)
-              ? profile.defaultEngineId
+            settings.defaultEngineId && available.some((e) => e.id === settings.defaultEngineId)
+              ? settings.defaultEngineId
               : null
           return {
             engines: available.map((e) => {

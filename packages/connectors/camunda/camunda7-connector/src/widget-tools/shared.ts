@@ -5,7 +5,7 @@ import { listIncidentsInput, listProcessInstancesInput } from "@miragon-ai/camun
 import type { EngineHealthThresholds } from "../data/health-data.js"
 import { clusterDetailFilterShape, pagingShape } from "../feed-contracts.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
-import type { ProfileStore } from "../lib/profile-store.js"
+import type { ProfileStore } from "@miragon-ai/widget-shell/server"
 
 /**
  * Filters shared by `camunda7_show_incidents_dashboard` and its

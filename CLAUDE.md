@@ -146,10 +146,16 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    lookups come from `packages/connectors/camunda/camunda7-connector/src/data/definition-info.ts`;
    `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step — never
    fork them. Analytics periods derive from `PERIODS`/`PERIOD_RANGE` (analytics-client)
-   — no hardcoded enum copies. Profile records migrate on read through
-   `lib/profile-migrations.ts` (`parseStoredProfile`, shared by the filesystem and
-   postgres stores) — a `PROFILE_SCHEMA_VERSION` bump without a matching migration
-   entry silently resets stored preferences. **Whose** profile a request touches is
+   — no hardcoded enum copies. The profile STORE (record schema, in-memory/
+   filesystem/postgres implementations, migrations) is core:
+   `packages/core/widget-shell/src/profile-{record,store,store-postgres,migrations}.ts`
+   (`@miragon-ai/widget-shell/server`) — the record is connector-free (language,
+   theme, `modules.<module>` slices + metadata; camunda7's engine/dashboard
+   preferences live in ITS slice, `modules.camunda7`, projected to a flat
+   `UserProfile` view in `camunda7-connector/src/lib/profile-schema.ts`).
+   Records migrate on read through `parseStoredProfile` (shared by the
+   filesystem and postgres stores) — a `PROFILE_SCHEMA_VERSION` bump without a
+   matching `PROFILE_MIGRATIONS` entry silently resets stored preferences. **Whose** profile a request touches is
    decided in exactly one place for ALL modules: `resolveProfileKey`/`resolveAuthUserId`
    - `ANONYMOUS_PROFILE_KEY` + the narrow `ProfileSource` port, in
      `packages/core/widget-shell/src/profile.ts` (`@miragon-ai/widget-shell/server`). A

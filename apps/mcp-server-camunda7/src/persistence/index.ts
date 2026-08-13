@@ -6,7 +6,7 @@ import {
   createPostgresProfileStore,
   PROFILE_STORE_MIGRATIONS,
   type ProfileStore,
-} from "@miragon-ai/camunda7-connector"
+} from "@miragon-ai/widget-shell/server"
 import {
   createPostgresDashboardStore,
   DASHBOARD_STORE_MIGRATIONS,
