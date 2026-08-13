@@ -98,9 +98,9 @@ describe("withToolsetFilter over the real camunda7 tool surface", () => {
     expect(operations.length).toBeLessThan(admin.length)
   })
 
-  it("fails open on an unknown toolset: warns and exposes everything", () => {
+  it("fails closed on an unknown toolset: warns and degrades to read-only", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    expect(toolNamesFor("does-not-exist")).toEqual(toolNamesFor(undefined))
+    expect(toolNamesFor("does-not-exist")).toEqual(toolNamesFor("read-only"))
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "does-not-exist"'))
   })
 })

@@ -68,17 +68,32 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
     expect(untouched.modules).toEqual(updated.modules)
   })
 
-  it("replaces exactly the saved module slice, leaving siblings intact", async () => {
+  it("merges the saved module slice one level deep, leaving siblings intact", async () => {
     const store = await makeStore()
     await store.save("sess-1", {
       modules: { camunda7: { defaultEngineId: "prod-a" }, analytics: { defaultPeriod: "30d" } },
     })
     const updated = await store.save("sess-1", { modules: { camunda7: { pinned: ["d1"] } } })
-    // Per-key REPLACE (the owning module merges within its slice itself).
+    // Per-key one-level MERGE (inside the store's lock, so concurrent saves
+    // of disjoint fields in the SAME slice both survive); a field clears via
+    // explicit `undefined`, tested below.
     expect(updated.modules).toEqual({
-      camunda7: { pinned: ["d1"] },
+      camunda7: { defaultEngineId: "prod-a", pinned: ["d1"] },
       analytics: { defaultPeriod: "30d" },
     })
+  })
+
+  it("clears a slice field via explicit undefined and keeps merging afterwards", async () => {
+    const store = await makeStore()
+    await store.save("sess-1", {
+      modules: { camunda7: { defaultEngineId: "prod-a", pinned: ["d1"] } },
+    })
+    const cleared = await store.save("sess-1", {
+      modules: { camunda7: { defaultEngineId: undefined } },
+    })
+    expect(cleared.modules?.camunda7).toEqual({ pinned: ["d1"] })
+    const merged = await store.save("sess-1", { modules: { camunda7: { fresh: true } } })
+    expect(merged.modules?.camunda7).toEqual({ pinned: ["d1"], fresh: true })
   })
 
   it("deletes a stored profile", async () => {
@@ -296,5 +311,18 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
     const profile = await store.get("sess-1")
     expect(profile?.theme).toBe("dark")
     expect(profile?.language).toBe("de")
+  })
+
+  it("merges concurrent saves of disjoint fields in the SAME module slice", async () => {
+    const store = createPostgresProfileStore({ sql })
+    // The one-level slice merge runs inside the per-key lock, so neither
+    // field may get lost even though both writers pre-read the same (empty)
+    // slice outside it.
+    await Promise.all([
+      store.save("sess-2", { modules: { camunda7: { defaultEngineId: "prod-a" } } }),
+      store.save("sess-2", { modules: { camunda7: { pinned: ["d1"] } } }),
+    ])
+    const profile = await store.get("sess-2")
+    expect(profile?.modules?.camunda7).toEqual({ defaultEngineId: "prod-a", pinned: ["d1"] })
   })
 })

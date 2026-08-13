@@ -115,7 +115,8 @@ Disable a module by listing only the ones you want, e.g.
 to narrow the tool surface: `camunda7:read-only` (queries + engine selection),
 `camunda7:operations` (adds start/complete/claim/variables/retries/messages),
 `camunda7:admin` (everything, incl. delete/modify/suspension, deployments,
-migrations). No suffix exposes all tools; unknown toolsets warn and fail open.
+migrations). No suffix exposes all tools; unknown toolsets warn and degrade to
+`read-only`.
 
 ## Observability
 

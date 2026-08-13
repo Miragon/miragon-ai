@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { PERIODS } from "@miragon-ai/analytics-client"
+import { parseModuleSlice } from "@miragon-ai/widget-shell/server"
 import type { ProfileSource } from "./server-locale.js"
 import { resolveSettingsKey } from "./server-locale.js"
 
@@ -78,12 +79,15 @@ export const optionalMinBucketSize = z
 /** The module's slice key inside `profile.modules`. */
 export const ANALYTICS_MODULE_KEY = "analytics"
 
-/** The slice parsed leniently: garbage or absence yields the defaults. */
+/**
+ * The slice parsed leniently: garbage or absence yields the defaults —
+ * per FIELD (shared `parseModuleSlice`), so one invalid value keeps the
+ * other saved preference intact.
+ */
 export function parseAnalyticsSettings(
   modules: Record<string, unknown> | undefined,
 ): AnalyticsSettings {
-  const parsed = analyticsSettingsSchema.safeParse(modules?.[ANALYTICS_MODULE_KEY] ?? {})
-  return parsed.success ? parsed.data : analyticsSettingsSchema.parse({})
+  return parseModuleSlice(analyticsSettingsSchema, modules?.[ANALYTICS_MODULE_KEY])
 }
 
 /**

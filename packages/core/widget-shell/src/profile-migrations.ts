@@ -34,8 +34,12 @@ function moveFlatFieldsIntoSlice(
  * written by any older build upgrades on read instead of being reset to
  * defaults. Migrations transform the raw JSON — the migrated result still goes
  * through `profileRecordSchema.safeParse`, which is the actual gate.
+ *
+ * Exported ONLY for the completeness test in `profile-migrations.test.ts`,
+ * which fails the moment a `PROFILE_SCHEMA_VERSION` bump forgets its entry —
+ * without it that mistake would surface as a silent preference reset on read.
  */
-const PROFILE_MIGRATIONS: Record<number, (raw: Record<string, unknown>) => void> = {
+export const PROFILE_MIGRATIONS: Record<number, (raw: Record<string, unknown>) => void> = {
   // v1 → v2: the analytics preferences move from flat camunda7-owned fields
   // into the module-owned `modules.analytics` slice (renamed to the slice's
   // own vocabulary — the module, not the profile, prefixes them).
@@ -86,7 +90,17 @@ export function parseStoredProfile(json: unknown): ProfileRecord | undefined {
   if (version > PROFILE_SCHEMA_VERSION || version < 1) return undefined
 
   while (version < PROFILE_SCHEMA_VERSION) {
-    PROFILE_MIGRATIONS[version]?.(raw)
+    const migrate = PROFILE_MIGRATIONS[version]
+    if (!migrate) {
+      // A bump without its migration entry is a build bug the completeness
+      // test catches; if one ever ships anyway, reset loudly instead of
+      // letting the schema strip the un-migrated fields in silence.
+      console.error(
+        `[widget-shell] No profile migration from schema v${version} — treating the stored record as unreadable`,
+      )
+      return undefined
+    }
+    migrate(raw)
     version += 1
     raw.schemaVersion = version
   }

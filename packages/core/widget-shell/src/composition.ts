@@ -155,10 +155,16 @@ export function composeModules<TShared>(options: {
     },
     warnUnknownEnvVars(env = process.env, extraKnown = []) {
       const known = new Set([...knownEnvVars, ...extraKnown])
+      // `<KNOWN_VAR>_*` extensions (DATABASE_URL_FILE, REDIS_URL_2, …) are
+      // conventions addressed at OTHER processes — docker secrets, sidecars —
+      // never a typo of the var they extend, so they don't warn.
+      const extendsKnownVar = (name: string) =>
+        [...known].some((knownName) => name.startsWith(`${knownName}_`))
       const unknown = Object.keys(env).filter(
         (name) =>
           watchedPrefixes.some((prefix) => name.startsWith(prefix)) &&
           !known.has(name) &&
+          !extendsKnownVar(name) &&
           !foreignEnvPrefixes.some((prefix) => name.startsWith(prefix)),
       )
       for (const name of unknown) {

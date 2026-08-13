@@ -10,7 +10,7 @@ import {
   withToolErrors,
   type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
-import { isCamunda7Toolset, isToolInToolset } from "../lib/toolsets.js"
+import { isToolInToolset, resolveCamunda7Toolset } from "../lib/toolsets.js"
 import {
   CAMUNDA7_SAVE_USER_PROFILE,
   CAMUNDA7_SHOW_USER_PROFILE,
@@ -73,15 +73,19 @@ export function registerUserProfileTools(
   toolset?: string,
 ): void {
   // The save tool is a durable write registered OUTSIDE the registrar, so it
-  // gates itself — same rule as `withToolsetFilter`: unknown toolset names fail
-  // open. Decided up front because the two view tools report the outcome as
-  // `canSave`, which is what hides the panel's Save button; a view that claimed
-  // otherwise would offer a write that resolves to an unknown tool.
+  // gates itself — same rule as `withToolsetFilter`: unknown toolset names warn
+  // and degrade to `read-only`. Decided up front because the two view tools
+  // report the outcome as `canSave`, which is what hides the panel's Save
+  // button; a view that claimed otherwise would offer a write that resolves to
+  // an unknown tool.
   const saveAnnotations = { idempotentHint: true }
+  const resolvedToolset = resolveCamunda7Toolset(toolset)
   const canSave =
-    toolset === undefined ||
-    !isCamunda7Toolset(toolset) ||
-    isToolInToolset({ name: CAMUNDA7_SAVE_USER_PROFILE, annotations: saveAnnotations }, toolset)
+    resolvedToolset === undefined ||
+    isToolInToolset(
+      { name: CAMUNDA7_SAVE_USER_PROFILE, annotations: saveAnnotations },
+      resolvedToolset,
+    )
 
   const loadView = async (ctx: unknown): Promise<UserProfileView> => {
     // Same key precedence as the save path (resolveProfileKey maps stdio to

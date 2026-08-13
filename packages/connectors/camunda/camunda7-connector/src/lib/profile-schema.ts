@@ -1,6 +1,7 @@
 import { z } from "zod"
 import {
   LOCALES,
+  parseModuleSlice,
   THEMES,
   withoutDefaults,
   type Locale,
@@ -53,15 +54,15 @@ export type Camunda7Settings = z.infer<typeof camunda7SettingsSchema>
 
 /**
  * Fail-soft slice parse: absent slice, garbage, or fields a different build
- * wrote all degrade to the schema defaults instead of failing the read path —
- * the same contract as analytics' `parseAnalyticsSettings`.
+ * wrote all degrade to the schema defaults — per FIELD, via the shared
+ * `parseModuleSlice`, so one bad value (e.g. a `preferredRole` a newer build
+ * wrote) can't reset the engine curation next to it. Same contract as
+ * analytics' `parseAnalyticsSettings`.
  */
 export function parseCamunda7Settings(
   record: { modules?: Record<string, unknown> } | undefined,
 ): Camunda7Settings {
-  const slice = record?.modules?.[CAMUNDA7_MODULE_KEY]
-  const parsed = camunda7SettingsSchema.safeParse(slice ?? {})
-  return parsed.success ? parsed.data : camunda7SettingsSchema.parse({})
+  return parseModuleSlice(camunda7SettingsSchema, record?.modules?.[CAMUNDA7_MODULE_KEY])
 }
 
 /**

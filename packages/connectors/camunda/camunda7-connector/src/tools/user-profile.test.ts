@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
 import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import { registerUserProfileTools } from "./user-profile.js"
@@ -9,6 +9,10 @@ import {
   CAMUNDA7_SHOW_USER_PROFILE,
   CAMUNDA7_USER_PROFILE_DATA,
 } from "../tool-names.js"
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 type Handler = (
   params: unknown,
@@ -62,8 +66,10 @@ describe("registerUserProfileTools toolset filtering", () => {
     expect(registeredToolNames("admin")).toContain(CAMUNDA7_SAVE_USER_PROFILE)
   })
 
-  it("fails open on unknown toolset names, like withToolsetFilter", () => {
-    expect(registeredToolNames("nonsense")).toContain(CAMUNDA7_SAVE_USER_PROFILE)
+  it("fails closed on unknown toolset names, like withToolsetFilter", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    expect(registeredToolNames("nonsense")).not.toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "nonsense"'))
   })
 })
 

@@ -60,6 +60,28 @@ function stripUndefined<T extends object>(obj: T): Partial<T> {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>
 }
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+
+/**
+ * One-level module-slice merge: each module key in the patch spreads over the
+ * stored slice of the SAME module (non-object slices replace), other modules'
+ * slices stay untouched. A field explicitly set to `undefined` overrides the
+ * stored value and drops out on serialization — that is how a module's save
+ * tool clears a field.
+ */
+function mergeModuleSlices(
+  prev: Record<string, unknown> | undefined,
+  patch: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const next = { ...prev }
+  for (const [module, slice] of Object.entries(patch ?? {})) {
+    const stored = next[module]
+    next[module] = isPlainObject(stored) && isPlainObject(slice) ? { ...stored, ...slice } : slice
+  }
+  return next
+}
+
 /**
  * Merge a partial save over the previous record (or a fresh default), preserving
  * `id`/`userId`/`createdAt` and re-stamping `updatedAt`. Omitted input fields
@@ -81,9 +103,14 @@ export function mergeProfile(
   return {
     ...prev,
     ...stripUndefined(input),
-    // Module slices merge per module key: a save carrying `modules.analytics`
-    // replaces exactly that slice and leaves other modules' slices intact.
-    modules: { ...prev.modules, ...input.modules },
+    // Module slices merge per module key, one level deep: a save carrying
+    // `modules.analytics` spreads over the STORED analytics slice (a field
+    // explicitly set to `undefined` clears on serialization) and leaves other
+    // modules' slices intact. Merging here — inside the postgres store's
+    // per-key lock — rather than replacing means two concurrent saves of
+    // DISJOINT fields in the same slice both survive; the save tool's
+    // pre-read (`mergeRawSlice`) alone cannot guarantee that.
+    modules: mergeModuleSlices(prev.modules, input.modules),
     id: key,
     // Once user-bound, always user-bound — a later save without auth context
     // must not demote the record back into the session-TTL cleanup scope.

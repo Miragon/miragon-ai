@@ -147,7 +147,8 @@ Two rules the save tool must honor:
   module's **declared** toolset names, never an `toolset === "read-only"` compare (that
   fails open for every other name the day a second restrictive toolset appears). Copy
   `packages/connectors/analytics/analytics-connector/src/toolsets.ts`: a `<MODULE>_TOOLSETS` list, a type guard, and
-  `allowsDurableWrites(toolset)` that fails open with a warning on unknown names. When it
+  `allowsDurableWrites(toolset)` that warns and fails CLOSED (degrades to your most
+  restrictive toolset) on unknown names. When it
   says no, skip registration; the view then reports `canSave: false` and the widget hides
   its Save button — the tool surface stays honest.
 - **Merge over the RAW stored slice**, not the parsed one:
@@ -223,7 +224,7 @@ Mirror `packages/connectors/analytics/analytics-connector/src/settings.test.ts`:
 - `parseMySettings`: defaults for absent / garbage slice; ignores other modules' slices
 - `settingsFor`: reads the slice; falls back to defaults on a store **outage**
 - `registerSettingsTools`: save tool registered only with a writable store; dropped in the
-  restrictive toolset; fails open on unknown names
+  restrictive toolset; fails closed (degrades to the restrictive toolset) on unknown names
 - a round-trip through a fake store: keyless save → read back; partial save keeps the
   other saved value
 

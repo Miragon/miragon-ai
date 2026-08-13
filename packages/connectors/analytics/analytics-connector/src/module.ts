@@ -16,7 +16,8 @@ const analyticsConfigSchema = z.object({
   /**
    * Optional toolset suffix from `MCP_ACTIVE_MODULES` (`analytics:read-only`).
    * The module's tools are read-only by nature — the toolset only gates the
-   * one durable write, `analytics_save_settings`. Unknown names fail open.
+   * one durable write, `analytics_save_settings`. Unknown names warn and
+   * degrade to `read-only`.
    */
   toolset: z.string().optional(),
 })

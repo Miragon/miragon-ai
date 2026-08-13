@@ -9,17 +9,24 @@ type ZodRawShape = Record<string, z.ZodType>
 /**
  * Named tool subsets a deployment can pick via `MCP_ACTIVE_MODULES`, e.g.
  * `camunda7:read-only`. No suffix means "all tools" (unchanged default).
- * The vocabulary skeleton (typed guard + the fail-open rule for unknown
+ * The vocabulary skeleton (typed guard + the fail-closed rule for unknown
  * names) is the shared `createToolsetVocabulary`; the names and the filter
  * semantics below stay module-owned.
  */
 export const CAMUNDA7_TOOLSETS = ["read-only", "operations", "admin"] as const
 export type Camunda7Toolset = (typeof CAMUNDA7_TOOLSETS)[number]
 
-const vocabulary = createToolsetVocabulary("camunda7", CAMUNDA7_TOOLSETS)
+const vocabulary = createToolsetVocabulary("camunda7", CAMUNDA7_TOOLSETS, "read-only")
 
-export function isCamunda7Toolset(value: string): value is Camunda7Toolset {
-  return vocabulary.isKnown(value)
+/**
+ * Normalize a configured toolset for gating decisions outside the registrar
+ * (e.g. `camunda7_save_user_profile`'s `canSave`): `undefined` means "no
+ * toolset — everything allowed", unknown names warn and degrade to
+ * `read-only`. Every self-gating write goes through this, never through an
+ * ad-hoc name compare.
+ */
+export function resolveCamunda7Toolset(toolset?: string): Camunda7Toolset | undefined {
+  return vocabulary.resolve(toolset)
 }
 
 /**
@@ -75,13 +82,13 @@ export function isToolInToolset(
 
 /**
  * Wraps a tool registrar so that only tools matching `toolset` reach the
- * server. `undefined` (no toolset configured) and unknown toolset names
- * register everything — unknown names warn and fail open, consistent with the
- * server's `MCP_ACTIVE_MODULES` semantics for unknown modules.
+ * server. `undefined` (no toolset configured) registers everything; an unknown
+ * toolset name warns and degrades to `read-only` — a typo'd suffix always
+ * meant to restrict, so it must never expose the admin tools.
  */
 export function withToolsetFilter(register: Register, toolset?: string): Register {
-  // `resolve` implements the shared fail-open rule: no toolset stays silent,
-  // an unknown name warns — both expose everything.
+  // `resolve` implements the shared rule: no toolset stays silent and exposes
+  // everything, an unknown name warns and fails closed to `read-only`.
   const known = vocabulary.resolve(toolset)
   if (known === undefined) return register
   const filtered = <TShape extends ZodRawShape>(config: ToolConfig<EngineRegistry, TShape>) => {

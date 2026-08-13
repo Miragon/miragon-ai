@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
 import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import {
@@ -10,6 +10,10 @@ import {
 import { registerSettingsTools } from "./settings-tools.js"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
 import { localizeFor, type ProfileSource } from "./server-locale.js"
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe("analyticsSettingsSchema", () => {
   it("fills every default from an empty object", () => {
@@ -42,6 +46,12 @@ describe("parseAnalyticsSettings", () => {
       defaultPeriod: "7d",
       minBucketSize: 10,
     })
+  })
+
+  it("degrades per FIELD: one invalid value keeps the other saved preference", () => {
+    expect(
+      parseAnalyticsSettings({ analytics: { defaultPeriod: "yesterday", minBucketSize: 5 } }),
+    ).toEqual({ defaultPeriod: "7d", minBucketSize: 5 })
   })
 
   it("parses a valid slice and fills missing fields with defaults", () => {
@@ -127,12 +137,14 @@ describe("registerSettingsTools", () => {
     ])
   })
 
-  it('drops the durable save tool in the "read-only" toolset, fails open on unknown names', () => {
+  it('drops the durable save tool in the "read-only" toolset, fails closed on unknown names', () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     expect(registeredToolNames(writable, "read-only")).toEqual([
       "analytics_show_settings",
       ANALYTICS_SETTINGS_DATA,
     ])
-    expect(registeredToolNames(writable, "nonsense")).toContain(ANALYTICS_SAVE_SETTINGS)
+    expect(registeredToolNames(writable, "nonsense")).not.toContain(ANALYTICS_SAVE_SETTINGS)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "nonsense"'))
   })
 
   it("round-trips a keyless save through the shared record", async () => {

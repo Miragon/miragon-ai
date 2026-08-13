@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { mergeRawSlice, requireProfileKey } from "./profile-slice.js"
+import { z } from "zod"
+import { mergeRawSlice, parseModuleSlice, requireProfileKey } from "./profile-slice.js"
 import { runWithMcpRequestInfo } from "./request-context.js"
 import type { ProfileSource } from "./profile.js"
 
@@ -42,5 +43,45 @@ describe("mergeRawSlice", () => {
   it("never reads a foreign module's slice", async () => {
     const store = storeWith({ other: { x: 1 } })
     expect(await mergeRawSlice(store, "k", "notes", {})).toEqual({})
+  })
+})
+
+describe("parseModuleSlice", () => {
+  const schema = z.object({
+    sortOrder: z.enum(["asc", "desc"]).default("asc"),
+    pageSize: z.number().int().min(1).optional(),
+    tags: z.array(z.string()).default([]),
+  })
+
+  it("parses a valid slice and applies defaults for absent fields", () => {
+    expect(parseModuleSlice(schema, { pageSize: 25 })).toEqual({
+      sortOrder: "asc",
+      pageSize: 25,
+      tags: [],
+    })
+  })
+
+  it("degrades absent and garbage slices to the full defaults", () => {
+    const defaults = { sortOrder: "asc", tags: [] }
+    expect(parseModuleSlice(schema, undefined)).toEqual(defaults)
+    expect(parseModuleSlice(schema, "garbage")).toEqual(defaults)
+    expect(parseModuleSlice(schema, 42)).toEqual(defaults)
+  })
+
+  it("recovers per FIELD: one invalid value keeps every other saved preference", () => {
+    // The failure mode this guards: a newer build writes a value this build's
+    // schema rejects; resetting the WHOLE slice would silently drop unrelated
+    // preferences (e.g. engine curation next to a bad preferredRole).
+    expect(
+      parseModuleSlice(schema, { sortOrder: "newest-first", pageSize: 25, tags: ["a"] }),
+    ).toEqual({ sortOrder: "asc", pageSize: 25, tags: ["a"] })
+  })
+
+  it("keeps unknown fields out of the view (storage preservation is mergeRawSlice's job)", () => {
+    expect(parseModuleSlice(schema, { pageSize: 5, futureField: 42 })).toEqual({
+      sortOrder: "asc",
+      pageSize: 5,
+      tags: [],
+    })
   })
 })

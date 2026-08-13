@@ -52,7 +52,8 @@ export function registerSettingsTools(
 ): void {
   // The save tool is a durable write registered OUTSIDE the tool registrar, so
   // it gates itself against the deployment's toolset (see `allowsDurableWrites`
-  // — declared names, unknown ones fail open like withToolsetFilter).
+  // — declared names, unknown ones degrade to `read-only` like
+  // withToolsetFilter).
   const store = profileStore
   const save = allowsDurableWrites(toolset) ? store?.save?.bind(store) : undefined
 

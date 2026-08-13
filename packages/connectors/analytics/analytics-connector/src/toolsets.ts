@@ -2,8 +2,8 @@
  * The analytics module's toolset vocabulary. Mirrors the shape of camunda7's
  * `lib/toolsets.ts` (module peers own their own toolset names — only the
  * *semantics* are shared): the suffix in `MCP_ACTIVE_MODULES=analytics:<toolset>`
- * is validated against a declared list, and unknown names fail OPEN with a
- * warning, exactly like `withToolsetFilter`.
+ * is validated against a declared list, and unknown names fail CLOSED with a
+ * warning — they degrade to `read-only`, exactly like `withToolsetFilter`.
  *
  * Analytics reads Prometheus, so every tool is read-only by nature except the
  * settings save — this list exists to gate that one durable write against a
@@ -15,7 +15,7 @@ import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
 export const ANALYTICS_TOOLSETS = ["read-only"] as const
 export type AnalyticsToolset = (typeof ANALYTICS_TOOLSETS)[number]
 
-const vocabulary = createToolsetVocabulary("analytics", ANALYTICS_TOOLSETS)
+const vocabulary = createToolsetVocabulary("analytics", ANALYTICS_TOOLSETS, "read-only")
 
 export function isAnalyticsToolset(value: string): value is AnalyticsToolset {
   return vocabulary.isKnown(value)
@@ -29,10 +29,10 @@ const READ_ONLY_TOOLSETS: ReadonlySet<AnalyticsToolset> = new Set(["read-only"])
  * (`analytics_save_settings`). Registered outside the tool registrar, that save
  * has to gate itself — the registrar's `withToolsetFilter` never sees it.
  *
- * `vocabulary.resolve` carries the shared fail-open rule: `undefined` (no
- * toolset configured) and unknown names (warned) register everything,
- * consistent with the server's `MCP_ACTIVE_MODULES` semantics for unknown
- * modules.
+ * `vocabulary.resolve` carries the shared rule: `undefined` (no toolset
+ * configured) allows everything, unknown names warn and degrade to
+ * `read-only` — a typo'd restriction must never grant the write it tried to
+ * take away.
  */
 export function allowsDurableWrites(toolset?: string): boolean {
   const known = vocabulary.resolve(toolset)

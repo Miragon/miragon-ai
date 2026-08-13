@@ -29,7 +29,7 @@ export interface Camunda7PluginConfig {
   /**
    * Optional named tool subset to expose (`read-only`, `operations`, `admin`
    * — see `lib/toolsets.ts` for the rule). Omitted = all tools. Unknown
-   * values warn and fail open to all tools.
+   * values warn and degrade to `read-only`.
    */
   toolset?: string
   /**

@@ -114,6 +114,16 @@ describe("warnUnknownEnvVars", () => {
     ).toEqual([])
   })
 
+  it("exempts `<KNOWN_VAR>_*` extensions (docker-secrets style), but not near-misses", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const unknown = compose().warnUnknownEnvVars({
+      BETA_URL_FILE: "/run/secrets/beta", // extends the known BETA_URL — another process's var
+      BETA_URLX: "typo", // near-miss, not an extension — still warns
+    })
+    expect(unknown).toEqual(["BETA_URLX"])
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+
   it("appends the optional hint to the warning", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     composeModules<TestShared>({

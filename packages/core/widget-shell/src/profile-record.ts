@@ -48,8 +48,9 @@ export type ProfileRecord = z.infer<typeof profileRecordSchema>
 /**
  * Save input: any subset of the record's user-settable fields. Omitted fields
  * keep their current value (the store merges over the existing record);
- * `modules` slices merge per module key — a save carrying `modules.analytics`
- * replaces exactly that slice and leaves other modules' slices untouched.
+ * `modules` slices merge per module key, one level deep — a save carrying
+ * `modules.analytics` spreads over the stored analytics slice (explicit
+ * `undefined` clears a field) and leaves other modules' slices untouched.
  *
  * A plain type, not a zod schema: validation happens at each module's TOOL
  * boundary (with a default-free schema — see `withoutDefaults` in

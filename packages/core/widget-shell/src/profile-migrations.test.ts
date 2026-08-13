@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { parseStoredProfile } from "./profile-migrations.js"
+import { PROFILE_MIGRATIONS, parseStoredProfile } from "./profile-migrations.js"
+import { PROFILE_SCHEMA_VERSION } from "./profile-constants.js"
 
 const V1_BASE = {
   id: "sess-1",
@@ -10,6 +11,18 @@ const V1_BASE = {
   updatedAt: "2026-01-02T00:00:00.000Z",
   schemaVersion: 1,
 }
+
+describe("PROFILE_MIGRATIONS completeness", () => {
+  it("carries an entry for every version below PROFILE_SCHEMA_VERSION", () => {
+    // The failure mode this guards: a PROFILE_SCHEMA_VERSION bump without its
+    // migration entry ships, and every stored record silently resets on read.
+    const expected = Array.from({ length: PROFILE_SCHEMA_VERSION - 1 }, (_, i) => i + 1)
+    const actual = Object.keys(PROFILE_MIGRATIONS)
+      .map(Number)
+      .sort((a, b) => a - b)
+    expect(actual).toEqual(expected)
+  })
+})
 
 describe("parseStoredProfile", () => {
   it("passes a current-version record through unchanged", () => {

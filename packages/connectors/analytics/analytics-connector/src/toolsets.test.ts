@@ -14,9 +14,11 @@ describe("allowsDurableWrites", () => {
     expect(allowsDurableWrites("read-only")).toBe(false)
   })
 
-  it("fails OPEN on an unknown toolset name, with a warning", () => {
+  it("fails CLOSED on an unknown toolset name, with a warning", () => {
+    // A typo'd `analytics:read-onyl` must not grant the one write the
+    // operator tried to disable — unknown names degrade to `read-only`.
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    expect(allowsDurableWrites("operations")).toBe(true)
+    expect(allowsDurableWrites("operations")).toBe(false)
     expect(warn).toHaveBeenCalledOnce()
   })
 
