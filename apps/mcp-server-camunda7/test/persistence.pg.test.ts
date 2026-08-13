@@ -2,7 +2,7 @@ import postgres from "postgres"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { DashboardOwnershipError } from "@miragon/mcp-toolkit-core/tools"
 import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
-import { PROFILE_STORE_MIGRATIONS } from "@miragon-ai/mcp-camunda7"
+import { PROFILE_STORE_MIGRATIONS } from "@miragon-ai/widget-shell/server"
 import {
   createPostgresDashboardStore,
   DASHBOARD_STORE_MIGRATIONS,
@@ -17,7 +17,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 10))
 // Opt-in integration slice (like test:host): needs a reachable Postgres, so it
 // only runs when TEST_DATABASE_URL is set — `pnpm test:pg` at the repo root
 // points it at the compose stack's dedicated test database. An own schema
-// isolates it from the mcp-camunda7 suite sharing that database.
+// isolates it from the camunda7-connector suite sharing that database.
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL
 const TEST_SCHEMA = "mcp_server_persistence_test"
 

@@ -1,7 +1,7 @@
 @import "tailwindcss";
-@source "../../../../packages/widget-shell/src/ui";
-@source "../../../../packages/mcp-camunda7/src";
-@source "../../../../packages/mcp-analytics/src";
+@source "../../../../packages/core/widget-shell/src/ui";
+@source "../../../../packages/connectors/camunda/camunda7-connector/src";
+@source "../../../../packages/connectors/analytics/analytics-connector/src";
 @import "@miragon/mcp-toolkit-ui/globals.css";
 
 /*

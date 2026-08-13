@@ -66,12 +66,13 @@ const frameworkOptions = {
 const { provider: oauth } = getOAuthConfigFromEnv()
 if (!oauth) {
   // mcp-use 2 serves HTTP statelessly and issues no MCP session ids, so
-  // without OAuth there is no caller identity: profile/settings saves and the
-  // sticky engine selection refuse per call (reads render defaults; a
-  // fronting gateway can restore session scoping by stamping Mcp-Session-Id).
-  // One boot line beats N puzzling tool errors.
+  // without OAuth there is no caller identity: profile/settings saves —
+  // including the default engine (`camunda7_engine` action "select") — refuse
+  // per call (reads render defaults; a fronting gateway can restore session
+  // scoping by stamping Mcp-Session-Id). One boot line beats N puzzling tool
+  // errors.
   console.warn(
-    "[miragon-ai] MCP_OAUTH is unset and mcp-use 2 issues no MCP session ids — user settings and the sticky engine selection stay disabled (pass `engine` per call; set MCP_OAUTH for per-user settings).",
+    "[miragon-ai] MCP_OAUTH is unset and mcp-use 2 issues no MCP session ids — user settings (incl. the default engine) cannot be saved (pass `engine` per call; set MCP_OAUTH for per-user settings).",
   )
 }
 // Explicit annotation: default-exporting the instance makes its type public
@@ -82,9 +83,10 @@ const app: MCPServer<unknown> = oauth
   : await createFrameworkApp(frameworkOptions)
 
 // Ambient per-request info (session id, auth user, Authorization header) for
-// the consumers that cannot receive a handler `ctx`: passthrough engine auth,
-// profile-key resolution in registrar handlers, and the sticky engine
-// selection. Idempotent — the camunda7/analytics plugins install it too.
+// the consumers that cannot receive a handler `ctx`: passthrough engine auth
+// and profile-key resolution in registrar handlers (which also feeds the
+// per-call default-engine lookup). Idempotent — the camunda7/analytics
+// plugins install it too.
 installMcpRequestContext(app)
 
 // --- Tool-call logging -------------------------------------------------

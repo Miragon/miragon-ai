@@ -6,25 +6,30 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 
 # add-settings-section — module-owned user settings
 
-Settings live in ONE profile record per user/session, shared by all modules
-(`packages/mcp-camunda7/src/lib/profile-schema.ts`). Each module owns a **slice** under
-`profile.modules.<module>`: the profile only transports it, the module owns its schema,
-validates it fail-soft on read, and writes it through its own save tool. The store merges
-per module key, so a save of `modules.<yours>` never touches another module's slice.
+Settings live in ONE profile record per user/session, shared by all modules. The record
+and its store are CORE (`packages/core/widget-shell/src/profile-record.ts` +
+`profile-store*.ts`, exported from `@miragon-ai/widget-shell/server`) and connector-free:
+`language`, `theme`, metadata, and the `profile.modules.<module>` transport. Each module
+owns a **slice** under `profile.modules.<module>`: the record only transports it, the
+module owns its schema, validates it fail-soft on read, and writes it through its own
+save tool. The store merges per module key, so a save of `modules.<yours>` never touches
+another module's slice.
 
-Reference implementation — read it before writing anything:
-`packages/mcp-analytics/src/settings.ts` + `settings-tools.ts` +
-`src/widgets/settings-section.tsx`.
+Reference implementations — read one before writing anything:
+`packages/connectors/analytics/analytics-connector/src/settings.ts` + `settings-tools.ts` +
+`src/widgets/settings-section.tsx` (pure slice), or camunda7's
+`src/lib/profile-schema.ts` + `src/tools/user-profile.ts` (slice + the cross-module
+`language`/`theme` fields behind one flat tool input).
 
 **Decide first: slice or core preference?** A setting only your module understands
-(analysis window, threshold) is a slice — everything below applies. A setting the whole
-server acts on (`language`, `theme`, engine availability) belongs in
-`userProfilePreferencesSchema` instead: add the field there, bump
-`PROFILE_SCHEMA_VERSION` in `lib/profile-constants.ts`, add the matching entry to
-`PROFILE_MIGRATIONS` in `lib/profile-migrations.ts` (a bump without a migration silently
-resets stored preferences), and extend the camunda7 profile widget. Don't put
-module-specific vocabulary into the core schema — v1→v2 moved the analytics fields out of
-it for exactly that reason.
+(analysis window, threshold, engine availability) is a slice — everything below applies.
+Only a setting EVERY module acts on (like `language`/`theme`) belongs on the core record
+in `profileRecordSchema` (`packages/core/widget-shell/src/profile-record.ts`): add the
+field there, bump `PROFILE_SCHEMA_VERSION` in `profile-constants.ts`, add the matching
+entry to `PROFILE_MIGRATIONS` in `profile-migrations.ts` (a bump without a migration
+silently resets stored preferences). Don't put module vocabulary into the core record —
+v2 moved the analytics fields and v3 the camunda7 engine/dashboard fields out of it for
+exactly that reason.
 
 ## Step 1 — the slice schema (`src/settings.ts`)
 
@@ -63,7 +68,7 @@ export async function settingsFor(store: ProfileSource | undefined, ctx?: unknow
 Fail-soft on every axis is the rule, not politeness: a profile-store hiccup must never
 fail a read that only needs Prometheus/the engine. At the tool boundary the affected
 input becomes `.optional()` (no zod default) so "omitted" stays distinguishable from
-"explicitly set" — see `optionalPeriod` in `mcp-analytics/src/settings.ts`.
+"explicitly set" — see `optionalPeriod` in `analytics-connector/src/settings.ts`.
 
 ## Step 2 — the save input must be default-FREE
 
@@ -87,7 +92,7 @@ export const mySettingsSaveInput = z.object(withoutDefaults(mySettingsSchema.sha
 
 Analytics spells its input out by hand only because a save wants different wording
 ("Omitted → unchanged"). Either way, cover it with a test that asserts omitted keys stay
-**absent** after the parse (see `packages/mcp-analytics/src/settings.test.ts`, "keeps
+**absent** after the parse (see `packages/connectors/analytics/analytics-connector/src/settings.test.ts`, "keeps
 omitted fields ABSENT").
 
 ## Step 3 — the profile port + key resolution (do NOT reimplement)
@@ -105,10 +110,11 @@ import {
 ```
 
 `ProfileSource` is the narrow read/write view a module gets: the locale plus its own
-slice, and `save?` for a `modules` patch. camunda7's `ProfileStore` satisfies it
-structurally (asserted at compile time in the app's `module-contract.ts`), so nobody has
-to import the camunda7 module. Alias them to your module's vocabulary if the call sites
-read better that way (`export const resolveSettingsKey = resolveProfileKey`).
+slice, and `save?` for a `modules` patch. The full `ProfileStore`
+(`@miragon-ai/widget-shell/server`) satisfies it structurally (asserted at compile time
+in the app's `module-contract.ts`) — modules stick to the narrow port, composition roots
+wire the full store. Alias them to your module's vocabulary if the call sites read
+better that way (`export const resolveSettingsKey = resolveProfileKey`).
 
 `resolveProfileKey(ctx)` precedence: auth user id (`ctx.auth.user.userId`, else the
 request context's `auth` var) > the `Mcp-Session-Id` header > `ANONYMOUS_PROFILE_KEY`
@@ -140,8 +146,9 @@ Two rules the save tool must honor:
   registrar's `withToolsetFilter` never sees it and it must gate itself — against your
   module's **declared** toolset names, never an `toolset === "read-only"` compare (that
   fails open for every other name the day a second restrictive toolset appears). Copy
-  `packages/mcp-analytics/src/toolsets.ts`: a `<MODULE>_TOOLSETS` list, a type guard, and
-  `allowsDurableWrites(toolset)` that fails open with a warning on unknown names. When it
+  `packages/connectors/analytics/analytics-connector/src/toolsets.ts`: a `<MODULE>_TOOLSETS` list, a type guard, and
+  `allowsDurableWrites(toolset)` that warns and fails CLOSED (degrades to your most
+  restrictive toolset) on unknown names. When it
   says no, skip registration; the view then reports `canSave: false` and the widget hides
   its Save button — the tool surface stays honest.
 - **Merge over the RAW stored slice**, not the parsed one:
@@ -189,7 +196,7 @@ One self-fetching card, composed from `@miragon-ai/widget-shell/widgets` —
    must have an entry)
 4. `src/tool-names.ts` — constants for the `*_data` feed and the save tool, so a rename
    trips TS at every widget call site
-5. `packages/mcp-camunda7/src/widgets/cockpit-app/views.ts` → `cockpitViews.settings` —
+5. `packages/connectors/camunda/camunda7-connector/src/widgets/cockpit-app/views.ts` → `cockpitViews.settings` —
    append `{ row: [{ widget: "<module>:settings", props: {} }] }`
 
 Link 5 is the only place the settings page is not self-assembling: a hand-maintained list
@@ -210,14 +217,14 @@ document any new env var in `docs/operations.md` (see the `docs-style` skill).
 
 ## Step 7 — tests
 
-Mirror `packages/mcp-analytics/src/settings.test.ts`:
+Mirror `packages/connectors/analytics/analytics-connector/src/settings.test.ts`:
 
 - schema fills every default from `{}`
 - save input keeps omitted fields **absent** (the zod-4 partial trap)
 - `parseMySettings`: defaults for absent / garbage slice; ignores other modules' slices
 - `settingsFor`: reads the slice; falls back to defaults on a store **outage**
 - `registerSettingsTools`: save tool registered only with a writable store; dropped in the
-  restrictive toolset; fails open on unknown names
+  restrictive toolset; fails closed (degrades to the restrictive toolset) on unknown names
 - a round-trip through a fake store: keyless save → read back; partial save keeps the
   other saved value
 
@@ -241,7 +248,7 @@ committing.
 
 ## Anti-patterns
 
-- Putting module vocabulary into `userProfilePreferencesSchema` instead of the slice.
+- Putting module vocabulary into the core `profileRecordSchema` instead of the slice.
 - `.partial()` over a defaulted schema at the tool boundary (silent resets).
 - Parsing the slice before merging in the save path (loses newer builds' fields).
 - Reading `profile.modules.<other>` — foreign slices are their owner's business.

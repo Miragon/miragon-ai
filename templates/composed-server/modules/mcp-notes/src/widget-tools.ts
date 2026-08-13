@@ -1,46 +1,14 @@
 import { z } from "zod"
 import type { MCPServer } from "mcp-use"
-import { appsSdkMeta, viewResourceUri } from "@miragon/mcp-toolkit-core"
 import {
+  appOnly,
   buildDataFeedResult,
   buildSingleWidgetView,
+  showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { NOTES_LIST_DATA } from "./tool-names.js"
 import type { NotesStore } from "./notes-store.js"
-
-/**
- * Binding for a model-visible `*_show_*` tool — same house pattern as the
- * camunda7/analytics modules (module-local on purpose: modules are peers).
- * The view name IS the tool name: mcp-use derives the entire MCP Apps half of
- * the wire contract (`_meta.ui.resourceUri`, flat `ui/resourceUri`, resource
- * CSP) from the first-class `view` binding — never stamp `ui` keys by hand,
- * mcp-use overwrites that namespace on `tools/list`. What mcp-use does NOT
- * derive is the OpenAI Apps SDK half (`openai/*`): `appsSdkMeta` builds it,
- * pointing `openai/outputTemplate` at the same `ui://views/<name>.html`
- * resource. The `outputSchema` is required by mcp-use for any view-bound
- * tool; `passthrough` matches the free-form `structuredContent` the
- * widget-shell view builders return.
- */
-function showToolBinding(name: string, title: string) {
-  return {
-    view: { name },
-    outputSchema: z.object({}).passthrough(),
-    _meta: appsSdkMeta({ resourceUri: viewResourceUri(name), title }),
-  }
-}
-
-/**
- * Marker for the internal `*_data` feed: mcp-use's native `visibility: "app"`
- * hides the tool from the model (SEP-1865), while the hand-stamped
- * `openai/widgetAccessible` lets Apps SDK hosts accept the in-widget
- * `callTool`. Deliberately no `view` binding — the feed must return JSON,
- * not render UI.
- */
-const appOnly = {
-  visibility: "app" as const,
-  _meta: { "openai/widgetAccessible": true },
-}
 
 /** Inputs shared by `notes_show_notes` and its `notes_list_data` feed. */
 const notesInputShape = {

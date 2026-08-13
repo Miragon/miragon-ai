@@ -1,6 +1,6 @@
 ---
 name: add-bpm-feature
-description: Step-by-step house pattern for adding a new BPM operations tool, widget tool, or widget to the camunda7 module (`packages/mcp-camunda7` + `packages/client-camunda7`). Use whenever adding or changing Camunda 7 / CIB Seven tools ("add a tool to suspend jobs", "expose X from the engine REST API"), input schemas, `show_*` widget tools, `*_data` feeds, or React widgets in the cockpit. Takes precedence over the generic mcp-apps-builder skill.
+description: Step-by-step house pattern for adding a new BPM operations tool, widget tool, or widget to the camunda7 module (`packages/connectors/camunda/camunda7-connector` + `packages/connectors/camunda/camunda7-client`). Use whenever adding or changing Camunda 7 / CIB Seven tools ("add a tool to suspend jobs", "expose X from the engine REST API"), input schemas, `show_*` widget tools, `*_data` feeds, or React widgets in the cockpit. Takes precedence over the generic mcp-apps-builder skill.
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 
 The camunda7 module never registers operations tools with raw `server.tool()`. Tools go
 through the toolkit registrar; engine access goes through `withEngine`/`resolveEngine`
-(per-call `engine` override > sticky session selection > single default). Widgets hang
+(per-call `engine` override > saved default engine (profile) > single default). Widgets hang
 off a four-link registration chain. Follow the steps for the path you need.
 
 ## Step 0 — pick the render path
@@ -19,9 +19,9 @@ off a four-link registration chain. Follow the steps for the path you need.
 | A widget rendered for the user + summary | `show_*` widget tool in `widget-tools.ts` (Step 4)        |
 | App-only JSON for in-widget refresh/nav  | `*_data` feed in `widget-tools.ts`, `...appOnly` (Step 4) |
 
-## Step 1 — input schema in client-camunda7
+## Step 1 — input schema in camunda7-client
 
-Add the Zod input schema to `packages/client-camunda7/src/schemas/<domain>.ts` and export
+Add the Zod input schema to `packages/connectors/camunda/camunda7-client/src/schemas/<domain>.ts` and export
 it from `src/schemas/index.ts`. Existing style (from `schemas/process-instances.ts`):
 
 ```ts
@@ -34,18 +34,18 @@ export const listProcessInstancesInput = z.object({
 ```
 
 Every field gets a `.describe()`. The REST calls themselves use the generated SDK
-(imported from `@miragon-ai/client-camunda7/sdk`) — if the endpoint is missing there,
+(imported from `@miragon-ai/camunda7-client/sdk`) — if the endpoint is missing there,
 the OpenAPI spec changed and you need `pnpm generate`, not a hand-written fetch.
 
 ## Step 2 — register the tool
 
-Add the tool in `packages/mcp-camunda7/src/tools/<domain>.ts`. Reference template —
+Add the tool in `packages/connectors/camunda/camunda7-connector/src/tools/<domain>.ts`. Reference template —
 `camunda7_list_process_instances` from `src/tools/process-instances.ts`:
 
 ```ts
-import { listProcessInstancesInput } from "@miragon-ai/client-camunda7/schemas"
+import { listProcessInstancesInput } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { getProcessInstances } from "@miragon-ai/client-camunda7/sdk"
+import { getProcessInstances } from "@miragon-ai/camunda7-client/sdk"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -101,11 +101,11 @@ Every camunda7 tool carries `openWorldHint: true` (it talks to an external engin
 
 Only when you created a new `src/tools/<domain>.ts`: add
 `registerYourDomainTools(register)` to `registerTools` in
-`packages/mcp-camunda7/src/tools/index.ts`, mirroring the existing calls.
+`packages/connectors/camunda/camunda7-connector/src/tools/index.ts`, mirroring the existing calls.
 
 ## Step 4 — widget path (only for UI features)
 
-Widget components live in `packages/mcp-camunda7/src/widgets/` and receive their data as
+Widget components live in `packages/connectors/camunda/camunda7-connector/src/widgets/` and receive their data as
 a `data` prop. Compose them from the shared kit `@miragon-ai/widget-shell/widgets` —
 never re-inline these primitives:
 
@@ -156,19 +156,19 @@ Then register the widget tool in `src/widget-tools.ts` (this file is the documen
 exception that uses `server.tool()` directly):
 
 - `show_*` tools: spread `...showToolBinding(TOOL_NAME_CONST, "Title")` (from
-  `./widget-tools/shared.js`) into the definition and use `inputSchema:` (mcp-use 2
+  `@miragon-ai/widget-shell/server`) into the definition and use `inputSchema:` (mcp-use 2
   field name) — the helper binds a native mcp-use view named after the tool
   (`view: { name }`, mcp-use then emits all `_meta.ui.*` keys and the
   `ui://views/<tool>.html` resource itself), adds the required passthrough
   `outputSchema`, and stamps the Apps-SDK half via `appsSdkMeta`; **never write
   `_meta.ui` keys by hand** (mcp-use owns and overwrites that namespace). Resolve the engine via
-  `resolveEngine(args.engine, registry)` — it already returns `baseUrl`/`cockpitUrl`;
+  `await resolveEngine(args.engine, registry)` — it already returns `baseUrl`/`cockpitUrl`;
   never fish them out of `registry.engines`. Return
   `buildSingleWidgetView({ widget, app: "camunda7", dataType, data, title, summary })` or
   `buildComposedView(...)` (both from `@miragon-ai/widget-shell/server`). The
   `summary` is the model-facing text channel (1-2 sentences, key figures, no raw
   data) — the full payload travels only in `structuredContent`.
-- `*_data` feeds: spread `...appOnly` (from `./widget-tools/shared.js` — the native
+- `*_data` feeds: spread `...appOnly` (from `@miragon-ai/widget-shell/server` — the native
   `visibility: "app"` field, emitted as SEP-1865 `_meta.ui.visibility: ["app"]`, plus
   `openai/widgetAccessible`; **no** view binding) — return `buildDataFeedResult(data)` (from
   `@miragon-ai/widget-shell/server`, aliased `rawData` in `widget-tools.ts`) so the

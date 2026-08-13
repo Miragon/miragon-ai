@@ -14,17 +14,17 @@ plus the `@miragon/mcp-toolkit-*` packages) for Camunda 7 / CIB Seven BPM
 operations and Prometheus-backed process analytics, including interactive React widgets
 (MCP Apps).
 
-| Path                         | Contents                                                                                                                                                        |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/mcp-server-camunda7/`  | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                                                                   |
-| `packages/mcp-camunda7/`     | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                                                                        |
-| `packages/mcp-analytics/`    | analytics module: Prometheus-backed tools, dashboards, comparison widgets                                                                                       |
-| `packages/client-camunda7/`  | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                                                                            |
-| `packages/client-analytics/` | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                                                                       |
-| `packages/widget-shell/`     | Shared widget kit: UI primitives incl. `useApplyTheme` (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders + the `shell:*` catalogue (`/server`) |
-| `engine-plugins/`            | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                                                                          |
-| `playground/`                | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                                                                               |
-| `docs/`                      | VitePress docs site (see the `docs-style` skill before editing)                                                                                                 |
+| Path                                                 | Contents                                                                                                                                                        |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/mcp-server-camunda7/`                          | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                                                                   |
+| `packages/connectors/camunda/camunda7-connector/`    | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                                                                        |
+| `packages/connectors/analytics/analytics-connector/` | analytics module: Prometheus-backed tools, dashboards, comparison widgets                                                                                       |
+| `packages/connectors/camunda/camunda7-client/`       | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                                                                            |
+| `packages/connectors/analytics/analytics-client/`    | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                                                                       |
+| `packages/core/widget-shell/`                        | Shared widget kit: UI primitives incl. `useApplyTheme` (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders + the `shell:*` catalogue (`/server`) |
+| `engine-plugins/`                                    | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                                                                          |
+| `playground/`                                        | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                                                                               |
+| `docs/`                                              | VitePress docs site (see the `docs-style` skill before editing)                                                                                                 |
 
 ## Commands
 
@@ -56,19 +56,19 @@ render widgets manually.
 
 If generated SDK files look wrong (e.g. `client.gen.ts` importing `./src/hey-api.js`
 instead of `../hey-api.js`), the shared turbo cache replayed a poisoned `generate`
-output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-camunda7 --force`.
+output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-client --force`.
 
 ## Architecture invariants
 
 1. **New operations tools go through the registrar — never raw `server.tool()`.** Add the
-   Zod input schema in `packages/client-camunda7/src/schemas/`, then register the tool in
-   `packages/mcp-camunda7/src/tools/<domain>.ts` via the `register` callback created by
+   Zod input schema in `packages/connectors/camunda/camunda7-client/src/schemas/`, then register the tool in
+   `packages/connectors/camunda/camunda7-connector/src/tools/<domain>.ts` via the `register` callback created by
    `createToolRegistrar` (wired in `src/tools/index.ts`). Every registrar tool carries a
    `category` matching its domain file (e.g. `"process-instances"`, `"tasks"`;
    `"analytics"` for the analytics module). Spread `...engineParamShape` into the input
    schema and wrap the handler in `withEngine(...)` (both from `src/lib/with-engine.ts`).
    See `camunda7_list_process_instances` in
-   `packages/mcp-camunda7/src/tools/process-instances.ts` for the canonical shape.
+   `packages/connectors/camunda/camunda7-connector/src/tools/process-instances.ts` for the canonical shape.
    Destructive/admin tools must also be listed in `src/lib/toolsets.ts` (`ADMIN_ONLY_TOOLS`)
    so the `camunda7:read-only|operations|admin` toolset filtering stays correct —
    `src/lib/toolsets.test.ts` enforces the rule structurally over every registered tool
@@ -81,19 +81,22 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    domain registrars + `tools/user-profile.ts`).
 
 2. **Never talk to an engine directly.** All engine access goes through
-   `resolveEngine`/`withEngine` (`packages/mcp-camunda7/src/lib/`), which implements the
-   multi-engine routing precedence: per-call `engine` override > sticky session selection
-   (`camunda7_engine`, action `"select"`) > the single configured default. Constructing or
-   caching a client yourself breaks multi-engine routing. `resolveEngine` already returns
-   `baseUrl`/`cockpitUrl` — never fish them out of `registry.engines` yourself.
+   `resolveEngine`/`withEngine` (`packages/connectors/camunda/camunda7-connector/src/lib/`), which implements the
+   multi-engine routing precedence: per-call `engine` override > the caller's saved default
+   engine (`profile.modules.camunda7.defaultEngineId`, written by `camunda7_engine` action
+   `"select"` and the settings page — resolution is single-sourced in
+   `lib/engine-preferences.ts`) > the single configured default. There is deliberately NO
+   in-memory session selection (replica-unsafe; mcp-use 2 issues no session ids). Constructing
+   or caching a client yourself breaks multi-engine routing. `resolveEngine` (async) already
+   returns `baseUrl`/`cockpitUrl` — never fish them out of `registry.engines` yourself.
 
 3. **Widget registration is a four-link chain** — a widget that misses a link is silently
    absent somewhere:
-   - `packages/mcp-camunda7/src/widgets/registry.ts` — component → dataType via `adaptDataWidget`
-   - `packages/mcp-camunda7/src/definition.ts` — widget metadata (`id`, `requires`, `size`, `propsSchema`)
+   - `packages/connectors/camunda/camunda7-connector/src/widgets/registry.ts` — component → dataType via `adaptDataWidget`
+   - `packages/connectors/camunda/camunda7-connector/src/definition.ts` — widget metadata (`id`, `requires`, `size`, `propsSchema`)
    - `apps/mcp-server-camunda7/src/ui/widget-registry.ts` — the host bundle map (spreads
      `camunda7Widgets`/`analyticsWidgets`)
-   - `packages/mcp-camunda7/src/tool-names.ts` — the tool-name constant for every
+   - `packages/connectors/camunda/camunda7-connector/src/tool-names.ts` — the tool-name constant for every
      `show_*`/`*_data` tool, so in-widget navigation stays rename-safe
 
    Links 1↔2 are guarded by `src/widgets/catalogue-sync.test.ts` (both modules have
@@ -108,7 +111,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
 5. **There are three render paths — pick deliberately:**
    - Registrar tools (`src/tools/`): plain JSON data _for the model_
    - Widget tools (`widget-tools.ts`, `show_*`, spread `...showToolBinding(name, title)`
-     from the module's shared helper — a `view` binding named after the tool +
+     from `@miragon-ai/widget-shell/server` — a `view` binding named after the tool +
      `outputSchema` + the Apps-SDK `_meta` half): render a widget for the user +
      return a summary for the model
    - `*_data` feeds (also in `widget-tools.ts`, spread `...appOnly` — the native
@@ -130,7 +133,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
    settings sections; `useBpmnViewer` + `BpmnZoomControls` for BPMN, with
    highlight/legend colors from `HIGHLIGHT_COLORS`
-   (`packages/mcp-camunda7/src/widgets/bpmn-highlights.ts`). Paged lists compose
+   (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total) + `ListTable` (the table
    frame; rows stay hand-composed `<tr>` + `Td`) + `PagedListFooter` (in camunda7 via
@@ -143,30 +146,50 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    so anything a guard reads belongs in state — see `usePagedViewData`'s generation.
 
 7. **Shared server data paths are single-sourced.** Definition name/version/instance
-   lookups come from `packages/mcp-camunda7/src/data/definition-info.ts`;
+   lookups come from `packages/connectors/camunda/camunda7-connector/src/data/definition-info.ts`;
    `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step — never
-   fork them. Analytics periods derive from `PERIODS`/`PERIOD_RANGE` (client-analytics)
-   — no hardcoded enum copies. Profile records migrate on read through
-   `lib/profile-migrations.ts` (`parseStoredProfile`, shared by the filesystem and
-   postgres stores) — a `PROFILE_SCHEMA_VERSION` bump without a matching migration
-   entry silently resets stored preferences. **Whose** profile a request touches is
+   fork them. Analytics periods derive from `PERIODS`/`PERIOD_RANGE` (analytics-client)
+   — no hardcoded enum copies. The profile STORE (record schema, in-memory/
+   filesystem/postgres implementations, migrations) is core:
+   `packages/core/widget-shell/src/profile-{record,store,store-postgres,migrations}.ts`
+   (`@miragon-ai/widget-shell/server`) — the record is connector-free (language,
+   theme, `modules.<module>` slices + metadata; camunda7's engine/dashboard
+   preferences live in ITS slice, `modules.camunda7`, projected to a flat
+   `UserProfile` view in `camunda7-connector/src/lib/profile-schema.ts`).
+   Records migrate on read through `parseStoredProfile` (shared by the
+   filesystem and postgres stores) — a `PROFILE_SCHEMA_VERSION` bump without a
+   matching `PROFILE_MIGRATIONS` entry silently resets stored preferences. **Whose** profile a request touches is
    decided in exactly one place for ALL modules: `resolveProfileKey`/`resolveAuthUserId`
    - `ANONYMOUS_PROFILE_KEY` + the narrow `ProfileSource` port, in
-     `packages/widget-shell/src/profile.ts` (`@miragon-ai/widget-shell/server`). A
+     `packages/core/widget-shell/src/profile.ts` (`@miragon-ai/widget-shell/server`). A
      module-local copy of that precedence would silently split one user's settings across
      two records; the app's `module-contract.ts` carries a compile-time assertion that
      camunda7's `ProfileStore` still satisfies the port.
 
 8. **Modules are self-contained peers; the app is a thin composition root.**
-   `mcp-*` packages never import each other. The dependency edges of this invariant
-   (module peer-isolation, module→own-client only, leaf clients, foundation
-   widget-shell, packages never importing the app, no cross-package deep imports)
+   Connector packages never import each other. Layout + naming carry the layer
+   semantics and are load-bearing for the guardrails: connector modules live at
+   `packages/connectors/<family>/<name>-connector` (npm `@miragon-ai/<name>-connector`),
+   their SDK leaves at `packages/connectors/<family>/<name>-client`
+   (npm `@miragon-ai/<name>-client`), foundation packages under `packages/core/`
+   — a new package that follows the convention is covered by the dependency rules
+   without touching them; one that breaks it would silently fall OUT of the rules,
+   which is why the convention itself is gated: `scripts/check-package-naming.mjs`
+   (`pnpm lint:naming`, part of `pnpm lint`) fails on any workspace package whose
+   directory or npm name breaks the pattern.
+   The dependency edges of this invariant
+   (connector peer-isolation, connector→own-client only, leaf clients, foundation
+   core, packages never importing the app, no cross-package deep imports)
    are machine-enforced by `.dependency-cruiser.cjs` via the root
    `pnpm lint:architecture` (part of `pnpm lint`). Each module exports its definition in
    `src/module.ts` (config schema, `configFromEnv`, `knownEnvVars`, `bootWarnings`,
-   plugin factory) conforming structurally to the app-owned port in
-   `apps/mcp-server-camunda7/src/module-contract.ts`; the app's `setup.ts` only selects
-   modules (`MCP_ACTIVE_MODULES`) and wires `SharedResources` (profile store +
+   plugin factory) conforming STRUCTURALLY (no import) to the port. The port SHAPE
+   (`ComposableModule<TShared>`) and the whole composition-root machinery
+   (`composeModules`: `MCP_ACTIVE_MODULES` parsing incl. `module:toolset` suffix,
+   env-typo warner with prefixes derived from every known var, boot warnings,
+   AppConfig/plugin assembly) live in `@miragon-ai/widget-shell/server`; the app's
+   `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
+   only declares the module list and wires `SharedResources` (profile store +
    `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap;
    analytics has NO engine-SDK dependency). Apps own no domain UI: widget catalogues and
    components live in packages. Cross-module UI is tiered: `shell:*` widgets via
@@ -175,7 +198,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    dedicated package created with the first real view — never in the app, never as
    module-to-module imports. The settings page follows the same tiers: each module
    owns its settings section (widget + `*_data` feed + save tool; reference:
-   `analytics:settings` + `mcp-analytics/src/settings-tools.ts` — the save tool honors
+   `analytics:settings` + `analytics-connector/src/settings-tools.ts` — the save tool honors
    `analytics:read-only`), its slice persists under `profile.modules.<module>`
    (validated fail-soft by the owning module — camunda7's save tool deliberately
    excludes `modules`), and composed views reference foreign section widgets by raw
@@ -191,20 +214,20 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
    from `@miragon-ai/widget-shell/server`; see
    `userProfileToolSaveInput`/`analyticsSettingsSaveInput`). A durable write registered
    outside the tool registrar gates itself against the module's declared toolset names
-   (`allowsDurableWrites` in `mcp-analytics/src/toolsets.ts`, `isToolInToolset` in
+   (`allowsDurableWrites` in `analytics-connector/src/toolsets.ts`, `isToolInToolset` in
    camunda7) — never an ad-hoc `toolset === "read-only"` compare, which fails open for
    every other name — and carries that same decision into its view as `canSave`, so the
    section renders disabled fields instead of a Save button whose click would resolve to
    an unknown tool. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in
-   `packages/mcp-camunda7/src/providers/` — the port holds ONLY real differences:
+   `packages/connectors/camunda/camunda7-connector/src/providers/` — the port holds ONLY real differences:
    cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)
    would be a new module + client + app. Extract shared packages on the second concrete
    consumer, never speculatively.
 
 ## Contracts
 
-- **`packages/client-analytics/metrics-contract.json` is the single source of truth for
+- **`packages/connectors/analytics/analytics-client/metrics-contract.json` is the single source of truth for
   metric names and labels — when changing a metric, change it here first.** The Kotlin
   plugin (`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt`,
   `EngineStateMetrics.kt`) emits Micrometer meters whose dotted names (`otelName` —
@@ -212,10 +235,10 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
   series (`promName`, e.g. `camunda.activity.ended` →
   `camunda_activity_ended_total`; durations carry base unit `seconds`, spelled out
   so every export path appends the same `_seconds` suffix). Consumers — the TS queries (via `METRIC_NAMES` in
-  `packages/client-analytics/src/metric-names.ts`, never raw strings), the alert rules
+  `packages/connectors/analytics/analytics-client/src/metric-names.ts`, never raw strings), the alert rules
   (`playground/docker/prometheus/alerts.yml`), and the Grafana dashboards
   (`playground/docker/grafana/dashboards/*.json`) — are checked against the contract by tests on
-  both sides: `packages/client-analytics/src/metrics-contract.test.ts` (vitest — also
+  both sides: `packages/connectors/analytics/analytics-client/src/metrics-contract.test.ts` (vitest — also
   covers the Grafana dashboards incl. regex matchers, per-metric `sum by (…)` grouping
   labels, and a dead-entry check with a documented allowlist) and
   `engine-plugins/cibseven-history-metrics/.../MetricsContractTest.kt` (Gradle — also
@@ -237,7 +260,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/client-ca
   again. The tool descriptions carry this rule to the model and are asserted in
   `src/tools/engine-{compare,landscape}.test.ts`.
 - **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
-  `1.1.0` everywhere). Updates are deliberate version bumps across all packages — never
+  `2.0.0` everywhere). Updates are deliberate version bumps across all packages — never
   loosen the pin or bump a single package in isolation.
 - **The widget `_meta` contract is split since mcp-use 2 — never hand-write the
   `ui` half.** mcp-use emits the MCP-Apps keys (`_meta.ui.resourceUri`, flat
@@ -264,15 +287,21 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
 
 - **Everything releases through one release-please train.** Conventional commits on
   `main` drive `release-please.yml`, which opens/updates a single Release PR (root
-  component, tag `v<version>`); release-please bumps the root, the server app,
-  client-camunda7 and client-analytics `package.json`s plus
+  component, tag `v<version>`); release-please bumps the root, the server app, all five
+  `packages/` `package.json`s, the template's `@miragon-ai/*` pins plus
   `engine-plugins/gradle.properties` in lockstep (`extra-files` in
   `release-please-config.json`). Merging the PR creates the release; the publish
   workflows then wait for manual approval of the `release` environment gate.
-- **No npm publish exists today.** `client-camunda7`/`client-analytics` carry a
-  `publishConfig` for npm.pkg.github.com (`access: restricted`) but no CI job publishes
-  them; the server app, widget-shell, mcp-camunda7 and mcp-analytics are `"private": true`.
-  Don't flip `private` or add a publish job without the distribution decision (#118).
+- **The five packages publish to the public npm registry.** The release train's
+  `publish-npm` matrix calls `publish-npm-package.yml` (OIDC trusted publishing, no
+  NPM_TOKEN; provenance attached) for `@miragon-ai/{widget-shell,camunda7-connector,
+camunda7-client,analytics-connector,analytics-client}` — matrix entries are package
+  DIRECTORIES under `packages/`; the npm name is read from each `package.json`.
+  Afterwards `sync-template-mirror.yml` waits until the versions are visible on npm and
+  mirrors `templates/composed-server` to the `Miragon/miragon-ai-starter` repo — the
+  customer-facing composition path (own server + own connector on the published
+  packages), drift-gated by `scripts/test-template.sh`. Only the server app stays
+  `"private": true`.
 - **Engine plugins publish to Maven Central via `publish-to-maven.yml`** (called from the
   release train): the Vanniktech Maven Publish plugin runs
   `publishAndReleaseToMavenCentral` against the Sonatype Central Portal (thin jar +
@@ -289,7 +318,7 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
-  exactly pinned dependency (`save-exact`, currently `1.1.0`). Toolkit changes happen in
+  exactly pinned dependency (`save-exact`, currently `2.0.0`). Toolkit changes happen in
   that repo and arrive here as a deliberate, repo-wide version bump — since 1.0 the
   toolkit follows semver (breaking changes arrive as major bumps; the exact pin makes
   every bump deliberate either way).
@@ -303,7 +332,7 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
 | Check                | Coverage                                                                                                                                                                                                                                                                                                                              |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pnpm build`         | tsc emit of server code + the server app's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                                                                                                            |
-| `pnpm typecheck`     | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in mcp-camunda7/mcp-analytics, `tsc -p tsconfig.ui.json` in the server app                                                                                                                                                                           |
+| `pnpm typecheck`     | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in the two connector packages, `tsc -p tsconfig.ui.json` in the server app                                                                                                                                                                           |
 | `pnpm test`          | Vitest unit tests (lib + query logic) **plus** the server app e2e smoke + widget wire-contract tests (in-process boot, loopback HTTP); **no widget rendering**; enforces the per-package coverage ratchet (frozen thresholds in each `vitest.config.ts`)                                                                              |
 | `pnpm lint`          | ESLint over each package's `src` (the server app also `test`/`test-host`) incl. the pattern gates (registrar-only tools, widget-shell date formatting), then the root `lint:architecture` (dependency-cruiser) and `lint:deadcode` — knip over files/dependencies/unlisted (unused exports are report-only for now: `pnpm exec knip`) |
 | `pnpm test:mutation` | Diff-scoped Stryker run (`scripts/mutation-diff.mjs`): changed files inside a package's `mutate` allowlist must keep the mutation score above the package's `thresholds.break` (`stryker.config.json`); runs in CI as "Mutation (changed files)". The gate bypasses the package's incremental cache, so a local run and CI agree      |
@@ -325,6 +354,6 @@ mutation ratchet works the same way inverted: each package's `mutate` allowlist 
 tests), and `thresholds.break` may only rise. Mutation runs use
 `vitest.stryker.config.ts` (coverage off — a coverage-threshold failure would read as a
 killed mutant); the Stryker vitest runner disables per-file isolation, so DOM widget
-suites stay out of the mutation test set (see mcp-camunda7's config). The knip ignore
+suites stay out of the mutation test set (see the camunda7 connector's config). The knip ignore
 lists in `knip.jsonc` follow the same convention: every entry carries its reason and
 the lists may only shrink; gating the unused-exports report is the next expansion.

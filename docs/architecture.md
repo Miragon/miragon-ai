@@ -33,13 +33,13 @@ flowchart LR
 
 ## Modules
 
-| Module                                                            | Role                                                                                                                                                                                                                                        |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **MCP Server** (`apps/mcp-server-camunda7/`)                      | Hosts the HTTP transport on port `8400`, loads modules from `MCP_ACTIVE_MODULES`, and serves the Vite-built React widget bundle (see **widgets**).                                                                                          |
-| **camunda7** (`packages/mcp-camunda7/`)                           | Wraps the Camunda 7 / CIB Seven REST API via an OpenAPI-generated client. Exposes process, task, incident, deployment, and history tools plus widgets.                                                                                      |
-| **analytics** (`packages/mcp-analytics/`)                         | Queries Prometheus via PromQL for performance, failure, bottleneck, version/cluster comparison, and the cross-engine landscape. Tools + widgets.                                                                                            |
-| **engine-plugins** (`engine-plugins/`)                            | Kotlin Micrometer plugins for CIB Seven: a process-metrics emitter. Independent build (Java 21, Gradle). No engine-side database.                                                                                                           |
-| **widgets** (`apps/mcp-server-camunda7/dist/mcp-app.js` + `.css`) | One Vite-built ES module + stylesheet containing React, Tailwind, and every widget. mcp-use serves it behind one `ui://views/<tool>.html` resource per widget tool; the host renders the bound view when a tool returns `{ widget, data }`. |
+| Module                                                               | Role                                                                                                                                                                                                                                        |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **MCP Server** (`apps/mcp-server-camunda7/`)                         | Hosts the HTTP transport on port `8400`, loads modules from `MCP_ACTIVE_MODULES`, and serves the Vite-built React widget bundle (see **widgets**).                                                                                          |
+| **camunda7** (`packages/connectors/camunda/camunda7-connector/`)     | Wraps the Camunda 7 / CIB Seven REST API via an OpenAPI-generated client. Exposes process, task, incident, deployment, and history tools plus widgets.                                                                                      |
+| **analytics** (`packages/connectors/analytics/analytics-connector/`) | Queries Prometheus via PromQL for performance, failure, bottleneck, version/cluster comparison, and the cross-engine landscape. Tools + widgets.                                                                                            |
+| **engine-plugins** (`engine-plugins/`)                               | Kotlin Micrometer plugins for CIB Seven: a process-metrics emitter. Independent build (Java 21, Gradle). No engine-side database.                                                                                                           |
+| **widgets** (`apps/mcp-server-camunda7/dist/mcp-app.js` + `.css`)    | One Vite-built ES module + stylesheet containing React, Tailwind, and every widget. mcp-use serves it behind one `ui://views/<tool>.html` resource per widget tool; the host renders the bound view when a tool returns `{ widget, data }`. |
 
 ## Composition rules
 
@@ -81,10 +81,10 @@ persisted in Postgres (`DATABASE_URL`), on disk (`MCP_PROFILE_DIR`), or in
 memory — in that order of precedence. The record is keyed by the authenticated
 user when the server runs with `MCP_OAUTH`, otherwise by the MCP session id.
 
-| Part                     | Owner       | Contents                                                        |
-| ------------------------ | ----------- | --------------------------------------------------------------- |
-| Core preferences         | camunda7    | Language, theme, engine availability + default, dashboard picks |
-| `modules.<module>` slice | that module | Whatever only it understands — e.g. the analytics look-back     |
+| Part                     | Owner        | Contents                                                          |
+| ------------------------ | ------------ | ----------------------------------------------------------------- |
+| Core record + store      | widget-shell | Language, theme, record metadata, the slice transport, the stores |
+| `modules.<module>` slice | that module  | Whatever only it understands — e.g. camunda7's engine picks       |
 
 Each module owns its slice end to end: its own schema, its own save tool, and
 its own section on the settings page. Nothing central knows what a slice

@@ -68,6 +68,6 @@ tasks.test {
     // MetricsContractTest reads the shared Kotlin<->TS metric contract at
     // runtime — declare the contract as a task input so a contract change
     // re-runs the otherwise up-to-date test task.
-    inputs.file(rootProject.layout.projectDirectory.file("../packages/client-analytics/metrics-contract.json"))
+    inputs.file(rootProject.layout.projectDirectory.file("../packages/connectors/analytics/analytics-client/metrics-contract.json"))
         .withPathSensitivity(PathSensitivity.NONE)
 }

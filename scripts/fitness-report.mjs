@@ -20,7 +20,7 @@ const put = (s = "") => lines.push(s)
 let archLine = "failed to run"
 try {
   const out = execSync(
-    "pnpm exec depcruise apps/*/src packages/*/src --config .dependency-cruiser.cjs",
+    "pnpm exec depcruise apps/*/src packages/core/*/src packages/connectors/*/*/src --config .dependency-cruiser.cjs",
     {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
@@ -45,11 +45,18 @@ put(`- Ratchet debt: ${complexityDebt} complexity, ${lengthDebt} max-lines entri
 put()
 
 // ── Per-package coverage + mutation ─────────────────────────────────────────
-const pkgDirs = ["packages", "apps"].flatMap((root) =>
-  readdirSync(root, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => `${root}/${d.name}`),
-)
+// Package roots: apps/*, packages/core/*, packages/connectors/<family>/*.
+const listDirs = (root) =>
+  existsSync(root)
+    ? readdirSync(root, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .map((d) => `${root}/${d.name}`)
+    : []
+const pkgDirs = [
+  ...listDirs("apps"),
+  ...listDirs("packages/core"),
+  ...listDirs("packages/connectors").flatMap(listDirs),
+]
 
 const pct = (n) => (typeof n === "number" ? `${n.toFixed(1)}%` : "—")
 

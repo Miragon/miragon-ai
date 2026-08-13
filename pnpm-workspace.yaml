@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
-  - "packages/*"
+  - "packages/core/*"
+  - "packages/connectors/*/*"
   - "docs"
 
 # qs@6.15.1 (transitive via the Stryker toolchain) carries a moderate DoS

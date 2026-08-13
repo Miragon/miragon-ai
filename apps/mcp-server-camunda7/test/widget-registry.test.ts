@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { collectLayoutWidgets } from "@miragon/mcp-toolkit-core"
-import { definition as camunda7Definition } from "@miragon-ai/mcp-camunda7/definition"
-import { definition as analyticsDefinition } from "@miragon-ai/mcp-analytics/definition"
-import { cockpitViews, filterLayoutToWidgets } from "@miragon-ai/mcp-camunda7/widgets"
+import { definition as camunda7Definition } from "@miragon-ai/camunda7-connector/definition"
+import { definition as analyticsDefinition } from "@miragon-ai/analytics-connector/definition"
+import { cockpitViews, filterLayoutToWidgets } from "@miragon-ai/camunda7-connector/widgets"
 import { widgetRegistry } from "../src/ui/widget-registry.js"
 
 /**

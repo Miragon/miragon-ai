@@ -42,7 +42,8 @@ function inMutateScope(relFile, mutatePatterns) {
 
 const byPackage = new Map()
 for (const file of changed) {
-  const match = /^(packages\/[^/]+)\/(.+)$/.exec(file)
+  // Package roots: packages/core/<pkg> and packages/connectors/<family>/<pkg>.
+  const match = /^(packages\/(?:core\/[^/]+|connectors\/[^/]+\/[^/]+))\/(.+)$/.exec(file)
   if (!match || !existsSync(file)) continue
   const [, pkg, rel] = match
   const configPath = `${pkg}/stryker.config.json`

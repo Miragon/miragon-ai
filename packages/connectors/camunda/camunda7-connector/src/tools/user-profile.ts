@@ -1,0 +1,191 @@
+import { z } from "zod"
+import type { MCPServer } from "mcp-use"
+import {
+  appOnly,
+  buildDataFeedResult as rawData,
+  buildSingleWidgetView,
+  mergeRawSlice,
+  requireProfileKey,
+  showToolBinding,
+  withToolErrors,
+  type ProfileStore,
+} from "@miragon-ai/widget-shell/server"
+import { isToolInToolset, resolveCamunda7Toolset } from "../lib/toolsets.js"
+import {
+  CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_SHOW_USER_PROFILE,
+  CAMUNDA7_USER_PROFILE_DATA,
+} from "../tool-names.js"
+import {
+  CAMUNDA7_MODULE_KEY,
+  defaultUserProfile,
+  toUserProfile,
+  userProfileToolSaveInput,
+  type UserProfile,
+  type UserProfileView,
+} from "../lib/profile-schema.js"
+import { resolveAuthUserId, resolveProfileKey } from "../lib/resolve-profile-key.js"
+import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { translator } from "../messages/index.js"
+
+/**
+ * One-line, model-facing summary of a profile — localized to the profile's own
+ * language (steers the model toward responding in that language; the MCP server
+ * cannot force the model's output language).
+ */
+function summarize(p: UserProfile): string {
+  const engines =
+    p.allowedEngineIds && p.allowedEngineIds.length > 0
+      ? translator(p.language, "profile.summary.someEngines", { count: p.allowedEngineIds.length })
+      : translator(p.language, "profile.summary.allEngines")
+  const defaultDashboard = p.defaultDashboardId
+    ? translator(p.language, "profile.summary.defaultDashboard", { id: p.defaultDashboardId })
+    : ""
+  return translator(p.language, "profile.summary", {
+    language: p.language,
+    theme: p.theme,
+    engines,
+    defaultDashboard,
+  })
+}
+
+/**
+ * Registers the user-profile tool surface (the three render paths, per the
+ * CLAUDE.md invariant):
+ *   - `camunda7_show_user_profile`  — widget tool (renders the settings panel),
+ *   - `camunda7_user_profile_data`  — app-only feed (backs the widget self-fetch),
+ *   - `camunda7_save_user_profile`  — model-visible write (partial update).
+ *
+ * All three resolve the profile key from the request (auth user id → session id)
+ * and never talk to an engine; the engine *registry* is read only for the full
+ * configured engine list the settings UI offers as availability checkboxes.
+ *
+ * The save tool is a durable write (shared profile store), so it honors
+ * the deployment's toolset like every registrar write: absent in `read-only`,
+ * present in `operations`/`admin`. The two view tools are always registered and
+ * carry the decision as `canSave`, so the panel's Save button and the tool
+ * surface can never disagree (mirrors analytics' `registerSettingsTools`).
+ */
+export function registerUserProfileTools(
+  server: MCPServer,
+  store: ProfileStore,
+  registry: EngineRegistry,
+  toolset?: string,
+): void {
+  // The save tool is a durable write registered OUTSIDE the registrar, so it
+  // gates itself — same rule as `withToolsetFilter`: unknown toolset names warn
+  // and degrade to `read-only`. Decided up front because the two view tools
+  // report the outcome as `canSave`, which is what hides the panel's Save
+  // button; a view that claimed otherwise would offer a write that resolves to
+  // an unknown tool.
+  const saveAnnotations = { idempotentHint: true }
+  const resolvedToolset = resolveCamunda7Toolset(toolset)
+  const canSave =
+    resolvedToolset === undefined ||
+    isToolInToolset(
+      { name: CAMUNDA7_SAVE_USER_PROFILE, annotations: saveAnnotations },
+      resolvedToolset,
+    )
+
+  const loadView = async (ctx: unknown): Promise<UserProfileView> => {
+    // Same key precedence as the save path (resolveProfileKey maps stdio to
+    // the shared anonymous record), so a keyless save is read back instead of
+    // being write-only. An HTTP request without any identity resolves no key —
+    // that renders defaults, and since mcp-use 2 issues no MCP session ids it
+    // is the NORM for un-authenticated HTTP deployments (identity comes from
+    // OAuth or a gateway-stamped Mcp-Session-Id).
+    const key = resolveProfileKey(ctx)
+    const record = key ? await store.get(key) : undefined
+    return {
+      profile: record ? toUserProfile(record) : defaultUserProfile(),
+      availableEngines: registry.engines.map((e) => ({ id: e.id, baseUrl: e.baseUrl })),
+      // Toolset gate (decided up front) AND per-request identity: without a
+      // profile key the save tool refuses, so the panel must render read-only
+      // instead of a Save button whose click errors.
+      canSave: canSave && key !== undefined,
+    }
+  }
+
+  server.tool(
+    {
+      name: CAMUNDA7_SHOW_USER_PROFILE,
+      title: "Profile & Settings",
+      description:
+        "Open the user profile & settings panel for this MiragonAI session: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      inputSchema: z.object({}),
+      ...showToolBinding(CAMUNDA7_SHOW_USER_PROFILE, "Profile & Settings"),
+    },
+    withToolErrors(async (_params, ctx) => {
+      const view = await loadView(ctx)
+      return buildSingleWidgetView({
+        widget: "camunda7:user-profile",
+        app: "camunda7",
+        dataType: "camunda7:userProfile",
+        data: view,
+        title: "Profile & Settings",
+        summary: summarize(view.profile),
+      })
+    }),
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_USER_PROFILE_DATA,
+      title: "User profile data (internal)",
+      description:
+        "Internal JSON feed (no UI) for the current session's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      inputSchema: z.object({}),
+      // visibility "app" + widgetAccessible: same dual app-only contract as
+      // the widget-tools feeds (see `widget-tools/shared.ts`).
+      ...appOnly,
+    },
+    // Spread: the feed contract takes `Record<string, unknown>`, which the
+    // named `UserProfileView` interface doesn't structurally satisfy.
+    withToolErrors(async (_params, ctx) => rawData({ ...(await loadView(ctx)) })),
+  )
+
+  if (!canSave) return
+
+  server.tool(
+    {
+      name: CAMUNDA7_SAVE_USER_PROFILE,
+      title: "Save user profile",
+      description:
+        'Update the current session\'s user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like "switch the UI to German" (language: "de") or "only let me pick the prod engines" (allowedEngineIds). Engine availability is curation, not access control.',
+      annotations: saveAnnotations,
+      // The flat input is a tool-API convenience; the handler splits it into
+      // the record's cross-module fields and this module's own slice.
+      inputSchema: userProfileToolSaveInput,
+      // No `view`/`visibility`: this is a normal model-visible tool returning
+      // a text summary; the widget also calls it and reads the updated profile
+      // back from structuredContent.
+    },
+    withToolErrors(async (params, ctx) => {
+      // Keyless refusal + raw-slice merge are the shared slice-write contract
+      // (`@miragon-ai/widget-shell/server`) — every module's save tool uses
+      // the same pair.
+      const key = requireProfileKey(ctx)
+      const { language, theme, ...sliceInput } = params
+      const nextSlice = await mergeRawSlice(store, key, CAMUNDA7_MODULE_KEY, sliceInput)
+      // The settings UI sends an empty string for the "(auto)"/"(none)" option
+      // of an optional id field — that clears the stored value.
+      for (const field of ["defaultEngineId", "defaultDashboardId"]) {
+        if (nextSlice[field] === "") delete nextSlice[field]
+      }
+      // Stamping the auth user id marks the record user-bound — exempt from
+      // the session-TTL cleanup.
+      const saved = await store.save(
+        key,
+        { language, theme, modules: { [CAMUNDA7_MODULE_KEY]: nextSlice } },
+        { userId: resolveAuthUserId(ctx) },
+      )
+      const profile = toUserProfile(saved)
+      return {
+        content: [{ type: "text" as const, text: summarize(profile) }],
+        structuredContent: profile as unknown as Record<string, unknown>,
+      }
+    }),
+  )
+}

@@ -29,8 +29,8 @@ panels straight into the chat. Built on [mcp-use](https://github.com/mcp-use/mcp
 - **Interactive widgets (MCP Apps)** — cockpit dashboard, process & incident panels, BPMN viewer,
   heatmaps and history timeline rendered for the user while the model gets a compact summary.
 - **Multi-engine routing** — talk to several engines at once (CIB Seven, Operaton and Camunda 7
-  mixed in one fleet) with sticky per-session engine selection; analytics aggregate or compare
-  across engines.
+  mixed in one fleet) with a per-user default engine plus per-call overrides; analytics aggregate
+  or compare across engines.
 - **Toolset scoping** — narrow the surface to `read-only`, `operations`, or `admin` per deployment.
 - **Self-hostable** — a single multi-arch (amd64/arm64) image on Docker Hub, plus a drop-in
   Micrometer metrics plugin for the engine.
@@ -104,17 +104,17 @@ never instance ids or variable values).
 
 A pnpm + Turbo monorepo. The server composes the two modules and serves them as one MCP endpoint.
 
-| Path                                                      | Package                                   | Role                                                                    |
-| --------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
-| [`apps/mcp-server-camunda7/`](apps/mcp-server-camunda7)   | `@miragon-ai/mcp-server-camunda7`         | The MCP host: composes modules, bundles widgets, serves HTTP on `:8400` |
-| [`packages/mcp-camunda7/`](packages/mcp-camunda7)         | `@miragon-ai/mcp-camunda7`                | Camunda 7 operations tools, widget tools, and React widgets             |
-| [`packages/mcp-analytics/`](packages/mcp-analytics)       | `@miragon-ai/mcp-analytics`               | Prometheus-backed analytics tools and dashboard widgets                 |
-| [`packages/client-camunda7/`](packages/client-camunda7)   | `@miragon-ai/client-camunda7`             | Generated CIB Seven REST SDK + MCP-oriented Zod schemas                 |
-| [`packages/client-analytics/`](packages/client-analytics) | `@miragon-ai/client-analytics`            | Prometheus client, PromQL query functions + metrics contract            |
-| [`packages/widget-shell/`](packages/widget-shell)         | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
-| [`engine-plugins/`](engine-plugins)                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin Micrometer metrics plugin for CIB Seven (Java 21)                |
-| [`playground/`](playground)                               | —                                         | Demo env: CIB Seven showcase, Compose stack, Fly.io deploy              |
-| [`docs/`](docs)                                           | `@miragon-ai/docs`                        | VitePress documentation site                                            |
+| Path                                                                                                      | Package                                   | Role                                                                    |
+| --------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
+| [`apps/mcp-server-camunda7/`](apps/mcp-server-camunda7)                                                   | `@miragon-ai/mcp-server-camunda7`         | The MCP host: composes modules, bundles widgets, serves HTTP on `:8400` |
+| [`packages/connectors/camunda/camunda7-connector/`](packages/connectors/camunda/camunda7-connector)       | `@miragon-ai/camunda7-connector`          | Camunda 7 operations tools, widget tools, and React widgets             |
+| [`packages/connectors/analytics/analytics-connector/`](packages/connectors/analytics/analytics-connector) | `@miragon-ai/analytics-connector`         | Prometheus-backed analytics tools and dashboard widgets                 |
+| [`packages/connectors/camunda/camunda7-client/`](packages/connectors/camunda/camunda7-client)             | `@miragon-ai/camunda7-client`             | Generated CIB Seven REST SDK + MCP-oriented Zod schemas                 |
+| [`packages/connectors/analytics/analytics-client/`](packages/connectors/analytics/analytics-client)       | `@miragon-ai/analytics-client`            | Prometheus client, PromQL query functions + metrics contract            |
+| [`packages/core/widget-shell/`](packages/core/widget-shell)                                               | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
+| [`engine-plugins/`](engine-plugins)                                                                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin Micrometer metrics plugin for CIB Seven (Java 21)                |
+| [`playground/`](playground)                                                                               | —                                         | Demo env: CIB Seven showcase, Compose stack, Fly.io deploy              |
+| [`docs/`](docs)                                                                                           | `@miragon-ai/docs`                        | VitePress documentation site                                            |
 
 ## Tools
 
@@ -185,8 +185,9 @@ The server can route to several engines — CIB Seven, Operaton and Camunda 7 mi
 Tag each engine in its metrics plugin
 (`ENGINE_ID`), register them in the server (`CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE` —
 `ENGINE_ID` must match the registered `id`, or that engine's analytics come back empty), and the
-host picks one per session via the `camunda7_engine` tool (`list` / `select` / `current`). Every
-operations tool also accepts a per-call `engine` override. Analytics tools take an optional `engine`
+host discovers them via the `camunda7_engine` tool (`list` / `select` / `current`); `select` saves
+an engine as the caller's default (a per-user profile setting, so it needs `MCP_OAUTH` identity).
+Every operations tool also accepts a per-call `engine` override, which works without any identity. Analytics tools take an optional `engine`
 filter to aggregate or compare. Each engine entry may carry its own `auth`
 (`{type, username?, password?, token?}`); entries without one use the global `CAMUNDA_*` settings.
 Entries may also declare their vendor via `flavor` (`cibseven` | `operaton` | `camunda7`, default

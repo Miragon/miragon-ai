@@ -1,0 +1,96 @@
+{
+  "name": "@miragon-ai/widget-shell",
+  "version": "0.7.0",
+  "description": "Shared widget kit for Miragon AI MCP Apps: UI primitives, view + data-feed builders, and the shell:* widget catalogue.",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "mcp-apps",
+    "widgets",
+    "react",
+    "ui",
+    "camunda"
+  ],
+  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/core/widget-shell#readme",
+  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "directory": "packages/core/widget-shell"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./ui": {
+      "types": "./dist/adapt-data-widget.d.ts",
+      "import": "./dist/adapt-data-widget.js"
+    },
+    "./widgets": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "test:mutation": "stryker run"
+  },
+  "peerDependencies": {
+    "@miragon/mcp-toolkit-core": "2.0.0",
+    "@miragon/mcp-toolkit-ui": "2.0.0",
+    "@tanstack/react-query": "5.101.4",
+    "bpmn-js": "18.22.1",
+    "mcp-use": "2.1.0",
+    "postgres": "3.4.9",
+    "react": "19.2.8"
+  },
+  "peerDependenciesMeta": {
+    "@miragon/mcp-toolkit-ui": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "postgres": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@miragon/mcp-toolkit-core": "2.0.0",
+    "@miragon/mcp-toolkit-ui": "2.0.0",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/vitest-runner": "9.6.1",
+    "@testing-library/react": "16.3.2",
+    "@types/react": "19.2.18",
+    "bpmn-js": "18.22.1",
+    "happy-dom": "20.11.2",
+    "mcp-use": "2.1.0",
+    "postgres": "3.4.9",
+    "react": "19.2.8",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  },
+  "dependencies": {
+    "clsx": "2.1.1",
+    "tailwind-merge": "3.6.0",
+    "zod": "4.4.3"
+  }
+}

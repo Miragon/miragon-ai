@@ -1,6 +1,6 @@
 ---
 name: add-analytics-feature
-description: Step-by-step house pattern for adding a new analytics capability — a PromQL query function in `packages/client-analytics`, a tool in `packages/mcp-analytics`, and optionally a dashboard widget. Use whenever adding or changing process analytics ("add a query for X", "new KPI/metric analysis", "extend the analytics dashboard"), PromQL queries, Prometheus-backed tools, or analytics widgets. Takes precedence over the generic mcp-apps-builder skill.
+description: Step-by-step house pattern for adding a new analytics capability — a PromQL query function in `packages/connectors/analytics/analytics-client`, a tool in `packages/connectors/analytics/analytics-connector`, and optionally a dashboard widget. Use whenever adding or changing process analytics ("add a query for X", "new KPI/metric analysis", "extend the analytics dashboard"), PromQL queries, Prometheus-backed tools, or analytics widgets. Takes precedence over the generic mcp-apps-builder skill.
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 ---
 
@@ -12,9 +12,9 @@ labeled samples into row shapes. There is no event store — anything that needs
 per-instance event ordering is out of reach and must be documented as such (see the
 `avg_wait_sec: null` notes in `queries/element.ts`).
 
-## Step 1 — query function in client-analytics
+## Step 1 — query function in analytics-client
 
-Add the function to `packages/client-analytics/src/queries/<topic>.ts` and export it
+Add the function to `packages/connectors/analytics/analytics-client/src/queries/<topic>.ts` and export it
 (plus its result types) from `src/queries/index.ts`. Always build selectors with the
 helpers from `src/prometheus.ts` — never concatenate label values by hand:
 
@@ -44,7 +44,7 @@ const [counts, sums] = await Promise.all([
 (`src/metric-names.ts`) — never raw `camunda_*` literals; a guard test in
 `src/metrics-contract.test.ts` fails on them. Histogram entries are the base name —
 append `_sum`/`_count`/`_bucket` at the call site. The single source of truth is
-`packages/client-analytics/metrics-contract.json`: if you need a _new_ metric or label,
+`packages/connectors/analytics/analytics-client/metrics-contract.json`: if you need a _new_ metric or label,
 change the contract first, then the Kotlin plugin
 (`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt` /
 `EngineStateMetrics.kt`), `METRIC_NAMES`, and any alert rules / Grafana dashboards —
@@ -78,15 +78,15 @@ Also cover the mapping logic (ranking, thresholds, rounding, null fields).
 
 ## Step 3 — input schema
 
-Add the tool's input schema to `packages/client-analytics/src/schemas/<topic>.ts` and
+Add the tool's input schema to `packages/connectors/analytics/analytics-client/src/schemas/<topic>.ts` and
 export it from `src/schemas/index.ts`. Reuse `engineFilterShape` from
 `src/schemas/shared.ts` for the optional `engine` filter and `periodField` for the
 `period` input (derived from `PERIODS` — never redeclare the period enum), and
 `.describe()` every field (see `elementBottleneckInput` in `src/schemas/path.ts`).
 
-## Step 4 — tool in mcp-analytics
+## Step 4 — tool in analytics-connector
 
-Register the tool in `packages/mcp-analytics/src/tools/<topic>.ts` through the registrar
+Register the tool in `packages/connectors/analytics/analytics-connector/src/tools/<topic>.ts` through the registrar
 (wired in `src/tools/index.ts`). Reference — `analytics_element_bottleneck` from
 `src/tools/element.ts`:
 
@@ -116,7 +116,7 @@ New domain file → add the `registerXyzTools(register)` call to `registerTools`
 
 The widget chain mirrors the camunda7 module:
 
-1. Component in `packages/mcp-analytics/src/widgets/`, taking a `data` prop.
+1. Component in `packages/connectors/analytics/analytics-connector/src/widgets/`, taking a `data` prop.
 2. Register it in `src/widgets/index.ts` in `analyticsWidgets` via
    `adaptDataWidget(MyWidget, "analytics:<dataType>")` (from
    `@miragon-ai/widget-shell/ui`).
@@ -126,7 +126,7 @@ The widget chain mirrors the camunda7 module:
    `analyticsWidgets` — verify your widget arrives there.
 5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with `inputSchema:`
    and spread `...showToolBinding(TOOL_NAME, "Title")` (from
-   `./widget-tool-shared.js` — native `view` binding named after the tool + required
+   `@miragon-ai/widget-shell/server` — native `view` binding named after the tool + required
    passthrough `outputSchema` + the Apps-SDK `_meta` half; never hand-write
    `_meta.ui` keys, mcp-use owns them), returning `buildComposedView(...)` /
    `buildSingleWidgetView(...)` from `@miragon-ai/widget-shell/server` (see

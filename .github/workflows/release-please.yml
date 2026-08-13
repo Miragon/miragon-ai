@@ -78,11 +78,11 @@ jobs:
       fail-fast: false
       matrix:
         package:
-          - client-camunda7
-          - client-analytics
-          - widget-shell
-          - mcp-camunda7
-          - mcp-analytics
+          - connectors/camunda/camunda7-client
+          - connectors/analytics/analytics-client
+          - core/widget-shell
+          - connectors/camunda/camunda7-connector
+          - connectors/analytics/analytics-connector
     uses: ./.github/workflows/publish-npm-package.yml
     with:
       package: ${{ matrix.package }}

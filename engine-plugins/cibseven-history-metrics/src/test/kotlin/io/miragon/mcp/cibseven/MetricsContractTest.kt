@@ -30,7 +30,7 @@ import kotlin.test.assertTrue
  * Kotlin side of the Kotlin<->TS metric contract. Verifies that the meters the
  * plugin actually emits ([ProcessMetrics] via [MetricsHistoryEventHandler],
  * [EngineStateMetrics]) stay in sync with
- * `packages/client-analytics/metrics-contract.json` — the single source of
+ * `packages/connectors/analytics/analytics-client/metrics-contract.json` — the single source of
  * truth consumed by the TS queries, the Prometheus alert rules and the Grafana
  * dashboards. A rename on either side fails this test.
  *
@@ -268,7 +268,7 @@ class MetricsContractTest {
 
     private companion object {
         const val ENGINE_ID = "test-engine"
-        const val CONTRACT_PATH = "packages/client-analytics/metrics-contract.json"
+        const val CONTRACT_PATH = "packages/connectors/analytics/analytics-client/metrics-contract.json"
 
         /**
          * Walks up from the Gradle test working directory (the module dir, i.e.

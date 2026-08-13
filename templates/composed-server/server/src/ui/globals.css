@@ -9,8 +9,8 @@
  * A module missing here renders with broken styling — no build error.
  */
 @source "../../node_modules/@miragon-ai/widget-shell/dist";
-@source "../../node_modules/@miragon-ai/mcp-camunda7/src";
-@source "../../node_modules/@miragon-ai/mcp-analytics/src";
+@source "../../node_modules/@miragon-ai/camunda7-connector/src";
+@source "../../node_modules/@miragon-ai/analytics-connector/src";
 @source "../../../modules/mcp-notes/src";
 @import "@miragon/mcp-toolkit-ui/globals.css";
 
