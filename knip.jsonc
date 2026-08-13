@@ -41,7 +41,7 @@
       ],
     },
 
-    "packages/client-camunda7": {
+    "packages/connectors/camunda/camunda7-client": {
       "vitest": {
         "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
       },
@@ -50,25 +50,25 @@
       "ignore": ["src/generated/**"],
     },
 
-    "packages/client-analytics": {
+    "packages/connectors/analytics/analytics-client": {
       "vitest": {
         "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
       },
     },
 
-    "packages/mcp-camunda7": {
+    "packages/connectors/camunda/camunda7-connector": {
       "vitest": {
         "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
       },
     },
 
-    "packages/mcp-analytics": {
+    "packages/connectors/analytics/analytics-connector": {
       "vitest": {
         "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
       },
     },
 
-    "packages/widget-shell": {
+    "packages/core/widget-shell": {
       "vitest": {
         "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
       },

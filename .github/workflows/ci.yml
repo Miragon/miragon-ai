@@ -43,7 +43,7 @@ jobs:
           name: coverage-summaries
           path: |
             apps/*/coverage/coverage-summary.json
-            packages/*/coverage/coverage-summary.json
+            packages/**/coverage/coverage-summary.json
           if-no-files-found: error
           retention-days: 1
 
@@ -99,7 +99,7 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: mutation-reports
-          path: packages/*/reports/mutation-report.json
+          path: packages/**/reports/mutation-report.json
           if-no-files-found: ignore
           retention-days: 1
 

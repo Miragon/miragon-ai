@@ -64,7 +64,7 @@ jobs:
         run: |
           version="${TAG#v}"
           deadline=$((SECONDS + 600))
-          for p in client-camunda7 client-analytics widget-shell mcp-camunda7 mcp-analytics; do
+          for p in camunda7-client analytics-client widget-shell camunda7-connector analytics-connector; do
             until npm view "@miragon-ai/$p@$version" version >/dev/null 2>&1; do
               if ((SECONDS >= deadline)); then
                 echo "::error::@miragon-ai/$p@$version not visible on npm after 10 minutes"

@@ -5,7 +5,7 @@ Multi-module Gradle build (Java 21) containing the CIB Seven process-metrics plu
 into the global registry, so any Micrometer export path surfaces them in Prometheus as `camunda_*`
 series — an OTLP push via `micrometer-registry-otlp` through the OTEL Collector (the playground
 default), an Actuator Prometheus scrape, or the OTEL Java agent's Micrometer bridge. There is no
-engine-side database. Those series are what the [analytics module](../packages/mcp-analytics) of
+engine-side database. Those series are what the [analytics module](../packages/connectors/analytics/analytics-connector) of
 [Miragon AI](../README.md) queries.
 
 Published to **Maven Central** as `io.miragon.mcp:cibseven-history-metrics` (released via
@@ -14,7 +14,7 @@ in [`../playground/cibseven-example/`](../playground/cibseven-example/) as a sep
 (composite via `includeBuild`).
 
 The metric names and labels it emits are governed by the
-[metrics contract](../packages/client-analytics/metrics-contract.json) — change a metric there first;
+[metrics contract](../packages/connectors/analytics/analytics-client/metrics-contract.json) — change a metric there first;
 `MetricsContractTest.kt` verifies this side against it.
 
 ## Consume it

@@ -56,8 +56,8 @@ Connect any MCP host to `http://localhost:8400/mcp` and call a tool.
 
 ## Build your own server
 
-The modules ship on public npm — `@miragon-ai/mcp-camunda7`,
-`@miragon-ai/mcp-analytics`, `@miragon-ai/widget-shell` plus the two client
+The modules ship on public npm — `@miragon-ai/camunda7-connector`,
+`@miragon-ai/analytics-connector`, `@miragon-ai/widget-shell` plus the two client
 packages, released in lockstep (pin one version across all of them).
 [`templates/composed-server/`](https://github.com/Miragon/miragon-ai/tree/main/templates/composed-server)
 is a ready-to-copy pnpm workspace that composes them with an example custom

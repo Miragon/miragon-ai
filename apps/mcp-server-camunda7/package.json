@@ -28,8 +28,8 @@
     "start": "cross-env NODE_ENV=production node dist/index.js"
   },
   "dependencies": {
-    "@miragon-ai/mcp-analytics": "workspace:*",
-    "@miragon-ai/mcp-camunda7": "workspace:*",
+    "@miragon-ai/analytics-connector": "workspace:*",
+    "@miragon-ai/camunda7-connector": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "1.1.0",
     "mcp-use": "2.1.0",

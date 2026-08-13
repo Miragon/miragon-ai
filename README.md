@@ -104,17 +104,17 @@ never instance ids or variable values).
 
 A pnpm + Turbo monorepo. The server composes the two modules and serves them as one MCP endpoint.
 
-| Path                                                      | Package                                   | Role                                                                    |
-| --------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
-| [`apps/mcp-server-camunda7/`](apps/mcp-server-camunda7)   | `@miragon-ai/mcp-server-camunda7`         | The MCP host: composes modules, bundles widgets, serves HTTP on `:8400` |
-| [`packages/mcp-camunda7/`](packages/mcp-camunda7)         | `@miragon-ai/mcp-camunda7`                | Camunda 7 operations tools, widget tools, and React widgets             |
-| [`packages/mcp-analytics/`](packages/mcp-analytics)       | `@miragon-ai/mcp-analytics`               | Prometheus-backed analytics tools and dashboard widgets                 |
-| [`packages/client-camunda7/`](packages/client-camunda7)   | `@miragon-ai/client-camunda7`             | Generated CIB Seven REST SDK + MCP-oriented Zod schemas                 |
-| [`packages/client-analytics/`](packages/client-analytics) | `@miragon-ai/client-analytics`            | Prometheus client, PromQL query functions + metrics contract            |
-| [`packages/widget-shell/`](packages/widget-shell)         | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
-| [`engine-plugins/`](engine-plugins)                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin Micrometer metrics plugin for CIB Seven (Java 21)                |
-| [`playground/`](playground)                               | —                                         | Demo env: CIB Seven showcase, Compose stack, Fly.io deploy              |
-| [`docs/`](docs)                                           | `@miragon-ai/docs`                        | VitePress documentation site                                            |
+| Path                                                                                                      | Package                                   | Role                                                                    |
+| --------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
+| [`apps/mcp-server-camunda7/`](apps/mcp-server-camunda7)                                                   | `@miragon-ai/mcp-server-camunda7`         | The MCP host: composes modules, bundles widgets, serves HTTP on `:8400` |
+| [`packages/connectors/camunda/camunda7-connector/`](packages/connectors/camunda/camunda7-connector)       | `@miragon-ai/camunda7-connector`          | Camunda 7 operations tools, widget tools, and React widgets             |
+| [`packages/connectors/analytics/analytics-connector/`](packages/connectors/analytics/analytics-connector) | `@miragon-ai/analytics-connector`         | Prometheus-backed analytics tools and dashboard widgets                 |
+| [`packages/connectors/camunda/camunda7-client/`](packages/connectors/camunda/camunda7-client)             | `@miragon-ai/camunda7-client`             | Generated CIB Seven REST SDK + MCP-oriented Zod schemas                 |
+| [`packages/connectors/analytics/analytics-client/`](packages/connectors/analytics/analytics-client)       | `@miragon-ai/analytics-client`            | Prometheus client, PromQL query functions + metrics contract            |
+| [`packages/core/widget-shell/`](packages/core/widget-shell)                                               | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
+| [`engine-plugins/`](engine-plugins)                                                                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin Micrometer metrics plugin for CIB Seven (Java 21)                |
+| [`playground/`](playground)                                                                               | —                                         | Demo env: CIB Seven showcase, Compose stack, Fly.io deploy              |
+| [`docs/`](docs)                                                                                           | `@miragon-ai/docs`                        | VitePress documentation site                                            |
 
 ## Tools
 

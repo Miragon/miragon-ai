@@ -11,7 +11,7 @@ on:
   workflow_call:
     inputs:
       package:
-        description: Package directory name under packages/
+        description: Package directory under packages/ (e.g. core/widget-shell)
         required: true
         type: string
 
@@ -39,8 +39,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # The npm name lives in the package.json — the directory name no longer
+      # mirrors it (packages/connectors/camunda/camunda7-connector etc.).
+      - id: pkg
+        name: Resolve package name
+        run: echo "name=$(node -p "require('./packages/${{ inputs.package }}/package.json').name")" >> "$GITHUB_OUTPUT"
+
       # Build the target package and its workspace dependencies only.
-      - run: pnpm --filter "@miragon-ai/${{ inputs.package }}..." run build
+      - run: pnpm --filter "${{ steps.pkg.outputs.name }}..." run build
 
       - name: Publish packages/${{ inputs.package }}
         run: |

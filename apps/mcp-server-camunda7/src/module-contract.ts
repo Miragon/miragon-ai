@@ -1,8 +1,8 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
 import type { ProfileSource } from "@miragon-ai/widget-shell/server"
-import type { ProfileStore } from "@miragon-ai/mcp-camunda7"
-import type { FetchBpmnXml } from "@miragon-ai/mcp-analytics"
+import type { ProfileStore } from "@miragon-ai/camunda7-connector"
+import type { FetchBpmnXml } from "@miragon-ai/analytics-connector"
 
 /**
  * Compile-time proof that the concrete profile store this app wires still

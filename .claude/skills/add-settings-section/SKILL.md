@@ -7,13 +7,13 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 # add-settings-section — module-owned user settings
 
 Settings live in ONE profile record per user/session, shared by all modules
-(`packages/mcp-camunda7/src/lib/profile-schema.ts`). Each module owns a **slice** under
+(`packages/connectors/camunda/camunda7-connector/src/lib/profile-schema.ts`). Each module owns a **slice** under
 `profile.modules.<module>`: the profile only transports it, the module owns its schema,
 validates it fail-soft on read, and writes it through its own save tool. The store merges
 per module key, so a save of `modules.<yours>` never touches another module's slice.
 
 Reference implementation — read it before writing anything:
-`packages/mcp-analytics/src/settings.ts` + `settings-tools.ts` +
+`packages/connectors/analytics/analytics-connector/src/settings.ts` + `settings-tools.ts` +
 `src/widgets/settings-section.tsx`.
 
 **Decide first: slice or core preference?** A setting only your module understands
@@ -63,7 +63,7 @@ export async function settingsFor(store: ProfileSource | undefined, ctx?: unknow
 Fail-soft on every axis is the rule, not politeness: a profile-store hiccup must never
 fail a read that only needs Prometheus/the engine. At the tool boundary the affected
 input becomes `.optional()` (no zod default) so "omitted" stays distinguishable from
-"explicitly set" — see `optionalPeriod` in `mcp-analytics/src/settings.ts`.
+"explicitly set" — see `optionalPeriod` in `analytics-connector/src/settings.ts`.
 
 ## Step 2 — the save input must be default-FREE
 
@@ -87,7 +87,7 @@ export const mySettingsSaveInput = z.object(withoutDefaults(mySettingsSchema.sha
 
 Analytics spells its input out by hand only because a save wants different wording
 ("Omitted → unchanged"). Either way, cover it with a test that asserts omitted keys stay
-**absent** after the parse (see `packages/mcp-analytics/src/settings.test.ts`, "keeps
+**absent** after the parse (see `packages/connectors/analytics/analytics-connector/src/settings.test.ts`, "keeps
 omitted fields ABSENT").
 
 ## Step 3 — the profile port + key resolution (do NOT reimplement)
@@ -140,7 +140,7 @@ Two rules the save tool must honor:
   registrar's `withToolsetFilter` never sees it and it must gate itself — against your
   module's **declared** toolset names, never an `toolset === "read-only"` compare (that
   fails open for every other name the day a second restrictive toolset appears). Copy
-  `packages/mcp-analytics/src/toolsets.ts`: a `<MODULE>_TOOLSETS` list, a type guard, and
+  `packages/connectors/analytics/analytics-connector/src/toolsets.ts`: a `<MODULE>_TOOLSETS` list, a type guard, and
   `allowsDurableWrites(toolset)` that fails open with a warning on unknown names. When it
   says no, skip registration; the view then reports `canSave: false` and the widget hides
   its Save button — the tool surface stays honest.
@@ -189,7 +189,7 @@ One self-fetching card, composed from `@miragon-ai/widget-shell/widgets` —
    must have an entry)
 4. `src/tool-names.ts` — constants for the `*_data` feed and the save tool, so a rename
    trips TS at every widget call site
-5. `packages/mcp-camunda7/src/widgets/cockpit-app/views.ts` → `cockpitViews.settings` —
+5. `packages/connectors/camunda/camunda7-connector/src/widgets/cockpit-app/views.ts` → `cockpitViews.settings` —
    append `{ row: [{ widget: "<module>:settings", props: {} }] }`
 
 Link 5 is the only place the settings page is not self-assembling: a hand-maintained list
@@ -210,7 +210,7 @@ document any new env var in `docs/operations.md` (see the `docs-style` skill).
 
 ## Step 7 — tests
 
-Mirror `packages/mcp-analytics/src/settings.test.ts`:
+Mirror `packages/connectors/analytics/analytics-connector/src/settings.test.ts`:
 
 - schema fills every default from `{}`
 - save input keeps omitted fields **absent** (the zod-4 partial trap)

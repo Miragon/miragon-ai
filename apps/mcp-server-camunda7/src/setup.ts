@@ -1,8 +1,12 @@
 import type { AppConfig, AppConfigEntry, AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
 
-import { camunda7Module, createBpmnXmlFetcher, type ProfileStore } from "@miragon-ai/mcp-camunda7"
-import { analyticsModule } from "@miragon-ai/mcp-analytics"
+import {
+  camunda7Module,
+  createBpmnXmlFetcher,
+  type ProfileStore,
+} from "@miragon-ai/camunda7-connector"
+import { analyticsModule } from "@miragon-ai/analytics-connector"
 import { createShellPlugin } from "@miragon-ai/widget-shell/server"
 import type { ModuleDefinition, SharedResources } from "./module-contract.js"
 import { createDefaultProfileStore } from "./persistence/index.js"

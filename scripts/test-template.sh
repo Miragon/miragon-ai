@@ -14,7 +14,16 @@ TEMPLATE="$ROOT/templates/composed-server"
 PACK_DIR="$(mktemp -d)"
 WORK="$(mktemp -d)/composed-server"
 
-PACKAGES=(client-camunda7 client-analytics widget-shell mcp-camunda7 mcp-analytics)
+# Package directories under packages/; npm names come from each package.json.
+PACKAGES=(
+  core/widget-shell
+  connectors/camunda/camunda7-client
+  connectors/camunda/camunda7-connector
+  connectors/analytics/analytics-client
+  connectors/analytics/analytics-connector
+)
+
+pkg_name() { node -p "require('$ROOT/packages/$1/package.json').name"; }
 
 # The template's committed @miragon-ai pins must match the workspace versions —
 # release-please bumps both together via extra-files; a drifted pin means an
@@ -27,13 +36,21 @@ ROOT="$ROOT" node - <<'EOF'
 const fs = require("fs")
 const root = process.env.ROOT
 const read = (p) => JSON.parse(fs.readFileSync(p, "utf8"))
-const pkgs = ["client-camunda7", "client-analytics", "widget-shell", "mcp-camunda7", "mcp-analytics"]
+const pkgDirs = [
+  "core/widget-shell",
+  "connectors/camunda/camunda7-client",
+  "connectors/camunda/camunda7-connector",
+  "connectors/analytics/analytics-client",
+  "connectors/analytics/analytics-connector",
+]
 const versions = Object.fromEntries(
-  pkgs.map((p) => ["@miragon-ai/" + p, read(`${root}/packages/${p}/package.json`).version]),
+  pkgDirs
+    .map((p) => read(`${root}/packages/${p}/package.json`))
+    .map((pj) => [pj.name, pj.version]),
 )
-// mcp-camunda7 declares toolkit-core (deps), toolkit-ui (devDeps) and
-// mcp-use (peer + devDeps), so its pins are the canonical ones.
-const camunda7 = read(`${root}/packages/mcp-camunda7/package.json`)
+// The camunda7 connector declares toolkit-core (deps), toolkit-ui (devDeps)
+// and mcp-use (peer + devDeps), so its pins are the canonical ones.
+const camunda7 = read(`${root}/packages/connectors/camunda/camunda7-connector/package.json`)
 for (const deps of [camunda7.dependencies, camunda7.peerDependencies, camunda7.devDependencies]) {
   for (const [name, pin] of Object.entries(deps ?? {})) {
     if (name.startsWith("@miragon/mcp-toolkit-") || name === "mcp-use") versions[name] = pin
@@ -62,12 +79,13 @@ EOF
 
 # Build what the tarballs ship (files: dist [+ src]).
 FILTERS=()
-for p in "${PACKAGES[@]}"; do FILTERS+=("--filter" "@miragon-ai/$p"); done
+for p in "${PACKAGES[@]}"; do FILTERS+=("--filter" "$(pkg_name "$p")"); done
 pnpm --dir "$ROOT" exec turbo run build "${FILTERS[@]}"
 
 for p in "${PACKAGES[@]}"; do
-  mkdir -p "$PACK_DIR/$p"
-  (cd "$ROOT/packages/$p" && pnpm pack --pack-destination "$PACK_DIR/$p" >/dev/null)
+  base="$(basename "$p")"
+  mkdir -p "$PACK_DIR/$base"
+  (cd "$ROOT/packages/$p" && pnpm pack --pack-destination "$PACK_DIR/$base" >/dev/null)
 done
 
 rsync -a --exclude node_modules --exclude dist --exclude .mcp-use "$TEMPLATE/" "$WORK/"
@@ -78,8 +96,9 @@ rsync -a --exclude node_modules --exclude dist --exclude .mcp-use "$TEMPLATE/" "
   echo ""
   echo "overrides:"
   for p in "${PACKAGES[@]}"; do
-    tgz=("$PACK_DIR/$p"/*.tgz)
-    echo "  \"@miragon-ai/$p\": \"file:${tgz[0]}\""
+    base="$(basename "$p")"
+    tgz=("$PACK_DIR/$base"/*.tgz)
+    echo "  \"$(pkg_name "$p")\": \"file:${tgz[0]}\""
   done
 } >> "$WORK/pnpm-workspace.yaml"
 

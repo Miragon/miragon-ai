@@ -4,7 +4,7 @@ import {
   createFileSystemProfileStore,
   createInMemoryProfileStore,
   type ProfileStore,
-} from "@miragon-ai/mcp-camunda7"
+} from "@miragon-ai/camunda7-connector"
 
 /**
  * Deliberately minimal persistence selection: filesystem-backed when the env

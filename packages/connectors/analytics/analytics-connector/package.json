@@ -1,0 +1,76 @@
+{
+  "name": "@miragon-ai/analytics-connector",
+  "version": "0.7.0",
+  "description": "Prometheus-backed process-analytics MCP module: tools, dashboards, and comparison widgets.",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "camunda",
+    "process-analytics",
+    "prometheus",
+    "widgets"
+  ],
+  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/connectors/analytics/analytics-connector#readme",
+  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "directory": "packages/connectors/analytics/analytics-connector"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./widgets": "./src/widgets/index.ts",
+    "./definition": "./src/definition.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.widgets.json",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "test:mutation": "stryker run"
+  },
+  "dependencies": {
+    "@miragon-ai/analytics-client": "workspace:*",
+    "@miragon-ai/widget-shell": "workspace:*",
+    "@miragon/mcp-toolkit-core": "1.1.0",
+    "zod": "4.4.3"
+  },
+  "peerDependencies": {
+    "mcp-use": "2.1.0",
+    "react": "19.2.8"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@miragon/mcp-toolkit-ui": "1.1.0",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/vitest-runner": "9.6.1",
+    "@types/react": "19.2.18",
+    "bpmn-js": "18.22.1",
+    "mcp-use": "2.1.0",
+    "react": "19.2.8",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

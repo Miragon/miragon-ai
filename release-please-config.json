@@ -21,38 +21,38 @@
         },
         {
           "type": "json",
-          "path": "packages/client-camunda7/package.json",
+          "path": "packages/connectors/camunda/camunda7-client/package.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
-          "path": "packages/client-analytics/package.json",
+          "path": "packages/connectors/analytics/analytics-client/package.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
-          "path": "packages/widget-shell/package.json",
+          "path": "packages/core/widget-shell/package.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
-          "path": "packages/mcp-camunda7/package.json",
+          "path": "packages/connectors/camunda/camunda7-connector/package.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
-          "path": "packages/mcp-analytics/package.json",
+          "path": "packages/connectors/analytics/analytics-connector/package.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
           "path": "templates/composed-server/server/package.json",
-          "jsonpath": "$.dependencies['@miragon-ai/mcp-analytics']"
+          "jsonpath": "$.dependencies['@miragon-ai/analytics-connector']"
         },
         {
           "type": "json",
           "path": "templates/composed-server/server/package.json",
-          "jsonpath": "$.dependencies['@miragon-ai/mcp-camunda7']"
+          "jsonpath": "$.dependencies['@miragon-ai/camunda7-connector']"
         },
         {
           "type": "json",

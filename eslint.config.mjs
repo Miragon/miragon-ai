@@ -7,8 +7,8 @@ import reactHooks from "eslint-plugin-react-hooks"
 // dedicated tsconfig.widgets.json / tsconfig.ui.json projects instead.
 const bundledUiFiles = [
   "apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}",
-  "packages/mcp-analytics/src/widgets/**/*.{ts,tsx}",
-  "packages/mcp-camunda7/src/widgets/**/*.{ts,tsx}",
+  "packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}",
+  "packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}",
 ]
 
 // Server tests (and the Playwright host simulation) live outside src/ (not
@@ -27,9 +27,9 @@ export const complexityRatchet = {}
 
 // Frozen at current length rounded up to the next 10 lines.
 export const maxLinesRatchet = {
-  "packages/mcp-camunda7/src/data/incident-panel-data.ts": 420,
-  "packages/mcp-camunda7/src/data/incident-panel-data.test.ts": 420,
-  "packages/mcp-camunda7/src/data/cockpit-data.ts": 410,
+  "packages/connectors/camunda/camunda7-connector/src/data/incident-panel-data.ts": 420,
+  "packages/connectors/camunda/camunda7-connector/src/data/incident-panel-data.test.ts": 420,
+  "packages/connectors/camunda/camunda7-connector/src/data/cockpit-data.ts": 410,
 }
 
 export default tseslint.config(
@@ -66,17 +66,17 @@ export default tseslint.config(
             "vitest.shared.ts",
             "apps/mcp-server-camunda7/vite.config.ts",
             "apps/mcp-server-camunda7/vitest.config.ts",
-            "packages/mcp-analytics/vitest.config.ts",
-            "packages/mcp-analytics/vitest.stryker.config.ts",
-            "packages/mcp-camunda7/vitest.config.ts",
-            "packages/mcp-camunda7/vitest.stryker.config.ts",
-            "packages/client-analytics/vitest.config.ts",
-            "packages/client-analytics/vitest.stryker.config.ts",
-            "packages/client-camunda7/vitest.config.ts",
-            "packages/client-camunda7/vitest.stryker.config.ts",
-            "packages/client-camunda7/openapi-ts.config.ts",
-            "packages/widget-shell/vitest.config.ts",
-            "packages/widget-shell/vitest.stryker.config.ts",
+            "packages/connectors/analytics/analytics-connector/vitest.config.ts",
+            "packages/connectors/analytics/analytics-connector/vitest.stryker.config.ts",
+            "packages/connectors/camunda/camunda7-connector/vitest.config.ts",
+            "packages/connectors/camunda/camunda7-connector/vitest.stryker.config.ts",
+            "packages/connectors/analytics/analytics-client/vitest.config.ts",
+            "packages/connectors/analytics/analytics-client/vitest.stryker.config.ts",
+            "packages/connectors/camunda/camunda7-client/vitest.config.ts",
+            "packages/connectors/camunda/camunda7-client/vitest.stryker.config.ts",
+            "packages/connectors/camunda/camunda7-client/openapi-ts.config.ts",
+            "packages/core/widget-shell/vitest.config.ts",
+            "packages/core/widget-shell/vitest.stryker.config.ts",
             "docs/.vitepress/config.ts",
             "docs/.vitepress/theme/index.ts",
           ],
@@ -93,8 +93,8 @@ export default tseslint.config(
       parserOptions: {
         project: [
           "apps/mcp-server-camunda7/tsconfig.ui.json",
-          "packages/mcp-analytics/tsconfig.widgets.json",
-          "packages/mcp-camunda7/tsconfig.widgets.json",
+          "packages/connectors/analytics/analytics-connector/tsconfig.widgets.json",
+          "packages/connectors/camunda/camunda7-connector/tsconfig.widgets.json",
         ],
         tsconfigRootDir: import.meta.dirname,
       },
@@ -147,14 +147,17 @@ export default tseslint.config(
   // feeds + module settings) — exactly the ignores list below. A durable
   // write registered there must gate itself against the module's toolset.
   {
-    files: ["packages/mcp-analytics/src/**/*.ts", "packages/mcp-camunda7/src/**/*.ts"],
+    files: [
+      "packages/connectors/analytics/analytics-connector/src/**/*.ts",
+      "packages/connectors/camunda/camunda7-connector/src/**/*.ts",
+    ],
     ignores: [
-      "packages/mcp-analytics/src/widget-tools.ts",
-      "packages/mcp-analytics/src/widget-tools/**",
-      "packages/mcp-analytics/src/settings-tools.ts",
-      "packages/mcp-camunda7/src/widget-tools.ts",
-      "packages/mcp-camunda7/src/widget-tools/**",
-      "packages/mcp-camunda7/src/tools/user-profile.ts",
+      "packages/connectors/analytics/analytics-connector/src/widget-tools.ts",
+      "packages/connectors/analytics/analytics-connector/src/widget-tools/**",
+      "packages/connectors/analytics/analytics-connector/src/settings-tools.ts",
+      "packages/connectors/camunda/camunda7-connector/src/widget-tools.ts",
+      "packages/connectors/camunda/camunda7-connector/src/widget-tools/**",
+      "packages/connectors/camunda/camunda7-connector/src/tools/user-profile.ts",
     ],
     rules: {
       "no-restricted-syntax": [
@@ -175,8 +178,8 @@ export default tseslint.config(
   {
     files: [
       "apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}",
-      "packages/mcp-analytics/src/widgets/**/*.{ts,tsx}",
-      "packages/mcp-camunda7/src/widgets/**/*.{ts,tsx}",
+      "packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}",
+      "packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}",
     ],
     rules: {
       "no-restricted-syntax": [
@@ -205,7 +208,11 @@ export default tseslint.config(
   // Global targets for all source code; the ratchet lists above freeze
   // today's offenders at their high-water mark.
   {
-    files: ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"],
+    files: [
+      "apps/*/src/**/*.{ts,tsx}",
+      "packages/core/*/src/**/*.{ts,tsx}",
+      "packages/connectors/*/*/src/**/*.{ts,tsx}",
+    ],
     rules: {
       complexity: ["error", 15],
       "max-lines": ["error", { max: 400, skipBlankLines: true, skipComments: true }],
@@ -213,7 +220,7 @@ export default tseslint.config(
   },
   // i18n message catalogs are data, not code — no length budget.
   {
-    files: ["packages/*/src/messages/*.sweep.ts"],
+    files: ["packages/connectors/*/*/src/messages/*.sweep.ts"],
     rules: { "max-lines": "off" },
   },
   ...Object.entries(complexityRatchet).map(([file, max]) => ({

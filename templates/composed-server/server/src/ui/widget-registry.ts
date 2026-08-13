@@ -1,6 +1,6 @@
 import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
-import { camunda7Widgets } from "@miragon-ai/mcp-camunda7/widgets"
-import { analyticsWidgets } from "@miragon-ai/mcp-analytics/widgets"
+import { camunda7Widgets } from "@miragon-ai/camunda7-connector/widgets"
+import { analyticsWidgets } from "@miragon-ai/analytics-connector/widgets"
 import { notesWidgets } from "@acme/mcp-notes/widgets"
 import { GenericDataTableWidget, GenericKpiGridWidget } from "@miragon-ai/widget-shell/widgets"
 
