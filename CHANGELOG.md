@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/Miragon/miragon-ai/compare/v0.8.0...v0.9.0) (2026-08-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **camunda7:** `cockpitViews.settings()` no longer takes zero arguments. Every builder in `cockpitViews` is now typed `(params: ViewParams, ctx?: ViewContext) => LayoutConfig`, so callers pass the route params plus, for the composed settings view, the host's widget ids: `cockpitViews.settings(params, { widgetIds })`. Called without the context it yields camunda7's own section alone.
+
+### Features
+
+* **camunda7:** assemble the settings page from the host widget registry ([#251](https://github.com/Miragon/miragon-ai/issues/251)) ([a4eda7e](https://github.com/Miragon/miragon-ai/commit/a4eda7e90dc4410ea26db44371dbadcfdb34b2a1))
+
 ## [0.8.0](https://github.com/Miragon/miragon-ai/compare/v0.7.0...v0.8.0) (2026-08-13)
 
 
