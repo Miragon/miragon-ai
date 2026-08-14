@@ -110,9 +110,9 @@ by name across ALL composed modules, including yours.
   `MCP_ACTIVE_MODULES` selects modules at runtime — all widgets stay bundled,
   inactive modules just register no tools.
 - **Exact version pins** (`save-exact` in `.npmrc`). Upgrade all `@miragon-ai/*`
-  packages together to one version; treat every `@miragon/mcp-toolkit-*` minor
-  as potentially breaking (0.x) and keep it at the version the `@miragon-ai`
-  packages pin.
+  packages together to one version; keep `@miragon/mcp-toolkit-*` at the version
+  the `@miragon-ai` packages pin, and `mcp-use` at the version the toolkit peers
+  exactly (toolkit 2.1.0 → `mcp-use@2.2.3`).
 - **Tailwind `@source` entries in `server/src/ui/globals.css`** must cover every
   module's widget sources — a missing entry renders unstyled widgets with no
   build error.
