@@ -33,16 +33,22 @@ describe("host widget registry covers the module catalogues", () => {
 })
 
 /**
- * The settings page composes one section widget per module, and its layout
- * (`cockpitViews.settings`) is a hand-maintained list of RAW cross-module ids
- * living in the camunda7 package. Both of its failure modes are SILENT:
- * forget to add a section and it is simply absent from the settings tab;
- * misspell it and `filterLayoutToWidgets` drops the cell. The convention
- * check below covers every module whose `definition` is listed in this file —
- * add yours to both describe blocks when you add a module.
+ * The settings page composes one section widget per module and assembles that
+ * layout from THIS server's widget registry: every widget id ending in
+ * `:settings` gets a row, in registration order — YOUR module's section
+ * included, with no edit in the camunda7 package. The failure mode stays
+ * SILENT: a section whose widget never reaches `widgetRegistry` is simply
+ * absent from the settings tab. The convention check below covers every module
+ * whose `definition` is listed in this file — add yours to both describe
+ * blocks when you add a module.
  */
 describe("settings page composes every module's settings section", () => {
-  const sectionIds = collectLayoutWidgets(cockpitViews.settings())
+  // What the cockpit passes at runtime: the ids this bundle can render.
+  const hostWidgetIds = Object.keys(widgetRegistry)
+  // The runtime call path; the settings view ignores the route params.
+  const settingsLayoutOf = (widgetIds: string[]) =>
+    cockpitViews.settings({ engine: "prod-a" }, { widgetIds })
+  const sectionIds = collectLayoutWidgets(settingsLayoutOf(hostWidgetIds))
 
   const cataloguedSections = [
     ...camunda7Definition.widgets.map((w) => w.id),
@@ -61,19 +67,37 @@ describe("settings page composes every module's settings section", () => {
   })
 
   it("survives filtering against the host registry with all sections intact", () => {
-    const filtered = filterLayoutToWidgets(cockpitViews.settings(), widgetRegistry)
+    const filtered = filterLayoutToWidgets(settingsLayoutOf(hostWidgetIds), widgetRegistry)
     expect(collectLayoutWidgets(filtered)).toEqual(sectionIds)
   })
 
   it("degrades to the remaining sections when a module is absent", () => {
-    // Tier-2 graceful degradation: a host without the analytics module drops
-    // that row instead of erroring on an unknown widget id.
+    // Tier-2 graceful degradation: a host without the analytics module renders
+    // no analytics section instead of erroring on an unknown widget id.
     const withoutAnalytics = Object.fromEntries(
       Object.entries(widgetRegistry).filter(([id]) => !id.startsWith("analytics:")),
     )
-    const filtered = filterLayoutToWidgets(cockpitViews.settings(), withoutAnalytics)
+    const filtered = filterLayoutToWidgets(
+      settingsLayoutOf(Object.keys(withoutAnalytics)),
+      withoutAnalytics,
+    )
     const remaining = collectLayoutWidgets(filtered)
     expect(remaining).toContain("camunda7:user-profile")
     expect(remaining.some((id) => id.startsWith("analytics:"))).toBe(false)
+  })
+
+  it("grows a row for a custom module's `<module>:settings` widget", () => {
+    // The extension point: give your section widget the `<module>:settings` id
+    // and spread your module's widget map into `widgetRegistry` — the settings
+    // tab picks it up. The stand-in id belongs to no composed module on purpose
+    // (NOT `notes:settings`): the day mcp-notes grows a real section, that id
+    // is already in `sectionIds` and the expectation below would demand it
+    // twice — a correct change turning this test red.
+    const CustomSection = () => null
+    const withCustomModule = { ...widgetRegistry, "your-module:settings": CustomSection }
+    const composed = collectLayoutWidgets(
+      filterLayoutToWidgets(settingsLayoutOf(Object.keys(withCustomModule)), withCustomModule),
+    )
+    expect(composed).toEqual([...sectionIds, "your-module:settings"])
   })
 })

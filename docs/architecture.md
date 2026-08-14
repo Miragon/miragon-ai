@@ -94,9 +94,11 @@ throughout: an unreadable slice or an unreachable store yields defaults rather
 than an error, so a profile-store hiccup can't break a call that only needs the
 engine or Prometheus.
 
-The settings page composes one section widget per module and resolves them at
-runtime, so a module that isn't mounted simply has no section instead of
-producing a broken tab.
+The settings page composes one section widget per module and assembles itself
+from the widgets the server actually bundles — every widget id ending in
+`:settings` becomes a row. A module that isn't mounted simply has no section
+instead of producing a broken tab, and a custom module in a composed server
+contributes its section by that convention alone.
 
 ## External systems
 

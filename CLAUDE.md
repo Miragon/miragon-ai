@@ -204,11 +204,16 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    excludes `modules`), and composed views reference foreign section widgets by raw
    id — resolved through `HostWidgetsProvider` (host root) and dropped by
    `filterLayoutToWidgets` when unresolvable, so a missing module's section disappears
-   instead of erroring. The settings LAYOUT (`cockpitViews.settings`) is the one
-   hand-maintained cross-module list; both its failure modes are silent (forgotten row =
-   invisible section, typo = dropped cell), so it is guarded by
-   `apps/mcp-server-camunda7/test/widget-registry.test.ts` against both module
-   catalogues — a new section widget belongs there too. Save-input schemas at tool
+   instead of erroring. The settings LAYOUT is not hand-maintained: `settingsLayout`
+   (`camunda7-connector/src/widgets/cockpit-app/views.ts`) assembles the page from the
+   HOST's widget registry — camunda7's own `camunda7:user-profile` panel first, then one
+   row per `<module>:settings` id in registration order — so a custom module in a
+   composed server contributes its section without an edit in the camunda7 package.
+   The convention (`<module>:settings`) is therefore load-bearing, and the failure mode
+   stays silent (a section whose widget never reaches the host registry is simply
+   absent), so `apps/mcp-server-camunda7/test/widget-registry.test.ts` asserts the
+   assembled layout against both module catalogues (the template test does the same for
+   its modules). Save-input schemas at tool
    boundaries must be default-FREE (zod 4 re-applies `.default()`s through `.partial()`,
    materializing omitted fields into silent resets — derive them with `withoutDefaults`
    from `@miragon-ai/widget-shell/server`; see

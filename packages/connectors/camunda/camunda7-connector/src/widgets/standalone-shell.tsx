@@ -220,7 +220,11 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
               </HostModelContext>
               <WidgetRenderer
                 layout={filterLayoutToWidgets(
-                  cockpitViews[current.section](buildViewParams(current, engineId ?? "")),
+                  cockpitViews[current.section](buildViewParams(current, engineId ?? ""), {
+                    // Same as the cockpit: a composed view (the settings page)
+                    // assembles its rows from this host's registry.
+                    widgetIds: Object.keys(drillWidgets),
+                  }),
                   drillWidgets,
                 )}
                 keys={{}}

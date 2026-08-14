@@ -43,9 +43,14 @@ const Harness: ComponentType<Record<string, unknown>> = () => (
 /** Stand-in for a FOREIGN module's section widget, as the host bundle registers it. */
 const ForeignSection = () => <div>analytics-section</div>
 
+/** A CUSTOM module's section — an id this package has never heard of. */
+const CustomSection = () => <div>acme-section</div>
+
 /** The shell as the host root mounts it: inside the full-registry provider. */
 const HarnessWithHostWidgets: ComponentType<Record<string, unknown>> = () => (
-  <HostWidgetsProvider widgets={{ "analytics:settings": ForeignSection }}>
+  <HostWidgetsProvider
+    widgets={{ "analytics:settings": ForeignSection, "acme:settings": CustomSection }}
+  >
     <Camunda7StandaloneShell>
       <DrillProbe />
     </Camunda7StandaloneShell>
@@ -132,9 +137,11 @@ describe("Camunda7StandaloneShell", () => {
     fireEvent.click(screen.getByText("drill-settings"))
 
     await screen.findByRole("navigation", { name: "Breadcrumb" })
-    // The settings view composes camunda7's own panel + the analytics module's
-    // section by raw id — the latter only resolves through the host registry.
+    // The settings view composes camunda7's own panel + one row per
+    // `<module>:settings` widget the host registered — including a CUSTOM
+    // module's section, which this package knows nothing about.
     expect(await screen.findByText("analytics-section")).toBeTruthy()
+    expect(await screen.findByText("acme-section")).toBeTruthy()
   })
 
   it("degrades to own widgets when the host provides no registry", async () => {

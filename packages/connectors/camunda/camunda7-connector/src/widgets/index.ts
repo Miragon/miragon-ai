@@ -18,10 +18,13 @@ import { CockpitApp } from "./cockpit-app/app.js"
 export { Camunda7StandaloneShell } from "./standalone-shell.js"
 
 /**
- * The cockpit's view→layout catalogue. Exported so the host app can ASSERT over
- * the composition — notably that `cockpitViews.settings` still lists every
- * module's settings section (a hand-maintained cross-module list that no other
- * check covers; see the app's `widget-registry.test.ts`).
+ * The cockpit's view→layout catalogue. Exported so a composition root can
+ * ASSERT over the composition — notably that every module it composes actually
+ * contributes its `<module>:settings` section to the settings page (see the
+ * app's `widget-registry.test.ts`). Those assertions go through the RUNTIME
+ * call path, `cockpitViews.settings(params, { widgetIds })`, so the router
+ * wiring is covered too; `settingsLayout` itself stays package-internal (its
+ * own unit tests import it directly) and off the published surface.
  */
 export { cockpitViews, filterLayoutToWidgets } from "./cockpit-app/views.js"
 
