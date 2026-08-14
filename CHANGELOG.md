@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0](https://github.com/Miragon/miragon-ai/compare/v0.7.0...v0.8.0) (2026-08-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **repo:** the npm packages @miragon-ai/mcp-camunda7, @miragon-ai/client-camunda7, @miragon-ai/mcp-analytics and @miragon-ai/client-analytics are renamed to @miragon-ai/camunda7-connector, @miragon-ai/camunda7-client, @miragon-ai/analytics-connector and @miragon-ai/analytics-client; the old names stay behind on the registry.
+
+### Code Refactoring
+
+* **repo:** split packages into core/connectors and extract the platform core into widget-shell ([#244](https://github.com/Miragon/miragon-ai/issues/244)) ([f5605d2](https://github.com/Miragon/miragon-ai/commit/f5605d21d0260702d81d525f2554dcfd7ea1ff44))
+
 ## [0.7.0](https://github.com/Miragon/miragon-ai/compare/v0.6.0...v0.7.0) (2026-08-12)
 
 
