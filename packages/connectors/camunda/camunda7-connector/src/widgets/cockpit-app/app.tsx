@@ -410,7 +410,12 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
           <NavProvider value={navigate}>
             <WidgetRenderer
               layout={filterLayoutToWidgets(
-                cockpitViews[current.section](buildViewParams(current, engineId)),
+                cockpitViews[current.section](buildViewParams(current, engineId), {
+                  // Composed views (the settings tab) assemble their rows from
+                  // what this host actually registered — including modules this
+                  // package has never heard of.
+                  widgetIds: Object.keys(cockpitWidgets),
+                }),
                 cockpitWidgets,
               )}
               keys={{}}

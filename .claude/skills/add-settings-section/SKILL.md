@@ -185,7 +185,7 @@ One self-fetching card, composed from `@miragon-ai/widget-shell/widgets` —
   pipeline data, so only the mounted component knows the self-fetched view.
 - Everything user-visible goes through the module's `useT()` catalogs (`de` + `en`).
 
-## Step 6 — registration (five links, one of them a peer edit)
+## Step 6 — registration (four links; the page assembles itself)
 
 1. `src/widgets/index.ts` — add the data-type constant + `adaptDataWidget(Widget, "<module>:settings")`
 2. `src/definition.ts` — widget metadata (`id`, `description`, `requires: []`,
@@ -196,20 +196,25 @@ One self-fetching card, composed from `@miragon-ai/widget-shell/widgets` —
    must have an entry)
 4. `src/tool-names.ts` — constants for the `*_data` feed and the save tool, so a rename
    trips TS at every widget call site
-5. `packages/connectors/camunda/camunda7-connector/src/widgets/cockpit-app/views.ts` → `cockpitViews.settings` —
-   append `{ row: [{ widget: "<module>:settings", props: {} }] }`
 
-Link 5 is the only place the settings page is not self-assembling: a hand-maintained list
-living in a **peer** module. Both its failure modes are silent — a forgotten row means an
-invisible section, a typo means a dropped cell — so
-`apps/mcp-server-camunda7/test/widget-registry.test.ts` asserts it against both module
-catalogues (convention: an id ending in `:settings` must appear in the layout, and every
-listed id must resolve in the host registry). Add your section there and that test turns
-green; forget it and it names exactly what is missing.
+**The `<module>:settings` id IS the registration on the settings page.**
+`settingsLayout` (`camunda7-connector/src/widgets/cockpit-app/views.ts`) assembles the
+page from the HOST's widget registry: camunda7's own `camunda7:user-profile` panel first,
+then one row per id ending in `:settings`, in registration order (the composition root's
+module order in `widget-registry.ts`). Nothing in the camunda7 package lists your module —
+which is exactly why a custom module in a composed server gets a first-class section too.
+Name the widget anything else and it renders only through your own
+`<module>_show_settings` tool.
 
-The id stays a raw string on purpose (tier-2 cross-module reference):
-`HostWidgetsProvider` resolves it at runtime and `filterLayoutToWidgets` drops the cell +
-emptied row when it resolves nowhere, so a host without your module degrades to "section
+The failure mode stays silent (a section whose widget never reaches the host registry is
+simply absent from the tab), so `apps/mcp-server-camunda7/test/widget-registry.test.ts`
+asserts the ASSEMBLED layout against both module catalogues: every catalogued `:settings`
+id must produce a row, and every row must resolve in the host registry. Land link 3 and
+that test turns green; forget it and it names exactly what is missing.
+
+Section ids stay raw strings on purpose (tier-2 cross-module reference):
+`HostWidgetsProvider` resolves them at runtime and `filterLayoutToWidgets` drops the cell +
+emptied row when one resolves nowhere, so a host without your module degrades to "section
 absent" instead of erroring.
 
 Also add the three tool names to `apps/mcp-server-camunda7/test/expected-tools.ts`, and

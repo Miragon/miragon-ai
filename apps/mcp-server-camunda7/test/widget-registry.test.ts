@@ -30,20 +30,26 @@ describe("host widget registry covers the module catalogues", () => {
 })
 
 /**
- * The settings page composes one section widget per module, and its layout
- * (`cockpitViews.settings`) is a hand-maintained list of RAW cross-module ids
- * living in the camunda7 package — the one link of the settings chain that
- * nothing else covers. Both of its failure modes are SILENT: forget to add your
- * section and it is simply absent from the settings tab; misspell it and
- * `filterLayoutToWidgets` drops the cell. Every other check stays green either
- * way, so this test is the only thing standing between a shipped settings
- * section and an invisible one.
+ * The settings page composes one section widget per module, and it assembles
+ * that layout from THIS host's widget registry (`settingsLayout`, by the
+ * `<module>:settings` convention) — so the page extends to modules the camunda7
+ * package has never heard of. Its failure modes stay SILENT: a section whose
+ * widget never reaches the host registry is simply absent from the settings
+ * tab, and an id that resolves nowhere is dropped by `filterLayoutToWidgets`.
+ * Every other check stays green either way, so this test is the only thing
+ * standing between a shipped settings section and an invisible one.
  *
  * This test lives in the app because only the composition root may see both
  * module catalogues at once (modules are peers and never import each other).
  */
 describe("settings page composes every module's settings section", () => {
-  const sectionIds = collectLayoutWidgets(cockpitViews.settings())
+  // The runtime input: the ids this host bundle can render, in registration
+  // order — exactly what the cockpit passes as the view context.
+  const hostWidgetIds = Object.keys(widgetRegistry)
+  // The runtime call path; the settings view ignores the route params.
+  const settingsLayoutOf = (widgetIds: string[]) =>
+    cockpitViews.settings({ engine: "prod-a" }, { widgetIds })
+  const sectionIds = collectLayoutWidgets(settingsLayoutOf(hostWidgetIds))
 
   /**
    * The convention that identifies a settings section in a module catalogue:
@@ -69,19 +75,33 @@ describe("settings page composes every module's settings section", () => {
     // The runtime path: HostWidgetsProvider resolves the raw ids and
     // filterLayoutToWidgets drops whatever it can't. With every module mounted,
     // nothing may be dropped.
-    const filtered = filterLayoutToWidgets(cockpitViews.settings(), widgetRegistry)
+    const filtered = filterLayoutToWidgets(settingsLayoutOf(hostWidgetIds), widgetRegistry)
     expect(collectLayoutWidgets(filtered)).toEqual(sectionIds)
   })
 
   it("degrades to the remaining sections when a module is absent", () => {
-    // Tier-2 graceful degradation: a host without the analytics module drops
-    // that row instead of erroring on an unknown widget id.
+    // Tier-2 graceful degradation: a host without the analytics module renders
+    // no analytics section instead of erroring on an unknown widget id.
     const withoutAnalytics = Object.fromEntries(
       Object.entries(widgetRegistry).filter(([id]) => !id.startsWith("analytics:")),
     )
-    const filtered = filterLayoutToWidgets(cockpitViews.settings(), withoutAnalytics)
+    const filtered = filterLayoutToWidgets(
+      settingsLayoutOf(Object.keys(withoutAnalytics)),
+      withoutAnalytics,
+    )
     const remaining = collectLayoutWidgets(filtered)
     expect(remaining).toContain("camunda7:user-profile")
     expect(remaining.some((id) => id.startsWith("analytics:"))).toBe(false)
+  })
+
+  it("extends to a CUSTOM module's section without an edit in the camunda7 package", () => {
+    // What a composed server (the starter template) relies on: register a
+    // `<module>:settings` widget in the host bundle and the page grows a row.
+    const CustomSection = () => null
+    const withCustomModule = { ...widgetRegistry, "acme:settings": CustomSection }
+    const composed = collectLayoutWidgets(
+      filterLayoutToWidgets(settingsLayoutOf(Object.keys(withCustomModule)), withCustomModule),
+    )
+    expect(composed).toEqual([...sectionIds, "acme:settings"])
   })
 })

@@ -83,6 +83,16 @@ Every widget must appear in four places, or it is silently absent somewhere:
 4. the module's `tool-names.ts` constant for every `show_*`/`*_data` tool
    referenced from widget code
 
+### Settings sections
+
+The cockpit's settings page assembles itself from `widgetRegistry`: camunda7's
+profile panel first, then one row per widget id ending in `:settings`, in
+registration order. Give your section widget the id `<module>:settings` and
+spread your module's widget map into `server/src/ui/widget-registry.ts` — your
+section then appears in the settings tab next to the camunda7 and analytics
+ones, with no fork of the camunda7 package. A module that isn't composed
+contributes no id and therefore no section.
+
 ### The three render paths
 
 - **Plain tools** (`src/tools.ts`, via `createToolRegistrar`): JSON for the
