@@ -41,6 +41,16 @@ re-run `pnpm install` to refresh `pnpm-lock.yaml` (the Docker build uses
 | `server/test/`                  | Guard tests — keep these; the wire-contract test covers your modules by naming convention, `widget-registry.test.ts` needs your `definition` added |
 | `modules/mcp-notes/`            | Example custom module: tools + widget + catalogue + sync test                                                                                      |
 
+## AI-first: agent instructions and skills
+
+The template ships agent guidance (`CLAUDE.md`) plus step-by-step skills in
+`.claude/skills/` for the four main task paths — `setup-server` (configure,
+brand, deploy), `create-module` (your own connector), `add-widget` (the widget
+path), and `add-settings-section` (per-user settings). Open this repo in
+Claude Code (or any agent that reads `CLAUDE.md`) and describe what you want;
+the skills encode the house patterns and point at the guard tests that keep
+you on them. Everything below works the same when done by hand.
+
 ## Adding your own module
 
 A module is a package that exports a `ModuleDefinition` (see
