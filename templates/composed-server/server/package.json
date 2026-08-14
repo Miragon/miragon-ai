@@ -20,13 +20,13 @@
     "@miragon-ai/analytics-connector": "0.8.0",
     "@miragon-ai/camunda7-connector": "0.8.0",
     "@miragon-ai/widget-shell": "0.8.0",
-    "@miragon/mcp-toolkit-core": "2.0.0",
-    "mcp-use": "2.1.0",
+    "@miragon/mcp-toolkit-core": "2.1.0",
+    "mcp-use": "2.2.3",
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@fontsource-variable/geist": "5.3.0",
-    "@miragon/mcp-toolkit-ui": "2.0.0",
+    "@miragon/mcp-toolkit-ui": "2.1.0",
     "@modelcontextprotocol/client": "2.0.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "22.19.15",

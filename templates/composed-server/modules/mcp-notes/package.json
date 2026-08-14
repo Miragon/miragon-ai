@@ -21,11 +21,11 @@
   },
   "dependencies": {
     "@miragon-ai/widget-shell": "0.8.0",
-    "@miragon/mcp-toolkit-core": "2.0.0",
+    "@miragon/mcp-toolkit-core": "2.1.0",
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "mcp-use": "2.1.0",
+    "mcp-use": "2.2.3",
     "react": "19.2.8"
   },
   "peerDependenciesMeta": {
@@ -34,10 +34,10 @@
     }
   },
   "devDependencies": {
-    "@miragon/mcp-toolkit-ui": "2.0.0",
+    "@miragon/mcp-toolkit-ui": "2.1.0",
     "@types/node": "22.19.15",
     "@types/react": "19.2.17",
-    "mcp-use": "2.1.0",
+    "mcp-use": "2.2.3",
     "react": "19.2.8",
     "typescript": "5.9.3",
     "vitest": "4.1.4"

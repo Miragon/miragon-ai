@@ -15,8 +15,8 @@ description: |
   Always consult the relevant reference files BEFORE implementing MCP features.
 ---
 
-> **⚠️ mcp-use 2.x (since 2026-08):** this repo now runs `mcp-use@2.1.0` /
-> `@miragon/mcp-toolkit-*@1.1.0`. Several idioms taught below are 1.x-only and
+> **⚠️ mcp-use 2.x (since 2026-08):** this repo now runs `mcp-use@2.2.3` /
+> `@miragon/mcp-toolkit-*@2.1.0`. Several idioms taught below are 1.x-only and
 > NO LONGER APPLY here: `mcp-use/server` imports (use the `mcp-use` root),
 > `schema:` on `server.tool` (use `inputSchema:`), `McpUseProvider`/`useWidget`
 > (use `bootstrapView` + the toolkit `HostBridge`), and any hand-stamped
