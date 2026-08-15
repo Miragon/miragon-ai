@@ -6,14 +6,10 @@ import tailwindcss from "@tailwindcss/vite"
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    // Bundle-weight guards for the widget bundle (assets are inlined via
-    // `assetsInlineLimit`, so unused weight is pure wire cost):
-    // - posthog-js: mcp-use dynamic-imports its telemetry client; the cockpit
-    //   sends none — a no-op stub saves ~180 KB minified.
-    // - geist: the full fontsource entry ships 5 subsets (incl. cyrillic +
-    //   vietnamese); the latin/latin-ext-only CSS saves ~100 KB of
-    //   incompressible base64 for an en/de product. Anchored regex so the
-    //   stub CSS's own `…/geist/files/*.woff2` urls keep resolving upstream.
+    // Bundle-weight guards (assets are inlined, so unused weight is pure wire
+    // cost): a no-op posthog stub (mcp-use's telemetry client, ~180 KB this
+    // server never uses) and a latin-only cut of the Geist font (~100 KB of
+    // unused subsets otherwise).
     alias: [
       {
         find: /^posthog-js$/,
@@ -24,21 +20,13 @@ export default defineConfig({
         replacement: fileURLToPath(new URL("./src/ui/geist-latin.css", import.meta.url)),
       },
     ],
-    // The widget packages (camunda7-connector, widget-shell, analytics-connector) and this
-    // app each resolve their own pnpm instance of the toolkit/React/Query libs
-    // (differing peer-dep hashes). Bundling multiple copies of @miragon/mcp-
-    // toolkit-ui gives each its own React context: McpAppView (this app's copy)
-    // sets the AppQueryProvider's CallToolContext, but a widget's useToolQuery
-    // (its package's copy) reads a *different* context → useCallTool() is
-    // undefined → every in-widget query is disabled and hangs on "Loading…".
-    // Same trap since mcp-use 2 for the module-scoped view runtime in
-    // `mcp-use/react` (the guide's "hooks require a browser view" crash).
-    // Dedupe collapses them to a single instance so the context matches.
-    //
-    // @miragon-ai/widget-shell is on the list because it is installed from npm
-    // here (in the miragon-ai monorepo it is workspace-linked and single-
-    // instance by construction): pnpm materializes one copy per peer-dep hash,
-    // and widget-shell carries the HostWidgetsProvider React context.
+    // LOAD-BEARING — never trim this list. The widget packages each resolve
+    // their own pnpm instance of the toolkit/React/Query libs; bundling two
+    // copies gives each its own React context, `useCallTool()` reads the
+    // wrong one, and every in-widget query hangs on "Loading…". Dedupe
+    // collapses them to a single instance. @miragon-ai/widget-shell is listed
+    // because it is installed from npm here and carries a React context of
+    // its own.
     dedupe: [
       "react",
       "react-dom",
@@ -51,9 +39,8 @@ export default defineConfig({
   },
   build: {
     // Two-file output (ES module + stylesheet) for createFrameworkApp's
-    // `app.bundle` — the mcp-use 2 native-view shape (the 1.x single-file
-    // HTML via vite-plugin-singlefile is gone). Assets stay inlined so the
-    // bundle remains self-contained inside the sandboxed view iframe.
+    // `app.bundle`, with all assets inlined so the bundle stays self-contained
+    // inside the sandboxed view iframe.
     assetsInlineLimit: 100_000_000,
     cssCodeSplit: false,
     rollupOptions: {

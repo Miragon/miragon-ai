@@ -61,8 +61,9 @@ The modules ship on public npm — `@miragon-ai/camunda7-connector`,
 packages, released in lockstep (pin one version across all of them).
 [`templates/composed-server/`](https://github.com/Miragon/miragon-ai/tree/main/templates/composed-server)
 is a ready-to-copy pnpm workspace that composes them with an example custom
-module (tools, widget, guard tests included); its `README.md` documents the
-module contract and the invariants. CI runs the template against the
+module (tools, widget, guard tests included); its `CLAUDE.md` and
+`.claude/skills/` document the module contract and the invariants, its
+`README.md` is the quick tour. CI runs the template against the
 workspace's packed packages on every change (`scripts/test-template.sh`).
 Each release also syncs it — tested against the published packages, with a
 committed lockfile — to the read-only mirror

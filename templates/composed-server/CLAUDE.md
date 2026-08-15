@@ -2,8 +2,8 @@
 
 Guidance for AI agents working in this repository — a composed MCP server built
 from the published `@miragon-ai` modules (camunda7 BPM operations, Prometheus
-process analytics) plus your own custom modules. `README.md` is the full
-overview; this file is the agent digest.
+process analytics) plus your own custom modules. `README.md` is the quick tour
+for humans; this file plus the skills carry the architecture rules.
 
 The skills in `.claude/skills/` are step-by-step walkthroughs for the four main
 task paths — read the matching one BEFORE starting:
@@ -33,12 +33,12 @@ Use the inspector (`http://localhost:8400/inspector`, `pnpm dev` only) to call
 tools and render widgets manually — `notes_show_notes` works without any
 external infrastructure.
 
-## Architecture invariants (short form — details in README.md and the skills)
+## Architecture invariants (short form — details in the skills)
 
 1. **Modules are self-contained peers; the server is a thin composition root.**
-   A module is a package exporting a `ModuleDefinition` (see
-   `server/src/module-contract.ts` — conformance is structural, modules never
-   import the server or each other). Wiring a module touches the server in four
+   A module is a package exporting a `ModuleDefinition` (the port type in
+   `server/src/setup.ts` — conformance is structural, modules never import
+   the server or each other). Wiring a module touches the server in four
    places (`MODULES` in `setup.ts`, the spread in `ui/widget-registry.ts`, a
    Tailwind `@source` in `ui/globals.css`, the definition in
    `test/widget-registry.test.ts`) plus the `workspace:*` dependency — the

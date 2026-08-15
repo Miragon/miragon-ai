@@ -1,37 +1,62 @@
 import type { AppConfig, AppConfigEntry, AppPlugin } from "@miragon/mcp-toolkit-core"
+import { createFileSystemDashboardStore } from "@miragon/mcp-toolkit-core/tools"
+import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import type { MCPServer } from "mcp-use"
 
 import { camunda7Module, createBpmnXmlFetcher } from "@miragon-ai/camunda7-connector"
-import { analyticsModule } from "@miragon-ai/analytics-connector"
+import { analyticsModule, type FetchBpmnXml } from "@miragon-ai/analytics-connector"
 import { notesModule } from "@acme/mcp-notes"
 import {
   composeModules,
   createShellPlugin,
+  profileStoreFromEnv,
+  startProfileSessionCleanup,
+  type ComposableModule,
   type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
-import type { ModuleDefinition, SharedResources } from "./module-contract.js"
-import { createProfileStore } from "./persistence.js"
 
 /**
- * The bundle definition: which modules THIS app composes. Each module brings
- * its own config schema, env mapping and known env vars (see
- * `module-contract.ts`) — this file only selects (via the shared
- * `composeModules` machinery), warns, and wires.
+ * Cross-module resources the server wires at boot and threads into every
+ * module's plugin. App-owned on purpose: which module's capability reaches
+ * which other module is configuration knowledge — modules stay peers and
+ * never import each other.
+ */
+export interface SharedResources {
+  /**
+   * One per-session preference store for the whole server (language, theme,
+   * engine and dashboard defaults). Filesystem-backed when `MCP_PROFILE_DIR`
+   * is set, else in-memory.
+   */
+  profileStore: ProfileStore
+  /**
+   * BPMN-XML lookup from the camunda7 module, consumed by the analytics
+   * heatmap. Absent when camunda7 is inactive — consumers degrade gracefully.
+   */
+  fetchBpmnXml?: FetchBpmnXml
+}
+
+/**
+ * The port every mounted module satisfies — structurally: modules never
+ * import this file, and your own module doesn't have to either. The port
+ * shape and selection machinery live in `@miragon-ai/widget-shell/server`;
+ * this app only instantiates it with its own `SharedResources`.
+ */
+export type ModuleDefinition = ComposableModule<SharedResources>
+
+/**
+ * Which modules THIS server composes. Each module brings its own config
+ * schema, env mapping and known env vars — this file only selects and wires.
  *
- * Adding a module touches four places (README "Adding your own module"):
- * this list, the widget spread in `src/ui/widget-registry.ts` (link 3 of the
- * four-link widget chain), a Tailwind `@source` entry in
- * `src/ui/globals.css` (missing = silently unstyled widgets), and the
- * module's `definition` in `test/widget-registry.test.ts` so the guard
- * covers it.
+ * Adding a module touches four places (the `create-module` skill walks
+ * through them): this list, the spread in `src/ui/widget-registry.ts`, a
+ * Tailwind `@source` entry in `src/ui/globals.css`, and the module's
+ * `definition` in `test/widget-registry.test.ts`.
  */
 const MODULES: readonly ModuleDefinition[] = [camunda7Module, analyticsModule, notesModule]
 
 /**
  * App-owned env vars; each module contributes its own slice via
- * `knownEnvVars`. Every known var contributes its prefix to the typo watcher
- * (NOTES_TITLE → NOTES_, PROMETHEUS_URL → PROMETHEUS_, …), so custom modules
- * get the same coverage as the CAMUNDA_/MCP_ families.
+ * `knownEnvVars`. Every known var feeds the boot-time typo warner.
  */
 const APP_ENV_VARS = [
   "MCP_URL",
@@ -58,18 +83,49 @@ export function getAppConfig(): AppConfig {
   return composition.appConfig()
 }
 
+// ── Persistence ──────────────────────────────────────────────────────────
+// Deliberately minimal: filesystem-backed when the env knob is set (survives
+// restarts), in-memory otherwise. For Postgres stores with migrations, see
+// the stock server (`apps/mcp-server-camunda7/src/persistence/` in the
+// miragon-ai repo).
+
+export function createProfileStore(env: NodeJS.ProcessEnv = process.env): ProfileStore {
+  return profileStoreFromEnv(env)
+}
+
+/** `undefined` lets the toolkit fall back to its in-memory dashboard store. */
+export function createDashboardStore(
+  env: NodeJS.ProcessEnv = process.env,
+): DashboardStore | undefined {
+  return env.MCP_DASHBOARD_DIR
+    ? createFileSystemDashboardStore({ dir: env.MCP_DASHBOARD_DIR })
+    : undefined
+}
+
 /**
- * Cross-module wiring — the one thing that stays app-owned by design: which
- * module's capability reaches which other module is configuration knowledge
- * (see `module-contract.ts`).
+ * Expire SESSION-keyed profile records (`MCP_PROFILE_SESSION_TTL_DAYS` tunes
+ * the window, default 30 days, `0` disables).
+ */
+export function startSessionCleanup(
+  store: ProfileStore,
+  env: NodeJS.ProcessEnv = process.env,
+): () => void {
+  return startProfileSessionCleanup(store, { env, label: "acme-mcp" })
+}
+
+// ── Plugins ──────────────────────────────────────────────────────────────
+
+/**
+ * Cross-module wiring — deliberately app-owned: which module's capability
+ * reaches which other module is configuration knowledge.
  */
 function buildSharedResources(
   entries: AppConfigEntry[],
   profileStore: ProfileStore,
 ): SharedResources {
-  // BPMN-XML lookup from the camunda7 module (its primary engine) for modules
-  // that need diagram XML but must not depend on the engine SDK — most notably
-  // the analytics heatmap. Absent when camunda7 is inactive (consumers degrade).
+  // camunda7's BPMN-XML lookup for modules that need diagram XML without an
+  // engine-SDK dependency (the analytics heatmap). Absent when camunda7 is
+  // inactive — consumers degrade gracefully.
   const camunda7Entry = entries.find((e) => e.app === camunda7Module.name)
   if (!camunda7Entry) return { profileStore }
   return { profileStore, fetchBpmnXml: createBpmnXmlFetcher(camunda7Entry.config) }
@@ -77,8 +133,7 @@ function buildSharedResources(
 
 /**
  * `index.ts` passes the store it built; the default keeps argument-less
- * callers (tests) on the filesystem/in-memory path without duplicating that
- * selection here.
+ * callers (tests) working without duplicating that selection here.
  */
 export function getPlugins(
   profileStore: ProfileStore = createProfileStore(),
@@ -86,9 +141,8 @@ export function getPlugins(
   const entries = composition.appEntries()
   const shared = buildSharedResources(entries, profileStore)
   return [
-    // Always-on generic widgets (`shell:*`) — no tools, no steps, so they are
-    // deliberately outside the MCP_ACTIVE_MODULES selection. Catalogue +
-    // components both live in @miragon-ai/widget-shell (apps own no domain UI).
+    // Always-on generic widgets (`shell:*`) — no tools, so deliberately
+    // outside the MCP_ACTIVE_MODULES selection.
     createShellPlugin(),
     ...composition.pluginsFor(entries, shared),
   ]

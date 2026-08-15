@@ -36,6 +36,13 @@ export {
   type McpRequestInfo,
 } from "./request-context.js"
 export {
+  installToolCallLogging,
+  resolvePort,
+  swallowDevCliViewsPrime,
+  type ResolvePortOptions,
+  type ToolCallMiddlewareHost,
+} from "./host-boot.js"
+export {
   LOCALES,
   PROFILE_SCHEMA_VERSION,
   THEMES,

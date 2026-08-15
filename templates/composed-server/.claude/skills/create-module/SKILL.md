@@ -7,9 +7,9 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 # create-module — your own connector module
 
 A module is a workspace package that exports a module-definition object
-conforming **structurally** to the server's port (`server/src/module-contract.ts`
-— your module never imports the server, the server never reaches into your
-module). Modules are peers: they never import each other; anything shared goes
+conforming **structurally** to the server's port (the `ModuleDefinition` type
+in `server/src/setup.ts` — your module never imports the server, the server
+never reaches into your module). Modules are peers: they never import each other; anything shared goes
 through `@miragon-ai/widget-shell` or the app-wired `SharedResources`.
 
 **Reference implementation: `modules/mcp-notes`.** Copy it rather than
@@ -58,18 +58,16 @@ The contract, field by field (see `notesModule`):
   built-in ones.
 - `supportsToolsets` — `false` unless you implement Step 5.
 - `createPlugin(config, shared)` — validate `config` with your zod schema
-  (**this** is where validation lives) and return the `AppPlugin`. `shared` is
-  the app-wired cross-module resource bag; type the fields you consume
-  structurally (e.g. `profileStore?: ProfileSource`) and tolerate their
-  absence.
+  (**this** is where validation lives) and return the `AppPlugin`: construct
+  your data source/client once and pass it to both `registerTools` and
+  `registerWidgetTools`. `shared` is the app-wired cross-module resource bag;
+  type the fields you consume structurally (e.g.
+  `profileStore?: ProfileSource`) and tolerate their absence.
 - Optional `bootWarnings(env)` — return actionable hints for misconfigured
   deployments (see the analytics module's Prometheus-URL warning).
 
-## Step 4 — plugin, catalogue, tools
+## Step 4 — catalogue and tools
 
-- `src/plugin.ts` — assembles the `AppPlugin` from the validated config:
-  construct your data source/client once here and pass it to both
-  `registerTools` and `registerWidgetTools`.
 - `src/definition.ts` — the module catalogue: `name`, `steps: []`, and one
   entry per widget (start with `widgets: []` if you have none yet).
 - `src/tools.ts` — plain tools **for the model**, registered through
