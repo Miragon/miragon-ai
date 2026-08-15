@@ -1,10 +1,8 @@
 /**
- * No-op stand-in aliased over `posthog-js` (see vite.config.ts). mcp-use's
- * McpUseProvider dynamic-imports posthog for its own telemetry; under
- * vite-singlefile the dynamic import is force-inlined, shipping ~180 KB of
- * analytics code into every widget iframe. The cockpit sends no telemetry, so
- * the stub keeps the interface mcp-use touches (init/capture/identify/reset)
- * and drops the weight.
+ * No-op stand-in aliased over `posthog-js` (see vite.config.ts): mcp-use
+ * dynamic-imports posthog for its own telemetry, which the bundle would
+ * force-inline (~180 KB). This server sends no telemetry, so the stub keeps
+ * the interface mcp-use touches and drops the weight.
  */
 type Noop = (...args: unknown[]) => void
 const noop: Noop = () => undefined

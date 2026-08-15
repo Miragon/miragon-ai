@@ -6,7 +6,7 @@ import type { ComponentProps } from "react"
  * Host-chrome strings per locale. The widgets localize via their module
  * catalogs, but the McpAppView chrome (refresh button, loading/fullscreen
  * labels) renders the toolkit's English defaults unless the `labels` prop is
- * set — this binds it to the profile locale the ProfileGate provides.
+ * set — this binds it to the locale the ProfileGate provides.
  */
 const LABELS: Record<string, McpAppViewLabels> = {
   de: {

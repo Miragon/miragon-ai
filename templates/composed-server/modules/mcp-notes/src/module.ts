@@ -2,27 +2,48 @@ import { z } from "zod"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
 import type { ProfileSource } from "@miragon-ai/widget-shell/server"
-import { createPlugin } from "./plugin.js"
+import { createNotesStore } from "./notes-store.js"
+import { registerTools } from "./tools.js"
+import { registerWidgetTools } from "./widget-tools.js"
+import { definition } from "./definition.js"
 
 /**
- * Self-contained module definition for host apps: everything the app needs to
- * mount the notes module without knowing its config surface. Conforms
- * structurally to the app's `ModuleDefinition` port (`src/module-contract.ts`
- * in the server package) — no import of the app.
+ * Self-contained module definition: everything the server needs to mount the
+ * notes module. Conforms structurally to the server's `ModuleDefinition` port
+ * (`server/src/setup.ts`) — no import of the server.
  */
 
 const notesConfigSchema = z.object({
   title: z.string().default("Team Notes"),
 })
 
+export interface NotesPluginConfig {
+  /** Heading shown in the notes widget. */
+  title: string
+}
+
 /**
- * Cross-module resources the host app threads in (structural, app-owned).
- * This simple module uses none of them — the field documents what arrives:
- * modules that localize summaries or persist per-user settings consume
- * `profileStore` (compare the analytics module).
+ * Cross-module resources the server threads in. This simple module uses none
+ * of them; modules that persist per-user settings consume `profileStore`
+ * (compare the analytics module).
  */
 interface NotesModuleShared {
   profileStore?: ProfileSource
+}
+
+/** Constructs the data source once and hands it to both tool registrations. */
+export function createPlugin(config: NotesPluginConfig): AppPlugin<MCPServer> {
+  const store = createNotesStore()
+  return {
+    definition,
+    appConfig: { store },
+    registerTools: (server) => {
+      registerTools(server, store)
+    },
+    registerWidgetTools: (server) => {
+      registerWidgetTools(server, store, config.title)
+    },
+  }
 }
 
 export const notesModule = {

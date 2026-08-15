@@ -14,17 +14,17 @@ plus the `@miragon/mcp-toolkit-*` packages) for Camunda 7 / CIB Seven BPM
 operations and Prometheus-backed process analytics, including interactive React widgets
 (MCP Apps).
 
-| Path                                                 | Contents                                                                                                                                                        |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/mcp-server-camunda7/`                          | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                                                                   |
-| `packages/connectors/camunda/camunda7-connector/`    | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                                                                        |
-| `packages/connectors/analytics/analytics-connector/` | analytics module: Prometheus-backed tools, dashboards, comparison widgets                                                                                       |
-| `packages/connectors/camunda/camunda7-client/`       | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                                                                            |
-| `packages/connectors/analytics/analytics-client/`    | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                                                                       |
-| `packages/core/widget-shell/`                        | Shared widget kit: UI primitives incl. `useApplyTheme` (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders + the `shell:*` catalogue (`/server`) |
-| `engine-plugins/`                                    | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                                                                          |
-| `playground/`                                        | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                                                                               |
-| `docs/`                                              | VitePress docs site (see the `docs-style` skill before editing)                                                                                                 |
+| Path                                                 | Contents                                                                                                                                                                                                                        |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/mcp-server-camunda7/`                          | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                                                                                                                                   |
+| `packages/connectors/camunda/camunda7-connector/`    | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                                                                                                                                        |
+| `packages/connectors/analytics/analytics-connector/` | analytics module: Prometheus-backed tools, dashboards, comparison widgets                                                                                                                                                       |
+| `packages/connectors/camunda/camunda7-client/`       | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                                                                                                                                            |
+| `packages/connectors/analytics/analytics-client/`    | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                                                                                                                                       |
+| `packages/core/widget-shell/`                        | Shared widget kit: UI primitives incl. `useApplyTheme` + the host app shell `AppShellProviders` (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders, the `shell:*` catalogue + the host-boot helpers (`/server`) |
+| `engine-plugins/`                                    | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                                                                                                                                          |
+| `playground/`                                        | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                                                                                                                                               |
+| `docs/`                                              | VitePress docs site (see the `docs-style` skill before editing)                                                                                                                                                                 |
 
 ## Commands
 
@@ -192,7 +192,15 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    only declares the module list and wires `SharedResources` (profile store +
    `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap;
    analytics has NO engine-SDK dependency). Apps own no domain UI: widget catalogues and
-   components live in packages. Cross-module UI is tiered: `shell:*` widgets via
+   components live in packages — and no boot plumbing either. The bundle root's provider
+   stack (`AppShellProviders`: theme → host bridge → display mode → `ProfileGate` →
+   host widget registry; order is load-bearing) plus `LocalizedAppView` live in
+   `@miragon-ai/widget-shell/widgets`, the mcp-use boot workarounds
+   (`installToolCallLogging`, `swallowDevCliViewsPrime`, `resolvePort`) in
+   `/server` — so `src/ui/main.tsx` and `src/index.ts` stay composition (registry,
+   profile-feed name, app-specific layers like `Camunda7StandaloneShell`) and a
+   toolkit/mcp-use migration lands once instead of in every composed-server fork.
+   Cross-module UI is tiered: `shell:*` widgets via
    `props.dataKey`; raw tool-name strings with graceful degradation (reference:
    `process-incidents/flow.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
    dedicated package created with the first real view — never in the app, never as

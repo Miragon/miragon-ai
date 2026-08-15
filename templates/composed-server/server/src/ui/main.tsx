@@ -1,57 +1,36 @@
-import { StrictMode, type ReactNode } from "react"
-import { ThemeProvider, bootstrapView, useDisplayMode } from "mcp-use/react"
-import { McpUseHostBridgeProvider } from "@miragon/mcp-toolkit-ui/app"
-import { DisplayModeProvider, HostWidgetsProvider } from "@miragon-ai/widget-shell/widgets"
+import { StrictMode } from "react"
+import { bootstrapView } from "mcp-use/react"
+import { AppShellProviders, LocalizedAppView } from "@miragon-ai/widget-shell/widgets"
 import { Camunda7StandaloneShell } from "@miragon-ai/camunda7-connector/widgets"
 import { widgetRegistry } from "./widget-registry.js"
-import { LocalizedAppView } from "./app-view-labels.js"
-import { ProfileGate } from "./profile-gate.js"
 import "./globals.css"
 
 /**
- * Bridges the view-scoped display mode into the portable widget context:
- * `useDisplayMode` is an mcp-use view hook (legal only under `bootstrapView`),
- * while `WidgetShell` & friends read the host-agnostic `DisplayModeProvider`
- * so they render unchanged in fixtures and standalone embeds.
+ * Stable name of the camunda7 user-profile feed (app-only `*_data` tool).
+ * Hardcoded so the host bundle doesn't take a build-time dependency on the
+ * module's tool-name constants — the feed name is part of the module contract.
  */
-function ViewDisplayMode({ children }: { children: ReactNode }) {
-  const { displayMode } = useDisplayMode()
-  return <DisplayModeProvider mode={displayMode}>{children}</DisplayModeProvider>
-}
+const PROFILE_DATA_TOOL = "camunda7_user_profile_data"
 
 /**
- * The document's MCP App view. `McpToolkitApp` composes exactly
- * ThemeProvider → McpUseHostBridgeProvider → McpAppView; this root inserts
- * the app-owned layers in between (per its docs, the supported way to build
- * a custom shell under your own `bootstrapView` mount).
+ * The document's MCP App view: the shared provider stack (theme, host bridge,
+ * display mode, profile locale/theme, widget registry) plus this app's own
+ * layers.
  */
 function AppRoot() {
   return (
     <StrictMode>
-      <ThemeProvider>
-        <McpUseHostBridgeProvider>
-          <ViewDisplayMode>
-            <ProfileGate>
-              {/* The full registry, provided for composed views that render another
-                  module's section widget by raw id (the cockpit settings tab). */}
-              <HostWidgetsProvider widgets={widgetRegistry}>
-                {/* Client-side drill-in for standalone camunda7 widget renders — the
-                    same clicks that navigate inside the cockpit navigate here too,
-                    instead of degrading to a chat follow-up. Inert for the cockpit
-                    (own NavProvider) and for non-camunda7 widgets (no useNav). */}
-                <Camunda7StandaloneShell>
-                  <LocalizedAppView widgets={widgetRegistry} />
-                </Camunda7StandaloneShell>
-              </HostWidgetsProvider>
-            </ProfileGate>
-          </ViewDisplayMode>
-        </McpUseHostBridgeProvider>
-      </ThemeProvider>
+      <AppShellProviders widgets={widgetRegistry} profileTool={PROFILE_DATA_TOOL}>
+        {/* Client-side drill-in for standalone camunda7 widget renders;
+            inert for the cockpit and for non-camunda7 widgets. */}
+        <Camunda7StandaloneShell>
+          <LocalizedAppView widgets={widgetRegistry} />
+        </Camunda7StandaloneShell>
+      </AppShellProviders>
     </StrictMode>
   )
 }
 
-// bootstrapView owns the mount since mcp-use 2: it connects the ext-apps
-// postMessage bridge, installs an error boundary, and auto-reports size
-// changes (replacing 1.x's createRoot + McpUseProvider pair).
+// bootstrapView owns the mount: it connects the host postMessage bridge,
+// installs an error boundary, and auto-reports size changes.
 bootstrapView({ default: AppRoot })

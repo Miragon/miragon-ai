@@ -88,7 +88,7 @@ MCP_PROFILE_SESSION_TTL_DAYS=30        # expiry for session-keyed records; 0 dis
 OAuth, Postgres stores, and Redis session backends are deliberately trimmed
 from this template — the stock server (`apps/mcp-server-camunda7` in the
 [miragon-ai repo](https://github.com/Miragon/miragon-ai)) is the reference for
-all three (README, "Deliberately trimmed vs. the stock server").
+all three (README, "Going further").
 
 ## Step 5 — make it yours
 
@@ -101,7 +101,7 @@ then reinstall so the lockfile matches:
    `server/package.json`'s dependencies, and in every import
    (`server/src/setup.ts`, `server/src/ui/widget-registry.ts`,
    `server/test/widget-registry.test.ts`)
-3. the `acme-mcp` labels in `server/src/index.ts`, `setup.ts`, `persistence.ts`
+3. the `acme-mcp` labels in `server/src/index.ts` and `setup.ts`
 4. `pnpm install` to refresh `pnpm-lock.yaml` (the Docker build uses
    `--frozen-lockfile`)
 
