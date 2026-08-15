@@ -14,8 +14,8 @@ import { initRuntime } from "./persistence/index.js"
 import { emitBootWarnings, getAppConfig, getPlugins, warnUnknownEnvVars } from "./setup.js"
 import { getOAuthConfigFromEnv, oauthSecretEnvVarNames } from "./oauth.js"
 
-// mcp-use ships anonymized telemetry (PostHog + Scarf) enabled by default —
-// an ops server must not phone home unless explicitly opted in.
+// mcp-use ships anonymized server-side telemetry enabled by default — an ops
+// server must not phone home unless explicitly opted in.
 process.env.MCP_USE_ANONYMIZED_TELEMETRY ??= "false"
 
 // Surface CAMUNDA_*/MCP_* typos at boot instead of silently ignoring them —
