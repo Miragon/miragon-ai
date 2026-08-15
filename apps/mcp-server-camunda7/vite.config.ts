@@ -6,19 +6,13 @@ import tailwindcss from "@tailwindcss/vite"
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    // Bundle-weight guards for the widget bundle (assets are inlined via
-    // `assetsInlineLimit`, so unused weight is pure wire cost):
-    // - posthog-js: mcp-use dynamic-imports its telemetry client; the cockpit
-    //   sends none — a no-op stub saves ~180 KB minified.
-    // - geist: the full fontsource entry ships 5 subsets (incl. cyrillic +
-    //   vietnamese); the latin/latin-ext-only CSS saves ~100 KB of
-    //   incompressible base64 for an en/de product. Anchored regex so the
-    //   stub CSS's own `…/geist/files/*.woff2` urls keep resolving upstream.
+    // Bundle-weight guard (assets are inlined via `assetsInlineLimit`, so
+    // unused weight is pure wire cost): the full fontsource geist entry ships
+    // 5 subsets (incl. cyrillic + vietnamese); the latin/latin-ext-only CSS
+    // saves ~100 KB of incompressible base64 for an en/de product. Anchored
+    // regex so the stub CSS's own `…/geist/files/*.woff2` urls keep resolving
+    // upstream.
     alias: [
-      {
-        find: /^posthog-js$/,
-        replacement: fileURLToPath(new URL("./src/ui/posthog-stub.ts", import.meta.url)),
-      },
       {
         find: /^@fontsource-variable\/geist$/,
         replacement: fileURLToPath(new URL("./src/ui/geist-latin.css", import.meta.url)),
