@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/Miragon/miragon-ai/compare/v0.9.0...v0.10.0) (2026-08-15)
+
+
+### Features
+
+* **widget-shell:** share the host app shell and boot helpers with composed servers ([#253](https://github.com/Miragon/miragon-ai/issues/253)) ([8c20434](https://github.com/Miragon/miragon-ai/commit/8c2043464b60320f9a26008144409fc3221907f5))
+
 ## [0.9.0](https://github.com/Miragon/miragon-ai/compare/v0.8.0...v0.9.0) (2026-08-14)
 
 
