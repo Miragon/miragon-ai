@@ -158,4 +158,4 @@ pnpm build && pnpm typecheck && pnpm test && pnpm lint
 covers widget `.tsx` code (`tsc -p tsconfig.widgets.json`). For end-to-end verification:
 `docker compose -f playground/docker/docker-compose.yml up -d` (engines + Prometheus emit real
 metrics), `pnpm dev`, then call the tool in the inspector at
-`http://localhost:8400/inspector`. Run `pnpm format:check` before committing.
+`http://localhost:8400/mcp/inspector`. Run `pnpm format:check` before committing.

@@ -19,7 +19,7 @@ cp .env.example .env                                           # dev defaults: P
 pnpm dev                                                       # MCP server on :8400
 ```
 
-- MCP endpoint: `http://localhost:8400/mcp`, inspector: `http://localhost:8400/inspector`
+- MCP endpoint: `http://localhost:8400/mcp`, inspector: `http://localhost:8400/mcp/inspector`
 - Grafana: `http://localhost:8470`, Prometheus: `http://localhost:8460`, engine: `http://localhost:8410`
 - Compose profiles: `--profile multi-engine` (second engine on :8411),
   `--profile full` (containerized server on :8400), `--profile dev` (plain

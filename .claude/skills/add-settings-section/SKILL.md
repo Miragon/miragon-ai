@@ -247,7 +247,7 @@ pnpm build && pnpm typecheck && pnpm test && pnpm lint
 need `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` plus a manual render:
 `docker compose -f playground/docker/docker-compose.yml up -d`, `pnpm dev`, open the
 settings tab via `<module>_show_settings` in the inspector at
-`http://localhost:8400/inspector`. Exercise Save and reload — a value that doesn't survive
+`http://localhost:8400/mcp/inspector`. Exercise Save and reload — a value that doesn't survive
 the reload means the merge or the key resolution is wrong. Run `pnpm format:check` before
 committing.
 

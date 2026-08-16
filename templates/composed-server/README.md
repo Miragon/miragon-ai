@@ -10,14 +10,15 @@ Everything installs from the public npm registry — no credentials needed.
 
 ## Quickstart
 
+Prerequisites: Node 22.22.2 or newer (`corepack enable` provides the pinned pnpm).
+
 ```bash
 pnpm install
 cp .env.example .env  # engine + Prometheus URLs; `pnpm dev` loads it
-pnpm build
-pnpm dev              # MCP endpoint on :8400/mcp, inspector on :8400/inspector
+pnpm dev              # MCP endpoint on :8400/mcp, inspector on :8400/mcp/inspector
 ```
 
-Open the inspector at `http://localhost:8400/inspector` and call
+Open the inspector at `http://localhost:8400/mcp/inspector` and call
 `notes_show_notes` — the example widget renders with no external systems.
 The camunda7/analytics tools need a running engine and Prometheus; the
 [miragon-ai playground](https://github.com/Miragon/miragon-ai/tree/main/playground)
@@ -44,9 +45,9 @@ silent (a widget rendering empty, unstyled, or not at all).
 ## Make it yours
 
 1. Rename the `@acme` scope in `server/package.json`,
-   `modules/mcp-notes/package.json`, the imports, and the
-   `--filter @acme/composed-mcp-server` in the Dockerfile; then re-run
-   `pnpm install` to refresh `pnpm-lock.yaml`.
+   `modules/mcp-notes/package.json`, and the imports (the Dockerfile selects
+   packages by path — no edit there); then re-run `pnpm install` to refresh
+   `pnpm-lock.yaml`.
 2. Swap the brand tokens (colors, radius, fonts) in
    `server/src/ui/globals.css`.
 
@@ -66,17 +67,17 @@ cp -R modules/mcp-notes modules/mcp-<name>
 
 Rename `notes` to your module name, put your API/SDK access behind the store
 interface, and wire the module into the server: the `workspace:*` dependency
-in `server/package.json`, the module list, the widget registry, a Tailwind
-`@source` line, and its `definition` in the guard test. The `create-module`
-skill walks through every step — and the guard tests fail loudly if a wiring
-step is missed.
+in `server/package.json`, the module list, the widget registry, and its
+`definition` in the guard test. The `create-module` skill walks through every
+step — and the guard tests fail loudly if a wiring step is missed.
 
 ## Configuration
 
 [`.env.example`](.env.example) documents every variable this server reads;
 copy it to `.env` (loaded by `pnpm dev` only — `pnpm start` and Docker take
-their config from the environment). A variable the server does not read
-prints a warning at boot, so typos surface immediately.
+their config from the environment). A variable under a watched prefix (`MCP_`,
+`CAMUNDA_`, `PROMETHEUS_`, plus each module's own) that the server does not
+read prints a warning at boot, so typos surface immediately.
 
 | Variable                                     | Effect                                                           |
 | -------------------------------------------- | ---------------------------------------------------------------- |

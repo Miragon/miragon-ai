@@ -135,16 +135,26 @@ One self-fetching card composed from `@miragon-ai/widget-shell/widgets` —
   the form baseline from server truth after the refetch.
 - Hide Save (render disabled fields) when the view says `canSave: false`.
 
-Register it through the four-link chain (see the add-widget skill). **One
-template-specific naming rule:** give the widget an id that does NOT end in
-`:settings` — e.g. `<module>:preferences`. The camunda7 cockpit's settings tab
-is composed from a layout owned by the published camunda7 package, which cannot
-list your widget; the server guard (`server/test/widget-registry.test.ts`)
-reserves the `:settings` suffix for sections that tab actually renders and
-fails on any other — correctly, because such a section would be silently
-invisible. Your section is reached through your own `<module>_show_settings`
-tool instead. (The **tool** names in Step 4 keep the `settings` wording — the
-convention there is `_show_`/`_data`, which they satisfy.)
+Register it through the four-link chain (see the add-widget skill). **The
+`<module>:settings` id IS the registration on the cockpit settings page:** the
+settings tab assembles itself from THIS server's widget registry — camunda7's
+own `camunda7:user-profile` panel first, then one row per widget id ending in
+`:settings`, in registration order. Nothing in the published camunda7 package
+lists your module — which is exactly why your section gets a first-class row
+with no edit beyond the normal module wiring. Two consequences:
+
+- Name your section widget `<module>:settings` and it appears on the settings
+  tab as soon as your module's widget map is spread into the host registry
+  (it stays reachable through your own `<module>_show_settings` tool too; any
+  other id renders ONLY through that tool).
+- The suffix alone earns the row — never use `:settings` for a widget that is
+  not a settings section.
+
+The failure mode stays silent (a section whose widget never reaches the host
+registry is simply absent from the tab), so add your `definition` to both
+describe blocks of `server/test/widget-registry.test.ts` — then a missed
+wiring step fails the guard naming your widget id instead of dropping the
+row silently.
 
 ## Step 6 — tests, then verify
 
@@ -158,9 +168,10 @@ the other saved value on a partial save.
 pnpm build && pnpm typecheck && pnpm test
 ```
 
-Then in the inspector: call `<module>_show_settings`, save a value, reload the
-widget — a value that doesn't survive the reload means the merge or the key
-resolution is wrong.
+Then in the inspector (or headless via the mcp-use client/screenshot commands
+in `CLAUDE.md` → Verification): call `<module>_show_settings`, save a value,
+reload the widget — a value that doesn't survive the reload means the merge or
+the key resolution is wrong.
 
 ## Anti-patterns
 

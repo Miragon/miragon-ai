@@ -104,20 +104,21 @@ Skip this until someone needs to run your module with a narrowed tool surface
 
 ## Step 6 — wire the module into the server
 
-Five edits, plus the env documentation. The failure modes of the middle three
-are **silent** (tools work, widgets render empty or unstyled) — which is why
-the last one exists:
+Four edits, plus the env documentation. The failure modes of the middle two
+are **silent** (tools work, widgets render empty) — which is why the last one
+exists:
 
 1. `server/package.json` — add `"@<your-scope>/mcp-<name>": "workspace:*"`,
    then `pnpm install`.
 2. `server/src/setup.ts` — add your module to `MODULES`.
 3. `server/src/ui/widget-registry.ts` — spread your `<name>Widgets` map
    (needed once you have widgets; harmless before).
-4. `server/src/ui/globals.css` — add
-   `@source "../../../modules/mcp-<name>/src";` so Tailwind scans your widget
-   sources (missing = silently unstyled widgets).
-5. `server/test/widget-registry.test.ts` — add your `definition` to **both**
+4. `server/test/widget-registry.test.ts` — add your `definition` to **both**
    describe blocks, so the guard actually covers your module.
+
+Tailwind needs no edit: `server/src/ui/globals.css` scans every workspace
+module through the `modules/*/src` glob — only an npm-installed module
+package would need its own `@source` line there.
 
 Then document every var from `knownEnvVars` in `.env.example` —
 `server/test/env-example.test.ts` fails on both drift directions (undocumented
@@ -135,8 +136,10 @@ pnpm build && pnpm typecheck && pnpm test
 
 Then boot it for real: `pnpm dev`, check the boot log (your module's env-var
 typo coverage and boot warnings show up here), and call your tools in the
-inspector at `http://localhost:8400/inspector`. Also verify the selection path:
-`MCP_ACTIVE_MODULES=<name> pnpm dev` must expose exactly your module's tools.
+inspector at `http://localhost:8400/mcp/inspector` — or headless via the
+mcp-use client/screenshot commands in `CLAUDE.md` → Verification. Also verify
+the selection path: `MCP_ACTIVE_MODULES=<name> pnpm dev` must expose exactly
+your module's tools.
 
 ## Anti-patterns
 

@@ -5,9 +5,9 @@ import { notesWidgets } from "@acme/mcp-notes/widgets"
 import { GenericDataTableWidget, GenericKpiGridWidget } from "@miragon-ai/widget-shell/widgets"
 
 /**
- * The host bundle map — one of the four places a new module is wired into
- * (start at MODULES in `src/setup.ts`; the `create-module` skill lists all
- * four). A forgotten spread here is SILENT: the module's tools work but every
+ * The host bundle map — one of the three places a new module is wired into
+ * (start at MODULES in `src/setup.ts`; the `create-module` skill lists them
+ * all). A forgotten spread here is SILENT: the module's tools work but every
  * widget renders as an empty slot. `test/widget-registry.test.ts` guards this
  * against all composed module catalogues.
  */

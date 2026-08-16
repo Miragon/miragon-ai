@@ -7,11 +7,14 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm --filter \"./modules/**\" build && pnpm -r typecheck",
     "test": "pnpm --filter \"./modules/**\" build && pnpm -r test",
-    "dev": "dotenv -e .env -- pnpm --filter ./server dev",
+    "dev": "pnpm --filter \"./modules/**\" build && dotenv -e .env -- pnpm --filter ./server dev",
     "start": "pnpm --filter ./server start"
   },
   "devDependencies": {
     "dotenv-cli": "11.0.0"
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22.22.2"
+  }
 }

@@ -27,7 +27,8 @@ RUN pnpm install --frozen-lockfile --offline
 
 RUN pnpm run build
 
-RUN pnpm --filter @acme/composed-mcp-server deploy --prod --legacy /app/deployed
+# Selected by path, not by name — renaming the @acme scope needs no edit here.
+RUN pnpm --filter ./server deploy --prod --legacy /app/deployed
 
 FROM base AS runtime
 WORKDIR /app

@@ -47,10 +47,11 @@ export type ModuleDefinition = ComposableModule<SharedResources>
  * Which modules THIS server composes. Each module brings its own config
  * schema, env mapping and known env vars — this file only selects and wires.
  *
- * Adding a module touches four places (the `create-module` skill walks
- * through them): this list, the spread in `src/ui/widget-registry.ts`, a
- * Tailwind `@source` entry in `src/ui/globals.css`, and the module's
- * `definition` in `test/widget-registry.test.ts`.
+ * Adding a module touches three places (the `create-module` skill walks
+ * through them): this list, the spread in `src/ui/widget-registry.ts`, and
+ * the module's `definition` in `test/widget-registry.test.ts` — Tailwind
+ * picks up workspace modules automatically via the `modules/` glob in
+ * `src/ui/globals.css`.
  */
 const MODULES: readonly ModuleDefinition[] = [camunda7Module, analyticsModule, notesModule]
 

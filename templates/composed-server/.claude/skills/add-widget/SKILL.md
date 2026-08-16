@@ -65,9 +65,10 @@ somewhere** (no build error):
 4. `src/tool-names.ts` — a constant for every `show_*`/`*_data` tool referenced
    from widget code, so a rename trips TS at every call site.
 
-New module (not just a new widget)? The Tailwind `@source` entry in
-`server/src/ui/globals.css` must cover your widget sources — missing means
-silently unstyled (see the create-module skill, Step 6).
+Tailwind coverage comes for free for workspace modules — the
+`modules/*/src` glob in `server/src/ui/globals.css` scans them all. Only a
+module installed from npm needs its own `@source` entry there (missing means
+silently unstyled).
 
 ## Step 3 — the widget tools (`src/widget-tools.ts`)
 
@@ -107,21 +108,31 @@ pnpm build && pnpm typecheck && pnpm test
   (naming, `_meta`, app-only visibility). If one fails it names exactly the
   missing link — fix the link, never the test.
 
-Then a manual render check (widget rendering is not covered by any automated
-test): `pnpm dev`, call your `show_*` tool in the inspector at
-`http://localhost:8400/inspector`, and exercise the widget's self-fetch (e.g.
-change a filter) so the `*_data` path runs too. The widget bundle is read once
-at boot — rebuild + restart to see changes, or run
-`pnpm --filter ./server dev:ui` in a second terminal for rebuild-on-save
-(restart still required to serve the new bundle).
+Then a render check (widget rendering is not covered by any automated test).
+Headless, with `pnpm dev` running — from `server/`, needs a local Chrome:
+
+```bash
+pnpm exec mcp-use client connect local http://localhost:8400/mcp  # once
+pnpm exec mcp-use client local tools call <module>_show_<thing>   # wire: _meta.ui.resourceUri + structuredContent
+pnpm exec mcp-use screenshot --mcp http://localhost:8400/mcp \
+  --tool <module>_show_<thing> --output /tmp/widget.png --json
+```
+
+A styled widget in the PNG proves the bundle, the registry links, and the
+Tailwind scan in one shot. In the inspector
+(`http://localhost:8400/mcp/inspector` — the human/no-Chrome path), also
+exercise the widget's self-fetch (e.g. change a filter) so the `*_data` path
+runs too. The widget bundle is read once at boot, and the root `pnpm dev`
+rebuilds modules + bundle on every start — restart `pnpm dev` at the repo
+root to see changes.
 
 ## Troubleshooting
 
-| Symptom                              | Cause                                                                                                                         |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| Widget renders as an empty slot      | link 3 missing (module spread not in `server/src/ui/widget-registry.ts`) — the guard test names the id                        |
-| Widget renders unstyled              | Tailwind `@source` entry for the module missing in `server/src/ui/globals.css`                                                |
-| Hangs on "Loading…" forever          | `resolve.dedupe` trimmed in `server/vite.config.ts` (duplicate React contexts), or a missing `isError` branch in the fallback |
-| Self-fetch renders a second widget   | the widget calls the `show_*` tool instead of the `*_data` feed                                                               |
-| e2e test fails on `_meta`/visibility | tool name breaks the `_show_`/`_data` convention, or a hand-written `_meta.ui` key — use the helpers                          |
-| Old UI after an edit                 | bundle is read once at boot — rebuild and restart `pnpm dev`                                                                  |
+| Symptom                              | Cause                                                                                                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Widget renders as an empty slot      | link 3 missing (module spread not in `server/src/ui/widget-registry.ts`) — the guard test names the id                                                                         |
+| Widget renders unstyled              | widget sources outside the Tailwind scan set — workspace modules are globbed (`modules/*/src`); an npm-installed module needs its own `@source` in `server/src/ui/globals.css` |
+| Hangs on "Loading…" forever          | `resolve.dedupe` trimmed in `server/vite.config.ts` (duplicate React contexts), or a missing `isError` branch in the fallback                                                  |
+| Self-fetch renders a second widget   | the widget calls the `show_*` tool instead of the `*_data` feed                                                                                                                |
+| e2e test fails on `_meta`/visibility | tool name breaks the `_show_`/`_data` convention, or a hand-written `_meta.ui` key — use the helpers                                                                           |
+| Old UI after an edit                 | bundle is read once at boot — restart `pnpm dev` at the repo root (it rebuilds modules + bundle on start)                                                                      |
