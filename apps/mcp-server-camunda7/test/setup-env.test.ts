@@ -231,27 +231,37 @@ describe("setup.ts engine credential enforcement (fail fast, no silent anonymous
   })
 })
 
-describe("setup.ts PROMETHEUS_URL boot hint", () => {
+describe("setup.ts module boot hints", () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.restoreAllMocks()
   })
 
-  it("warns when PROMETHEUS_URL is unset (default does not match the compose stack)", () => {
+  const ENGINE_ENV = { CAMUNDA_BASE_URL: "http://localhost:8410/engine-rest" }
+  const PROM_ENV = { PROMETHEUS_URL: "http://localhost:8460" }
+
+  it("warns per unconfigured module: Prometheus URL and the engine fallback", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
 
     const warnings = emitBootWarnings({})
-    expect(warnings).toHaveLength(1)
-    expect(warnings[0]).toContain("PROMETHEUS_URL")
+    expect(warnings).toHaveLength(2)
+    expect(warnings.some((w) => w.includes("PROMETHEUS_URL"))).toBe(true)
+    expect(warnings.some((w) => w.includes("CAMUNDA_BASE_URL"))).toBe(true)
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("PROMETHEUS_URL"))
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("CAMUNDA_BASE_URL"))
   })
 
-  it("stays silent when PROMETHEUS_URL is set or the analytics module is inactive", () => {
+  it("stays silent when both modules are configured", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-    expect(emitBootWarnings({ PROMETHEUS_URL: "http://localhost:8460" })).toEqual([])
-    expect(emitBootWarnings({ MCP_ACTIVE_MODULES: "camunda7" })).toEqual([])
+    expect(emitBootWarnings({ ...PROM_ENV, ...ENGINE_ENV })).toEqual([])
     expect(warn).not.toHaveBeenCalled()
+  })
+
+  it("scopes each hint to its module's active state", () => {
+    // An inactive module must not leak its warning into the boot log.
+    expect(emitBootWarnings({ MCP_ACTIVE_MODULES: "camunda7", ...ENGINE_ENV })).toEqual([])
+    expect(emitBootWarnings({ MCP_ACTIVE_MODULES: "analytics", ...PROM_ENV })).toEqual([])
   })
 
   it("lets an empty PROMETHEUS_URL fall through to the schema default", () => {
