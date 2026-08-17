@@ -18,7 +18,12 @@ export default mergeConfig(
         // @miragon-ai/widget-shell, where the SAME code is covered by
         // composition.test.ts at that package's higher thresholds; the app's
         // percentages shifted without a single line losing tests.
-        thresholds: { statements: 48, branches: 45, functions: 48, lines: 50 },
+        // Re-baselined UP 2026-08-17: the Postgres persistence (client,
+        // migration runner, dashboard store) moved to @miragon-ai/widget-shell
+        // too, and what remains here — the env→backend selection — is covered
+        // by persistence-runtime.test.ts; measured statements 82.89 /
+        // branches 77.27 / functions 94.44 / lines 83.33.
+        thresholds: { statements: 80, branches: 75, functions: 92, lines: 81 },
       },
     },
   }),

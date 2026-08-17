@@ -65,6 +65,11 @@ export {
   type ProfileStore,
 } from "./profile-store.js"
 export { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
+export {
+  createPostgresDashboardStore,
+  DASHBOARD_STORE_MIGRATIONS,
+} from "./dashboard-store-postgres.js"
+export { createSql, runMigrations, type Migration } from "./postgres.js"
 export { appOnly, showToolBinding } from "./widget-tool-bindings.js"
 export {
   composeModules,

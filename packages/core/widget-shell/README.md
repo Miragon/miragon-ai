@@ -22,14 +22,21 @@ package customers build their own connectors and composed servers on (see the
   so the catalogue lives here.
 - **Shared UI primitives** (`./widgets`) — common components (`WidgetShell`, tables, formatters,
   `useApplyTheme`, …) and `with-tool-errors` handling reused across both widget packages.
+- **Persistence** (`./server`) — the user-profile store (in-memory / filesystem / Postgres) and the
+  Postgres `DashboardStore` for the toolkit's saved dashboards, plus the `createSql` client and the
+  `runMigrations` runner that applies each store's own `Migration[]` (`PROFILE_STORE_MIGRATIONS`,
+  `DASHBOARD_STORE_MIGRATIONS`) under an advisory lock. A composed server picks its backends from
+  its own env and injects them — it does not reimplement the stores. `postgres` is an **optional**
+  peer dependency: the driver is loaded through a dynamic import inside `createSql`, so servers
+  persisting to disk or memory never need it installed.
 
 ## Exports
 
-| Subpath     | Contents                                                                                                      |
-| ----------- | ------------------------------------------------------------------------------------------------------------- |
-| `./server`  | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult` + `shellDefinition`/`createShellPlugin` |
-| `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                             |
-| `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and `useApplyTheme`                        |
+| Subpath     | Contents                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./server`  | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, the profile + dashboard stores and the Postgres client/migration runner |
+| `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                     |
+| `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and `useApplyTheme`                                                                                                |
 
 The `@miragon/mcp-toolkit-*`, React and `@tanstack/react-query` deps are **peer dependencies** — they
 must resolve to a single instance across the host bundle (see the `dedupe` array in the server app's

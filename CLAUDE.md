@@ -165,6 +165,19 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
      module-local copy of that precedence would silently split one user's settings across
      two records; the app's `module-contract.ts` carries a compile-time assertion that
      camunda7's `ProfileStore` still satisfies the port.
+     The whole PERSISTENCE layer follows the same rule: the postgres.js client
+     (`createSql`), the migration runner (`runMigrations` + the `Migration` shape) and the
+     Postgres dashboard store (`createPostgresDashboardStore`, implementing the toolkit's
+     `DashboardStore`) live in `packages/core/widget-shell/src/{postgres,dashboard-store-postgres}.ts`
+     next to the profile store — a composed server imports them from
+     `@miragon-ai/widget-shell/server` instead of reimplementing them, and the app's
+     `src/persistence/index.ts` shrinks to the env→backend SELECTION (`DATABASE_URL` beats
+     `MCP_PROFILE_DIR`/`MCP_DASHBOARD_DIR` beats in-memory). Migration `name`s are the keys
+     recorded in `schema_migrations`: append-only, never renamed (a rename re-runs the DDL
+     on every existing database), and each store owns its own array. Writes that first-create
+     a row take a per-key `pg_advisory_xact_lock` — `SELECT … FOR UPDATE` cannot lock a row
+     that does not exist yet, so without it two concurrent first saves both take the create
+     branch and the second silently overwrites the first, ownership check included.
 
 8. **Modules are self-contained peers; the app is a thin composition root.**
    Connector packages never import each other. Layout + naming carry the layer
@@ -355,6 +368,7 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
 | `pnpm fitness`       | Aggregated fitness report — architecture graph, ratchet debt, per-package coverage + mutation scores (diff-scoped in CI — the file count next to each score says over what); its own CI job, fed by the test + mutation jobs' artifacts                                                                                               |
 | `./gradlew build`    | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                                                                                                   |
 | `test:host`          | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin                                                                                |
+| `pnpm test:pg`       | The opt-in database slice: reruns the suites with `TEST_DATABASE_URL` pointed at the compose stack's test database, which un-skips the Postgres store + migration-runner tests (`describe.skipIf`). **The only check that executes the Postgres adapters** — required for changes to `postgres.ts` or any `*-store-postgres.ts`       |
 | Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only)                                                                                                                                                 |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
@@ -370,6 +384,12 @@ mutation ratchet works the same way inverted: each package's `mutate` allowlist 
 tests), and `thresholds.break` may only rise. Mutation runs use
 `vitest.stryker.config.ts` (coverage off — a coverage-threshold failure would read as a
 killed mutant); the Stryker vitest runner disables per-file isolation, so DOM widget
-suites stay out of the mutation test set (see the camunda7 connector's config). The knip ignore
+suites stay out of the mutation test set (see the camunda7 connector's config). The
+Postgres adapters (`src/postgres.ts`, `src/*-store-postgres.ts`) are out of BOTH sets —
+the shared `coverage.exclude` in `vitest.shared.ts` and widget-shell's `mutate` negatives
+— because their suites only run under `pnpm test:pg`: counted in, the same commit would
+measure ten points apart depending on whether a database happened to be reachable, and
+every mutant would survive by construction. That exclusion is scoped to those two
+patterns and is not a precedent for excluding code that the default run CAN execute. The knip ignore
 lists in `knip.jsonc` follow the same convention: every entry carries its reason and
 the lists may only shrink; gating the unused-exports report is the next expansion.
