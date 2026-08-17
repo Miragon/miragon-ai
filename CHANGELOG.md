@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/Miragon/miragon-ai/compare/v0.10.0...v0.11.0) (2026-08-17)
+
+
+### Features
+
+* starter-template DX — self-sufficient dev loop, install guards, headless verification ([#256](https://github.com/Miragon/miragon-ai/issues/256)) ([46f5d89](https://github.com/Miragon/miragon-ai/commit/46f5d89cc8cabecb45a9fb51159a31055a733069))
+
 ## [0.10.0](https://github.com/Miragon/miragon-ai/compare/v0.9.0...v0.10.0) (2026-08-15)
 
 
