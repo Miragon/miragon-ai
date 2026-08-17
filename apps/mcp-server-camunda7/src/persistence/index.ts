@@ -1,26 +1,26 @@
 import { createFileSystemDashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import {
+  createPostgresDashboardStore,
   createPostgresProfileStore,
+  createSql,
+  DASHBOARD_STORE_MIGRATIONS,
   PROFILE_STORE_MIGRATIONS,
   profileStoreFromEnv,
+  runMigrations,
   startProfileSessionCleanup,
   type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
-import {
-  createPostgresDashboardStore,
-  DASHBOARD_STORE_MIGRATIONS,
-} from "./dashboard-store-postgres.js"
-import { createSql } from "./db.js"
-import { runMigrations } from "./migrations.js"
 
 /**
  * Everything the composition root wires that depends on the deployment's
  * persistence choice. `initRuntime` below is the ONLY place environment
  * variables are translated into backend selections — a customer packaging
  * that needs a different mix (other database) either sets different env vars
- * or replaces this one module; the store factories themselves are pure and
- * injectable.
+ * or replaces this one module. The backends themselves are NOT app code: the
+ * Postgres client, the migration runner and both Postgres stores live in
+ * `@miragon-ai/widget-shell/server`, so a composed server gets the same
+ * persistence by importing them instead of forking this file.
  */
 export interface RuntimeBackends {
   profileStore: ProfileStore
@@ -90,7 +90,7 @@ export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise
     )
   }
 
-  const sql = createSql(databaseUrl)
+  const sql = await createSql(databaseUrl)
   const applied = await runMigrations(sql, [
     ...PROFILE_STORE_MIGRATIONS,
     ...DASHBOARD_STORE_MIGRATIONS,
@@ -104,7 +104,7 @@ export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise
   const stopCleanup = startSessionCleanup(profileStore, env)
   return {
     profileStore,
-    dashboardStore: createPostgresDashboardStore({ sql }),
+    dashboardStore: createPostgresDashboardStore({ sql, label: "miragon-ai" }),
     shutdown: async () => {
       stopCleanup()
       await sql.end({ timeout: 5 })

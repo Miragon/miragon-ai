@@ -2,12 +2,12 @@ import postgres from "postgres"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { DashboardOwnershipError } from "@miragon/mcp-toolkit-core/tools"
 import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
-import { PROFILE_STORE_MIGRATIONS } from "@miragon-ai/widget-shell/server"
 import {
   createPostgresDashboardStore,
   DASHBOARD_STORE_MIGRATIONS,
-} from "../src/persistence/dashboard-store-postgres.js"
-import { runMigrations } from "../src/persistence/migrations.js"
+} from "./dashboard-store-postgres.js"
+import { runMigrations } from "./postgres.js"
+import { PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
 
 const LAYOUT = [{ row: [{ widget: "shell:kpi-grid" }] }]
 
@@ -17,9 +17,9 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 10))
 // Opt-in integration slice (like test:host): needs a reachable Postgres, so it
 // only runs when TEST_DATABASE_URL is set — `pnpm test:pg` at the repo root
 // points it at the compose stack's dedicated test database. An own schema
-// isolates it from the camunda7-connector suite sharing that database.
+// isolates it from the other suites sharing that database.
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL
-const TEST_SCHEMA = "mcp_server_persistence_test"
+const TEST_SCHEMA = "widget_shell_dashboard_store_test"
 
 describe.skipIf(!TEST_DATABASE_URL)("postgres persistence", () => {
   let sql: postgres.Sql
@@ -89,6 +89,38 @@ describe.skipIf(!TEST_DATABASE_URL)("postgres persistence", () => {
       expect(updated.name).toBe("renamed")
       expect(updated.createdAt).toBe(created.createdAt)
       expect(updated.updatedAt > created.updatedAt).toBe(true)
+    })
+
+    it("takes the per-id advisory lock before the create branch", async () => {
+      // The row does not exist yet, so SELECT…FOR UPDATE has nothing to lock:
+      // without the advisory lock two concurrent first saves of the same id
+      // both take the create branch and the second upsert overwrites the
+      // first — ownership check included. Racing two saves does NOT prove the
+      // lock is there (postgres serializes them at the unique index either
+      // way), so hold the lock from a separate session and assert the save
+      // WAITS for it: with the lock removed from the store this resolves
+      // immediately and the test fails.
+      const blocker = postgres(TEST_DATABASE_URL!, {
+        max: 1,
+        onnotice: () => {},
+        connection: { search_path: TEST_SCHEMA },
+      })
+      try {
+        await blocker`SELECT pg_advisory_lock(hashtextextended('dashboards:contested', 0))`
+        let settled = false
+        const pending = store
+          .save({ id: "contested", name: "blocked", layout: LAYOUT })
+          .finally(() => {
+            settled = true
+          })
+        await new Promise((resolve) => setTimeout(resolve, 250))
+        expect(settled).toBe(false)
+
+        await blocker`SELECT pg_advisory_unlock(hashtextextended('dashboards:contested', 0))`
+        await expect(pending).resolves.toMatchObject({ id: "contested", name: "blocked" })
+      } finally {
+        await blocker.end({ timeout: 5 })
+      }
     })
 
     it("rejects a foreign update and never reassigns the owner", async () => {
