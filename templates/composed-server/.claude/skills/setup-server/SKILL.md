@@ -136,9 +136,17 @@ pnpm build && pnpm typecheck && pnpm test
 Then a functional pass in the inspector: `camunda7_engine` (engine reachable,
 auth works), one `camunda7_show_*` widget, one analytics tool (Prometheus
 reachable, `engine_id` matches). A clean boot log — no unknown-var or
-missing-URL warnings — is part of done. To test against a real ChatGPT/Claude
-host, `mcp-use dev --tunnel` (from `server/`) exposes the local server through
-a public tunnel.
+missing-URL warnings — is part of done.
+
+To test against a real ChatGPT/Claude host, `--tunnel` exposes the local server
+publicly. Run it through dotenv from the repo root — `mcp-use dev` only reads a
+`.env` next to itself (`server/.env`), never this repo's root one, so a bare
+`mcp-use dev --tunnel` in `server/` tunnels a server with no engine or
+Prometheus configured:
+
+```bash
+pnpm exec dotenv -e .env -- pnpm --filter ./server exec mcp-use dev --tunnel --no-open
+```
 
 ## Troubleshooting
 
