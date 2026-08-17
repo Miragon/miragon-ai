@@ -5,7 +5,10 @@ The **analytics module** for [Miragon AI](../../../../README.md): Prometheus-bac
 [`@miragon-ai/analytics-client`](../analytics-client) and the `@miragon/mcp-toolkit-*` packages.
 
 The server loads this module as `analytics` via `analyticsModule` (`src/module.ts`), which conforms
-structurally to the app's `ModuleDefinition` port. The package is `private` and not published to npm.
+structurally to the app's `ModuleDefinition` port. The package is published to npm in lockstep with
+the other `@miragon-ai` packages (pin them all to one version); the
+[miragon-ai-starter](https://github.com/Miragon/miragon-ai-starter) template shows how to compose it
+into your own MCP server.
 
 ## What it provides
 

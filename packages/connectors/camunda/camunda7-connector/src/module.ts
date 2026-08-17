@@ -164,6 +164,26 @@ export const camunda7Module = {
 
   supportsToolsets: true,
 
+  /**
+   * Boot-time hints for active deployments. With no engine env at all the
+   * module silently falls back to `http://localhost:8410/engine-rest` — which
+   * reaches the repo's Compose engine, so BPM tools work while engine-scoped
+   * analytics (heatmap, engine compare) join on a mismatched `engine_id` and
+   * read as "no data", not as a config error. Mirrors the analytics module's
+   * PROMETHEUS_URL warning.
+   */
+  bootWarnings(env: NodeJS.ProcessEnv): string[] {
+    const configured =
+      env.CAMUNDA_ENGINES_FILE?.trim() ||
+      env.CAMUNDA_ENGINES_JSON?.trim() ||
+      env.CAMUNDA_BASE_URL?.trim()
+    if (configured) return []
+    const id = env.CAMUNDA_ENGINE_ID?.trim() || "default"
+    return [
+      `No engine is configured (CAMUNDA_ENGINES_FILE / CAMUNDA_ENGINES_JSON / CAMUNDA_BASE_URL) — defaulting to http://localhost:8410/engine-rest with engine id "${id}". That id is the join key against the metrics' engine_id label: engine-scoped analytics return empty when it does not match the ENGINE_ID the engine stamps (the repo's Compose stack stamps "prod-a" — set CAMUNDA_ENGINE_ID to match).`,
+    ]
+  },
+
   createPlugin(
     config: Record<string, unknown>,
     shared: Camunda7SharedResources,

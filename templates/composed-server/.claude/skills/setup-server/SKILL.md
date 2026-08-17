@@ -20,13 +20,12 @@ Configuration ground rules first:
 ## Step 1 — install and first run
 
 ```bash
-pnpm install
+pnpm install    # needs Node >= 22.22.2 (enforced at install time)
 cp .env.example .env
-pnpm build
-pnpm dev        # MCP endpoint on :8400/mcp, inspector on :8400/inspector
+pnpm dev        # MCP endpoint on :8400/mcp, inspector on :8400/mcp/inspector
 ```
 
-Verify before configuring anything: open `http://localhost:8400/inspector` and
+Verify before configuring anything: open `http://localhost:8400/mcp/inspector` and
 call `notes_show_notes` — the example module needs no external infrastructure,
 so a rendered notes widget proves server, widget bundle, and inspector work.
 Then read the boot log: every warning there is actionable (unknown env var,
@@ -95,8 +94,8 @@ all three (README, "Going further").
 Renaming the placeholder scope touches a fixed set of places — do all of them,
 then reinstall so the lockfile matches:
 
-1. `@acme/composed-mcp-server` in `server/package.json` **and** the
-   `--filter @acme/composed-mcp-server` deploy step in the `Dockerfile`
+1. `@acme/composed-mcp-server` in `server/package.json` (the `Dockerfile`
+   selects packages by path — no edit there)
 2. `@acme/mcp-notes` in `modules/mcp-notes/package.json`, in
    `server/package.json`'s dependencies, and in every import
    (`server/src/setup.ts`, `server/src/ui/widget-registry.ts`,
@@ -139,13 +138,23 @@ auth works), one `camunda7_show_*` widget, one analytics tool (Prometheus
 reachable, `engine_id` matches). A clean boot log — no unknown-var or
 missing-URL warnings — is part of done.
 
+To test against a real ChatGPT/Claude host, `--tunnel` exposes the local server
+publicly. Run it through dotenv from the repo root — `mcp-use dev` only reads a
+`.env` next to itself (`server/.env`), never this repo's root one, so a bare
+`mcp-use dev --tunnel` in `server/` tunnels a server with no engine or
+Prometheus configured:
+
+```bash
+pnpm exec dotenv -e .env -- pnpm --filter ./server exec mcp-use dev --tunnel --no-open
+```
+
 ## Troubleshooting
 
-| Symptom                                   | Cause                                                                                                            |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Every in-widget query hangs on "Loading…" | `resolve.dedupe` in `server/vite.config.ts` was trimmed, or a second copy of React/toolkit/mcp-use got installed |
-| Widgets render unstyled                   | missing Tailwind `@source` entry in `server/src/ui/globals.css` for that module's widget sources                 |
-| Analytics tools return empty results      | `CAMUNDA_ENGINE_ID` doesn't match the engine's metrics `ENGINE_ID`, or `PROMETHEUS_URL` points at the wrong port |
-| "Unknown environment variable" at boot    | typo, or a var this build doesn't read — `.env.example` is the authoritative list                                |
-| Widget UI changes don't show up           | the bundle is read once at boot — rebuild (`pnpm build`) and restart `pnpm dev`, or run `dev:ui` watch alongside |
-| A tool is missing                         | module not in `MCP_ACTIVE_MODULES`, or a toolset suffix (`:read-only`) filtered it                               |
+| Symptom                                   | Cause                                                                                                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Every in-widget query hangs on "Loading…" | `resolve.dedupe` in `server/vite.config.ts` was trimmed, or a second copy of React/toolkit/mcp-use got installed                                  |
+| Widgets render unstyled                   | widget sources outside the Tailwind scan set (workspace modules are globbed; npm-installed ones need an `@source` in `server/src/ui/globals.css`) |
+| Analytics tools return empty results      | `CAMUNDA_ENGINE_ID` doesn't match the engine's metrics `ENGINE_ID`, or `PROMETHEUS_URL` points at the wrong port                                  |
+| "Unknown environment variable" at boot    | typo, or a var this build doesn't read — `.env.example` is the authoritative list                                                                 |
+| Widget UI changes don't show up           | the bundle is read once at boot — restart `pnpm dev` at the repo root (it rebuilds modules + bundle on start)                                     |
+| A tool is missing                         | module not in `MCP_ACTIVE_MODULES`, or a toolset suffix (`:read-only`) filtered it                                                                |
