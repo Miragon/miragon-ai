@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/Miragon/miragon-ai/compare/v0.11.0...v0.12.0) (2026-08-17)
+
+
+### Features
+
+* **widget-shell:** share the Postgres persistence layer with composed servers ([#258](https://github.com/Miragon/miragon-ai/issues/258)) ([c1b3037](https://github.com/Miragon/miragon-ai/commit/c1b30371f4c0c090fd75d17dfcacbb13e550e8b6))
+
 ## [0.11.0](https://github.com/Miragon/miragon-ai/compare/v0.10.0...v0.11.0) (2026-08-17)
 
 
