@@ -51,7 +51,22 @@ docker run --rm -p 8400:8400 \
 ```
 
 The server speaks the streamable-HTTP MCP transport on `http://localhost:8400/mcp`. Add it to your
-MCP host (Claude Desktop, Claude Code, ChatGPT, …) as an HTTP/streamable server.
+MCP host as an HTTP/streamable server — `claude mcp add --transport http miragon-ai
+http://localhost:8400/mcp` for Claude Code, a custom connector on your public URL for claude.ai /
+ChatGPT. Claude Desktop takes stdio servers only, so bridge it there:
+
+```json
+{
+  "mcpServers": {
+    "miragon-ai": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://127.0.0.1:8400/mcp", "--transport", "http-only"]
+    }
+  }
+}
+```
+
+See [How to use it](docs/usage.md) for the full connection matrix and what to ask once connected.
 
 **Prefer to build the image yourself?** No credentials needed — build it and run `miragon-ai-server`
 in place of the Docker Hub image above.

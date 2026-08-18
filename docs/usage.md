@@ -6,20 +6,41 @@ the assistant takes the right steps without you having to spell each one out.
 
 ## Connect your assistant
 
-Add an HTTP MCP server pointing at your deployment — or at the hosted
+Point the assistant at your deployment's `/mcp` endpoint — or at the hosted
 [playground](https://miragon-ai-playground.fly.dev/mcp) to try it without any
-setup (`https://miragon-ai-playground.fly.dev/mcp` — also works as a claude.ai
-custom connector). For Claude Desktop:
+setup.
+
+| Host               | How to connect                                                                                                                    |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| claude.ai          | Settings → Connectors → **Add custom connector**, URL `https://miragon-ai-playground.fly.dev/mcp` (needs a public HTTPS endpoint) |
+| Claude Code        | `claude mcp add --transport http miragon-ai https://miragon-ai-playground.fly.dev/mcp`                                            |
+| Claude Desktop     | stdio only — bridge the HTTP endpoint with `mcp-remote` (below)                                                                   |
+| Any other MCP host | add it as a streamable-HTTP server                                                                                                |
+
+Claude Desktop validates `claude_desktop_config.json` against the stdio shape,
+so a bare `"url"` entry is dropped silently. Open Settings → Developer → Edit
+Config, add the bridge, and restart the app:
 
 ```json
 {
   "mcpServers": {
     "miragon-ai": {
-      "url": "https://miragon-ai-playground.fly.dev/mcp"
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://miragon-ai-playground.fly.dev/mcp",
+        "--transport",
+        "http-only"
+      ]
     }
   }
 }
 ```
+
+For a server on your own machine, use `http://127.0.0.1:8400/mcp` there —
+`127.0.0.1` rather than `localhost`, which Node may resolve to IPv6 while the
+server listens on IPv4.
 
 Once connected, you'll see Camunda and analytics tools available in the
 assistant. Try asking _"list all running incidents"_ — Claude calls
