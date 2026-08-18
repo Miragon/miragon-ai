@@ -10,6 +10,11 @@ Everything installs from the public npm registry — no credentials needed.
 
 ## Quickstart
 
+Two ways to run it — from source while you develop, or as a container once you
+deploy.
+
+### 1. From source
+
 Prerequisites: Node 22.22.2 or newer (`corepack enable` provides the pinned pnpm).
 
 ```bash
@@ -18,11 +23,65 @@ cp .env.example .env  # engine + Prometheus URLs; `pnpm dev` loads it
 pnpm dev              # MCP endpoint on :8400/mcp, inspector on :8400/mcp/inspector
 ```
 
-Open the inspector at `http://localhost:8400/mcp/inspector` and call
-`notes_show_notes` — the example widget renders with no external systems.
+### 2. As a container
+
+The image takes its config from the environment — it never reads `.env`.
+
+```bash
+pnpm install          # once, then commit pnpm-lock.yaml (the build uses --frozen-lockfile)
+docker build -t my-mcp-server .
+docker run -p 8400:8400 \
+  -e CAMUNDA_BASE_URL=http://host.docker.internal:8410/engine-rest \
+  -e PROMETHEUS_URL=http://host.docker.internal:8460 \
+  my-mcp-server
+```
+
+Either way the MCP endpoint is `http://localhost:8400/mcp`. With `pnpm dev`,
+open the inspector at `http://localhost:8400/mcp/inspector` and call
+`notes_show_notes` — the example widget renders with no external systems (the
+production entrypoint the image runs mounts no inspector).
 The camunda7/analytics tools need a running engine and Prometheus; the
 [miragon-ai playground](https://github.com/Miragon/miragon-ai/tree/main/playground)
 ships a ready-made Docker Compose stack whose URLs match `.env.example`.
+
+## Connect an assistant
+
+The server speaks streamable HTTP on `/mcp`. Tools work in every MCP host;
+widgets render in hosts that support MCP Apps (the inspector is the local
+render check).
+
+**Claude Desktop** — its `claude_desktop_config.json` validates **stdio servers
+only**, so a bare `"url"` entry is silently dropped. Bridge the HTTP endpoint
+with [`mcp-remote`](https://www.npmjs.com/package/mcp-remote). Open Settings →
+Developer → Edit Config
+(macOS `~/Library/Application Support/Claude/claude_desktop_config.json`,
+Windows `%APPDATA%\Claude\claude_desktop_config.json`), then restart the app:
+
+```json
+{
+  "mcpServers": {
+    "my-mcp-server": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://127.0.0.1:8400/mcp", "--transport", "http-only"]
+    }
+  }
+}
+```
+
+Use `127.0.0.1` rather than `localhost` — Node may resolve the latter to IPv6
+while the server listens on IPv4.
+
+**Claude Code** — HTTP natively, no bridge:
+
+```bash
+claude mcp add --transport http my-mcp-server http://localhost:8400/mcp
+```
+
+**claude.ai (custom connector)** — needs a deployed server reachable over the
+public internet (Settings → Connectors → Add custom connector with your
+`https://…/mcp` URL); localhost is not reachable from Anthropic's
+infrastructure. To try a local build against a hosted assistant, tunnel it —
+see the `setup-server` skill.
 
 ## Built for AI-assisted development
 
@@ -89,13 +148,23 @@ read prints a warning at boot, so typos surface immediately.
 | `MCP_DASHBOARD_DIR`                          | Filesystem persistence for saved dashboards (default: in-memory) |
 | `CAMUNDA_*`, `PROMETHEUS_URL`, `NOTES_TITLE` | Module config — see `.env.example` for the full list             |
 
-## Docker
+## Deploying
+
+The image built in the [Quickstart](#2-as-a-container) is the deployment
+artifact. Two things to add beyond the local run:
 
 ```bash
-pnpm install          # once, then commit pnpm-lock.yaml
-docker build -t my-mcp-server .
-docker run -p 8400:8400 -e CAMUNDA_BASE_URL=http://host.docker.internal:8080/engine-rest my-mcp-server
+docker run -p 8400:8400 \
+  -e MCP_URL=https://mcp.example.com \
+  -e MCP_PROFILE_DIR=/data/profiles -e MCP_DASHBOARD_DIR=/data/dashboards \
+  -v mcp-data:/data \
+  my-mcp-server
 ```
+
+- `MCP_URL` is the public base URL when the server sits behind a proxy or MCP
+  gateway; `PORT` changes the HTTP port.
+- Both stores are in-memory by default — without the volume, user settings and
+  saved dashboards are lost on every restart.
 
 ## Going further
 
