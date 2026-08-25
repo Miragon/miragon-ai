@@ -15,9 +15,25 @@ updates:
       - "dominikhorn93"
       - "emaarco"
     groups:
+      # The toolkit peers `mcp-use` EXACTLY (toolkit 2.1.0 → mcp-use 2.2.3), and the
+      # composed-server template pins both by hand — a lone `mcp-use` bump therefore
+      # always lands with an unmet peer and a red `scripts/test-template.sh` drift gate
+      # (see #270). Keep the pair in its own PR so it stays a deliberate joint bump and
+      # does not drag the rest of the group into the red. Listed FIRST: Dependabot
+      # assigns a dependency to the first group it matches.
+      mcp-toolkit:
+        patterns:
+          - "mcp-use"
+          - "@miragon/mcp-toolkit-*"
+        update-types:
+          - "patch"
+          - "minor"
       npm-dependencies:
         patterns:
           - "*"
+        exclude-patterns:
+          - "mcp-use"
+          - "@miragon/mcp-toolkit-*"
         update-types:
           - "patch"
           - "minor"
