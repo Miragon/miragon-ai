@@ -67,10 +67,10 @@
     "@stryker-mutator/core": "10.0.0",
     "@stryker-mutator/vitest-runner": "10.0.0",
     "@types/react": "19.2.18",
-    "bpmn-js": "18.24.0",
+    "bpmn-js": "18.25.1",
     "mcp-use": "2.2.3",
     "react": "19.2.8",
     "typescript": "5.9.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   }
 }
