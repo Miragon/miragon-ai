@@ -57,7 +57,7 @@ export async function buildCockpitDashboardData(
       name?: string | null
       version?: number | null
     }
-  }> = []
+  }>
 
   try {
     const stats = await getProcessDefinitionStatistics({

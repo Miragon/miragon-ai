@@ -54,7 +54,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       // cockpit LAND on the profile's default engine. The app threads the
       // chosen engineId into every nested tool call via the `engine` override,
       // so client-side navigation never depends on the saved default.
-      let engineId: string | null = null
+      let engineId: string | null
       try {
         engineId = (await resolveEngine(args.engine, registry)).engineId
       } catch {
