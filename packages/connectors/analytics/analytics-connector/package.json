@@ -70,7 +70,7 @@
     "bpmn-js": "18.25.1",
     "mcp-use": "2.2.3",
     "react": "19.2.8",
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "vitest": "4.1.11"
   }
 }

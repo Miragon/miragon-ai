@@ -12,6 +12,11 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    // TypeScript 6 no longer pulls every `@types/*` package into the global
+    // scope automatically. Server code is the default here, so the base opts
+    // node back in; the browser-only projects (widget + UI tsconfigs) override
+    // this with their own `types` so Node globals stay out of widget code.
+    "types": ["node"],
     "outDir": "dist",
     "rootDir": "src"
   }
