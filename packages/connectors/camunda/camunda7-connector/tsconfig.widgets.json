@@ -3,6 +3,8 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // Browser-only: keep the base's Node globals out of widget code.
+    "types": [],
     "noEmit": true,
     "composite": false,
     "declaration": false,
