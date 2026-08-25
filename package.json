@@ -30,7 +30,7 @@
     "lint:deadcode": "knip --exclude exports,types,enumMembers"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.5",
+    "@eslint/js": "10.0.1",
     "@types/node": "26.2.0",
     "@vitest/coverage-v8": "4.1.10",
     "dependency-cruiser": "18.2.0",

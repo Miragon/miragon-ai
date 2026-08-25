@@ -16,7 +16,9 @@ export default mergeConfig(
         // without a single line losing tests (lines 38 → 35 at measured
         // 37.54%). Raised 2026-08-17 with module.ts under test (measured
         // statements 38.66 / branches 27.88 / functions 32.05 / lines 39.09).
-        thresholds: { statements: 36, branches: 25, functions: 30, lines: 37 },
+        // Raised 2026-08-25 with data/cockpit-data.ts under test (measured
+        // statements 42.05 / branches 32.61 / functions 35.76 / lines 42.50).
+        thresholds: { statements: 39, branches: 30, functions: 33, lines: 40 },
       },
     },
   }),
