@@ -55,7 +55,7 @@
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "mcp-use": "2.2.3",
+    "mcp-use": "2.3.0",
     "react": "19.2.8"
   },
   "peerDependenciesMeta": {
@@ -69,12 +69,12 @@
     "@stryker-mutator/vitest-runner": "10.0.0",
     "@testing-library/react": "16.3.2",
     "@types/react": "19.2.18",
-    "bpmn-js": "18.24.0",
-    "happy-dom": "20.11.2",
-    "mcp-use": "2.2.3",
+    "bpmn-js": "18.25.1",
+    "happy-dom": "20.11.6",
+    "mcp-use": "2.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "typescript": "5.9.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   }
 }
