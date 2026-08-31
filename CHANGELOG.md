@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/Miragon/miragon-ai/compare/v0.12.0...v0.13.0) (2026-08-31)
+
+
+### Features
+
+* **camunda7:** environment-map engine config with two-stage selection ([#276](https://github.com/Miragon/miragon-ai/issues/276)) ([6483480](https://github.com/Miragon/miragon-ai/commit/6483480e31772c8d42c37d4f6bb722d59ed3c6dc))
+
 ## [0.12.0](https://github.com/Miragon/miragon-ai/compare/v0.11.0...v0.12.0) (2026-08-17)
 
 
