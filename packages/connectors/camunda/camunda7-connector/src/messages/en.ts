@@ -30,6 +30,11 @@ export const en: MessageCatalog = {
   "cockpit.landing.title": "CIB Seven Cockpit",
   "cockpit.landing.subtitle": ({ count }) =>
     `${String(count)} engines configured — operate one engine, or analyze across the whole fleet.`,
+  "cockpit.landing.subtitle.env": ({ count, envCount }) =>
+    `${String(count)} engines in ${String(envCount)} environments — pick an environment, then an engine, or analyze across the whole fleet.`,
+  "cockpit.landing.env.count": ({ count }) =>
+    `${String(count)} engine${Number(count) === 1 ? "" : "s"}`,
+  "cockpit.landing.env.back": "All environments",
   "cockpit.landing.operate.title": "Operate an engine",
   "cockpit.landing.operate.desc": "Overview, incidents and drill-downs for one engine.",
   "cockpit.landing.fleet.title": "Cross-engine analyses",

@@ -207,6 +207,22 @@ filter to aggregate or compare. Each engine entry may carry its own `auth`
 (`{type, username?, password?, token?}`); entries without one use the global `CAMUNDA_*` settings.
 Entries may also declare their vendor via `flavor` (`cibseven` | `operaton` | `camunda7`, default
 `cibseven`), which selects the engine's cockpit-link routes and display name.
+
+Fleets that span several environments (each environment hosting some services with an engine)
+group their engines per environment: the cockpit landing becomes a two-stage selection
+(pick the environment first, then one of its engines), and the engine switcher, the settings
+page and `camunda7_engine` `list` group their engines by environment. Either write the
+engines JSON as a map keyed by environment id, or tag entries individually:
+
+```json
+{
+  "prod-eu": [{ "id": "prod-a", "baseUrl": "http://engine-a:8410/engine-rest" }],
+  "prod-us": [{ "id": "prod-b", "baseUrl": "http://engine-b:8410/engine-rest" }]
+}
+```
+
+Engine ids stay globally unique across environments — the id remains the `ENGINE_ID` metrics
+join key and the per-call `engine` selector; the environment is a grouping level only.
 Full walkthrough in [`docs/operations.md`](docs/operations.md).
 
 ## Engine metrics plugin

@@ -128,10 +128,12 @@ describe("mcp-server-camunda7 E2E smoke", () => {
         {
           id: "default",
           baseUrl: "http://localhost:1",
+          environment: "default",
           flavor: "cibseven",
           engineName: "CIB Seven",
         },
       ],
+      environments: [{ id: "default", engineIds: ["default"] }],
       defaultEngineId: null,
     })
   })

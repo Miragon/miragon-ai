@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { mergeRawSlice, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import { UnknownEngineError, type EngineRegistry, type EngineEntry } from "../lib/resolve-engine.js"
+import { environmentOf, groupEnginesByEnvironment } from "../lib/environments.js"
 import { providerForEntry } from "../providers/index.js"
 import { allowedEngines, profileDefaultEngineId } from "../lib/engine-preferences.js"
 import { parseCamunda7Settings, CAMUNDA7_MODULE_KEY } from "../lib/profile-schema.js"
@@ -53,7 +54,9 @@ export function registerEngineTools(
     category: "engines",
     description:
       "Manage which CIB Seven / Camunda 7 engine operations tools talk to. " +
-      'action="list" returns the engines available to this profile and the saved default engine (if any); ' +
+      'action="list" returns the engines available to this profile grouped by ENVIRONMENT ' +
+      "(`environments` maps each environment to its engine ids; every engine entry names its `environment`) " +
+      "plus the saved default engine (if any) — pick an environment first, then one of its engines; " +
       'action="select" (requires engineId) saves that engine as the caller\'s default — ' +
       "all subsequent operations tool calls without a per-call `engine` override route to it " +
       "(a durable per-user setting, the same field the settings page edits); " +
@@ -80,11 +83,18 @@ export function registerEngineTools(
               return {
                 id: e.id,
                 baseUrl: e.baseUrl,
+                environment: environmentOf(e),
                 flavor: provider.flavor,
                 engineName: provider.branding.displayName,
                 ...(e.cockpitUrl ? { cockpitUrl: e.cockpitUrl } : {}),
               }
             }),
+            // The environment→engine map over the same allowed engines — the
+            // two-stage selection view (pick an environment, then an engine).
+            environments: groupEnginesByEnvironment(available).map((g) => ({
+              id: g.id,
+              engineIds: g.engines.map((e) => e.id),
+            })),
             // The saved default (validated against the allowed engines) — the
             // engine operations tools use when no per-call override is given,
             // and the cockpit's landing engine.

@@ -3,6 +3,7 @@ import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext, WidgetRenderer, useHostBridge } from "@miragon/mcp-toolkit-ui/app"
 import { ViewDataState, WidgetShell, useHostWidgets } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "../../view-models.js"
+import { formatEnginesByEnvironment, groupEnginesByEnvironment } from "../../lib/environments.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
 import {
   buildViewParams,
@@ -18,11 +19,12 @@ import { CAMUNDA7_ENGINE } from "../../tool-names.js"
 import { NavBreadcrumb } from "./breadcrumb.js"
 import { cockpitViews, filterLayoutToWidgets } from "./views.js"
 import { FleetView } from "./fleet-view.js"
+import { LandingChooser } from "./landing.js"
 
 export type { CockpitAppData }
 
 interface EnginesResult {
-  engines: Array<{ id: string }>
+  engines: Array<{ id: string; environment?: string }>
   /** The caller's saved default engine (profile) — null when none is saved. */
   defaultEngineId: string | null
 }
@@ -93,6 +95,17 @@ function cockpitReducer(state: CockpitState, action: CockpitAction): CockpitStat
   }
 }
 
+/**
+ * The fleet-mode model context. Names each engine's environment when more than
+ * one exists — the model sees the fleet only through this string, while the
+ * widget visibly groups its tiles per environment.
+ */
+function fleetModelContext(engineGroups: Array<{ id: string; engines: Array<{ id: string }> }>) {
+  const grouped = engineGroups.length > 1
+  const summary = formatEnginesByEnvironment(engineGroups)
+  return `Support is in the consolidated CIB Seven cockpit in CROSS-ENGINE mode across engines${grouped ? " grouped by environment —" : ":"} ${summary}. This is an OVERVIEW across engines, not a ranking between them: the engines run different process definitions, so per-engine failure rates or durations describe each engine's process mix rather than the engine. ${grouped ? "Attribute findings to their environment when relevant. " : ""}Offer the cross-engine landscape (analytics_engine_landscape — what runs where, absolute load, job backlog), fleet-wide failure & performance analyses, and per-engine health. A like-for-like engine KPI comparison (analytics_engine_compare) is only sound for a process definition deployed on several engines and requires that processDefinitionKey. Drilling into an engine switches to that engine's single-engine cockpit.`
+}
+
 function EnginesEmptyState({
   hasTransport,
   enginesQuery,
@@ -110,92 +123,6 @@ function EnginesEmptyState({
         emptyText={translator(locale, "cockpit.empty.engines")}
         className="text-muted-foreground p-6 text-sm"
       />
-    </WidgetShell>
-  )
-}
-
-function LandingChooser({
-  engines,
-  onEnterEngine,
-  onOpenFleet,
-}: {
-  engines: Array<{ id: string }>
-  onEnterEngine: (id: string) => void
-  onOpenFleet: () => void
-}) {
-  const locale = useLocale()
-  // A single engine auto-enters via the effect in CockpitApp — bridge the one
-  // render before it lands.
-  if (engines.length === 1) {
-    return (
-      <WidgetShell>
-        <div className="text-muted-foreground p-6 text-sm">
-          {translator(locale, "cockpit.loading.engines")}
-        </div>
-      </WidgetShell>
-    )
-  }
-  // The landing chooser: with more than one engine, Open Cockpit offers two
-  // ways in — operate a single engine, or run cross-engine analyses.
-  return (
-    <WidgetShell>
-      <div className="mx-auto flex max-w-2xl flex-col gap-6 py-10">
-        <div className="text-center">
-          <h1 className="text-foreground text-2xl font-bold">
-            {translator(locale, "cockpit.landing.title")}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {translator(locale, "cockpit.landing.subtitle", { count: engines.length })}
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
-            <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
-              ▦
-            </div>
-            <div>
-              <h2 className="text-foreground font-semibold">
-                {translator(locale, "cockpit.landing.operate.title")}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {translator(locale, "cockpit.landing.operate.desc")}
-              </p>
-            </div>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {engines.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => onEnterEngine(e.id)}
-                  className="border-border bg-background text-foreground hover:bg-muted focus-visible:ring-ring rounded-md border px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2"
-                >
-                  {e.id} <span aria-hidden>→</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onOpenFleet}
-            className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-5 text-left outline-none focus-visible:ring-2"
-          >
-            <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
-              ⤧
-            </div>
-            <div>
-              <h2 className="text-foreground font-semibold">
-                {translator(locale, "cockpit.landing.fleet.title")}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {translator(locale, "cockpit.landing.fleet.desc")}
-              </p>
-            </div>
-            <span className="text-m-blue mt-1 text-sm font-medium">
-              {translator(locale, "cockpit.landing.fleet.open")} <span aria-hidden>→</span>
-            </span>
-          </button>
-        </div>
-      </div>
     </WidgetShell>
   )
 }
@@ -220,6 +147,9 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     action: "list",
   })
   const engines = enginesQuery.data?.engines ?? data?.engines ?? []
+  // The environment→engine map (single default group when none is configured)
+  // — drives the sidebar switcher's optgroups.
+  const engineGroups = groupEnginesByEnvironment(engines)
 
   // Active locale from the global ProfileGate (server root) — used for the
   // shell strings here; the rendered leaf widgets read it the same way. Theme is
@@ -291,15 +221,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   if (scope.kind === "fleet") {
     return (
       <WidgetShell>
-        <HostModelContext
-          content={`Support is in the consolidated CIB Seven cockpit in CROSS-ENGINE mode across engines: ${engines
-            .map((e) => e.id)
-            .join(
-              ", ",
-            )}. This is an OVERVIEW across engines, not a ranking between them: the engines run different process definitions, so per-engine failure rates or durations describe each engine's process mix rather than the engine. Offer the cross-engine landscape (analytics_engine_landscape — what runs where, absolute load, job backlog), fleet-wide failure & performance analyses, and per-engine health. A like-for-like engine KPI comparison (analytics_engine_compare) is only sound for a process definition deployed on several engines and requires that processDefinitionKey. Drilling into an engine switches to that engine's single-engine cockpit.`}
-        >
-          {null}
-        </HostModelContext>
+        <HostModelContext content={fleetModelContext(engineGroups)}>{null}</HostModelContext>
         {engines.length > 1 && (
           <nav
             aria-label={translator(locale, "cockpit.aria.breadcrumb")}
@@ -384,11 +306,23 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                   onChange={(e) => switchEngine(e.target.value)}
                   className="border-border bg-background text-foreground h-8 rounded-md border px-2 text-xs"
                 >
-                  {engines.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.id}
-                    </option>
-                  ))}
+                  {/* The environment→engine map as optgroups — flat when only
+                      one environment is configured. */}
+                  {engineGroups.length > 1
+                    ? engineGroups.map((g) => (
+                        <optgroup key={g.id} label={g.id}>
+                          {g.engines.map((e) => (
+                            <option key={e.id} value={e.id}>
+                              {e.id}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))
+                    : engines.map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.id}
+                        </option>
+                      ))}
                 </select>
               </label>
             </div>

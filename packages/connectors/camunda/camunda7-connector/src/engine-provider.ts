@@ -28,6 +28,14 @@ export interface EngineEntry {
   id: string
   baseUrl: string
   cockpitUrl?: string
+  /**
+   * The environment this engine's service runs in (e.g. "prod-eu"). A grouping
+   * level for the two-stage pick-an-environment-then-an-engine selection —
+   * never part of the engine identity: `id` stays the flat, globally unique
+   * join key against the metrics' `engine_id` label. Absent = the implicit
+   * default environment.
+   */
+  environment?: string
   /** Engine vendor of the C7 dialect; selects the provider. Default: "cibseven". */
   flavor?: EngineFlavor
   auth?: EngineAuth

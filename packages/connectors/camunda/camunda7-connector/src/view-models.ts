@@ -162,6 +162,8 @@ export interface ProcessInstanceRow {
 export interface CockpitEngineInfo {
   id: string
   baseUrl: string
+  /** Environment grouping for the two-stage picker (default environment when unconfigured). */
+  environment: string
 }
 
 /**

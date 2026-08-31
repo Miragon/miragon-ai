@@ -87,6 +87,22 @@ describe("setup.ts engine resolution precedence (ENGINES_FILE > ENGINES_JSON > B
 
     expect(configuredEngines()).toEqual(JSON_ENGINES)
   })
+
+  it("accepts the environment-map form in both JSON sources, stamping each key as environment", () => {
+    const asMap = {
+      "prod-eu": [{ id: "eu-a", baseUrl: "http://eu-a.example/engine-rest" }],
+      "prod-us": [{ id: "us-a", baseUrl: "http://us-a.example/engine-rest" }],
+    }
+    const flattened = [
+      { id: "eu-a", baseUrl: "http://eu-a.example/engine-rest", environment: "prod-eu" },
+      { id: "us-a", baseUrl: "http://us-a.example/engine-rest", environment: "prod-us" },
+    ]
+    vi.stubEnv("CAMUNDA_ENGINES_JSON", JSON.stringify(asMap))
+    expect(configuredEngines()).toEqual(flattened)
+
+    vi.stubEnv("CAMUNDA_ENGINES_FILE", writeEnginesFile(asMap))
+    expect(configuredEngines()).toEqual(flattened)
+  })
 })
 
 describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
