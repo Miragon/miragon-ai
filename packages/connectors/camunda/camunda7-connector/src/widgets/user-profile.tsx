@@ -24,6 +24,7 @@ import {
 
 import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_USER_PROFILE_DATA } from "../tool-names.js"
 import { ROLES, type Role } from "../lib/profile-constants.js"
+import { groupEnginesByEnvironment } from "../lib/environments.js"
 import type { UserProfile, UserProfileView } from "../lib/profile-schema.js"
 import { useT } from "../messages/use-t.js"
 import { refreshCockpitData } from "./refresh.js"
@@ -199,6 +200,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
   )
 
   const engines = view.availableEngines
+  const engineGroups = groupEnginesByEnvironment(engines)
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }))
 
@@ -345,17 +347,28 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           >
             <div className="flex flex-col gap-1.5">
               {engines.length === 0 && <span className={helpCls}>{t("profile.engines.none")}</span>}
-              {engines.map((e) => (
-                <label key={e.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.allowedEngineIds.includes(e.id)}
-                    disabled={!canSave}
-                    onChange={(ev) => toggleEngine(e.id, ev.target.checked)}
-                  />
-                  <span className="font-mono">{e.id}</span>
-                  <span className={helpCls}>{e.baseUrl}</span>
-                </label>
+              {/* The environment→engine map: checkboxes group under their
+                  environment (flat when only one environment is configured). */}
+              {engineGroups.map((g) => (
+                <div key={g.id} className="flex flex-col gap-1.5">
+                  {engineGroups.length > 1 && (
+                    <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+                      {g.id}
+                    </span>
+                  )}
+                  {g.engines.map((e) => (
+                    <label key={e.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.allowedEngineIds.includes(e.id)}
+                        disabled={!canSave}
+                        onChange={(ev) => toggleEngine(e.id, ev.target.checked)}
+                      />
+                      <span className="font-mono">{e.id}</span>
+                      <span className={helpCls}>{e.baseUrl}</span>
+                    </label>
+                  ))}
+                </div>
               ))}
             </div>
           </SettingsField>
@@ -369,13 +382,22 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
               onChange={(e) => set("defaultEngineId", e.target.value)}
             >
               <option value="">{t("profile.engine.auto")}</option>
-              {engines
-                .filter((e) => form.allowedEngineIds.includes(e.id))
-                .map((e) => (
+              {engineGroups.map((g) => {
+                const allowed = g.engines.filter((e) => form.allowedEngineIds.includes(e.id))
+                if (allowed.length === 0) return null
+                const options = allowed.map((e) => (
                   <option key={e.id} value={e.id}>
                     {e.id}
                   </option>
-                ))}
+                ))
+                return engineGroups.length > 1 ? (
+                  <optgroup key={g.id} label={g.id}>
+                    {options}
+                  </optgroup>
+                ) : (
+                  options
+                )
+              })}
             </NativeSelect>
           </SettingsField>
         </SettingsCard>

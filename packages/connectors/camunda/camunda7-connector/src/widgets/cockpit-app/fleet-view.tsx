@@ -9,6 +9,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
+import { formatEnginesByEnvironment, groupEnginesByEnvironment } from "../../lib/environments.js"
 import { severityTone } from "../cockpit-dashboard/lib.js"
 import { useT } from "../../messages/use-t.js"
 import { filterLayoutToWidgets } from "./views.js"
@@ -158,15 +159,21 @@ export function FleetView({
   onEnterEngine,
   widgets,
 }: {
-  engines: Array<{ id: string }>
+  engines: Array<{ id: string; environment?: string }>
   onEnterEngine: (id: string) => void
   /** Host widget registry — resolves the analytics landscape section (tier-2). */
   widgets: Record<string, WidgetComponent>
 }) {
   const t = useT()
   const ids = engines.map((e) => e.id)
-  const idList = ids.join(", ")
   const idArray = ids.map((id) => `"${id}"`).join(", ")
+  // Health tiles group by environment (single default group renders flat) —
+  // the fleet itself stays ALL engines: the landscape and the fleet-wide
+  // analyses deliberately span every environment.
+  const engineGroups = groupEnginesByEnvironment(engines)
+  // The AI prompts see the fleet only through this string — name each engine's
+  // environment when more than one exists, matching the grouping on screen.
+  const idList = formatEnginesByEnvironment(engineGroups)
 
   return (
     <div className="flex flex-col gap-6">
@@ -190,13 +197,22 @@ export function FleetView({
         />
       </header>
 
-      <section>
+      <section className="flex flex-col gap-4">
         <SectionHeading title={t("fleet.engineHealth.title")} hint={t("fleet.engineHealth.hint")} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {engines.map((e) => (
-            <FleetEngineCard key={e.id} engineId={e.id} onEnter={() => onEnterEngine(e.id)} />
-          ))}
-        </div>
+        {engineGroups.map((g) => (
+          <div key={g.id}>
+            {engineGroups.length > 1 && (
+              <div className="text-muted-foreground mb-2 text-[11px] font-medium tracking-wide uppercase">
+                {g.id}
+              </div>
+            )}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {g.engines.map((e) => (
+                <FleetEngineCard key={e.id} engineId={e.id} onEnter={() => onEnterEngine(e.id)} />
+              ))}
+            </div>
+          </div>
+        ))}
       </section>
 
       <LandscapeSection engineIds={ids} widgets={widgets} />

@@ -46,8 +46,13 @@ Edit `.env` (every field is documented inline in `.env.example`):
   reachable from the user's browser (container hostname), otherwise "open in
   cockpit" links point nowhere.
 - Multiple engines: `CAMUNDA_ENGINES_JSON` (or `CAMUNDA_ENGINES_FILE`) with
-  per-engine `id`, `baseUrl`, optional `flavor` (`cibseven | operaton |
-camunda7`) and `auth` — overrides the single-engine shorthand above.
+  per-engine `id`, `baseUrl`, optional `environment`, `flavor` (`cibseven |
+operaton | camunda7`) and `auth` — overrides the single-engine shorthand
+  above. To group engines by environment, either set `environment` per entry
+  or write the JSON as a map keyed by environment id
+  (`{"<environment>": [engines…]}`) — pickers and `camunda7_engine` `list`
+  then offer a two-stage environment → engine selection. Engine ids stay
+  globally unique across environments.
 - `PROMETHEUS_URL` — unset defaults to `http://localhost:9090`, which does
   **not** match the playground stack (host port 8460); every analytics query
   then fails. The server warns at boot when unset.

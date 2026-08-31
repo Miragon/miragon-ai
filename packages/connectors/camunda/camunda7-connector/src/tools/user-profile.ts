@@ -25,6 +25,7 @@ import {
   type UserProfileView,
 } from "../lib/profile-schema.js"
 import { resolveAuthUserId, resolveProfileKey } from "../lib/resolve-profile-key.js"
+import { environmentOf } from "../lib/environments.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { translator } from "../messages/index.js"
 
@@ -98,7 +99,11 @@ export function registerUserProfileTools(
     const record = key ? await store.get(key) : undefined
     return {
       profile: record ? toUserProfile(record) : defaultUserProfile(),
-      availableEngines: registry.engines.map((e) => ({ id: e.id, baseUrl: e.baseUrl })),
+      availableEngines: registry.engines.map((e) => ({
+        id: e.id,
+        baseUrl: e.baseUrl,
+        environment: environmentOf(e),
+      })),
       // Toolset gate (decided up front) AND per-request identity: without a
       // profile key the save tool refuses, so the panel must render read-only
       // instead of a Save button whose click errors.

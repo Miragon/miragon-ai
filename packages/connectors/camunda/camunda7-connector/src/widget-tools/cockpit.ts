@@ -24,6 +24,7 @@ import {
   CAMUNDA7_SHOW_PROCESS_LIST,
 } from "../tool-names.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
+import { environmentOf } from "../lib/environments.js"
 import { engineParamShape } from "../lib/with-engine.js"
 import {
   pagingShape,
@@ -63,7 +64,11 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       }
       const data: CockpitAppData = {
         engineId,
-        engines: registry.engines.map((e) => ({ id: e.id, baseUrl: e.baseUrl })),
+        engines: registry.engines.map((e) => ({
+          id: e.id,
+          baseUrl: e.baseUrl,
+          environment: environmentOf(e),
+        })),
       }
       return buildSingleWidgetView({
         widget: "camunda7:cockpit-app",

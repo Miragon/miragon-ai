@@ -187,4 +187,49 @@ describe("camunda7_engine list / current", () => {
     const list = await under(USER, () => call({ action: "list" }))
     expect((list.engines as Array<{ id: string }>).map((e) => e.id)).toEqual(["alpha", "beta"])
   })
+
+  it("groups an environment-less config into the single default environment", async () => {
+    const { call } = harness()
+    const list = await under(USER, () => call({ action: "list" }))
+    expect((list.engines as Array<{ environment: string }>).map((e) => e.environment)).toEqual([
+      "default",
+      "default",
+    ])
+    expect(list.environments).toEqual([{ id: "default", engineIds: ["alpha", "beta"] }])
+  })
+
+  it("maps environments to their engines in config order — the two-stage selection view", async () => {
+    const store = createInMemoryProfileStore()
+    const registry = createEngineRegistry(
+      [
+        { id: "eu-a", baseUrl: "http://eu-a/engine-rest", environment: "prod-eu" },
+        { id: "us-a", baseUrl: "http://us-a/engine-rest", environment: "prod-us" },
+        { id: "eu-b", baseUrl: "http://eu-b/engine-rest", environment: "prod-eu" },
+      ],
+      (e) => ({ __engine: e.id }) as unknown as Client,
+    )
+    let handler: Handler | undefined
+    const recorder = Object.assign(
+      (config: ToolConfig<EngineRegistry>) => {
+        handler = (config as unknown as { handler: Handler }).handler
+      },
+      { getRegisteredTools: () => [] },
+    )
+    registerEngineTools(recorder as never, store)
+    const list = await under(USER, () => handler!(registry, { action: "list" }))
+    expect(
+      (list.engines as Array<{ id: string; environment: string }>).map((e) => [
+        e.id,
+        e.environment,
+      ]),
+    ).toEqual([
+      ["eu-a", "prod-eu"],
+      ["us-a", "prod-us"],
+      ["eu-b", "prod-eu"],
+    ])
+    expect(list.environments).toEqual([
+      { id: "prod-eu", engineIds: ["eu-a", "eu-b"] },
+      { id: "prod-us", engineIds: ["us-a"] },
+    ])
+  })
 })

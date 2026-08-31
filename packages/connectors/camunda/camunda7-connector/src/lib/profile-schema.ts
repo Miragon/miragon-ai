@@ -129,7 +129,7 @@ export const userProfileToolSaveInput = z
  */
 export interface UserProfileView {
   profile: UserProfile
-  availableEngines: Array<{ id: string; baseUrl: string }>
+  availableEngines: Array<{ id: string; baseUrl: string; environment: string }>
   /**
    * False when the deployment's toolset drops `camunda7_save_user_profile`
    * (`camunda7:read-only`) — the panel then renders disabled fields without a
