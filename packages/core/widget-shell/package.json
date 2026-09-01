@@ -54,7 +54,7 @@
     "@miragon/mcp-toolkit-core": "2.2.0",
     "@miragon/mcp-toolkit-ui": "2.2.0",
     "@tanstack/react-query": "5.101.4",
-    "bpmn-js": "18.25.1",
+    "bpmn-js": "18.26.0",
     "mcp-use": "2.3.2",
     "postgres": "3.4.9",
     "react": "19.2.8"
@@ -78,10 +78,10 @@
     "@miragon/mcp-toolkit-ui": "2.2.0",
     "@stryker-mutator/core": "10.0.0",
     "@stryker-mutator/vitest-runner": "10.0.0",
-    "@testing-library/react": "16.3.2",
+    "@testing-library/react": "16.3.3",
     "@types/react": "19.2.18",
-    "bpmn-js": "18.25.1",
-    "happy-dom": "20.11.6",
+    "bpmn-js": "18.26.0",
+    "happy-dom": "20.11.15",
     "mcp-use": "2.3.2",
     "postgres": "3.4.9",
     "react": "19.2.8",
@@ -91,6 +91,6 @@
   "dependencies": {
     "clsx": "2.1.1",
     "tailwind-merge": "3.6.0",
-    "zod": "4.4.3"
+    "zod": "4.5.2"
   }
 }

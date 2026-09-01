@@ -51,7 +51,7 @@
     "@miragon-ai/analytics-client": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "2.2.0",
-    "zod": "4.4.3"
+    "zod": "4.5.2"
   },
   "peerDependencies": {
     "mcp-use": "2.3.2",
@@ -67,7 +67,7 @@
     "@stryker-mutator/core": "10.0.0",
     "@stryker-mutator/vitest-runner": "10.0.0",
     "@types/react": "19.2.18",
-    "bpmn-js": "18.25.1",
+    "bpmn-js": "18.26.0",
     "mcp-use": "2.3.2",
     "react": "19.2.8",
     "typescript": "6.0.3",
