@@ -40,6 +40,6 @@
     "mcp-use": "2.4.3",
     "react": "19.2.8",
     "typescript": "5.9.3",
-    "vitest": "4.1.4"
+    "vitest": "4.1.11"
   }
 }
