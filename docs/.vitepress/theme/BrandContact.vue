@@ -15,7 +15,7 @@
         journey to <span class="grad">process intelligence.</span>
       </h3>
       <p class="desc">
-        Pick a slot that works for you — 30 minutes, no agenda required. We'll talk through your
+        Pick a slot that works for you, 30 minutes, no agenda required. We'll talk through your
         current setup and where AI-native tooling can make a real difference.
       </p>
 
@@ -27,7 +27,7 @@
       </button>
 
       <div v-show="mailOpen" class="mailForm">
-        <div v-if="sent" class="sentMsg">✓ Thanks — we'll get back to you shortly.</div>
+        <div v-if="sent" class="sentMsg">✓ Thanks, we'll get back to you shortly.</div>
         <form
           v-show="!sent"
           ref="formRef"

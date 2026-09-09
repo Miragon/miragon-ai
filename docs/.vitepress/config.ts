@@ -10,7 +10,7 @@ export default withMermaid({
   // always carries the dark miragon.ai brand (scoped in theme/custom.css).
   head: [
     // consentmanager.net cookie consent with autoblocking, same setup as the
-    // marketing site (miragon-ai-website/index.html) — blocks third-party
+    // marketing site (miragon-ai-website/index.html); blocks third-party
     // scripts (e.g. the Calendly embed) until the visitor consents.
     ["script", {}, 'window.cmp_setlang = "EN";'],
     [
@@ -28,7 +28,7 @@ export default withMermaid({
     ["meta", { name: "theme-color", content: "#00e676" }],
   ],
   // Preload the self-hosted Inter Variable (hashed filename, so a static
-  // head link can't point at it — see vitepress.dev site-config#transformhead).
+  // head link can't point at it, see vitepress.dev site-config#transformhead).
   transformHead({ assets }) {
     const inter = assets.find((file) => /inter-latin-wght-normal\.[\w-]+\.woff2/.test(file))
     if (inter) {
@@ -39,16 +39,32 @@ export default withMermaid({
   },
   themeConfig: {
     logo: { src: "/logo.svg", alt: "Miragon" },
-    // The wordmark already reads MIRAGON — no text next to it.
+    // The wordmark already reads MIRAGON, no text next to it.
     siteTitle: false,
     nav: [
-      { text: "Architecture", link: "/architecture" },
-      { text: "Developers", link: "/developer" },
-      { text: "Operations", link: "/operations" },
-      { text: "Usage", link: "/usage" },
+      { text: "Design", link: "/product/design" },
+      { text: "Operations", link: "/product/operations" },
+      {
+        text: "Docs",
+        // "Deployment" (not "Operations") for /operations so the DevOps doc
+        // doesn't collide with the Miragon AI Operations product page.
+        items: [
+          { text: "Architecture", link: "/architecture" },
+          { text: "For Developers", link: "/developer" },
+          { text: "Deployment", link: "/operations" },
+          { text: "Usage", link: "/usage" },
+        ],
+      },
       { text: "Playground", link: "https://miragon-ai-playground.fly.dev/mcp" },
     ],
     sidebar: [
+      {
+        text: "Products",
+        items: [
+          { text: "Miragon AI Design", link: "/product/design" },
+          { text: "Miragon AI Operations", link: "/product/operations" },
+        ],
+      },
       {
         text: "Overview",
         items: [{ text: "Introduction", link: "/" }],

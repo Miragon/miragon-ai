@@ -37,7 +37,7 @@ onMounted(() => {
         <div class="turn asst" style="--i: 1">
           <span class="who">miragon-ai</span>
           <p class="line">
-            Across 2 process definitions, <b>147 open incidents</b> — all failed jobs.
+            Across 2 process definitions, <b>147 open incidents</b>, all failed jobs.
           </p>
 
           <div class="widget">
