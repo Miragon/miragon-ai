@@ -43,6 +43,21 @@ export {
   type ToolCallMiddlewareHost,
 } from "./host-boot.js"
 export {
+  installHealthEndpoints,
+  type HealthOptions,
+  type HealthReport,
+  type HealthStatus,
+  type HttpRouteHost,
+  type ReadinessCheck,
+} from "./health.js"
+export {
+  installMetrics,
+  type HttpMiddlewareContext,
+  type HttpMiddlewareHost,
+  type MetricsHost,
+  type MetricsOptions,
+} from "./metrics.js"
+export {
   LOCALES,
   PROFILE_SCHEMA_VERSION,
   THEMES,
@@ -69,7 +84,7 @@ export {
   createPostgresDashboardStore,
   DASHBOARD_STORE_MIGRATIONS,
 } from "./dashboard-store-postgres.js"
-export { createSql, runMigrations, type Migration } from "./postgres.js"
+export { createSql, postgresReadinessCheck, runMigrations, type Migration } from "./postgres.js"
 export { appOnly, showToolBinding } from "./widget-tool-bindings.js"
 export {
   composeModules,

@@ -25,14 +25,15 @@ primary_region = "fra"
   auto_start_machines = true
   min_machines_running = 0
 
-# Port-level liveness, mirroring the Dockerfile HEALTHCHECK (avoids coupling
-# to a specific HTTP route).
-[checks.tcp]
-  type = "tcp"
-  port = 8400
+# Readiness over HTTP, mirroring the Dockerfile HEALTHCHECK: /health/ready
+# answers 200 once the MCP transport serves and the server's own dependencies
+# respond (/health/live is the liveness-only variant).
+[[http_service.checks]]
   interval = "15s"
   timeout = "5s"
   grace_period = "30s"
+  method = "GET"
+  path = "/health/ready"
 
 [[vm]]
   size = "shared-cpu-1x"

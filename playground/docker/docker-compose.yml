@@ -248,12 +248,14 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
+      # Readiness over HTTP (the server's /health/ready — mirrors the Dockerfile
+      # HEALTHCHECK); the image ships no curl, Node's global fetch does the probe.
       test:
         [
           "CMD",
           "node",
           "-e",
-          "require('net').createConnection(8400,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))",
+          "fetch('http://127.0.0.1:8400/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 3s

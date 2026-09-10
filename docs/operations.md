@@ -14,14 +14,9 @@ docker run --rm -p 8400:8400 \
 
 Releases are cut by release-please: merging the Release PR tags `v<version>`,
 and after manual approval `publish-to-docker.yml` builds the root `Dockerfile`
-and pushes `:<version>` and `:latest`.
-
-To build it yourself (no registry credential needed — all dependencies are
-public):
-
-```bash
-docker build -t miragon-ai-server .
-```
+and pushes `:<version>` and `:latest`. `docker build -t miragon-ai-server .`
+builds it locally (all dependencies are public — no registry credential). The
+image's `HEALTHCHECK` polls `/health/ready` (see [Observability](#observability)).
 
 `playground/docker/docker-compose.yml` is the fully wired local demo
 (`--profile full` adds the server); `playground/README.md` covers deploying the
@@ -39,11 +34,10 @@ IdP must issue tokens whose `aud` includes it (e.g. a Keycloak audience
 mapper; the playground realm seeds one as the `mcp-resource` client scope).
 Set `MCP_URL` so advertised URLs are right.
 
-The 1.x providers `oidc` and `oidc-proxy` are gone: mcp-use 2 removed the
-generic JWKS verifier and the OAuth proxy broker they were built on, so both
-now fail the boot with an actionable error instead of coming up
-unauthenticated. For an IdP without Dynamic Client Registration, front the
-server with an OAuth-terminating gateway.
+The 1.x providers `oidc` and `oidc-proxy` are gone with mcp-use 2 (no generic
+JWKS verifier, no OAuth proxy broker) — both fail the boot with an actionable
+error. For an IdP without Dynamic Client Registration, front the server with
+an OAuth-terminating gateway.
 
 `CAMUNDA_AUTH_TYPE=passthrough` forwards each caller's bearer token to the
 engine per request (never to Prometheus). With `MCP_OAUTH`
@@ -92,22 +86,6 @@ silently ignored); mcp-use telemetry is off by default
 then says so instead of rendering an uncolored diagram), plus
 `OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_SERVICE_NAME` for the OTLP push.
 
-## External services
-
-The server expects **Camunda 7 / CIB Seven** and **Prometheus** (scraping the
-OTEL Collector's metrics); **Grafana** is optional (`:8470`,
-`playground/docker/grafana/`).
-
-## Metrics pipeline
-
-The Kotlin plugin (`engine-plugins/cibseven-history-metrics`) runs inside the
-CIB Seven runtime and records history-event metrics (no sampling) into
-Micrometer's global registry — any Micrometer export works: OTLP push to the
-Collector (`micrometer-registry-otlp`, the playground default), an Actuator
-Prometheus scrape, or the OTEL agent's Micrometer bridge. The analytics module
-queries Prometheus over PromQL. Per-instance drill-down is not metric-backed —
-use the `camunda7_query_historic_*` tools.
-
 ## Module activation
 
 Disable a module by listing only the ones you want, e.g.
@@ -120,12 +98,32 @@ migrations). No suffix exposes all tools; unknown toolsets warn and degrade to
 
 ## Observability
 
-HTTP transport logs structured JSON to stdout. Metrics flow engine (OTLP push)
-→ OTEL Collector → Prometheus (scrape) → Grafana: event-driven
+Three operational routes sit next to `/mcp`, outside the OAuth gate (which is
+scoped to the MCP path) — probes and scrapers need no token:
+
+| Route           | Purpose                                                                                                                                                                                                                                                                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/health/live`  | Liveness — 200 as soon as the process serves HTTP                                                                                                                                                                                                                                                                                                             |
+| `/health/ready` | Readiness — 200 once the server's own dependencies respond (the Postgres store under `DATABASE_URL`), else 503 naming the failing check. Never probes engines or Prometheus: their outages surface as tool errors, not as an unroutable server. `/health` aliases it (Docker `HEALTHCHECK`, Compose, Fly)                                                     |
+| `/metrics`      | Prometheus text — `mcp_tool_calls_total{tool,outcome}`, `mcp_tool_call_duration_seconds{tool}`, `mcp_http_requests_total{method,route,status}`, `mcp_http_request_duration_seconds{method,route}` plus the standard `process_*`/`nodejs_*` collectors. Labels are bounded by construction (tool catalogue, known routes) — never users, sessions or arguments |
+
+HTTP transport logs structured JSON to stdout. The server expects
+**Camunda 7 / CIB Seven** and **Prometheus**; **Grafana** is optional
+(`:8470`, `playground/docker/grafana/`).
+
+Engine metrics take the push path: the Kotlin plugin
+(`engine-plugins/cibseven-history-metrics`) records history-event metrics (no
+sampling) into Micrometer's global registry inside the CIB Seven runtime — any
+Micrometer export works: OTLP push to the OTEL Collector
+(`micrometer-registry-otlp`, the playground default), an Actuator Prometheus
+scrape, or the OTEL agent's Micrometer bridge. Prometheus scrapes the
+Collector; the analytics module queries it over PromQL — event-driven
 counters/histograms (throughput, durations) plus point-in-time gauges (running
-WIP, open incidents, job/task backlog). Alert rules ship in `playground/docker/prometheus/alerts.yml` (wire an
-Alertmanager under `alerting:` to route them); the `analytics_engine_health`
-tool surfaces the same gauges + firing alerts in one call.
+WIP, open incidents, job/task backlog). Per-instance drill-down is not
+metric-backed — use the `camunda7_query_historic_*` tools. Alert rules ship in
+`playground/docker/prometheus/alerts.yml` (wire an Alertmanager under
+`alerting:` to route them); the `analytics_engine_health` tool surfaces the
+same gauges + firing alerts in one call.
 
 ## CI/CD
 
