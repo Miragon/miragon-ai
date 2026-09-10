@@ -1,4 +1,5 @@
 import type postgres from "postgres"
+import type { ReadinessCheck } from "./health.js"
 
 /**
  * The Postgres infrastructure shared by every store in this package: the one
@@ -33,6 +34,18 @@ export async function createSql(databaseUrl: string): Promise<postgres.Sql> {
     // NOTICEs (e.g. from CREATE TABLE IF NOT EXISTS) are noise on the server log.
     onnotice: () => {},
   })
+}
+
+/**
+ * The `/health/ready` check for a postgres.js client: one `SELECT 1` round
+ * trip through the pool. Connections are lazy, so this is also what first
+ * surfaces an unreachable database after boot. Lives next to `createSql` so
+ * every composition root that persists to Postgres wires the same probe.
+ */
+export function postgresReadinessCheck(sql: postgres.Sql): ReadinessCheck {
+  return async () => {
+    await sql`SELECT 1`
+  }
 }
 
 /**

@@ -40,9 +40,11 @@ EXPOSE 8400
 
 USER node
 
-# Liveness: succeed once the server is accepting TCP connections on 8400.
-# Port-level check avoids coupling to a specific HTTP route.
+# Readiness over HTTP: /health/ready answers 200 once the MCP transport serves
+# and the server's own dependencies (database) respond — the same route Compose
+# and Fly poll; /health/live is the liveness-only variant for orchestrators
+# that split the two. Node's global fetch keeps the image curl-free.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
-  CMD node -e "require('net').connect(8400,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8400)+'/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
 
 CMD ["node", "dist/index.js"]

@@ -13,6 +13,8 @@ describe("initRuntime (non-database path)", () => {
   it("selects in-memory stores and a resolvable shutdown when nothing is configured", async () => {
     const runtime = await initRuntime(env())
     expect(runtime.dashboardStore).toBeUndefined()
+    // No database → nothing for /health/ready to verify.
+    expect(runtime.readiness).toEqual({})
     await expect(runtime.profileStore.get("nobody")).resolves.toBeUndefined()
     await runtime.shutdown()
   })

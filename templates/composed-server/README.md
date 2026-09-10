@@ -165,6 +165,9 @@ docker run -p 8400:8400 \
   gateway; `PORT` changes the HTTP port.
 - Both stores are in-memory by default — without the volume, user settings and
   saved dashboards are lost on every restart.
+- `/health/live`, `/health/ready` and `/metrics` (Prometheus) are served next
+  to `/mcp`, outside any OAuth gate — the image's `HEALTHCHECK` polls
+  `/health/ready`; point Kubernetes probes and a ServiceMonitor at them.
 
 ## Going further
 

@@ -5,7 +5,9 @@ import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
 import type { MCPServer } from "mcp-use"
 import {
+  installHealthEndpoints,
   installMcpRequestContext,
+  installMetrics,
   installToolCallLogging,
   resolvePort,
   swallowDevCliViewsPrime,
@@ -99,6 +101,15 @@ installMcpRequestContext(app)
 // `mcp-use dev`) — both shared host boot helpers.
 installToolCallLogging(app, "miragon-ai")
 swallowDevCliViewsPrime(app)
+
+// Operational HTTP routes next to /mcp — outside the OAuth gate, which is
+// scoped to the MCP path: the Prometheus scrape, then Kubernetes-style probes
+// (readiness covers the server's OWN dependencies, never engines or
+// Prometheus — their outages are tool errors, not an unroutable server). The
+// Dockerfile HEALTHCHECK, Compose and Fly all poll /health/ready. Metrics
+// first: hono only counts routes registered after its middleware.
+installMetrics(app)
+installHealthEndpoints(app, { readiness: runtime.readiness, label: "miragon-ai" })
 
 export default app
 

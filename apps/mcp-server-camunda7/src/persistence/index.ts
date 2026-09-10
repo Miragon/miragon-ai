@@ -5,11 +5,13 @@ import {
   createPostgresProfileStore,
   createSql,
   DASHBOARD_STORE_MIGRATIONS,
+  postgresReadinessCheck,
   PROFILE_STORE_MIGRATIONS,
   profileStoreFromEnv,
   runMigrations,
   startProfileSessionCleanup,
   type ProfileStore,
+  type ReadinessCheck,
 } from "@miragon-ai/widget-shell/server"
 
 /**
@@ -28,6 +30,12 @@ export interface RuntimeBackends {
   dashboardStore: DashboardStore | undefined
   /** Closes owned resources (DB pool); wired to SIGTERM/SIGINT in index.ts. */
   shutdown(): Promise<void>
+  /**
+   * What `/health/ready` verifies: the store dependencies THIS deployment
+   * has (the database when Postgres is selected; nothing for the file/memory
+   * stores — a missing directory fails loudly at the first save instead).
+   */
+  readiness: Record<string, ReadinessCheck>
 }
 
 /**
@@ -81,6 +89,7 @@ export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise
       shutdown: async () => {
         stopCleanup()
       },
+      readiness: {},
     }
   }
 
@@ -109,5 +118,6 @@ export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise
       stopCleanup()
       await sql.end({ timeout: 5 })
     },
+    readiness: { database: postgresReadinessCheck(sql) },
   }
 }

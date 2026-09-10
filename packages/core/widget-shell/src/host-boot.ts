@@ -17,6 +17,24 @@ export interface ToolCallMiddlewareHost {
   ): unknown
 }
 
+/** The tool name from mcp-use's tools/call middleware ctx (`unknown` when the shape is off). */
+export function toolNameOf(ctx: unknown): string {
+  return (ctx as { params?: { name?: string } } | undefined)?.params?.name ?? "unknown"
+}
+
+/**
+ * `error` for an `isError` result (the toolkit's `withToolErrors` shape —
+ * handlers report failures as results, not throws), `ok` otherwise. Shared
+ * by the log line and the metrics counter so both agree on what an error is.
+ */
+export function toolCallOutcome(result: unknown): "ok" | "error" {
+  const isError =
+    typeof result === "object" &&
+    result !== null &&
+    (result as { isError?: unknown }).isError === true
+  return isError ? "error" : "ok"
+}
+
 /**
  * One log line per tools/call with tool name, duration, and outcome.
  * Arguments and results are deliberately not logged — they can carry
@@ -24,16 +42,12 @@ export interface ToolCallMiddlewareHost {
  */
 export function installToolCallLogging(server: ToolCallMiddlewareHost, label: string): void {
   server.use("mcp:tools/call", async (ctx, next) => {
-    const toolName = (ctx as { params?: { name?: string } } | undefined)?.params?.name ?? "unknown"
+    const toolName = toolNameOf(ctx)
     const start = Date.now()
     try {
       const result = await next()
-      const isError =
-        typeof result === "object" &&
-        result !== null &&
-        (result as { isError?: unknown }).isError === true
       console.log(
-        `[${label}] tools/call ${toolName} ${isError ? "error" : "ok"} in ${Date.now() - start}ms`,
+        `[${label}] tools/call ${toolName} ${toolCallOutcome(result)} in ${Date.now() - start}ms`,
       )
       return result
     } catch (error) {

@@ -5,6 +5,7 @@ import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
 import type { MCPServer } from "mcp-use"
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
+import { installHealthEndpoints, installMetrics } from "@miragon-ai/widget-shell/server"
 import { getAppConfig, getPlugins } from "../src/setup.js"
 import { EXPECTED_TOOLS } from "./expected-tools.js"
 
@@ -46,6 +47,7 @@ function textPayload(result: { content?: unknown }): unknown {
 describe("mcp-server-camunda7 E2E smoke", () => {
   let app: MCPServer
   let client: Client
+  let port: number
 
   beforeAll(async () => {
     // Dummy engine: tools that only hit the in-memory EngineRegistry keep
@@ -74,7 +76,11 @@ describe("mcp-server-camunda7 E2E smoke", () => {
         builder: true,
       },
     })
-    const port = await getFreePort()
+    // Match src/index.ts: the operational routes ride on the same hono app,
+    // metrics first so the probes are counted.
+    installMetrics(app)
+    installHealthEndpoints(app, { readiness: { always: () => {} }, label: "e2e" })
+    port = await getFreePort()
     await app.listen(port)
     client = await connectClient(port)
   })
@@ -136,6 +142,34 @@ describe("mcp-server-camunda7 E2E smoke", () => {
       environments: [{ id: "default", engineIds: ["default"] }],
       defaultEngineId: null,
     })
+  })
+
+  it("serves the health probes and the Prometheus scrape next to the MCP transport", async () => {
+    const base = `http://127.0.0.1:${port}`
+    const live = await fetch(`${base}/health/live`)
+    expect(live.status).toBe(200)
+    expect(await live.json()).toEqual({ status: "up" })
+
+    const ready = await fetch(`${base}/health/ready`)
+    expect(ready.status).toBe(200)
+    expect(await ready.json()).toEqual({ status: "up", checks: { always: "up" } })
+
+    // A real tools/call through the transport must reach the metrics middleware.
+    const call = await client.callTool({ name: "camunda7_engine", arguments: { action: "list" } })
+    expect(call.isError).toBeFalsy()
+
+    const metrics = await fetch(`${base}/metrics`)
+    expect(metrics.status).toBe(200)
+    expect(metrics.headers.get("content-type")).toContain("text/plain")
+    const text = await metrics.text()
+    expect(text).toMatch(/^mcp_tool_calls_total\{tool="camunda7_engine",outcome="ok"\} [1-9]\d*$/m)
+    expect(text).toMatch(
+      /^mcp_http_requests_total\{method="GET",route="\/health",status="200"\} [1-9]\d*$/m,
+    )
+    expect(text).toMatch(
+      /^mcp_http_requests_total\{method="POST",route="\/mcp",status="200"\} [1-9]\d*$/m,
+    )
+    expect(text).toContain("process_cpu_user_seconds_total")
   })
 
   it("answers get-framework-manifest with the active modules", async () => {

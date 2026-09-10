@@ -6,7 +6,7 @@ import {
   createPostgresDashboardStore,
   DASHBOARD_STORE_MIGRATIONS,
 } from "./dashboard-store-postgres.js"
-import { runMigrations } from "./postgres.js"
+import { postgresReadinessCheck, runMigrations } from "./postgres.js"
 import { PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
 
 const LAYOUT = [{ row: [{ widget: "shell:kpi-grid" }] }]
@@ -182,5 +182,26 @@ describe.skipIf(!TEST_DATABASE_URL)("postgres persistence", () => {
       const rows = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM dashboards`
       expect(rows[0].n).toBe(1)
     })
+  })
+})
+
+describe.skipIf(!TEST_DATABASE_URL)("postgresReadinessCheck", () => {
+  it("resolves against a reachable database", async () => {
+    const sql = postgres(TEST_DATABASE_URL!, { max: 1, onnotice: () => {} })
+    try {
+      await expect(postgresReadinessCheck(sql)()).resolves.toBeUndefined()
+    } finally {
+      await sql.end({ timeout: 5 })
+    }
+  })
+
+  it("rejects when the database is unreachable", async () => {
+    // Nothing listens on port 1; the short connect timeout keeps the test fast.
+    const sql = postgres("postgres://127.0.0.1:1/nothing", { max: 1, connect_timeout: 1 })
+    try {
+      await expect(postgresReadinessCheck(sql)()).rejects.toThrow()
+    } finally {
+      await sql.end({ timeout: 1 })
+    }
   })
 })

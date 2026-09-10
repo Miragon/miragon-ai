@@ -209,7 +209,12 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    stack (`AppShellProviders`: theme → host bridge → display mode → `ProfileGate` →
    host widget registry; order is load-bearing) plus `LocalizedAppView` live in
    `@miragon-ai/widget-shell/widgets`, the mcp-use boot workarounds
-   (`installToolCallLogging`, `swallowDevCliViewsPrime`, `resolvePort`) in
+   (`installToolCallLogging`, `swallowDevCliViewsPrime`, `resolvePort`) and the
+   operational HTTP routes (`installMetrics` — the Prometheus scrape, labels
+   bounded by construction: tool catalogue + known routes, never users/sessions/
+   arguments; `installHealthEndpoints` — `/health/live|ready`, readiness probes
+   the server's OWN dependencies only, never engines or Prometheus; metrics
+   BEFORE health, hono only counts routes registered after its middleware) in
    `/server` — so `src/ui/main.tsx` and `src/index.ts` stay composition (registry,
    profile-feed name, app-specific layers like `Camunda7StandaloneShell`) and a
    toolkit/mcp-use migration lands once instead of in every composed-server fork.
