@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/Miragon/miragon-ai/compare/v0.13.0...v0.14.0) (2026-09-10)
+
+
+### Features
+
+* **server:** health probes and Prometheus metrics next to /mcp ([#290](https://github.com/Miragon/miragon-ai/issues/290)) ([e04a462](https://github.com/Miragon/miragon-ai/commit/e04a462fb0eab7a183288ad803f1ea0febb20925))
+
 ## [0.13.0](https://github.com/Miragon/miragon-ai/compare/v0.12.0...v0.13.0) (2026-09-09)
 
 
