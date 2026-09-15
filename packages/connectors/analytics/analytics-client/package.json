@@ -60,12 +60,12 @@
     "test:mutation": "stryker run"
   },
   "dependencies": {
-    "zod": "4.5.4"
+    "zod": "4.6.2"
   },
   "devDependencies": {
     "@stryker-mutator/core": "10.0.0",
     "@stryker-mutator/vitest-runner": "10.0.0",
-    "@types/node": "26.2.0",
+    "@types/node": "26.5.1",
     "typescript": "6.0.3",
     "vitest": "4.1.11"
   }
