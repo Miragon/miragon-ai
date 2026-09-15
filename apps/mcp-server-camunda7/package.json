@@ -32,7 +32,7 @@
     "@miragon-ai/camunda7-connector": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "2.3.0",
-    "mcp-use": "2.4.3",
+    "mcp-use": "2.5.0",
     "postgres": "3.4.9",
     "zod": "4.5.4"
   },

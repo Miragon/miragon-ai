@@ -55,7 +55,7 @@
     "zod": "4.5.4"
   },
   "peerDependencies": {
-    "mcp-use": "2.4.3",
+    "mcp-use": "2.5.0",
     "react": "19.2.8"
   },
   "peerDependenciesMeta": {
@@ -71,7 +71,7 @@
     "@types/react": "19.2.18",
     "bpmn-js": "18.28.0",
     "happy-dom": "20.14.0",
-    "mcp-use": "2.4.3",
+    "mcp-use": "2.5.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "typescript": "6.0.3",
