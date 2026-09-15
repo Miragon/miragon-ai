@@ -1,6 +1,6 @@
 [versions]
 # Language / platform
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 # Spring Boot 4.1.0 (latest). CIB Seven 2.2.0's matrix officially lists 4.0.x, but
 # 4.1.0 boots and serves cleanly here — engine, REST and the Cockpit/Tasklist
 # webapp were all verified by actually running the cibseven-example app — once the
