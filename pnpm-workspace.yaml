@@ -4,8 +4,19 @@ packages:
   - "packages/connectors/*/*"
   - "docs"
 
-# qs@6.15.1 (transitive via the Stryker toolchain) carries a moderate DoS
-# advisory (qs.stringify TypeError crash); pin to the patched line until the
-# dependents catch up.
+# Transitive packages carrying open advisories that their dependents have not
+# caught up with yet. All three sit in the build/test toolchain only — none of
+# them ships in the server image — but pinning the patched line here is what
+# closes the Dependabot alert. Keep every entry caret-ranged: an override
+# replaces the dependent's own range outright, so a bare `>=` would happily
+# resolve the next major (js-yaml 5, fast-uri 4) into a dependent that never
+# asked for it. Drop an entry once its dependent resolves the patched version
+# on its own.
 overrides:
-  qs: ">=6.15.3"
+  # via the Stryker toolchain: qs.stringify DoS + array-limit bypass
+  qs: "^6.16.0"
+  # via @hey-api/json-schema-ref-parser (SDK codegen): quadratic CPU in !!omap
+  # resolution, unbounded CPU use for empty merge sources
+  js-yaml: "^4.3.2"
+  # via ajv <- @stryker-mutator/core: host confusion + SSRF in URI normalization
+  fast-uri: "^3.1.6"
