@@ -28,10 +28,14 @@ pkg_name() { node -p "require('$ROOT/packages/$1/package.json').name"; }
 # The template's committed @miragon-ai pins must match the workspace versions —
 # release-please bumps both together via extra-files; a drifted pin means an
 # extra-files entry is missing and customers would install a stale release.
-# The toolkit family and mcp-use are checked too: they are pinned exactly
-# across the workspace (save-exact; a drifted second instance resurrects the
-# duplicate-React-context hang), but release-please does NOT bump them — a
-# repo-wide toolkit/mcp-use bump must include the template by hand.
+# The toolkit family and mcp-use are checked too, but the pin SHAPE differs by
+# stanza: toolkit-core (and react/react-dom/zod) are ranged peerDependencies so
+# consumers dedupe them, while the exact devDependency copy stays pinned
+# (save-exact; a drifted second instance resurrects the duplicate-React-context
+# hang). mcp-use is exact everywhere. release-please does NOT bump these — a
+# repo-wide toolkit/mcp-use bump must include the template by hand. The check is
+# stanza-aware: template peerDependencies compare against the connector's peer
+# ranges, template deps/devDeps against its exact pins.
 ROOT="$ROOT" node - <<'EOF'
 const fs = require("fs")
 const root = process.env.ROOT
@@ -48,21 +52,32 @@ const versions = Object.fromEntries(
     .map((p) => read(`${root}/packages/${p}/package.json`))
     .map((pj) => [pj.name, pj.version]),
 )
-// The camunda7 connector declares toolkit-core (deps), toolkit-ui (devDeps)
-// and mcp-use (peer + devDeps), so its pins are the canonical ones.
+const tracked = (name) => name.startsWith("@miragon/mcp-toolkit-") || name === "mcp-use"
+// The camunda7 connector declares the canonical pins for the toolkit family and
+// mcp-use; peer pins (ranges) and exact pins (deps/devDeps) are tracked apart.
 const camunda7 = read(`${root}/packages/connectors/camunda/camunda7-connector/package.json`)
-for (const deps of [camunda7.dependencies, camunda7.peerDependencies, camunda7.devDependencies]) {
+const peerPins = {}
+const exactPins = {}
+for (const [name, pin] of Object.entries(camunda7.peerDependencies ?? {})) {
+  if (tracked(name)) peerPins[name] = pin
+}
+for (const deps of [camunda7.dependencies, camunda7.devDependencies]) {
   for (const [name, pin] of Object.entries(deps ?? {})) {
-    if (name.startsWith("@miragon/mcp-toolkit-") || name === "mcp-use") versions[name] = pin
+    if (tracked(name)) exactPins[name] = pin
   }
 }
 const bad = []
 for (const file of ["server/package.json", "modules/mcp-notes/package.json"]) {
   const pj = read(`${root}/templates/composed-server/${file}`)
-  for (const deps of [pj.dependencies, pj.devDependencies, pj.peerDependencies]) {
-    for (const [name, pin] of Object.entries(deps ?? {})) {
-      if (versions[name] && pin !== versions[name]) {
-        bad.push(`${file}: ${name} pinned ${pin}, workspace is ${versions[name]}`)
+  for (const [stanza, pins] of [
+    ["dependencies", exactPins],
+    ["devDependencies", exactPins],
+    ["peerDependencies", peerPins],
+  ]) {
+    for (const [name, pin] of Object.entries(pj[stanza] ?? {})) {
+      const expected = versions[name] ?? pins[name]
+      if (expected && pin !== expected) {
+        bad.push(`${file} (${stanza}): ${name} pinned ${pin}, workspace is ${expected}`)
       }
     }
   }

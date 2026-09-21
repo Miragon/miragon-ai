@@ -290,12 +290,23 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
   (`sharedProcessKeys` from the landscape are its valid inputs) — don't make it optional
   again. The tool descriptions carry this rule to the model and are asserted in
   `src/tools/engine-{compare,landscape}.test.ts`.
-- **`@miragon/mcp-toolkit-*` is pinned exactly** (`save-exact=true` in `.npmrc`, currently
-  `2.4.0` everywhere). Updates are deliberate version bumps across all packages — never
-  loosen the pin or bump a single package in isolation. The toolkit peers `mcp-use`
-  exactly too (toolkit `2.4.0` → `mcp-use@2.5.1`, `zod@4.5.4`), so a toolkit bump is always a joint
-  toolkit + `mcp-use` bump across every package incl. `templates/composed-server` —
-  `scripts/test-template.sh` fails if the template is left behind.
+- **Pinning is split by dependency stanza.** `dependencies`/`devDependencies` stay
+  EXACT (`save-exact=true` in `.npmrc`; the `Miragon/pin-npm-dependencies` CI action
+  enforces it — it deliberately ignores `peerDependencies`). The genuinely
+  consumer-shared libraries are published as RANGED `peerDependencies` so a downstream
+  React + zod app dedupes them against its own copy instead of getting a second
+  instance: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*`
+  `~2.4.0` (2.4.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
+  appears as an EXACT `devDependency` so the in-repo build/tests resolve a concrete
+  version. **`mcp-use` is the exception: exactly pinned even as a peer** (`2.5.1`) — a
+  duplicate `mcp-use` instance breaks the React context and hangs every in-widget query
+  on "Loading…" (invariant #4), so its exact pin is load-bearing. Name the required
+  `mcp-use` version in each package README and the release changelog. Toolkit updates are
+  still deliberate version bumps across all packages — never bump a single package in
+  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.4.0` → `mcp-use@2.5.1`,
+  `zod@4.5.4`), so a toolkit MAJOR/MINOR bump is a joint toolkit + `mcp-use` bump across
+  every package incl. `templates/composed-server` — `scripts/test-template.sh` fails if
+  the template is left behind.
 - **The widget `_meta` contract is split since mcp-use 2 — never hand-write the
   `ui` half.** mcp-use emits the MCP-Apps keys (`_meta.ui.resourceUri`, flat
   `ui/resourceUri`, `_meta.ui.visibility`, the view resources `ui://views/<tool>.html`)
@@ -351,11 +362,11 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
   root `Dockerfile` and pushes `docker.io/miragon/miragon-ai-server:<version>` and
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
-- **`@miragon/mcp-toolkit-*` lives in a separate repository** and is consumed here as an
-  exactly pinned dependency (`save-exact`, currently `2.4.0`). Toolkit changes happen in
-  that repo and arrive here as a deliberate, repo-wide version bump — since 1.0 the
-  toolkit follows semver (breaking changes arrive as major bumps; the exact pin makes
-  every bump deliberate either way).
+- **`@miragon/mcp-toolkit-*` lives in a separate repository.** In `devDependencies` it is
+  exactly pinned (`save-exact`, currently `2.4.0`); in the published surface it is a
+  ranged `peerDependency` (`~2.4.0`) so consumers dedupe it. Toolkit changes arrive here
+  as a deliberate, repo-wide version bump — since 1.0 the toolkit follows semver
+  (breaking changes arrive as major bumps).
 - **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,
   point temporary `overrides` in `pnpm-workspace.yaml` at the `file:` tarballs (park any
   `patchedDependencies` entry for the same package while doing so), run the full bar plus

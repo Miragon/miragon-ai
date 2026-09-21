@@ -1,6 +1,6 @@
 {
   "name": "@miragon-ai/camunda7-client",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Generated CIB Seven / Camunda 7 REST SDK plus Zod input schemas.",
   "license": "MIT",
   "keywords": [
@@ -57,14 +57,15 @@
     "spec:refresh": "sh ./scripts/refresh-spec.sh",
     "test:mutation": "stryker run"
   },
-  "dependencies": {
-    "zod": "4.5.4"
+  "peerDependencies": {
+    "zod": "^4.4.0"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.99.0",
     "@stryker-mutator/core": "10.0.0",
     "@stryker-mutator/vitest-runner": "10.0.0",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "zod": "4.5.4"
   }
 }

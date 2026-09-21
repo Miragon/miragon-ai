@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0](https://github.com/Miragon/miragon-ai/compare/v0.14.0...v0.15.0) (2026-09-21)
+
+
+### Features
+
+* **deps:** publish consumer-shared libraries as ranged peerDependencies ([#305](https://github.com/Miragon/miragon-ai/issues/305)) ([7e48000](https://github.com/Miragon/miragon-ai/commit/7e480009c45ca4a6f7a3b6b7de2321c3602b5488))
+
+
+### Bug Fixes
+
+* **ci:** cut releases for runtime dependency bumps ([#301](https://github.com/Miragon/miragon-ai/issues/301)) ([387a4dd](https://github.com/Miragon/miragon-ai/commit/387a4dd4a24247fe5843a3ab9e4804d0a2509869))
+
 ## [0.14.0](https://github.com/Miragon/miragon-ai/compare/v0.13.0...v0.14.0) (2026-09-10)
 
 
