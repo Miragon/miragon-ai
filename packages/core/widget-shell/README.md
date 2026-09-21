@@ -38,9 +38,15 @@ package customers build their own connectors and composed servers on (see the
 | `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                     |
 | `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and `useApplyTheme`                                                                                                |
 
-The `@miragon/mcp-toolkit-*`, React and `@tanstack/react-query` deps are **peer dependencies** — they
-must resolve to a single instance across the host bundle (see the `dedupe` array in the server app's
-`vite.config.ts`), otherwise the React contexts diverge and in-widget queries hang.
+The `@miragon/mcp-toolkit-*`, `react`/`react-dom`, `zod` and `@tanstack/react-query` deps are
+**peer dependencies** — they must resolve to a single instance across the host bundle (see the
+`dedupe` array in the server app's `vite.config.ts`), otherwise the React contexts diverge and
+in-widget queries hang. They are published as ranges (`react`/`react-dom` `^19.2.0`, `zod`
+`^4.4.0`, `@miragon/mcp-toolkit-*` `~2.4.0`) so they dedupe against your app's copy.
+
+`mcp-use` is the exception: it is an **exactly pinned** peer dependency — pin it to `mcp-use@2.5.1`
+in your app. A duplicate `mcp-use` instance breaks the React context and hangs every in-widget query
+on "Loading…".
 
 ## Where it fits
 

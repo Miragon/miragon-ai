@@ -172,10 +172,6 @@ importers:
         version: 2.0.17(mermaid@11.17.2)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.5.1)(axios@1.15.2(debug@4.4.3))(lightningcss@1.33.0)(postcss@8.5.28)(search-insights@2.17.3)(typescript@6.0.3))
 
   packages/connectors/analytics/analytics-client:
-    dependencies:
-      zod:
-        specifier: 4.5.4
-        version: 4.5.4
     devDependencies:
       '@stryker-mutator/core':
         specifier: 10.0.0
@@ -192,6 +188,9 @@ importers:
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.14.5)(jsdom@29.0.0)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
+      zod:
+        specifier: 4.5.4
+        version: 4.5.4
 
   packages/connectors/analytics/analytics-connector:
     dependencies:
@@ -201,13 +200,10 @@ importers:
       '@miragon-ai/widget-shell':
         specifier: workspace:*
         version: link:../../../core/widget-shell
+    devDependencies:
       '@miragon/mcp-toolkit-core':
         specifier: 2.4.0
         version: 2.4.0(mcp-use@2.5.1(@base-ui/react@1.8.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@types/node@26.5.1)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.2.8))(markdown-to-jsx@9.7.15(react@19.2.8)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react-resizable-panels@4.10.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(sonner@2.0.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(tailwind-merge@3.6.0)(tsx@4.21.0)(yaml@2.9.0)(zod@4.5.4))(zod@4.5.4)
-      zod:
-        specifier: 4.5.4
-        version: 4.5.4
-    devDependencies:
       '@miragon/mcp-toolkit-ui':
         specifier: 2.4.0
         version: 2.4.0(c74ae6c7c73a3b87e6661828a94636e7)
@@ -229,18 +225,20 @@ importers:
       react:
         specifier: 19.2.8
         version: 19.2.8
+      react-dom:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
       typescript:
         specifier: 6.0.3
         version: 6.0.3
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.14.5)(jsdom@29.0.0)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
-
-  packages/connectors/camunda/camunda7-client:
-    dependencies:
       zod:
         specifier: 4.5.4
         version: 4.5.4
+
+  packages/connectors/camunda/camunda7-client:
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: 0.99.0
@@ -257,6 +255,9 @@ importers:
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.14.5)(jsdom@29.0.0)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
+      zod:
+        specifier: 4.5.4
+        version: 4.5.4
 
   packages/connectors/camunda/camunda7-connector:
     dependencies:
@@ -266,13 +267,10 @@ importers:
       '@miragon-ai/widget-shell':
         specifier: workspace:*
         version: link:../../../core/widget-shell
+    devDependencies:
       '@miragon/mcp-toolkit-core':
         specifier: 2.4.0
         version: 2.4.0(mcp-use@2.5.1(@base-ui/react@1.8.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@types/node@26.5.1)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.2.8))(markdown-to-jsx@9.7.15(react@19.2.8)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react-resizable-panels@4.10.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(sonner@2.0.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(tailwind-merge@3.6.0)(tsx@4.21.0)(yaml@2.9.0)(zod@4.5.4))(zod@4.5.4)
-      zod:
-        specifier: 4.5.4
-        version: 4.5.4
-    devDependencies:
       '@miragon/mcp-toolkit-ui':
         specifier: 2.4.0
         version: 2.4.0(c74ae6c7c73a3b87e6661828a94636e7)
@@ -309,6 +307,9 @@ importers:
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.14.5)(jsdom@29.0.0)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
+      zod:
+        specifier: 4.5.4
+        version: 4.5.4
 
   packages/core/widget-shell:
     dependencies:
@@ -324,9 +325,6 @@ importers:
       tailwind-merge:
         specifier: 3.6.0
         version: 3.6.0
-      zod:
-        specifier: 4.5.4
-        version: 4.5.4
     devDependencies:
       '@miragon/mcp-toolkit-core':
         specifier: 2.4.0
@@ -361,12 +359,18 @@ importers:
       react:
         specifier: 19.2.8
         version: 19.2.8
+      react-dom:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
       typescript:
         specifier: 6.0.3
         version: 6.0.3
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.14.5)(jsdom@29.0.0)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
+      zod:
+        specifier: 4.5.4
+        version: 4.5.4
 
 packages:
 
