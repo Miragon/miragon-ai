@@ -58,10 +58,15 @@ external infrastructure.
 4. **`resolve.dedupe` in `server/vite.config.ts` is load-bearing — never trim
    it.** Without it every in-widget query hangs on "Loading…" (duplicate React
    contexts).
-5. **Exact version pins** (`save-exact` in `.npmrc`): upgrade all
-   `@miragon-ai/*` packages together to one version; keep
-   `@miragon/mcp-toolkit-*` and `mcp-use` at the versions the `@miragon-ai`
-   packages pin. `@mcp-use/client` (a dev dependency of `server/`) is
+5. **Exact version pins** (`save-exact` in `.npmrc`) for `dependencies`/
+   `devDependencies`: upgrade all `@miragon-ai/*` packages together to one
+   version. The consumer-shared libraries are ranged `peerDependencies`
+   instead — `react`/`react-dom` (`^19.2.0`), `zod` (`^4.4.0`) and
+   `@miragon/mcp-toolkit-*` (`~2.4.0`) — so they dedupe against your app's
+   copy; keep an exact copy of each in `devDependencies` for local builds.
+   **`mcp-use` stays exactly pinned** even as a peer (`2.5.1`): a duplicate
+   `mcp-use` instance breaks the React context and hangs every in-widget query
+   on "Loading…" (invariant #4). `@mcp-use/client` (a dev dependency of `server/`) is
    pre-pinned to the newest version mcp-use's optional peer range accepts, so
    the mcp-use CLI's on-demand install can never mutate `package.json`
    mid-task or introduce a second, differently-resolved mcp-use instance — on

@@ -10,6 +10,11 @@ the other `@miragon-ai` packages (pin them all to one version); the
 [miragon-ai-starter](https://github.com/Miragon/miragon-ai-starter) template shows how to compose it
 into your own MCP server.
 
+The consumer-shared libraries are ranged **peer dependencies** so they dedupe against your app's
+copy: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*` `~2.4.0`. **`mcp-use`
+is exactly pinned** — pin it to `mcp-use@2.5.1` in your app; a duplicate `mcp-use` instance breaks
+the React context and hangs every in-widget query on "Loading…".
+
 ## What it provides
 
 - **Analytics tools** (`src/tools/`) — `analyze_process_performance`, `compare_execution_periods`,
