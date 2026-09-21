@@ -11,16 +11,16 @@ updates:
       interval: "weekly"
     # majors arrive as individual PRs — leave room next to the grouped one
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "fix"
+      prefix-development: "chore"
     reviewers:
       - "dominikhorn93"
       - "emaarco"
     groups:
-      # The toolkit peers `mcp-use` EXACTLY (toolkit 2.1.0 → mcp-use 2.2.3), and the
-      # composed-server template pins both by hand — a lone `mcp-use` bump therefore
-      # always lands with an unmet peer and a red `scripts/test-template.sh` drift gate
-      # (see #270). Keep the pair in its own PR so it stays a deliberate joint bump and
-      # does not drag the rest of the group into the red. Listed FIRST: Dependabot
-      # assigns a dependency to the first group it matches.
+      # Toolkit peers `mcp-use` exactly, so bump them together in their own PR (a lone
+      # bump breaks the peer + template drift gate, see #270). Listed FIRST: Dependabot
+      # assigns each dependency to the first matching group.
       mcp-toolkit:
         patterns:
           - "mcp-use"
