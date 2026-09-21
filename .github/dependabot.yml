@@ -11,6 +11,13 @@ updates:
       interval: "weekly"
     # majors arrive as individual PRs — leave room next to the grouped one
     open-pull-requests-limit: 10
+    # Runtime dependency bumps ship in the published packages, so they must cut a
+    # release: `fix(deps):` triggers a release-please patch bump, where the default
+    # `chore(deps):` does not. Dev-only bumps stay `chore` — they never
+    # reach a published artifact, so they should not force a release.
+    commit-message:
+      prefix: "fix"
+      prefix-development: "chore"
     reviewers:
       - "dominikhorn93"
       - "emaarco"
