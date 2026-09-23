@@ -99,6 +99,7 @@ export const EXPECTED_TOOLS: readonly string[] = [
   "camunda7_throw_signal",
   "camunda7_unclaim_task",
   "camunda7_user_profile_data",
+  "camunda7_widget_actions_data",
   "delete-dashboard",
   "get-builder-catalogue",
   "get-framework-manifest",

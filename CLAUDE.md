@@ -222,7 +222,11 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    `props.dataKey`; raw tool-name strings with graceful degradation (reference:
    `process-incidents/flow.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
    dedicated package created with the first real view — never in the app, never as
-   module-to-module imports. The settings page follows the same tiers: each module
+   module-to-module imports. The host bundle is static — `MCP_ACTIVE_MODULES` changes only
+   the server's tool surface — so a widget-registry lookup cannot tell a runtime-INACTIVE
+   module; a surface that only makes sense with another module probes one of its cheap
+   feeds (reference: `useAnalyticsActive` → `analytics_settings_data`, gating camunda7's
+   cross-engine view) and appears once confirmed. The settings page follows the same tiers: each module
    owns its settings section (widget + `*_data` feed + save tool; reference:
    `analytics:settings` + `analytics-connector/src/settings-tools.ts` — the save tool honors
    `analytics:read-only`), its slice persists under `profile.modules.<module>`
@@ -249,7 +253,11 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    camunda7) — never an ad-hoc `toolset === "read-only"` compare, which fails open for
    every other name — and carries that same decision into its view as `canSave`, so the
    section renders disabled fields instead of a Save button whose click would resolve to
-   an unknown tool. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
+   an unknown tool. In-widget engine writes follow the same rule: every tool a widget
+   mutates is listed in `CAMUNDA7_WIDGET_ACTIONS` (`tool-names.ts`) and its button renders
+   only when `useCanRun()` allows it (fed by `camunda7_widget_actions_data` →
+   `allowedWidgetActions`) — hidden, not disabled; `src/widget-actions.test.ts` fails on
+   an unlisted in-widget write. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in
    `packages/connectors/camunda/camunda7-connector/src/providers/` — the port holds ONLY real differences:
    cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)

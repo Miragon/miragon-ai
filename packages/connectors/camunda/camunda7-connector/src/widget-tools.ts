@@ -7,18 +7,24 @@ import { registerCockpitWidgetTools } from "./widget-tools/cockpit.js"
 import { registerInstanceWidgetTools } from "./widget-tools/instances.js"
 import { registerIncidentWidgetTools } from "./widget-tools/incidents.js"
 import { registerWidgetDataFeeds } from "./widget-tools/data-feeds.js"
+import { registerWidgetActionsFeed } from "./widget-tools/actions.js"
 
 export interface Camunda7WidgetToolsOptions {
   /** Per-deployment overrides for the engine-health traffic-light thresholds. */
   healthThresholds?: Partial<EngineHealthThresholds>
   /** Profile store for localizing model-facing summaries (locale → profile language). */
   profileStore?: ProfileStore
+  /**
+   * The deployment's toolset — decides which in-widget write buttons the
+   * widgets render (`camunda7_widget_actions_data`). Omitted = all tools.
+   */
+  toolset?: string
 }
 
 /**
  * Entry for the widget-tools path: builds the shared context once and hands it
  * to the per-domain registrars under `./widget-tools/`. The tool surface is the
- * union of the four groups; the wire contract per tool lives with its block.
+ * union of the five groups; the wire contract per tool lives with its block.
  */
 export function registerWidgetTools(
   server: MCPServer,
@@ -34,9 +40,16 @@ export function registerWidgetTools(
   // in-memory store (→ locale "en") when none is injected (tests/embeds).
   const profileStore = options.profileStore ?? createInMemoryProfileStore()
 
-  const ctx: WidgetToolsContext = { server, registry, healthThresholds, profileStore }
+  const ctx: WidgetToolsContext = {
+    server,
+    registry,
+    healthThresholds,
+    profileStore,
+    toolset: options.toolset,
+  }
   registerCockpitWidgetTools(ctx)
   registerInstanceWidgetTools(ctx)
   registerIncidentWidgetTools(ctx)
   registerWidgetDataFeeds(ctx)
+  registerWidgetActionsFeed(ctx)
 }

@@ -62,3 +62,19 @@ export const CAMUNDA7_SAVE_USER_PROFILE = "camunda7_save_user_profile"
 // list and to save the default engine on an in-cockpit switch, so the name is
 // load-bearing beyond prompt hints.
 export const CAMUNDA7_ENGINE = "camunda7_engine"
+// The engine writes widgets trigger in place (`useToolMutation`). The
+// deployment's toolset may not register them (`camunda7:read-only` drops every
+// write, `:operations` the admin-only ones), so the widgets ask the app-only
+// `*_widget_actions_data` feed which of these exist and render only those
+// buttons (`useCanRun`). `src/widget-actions.test.ts` fails on an in-widget
+// write missing from this list.
+export const CAMUNDA7_WIDGET_ACTIONS = [
+  "camunda7_set_job_retries",
+  "camunda7_resolve_incident",
+  "camunda7_complete_task",
+  "camunda7_set_process_instance_variable",
+  "camunda7_set_process_instance_suspension",
+  "camunda7_delete_process_instance",
+] as const
+export type Camunda7WidgetAction = (typeof CAMUNDA7_WIDGET_ACTIONS)[number]
+export const CAMUNDA7_WIDGET_ACTIONS_DATA = "camunda7_widget_actions_data"

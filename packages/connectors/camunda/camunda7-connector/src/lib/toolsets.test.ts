@@ -5,7 +5,8 @@ import { registerTools } from "../tools/index.js"
 import { registerIncidentIssueTools } from "../tools/incident-issue.js"
 import type { EngineRegistry } from "./resolve-engine.js"
 import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
-import { withToolsetFilter } from "./toolsets.js"
+import { allowedWidgetActions, withToolsetFilter } from "./toolsets.js"
+import { CAMUNDA7_WIDGET_ACTIONS } from "../tool-names.js"
 
 type Register = Parameters<typeof registerTools>[0]
 type Config = ToolConfig<EngineRegistry>
@@ -149,5 +150,49 @@ describe("toolset rule holds structurally for every registered tool", () => {
         `${name} is advertised in read-only but does not declare readOnlyHint: true`,
       ).toBe(true)
     }
+  })
+})
+
+/**
+ * The widgets render their write buttons from `allowedWidgetActions`, not from
+ * the tool list — so the two must agree for every toolset, or a button's click
+ * resolves to an unknown tool (or a registered write loses its button).
+ */
+describe("allowedWidgetActions mirrors the registered tool surface", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("every widget action is a real tool of the full surface", () => {
+    const all = toolNamesFor(undefined)
+    for (const action of CAMUNDA7_WIDGET_ACTIONS) {
+      expect(all, `${action} is listed as a widget action but not registered`).toContain(action)
+    }
+  })
+
+  it.each([undefined, "read-only", "operations", "admin"])(
+    "toolset %s allows exactly the registered widget actions",
+    (toolset) => {
+      const registered = new Set(toolNamesFor(toolset))
+      expect(allowedWidgetActions(toolset)).toEqual(
+        CAMUNDA7_WIDGET_ACTIONS.filter((action) => registered.has(action)),
+      )
+    },
+  )
+
+  it("read-only allows none, operations all but the admin-only suspend/cancel", () => {
+    expect(allowedWidgetActions("read-only")).toEqual([])
+    expect(allowedWidgetActions("operations")).toEqual([
+      "camunda7_set_job_retries",
+      "camunda7_resolve_incident",
+      "camunda7_complete_task",
+      "camunda7_set_process_instance_variable",
+    ])
+  })
+
+  it("fails closed on an unknown toolset, like the registrar filter", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    expect(allowedWidgetActions("does-not-exist")).toEqual([])
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "does-not-exist"'))
   })
 })

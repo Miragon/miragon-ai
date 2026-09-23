@@ -18,6 +18,7 @@ import { translator } from "../../messages/index.js"
 import { CAMUNDA7_ENGINE } from "../../tool-names.js"
 import { NavBreadcrumb } from "./breadcrumb.js"
 import { cockpitViews, filterLayoutToWidgets } from "./views.js"
+import { useAnalyticsActive } from "./analytics-probe.js"
 import { FleetView } from "./fleet-view.js"
 import { LandingChooser } from "./landing.js"
 
@@ -96,6 +97,66 @@ function cockpitReducer(state: CockpitState, action: CockpitAction): CockpitStat
 }
 
 /**
+ * The sidebar's multi-engine block: the way to the cross-engine view (only while
+ * `onOpenFleet` is offered — an analytics feature) and the active-engine select,
+ * with the environment→engine map as optgroups (flat for a single environment).
+ */
+function EngineSwitcher({
+  engineId,
+  engineGroups,
+  onSwitch,
+  onOpenFleet,
+}: {
+  engineId: string
+  engineGroups: Array<{ id: string; engines: Array<{ id: string }> }>
+  onSwitch: (id: string) => void
+  onOpenFleet?: () => void
+}) {
+  const locale = useLocale()
+  return (
+    <div className="border-border mt-1 flex flex-col gap-2 border-t pt-3">
+      {onOpenFleet && (
+        <button
+          type="button"
+          onClick={onOpenFleet}
+          className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2"
+        >
+          <span aria-hidden="true">⤧</span>
+          {translator(locale, "cockpit.nav.crossEngine")}
+        </button>
+      )}
+      <label className="text-muted-foreground flex flex-col gap-1 px-3 text-[11px] font-medium">
+        {translator(locale, "cockpit.nav.engine")}
+        <select
+          aria-label={translator(locale, "cockpit.aria.activeEngine")}
+          value={engineId}
+          onChange={(e) => onSwitch(e.target.value)}
+          className="border-border bg-background text-foreground h-8 rounded-md border px-2 text-xs"
+        >
+          {engineGroups.length > 1
+            ? engineGroups.map((g) => (
+                <optgroup key={g.id} label={g.id}>
+                  {g.engines.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.id}
+                    </option>
+                  ))}
+                </optgroup>
+              ))
+            : engineGroups
+                .flatMap((g) => g.engines)
+                .map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.id}
+                  </option>
+                ))}
+        </select>
+      </label>
+    </div>
+  )
+}
+
+/**
  * The fleet-mode model context. Names each engine's environment when more than
  * one exists — the model sees the fleet only through this string, while the
  * widget visibly groups its tiles per environment.
@@ -165,6 +226,12 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
 
   const [{ scope, stack }, dispatch] = useReducer(cockpitReducer, INITIAL_STATE)
 
+  // The cross-engine view is an analytics feature (landscape + fleet analyses
+  // need Prometheus) — offered only once the module is confirmed active, both
+  // on the landing and in the sidebar. Per-engine health stays on the picker.
+  const offerFleet = useAnalyticsActive() && engines.length > 1
+  const openFleet = offerFleet ? () => dispatch({ type: "to-fleet" }) : undefined
+
   // A single configured engine skips the landing chooser — one-shot auto-enter
   // once the engine list resolves.
   const soleEngineId = engines.length === 1 ? engines[0].id : null
@@ -208,13 +275,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   }
 
   if (scope.kind === "landing") {
-    return (
-      <LandingChooser
-        engines={engines}
-        onEnterEngine={enterEngine}
-        onOpenFleet={() => dispatch({ type: "to-fleet" })}
-      />
-    )
+    return <LandingChooser engines={engines} onEnterEngine={enterEngine} onOpenFleet={openFleet} />
   }
 
   // ── Cross-engine (fleet) mode ─────────────────────────────────────────────
@@ -289,43 +350,12 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
           </nav>
 
           {engines.length > 1 && (
-            <div className="border-border mt-1 flex flex-col gap-2 border-t pt-3">
-              <button
-                type="button"
-                onClick={() => dispatch({ type: "to-fleet" })}
-                className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2"
-              >
-                <span aria-hidden="true">⤧</span>
-                {translator(locale, "cockpit.nav.crossEngine")}
-              </button>
-              <label className="text-muted-foreground flex flex-col gap-1 px-3 text-[11px] font-medium">
-                {translator(locale, "cockpit.nav.engine")}
-                <select
-                  aria-label={translator(locale, "cockpit.aria.activeEngine")}
-                  value={engineId}
-                  onChange={(e) => switchEngine(e.target.value)}
-                  className="border-border bg-background text-foreground h-8 rounded-md border px-2 text-xs"
-                >
-                  {/* The environment→engine map as optgroups — flat when only
-                      one environment is configured. */}
-                  {engineGroups.length > 1
-                    ? engineGroups.map((g) => (
-                        <optgroup key={g.id} label={g.id}>
-                          {g.engines.map((e) => (
-                            <option key={e.id} value={e.id}>
-                              {e.id}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))
-                    : engines.map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.id}
-                        </option>
-                      ))}
-                </select>
-              </label>
-            </div>
+            <EngineSwitcher
+              engineId={engineId}
+              engineGroups={engineGroups}
+              onSwitch={switchEngine}
+              onOpenFleet={openFleet}
+            />
           )}
         </aside>
 

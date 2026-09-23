@@ -1,17 +1,9 @@
-import { useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { WidgetRenderer, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
-import {
-  AskAiButton,
-  CountPill,
-  SectionHeading,
-  TONE_DOT,
-  type ToneVariant,
-} from "@miragon-ai/widget-shell/widgets"
+import { AskAiButton, CountPill, SectionHeading, TONE_DOT } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
-import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { formatEnginesByEnvironment, groupEnginesByEnvironment } from "../../lib/environments.js"
-import { severityTone } from "../cockpit-dashboard/lib.js"
 import { useT } from "../../messages/use-t.js"
+import { useEngineHealth } from "./engine-health.js"
 import { filterLayoutToWidgets } from "./views.js"
 
 function FleetEngineKpis({
@@ -53,24 +45,12 @@ function FleetEngineKpis({
 }
 
 /**
- * One health tile per engine. Self-fetches the same `camunda7_cockpit_overview_data`
- * feed the per-engine cockpit overview uses, under the SAME query key — so once an
- * operator drills into an engine its overview is already warm in the cache. Clicking
- * the tile enters that engine's cockpit.
+ * One health tile per engine ({@link useEngineHealth} — the same numbers the
+ * landing's engine picker shows). Clicking the tile enters that engine's cockpit.
  */
 function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () => void }) {
-  const q = useToolQuery<CockpitDashboardData>(
-    ["camunda7:cockpit-overview", engineId],
-    CAMUNDA7_COCKPIT_OVERVIEW_DATA,
-    { engine: engineId },
-  )
+  const { query: q, summary: s, incidents, failed, tone } = useEngineHealth(engineId)
   const t = useT()
-  const s = q.data?.summary
-  const incidents = s?.totalIncidents ?? 0
-  const failed = s?.totalFailedJobs ?? 0
-  // Same severity ladder as the per-definition rows — including the neutral
-  // tone for an idle engine (0 running instances), which must not read as green.
-  const tone: ToneVariant = severityTone(failed, incidents, s?.totalRunningInstances ?? 0)
 
   return (
     <button
@@ -115,8 +95,9 @@ const LANDSCAPE_WIDGET = "analytics:engine-landscape"
 /**
  * The analytics module's cross-engine landscape, composed by raw widget id.
  * Tier-2 cross-module UI (architecture invariant 8): the id is a string, not an
- * import — `filterLayoutToWidgets` drops the cell when the analytics module is
- * inactive, so the section disappears instead of erroring.
+ * import — `filterLayoutToWidgets` drops the cell when the analytics widgets are
+ * not bundled. A bundled but runtime-INACTIVE analytics module never gets here:
+ * the cockpit only offers the fleet view once `useAnalyticsActive` confirms it.
  */
 function LandscapeSection({
   engineIds,

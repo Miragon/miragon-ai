@@ -177,6 +177,9 @@ Narrow the camunda7 surface per deployment via a suffix in `MCP_ACTIVE_MODULES`:
 
 Example: `MCP_ACTIVE_MODULES=camunda7:read-only,analytics`.
 
+The widgets follow the toolset: an action button whose tool the toolset drops (retry, resolve
+incident, complete task, edit variable, suspend, cancel) is hidden, not disabled.
+
 ## Configuration
 
 The most common variables — see [`docs/operations.md`](docs/operations.md) for the full reference.
@@ -207,6 +210,11 @@ filter to aggregate or compare. Each engine entry may carry its own `auth`
 (`{type, username?, password?, token?}`); entries without one use the global `CAMUNDA_*` settings.
 Entries may also declare their vendor via `flavor` (`cibseven` | `operaton` | `camunda7`, default
 `cibseven`), which selects the engine's cockpit-link routes and display name.
+
+With several engines, the cockpit landing shows each engine's live health (status dot, open
+incidents) on the engine picker, read from the engine itself. The cross-engine view (process
+landscape plus fleet-wide failure and performance analyses) needs the analytics module; without it
+(e.g. `MCP_ACTIVE_MODULES=camunda7` where no Prometheus exists) the cockpit does not offer it.
 
 Fleets that span several environments (each environment hosting some services with an engine)
 group their engines per environment: the cockpit landing becomes a two-stage selection

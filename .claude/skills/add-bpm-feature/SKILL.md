@@ -183,7 +183,13 @@ exception that uses `server.tool()` directly):
   every `*_show_*` tool and app-only visibility on every `*_data` feed **by name**.
 - A widget-path tool that performs a durable write must honor the toolset itself —
   follow `camunda7_save_user_profile` in `src/tools/user-profile.ts`
-  (`isCamunda7Toolset` + `isToolInToolset`, failing open on unknown toolset names).
+  (`resolveCamunda7Toolset` + `isToolInToolset`, failing closed to `read-only` on
+  unknown toolset names).
+- A widget button that calls a write tool (`useToolMutation`) renders only when
+  `useCanRun()` (`src/widgets/widget-actions.ts`) allows that tool, and the tool is
+  listed in `CAMUNDA7_WIDGET_ACTIONS` (`src/tool-names.ts`) — `src/widget-actions.test.ts`
+  enforces the list. Hide the control (and a table column it would leave empty), never
+  just disable it: the toolset is deployment-wide, the user cannot change it.
 
 ## Step 5 — verify
 

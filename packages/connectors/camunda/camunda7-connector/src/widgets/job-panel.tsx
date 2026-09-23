@@ -19,6 +19,7 @@ import {
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { CockpitListFooter } from "./list-footer.js"
 import { refreshCockpitData } from "./refresh.js"
+import { useCanRun } from "./widget-actions.js"
 import { useT } from "../messages/use-t.js"
 
 export type { JobPanelData }
@@ -51,6 +52,8 @@ export function JobPanelWidget({
   const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
   const [retryError, setRetryError] = useState<{ jobId: string; message: string } | null>(null)
   const retryMutation = useToolMutation("camunda7_set_job_retries")
+  const canRun = useCanRun()
+  const canRetry = canRun("camunda7_set_job_retries")
   const { feedEngine, effectiveFailedOnly, args } = buildJobsFeed(initialData, engine, failedOnly)
   const paged = usePagedViewData<JobPanelData["jobs"][number], JobPanelData>({
     initialData,
@@ -124,8 +127,10 @@ export function JobPanelWidget({
             `${failedOnly ? " filtered to failed jobs only" : ""}: ` +
             `${totalCount} job(s) total, ${failedCount} failed (no retries left), ` +
             `${jobs.length} loaded.`,
-          `Retry one with camunda7_set_job_retries, all failed ones via ` +
-            `camunda7_set_job_retries_batch; matching incidents via camunda7_list_incidents.`,
+          canRetry
+            ? `Retry one with camunda7_set_job_retries, all failed ones via ` +
+              `camunda7_set_job_retries_batch; matching incidents via camunda7_list_incidents.`
+            : `Matching incidents via camunda7_list_incidents.`,
         ].join(" ")}
       >
         {null}
@@ -217,14 +222,16 @@ export function JobPanelWidget({
                           title={t("jobPanel.draftTicket")}
                           prompt={`Draft an incident ticket for the incident behind failed job ${job.id} on engine "${engineId}". This job has no incidentId directly, so first FIND the incident: call camunda7_list_incidents({ engine: "${engineId}", processInstanceId: "${job.processInstanceId}" }) and pick the incident for this job (activity "${job.activityId}" of process "${job.processDefinitionKey}", instance ${job.processInstanceId}; reported exception: "${job.exceptionMessage}"). Then build the draft with camunda7_format_incident_issue({ incidentId: "<found incident id>" }) and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
                         />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={retryMutation.isPending}
-                          onClick={() => handleRetry(job.id)}
-                        >
-                          {t("jobPanel.retry")}
-                        </Button>
+                        {canRetry && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={retryMutation.isPending}
+                            onClick={() => handleRetry(job.id)}
+                          >
+                            {t("jobPanel.retry")}
+                          </Button>
+                        )}
                       </div>
                     )}
                     {retried && <Badge variant="secondary">{t("jobPanel.retried")}</Badge>}

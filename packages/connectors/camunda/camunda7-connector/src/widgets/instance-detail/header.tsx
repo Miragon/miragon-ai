@@ -52,8 +52,10 @@ export function InstanceHeader({
   isSuspended: boolean
   isActionable: boolean
   isMutatingInstance: boolean
-  onRequestSuspendToggle: () => void
-  onRequestCancel: () => void
+  /** Omitted when the deployment's toolset has no suspension tool — no button. */
+  onRequestSuspendToggle?: () => void
+  /** Omitted when the deployment's toolset has no cancel tool — no button. */
+  onRequestCancel?: () => void
 }) {
   const t = useT()
   const activeIds = (activeActivityIds ?? []).join(", ") || "none"
@@ -87,26 +89,26 @@ export function InstanceHeader({
               instance.businessKey ? ` (business key ${instance.businessKey})` : ""
             } of definition ${instance.definitionId}${engineClause}. It is currently at activities ${activeIds} with incidents at ${incidentIds}. Use camunda7_get_process_instance, camunda7_list_incidents({processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.`}
           />
-          {isActionable && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isMutatingInstance}
-                onClick={onRequestSuspendToggle}
-              >
-                {isSuspended ? t("instanceDetail.activate") : t("instanceDetail.suspend")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                disabled={isMutatingInstance}
-                onClick={onRequestCancel}
-              >
-                {t("instanceDetail.cancelInstance")}
-              </Button>
-            </>
+          {isActionable && onRequestSuspendToggle && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isMutatingInstance}
+              onClick={onRequestSuspendToggle}
+            >
+              {isSuspended ? t("instanceDetail.activate") : t("instanceDetail.suspend")}
+            </Button>
+          )}
+          {isActionable && onRequestCancel && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              disabled={isMutatingInstance}
+              onClick={onRequestCancel}
+            >
+              {t("instanceDetail.cancelInstance")}
+            </Button>
           )}
         </>
       }

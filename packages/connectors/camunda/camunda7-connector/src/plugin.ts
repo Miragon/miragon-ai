@@ -122,9 +122,12 @@ export function createPlugin(
       registerIncidentIssuePrompt(server, incidentIssueConfig)
     },
     registerWidgetTools: (server) => {
+      // The toolset decides which in-widget write buttons render
+      // (`camunda7_widget_actions_data`), mirroring the registrar filter.
       registerWidgetTools(server, registry, {
         healthThresholds: config.healthThresholds,
         profileStore,
+        toolset: config.toolset,
       })
       // Profile tools render/own the settings widget; the engine registry is
       // read only for the configured engine list the settings UI offers as

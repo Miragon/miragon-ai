@@ -2,6 +2,7 @@ import type { createToolRegistrar, ToolConfig } from "@miragon/mcp-toolkit-core/
 import type { z } from "zod"
 import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
 import type { EngineRegistry } from "./resolve-engine.js"
+import { CAMUNDA7_WIDGET_ACTIONS, type Camunda7WidgetAction } from "../tool-names.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 type ZodRawShape = Record<string, z.ZodType>
@@ -81,6 +82,21 @@ export function isToolInToolset(
   if (toolset === "operations") return true
   // read-only
   return config.annotations?.readOnlyHint === true || SESSION_INFRASTRUCTURE_TOOLS.has(config.name)
+}
+
+/**
+ * The in-widget writes ({@link CAMUNDA7_WIDGET_ACTIONS}) this deployment's
+ * toolset registers — what the widgets render their action buttons from, so a
+ * button and the tool surface can never disagree (the widget twin of the
+ * settings panel's `canSave`). Same resolution as {@link withToolsetFilter}:
+ * no toolset allows everything, an unknown name fails closed to `read-only`.
+ * Every entry is an engine write, so the rule needs no annotations —
+ * `isToolInToolset` only consults `readOnlyHint`, which a write never carries.
+ */
+export function allowedWidgetActions(toolset?: string): Camunda7WidgetAction[] {
+  const known = vocabulary.resolve(toolset)
+  if (known === undefined) return [...CAMUNDA7_WIDGET_ACTIONS]
+  return CAMUNDA7_WIDGET_ACTIONS.filter((name) => isToolInToolset({ name }, known))
 }
 
 /**

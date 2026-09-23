@@ -13,6 +13,7 @@ import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
 import { refreshCockpitData } from "../refresh.js"
+import { useCanRun } from "../widget-actions.js"
 import { ConfirmDialog } from "../confirm-dialog.js"
 import { ActivitySummary } from "./activity-summary.js"
 import { PagedIncidentTable, type ResolveError } from "./incident-table.js"
@@ -66,6 +67,8 @@ export function ActivityIncidentList({
 }) {
   const t = useT()
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
+  const canRun = useCanRun()
+  const canResolve = canRun("camunda7_resolve_incident")
   const go = useNav()
   const { data, loading, error } = useViewData<ProcessIncidentsData>(
     initialData,
@@ -178,7 +181,7 @@ export function ActivityIncidentList({
                 resolvedIds={resolvedIds}
                 pendingIds={pendingIds}
                 resolveError={resolveError}
-                onResolve={setConfirmResolveId}
+                onResolve={canResolve ? setConfirmResolveId : undefined}
                 onAnalyze={analyzeIncident}
               />
             </GroupCard>

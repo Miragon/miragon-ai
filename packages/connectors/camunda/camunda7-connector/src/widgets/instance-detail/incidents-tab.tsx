@@ -15,7 +15,8 @@ export function IncidentsTab({
   resolvedIds: Set<string>
   pendingIds: Set<string>
   resolveError: ResolveError | null
-  onResolve: (incidentId: string) => void
+  /** Omitted when the deployment's toolset has no resolve tool — no button. */
+  onResolve?: (incidentId: string) => void
 }) {
   const t = useT()
   const go = useNav()
