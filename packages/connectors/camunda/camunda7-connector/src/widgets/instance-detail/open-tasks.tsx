@@ -3,6 +3,7 @@ import { Button, Card, CardContent } from "@miragon/mcp-toolkit-ui"
 
 import type { OpenUserTask } from "../../view-models.js"
 import { TaskCompleteForm } from "../task-complete-form.js"
+import { useCanRun } from "../widget-actions.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
@@ -30,12 +31,15 @@ export function useOpenTasks(openTasks: OpenUserTask[] | undefined) {
 function OpenTaskCard({
   task,
   engine,
+  canComplete,
   expanded,
   onToggle,
   onCompleted,
 }: {
   task: OpenUserTask
   engine?: string
+  /** False when the deployment's toolset has no complete tool — no form toggle. */
+  canComplete: boolean
   expanded: boolean
   onToggle: () => void
   onCompleted: () => void
@@ -53,11 +57,13 @@ function OpenTaskCard({
               {!task.assignee && <> · {t("instanceDetail.unassigned")}</>}
             </div>
           </div>
-          <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={onToggle}>
-            {expanded ? t("instanceDetail.close") : t("instanceDetail.complete")}
-          </Button>
+          {canComplete && (
+            <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={onToggle}>
+              {expanded ? t("instanceDetail.close") : t("instanceDetail.complete")}
+            </Button>
+          )}
         </div>
-        {expanded && (
+        {canComplete && expanded && (
           <div className="mt-3 border-t pt-3">
             <TaskCompleteForm
               taskId={task.id}
@@ -73,7 +79,10 @@ function OpenTaskCard({
   )
 }
 
-/** The "Tasks" tab body — the open-task cards with their inline complete forms. */
+/**
+ * The "Tasks" tab body — the open-task cards with their inline complete forms
+ * (only where the deployment's toolset exposes `camunda7_complete_task`).
+ */
 export function OpenTasksTab({
   openTasks,
   visibleTasks,
@@ -90,6 +99,8 @@ export function OpenTasksTab({
   onTaskCompleted: (taskId: string) => void
 }) {
   const t = useT()
+  const canRun = useCanRun()
+  const canComplete = canRun("camunda7_complete_task")
   if (visibleTasks.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
@@ -106,6 +117,7 @@ export function OpenTasksTab({
           key={task.id}
           task={task}
           engine={engineId}
+          canComplete={canComplete}
           expanded={activeTaskId === task.id}
           onToggle={() => onToggleTask(task.id)}
           onCompleted={() => onTaskCompleted(task.id)}

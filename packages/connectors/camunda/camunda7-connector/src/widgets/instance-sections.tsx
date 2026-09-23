@@ -6,6 +6,7 @@ import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
 import { coerceValue } from "./lib/coerce-value.js"
 import { refreshCockpitData } from "./refresh.js"
+import { useCanRun } from "./widget-actions.js"
 
 export function formatVariableValue(value: unknown, type?: string): string {
   if (value === null || value === undefined) return "—"
@@ -38,14 +39,14 @@ function VariableRow({
   variable,
   instanceId,
   engine,
-  readOnly,
+  editable,
   onSaved,
 }: {
   name: string
   variable: VariableValue
   instanceId: string
   engine?: string
-  readOnly: boolean
+  editable: boolean
   onSaved: (name: string, value: unknown) => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -148,13 +149,15 @@ function VariableRow({
           formatVariableValue(variable.value, variable.type)
         )}
       </Td>
-      <Td align="right" className="w-16">
-        {!editing && !readOnly && (
-          <Button variant="ghost" size="sm" onClick={startEdit}>
-            {t("instanceSections.edit")}
-          </Button>
-        )}
-      </Td>
+      {editable && (
+        <Td align="right" className="w-16">
+          {!editing && (
+            <Button variant="ghost" size="sm" onClick={startEdit}>
+              {t("instanceSections.edit")}
+            </Button>
+          )}
+        </Td>
+      )}
     </tr>
   )
 }
@@ -172,6 +175,10 @@ export function VariablesTable({
 }) {
   const [localVars, setLocalVars] = useState<Map<string, unknown>>(new Map())
   const t = useT()
+  // An ended instance and a toolset without the variable write both mean no
+  // edit column at all — an empty trailing column would read as missing data.
+  const canRun = useCanRun()
+  const editable = !readOnly && canRun("camunda7_set_process_instance_variable")
   // The optimistic shadows only bridge the gap until the feed refetches —
   // fresh server data (new `variables` identity) must win again.
   useResetOnChange(variables, () => setLocalVars(new Map()))
@@ -199,7 +206,7 @@ export function VariablesTable({
         { label: t("instanceSections.columnName") },
         { label: t("instanceSections.columnType") },
         { label: t("instanceSections.columnValue") },
-        { plain: true },
+        ...(editable ? [{ plain: true }] : []),
       ]}
     >
       {entries.map(([name, variable]) => (
@@ -209,7 +216,7 @@ export function VariablesTable({
           variable={getVariable(name, variable)}
           instanceId={instanceId}
           engine={engine}
-          readOnly={readOnly}
+          editable={editable}
           onSaved={handleSaved}
         />
       ))}

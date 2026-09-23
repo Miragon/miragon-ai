@@ -33,9 +33,11 @@ export function FailureTab({
 }: {
   data: IncidentDetailData
   resolved: boolean
-  onResolve: () => void
+  /** Omitted when the deployment's toolset has no resolve tool — no button. */
+  onResolve?: () => void
   resolving: boolean
-  onRetry: () => void
+  /** Omitted when the deployment's toolset has no retry tool — no button. */
+  onRetry?: () => void
   retrying: boolean
   retried: boolean
   retryError?: string | null
@@ -124,9 +126,11 @@ function ActionsRow({
 }: {
   data: IncidentDetailData
   resolved: boolean
-  onResolve: () => void
+  /** Omitted when the deployment's toolset has no resolve tool — no button. */
+  onResolve?: () => void
   resolving: boolean
-  onRetry: () => void
+  /** Omitted when the deployment's toolset has no retry tool — no button. */
+  onRetry?: () => void
   retrying: boolean
   retried: boolean
   retryError?: string | null
@@ -140,7 +144,7 @@ function ActionsRow({
           label={t("incidentFailure.draftTicketLabel")}
           prompt={draftTicketPrompt(data)}
         />
-        {data.job && (
+        {data.job && onRetry && (
           <Button
             variant="outline"
             size="sm"
@@ -155,15 +159,17 @@ function ActionsRow({
         {resolved ? (
           <Badge variant="secondary">{t("incidentDetail.resolved")}</Badge>
         ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onResolve}
-            disabled={resolving}
-            aria-label={t("incidentFailure.resolveAria")}
-          >
-            {t("incidentFailure.resolveButton")}
-          </Button>
+          onResolve && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onResolve}
+              disabled={resolving}
+              aria-label={t("incidentFailure.resolveAria")}
+            >
+              {t("incidentFailure.resolveButton")}
+            </Button>
+          )
         )}
       </div>
       {retryError && (

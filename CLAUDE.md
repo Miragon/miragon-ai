@@ -249,7 +249,11 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    camunda7) — never an ad-hoc `toolset === "read-only"` compare, which fails open for
    every other name — and carries that same decision into its view as `canSave`, so the
    section renders disabled fields instead of a Save button whose click would resolve to
-   an unknown tool. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
+   an unknown tool. In-widget engine writes follow the same rule: every tool a widget
+   mutates is listed in `CAMUNDA7_WIDGET_ACTIONS` (`tool-names.ts`) and its button renders
+   only when `useCanRun()` allows it (fed by `camunda7_widget_actions_data` →
+   `allowedWidgetActions`) — hidden, not disabled; `src/widget-actions.test.ts` fails on
+   an unlisted in-widget write. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in
    `packages/connectors/camunda/camunda7-connector/src/providers/` — the port holds ONLY real differences:
    cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)

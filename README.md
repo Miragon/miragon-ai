@@ -177,6 +177,9 @@ Narrow the camunda7 surface per deployment via a suffix in `MCP_ACTIVE_MODULES`:
 
 Example: `MCP_ACTIVE_MODULES=camunda7:read-only,analytics`.
 
+The widgets follow the toolset: an action button whose tool the toolset drops (retry, resolve
+incident, complete task, edit variable, suspend, cancel) is hidden, not disabled.
+
 ## Configuration
 
 The most common variables — see [`docs/operations.md`](docs/operations.md) for the full reference.

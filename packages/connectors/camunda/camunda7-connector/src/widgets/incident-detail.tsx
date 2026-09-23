@@ -19,13 +19,25 @@ import { IncidentDetailHeader } from "./incident-detail/header.js"
 import { InstanceTab } from "./incident-detail/instance-tab.js"
 import { IncidentKpis } from "./incident-detail/kpis.js"
 import { refreshCockpitData } from "./refresh.js"
+import { useCanRun } from "./widget-actions.js"
 import { PagedHistoryView } from "./history-timeline.js"
 import { useT } from "../messages/use-t.js"
 
 export type { IncidentDetailData }
 
-function modelSummary(data: IncidentDetailData, resolved: boolean): string {
+function modelSummary(
+  data: IncidentDetailData,
+  resolved: boolean,
+  { canResolve, canRetry }: { canResolve: boolean; canRetry: boolean },
+): string {
   const incidentMessage = data.incidentMessage ?? data.job?.exceptionMessage
+  // Only the writes this deployment's toolset exposes — the model has no others.
+  const writes = [
+    canResolve && "camunda7_resolve_incident",
+    canRetry && "camunda7_set_job_retries",
+  ].filter(Boolean)
+  const jobClause = data.job ? ` (job ${data.job.id}, ${data.job.retries} retries left)` : ""
+  const instanceHint = "instance context via camunda7_show_instance_detail."
   return [
     `Viewing CIB Seven incident ${data.incidentId} (type ${data.incidentType}` +
       `${resolved ? ", marked resolved in this session" : ""}) at activity ` +
@@ -34,9 +46,9 @@ function modelSummary(data: IncidentDetailData, resolved: boolean): string {
       `${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}, ` +
       `engine ${data.engineId ?? "default"}.`,
     `Message: ${incidentMessage ? `"${truncate(incidentMessage, 160)}"` : "(none reported)"}.`,
-    `Act via camunda7_resolve_incident / camunda7_set_job_retries` +
-      `${data.job ? ` (job ${data.job.id}, ${data.job.retries} retries left)` : ""}; ` +
-      `full instance context via camunda7_show_instance_detail.`,
+    writes.length > 0
+      ? `Act via ${writes.join(" / ")}${jobClause}; full ${instanceHint}`
+      : `Full ${instanceHint}`,
   ].join(" ")
 }
 
@@ -51,6 +63,9 @@ export function IncidentDetailWidget({
 }) {
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const retryMutation = useToolMutation("camunda7_set_job_retries")
+  const canRun = useCanRun()
+  const canResolve = canRun("camunda7_resolve_incident")
+  const canRetry = canRun("camunda7_set_job_retries")
   const [resolved, setResolved] = useState(false)
   const [retried, setRetried] = useState(false)
   const [confirmResolve, setConfirmResolve] = useState(false)
@@ -139,12 +154,16 @@ export function IncidentDetailWidget({
             <FailureTab
               data={data}
               resolved={resolved}
-              onResolve={() => {
-                resolveMutation.reset()
-                setConfirmResolve(true)
-              }}
+              onResolve={
+                canResolve
+                  ? () => {
+                      resolveMutation.reset()
+                      setConfirmResolve(true)
+                    }
+                  : undefined
+              }
               resolving={resolveMutation.isPending}
-              onRetry={handleRetry}
+              onRetry={canRetry ? handleRetry : undefined}
               retrying={retryMutation.isPending}
               retried={retried}
               retryError={retryMutation.error?.message ?? null}
@@ -174,7 +193,9 @@ export function IncidentDetailWidget({
     >
       {/* Rendered in-component (not via the adapter's describeForModel) because
           this widget self-fetches in the cockpit, where the adapter has no data. */}
-      <HostModelContext content={modelSummary(data, resolved)}>{null}</HostModelContext>
+      <HostModelContext content={modelSummary(data, resolved, { canResolve, canRetry })}>
+        {null}
+      </HostModelContext>
 
       <ConfirmDialog
         open={confirmResolve}

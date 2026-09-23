@@ -89,12 +89,12 @@ then says so instead of rendering an uncolored diagram), plus
 ## Module activation
 
 Disable a module by listing only the ones you want, e.g.
-`MCP_ACTIVE_MODULES=camunda7`. The camunda7 module also takes a toolset suffix
-to narrow the tool surface: `camunda7:read-only` (queries + engine discovery),
-`camunda7:operations` (adds start/complete/claim/variables/retries/messages),
-`camunda7:admin` (everything, incl. delete/modify/suspension, deployments,
-migrations). No suffix exposes all tools; unknown toolsets warn and degrade to
-`read-only`.
+`MCP_ACTIVE_MODULES=camunda7`. The camunda7 toolset suffix narrows the tool
+surface: `:read-only` (queries + engine discovery), `:operations` (adds
+start/complete/claim/variables/retries/messages), `:admin` (adds
+delete/modify/suspension, deployments, migrations). No suffix exposes all
+tools; unknown toolsets warn and degrade to `read-only`. Widgets hide action
+buttons whose tool the toolset drops.
 
 ## Observability
 

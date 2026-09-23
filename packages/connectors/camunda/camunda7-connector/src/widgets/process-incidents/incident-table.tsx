@@ -43,7 +43,8 @@ export function IncidentTable({
   resolvedIds: Set<string>
   pendingIds: Set<string>
   resolveError: ResolveError | null
-  onResolve: (incidentId: string) => void
+  /** Omitted when the deployment's toolset has no resolve tool — no button. */
+  onResolve?: (incidentId: string) => void
   onAnalyze: (incidentId: string) => void
   /**
    * Drop the instance column (and the grouped view's icon-column indent) when
@@ -130,14 +131,16 @@ export function IncidentTable({
                           "```",
                         ].join("\n")}
                       />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pendingIds.has(incident.id)}
-                        onClick={() => onResolve(incident.id)}
-                      >
-                        {t("procIncTable.resolve")}
-                      </Button>
+                      {onResolve && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={pendingIds.has(incident.id)}
+                          onClick={() => onResolve(incident.id)}
+                        >
+                          {t("procIncTable.resolve")}
+                        </Button>
+                      )}
                     </div>
                   )}
                 </Td>
@@ -198,7 +201,8 @@ export function PagedIncidentTable({
   resolvedIds: Set<string>
   pendingIds: Set<string>
   resolveError: ResolveError | null
-  onResolve: (incidentId: string) => void
+  /** Omitted when the deployment's toolset has no resolve tool — no button. */
+  onResolve?: (incidentId: string) => void
   onAnalyze: (incidentId: string) => void
 }) {
   const t = useT()

@@ -65,4 +65,6 @@ export interface WidgetToolsContext {
   registry: EngineRegistry
   healthThresholds: EngineHealthThresholds
   profileStore: ProfileStore
+  /** The deployment's toolset (`MCP_ACTIVE_MODULES` suffix); undefined = all tools. */
+  toolset?: string
 }

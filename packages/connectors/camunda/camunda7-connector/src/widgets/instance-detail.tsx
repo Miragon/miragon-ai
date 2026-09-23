@@ -83,7 +83,7 @@ export function InstanceDetailWidget({
           resolvedIds={actions.resolvedIds}
           pendingIds={actions.pendingIds}
           resolveError={actions.resolveError}
-          onResolve={actions.setConfirmResolveId}
+          onResolve={actions.canResolve ? actions.setConfirmResolveId : undefined}
         />
       ),
     },
@@ -133,8 +133,8 @@ export function InstanceDetailWidget({
           isSuspended={isSuspended}
           isActionable={isActionable}
           isMutatingInstance={actions.isMutatingInstance}
-          onRequestSuspendToggle={actions.requestSuspendToggle}
-          onRequestCancel={actions.requestCancel}
+          onRequestSuspendToggle={actions.canSuspend ? actions.requestSuspendToggle : undefined}
+          onRequestCancel={actions.canCancel ? actions.requestCancel : undefined}
         />
       }
       kpi={

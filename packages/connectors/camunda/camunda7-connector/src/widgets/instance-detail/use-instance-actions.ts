@@ -5,12 +5,14 @@ import { useResetOnChange } from "@miragon-ai/widget-shell/widgets"
 import type { InstanceDetailData } from "../../view-models.js"
 import type { ResolveError } from "../process-incidents/incident-table.js"
 import { refreshCockpitData } from "../refresh.js"
+import { useCanRun } from "../widget-actions.js"
 
 /**
  * All mutation state of the instance-detail view: incident resolve marks,
  * suspend/activate, cancel, and the confirm-dialog switches. The UI faces of
  * this state are `InstanceHeader` (the action buttons) and
- * `InstanceActionDialogs` (the confirmations).
+ * `InstanceActionDialogs` (the confirmations). The `can*` flags say which
+ * actions the deployment's toolset exposes — the buttons render only for those.
  */
 export function useInstanceActions({
   engine,
@@ -31,6 +33,7 @@ export function useInstanceActions({
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const suspensionMutation = useToolMutation("camunda7_set_process_instance_suspension")
   const cancelMutation = useToolMutation("camunda7_delete_process_instance")
+  const canRun = useCanRun()
   // The suspend/activate override and the optimistic resolved marks (mirrors
   // process-incidents/list) only bridge the gap until the feed refetches —
   // fresh server data must win again.
@@ -112,6 +115,9 @@ export function useInstanceActions({
     engineId,
     isSuspended,
     cancelled,
+    canResolve: canRun("camunda7_resolve_incident"),
+    canSuspend: canRun("camunda7_set_process_instance_suspension"),
+    canCancel: canRun("camunda7_delete_process_instance"),
     isMutatingInstance: suspensionMutation.isPending || cancelMutation.isPending,
     resolvedIds,
     pendingIds,
