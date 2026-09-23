@@ -222,7 +222,11 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    `props.dataKey`; raw tool-name strings with graceful degradation (reference:
    `process-incidents/flow.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
    dedicated package created with the first real view — never in the app, never as
-   module-to-module imports. The settings page follows the same tiers: each module
+   module-to-module imports. The host bundle is static — `MCP_ACTIVE_MODULES` changes only
+   the server's tool surface — so a widget-registry lookup cannot tell a runtime-INACTIVE
+   module; a surface that only makes sense with another module probes one of its cheap
+   feeds (reference: `useAnalyticsActive` → `analytics_settings_data`, gating camunda7's
+   cross-engine view) and appears once confirmed. The settings page follows the same tiers: each module
    owns its settings section (widget + `*_data` feed + save tool; reference:
    `analytics:settings` + `analytics-connector/src/settings-tools.ts` — the save tool honors
    `analytics:read-only`), its slice persists under `profile.modules.<module>`

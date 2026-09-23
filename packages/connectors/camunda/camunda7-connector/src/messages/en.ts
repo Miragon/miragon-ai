@@ -35,6 +35,13 @@ export const en: MessageCatalog = {
   "cockpit.landing.env.count": ({ count }) =>
     `${String(count)} engine${Number(count) === 1 ? "" : "s"}`,
   "cockpit.landing.env.back": "All environments",
+  "cockpit.landing.subtitle.noFleet": ({ count }) =>
+    `${String(count)} engines configured — pick one to operate.`,
+  "cockpit.landing.subtitle.env.noFleet": ({ count, envCount }) =>
+    `${String(count)} engines in ${String(envCount)} environments — pick an environment, then an engine.`,
+  "cockpit.landing.engine.incidents": ({ count }) =>
+    `${String(count)} incident${Number(count) === 1 ? "" : "s"}`,
+  "cockpit.landing.engine.noStatus": "status unavailable",
   "cockpit.landing.operate.title": "Operate an engine",
   "cockpit.landing.operate.desc": "Overview, incidents and drill-downs for one engine.",
   "cockpit.landing.fleet.title": "Cross-engine analyses",

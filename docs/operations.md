@@ -88,9 +88,10 @@ then says so instead of rendering an uncolored diagram), plus
 
 ## Module activation
 
-Disable a module by listing only the ones you want, e.g.
-`MCP_ACTIVE_MODULES=camunda7`. The camunda7 toolset suffix narrows the tool
-surface: `:read-only` (queries + engine discovery), `:operations` (adds
+Disable a module by listing only the ones you want — e.g.
+`MCP_ACTIVE_MODULES=camunda7` without Prometheus (the cockpit then drops its
+cross-engine view). The camunda7 toolset suffix narrows the tool surface:
+`:read-only` (queries + engine discovery), `:operations` (adds
 start/complete/claim/variables/retries/messages), `:admin` (adds
 delete/modify/suspension, deployments, migrations). No suffix exposes all
 tools; unknown toolsets warn and degrade to `read-only`. Widgets hide action
