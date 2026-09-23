@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/Miragon/miragon-ai/compare/v0.15.0...v0.16.0) (2026-09-23)
+
+
+### Features
+
+* **camunda7:** hide widget actions and views the deployment does not expose ([#307](https://github.com/Miragon/miragon-ai/issues/307)) ([687f780](https://github.com/Miragon/miragon-ai/commit/687f78088b9c35ad58a1eb91e853c7472d0f7166))
+
 ## [0.15.0](https://github.com/Miragon/miragon-ai/compare/v0.14.0...v0.15.0) (2026-09-21)
 
 
