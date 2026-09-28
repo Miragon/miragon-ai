@@ -2,69 +2,27 @@
 layout: home
 
 hero:
-  name: Your processes,
-  text: one conversation away.
-  tagline: "An MCP server for Camunda 7 / CIB Seven — run operations, analytics, and incident response by asking, with every answer rendered as an interactive widget right in the chat."
+  name: Bring AI to the stack
+  text: your business already trusts.
+  tagline: "Miragon AI adds modern AI to the Camunda 7 and Activiti platform your organization already runs, future-proofing the investment you've made, with no rip-and-replace. Design your processes together, then operate them just by asking."
   actions:
     - theme: brand
-      text: Try it out
-      link: "https://inspector.manufact.com/inspector?server=https%3A%2F%2Fmiragon-ai-playground.fly.dev%2Fmcp&tab=chat"
-      target: _blank
+      text: Explore the platform
+      link: "#products"
     - theme: alt
-      text: Connect Claude
-      link: "#connect-your-claude"
+      text: Book a call
+      link: "#contact"
     - theme: alt
       text: GitHub
       link: https://github.com/Miragon/miragon-ai
-
-features:
-  - title: For End Users
-    details: Connect Claude, ask questions about your processes, fix incidents.
-    link: /usage
-    linkText: Start using it
-  - title: For Developers
-    details: Clone, install, and run the full stack locally in a few minutes.
-    link: /developer
-    linkText: Set up your machine
-  - title: Architecture
-    details: A one-page mental model of the server, modules, and external systems.
-    link: /architecture
-    linkText: See the diagram
-  - title: Operations
-    details: Deployment artifact, environment variables, and observability.
-    link: /operations
-    linkText: Run it in production
 ---
+
+<ProductLineup />
+
+<CockpitToConversation />
 
 <TryItOut />
 
-## Connect your Claude in 30 seconds {#connect-your-claude}
-
-The hosted [playground](https://miragon-ai-playground.fly.dev/mcp) runs a seeded
-CIB Seven engine with live traffic and the full analytics stack — nothing to
-install. Point any MCP client at it:
-
-```
-https://miragon-ai-playground.fly.dev/mcp
-```
-
-::: code-group
-
-```sh [Claude Code]
-claude mcp add --transport http miragon-ai https://miragon-ai-playground.fly.dev/mcp
-```
-
-```txt [claude.ai]
-Settings → Connectors → Add custom connector
-URL: https://miragon-ai-playground.fly.dev/mcp
-```
-
-:::
-
-Then ask: _"Which processes have open incidents right now?"_ — and drill into
-the interactive widgets. Ready for your own stack? Head to
-[For Developers](/developer).
-
-<CockpitToConversation />
+<DocsDirectory />
 
 <BrandContact />
