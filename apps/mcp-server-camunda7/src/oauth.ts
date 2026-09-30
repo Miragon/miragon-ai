@@ -174,14 +174,22 @@ export function getOAuthConfigFromEnv(
  * per-user scoping into "everyone sees (and can delete) everything". It also
  * keeps existing user-keyed profile/dashboard rows (stored under the 1.x
  * `userId` = token sub) resolving to the same records.
+ *
+ * Returns the `unknown` user slot the server is typed with: since mcp-use 2.7
+ * the provider's optional `setup(host)` hook takes the user type in parameter
+ * position, which makes `OAuthProvider<TUser>` invariant — a Keycloak- or
+ * Auth0-typed provider no longer widens to `OAuthProvider<unknown>` on its
+ * own. Passing its `setup` through unchanged is sound: every user the host
+ * hands out went through the `mapAuthInfo` below, i.e. is a `TUser`.
  */
 function withLegacyUserId<TUser extends { id: string }>(
   provider: OAuthProvider<TUser>,
-): OAuthProvider<TUser & { userId: string }> {
+): OAuthProvider<unknown> {
+  const { mapAuthInfo, ...rest } = provider
   return {
-    ...provider,
+    ...(rest as Omit<OAuthProvider<unknown>, "mapAuthInfo">),
     mapAuthInfo: (authInfo) => {
-      const extra = provider.mapAuthInfo(authInfo)
+      const extra = mapAuthInfo(authInfo)
       return { ...extra, user: { ...extra.user, userId: extra.user.id } }
     },
   }
