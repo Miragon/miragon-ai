@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.17.0](https://github.com/Miragon/miragon-ai/compare/v0.16.0...v0.17.0) (2026-09-30)
+
+
+### Features
+
+* **deps:** bump @miragon/mcp-toolkit-* to 2.5.0 and mcp-use to 2.7.1 ([#316](https://github.com/Miragon/miragon-ai/issues/316)) ([ad0edd8](https://github.com/Miragon/miragon-ai/commit/ad0edd857ed2b61c1ad75056cf91fcb3b76077d8))
+
+
+### Bug Fixes
+
+* bump the npm-dependencies group with 17 updates ([#314](https://github.com/Miragon/miragon-ai/issues/314)) ([f9b9e2e](https://github.com/Miragon/miragon-ai/commit/f9b9e2e53601ac9cf97fc8ce5a964196e96dd7eb))
+
 ## [0.16.0](https://github.com/Miragon/miragon-ai/compare/v0.15.0...v0.16.0) (2026-09-23)
 
 
