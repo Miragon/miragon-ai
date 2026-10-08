@@ -35,7 +35,7 @@ function credentialOf(authorization = ""): string {
 }
 
 /** Upstreams that quote a credential back — status, content type, body per query. */
-const echoes: Record<string, (auth?: string) => [number, string, string]> = {
+const echoTable: Record<string, (auth?: string) => [number, string, string]> = {
   // A misbehaving proxy: the whole Authorization header…
   "echo-auth": (auth) => [401, "text/plain", `denied: ${auth ?? ""}`],
   // …or only the credential itself.
@@ -59,6 +59,10 @@ const echoes: Record<string, (auth?: string) => [number, string, string]> = {
   ],
 }
 
+// A Map, not an object lookup: the query string never dispatches through
+// inherited properties (e.g. "constructor").
+const echoes = new Map(Object.entries(echoTable))
+
 const prometheus = http.createServer((req, res) => {
   lastHeaders = req.headers
   const query = new URL(req.url ?? "/", "http://x").searchParams.get("query") ?? ""
@@ -66,7 +70,7 @@ const prometheus = http.createServer((req, res) => {
     res.writeHead(status, { "Content-Type": "application/json" })
     res.end(JSON.stringify(body))
   }
-  const echo = echoes[query]
+  const echo = echoes.get(query)
   if (echo) {
     const [status, type, body] = echo(req.headers.authorization)
     res.writeHead(status, { "Content-Type": type })

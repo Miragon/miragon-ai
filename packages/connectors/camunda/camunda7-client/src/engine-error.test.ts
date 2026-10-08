@@ -45,7 +45,7 @@ function text(res: http.ServerResponse, status: number, body?: string) {
 /** The request arrived (body read) — then the connection drops. */
 const reset: Route = (_, req) => req.socket.destroy()
 
-const routes: Record<string, Route> = {
+const routeTable: Record<string, Route> = {
   "/process-instance/bad-type": (res) =>
     json(res, 400, {
       type: "InvalidRequestException",
@@ -77,11 +77,15 @@ const routes: Record<string, Route> = {
   "/process-definition/key/reset/start": reset,
 }
 
+// A Map, not an object lookup: the request path never dispatches through
+// inherited properties (e.g. "/constructor").
+const routes = new Map(Object.entries(routeTable))
+
 const engine = http.createServer((req, res) => {
   req.resume()
   req.on("end", () => {
     const path = (req.url ?? "").replace(/^\/engine-rest/, "").replace(/\?.*$/, "")
-    const route = routes[path] ?? ((r: http.ServerResponse) => json(r, 200, { id: "ok" }))
+    const route = routes.get(path) ?? ((r: http.ServerResponse) => json(r, 200, { id: "ok" }))
     route(res, req)
   })
 })

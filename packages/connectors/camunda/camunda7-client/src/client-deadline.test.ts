@@ -49,7 +49,7 @@ function json(res: http.ServerResponse, status: number, body: unknown) {
 
 const never: Route = () => {} // never answers — the deadline must end the call
 
-const routes: Record<string, Route> = {
+const routeTable: Record<string, Route> = {
   "/process-instance/hang": never,
   "/process-definition/key/hang/start": never,
   // Headers, then a body that never completes.
@@ -69,13 +69,17 @@ const routes: Record<string, Route> = {
     json(res, 200, { id: "pi-1", echo: JSON.parse(body) as unknown }),
 }
 
+// A Map, not an object lookup: the request path never dispatches through
+// inherited properties (e.g. "/constructor").
+const routes = new Map(Object.entries(routeTable))
+
 const engine = http.createServer((req, res) => {
   let body = ""
   req.on("data", (chunk: Buffer) => (body += chunk.toString()))
   req.on("end", () => {
     const path = (req.url ?? "").replace(/^\/engine-rest/, "").replace(/\?.*$/, "")
     seen.push({ method: req.method, path, headers: req.headers })
-    const route = routes[path] ?? ((r: http.ServerResponse) => json(r, 200, { id: "ok" }))
+    const route = routes.get(path) ?? ((r: http.ServerResponse) => json(r, 200, { id: "ok" }))
     route(res, body)
   })
 })
