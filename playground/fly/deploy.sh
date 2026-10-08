@@ -7,7 +7,7 @@
 #
 # Notes:
 # - Apps are created on first use, so the Fly token must be org-scoped
-#   (`fly tokens create org`), not app-scoped.
+#   (`fly tokens create org -o miragon`), not app-scoped.
 # - The engine image copies a pre-built jar: run
 #   `(cd playground/cibseven-example && ./gradlew bootJar)` before `engine`/`all`.
 # - flyctl resolves --config relative to the build-context working directory,
@@ -16,7 +16,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TARGET="${1:-all}"
-FLY_ORG="${FLY_ORG:-personal}"
+FLY_ORG="${FLY_ORG:-miragon}"
 
 ensure_app() {
   local app="$1"

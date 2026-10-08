@@ -47,9 +47,12 @@ engine jar, then deploys all apps (or a single one via the `target` input).
 One-time setup:
 
 - Repo secret `FLY_API_TOKEN`: an org-scoped deploy token —
-  `fly tokens create org` — stored including the leading `FlyV1 ` prefix
-  (org-scoped because `deploy.sh` creates missing apps on first run).
-- Optional repo variable `FLY_ORG` if the apps should not live in `personal`.
+  `fly tokens create org -o miragon` — stored including the leading `FlyV1 `
+  prefix. It must be org-scoped because `deploy.sh` creates missing apps on
+  first run, and the nightly **Reset Playground** workflow reaches two apps
+  (engine + Prometheus). An app-scoped `fly tokens create deploy` token is
+  rejected as `unauthorized`.
+- Optional repo variable `FLY_ORG` if the apps should not live in `miragon`.
 
 ### Via CLI
 

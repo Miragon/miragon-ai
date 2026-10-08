@@ -15,7 +15,10 @@ name: Reset Playground
 # lives in deploy-playground.yml if that is ever needed.
 #
 # Runs on the schedule below and can be triggered manually. Requires the same
-# org-scoped FLY_API_TOKEN repo secret as deploy-playground.yml.
+# org-scoped FLY_API_TOKEN repo secret as deploy-playground.yml — a token of
+# the org that owns the playground apps (`fly tokens create org -o miragon`).
+# An app-scoped deploy token (`fly tokens create deploy`) does not work: it
+# cannot reach two apps, and Fly rejects it as "unauthorized".
 #
 # NOTE ON TIMING: GitHub Actions cron is UTC and does not observe DST, so a fixed
 # UTC time drifts one hour across the year in Germany. 22:00 UTC = 00:00 local
@@ -47,6 +50,12 @@ jobs:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       ENGINE_APP: miragon-ai-playground-engine
       PROM_APP: miragon-ai-playground-prometheus
+    defaults:
+      run:
+        # An explicit `bash` runs with `-eo pipefail`. The implicit default runs
+        # without pipefail, so a failing `flyctl … | jq` exits 0 and the
+        # real error gets masked by a misleading follow-up message.
+        shell: bash
     steps:
       # Pinned by commit SHA (repo convention: no floating tags); flyctl version
       # kept in lockstep with deploy-playground.yml.
@@ -54,16 +63,53 @@ jobs:
         with:
           version: 0.4.67
 
+      # Preflight before anything destructive: the token must reach BOTH apps.
+      # A bad token then fails here with the real cause, instead of leaving
+      # the playground half-reset (engine restarted, metric history kept).
+      - name: Check Fly access
+        run: |
+          for app in "$ENGINE_APP" "$PROM_APP"; do
+            if ! out=$(flyctl machines list --app "$app" --json 2>&1); then
+              echo "$out" >&2
+              echo "::error title=FLY_API_TOKEN cannot reach $app::The token must be an org-scoped token of the org that owns the playground apps (fly tokens create org -o miragon). An app-scoped deploy token is rejected as unauthorized."
+              exit 1
+            fi
+          done
+
       - name: Restart engine (reseeds H2 database)
         run: |
           ids=$(flyctl machines list --app "$ENGINE_APP" --json | jq -r '.[].id')
           if [ -z "$ids" ]; then
-            echo "no machines found for $ENGINE_APP — is the playground deployed?" >&2
+            echo "::error::no machines found for $ENGINE_APP — is the playground deployed?"
             exit 1
           fi
+          restarted_at=$(date -u +%Y-%m-%dT%H:%M:%S)
           for id in $ids; do
             echo "==> restarting machine $id"
-            flyctl machine restart "$id" --app "$ENGINE_APP"
+            # flyctl's own health-check wait gives up after 5 min, but the
+            # engine needs ~7 min on shared-cpu-2x to boot and reseed. The
+            # loop below waits with a longer deadline instead.
+            flyctl machine restart "$id" --app "$ENGINE_APP" --skip-health-checks
+          done
+
+          # Wait until every engine check (engine_rest in engine.fly.toml)
+          # passes with a result recorded AFTER the restart. A "passing" from
+          # the old process may still be listed right after the restart.
+          deadline=$((SECONDS + 15 * 60))
+          while :; do
+            fresh=$(flyctl machines list --app "$ENGINE_APP" --json | jq --arg t "$restarted_at" \
+              '[.[].checks[]?] as $all
+               | ($all | length) > 0
+                 and ($all | all(.status == "passing" and .updated_at > $t))')
+            if [ "$fresh" = "true" ]; then
+              echo "==> engine healthy $((SECONDS / 60)) min after the restart"
+              break
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::engine not healthy 15 min after the restart"
+              exit 1
+            fi
+            sleep 20
           done
 
       - name: Wipe Prometheus history
@@ -90,9 +136,17 @@ jobs:
             exit 1
           fi
 
-          # Delete every series, then release the disk immediately. Requires
-          # --web.enable-admin-api (set in prometheus/Dockerfile.fly).
+          # The wipe needs --web.enable-admin-api (set in
+          # prometheus/Dockerfile.fly). A deployed image that predates the flag
+          # rejects it, so check first and name the fix: redeploy Prometheus.
+          admin_api=$(curl -sS http://localhost:9090/api/v1/status/flags | jq -r '.data["web.enable-admin-api"]')
+          if [ "$admin_api" != "true" ]; then
+            echo "::error title=Prometheus admin API disabled::The deployed $PROM_APP runs without --web.enable-admin-api (web.enable-admin-api=$admin_api). Redeploy it: Deploy Playground workflow, target prometheus."
+            exit 1
+          fi
+
+          # Delete every series, then release the disk immediately.
           echo "==> deleting all series"
-          curl -sf -g -X POST 'http://localhost:9090/api/v1/admin/tsdb/delete_series?match[]={__name__=~".+"}'
-          curl -sf -X POST http://localhost:9090/api/v1/admin/tsdb/clean_tombstones
+          curl -sS --fail-with-body -g -X POST 'http://localhost:9090/api/v1/admin/tsdb/delete_series?match[]={__name__=~".+"}'
+          curl -sS --fail-with-body -X POST http://localhost:9090/api/v1/admin/tsdb/clean_tombstones
           echo "==> Prometheus history wiped"
