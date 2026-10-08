@@ -20,7 +20,12 @@ vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
   getHistoricTaskInstancesCount: vi.fn(),
   getHistoricVariableInstances: vi.fn(),
   getHistoricVariableInstancesCount: vi.fn(),
+  getExternalTasks: vi.fn(),
+  getExternalTasksCount: vi.fn(),
   // unrelated endpoints imported by the same tool files
+  fetchAndLock: vi.fn(),
+  completeExternalTaskResource: vi.fn(),
+  handleFailure: vi.fn(),
   startProcessInstanceByKey: vi.fn(),
   getProcessInstance: vi.fn(),
   deleteProcessInstance: vi.fn(),
@@ -48,6 +53,7 @@ import { registerTaskTools } from "./tasks.js"
 import { registerJobTools } from "./jobs.js"
 import { registerIncidentTools } from "./incidents.js"
 import { registerHistoryTools } from "./history.js"
+import { registerExternalTaskTools } from "./external-tasks.js"
 
 type Register = Parameters<typeof registerProcessInstanceTools>[0]
 type Config = ToolConfig<EngineRegistry>
@@ -68,6 +74,7 @@ const tools = captureTools(
   registerJobTools,
   registerIncidentTools,
   registerHistoryTools,
+  registerExternalTaskTools,
 )
 
 const fakeClient = { fake: true } as unknown as Client
@@ -137,6 +144,22 @@ const cases = [
     count: sdk.getHistoricVariableInstancesCount,
     filterArgs: { variableName: "amount" },
   },
+  {
+    tool: "camunda7_list_external_tasks",
+    list: sdk.getExternalTasks,
+    count: sdk.getExternalTasksCount,
+    filterArgs: {
+      topicName: "invoice-mail",
+      workerId: "worker-1",
+      locked: true,
+      notLocked: false,
+      withRetriesLeft: false,
+      noRetriesLeft: true,
+      processInstanceId: "pi-1",
+      processDefinitionKey: "invoice",
+      activityId: "send-mail",
+    },
+  },
 ] as const
 
 describe.each(cases)("$tool pagination envelope", ({ tool, list, count, filterArgs }) => {
@@ -184,6 +207,62 @@ describe.each(cases)("$tool pagination envelope", ({ tool, list, count, filterAr
 
     expect(result).toEqual({ items: page, totalCount: 1, hasMore: false })
     expect(result).not.toHaveProperty("nextOffset")
+  })
+})
+
+/**
+ * The engine sorts external tasks only by an explicit sortBy+sortOrder PAIR
+ * (either alone is a 400), so the tool pairs them: sortBy alone sorts
+ * ascending, a lone sortOrder is dropped.
+ */
+describe("camunda7_list_external_tasks", () => {
+  const EXTERNAL = "camunda7_list_external_tasks"
+  const pageQuery = async (args: Record<string, unknown>) => {
+    vi.mocked(sdk.getExternalTasks).mockResolvedValueOnce([])
+    vi.mocked(sdk.getExternalTasksCount).mockResolvedValueOnce({ count: 0 })
+    await callTool(EXTERNAL, { firstResult: 0, maxResults: 20, ...args })
+    const query = vi.mocked(sdk.getExternalTasks).mock.calls[0][0]?.query as Record<string, unknown>
+    const countQuery = vi.mocked(sdk.getExternalTasksCount).mock.calls[0][0]?.query as Record<
+      string,
+      unknown
+    >
+    return { query, countQuery }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("is a read-only, paged query that says it never touches a task", () => {
+    const config = tools.get(EXTERNAL)
+    expect(config?.category).toBe("external-tasks")
+    expect(config?.annotations).toEqual({
+      readOnlyHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+    })
+    expect(config?.description).toContain("it never locks, completes or fails a task")
+    expect(config?.description).toMatch(
+      /If hasMore is true, call again with firstResult = nextOffset\.$/,
+    )
+  })
+
+  it("defaults sortOrder to asc when only sortBy is given", async () => {
+    const { query, countQuery } = await pageQuery({ sortBy: "lockExpirationTime" })
+    expect(query).toMatchObject({ sortBy: "lockExpirationTime", sortOrder: "asc" })
+    expect(countQuery).not.toHaveProperty("sortBy")
+    expect(countQuery).not.toHaveProperty("sortOrder")
+  })
+
+  it("keeps an explicit sortOrder next to its sortBy", async () => {
+    const { query } = await pageQuery({ sortBy: "taskPriority", sortOrder: "desc" })
+    expect(query).toMatchObject({ sortBy: "taskPriority", sortOrder: "desc" })
+  })
+
+  it("drops a lone sortOrder — the engine rejects it without sortBy", async () => {
+    const { query } = await pageQuery({ sortOrder: "desc" })
+    expect(query).not.toHaveProperty("sortBy")
+    expect(query).not.toHaveProperty("sortOrder")
   })
 })
 

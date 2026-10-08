@@ -3,6 +3,7 @@ import type { MCPServer } from "mcp-use"
 import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
 import { DEFAULT_HEALTH_THRESHOLDS } from "../data/health-data.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { resolveCamunda7Toolset, type Camunda7Toolset } from "../lib/toolsets.js"
 import { CAMUNDA7_WIDGET_ACTIONS, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
 import { registerWidgetActionsFeed } from "./actions.js"
 
@@ -13,7 +14,7 @@ afterEach(() => {
 type Handler = (params: unknown) => Promise<{ structuredContent?: Record<string, unknown> }>
 
 /** Register the feed against a mock server and expose its definition + handler. */
-function registerFeed(toolset?: string) {
+function registerFeed(toolset: Camunda7Toolset) {
   const tool = vi.fn()
   registerWidgetActionsFeed({
     server: { tool } as unknown as MCPServer,
@@ -27,21 +28,25 @@ function registerFeed(toolset?: string) {
   return { definition, handler }
 }
 
-async function allowedActionsFor(toolset?: string): Promise<unknown> {
+async function allowedActionsFor(toolset: Camunda7Toolset): Promise<unknown> {
   const result = await registerFeed(toolset).handler({})
   return result.structuredContent?.allowedActions
 }
 
 describe("camunda7_widget_actions_data", () => {
   it("is an app-only feed with no view binding", () => {
-    const { definition } = registerFeed()
+    const { definition } = registerFeed("operations")
     expect(definition.name).toBe(CAMUNDA7_WIDGET_ACTIONS_DATA)
     expect(definition.visibility).toBe("app")
     expect(definition).not.toHaveProperty("view")
   })
 
-  it("allows every widget action without a toolset", async () => {
-    expect(await allowedActionsFor(undefined)).toEqual([...CAMUNDA7_WIDGET_ACTIONS])
+  it("allows every widget action only under an explicit admin", async () => {
+    expect(await allowedActionsFor("admin")).toEqual([...CAMUNDA7_WIDGET_ACTIONS])
+  })
+
+  it("a missing toolset, resolved like the plugin does, allows none (read-only floor)", async () => {
+    expect(await allowedActionsFor(resolveCamunda7Toolset(undefined))).toEqual([])
   })
 
   it("allows none in read-only", async () => {

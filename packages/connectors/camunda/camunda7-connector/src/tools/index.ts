@@ -15,14 +15,23 @@ import { registerMigrationTools } from "./migrations.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
-export function registerTools(register: Register): void {
+export interface RegisterToolsOptions {
+  /**
+   * Register `camunda7_create_deployment` (`CAMUNDA_ALLOW_DEPLOYMENTS=true`).
+   * Deploying runs code inside the engine JVM, so the tool is opt-in on top
+   * of being admin-only. Default: off.
+   */
+  allowDeployments?: boolean
+}
+
+export function registerTools(register: Register, opts: RegisterToolsOptions = {}): void {
   registerProcessDefinitionTools(register)
   registerProcessInstanceTools(register)
   registerTaskTools(register)
   registerTaskFormTools(register)
   registerExternalTaskTools(register)
   registerMessageSignalTools(register)
-  registerDeploymentTools(register)
+  registerDeploymentTools(register, { allowDeployments: opts.allowDeployments === true })
   registerIncidentTools(register)
   registerJobTools(register)
   registerHistoryTools(register)

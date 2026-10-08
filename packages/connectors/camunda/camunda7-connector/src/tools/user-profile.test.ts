@@ -4,6 +4,7 @@ import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import { registerUserProfileTools } from "./user-profile.js"
 import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { CAMUNDA7_TOOLSETS, resolveCamunda7Toolset, type Camunda7Toolset } from "../lib/toolsets.js"
 import {
   CAMUNDA7_SAVE_USER_PROFILE,
   CAMUNDA7_SHOW_USER_PROFILE,
@@ -23,8 +24,12 @@ type Handler = (
   isError?: boolean
 }>
 
-/** Register the triple against a mock server and expose what landed on it. */
-function register(toolset?: string) {
+/**
+ * Register the triple against a mock server and expose what landed on it. The
+ * toolset is always explicit; the default is `operations`, an authenticated
+ * boot's no-suffix toolset (profile writes allowed).
+ */
+function register(toolset: Camunda7Toolset = "operations") {
   const tool = vi.fn()
   const server = { tool } as unknown as MCPServer
   const registry = { engines: [] } as unknown as EngineRegistry
@@ -43,11 +48,11 @@ function register(toolset?: string) {
   return { names, definitionFor, handlerFor }
 }
 
-const registeredToolNames = (toolset?: string): string[] => register(toolset).names
+const registeredToolNames = (toolset: Camunda7Toolset): string[] => register(toolset).names
 
 describe("registerUserProfileTools toolset filtering", () => {
-  it("registers all three tools when no toolset is configured", () => {
-    expect(registeredToolNames()).toEqual([
+  it("registers all three tools under operations", () => {
+    expect(registeredToolNames("operations")).toEqual([
       CAMUNDA7_SHOW_USER_PROFILE,
       CAMUNDA7_USER_PROFILE_DATA,
       CAMUNDA7_SAVE_USER_PROFILE,
@@ -66,10 +71,15 @@ describe("registerUserProfileTools toolset filtering", () => {
     expect(registeredToolNames("admin")).toContain(CAMUNDA7_SAVE_USER_PROFILE)
   })
 
-  it("fails closed on unknown toolset names, like withToolsetFilter", () => {
+  it("fails closed for unknown and missing names, resolved like the plugin does", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    expect(registeredToolNames("nonsense")).not.toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(registeredToolNames(resolveCamunda7Toolset("nonsense"))).not.toContain(
+      CAMUNDA7_SAVE_USER_PROFILE,
+    )
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "nonsense"'))
+    expect(registeredToolNames(resolveCamunda7Toolset(undefined))).not.toContain(
+      CAMUNDA7_SAVE_USER_PROFILE,
+    )
   })
 })
 
@@ -80,7 +90,7 @@ describe("registerUserProfileTools toolset filtering", () => {
  * unknown tool.
  */
 describe("canSave mirrors the registered tool surface", () => {
-  const feedCanSave = async (toolset?: string) => {
+  const feedCanSave = async (toolset: Camunda7Toolset) => {
     const { names, handlerFor } = register(toolset)
     const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
     return {
@@ -89,7 +99,7 @@ describe("canSave mirrors the registered tool surface", () => {
     }
   }
 
-  it.each([undefined, "read-only", "operations", "admin", "nonsense"])(
+  it.each(CAMUNDA7_TOOLSETS)(
     "agrees with the save tool's presence (toolset: %s)",
     async (toolset) => {
       const { canSave, hasSaveTool } = await feedCanSave(toolset)

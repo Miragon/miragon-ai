@@ -10,7 +10,7 @@ import {
   withToolErrors,
   type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
-import { isToolInToolset, resolveCamunda7Toolset } from "../lib/toolsets.js"
+import { allowsProfileSave, type Camunda7Toolset } from "../lib/toolsets.js"
 import {
   CAMUNDA7_SAVE_USER_PROFILE,
   CAMUNDA7_SHOW_USER_PROFILE,
@@ -71,22 +71,15 @@ export function registerUserProfileTools(
   server: MCPServer,
   store: ProfileStore,
   registry: EngineRegistry,
-  toolset?: string,
+  toolset: Camunda7Toolset,
 ): void {
   // The save tool is a durable write registered OUTSIDE the registrar, so it
-  // gates itself — same rule as `withToolsetFilter`: unknown toolset names warn
-  // and degrade to `read-only`. Decided up front because the two view tools
-  // report the outcome as `canSave`, which is what hides the panel's Save
-  // button; a view that claimed otherwise would offer a write that resolves to
-  // an unknown tool.
-  const saveAnnotations = { idempotentHint: true }
-  const resolvedToolset = resolveCamunda7Toolset(toolset)
-  const canSave =
-    resolvedToolset === undefined ||
-    isToolInToolset(
-      { name: CAMUNDA7_SAVE_USER_PROFILE, annotations: saveAnnotations },
-      resolvedToolset,
-    )
+  // gates itself against the (already concrete) toolset — the same registrar
+  // rule, via the one profile-write decision `camunda7_engine`'s "select"
+  // shares. Decided up front because the two view tools report the outcome as
+  // `canSave`, which is what hides the panel's Save button; a view that
+  // claimed otherwise would offer a write that resolves to an unknown tool.
+  const canSave = allowsProfileSave(toolset)
 
   const loadView = async (ctx: unknown): Promise<UserProfileView> => {
     // Same key precedence as the save path (resolveProfileKey maps stdio to
@@ -159,7 +152,7 @@ export function registerUserProfileTools(
       title: "Save user profile",
       description:
         'Update the current session\'s user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like "switch the UI to German" (language: "de") or "only let me pick the prod engines" (allowedEngineIds). Engine availability is curation, not access control.',
-      annotations: saveAnnotations,
+      annotations: { idempotentHint: true },
       // The flat input is a tool-API convenience; the handler splits it into
       // the record's cross-module fields and this module's own slice.
       inputSchema: userProfileToolSaveInput,

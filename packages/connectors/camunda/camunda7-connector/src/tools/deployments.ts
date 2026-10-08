@@ -10,7 +10,10 @@ import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
-export function registerDeploymentTools(register: Register) {
+export function registerDeploymentTools(
+  register: Register,
+  { allowDeployments }: { allowDeployments: boolean },
+) {
   register({
     name: "camunda7_get_deployment",
     category: "deployments",
@@ -41,12 +44,21 @@ export function registerDeploymentTools(register: Register) {
     ),
   })
 
+  // Deploying IS code execution inside the engine JVM — a deployed model's
+  // expressions (JUEL method calls suffice, no script engine needed), scripts
+  // and listener/delegate references run with the engine's privileges. So the
+  // tool is opt-in (CAMUNDA_ALLOW_DEPLOYMENTS=true) ON TOP of admin-only
+  // (ADMIN_ONLY_TOOLS): without the flag it is not registered in any toolset.
+  if (!allowDeployments) return
+
   register({
     name: "camunda7_create_deployment",
     category: "deployments",
     description:
-      "Deploy BPMN process definitions and other resources to the engine. Supports duplicate filtering and deploy-changed-only.",
-    annotations: { openWorldHint: true },
+      "Deploy BPMN process definitions and other resources to the engine. Supports duplicate filtering and deploy-changed-only. " +
+      "WARNING: deploying runs code inside the engine JVM — expressions, scripts and listener/delegate references in the " +
+      "deployed models execute with the engine's privileges. Available only in the admin toolset with CAMUNDA_ALLOW_DEPLOYMENTS=true.",
+    annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: { ...createDeploymentInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       const form = new FormData()

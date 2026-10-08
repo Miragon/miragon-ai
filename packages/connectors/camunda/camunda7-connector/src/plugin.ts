@@ -13,7 +13,7 @@ import { definition } from "./definition.js"
 import { createEngineRegistry, type EngineEntry } from "./lib/resolve-engine.js"
 import { profileDefaultEngineId } from "./lib/engine-preferences.js"
 import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
-import { withToolsetFilter } from "./lib/toolsets.js"
+import { resolveCamunda7Toolset, withToolsetFilter } from "./lib/toolsets.js"
 
 export interface Camunda7PluginConfig {
   engines: EngineEntry[]
@@ -28,11 +28,22 @@ export interface Camunda7PluginConfig {
   password?: string
   token?: string
   /**
-   * Optional named tool subset to expose (`read-only`, `operations`, `admin`
-   * — see `lib/toolsets.ts` for the rule). Omitted = all tools. Unknown
-   * values warn and degrade to `read-only`.
+   * The named tool subset to expose (`read-only`, `operations`, `admin` — see
+   * `lib/toolsets.ts` for the rule). The composition root passes the concrete
+   * toolset it resolved for this boot (the suffix, or the auth-dependent
+   * default). Omitted — only a direct caller does that — means `read-only`,
+   * the floor, never everything; unknown values warn and degrade to
+   * `read-only` too.
    */
   toolset?: string
+  /**
+   * Registers `camunda7_create_deployment` (env: `CAMUNDA_ALLOW_DEPLOYMENTS`).
+   * Deploy permission IS code execution inside the engine JVM: the deployed
+   * models' expressions, scripts and listener/delegate references run with
+   * the engine's privileges. The tool is admin-only on top, so it needs BOTH
+   * this flag and the `admin` toolset. Default: off.
+   */
+  allowDeployments?: boolean
   /**
    * Optional `owner/repo` of a GitHub repository — purely a convenience for
    * GitHub customers (enables the prefilled new-issue URL and a default target
@@ -67,6 +78,10 @@ export function createPlugin(
   shared: Camunda7SharedResources = {},
 ): AppPlugin<MCPServer> {
   const profileStore = shared.profileStore ?? createInMemoryProfileStore()
+  // Resolved ONCE per plugin: every gate below (registrar filter, engine
+  // "select", widget write buttons, profile save) reads this one concrete
+  // toolset — an unknown name warns here once and degrades to `read-only`.
+  const toolset = resolveCamunda7Toolset(config.toolset)
   const registry = createEngineRegistry(
     config.engines,
     (e) => {
@@ -111,13 +126,14 @@ export function createPlugin(
       installMcpRequestContext(server)
       // One registrar for the whole module, wrapped in the toolset filter so a
       // `camunda7:read-only` / `:operations` / `:admin` deployment only
-      // advertises its subset (no toolset = everything, unchanged default).
-      const register = withToolsetFilter(createToolRegistrar(server, registry), config.toolset)
-      // The toolset is threaded through so the durable "select" action (a
-      // profile write) can gate itself — the tool as a whole stays registered
-      // in every toolset for the read actions.
-      registerEngineTools(register, profileStore, config.toolset)
-      registerTools(register)
+      // advertises its subset — always filtered, there is no "everything".
+      const register = withToolsetFilter(createToolRegistrar(server, registry), toolset)
+      // The toolset is threaded through so the engine tool registers its
+      // toolset-shaped variant (read-only: no durable "select") and its
+      // handler can still refuse "select" on its own.
+      registerEngineTools(register, profileStore, toolset)
+      // Deployments are opt-in on top of `admin` (code execution in the JVM).
+      registerTools(register, { allowDeployments: config.allowDeployments })
       registerIncidentIssueTools(register, incidentIssueConfig)
       registerIncidentIssuePrompt(server, incidentIssueConfig)
     },
@@ -127,13 +143,13 @@ export function createPlugin(
       registerWidgetTools(server, registry, {
         healthThresholds: config.healthThresholds,
         profileStore,
-        toolset: config.toolset,
+        toolset,
       })
       // Profile tools render/own the settings widget; the engine registry is
       // read only for the configured engine list the settings UI offers as
       // availability checkboxes. The toolset is threaded through so the
       // durable save tool stays out of `read-only`.
-      registerUserProfileTools(server, profileStore, registry, config.toolset)
+      registerUserProfileTools(server, profileStore, registry, toolset)
     },
   }
 }

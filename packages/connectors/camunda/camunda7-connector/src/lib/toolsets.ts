@@ -2,39 +2,71 @@ import type { createToolRegistrar, ToolConfig } from "@miragon/mcp-toolkit-core/
 import type { z } from "zod"
 import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
 import type { EngineRegistry } from "./resolve-engine.js"
-import { CAMUNDA7_WIDGET_ACTIONS, type Camunda7WidgetAction } from "../tool-names.js"
+import {
+  CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_WIDGET_ACTIONS,
+  type Camunda7WidgetAction,
+} from "../tool-names.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 type ZodRawShape = Record<string, z.ZodType>
 
 /**
- * Named tool subsets a deployment can pick via `MCP_ACTIVE_MODULES`, e.g.
- * `camunda7:read-only`. No suffix means "all tools" (unchanged default).
- * The vocabulary skeleton (typed guard + the fail-closed rule for unknown
- * names) is the shared `createToolsetVocabulary`; the names and the filter
- * semantics below stay module-owned.
+ * Named tool subsets a deployment picks via `MCP_ACTIVE_MODULES`, e.g.
+ * `camunda7:read-only`. The selection FAILS CLOSED — nothing resolves to
+ * "every tool":
+ *
+ *   - no suffix → `read-only` on an unauthenticated boot, `operations` when
+ *     the composition root installed OAuth;
+ *   - an empty or unknown suffix → warns and degrades to `read-only`;
+ *   - `admin` (the only toolset with the {@link ADMIN_ONLY_TOOLS}) is reached
+ *     only by naming it.
+ *
+ * The rule itself is the shared `createToolsetVocabulary` (the composition
+ * resolves ONE concrete toolset per boot and threads it into the plugin
+ * config); the names and the filter semantics below stay module-owned.
  */
 export const CAMUNDA7_TOOLSETS = ["read-only", "operations", "admin"] as const
 export type Camunda7Toolset = (typeof CAMUNDA7_TOOLSETS)[number]
 
-const vocabulary = createToolsetVocabulary("camunda7", CAMUNDA7_TOOLSETS, "read-only")
+/**
+ * camunda7's toolset vocabulary — declared on `camunda7Module.toolsets`, so
+ * the composition root resolves the effective toolset with it. `read-only` is
+ * the floor (no durable write), `operations` the standard non-admin toolset
+ * an authenticated boot gets without a suffix.
+ */
+export const camunda7Toolsets = createToolsetVocabulary(
+  "camunda7",
+  CAMUNDA7_TOOLSETS,
+  "read-only",
+  {
+    authenticatedDefault: "operations",
+  },
+)
 
 /**
- * Normalize a configured toolset for gating decisions outside the registrar
- * (e.g. `camunda7_save_user_profile`'s `canSave`): `undefined` means "no
- * toolset — everything allowed", unknown names warn and degrade to
- * `read-only`. Every self-gating write goes through this, never through an
- * ad-hoc name compare.
+ * Normalize a configured toolset to a concrete one: a known name is itself,
+ * an unknown one warns and degrades to `read-only`, and a MISSING one is
+ * `read-only` too — the composition root always passes a concrete name, so
+ * only a direct `createPlugin` caller omits it, and it gets the floor, never
+ * everything. The plugin resolves once and threads the typed result through
+ * every gate (registrar filter, widget actions, profile writes).
  */
-export function resolveCamunda7Toolset(toolset?: string): Camunda7Toolset | undefined {
-  return vocabulary.resolve(toolset)
+export function resolveCamunda7Toolset(toolset?: string): Camunda7Toolset {
+  return camunda7Toolsets.resolve(toolset)
 }
 
 /**
  * Tools that are only exposed in the `admin` toolset, regardless of their
  * annotations. This is the one explicit list in the toolset rule: everything
- * irreversible (delete/modify/batch), engine-content-changing (deployments),
- * or operator-of-operators territory (migrations, suspension toggles).
+ * irreversible (delete/modify/batch), engine-content-changing (deployments —
+ * which also run code inside the engine JVM, see `CAMUNDA_ALLOW_DEPLOYMENTS`),
+ * operator-of-operators territory (migrations, suspension toggles),
+ * engine-wide broadcasts (`camunda7_throw_signal` reaches every matching
+ * catch event in every instance and starts instances through signal start
+ * events), and the external-task WORKER protocol (fetch-and-lock withholds
+ * tasks from the production workers until the lock expires; complete/failure
+ * act on a task as if the worker had).
  *
  * `camunda7_create_migration_plan` is engine-read-only, but a migration plan
  * is useless without `camunda7_migrate_process_instances_async` — the pair
@@ -48,30 +80,31 @@ const ADMIN_ONLY_TOOLS: ReadonlySet<string> = new Set([
   "camunda7_create_migration_plan",
   "camunda7_migrate_process_instances_async",
   "camunda7_set_job_retries_batch",
+  "camunda7_throw_signal",
+  "camunda7_fetch_and_lock",
+  "camunda7_complete_external_task",
+  "camunda7_handle_external_task_failure",
 ])
 
 /**
- * Tools included in every toolset even though they are not engine-read-only.
- * `camunda7_engine` never mutates engine state and must stay discoverable
- * everywhere: its `list`/`current` actions are the reads a read-only
- * multi-engine deployment needs to route queries (per-call `engine` override),
- * and the durable `select` action (a profile write of `defaultEngineId`)
- * gates itself against the toolset inside the handler — it shares the
- * `camunda7_save_user_profile` decision, see `registerEngineTools`.
+ * The admin-only tool names, public for guard tests in composing servers
+ * (e.g. "a boot without an explicit `camunda7:admin` never lists any of
+ * these"). Derived from {@link ADMIN_ONLY_TOOLS} — that set stays the single
+ * source.
  */
-const SESSION_INFRASTRUCTURE_TOOLS: ReadonlySet<string> = new Set(["camunda7_engine"])
+export const CAMUNDA7_ADMIN_ONLY_TOOLS: readonly string[] = Object.freeze([...ADMIN_ONLY_TOOLS])
 
 /**
  * The toolset rule, applied per registrar tool (widget tools and `*_data`
  * feeds are read-only views and are not filtered):
  *
  *   1. Tools in {@link ADMIN_ONLY_TOOLS} exist only in `admin`.
- *   2. Tools with `annotations.readOnlyHint: true` — plus the session
- *      infrastructure tools — exist in every toolset.
+ *   2. Tools with `annotations.readOnlyHint: true` exist in every toolset —
+ *      and `read-only` lists NOTHING else (no exemptions: a tool that must be
+ *      discoverable there declares `readOnlyHint` for its read-only variant,
+ *      see `camunda7_engine`).
  *   3. Everything else (engine writes: start/complete/claim/retries/…)
  *      exists in `operations` and `admin`.
- *
- * `admin` (and no toolset at all) therefore exposes every tool.
  */
 export function isToolInToolset(
   config: Pick<ToolConfig<EngineRegistry>, "name" | "annotations">,
@@ -81,37 +114,40 @@ export function isToolInToolset(
   if (ADMIN_ONLY_TOOLS.has(config.name)) return false
   if (toolset === "operations") return true
   // read-only
-  return config.annotations?.readOnlyHint === true || SESSION_INFRASTRUCTURE_TOOLS.has(config.name)
+  return config.annotations?.readOnlyHint === true
+}
+
+/**
+ * The ONE durable-profile-write decision: whether `camunda7_save_user_profile`
+ * exists in `toolset` — the registrar rule applied to the save tool (a write,
+ * not admin-only → every toolset above the read-only floor). `camunda7_engine`
+ * action `"select"` writes the same profile field, so it shares exactly this
+ * decision; the settings panel reports it as `canSave`.
+ */
+export function allowsProfileSave(toolset: Camunda7Toolset): boolean {
+  return isToolInToolset({ name: CAMUNDA7_SAVE_USER_PROFILE }, toolset)
 }
 
 /**
  * The in-widget writes ({@link CAMUNDA7_WIDGET_ACTIONS}) this deployment's
  * toolset registers — what the widgets render their action buttons from, so a
  * button and the tool surface can never disagree (the widget twin of the
- * settings panel's `canSave`). Same resolution as {@link withToolsetFilter}:
- * no toolset allows everything, an unknown name fails closed to `read-only`.
- * Every entry is an engine write, so the rule needs no annotations —
- * `isToolInToolset` only consults `readOnlyHint`, which a write never carries.
+ * settings panel's `canSave`). Every entry is an engine write, so the rule
+ * needs no annotations — `isToolInToolset` only consults `readOnlyHint`,
+ * which a write never carries.
  */
-export function allowedWidgetActions(toolset?: string): Camunda7WidgetAction[] {
-  const known = vocabulary.resolve(toolset)
-  if (known === undefined) return [...CAMUNDA7_WIDGET_ACTIONS]
-  return CAMUNDA7_WIDGET_ACTIONS.filter((name) => isToolInToolset({ name }, known))
+export function allowedWidgetActions(toolset: Camunda7Toolset): Camunda7WidgetAction[] {
+  return CAMUNDA7_WIDGET_ACTIONS.filter((name) => isToolInToolset({ name }, toolset))
 }
 
 /**
  * Wraps a tool registrar so that only tools matching `toolset` reach the
- * server. `undefined` (no toolset configured) registers everything; an unknown
- * toolset name warns and degrades to `read-only` — a typo'd suffix always
- * meant to restrict, so it must never expose the admin tools.
+ * server. The toolset is already concrete (resolved once by the plugin), so
+ * there is no pass-through branch: every registration is filtered.
  */
-export function withToolsetFilter(register: Register, toolset?: string): Register {
-  // `resolve` implements the shared rule: no toolset stays silent and exposes
-  // everything, an unknown name warns and fails closed to `read-only`.
-  const known = vocabulary.resolve(toolset)
-  if (known === undefined) return register
+export function withToolsetFilter(register: Register, toolset: Camunda7Toolset): Register {
   const filtered = <TShape extends ZodRawShape>(config: ToolConfig<EngineRegistry, TShape>) => {
-    if (isToolInToolset(config, known)) register(config)
+    if (isToolInToolset(config, toolset)) register(config)
   }
   return Object.assign(filtered, { getRegisteredTools: () => register.getRegisteredTools() })
 }

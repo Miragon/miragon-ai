@@ -1,4 +1,55 @@
 import { z } from "zod"
+import { firstResultParam } from "./shared.js"
+
+/**
+ * Read-only external-task query (`GET /external-task`) — inspects what the
+ * workers see without locking, completing or failing anything. The boolean
+ * filters are TRUE-ONLY on the engine side: `false` matches every task.
+ */
+export const listExternalTasksInput = z.object({
+  topicName: z.string().optional().describe("Filter by external task topic"),
+  workerId: z
+    .string()
+    .optional()
+    .describe("Filter by the id of the worker that most recently locked the task"),
+  locked: z
+    .boolean()
+    .optional()
+    .describe("true = only tasks currently locked (lock not expired); false matches all"),
+  notLocked: z
+    .boolean()
+    .optional()
+    .describe("true = only tasks currently NOT locked (no lock, or it expired); false matches all"),
+  withRetriesLeft: z
+    .boolean()
+    .optional()
+    .describe("true = only tasks with retries > 0 (or not set yet); false matches all"),
+  noRetriesLeft: z
+    .boolean()
+    .optional()
+    .describe("true = only tasks with 0 retries (failed, an incident exists); false matches all"),
+  processInstanceId: z.string().optional().describe("Filter by process instance ID"),
+  processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
+  activityId: z.string().optional().describe("Filter by the activity the task was created for"),
+  firstResult: firstResultParam,
+  maxResults: z.number().int().positive().optional().default(20),
+  sortBy: z
+    .enum([
+      "id",
+      "lockExpirationTime",
+      "processInstanceId",
+      "processDefinitionId",
+      "processDefinitionKey",
+      "taskPriority",
+      "tenantId",
+    ])
+    .optional()
+    .describe("Sort field; sorts ascending unless sortOrder is given"),
+  sortOrder: z
+    .enum(["asc", "desc"])
+    .optional()
+    .describe("Sort direction for sortBy (default asc); ignored without sortBy"),
+})
 
 export const fetchAndLockInput = z.object({
   workerId: z.string().describe("The ID of the worker to lock tasks for"),

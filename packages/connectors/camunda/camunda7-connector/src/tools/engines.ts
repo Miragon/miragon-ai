@@ -7,10 +7,32 @@ import { providerForEntry } from "../providers/index.js"
 import { allowedEngines, profileDefaultEngineId } from "../lib/engine-preferences.js"
 import { parseCamunda7Settings, CAMUNDA7_MODULE_KEY } from "../lib/profile-schema.js"
 import { resolveAuthUserId, resolveProfileKey } from "../lib/resolve-profile-key.js"
-import { isToolInToolset, resolveCamunda7Toolset } from "../lib/toolsets.js"
-import { CAMUNDA7_ENGINE, CAMUNDA7_SAVE_USER_PROFILE } from "../tool-names.js"
+import { allowsProfileSave, type Camunda7Toolset } from "../lib/toolsets.js"
+import { CAMUNDA7_ENGINE } from "../tool-names.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
+
+const ENGINE_ACTIONS = ["list", "select", "current"] as const
+type EngineAction = (typeof ENGINE_ACTIONS)[number]
+/** What a toolset WITHOUT profile writes offers — `select` is the durable action. */
+const READ_ACTIONS = ["list", "current"] as const
+
+const DESCRIPTION_LEAD =
+  "Manage which CIB Seven / Camunda 7 engine operations tools talk to. " +
+  'action="list" returns the engines available to this profile grouped by ENVIRONMENT ' +
+  "(`environments` maps each environment to its engine ids; every engine entry names its `environment`) " +
+  "plus the saved default engine (if any) — pick an environment first, then one of its engines; "
+const DESCRIPTION_SELECT =
+  'action="select" (requires engineId) saves that engine as the caller\'s default — ' +
+  "all subsequent operations tool calls without a per-call `engine` override route to it " +
+  "(a durable per-user setting, the same field the settings page edits); "
+const DESCRIPTION_TAIL =
+  'action="current" reports the saved default engine (or null). ' +
+  "With more than one engine configured, pass the per-call `engine` parameter or save a default first."
+const DESCRIPTION_READ_ONLY_TAIL =
+  'action="current" reports the saved default engine (or null). ' +
+  "This deployment's toolset does not allow saving a default engine — with more than one engine " +
+  "configured, pass the per-call `engine` parameter."
 
 /**
  * Registers the consolidated engine-management tool that lets the MCP host
@@ -21,23 +43,28 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
  *   - `camunda7_engine` action `"select"`  → save an engine as the caller's default
  *     (`profile.modules.camunda7.defaultEngineId` — durable, same identity as all settings).
  *   - `camunda7_engine` action `"current"` → report the saved default engine.
+ *
+ * The tool exists in every toolset — its reads are what a read-only
+ * multi-engine deployment needs to route queries — but its SHAPE follows the
+ * toolset, decided at registration: where the profile write is not allowed
+ * (`read-only`) it registers as a genuine read-only tool (`readOnlyHint`,
+ * actions `list`/`current` only), so `read-only` lists strictly
+ * `readOnlyHint` tools, with no exemption.
  */
 export function registerEngineTools(
   register: Register,
   profileStore: ProfileStore,
-  toolset?: string,
+  toolset: Camunda7Toolset,
 ): void {
   // "select" writes the SAME profile field the settings save tool owns, so it
-  // shares exactly that tool's toolset decision — never the engine tool's own
-  // name, which the session-infrastructure allowance keeps registered in every
-  // toolset for the read actions (see SESSION_INFRASTRUCTURE_TOOLS).
-  const resolvedToolset = resolveCamunda7Toolset(toolset)
-  const canSaveDefault =
-    resolvedToolset === undefined ||
-    isToolInToolset(
-      { name: CAMUNDA7_SAVE_USER_PROFILE, annotations: { idempotentHint: true } },
-      resolvedToolset,
-    )
+  // shares exactly that tool's toolset decision.
+  const canSaveDefault = allowsProfileSave(toolset)
+  // The action schema is typed over every action so the handler keeps its
+  // `select` guard (defense in depth: a caller bypassing the advertised enum
+  // still hits the refusal below).
+  const actionSchema: z.ZodType<EngineAction> = canSaveDefault
+    ? z.enum(ENGINE_ACTIONS)
+    : z.enum(READ_ACTIONS)
 
   // The user-profile `allowedEngineIds` curates which engines the caller may
   // pick from (shared rule: `allowedEngines`). resolveProfileKey
@@ -52,21 +79,16 @@ export function registerEngineTools(
   register({
     name: CAMUNDA7_ENGINE,
     category: "engines",
-    description:
-      "Manage which CIB Seven / Camunda 7 engine operations tools talk to. " +
-      'action="list" returns the engines available to this profile grouped by ENVIRONMENT ' +
-      "(`environments` maps each environment to its engine ids; every engine entry names its `environment`) " +
-      "plus the saved default engine (if any) — pick an environment first, then one of its engines; " +
-      'action="select" (requires engineId) saves that engine as the caller\'s default — ' +
-      "all subsequent operations tool calls without a per-call `engine` override route to it " +
-      "(a durable per-user setting, the same field the settings page edits); " +
-      'action="current" reports the saved default engine (or null). ' +
-      "With more than one engine configured, pass the per-call `engine` parameter or save a default first.",
-    annotations: { idempotentHint: true },
+    description: canSaveDefault
+      ? DESCRIPTION_LEAD + DESCRIPTION_SELECT + DESCRIPTION_TAIL
+      : DESCRIPTION_LEAD + DESCRIPTION_READ_ONLY_TAIL,
+    // "select" only overwrites the caller's own default (idempotent, never
+    // destructive) — the read-only variant has no write at all.
+    annotations: canSaveDefault
+      ? { idempotentHint: true, destructiveHint: false }
+      : { readOnlyHint: true, idempotentHint: true },
     inputSchema: {
-      action: z
-        .enum(["list", "select", "current"])
-        .describe("Engine-management action to perform."),
+      action: actionSchema.describe("Engine-management action to perform."),
       engineId: z
         .string()
         .optional()

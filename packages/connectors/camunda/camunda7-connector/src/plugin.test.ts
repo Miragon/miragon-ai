@@ -1,7 +1,92 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import type { MCPServer } from "mcp-use"
 import type { Client } from "@miragon-ai/camunda7-client"
-import { createPlugin } from "./plugin.js"
+import { createPlugin, type Camunda7PluginConfig } from "./plugin.js"
 import { resolveEngine, type Camunda7StepAppConfig } from "./lib/resolve-engine.js"
+import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "./lib/toolsets.js"
+import {
+  CAMUNDA7_ENGINE,
+  CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_WIDGET_ACTIONS_DATA,
+} from "./tool-names.js"
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+/**
+ * Boots the plugin's BOTH registration paths (registrar tools + widget tools)
+ * against a mock server — the wiring under test: one resolved toolset reaches
+ * every gate, and the deployment flag reaches the registrar.
+ */
+async function bootSurface(config: Partial<Camunda7PluginConfig>) {
+  const tool = vi.fn()
+  const server = { tool, use: vi.fn(), prompt: vi.fn() } as unknown as MCPServer
+  const plugin = createPlugin({
+    engines: [{ id: "a", baseUrl: "http://a.example/engine-rest" }],
+    ...config,
+  })
+  plugin.registerTools?.(server)
+  plugin.registerWidgetTools?.(server)
+  const calls = tool.mock.calls as Array<
+    [{ name: string; annotations?: Record<string, unknown> }, (p: unknown) => Promise<unknown>]
+  >
+  const byName = new Map(
+    calls.map(([definition, handler]) => [definition.name, { definition, handler }]),
+  )
+  const feed = (await byName.get(CAMUNDA7_WIDGET_ACTIONS_DATA)!.handler({})) as {
+    structuredContent: { allowedActions: string[] }
+  }
+  return {
+    names: [...byName.keys()],
+    byName,
+    allowedActions: feed.structuredContent.allowedActions,
+  }
+}
+
+describe("createPlugin toolset wiring (fail-closed)", () => {
+  it("without a toolset boots the read-only floor on every path — never everything", async () => {
+    const { names, byName, allowedActions } = await bootSurface({})
+    for (const admin of CAMUNDA7_ADMIN_ONLY_TOOLS) expect(names).not.toContain(admin)
+    expect(names).not.toContain("camunda7_start_process_instance")
+    expect(names).not.toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(allowedActions).toEqual([])
+    // The engine tool registers its read-only variant.
+    expect(byName.get(CAMUNDA7_ENGINE)?.definition.annotations).toMatchObject({
+      readOnlyHint: true,
+    })
+  })
+
+  it("resolves an unknown toolset ONCE (one warning) and degrades every path to read-only", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const { names, allowedActions } = await bootSurface({ toolset: "superuser" })
+    expect(warn).toHaveBeenCalledOnce()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "superuser"'))
+    expect(names).not.toContain("camunda7_start_process_instance")
+    expect(names).not.toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(allowedActions).toEqual([])
+  })
+
+  it("operations: engine writes + profile save, no admin-only tool", async () => {
+    const { names, allowedActions } = await bootSurface({
+      toolset: "operations",
+      allowDeployments: true,
+    })
+    expect(names).toContain("camunda7_start_process_instance")
+    expect(names).toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    for (const admin of CAMUNDA7_ADMIN_ONLY_TOOLS) expect(names).not.toContain(admin)
+    expect(allowedActions).toContain("camunda7_resolve_incident")
+  })
+
+  it("threads allowDeployments to the registrar: create_deployment needs it on top of admin", async () => {
+    expect((await bootSurface({ toolset: "admin" })).names).not.toContain(
+      "camunda7_create_deployment",
+    )
+    expect((await bootSurface({ toolset: "admin", allowDeployments: true })).names).toContain(
+      "camunda7_create_deployment",
+    )
+  })
+})
 
 function authHeader(client: Client): string | null {
   return (client.getConfig().headers as Headers).get("Authorization")

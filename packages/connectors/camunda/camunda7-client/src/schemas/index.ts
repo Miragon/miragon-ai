@@ -29,6 +29,7 @@ export {
   type TaskFormSchema,
 } from "./task-form.js"
 export {
+  listExternalTasksInput,
   fetchAndLockInput,
   completeExternalTaskInput,
   handleExternalTaskFailureInput,
