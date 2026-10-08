@@ -1,13 +1,8 @@
 import http from "node:http"
 import type { AddressInfo } from "node:net"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import {
-  createCamunda7Client,
-  withCallerSignal,
-  type Camunda7ClientOptions,
-  type Client,
-} from "./client.js"
-import { EngineRequestError } from "./engine-error.js"
+import { createCamunda7Client, type Camunda7ClientOptions, type Client } from "./client.js"
+import { EngineRequestError, toEngineRequestError } from "./engine-error.js"
 
 /**
  * Guard for the model-facing engine error text (#325). Runs the REAL
@@ -19,7 +14,8 @@ import { EngineRequestError } from "./engine-error.js"
  * e.message : …`). The three calls below are what the generated SDK
  * functions of the same name send (`sdk.gen.ts`, not imported here: its ~460
  * thin wrappers would swamp this package's coverage ratchet); the connector's
- * `engine-errors.test.ts` drives the SDK itself through a registrar tool.
+ * `engine-errors.test.ts` drives the SDK itself through a registrar tool. The
+ * deadline and caller cancellation are pinned in `client-deadline.test.ts`.
  */
 
 const getProcessInstance = (o: { client: Client; path: { id: string } }) =>
@@ -30,80 +26,63 @@ const startProcessInstanceByKey = (o: {
   client: Client
   path: { key: string }
   body: Record<string, unknown>
-}) =>
-  o.client.post({
-    url: "/process-definition/key/{key}/start",
-    path: o.path,
-    body: o.body,
-  })
+}) => o.client.post({ url: "/process-definition/key/{key}/start", path: o.path, body: o.body })
 
 const LONG_TEXT = `upstream connect error or disconnect/reset before headers. ${"x".repeat(2000)}`
 
-/** Requests the fake engine has seen (method + body) — for the rewrap check. */
-const seen: Array<{ method?: string; url?: string; body: string }> = []
+type Route = (res: http.ServerResponse, req: http.IncomingMessage) => void
 
 function json(res: http.ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { "Content-Type": "application/json" })
   res.end(JSON.stringify(body))
 }
 
+function text(res: http.ServerResponse, status: number, body?: string) {
+  res.writeHead(status, body === undefined ? {} : { "Content-Type": "text/plain" })
+  res.end(body)
+}
+
+/** The request arrived (body read) — then the connection drops. */
+const reset: Route = (_, req) => req.socket.destroy()
+
+const routes: Record<string, Route> = {
+  "/process-instance/bad-type": (res) =>
+    json(res, 400, {
+      type: "InvalidRequestException",
+      message: 'Cannot convert value "abc" of type String to type Integer',
+      code: 0,
+    }),
+  "/process-instance/missing": (res) =>
+    json(res, 404, {
+      type: "InvalidRequestException",
+      message: "Process instance with id missing does not exist",
+      code: 0,
+    }),
+  "/process-instance/locked": (res) =>
+    json(res, 500, {
+      type: "OptimisticLockingException",
+      message: "ENGINE-03005 Execution of 'UPDATE ExecutionEntity[42]' failed.",
+      code: 1,
+    }),
+  "/process-instance/empty": (res) => text(res, 500),
+  "/process-instance/text": (res) => text(res, 502, LONG_TEXT),
+  "/process-instance/proxy-json": (res) => json(res, 403, { error: "Forbidden", status: 403 }),
+  // A proxy's envelope: `type` is no exception class name.
+  "/process-instance/odd-type": (res) =>
+    json(res, 400, { type: `Gateway\nError ${"y".repeat(300)}`, message: "boom" }),
+  // Like a proxy that quotes the rejected credential back.
+  "/process-instance/unauthorized": (res, req) =>
+    text(res, 401, req.headers.authorization ? `denied: ${req.headers.authorization}` : ""),
+  "/process-instance/reset": reset,
+  "/process-definition/key/reset/start": reset,
+}
+
 const engine = http.createServer((req, res) => {
-  let body = ""
-  req.on("data", (chunk: Buffer) => (body += chunk.toString()))
+  req.resume()
   req.on("end", () => {
-    seen.push({ method: req.method, url: req.url, body })
-    const url = req.url ?? ""
-    if (url.startsWith("/engine-rest/process-instance/bad-type")) {
-      return json(res, 400, {
-        type: "InvalidRequestException",
-        message: 'Cannot convert value "abc" of type String to type Integer',
-        code: 0,
-      })
-    }
-    if (url.startsWith("/engine-rest/process-instance/missing")) {
-      return json(res, 404, {
-        type: "InvalidRequestException",
-        message: "Process instance with id missing does not exist",
-        code: 0,
-      })
-    }
-    if (url.startsWith("/engine-rest/process-instance/locked")) {
-      return json(res, 500, {
-        type: "OptimisticLockingException",
-        message: "ENGINE-03005 Execution of 'UPDATE ExecutionEntity[42]' failed.",
-        code: 1,
-      })
-    }
-    if (url.startsWith("/engine-rest/process-instance/empty")) {
-      res.writeHead(500)
-      return res.end()
-    }
-    if (url.startsWith("/engine-rest/process-instance/text")) {
-      res.writeHead(502, { "Content-Type": "text/plain" })
-      return res.end(LONG_TEXT)
-    }
-    if (url.startsWith("/engine-rest/process-instance/proxy-json")) {
-      return json(res, 403, { error: "Forbidden", status: 403 })
-    }
-    if (url.startsWith("/engine-rest/process-instance/unauthorized")) {
-      res.writeHead(401)
-      return res.end()
-    }
-    if (url.startsWith("/engine-rest/process-instance/hang")) {
-      return // never answers — the per-request deadline must end the call
-    }
-    if (url.startsWith("/engine-rest/process-definition/key/slow/start")) {
-      // Answers after the caller's signal fired: a write must still land.
-      setTimeout(() => json(res, 200, { id: "pi-1", echo: JSON.parse(body) as unknown }), 80)
-      return
-    }
-    if (url.startsWith("/engine-rest/process-definition/key/hang/start")) {
-      return
-    }
-    if (url.startsWith("/engine-rest/process-definition/key/echo/start")) {
-      return json(res, 200, { id: "pi-1", echo: JSON.parse(body) as unknown })
-    }
-    json(res, 200, { id: "ok" })
+    const path = (req.url ?? "").replace(/^\/engine-rest/, "").replace(/\?.*$/, "")
+    const route = routes[path] ?? ((r: http.ServerResponse) => json(r, 200, { id: "ok" }))
+    route(res, req)
   })
 })
 
@@ -199,35 +178,10 @@ describe("engine errors reach the model as actionable text", () => {
     expect(e.message).toBe("[403] Forbidden (engine prod-a)")
   })
 
-  it("ECONNREFUSED → engine <id> unreachable (<code>)", async () => {
-    const e = await failure(
-      getProcessInstance({ client: client({ baseUrl: closedPortUrl }), path: { id: "x" } }),
-    )
-    expect(e.message).toBe("engine prod-a unreachable (ECONNREFUSED)")
-    expect(e).toMatchObject({ kind: "unreachable", httpStatus: undefined, engineId: "prod-a" })
-  })
-
-  it("a hung engine ends at the per-request deadline", async () => {
-    const started = Date.now()
-    const e = await failure(
-      getProcessInstance({ client: client({ timeoutMs: 50 }), path: { id: "hang" } }),
-    )
-    expect(Date.now() - started).toBeLessThan(2000)
-    expect(e.message).toBe("engine prod-a did not respond within 50 ms (timeout)")
-    expect(e.kind).toBe("timeout")
-  })
-
-  it("a timed-out WRITE warns that it may still have been applied", async () => {
-    const e = await failure(
-      startProcessInstanceByKey({
-        client: client({ timeoutMs: 50 }),
-        path: { key: "hang" },
-        body: {},
-      }),
-    )
-    expect(e.message).toBe(
-      "engine prod-a did not respond within 50 ms (timeout) — the POST may still have been applied; check the current state before retrying",
-    )
+  it("drops a `type` that is no exception class name instead of echoing it", async () => {
+    const e = await failure(getProcessInstance({ client: client(), path: { id: "odd-type" } }))
+    expect(e.message).toBe("[400] boom (engine prod-a)")
+    expect(e.type).toBeUndefined()
   })
 
   it("omits the engine suffix when the client has no engine id", async () => {
@@ -241,16 +195,50 @@ describe("engine errors reach the model as actionable text", () => {
       "engine unreachable (ECONNREFUSED)",
     )
   })
+})
 
-  it("keeps request bodies intact through the deadline's request rewrap", async () => {
-    const started = (await startProcessInstanceByKey({
-      client: client(),
-      path: { key: "echo" },
-      body: { businessKey: "order-7" },
-    })) as unknown as { echo: { businessKey: string } }
-    expect(started.echo).toEqual({ businessKey: "order-7" })
-    const last = seen.filter((r) => r.url?.includes("/key/echo/start")).at(-1)
-    expect(last?.method).toBe("POST")
+describe("network failures", () => {
+  it("ECONNREFUSED → engine <id> unreachable (<code>)", async () => {
+    const e = await failure(
+      getProcessInstance({ client: client({ baseUrl: closedPortUrl }), path: { id: "x" } }),
+    )
+    expect(e.message).toBe("engine prod-a unreachable (ECONNREFUSED)")
+    expect(e).toMatchObject({ kind: "unreachable", httpStatus: undefined, engineId: "prod-a" })
+  })
+
+  it("a WRITE whose connection drops after the engine received it is not 'unreachable'", async () => {
+    const e = await failure(
+      startProcessInstanceByKey({ client: client(), path: { key: "reset" }, body: {} }),
+    )
+    expect(e.message).toBe(
+      "connection to engine prod-a failed (UND_ERR_SOCKET) — the POST may still have been applied; check the current state before retrying",
+    )
+    expect(e).toMatchObject({ kind: "connection", engineMessage: "UND_ERR_SOCKET" })
+  })
+
+  it("a READ whose connection drops names the failure without the write caveat", async () => {
+    const e = await failure(getProcessInstance({ client: client(), path: { id: "reset" } }))
+    expect(e.message).toBe("connection to engine prod-a failed (UND_ERR_SOCKET)")
+  })
+
+  it("only connect-phase failures — the engine cannot have seen the request — read 'unreachable'", () => {
+    const post = new Request("http://engine.invalid/x", { method: "POST" })
+    const map = (code?: string) =>
+      toEngineRequestError(new TypeError("fetch failed", { cause: code ? { code } : {} }), {
+        request: post,
+        engineId: "prod-a",
+        timeoutMs: 1,
+        timedOut: false,
+      }) as EngineRequestError
+    const connectPhase = ["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "EHOSTUNREACH", "ENETUNREACH"]
+    for (const code of [...connectPhase, "UND_ERR_CONNECT_TIMEOUT"]) {
+      expect(map(code).message).toBe(`engine prod-a unreachable (${code})`)
+    }
+    for (const code of ["ECONNRESET", "EPIPE", "ETIMEDOUT", undefined]) {
+      expect(map(code)).toMatchObject({ kind: "connection" })
+      expect(map(code).message).toMatch(/— the POST may still have been applied/)
+    }
+    expect(map(undefined).message).toMatch(/^connection to engine prod-a failed \(network error\)/)
   })
 })
 
@@ -265,66 +253,33 @@ describe("401 hints per auth type", () => {
     )
   })
 
+  // The fake engine quotes the rejected Authorization header back, like some
+  // proxies do — the credential must be masked, not handed to the model.
   it("passthrough with a forwarded token", async () => {
     const e = await unauthorized({ authType: "passthrough", tokenProvider: () => "tok-123" })
-    expect(e.message).toMatch(
-      /\(engine prod-a\)\. The engine rejected the forwarded bearer token\.$/,
+    expect(e.message).toBe(
+      "[401] denied: Bearer *** (engine prod-a). The engine rejected the forwarded bearer token.",
     )
-    expect(e.message).not.toContain("tok-123")
+    expect(e.engineMessage).toBe("denied: Bearer ***")
   })
 
-  it("static credentials", async () => {
+  it("static basic credentials", async () => {
     const e = await unauthorized({ authType: "basic", username: "demo", password: "s3cret" })
-    expect(e.message).toMatch(/The engine rejected the configured credentials\.$/)
-    expect(e.message).not.toContain("s3cret")
+    expect(e.message).toBe(
+      "[401] denied: Basic *** (engine prod-a). The engine rejected the configured credentials.",
+    )
+    expect(e.message).not.toContain(Buffer.from("demo:s3cret").toString("base64"))
+  })
+
+  it("a static bearer token, configured with a stray trailing newline", async () => {
+    const e = await unauthorized({ authType: "bearer", token: "tok-456\n" })
+    expect(e.message).toBe(
+      "[401] denied: Bearer *** (engine prod-a). The engine rejected the configured credentials.",
+    )
   })
 
   it("no auth configured", async () => {
     const e = await unauthorized({ authType: "none" })
     expect(e.message).toMatch(/The engine requires authentication, but none is configured\.$/)
-  })
-})
-
-describe("caller cancellation", () => {
-  it("aborts a read when the caller's signal fires", async () => {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 30)
-    const e = await failure(
-      getProcessInstance({
-        client: withCallerSignal(client(), controller.signal),
-        path: { id: "hang" },
-      }),
-    )
-    expect(e.message).toBe("request to engine prod-a was cancelled by the caller")
-    expect(e.kind).toBe("cancelled")
-  })
-
-  it("an already-aborted signal fails fast without reaching the engine", async () => {
-    const before = seen.length
-    const e = await failure(
-      getProcessInstance({
-        client: withCallerSignal(client(), AbortSignal.abort()),
-        path: { id: "ok" },
-      }),
-    )
-    expect(e.kind).toBe("cancelled")
-    expect(seen.length).toBe(before)
-  })
-
-  it("never aborts a write once started — the caller's signal only binds reads", async () => {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 20)
-    const started = (await startProcessInstanceByKey({
-      client: withCallerSignal(client(), controller.signal),
-      path: { key: "slow" },
-      body: { businessKey: "order-8" },
-    })) as unknown as { id: string }
-    expect(controller.signal.aborted).toBe(true)
-    expect(started.id).toBe("pi-1")
-  })
-
-  it("returns the client unchanged without a signal", () => {
-    const c = client()
-    expect(withCallerSignal(c, undefined)).toBe(c)
   })
 })

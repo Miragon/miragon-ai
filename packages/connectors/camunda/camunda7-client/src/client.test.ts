@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { createCamunda7Client } from "./client.js"
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 function headers(client: ReturnType<typeof createCamunda7Client>): Headers {
   return client.getConfig().headers as Headers
@@ -109,20 +113,22 @@ describe("createCamunda7Client", () => {
     expect(() => createCamunda7Client({ baseUrl, timeoutMs: 2_147_483_647 })).not.toThrow()
   })
 
-  it("re-wraps every request with an abortable deadline signal", async () => {
-    let signal: AbortSignal | undefined
-    const fetchStub: typeof fetch = (input) => {
-      signal = (input as Request).signal
+  it("sends every request with a deadline signal that also follows the caller's", async () => {
+    let sent: { request?: Request; signal?: AbortSignal | null } = {}
+    vi.stubGlobal("fetch", (request: Request, init?: RequestInit) => {
+      sent = { request, signal: init?.signal }
       return Promise.resolve(
         new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } }),
       )
-    }
+    })
     const caller = new AbortController()
     const client = createCamunda7Client({ baseUrl: "http://localhost:8410/engine-rest" })
-    await client.get({ url: "/engine", fetch: fetchStub, signal: caller.signal })
-    expect(signal?.aborted).toBe(false)
+    await client.get({ url: "/engine", signal: caller.signal })
+    expect(sent.request?.url).toBe("http://localhost:8410/engine-rest/engine")
+    expect(sent.signal).toBeInstanceOf(AbortSignal)
+    expect(sent.signal?.aborted).toBe(false)
     caller.abort()
-    expect(signal?.aborted).toBe(true)
+    expect(sent.signal?.aborted).toBe(true)
   })
 
   it("passthrough: leaves the other request headers untouched", async () => {

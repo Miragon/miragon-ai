@@ -17,10 +17,12 @@ type ToolCallback = (
 ) => Promise<{ isError?: boolean; content: Array<{ type: string; text: string }> }>
 
 const seenAuth: Array<string | undefined> = []
+const seenTenant: Array<string | string[] | undefined> = []
 let hang = false
 
 const prometheus = http.createServer((req, res) => {
   seenAuth.push(req.headers.authorization)
+  seenTenant.push(req.headers["x-scope-orgid"])
   if (hang) return
   res.writeHead(200, { "Content-Type": "application/json" })
   res.end(JSON.stringify({ status: "success", data: { resultType: "vector", result: [] } }))
@@ -67,12 +69,73 @@ describe("Prometheus config reaches the wire", () => {
     expect(seenAuth.every((auth) => auth === "Bearer tok-123")).toBe(true)
   })
 
+  it("PROMETHEUS_HEADERS and PROMETHEUS_USERNAME/PROMETHEUS_PASSWORD reach every query", async () => {
+    hang = false
+    seenAuth.length = 0
+    seenTenant.length = 0
+    const tools = boot({
+      PROMETHEUS_HEADERS: '{"X-Scope-OrgID":"tenant-a"}',
+      PROMETHEUS_USERNAME: "grafana",
+      PROMETHEUS_PASSWORD: "hunter2-pass",
+    })
+    const result = await tools.get("analytics_engine_landscape")!({})
+    expect(result.isError).toBeFalsy()
+    expect(seenTenant.length).toBeGreaterThan(0)
+    expect(seenTenant.every((tenant) => tenant === "tenant-a")).toBe(true)
+    const basic = `Basic ${Buffer.from("grafana:hunter2-pass").toString("base64")}`
+    expect(seenAuth.every((auth) => auth === basic)).toBe(true)
+  })
+
   it("PROMETHEUS_TIMEOUT_MS bounds a hung Prometheus", async () => {
     hang = true
     const tools = boot({ PROMETHEUS_TIMEOUT_MS: "60" })
     const result = await tools.get("analytics_engine_landscape")!({})
     expect(result.isError).toBe(true)
     expect(result.content[0].text).toBe("Prometheus did not respond within 60 ms (timeout)")
+  })
+
+  it("EVERY widget tool and feed hands ctx.signal to its queries", async () => {
+    hang = false
+    const tools = new Map<string, ToolCallback>()
+    const server = {
+      tool: (definition: { name: string }, callback: ToolCallback) => {
+        tools.set(definition.name, callback)
+      },
+    } as unknown as MCPServer
+    analyticsModule
+      .createPlugin(
+        { ...analyticsModule.configFromEnv({ PROMETHEUS_URL: url }), toolset: "read-only" },
+        {},
+      )
+      .registerWidgetTools?.(server)
+    // Each handler runs twice with args every tool accepts: unsignalled it
+    // must reach Prometheus, with an already-aborted ctx.signal it must not —
+    // a handler that drops ctx would still query. Tools that never query are
+    // named.
+    const args = {
+      processDefinitionKey: "order",
+      deploymentTimestamp: "2026-10-01T00:00:00Z",
+      engineA: "prod-a",
+      engineB: "prod-b",
+    }
+    const queriesOf = async (name: string, ctx: { signal?: AbortSignal }) => {
+      const before = seenAuth.length
+      await tools.get(name)!(args, ctx)
+      return seenAuth.length - before
+    }
+    const neverQuery: string[] = []
+    for (const name of tools.keys()) {
+      if ((await queriesOf(name, {})) === 0) {
+        neverQuery.push(name)
+        continue
+      }
+      expect({ name, queries: await queriesOf(name, { signal: AbortSignal.abort() }) }).toEqual({
+        name,
+        queries: 0,
+      })
+    }
+    expect(neverQuery).toEqual(["analytics_show_settings", "analytics_settings_data"])
+    expect(tools.size - neverQuery.length).toBeGreaterThanOrEqual(11)
   })
 
   it("a widget feed's ctx.signal cancels its queries before the deadline", async () => {

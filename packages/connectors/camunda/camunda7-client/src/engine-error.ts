@@ -8,11 +8,17 @@
  * through {@link toEngineRequestError} instead.
  */
 
-/** What went wrong: an engine error response, no connection, the deadline, or the caller. */
-export type EngineFailureKind = "http" | "unreachable" | "timeout" | "cancelled"
+/**
+ * What went wrong: an engine error response, no connection to the engine, a
+ * connection that failed mid-request, the deadline, or the caller.
+ */
+export type EngineFailureKind = "http" | "unreachable" | "connection" | "timeout" | "cancelled"
 
 /** Upper bound for engine-supplied text in the message (stack traces, HTML error pages). */
 const MAX_ENGINE_TEXT = 500
+
+/** An `ExceptionDto.type` worth echoing: a (qualified) Java class name, nothing longer. */
+const EXCEPTION_TYPE = /^[\w$.]{1,120}$/
 
 /**
  * An engine call that failed, with a model-actionable `message`:
@@ -20,6 +26,7 @@ const MAX_ENGINE_TEXT = 500
  * - `[404 InvalidRequestException] Process instance with id x does not exist (engine prod-a)`
  * - `[500] Internal Server Error — empty response body (engine prod-a)`
  * - `engine prod-a unreachable (ECONNREFUSED)`
+ * - `connection to engine prod-a failed (UND_ERR_SOCKET) — the POST may still have been applied; …`
  * - `engine prod-a did not respond within 30000 ms (timeout)`
  *
  * The HTTP status is `httpStatus`, deliberately NOT `status` (and the
@@ -63,9 +70,36 @@ export class EngineRequestError extends Error {
   }
 }
 
-/** Collapses whitespace and caps engine-supplied text at {@link MAX_ENGINE_TEXT}. */
-function clip(text: string): string {
-  const flat = text.replace(/\s+/g, " ").trim()
+/**
+ * Every form a credential can take in echoed text — as configured, trimmed
+ * (header values are sent trimmed) and whitespace-collapsed — longest first,
+ * so a value is masked whole before any shorter one inside it. Values under
+ * 4 characters are skipped: masking those would shred ordinary text.
+ */
+function secretForms(secrets: ReadonlyArray<string | undefined>): string[] {
+  const forms = new Set<string>()
+  for (const secret of secrets) {
+    if (!secret) continue
+    for (const form of [secret, secret.trim(), secret.replace(/\s+/g, " ").trim()]) {
+      if (form.length >= 4) forms.add(form)
+    }
+  }
+  return [...forms].sort((a, b) => b.length - a.length)
+}
+
+function mask(text: string, secrets: readonly string[]): string {
+  let masked = text
+  for (const secret of secrets) masked = masked.split(secret).join("***")
+  return masked
+}
+
+/**
+ * Engine-supplied text made safe for the model: credentials masked (before
+ * AND after collapsing whitespace, so neither form slips through), then
+ * capped at {@link MAX_ENGINE_TEXT}.
+ */
+function clip(text: string, secrets: readonly string[]): string {
+  const flat = mask(mask(text, secrets).replace(/\s+/g, " ").trim(), secrets)
   return flat.length > MAX_ENGINE_TEXT ? `${flat.slice(0, MAX_ENGINE_TEXT)}…` : flat
 }
 
@@ -81,13 +115,16 @@ function stringField(value: unknown, key: string): string | undefined {
 function describeBody(
   body: unknown,
   response: Response,
+  secrets: readonly string[],
 ): { type?: string; engineMessage: string; engineCode?: number } {
   let type: string | undefined
   let engineCode: number | undefined
   let text: string
   if (body !== null && typeof body === "object" && !Array.isArray(body)) {
-    // ExceptionDto {type, message, code}; `error` covers proxies/gateways.
-    type = stringField(body, "type")
+    // ExceptionDto {type, message, code}; `error` covers proxies/gateways. A
+    // `type` that is no class name (a proxy's free text) is dropped.
+    const rawType = stringField(body, "type")
+    type = rawType && EXCEPTION_TYPE.test(rawType) ? mask(rawType, secrets) : undefined
     const code = (body as Record<string, unknown>).code
     engineCode = typeof code === "number" ? code : undefined
     const message = stringField(body, "message") ?? stringField(body, "error")
@@ -95,14 +132,13 @@ function describeBody(
   } else {
     text = typeof body === "string" ? body : body == null ? "" : JSON.stringify(body)
   }
-  const engineMessage = clip(text)
+  const engineMessage = clip(text, secrets)
   if (engineMessage) return { type, engineMessage, engineCode }
+  const statusText = clip(response.statusText, secrets)
   return {
     type,
     engineCode,
-    engineMessage: response.statusText
-      ? `${response.statusText} — empty response body`
-      : "empty response body",
+    engineMessage: statusText ? `${statusText} — empty response body` : "empty response body",
   }
 }
 
@@ -126,9 +162,32 @@ export interface EngineErrorContext {
   timedOut: boolean
   /** Appended as a sentence to 401 messages (auth-type-specific remedy). */
   unauthorizedHint?: string
+  /** Credentials the request carried — masked wherever engine text is echoed. */
+  secrets?: ReadonlyArray<string | undefined>
 }
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"])
+
+/**
+ * Network failures before a connection exists (DNS, refused, no route,
+ * connect timeout): the engine cannot have seen the request. Any other one
+ * (a reset or closed socket) may come after the engine received it.
+ */
+const CONNECT_PHASE_CODES = new Set([
+  "ECONNREFUSED",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "UND_ERR_CONNECT_TIMEOUT",
+])
+
+/** The caveat for a write whose outcome is unknown; empty for reads. */
+function writeCaveat(request: Request): string {
+  return SAFE_METHODS.has(request.method)
+    ? ""
+    : ` — the ${request.method} may still have been applied; check the current state before retrying`
+}
 
 /** An aborted request: this client's deadline, or the caller's signal. */
 function abortError(error: unknown, request: Request, ctx: EngineErrorContext) {
@@ -141,11 +200,8 @@ function abortError(error: unknown, request: Request, ctx: EngineErrorContext) {
       cause: error,
     })
   }
-  const write = SAFE_METHODS.has(request.method)
-    ? ""
-    : ` — the ${request.method} may still have been applied; check the current state before retrying`
   return new EngineRequestError(
-    `${engine} did not respond within ${ctx.timeoutMs} ms (timeout)${write}`,
+    `${engine} did not respond within ${ctx.timeoutMs} ms (timeout)${writeCaveat(request)}`,
     {
       kind: "timeout",
       engineMessage: `no response within ${ctx.timeoutMs} ms`,
@@ -155,43 +211,61 @@ function abortError(error: unknown, request: Request, ctx: EngineErrorContext) {
   )
 }
 
+/** An engine error response: status, exception type and the (masked) engine text. */
+function httpError(body: unknown, response: Response, ctx: EngineErrorContext) {
+  const { type, engineMessage, engineCode } = describeBody(
+    body,
+    response,
+    secretForms(ctx.secrets ?? []),
+  )
+  const suffix = ctx.engineId ? ` (engine ${ctx.engineId})` : ""
+  const head = `[${response.status}${type ? ` ${type}` : ""}] ${engineMessage}${suffix}`
+  const hint = response.status === 401 && ctx.unauthorizedHint ? `. ${ctx.unauthorizedHint}` : ""
+  return new EngineRequestError(`${head}${hint}`, {
+    kind: "http",
+    httpStatus: response.status,
+    type,
+    engineMessage,
+    engineCode,
+    engineId: ctx.engineId,
+  })
+}
+
+/** A network failure: no connection at all, or one that broke mid-request. */
+function networkError(error: TypeError, request: Request, engineId: string | undefined) {
+  const engine = engineId ? `engine ${engineId}` : "engine"
+  const code = networkCode(error)
+  const details = { engineMessage: code, engineId, cause: error }
+  if (CONNECT_PHASE_CODES.has(code)) {
+    return new EngineRequestError(`${engine} unreachable (${code})`, {
+      kind: "unreachable",
+      ...details,
+    })
+  }
+  return new EngineRequestError(`connection to ${engine} failed (${code})${writeCaveat(request)}`, {
+    kind: "connection",
+    ...details,
+  })
+}
+
 /**
  * Maps whatever a failed engine call threw to an {@link EngineRequestError}.
- * Errors that are none of the four kinds (e.g. a request that could not even
- * be built) pass through unchanged — they already carry their own message.
+ * Errors that are none of these kinds (e.g. a request that could not even be
+ * built) pass through unchanged — they already carry their own message.
  */
 export function toEngineRequestError(error: unknown, ctx: EngineErrorContext): unknown {
   if (error instanceof EngineRequestError) return error
-  const { response, request, engineId } = ctx
-  const engine = engineId ? `engine ${engineId}` : "engine"
-  const suffix = engineId ? ` (engine ${engineId})` : ""
+  const { response, request } = ctx
 
-  // Abort first: a deadline that fires while the error BODY is being read
-  // still arrives with a response.
-  if (request?.signal.aborted) return abortError(error, request, ctx)
+  // Abort first: a deadline that fires while the BODY is being read still
+  // arrives with a response. The deadline aborts the request as sent (in the
+  // client's fetch), the caller's signal the request itself.
+  if (request && (ctx.timedOut || request.signal.aborted)) return abortError(error, request, ctx)
 
-  if (response && !response.ok) {
-    const { type, engineMessage, engineCode } = describeBody(error, response)
-    const head = `[${response.status}${type ? ` ${type}` : ""}] ${engineMessage}${suffix}`
-    const hint = response.status === 401 && ctx.unauthorizedHint ? `. ${ctx.unauthorizedHint}` : ""
-    return new EngineRequestError(`${head}${hint}`, {
-      kind: "http",
-      httpStatus: response.status,
-      type,
-      engineMessage,
-      engineCode,
-      engineId,
-    })
-  }
+  if (response && !response.ok) return httpError(error, response, ctx)
 
   if (!response && request && error instanceof TypeError) {
-    const code = networkCode(error)
-    return new EngineRequestError(`${engine} unreachable (${code})`, {
-      kind: "unreachable",
-      engineMessage: code,
-      engineId,
-      cause: error,
-    })
+    return networkError(error, request, ctx.engineId)
   }
 
   return error

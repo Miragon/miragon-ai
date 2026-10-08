@@ -6,7 +6,7 @@ import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
 import { DEFAULT_HEALTH_THRESHOLDS } from "../data/health-data.js"
 import { createEngineRegistry, type EngineEntry } from "../lib/resolve-engine.js"
-import { camunda7Module } from "../module.js"
+import { camunda7Module, createBpmnXmlFetcher } from "../module.js"
 import { providerForEntry } from "../providers/index.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../tool-names.js"
 import { registerWidgetDataFeeds } from "../widget-tools/data-feeds.js"
@@ -160,6 +160,18 @@ describe("engine errors as the model reads them (registrar tool)", () => {
     camunda7Module.createPlugin({ ...config, toolset: "read-only" }, {}).registerTools?.(server)
     const result = await tools.get("camunda7_get_process_instance")!({ processInstanceId: "hang" })
     expect(result.content[0].text).toBe("engine prod-a did not respond within 150 ms (timeout)")
+  })
+
+  it("CAMUNDA_REQUEST_TIMEOUT_MS also bounds the BPMN-XML lookup handed to analytics", async () => {
+    const fetchBpmnXml = createBpmnXmlFetcher(
+      camunda7Module.configFromEnv({
+        CAMUNDA_BASE_URL: baseUrl,
+        CAMUNDA_REQUEST_TIMEOUT_MS: "100",
+      }),
+    )!
+    const started = Date.now()
+    expect(await fetchBpmnXml("hang")).toBeNull()
+    expect(Date.now() - started).toBeLessThan(2_000)
   })
 })
 

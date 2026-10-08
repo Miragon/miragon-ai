@@ -44,14 +44,23 @@ const definitions = await getProcessDefinitions({ client, query: { latestVersion
 Every `createCamunda7Client` client — whatever its auth type — rejects with an
 `EngineRequestError` (an `Error` with `kind`, `httpStatus`, `type`,
 `engineMessage`, `engineCode`, `engineId`) instead of the raw error body, with
-a message that is safe and useful to show a model:
+a message that is safe and useful to show a model (engine text truncated, the
+request's credentials masked):
 `[404 InvalidRequestException] Process instance with id x does not exist (engine prod-a)`,
-`engine prod-a unreachable (ECONNREFUSED)`, or
+`engine prod-a unreachable (ECONNREFUSED)` (no connection — the engine never
+saw the request), `connection to engine prod-a failed (ECONNRESET)` (dropped
+mid-request; a write adds that it may still have been applied), or
 `engine prod-a did not respond within 30000 ms (timeout)`. Pass `engineId` to
 name the engine in those messages and `timeoutMs` to change the per-request
 deadline (default 30 000 ms). `withCallerSignal(client, signal)` returns a view
 whose reads (`GET`/`HEAD`/`OPTIONS`) also abort with the caller's signal —
 writes never do, since aborting a started write cannot undo it.
+
+The deadline lives in the client's `fetch`, so it binds each request after
+every request interceptor. A custom `fetch` (per call or via `setConfig`)
+replaces it — wrap `client.getConfig().fetch` instead. Request interceptors
+should mutate the request (`request.headers.set(…)`): one that returns a new
+`Request` keeps the deadline, but can detach the caller's signal.
 
 ## OpenAPI spec — origin & refresh
 

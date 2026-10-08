@@ -57,8 +57,13 @@ interface PromApiResponse {
  * never echoed: it may hold credentials.
  */
 function splitUserinfo(raw: string): { base: string; username?: string; password?: string } {
-  const url = URL.parse(raw)
-  if (!url) throw new Error("Prometheus URL (PROMETHEUS_URL) is not a valid URL")
+  let url: URL
+  try {
+    url = new URL(raw) // not URL.parse: that needs Node 22.1, the package supports 22.0
+  } catch {
+    // Not chained: the parse error carries the raw input.
+    throw new Error("Prometheus URL (PROMETHEUS_URL) is not a valid URL")
+  }
   const username = decodeURIComponent(url.username) || undefined
   const password = decodeURIComponent(url.password) || undefined
   url.username = ""
@@ -102,6 +107,32 @@ function authorizationFor(
 const HEADER_NAME = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/
 const HEADER_VALUE = /^[^\r\n\0]*$/
 
+/**
+ * Every form a secret can take in echoed text — as configured, trimmed
+ * (header values are sent trimmed) and whitespace-collapsed — longest first,
+ * so a value is masked whole before any shorter one inside it. Values under
+ * 4 characters are skipped: masking those would shred ordinary text.
+ */
+function secretForms(secrets: Array<string | undefined>): string[] {
+  const forms = new Set<string>()
+  for (const secret of secrets) {
+    if (!secret) continue
+    for (const form of [secret, secret.trim(), secret.replace(/\s+/g, " ").trim()]) {
+      if (form.length >= 4) forms.add(form)
+    }
+  }
+  return [...forms].sort((a, b) => b.length - a.length)
+}
+
+function mask(text: string, secrets: readonly string[]): string {
+  let masked = text
+  for (const secret of secrets) masked = masked.split(secret).join("***")
+  return masked
+}
+
+/** A Prometheus API `errorType` (`bad_data`, `timeout`, …); anything else is not echoed. */
+const ERROR_TYPE = /^[a-z_]{1,40}$/
+
 /** The request headers (custom + auth) and every secret an upstream could echo back. */
 function buildHeaders(
   config: PrometheusConfig,
@@ -125,12 +156,9 @@ function buildHeaders(
     )
   }
   if (authorization) headers.set("Authorization", authorization)
-  return {
-    headers,
-    secrets: [...secrets, ...headers.values()].filter(
-      (s): s is string => typeof s === "string" && s.length >= 4,
-    ),
-  }
+  // The configured credential (not its header line, so an echo keeps the
+  // scheme readable) plus every custom header value.
+  return { headers, secrets: secretForms([...secrets, ...Object.values(config.headers ?? {})]) }
 }
 
 function resolveTimeout(timeoutMs: number | undefined): number {
@@ -174,17 +202,23 @@ export function createPrometheusClient(config: PrometheusConfig): PrometheusClie
   const { headers, secrets } = buildHeaders(config, userinfo)
   const timeoutMs = resolveTimeout(config.timeoutMs)
 
-  /** Truncated, whitespace-collapsed upstream text with every configured secret masked. */
+  /**
+   * Upstream text with every configured secret masked (before AND after
+   * collapsing whitespace, so neither form slips through), then truncated.
+   */
   const safe = (text: string): string => {
-    let flat = text.replace(/\s+/g, " ").trim()
-    for (const secret of secrets) flat = flat.split(secret).join("***")
+    const flat = mask(mask(text, secrets).replace(/\s+/g, " ").trim(), secrets)
     return flat.length > MAX_ERROR_TEXT ? `${flat.slice(0, MAX_ERROR_TEXT)}…` : flat
   }
+
+  /** The envelope's `errorType` when it is a Prometheus one (masked all the same). */
+  const errorTypeOf = (value: unknown): string | undefined =>
+    typeof value === "string" && ERROR_TYPE.test(value) ? safe(value) : undefined
 
   function httpError(response: Response, text: string): Error {
     // The API's JSON error envelope when it is one, else the raw text.
     const body = parseJson(text) as Partial<PromApiResponse> | null | undefined
-    const errorType = typeof body?.errorType === "string" ? body.errorType : undefined
+    const errorType = errorTypeOf(body?.errorType)
     const raw = typeof body?.error === "string" ? body.error : text
     const detail = safe(raw) || `${response.statusText || "HTTP error"} — empty response body`
     const auth = response.status === 401 || response.status === 403
@@ -234,8 +268,9 @@ export function createPrometheusClient(config: PrometheusConfig): PrometheusClie
       if (!response.ok) throw httpError(response, text)
       const body = parseEnvelope(response, text)
       if (body.status !== "success" || !body.data) {
+        const errorType = errorTypeOf(body.errorType)
         throw new Error(
-          `Prometheus query error${body.errorType ? ` (${body.errorType})` : ""}: ${safe(
+          `Prometheus query error${errorType ? ` (${errorType})` : ""}: ${safe(
             body.error ?? "unknown",
           )}`,
         )

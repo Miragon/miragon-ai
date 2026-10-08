@@ -28,12 +28,49 @@ const success = {
   },
 }
 
+/** The credential of an Authorization header: the bearer token / the decoded password. */
+function credentialOf(authorization = ""): string {
+  const [scheme, value = ""] = authorization.split(" ")
+  return scheme === "Basic" ? Buffer.from(value, "base64").toString().split(":")[1] : value
+}
+
+/** Upstreams that quote a credential back — status, content type, body per query. */
+const echoes: Record<string, (auth?: string) => [number, string, string]> = {
+  // A misbehaving proxy: the whole Authorization header…
+  "echo-auth": (auth) => [401, "text/plain", `denied: ${auth ?? ""}`],
+  // …or only the credential itself.
+  "echo-credential": (auth) => [401, "text/plain", `invalid credential ${credentialOf(auth)}`],
+  // Envelopes whose errorType is no Prometheus error type.
+  "echo-type": (auth) => [
+    400,
+    "application/json",
+    JSON.stringify({ status: "error", errorType: `${"t".repeat(2000)} ${auth}`, error: "nope" }),
+  ],
+  "api-echo-type": () => [
+    200,
+    "application/json",
+    JSON.stringify({ status: "error", errorType: `bad ${TOKEN}`, error: "nope" }),
+  ],
+  // A short, Prometheus-shaped errorType that happens to be a configured header value.
+  "header-type": () => [
+    400,
+    "application/json",
+    JSON.stringify({ status: "error", errorType: "tenantsecret", error: "nope" }),
+  ],
+}
+
 const prometheus = http.createServer((req, res) => {
   lastHeaders = req.headers
   const query = new URL(req.url ?? "/", "http://x").searchParams.get("query") ?? ""
   const json = (status: number, body: unknown) => {
     res.writeHead(status, { "Content-Type": "application/json" })
     res.end(JSON.stringify(body))
+  }
+  const echo = echoes[query]
+  if (echo) {
+    const [status, type, body] = echo(req.headers.authorization)
+    res.writeHead(status, { "Content-Type": type })
+    return res.end(body)
   }
   if (query === "hang") return
   if (query === "bad") {
@@ -50,11 +87,6 @@ const prometheus = http.createServer((req, res) => {
   if (query === "empty") {
     res.writeHead(503)
     return res.end()
-  }
-  if (query === "echo-auth") {
-    // A misbehaving proxy that echoes the credential back in its error body.
-    res.writeHead(401, { "Content-Type": "text/plain" })
-    return res.end(`denied: ${req.headers.authorization ?? ""}`)
   }
   if (query === "html") {
     res.writeHead(200, { "Content-Type": "text/html" })
@@ -216,6 +248,38 @@ describe("Prometheus errors reach the model actionable and credential-free", () 
     )
     expect(basic).not.toContain(Buffer.from(`grafana:${PASSWORD}`).toString("base64"))
     expect(basic).toContain("denied: Basic ***")
+  })
+
+  it("masks a credential echoed alone, also when configured with stray whitespace", async () => {
+    // A token read verbatim from a secret file keeps its trailing newline; the
+    // header is sent trimmed, so the echo carries the trimmed form.
+    expect(await failure(client({ bearerToken: `${TOKEN}\n` }).instant("echo-credential"))).toBe(
+      "Prometheus query failed (401): invalid credential *** — check the configured Prometheus credentials",
+    )
+    // Whitespace inside a password survives the echo but not the collapse.
+    const spaced = "hunter2  pass\tword"
+    const basic = await failure(
+      client({ username: "grafana", password: spaced }).instant("echo-credential"),
+    )
+    expect(basic).toBe(
+      "Prometheus query failed (401): invalid credential *** — check the configured Prometheus credentials",
+    )
+  })
+
+  it("never echoes an errorType that is no Prometheus error type", async () => {
+    expect(await failure(client({ bearerToken: TOKEN }).instant("echo-type"))).toBe(
+      "Prometheus query failed (400): nope",
+    )
+    expect(await failure(client({ bearerToken: TOKEN }).instant("api-echo-type"))).toBe(
+      "Prometheus query error: nope",
+    )
+  })
+
+  it("masks a Prometheus-shaped errorType that is a configured secret", async () => {
+    const tenant = client({ headers: { "X-Scope-OrgID": "tenantsecret" } })
+    expect(await failure(tenant.instant("header-type"))).toBe(
+      "Prometheus query failed (400 ***): nope",
+    )
   })
 
   it("a 200 that is not JSON (a login page) says so instead of a JSON parse error", async () => {

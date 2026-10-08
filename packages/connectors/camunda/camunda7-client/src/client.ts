@@ -84,35 +84,57 @@ function resolveTimeout(timeoutMs: number | undefined): number {
 }
 
 /**
+ * The credentials a request carried, for masking in error text (an engine or
+ * proxy may quote them back): the configured password/token and whatever the
+ * request's own `Authorization` header holds (the Basic value, a static or a
+ * passed-through bearer token).
+ */
+function credentialsOf(options: Camunda7ClientOptions, request: Request | undefined) {
+  const authorization = request?.headers.get("Authorization") ?? undefined
+  return [options.password, options.token, authorization?.replace(/^\S+\s+/, "")]
+}
+
+/**
  * Per-engine client factory. All defaults (JSON content negotiation headers,
  * `throwOnError`, `responseStyle`) come from `createClientConfig` in
  * src/hey-api.ts — the same function the generated default client uses — so
  * runtime behavior and the generated SDK types stay in sync.
  *
- * Every client carries two interceptors whatever its auth type: a
- * per-request deadline (combined with a caller `signal`, see
- * {@link withCallerSignal}) and the mapping of every failure to an
- * `EngineRequestError` (status, exception type, engine message, engine id).
+ * Every client, whatever its auth type, carries a per-request deadline in its
+ * `fetch` (combined with a caller `signal`, see {@link withCallerSignal}) and
+ * an error interceptor that maps every failure to an `EngineRequestError`
+ * (status, exception type, engine message, engine id; credentials masked).
+ *
+ * The deadline binds the request as it LEAVES — after every request
+ * interceptor — so an interceptor that returns a new `Request` can neither
+ * detach it nor disguise it as a cancellation. A custom `fetch` (per call or
+ * via `setConfig`) replaces the deadline with it: wrap
+ * `client.getConfig().fetch` instead. Request interceptors should mutate the
+ * request (`request.headers.set(…)`); one that returns a new `Request` keeps
+ * the deadline, but the caller's signal reaches the new request only through
+ * the dropped one (undici follows signals via a `WeakRef`), so after a
+ * garbage collection a cancelled call runs on until the deadline.
  */
 export function createCamunda7Client(options: Camunda7ClientOptions): Client {
   const timeoutMs = resolveTimeout(options.timeoutMs)
+  // Keyed by the request hey-api sends, i.e. the one its error interceptors
+  // receive: tells OUR deadline from a caller's cancellation, and keeps the
+  // timer alive exactly as long as hey-api holds that request (body read
+  // included).
+  const deadlines = new WeakMap<Request, AbortSignal>()
+  const fetchWithDeadline = (request: Request): Promise<Response> => {
+    const deadline = AbortSignal.timeout(timeoutMs)
+    deadlines.set(request, deadline)
+    return fetch(request, { signal: AbortSignal.any([request.signal, deadline]) })
+  }
   const client = createClient(
     createClientConfig({
       baseUrl: options.baseUrl,
       headers: buildAuthHeader(options),
+      // hey-api calls its `fetch` with the finished Request only.
+      fetch: fetchWithDeadline as typeof fetch,
     }),
   )
-
-  // The deadline: re-wrap each request with its own signal combined with a
-  // fresh timeout. Remembered per request, so the error mapping can tell OUR
-  // deadline from a caller's cancellation.
-  const deadlines = new WeakMap<Request, AbortSignal>()
-  client.interceptors.request.use((request) => {
-    const deadline = AbortSignal.timeout(timeoutMs)
-    const bounded = new Request(request, { signal: AbortSignal.any([request.signal, deadline]) })
-    deadlines.set(bounded, deadline)
-    return bounded
-  })
 
   if (options.authType === "passthrough" && options.tokenProvider) {
     const { tokenProvider } = options
@@ -139,6 +161,7 @@ export function createCamunda7Client(options: Camunda7ClientOptions): Client {
       timeoutMs,
       timedOut: request ? deadlines.get(request)?.aborted === true : false,
       unauthorizedHint: response?.status === 401 ? unauthorizedHint(options) : undefined,
+      secrets: credentialsOf(options, request),
     }),
   )
   return client

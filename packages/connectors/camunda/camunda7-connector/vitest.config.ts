@@ -20,8 +20,10 @@ export default mergeConfig(
         // statements 42.05 / branches 32.61 / functions 35.76 / lines 42.50).
         // Raised 2026-10-08 with the engine-error/timeout guard end to end
         // (measured statements 48.13 / branches 36.38 / functions 41.03 /
-        // lines 48.75).
-        thresholds: { statements: 46, branches: 34, functions: 39, lines: 46 },
+        // lines 48.75). Raised again 2026-10-08 with the ctx.signal sweep over
+        // every widget tool and feed (measured statements 54.48 / branches
+        // 40.44 / functions 47.64 / lines 55.62).
+        thresholds: { statements: 52, branches: 38, functions: 45, lines: 53 },
       },
     },
   }),
