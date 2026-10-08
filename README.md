@@ -14,8 +14,8 @@ One MCP server, two modules (**operations** + **analytics**), and a fleet of int
 panels straight into the chat. Built on [mcp-use](https://github.com/mcp-use/mcp-use).
 
 > Ask _"why is the loan-approval process stalling?"_ — the assistant lists the running instances,
-> opens the incident panel, reads the metrics, and offers to retry the failed jobs. No cockpit
-> tab-hunting, no PromQL.
+> opens the incident panel, reads the metrics, and pinpoints the failing step — and, once you grant
+> the `operations` toolset, retries the failed jobs. No cockpit tab-hunting, no PromQL.
 
 **[🐳 Pull the server image from Docker Hub →](https://hub.docker.com/r/miragon/miragon-ai-server)**
 
@@ -31,7 +31,8 @@ panels straight into the chat. Built on [mcp-use](https://github.com/mcp-use/mcp
 - **Multi-engine routing** — talk to several engines at once (CIB Seven, Operaton and Camunda 7
   mixed in one fleet) with a per-user default engine plus per-call overrides; analytics aggregate
   or compare across engines.
-- **Toolset scoping** — narrow the surface to `read-only`, `operations`, or `admin` per deployment.
+- **Fail-closed toolsets** — read-only unless you widen it: `operations` (the default under OAuth)
+  or `admin` per deployment; deployments additionally need an explicit opt-in flag.
 - **Self-hostable** — a single multi-arch (amd64/arm64) image on Docker Hub, plus a drop-in
   Micrometer metrics plugin for the engine.
 
@@ -41,7 +42,7 @@ Pull the published server image and point an MCP client at it. You need a reacha
 Camunda 7 engine (REST API) and — for the analytics module — a Prometheus instance.
 
 ```bash
-docker run --rm -p 8400:8400 \
+docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8410/engine-rest \
   -e CAMUNDA_AUTH_TYPE=basic \
   -e CAMUNDA_USERNAME=demo \
@@ -49,6 +50,12 @@ docker run --rm -p 8400:8400 \
   -e PROMETHEUS_URL=http://host.docker.internal:9090 \
   docker.io/miragon/miragon-ai-server:latest
 ```
+
+Without `MCP_OAUTH` the endpoint is unauthenticated, so this boots **read-only**: queries, widgets
+and analytics, no engine writes — the boot log names the effective [toolsets](#toolsets). To allow
+writes, put OAuth in front (`-e MCP_OAUTH='{"provider":"keycloak",…}'` raises the default to
+`operations`) or name the toolsets yourself (`-e MCP_ACTIVE_MODULES=camunda7:operations,analytics`)
+— on an unauthenticated server only while the port stays bound to `127.0.0.1` as above.
 
 The server speaks the streamable-HTTP MCP transport on `http://localhost:8400/mcp`. Add it to your
 MCP host as an HTTP/streamable server — `claude mcp add --transport http miragon-ai
@@ -142,8 +149,7 @@ BPM operations across these domains (`category`): `engines`, `process-definition
 - **Process definitions** — `list_process_definitions`, `get_process_definition_xml`
 - **Process instances** — `start`, `list`, `get`, `delete`, `modify`, `set_*_suspension`,
   `get_activity_instance_tree`, variables
-- **User & external tasks** — `list/get/claim/unclaim/complete`, `fetch_and_lock`,
-  `complete_external_task`, `handle_external_task_failure`
+- **User & external tasks** — `list/get/claim/unclaim/complete`, `list_external_tasks`
 - **Incidents & jobs** — `list_incidents`, `resolve_incident`, `format_incident_issue`,
   `list_jobs`, `set_job_retries`
 - **History & migrations** — `query_historic_*`, migration tools
@@ -167,35 +173,50 @@ lists the definitions deployed on more than one engine as its valid inputs.
 
 ### Toolsets
 
-Narrow the camunda7 surface per deployment via a suffix in `MCP_ACTIVE_MODULES`:
+Each module runs exactly one toolset per boot, chosen by a suffix in `MCP_ACTIVE_MODULES`
+(`camunda7:operations,analytics:standard`) and stated in the boot log. Without a suffix the default
+fails closed: the read-only toolset on an unauthenticated server, the standard one under
+`MCP_OAUTH`. `admin` is never implied — only naming it grants it — and an empty (`camunda7:`) or
+unknown suffix warns and falls back to read-only, even under OAuth.
 
-| Toolset               | Surface                                                                                                         |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `camunda7:read-only`  | Queries only (`list_*`, `get_*`, `query_*`) plus engine selection — monitoring without writes                   |
-| `camunda7:operations` | Read-only plus day-to-day writes (start instances, complete/claim tasks, variables, retries, messages, signals) |
-| `camunda7:admin`      | Everything, including delete/modify/suspend, deployments, migrations                                            |
+| Toolset               | Surface                                                                                                                                                                                                                                   | No-suffix default |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `camunda7:read-only`  | Queries only (`list_*`, `get_*`, `query_*`) plus `camunda7_engine` `list`/`current` — monitoring without writes                                                                                                                           | without OAuth     |
+| `camunda7:operations` | Read-only plus day-to-day engine writes: start instances, claim/assign/complete tasks, variables, job retries, resolve incidents, correlate messages                                                                                      | with OAuth        |
+| `camunda7:admin`      | Everything: adds delete/modify/suspend, migrations, batch retries, `throw_signal` (engine-wide broadcast), the external-task worker protocol (`fetch_and_lock`, `complete_external_task`, `handle_external_task_failure`) and deployments | never             |
+| `analytics:read-only` | Every analytics tool and widget; no settings save                                                                                                                                                                                         | without OAuth     |
+| `analytics:standard`  | Adds `analytics_save_settings`                                                                                                                                                                                                            | with OAuth        |
 
-Example: `MCP_ACTIVE_MODULES=camunda7:read-only,analytics`.
+`camunda7_create_deployment` additionally needs `CAMUNDA_ALLOW_DEPLOYMENTS=true`: deploying a BPMN or
+DMN runs code inside the engine JVM (JUEL expressions, scripts). The full surface of earlier
+releases is `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` plus that flag (the dashboard
+builder also needs `MCP_OAUTH`) — never on a server the network can reach without authentication.
+A gateway or reverse proxy that terminates auth in front of the server is invisible to it, so such
+a deployment runs read-only until it names its toolsets.
 
 The widgets follow the toolset: an action button whose tool the toolset drops (retry, resolve
-incident, complete task, edit variable, suspend, cancel) is hidden, not disabled.
+incident, complete task, edit variable, suspend, cancel) is hidden, not disabled — the default
+anonymous deployment shows no write buttons. The dashboard builder (`get-builder-catalogue`,
+`save/list/load/delete-dashboard`) exists only under `MCP_OAUTH` and while no active module runs
+read-only; `render-view`, `refresh-view` and `get-framework-manifest` are always there.
 
 ## Configuration
 
 The most common variables — see [`docs/operations.md`](docs/operations.md) for the full reference.
 
-| Variable                                                  | Default                             | Description                                                                                                                               |
-| --------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                                                    | `8400`                              | HTTP port the MCP server listens on                                                                                                       |
-| `MCP_ACTIVE_MODULES`                                      | all                                 | Comma-separated modules (`camunda7,analytics`), each with an optional toolset suffix                                                      |
-| `MCP_OAUTH`                                               | —                                   | JSON OAuth resource-server config (Keycloak / Auth0; the 1.x generic-OIDC/oidc-proxy modes were removed with mcp-use 2) protecting `/mcp` |
-| `CAMUNDA_BASE_URL`                                        | `http://localhost:8410/engine-rest` | Single-engine REST base URL                                                                                                               |
-| `CAMUNDA_ENGINE_ID`                                       | `default`                           | Id of that engine — must match the engine's `ENGINE_ID` or its analytics stay empty                                                       |
-| `CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE`           | —                                   | Register multiple engines (see [Multi-engine](#multi-engine))                                                                             |
-| `CAMUNDA_COCKPIT_URL`                                     | derived                             | Cockpit web base for jump-out links                                                                                                       |
-| `CAMUNDA_AUTH_TYPE`                                       | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without an `auth`                                                      |
-| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` / `CAMUNDA_TOKEN` | —                                   | Credentials for `basic`/`bearer`; `passthrough` forwards each caller's bearer token                                                       |
-| `PROMETHEUS_URL`                                          | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source                                                                                           |
+| Variable                                                  | Default                             | Description                                                                                                                                                |
+| --------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                                    | `8400`                              | HTTP port the MCP server listens on                                                                                                                        |
+| `MCP_ACTIVE_MODULES`                                      | all, read-only                      | Comma-separated modules (`camunda7,analytics`), each with an optional [toolset](#toolsets) suffix; no suffix = read-only, under OAuth the standard toolset |
+| `MCP_OAUTH`                                               | —                                   | JSON OAuth resource-server config (Keycloak / Auth0; the 1.x generic-OIDC/oidc-proxy modes were removed with mcp-use 2) protecting `/mcp`                  |
+| `CAMUNDA_ALLOW_DEPLOYMENTS`                               | `false`                             | `true` registers `camunda7_create_deployment` under `camunda7:admin` — code execution in the engine JVM; any value but `true`/`false` fails the boot       |
+| `CAMUNDA_BASE_URL`                                        | `http://localhost:8410/engine-rest` | Single-engine REST base URL                                                                                                                                |
+| `CAMUNDA_ENGINE_ID`                                       | `default`                           | Id of that engine — must match the engine's `ENGINE_ID` or its analytics stay empty                                                                        |
+| `CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE`           | —                                   | Register multiple engines (see [Multi-engine](#multi-engine))                                                                                              |
+| `CAMUNDA_COCKPIT_URL`                                     | derived                             | Cockpit web base for jump-out links                                                                                                                        |
+| `CAMUNDA_AUTH_TYPE`                                       | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without an `auth`                                                                       |
+| `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` / `CAMUNDA_TOKEN` | —                                   | Credentials for `basic`/`bearer`; `passthrough` forwards each caller's bearer token                                                                        |
+| `PROMETHEUS_URL`                                          | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source                                                                                                            |
 
 ### Multi-engine
 
@@ -204,7 +225,8 @@ Tag each engine in its metrics plugin
 (`ENGINE_ID`), register them in the server (`CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE` —
 `ENGINE_ID` must match the registered `id`, or that engine's analytics come back empty), and the
 host discovers them via the `camunda7_engine` tool (`list` / `select` / `current`); `select` saves
-an engine as the caller's default (a per-user profile setting, so it needs `MCP_OAUTH` identity).
+an engine as the caller's default (a per-user profile setting, so it needs `MCP_OAUTH` identity and
+a toolset that allows writes).
 Every operations tool also accepts a per-call `engine` override, which works without any identity. Analytics tools take an optional `engine`
 filter to aggregate or compare. Each engine entry may carry its own `auth`
 (`{type, username?, password?, token?}`); entries without one use the global `CAMUNDA_*` settings.
@@ -255,7 +277,8 @@ pnpm dev                                             # MCP server on :8400
 ```
 
 `pnpm dev` also serves the `mcp-use` inspector at `http://localhost:8400/mcp/inspector` — call tools and
-render widgets by hand. The minimum bar for any change:
+render widgets by hand. It boots read-only; uncomment `MCP_ACTIVE_MODULES` in `.env` to exercise the
+write paths. The minimum bar for any change:
 
 ```bash
 pnpm build && pnpm typecheck && pnpm test && pnpm lint

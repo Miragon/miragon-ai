@@ -41,8 +41,8 @@ features:
 ## Connect your Claude in 30 seconds {#connect-your-claude}
 
 The hosted [playground](https://miragon-ai-playground.fly.dev/mcp) runs a seeded
-CIB Seven engine with live traffic and the full analytics stack — nothing to
-install. Point any MCP client at it:
+CIB Seven engine with live traffic and the full analytics stack — read-only,
+nothing to install. Point any MCP client at it:
 
 ```
 https://miragon-ai-playground.fly.dev/mcp

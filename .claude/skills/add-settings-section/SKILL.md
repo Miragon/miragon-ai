@@ -146,11 +146,22 @@ Two rules the save tool must honor:
   registrar's `withToolsetFilter` never sees it and it must gate itself — against your
   module's **declared** toolset names, never an `toolset === "read-only"` compare (that
   fails open for every other name the day a second restrictive toolset appears). Copy
-  `packages/connectors/analytics/analytics-connector/src/toolsets.ts`: a `<MODULE>_TOOLSETS` list, a type guard, and
-  `allowsDurableWrites(toolset)` that warns and fails CLOSED (degrades to your most
-  restrictive toolset) on unknown names. When it
-  says no, skip registration; the view then reports `canSave: false` and the widget hides
-  its Save button — the tool surface stays honest.
+  `packages/connectors/analytics/analytics-connector/src/toolsets.ts`: a `<MODULE>_TOOLSETS`
+  list, ONE vocabulary from `@miragon-ai/widget-shell/server` —
+
+  ```ts
+  export const myToolsets = createToolsetVocabulary("<module>", MY_TOOLSETS, "read-only", {
+    authenticatedDefault: "standard",
+  })
+  ```
+
+  — declared as `toolsets: myToolsets` on your module definition, so the composition
+  resolves one concrete toolset per boot (read-only without OAuth, the standard one with
+  it), and `allowsDurableWrites(toolset)` built on `myToolsets.resolve`: a MISSING toolset
+  resolves to the read-only floor just like an unknown name (which also warns), never to
+  "everything". When it says no, skip registration; the view then reports `canSave: false`
+  and the widget hides its Save button — the tool surface stays honest.
+
 - **Merge over the RAW stored slice**, not the parsed one:
 
   ```ts
@@ -230,6 +241,7 @@ Mirror `packages/connectors/analytics/analytics-connector/src/settings.test.ts`:
 - `settingsFor`: reads the slice; falls back to defaults on a store **outage**
 - `registerSettingsTools`: save tool registered only with a writable store; dropped in the
   restrictive toolset; fails closed (degrades to the restrictive toolset) on unknown names
+  AND on a missing toolset
 - a round-trip through a fake store: keyless save → read back; partial save keeps the
   other saved value
 
@@ -248,8 +260,11 @@ need `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` plus a manual ren
 `docker compose -f playground/docker/docker-compose.yml up -d`, `pnpm dev`, open the
 settings tab via `<module>_show_settings` in the inspector at
 `http://localhost:8400/mcp/inspector`. Exercise Save and reload — a value that doesn't survive
-the reload means the merge or the key resolution is wrong. Run `pnpm format:check` before
-committing.
+the reload means the merge or the key resolution is wrong. Save needs a caller identity AND
+a write-capable toolset: the default `pnpm dev` boot has neither, so the section correctly
+renders disabled fields. To test the save path, run `docker compose --profile auth up -d`
+with the local-Keycloak `MCP_OAUTH` line from `.env.example` (OAuth raises the default to
+the standard toolsets). Run `pnpm format:check` before committing.
 
 ## Anti-patterns
 

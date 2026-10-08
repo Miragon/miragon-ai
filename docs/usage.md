@@ -8,7 +8,8 @@ the assistant takes the right steps without you having to spell each one out.
 
 Point the assistant at your deployment's `/mcp` endpoint — or at the hosted
 [playground](https://miragon-ai-playground.fly.dev/mcp) to try it without any
-setup.
+setup. The playground is public and therefore **read-only**: you can ask
+anything, but it never changes the engine.
 
 | Host               | How to connect                                                                                                                    |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -60,8 +61,13 @@ Most data-heavy answers come back as an interactive widget — process lists,
 task inboxes, incident dashboards, instance details, and analytics dashboards
 all render inline.
 
-Every action that mutates state — retries, resolves, modifications, deletions
-— prompts for explicit confirmation before running.
+What the assistant may _change_ depends on the deployment's toolset. A
+read-only deployment — the playground, or any server without login unless its
+operator widened it — answers every question but offers no write tools and no
+action buttons. Starting instances, completing tasks, retries and resolving
+incidents need `operations` (the default with login); deletions,
+modifications, migrations and signals need `admin`, which an operator has to
+enable explicitly. Every write prompts for explicit confirmation before running.
 
 ## Your settings
 
@@ -74,7 +80,7 @@ shows only those sections.
 | Language            | Profile   | UI language, and the language tool summaries come back in              |
 | Theme               | Profile   | Light, dark, or follow the OS                                          |
 | Engine availability | Profile   | Which engines appear in pickers, and which one is the default          |
-| Pinned dashboards   | Profile   | Which saved dashboards come first in pickers                           |
+| Pinned dashboards   | Profile   | Which saved dashboards come first in pickers (needs login)             |
 | Look-back period    | Analytics | Applied whenever you ask an analytics question without naming a window |
 | Comparison bucket   | Analytics | How many instances a window needs before a comparison is trusted       |
 
@@ -83,16 +89,17 @@ analytics settings"_ — or change a value in passing, without any page:
 _"switch the UI to German"_, _"default my analytics to 30 days"_. Only the
 setting you name changes; the rest keeps its value.
 
-Where settings are stored depends on the deployment: signed in, they follow your
-user account across sessions; without a login they belong to the current MCP
-session and expire after a period of inactivity. A read-only deployment shows
-the settings but hides Save.
+Settings are saved per user account, so they need a deployment with login:
+signed in, they follow you across sessions. Without a login — and on a
+read-only deployment — the page shows the defaults but hides Save. Saved
+dashboards exist only with login on a deployment that allows writes; otherwise
+the dashboard picker says "Saved dashboards are unavailable".
 
 ## Tips
 
 - Ask follow-ups. Once a widget is on screen, you can drill down by clicking,
   or ask for "the same thing but for the last 7 days."
 - Combine tools. "Find failed instances from yesterday, then retry the
-  transient ones" works as a single sentence.
+  transient ones" works as a single sentence (the retry needs `operations`).
 - If a tool isn't doing what you expect, ask the assistant to show you the raw
   arguments — it'll print them and you can spot mismatches quickly.

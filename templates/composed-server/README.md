@@ -138,15 +138,24 @@ their config from the environment). A variable under a watched prefix (`MCP_`,
 `CAMUNDA_`, `PROMETHEUS_`, plus each module's own) that the server does not
 read prints a warning at boot, so typos surface immediately.
 
-| Variable                                     | Effect                                                           |
-| -------------------------------------------- | ---------------------------------------------------------------- |
-| `PORT`                                       | HTTP port (default 8400)                                         |
-| `MCP_URL`                                    | Public base URL (behind a proxy/gateway)                         |
-| `MCP_ACTIVE_MODULES`                         | Comma list, e.g. `camunda7:read-only,notes` (default: all)       |
-| `MCP_PROFILE_DIR`                            | Filesystem persistence for user profiles (default: in-memory)    |
-| `MCP_PROFILE_SESSION_TTL_DAYS`               | Expiry for session-keyed profile records (default 30, `0` = off) |
-| `MCP_DASHBOARD_DIR`                          | Filesystem persistence for saved dashboards (default: in-memory) |
-| `CAMUNDA_*`, `PROMETHEUS_URL`, `NOTES_TITLE` | Module config — see `.env.example` for the full list             |
+Toolsets fail closed: this server installs no OAuth, so camunda7 and analytics
+run **read-only** without a `module:toolset` suffix (queries, widgets,
+analytics — no writes; a module without toolsets, like notes, registers all
+its tools), and the boot log names the effective toolsets. Writes are opt-in by
+naming them — camunda7 `operations`/`admin`, analytics `standard`; `admin` is
+never implied, and `camunda7_create_deployment` additionally needs
+`CAMUNDA_ALLOW_DEPLOYMENTS=true` (deploying a BPMN runs code in the engine
+JVM). See the `setup-server` skill before widening a server others can reach.
+
+| Variable                                     | Effect                                                                                                 |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `PORT`                                       | HTTP port (default 8400)                                                                               |
+| `MCP_URL`                                    | Public base URL (behind a proxy/gateway)                                                               |
+| `MCP_ACTIVE_MODULES`                         | Comma list with optional toolsets, e.g. `camunda7:operations,notes` (default: every module, read-only) |
+| `MCP_PROFILE_DIR`                            | Filesystem persistence for user profiles (default: in-memory)                                          |
+| `MCP_PROFILE_SESSION_TTL_DAYS`               | Expiry for session-keyed profile records (default 30, `0` = off)                                       |
+| `MCP_DASHBOARD_DIR`                          | Filesystem persistence for saved dashboards (default: in-memory)                                       |
+| `CAMUNDA_*`, `PROMETHEUS_URL`, `NOTES_TITLE` | Module config — see `.env.example` for the full list                                                   |
 
 ## Deploying
 
@@ -163,6 +172,10 @@ docker run -p 8400:8400 \
 
 - `MCP_URL` is the public base URL when the server sits behind a proxy or MCP
   gateway; `PORT` changes the HTTP port.
+- The server boots read-only. It has no auth of its own, so put an
+  authenticating gateway in front before widening `MCP_ACTIVE_MODULES` — the
+  server cannot see the gateway's login, which is why the toolsets stay
+  explicit there.
 - Both stores are in-memory by default — without the volume, user settings and
   saved dashboards are lost on every restart.
 - `/health/live`, `/health/ready` and `/metrics` (Prometheus) are served next

@@ -31,8 +31,18 @@ the React context and hangs every in-widget query on "Loading…".
   vendor `flavor` (`cibseven` | `operaton` | `camunda7`, default `cibseven`) resolved to an
   `EngineProvider` holding only the real vendor differences: cockpit routes, branding, client hook.
   Mixed-vendor fleets run in one server.
-- **Toolset filtering** — `src/lib/toolsets.ts` narrows the surface to `read-only` / `operations` /
-  `admin`.
+- **Toolsets, fail-closed** — `src/lib/toolsets.ts` declares `read-only` / `operations` / `admin` as
+  the module's `toolsets` vocabulary. With no `camunda7:<toolset>` suffix the module runs
+  `read-only` on an unauthenticated server and `operations` under OAuth; an empty or unknown suffix
+  falls back to `read-only`. `admin` — delete/modify/suspension, migrations, batch retries,
+  `throw_signal` (engine-wide), the external-task worker protocol (`fetch_and_lock`,
+  `complete_external_task`, `handle_external_task_failure`) and deployments — is never implied;
+  `camunda7_list_external_tasks` is the read-only view of external tasks. Widget action buttons
+  render only for tools the toolset registers.
+- **Deployments are opt-in** — `camunda7_create_deployment` is registered only with
+  `CAMUNDA_ALLOW_DEPLOYMENTS=true` (strict `true`/`false`, anything else fails the boot) on top of
+  `camunda7:admin`: deploying a BPMN/DMN is code execution inside the engine JVM (JUEL expressions,
+  scripts). The full surface of earlier releases is `camunda7:admin` plus that flag.
 
 ## Adding a tool or widget
 

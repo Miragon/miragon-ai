@@ -73,7 +73,18 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    so the `camunda7:read-only|operations|admin` toolset filtering stays correct —
    `src/lib/toolsets.test.ts` enforces the rule structurally over every registered tool
    (`destructiveHint` ⇒ admin-only, read-only ⇒ `readOnlyHint`), so get the annotations
-   right rather than editing the test. Tools registered outside the registrar (the
+   right rather than editing the test. Toolsets are FAIL-CLOSED: without a suffix a module
+   runs its read-only floor on an unauthenticated boot and its standard toolset (camunda7
+   `operations`, analytics `standard`) under OAuth; `admin` is never implied, and an
+   empty/unknown suffix warns and falls back to the floor — nothing ever resolves to
+   "everything" (pinned by widget-shell's `toolsets.test.ts` + `composition.test.ts`).
+   Admin-only by decision, each with `destructiveHint: true`: the engine-wide
+   `camunda7_throw_signal` and the external-task worker protocol (`fetch_and_lock`,
+   `complete_external_task`, `handle_external_task_failure` — the read path is
+   `camunda7_list_external_tasks`). `camunda7_create_deployment` (`destructiveHint: true`)
+   is additionally registered only with `CAMUNDA_ALLOW_DEPLOYMENTS=true`: deploying
+   BPMN/DMN is code execution inside the engine JVM (JUEL, scripts) — never relax that
+   gate or fold it into a toolset. Tools registered outside the registrar (the
    widget-tools path) that perform durable writes must honor the toolset themselves —
    pattern: `camunda7_save_user_profile` in `src/tools/user-profile.ts`. An ESLint gate
    (`no-restricted-syntax` in `eslint.config.mjs`) blocks raw `server.tool()` outside
@@ -195,13 +206,22 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    core, packages never importing the app, no cross-package deep imports)
    are machine-enforced by `.dependency-cruiser.cjs` via the root
    `pnpm lint:architecture` (part of `pnpm lint`). Each module exports its definition in
-   `src/module.ts` (config schema, `configFromEnv`, `knownEnvVars`, `bootWarnings`,
-   plugin factory) conforming STRUCTURALLY (no import) to the port. The port SHAPE
-   (`ComposableModule<TShared>`) and the whole composition-root machinery
-   (`composeModules`: `MCP_ACTIVE_MODULES` parsing incl. `module:toolset` suffix,
+   `src/module.ts` (config schema, `configFromEnv`, `knownEnvVars`, `toolsets`,
+   `bootWarnings`, plugin factory) conforming STRUCTURALLY (no import) to the port. The
+   port SHAPE (`ComposableModule<TShared>`) and the whole composition-root machinery
+   (`composeModules`: `MCP_ACTIVE_MODULES` parsing incl. `module:toolset` suffix;
+   `resolveBoot(env, { authenticated })`, which resolves ONE concrete toolset per module
+   per boot from the module's declared `toolsets` vocabulary (`createToolsetVocabulary`;
+   the old `supportsToolsets` flag is deprecated) and threads it into `config.toolset`;
+   `logEffectiveToolsets`, the one boot line stating each module's toolset and why;
    env-typo warner with prefixes derived from every known var, boot warnings,
-   AppConfig/plugin assembly) live in `@miragon-ai/widget-shell/server`; the app's
-   `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
+   AppConfig/plugin assembly) live in `@miragon-ai/widget-shell/server`. The root passes
+   `authenticated` only when it actually INSTALLED OAuth — never inferred from an env var.
+   Framework durable writes no module toolset filters (the toolkit builder's
+   `get-builder-catalogue` + `save/list/load/delete-dashboard`) are registered only when
+   `frameworkWritesAllowed(boot)` holds — OAuth installed AND no active module on its
+   read-only floor; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
+   app's `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
    only declares the module list and wires `SharedResources` (profile store +
    `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap;
    analytics has NO engine-SDK dependency). Apps own no domain UI: widget catalogues and
@@ -251,7 +271,9 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    outside the tool registrar gates itself against the module's declared toolset names
    (`allowsDurableWrites` in `analytics-connector/src/toolsets.ts`, `isToolInToolset` in
    camunda7) — never an ad-hoc `toolset === "read-only"` compare, which fails open for
-   every other name — and carries that same decision into its view as `canSave`, so the
+   every other name, and never a `toolset === undefined` shortcut either: an absent
+   toolset no longer means "everything", the vocabulary resolves it to the read-only
+   floor — and carries that same decision into its view as `canSave`, so the
    section renders disabled fields instead of a Save button whose click would resolve to
    an unknown tool. In-widget engine writes follow the same rule: every tool a widget
    mutates is listed in `CAMUNDA7_WIDGET_ACTIONS` (`tool-names.ts`) and its button renders
@@ -331,10 +353,12 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
 - **Federation/aggregation happens in an external MCP gateway (agentgateway) IN FRONT of
   this server; this repo builds one self-contained MCP server including its UI.** No
   upstream/proxy mechanics in the code — don't reintroduce a proxies/upstream option
-  (federation was deliberately dropped in #162). The generic `shell:kpi-grid`/`shell:data-table`
-  widgets (catalogue + components in `@miragon-ai/widget-shell`) are always registered — they are the
-  standard `render-view`/builder composition targets for KPI rows/tables, fed via
-  `props.dataKey`.
+  (federation was deliberately dropped in #162). A gateway that terminates auth in front
+  is invisible to this server: without `MCP_OAUTH` it boots read-only, so such a
+  deployment must name its toolsets in `MCP_ACTIVE_MODULES`. The generic
+  `shell:kpi-grid`/`shell:data-table` widgets (catalogue + components in
+  `@miragon-ai/widget-shell`) are always registered — they are the standard
+  `render-view`/builder composition targets for KPI rows/tables, fed via `props.dataKey`.
 
 ## Releases & toolkit contributions
 
@@ -393,7 +417,7 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
 | `./gradlew build`    | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                                                                                                   |
 | `test:host`          | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin                                                                                |
 | `pnpm test:pg`       | The opt-in database slice: reruns the suites with `TEST_DATABASE_URL` pointed at the compose stack's test database, which un-skips the Postgres store + migration-runner tests (`describe.skipIf`). **The only check that executes the Postgres adapters** — required for changes to `postgres.ts` or any `*-store-postgres.ts`       |
-| Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only)                                                                                                                                                 |
+| Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only). The default boot is read-only — write paths need an explicit suffix, e.g. `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env`     |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
 every change; widget changes additionally need `test:host` plus a manual render check via

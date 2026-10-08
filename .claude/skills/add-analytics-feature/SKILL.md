@@ -107,7 +107,10 @@ export function registerElementTools(register: Register) {
 ```
 
 Analytics tools are read-only by nature and talk to an external Prometheus:
-`{ readOnlyHint: true, idempotentHint: true, openWorldHint: true }`.
+`{ readOnlyHint: true, idempotentHint: true, openWorldHint: true }`. The analytics registrar
+is not toolset-filtered — `analytics:read-only`, the default without OAuth, stays honest only
+while every registrar tool is a read. Anything that writes durably gates itself like
+`analytics_save_settings` (`allowsDurableWrites` in `src/toolsets.ts`).
 New domain file → add the `registerXyzTools(register)` call to `registerTools` in
 `src/tools/index.ts`. Name the description honestly about metric limitations (e.g.
 "queue/wait time is not available from metrics").

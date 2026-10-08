@@ -1,3 +1,9 @@
+# Local demo stack — LOOPBACK-ONLY BY DESIGN. Every published port binds to
+# 127.0.0.1: the engine REST API accepts anonymous requests (anyone who reaches
+# it can deploy and start processes), Grafana runs as anonymous Admin, and
+# Postgres, Keycloak and the OTEL Collector use demo-grade credentials or none.
+# Don't drop the 127.0.0.1: prefixes to reach the stack from another machine —
+# tunnel instead, e.g. `ssh -L 8400:127.0.0.1:8400 -L 8470:127.0.0.1:8470 <host>`.
 name: miragon-ai
 
 services:
@@ -8,7 +14,7 @@ services:
       context: ../cibseven-example
       dockerfile: Dockerfile
     ports:
-      - "8410:8410"
+      - "127.0.0.1:8410:8410"
     environment:
       - SPRING_PROFILES_ACTIVE=seed-presentation
       - METRICS_ENABLED=true
@@ -46,7 +52,7 @@ services:
       context: ../cibseven-example
       dockerfile: Dockerfile
     ports:
-      - "8411:8410"
+      - "127.0.0.1:8411:8410"
     environment:
       - SPRING_PROFILES_ACTIVE=seed-presentation
       - METRICS_ENABLED=true
@@ -76,7 +82,7 @@ services:
     profiles: [dev]
     image: cibseven/cibseven:run-latest
     ports:
-      - "8410:8080"
+      - "127.0.0.1:8410:8080"
     environment:
       - CIBSEVEN_BPM_RUN_AUTH_ENABLED=true
     healthcheck:
@@ -97,10 +103,10 @@ services:
     volumes:
       - ./otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
-      - "8430:4317" # OTLP gRPC
-      - "8431:4318" # OTLP HTTP
-      - "8450:8888" # Collector's own telemetry
-      - "8451:9464" # Prometheus exporter (process metrics)
+      - "127.0.0.1:8430:4317" # OTLP gRPC
+      - "127.0.0.1:8431:4318" # OTLP HTTP
+      - "127.0.0.1:8450:8888" # Collector's own telemetry
+      - "127.0.0.1:8451:9464" # Prometheus exporter (process metrics)
 
   # Prometheus — scrapes the Collector's process metrics.
   prometheus:
@@ -113,7 +119,7 @@ services:
       - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "8460:9090" # Prometheus UI
+      - "127.0.0.1:8460:9090" # Prometheus UI
     depends_on:
       - otel-collector
 
@@ -131,7 +137,7 @@ services:
       - GF_AUTH_DISABLE_LOGIN_FORM=true
       - GF_USERS_DEFAULT_THEME=light
     ports:
-      - "8470:3000" # Grafana UI
+      - "127.0.0.1:8470:3000" # Grafana UI
     depends_on:
       - prometheus
 
@@ -152,7 +158,7 @@ services:
       - postgres-data:/var/lib/postgresql
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "8440:5432"
+      - "127.0.0.1:8440:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U miragon -d miragon"]
       interval: 5s
@@ -196,7 +202,7 @@ services:
       # are ephemeral, like the rest of the demo stack).
       - ./keycloak/realm-miragon.json:/opt/keycloak/data/import/realm-miragon.json:ro
     ports:
-      - "8480:8080"
+      - "127.0.0.1:8480:8080"
     healthcheck:
       # The distroless-ish image ships no curl; the management port answers
       # /health/ready once the realm import finished.
@@ -220,9 +226,17 @@ services:
       context: ../..
       dockerfile: Dockerfile
     ports:
-      - "8400:8400"
+      - "127.0.0.1:8400:8400"
     environment:
       - PORT=8400
+      # No MCP_OAUTH and no toolset suffix ⇒ every module boots READ-ONLY (the
+      # boot log names the effective toolsets). To exercise write paths, name
+      # the toolsets explicitly — e.g. add
+      #   - MCP_ACTIVE_MODULES=camunda7:operations,analytics:standard
+      # (camunda7:admin for delete/modify/migrations/signals; deployments also
+      # need CAMUNDA_ALLOW_DEPLOYMENTS=true). Safe here only because the port is
+      # bound to 127.0.0.1 — never widen an unauthenticated server reachable
+      # from a network.
       # Pass either a single CAMUNDA_BASE_URL (back-compat, single engine) OR
       # CAMUNDA_ENGINES_JSON with a list. Below: single-engine default; for
       # multi-engine override by exporting CAMUNDA_ENGINES_JSON in the host

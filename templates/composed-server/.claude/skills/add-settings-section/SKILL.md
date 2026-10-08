@@ -115,13 +115,13 @@ Rules the save tool must honor:
 
   A missing key throws — a save must fail visibly, never silently no-op.
 
-- **Toolset gate** (only if your module `supportsToolsets`): the save is a
-  durable write registered outside the registrar, so it must gate itself —
-  against your declared toolset names, failing CLOSED on unknown ones (see the
-  create-module skill, Step 5). When the toolset forbids writes, skip
-  registering the save tool AND report `canSave: false` in the view, so the
-  widget shows disabled fields instead of a Save button that resolves to an
-  unknown tool.
+- **Toolset gate** (only if your module declares `toolsets`): the save is a
+  durable write registered outside the registrar, so it must gate itself — on
+  your vocabulary (`allowsDurableWrites(resolve(toolset))`), which fails CLOSED
+  on an unknown AND on a missing toolset (see the create-module skill, Step 5).
+  When the toolset forbids writes, skip registering the save tool AND report
+  `canSave: false` in the view, so the widget shows disabled fields instead of
+  a Save button that resolves to an unknown tool.
 
 ## Step 5 — the section widget
 
@@ -171,7 +171,11 @@ pnpm build && pnpm typecheck && pnpm test
 Then in the inspector (or headless via the mcp-use client/screenshot commands
 in `CLAUDE.md` → Verification): call `<module>_show_settings`, save a value,
 reload the widget — a value that doesn't survive the reload means the merge or
-the key resolution is wrong.
+the key resolution is wrong. With `toolsets` declared, the default boot is your
+read-only floor (this server has no OAuth), so name the write toolset first,
+e.g. `MCP_ACTIVE_MODULES=<module>:standard,…` in `.env`. Save also needs a
+caller identity: when the section still renders disabled fields, the request
+resolved no profile key — the correct, fail-closed outcome without one.
 
 ## Anti-patterns
 

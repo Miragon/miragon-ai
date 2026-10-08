@@ -81,11 +81,19 @@ Non-negotiables:
 - Write tools that only flip state return a small `{ success: true, … }` object instead
   of the raw (often empty) REST response.
 - Destructive/admin-grade tools (delete, modify, suspension, deployments, migrations,
-  batches) must be added to `ADMIN_ONLY_TOOLS` in `src/lib/toolsets.ts` so the
+  batches, engine-wide broadcasts like signals, the external-task worker protocol) must
+  be added to `ADMIN_ONLY_TOOLS` in `src/lib/toolsets.ts` so the
   `camunda7:read-only|operations|admin` toolset filtering stays correct — `read-only`
   membership is derived from `readOnlyHint: true`. `src/lib/toolsets.test.ts` enforces
   the rule structurally over every registered tool (`destructiveHint` ⇒ admin-only,
   read-only ⇒ `readOnlyHint`) — get the annotations right; never edit the test to pass.
+- Toolsets fail CLOSED: with no suffix a deployment runs `read-only` (no OAuth) or
+  `operations` (OAuth); `admin` is only ever reached by naming it. So an `operations`
+  tool is on for every authenticated default deployment and an `admin` tool for none —
+  place a new write deliberately. A tool that runs code inside the engine
+  (`camunda7_create_deployment`) additionally sits behind its own strict env opt-in
+  (`CAMUNDA_ALLOW_DEPLOYMENTS=true`) and is not registered without it; follow that
+  pattern for anything comparable instead of trusting the toolset alone.
 
 ### Annotation conventions
 
@@ -94,6 +102,7 @@ Non-negotiables:
 | Read / list / get                       | `{ readOnlyHint: true, idempotentHint: true, openWorldHint: true }` |
 | Write (start, set variable, suspend, …) | `{ openWorldHint: true }`                                           |
 | Delete / irreversible (delete, modify)  | `{ destructiveHint: true, openWorldHint: true }`                    |
+| Engine-wide / worker / deploy           | `{ destructiveHint: true, openWorldHint: true }` (admin-only)       |
 
 Every camunda7 tool carries `openWorldHint: true` (it talks to an external engine).
 
@@ -183,8 +192,8 @@ exception that uses `server.tool()` directly):
   every `*_show_*` tool and app-only visibility on every `*_data` feed **by name**.
 - A widget-path tool that performs a durable write must honor the toolset itself —
   follow `camunda7_save_user_profile` in `src/tools/user-profile.ts`
-  (`resolveCamunda7Toolset` + `isToolInToolset`, failing closed to `read-only` on
-  unknown toolset names).
+  (`resolveCamunda7Toolset` + `isToolInToolset`): a missing toolset resolves to
+  `read-only` exactly like an unknown name — never treat `undefined` as "everything".
 - A widget button that calls a write tool (`useToolMutation`) renders only when
   `useCanRun()` (`src/widgets/widget-actions.ts`) allows that tool, and the tool is
   listed in `CAMUNDA7_WIDGET_ACTIONS` (`src/tool-names.ts`) — `src/widget-actions.test.ts`
@@ -202,5 +211,8 @@ pnpm --filter @miragon-ai/mcp-server-camunda7 test:host
 `pnpm typecheck` is the **only** automated check that type-checks widget `.tsx` code
 (`tsc -p tsconfig.widgets.json`) — never skip it. For widgets also do a manual render
 check: `docker compose -f playground/docker/docker-compose.yml up -d`, `pnpm dev`, then call the
-tool in the inspector at `http://localhost:8400/mcp/inspector`. Run `pnpm format:check`
-(or `pnpm format`) before committing.
+tool in the inspector at `http://localhost:8400/mcp/inspector`. The default `pnpm dev` boot
+is read-only (the boot log names the toolsets) — to exercise a write tool or button, set
+`MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env` (plus
+`CAMUNDA_ALLOW_DEPLOYMENTS=true` for deployments). Run `pnpm format:check` (or
+`pnpm format`) before committing.

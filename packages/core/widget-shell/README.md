@@ -22,6 +22,21 @@ package customers build their own connectors and composed servers on (see the
   so the catalogue lives here.
 - **Shared UI primitives** (`./widgets`) — common components (`WidgetShell`, tables, formatters,
   `useApplyTheme`, …) and `with-tool-errors` handling reused across both widget packages.
+- **Module composition** (`./server`) — `composeModules` is the composition-root machinery every
+  server shares: `MCP_ACTIVE_MODULES` selection with `module:toolset` suffixes, the env-typo warner
+  and boot warnings. `resolveBoot(env, { authenticated })` resolves ONE concrete toolset per module
+  per boot and threads it into the module's `config.toolset`; pass `authenticated: true` only when
+  your server actually installed OAuth. `logEffectiveToolsets(boot)` prints the one boot line that
+  states each module's toolset and why, and `frameworkWritesAllowed(boot)` decides whether
+  framework writes no module toolset filters (the toolkit's dashboard builder) may be registered —
+  only with OAuth and no module on its read-only floor.
+- **Toolset vocabularies** (`./server`) — a module declares its toolsets as
+  `toolsets: createToolsetVocabulary(module, names, floor, { authenticatedDefault })` on its
+  definition (the boolean `supportsToolsets` is deprecated). The rule is fail-closed: no suffix →
+  `floor` without OAuth, `authenticatedDefault` (default: `floor`) with it; an empty or unknown
+  suffix → `floor` with a warning; `resolve(undefined)` → `floor`. Nothing resolves to
+  "everything" — a module's widest toolset is reachable only by naming it — and
+  `allowsDurableWrites(toolset)` is true for every toolset above the floor.
 - **Persistence** (`./server`) — the user-profile store (in-memory / filesystem / Postgres) and the
   Postgres `DashboardStore` for the toolkit's saved dashboards, plus the `createSql` client and the
   `runMigrations` runner that applies each store's own `Migration[]` (`PROFILE_STORE_MIGRATIONS`,
@@ -32,11 +47,11 @@ package customers build their own connectors and composed servers on (see the
 
 ## Exports
 
-| Subpath     | Contents                                                                                                                                                                              |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `./server`  | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, the profile + dashboard stores and the Postgres client/migration runner |
-| `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                     |
-| `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and `useApplyTheme`                                                                                                |
+| Subpath     | Contents                                                                                                                                                                                                                                                       |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./server`  | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, `composeModules` / `frameworkWritesAllowed` / `createToolsetVocabulary`, the profile + dashboard stores and the Postgres client/migration runner |
+| `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                                                                                              |
+| `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and `useApplyTheme`                                                                                                                                                                         |
 
 The `@miragon/mcp-toolkit-*`, `react`/`react-dom`, `zod` and `@tanstack/react-query` deps are
 **peer dependencies** — they must resolve to a single instance across the host bundle (see the
