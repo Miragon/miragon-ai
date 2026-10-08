@@ -1,34 +1,13 @@
-import net from "node:net"
-import path from "node:path"
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
-import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
-import type { MCPServer } from "mcp-use"
-import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import type { Client } from "@modelcontextprotocol/client"
+import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "@miragon-ai/camunda7-connector"
 import { installHealthEndpoints, installMetrics } from "@miragon-ai/widget-shell/server"
-import { getAppConfig, getPlugins } from "../src/setup.js"
-import { EXPECTED_TOOLS } from "./expected-tools.js"
-
-const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
-
-/** Reserve a free TCP port by binding to port 0 and releasing it again. */
-async function getFreePort(): Promise<number> {
-  return await new Promise((resolve, reject) => {
-    const probe = net.createServer()
-    probe.once("error", reject)
-    probe.listen(0, "127.0.0.1", () => {
-      const { port } = probe.address() as net.AddressInfo
-      probe.close(() => resolve(port))
-    })
-  })
-}
-
-/** Modern-envelope MCP client against the in-process server (mcp-use 2 wire). */
-async function connectClient(port: number): Promise<Client> {
-  const client = new Client({ name: "e2e-test", version: "0.0.0" })
-  await client.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`)))
-  return client
-}
+import { bootServer, listToolNames, type BootedServer } from "./boot-server.js"
+import {
+  EXPECTED_TOOLS_ADMIN,
+  EXPECTED_TOOLS_OPERATIONS,
+  EXPECTED_TOOLS_READ_ONLY,
+} from "./expected-tools.js"
 
 function textPayload(result: { content?: unknown }): unknown {
   const content = result.content as Array<{ type: string; text?: string }> | undefined
@@ -37,64 +16,47 @@ function textPayload(result: { content?: unknown }): unknown {
   return JSON.parse(text!)
 }
 
+/** The full surface: an explicit admin + deployment opt-in under OAuth — never a default. */
+const FULL_SURFACE = {
+  authenticated: true,
+  env: {
+    MCP_ACTIVE_MODULES: "camunda7:admin,analytics:standard",
+    CAMUNDA_ALLOW_DEPLOYMENTS: "true",
+  },
+}
+
 /**
- * E2E smoke test: boots the real server in-process (same plugin set and env
- * wiring as `src/index.ts`, with a stand-in widget bundle) and speaks the MCP
- * protocol to it over streamable HTTP. This is the only test that covers tool
- * *registration* — plugin.ts wiring, setup.ts module activation and the
- * framework tool trio — rather than the tool implementations.
+ * E2E smoke test: boots the real server in-process (same selection, plugin
+ * set and builder decision as `src/index.ts`, with a stand-in widget bundle)
+ * and speaks the MCP protocol to it over streamable HTTP. Together with the
+ * toolset suites below this is the only coverage of tool *registration* —
+ * plugin.ts wiring, setup.ts module activation and the framework tools —
+ * rather than the tool implementations.
  */
 describe("mcp-server-camunda7 E2E smoke", () => {
-  let app: MCPServer
+  let server: BootedServer
   let client: Client
   let port: number
 
   beforeAll(async () => {
-    // Dummy engine: tools that only hit the in-memory EngineRegistry keep
-    // working; nothing in this test may reach a real engine or Prometheus.
-    vi.stubEnv("CAMUNDA_BASE_URL", "http://localhost:1")
-    vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
-    vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
-    vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
-    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
-    // Persistence must stay in-memory regardless of the dev shell's env.
-    vi.stubEnv("DATABASE_URL", undefined)
-    vi.stubEnv("REDIS_URL", undefined)
-    vi.stubEnv("MCP_PROFILE_DIR", undefined)
-    vi.stubEnv("MCP_DASHBOARD_DIR", undefined)
-
-    app = await createFrameworkApp({
-      name: "automation-mcp",
-      version: "0.1.0",
-      host: "127.0.0.1",
-      plugins: getPlugins() as AppPlugin[],
-      appConfig: getAppConfig(),
-      app: {
-        bundle: { jsPath: FIXTURE_JS },
-        // Match src/index.ts: keep the opt-in builder/dashboard tools registered
-        // so the EXPECTED_TOOLS snapshot covers the full surface.
-        builder: true,
+    server = await bootServer({
+      ...FULL_SURFACE,
+      // Match src/index.ts: the operational routes ride on the same hono app,
+      // metrics first so the probes are counted.
+      beforeListen(booted) {
+        installMetrics(booted)
+        installHealthEndpoints(booted, { readiness: { always: () => {} }, label: "e2e" })
       },
     })
-    // Match src/index.ts: the operational routes ride on the same hono app,
-    // metrics first so the probes are counted.
-    installMetrics(app)
-    installHealthEndpoints(app, { readiness: { always: () => {} }, label: "e2e" })
-    port = await getFreePort()
-    await app.listen(port)
-    client = await connectClient(port)
+    ;({ client, port } = server)
   })
 
   afterAll(async () => {
-    await client?.close()
-    await app?.close()
-    vi.unstubAllEnvs()
+    await server?.close()
   })
 
-  it("exposes exactly the expected tool surface (tools/list snapshot)", async () => {
-    const { tools } = await client.listTools()
-    const names = tools.map((t) => t.name).sort()
-    expect(names).toEqual([...EXPECTED_TOOLS])
+  it("exposes exactly the full admin surface (tools/list snapshot)", async () => {
+    expect(await listToolNames(client)).toEqual([...EXPECTED_TOOLS_ADMIN])
   })
 
   it("advertises the pagination envelope on every list/query tool", async () => {
@@ -103,6 +65,7 @@ describe("mcp-server-camunda7 E2E smoke", () => {
       "camunda7_list_tasks",
       "camunda7_list_jobs",
       "camunda7_list_incidents",
+      "camunda7_list_external_tasks",
       "camunda7_query_historic_process_instances",
       "camunda7_query_historic_activity_instances",
       "camunda7_query_historic_task_instances",
@@ -182,85 +145,167 @@ describe("mcp-server-camunda7 E2E smoke", () => {
 })
 
 /**
- * Toolset negative probe: a `camunda7:read-only` deployment must not advertise
- * any destructive or engine-write tool. Boots a second server instance so the
- * env-driven `module:toolset` wiring (setup.ts → plugin config → registrar
- * filter) is covered end to end, not just the filter in isolation.
+ * The tool surface per toolset, on the wire: each boot resolves its selection
+ * exactly like `src/index.ts` (setup.ts `resolveBoot` → plugin config →
+ * registrar filter + builder decision), so the fail-closed defaults are pinned
+ * end to end, not just the filter in isolation.
  */
-describe("mcp-server-camunda7 E2E toolset filtering (camunda7:read-only)", () => {
-  let app: MCPServer
-  let client: Client
+describe("mcp-server-camunda7 E2E toolset surfaces", () => {
+  it.each([
+    ["no suffix, no OAuth → read-only", {}, EXPECTED_TOOLS_READ_ONLY],
+    ["no suffix, OAuth → operations", { authenticated: true }, EXPECTED_TOOLS_OPERATIONS],
+    [
+      "explicit camunda7:read-only,analytics:read-only under OAuth",
+      {
+        authenticated: true,
+        env: { MCP_ACTIVE_MODULES: "camunda7:read-only,analytics:read-only" },
+      },
+      EXPECTED_TOOLS_READ_ONLY,
+    ],
+    [
+      "explicit camunda7:operations,analytics:standard under OAuth",
+      {
+        authenticated: true,
+        env: { MCP_ACTIVE_MODULES: "camunda7:operations,analytics:standard" },
+      },
+      EXPECTED_TOOLS_OPERATIONS,
+    ],
+    ["explicit admin + deployments under OAuth", FULL_SURFACE, EXPECTED_TOOLS_ADMIN],
+  ])("%s", async (_label, options, expected) => {
+    const server = await bootServer(options)
+    try {
+      expect(await listToolNames(server.client)).toEqual([...expected])
+    } finally {
+      await server.close()
+    }
+  })
+
+  it("keeps a module out entirely when it is not selected (camunda7:read-only alone)", async () => {
+    const server = await bootServer({ env: { MCP_ACTIVE_MODULES: "camunda7:read-only" } })
+    try {
+      const names = await listToolNames(server.client)
+      expect(names.some((n) => n.startsWith("analytics_"))).toBe(false)
+      expect(names).toEqual(
+        expect.arrayContaining(["camunda7_engine", "camunda7_list_external_tasks"]),
+      )
+    } finally {
+      await server.close()
+    }
+  })
+})
+
+/**
+ * The #323 guardrail: no selection that does not NAME `camunda7:admin` may
+ * ever list an admin-only tool — not unset, not `all`, not a bare module
+ * list, not an empty or unknown suffix, in either auth mode. The admin list
+ * comes from the connector itself (`CAMUNDA7_ADMIN_ONLY_TOOLS`), so a tool
+ * added there is guarded here without touching this test.
+ */
+describe("mcp-server-camunda7 E2E fail-closed guard", () => {
+  const SELECTIONS = [
+    undefined,
+    "all",
+    "camunda7,analytics",
+    "camunda7:",
+    "camunda7:,analytics:",
+    " camunda7 : , analytics : ",
+    "camunda7:bogus,analytics:bogus",
+    "camunda7:admin:read-only",
+  ]
+
+  describe.each(SELECTIONS)("MCP_ACTIVE_MODULES=%j", (selection) => {
+    it.each([false, true])("authenticated=%s lists no admin-only tool", async (authenticated) => {
+      const server = await bootServer({
+        authenticated,
+        // The deployment flag alone must never surface create_deployment.
+        env: { MCP_ACTIVE_MODULES: selection, CAMUNDA_ALLOW_DEPLOYMENTS: "true" },
+      })
+      try {
+        const names = await listToolNames(server.client)
+        for (const tool of CAMUNDA7_ADMIN_ONLY_TOOLS) {
+          expect(names, `${tool} must not be listed`).not.toContain(tool)
+        }
+        if (!authenticated) {
+          expect(names).not.toContain("save-dashboard")
+          expect(names).not.toContain("delete-dashboard")
+        }
+      } finally {
+        await server.close()
+      }
+    })
+  })
+
+  it.each(["camunda7:", "camunda7:bogus", "camunda7:admin:read-only"])(
+    "an empty or unknown suffix (%j) falls back to read-only even under OAuth",
+    async (camunda7) => {
+      const server = await bootServer({
+        authenticated: true,
+        env: { MCP_ACTIVE_MODULES: `${camunda7},analytics:read-only` },
+      })
+      try {
+        expect(await listToolNames(server.client)).toEqual([...EXPECTED_TOOLS_READ_ONLY])
+      } finally {
+        await server.close()
+      }
+    },
+  )
+
+  it("registers camunda7_create_deployment only with admin AND CAMUNDA_ALLOW_DEPLOYMENTS=true", async () => {
+    const cases = [
+      [{ MCP_ACTIVE_MODULES: "camunda7:operations", CAMUNDA_ALLOW_DEPLOYMENTS: "true" }, false],
+      [{ MCP_ACTIVE_MODULES: "camunda7:admin", CAMUNDA_ALLOW_DEPLOYMENTS: "false" }, false],
+      [{ MCP_ACTIVE_MODULES: "camunda7:admin" }, false],
+      [{ MCP_ACTIVE_MODULES: "camunda7:admin", CAMUNDA_ALLOW_DEPLOYMENTS: "true" }, true],
+    ] as const
+    for (const [env, listed] of cases) {
+      const server = await bootServer({ authenticated: true, env })
+      try {
+        expect(await listToolNames(server.client), JSON.stringify(env)).toEqual(
+          listed
+            ? expect.arrayContaining(["camunda7_create_deployment"])
+            : expect.not.arrayContaining(["camunda7_create_deployment"]),
+        )
+      } finally {
+        await server.close()
+      }
+    }
+  })
+})
+
+/**
+ * "read-only lists only readOnlyHint tools", on the wire — the module tools,
+ * the widget tools and the framework tools alike. The ONLY exemptions are the
+ * toolkit's `render-view` (model-visible) and `refresh-view` (app-only): both
+ * are reads by construction (every registered pipeline step is a `load-*`
+ * read) but ship unannotated in @miragon/mcp-toolkit-core 2.5, and a
+ * view-bound tool cannot be re-registered app-side (mcp-toolkit#177).
+ */
+describe("mcp-server-camunda7 E2E read-only annotations", () => {
+  const UNANNOTATED_TOOLKIT_READS = new Set(["render-view", "refresh-view"])
+  let server: BootedServer
 
   beforeAll(async () => {
-    vi.stubEnv("CAMUNDA_BASE_URL", "http://localhost:1")
-    vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
-    vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
-    vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
-    vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:read-only")
-    // Persistence must stay in-memory regardless of the dev shell's env.
-    vi.stubEnv("DATABASE_URL", undefined)
-    vi.stubEnv("REDIS_URL", undefined)
-    vi.stubEnv("MCP_PROFILE_DIR", undefined)
-    vi.stubEnv("MCP_DASHBOARD_DIR", undefined)
-
-    app = await createFrameworkApp({
-      name: "automation-mcp",
-      version: "0.1.0",
-      host: "127.0.0.1",
-      plugins: getPlugins() as AppPlugin[],
-      appConfig: getAppConfig(),
-      app: {
-        bundle: { jsPath: FIXTURE_JS },
-        builder: true,
-      },
-    })
-    const port = await getFreePort()
-    await app.listen(port)
-    client = await connectClient(port)
+    server = await bootServer()
   })
 
   afterAll(async () => {
-    await client?.close()
-    await app?.close()
-    vi.unstubAllEnvs()
+    await server?.close()
   })
 
-  it("advertises no destructive or engine-write tools, but keeps queries + engine selection", async () => {
-    const { tools } = await client.listTools()
-    const names = tools.map((t) => t.name)
+  it("lists only readOnlyHint tools (minus the documented toolkit exemptions)", async () => {
+    const { tools } = await server.client.listTools()
+    const unannotated = tools
+      .filter((t) => t.annotations?.readOnlyHint !== true)
+      .map((t) => t.name)
+      .sort()
+    expect(unannotated).toEqual([...UNANNOTATED_TOOLKIT_READS].sort())
+  })
 
-    const forbidden = [
-      // admin-only (destructive / engine-content-changing)
-      "camunda7_delete_process_instance",
-      "camunda7_modify_process_instance",
-      "camunda7_set_process_instance_suspension",
-      "camunda7_create_deployment",
-      "camunda7_create_migration_plan",
-      "camunda7_migrate_process_instances_async",
-      "camunda7_set_job_retries_batch",
-      // engine writes (operations toolset only)
-      "camunda7_start_process_instance",
-      "camunda7_complete_task",
-      "camunda7_claim_task",
-      "camunda7_set_job_retries",
-      "camunda7_correlate_message",
-      "camunda7_throw_signal",
-      // durable profile write (registered via the widget-tools path, not the registrar)
-      "camunda7_save_user_profile",
-    ]
-    for (const tool of forbidden) {
-      expect(names, `${tool} must not be advertised in camunda7:read-only`).not.toContain(tool)
-    }
-
-    expect(names).toEqual(
-      expect.arrayContaining([
-        "camunda7_engine",
-        "camunda7_list_process_instances",
-        "camunda7_list_incidents",
-        "camunda7_query_historic_process_instances",
-      ]),
-    )
-    // The analytics module was not activated alongside.
-    expect(names.some((n) => n.startsWith("analytics_"))).toBe(false)
+  it("offers camunda7_engine without its durable 'select' action", async () => {
+    const { tools } = await server.client.listTools()
+    const engine = tools.find((t) => t.name === "camunda7_engine")
+    const action = (engine?.inputSchema as { properties?: Record<string, { enum?: string[] }> })
+      ?.properties?.action
+    expect(action?.enum).toEqual(["list", "current"])
   })
 })

@@ -57,9 +57,9 @@ export const notesModule = {
   /** This module's slice of the app's unknown-env-var typo warner. */
   knownEnvVars: ["NOTES_TITLE"] as const,
 
-  // No toolset variants — the app warns and exposes all tools when a
-  // `notes:<toolset>` suffix appears in MCP_ACTIVE_MODULES.
-  supportsToolsets: false,
+  // No `toolsets`: every notes tool is a read, so there is nothing to narrow —
+  // the server ignores a `notes:<toolset>` suffix with a warning. A module
+  // with writes declares `toolsets: createToolsetVocabulary(...)` instead.
 
   createPlugin(config: Record<string, unknown>, _shared: NotesModuleShared): AppPlugin<MCPServer> {
     return createPlugin(notesConfigSchema.parse(config))
