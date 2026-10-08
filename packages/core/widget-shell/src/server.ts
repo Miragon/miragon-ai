@@ -77,6 +77,7 @@ export {
 export {
   createComposedServer,
   DEFAULT_DRAIN_TIMEOUT_MS,
+  DEFAULT_REQUEST_TIMEOUT_MS,
   type BootComposition,
   type ComposedServer,
   type ComposedServerInfo,

@@ -76,18 +76,25 @@ export function initializeRequest(
   })
 }
 
+/** How long an upload that is never finished may wait for its answer. */
+const OPEN_UPLOAD_ANSWER_MS = 2000
+
 /**
  * Stream a body that is never finished: resolves with the response the server
- * sends WHILE the client is still uploading — proof the server rejects an
- * oversized body before buffering it, instead of after reading it whole.
+ * sends WHILE the client is still uploading — proof the server refuses the
+ * body before buffering it, instead of after reading it whole. A server that
+ * waits for the rest gets no chance to: the promise rejects after
+ * {@link OPEN_UPLOAD_ANSWER_MS} with that diagnosis instead of hanging the test.
  */
 export async function streamOversizedBody(
   port: number,
-  options: { chunkBytes: number; contentLength?: number },
-): Promise<{ status: number; body: string; finishedSending: boolean }> {
+  options: { chunkBytes: number; contentLength?: number; headers?: Record<string, string> },
+): Promise<RawResponse> {
   return await new Promise((resolve, reject) => {
-    let finishedSending = false
-    const headers: Record<string, string | number> = { "content-type": "application/json" }
+    const headers: Record<string, string | number> = {
+      "content-type": "application/json",
+      ...options.headers,
+    }
     if (options.contentLength !== undefined) headers["content-length"] = options.contentLength
     const req = http.request(
       { host: "127.0.0.1", port, method: "POST", path: "/mcp", headers, agent: false },
@@ -95,15 +102,26 @@ export async function streamOversizedBody(
         const chunks: Buffer[] = []
         res.on("data", (chunk: Buffer) => chunks.push(chunk))
         res.on("end", () => {
+          clearTimeout(unanswered)
           resolve({
             status: res.statusCode ?? 0,
+            headers: res.headers,
             body: Buffer.concat(chunks).toString("utf8"),
-            finishedSending,
           })
           req.destroy()
         })
       },
     )
+    // Deliberately never ended: only an answer to the OPEN upload resolves.
+    const unanswered = setTimeout(() => {
+      req.destroy()
+      reject(
+        new Error(
+          `No answer within ${OPEN_UPLOAD_ANSWER_MS} ms while the upload was still open — ` +
+            "the server buffered the body instead of refusing it",
+        ),
+      )
+    }, OPEN_UPLOAD_ANSWER_MS)
     // The server cuts the connection after answering; a write racing that is
     // expected and not a test failure.
     req.on("error", (error: NodeJS.ErrnoException) => {
@@ -111,10 +129,5 @@ export async function streamOversizedBody(
       reject(error)
     })
     req.write(Buffer.alloc(options.chunkBytes, 0x20))
-    // Deliberately NOT ending the request: a server that buffers the whole
-    // body would wait here forever (the test then times out).
-    req.on("finish", () => {
-      finishedSending = true
-    })
   })
 }

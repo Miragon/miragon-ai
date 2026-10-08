@@ -111,3 +111,45 @@ describe("HTTP surface (createApp)", () => {
     expect(res.status).toBe(413)
   })
 })
+
+/**
+ * `mcp-use dev --tunnel` (the setup-server skill's way to try a local build
+ * from claude.ai or ChatGPT): the CLI owns the socket, checks `Host` itself —
+ * localhost-class plus its own tunnel host — and hands `createApp`'s server
+ * the tunneled request with the PUBLIC tunnel host unchanged. The app's guard
+ * must defer that half to the CLI or every hosted-assistant call gets 403.
+ */
+describe("under `mcp-use dev --tunnel`", () => {
+  const TUNNEL_HOST = "k3x9.tunnel.example"
+
+  it("serves the tunnel host and still refuses a foreign Origin", async () => {
+    const composed = await createApp(
+      { CAMUNDA_BASE_URL: "http://localhost:1", MCP_USE_DEV_CLI: "1" },
+      { bundle: { jsPath: FIXTURE_JS } },
+    )
+    const tunneled = (headers: Record<string, string> = {}) =>
+      composed.app.fetch(
+        new Request(`http://${TUNNEL_HOST}/mcp`, {
+          method: "POST",
+          headers: {
+            host: TUNNEL_HOST,
+            "content-type": "application/json",
+            accept: "application/json, text/event-stream",
+            ...headers,
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "initialize",
+            params: {
+              protocolVersion: "2025-06-18",
+              capabilities: {},
+              clientInfo: { name: "tunnel-test", version: "0" },
+            },
+          }),
+        }),
+      )
+    expect((await tunneled()).status).toBe(200)
+    expect((await tunneled({ origin: "https://attacker.example" })).status).toBe(403)
+  })
+})

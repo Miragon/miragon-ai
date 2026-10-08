@@ -242,15 +242,18 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    503 `draining` during shutdown) — metrics first, hono only counts routes registered
    after its middleware) and its `listen()` serves production through
    `createBodyLimitedListener` (mcp-use's public `toNodeHandler` behind the
-   `MCP_MAX_BODY_BYTES` cap, 413 before buffering) with the graceful drain (readiness →
-   stop accepting → in-flight finish, bounded → `app.close()` → the root's
+   `MCP_MAX_BODY_BYTES` cap — 413 before buffering — an in-flight body budget of 4× the
+   cap — 503 — and a 30 s request timeout; a request the guard refuses is never read,
+   both decide by the one `edgeRejection`) with the graceful drain (stop accepting →
+   in-flight finish, bounded, readiness 503 `draining` → `app.close()` → the root's
    `runtime.shutdown()`). The edge (`resolveHttpEdgePolicy`) is DNS-rebinding protection:
    Host on every request, Origin on non-GET requests that carry one, admitted only when
    localhost-class, `MCP_URL`'s or in `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` —
    `/health*` and `/metrics` are exempt (probes and scrapers address a container by IP);
    never swap it for mcp-use's `allowedHosts`, which guards those too. Each app owns ONE
    `createApp(env, deps?)` (`src/app.ts`: its OAuth decision, persistence, plugins) that
-   `src/index.ts` (production and `mcp-use dev`, which owns the socket — no cap, no drain)
+   `src/index.ts` (production and `mcp-use dev`, which owns the socket — no cap, no drain —
+   and the Host check: the guard defers that half to the CLI, which admits its tunnel host)
    AND the e2e suites boot — never a test-only re-implementation of the boot — so
    `src/ui/main.tsx` and `src/index.ts` stay composition (registry, profile-feed name,
    app-specific layers like `Camunda7StandaloneShell`) and a toolkit/mcp-use migration

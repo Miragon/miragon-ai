@@ -8,7 +8,7 @@ import {
   showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
-import type { CockpitAppData, HistoryTimelineData } from "../view-models.js"
+import type { CockpitAppData, CockpitEngineInfo, HistoryTimelineData } from "../view-models.js"
 import {
   getHistoricActivityInstances,
   getHistoricActivityInstancesCount,
@@ -65,7 +65,9 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       const data: CockpitAppData = {
         engineId,
         // No REST baseUrl: the app navigates by engine id (internal topology stays server-side).
-        engines: registry.engines.map((e) => ({
+        // The explicit return type makes an extra field an excess-property error —
+        // a contextually typed map callback would accept it silently.
+        engines: registry.engines.map((e): CockpitEngineInfo => ({
           id: e.id,
           environment: environmentOf(e),
         })),

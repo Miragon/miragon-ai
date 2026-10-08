@@ -21,7 +21,15 @@
  *    the Host/Origin guard, then the health probes — so `/metrics` and
  *    `/health*` stay reachable by IP-addressed scrapers and probes;
  * 5. `listen()` (production only — `mcp-use dev` owns the socket): the
- *    body-capped Node listener and the graceful drain on SIGTERM/SIGINT.
+ *    body-capped Node listener with request timeouts, and the graceful drain
+ *    on SIGTERM/SIGINT.
+ *
+ * Under `mcp-use dev` the CLI also owns the `Host` check: on its loopback
+ * default it admits localhost-class names plus its own live tunnel host —
+ * reserved after this entry is imported, so only the CLI knows it — and
+ * `--host 0.0.0.0` is its explicit, loudly warned opt-out. The guard then
+ * defers its `Host` half to the CLI (else `mcp-use dev --tunnel` answers every
+ * hosted-assistant call 403) and keeps the `Origin` half, which the CLI lacks.
  */
 import http from "node:http"
 import type { AddressInfo } from "node:net"
@@ -34,6 +42,7 @@ import { installHealthEndpoints, type ReadinessCheck } from "./health.js"
 import { installToolCallLogging, resolvePort, swallowDevCliViewsPrime } from "./host-boot.js"
 import {
   describeHttpEdgePolicy,
+  edgeRejection,
   HTTP_EDGE_ENV_VARS,
   installHttpEdgeGuard,
   resolveHttpEdgePolicy,
@@ -104,15 +113,24 @@ export interface ListenOptions {
   handleSignals?: boolean
   /** Upper bound for in-flight requests to finish once draining (default {@link DEFAULT_DRAIN_TIMEOUT_MS}). */
   drainTimeoutMs?: number
+  /**
+   * Time a client gets to send a whole request, headers and body (default
+   * {@link DEFAULT_REQUEST_TIMEOUT_MS}) — a slow upload cannot pin its
+   * buffered body for Node's 300 s default. Responses (SSE streams, long tool
+   * calls) are not bounded by it.
+   */
+  requestTimeoutMs?: number
 }
 
 export interface RunningServer {
   port: number
   url: string
   /**
-   * Graceful drain (idempotent): readiness → 503 `draining`, stop accepting,
-   * let in-flight requests finish (bounded), close the MCP server, then the
-   * root's `runtime.shutdown()`.
+   * Graceful drain (idempotent): stop accepting at once, let in-flight
+   * requests finish (bounded — readiness answers those 503 `draining`), close
+   * the MCP server, then the root's `runtime.shutdown()`. New connections are
+   * refused from the first moment, so a load balancer that routes until its
+   * endpoint update lands (Kubernetes) needs a `preStop` sleep in front.
    */
   shutdown(): Promise<void>
 }
@@ -131,8 +149,21 @@ export interface ComposedServer {
 /** Below Fly's default 5 s kill timeout and Docker's 10 s stop grace. */
 export const DEFAULT_DRAIN_TIMEOUT_MS = 4000
 
+/** Far above any MCP client's upload, far below Node's 300 s default. */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
+
 const HEALTH_PATH = "/health"
 const METRICS_PATH = "/metrics"
+/** The read-only operational routes: probes and scrapers reach them by container IP. */
+const EXEMPT_PATHS = [HEALTH_PATH, METRICS_PATH]
+
+/**
+ * The policy the guard enforces: the resolved edge, except that under
+ * `mcp-use dev` the `Host` half is the CLI's (see the module comment).
+ */
+function guardPolicyFor(edge: HttpEdgePolicy, env: NodeJS.ProcessEnv): HttpEdgePolicy {
+  return env.MCP_USE_DEV_CLI ? { ...edge, allowedHosts: "*" } : edge
+}
 
 /**
  * mcp-use resolves the OAuth resource (RFC 8707 audience) from the provider
@@ -245,19 +276,42 @@ function installSignalHandlers(shutdown: () => Promise<void>, label: string): vo
 
 async function listen(
   ctx: Omit<DrainContext, "server" | "listener" | "drainTimeoutMs"> & {
-    edge: HttpEdgePolicy
+    /** The policy the in-app guard enforces — the listener decides by the same one. */
+    guard: HttpEdgePolicy
     env: NodeJS.ProcessEnv
   },
   options: ListenOptions,
 ): Promise<RunningServer> {
-  const { label, app, edge, env } = ctx
+  const { label, app, guard, env } = ctx
   const host = options.host ?? (env.HOST?.trim() || "0.0.0.0")
   const port = options.port ?? resolvePort({ env, label })
   const listener = createBodyLimitedListener(app, {
-    maxBodyBytes: edge.maxBodyBytes,
+    maxBodyBytes: guard.maxBodyBytes,
+    maxInFlightBodyBytes: guard.maxInFlightBodyBytes,
+    // The guard refuses these whatever their body says — never buffer it.
+    refusedBeforeBody: (req) =>
+      edgeRejection(
+        {
+          method: (req.method ?? "GET").toUpperCase(),
+          path: (req.url ?? "/").split("?")[0],
+          host: req.headers.host,
+          origin: req.headers.origin,
+        },
+        guard,
+        EXEMPT_PATHS,
+      ) !== undefined,
     onError: (error) => console.error(`[${label}] request failed:`, error),
   })
-  const server = http.createServer(listener)
+  const requestTimeout = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS
+  const server = http.createServer(
+    {
+      requestTimeout,
+      headersTimeout: requestTimeout,
+      // Node checks the timeouts on this interval (default 30 s).
+      connectionsCheckingInterval: Math.min(requestTimeout, 5000),
+    },
+    listener,
+  )
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject)
     server.listen(port, host, () => {
@@ -308,6 +362,12 @@ export async function createComposedServer(
     )
   }
   console.info(`[${label}] ${describeHttpEdgePolicy(edge)}`)
+  const guard = guardPolicyFor(edge, env)
+  if (guard !== edge) {
+    console.info(
+      `[${label}] mcp-use dev: the CLI checks Host (localhost-class + its tunnel); Origin is checked here.`,
+    )
+  }
 
   const runtime = await options.setup(boot)
   const app = await buildFrameworkApp(options, boot, builder, runtime)
@@ -321,7 +381,7 @@ export async function createComposedServer(
   installToolCallLogging(app, label)
   swallowDevCliViewsPrime(app, env)
   installMetrics(app, { path: METRICS_PATH, token: edge.metricsToken })
-  installHttpEdgeGuard(app, edge, { exemptPaths: [HEALTH_PATH, METRICS_PATH] })
+  installHttpEdgeGuard(app, guard, { exemptPaths: EXEMPT_PATHS })
   installHealthEndpoints(app, {
     path: HEALTH_PATH,
     readiness: runtime.readiness,
@@ -335,6 +395,6 @@ export async function createComposedServer(
     builder,
     edge,
     listen: (listenOptions = {}) =>
-      listen({ label, app, edge, env, runtime, state }, listenOptions),
+      listen({ label, app, guard, env, runtime, state }, listenOptions),
   }
 }

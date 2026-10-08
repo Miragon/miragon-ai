@@ -201,6 +201,11 @@ Prometheus configured:
 pnpm exec dotenv -e .env -- pnpm --filter ./server exec mcp-use dev --tunnel --no-open
 ```
 
+Under `mcp-use dev` the CLI checks `Host` itself and admits its tunnel host,
+so the tunnel needs no `MCP_ALLOWED_HOSTS` (browser `Origin`s are still
+checked). A built server (`pnpm start`, the image) behind a tunnel or proxy
+needs `MCP_URL` set to the public URL — else every call gets 403.
+
 ## Step 8 — verify
 
 ```bash

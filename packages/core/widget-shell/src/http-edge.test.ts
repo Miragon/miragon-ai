@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 import {
   DEFAULT_MAX_BODY_BYTES,
   describeHttpEdgePolicy,
+  edgeRejection,
   hostRejection,
+  IN_FLIGHT_BODY_MULTIPLE,
   installHttpEdgeGuard,
   jsonRpcErrorBody,
   originRejection,
@@ -15,13 +17,19 @@ import {
 const LOCAL = ["localhost", "127.0.0.1", "[::1]"]
 
 describe("resolveHttpEdgePolicy", () => {
-  it("defaults to localhost-class only, a 4 MiB cap and an open /metrics", () => {
+  it("defaults to localhost-class only, a 4 MiB cap, a 16 MiB in-flight budget and an open /metrics", () => {
     expect(resolveHttpEdgePolicy({})).toEqual({
       allowedHosts: LOCAL,
       allowedOrigins: LOCAL,
       maxBodyBytes: 4 * 1024 * 1024,
+      maxInFlightBodyBytes: 16 * 1024 * 1024,
     })
     expect(DEFAULT_MAX_BODY_BYTES).toBe(4194304)
+    expect(IN_FLIGHT_BODY_MULTIPLE).toBe(4)
+  })
+
+  it("scales the in-flight budget with MCP_MAX_BODY_BYTES", () => {
+    expect(resolveHttpEdgePolicy({ MCP_MAX_BODY_BYTES: "1000" }).maxInFlightBodyBytes).toBe(4000)
   })
 
   it("derives the host and the origin from MCP_URL", () => {
@@ -89,7 +97,7 @@ describe("describeHttpEdgePolicy", () => {
     ).toBe(
       "HTTP edge — hosts: localhost, 127.0.0.1, [::1], mcp.example.com; " +
         "origins: localhost, 127.0.0.1, [::1], https://mcp.example.com; " +
-        "max body 4 MiB; /metrics token-protected",
+        "max body 4 MiB (16 MiB in flight); /metrics token-protected",
     )
     expect(
       describeHttpEdgePolicy(
@@ -100,15 +108,18 @@ describe("describeHttpEdgePolicy", () => {
         }),
       ),
     ).toBe(
-      "HTTP edge — hosts: any (validation off); origins: any (validation off); max body 1.5 MiB; /metrics open",
+      "HTTP edge — hosts: any (validation off); origins: any (validation off); " +
+        "max body 1.5 MiB (6 MiB in flight); /metrics open",
     )
   })
 
   it.each([
-    ["1048576", "max body 1 MiB;"],
-    ["1024", "max body 1 KiB;"],
-    ["2560", "max body 2.5 KiB;"],
-    ["1023", "max body 1023 bytes;"],
+    ["1048576", "max body 1 MiB (4 MiB in flight);"],
+    ["1024", "max body 1 KiB (4 KiB in flight);"],
+    ["2560", "max body 2.5 KiB (10 KiB in flight);"],
+    ["1023", "max body 1023 bytes (4 KiB in flight);"],
+    ["640", "max body 640 bytes (2.5 KiB in flight);"],
+    ["255", "max body 255 bytes (1020 bytes in flight);"],
   ])("formats a %s-byte cap readably", (bytes, expected) => {
     expect(describeHttpEdgePolicy(resolveHttpEdgePolicy({ MCP_MAX_BODY_BYTES: bytes }))).toContain(
       expected,
@@ -193,6 +204,43 @@ describe("originRejection", () => {
     expect(
       originRejection("https://attacker.example", "POST", { ...policy, allowedOrigins: "*" }),
     ).toBeUndefined()
+  })
+})
+
+describe("edgeRejection", () => {
+  const request = (overrides: Partial<Parameters<typeof edgeRejection>[0]> = {}) => ({
+    method: "POST",
+    path: "/mcp",
+    host: "mcp.example.com",
+    origin: undefined,
+    ...overrides,
+  })
+
+  it("passes a request whose Host and Origin are allowed", () => {
+    expect(edgeRejection(request({ origin: "https://app.example.com" }), policy)).toBeUndefined()
+  })
+
+  it("reports the Host before the Origin", () => {
+    const reason = edgeRejection(
+      request({ host: "attacker.example", origin: "https://attacker.example" }),
+      policy,
+    )
+    expect(reason).toMatch(/^Host "attacker\.example" is not allowed/)
+  })
+
+  it("reports a foreign Origin when the Host passes", () => {
+    const reason = edgeRejection(request({ origin: "https://attacker.example" }), policy)
+    expect(reason).toMatch(/^Origin "https:\/\/attacker\.example" is not allowed/)
+  })
+
+  it("passes the exempt path prefixes whatever their headers", () => {
+    const foreign = { host: "10.0.0.7", origin: "https://attacker.example" }
+    expect(edgeRejection(request({ path: "/metrics", ...foreign }), policy, ["/metrics"])).toBe(
+      undefined,
+    )
+    expect(
+      edgeRejection(request({ path: "/metrics2", ...foreign }), policy, ["/metrics"]),
+    ).toBeDefined()
   })
 })
 

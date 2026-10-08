@@ -16,15 +16,29 @@
  * Deliberately app-owned instead of mcp-use's `allowedHosts`/`allowedOrigins`
  * (which guard every path): probes and scrapers address a container by its
  * IP (Kubernetes, Fly), so the operational routes are exempt — see
- * {@link installHttpEdgeGuard}. The size half of the edge (the body cap) lives
- * in `node-listener.ts`; both read the one policy resolved here.
+ * {@link installHttpEdgeGuard}. The size half of the edge (the body cap and the
+ * in-flight budget) lives in `node-listener.ts`; both read the one policy
+ * resolved here.
  */
 
 /** Hostnames that always pass both checks — a loopback caller is the machine itself. */
 export const LOCALHOST_HOSTNAMES: readonly string[] = ["localhost", "127.0.0.1", "[::1]"]
 
-/** Default request-body cap (4 MiB) — far above any MCP JSON-RPC message, far below a DoS. */
+/**
+ * Default request-body cap (4 MiB): far above any MCP JSON-RPC message, room
+ * for a multi-resource BPMN deployment. The cap bounds ONE request, not the
+ * process — mcp-use parses a JSON body into a heap graph up to ~20× its size
+ * before the OAuth gate runs — so the in-flight budget below bounds the total.
+ */
 export const DEFAULT_MAX_BODY_BYTES = 4 * 1024 * 1024
+
+/**
+ * The in-flight body budget, in cap-sized bodies: the bytes held across all
+ * requests whose response is still open (16 MiB by default) — room for
+ * thousands of ordinary JSON-RPC calls but only a handful of cap-sized
+ * uploads; a request past it gets 503.
+ */
+export const IN_FLIGHT_BODY_MULTIPLE = 4
 
 /**
  * The env vars the shared edge reads. Composition roots spread them into
@@ -53,6 +67,8 @@ export interface HttpEdgePolicy {
   allowedOrigins: AllowList
   /** Request-body cap in bytes (`MCP_MAX_BODY_BYTES`). */
   maxBodyBytes: number
+  /** Body bytes held across all in-flight requests ({@link IN_FLIGHT_BODY_MULTIPLE} × the cap). */
+  maxInFlightBodyBytes: number
   /** Bearer token `/metrics` requires (`MCP_METRICS_TOKEN`); unset = open. */
   metricsToken?: string
 }
@@ -127,6 +143,7 @@ function withDerived(
 export function resolveHttpEdgePolicy(env: NodeJS.ProcessEnv = process.env): HttpEdgePolicy {
   const url = publicUrl(env.MCP_URL)
   const metricsToken = env.MCP_METRICS_TOKEN?.trim()
+  const maxBodyBytes = maxBodyBytesFrom(env.MCP_MAX_BODY_BYTES)
   return {
     allowedHosts: withDerived(listFrom(env.MCP_ALLOWED_HOSTS), url?.hostname, (entry) =>
       hostnameOf(entry, "MCP_ALLOWED_HOSTS"),
@@ -134,7 +151,8 @@ export function resolveHttpEdgePolicy(env: NodeJS.ProcessEnv = process.env): Htt
     allowedOrigins: withDerived(listFrom(env.MCP_ALLOWED_ORIGINS), url?.origin, (entry) =>
       originEntryOf(entry, "MCP_ALLOWED_ORIGINS"),
     ),
-    maxBodyBytes: maxBodyBytesFrom(env.MCP_MAX_BODY_BYTES),
+    maxBodyBytes,
+    maxInFlightBodyBytes: IN_FLIGHT_BODY_MULTIPLE * maxBodyBytes,
     ...(metricsToken ? { metricsToken } : {}),
   }
 }
@@ -151,7 +169,7 @@ export function describeHttpEdgePolicy(policy: HttpEdgePolicy): string {
     allowList === "*" ? "any (validation off)" : allowList.join(", ")
   return (
     `HTTP edge — hosts: ${list(policy.allowedHosts)}; origins: ${list(policy.allowedOrigins)}; ` +
-    `max body ${formatBytes(policy.maxBodyBytes)}; ` +
+    `max body ${formatBytes(policy.maxBodyBytes)} (${formatBytes(policy.maxInFlightBodyBytes)} in flight); ` +
     `/metrics ${policy.metricsToken ? "token-protected" : "open"}`
   )
 }
@@ -205,6 +223,35 @@ export function originRejection(
   )
 }
 
+/** What the guard reads from a request — in the hono middleware and the Node listener alike. */
+export interface EdgeRequest {
+  method: string
+  /** The URL path, without the query. */
+  path: string
+  host: string | undefined
+  origin: string | undefined
+}
+
+const isExempt = (path: string, prefixes: readonly string[]): boolean =>
+  prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+
+/**
+ * THE guard decision: why `request` is refused, or `undefined` when it passes
+ * (an exempt path always passes). Single-sourced so the Node listener — which
+ * discards a refused request's body unread — and the hono guard — which
+ * answers it — never disagree.
+ */
+export function edgeRejection(
+  request: EdgeRequest,
+  policy: HttpEdgePolicy,
+  exemptPaths: readonly string[] = [],
+): string | undefined {
+  if (isExempt(request.path, exemptPaths)) return undefined
+  return (
+    hostRejection(request.host, policy) ?? originRejection(request.origin, request.method, policy)
+  )
+}
+
 /** A JSON-RPC-shaped error body, so MCP clients surface the reason verbatim. */
 export function jsonRpcErrorBody(message: string): string {
   return JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message }, id: null })
@@ -238,9 +285,6 @@ export interface EdgeGuardOptions {
   exemptPaths?: readonly string[]
 }
 
-const isExempt = (path: string, prefixes: readonly string[]): boolean =>
-  prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
-
 /**
  * Register the Host/Origin guard on every route registered AFTER it (hono
  * runs handlers in registration order) — the MCP endpoint and the view
@@ -254,12 +298,12 @@ export function installHttpEdgeGuard(
 ): void {
   server.use("*", async (ctx, next) => {
     const { method, path } = ctx.req
-    if (!isExempt(path, exemptPaths)) {
-      const rejection =
-        hostRejection(ctx.req.header("host"), policy) ??
-        originRejection(ctx.req.header("origin"), method, policy)
-      if (rejection) return jsonRpcErrorResponse(403, `Forbidden: ${rejection}`)
-    }
+    const rejection = edgeRejection(
+      { method, path, host: ctx.req.header("host"), origin: ctx.req.header("origin") },
+      policy,
+      exemptPaths,
+    )
+    if (rejection) return jsonRpcErrorResponse(403, `Forbidden: ${rejection}`)
     await next()
   })
 }

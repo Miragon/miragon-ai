@@ -191,8 +191,10 @@ docker run -p 8400:8400 \
 - `/health/live`, `/health/ready` and `/metrics` (Prometheus) are served next
   to `/mcp`, outside any OAuth gate and the `Host` check (`MCP_METRICS_TOKEN`
   protects the scrape) — the image's `HEALTHCHECK` polls `/health/ready`;
-  point Kubernetes probes and a ServiceMonitor at them. On SIGTERM readiness
-  answers 503 `draining` while in-flight requests finish.
+  point Kubernetes probes and a ServiceMonitor at them. On SIGTERM the server
+  stops accepting and lets in-flight requests finish (readiness answers those
+  503 `draining`); on Kubernetes add a `preStop` sleep so the endpoint is
+  removed before new connections are refused.
 
 ## Going further
 

@@ -45,8 +45,9 @@ oauth? })` is the one boot sequence every composed server shares: env-typo warni
   `serverInfo`/`instructions`, request context, tool-call logging, `/metrics` (optional
   `MCP_METRICS_TOKEN`), the Host/Origin guard and `/health/*`. `mcp-use dev` serves the returned
   `app`; production calls `listen({ handleSignals: true })` — mcp-use's `toNodeHandler` behind a
-  request-body cap (`MCP_MAX_BODY_BYTES`, 413 before buffering) plus a graceful drain (readiness
-  503 `draining`, in-flight requests finish, then your `runtime.shutdown()`). The guard is
+  request-body cap (`MCP_MAX_BODY_BYTES`, 413 before buffering), an in-flight body budget of 4×
+  the cap (503) and a 30 s request timeout, plus a graceful drain (stop accepting, in-flight
+  requests finish — readiness 503 `draining` — then your `runtime.shutdown()`). The guard is
   DNS-rebinding protection: `Host` (and a POST's `Origin`) must be localhost-class, `MCP_URL`'s or
   in `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` (spread `HTTP_EDGE_ENV_VARS` into your known vars);
   `/health*` and `/metrics` stay reachable by IP for probes and scrapers.

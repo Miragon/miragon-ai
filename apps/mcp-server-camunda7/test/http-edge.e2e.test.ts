@@ -69,19 +69,33 @@ describe("HTTP edge — default policy (no MCP_URL: localhost-class only)", () =
   })
 
   it("answers 413 for a declared Content-Length over the 4 MiB default without reading the body", async () => {
+    // 1 KiB of the 5 MiB declared sent — `streamOversizedBody` rejects unless
+    // the answer arrives while the rest is still owed.
     const res = await streamOversizedBody(server.port, {
       chunkBytes: 1024,
       contentLength: 5 * MIB,
     })
     expect(res.status).toBe(413)
-    expect(res.finishedSending).toBe(false)
+    expect(res.headers.connection).toBe("close")
     expect(errorMessage(res.body)).toContain("MCP_MAX_BODY_BYTES")
   })
 
   it("answers 413 for an undeclared (chunked) body while the client is still sending", async () => {
     const res = await streamOversizedBody(server.port, { chunkBytes: 4 * MIB + 1 })
     expect(res.status).toBe(413)
-    expect(res.finishedSending).toBe(false)
+    expect(res.headers.connection).toBe("close")
+  })
+
+  it("refuses a foreign Host's upload with 403 without reading the body", async () => {
+    // Under the cap so only the guard can refuse it — and never finished, so
+    // only a refusal before the body resolves the call.
+    const res = await streamOversizedBody(server.port, {
+      chunkBytes: 1024,
+      contentLength: 2 * MIB,
+      headers: { host: "attacker.example" },
+    })
+    expect(res.status).toBe(403)
+    expect(errorMessage(res.body)).toMatch(/Host "attacker\.example" is not allowed/)
   })
 
   it("reports the package.json version, a title and the instructions as serverInfo", () => {
