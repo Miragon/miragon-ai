@@ -82,10 +82,13 @@ describe("CAMUNDA_ALLOW_DEPLOYMENTS", () => {
     ])
   })
 
-  it("configFromEnv passes the raw value through for the strict schema", () => {
-    expect(
-      camunda7Module.configFromEnv({ CAMUNDA_ALLOW_DEPLOYMENTS: "yes" }).allowDeployments,
-    ).toBe("yes")
+  it("configFromEnv only trims (empty = unset) and leaves the verdict to the strict schema", () => {
+    const fromEnv = (value?: string) =>
+      camunda7Module.configFromEnv({ CAMUNDA_ALLOW_DEPLOYMENTS: value }).allowDeployments
+    expect(fromEnv("yes")).toBe("yes")
+    expect(fromEnv(" true ")).toBe("true")
+    expect(fromEnv("")).toBeUndefined()
+    expect(fromEnv("   ")).toBeUndefined()
     expect(camunda7Module.configFromEnv({}).allowDeployments).toBeUndefined()
   })
 

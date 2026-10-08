@@ -60,11 +60,16 @@ export interface EffectiveToolset {
   toolset?: string
   /**
    * Why: the suffix named it, the auth-dependent default applied, an empty or
-   * unknown suffix fell back to the floor — or `none` for a module without a
-   * vocabulary (no toolsets, or a deprecated `supportsToolsets` pass-through).
+   * unknown suffix fell back to the floor — `legacy` for a deprecated
+   * `supportsToolsets` pass-through the module resolves itself, or `none` for
+   * a module without toolsets.
    */
-  source: ToolsetSource | "none"
-  /** Whether the toolset permits durable writes; a module without a vocabulary declares no restriction. */
+  source: ToolsetSource | "legacy" | "none"
+  /**
+   * Whether the toolset permits durable writes. A module without toolsets
+   * declares no restriction (`true`); a `legacy` pass-through is unknowable
+   * here and counts as restricted (`false`).
+   */
   durableWrites: boolean
 }
 
@@ -206,11 +211,14 @@ export function composeModules<TShared>(options: {
         `[${label}] Module "${module.name}" declares the deprecated supportsToolsets without a toolsets vocabulary — ` +
           `its suffix is passed through unresolved; declare \`toolsets\` (createToolsetVocabulary) instead`,
       )
+      // The composition cannot tell what the raw suffix (or the module's own
+      // reading of a missing one) permits, so it must not count as a
+      // write-capable module for framework writes: fail closed.
       return {
         module: module.name,
         ...(suffix === undefined ? {} : { toolset: suffix }),
-        source: "none",
-        durableWrites: true,
+        source: "legacy",
+        durableWrites: false,
       }
     }
     if (suffix !== undefined) {
@@ -291,18 +299,18 @@ export function composeModules<TShared>(options: {
     logEffectiveToolsets(boot) {
       // console.info, deliberately not a boot WARNING: it states the surface
       // on every boot, the restrictive default included.
-      const reason = (source: EffectiveToolset["source"]) => {
-        if (source === "default")
-          return boot.authenticated ? "default with OAuth" : "default without OAuth"
-        return source === "none" ? "unresolved" : source
+      const describe = ({ module, toolset, source }: EffectiveToolset): string => {
+        if (source === "legacy") {
+          const suffix = toolset === undefined ? "" : `:${toolset}`
+          return `${module}${suffix} (resolved by the module, deprecated)`
+        }
+        if (toolset === undefined) return `${module} (no toolsets)`
+        if (source === "default") {
+          return `${module}:${toolset} (default ${boot.authenticated ? "with" : "without"} OAuth)`
+        }
+        return `${module}:${toolset} (${source})`
       }
-      const modules = boot.toolsets
-        .map(({ module, toolset, source }) =>
-          toolset === undefined
-            ? `${module} (no toolsets)`
-            : `${module}:${toolset} (${reason(source)})`,
-        )
-        .join(", ")
+      const modules = boot.toolsets.map(describe).join(", ")
       const line = `[${label}] Toolsets — ${modules || "no active modules"}`
       console.info(line)
       return line

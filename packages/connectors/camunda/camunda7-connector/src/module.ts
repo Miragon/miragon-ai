@@ -257,8 +257,10 @@ export const camunda7Module = {
       password: env.CAMUNDA_PASSWORD,
       token: env.CAMUNDA_TOKEN,
       incidentIssueRepository: env.CAMUNDA_INCIDENT_ISSUE_REPO,
-      // Raw on purpose: the schema rejects anything but "true"/"false".
-      allowDeployments: env.CAMUNDA_ALLOW_DEPLOYMENTS,
+      // Only trimmed (empty = unset, like the other CAMUNDA_* vars — e.g. a
+      // compose `${CAMUNDA_ALLOW_DEPLOYMENTS:-}`); the schema rejects anything
+      // but "true"/"false".
+      allowDeployments: env.CAMUNDA_ALLOW_DEPLOYMENTS?.trim() || undefined,
       // Engine-health verdict thresholds — only forwarded when set, so the
       // module's defaults apply otherwise.
       ...(env.CAMUNDA_HEALTH_CRITICAL_INCIDENTS || env.CAMUNDA_HEALTH_CRITICAL_CLUSTER_SIZE

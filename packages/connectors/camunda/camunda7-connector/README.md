@@ -42,7 +42,7 @@ the React context and hangs every in-widget query on "Loading…".
 - **Deployments are opt-in** — `camunda7_create_deployment` is registered only with
   `CAMUNDA_ALLOW_DEPLOYMENTS=true` (strict `true`/`false`, anything else fails the boot) on top of
   `camunda7:admin`: deploying a BPMN/DMN is code execution inside the engine JVM (JUEL expressions,
-  scripts). The full surface of earlier releases is `camunda7:admin` plus that flag.
+  scripts). The full camunda7 surface of earlier releases is `camunda7:admin` plus that flag.
 
 ## Adding a tool or widget
 

@@ -75,7 +75,7 @@ describe("resolveStepEngine", () => {
     // The message must name the selectable ids — the error path serialises
     // only code + message, so this is the LLM's one shot at seeing them.
     await expect(resolveStepEngine(appConfig)).rejects.toThrow(
-      'No engine specified and no default engine saved. Available engines: alpha, beta. Pass the per-call `engine` parameter, or save a default with camunda7_engine action "select".',
+      'No engine specified and no default engine saved. Available engines: alpha, beta. Pass the per-call `engine` parameter (camunda7_engine action "list" shows the ids). Where the toolset allows it, a signed-in user can also save a default with camunda7_engine action "select".',
     )
   })
 

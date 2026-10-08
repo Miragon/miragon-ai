@@ -14,12 +14,11 @@ import {
 } from "@miragon-ai/widget-shell/server"
 import { initRuntime } from "./persistence/index.js"
 import {
-  builderEnabled,
   emitBootWarnings,
   getAppConfig,
   getPlugins,
   logEffectiveToolsets,
-  resolveBoot,
+  selectBoot,
   warnUnknownEnvVars,
 } from "./setup.js"
 import { getOAuthConfigFromEnv, oauthSecretEnvVarNames } from "./oauth.js"
@@ -41,11 +40,11 @@ warnUnknownEnvVars(process.env, oauthSecretEnvVarNames())
 // the standard toolset with it), and a bad MCP_OAUTH fails before migrations.
 const { provider: oauth } = getOAuthConfigFromEnv()
 
-// The module selection, resolved once: everything below derives from it.
-const boot = resolveBoot({ authenticated: oauth !== undefined })
+// The module selection, resolved once from the provider actually built:
+// everything below derives from it.
+const { boot, builder } = selectBoot(oauth)
 emitBootWarnings()
 logEffectiveToolsets(boot)
-const builder = builderEnabled(boot)
 if (!builder) {
   console.info(
     "[miragon-ai] Dashboard builder off (needs MCP_OAUTH and no read-only module) — render-view stays.",

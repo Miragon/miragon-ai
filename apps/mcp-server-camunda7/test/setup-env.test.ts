@@ -9,8 +9,10 @@ import {
   getPlugins,
   logEffectiveToolsets,
   resolveBoot,
+  selectBoot,
   warnUnknownEnvVars,
 } from "../src/setup.js"
+import { getOAuthConfigFromEnv } from "../src/oauth.js"
 
 const FILE_ENGINES = [{ id: "from-file", baseUrl: "http://file.example/engine-rest" }]
 const JSON_ENGINES = [{ id: "from-json", baseUrl: "http://json.example/engine-rest" }]
@@ -178,6 +180,28 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
       "[miragon-ai] Toolsets — camunda7:admin (suffix), analytics:read-only (default without OAuth)",
     )
     expect(info).toHaveBeenCalledTimes(1)
+  })
+
+  it("selectBoot derives the selection from the provider ACTUALLY built from MCP_OAUTH", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    const toolsets = (selection: ReturnType<typeof selectBoot>) =>
+      Object.fromEntries(selection.boot.entries.map((e) => [e.app, e.config.toolset]))
+
+    // Unset or blank MCP_OAUTH builds no provider → unauthenticated defaults.
+    for (const raw of [undefined, "", "   "]) {
+      const anonymous = selectBoot(getOAuthConfigFromEnv(raw).provider)
+      expect(toolsets(anonymous)).toEqual({ camunda7: "read-only", analytics: "read-only" })
+      expect(anonymous.builder).toBe(false)
+    }
+
+    const keycloak = JSON.stringify({
+      provider: "keycloak",
+      serverUrl: "https://kc.example.com",
+      realm: "r",
+    })
+    const authenticated = selectBoot(getOAuthConfigFromEnv(keycloak).provider)
+    expect(toolsets(authenticated)).toEqual({ camunda7: "operations", analytics: "standard" })
+    expect(authenticated.builder).toBe(true)
   })
 
   it("enables the dashboard builder only under OAuth with no read-only module", () => {

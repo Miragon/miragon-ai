@@ -105,7 +105,7 @@ describe("activeModules / appEntries", () => {
     const boot = compose(modules).resolveBoot({ MCP_ACTIVE_MODULES: "alpha:custom" })
     expect(boot.entries[0].config).toMatchObject({ toolset: "custom" })
     expect(boot.toolsets).toEqual([
-      { module: "alpha", toolset: "custom", source: "none", durableWrites: true },
+      { module: "alpha", toolset: "custom", source: "legacy", durableWrites: false },
     ])
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("deprecated supportsToolsets"))
     expect(compose(modules).resolveBoot({}).entries[0].config).not.toHaveProperty("toolset")
@@ -206,7 +206,7 @@ describe("logEffectiveToolsets", () => {
     expect(warn).toHaveBeenCalledTimes(1) // the typo, nothing from the log itself
   })
 
-  it("names the auth mode behind a default, and an unresolved pass-through", () => {
+  it("names the auth mode behind a default, and a deprecated pass-through", () => {
     vi.spyOn(console, "info").mockImplementation(() => {})
     vi.spyOn(console, "warn").mockImplementation(() => {})
     const composition = compose([
@@ -215,11 +215,13 @@ describe("logEffectiveToolsets", () => {
     ])
     const env = { MCP_ACTIVE_MODULES: "alpha,beta:x" }
     expect(composition.logEffectiveToolsets(composition.resolveBoot(env))).toBe(
-      "[test-root] Toolsets — alpha:read-only (default without OAuth), beta:x (unresolved)",
+      "[test-root] Toolsets — alpha:read-only (default without OAuth), beta:x (resolved by the module, deprecated)",
     )
     expect(
       composition.logEffectiveToolsets(composition.resolveBoot(env, { authenticated: true })),
-    ).toBe("[test-root] Toolsets — alpha:operations (default with OAuth), beta:x (unresolved)")
+    ).toBe(
+      "[test-root] Toolsets — alpha:operations (default with OAuth), beta:x (resolved by the module, deprecated)",
+    )
   })
 
   it("says so when no module is active", () => {
@@ -257,6 +259,17 @@ describe("frameworkWritesAllowed", () => {
     expect(
       frameworkWritesAllowed(boot(true, { MCP_ACTIVE_MODULES: "alpha:admin,beta:read-only" })),
     ).toBe(false)
+  })
+
+  it("refuses them for a deprecated supportsToolsets module — its surface is unknowable here", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    const legacy = compose([
+      moduleOf("alpha"),
+      moduleOf("crm", { toolsets: undefined, supportsToolsets: true }),
+    ])
+    for (const env of [{}, { MCP_ACTIVE_MODULES: "alpha:admin,crm:admin" }]) {
+      expect(frameworkWritesAllowed(legacy.resolveBoot(env, { authenticated: true }))).toBe(false)
+    }
   })
 })
 

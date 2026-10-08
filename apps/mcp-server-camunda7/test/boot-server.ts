@@ -5,7 +5,8 @@ import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
 import type { MCPServer } from "mcp-use"
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
-import { builderEnabled, getAppConfig, getPlugins, resolveBoot } from "../src/setup.js"
+import { getOAuthConfigFromEnv } from "../src/oauth.js"
+import { getAppConfig, getPlugins, selectBoot } from "../src/setup.js"
 
 const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
 
@@ -28,6 +29,17 @@ const BASE_ENV: Record<string, string | undefined> = {
   MCP_PROFILE_DIR: undefined,
   MCP_DASHBOARD_DIR: undefined,
 }
+
+/**
+ * A network-free MCP_OAUTH (the Keycloak provider resolves its JWKS lazily),
+ * so `authenticated` boots run the SAME env → provider → selection path as
+ * `src/index.ts`.
+ */
+const TEST_MCP_OAUTH = JSON.stringify({
+  provider: "keycloak",
+  serverUrl: "https://kc.example.com",
+  realm: "e2e",
+})
 
 /** Reserve a free TCP port by binding to port 0 and releasing it again. */
 export async function getFreePort(): Promise<number> {
@@ -58,10 +70,10 @@ export interface BootedServer {
 
 /**
  * Boots the real server in-process with the SAME decisions `src/index.ts`
- * makes — one `resolveBoot`, plugins + `AppConfig` derived from it, and the
- * builder via `builderEnabled` — so a policy change there is covered here.
- * `authenticated` stands in for an installed MCP_OAUTH (the composition-level
- * input); the HTTP gate itself stays mcp-use's.
+ * makes — MCP_OAUTH → provider → `selectBoot` (selection + builder), plugins
+ * and `AppConfig` derived from it — so a policy change there is covered here.
+ * `authenticated` sets a real MCP_OAUTH; the provider is NOT installed on the
+ * test app, so the HTTP bearer gate itself (mcp-use's) stays out of scope.
  */
 export async function bootServer(
   options: {
@@ -71,17 +83,18 @@ export async function bootServer(
     beforeListen?: (app: MCPServer) => void
   } = {},
 ): Promise<BootedServer> {
-  for (const [name, value] of Object.entries({ ...BASE_ENV, ...options.env })) {
+  const oauthEnv = { MCP_OAUTH: options.authenticated ? TEST_MCP_OAUTH : undefined }
+  for (const [name, value] of Object.entries({ ...BASE_ENV, ...oauthEnv, ...options.env })) {
     vi.stubEnv(name, value)
   }
-  const boot = resolveBoot({ authenticated: options.authenticated ?? false })
+  const { boot, builder } = selectBoot(getOAuthConfigFromEnv().provider)
   const app = await createFrameworkApp({
     name: "automation-mcp",
     version: "0.1.0",
     host: "127.0.0.1",
     plugins: getPlugins(undefined, boot) as AppPlugin[],
     appConfig: getAppConfig(boot),
-    app: { bundle: { jsPath: FIXTURE_JS }, builder: builderEnabled(boot) },
+    app: { bundle: { jsPath: FIXTURE_JS }, builder },
   })
   options.beforeListen?.(app)
   const port = await getFreePort()

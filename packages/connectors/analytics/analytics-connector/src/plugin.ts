@@ -7,7 +7,7 @@ import { registerSettingsTools } from "./settings-tools.js"
 import { registerWidgetTools, type FetchBpmnXml } from "./widget-tools.js"
 import { definition } from "./definition.js"
 import type { ProfileSource } from "./server-locale.js"
-import type { AnalyticsToolset } from "./toolsets.js"
+import { analyticsToolsets } from "./toolsets.js"
 
 export interface AnalyticsPluginConfig {
   /** Base URL of the Prometheus HTTP API (e.g. http://localhost:9090). */
@@ -27,12 +27,14 @@ export interface AnalyticsPluginConfig {
    */
   profileStore?: ProfileSource
   /**
-   * The module's effective toolset (`analyticsModule` resolves it from the
-   * composition root's selection). `"read-only"` — also what an ABSENT toolset
-   * resolves to — registers no settings save tool; `"standard"` registers it,
-   * given a writable `profileStore`.
+   * The module's toolset (`analyticsModule` passes the one the composition
+   * root resolved). `"read-only"` — also what an ABSENT or unknown toolset
+   * resolves to (an unknown name warns) — registers no settings save tool;
+   * `"standard"` registers it, given a writable `profileStore`. Typed `string`
+   * like camunda7's, so callers can pass a configured value through; it is
+   * resolved fail-closed here.
    */
-  toolset?: AnalyticsToolset
+  toolset?: string
 }
 
 export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer> {
@@ -52,7 +54,7 @@ export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer
         fetchBpmnXml: config.fetchBpmnXml,
         profileStore: config.profileStore,
       })
-      registerSettingsTools(server, config.profileStore, config.toolset)
+      registerSettingsTools(server, config.profileStore, analyticsToolsets.resolve(config.toolset))
     },
   }
 }

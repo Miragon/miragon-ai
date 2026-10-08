@@ -86,6 +86,20 @@ export function builderEnabled(boot: ResolvedBoot): boolean {
 }
 
 /**
+ * The boot decision `index.ts` makes, single-sourced so the e2e helpers run
+ * it too: the selection is authenticated exactly when an OAuth provider was
+ * actually BUILT from MCP_OAUTH (unset/blank builds none → the read-only
+ * defaults) — never from the raw env var — and the builder follows from it.
+ */
+export function selectBoot(
+  oauthProvider: object | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): { boot: ResolvedBoot; builder: boolean } {
+  const boot = resolveBoot({ authenticated: oauthProvider !== undefined }, env)
+  return { boot, builder: builderEnabled(boot) }
+}
+
+/**
  * Cross-module wiring — the one thing that stays app-owned by design: which
  * module's capability reaches which other module is configuration knowledge
  * (see `module-contract.ts`). Store *selection* lives in

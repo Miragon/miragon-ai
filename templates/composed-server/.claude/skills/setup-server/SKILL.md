@@ -101,7 +101,7 @@ deployments point them at directories (mounted volumes in Docker):
 
 ```bash
 MCP_PROFILE_DIR=./.data/profiles       # per-user settings (language, theme, module slices)
-MCP_DASHBOARD_DIR=./.data/dashboards   # saved builder dashboards
+MCP_DASHBOARD_DIR=./.data/dashboards   # saved builder dashboards — only once OAuth is installed (builder is off without it)
 MCP_PROFILE_SESSION_TTL_DAYS=30        # expiry for session-keyed records; 0 disables
 ```
 
