@@ -49,7 +49,11 @@ and labels. The Kotlin plugin emits the OTEL instruments (`otelName`) that surfa
 ([`src/metric-names.ts`](src/metric-names.ts)) — **never raw strings**. Both sides are verified
 against the contract:
 
-- TypeScript: [`src/metrics-contract.test.ts`](src/metrics-contract.test.ts) (vitest)
+- TypeScript: [`src/metrics-contract.test.ts`](src/metrics-contract.test.ts) (vitest) checks the
+  metric names; [`src/metrics-contract-labels.test.ts`](src/metrics-contract-labels.test.ts) runs
+  every exported query function and checks each label its PromQL names (matchers, `by`/`without`,
+  `on`/`ignoring`/`group_*`) against the labels the contract declares for that series, alert
+  rules and Grafana dashboards included
 - Kotlin: `MetricsContractTest.kt` (Gradle)
 
 A rename that skips the contract — or a consumer (queries, alert rules, Grafana dashboards) — fails

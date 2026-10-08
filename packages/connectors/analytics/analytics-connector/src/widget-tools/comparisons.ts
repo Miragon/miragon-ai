@@ -10,6 +10,7 @@ import { queries, schemas } from "@miragon-ai/analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
 import { localizeFor } from "../server-locale.js"
 import { optionalMinBucketSize, settingsFor } from "../settings.js"
+import { versionCompareCaveats } from "../version-compare-caveats.js"
 import { compareDeltaSummary, suppressedNote, type AnalyticsWidgetToolsContext } from "./shared.js"
 
 /**
@@ -82,10 +83,9 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         args.minBucketSize ?? (await settingsFor(profileStore, toolCtx)).minBucketSize
       const data = await queries.versionCompare(ch, { ...args, minBucketSize })
       // Null incident KPIs (no version label on the incident metric) must not
-      // read as "failure rate 0pp" — say why they are missing instead.
-      const incidentsUnavailable = data.kpis.some(
-        (k) => k.failure_rate_pct === null || k.incident_rate_pct === null,
-      )
+      // read as "failure rate 0pp" — say why they are missing instead; nor may
+      // an elementId that scoped nothing read as the comparison's scope.
+      const { incidentRatesUnavailable, ignoredElementId } = versionCompareCaveats(data)
       return buildSingleWidgetView({
         widget: "analytics:version-compare",
         app: "analytics",
@@ -98,7 +98,10 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
           versionB: data.versionB,
           windowDays: data.windowDays,
           delta: compareDeltaSummary(data.delta),
-          incidents: incidentsUnavailable ? t("aSum.versionIncidentsUnavailable") : "",
+          incidents: incidentRatesUnavailable ? t("aSum.versionIncidentsUnavailable") : "",
+          element: ignoredElementId
+            ? t("aSum.versionElementIgnored", { element: ignoredElementId })
+            : "",
           suppressed: suppressedNote(data.suppressed),
         }),
       })

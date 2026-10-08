@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { describeEngineLandscape, describeVersionCompare } from "./model-descriptions.js"
+import {
+  describeEngineLandscape,
+  describeFailureRates,
+  describeVersionCompare,
+} from "./model-descriptions.js"
 import type {
   EngineLandscapeEngine,
   EngineLandscapeResult,
+  FailureDashboardData,
   VersionCompareKpi,
   VersionCompareResult,
 } from "@miragon-ai/analytics-client"
@@ -96,12 +101,15 @@ const versionKpi = (version: number, over: Partial<VersionCompareKpi> = {}): Ver
   ...over,
 })
 
-const versionCompare = (kpis: VersionCompareKpi[]): VersionCompareResult => ({
+const versionCompare = (
+  kpis: VersionCompareKpi[],
+  elementId: string | null = null,
+): VersionCompareResult => ({
   processDefinitionKey: "order",
   versionA: 1,
   versionB: 2,
   windowDays: 14,
-  elementId: null,
+  elementId,
   minBucketSize: 10,
   suppressed: false,
   kpis,
@@ -131,5 +139,56 @@ describe("describeVersionCompare", () => {
       {},
     )
     expect(text).not.toContain("not measured per version")
+  })
+
+  it("never presents an elementId that scoped nothing as the comparison's scope", () => {
+    const text = describeVersionCompare(
+      versionCompare([versionKpi(1), versionKpi(2)], "Task_check"),
+      {},
+    )
+
+    // The process-wide delta must not read as the element's.
+    expect(text).not.toContain("element Task_check:")
+    expect(text).toContain("over a 14d window: most notable delta: avg duration +25%")
+    expect(text).toContain("elementId Task_check has no effect")
+    expect(text).toContain("every figure covers the whole process")
+  })
+
+  it("scopes only the incident KPIs to the element once they are measured", () => {
+    const measured = { failure_rate_pct: 1, incident_rate_pct: 1 }
+    const text = describeVersionCompare(
+      versionCompare([versionKpi(1, measured), versionKpi(2, measured)], "Task_check"),
+      {},
+    )
+    expect(text).toContain("(incident KPIs scoped to element Task_check)")
+    expect(text).not.toContain("has no effect")
+  })
+})
+
+describe("describeFailureRates", () => {
+  const failures: FailureDashboardData = {
+    totalIncidents: 3,
+    uniqueErrorPatterns: 1,
+    mostAffectedProcess: "order",
+    errorPatterns: [],
+    processBreakdown: [
+      {
+        processDefinitionKey: "order",
+        totalInstances: 50,
+        failedCount: 6,
+        incidentCount: 3,
+        failureRatePct: 12,
+      },
+    ],
+  }
+
+  it("routes the regression check to tools that measure failure rates (#327)", () => {
+    const text = describeFailureRates(failures, {})
+
+    expect(text).toContain('highest "order" at 12%')
+    expect(text).toContain("analytics_compare_execution_periods")
+    expect(text).toContain("analytics_cluster_compare")
+    // Its failure rates are null per version — a wasted call for this question.
+    expect(text).not.toContain("analytics_version_compare")
   })
 })

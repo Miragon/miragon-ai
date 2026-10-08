@@ -10,6 +10,7 @@ import {
   type ContractMetricLike,
   type SeriesCatalog,
 } from "./promql-labels.test-support.js"
+import { alertExpressions, dashboardQueries } from "./promql-sources.test-support.js"
 
 /**
  * Behavioural half of the metrics contract: instead of scanning source text,
@@ -35,30 +36,6 @@ const contract = JSON.parse(readFileSync(here("../metrics-contract.json"), "utf8
 const alertsFile = join(repoRoot, "playground/docker/prometheus/alerts.yml")
 const dashboardsDir = join(repoRoot, "playground/docker/grafana/dashboards")
 
-/** `expr:` values of the alert rules — inline, or a `|`/`>` block scalar. */
-function alertExpressions(yaml: string): string[] {
-  const lines = yaml.split("\n")
-  const out: string[] = []
-  for (let i = 0; i < lines.length; i++) {
-    const match = /^(\s*)expr:\s*(.*)$/.exec(lines[i])
-    if (!match) continue
-    const [, indent, inline] = match
-    if (!/^[|>][-+]?$/.test(inline)) {
-      out.push(inline)
-      continue
-    }
-    // The block runs until the first non-blank line indented no deeper than `expr:`.
-    const block: string[] = []
-    for (; i + 1 < lines.length; i++) {
-      const next = lines[i + 1]
-      if (next.trim() !== "" && next.length - next.trimStart().length <= indent.length) break
-      block.push(next.trim())
-    }
-    out.push(block.join(" ").trim())
-  }
-  return out
-}
-
 /**
  * Non-contract series Prometheus synthesises itself. `up` carries the scrape
  * target labels (no target relabelling in prometheus.yml). `ALERTS` carries
@@ -70,7 +47,8 @@ const UP_LABELS = ["job", "instance"]
 const ALERTS_BASE_LABELS = ["alertname", "alertstate", "severity"]
 
 const ruleCatalog = contractCatalog(contract.metrics, { up: { labels: UP_LABELS } })
-const alertRules = alertExpressions(readFileSync(alertsFile, "utf8"))
+const alertsYaml = readFileSync(alertsFile, "utf8")
+const alertRules = alertExpressions(alertsYaml)
 const alertLabels = new Set([
   ...ALERTS_BASE_LABELS,
   ...alertRules.flatMap((expr) => checkQueryLabels(expr, ruleCatalog).resultLabels ?? []),
@@ -260,7 +238,17 @@ describe("metrics contract — labels each query actually sends", () => {
 describe("metrics contract — labels in alert rules and dashboards", () => {
   it("alert rule expressions name only declared labels", () => {
     expect(alertRules.length).toBeGreaterThan(0)
+    // Every `expr:` in the file was extracted — none hides in a YAML shape
+    // (flow mapping, …) the extractor does not read.
+    expect(alertRules).toHaveLength(alertsYaml.match(/\bexpr:/g)?.length ?? 0)
     expect(alertRules.flatMap((expr) => violationsOf("alerts.yml", expr))).toEqual([])
+    for (const expr of alertRules) {
+      // A rule that selects no series or yields no vector was not checked —
+      // e.g. an expression that parsed as one PromQL string literal.
+      const { series, resultLabels } = checkQueryLabels(expr, catalog)
+      expect(series, `alerts.yml selects no series: ${expr}`).not.toEqual([])
+      expect(resultLabels, `alerts.yml yields no vector: ${expr}`).toBeDefined()
+    }
     // The rules aggregate by engine_id — `engineHealth` filters ALERTS on it.
     expect(alertLabels.has("engine_id")).toBe(true)
   })
@@ -275,32 +263,11 @@ describe("metrics contract — labels in alert rules and dashboards", () => {
       for (const promql of dashboardQueries(dashboard)) {
         expressions++
         violations.push(...violationsOf(`dashboards/${file}`, promql))
+        const { series } = checkQueryLabels(promql, catalog)
+        expect(series, `dashboards/${file} selects no series: ${promql}`).not.toEqual([])
       }
     }
     expect(expressions).toBeGreaterThan(0)
     expect(violations).toEqual([])
   })
 })
-
-/**
- * Every panel `expr` of a dashboard, plus templating `label_values(series,
- * label)` queries rewritten to the equivalent `count by (label)(series)` so the
- * label is checked like any other grouping.
- */
-function dashboardQueries(node: unknown): string[] {
-  if (Array.isArray(node)) return node.flatMap(dashboardQueries)
-  if (node === null || typeof node !== "object") return []
-  const out: string[] = []
-  for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
-    if (typeof value !== "string") {
-      out.push(...dashboardQueries(value))
-      continue
-    }
-    if (key === "expr") out.push(value)
-    const labelValues = /^label_values\(\s*([^,\s]+)\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)$/.exec(
-      value,
-    )
-    if (key === "query" && labelValues) out.push(`count by (${labelValues[2]})(${labelValues[1]})`)
-  }
-  return out
-}

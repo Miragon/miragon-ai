@@ -156,9 +156,12 @@ export const deSweep: MessageCatalog = {
   "aSettings.section": "Analyse-Standardwerte",
   "aSettings.subtitle": "Standardwerte, wenn ein Analyse-Aufruf einen Wert weglässt.",
   "aVersionCompare.badgeElement": "Element: {element}",
+  "aVersionCompare.badgeElementIgnored": "Element {element}: ignoriert",
   "aVersionCompare.badgeInsufficientSignal":
     "Unzureichendes Signal (mind. {min} Instanzen/Version)",
   "aVersionCompare.badgeWindow": "Zeitraum: {days}d",
+  "aVersionCompare.elementIgnored":
+    "Der Elementfilter {element} wirkt hier nicht: Er grenzt nur die Fehler- und Vorfallsraten ein. Alle Werte gelten für den ganzen Prozess.",
   "aVersionCompare.emptyIncomplete": "Unvollständige KPI-Daten.",
   "aVersionCompare.emptyNoData": "Keine Versionsvergleichsdaten.",
   "aVersionCompare.incidentKpisUnavailable":

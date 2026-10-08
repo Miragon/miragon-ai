@@ -155,8 +155,11 @@ export const enSweep: MessageCatalog = {
   "aSettings.section": "Analytics defaults",
   "aSettings.subtitle": "Defaults applied when an analytics call omits a value.",
   "aVersionCompare.badgeElement": "element: {element}",
+  "aVersionCompare.badgeElementIgnored": "element {element}: ignored",
   "aVersionCompare.badgeInsufficientSignal": "Insufficient signal (min {min} instances/version)",
   "aVersionCompare.badgeWindow": "window: {days}d",
+  "aVersionCompare.elementIgnored":
+    "The element filter {element} has no effect here: it only scopes the failure and incident rates. Every figure covers the whole process.",
   "aVersionCompare.emptyIncomplete": "Incomplete KPI data.",
   "aVersionCompare.emptyNoData": "No version-comparison data.",
   "aVersionCompare.incidentKpisUnavailable":

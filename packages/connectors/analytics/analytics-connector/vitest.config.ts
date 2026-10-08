@@ -12,8 +12,11 @@ export default mergeConfig(
         // shared settings/i18n/toolset boilerplate (a well-tested surface)
         // moved to @miragon-ai/widget-shell, where the SAME code is held to
         // that package's higher thresholds — this package's percentages
-        // shifted without a single line losing tests.
-        thresholds: { statements: 26, branches: 8, functions: 15, lines: 27 },
+        // shifted without a single line losing tests. Raised 2026-10-08 with
+        // the version-compare caveats and the comparison/failure widget
+        // helpers under test (measured statements 43.62 / branches 22.13 /
+        // functions 40.8 / lines 45.32).
+        thresholds: { statements: 41, branches: 20, functions: 38, lines: 43 },
       },
     },
   }),
