@@ -64,9 +64,9 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       }
       const data: CockpitAppData = {
         engineId,
+        // No REST baseUrl: the app navigates by engine id (internal topology stays server-side).
         engines: registry.engines.map((e) => ({
           id: e.id,
-          baseUrl: e.baseUrl,
           environment: environmentOf(e),
         })),
       }

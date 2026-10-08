@@ -100,11 +100,13 @@ export function registerEngineTools(
         case "list": {
           const available = await allowedEnginesFor(reg)
           return {
+            // Deliberately WITHOUT the engine's REST baseUrl: it is internal
+            // network topology the model never needs (it routes by `id`);
+            // only an explicitly configured, user-facing cockpitUrl is shown.
             engines: available.map((e) => {
               const provider = providerForEntry(e)
               return {
                 id: e.id,
-                baseUrl: e.baseUrl,
                 environment: environmentOf(e),
                 flavor: provider.flavor,
                 engineName: provider.branding.displayName,

@@ -29,10 +29,12 @@ type Handler = (
  * toolset is always explicit; the default is `operations`, an authenticated
  * boot's no-suffix toolset (profile writes allowed).
  */
-function register(toolset: Camunda7Toolset = "operations") {
+function register(
+  toolset: Camunda7Toolset = "operations",
+  registry = { engines: [] } as unknown as EngineRegistry,
+) {
   const tool = vi.fn()
   const server = { tool } as unknown as MCPServer
-  const registry = { engines: [] } as unknown as EngineRegistry
   registerUserProfileTools(server, createInMemoryProfileStore(), registry, toolset)
   const names = tool.mock.calls.map((c) => (c[0] as { name: string }).name)
   const definitionFor = (name: string): Record<string, unknown> => {
@@ -138,6 +140,23 @@ describe("render-path contract (mcp-use 2 native fields)", () => {
     expect(def.view).toBeUndefined()
     expect(def.visibility).toBeUndefined()
     expect(def._meta).toBeUndefined()
+  })
+})
+
+describe("engine disclosure (#324)", () => {
+  it("offers engines by id and environment — never the internal engine REST baseUrl", async () => {
+    const registry = {
+      engines: [
+        { id: "prod-a", baseUrl: "http://engine-a.internal:8410/engine-rest" },
+        { id: "prod-b", baseUrl: "http://engine-b.internal:8410/engine-rest", environment: "eu" },
+      ],
+    } as unknown as EngineRegistry
+    const result = await register("operations", registry).handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
+    expect(result.structuredContent?.availableEngines).toEqual([
+      { id: "prod-a", environment: "default" },
+      { id: "prod-b", environment: "eu" },
+    ])
+    expect(JSON.stringify(result)).not.toContain(".internal")
   })
 })
 

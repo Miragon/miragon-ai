@@ -272,6 +272,19 @@ describe("camunda7_engine list / current", () => {
     expect((list.engines as Array<{ id: string }>).map((e) => e.id)).toEqual(["alpha", "beta"])
   })
 
+  it("never hands the model an engine's internal REST baseUrl — only a configured cockpitUrl", async () => {
+    const { call } = harness()
+    const list = await under(USER, () => call({ action: "list" }))
+    expect(list.engines).toEqual([
+      expect.objectContaining({ id: "alpha", cockpitUrl: "http://alpha/cockpit" }),
+      expect.objectContaining({ id: "beta" }),
+    ])
+    for (const engine of list.engines as Array<Record<string, unknown>>) {
+      expect(engine).not.toHaveProperty("baseUrl")
+    }
+    expect(JSON.stringify(list)).not.toContain("engine-rest")
+  })
+
   it("groups an environment-less config into the single default environment", async () => {
     const { call } = harness()
     const list = await under(USER, () => call({ action: "list" }))

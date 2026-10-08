@@ -70,7 +70,7 @@ const PROFILE_FEED = {
     updatedAt: "2026-01-01T00:00:00.000Z",
     schemaVersion: 1,
   },
-  availableEngines: [{ id: "prod-a", baseUrl: "http://localhost:1" }],
+  availableEngines: [{ id: "prod-a", environment: "default" }],
   canSave: true,
 }
 

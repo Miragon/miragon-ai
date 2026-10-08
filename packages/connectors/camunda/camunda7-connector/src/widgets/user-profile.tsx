@@ -365,7 +365,6 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
                         onChange={(ev) => toggleEngine(e.id, ev.target.checked)}
                       />
                       <span className="font-mono">{e.id}</span>
-                      <span className={helpCls}>{e.baseUrl}</span>
                     </label>
                   ))}
                 </div>
