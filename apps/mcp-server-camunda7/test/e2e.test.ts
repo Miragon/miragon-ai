@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import type { Client } from "@modelcontextprotocol/client"
 import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "@miragon-ai/camunda7-connector"
-import { installHealthEndpoints, installMetrics } from "@miragon-ai/widget-shell/server"
-import { bootServer, listToolNames, type BootedServer } from "./boot-server.js"
+import { bootServer, createTestRuntime, listToolNames, type BootedServer } from "./boot-server.js"
 import {
   EXPECTED_TOOLS_ADMIN,
   EXPECTED_TOOLS_OPERATIONS,
@@ -26,12 +25,12 @@ const FULL_SURFACE = {
 }
 
 /**
- * E2E smoke test: boots the real server in-process (same selection, plugin
- * set and builder decision as `src/index.ts`, with a stand-in widget bundle)
- * and speaks the MCP protocol to it over streamable HTTP. Together with the
- * toolset suites below this is the only coverage of tool *registration* —
- * plugin.ts wiring, setup.ts module activation and the framework tools —
- * rather than the tool implementations.
+ * E2E smoke test: boots the real composition in-process (`createApp`, the
+ * exact boot `src/index.ts` runs, with a stand-in widget bundle and in-memory
+ * persistence) and speaks the MCP protocol to it over streamable HTTP.
+ * Together with the toolset suites below this is the only coverage of tool
+ * *registration* — plugin.ts wiring, setup.ts module activation and the
+ * framework tools — rather than the tool implementations.
  */
 describe("mcp-server-camunda7 E2E smoke", () => {
   let server: BootedServer
@@ -41,12 +40,7 @@ describe("mcp-server-camunda7 E2E smoke", () => {
   beforeAll(async () => {
     server = await bootServer({
       ...FULL_SURFACE,
-      // Match src/index.ts: the operational routes ride on the same hono app,
-      // metrics first so the probes are counted.
-      beforeListen(booted) {
-        installMetrics(booted)
-        installHealthEndpoints(booted, { readiness: { always: () => {} }, label: "e2e" })
-      },
+      runtime: createTestRuntime({ readiness: { always: () => {} } }),
     })
     ;({ client, port } = server)
   })
@@ -145,9 +139,10 @@ describe("mcp-server-camunda7 E2E smoke", () => {
 
 /**
  * The tool surface per toolset, on the wire: each boot resolves its selection
- * exactly like `src/index.ts` (setup.ts `resolveBoot` → plugin config →
- * registrar filter + builder decision), so the fail-closed defaults are pinned
- * end to end, not just the filter in isolation.
+ * through `createApp` like `src/index.ts` (the shared boot's `resolveBoot` →
+ * plugin config → registrar filter + builder decision), so the fail-closed
+ * defaults are pinned end to end, not just the filter in isolation. The
+ * authenticated boots install a stub OAuth provider — the real bearer gate.
  */
 describe("mcp-server-camunda7 E2E toolset surfaces", () => {
   it.each([

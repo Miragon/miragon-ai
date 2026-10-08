@@ -22,8 +22,11 @@ export default mergeConfig(
         // migration runner, dashboard store) moved to @miragon-ai/widget-shell
         // too, and what remains here — the env→backend selection — is covered
         // by persistence-runtime.test.ts; measured statements 82.89 /
-        // branches 77.27 / functions 94.44 / lines 83.33.
-        thresholds: { statements: 80, branches: 75, functions: 92, lines: 81 },
+        // branches 77.27 / functions 94.44 / lines 83.33. Raised 2026-10-08
+        // (#324: `createApp` replaced the e2e re-implementation of the boot,
+        // so the suites now execute the real composition root): measured
+        // 87.74 / 80.23 / 93.75 / 88.27.
+        thresholds: { statements: 85, branches: 78, functions: 92, lines: 86 },
       },
     },
   }),

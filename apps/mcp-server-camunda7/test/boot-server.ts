@@ -1,20 +1,24 @@
-import net from "node:net"
 import path from "node:path"
 import { vi } from "vitest"
-import type { AppPlugin } from "@miragon/mcp-toolkit-core"
-import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
 import type { MCPServer } from "mcp-use"
+import { OAuthError, OAuthErrorCode, oauthCustomProvider, type OAuthProvider } from "mcp-use/oauth"
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
-import { getOAuthConfigFromEnv } from "../src/oauth.js"
-import { getAppConfig, getPlugins, selectBoot } from "../src/setup.js"
+import {
+  createInMemoryProfileStore,
+  type ComposedServer,
+  type RunningServer,
+} from "@miragon-ai/widget-shell/server"
+import { createApp } from "../src/app.js"
+import type { RuntimeBackends } from "../src/persistence/index.js"
 
 const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
 
 /**
  * Neutral env for every in-process boot: a dummy engine (nothing may reach a
- * real engine or Prometheus), in-memory persistence, and no ambient toolset,
- * OAuth or deployment flag from the developer's shell — each of those changes
- * the tool surface under test.
+ * real engine or Prometheus), no ambient toolset, OAuth, deployment flag or
+ * edge override from the developer's shell — each of those changes the
+ * surface under test. Persistence is injected (in-memory), so DATABASE_URL
+ * and the store directories never matter.
  */
 const BASE_ENV: Record<string, string | undefined> = {
   CAMUNDA_BASE_URL: "http://localhost:1",
@@ -24,89 +28,135 @@ const BASE_ENV: Record<string, string | undefined> = {
   CAMUNDA_ALLOW_DEPLOYMENTS: undefined,
   MCP_ACTIVE_MODULES: undefined,
   MCP_OAUTH: undefined,
+  MCP_URL: undefined,
+  MCP_ALLOWED_HOSTS: undefined,
+  MCP_ALLOWED_ORIGINS: undefined,
+  MCP_MAX_BODY_BYTES: undefined,
+  MCP_METRICS_TOKEN: undefined,
   DATABASE_URL: undefined,
   REDIS_URL: undefined,
   MCP_PROFILE_DIR: undefined,
   MCP_DASHBOARD_DIR: undefined,
 }
 
-/**
- * A network-free MCP_OAUTH (the Keycloak provider resolves its JWKS lazily),
- * so `authenticated` boots run the SAME env → provider → selection path as
- * `src/index.ts`.
- */
-const TEST_MCP_OAUTH = JSON.stringify({
-  provider: "keycloak",
-  serverUrl: "https://kc.example.com",
-  realm: "e2e",
-})
+/** Bearer tokens the stub IdP accepts, by user id. */
+export const TEST_TOKENS = { alice: "e2e-token-alice", bob: "e2e-token-bob" } as const
 
-/** Reserve a free TCP port by binding to port 0 and releasing it again. */
-export async function getFreePort(): Promise<number> {
-  return await new Promise((resolve, reject) => {
-    const probe = net.createServer()
-    probe.once("error", reject)
-    probe.listen(0, "127.0.0.1", () => {
-      const { port } = probe.address() as net.AddressInfo
-      probe.close(() => resolve(port))
-    })
+/**
+ * A network-free OAuth provider standing in for Keycloak/Auth0: it accepts
+ * exactly {@link TEST_TOKENS}. Installing it runs mcp-use's REAL bearer gate
+ * (401 without a token) and the real `ctx.auth` shape, instead of only
+ * flipping the selection to "authenticated".
+ */
+export function createTestOAuthProvider(): OAuthProvider<unknown> {
+  const resource = "http://localhost/mcp"
+  return oauthCustomProvider<unknown>({
+    resource,
+    oauthMetadata: {
+      issuer: "https://idp.e2e.test",
+      authorization_endpoint: "https://idp.e2e.test/authorize",
+      token_endpoint: "https://idp.e2e.test/token",
+      response_types_supported: ["code"],
+    },
+    createTokenVerifier: (canonical) => ({
+      verifyAccessToken: (token: string) => {
+        const user = Object.entries(TEST_TOKENS).find(([, value]) => value === token)?.[0]
+        if (!user) {
+          return Promise.reject(new OAuthError(OAuthErrorCode.InvalidToken, "unknown e2e token"))
+        }
+        return Promise.resolve({
+          token,
+          clientId: "e2e",
+          scopes: [],
+          expiresAt: Math.floor(Date.now() / 1000) + 3600,
+          resource: canonical,
+          extra: { sub: user },
+        })
+      },
+    }),
+    mapAuthInfo: (authInfo) => {
+      const sub = String(authInfo.extra?.sub)
+      return { user: { id: sub, userId: sub }, payload: { sub }, permissions: [] }
+    },
   })
 }
 
+/** In-memory persistence with an observable shutdown — what `initRuntime` returns without DATABASE_URL. */
+export function createTestRuntime(overrides: Partial<RuntimeBackends> = {}): RuntimeBackends {
+  return {
+    profileStore: createInMemoryProfileStore(),
+    dashboardStore: undefined,
+    readiness: {},
+    shutdown: vi.fn(async () => {}),
+    ...overrides,
+  }
+}
+
 /** Modern-envelope MCP client against the in-process server (mcp-use 2 wire). */
-export async function connectClient(port: number): Promise<Client> {
+export async function connectClient(port: number, token?: string): Promise<Client> {
   const client = new Client({ name: "e2e-test", version: "0.0.0" })
-  await client.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`)))
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`), {
+      ...(token ? { requestInit: { headers: { Authorization: `Bearer ${token}` } } } : {}),
+    }),
+  )
   return client
 }
 
 export interface BootedServer {
-  app: MCPServer
+  app: MCPServer<unknown>
+  composed: ComposedServer
+  running: RunningServer
+  runtime: RuntimeBackends
   client: Client
   port: number
-  /** Stops client + server and restores the env. */
+  /** Stops client + server (graceful drain) and restores the env. */
   close(): Promise<void>
 }
 
+export interface BootOptions {
+  env?: Record<string, string | undefined>
+  /** Install the stub OAuth provider; the client then calls as `alice`. */
+  authenticated?: boolean
+  runtime?: RuntimeBackends
+  drainTimeoutMs?: number
+}
+
 /**
- * Boots the real server in-process with the SAME decisions `src/index.ts`
- * makes — MCP_OAUTH → provider → `selectBoot` (selection + builder), plugins
- * and `AppConfig` derived from it — so a policy change there is covered here.
- * `authenticated` sets a real MCP_OAUTH; the provider is NOT installed on the
- * test app, so the HTTP bearer gate itself (mcp-use's) stays out of scope.
+ * Boots the REAL composition — `createApp` from `src/app.ts`, i.e. exactly
+ * what `src/index.ts` runs (selection, plugins, the Host/Origin guard, the
+ * operational routes, the body-capped listener) — on an ephemeral loopback
+ * port, with a stand-in widget bundle and in-memory persistence.
  */
-export async function bootServer(
-  options: {
-    env?: Record<string, string | undefined>
-    authenticated?: boolean
-    /** Hook to install routes on the app before it listens (e.g. metrics). */
-    beforeListen?: (app: MCPServer) => void
-  } = {},
-): Promise<BootedServer> {
-  const oauthEnv = { MCP_OAUTH: options.authenticated ? TEST_MCP_OAUTH : undefined }
-  for (const [name, value] of Object.entries({ ...BASE_ENV, ...oauthEnv, ...options.env })) {
+export async function bootServer(options: BootOptions = {}): Promise<BootedServer> {
+  for (const [name, value] of Object.entries({ ...BASE_ENV, ...options.env })) {
     vi.stubEnv(name, value)
   }
-  const { boot, builder } = selectBoot(getOAuthConfigFromEnv().provider)
-  const app = await createFrameworkApp({
-    name: "automation-mcp",
-    version: "0.1.0",
-    host: "127.0.0.1",
-    plugins: getPlugins(undefined, boot) as AppPlugin[],
-    appConfig: getAppConfig(boot),
-    app: { bundle: { jsPath: FIXTURE_JS }, builder },
+  const runtime = options.runtime ?? createTestRuntime()
+  const composed = await createApp(process.env, {
+    oauth: options.authenticated ? createTestOAuthProvider() : undefined,
+    runtime,
+    bundle: { jsPath: FIXTURE_JS },
   })
-  options.beforeListen?.(app)
-  const port = await getFreePort()
-  await app.listen(port)
-  const client = await connectClient(port)
+  const running = await composed.listen({
+    port: 0,
+    host: "127.0.0.1",
+    drainTimeoutMs: options.drainTimeoutMs ?? 1000,
+  })
+  const client = await connectClient(
+    running.port,
+    options.authenticated ? TEST_TOKENS.alice : undefined,
+  )
   return {
-    app,
+    app: composed.app,
+    composed,
+    running,
+    runtime,
     client,
-    port,
+    port: running.port,
     async close() {
       await client.close()
-      await app.close()
+      await running.shutdown()
       vi.unstubAllEnvs()
     },
   }

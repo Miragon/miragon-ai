@@ -55,7 +55,10 @@ Without `MCP_OAUTH` the endpoint is unauthenticated, so this boots **read-only**
 and analytics, no engine writes — the boot log names the effective [toolsets](#toolsets). To allow
 writes, put OAuth in front (`-e MCP_OAUTH='{"provider":"keycloak",…}'` raises the default to
 `operations`) or name the toolsets yourself (`-e MCP_ACTIVE_MODULES=camunda7:operations,analytics`)
-— on an unauthenticated server only while the port stays bound to `127.0.0.1` as above.
+— on an unauthenticated server only while the port stays bound to `127.0.0.1` as above. Reached
+under any other name (a public hostname, a gateway, a cluster service), the server answers 403
+until `MCP_URL` or `MCP_ALLOWED_HOSTS` names it — `Host`/`Origin` validation is its DNS-rebinding
+protection.
 
 The server speaks the streamable-HTTP MCP transport on `http://localhost:8400/mcp`. Add it to your
 MCP host as an HTTP/streamable server — `claude mcp add --transport http miragon-ai
@@ -209,6 +212,7 @@ The most common variables — see [`docs/operations.md`](docs/operations.md) for
 | --------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                                                    | `8400`                              | HTTP port the MCP server listens on                                                                                                                                 |
 | `MCP_ACTIVE_MODULES`                                      | all, read-only                      | Comma-separated modules (`camunda7,analytics`), each with an optional [toolset](#toolsets) suffix; no suffix = read-only, under OAuth the standard toolset          |
+| `MCP_URL`                                                 | —                                   | Public base URL: advertised URLs, OAuth audience, and the `Host`/`Origin` accepted (else localhost only)                                                            |
 | `MCP_OAUTH`                                               | —                                   | JSON OAuth resource-server config (Keycloak / Auth0; the 1.x generic-OIDC/oidc-proxy modes were removed with mcp-use 2) protecting `/mcp`                           |
 | `CAMUNDA_ALLOW_DEPLOYMENTS`                               | `false`                             | `true` registers `camunda7_create_deployment` under `camunda7:admin` — code execution in the engine JVM; empty = unset, any value but `true`/`false` fails the boot |
 | `CAMUNDA_BASE_URL`                                        | `http://localhost:8410/engine-rest` | Single-engine REST base URL                                                                                                                                         |

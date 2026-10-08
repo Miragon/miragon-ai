@@ -1,23 +1,21 @@
-import net from "node:net"
 import path from "node:path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
-import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import { VIEW_RESOURCE_URI_PREFIX, viewResourceUri } from "@miragon/mcp-toolkit-core"
-import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
-import type { MCPServer } from "mcp-use"
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "@miragon-ai/camunda7-connector"
-import { builderEnabled, getAppConfig, getPlugins, resolveBoot } from "../src/setup.js"
+import type { RunningServer } from "@miragon-ai/widget-shell/server"
+import { createApp, packageVersion, SERVER_INSTRUCTIONS } from "../src/app.js"
 
 const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
 
 /**
- * Boot the server in-process with the SAME selection + builder decision as
- * `src/index.ts` and list its tools. The camunda7 module boots against a dead
- * engine URL — tools register fine; only actual calls would fail.
+ * Boot the REAL composition in-process (`createApp`, exactly what
+ * `src/index.ts` runs, with a stand-in widget bundle) and list its tools. The
+ * camunda7 module boots against a dead engine URL — tools register fine; only
+ * actual calls would fail.
  */
 async function bootAndList(activeModules: string | undefined): Promise<{
-  app: MCPServer
+  app: RunningServer
   client: Client
   origin: string
   tools: ToolEntry[]
@@ -32,33 +30,12 @@ async function bootAndList(activeModules: string | undefined): Promise<{
   vi.stubEnv("MCP_PROFILE_DIR", undefined)
   vi.stubEnv("MCP_DASHBOARD_DIR", undefined)
 
-  const boot = resolveBoot()
-  const app = await createFrameworkApp({
-    name: "acme-mcp",
-    version: "0.1.0",
-    host: "127.0.0.1",
-    plugins: getPlugins(undefined, boot) as AppPlugin[],
-    appConfig: getAppConfig(boot),
-    app: { bundle: { jsPath: FIXTURE_JS }, builder: builderEnabled(boot) },
-  })
-  const port = await getFreePort()
-  await app.listen(port)
-  const origin = `http://127.0.0.1:${port}`
+  const composed = await createApp(process.env, { bundle: { jsPath: FIXTURE_JS } })
+  const app = await composed.listen({ port: 0, host: "127.0.0.1" })
+  const origin = `http://127.0.0.1:${app.port}`
   const client = new Client({ name: "widget-contract-test", version: "0.0.0" })
   await client.connect(new StreamableHTTPClientTransport(new URL(`${origin}/mcp`)))
   return { app, client, origin, tools: (await client.listTools()).tools }
-}
-
-/** Reserve a free TCP port by binding to port 0 and releasing it again. */
-async function getFreePort(): Promise<number> {
-  return await new Promise((resolve, reject) => {
-    const probe = net.createServer()
-    probe.once("error", reject)
-    probe.listen(0, "127.0.0.1", () => {
-      const { port } = probe.address() as net.AddressInfo
-      probe.close(() => resolve(port))
-    })
-  })
 }
 
 type ToolEntry = { name: string; _meta?: Record<string, unknown> }
@@ -86,7 +63,7 @@ function uiBlock(meta: Record<string, unknown>): Record<string, unknown> {
  * in-widget callTool.
  */
 describe("widget wire contract (dual-protocol _meta)", () => {
-  let app: MCPServer
+  let app: RunningServer
   let client: Client
   let tools: ToolEntry[]
   let serverOrigin: string
@@ -97,8 +74,17 @@ describe("widget wire contract (dual-protocol _meta)", () => {
 
   afterAll(async () => {
     await client?.close()
-    await app?.close()
+    await app?.shutdown()
     vi.unstubAllEnvs()
+  })
+
+  it("reports serverInfo from package.json plus the instructions", () => {
+    expect(client.getServerVersion()).toMatchObject({
+      name: "acme-mcp",
+      version: packageVersion(),
+      title: "Acme MCP",
+    })
+    expect(client.getInstructions()).toBe(SERVER_INSTRUCTIONS)
   })
 
   it("registers the custom notes module alongside the Miragon modules", () => {
@@ -253,7 +239,7 @@ describe("fail-closed toolsets", () => {
         }
       } finally {
         await client.close()
-        await app.close()
+        await app.shutdown()
         vi.unstubAllEnvs()
       }
     },

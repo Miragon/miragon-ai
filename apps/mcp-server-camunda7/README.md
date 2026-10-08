@@ -36,7 +36,7 @@ upstream/proxy federation.
 
 ```bash
 # Published image (production) — boots read-only without MCP_OAUTH or a toolset suffix
-docker run --rm -p 8400:8400 \
+docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8410/engine-rest \
   -e PROMETHEUS_URL=http://host.docker.internal:9090 \
   docker.io/miragon/miragon-ai-server:latest
@@ -57,7 +57,8 @@ Configuration is entirely environment-driven — see
 
 | Path                     | Contents                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `src/index.ts`           | Server entry — builds the mcp-use server, mounts modules, starts HTTP                                    |
+| `src/index.ts`           | Server entry — `createApp()`, then `listen()` (body cap, drain) unless `mcp-use dev` serves it           |
+| `src/app.ts`             | `createApp(env, deps?)` — OAuth, persistence, plugins into the shared boot; the e2e suites boot it too   |
 | `src/module-contract.ts` | App-owned port: `ModuleDefinition` + `SharedResources { profileStore, fetchBpmnXml? }`                   |
 | `src/setup.ts`           | Module selection (`MCP_ACTIVE_MODULES`), env-typo warner + boot warnings from the modules, shared wiring |
 | `src/ui/`                | Widget host bundle: `widget-registry.ts` (the host map) + `McpAppView` dispatcher                        |
