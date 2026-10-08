@@ -78,6 +78,22 @@ export function toneFor(value: number | null, worseIfUp: boolean): string | unde
 
 type DeltaUnit = "pct" | "pp"
 
+/**
+ * The compare KPIs the table reads. The rates are nullable because the version
+ * compare cannot measure them per version (the incident metric carries no
+ * version label) — a null renders "n/a", never "0.0%". The cluster and engine
+ * compares always fill them.
+ */
+type ComparableKpis = Pick<
+  CompareKpis,
+  "instance_count" | "avg_duration_sec" | "p95_duration_sec"
+> & {
+  failure_rate_pct: number | null
+  incident_rate_pct: number | null
+}
+
+const pctValue = (n: number | null) => (n === null ? null : `${n.toFixed(1)}%`)
+
 /** A single metric row: label, the two compared values, and the RAW delta. */
 export type ComparisonMetric = {
   label: string
@@ -94,7 +110,8 @@ export type ComparisonMetric = {
  */
 const COMPARE_METRICS: Array<{
   labelKey: string
-  value: (k: CompareKpis) => string
+  /** Formatted value, or null when the KPI is not measured for this comparison. */
+  value: (k: ComparableKpis) => string | null
   delta: (d: CompareKpiDelta) => number | null
   unit: DeltaUnit
   worseIfUp: boolean
@@ -108,14 +125,14 @@ const COMPARE_METRICS: Array<{
   },
   {
     labelKey: "aComparison.metricFailureRate",
-    value: (k) => `${k.failure_rate_pct.toFixed(1)}%`,
+    value: (k) => pctValue(k.failure_rate_pct),
     delta: (d) => d.failure_rate_delta_pp,
     unit: "pp",
     worseIfUp: true,
   },
   {
     labelKey: "aComparison.metricIncidentRate",
-    value: (k) => `${k.incident_rate_pct.toFixed(1)}%`,
+    value: (k) => pctValue(k.incident_rate_pct),
     delta: (d) => d.incident_rate_delta_pp,
     unit: "pp",
     worseIfUp: true,
@@ -139,14 +156,15 @@ const COMPARE_METRICS: Array<{
 /** Resolve the shared metric rows for one baseline/other KPI pair. */
 export function buildComparisonMetrics(
   t: T,
-  before: CompareKpis,
-  after: CompareKpis,
+  before: ComparableKpis,
+  after: ComparableKpis,
   delta: CompareKpiDelta,
 ): ComparisonMetric[] {
+  const unavailable = t("aComparison.valueUnavailable")
   return COMPARE_METRICS.map((m) => ({
     label: t(m.labelKey),
-    before: m.value(before),
-    after: m.value(after),
+    before: m.value(before) ?? unavailable,
+    after: m.value(after) ?? unavailable,
     delta: { value: m.delta(delta), unit: m.unit, worseIfUp: m.worseIfUp },
   }))
 }
@@ -197,6 +215,7 @@ export function ComparisonCard({
   tableLabel,
   metrics,
   actions,
+  note,
 }: {
   title: string
   badges: ReactNode
@@ -206,6 +225,8 @@ export function ComparisonCard({
   metrics: ComparisonMetric[]
   /** Optional header action slot (e.g. an AI affordance), right-aligned. */
   actions?: ReactNode
+  /** Optional caveat under the table, e.g. why a metric reads "n/a". */
+  note?: ReactNode
 }) {
   const t = useT()
   return (
@@ -237,6 +258,11 @@ export function ComparisonCard({
             ))}
           </TableBody>
         </Table>
+        {note && (
+          <Alert className="mt-4">
+            <AlertDescription>{note}</AlertDescription>
+          </Alert>
+        )}
       </CardContent>
     </Card>
   )

@@ -26,5 +26,7 @@ export const deServer: MessageCatalog = {
   "aSum.settingsSaved":
     "Analyse-Einstellungen gespeichert: Standard-Zeitraum {period}, min. Bucket-Größe {minBucketSize}.",
   "aSum.versionCompare":
-    'Versionsvergleich für "{key}" v{versionA} vs. v{versionB} über {windowDays} d: {delta}{suppressed}.',
+    'Versionsvergleich für "{key}" v{versionA} vs. v{versionB} über {windowDays} d: {delta}{incidents}{suppressed}.',
+  "aSum.versionIncidentsUnavailable":
+    " — Fehler- und Vorfallsraten pro Version nicht verfügbar (die Vorfallsmetrik trägt kein Versionslabel), nicht 0",
 }

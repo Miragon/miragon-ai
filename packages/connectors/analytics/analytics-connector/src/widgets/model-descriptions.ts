@@ -175,11 +175,18 @@ export const describeClusterCompare: DescribeForModel<ClusterCompareData> = (dat
   `${suppressedNote(data.suppressed)}. ` +
   `Confirm with analytics_cluster_compare; find the driving activity with analytics_element_bottleneck.`
 
+/** Version compare only: the incident metric has no version label, so its rates come back null. */
+const incidentsUnavailableNote = (data: NonNullable<VersionCompareData>): string =>
+  data.kpis.some((k) => k.failure_rate_pct === null || k.incident_rate_pct === null)
+    ? "Failure and incident rates are not measured per version (no version label on the incident metric) — unknown, not zero. "
+    : ""
+
 export const describeVersionCompare: DescribeForModel<VersionCompareData> = (data) =>
   `Comparing process "${data.processDefinitionKey}" v${data.versionA} (baseline) vs ` +
   `v${data.versionB} over a ${data.windowDays}d window` +
   `${data.elementId ? `, element ${data.elementId}` : ""}: ${mostNotableDelta(data.delta)}` +
   `${suppressedNote(data.suppressed)}. ` +
+  incidentsUnavailableNote(data) +
   `Confirm with analytics_version_compare; find the driving activity with analytics_element_bottleneck.`
 
 export const describeEngineCompare: DescribeForModel<EngineCompareData> = (data) =>

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { describeEngineLandscape } from "./model-descriptions.js"
-import type { EngineLandscapeEngine, EngineLandscapeResult } from "@miragon-ai/analytics-client"
+import { describeEngineLandscape, describeVersionCompare } from "./model-descriptions.js"
+import type {
+  EngineLandscapeEngine,
+  EngineLandscapeResult,
+  VersionCompareKpi,
+  VersionCompareResult,
+} from "@miragon-ai/analytics-client"
 
 const engine = (
   engineId: string,
@@ -74,5 +79,57 @@ describe("describeEngineLandscape", () => {
     )
 
     expect(text).toContain("reporting NO metrics: prod-c")
+  })
+})
+
+const versionKpi = (version: number, over: Partial<VersionCompareKpi> = {}): VersionCompareKpi => ({
+  version,
+  bucket: version === 1 ? "versionA" : "versionB",
+  instance_count: 100,
+  completed_count: 90,
+  failed_count: null,
+  failure_rate_pct: null,
+  incident_count: null,
+  incident_rate_pct: null,
+  avg_duration_sec: 10,
+  p95_duration_sec: 20,
+  ...over,
+})
+
+const versionCompare = (kpis: VersionCompareKpi[]): VersionCompareResult => ({
+  processDefinitionKey: "order",
+  versionA: 1,
+  versionB: 2,
+  windowDays: 14,
+  elementId: null,
+  minBucketSize: 10,
+  suppressed: false,
+  kpis,
+  delta: {
+    instance_count_delta_pct: 0,
+    failure_rate_delta_pp: null,
+    incident_rate_delta_pp: null,
+    avg_duration_delta_pct: 25,
+    p95_duration_delta_pct: null,
+  },
+  notes: [],
+})
+
+describe("describeVersionCompare", () => {
+  it("names the measured delta and flags the incident rates as unknown, not zero (#327)", () => {
+    const text = describeVersionCompare(versionCompare([versionKpi(1), versionKpi(2)]), {})
+
+    expect(text).toContain("most notable delta: avg duration +25%")
+    expect(text).toContain("not measured per version")
+    expect(text).toContain("unknown, not zero")
+  })
+
+  it("drops the caveat once the incident rates are measured", () => {
+    const measured = { failure_rate_pct: 1, incident_rate_pct: 1 }
+    const text = describeVersionCompare(
+      versionCompare([versionKpi(1, measured), versionKpi(2, measured)]),
+      {},
+    )
+    expect(text).not.toContain("not measured per version")
   })
 })

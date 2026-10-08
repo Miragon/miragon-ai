@@ -68,7 +68,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       name: "analytics_show_version_compare",
       title: "Process Version Comparison",
       description:
-        "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
+        "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Instance counts and durations are exact per version; failure and incident rates show as n/a — the incident metric carries no version label, so they are not measured per version (never read them as zero). Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: z.object({
         ...schemas.versionCompareInput.shape,
@@ -81,6 +81,11 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       const minBucketSize =
         args.minBucketSize ?? (await settingsFor(profileStore, toolCtx)).minBucketSize
       const data = await queries.versionCompare(ch, { ...args, minBucketSize })
+      // Null incident KPIs (no version label on the incident metric) must not
+      // read as "failure rate 0pp" — say why they are missing instead.
+      const incidentsUnavailable = data.kpis.some(
+        (k) => k.failure_rate_pct === null || k.incident_rate_pct === null,
+      )
       return buildSingleWidgetView({
         widget: "analytics:version-compare",
         app: "analytics",
@@ -93,6 +98,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
           versionB: data.versionB,
           windowDays: data.windowDays,
           delta: compareDeltaSummary(data.delta),
+          incidents: incidentsUnavailable ? t("aSum.versionIncidentsUnavailable") : "",
           suppressed: suppressedNote(data.suppressed),
         }),
       })

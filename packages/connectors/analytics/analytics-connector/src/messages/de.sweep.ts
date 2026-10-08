@@ -36,6 +36,7 @@ export const deSweep: MessageCatalog = {
   "aComparison.metricIncidentRate": "Vorfallsrate",
   "aComparison.metricInstances": "Instanzen",
   "aComparison.metricP95Duration": "P95-Dauer",
+  "aComparison.valueUnavailable": "k. A.",
   "aDefBreakdown.avgDuration": "Durchschnitt {duration}",
   "aDefBreakdown.completedCount": "{count} abgeschlossen",
   "aDefBreakdown.emptyState": "Keine Prozessdefinitionen im ausgewählten Zeitraum.",
@@ -160,6 +161,8 @@ export const deSweep: MessageCatalog = {
   "aVersionCompare.badgeWindow": "Zeitraum: {days}d",
   "aVersionCompare.emptyIncomplete": "Unvollständige KPI-Daten.",
   "aVersionCompare.emptyNoData": "Keine Versionsvergleichsdaten.",
+  "aVersionCompare.incidentKpisUnavailable":
+    "Fehler- und Vorfallsraten sind pro Version nicht verfügbar: Die Vorfallsmetrik trägt kein Label für die Prozessversion. Instanzzahlen und Dauern sind exakt.",
   "aVersionCompare.tableLabel": "Vergleich der Versionsmetriken",
   "aVersionCompare.title": "Versionsvergleich",
 }
