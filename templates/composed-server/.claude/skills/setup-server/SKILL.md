@@ -57,7 +57,12 @@ operaton | camunda7`) and `auth` — overrides the single-engine shorthand
   globally unique across environments.
 - `PROMETHEUS_URL` — unset defaults to `http://localhost:9090`, which does
   **not** match the playground stack (host port 8460); every analytics query
-  then fails. The server warns at boot when unset.
+  then fails. The server warns at boot when unset. A protected Prometheus takes
+  `PROMETHEUS_BEARER_TOKEN` or `PROMETHEUS_USERNAME`/`PROMETHEUS_PASSWORD`
+  (plus `PROMETHEUS_HEADERS`, a JSON object, e.g. for a tenant id).
+- `CAMUNDA_REQUEST_TIMEOUT_MS` / `PROMETHEUS_TIMEOUT_MS` — per-request
+  deadlines (default 30000 ms); a hung upstream then fails the tool call with
+  a timeout error instead of holding it.
 
 No engine at hand? The
 [miragon-ai playground](https://github.com/Miragon/miragon-ai/tree/main/playground)

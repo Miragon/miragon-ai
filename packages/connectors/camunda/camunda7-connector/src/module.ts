@@ -65,6 +65,9 @@ const engineSchema = z.object({
   auth: engineAuthSchema.optional(),
 })
 
+/** The longest delay a Node timer holds — a longer deadline would fire at once. */
+const MAX_TIMEOUT_MS = 2_147_483_647
+
 export const camunda7ConfigSchema = z
   .object({
     engines: z.array(engineSchema).min(1),
@@ -84,6 +87,25 @@ export const camunda7ConfigSchema = z
       })
       .optional()
       .transform((v) => v === "true"),
+    // CAMUNDA_REQUEST_TIMEOUT_MS — per-request engine deadline. Strict like
+    // the flag above: a typo ("30s", "3e4") fails the boot instead of being
+    // coerced into some other deadline. Unset = the client default (30 s).
+    requestTimeoutMs: z
+      .union([
+        z.number(),
+        z
+          .string()
+          .regex(/^\d+$/, "CAMUNDA_REQUEST_TIMEOUT_MS must be a whole number of milliseconds")
+          .transform(Number),
+      ])
+      .pipe(
+        z
+          .number()
+          .int("CAMUNDA_REQUEST_TIMEOUT_MS must be a whole number of milliseconds")
+          .min(1, "CAMUNDA_REQUEST_TIMEOUT_MS must be at least 1 ms")
+          .max(MAX_TIMEOUT_MS, `CAMUNDA_REQUEST_TIMEOUT_MS must be at most ${MAX_TIMEOUT_MS} ms`),
+      )
+      .optional(),
     incidentIssueRepository: z
       .string()
       .regex(/^[^/\s]+\/[^/\s]+$/, "Expected `owner/repo`")
@@ -270,6 +292,7 @@ export const camunda7Module = {
       // compose `${CAMUNDA_ALLOW_DEPLOYMENTS:-}`); the schema rejects anything
       // but "true"/"false".
       allowDeployments: allowDeploymentsFromEnv(env),
+      requestTimeoutMs: env.CAMUNDA_REQUEST_TIMEOUT_MS?.trim() || undefined,
       // Engine-health verdict thresholds — only forwarded when set, so the
       // module's defaults apply otherwise.
       ...(env.CAMUNDA_HEALTH_CRITICAL_INCIDENTS || env.CAMUNDA_HEALTH_CRITICAL_CLUSTER_SIZE
@@ -298,6 +321,7 @@ export const camunda7Module = {
     "CAMUNDA_HEALTH_CRITICAL_INCIDENTS",
     "CAMUNDA_HEALTH_CRITICAL_CLUSTER_SIZE",
     "CAMUNDA_ALLOW_DEPLOYMENTS",
+    "CAMUNDA_REQUEST_TIMEOUT_MS",
   ] as const,
 
   /**
@@ -370,7 +394,9 @@ export function createBpmnXmlFetcher(
   }
   // Same client construction (incl. passthrough semantics) as the plugin's
   // registry clients — via the entry's vendor provider.
-  const client = providerForEntry(primary).createClient(primary, auth)
+  const client = providerForEntry(primary).createClient(primary, auth, {
+    timeoutMs: parsed.requestTimeoutMs,
+  })
   return async (processDefinitionKey) => {
     const xmlResp = (await getProcessDefinitionBpmn20XmlByKey({
       client,

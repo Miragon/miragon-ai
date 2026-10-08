@@ -4,6 +4,7 @@ export { camunda7Module, camunda7ConfigSchema, createBpmnXmlFetcher } from "./mo
 export { CAMUNDA7_ADMIN_ONLY_TOOLS } from "./lib/toolsets.js"
 export type {
   CockpitRef,
+  EngineClientSettings,
   EngineCockpitStrategy,
   EngineEntry,
   EngineFlavor,

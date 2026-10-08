@@ -111,7 +111,67 @@ describe("analyticsModule env surface", () => {
       url: "http://p:9090",
     })
     expect(analyticsModule.configFromEnv({ PROMETHEUS_URL: "  " })).toEqual({ url: undefined })
-    expect(analyticsModule.knownEnvVars).toEqual(["PROMETHEUS_URL"])
+    expect(analyticsModule.knownEnvVars).toEqual([
+      "PROMETHEUS_URL",
+      "PROMETHEUS_BEARER_TOKEN",
+      "PROMETHEUS_USERNAME",
+      "PROMETHEUS_PASSWORD",
+      "PROMETHEUS_HEADERS",
+      "PROMETHEUS_TIMEOUT_MS",
+    ])
+  })
+
+  it("maps the auth + timeout variables: blank = unset, credentials verbatim", () => {
+    expect(
+      analyticsModule.configFromEnv({
+        PROMETHEUS_BEARER_TOKEN: " tok ",
+        PROMETHEUS_USERNAME: "  ",
+        PROMETHEUS_PASSWORD: "",
+        PROMETHEUS_HEADERS: ' {"X-Scope-OrgID":"t"} ',
+        PROMETHEUS_TIMEOUT_MS: " 5000 ",
+      }),
+    ).toEqual({
+      bearerToken: " tok ",
+      headers: '{"X-Scope-OrgID":"t"}',
+      timeoutMs: "5000",
+    })
+  })
+})
+
+describe("analyticsModule Prometheus config validation", () => {
+  const boot = (config: Record<string, unknown>) =>
+    analyticsModule.createPlugin({ url: "http://prometheus.invalid", ...config }, {})
+
+  it("accepts the auth variants and a strict timeout", () => {
+    expect(() => boot({ bearerToken: "tok", timeoutMs: "5000" })).not.toThrow()
+    expect(() => boot({ username: "u", password: "p", timeoutMs: 250 })).not.toThrow()
+    expect(() => boot({ url: "http://u:p@prometheus.invalid" })).not.toThrow()
+    expect(() => boot({ headers: '{"X-Scope-OrgID":"tenant-a"}' })).not.toThrow()
+  })
+
+  it.each(["30s", "3e4", "0", "-1", "1.5", "2147483648"])(
+    "fails the boot on PROMETHEUS_TIMEOUT_MS=%j, naming the variable",
+    (timeoutMs) => {
+      expect(() => boot({ timeoutMs })).toThrow(/PROMETHEUS_TIMEOUT_MS/)
+    },
+  )
+
+  it.each(['["X-A"]', '{"X-A":1}', "X-Api-Key: s3cret-value", '"s3cret-value"'])(
+    "fails the boot on PROMETHEUS_HEADERS=%j without echoing it",
+    (headers) => {
+      expect(() => boot({ headers })).toThrow(/PROMETHEUS_HEADERS must be a JSON object/)
+      expect(() => boot({ headers })).not.toThrow(/s3cret-value/)
+    },
+  )
+
+  it("fails the boot on ambiguous auth", () => {
+    expect(() => boot({ bearerToken: "tok", username: "u", password: "p" })).toThrow(
+      /PROMETHEUS_BEARER_TOKEN/,
+    )
+    expect(() => boot({ username: "u" })).toThrow(/PROMETHEUS_PASSWORD/)
+    expect(() => boot({ url: "http://u:p@prometheus.invalid", bearerToken: "tok" })).toThrow(
+      /ambiguous/,
+    )
   })
 
   it("warns at boot only while PROMETHEUS_URL is unset", () => {

@@ -7,9 +7,11 @@ export default mergeConfig(
     test: {
       include: ["src/**/*.test.ts"],
       coverage: {
-        // Ratchet: frozen 2 points under the 2026-08-07 baseline. Raise when
-        // you push coverage up; never lower.
-        thresholds: { statements: 26, branches: 15, functions: 30, lines: 27 },
+        // Ratchet: frozen 2 points under the baseline. Raise when you push
+        // coverage up; never lower. Raised 2026-10-08 with the engine error
+        // mapping under test (measured statements 44.36 / branches 32.27 /
+        // functions 44.31 / lines 44.74).
+        thresholds: { statements: 42, branches: 30, functions: 42, lines: 42 },
       },
     },
   }),

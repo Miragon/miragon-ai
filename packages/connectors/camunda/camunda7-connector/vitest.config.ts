@@ -18,7 +18,10 @@ export default mergeConfig(
         // statements 38.66 / branches 27.88 / functions 32.05 / lines 39.09).
         // Raised 2026-08-25 with data/cockpit-data.ts under test (measured
         // statements 42.05 / branches 32.61 / functions 35.76 / lines 42.50).
-        thresholds: { statements: 39, branches: 30, functions: 33, lines: 40 },
+        // Raised 2026-10-08 with the engine-error/timeout guard end to end
+        // (measured statements 48.13 / branches 36.38 / functions 41.03 /
+        // lines 48.75).
+        thresholds: { statements: 46, branches: 34, functions: 39, lines: 46 },
       },
     },
   }),

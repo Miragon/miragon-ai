@@ -12,8 +12,58 @@ import type { ProfileSource } from "./server-locale.js"
  * structurally to the app's `ModuleDefinition` port — no import of the app.
  */
 
+/** The longest delay a Node timer holds — a longer deadline would fire at once. */
+const MAX_TIMEOUT_MS = 2_147_483_647
+
+const HEADERS_ERROR =
+  'PROMETHEUS_HEADERS must be a JSON object of string header values, e.g. {"X-Scope-OrgID":"tenant-a"}'
+
+/** `PROMETHEUS_HEADERS` JSON text (env) or an object (direct caller) → a header record. */
+const headersSchema = z
+  .union([
+    z.record(z.string(), z.string()),
+    z.string().transform((text, ctx) => {
+      try {
+        return JSON.parse(text) as unknown
+      } catch {
+        // Never echo the text: header values are often secrets (API keys).
+        ctx.addIssue({ code: "custom", message: HEADERS_ERROR })
+        return z.NEVER
+      }
+    }),
+  ])
+  .pipe(z.record(z.string(), z.string({ error: HEADERS_ERROR }), { error: HEADERS_ERROR }))
+
 const analyticsConfigSchema = z.object({
   url: z.string().default("http://localhost:9090"),
+  /**
+   * Prometheus auth (all optional): a bearer token, OR basic auth — explicit
+   * username + password or userinfo in `url` — plus extra headers (tenant
+   * ids). The client rejects ambiguous combinations at boot and keeps every
+   * credential out of model-visible errors.
+   */
+  bearerToken: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  headers: headersSchema.optional(),
+  // PROMETHEUS_TIMEOUT_MS — strict: a typo fails the boot instead of being
+  // coerced into some other deadline. Unset = the client default (30 s).
+  timeoutMs: z
+    .union([
+      z.number(),
+      z
+        .string()
+        .regex(/^\d+$/, "PROMETHEUS_TIMEOUT_MS must be a whole number of milliseconds")
+        .transform(Number),
+    ])
+    .pipe(
+      z
+        .number()
+        .int("PROMETHEUS_TIMEOUT_MS must be a whole number of milliseconds")
+        .min(1, "PROMETHEUS_TIMEOUT_MS must be at least 1 ms")
+        .max(MAX_TIMEOUT_MS, `PROMETHEUS_TIMEOUT_MS must be at most ${MAX_TIMEOUT_MS} ms`),
+    )
+    .optional(),
   /**
    * The effective toolset the composition root resolved from the
    * `MCP_ACTIVE_MODULES` suffix — always a concrete declared name there. The
@@ -40,11 +90,29 @@ export const analyticsModule = {
    * through to the schema default instead of producing an invalid-URL client.
    */
   configFromEnv(env: NodeJS.ProcessEnv): Record<string, unknown> {
-    return { url: env.PROMETHEUS_URL?.trim() || undefined }
+    // Blank = unset for every variable (a `KEY=` left in a .env file).
+    // Credentials are passed verbatim otherwise — never trimmed into another secret.
+    const trimmed = (name: string) => env[name]?.trim() || undefined
+    const verbatim = (name: string) => (env[name]?.trim() ? env[name] : undefined)
+    return {
+      url: trimmed("PROMETHEUS_URL"),
+      bearerToken: verbatim("PROMETHEUS_BEARER_TOKEN"),
+      username: verbatim("PROMETHEUS_USERNAME"),
+      password: verbatim("PROMETHEUS_PASSWORD"),
+      headers: trimmed("PROMETHEUS_HEADERS"),
+      timeoutMs: trimmed("PROMETHEUS_TIMEOUT_MS"),
+    }
   },
 
   /** This module's slice of the app's unknown-env-var typo warner. */
-  knownEnvVars: ["PROMETHEUS_URL"] as const,
+  knownEnvVars: [
+    "PROMETHEUS_URL",
+    "PROMETHEUS_BEARER_TOKEN",
+    "PROMETHEUS_USERNAME",
+    "PROMETHEUS_PASSWORD",
+    "PROMETHEUS_HEADERS",
+    "PROMETHEUS_TIMEOUT_MS",
+  ] as const,
 
   /**
    * `read-only` (the floor) | `standard` (adds the caller's own settings save,

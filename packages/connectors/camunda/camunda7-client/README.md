@@ -8,12 +8,12 @@ usable by any CIB Seven / Camunda 7 project.
 
 ## Exports
 
-| Subpath     | Contents                                                                      |
-| ----------- | ----------------------------------------------------------------------------- |
-| `.`         | `createCamunda7Client` factory (basic / bearer / no auth) + schema re-exports |
-| `./sdk`     | Generated SDK — one typed function per REST operation                         |
-| `./types`   | Generated request/response types                                              |
-| `./schemas` | Zod input schemas (see below)                                                 |
+| Subpath     | Contents                                                                 |
+| ----------- | ------------------------------------------------------------------------ |
+| `.`         | `createCamunda7Client` factory, `EngineRequestError` + schema re-exports |
+| `./sdk`     | Generated SDK — one typed function per REST operation                    |
+| `./types`   | Generated request/response types                                         |
+| `./schemas` | Zod input schemas (see below)                                            |
 
 These four subpaths are the public API. The internal layout of the generated
 output (`dist/generated/**`) is not — it may change with any `@hey-api/openapi-ts`
@@ -40,6 +40,18 @@ const client = createCamunda7Client({
 })
 const definitions = await getProcessDefinitions({ client, query: { latestVersion: true } })
 ```
+
+Every `createCamunda7Client` client — whatever its auth type — rejects with an
+`EngineRequestError` (an `Error` with `kind`, `httpStatus`, `type`,
+`engineMessage`, `engineCode`, `engineId`) instead of the raw error body, with
+a message that is safe and useful to show a model:
+`[404 InvalidRequestException] Process instance with id x does not exist (engine prod-a)`,
+`engine prod-a unreachable (ECONNREFUSED)`, or
+`engine prod-a did not respond within 30000 ms (timeout)`. Pass `engineId` to
+name the engine in those messages and `timeoutMs` to change the per-request
+deadline (default 30 000 ms). `withCallerSignal(client, signal)` returns a view
+whose reads (`GET`/`HEAD`/`OPTIONS`) also abort with the caller's signal —
+writes never do, since aborting a started write cannot undo it.
 
 ## OpenAPI spec — origin & refresh
 

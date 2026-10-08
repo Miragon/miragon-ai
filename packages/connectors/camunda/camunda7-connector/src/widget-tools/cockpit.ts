@@ -99,7 +99,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = await resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildProcessListData(client, engineId, {
         key: args.key,
         nameLike: args.nameLike,
@@ -145,7 +145,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = await resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildProcessInstancesData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
         active: args.active,
@@ -190,6 +190,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
+        ctx,
       )
       const data = await buildProcessIncidentsData(client, {
         baseUrl,
@@ -234,7 +235,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = await resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const [activities, activitiesCount, instances] = await Promise.all([
         getHistoricActivityInstances({
           client,

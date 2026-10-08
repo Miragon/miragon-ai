@@ -41,6 +41,14 @@ const perf = await analyzePerformance(prom, {
 })
 ```
 
+`createPrometheusClient` also takes optional auth — `bearerToken`, or
+`username` + `password` (userinfo in `url` is moved into the Basic header) —
+extra `headers` (e.g. a tenant id) and a per-query `timeoutMs` (default
+30 000 ms). Ambiguous auth throws at construction. Query errors never carry
+the URL or a credential and truncate upstream bodies, so they are safe to show
+a model. `withCallerSignal(client, signal)` makes every query abort with the
+caller's signal as well.
+
 ## Metrics contract
 
 [`metrics-contract.json`](metrics-contract.json) is the **single source of truth** for metric names
