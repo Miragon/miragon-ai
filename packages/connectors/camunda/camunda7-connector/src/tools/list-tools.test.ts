@@ -23,6 +23,7 @@ vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
   getExternalTasks: vi.fn(),
   getExternalTasksCount: vi.fn(),
   // unrelated endpoints imported by the same tool files
+  setExternalTaskResourceRetries: vi.fn(),
   fetchAndLock: vi.fn(),
   completeExternalTaskResource: vi.fn(),
   handleFailure: vi.fn(),
@@ -291,5 +292,31 @@ describe("envelope degradation", () => {
     const result = await callTool("camunda7_list_incidents", {})
 
     expect(result).toEqual({ items: [], totalCount: 0, hasMore: false })
+  })
+})
+
+describe("camunda7_set_external_task_retries", () => {
+  it("sets the retries on exactly the given external task and echoes them", async () => {
+    vi.mocked(sdk.setExternalTaskResourceRetries).mockResolvedValue(undefined)
+
+    const result = await callTool("camunda7_set_external_task_retries", {
+      externalTaskId: "ext-1",
+      retries: 3,
+    })
+
+    expect(sdk.setExternalTaskResourceRetries).toHaveBeenCalledWith({
+      client: fakeClient,
+      path: { id: "ext-1" },
+      body: { retries: 3 },
+    })
+    expect(result).toEqual({ success: true, externalTaskId: "ext-1", retries: 3 })
+  })
+
+  it("is a non-destructive, idempotent operations write — never a read", () => {
+    expect(tools.get("camunda7_set_external_task_retries")?.annotations).toEqual({
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    })
   })
 })

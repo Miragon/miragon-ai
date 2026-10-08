@@ -149,7 +149,8 @@ BPM operations across these domains (`category`): `engines`, `process-definition
 - **Process definitions** — `list_process_definitions`, `get_process_definition_xml`
 - **Process instances** — `start`, `list`, `get`, `delete`, `modify`, `set_*_suspension`,
   `get_activity_instance_tree`, variables
-- **User & external tasks** — `list/get/claim/unclaim/complete`, `list_external_tasks`
+- **User & external tasks** — `list/get/claim/unclaim/complete`, `list_external_tasks`,
+  `set_external_task_retries`
 - **Incidents & jobs** — `list_incidents`, `resolve_incident`, `format_incident_issue`,
   `list_jobs`, `set_job_retries`
 - **History & migrations** — `query_historic_*`, migration tools
@@ -182,7 +183,7 @@ unknown suffix warns and falls back to read-only, even under OAuth.
 | Toolset               | Surface                                                                                                                                                                                                                                   | No-suffix default |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
 | `camunda7:read-only`  | Queries only (`list_*`, `get_*`, `query_*`) plus `camunda7_engine` `list`/`current` — monitoring without writes                                                                                                                           | without OAuth     |
-| `camunda7:operations` | Read-only plus day-to-day engine writes: start instances, claim/assign/complete tasks, variables, job retries, resolve incidents, correlate messages                                                                                      | with OAuth        |
+| `camunda7:operations` | Read-only plus day-to-day engine writes: start instances, claim/assign/complete tasks, variables, job and external-task retries, resolve incidents, correlate messages                                                                    | with OAuth        |
 | `camunda7:admin`      | Everything: adds delete/modify/suspend, migrations, batch retries, `throw_signal` (engine-wide broadcast), the external-task worker protocol (`fetch_and_lock`, `complete_external_task`, `handle_external_task_failure`) and deployments | never             |
 | `analytics:read-only` | Every analytics tool and widget; no settings save                                                                                                                                                                                         | without OAuth     |
 | `analytics:standard`  | Adds `analytics_save_settings`                                                                                                                                                                                                            | with OAuth        |

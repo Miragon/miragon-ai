@@ -104,6 +104,7 @@ const OPERATIONS_ADDS: readonly string[] = [
   "camunda7_correlate_message",
   "camunda7_resolve_incident",
   "camunda7_save_user_profile",
+  "camunda7_set_external_task_retries",
   "camunda7_set_job_retries",
   "camunda7_set_process_instance_variable",
   "camunda7_set_task_assignee",

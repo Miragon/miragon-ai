@@ -51,6 +51,21 @@ export const listExternalTasksInput = z.object({
     .describe("Sort direction for sortBy (default asc); ignored without sortBy"),
 })
 
+/**
+ * Per-task retries (`PUT /external-task/{id}/retries`) — the operations-level
+ * recovery for a failed external task: retries > 0 hand it back to its
+ * workers and clear its `failedExternalTask` incident (which
+ * `camunda7_resolve_incident` cannot resolve); 0 raises one.
+ */
+export const setExternalTaskRetriesInput = z.object({
+  externalTaskId: z.string().describe("The external task ID (from camunda7_list_external_tasks)"),
+  retries: z
+    .number()
+    .int()
+    .min(0)
+    .describe("Number of retries to set; > 0 makes a failed task available to its workers again"),
+})
+
 export const fetchAndLockInput = z.object({
   workerId: z.string().describe("The ID of the worker to lock tasks for"),
   maxTasks: z.number().int().positive().default(10).describe("Maximum number of tasks to fetch"),

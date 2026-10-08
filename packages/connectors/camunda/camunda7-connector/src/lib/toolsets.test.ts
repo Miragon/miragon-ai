@@ -75,6 +75,7 @@ const ENGINE_WRITES = [
   "camunda7_claim_task",
   "camunda7_set_process_instance_variable",
   "camunda7_set_job_retries",
+  "camunda7_set_external_task_retries",
   "camunda7_correlate_message",
 ]
 

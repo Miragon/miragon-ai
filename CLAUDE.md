@@ -81,7 +81,8 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    Admin-only by decision, each with `destructiveHint: true`: the engine-wide
    `camunda7_throw_signal` and the external-task worker protocol (`fetch_and_lock`,
    `complete_external_task`, `handle_external_task_failure` — the read path is
-   `camunda7_list_external_tasks`). `camunda7_create_deployment` (`destructiveHint: true`)
+   `camunda7_list_external_tasks`, recovery in `operations` is
+   `camunda7_set_external_task_retries`). `camunda7_create_deployment` (`destructiveHint: true`)
    is additionally registered only with `CAMUNDA_ALLOW_DEPLOYMENTS=true`: deploying
    BPMN/DMN is code execution inside the engine JVM (JUEL, scripts) — never relax that
    gate or fold it into a toolset. Tools registered outside the registrar (the

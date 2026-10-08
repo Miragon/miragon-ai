@@ -1,5 +1,6 @@
 import {
   listExternalTasksInput,
+  setExternalTaskRetriesInput,
   fetchAndLockInput,
   completeExternalTaskInput,
   handleExternalTaskFailureInput,
@@ -8,6 +9,7 @@ import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   getExternalTasks,
   getExternalTasksCount,
+  setExternalTaskResourceRetries,
   fetchAndLock,
   completeExternalTaskResource,
   handleFailure,
@@ -37,7 +39,8 @@ export function registerExternalTaskTools(register: Register) {
     category: "external-tasks",
     description:
       "List external tasks (service-task work handed to external workers) with optional filters — topic, worker, " +
-      "lock state, retries, process instance/definition, activity. Read-only: it never locks, completes or fails a task. " +
+      "lock state, retries, process instance/definition, activity. Read-only: it never locks, completes or fails a task " +
+      "(noRetriesLeft finds the failed ones; camunda7_set_external_task_retries hands them back to their workers). " +
       "Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listExternalTasksInput.shape, ...engineParamShape },
@@ -67,6 +70,28 @@ export function registerExternalTaskTools(register: Register) {
         getExternalTasksCount({ client, query: filters }),
       ])
       return toPaginatedList(items, count, args.firstResult)
+    }),
+  })
+
+  // Operations-level recovery: the per-task retry knob, the external-task
+  // twin of camunda7_set_job_retries. It never acts AS the worker — the
+  // task goes back to the production workers.
+  register({
+    name: "camunda7_set_external_task_retries",
+    category: "external-tasks",
+    description:
+      "Set the retries of an external task. Retries > 0 hand a failed task back to its workers and clear its " +
+      "failedExternalTask incident (camunda7_resolve_incident cannot resolve that incident type); 0 raises an incident. " +
+      "Never locks, completes or fails the task itself.",
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    inputSchema: { ...setExternalTaskRetriesInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
+      await setExternalTaskResourceRetries({
+        client,
+        path: { id: args.externalTaskId },
+        body: { retries: args.retries },
+      })
+      return { success: true, externalTaskId: args.externalTaskId, retries: args.retries }
     }),
   })
 
