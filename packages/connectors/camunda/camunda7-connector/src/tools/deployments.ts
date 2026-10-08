@@ -1,3 +1,4 @@
+import type { z } from "zod"
 import {
   listDeploymentsInput,
   createDeploymentInput,
@@ -5,10 +6,44 @@ import {
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { getDeployments, getDeployment, createDeployment } from "@miragon-ai/camunda7-client/sdk"
+import type { MultiFormDeploymentDto } from "@miragon-ai/camunda7-client/types"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
+
+/**
+ * The `POST /deployment/create` multipart body, as the generated SDK expects it.
+ *
+ * A PLAIN record on purpose: the SDK's `formDataBodySerializer` builds the
+ * multipart body itself by walking `Object.entries(body)`, so a prebuilt
+ * `FormData` (no own enumerable entries) went out as an EMPTY body and no
+ * deployment ever succeeded (#326). Here every resource is a `File`, which the
+ * serializer appends under its own name as the part's filename — the engine
+ * names each deployed resource after that filename. Undefined fields are
+ * skipped and booleans go out as "true"/"false"; empty strings are dropped like
+ * absent ones so an empty `tenant-id` never reaches the engine.
+ *
+ * Part NAMES are synthetic (`resource-<n>`): the engine collects the parts in a
+ * map keyed by name and treats its reserved names (`deployment-name`,
+ * `tenant-id`, …) as fields, so naming a part after its resource would let a
+ * resource called e.g. "tenant-id" hijack a field instead of being deployed.
+ */
+type DeploymentForm = MultiFormDeploymentDto & Record<`resource-${number}`, File>
+
+function deploymentForm(args: z.infer<typeof createDeploymentInput>): DeploymentForm {
+  const form: DeploymentForm = {
+    "deployment-name": args.deploymentName,
+    "enable-duplicate-filtering": args.enableDuplicateFiltering,
+    "deploy-changed-only": args.deployChangedOnly,
+    "deployment-source": args.deploymentSource || undefined,
+    "tenant-id": args.tenantId || undefined,
+  }
+  args.resources.forEach((resource, index) => {
+    form[`resource-${index}`] = new File([resource.content], resource.name)
+  })
+  return form
+}
 
 export function registerDeploymentTools(
   register: Register,
@@ -60,28 +95,8 @@ export function registerDeploymentTools(
       "deployed models execute with the engine's privileges. Available only in the admin toolset with CAMUNDA_ALLOW_DEPLOYMENTS=true.",
     annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: { ...createDeploymentInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) => {
-      const form = new FormData()
-      form.append("deployment-name", args.deploymentName)
-      if (args.enableDuplicateFiltering !== undefined) {
-        form.append("enable-duplicate-filtering", String(args.enableDuplicateFiltering))
-      }
-      if (args.deployChangedOnly !== undefined) {
-        form.append("deploy-changed-only", String(args.deployChangedOnly))
-      }
-      if (args.deploymentSource) form.append("deployment-source", args.deploymentSource)
-      if (args.tenantId) form.append("tenant-id", args.tenantId)
-      for (const resource of args.resources) {
-        form.append(resource.name, new Blob([resource.content]), resource.name)
-      }
-      return createDeployment({
-        client,
-        body: form as unknown as Parameters<typeof createDeployment>[0] extends {
-          body?: infer B
-        }
-          ? B
-          : never,
-      })
-    }),
+    handler: withEngine(async (client, args) =>
+      createDeployment({ client, body: deploymentForm(args) }),
+    ),
   })
 }

@@ -27,10 +27,15 @@ export const createDeploymentInput = z.object({
   resources: z
     .array(
       z.object({
-        name: z.string().describe('Resource file name (e.g. "process.bpmn")'),
+        name: z.string().min(1).describe('Resource file name (e.g. "process.bpmn")'),
         content: z.string().describe("Resource content (BPMN XML, DMN XML, etc.)"),
       }),
     )
     .min(1)
-    .describe("Resources to deploy"),
+    // The engine keys a deployment's resources by file name: a repeated name
+    // would silently replace the earlier resource instead of failing.
+    .refine((resources) => new Set(resources.map((r) => r.name)).size === resources.length, {
+      message: "Resource names must be unique within one deployment",
+    })
+    .describe("Resources to deploy; each name must be unique within the deployment"),
 })
