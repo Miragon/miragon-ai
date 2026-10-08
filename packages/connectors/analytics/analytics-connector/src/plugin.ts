@@ -7,6 +7,7 @@ import { registerSettingsTools } from "./settings-tools.js"
 import { registerWidgetTools, type FetchBpmnXml } from "./widget-tools.js"
 import { definition } from "./definition.js"
 import type { ProfileSource } from "./server-locale.js"
+import type { AnalyticsToolset } from "./toolsets.js"
 
 export interface AnalyticsPluginConfig {
   /** Base URL of the Prometheus HTTP API (e.g. http://localhost:9090). */
@@ -25,8 +26,13 @@ export interface AnalyticsPluginConfig {
    * period/minBucketSize defaults, written by `analytics_save_settings`.
    */
   profileStore?: ProfileSource
-  /** Toolset suffix from the app ("read-only" hides the settings save tool). */
-  toolset?: string
+  /**
+   * The module's effective toolset (`analyticsModule` resolves it from the
+   * composition root's selection). `"read-only"` — also what an ABSENT toolset
+   * resolves to — registers no settings save tool; `"standard"` registers it,
+   * given a writable `profileStore`.
+   */
+  toolset?: AnalyticsToolset
 }
 
 export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer> {
