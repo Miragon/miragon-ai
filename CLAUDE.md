@@ -302,7 +302,12 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
   (`playground/docker/grafana/dashboards/*.json`) — are checked against the contract by tests on
   both sides: `packages/connectors/analytics/analytics-client/src/metrics-contract.test.ts` (vitest — also
   covers the Grafana dashboards incl. regex matchers, per-metric `sum by (…)` grouping
-  labels, and a dead-entry check with a documented allowlist) and
+  labels, and a dead-entry check with a documented allowlist; its behavioural twin
+  `src/metrics-contract-labels.test.ts` runs EVERY exported query function through a
+  recording client and checks every matcher/`by`/`on` label against the contract — alert
+  rules and dashboards included; its `SCENARIOS` map is total over `queries`, so a new
+  export needs an entry, and new PromQL shapes extend the `*.test-support.ts` checker
+  rather than bypass it) and
   `engine-plugins/cibseven-history-metrics/.../MetricsContractTest.kt` (Gradle — also
   checks the label keys each instrument attaches). A rename that skips the contract or
   a consumer fails one of them; don't weaken these guards to make a change pass. Only
