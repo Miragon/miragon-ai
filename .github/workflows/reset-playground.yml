@@ -15,7 +15,10 @@ name: Reset Playground
 # lives in deploy-playground.yml if that is ever needed.
 #
 # Runs on the schedule below and can be triggered manually. Requires the same
-# org-scoped FLY_API_TOKEN repo secret as deploy-playground.yml.
+# org-scoped FLY_API_TOKEN repo secret as deploy-playground.yml — a token of
+# the org that owns the playground apps (`fly tokens create org -o miragon`).
+# An app-scoped deploy token (`fly tokens create deploy`) does not work: it
+# cannot reach two apps, and Fly rejects it as "unauthorized".
 #
 # NOTE ON TIMING: GitHub Actions cron is UTC and does not observe DST, so a fixed
 # UTC time drifts one hour across the year in Germany. 22:00 UTC = 00:00 local
@@ -47,6 +50,12 @@ jobs:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       ENGINE_APP: miragon-ai-playground-engine
       PROM_APP: miragon-ai-playground-prometheus
+    defaults:
+      run:
+        # An explicit `bash` runs with `-eo pipefail`. The implicit default runs
+        # without pipefail, so a failing `flyctl … | jq` exits 0 and the
+        # real error gets masked by a misleading follow-up message.
+        shell: bash
     steps:
       # Pinned by commit SHA (repo convention: no floating tags); flyctl version
       # kept in lockstep with deploy-playground.yml.
@@ -54,11 +63,24 @@ jobs:
         with:
           version: 0.4.67
 
+      # Preflight before anything destructive: the token must reach BOTH apps.
+      # A bad token then fails here with the real cause, instead of leaving
+      # the playground half-reset (engine restarted, metric history kept).
+      - name: Check Fly access
+        run: |
+          for app in "$ENGINE_APP" "$PROM_APP"; do
+            if ! out=$(flyctl machines list --app "$app" --json 2>&1); then
+              echo "$out" >&2
+              echo "::error title=FLY_API_TOKEN cannot reach $app::The token must be an org-scoped token of the org that owns the playground apps (fly tokens create org -o miragon). An app-scoped deploy token is rejected as unauthorized."
+              exit 1
+            fi
+          done
+
       - name: Restart engine (reseeds H2 database)
         run: |
           ids=$(flyctl machines list --app "$ENGINE_APP" --json | jq -r '.[].id')
           if [ -z "$ids" ]; then
-            echo "no machines found for $ENGINE_APP — is the playground deployed?" >&2
+            echo "::error::no machines found for $ENGINE_APP — is the playground deployed?"
             exit 1
           fi
           for id in $ids; do

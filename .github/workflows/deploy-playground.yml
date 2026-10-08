@@ -5,7 +5,9 @@ name: Deploy Playground
 # is a demo environment, not part of the release train.
 #
 # Required repo secret: FLY_API_TOKEN — an org-scoped Fly deploy token
-# (`fly tokens create org`), stored including the leading `FlyV1 ` prefix.
+# (`fly tokens create org -o miragon`), stored including the leading `FlyV1 `
+# prefix. An app-scoped token (`fly tokens create deploy`) is rejected as
+# "unauthorized" — it cannot reach the other playground apps.
 on:
   workflow_dispatch:
     inputs:
@@ -66,4 +68,4 @@ jobs:
         run: ./playground/fly/deploy.sh "${{ inputs.target }}"
         env:
           # Org that owns the playground apps (repo variable, optional).
-          FLY_ORG: ${{ vars.FLY_ORG || 'personal' }}
+          FLY_ORG: ${{ vars.FLY_ORG || 'miragon' }}
