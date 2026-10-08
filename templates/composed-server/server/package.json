@@ -4,6 +4,9 @@
   "private": true,
   "description": "Composed MCP server: Miragon AI modules (camunda7, analytics) plus the custom notes module.",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "main": "dist/index.js",
   "scripts": {
     "build:ui": "vite build",
