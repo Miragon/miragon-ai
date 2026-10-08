@@ -83,9 +83,33 @@ jobs:
             echo "::error::no machines found for $ENGINE_APP — is the playground deployed?"
             exit 1
           fi
+          restarted_at=$(date -u +%Y-%m-%dT%H:%M:%S)
           for id in $ids; do
             echo "==> restarting machine $id"
-            flyctl machine restart "$id" --app "$ENGINE_APP"
+            # flyctl's own health-check wait gives up after 5 min, but the
+            # engine needs ~7 min on shared-cpu-2x to boot and reseed. The
+            # loop below waits with a longer deadline instead.
+            flyctl machine restart "$id" --app "$ENGINE_APP" --skip-health-checks
+          done
+
+          # Wait until every engine check (engine_rest in engine.fly.toml)
+          # passes with a result recorded AFTER the restart. A "passing" from
+          # the old process may still be listed right after the restart.
+          deadline=$((SECONDS + 15 * 60))
+          while :; do
+            fresh=$(flyctl machines list --app "$ENGINE_APP" --json | jq --arg t "$restarted_at" \
+              '[.[].checks[]?] as $all
+               | ($all | length) > 0
+                 and ($all | all(.status == "passing" and .updated_at > $t))')
+            if [ "$fresh" = "true" ]; then
+              echo "==> engine healthy $((SECONDS / 60)) min after the restart"
+              break
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::engine not healthy 15 min after the restart"
+              exit 1
+            fi
+            sleep 20
           done
 
       - name: Wipe Prometheus history
