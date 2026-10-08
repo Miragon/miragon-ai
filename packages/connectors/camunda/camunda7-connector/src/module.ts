@@ -245,6 +245,15 @@ function loadEnginesFromEnv(env: NodeJS.ProcessEnv): unknown {
   return [{ id, baseUrl: "http://localhost:8410/engine-rest" }]
 }
 
+/**
+ * CAMUNDA_ALLOW_DEPLOYMENTS as the module reads it — trimmed, empty = unset —
+ * shared by `configFromEnv` (what arms the tool) and `bootWarnings` (what
+ * discloses it), so a padded "true" can never arm deployments silently.
+ */
+function allowDeploymentsFromEnv(env: NodeJS.ProcessEnv): string | undefined {
+  return env.CAMUNDA_ALLOW_DEPLOYMENTS?.trim() || undefined
+}
+
 export const camunda7Module = {
   name: "camunda7",
 
@@ -260,7 +269,7 @@ export const camunda7Module = {
       // Only trimmed (empty = unset, like the other CAMUNDA_* vars — e.g. a
       // compose `${CAMUNDA_ALLOW_DEPLOYMENTS:-}`); the schema rejects anything
       // but "true"/"false".
-      allowDeployments: env.CAMUNDA_ALLOW_DEPLOYMENTS?.trim() || undefined,
+      allowDeployments: allowDeploymentsFromEnv(env),
       // Engine-health verdict thresholds — only forwarded when set, so the
       // module's defaults apply otherwise.
       ...(env.CAMUNDA_HEALTH_CRITICAL_INCIDENTS || env.CAMUNDA_HEALTH_CRITICAL_CLUSTER_SIZE
@@ -324,7 +333,7 @@ export const camunda7Module = {
         `No engine is configured (CAMUNDA_ENGINES_FILE / CAMUNDA_ENGINES_JSON / CAMUNDA_BASE_URL) — defaulting to http://localhost:8410/engine-rest with engine id "${id}". That id is the join key against the metrics' engine_id label: engine-scoped analytics return empty when it does not match the ENGINE_ID the engine stamps (the repo's Compose stack stamps "prod-a" — set CAMUNDA_ENGINE_ID to match).`,
       )
     }
-    if (env.CAMUNDA_ALLOW_DEPLOYMENTS === "true") {
+    if (allowDeploymentsFromEnv(env) === "true") {
       warnings.push(
         "CAMUNDA_ALLOW_DEPLOYMENTS=true — camunda7_create_deployment is registered under camunda7:admin. Deploying a process runs code inside the engine JVM (expressions, scripts and listener/delegate references execute with the engine's privileges): grant camunda7:admin only to callers you would trust with that.",
       )

@@ -323,7 +323,9 @@ export function composeModules<TShared>(options: {
  * builder's `save-dashboard`/`delete-dashboard`, which no module toolset
  * filters. Only with a caller identity (dashboards are keyed by user; without
  * OAuth every record is shared and ownerless) and only when no active module
- * sits on its read-only floor: the most restrictive module wins.
+ * sits on its read-only floor: the most restrictive module wins. A module on
+ * the deprecated `supportsToolsets` pass-through counts as restricted too —
+ * its surface is unknowable here — so it keeps the dashboard builder off.
  */
 export function frameworkWritesAllowed(boot: ResolvedBoot): boolean {
   return boot.authenticated && boot.toolsets.every(({ durableWrites }) => durableWrites)

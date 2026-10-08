@@ -221,7 +221,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    Framework durable writes no module toolset filters (the toolkit builder's
    `get-builder-catalogue` + `save/list/load/delete-dashboard`) are registered only when
    `frameworkWritesAllowed(boot)` holds — OAuth installed AND no active module on its
-   read-only floor; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
+   read-only floor or on the deprecated `supportsToolsets` pass-through; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
    app's `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
    only declares the module list and wires `SharedResources` (profile store +
    `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap;

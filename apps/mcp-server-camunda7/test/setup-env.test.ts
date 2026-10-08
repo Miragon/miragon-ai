@@ -184,6 +184,8 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
 
   it("selectBoot derives the selection from the provider ACTUALLY built from MCP_OAUTH", () => {
     vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    // `getOAuthConfigFromEnv(undefined)` falls back to process.env.MCP_OAUTH.
+    vi.stubEnv("MCP_OAUTH", undefined)
     const toolsets = (selection: ReturnType<typeof selectBoot>) =>
       Object.fromEntries(selection.boot.entries.map((e) => [e.app, e.config.toolset]))
 

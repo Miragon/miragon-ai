@@ -313,6 +313,20 @@ describe("camunda7Module.bootWarnings", () => {
     ).toEqual([])
   })
 
+  it.each([" true ", "true\n"])(
+    "discloses a padded opt-in (%j) exactly like the value configFromEnv arms",
+    (raw) => {
+      const env = {
+        CAMUNDA_BASE_URL: "http://engine.example/engine-rest",
+        CAMUNDA_ALLOW_DEPLOYMENTS: raw,
+      }
+      expect(camunda7Module.configFromEnv(env).allowDeployments).toBe("true")
+      expect(camunda7Module.bootWarnings(env)).toEqual([
+        expect.stringContaining("CAMUNDA_ALLOW_DEPLOYMENTS=true"),
+      ])
+    },
+  )
+
   it("keeps both warnings when the engine is unconfigured AND deployments are on", () => {
     const warnings = camunda7Module.bootWarnings({ CAMUNDA_ALLOW_DEPLOYMENTS: "true" })
     expect(warnings).toHaveLength(2)

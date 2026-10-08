@@ -82,7 +82,7 @@ MCP_ACTIVE_MODULES=camunda7:operations,analytics:standard,notes
   boot log's `Toolsets —` line after every change.
 - `camunda7_create_deployment` additionally needs `CAMUNDA_ALLOW_DEPLOYMENTS=true`
   next to `camunda7:admin` — deploying a BPMN/DMN runs code inside the engine
-  JVM (JUEL expressions, scripts). Strict `true`/`false`; junk fails the boot.
+  JVM (JUEL expressions, scripts). Strict `true`/`false` (empty = unset); junk fails the boot.
 - Widening is a security decision: the server listens on all interfaces with
   no auth of its own, so write toolsets are open to anyone who reaches the
   port. Behind an authenticating gateway the server still sees no identity —

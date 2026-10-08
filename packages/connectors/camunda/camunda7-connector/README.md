@@ -40,7 +40,7 @@ the React context and hangs every in-widget query on "Loading…".
   `camunda7_list_external_tasks` is the read-only view of external tasks. Widget action buttons
   render only for tools the toolset registers.
 - **Deployments are opt-in** — `camunda7_create_deployment` is registered only with
-  `CAMUNDA_ALLOW_DEPLOYMENTS=true` (strict `true`/`false`, anything else fails the boot) on top of
+  `CAMUNDA_ALLOW_DEPLOYMENTS=true` (strict `true`/`false` after trimming, empty = unset, anything else fails the boot) on top of
   `camunda7:admin`: deploying a BPMN/DMN is code execution inside the engine JVM (JUEL expressions,
   scripts). The full camunda7 surface of earlier releases is `camunda7:admin` plus that flag.
 
