@@ -4,7 +4,10 @@ import type { AddressInfo } from "node:net"
 import { afterEach, describe, expect, it } from "vitest"
 import { z } from "zod"
 import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
-import type { CreateDeploymentResponse } from "@miragon-ai/camunda7-client/types"
+import type {
+  CreateDeploymentResponse,
+  MultiFormDeploymentDto,
+} from "@miragon-ai/camunda7-client/types"
 import {
   createEngineRegistry,
   type EngineEntry,
@@ -65,17 +68,71 @@ function decodeForm(request: RecordedRequest): Promise<FormData> {
   }).formData()
 }
 
-/** The file parts of a decoded form, in wire order: filename + text content. */
-async function fileParts(form: FormData): Promise<Array<{ filename: string; content: string }>> {
-  const files = [...form.values()].filter((value): value is File => value instanceof File)
-  return Promise.all(files.map(async (f) => ({ filename: f.name, content: await f.text() })))
+/**
+ * Each file part's filename exactly as the ENGINE's parser reads it: the raw
+ * `filename="…"` of the part header. The platform decoder reverses fetch's
+ * `%22`/`%0D`/`%0A` escapes and commons-fileupload does not, so on the engine
+ * `a"b` and a literal `a%22b` are the same name.
+ */
+function wireFilenames(request: RecordedRequest): string[] {
+  return request.body
+    .toString("utf8")
+    .split("\r\n")
+    .flatMap(
+      (line) => /^Content-Disposition: form-data; .*; filename="(.*)"$/i.exec(line)?.[1] ?? [],
+    )
 }
 
-/** The non-file (text) parts of a decoded form, as a plain object. */
-function textParts(form: FormData): Record<string, string> {
-  return Object.fromEntries(
-    [...form.entries()].filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+/**
+ * The part names the engine reads as deployment FIELDS (CIB Seven
+ * `DeploymentRestServiceImpl.RESERVED_KEYWORDS`): every other part is deployed
+ * as a resource. Typed against the generated DTO, so a field the spec adds or
+ * renames breaks this list at compile time instead of slipping past it.
+ */
+const RESERVED_FIELDS: ReadonlySet<string> = new Set(
+  Object.keys({
+    "deployment-name": true,
+    "deployment-activation-time": true,
+    "enable-duplicate-filtering": true,
+    "deploy-changed-only": true,
+    "deployment-source": true,
+    "tenant-id": true,
+  } satisfies Record<Exclude<keyof MultiFormDeploymentDto, "data">, true>),
+)
+
+/**
+ * A recorded request as the ENGINE reads it, not merely as the platform
+ * decodes it. The engine collects the parts in a map keyed by part NAME (CIB
+ * Seven `MultipartFormData`, last part wins), reads the reserved names as
+ * fields and deploys every other part as a resource named after its raw
+ * filename. So the view fails on what that map would hide before anything is
+ * compared: a part name sent twice (all but the last part silently dropped), a
+ * file under a reserved name (a resource taking over a field) or a text part
+ * posing as a resource.
+ */
+async function engineView(request: RecordedRequest) {
+  const form = await decodeForm(request)
+  const partNames = [...form.keys()]
+  expect(partNames, "a repeated part name keeps only its last part").toEqual([
+    ...new Set(partNames),
+  ])
+  const fields: Record<string, string> = {}
+  const files: File[] = []
+  for (const [name, value] of form.entries()) {
+    if (RESERVED_FIELDS.has(name)) {
+      expect(value, `reserved part "${name}" must be a text field`).toBeTypeOf("string")
+      fields[name] = value as string
+    } else {
+      expect(value, `part "${name}" must be a file the engine can deploy`).toBeInstanceOf(File)
+      files.push(value as File)
+    }
+  }
+  const filenames = wireFilenames(request)
+  expect(filenames).toHaveLength(files.length)
+  const resources = await Promise.all(
+    files.map(async (file, index) => ({ filename: filenames[index], content: await file.text() })),
   )
+  return { partNames, fields, resources }
 }
 
 const DEPLOYMENT: CreateDeploymentResponse = {
@@ -152,12 +209,14 @@ describe("camunda7_create_deployment on the wire (recording fake engine)", () =>
     expect(request.body.toString("utf8")).toContain(`--${boundary}--`)
     expect(request.headers.authorization).toBe(`Basic ${btoa("demo:demo")}`)
 
-    const form = await decodeForm(request)
-    expect(textParts(form)).toEqual({ "deployment-name": "orders" })
-    expect(await fileParts(form)).toEqual([
-      { filename: "order.bpmn", content: ORDER_BPMN },
-      { filename: "rules.dmn", content: RULES_DMN },
-    ])
+    expect(await engineView(request)).toEqual({
+      partNames: ["deployment-name", "resource-0", "resource-1"],
+      fields: { "deployment-name": "orders" },
+      resources: [
+        { filename: "order.bpmn", content: ORDER_BPMN },
+        { filename: "rules.dmn", content: RULES_DMN },
+      ],
+    })
   })
 
   it("forwards every optional field the schema exposes, in the engine's spelling", async () => {
@@ -173,15 +232,24 @@ describe("camunda7_create_deployment on the wire (recording fake engine)", () =>
       resources: [{ name: "order.bpmn", content: ORDER_BPMN }],
     })
 
-    const form = await decodeForm(engine.requests[0])
-    expect(textParts(form)).toEqual({
-      "deployment-name": "orders",
-      "enable-duplicate-filtering": "true",
-      "deploy-changed-only": "false",
-      "deployment-source": "miragon-ai",
-      "tenant-id": "tenant-a",
+    expect(await engineView(engine.requests[0])).toEqual({
+      partNames: [
+        "deployment-name",
+        "enable-duplicate-filtering",
+        "deploy-changed-only",
+        "deployment-source",
+        "tenant-id",
+        "resource-0",
+      ],
+      fields: {
+        "deployment-name": "orders",
+        "enable-duplicate-filtering": "true",
+        "deploy-changed-only": "false",
+        "deployment-source": "miragon-ai",
+        "tenant-id": "tenant-a",
+      },
+      resources: [{ filename: "order.bpmn", content: ORDER_BPMN }],
     })
-    expect(await fileParts(form)).toEqual([{ filename: "order.bpmn", content: ORDER_BPMN }])
   })
 
   it("never lets a resource name or an empty field masquerade as a form field", async () => {
@@ -198,13 +266,56 @@ describe("camunda7_create_deployment on the wire (recording fake engine)", () =>
       ],
     })
 
-    const form = await decodeForm(engine.requests[0])
     // Empty strings are omitted like absent fields; the resources named after
-    // reserved fields arrive as file parts under their own filenames.
-    expect(textParts(form)).toEqual({ "deployment-name": "orders" })
-    expect(await fileParts(form)).toEqual([
-      { filename: "tenant-id", content: ORDER_BPMN },
-      { filename: "deployment-name", content: RULES_DMN },
+    // reserved fields travel under synthetic part names and keep their own
+    // names only as filenames, so the engine still deploys both of them.
+    expect(await engineView(engine.requests[0])).toEqual({
+      partNames: ["deployment-name", "resource-0", "resource-1"],
+      fields: { "deployment-name": "orders" },
+      resources: [
+        { filename: "tenant-id", content: ORDER_BPMN },
+        { filename: "deployment-name", content: RULES_DMN },
+      ],
+    })
+  })
+
+  it("delivers every name the input schema accepts byte-exact as the filename", async () => {
+    const engine = await startFakeEngine(DEPLOYMENT)
+    const { config, call } = deploymentTool([{ id: "local", baseUrl: engine.baseUrl }])
+    const names = ["processes/order process.bpmn", "Größe – Rabattstufen.dmn", "order%22v2.bpmn"]
+
+    // Validated first, exactly as the server validates before the handler runs.
+    await call(
+      z.object(config.inputSchema).parse({
+        deploymentName: "orders",
+        resources: names.map((name) => ({ name, content: ORDER_BPMN })),
+      }) as CreateArgs,
+    )
+
+    const { resources } = await engineView(engine.requests[0])
+    expect(resources.map((r) => r.filename)).toEqual(names)
+  })
+
+  it("refuses names the transport would rewrite into a collision", async () => {
+    const engine = await startFakeEngine(DEPLOYMENT)
+    const { config, call } = deploymentTool([{ id: "local", baseUrl: engine.baseUrl }])
+    const colliding = {
+      deploymentName: "orders",
+      resources: [
+        { name: 'order"v2.bpmn', content: ORDER_BPMN },
+        { name: "order%22v2.bpmn", content: RULES_DMN },
+      ],
+    }
+
+    // Unvalidated, fetch percent-escapes the quote: two distinct names reach
+    // the engine as ONE filename, and the engine keeps only one of them.
+    await call(colliding)
+    const { resources } = await engineView(engine.requests[0])
+    expect(resources.map((r) => r.filename)).toEqual(["order%22v2.bpmn", "order%22v2.bpmn"])
+
+    // The tool's input schema refuses the pair before any request is sent.
+    expect(z.object(config.inputSchema).safeParse(colliding).error?.issues).toEqual([
+      expect.objectContaining({ path: ["resources", 0, "name"] }),
     ])
   })
 
