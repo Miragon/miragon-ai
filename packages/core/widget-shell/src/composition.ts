@@ -1,5 +1,6 @@
 import type { AppConfig, AppConfigEntry, AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
+import type { ToolsetSource, ToolsetVocabulary } from "./toolsets.js"
 
 /**
  * The composition-root machinery every server (the stock app AND a customer's
@@ -21,8 +22,20 @@ export interface ComposableModule<TShared> {
   configFromEnv(env: NodeJS.ProcessEnv): Record<string, unknown>
   /** Env vars this module reads — composed into the root's unknown-var typo warner. */
   knownEnvVars: readonly string[]
-  /** Whether the module understands the `module:toolset` suffix syntax. */
-  supportsToolsets: boolean
+  /**
+   * The module's toolset vocabulary (`createToolsetVocabulary`). Declaring it
+   * opts the module into the `module:toolset` suffix: the composition resolves
+   * ONE concrete toolset per boot — the suffix, or the auth-dependent default,
+   * never "everything" — and threads it into `config.toolset`. Absent = the
+   * module has no toolsets.
+   */
+  toolsets?: ToolsetVocabulary<string>
+  /**
+   * @deprecated Declare {@link ComposableModule.toolsets} instead. `true`
+   * without a vocabulary passes the raw suffix through unresolved and leaves an
+   * absent suffix to the module (with a boot warning).
+   */
+  supportsToolsets?: boolean
   /** Optional boot-time hints (returned, and logged by the root) for active deployments. */
   bootWarnings?(env: NodeJS.ProcessEnv): string[]
   /** Validates the raw config and builds the plugin; receives the shared resources. */
@@ -32,12 +45,46 @@ export interface ComposableModule<TShared> {
 export interface ActiveModuleRef {
   name: string
   /**
-   * Optional toolset suffix from the `module:toolset` syntax, e.g.
-   * `camunda7:read-only`. Validated by the module itself (unknown toolsets
-   * warn + expose all tools — fail-open, consistent with the unknown-module
-   * handling here).
+   * The raw toolset suffix from the `module:toolset` syntax, e.g.
+   * `camunda7:read-only` — trimmed, and kept even when EMPTY (`camunda7:` →
+   * `""`), so an empty suffix fails closed like an unknown one instead of
+   * reading as "no suffix". Absent = no suffix: the auth-dependent default.
    */
   toolset?: string
+}
+
+/** The toolset one active module runs with — one entry of the boot log. */
+export interface EffectiveToolset {
+  module: string
+  /** The concrete toolset; absent for a module without toolsets. */
+  toolset?: string
+  /**
+   * Why: the suffix named it, the auth-dependent default applied, an empty or
+   * unknown suffix fell back to the floor — or `none` for a module without a
+   * vocabulary (no toolsets, or a deprecated `supportsToolsets` pass-through).
+   */
+  source: ToolsetSource | "none"
+  /** Whether the toolset permits durable writes; a module without a vocabulary declares no restriction. */
+  durableWrites: boolean
+}
+
+/** One boot's module selection, resolved ONCE by the composition root. */
+export interface ResolvedBoot {
+  /** Whether the root installed OAuth (a caller identity exists). */
+  authenticated: boolean
+  /** The active modules' mcp-use config entries, each carrying its effective toolset. */
+  entries: AppConfigEntry[]
+  toolsets: EffectiveToolset[]
+}
+
+export interface ResolveBootOptions {
+  /**
+   * Whether the composition root INSTALLED OAuth on `/mcp`. Only the root
+   * knows — never infer it from an env var the root may not honor (a server
+   * without OAuth wiring would read a stray `MCP_OAUTH` as authenticated and
+   * fail open). Omitted = `false`, the fail-closed reading.
+   */
+  authenticated?: boolean
 }
 
 /**
@@ -50,15 +97,25 @@ export interface ModuleComposition<TShared> {
   knownEnvVars: ReadonlySet<string>
   /** The `MCP_ACTIVE_MODULES` selection (unset/`all` = every module); unknown names warn and are skipped. */
   activeModules: (env?: NodeJS.ProcessEnv) => ActiveModuleRef[]
-  /** The active modules' mcp-use config entries, toolset suffix threaded into each config. */
-  appEntries: (env?: NodeJS.ProcessEnv) => AppConfigEntry[]
-  appConfig: (env?: NodeJS.ProcessEnv) => AppConfig
+  /**
+   * Resolve the boot ONCE: every toolset-bearing module gets a concrete
+   * effective toolset in its config (suffix → itself; empty/unknown → the
+   * module's floor, with one warning; none → the floor without OAuth, the
+   * module's standard toolset with it). Call it once per boot and derive
+   * plugins, `AppConfig` and the boot log from the result.
+   */
+  resolveBoot: (env?: NodeJS.ProcessEnv, options?: ResolveBootOptions) => ResolvedBoot
+  /** `resolveBoot(env, options).entries`. */
+  appEntries: (env?: NodeJS.ProcessEnv, options?: ResolveBootOptions) => AppConfigEntry[]
+  appConfig: (env?: NodeJS.ProcessEnv, options?: ResolveBootOptions) => AppConfig
   /** Instantiate the active modules' plugins with the root's shared resources. */
   pluginsFor: (entries: AppConfigEntry[], shared: TShared) => AppPlugin<MCPServer>[]
   /** Report unknown env vars under any watched prefix; returns the offenders. */
   warnUnknownEnvVars: (env?: NodeJS.ProcessEnv, extraKnown?: Iterable<string>) => string[]
   /** Collect + log the active modules' boot-time hints. */
   emitBootWarnings: (env?: NodeJS.ProcessEnv) => string[]
+  /** Log (console.info) and return the one boot line that states each active module's effective toolset. */
+  logEffectiveToolsets: (boot: ResolvedBoot) => string
 }
 
 export function composeModules<TShared>(options: {
@@ -112,8 +169,12 @@ export function composeModules<TShared>(options: {
       .map((s) => s.trim())
       .filter(Boolean)
       .map((entry): ActiveModuleRef => {
-        const [name, toolset] = entry.split(":", 2)
-        return toolset ? { name, toolset } : { name }
+        // Everything after the FIRST colon is the suffix, kept even when empty
+        // or when it contains further colons — both are then unknown toolset
+        // names and fail closed, instead of reading as "no suffix".
+        const colon = entry.indexOf(":")
+        if (colon === -1) return { name: entry }
+        return { name: entry.slice(0, colon).trim(), toolset: entry.slice(colon + 1).trim() }
       })
       .filter(({ name }) => {
         if (!registry[name]) {
@@ -124,29 +185,70 @@ export function composeModules<TShared>(options: {
       })
   }
 
-  const appEntries = (env: NodeJS.ProcessEnv = process.env): AppConfigEntry[] =>
-    activeModules(env).map(({ name, toolset }) => {
-      if (toolset && !registry[name].supportsToolsets) {
-        console.warn(
-          `[${label}] Module "${name}" has no toolsets — ignoring ":${toolset}" and exposing all tools`,
-        )
-        toolset = undefined
+  // The one place a suffix becomes a toolset: per module, per boot.
+  const effectiveToolset = (
+    module: ComposableModule<TShared>,
+    suffix: string | undefined,
+    authenticated: boolean,
+  ): EffectiveToolset => {
+    const vocabulary = module.toolsets
+    if (vocabulary) {
+      const { toolset, source } = vocabulary.effective(suffix, { authenticated })
+      return {
+        module: module.name,
+        toolset,
+        source,
+        durableWrites: vocabulary.allowsDurableWrites(toolset),
       }
+    }
+    if (module.supportsToolsets) {
+      console.warn(
+        `[${label}] Module "${module.name}" declares the deprecated supportsToolsets without a toolsets vocabulary — ` +
+          `its suffix is passed through unresolved; declare \`toolsets\` (createToolsetVocabulary) instead`,
+      )
+      return {
+        module: module.name,
+        ...(suffix === undefined ? {} : { toolset: suffix }),
+        source: "none",
+        durableWrites: true,
+      }
+    }
+    if (suffix !== undefined) {
+      console.warn(`[${label}] Module "${module.name}" has no toolsets — ignoring ":${suffix}"`)
+    }
+    return { module: module.name, source: "none", durableWrites: true }
+  }
+
+  const resolveBoot = (
+    env: NodeJS.ProcessEnv = process.env,
+    { authenticated = false }: ResolveBootOptions = {},
+  ): ResolvedBoot => {
+    const toolsets: EffectiveToolset[] = []
+    const entries = activeModules(env).map(({ name, toolset: suffix }): AppConfigEntry => {
+      const effective = effectiveToolset(registry[name], suffix, authenticated)
+      toolsets.push(effective)
+      const { toolset } = effective
       return {
         app: name,
         config: {
           ...registry[name].configFromEnv(env),
-          ...(toolset ? { toolset } : {}),
+          ...(toolset === undefined ? {} : { toolset }),
         },
       }
     })
+    return { authenticated, entries, toolsets }
+  }
+
+  const appEntries = (env?: NodeJS.ProcessEnv, options?: ResolveBootOptions): AppConfigEntry[] =>
+    resolveBoot(env, options).entries
 
   return {
     knownEnvVars,
     activeModules,
+    resolveBoot,
     appEntries,
-    appConfig(env) {
-      return { activeApps: appEntries(env), pipelines: {} }
+    appConfig(env, options) {
+      return { activeApps: appEntries(env, options), pipelines: {} }
     },
     pluginsFor(entries, shared) {
       return entries
@@ -176,8 +278,8 @@ export function composeModules<TShared>(options: {
       return unknown
     },
     emitBootWarnings(env = process.env) {
-      // Deliberately separate from `configFromEnv` (which runs twice per boot
-      // — plugins + app config — and stays side-effect free).
+      // Deliberately separate from `configFromEnv` (which runs inside
+      // `resolveBoot` and stays side-effect free).
       const warnings = activeModules(env).flatMap(
         ({ name }) => registry[name].bootWarnings?.(env) ?? [],
       )
@@ -186,5 +288,35 @@ export function composeModules<TShared>(options: {
       }
       return warnings
     },
+    logEffectiveToolsets(boot) {
+      // console.info, deliberately not a boot WARNING: it states the surface
+      // on every boot, the restrictive default included.
+      const reason = (source: EffectiveToolset["source"]) => {
+        if (source === "default")
+          return boot.authenticated ? "default with OAuth" : "default without OAuth"
+        return source === "none" ? "unresolved" : source
+      }
+      const modules = boot.toolsets
+        .map(({ module, toolset, source }) =>
+          toolset === undefined
+            ? `${module} (no toolsets)`
+            : `${module}:${toolset} (${reason(source)})`,
+        )
+        .join(", ")
+      const line = `[${label}] Toolsets — ${modules || "no active modules"}`
+      console.info(line)
+      return line
+    },
   }
+}
+
+/**
+ * Whether the server may register FRAMEWORK durable writes — the toolkit
+ * builder's `save-dashboard`/`delete-dashboard`, which no module toolset
+ * filters. Only with a caller identity (dashboards are keyed by user; without
+ * OAuth every record is shared and ownerless) and only when no active module
+ * sits on its read-only floor: the most restrictive module wins.
+ */
+export function frameworkWritesAllowed(boot: ResolvedBoot): boolean {
+  return boot.authenticated && boot.toolsets.every(({ durableWrites }) => durableWrites)
 }

@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { composeModules, type ComposableModule } from "./composition.js"
+import {
+  composeModules,
+  frameworkWritesAllowed,
+  type ComposableModule,
+  type ResolvedBoot,
+} from "./composition.js"
+import { createToolsetVocabulary } from "./toolsets.js"
 
 interface TestShared {
   tag: string
@@ -12,7 +18,14 @@ const moduleOf = (
   name,
   configFromEnv: (env) => ({ url: env[`${name.toUpperCase()}_URL`] ?? "default" }),
   knownEnvVars: [`${name.toUpperCase()}_URL`],
-  supportsToolsets: true,
+  toolsets: createToolsetVocabulary(
+    name,
+    ["read-only", "operations", "admin"] as const,
+    "read-only",
+    {
+      authenticatedDefault: "operations",
+    },
+  ),
   createPlugin: (config, shared) =>
     ({ definition: { name }, config, shared }) as unknown as ReturnType<
       ComposableModule<TestShared>["createPlugin"]
@@ -47,6 +60,15 @@ describe("activeModules / appEntries", () => {
     ])
   })
 
+  it("keeps an EMPTY suffix distinct from no suffix, trims both halves, keeps extra colons", () => {
+    expect(
+      compose().activeModules({ MCP_ACTIVE_MODULES: "alpha:, beta : admin:read-only" }),
+    ).toEqual([
+      { name: "alpha", toolset: "" },
+      { name: "beta", toolset: "admin:read-only" },
+    ])
+  })
+
   it("skips unknown modules with a warning (fail open)", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     expect(compose().activeModules({ MCP_ACTIVE_MODULES: "nope:read-only,alpha" })).toEqual([
@@ -56,30 +78,185 @@ describe("activeModules / appEntries", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("[test-root]"))
   })
 
-  it("threads the toolset into the module config; config comes from configFromEnv(env)", () => {
+  it("threads the EFFECTIVE toolset into every module config; config comes from configFromEnv(env)", () => {
     const entries = compose().appEntries({
       MCP_ACTIVE_MODULES: "alpha:admin,beta",
       ALPHA_URL: "http://a",
     })
     expect(entries).toEqual([
       { app: "alpha", config: { url: "http://a", toolset: "admin" } },
-      { app: "beta", config: { url: "default" } },
+      { app: "beta", config: { url: "default", toolset: "read-only" } },
     ])
   })
 
-  it("strips the toolset suffix (warning) for modules without toolset support", () => {
+  it("strips the toolset suffix (warning) for modules without toolsets", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    const modules = [moduleOf("alpha", { supportsToolsets: false })]
+    const modules = [moduleOf("alpha", { toolsets: undefined })]
     const entries = compose(modules).appEntries({ MCP_ACTIVE_MODULES: "alpha:read-only" })
     expect(entries[0].config).not.toHaveProperty("toolset")
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("has no toolsets"))
+    expect(warn).toHaveBeenCalledWith(
+      '[test-root] Module "alpha" has no toolsets — ignoring ":read-only"',
+    )
+  })
+
+  it("passes the raw suffix through for the deprecated supportsToolsets flag, with a warning", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const modules = [moduleOf("alpha", { toolsets: undefined, supportsToolsets: true })]
+    const boot = compose(modules).resolveBoot({ MCP_ACTIVE_MODULES: "alpha:custom" })
+    expect(boot.entries[0].config).toMatchObject({ toolset: "custom" })
+    expect(boot.toolsets).toEqual([
+      { module: "alpha", toolset: "custom", source: "none", durableWrites: true },
+    ])
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("deprecated supportsToolsets"))
+    expect(compose(modules).resolveBoot({}).entries[0].config).not.toHaveProperty("toolset")
   })
 
   it("appConfig wraps the entries in the mcp-use shape", () => {
     expect(compose().appConfig({ MCP_ACTIVE_MODULES: "alpha" })).toEqual({
-      activeApps: [{ app: "alpha", config: { url: "default" } }],
+      activeApps: [{ app: "alpha", config: { url: "default", toolset: "read-only" } }],
       pipelines: {},
     })
+    expect(compose().appConfig({ MCP_ACTIVE_MODULES: "alpha" }, { authenticated: true })).toEqual({
+      activeApps: [{ app: "alpha", config: { url: "default", toolset: "operations" } }],
+      pipelines: {},
+    })
+  })
+})
+
+describe("resolveBoot — the fail-closed toolset rule", () => {
+  const toolsetsOf = (boot: ResolvedBoot) =>
+    Object.fromEntries(boot.toolsets.map(({ module, toolset }) => [module, toolset]))
+
+  it.each([undefined, "", "all", "alpha,beta"])(
+    "MCP_ACTIVE_MODULES=%j defaults to the floor without OAuth and to the standard toolset with it — never admin",
+    (value) => {
+      const env = value === undefined ? {} : { MCP_ACTIVE_MODULES: value }
+      const anonymous = compose().resolveBoot(env)
+      expect(anonymous.authenticated).toBe(false)
+      expect(toolsetsOf(anonymous)).toEqual({ alpha: "read-only", beta: "read-only" })
+      expect(anonymous.toolsets.every(({ source }) => source === "default")).toBe(true)
+      expect(toolsetsOf(compose().resolveBoot(env, { authenticated: true }))).toEqual({
+        alpha: "operations",
+        beta: "operations",
+      })
+    },
+  )
+
+  it.each(["alpha:,beta:", "alpha: ,beta:  ", "alpha:bogus,beta:admin:read-only"])(
+    "empty or unknown suffixes (%j) fail closed to the floor, even under OAuth",
+    (value) => {
+      vi.spyOn(console, "warn").mockImplementation(() => {})
+      const boot = compose().resolveBoot({ MCP_ACTIVE_MODULES: value }, { authenticated: true })
+      expect(toolsetsOf(boot)).toEqual({ alpha: "read-only", beta: "read-only" })
+      expect(boot.toolsets.every(({ source }) => source === "fallback")).toBe(true)
+      expect(boot.entries.map(({ config }) => config.toolset)).toEqual(["read-only", "read-only"])
+    },
+  )
+
+  it("an explicit suffix wins over the default in both auth modes", () => {
+    for (const authenticated of [false, true]) {
+      const boot = compose().resolveBoot(
+        { MCP_ACTIVE_MODULES: "alpha:admin,beta:read-only" },
+        { authenticated },
+      )
+      expect(toolsetsOf(boot)).toEqual({ alpha: "admin", beta: "read-only" })
+      expect(boot.toolsets.map(({ source }) => source)).toEqual(["suffix", "suffix"])
+    }
+  })
+
+  it("warns ONCE per boot for an unknown suffix", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    compose().resolveBoot({ MCP_ACTIVE_MODULES: "alpha:typo" })
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[alpha] Unknown toolset "typo"'))
+  })
+
+  it("reports whether each effective toolset permits durable writes", () => {
+    const boot = compose().resolveBoot({ MCP_ACTIVE_MODULES: "alpha:operations,beta" })
+    expect(boot.toolsets).toEqual([
+      { module: "alpha", toolset: "operations", source: "suffix", durableWrites: true },
+      { module: "beta", toolset: "read-only", source: "default", durableWrites: false },
+    ])
+  })
+
+  it("leaves modules without toolsets unrestricted and toolset-free", () => {
+    const boot = compose([moduleOf("alpha", { toolsets: undefined })]).resolveBoot({})
+    expect(boot.toolsets).toEqual([{ module: "alpha", source: "none", durableWrites: true }])
+    expect(boot.entries[0].config).not.toHaveProperty("toolset")
+  })
+})
+
+describe("logEffectiveToolsets", () => {
+  it("logs ONE info line naming each module's toolset and why", () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {})
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const modules = [
+      moduleOf("alpha"),
+      moduleOf("beta"),
+      moduleOf("gamma", { toolsets: undefined }),
+    ]
+    const composition = compose(modules)
+    const boot = composition.resolveBoot({ MCP_ACTIVE_MODULES: "alpha:admin,beta:typo,gamma" })
+    const line = composition.logEffectiveToolsets(boot)
+    expect(line).toBe(
+      "[test-root] Toolsets — alpha:admin (suffix), beta:read-only (fallback), gamma (no toolsets)",
+    )
+    expect(info).toHaveBeenCalledTimes(1)
+    expect(info).toHaveBeenCalledWith(line)
+    expect(warn).toHaveBeenCalledTimes(1) // the typo, nothing from the log itself
+  })
+
+  it("names the auth mode behind a default, and an unresolved pass-through", () => {
+    vi.spyOn(console, "info").mockImplementation(() => {})
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    const composition = compose([
+      moduleOf("alpha"),
+      moduleOf("beta", { toolsets: undefined, supportsToolsets: true }),
+    ])
+    const env = { MCP_ACTIVE_MODULES: "alpha,beta:x" }
+    expect(composition.logEffectiveToolsets(composition.resolveBoot(env))).toBe(
+      "[test-root] Toolsets — alpha:read-only (default without OAuth), beta:x (unresolved)",
+    )
+    expect(
+      composition.logEffectiveToolsets(composition.resolveBoot(env, { authenticated: true })),
+    ).toBe("[test-root] Toolsets — alpha:operations (default with OAuth), beta:x (unresolved)")
+  })
+
+  it("says so when no module is active", () => {
+    vi.spyOn(console, "info").mockImplementation(() => {})
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    const composition = compose()
+    expect(
+      composition.logEffectiveToolsets(composition.resolveBoot({ MCP_ACTIVE_MODULES: "nope" })),
+    ).toBe("[test-root] Toolsets — no active modules")
+  })
+})
+
+describe("frameworkWritesAllowed", () => {
+  const boot = (authenticated: boolean, env: NodeJS.ProcessEnv) =>
+    compose([
+      moduleOf("alpha"),
+      moduleOf("beta"),
+      moduleOf("gamma", { toolsets: undefined }),
+    ]).resolveBoot(env, { authenticated })
+
+  it("requires OAuth — without a caller identity framework records are ownerless", () => {
+    expect(
+      frameworkWritesAllowed(boot(false, { MCP_ACTIVE_MODULES: "alpha:admin,beta:admin" })),
+    ).toBe(false)
+  })
+
+  it("allows them under OAuth when every module permits durable writes", () => {
+    expect(frameworkWritesAllowed(boot(true, {}))).toBe(true)
+    expect(frameworkWritesAllowed(boot(true, { MCP_ACTIVE_MODULES: "alpha:admin,gamma" }))).toBe(
+      true,
+    )
+  })
+
+  it("refuses them when ANY module sits on its read-only floor — the most restrictive wins", () => {
+    expect(
+      frameworkWritesAllowed(boot(true, { MCP_ACTIVE_MODULES: "alpha:admin,beta:read-only" })),
+    ).toBe(false)
   })
 })
 
