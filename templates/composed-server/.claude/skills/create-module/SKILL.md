@@ -56,7 +56,9 @@ The contract, field by field (see `notesModule`):
   boot-time typo warner, and each var contributes its prefix (`ACME_URL` →
   `ACME_`) to the watched set — your module gets the same typo coverage as the
   built-in ones.
-- `supportsToolsets` — `false` unless you implement Step 5.
+- `toolsets` — leave it out unless you implement Step 5 (the notes module has
+  none). The older `supportsToolsets` flag is deprecated: never set it to
+  `true` — declare `toolsets` instead.
 - `createPlugin(config, shared)` — validate `config` with your zod schema
   (**this** is where validation lives) and return the `AppPlugin`: construct
   your data source/client once and pass it to both `registerTools` and
@@ -91,15 +93,35 @@ Tool conventions (they carry the contract, so they are not cosmetic):
 ## Step 5 — toolsets (optional)
 
 Skip this until someone needs to run your module with a narrowed tool surface
-(`MCP_ACTIVE_MODULES=<name>:read-only`). Then:
+(`MCP_ACTIVE_MODULES=<name>:read-only`). Then declare a vocabulary and put it
+on the module definition — the composition resolves ONE concrete toolset per
+boot, logs it, and hands it to `createPlugin` as `config.toolset`:
 
-- Set `supportsToolsets: true`; the suffix arrives as `config.toolset` in
-  `createPlugin`.
+```ts
+import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
+
+export const MY_TOOLSETS = ["read-only", "standard"] as const
+export const myToolsets = createToolsetVocabulary("<name>", MY_TOOLSETS, "read-only", {
+  authenticatedDefault: "standard",
+})
+// src/module.ts: `toolsets: myToolsets,` on the module definition
+```
+
+- Accept it in your config schema (`toolset: z.string().optional()`) and
+  resolve it once in `createPlugin` with `myToolsets.resolve(config.toolset)`.
+- The third argument is your READ-ONLY FLOOR (it must permit no durable
+  write). No suffix on an unauthenticated boot — always, in this template,
+  which installs no OAuth — an empty or unknown suffix (with a warning), and a
+  direct `createPlugin` caller passing no toolset all land there.
+- `authenticatedDefault` is the no-suffix default under OAuth: your standard
+  non-admin toolset. Never make it your widest one — an admin-like toolset
+  must only be reachable by naming it.
 - Filter registrar tools by their annotations (read-only ⇔
   `readOnlyHint: true`), and gate durable writes registered outside the
-  registrar **against your declared toolset list, failing CLOSED on unknown
-  names** — never a `toolset === "read-only"` string compare, which fails open
-  for every name you add later. Reference:
+  registrar on `myToolsets.allowsDurableWrites(myToolsets.resolve(config.toolset))`
+  — never a `toolset === "read-only"` compare (fails open for every name you
+  add later) or a `toolset === undefined` shortcut (an absent toolset is the
+  floor, not "everything"). Reference:
   `node_modules/@miragon-ai/analytics-connector/src/toolsets.ts`.
 
 ## Step 6 — wire the module into the server
@@ -139,7 +161,8 @@ typo coverage and boot warnings show up here), and call your tools in the
 inspector at `http://localhost:8400/mcp/inspector` — or headless via the
 mcp-use client/screenshot commands in `CLAUDE.md` → Verification. Also verify
 the selection path: `MCP_ACTIVE_MODULES=<name> pnpm dev` must expose exactly
-your module's tools.
+your module's tools — its read-only toolset if you declared `toolsets` (the
+boot log's `Toolsets —` line says which).
 
 ## Anti-patterns
 

@@ -1,13 +1,25 @@
 /**
- * Checked-in snapshot of every tool the server exposes over MCP, sorted by
- * name. The E2E smoke test compares `tools/list` against this list, so adding,
- * renaming, or removing a tool fails CI until this file (and the README /
- * definition.ts surface it documents) is updated deliberately.
+ * Checked-in snapshots of the tool surface per toolset, sorted by name. The
+ * E2E tests compare `tools/list` against them, so adding, renaming, removing or
+ * re-tiering a tool fails CI until these lists (and the README / definition.ts
+ * surface they document) are updated deliberately.
  *
- * Regenerate by running the E2E test and copying the sorted names from the
- * assertion diff.
+ * Layered on purpose — each tier is the one below plus an explicit list, so a
+ * review sees exactly what a toolset adds:
+ *
+ * - READ_ONLY: the unauthenticated default (no suffix, no MCP_OAUTH) =
+ *   `camunda7:read-only,analytics:read-only`. Only `readOnlyHint` tools plus
+ *   the toolkit's unannotated `render-view`/`refresh-view`.
+ * - OPERATIONS: the default under OAuth = `camunda7:operations,
+ *   analytics:standard` — engine writes, the two settings saves and the
+ *   toolkit's dashboard builder (OAuth + no read-only module).
+ * - ADMIN: `camunda7:admin,analytics:standard` + `CAMUNDA_ALLOW_DEPLOYMENTS=true`
+ *   under OAuth — the full surface. Never implied by a default.
+ *
+ * Regenerate by running the E2E tests and copying the sorted names from the
+ * assertion diffs.
  */
-export const EXPECTED_TOOLS: readonly string[] = [
+export const EXPECTED_TOOLS_READ_ONLY: readonly string[] = [
   "analytics_analyze_process_performance",
   "analytics_bpmn_heatmap_data",
   "analytics_cluster_compare",
@@ -20,7 +32,6 @@ export const EXPECTED_TOOLS: readonly string[] = [
   "analytics_engine_landscape_data",
   "analytics_failure_dashboard_data",
   "analytics_find_failed_instances",
-  "analytics_save_settings",
   "analytics_settings_data",
   "analytics_show_bpmn_heatmap",
   "analytics_show_cluster_compare",
@@ -33,18 +44,10 @@ export const EXPECTED_TOOLS: readonly string[] = [
   "analytics_version_compare",
   "camunda7_activity_incidents_data",
   "camunda7_bpmn_viewer_data",
-  "camunda7_claim_task",
   "camunda7_cluster_detail_data",
   "camunda7_cockpit_overview_data",
-  "camunda7_complete_external_task",
-  "camunda7_complete_task",
-  "camunda7_correlate_message",
-  "camunda7_create_deployment",
-  "camunda7_create_migration_plan",
-  "camunda7_delete_process_instance",
   "camunda7_engine",
   "camunda7_engine_health_data",
-  "camunda7_fetch_and_lock",
   "camunda7_format_incident_issue",
   "camunda7_get_activity_instance_tree",
   "camunda7_get_deployment",
@@ -54,19 +57,17 @@ export const EXPECTED_TOOLS: readonly string[] = [
   "camunda7_get_task",
   "camunda7_get_task_form",
   "camunda7_get_task_variables",
-  "camunda7_handle_external_task_failure",
   "camunda7_incident_detail_data",
   "camunda7_incidents_data",
   "camunda7_instance_detail_data",
   "camunda7_jobs_data",
   "camunda7_list_deployments",
+  "camunda7_list_external_tasks",
   "camunda7_list_incidents",
   "camunda7_list_jobs",
   "camunda7_list_process_definitions",
   "camunda7_list_process_instances",
   "camunda7_list_tasks",
-  "camunda7_migrate_process_instances_async",
-  "camunda7_modify_process_instance",
   "camunda7_open_cockpit",
   "camunda7_process_incidents_data",
   "camunda7_process_instances_data",
@@ -75,13 +76,6 @@ export const EXPECTED_TOOLS: readonly string[] = [
   "camunda7_query_historic_process_instances",
   "camunda7_query_historic_task_instances",
   "camunda7_query_historic_variable_instances",
-  "camunda7_resolve_incident",
-  "camunda7_save_user_profile",
-  "camunda7_set_job_retries",
-  "camunda7_set_job_retries_batch",
-  "camunda7_set_process_instance_suspension",
-  "camunda7_set_process_instance_variable",
-  "camunda7_set_task_assignee",
   "camunda7_show_bpmn_viewer",
   "camunda7_show_cluster_detail",
   "camunda7_show_engine_health",
@@ -95,17 +89,55 @@ export const EXPECTED_TOOLS: readonly string[] = [
   "camunda7_show_process_instances",
   "camunda7_show_process_list",
   "camunda7_show_user_profile",
-  "camunda7_start_process_instance",
-  "camunda7_throw_signal",
-  "camunda7_unclaim_task",
   "camunda7_user_profile_data",
   "camunda7_widget_actions_data",
-  "delete-dashboard",
-  "get-builder-catalogue",
   "get-framework-manifest",
-  "list-dashboards",
-  "load-dashboard",
   "refresh-view",
   "render-view",
+]
+
+/** What `operations` (camunda7) / `standard` (analytics) and the builder add. */
+const OPERATIONS_ADDS: readonly string[] = [
+  "analytics_save_settings",
+  "camunda7_claim_task",
+  "camunda7_complete_task",
+  "camunda7_correlate_message",
+  "camunda7_resolve_incident",
+  "camunda7_save_user_profile",
+  "camunda7_set_external_task_retries",
+  "camunda7_set_job_retries",
+  "camunda7_set_process_instance_variable",
+  "camunda7_set_task_assignee",
+  "camunda7_start_process_instance",
+  "camunda7_unclaim_task",
+  "delete-dashboard",
+  "get-builder-catalogue",
+  "list-dashboards",
+  "load-dashboard",
   "save-dashboard",
 ]
+
+/** What `camunda7:admin` (+ CAMUNDA_ALLOW_DEPLOYMENTS=true) adds — never implied. */
+const ADMIN_ADDS: readonly string[] = [
+  "camunda7_complete_external_task",
+  "camunda7_create_deployment",
+  "camunda7_create_migration_plan",
+  "camunda7_delete_process_instance",
+  "camunda7_fetch_and_lock",
+  "camunda7_handle_external_task_failure",
+  "camunda7_migrate_process_instances_async",
+  "camunda7_modify_process_instance",
+  "camunda7_set_job_retries_batch",
+  "camunda7_set_process_instance_suspension",
+  "camunda7_throw_signal",
+]
+
+export const EXPECTED_TOOLS_OPERATIONS: readonly string[] = [
+  ...EXPECTED_TOOLS_READ_ONLY,
+  ...OPERATIONS_ADDS,
+].sort()
+
+export const EXPECTED_TOOLS_ADMIN: readonly string[] = [
+  ...EXPECTED_TOOLS_OPERATIONS,
+  ...ADMIN_ADDS,
+].sort()

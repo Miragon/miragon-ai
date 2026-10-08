@@ -1,26 +1,7 @@
-import net from "node:net"
-import path from "node:path"
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
-import type { AppPlugin } from "@miragon/mcp-toolkit-core"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { VIEW_RESOURCE_URI_PREFIX, viewResourceUri } from "@miragon/mcp-toolkit-core"
-import { createFrameworkApp } from "@miragon/mcp-toolkit-core/tools"
-import type { MCPServer } from "mcp-use"
-import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
-import { getAppConfig, getPlugins } from "../src/setup.js"
-
-const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
-
-/** Reserve a free TCP port by binding to port 0 and releasing it again. */
-async function getFreePort(): Promise<number> {
-  return await new Promise((resolve, reject) => {
-    const probe = net.createServer()
-    probe.once("error", reject)
-    probe.listen(0, "127.0.0.1", () => {
-      const { port } = probe.address() as net.AddressInfo
-      probe.close(() => resolve(port))
-    })
-  })
-}
+import type { Client } from "@modelcontextprotocol/client"
+import { bootServer, type BootedServer } from "./boot-server.js"
 
 type ToolEntry = { name: string; _meta?: Record<string, unknown> }
 
@@ -43,47 +24,26 @@ function uiBlock(meta: Record<string, unknown>): Record<string, unknown> {
  * contract whose absence made every widget hang on its loading skeleton.
  */
 describe("widget wire contract (dual-protocol _meta)", () => {
-  let app: MCPServer
+  let server: BootedServer
   let client: Client
   let tools: ToolEntry[]
   let serverOrigin: string
 
   beforeAll(async () => {
-    vi.stubEnv("CAMUNDA_BASE_URL", "http://localhost:1")
-    vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
-    vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
-    vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
-    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
-    // Persistence must stay in-memory regardless of the dev shell's env.
-    vi.stubEnv("DATABASE_URL", undefined)
-    vi.stubEnv("REDIS_URL", undefined)
-    vi.stubEnv("MCP_PROFILE_DIR", undefined)
-    vi.stubEnv("MCP_DASHBOARD_DIR", undefined)
-
-    app = await createFrameworkApp({
-      name: "automation-mcp",
-      version: "0.1.0",
-      host: "127.0.0.1",
-      plugins: getPlugins() as AppPlugin[],
-      appConfig: getAppConfig(),
-      app: {
-        bundle: { jsPath: FIXTURE_JS },
-        builder: true,
-      },
+    // The widest surface (admin + standard under OAuth), so the contract also
+    // covers the opt-in builder tools; widget tools and *_data feeds are the
+    // same in every toolset.
+    server = await bootServer({
+      authenticated: true,
+      env: { MCP_ACTIVE_MODULES: "camunda7:admin,analytics:standard" },
     })
-    const port = await getFreePort()
-    await app.listen(port)
-    serverOrigin = `http://127.0.0.1:${port}`
-
-    client = new Client({ name: "widget-contract-test", version: "0.0.0" })
-    await client.connect(new StreamableHTTPClientTransport(new URL(`${serverOrigin}/mcp`)))
+    client = server.client
+    serverOrigin = `http://127.0.0.1:${server.port}`
     tools = (await client.listTools()).tools
   })
 
   afterAll(async () => {
-    await client?.close()
-    await app?.close()
-    vi.unstubAllEnvs()
+    await server?.close()
   })
 
   it("emits the full dual-protocol _meta on every model-visible widget tool", () => {

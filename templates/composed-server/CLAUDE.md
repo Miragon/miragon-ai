@@ -79,6 +79,16 @@ external infrastructure.
 7. **`.env.example` documents every env var the server reads** — both drift
    directions are guarded by `server/test/env-example.test.ts`; add your
    module's vars there.
+8. **Toolsets fail closed.** A module opts into the `module:toolset` suffix by
+   declaring `toolsets: createToolsetVocabulary(...)` on its definition (the
+   old `supportsToolsets` flag is deprecated); the composition resolves ONE
+   concrete toolset per module per boot and logs it. This server installs no
+   OAuth, so a module without a suffix runs its read-only floor, an
+   empty/unknown suffix falls back to it, and an admin-like toolset is only
+   reachable by naming it. Gate durable writes on the vocabulary
+   (`allowsDurableWrites(resolve(toolset))`) — never on a name compare or on
+   `toolset === undefined`, both of which fail open. Details: `create-module`
+   Step 5.
 
 ## Verification
 

@@ -1,6 +1,7 @@
 import type { MCPServer } from "mcp-use"
 import { DEFAULT_HEALTH_THRESHOLDS, type EngineHealthThresholds } from "./data/health-data.js"
 import type { EngineRegistry } from "./lib/resolve-engine.js"
+import type { Camunda7Toolset } from "./lib/toolsets.js"
 import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import type { WidgetToolsContext } from "./widget-tools/shared.js"
 import { registerCockpitWidgetTools } from "./widget-tools/cockpit.js"
@@ -15,10 +16,12 @@ export interface Camunda7WidgetToolsOptions {
   /** Profile store for localizing model-facing summaries (locale → profile language). */
   profileStore?: ProfileStore
   /**
-   * The deployment's toolset — decides which in-widget write buttons the
-   * widgets render (`camunda7_widget_actions_data`). Omitted = all tools.
+   * The deployment's resolved toolset — decides which in-widget write buttons
+   * the widgets render (`camunda7_widget_actions_data`). Always concrete: the
+   * plugin resolves it once (`resolveCamunda7Toolset`), so there is no
+   * "omitted = everything" reading.
    */
-  toolset?: string
+  toolset: Camunda7Toolset
 }
 
 /**
@@ -29,7 +32,7 @@ export interface Camunda7WidgetToolsOptions {
 export function registerWidgetTools(
   server: MCPServer,
   registry: EngineRegistry,
-  options: Camunda7WidgetToolsOptions = {},
+  options: Camunda7WidgetToolsOptions,
 ) {
   const healthThresholds: EngineHealthThresholds = {
     ...DEFAULT_HEALTH_THRESHOLDS,

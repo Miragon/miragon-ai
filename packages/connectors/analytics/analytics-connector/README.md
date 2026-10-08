@@ -26,6 +26,11 @@ the React context and hangs every in-widget query on "Loading…".
   `show_version_compare`, `show_engine_landscape`, `show_engine_compare`, `show_bpmn_heatmap`.
 - **Engine-aware** — every tool accepts an optional `engine` filter (single id or list) so a single
   dashboard can aggregate across CIB Seven instances; analytics are session-independent.
+- **Toolsets** (`src/toolsets.ts`, declared as the module's `toolsets` vocabulary) — `read-only`
+  (every analytics tool and widget, no settings save) and `standard` (adds
+  `analytics_save_settings`). With no `analytics:<toolset>` suffix the module runs `read-only` on an
+  unauthenticated server and `standard` under OAuth; an empty or unknown suffix falls back to
+  `read-only`.
 
 ### Cross-engine: overview, not scoreboard
 

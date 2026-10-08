@@ -10,6 +10,7 @@ import {
 import { registerSettingsTools } from "./settings-tools.js"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
 import { localizeFor, type ProfileSource } from "./server-locale.js"
+import type { AnalyticsToolset } from "./toolsets.js"
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -105,10 +106,12 @@ describe("localizeFor", () => {
 })
 
 describe("registerSettingsTools", () => {
+  // `toolset` is a plain string here on purpose: an untyped (JS) caller can
+  // hand the gate any name, and the gate must still resolve it fail-closed.
   function registeredToolNames(store?: ProfileSource, toolset?: string): string[] {
     const tool = vi.fn()
     const server = { tool } as unknown as MCPServer
-    registerSettingsTools(server, store, toolset)
+    registerSettingsTools(server, store, toolset as AnalyticsToolset | undefined)
     return tool.mock.calls.map((c) => (c[0] as { name: string }).name)
   }
 
@@ -117,24 +120,35 @@ describe("registerSettingsTools", () => {
     save: () => Promise.resolve({}),
   }
 
-  it("registers the save tool only when the store is writable", () => {
-    expect(registeredToolNames(writable)).toEqual([
+  it('registers the save tool with a writable store in the "standard" toolset', () => {
+    expect(registeredToolNames(writable, "standard")).toEqual([
       "analytics_show_settings",
       ANALYTICS_SETTINGS_DATA,
       ANALYTICS_SAVE_SETTINGS,
     ])
   })
 
-  it("stays read-only without a writable store (no save tool)", () => {
+  it("stays read-only without a writable store (no save tool), even in standard", () => {
     const readOnly: ProfileSource = { get: () => Promise.resolve(undefined) }
-    expect(registeredToolNames(readOnly)).toEqual([
+    expect(registeredToolNames(readOnly, "standard")).toEqual([
       "analytics_show_settings",
       ANALYTICS_SETTINGS_DATA,
     ])
-    expect(registeredToolNames(undefined)).toEqual([
+    expect(registeredToolNames(undefined, "standard")).toEqual([
       "analytics_show_settings",
       ANALYTICS_SETTINGS_DATA,
     ])
+  })
+
+  it("fails closed WITHOUT a toolset: a writable store alone registers no save tool", () => {
+    // A missing toolset is the read-only floor (silently — it is the
+    // documented default of a direct caller, not a misconfiguration).
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    expect(registeredToolNames(writable)).toEqual([
+      "analytics_show_settings",
+      ANALYTICS_SETTINGS_DATA,
+    ])
+    expect(warn).not.toHaveBeenCalled()
   })
 
   it('drops the durable save tool in the "read-only" toolset, fails closed on unknown names', () => {
@@ -143,8 +157,92 @@ describe("registerSettingsTools", () => {
       "analytics_show_settings",
       ANALYTICS_SETTINGS_DATA,
     ])
-    expect(registeredToolNames(writable, "nonsense")).not.toContain(ANALYTICS_SAVE_SETTINGS)
+    expect(registeredToolNames(writable, "nonsense")).toEqual([
+      "analytics_show_settings",
+      ANALYTICS_SETTINGS_DATA,
+    ])
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "nonsense"'))
+  })
+
+  it("a save-less section reports canSave false even for an identified caller", async () => {
+    const tool = vi.fn()
+    registerSettingsTools({ tool } as unknown as MCPServer, writable, "read-only")
+    const data = tool.mock.calls.find(
+      (c) => (c[0] as { name: string }).name === ANALYTICS_SETTINGS_DATA,
+    )![1] as () => Promise<{ structuredContent?: Record<string, unknown> }>
+    const view = await runWithMcpRequestInfo({ authUserId: "user-7" }, () => data())
+    expect(view.structuredContent?.canSave).toBe(false)
+  })
+
+  it("the model summary points at the save tool only when it is registered", async () => {
+    type ShowResult = {
+      content: Array<{ text: string }>
+      structuredContent: Record<string, unknown>
+    }
+    const show = async (toolset: AnalyticsToolset): Promise<ShowResult> => {
+      const tool = vi.fn()
+      registerSettingsTools({ tool } as unknown as MCPServer, writable, toolset)
+      const handler = tool.mock.calls.find(
+        (c) => (c[0] as { name: string }).name === "analytics_show_settings",
+      )![1] as () => Promise<ShowResult>
+      return runWithMcpRequestInfo({ authUserId: "user-7" }, () => handler())
+    }
+    const defaults = { defaultPeriod: "7d", minBucketSize: 10 }
+
+    const standard = await show("standard")
+    expect(standard.content[0].text).toBe(
+      "Analytics settings: default period 7d, min bucket size 10. Change via analytics_save_settings.",
+    )
+    expect(standard.structuredContent).toMatchObject({
+      title: "Analytics Settings",
+      layout: [{ row: [{ widget: "analytics:settings" }] }],
+      context: {
+        stepData: {
+          result: {
+            data: { settings: defaults, canSave: true },
+            _app: "analytics",
+            _dataType: "analytics:settings",
+          },
+        },
+      },
+    })
+
+    // On the read-only floor the save tool does not exist — advertising it to
+    // the model would send it to an unknown tool.
+    const readOnly = await show("read-only")
+    expect(readOnly.content[0].text).toBe(
+      "Analytics settings: default period 7d, min bucket size 10.",
+    )
+    expect(readOnly.structuredContent).toMatchObject({
+      context: { stepData: { result: { data: { settings: defaults, canSave: false } } } },
+    })
+  })
+
+  it("declares honest metadata for the settings triple", () => {
+    const tool = vi.fn()
+    registerSettingsTools({ tool } as unknown as MCPServer, writable, "standard")
+    const definitions = tool.mock.calls.map(
+      (c) =>
+        c[0] as {
+          name: string
+          title?: string
+          description?: string
+          annotations?: Record<string, boolean>
+        },
+    )
+    const readOnlyRead = { readOnlyHint: true, idempotentHint: true, openWorldHint: true }
+    expect(definitions.map(({ name, annotations }) => [name, annotations])).toEqual([
+      ["analytics_show_settings", readOnlyRead],
+      [ANALYTICS_SETTINGS_DATA, readOnlyRead],
+      [
+        ANALYTICS_SAVE_SETTINGS,
+        { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      ],
+    ])
+    for (const { name, title, description } of definitions) {
+      expect(title, `${name} title`).toBeTruthy()
+      expect(description, `${name} description`).toBeTruthy()
+    }
   })
 
   it("round-trips a keyless save through the shared record", async () => {
@@ -158,12 +256,13 @@ describe("registerSettingsTools", () => {
       },
     }
     const tool = vi.fn()
-    registerSettingsTools({ tool } as unknown as MCPServer, store)
+    registerSettingsTools({ tool } as unknown as MCPServer, store, "standard")
     type Handler = (
       params: unknown,
       ctx?: unknown,
     ) => Promise<{
       structuredContent?: Record<string, unknown>
+      content?: Array<{ type?: string; text?: string }>
     }>
     const handlerFor = (name: string): Handler => {
       const call = tool.mock.calls.find((c) => (c[0] as { name: string }).name === name)
@@ -171,7 +270,16 @@ describe("registerSettingsTools", () => {
       return call[1] as Handler
     }
 
-    await handlerFor(ANALYTICS_SAVE_SETTINGS)({ defaultPeriod: "30d" })
+    const saved = await handlerFor(ANALYTICS_SAVE_SETTINGS)({ defaultPeriod: "30d" })
+    // The widget reads the EFFECTIVE slice back from structuredContent; the
+    // model gets the localized confirmation.
+    expect(saved.structuredContent).toEqual({ defaultPeriod: "30d", minBucketSize: 10 })
+    expect(saved.content).toEqual([
+      {
+        type: "text",
+        text: "Analytics settings saved: default period 30d, min bucket size 10.",
+      },
+    ])
     // Only the provided field is persisted — no defaults materialized into
     // storage, so a later default change applies to fields never set.
     expect(records.get("anonymous")).toEqual({
@@ -192,7 +300,7 @@ describe("registerSettingsTools", () => {
       },
     }
     const tool = vi.fn()
-    registerSettingsTools({ tool } as unknown as MCPServer, store)
+    registerSettingsTools({ tool } as unknown as MCPServer, store, "standard")
     const call = tool.mock.calls.find(
       (c) => (c[0] as { name: string }).name === ANALYTICS_SAVE_SETTINGS,
     )
@@ -210,10 +318,11 @@ describe("registerSettingsTools", () => {
   // read-only and the save tool must refuse with an actionable cause.
   it("identity gating: canSave false + save refusal without identity, true with an auth user", async () => {
     const tool = vi.fn()
-    registerSettingsTools({ tool } as unknown as MCPServer, {
-      get: () => Promise.resolve(undefined),
-      save: () => Promise.resolve({}),
-    })
+    registerSettingsTools(
+      { tool } as unknown as MCPServer,
+      { get: () => Promise.resolve(undefined), save: () => Promise.resolve({}) },
+      "standard",
+    )
     type Handler = (
       params: unknown,
       ctx?: unknown,
@@ -240,5 +349,23 @@ describe("registerSettingsTools", () => {
       handlerFor(ANALYTICS_SETTINGS_DATA)({}),
     )
     expect(authed.structuredContent?.canSave).toBe(true)
+  })
+
+  it("stamps the auth user id on the saved record (user-bound, exempt from session TTL)", async () => {
+    const save = vi.fn<NonNullable<ProfileSource["save"]>>(() => Promise.resolve({}))
+    const tool = vi.fn()
+    registerSettingsTools(
+      { tool } as unknown as MCPServer,
+      { get: () => Promise.resolve(undefined), save },
+      "standard",
+    )
+    const handler = tool.mock.calls.find(
+      (c) => (c[0] as { name: string }).name === ANALYTICS_SAVE_SETTINGS,
+    )![1] as (params: unknown) => Promise<unknown>
+
+    await runWithMcpRequestInfo({ authUserId: "user-7" }, () => handler({ minBucketSize: 5 }))
+    expect(save).toHaveBeenCalledOnce()
+    expect(save.mock.calls[0][1]).toEqual({ modules: { analytics: { minBucketSize: 5 } } })
+    expect(save.mock.calls[0][2]).toEqual({ userId: "user-7" })
   })
 })

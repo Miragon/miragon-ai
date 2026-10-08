@@ -2,7 +2,17 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { emitBootWarnings, getAppConfig, getPlugins, warnUnknownEnvVars } from "../src/setup.js"
+import {
+  builderEnabled,
+  emitBootWarnings,
+  getAppConfig,
+  getPlugins,
+  logEffectiveToolsets,
+  resolveBoot,
+  selectBoot,
+  warnUnknownEnvVars,
+} from "../src/setup.js"
+import { getOAuthConfigFromEnv } from "../src/oauth.js"
 
 const FILE_ENGINES = [{ id: "from-file", baseUrl: "http://file.example/engine-rest" }]
 const JSON_ENGINES = [{ id: "from-json", baseUrl: "http://json.example/engine-rest" }]
@@ -121,29 +131,90 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
     return getAppConfig().activeApps
   }
 
-  it("threads the toolset suffix into the camunda7 module config", () => {
-    vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:read-only,analytics")
+  it("threads the suffix into the camunda7 config and the default into the suffix-less analytics", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:operations,analytics")
 
     const camunda7 = activeApps().find((e) => e.app === "camunda7")
-    expect(camunda7?.config).toMatchObject({ toolset: "read-only" })
+    expect(camunda7?.config).toMatchObject({ toolset: "operations" })
     const analytics = activeApps().find((e) => e.app === "analytics")
-    expect(analytics?.config).not.toHaveProperty("toolset")
+    expect(analytics?.config).toMatchObject({ toolset: "read-only" })
   })
 
-  it("activates all modules without a toolset when MCP_ACTIVE_MODULES is unset", () => {
+  it("activates all modules on their read-only floor when MCP_ACTIVE_MODULES is unset (no OAuth)", () => {
     vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
 
     const apps = activeApps()
     expect(apps.map((e) => e.app).sort()).toEqual(["analytics", "camunda7"])
     for (const entry of apps) {
-      expect(entry.config).not.toHaveProperty("toolset")
+      expect(entry.config).toMatchObject({ toolset: "read-only" })
     }
   })
 
-  // Since analytics gained toolset support (`analytics:read-only` hides its
-  // settings save tool), no registered module exercises the "no toolsets —
-  // ignoring" fail-open branch anymore; the branch stays in setup.ts for
-  // future modules.
+  it("defaults to each module's standard toolset under OAuth — never admin", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+
+    const boot = resolveBoot({ authenticated: true })
+    expect(Object.fromEntries(boot.entries.map((e) => [e.app, e.config.toolset]))).toEqual({
+      camunda7: "operations",
+      analytics: "standard",
+    })
+    expect(getAppConfig(boot).activeApps).toBe(boot.entries)
+  })
+
+  it.each(["camunda7:", "camunda7: ", "camunda7:bogus", "camunda7:admin:read-only"])(
+    "fails an empty or unknown suffix (%j) closed to read-only, even under OAuth",
+    (value) => {
+      vi.spyOn(console, "warn").mockImplementation(() => {})
+      vi.stubEnv("MCP_ACTIVE_MODULES", value)
+
+      const [camunda7] = resolveBoot({ authenticated: true }).entries
+      expect(camunda7.config).toMatchObject({ toolset: "read-only" })
+    },
+  )
+
+  it("logs the effective toolsets in one info line", () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {})
+    vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:admin,analytics")
+
+    expect(logEffectiveToolsets(resolveBoot())).toBe(
+      "[miragon-ai] Toolsets — camunda7:admin (suffix), analytics:read-only (default without OAuth)",
+    )
+    expect(info).toHaveBeenCalledTimes(1)
+  })
+
+  it("selectBoot derives the selection from the provider ACTUALLY built from MCP_OAUTH", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    // `getOAuthConfigFromEnv(undefined)` falls back to process.env.MCP_OAUTH.
+    vi.stubEnv("MCP_OAUTH", undefined)
+    const toolsets = (selection: ReturnType<typeof selectBoot>) =>
+      Object.fromEntries(selection.boot.entries.map((e) => [e.app, e.config.toolset]))
+
+    // Unset or blank MCP_OAUTH builds no provider → unauthenticated defaults.
+    for (const raw of [undefined, "", "   "]) {
+      const anonymous = selectBoot(getOAuthConfigFromEnv(raw).provider)
+      expect(toolsets(anonymous)).toEqual({ camunda7: "read-only", analytics: "read-only" })
+      expect(anonymous.builder).toBe(false)
+    }
+
+    const keycloak = JSON.stringify({
+      provider: "keycloak",
+      serverUrl: "https://kc.example.com",
+      realm: "r",
+    })
+    const authenticated = selectBoot(getOAuthConfigFromEnv(keycloak).provider)
+    expect(toolsets(authenticated)).toEqual({ camunda7: "operations", analytics: "standard" })
+    expect(authenticated.builder).toBe(true)
+  })
+
+  it("enables the dashboard builder only under OAuth with no read-only module", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    expect(builderEnabled(resolveBoot())).toBe(false)
+    expect(builderEnabled(resolveBoot({ authenticated: true }))).toBe(true)
+
+    vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:admin,analytics:read-only")
+    expect(builderEnabled(resolveBoot({ authenticated: true }))).toBe(false)
+  })
+
   it("passes the toolset through for modules that support it (analytics:read-only)", () => {
     vi.stubEnv("MCP_ACTIVE_MODULES", "analytics:read-only")
 

@@ -1,5 +1,125 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import type { MCPServer } from "mcp-use"
 import { camunda7Module, camunda7ConfigSchema } from "./module.js"
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+/**
+ * The toolset vocabulary the composition root resolves with: the module's
+ * fail-closed POLICY (which toolset an unauthenticated / authenticated boot
+ * without a suffix gets, and that `admin` is never implied).
+ */
+describe("camunda7Module.toolsets (fail-closed policy)", () => {
+  const vocabulary = camunda7Module.toolsets
+
+  it("declares the vocabulary instead of the deprecated supportsToolsets", () => {
+    expect(vocabulary.module).toBe("camunda7")
+    expect(vocabulary.names).toEqual(["read-only", "operations", "admin"])
+    expect(vocabulary.fallback).toBe("read-only")
+    expect(vocabulary.authenticatedDefault).toBe("operations")
+    expect(camunda7Module).not.toHaveProperty("supportsToolsets")
+  })
+
+  it("no suffix: read-only without OAuth, operations with it — never admin", () => {
+    expect(vocabulary.effective(undefined, { authenticated: false })).toEqual({
+      toolset: "read-only",
+      source: "default",
+    })
+    expect(vocabulary.effective(undefined, { authenticated: true })).toEqual({
+      toolset: "operations",
+      source: "default",
+    })
+  })
+
+  it("admin only when named; an empty or unknown suffix falls back to read-only", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    expect(vocabulary.effective("admin", { authenticated: false })).toEqual({
+      toolset: "admin",
+      source: "suffix",
+    })
+    for (const suffix of ["", "root"]) {
+      expect(vocabulary.effective(suffix, { authenticated: true })).toEqual({
+        toolset: "read-only",
+        source: "fallback",
+      })
+    }
+  })
+
+  it("durable writes are allowed in every toolset above the read-only floor", () => {
+    expect(vocabulary.allowsDurableWrites("read-only")).toBe(false)
+    expect(vocabulary.allowsDurableWrites("operations")).toBe(true)
+    expect(vocabulary.allowsDurableWrites("admin")).toBe(true)
+  })
+})
+
+/**
+ * Deploy permission is code execution inside the engine JVM — the opt-in must
+ * parse strictly: a typo fails the boot instead of being guessed either way
+ * (`z.coerce.boolean` would even read "false" as true).
+ */
+describe("CAMUNDA_ALLOW_DEPLOYMENTS", () => {
+  const engine = { id: "prod-a", baseUrl: "http://engine.example/engine-rest" }
+  const parsedFlag = (allowDeployments?: string) =>
+    camunda7ConfigSchema.parse({ engines: [engine], allowDeployments }).allowDeployments
+
+  it('parses "true" to true and "false" / unset to false', () => {
+    expect(parsedFlag("true")).toBe(true)
+    expect(parsedFlag("false")).toBe(false)
+    expect(parsedFlag(undefined)).toBe(false)
+    expect(camunda7ConfigSchema.parse({ engines: [engine] }).allowDeployments).toBe(false)
+  })
+
+  it.each(["yes", "1", "TRUE", " true", ""])("fails the boot on %j, naming the variable", (raw) => {
+    expect(() => parsedFlag(raw)).toThrow(/CAMUNDA_ALLOW_DEPLOYMENTS/)
+    const result = camunda7ConfigSchema.safeParse({ engines: [engine], allowDeployments: raw })
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({
+        path: ["allowDeployments"],
+        message: 'CAMUNDA_ALLOW_DEPLOYMENTS must be exactly "true" or "false" (or unset)',
+      }),
+    ])
+  })
+
+  it("configFromEnv only trims (empty = unset) and leaves the verdict to the strict schema", () => {
+    const fromEnv = (value?: string) =>
+      camunda7Module.configFromEnv({ CAMUNDA_ALLOW_DEPLOYMENTS: value }).allowDeployments
+    expect(fromEnv("yes")).toBe("yes")
+    expect(fromEnv(" true ")).toBe("true")
+    expect(fromEnv("")).toBeUndefined()
+    expect(fromEnv("   ")).toBeUndefined()
+    expect(camunda7Module.configFromEnv({}).allowDeployments).toBeUndefined()
+  })
+
+  it("is a known env var", () => {
+    expect(camunda7Module.knownEnvVars).toContain("CAMUNDA_ALLOW_DEPLOYMENTS")
+  })
+
+  /** The module's createPlugin → plugin → registrar path, as the composition drives it. */
+  const registeredNames = (config: Record<string, unknown>): string[] => {
+    const tool = vi.fn()
+    const server = { tool, use: vi.fn(), prompt: vi.fn() } as unknown as MCPServer
+    camunda7Module.createPlugin({ engines: [engine], ...config }, {}).registerTools?.(server)
+    return tool.mock.calls.map((c) => (c[0] as { name: string }).name)
+  }
+
+  it("registers camunda7_create_deployment only with the flag AND camunda7:admin", () => {
+    const DEPLOY = "camunda7_create_deployment"
+    expect(registeredNames({ toolset: "admin", allowDeployments: "true" })).toContain(DEPLOY)
+    expect(registeredNames({ toolset: "admin", allowDeployments: "false" })).not.toContain(DEPLOY)
+    expect(registeredNames({ toolset: "admin" })).not.toContain(DEPLOY)
+    expect(registeredNames({ toolset: "operations", allowDeployments: "true" })).not.toContain(
+      DEPLOY,
+    )
+  })
+
+  it("boots junk loudly through createPlugin, not silently off", () => {
+    expect(() => registeredNames({ toolset: "admin", allowDeployments: "on" })).toThrow(
+      /CAMUNDA_ALLOW_DEPLOYMENTS/,
+    )
+  })
+})
 
 /**
  * The engine id is a JOIN KEY against the metrics `engine_id` label, not a
@@ -164,8 +284,54 @@ describe("camunda7Module.bootWarnings", () => {
     expect(camunda7Module.bootWarnings(env)).toEqual([])
   })
 
-  it("treats whitespace-only values as unset", () => {
-    expect(camunda7Module.bootWarnings({ CAMUNDA_BASE_URL: "  " })).toHaveLength(1)
+  it.each(["CAMUNDA_ENGINES_FILE", "CAMUNDA_ENGINES_JSON", "CAMUNDA_BASE_URL"])(
+    "treats a whitespace-only %s as unset",
+    (name) => {
+      expect(camunda7Module.bootWarnings({ [name]: "  " })).toHaveLength(1)
+    },
+  )
+
+  it("names the default id for a whitespace-only CAMUNDA_ENGINE_ID", () => {
+    expect(camunda7Module.bootWarnings({ CAMUNDA_ENGINE_ID: "  " })[0]).toContain(
+      'engine id "default"',
+    )
+  })
+
+  it("states the deployment opt-in on every boot: admin-only, code execution in the JVM", () => {
+    const configured = { CAMUNDA_BASE_URL: "http://engine.example/engine-rest" }
+    const warnings = camunda7Module.bootWarnings({
+      ...configured,
+      CAMUNDA_ALLOW_DEPLOYMENTS: "true",
+    })
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain(
+      "CAMUNDA_ALLOW_DEPLOYMENTS=true — camunda7_create_deployment is registered under camunda7:admin",
+    )
+    expect(warnings[0]).toContain("Deploying a process runs code inside the engine JVM")
+    expect(
+      camunda7Module.bootWarnings({ ...configured, CAMUNDA_ALLOW_DEPLOYMENTS: "false" }),
+    ).toEqual([])
+  })
+
+  it.each([" true ", "true\n"])(
+    "discloses a padded opt-in (%j) exactly like the value configFromEnv arms",
+    (raw) => {
+      const env = {
+        CAMUNDA_BASE_URL: "http://engine.example/engine-rest",
+        CAMUNDA_ALLOW_DEPLOYMENTS: raw,
+      }
+      expect(camunda7Module.configFromEnv(env).allowDeployments).toBe("true")
+      expect(camunda7Module.bootWarnings(env)).toEqual([
+        expect.stringContaining("CAMUNDA_ALLOW_DEPLOYMENTS=true"),
+      ])
+    },
+  )
+
+  it("keeps both warnings when the engine is unconfigured AND deployments are on", () => {
+    const warnings = camunda7Module.bootWarnings({ CAMUNDA_ALLOW_DEPLOYMENTS: "true" })
+    expect(warnings).toHaveLength(2)
+    expect(warnings[0]).toContain("No engine is configured")
+    expect(warnings[1]).toContain("CAMUNDA_ALLOW_DEPLOYMENTS=true")
   })
 })
 

@@ -6,7 +6,10 @@ import { analyticsModule } from "@miragon-ai/analytics-connector"
 import {
   composeModules,
   createShellPlugin,
+  frameworkWritesAllowed,
   type ProfileStore,
+  type ResolveBootOptions,
+  type ResolvedBoot,
 } from "@miragon-ai/widget-shell/server"
 import type { ModuleDefinition, SharedResources } from "./module-contract.js"
 import { createDefaultProfileStore } from "./persistence/index.js"
@@ -51,9 +54,49 @@ const composition = composeModules<SharedResources>({
 
 export const warnUnknownEnvVars = composition.warnUnknownEnvVars
 export const emitBootWarnings = composition.emitBootWarnings
+export const logEffectiveToolsets = composition.logEffectiveToolsets
 
-export function getAppConfig(): AppConfig {
-  return composition.appConfig()
+/**
+ * The module selection, resolved ONCE per boot: each module's effective
+ * toolset (fail closed — no suffix is the read-only floor unless `index.ts`
+ * installed OAuth) threaded into its config. Plugins, `AppConfig` and the
+ * builder decision all derive from this one value. The default (no OAuth)
+ * keeps argument-less callers (tests) on the restrictive side.
+ */
+export function resolveBoot(
+  options: ResolveBootOptions = {},
+  env: NodeJS.ProcessEnv = process.env,
+): ResolvedBoot {
+  return composition.resolveBoot(env, options)
+}
+
+export function getAppConfig(boot: ResolvedBoot = resolveBoot()): AppConfig {
+  return { activeApps: boot.entries, pipelines: {} }
+}
+
+/**
+ * Whether to switch on the toolkit's visual builder and its dashboard tools
+ * (`get-builder-catalogue`, `save/list/load/delete-dashboard`). No module
+ * toolset filters them, and the dashboard writes are keyed by user, so they
+ * exist only under OAuth while no module runs on its read-only floor
+ * (`frameworkWritesAllowed`). `render-view`/`refresh-view` stay regardless.
+ */
+export function builderEnabled(boot: ResolvedBoot): boolean {
+  return frameworkWritesAllowed(boot)
+}
+
+/**
+ * The boot decision `index.ts` makes, single-sourced so the e2e helpers run
+ * it too: the selection is authenticated exactly when an OAuth provider was
+ * actually BUILT from MCP_OAUTH (unset/blank builds none → the read-only
+ * defaults) — never from the raw env var — and the builder follows from it.
+ */
+export function selectBoot(
+  oauthProvider: object | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): { boot: ResolvedBoot; builder: boolean } {
+  const boot = resolveBoot({ authenticated: oauthProvider !== undefined }, env)
+  return { boot, builder: builderEnabled(boot) }
 }
 
 /**
@@ -75,14 +118,16 @@ function buildSharedResources(
 }
 
 /**
- * `index.ts` passes the store `initRuntime` selected (possibly Postgres); the
- * default keeps argument-less callers (tests) on the filesystem/in-memory
- * path without duplicating that selection here.
+ * `index.ts` passes the store `initRuntime` selected (possibly Postgres) and
+ * its once-per-boot selection; the defaults keep argument-less callers (tests)
+ * on the filesystem/in-memory path and the unauthenticated defaults without
+ * duplicating either selection here.
  */
 export function getPlugins(
   profileStore: ProfileStore = createDefaultProfileStore(),
+  boot: ResolvedBoot = resolveBoot(),
 ): AppPlugin<MCPServer>[] {
-  const entries = composition.appEntries()
+  const { entries } = boot
   const shared = buildSharedResources(entries, profileStore)
   return [
     // Always-on generic widgets (`shell:*`) — no tools, no steps, so they are

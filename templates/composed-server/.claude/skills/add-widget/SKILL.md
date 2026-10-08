@@ -92,8 +92,10 @@ Model both tools on `modules/mcp-notes/src/widget-tools.ts`:
 - Share the input shape between the pair (one `const <thing>InputShape`), so
   the widget can re-issue the show tool's arguments against the feed.
 - A widget-path tool that performs a **durable write** must honor the module's
-  toolset itself (the registrar's filter never sees it) — see the
-  add-settings-section skill and
+  toolset itself (the registrar's filter never sees it) — gate it on the
+  module's `toolsets` vocabulary, where a missing toolset is the read-only
+  floor (the default here: this server has no OAuth), never "everything"; see
+  the add-settings-section skill and
   `node_modules/@miragon-ai/analytics-connector/src/settings-tools.ts`.
 
 ## Step 4 — verify

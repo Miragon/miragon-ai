@@ -88,12 +88,21 @@ export { createSql, postgresReadinessCheck, runMigrations, type Migration } from
 export { appOnly, showToolBinding } from "./widget-tool-bindings.js"
 export {
   composeModules,
+  frameworkWritesAllowed,
   type ActiveModuleRef,
   type ComposableModule,
+  type EffectiveToolset,
   type ModuleComposition,
+  type ResolveBootOptions,
+  type ResolvedBoot,
 } from "./composition.js"
 export { profileStoreFromEnv, startProfileSessionCleanup } from "./profile-store-env.js"
-export { createToolsetVocabulary, type ToolsetVocabulary } from "./toolsets.js"
+export {
+  createToolsetVocabulary,
+  type EffectiveSelection,
+  type ToolsetSource,
+  type ToolsetVocabulary,
+} from "./toolsets.js"
 export {
   createLocalizeFor,
   resolveProfileLocale,

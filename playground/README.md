@@ -21,6 +21,15 @@ pnpm dev                                                       # MCP server on :
 
 - MCP endpoint: `http://localhost:8400/mcp`, inspector: `http://localhost:8400/mcp/inspector`
 - Grafana: `http://localhost:8470`, Prometheus: `http://localhost:8460`, engine: `http://localhost:8410`
+- Every published port binds to `127.0.0.1` on purpose — the engine REST API
+  is anonymous, Grafana runs as anonymous Admin, the rest uses demo
+  credentials. From another machine, tunnel instead of rebinding
+  (`ssh -L 8400:127.0.0.1:8400 <host>`).
+- The server boots **read-only** (no `MCP_OAUTH`, no toolset suffix — the boot
+  log names the effective toolsets). To exercise write paths, set
+  `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env` (see the
+  commented line there); deployments additionally need
+  `CAMUNDA_ALLOW_DEPLOYMENTS=true`.
 - Compose profiles: `--profile multi-engine` (second engine on :8411),
   `--profile full` (containerized server on :8400), `--profile dev` (plain
   CIB Seven image, no analytics), `--profile auth` (Keycloak on :8480 for
@@ -29,7 +38,9 @@ pnpm dev                                                       # MCP server on :
 ## Deploy to Fly.io
 
 The stack maps to six Fly apps in one org, wired over Fly's private 6PN
-network. Only the server is public — everything else has no public IP.
+network. Only the server is public — everything else has no public IP, but
+6PN is shared by every app in the org: the anonymous engine REST API is
+reachable from all of them, so keep untrusted apps out of the org.
 
 | Fly app                            | Service        | Exposure                                             |
 | ---------------------------------- | -------------- | ---------------------------------------------------- |
@@ -68,10 +79,19 @@ Afterwards, point an MCP client (e.g. claude.ai custom connector) at
 
 ### Notes
 
-- The MCP endpoint is **unauthenticated** by default — it exposes demo data
-  on a throwaway engine. To put OAuth in front, set the `MCP_OAUTH` config as
-  a Fly secret on the server app (`fly secrets set MCP_OAUTH='…' -a
-miragon-ai-playground`, see `.env.example`).
+- The MCP endpoint is **unauthenticated** and pinned **read-only** —
+  `MCP_ACTIVE_MODULES=camunda7:read-only,analytics:read-only` in
+  `fly/server-camunda7.fly.toml`: anyone can query the demo engine, nobody
+  can change it through the server (no engine writes, settings saves or
+  dashboard builder). Never widen it there and never set
+  `CAMUNDA_ALLOW_DEPLOYMENTS` on this app (deploying a BPMN runs code in the
+  engine JVM).
+- A Fly **secret** overrides an `[env]` entry of the same name — if
+  `fly secrets list -a miragon-ai-playground` shows `MCP_ACTIVE_MODULES`,
+  keep it in sync with the toml (or `fly secrets unset` it). `MCP_OAUTH` as a
+  secret adds login (`fly secrets set MCP_OAUTH='…' -a
+miragon-ai-playground`, see `.env.example`); the pin still keeps it
+  read-only.
 - The engine keeps its H2 database in memory: every engine restart reseeds
   (~600 instances) and live traffic keeps metrics moving. Prometheus history
   survives restarts on its volume.

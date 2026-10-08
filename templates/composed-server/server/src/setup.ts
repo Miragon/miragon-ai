@@ -9,10 +9,12 @@ import { notesModule } from "@acme/mcp-notes"
 import {
   composeModules,
   createShellPlugin,
+  frameworkWritesAllowed,
   profileStoreFromEnv,
   startProfileSessionCleanup,
   type ComposableModule,
   type ProfileStore,
+  type ResolvedBoot,
 } from "@miragon-ai/widget-shell/server"
 
 /**
@@ -79,9 +81,31 @@ export const KNOWN_ENV_VARS = composition.knownEnvVars
 
 export const warnUnknownEnvVars = composition.warnUnknownEnvVars
 export const emitBootWarnings = composition.emitBootWarnings
+export const logEffectiveToolsets = composition.logEffectiveToolsets
 
-export function getAppConfig(): AppConfig {
-  return composition.appConfig()
+/**
+ * The module selection, resolved ONCE per boot: each module's effective
+ * toolset threaded into its config. This server installs no OAuth, so the
+ * selection is unauthenticated — every module without an explicit suffix runs
+ * its read-only floor (`MCP_ACTIVE_MODULES=camunda7:operations` widens it,
+ * for anyone who reaches the port). Pass `{ authenticated: true }` only once
+ * `index.ts` really installs OAuth on `/mcp`.
+ */
+export function resolveBoot(env: NodeJS.ProcessEnv = process.env): ResolvedBoot {
+  return composition.resolveBoot(env)
+}
+
+export function getAppConfig(boot: ResolvedBoot = resolveBoot()): AppConfig {
+  return { activeApps: boot.entries, pipelines: {} }
+}
+
+/**
+ * The toolkit's visual builder + dashboard tools bypass every module toolset
+ * and key their records by user, so they need OAuth and no read-only module
+ * (`frameworkWritesAllowed`) — always off on this unauthenticated server.
+ */
+export function builderEnabled(boot: ResolvedBoot): boolean {
+  return frameworkWritesAllowed(boot)
 }
 
 // ── Persistence ──────────────────────────────────────────────────────────
@@ -133,13 +157,15 @@ function buildSharedResources(
 }
 
 /**
- * `index.ts` passes the store it built; the default keeps argument-less
- * callers (tests) working without duplicating that selection here.
+ * `index.ts` passes the store it built and its once-per-boot selection; the
+ * defaults keep argument-less callers (tests) working without duplicating
+ * either here.
  */
 export function getPlugins(
   profileStore: ProfileStore = createProfileStore(),
+  boot: ResolvedBoot = resolveBoot(),
 ): AppPlugin<MCPServer>[] {
-  const entries = composition.appEntries()
+  const { entries } = boot
   const shared = buildSharedResources(entries, profileStore)
   return [
     // Always-on generic widgets (`shell:*`) — no tools, so deliberately

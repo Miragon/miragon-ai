@@ -13,11 +13,14 @@ import {
   swallowDevCliViewsPrime,
 } from "@miragon-ai/widget-shell/server"
 import {
+  builderEnabled,
   createDashboardStore,
   createProfileStore,
   emitBootWarnings,
   getAppConfig,
   getPlugins,
+  logEffectiveToolsets,
+  resolveBoot,
   startSessionCleanup,
   warnUnknownEnvVars,
 } from "./setup.js"
@@ -28,7 +31,12 @@ process.env.MCP_USE_ANONYMIZED_TELEMETRY ??= "false"
 
 // Surface env-var typos at boot instead of silently ignoring them.
 warnUnknownEnvVars()
+
+// The module selection, resolved once; the boot log states each module's
+// effective toolset (read-only unless MCP_ACTIVE_MODULES names a wider one).
+const boot = resolveBoot()
 emitBootWarnings()
+logEffectiveToolsets(boot)
 
 const profileStore = createProfileStore()
 startSessionCleanup(profileStore)
@@ -45,8 +53,8 @@ const app: MCPServer<unknown> = await createFrameworkApp({
   host: "0.0.0.0",
   // Cast: the toolkit types `plugins` unparameterized; the factories return
   // `AppPlugin<MCPServer>`, which is what the framework passes at runtime.
-  plugins: getPlugins(profileStore) as AppPlugin[],
-  appConfig: getAppConfig(),
+  plugins: getPlugins(profileStore, boot) as AppPlugin[],
+  appConfig: getAppConfig(boot),
   app: {
     // The compiled widget bundle. Read ONCE at boot — after rebuilding the
     // bundle, restart the server.
@@ -54,8 +62,9 @@ const app: MCPServer<unknown> = await createFrameworkApp({
       jsPath: path.join(DIST_DIR, "mcp-app.js"),
       cssPath: path.join(DIST_DIR, "mcp-app.css"),
     },
-    // Visual builder + dashboard-persistence tools.
-    builder: true,
+    // Visual builder + dashboard-persistence tools: only with OAuth and no
+    // read-only module (`builderEnabled`), so off on this server.
+    builder: builderEnabled(boot),
     dashboardStore: createDashboardStore(),
   },
 })

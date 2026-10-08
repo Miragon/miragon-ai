@@ -23,7 +23,7 @@ import {
   settingsFor,
   type AnalyticsSettings,
 } from "./settings.js"
-import { allowsDurableWrites } from "./toolsets.js"
+import { allowsDurableWrites, type AnalyticsToolset } from "./toolsets.js"
 
 /**
  * The analytics module's settings section — its own show/data/save tool triple
@@ -37,10 +37,10 @@ import { allowsDurableWrites } from "./toolsets.js"
 export interface AnalyticsSettingsView {
   settings: AnalyticsSettings
   /**
-   * False without a writable store, in a read-only toolset, or when the
-   * request carries no resolvable profile identity (mcp-use 2 issues no MCP
-   * session ids — identity comes from OAuth or a gateway-stamped
-   * `Mcp-Session-Id`) — the widget hides Save.
+   * False without a writable store, in the `read-only` toolset (also what a
+   * missing toolset resolves to), or when the request carries no resolvable
+   * profile identity (mcp-use 2 issues no MCP session ids — identity comes
+   * from OAuth or a gateway-stamped `Mcp-Session-Id`) — the widget hides Save.
    */
   canSave: boolean
 }
@@ -48,12 +48,12 @@ export interface AnalyticsSettingsView {
 export function registerSettingsTools(
   server: MCPServer,
   profileStore?: ProfileSource,
-  toolset?: string,
+  toolset?: AnalyticsToolset,
 ): void {
   // The save tool is a durable write registered OUTSIDE the tool registrar, so
-  // it gates itself against the deployment's toolset (see `allowsDurableWrites`
-  // — declared names, unknown ones degrade to `read-only` like
-  // withToolsetFilter).
+  // it gates itself against the module's toolset (see `allowsDurableWrites`):
+  // only `standard` saves. A missing toolset resolves to the `read-only`
+  // floor, and an unknown name from an untyped caller warns and degrades to it.
   const store = profileStore
   const save = allowsDurableWrites(toolset) ? store?.save?.bind(store) : undefined
 
@@ -110,7 +110,7 @@ export function registerSettingsTools(
     withToolErrors(async (_params, ctx) => buildDataFeedResult({ ...(await loadView(ctx)) })),
   )
 
-  // Without a writable store (or in a read-only toolset) there is nothing to
+  // Without a writable store (or on the `read-only` floor) there is nothing to
   // save into — the section stays read-only (canSave: false) and the tool
   // surface honestly reflects that.
   if (!save || !store) return
@@ -121,7 +121,10 @@ export function registerSettingsTools(
       title: "Save analytics settings",
       description:
         "Update the session's analytics defaults. Only the provided fields change; omitted fields keep their value. The saved defaults apply whenever an analytics call omits `period` or `minBucketSize`.",
-      annotations: { idempotentHint: true },
+      // The module's only non-read-only tool, and explicitly NOT destructive
+      // (MCP presumes a write destructive unless told otherwise): it merges
+      // the caller's own slice, nothing is deleted or overwritten wholesale.
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
       inputSchema: analyticsSettingsSaveInput,
       // No view binding / app visibility: a normal model-visible tool; the
       // settings widget also calls it and reads the saved slice back from

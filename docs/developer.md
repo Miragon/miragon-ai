@@ -7,7 +7,7 @@ with the hosted playground.
 
 Point any MCP client at the [playground](https://miragon-ai-playground.fly.dev/mcp)
 (`https://miragon-ai-playground.fly.dev/mcp`): a seeded engine, live traffic,
-and the full analytics stack. See [Connect your Claude in 30 seconds](/#connect-your-claude).
+and the full analytics stack, read-only. See [Connect your Claude in 30 seconds](/#connect-your-claude).
 Everything below is for running your own stack.
 
 ## Prerequisites
@@ -27,7 +27,7 @@ pnpm install
 
 ## Start the infrastructure
 
-The default Compose stack brings up CIB Seven, the OTEL Collector, Prometheus, and Grafana — but **not** the Node MCP server, so port `8400` stays free for `pnpm dev`.
+The default Compose stack brings up CIB Seven, the OTEL Collector, Prometheus, and Grafana — but **not** the Node MCP server, so port `8400` stays free for `pnpm dev`. Every port binds to `127.0.0.1`.
 
 ```bash
 docker compose -f playground/docker/docker-compose.yml up -d
@@ -41,7 +41,10 @@ pnpm dev
 ```
 
 This starts the MCP server on `:8400`.
-Connect any MCP host to `http://localhost:8400/mcp` and call a tool.
+Connect any MCP host to `http://localhost:8400/mcp` and call a tool. It boots
+read-only (no `MCP_OAUTH`, no toolset suffix — the boot log says so); to test
+write paths, uncomment `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard`
+in `.env`. `pnpm dev` binds 127.0.0.1; `pnpm start` and Docker listen on all interfaces.
 
 ## Common tasks
 

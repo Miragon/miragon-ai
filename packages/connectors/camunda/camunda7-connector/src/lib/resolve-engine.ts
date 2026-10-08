@@ -87,7 +87,7 @@ export class EngineNotSelectedError extends Error {
         .map((e) => e.id)
         .join(
           ", ",
-        )}. Pass the per-call \`engine\` parameter, or save a default with camunda7_engine action "select".`,
+        )}. Pass the per-call \`engine\` parameter (camunda7_engine action "list" shows the ids). Where the toolset allows it, a signed-in user can also save a default with camunda7_engine action "select".`,
     )
     this.name = "EngineNotSelectedError"
     this.availableEngines = availableEngines

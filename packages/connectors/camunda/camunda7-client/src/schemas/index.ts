@@ -29,9 +29,11 @@ export {
   type TaskFormSchema,
 } from "./task-form.js"
 export {
+  listExternalTasksInput,
   fetchAndLockInput,
   completeExternalTaskInput,
   handleExternalTaskFailureInput,
+  setExternalTaskRetriesInput,
 } from "./external-tasks.js"
 export { correlateMessageInput, throwSignalInput } from "./messages-signals.js"
 export { listDeploymentsInput, createDeploymentInput, getDeploymentInput } from "./deployments.js"

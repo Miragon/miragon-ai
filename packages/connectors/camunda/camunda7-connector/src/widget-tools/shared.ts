@@ -3,6 +3,7 @@ import { listIncidentsInput, listProcessInstancesInput } from "@miragon-ai/camun
 import type { EngineHealthThresholds } from "../data/health-data.js"
 import { clusterDetailFilterShape, pagingShape } from "../feed-contracts.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import type { Camunda7Toolset } from "../lib/toolsets.js"
 import type { ProfileStore } from "@miragon-ai/widget-shell/server"
 
 /**
@@ -65,6 +66,6 @@ export interface WidgetToolsContext {
   registry: EngineRegistry
   healthThresholds: EngineHealthThresholds
   profileStore: ProfileStore
-  /** The deployment's toolset (`MCP_ACTIVE_MODULES` suffix); undefined = all tools. */
-  toolset?: string
+  /** The deployment's resolved toolset (from the `MCP_ACTIVE_MODULES` suffix or the auth-dependent default). */
+  toolset: Camunda7Toolset
 }

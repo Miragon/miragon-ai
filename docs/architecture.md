@@ -58,10 +58,12 @@ second engine dialect cheap:
   capabilities are injected by the app — e.g. the camunda7 module's BPMN-XML
   lookup feeding the analytics heatmap (`SharedResources.fetchBpmnXml`).
 - **Modules are self-contained.** Each exports a module definition — config
-  schema, env mapping, known env vars, boot warnings, plugin factory
-  (`packages/*/src/module.ts`). The app only selects modules
+  schema, env mapping, known env vars, toolset vocabulary, boot warnings,
+  plugin factory (`packages/*/src/module.ts`). The app only selects modules
   (`MCP_ACTIVE_MODULES`) and wires shared resources against its own port
-  (`apps/mcp-server-camunda7/src/module-contract.ts`). The module packages are
+  (`apps/mcp-server-camunda7/src/module-contract.ts`); the shared composition
+  resolves one fail-closed toolset per module per boot (read-only unless
+  widened) and logs it. The module packages are
   published to npm, so external composition roots can mount them next to
   their own modules — `templates/composed-server/` is the reference.
 - **Apps own no domain UI.** Widgets and their catalogues live in packages:

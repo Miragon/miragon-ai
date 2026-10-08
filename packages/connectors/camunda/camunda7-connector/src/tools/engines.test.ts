@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest"
+import { z } from "zod"
 import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import {
   ANONYMOUS_PROFILE_KEY,
@@ -14,6 +15,8 @@ import {
   type EngineRegistry,
 } from "../lib/resolve-engine.js"
 import { CAMUNDA7_MODULE_KEY } from "../lib/profile-schema.js"
+import type { Camunda7Toolset } from "../lib/toolsets.js"
+import { CAMUNDA7_ENGINE } from "../tool-names.js"
 
 const ENGINES = [
   { id: "alpha", baseUrl: "http://alpha/engine-rest", cockpitUrl: "http://alpha/cockpit" },
@@ -30,23 +33,104 @@ type Handler = (reg: EngineRegistry, args: EngineToolArgs) => Promise<Record<str
  * Registers the real engine tool against a recording registrar and exposes its
  * handler directly — the registrar/toolset mechanics have their own tests
  * (`lib/toolsets.test.ts`); here we pin the handler contract: what `select`
- * persists, whom it refuses, and what `list`/`current` report.
+ * persists, whom it refuses, and what `list`/`current` report. The toolset is
+ * always explicit; the default is `operations`, an authenticated boot's
+ * no-suffix toolset (profile writes allowed).
  */
-function harness(toolset?: string) {
+function harness(toolset: Camunda7Toolset = "operations") {
   const store = createInMemoryProfileStore()
   const registry = createEngineRegistry(ENGINES, (e) => ({ __engine: e.id }) as unknown as Client)
-  let handler: Handler | undefined
+  let registered: ToolConfig<EngineRegistry> | undefined
   const recorder = Object.assign(
     (config: ToolConfig<EngineRegistry>) => {
-      handler = (config as unknown as { handler: Handler }).handler
+      registered = config
     },
     { getRegisteredTools: () => [] },
   )
   registerEngineTools(recorder as never, store, toolset)
-  if (!handler) throw new Error("camunda7_engine did not register")
-  const call = (args: EngineToolArgs) => handler!(registry, args)
-  return { store, call }
+  if (!registered) throw new Error("camunda7_engine did not register")
+  const config = registered
+  const handler = (config as unknown as { handler: Handler }).handler
+  const call = (args: EngineToolArgs) => handler(registry, args)
+  return { store, call, config }
 }
+
+/**
+ * The tool's SHAPE follows the toolset at registration: `read-only` must list
+ * strictly `readOnlyHint` tools (no exemption), so there the engine tool
+ * registers without its durable `select` action.
+ */
+describe("camunda7_engine registration variant per toolset", () => {
+  const actionsOf = (config: ToolConfig<EngineRegistry>) =>
+    (config.inputSchema as unknown as { action: z.ZodEnum }).action.options
+
+  it("read-only: a genuine read-only tool offering only list/current", () => {
+    const { config } = harness("read-only")
+    expect(config.name).toBe(CAMUNDA7_ENGINE)
+    expect(config.annotations).toEqual({ readOnlyHint: true, idempotentHint: true })
+    expect(actionsOf(config)).toEqual(["list", "current"])
+    expect(config.description).not.toContain('action="select"')
+    expect(config.description).toContain("does not allow saving a default engine")
+  })
+
+  it.each(["operations", "admin"] as const)(
+    "%s: idempotent, explicitly non-destructive, all three actions",
+    (toolset) => {
+      const { config } = harness(toolset)
+      expect(config.annotations).toEqual({ idempotentHint: true, destructiveHint: false })
+      expect(actionsOf(config)).toEqual(["list", "select", "current"])
+      expect(config.description).toContain('action="select" (requires engineId)')
+      expect(config.description).not.toContain("does not allow saving a default engine")
+    },
+  )
+
+  /** The model-facing contract: what each variant tells the model it can do. */
+  const LEAD =
+    "Manage which CIB Seven / Camunda 7 engine operations tools talk to. " +
+    'action="list" returns the engines available to this profile grouped by ENVIRONMENT ' +
+    "(`environments` maps each environment to its engine ids; every engine entry names its `environment`) " +
+    "plus the saved default engine (if any) — pick an environment first, then one of its engines; "
+
+  it("operations/admin describe the durable select and how routing falls back", () => {
+    expect(harness("operations").config.description).toBe(
+      LEAD +
+        'action="select" (requires engineId) saves that engine as the caller\'s default — ' +
+        "all subsequent operations tool calls without a per-call `engine` override route to it " +
+        "(a durable per-user setting, the same field the settings page edits); " +
+        'action="current" reports the saved default engine (or null). ' +
+        "With more than one engine configured, pass the per-call `engine` parameter or save a default first.",
+    )
+  })
+
+  it("read-only describes list/current and points at the per-call override only", () => {
+    expect(harness("read-only").config.description).toBe(
+      LEAD +
+        'action="current" reports the saved default engine (or null). ' +
+        "This deployment's toolset does not allow saving a default engine — with more than one engine " +
+        "configured, pass the per-call `engine` parameter.",
+    )
+  })
+
+  it("keeps its category and parameter docs in every variant", () => {
+    for (const toolset of ["read-only", "operations"] as const) {
+      const { config } = harness(toolset)
+      const shape = config.inputSchema as unknown as Record<string, z.ZodType>
+      expect(config.category).toBe("engines")
+      expect(shape.action.description).toBe("Engine-management action to perform.")
+      expect(shape.engineId.description).toBe(
+        'Engine id to select (required for action="select"), e.g. "prod-a".',
+      )
+    }
+  })
+
+  it("the read-only input schema rejects select before the handler runs", () => {
+    const schema = z.object(harness("read-only").config.inputSchema)
+    expect(schema.safeParse({ action: "select", engineId: "beta" }).success).toBe(false)
+    expect(schema.safeParse({ action: "list" }).success).toBe(true)
+    const writable = z.object(harness("operations").config.inputSchema)
+    expect(writable.safeParse({ action: "select", engineId: "beta" }).success).toBe(true)
+  })
+})
 
 /** Run `fn` under a fixed caller identity (an authenticated user by default). */
 const under = <T>(info: McpRequestInfo, fn: () => Promise<T>): Promise<T> =>
@@ -215,7 +299,7 @@ describe("camunda7_engine list / current", () => {
       },
       { getRegisteredTools: () => [] },
     )
-    registerEngineTools(recorder as never, store)
+    registerEngineTools(recorder as never, store, "read-only")
     const list = await under(USER, () => handler!(registry, { action: "list" }))
     expect(
       (list.engines as Array<{ id: string; environment: string }>).map((e) => [

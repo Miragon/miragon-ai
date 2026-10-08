@@ -5,6 +5,7 @@ import type { MCPServer } from "mcp-use"
 import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/camunda7-client/sdk"
 import { createPlugin, type Camunda7SharedResources } from "./plugin.js"
 import { providerForEntry } from "./providers/index.js"
+import { camunda7Toolsets } from "./lib/toolsets.js"
 
 /**
  * Self-contained module definition for host apps: config schema, env mapping,
@@ -72,6 +73,17 @@ export const camunda7ConfigSchema = z
     password: z.string().optional(),
     token: z.string().optional(),
     toolset: z.string().optional(),
+    // CAMUNDA_ALLOW_DEPLOYMENTS — parsed STRICTLY: deploy permission is code
+    // execution inside the engine JVM, so anything but "true"/"false" fails
+    // the boot loudly instead of guessing (z.coerce.boolean would even read
+    // "false" as true). Optional: unset = off; createBpmnXmlFetcher parses
+    // the same schema.
+    allowDeployments: z
+      .enum(["true", "false"], {
+        error: 'CAMUNDA_ALLOW_DEPLOYMENTS must be exactly "true" or "false" (or unset)',
+      })
+      .optional()
+      .transform((v) => v === "true"),
     incidentIssueRepository: z
       .string()
       .regex(/^[^/\s]+\/[^/\s]+$/, "Expected `owner/repo`")
@@ -233,6 +245,15 @@ function loadEnginesFromEnv(env: NodeJS.ProcessEnv): unknown {
   return [{ id, baseUrl: "http://localhost:8410/engine-rest" }]
 }
 
+/**
+ * CAMUNDA_ALLOW_DEPLOYMENTS as the module reads it — trimmed, empty = unset —
+ * shared by `configFromEnv` (what arms the tool) and `bootWarnings` (what
+ * discloses it), so a padded "true" can never arm deployments silently.
+ */
+function allowDeploymentsFromEnv(env: NodeJS.ProcessEnv): string | undefined {
+  return env.CAMUNDA_ALLOW_DEPLOYMENTS?.trim() || undefined
+}
+
 export const camunda7Module = {
   name: "camunda7",
 
@@ -245,6 +266,10 @@ export const camunda7Module = {
       password: env.CAMUNDA_PASSWORD,
       token: env.CAMUNDA_TOKEN,
       incidentIssueRepository: env.CAMUNDA_INCIDENT_ISSUE_REPO,
+      // Only trimmed (empty = unset, like the other CAMUNDA_* vars — e.g. a
+      // compose `${CAMUNDA_ALLOW_DEPLOYMENTS:-}`); the schema rejects anything
+      // but "true"/"false".
+      allowDeployments: allowDeploymentsFromEnv(env),
       // Engine-health verdict thresholds — only forwarded when set, so the
       // module's defaults apply otherwise.
       ...(env.CAMUNDA_HEALTH_CRITICAL_INCIDENTS || env.CAMUNDA_HEALTH_CRITICAL_CLUSTER_SIZE
@@ -272,28 +297,48 @@ export const camunda7Module = {
     "CAMUNDA_INCIDENT_ISSUE_REPO",
     "CAMUNDA_HEALTH_CRITICAL_INCIDENTS",
     "CAMUNDA_HEALTH_CRITICAL_CLUSTER_SIZE",
+    "CAMUNDA_ALLOW_DEPLOYMENTS",
   ] as const,
 
-  supportsToolsets: true,
+  /**
+   * The toolset vocabulary — the composition root resolves ONE concrete
+   * toolset per boot with it (fail-closed: `read-only` without a suffix on an
+   * unauthenticated boot, `operations` under OAuth, `read-only` for an empty
+   * or unknown suffix; `admin` only when named) and threads it into
+   * `config.toolset`.
+   */
+  toolsets: camunda7Toolsets,
 
   /**
-   * Boot-time hints for active deployments. With no engine env at all the
-   * module silently falls back to `http://localhost:8410/engine-rest` — which
-   * reaches the repo's Compose engine, so BPM tools work while engine-scoped
-   * analytics (heatmap, engine compare) join on a mismatched `engine_id` and
-   * read as "no data", not as a config error. Mirrors the analytics module's
-   * PROMETHEUS_URL warning.
+   * Boot-time hints for active deployments:
+   *
+   * - With no engine env at all the module silently falls back to
+   *   `http://localhost:8410/engine-rest` — which reaches the repo's Compose
+   *   engine, so BPM tools work while engine-scoped analytics (heatmap,
+   *   engine compare) join on a mismatched `engine_id` and read as "no data",
+   *   not as a config error. Mirrors the analytics module's PROMETHEUS_URL
+   *   warning.
+   * - `CAMUNDA_ALLOW_DEPLOYMENTS=true` arms code execution inside the engine
+   *   JVM for every `camunda7:admin` caller — stated on every boot.
    */
   bootWarnings(env: NodeJS.ProcessEnv): string[] {
+    const warnings: string[] = []
     const configured =
       env.CAMUNDA_ENGINES_FILE?.trim() ||
       env.CAMUNDA_ENGINES_JSON?.trim() ||
       env.CAMUNDA_BASE_URL?.trim()
-    if (configured) return []
-    const id = env.CAMUNDA_ENGINE_ID?.trim() || "default"
-    return [
-      `No engine is configured (CAMUNDA_ENGINES_FILE / CAMUNDA_ENGINES_JSON / CAMUNDA_BASE_URL) — defaulting to http://localhost:8410/engine-rest with engine id "${id}". That id is the join key against the metrics' engine_id label: engine-scoped analytics return empty when it does not match the ENGINE_ID the engine stamps (the repo's Compose stack stamps "prod-a" — set CAMUNDA_ENGINE_ID to match).`,
-    ]
+    if (!configured) {
+      const id = env.CAMUNDA_ENGINE_ID?.trim() || "default"
+      warnings.push(
+        `No engine is configured (CAMUNDA_ENGINES_FILE / CAMUNDA_ENGINES_JSON / CAMUNDA_BASE_URL) — defaulting to http://localhost:8410/engine-rest with engine id "${id}". That id is the join key against the metrics' engine_id label: engine-scoped analytics return empty when it does not match the ENGINE_ID the engine stamps (the repo's Compose stack stamps "prod-a" — set CAMUNDA_ENGINE_ID to match).`,
+      )
+    }
+    if (allowDeploymentsFromEnv(env) === "true") {
+      warnings.push(
+        "CAMUNDA_ALLOW_DEPLOYMENTS=true — camunda7_create_deployment is registered under camunda7:admin. Deploying a process runs code inside the engine JVM (expressions, scripts and listener/delegate references execute with the engine's privileges): grant camunda7:admin only to callers you would trust with that.",
+      )
+    }
+    return warnings
   },
 
   createPlugin(

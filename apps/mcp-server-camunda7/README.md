@@ -11,8 +11,12 @@ is `private` and not published to npm.
 
 ## What it does
 
-- **Composes modules** — loads the modules named in `MCP_ACTIVE_MODULES` (default: all), each with an
-  optional toolset suffix (`camunda7:read-only`, …), and merges their tools, widgets and pipeline steps.
+- **Composes modules** — loads the modules named in `MCP_ACTIVE_MODULES` (default: all) and merges
+  their tools, widgets and pipeline steps. Each module runs one fail-closed toolset per boot: the
+  suffix if given (`camunda7:operations`, …), otherwise read-only without `MCP_OAUTH` and its
+  standard toolset (camunda7 `operations`, analytics `standard`) with it — `admin` is never implied,
+  an empty or unknown suffix falls back to read-only, and the boot log states the result. The
+  toolkit's dashboard builder is registered only under OAuth while no module runs read-only.
   Modules self-describe via their `src/module.ts` (`configFromEnv`, `knownEnvVars`, `bootWarnings`,
   plugin factory) against the app-owned port in [`src/module-contract.ts`](src/module-contract.ts) —
   the app only selects modules and wires shared resources.
@@ -31,7 +35,7 @@ upstream/proxy federation.
 ## Run
 
 ```bash
-# Published image (production)
+# Published image (production) — boots read-only without MCP_OAUTH or a toolset suffix
 docker run --rm -p 8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8410/engine-rest \
   -e PROMETHEUS_URL=http://host.docker.internal:9090 \
@@ -44,7 +48,10 @@ pnpm start        # run the compiled server from dist/
 ```
 
 Configuration is entirely environment-driven — see
-[Configuration](../../README.md#configuration) and [`docs/operations.md`](../../docs/operations.md).
+[Configuration](../../README.md#configuration), [Toolsets](../../README.md#toolsets) and
+[`docs/operations.md`](../../docs/operations.md). To exercise write paths locally, set
+`MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env` (plus
+`CAMUNDA_ALLOW_DEPLOYMENTS=true` for deployments).
 
 ## Layout
 
