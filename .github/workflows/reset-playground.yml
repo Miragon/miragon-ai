@@ -136,9 +136,17 @@ jobs:
             exit 1
           fi
 
-          # Delete every series, then release the disk immediately. Requires
-          # --web.enable-admin-api (set in prometheus/Dockerfile.fly).
+          # The wipe needs --web.enable-admin-api (set in
+          # prometheus/Dockerfile.fly). A deployed image that predates the flag
+          # rejects it, so check first and name the fix: redeploy Prometheus.
+          admin_api=$(curl -sS http://localhost:9090/api/v1/status/flags | jq -r '.data["web.enable-admin-api"]')
+          if [ "$admin_api" != "true" ]; then
+            echo "::error title=Prometheus admin API disabled::The deployed $PROM_APP runs without --web.enable-admin-api (web.enable-admin-api=$admin_api). Redeploy it: Deploy Playground workflow, target prometheus."
+            exit 1
+          fi
+
+          # Delete every series, then release the disk immediately.
           echo "==> deleting all series"
-          curl -sf -g -X POST 'http://localhost:9090/api/v1/admin/tsdb/delete_series?match[]={__name__=~".+"}'
-          curl -sf -X POST http://localhost:9090/api/v1/admin/tsdb/clean_tombstones
+          curl -sS --fail-with-body -g -X POST 'http://localhost:9090/api/v1/admin/tsdb/delete_series?match[]={__name__=~".+"}'
+          curl -sS --fail-with-body -X POST http://localhost:9090/api/v1/admin/tsdb/clean_tombstones
           echo "==> Prometheus history wiped"
