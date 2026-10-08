@@ -77,15 +77,16 @@ const routeTable: Record<string, Route> = {
   "/process-definition/key/reset/start": reset,
 }
 
-// A Map, not an object lookup: the request path never dispatches through
-// inherited properties (e.g. "/constructor").
-const routes = new Map(Object.entries(routeTable))
+// Matched by comparison against the fixed table, never looked up by the
+// request path (no dispatch through inherited properties like "/constructor").
+const routes = Object.entries(routeTable)
+const routeFor = (path: string): Route | undefined => routes.find(([p]) => p === path)?.[1]
 
 const engine = http.createServer((req, res) => {
   req.resume()
   req.on("end", () => {
     const path = (req.url ?? "").replace(/^\/engine-rest/, "").replace(/\?.*$/, "")
-    const route = routes.get(path) ?? ((r: http.ServerResponse) => json(r, 200, { id: "ok" }))
+    const route = routeFor(path) ?? ((r: http.ServerResponse) => json(r, 200, { id: "ok" }))
     route(res, req)
   })
 })

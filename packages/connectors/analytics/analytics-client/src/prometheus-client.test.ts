@@ -59,9 +59,9 @@ const echoTable: Record<string, (auth?: string) => [number, string, string]> = {
   ],
 }
 
-// A Map, not an object lookup: the query string never dispatches through
-// inherited properties (e.g. "constructor").
-const echoes = new Map(Object.entries(echoTable))
+// Matched by comparison against the fixed table, never looked up by the query
+// string (no dispatch through inherited properties like "constructor").
+const echoes = Object.entries(echoTable)
 
 const prometheus = http.createServer((req, res) => {
   lastHeaders = req.headers
@@ -70,7 +70,7 @@ const prometheus = http.createServer((req, res) => {
     res.writeHead(status, { "Content-Type": "application/json" })
     res.end(JSON.stringify(body))
   }
-  const echo = echoes.get(query)
+  const echo = echoes.find(([q]) => q === query)?.[1]
   if (echo) {
     const [status, type, body] = echo(req.headers.authorization)
     res.writeHead(status, { "Content-Type": type })

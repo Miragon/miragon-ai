@@ -69,9 +69,10 @@ const routeTable: Record<string, Route> = {
     json(res, 200, { id: "pi-1", echo: JSON.parse(body) as unknown }),
 }
 
-// A Map, not an object lookup: the request path never dispatches through
-// inherited properties (e.g. "/constructor").
-const routes = new Map(Object.entries(routeTable))
+// Matched by comparison against the fixed table, never looked up by the
+// request path (no dispatch through inherited properties like "/constructor").
+const routes = Object.entries(routeTable)
+const routeFor = (path: string): Route | undefined => routes.find(([p]) => p === path)?.[1]
 
 const engine = http.createServer((req, res) => {
   let body = ""
@@ -79,7 +80,7 @@ const engine = http.createServer((req, res) => {
   req.on("end", () => {
     const path = (req.url ?? "").replace(/^\/engine-rest/, "").replace(/\?.*$/, "")
     seen.push({ method: req.method, path, headers: req.headers })
-    const route = routes.get(path) ?? ((r: http.ServerResponse) => json(r, 200, { id: "ok" }))
+    const route = routeFor(path) ?? ((r: http.ServerResponse) => json(r, 200, { id: "ok" }))
     route(res, body)
   })
 })
