@@ -35,13 +35,20 @@ export interface HealthOptions {
   timeoutMs?: number
   /** Log prefix for failed checks (default `health`). */
   label?: string
+  /**
+   * True once the host is shutting down: readiness then answers 503
+   * `draining` (liveness stays 200), so a load balancer stops routing new
+   * traffic while in-flight requests finish.
+   */
+  draining?: () => boolean
 }
 
 export type HealthStatus = "up" | "down"
 
 /** The readiness body: the overall verdict plus one entry per check. */
 export interface HealthReport {
-  status: HealthStatus
+  /** `draining` while the host shuts down, whatever the checks say. */
+  status: HealthStatus | "draining"
   checks: Record<string, HealthStatus>
 }
 
@@ -89,16 +96,26 @@ async function runReadinessChecks(
 /**
  * Register `<path>/live`, `<path>/ready` and `<path>` (= ready). Readiness
  * answers 200 with `{ status: "up", checks }` or 503 with `status: "down"`
- * and the failing checks marked; the checks run in parallel, each under
+ * and the failing checks marked (`status: "draining"` once `draining()`
+ * holds); the checks run in parallel, each under
  * `timeoutMs`. Register `installMetrics` first if probe traffic should show
  * up in the HTTP metrics (hono only wraps routes registered after the
  * middleware).
  */
 export function installHealthEndpoints(server: HttpRouteHost, options: HealthOptions = {}): void {
-  const { path = "/health", readiness = {}, timeoutMs = 2000, label = "health" } = options
+  const {
+    path = "/health",
+    readiness = {},
+    timeoutMs = 2000,
+    label = "health",
+    draining = () => false,
+  } = options
   const live = (): Response => jsonResponse(200, { status: "up" })
   const ready = async (): Promise<Response> => {
+    if (draining()) return jsonResponse(503, { status: "draining", checks: {} })
     const report = await runReadinessChecks(readiness, timeoutMs, label)
+    // Re-checked: a probe in flight when the drain began must not report up.
+    if (draining()) return jsonResponse(503, { ...report, status: "draining" })
     return jsonResponse(report.status === "up" ? 200 : 503, report)
   }
   server.get(`${path}/live`, live)

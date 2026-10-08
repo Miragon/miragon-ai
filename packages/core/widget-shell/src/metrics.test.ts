@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { Registry } from "prom-client"
 import {
+  bearerMatches,
   installMetrics,
   routeLabel,
   type HttpMiddlewareContext,
@@ -26,16 +27,31 @@ function install(options?: MetricsOptions) {
   }
   const registry = installMetrics(server, { defaultMetrics: false, ...options })
   if (!http || !tool) throw new Error("middlewares were not registered")
-  const scrape = async (path = "/metrics") => {
+  const scrape = async (path = "/metrics", authorization?: string) => {
     const handler = routes.get(path)
     if (!handler) throw new Error(`no route registered for ${path}`)
-    const res = await handler({})
+    const res = await handler({
+      req: { header: (name: string) => (name === "authorization" ? authorization : undefined) },
+    })
     return { status: res.status, headers: res.headers, text: await res.text() }
   }
   const request = (method: string, path: string, status: number, next?: () => Promise<void>) =>
     http!({ req: { method, path }, res: { status } }, next ?? (async () => {}))
   return { routes, registry, scrape, request, tool }
 }
+
+describe("bearerMatches", () => {
+  it("accepts exactly `Bearer <token>` (scheme case-insensitive)", () => {
+    expect(bearerMatches("Bearer s3cret", "s3cret")).toBe(true)
+    expect(bearerMatches("bearer   s3cret ", "s3cret")).toBe(true)
+    expect(bearerMatches("Bearer s3cret2", "s3cret")).toBe(false)
+    expect(bearerMatches("Bearer s3cre", "s3cret")).toBe(false)
+    expect(bearerMatches("Basic s3cret", "s3cret")).toBe(false)
+    expect(bearerMatches("s3cret", "s3cret")).toBe(false)
+    expect(bearerMatches("Bearer ", "s3cret")).toBe(false)
+    expect(bearerMatches(undefined, "s3cret")).toBe(false)
+  })
+})
 
 describe("routeLabel", () => {
   it("keeps known routes and their sub-paths, folds everything else into other", () => {
@@ -52,6 +68,25 @@ describe("routeLabel", () => {
   it("honors a custom route set", () => {
     expect(routeLabel("/api/v1/x", ["/api"])).toBe("/api")
     expect(routeLabel("/mcp", ["/api"])).toBe("other")
+  })
+})
+
+describe("installMetrics token", () => {
+  it("answers 401 with a Bearer challenge unless the scrape carries the token", async () => {
+    const { scrape } = install({ token: "s3cret" })
+    const anonymous = await scrape()
+    expect(anonymous.status).toBe(401)
+    expect(anonymous.headers.get("www-authenticate")).toBe('Bearer realm="metrics"')
+    expect(anonymous.text).not.toContain("mcp_tool_calls_total")
+    expect((await scrape("/metrics", "Bearer wrong")).status).toBe(401)
+    const authorized = await scrape("/metrics", "Bearer s3cret")
+    expect(authorized.status).toBe(200)
+    expect(authorized.text).toContain("mcp_tool_calls_total")
+  })
+
+  it("stays open without a token", async () => {
+    const { scrape } = install()
+    expect((await scrape()).status).toBe(200)
   })
 })
 
