@@ -1,5 +1,8 @@
 export {
   createPrometheusClient,
+  withCallerSignal,
+  DEFAULT_PROMETHEUS_TIMEOUT_MS,
+  type PrometheusQueryOptions,
   escapeLabelValue,
   engineMatcher,
   selector,

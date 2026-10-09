@@ -5,7 +5,7 @@
   "vitest": {
     "configFile": "vitest.stryker.config.ts"
   },
-  "mutate": ["src/client.ts"],
+  "mutate": ["src/client.ts", "src/engine-error.ts"],
   "inPlace": true,
   "incremental": true,
   "incrementalFile": "reports/stryker-incremental.json",

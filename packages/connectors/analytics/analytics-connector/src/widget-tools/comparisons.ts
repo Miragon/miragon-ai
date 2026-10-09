@@ -6,7 +6,7 @@ import {
   showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
-import { queries, schemas } from "@miragon-ai/analytics-client"
+import { queries, schemas, withCallerSignal } from "@miragon-ai/analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
 import { localizeFor } from "../server-locale.js"
 import { optionalMinBucketSize, settingsFor } from "../settings.js"
@@ -44,7 +44,10 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       const t = await localizeFor(profileStore, toolCtx)
       const minBucketSize =
         args.minBucketSize ?? (await settingsFor(profileStore, toolCtx)).minBucketSize
-      const data = await queries.clusterCompare(ch, { ...args, minBucketSize })
+      const data = await queries.clusterCompare(withCallerSignal(ch, toolCtx.signal), {
+        ...args,
+        minBucketSize,
+      })
       return buildSingleWidgetView({
         widget: "analytics:cluster-compare",
         app: "analytics",
@@ -81,7 +84,10 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       const t = await localizeFor(profileStore, toolCtx)
       const minBucketSize =
         args.minBucketSize ?? (await settingsFor(profileStore, toolCtx)).minBucketSize
-      const data = await queries.versionCompare(ch, { ...args, minBucketSize })
+      const data = await queries.versionCompare(withCallerSignal(ch, toolCtx.signal), {
+        ...args,
+        minBucketSize,
+      })
       // Null incident KPIs (no version label on the incident metric) must not
       // read as "failure rate 0pp" — say why they are missing instead; nor may
       // an elementId that scoped nothing read as the comparison's scope.
@@ -126,7 +132,10 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       const t = await localizeFor(profileStore, toolCtx)
       const minBucketSize =
         args.minBucketSize ?? (await settingsFor(profileStore, toolCtx)).minBucketSize
-      const data = await queries.engineCompare(ch, { ...args, minBucketSize })
+      const data = await queries.engineCompare(withCallerSignal(ch, toolCtx.signal), {
+        ...args,
+        minBucketSize,
+      })
       return buildSingleWidgetView({
         widget: "analytics:engine-compare",
         app: "analytics",
@@ -158,7 +167,9 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
     },
     withToolErrors(async (args, toolCtx) => {
       const t = await localizeFor(profileStore, toolCtx)
-      const data = await queries.engineLandscape(ch, { engine: args.engine })
+      const data = await queries.engineLandscape(withCallerSignal(ch, toolCtx.signal), {
+        engine: args.engine,
+      })
       return buildSingleWidgetView({
         widget: "analytics:engine-landscape",
         app: "analytics",
@@ -190,8 +201,10 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       inputSchema: z.object(schemas.engineLandscapeInput.shape),
       ...appOnly,
     },
-    withToolErrors(async (args) => {
-      const data = await queries.engineLandscape(ch, { engine: args.engine })
+    withToolErrors(async (args, toolCtx) => {
+      const data = await queries.engineLandscape(withCallerSignal(ch, toolCtx.signal), {
+        engine: args.engine,
+      })
       return buildDataFeedResult({ ...data })
     }),
   )

@@ -45,6 +45,12 @@ export interface Camunda7PluginConfig {
    */
   allowDeployments?: boolean
   /**
+   * Per-request deadline for every engine call in ms (env:
+   * `CAMUNDA_REQUEST_TIMEOUT_MS`); unset = the client default (30 s). A hung
+   * engine then fails the tool call with a timeout error naming the engine.
+   */
+  requestTimeoutMs?: number
+  /**
    * Optional `owner/repo` of a GitHub repository — purely a convenience for
    * GitHub customers (enables the prefilled new-issue URL and a default target
    * when the user asks to file there). The `camunda7_format_incident_issue`
@@ -95,7 +101,7 @@ export function createPlugin(
       }
       // The vendor provider owns client construction (identical across C7
       // vendors today — `providers/create-client.ts`).
-      return providerForEntry(e).createClient(e, auth)
+      return providerForEntry(e).createClient(e, auth, { timeoutMs: config.requestTimeoutMs })
     },
     {
       // Per-call fallback when no `engine` override is given: the caller's

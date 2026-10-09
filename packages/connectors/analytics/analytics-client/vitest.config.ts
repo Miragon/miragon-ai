@@ -13,11 +13,11 @@ export default mergeConfig(
         // product numbers the ratchet below is meant to hold.
         exclude: ["src/**/*.test-support.ts"],
         // Ratchet: frozen 2 points under the measured baseline. Raise when
-        // you push coverage up; never lower. Raised 2026-10-08 once the
-        // behavioural contract test ran every query function (measured
-        // without test support: statements 93.4 / branches 68.91 /
-        // functions 96.19 / lines 93.61).
-        thresholds: { statements: 91, branches: 66, functions: 94, lines: 91 },
+        // you push coverage up; never lower. Raised 2026-10-08 with the
+        // behavioural contract test over every query function (measured
+        // without test support: 93.4 / 68.91 / 96.19 / 93.61) and with the
+        // Prometheus HTTP client under test (95.69 / 80.64 / 98.01 / 96.06).
+        thresholds: { statements: 93, branches: 78, functions: 96, lines: 94 },
       },
     },
   }),

@@ -218,6 +218,8 @@ The most common variables — see [`docs/operations.md`](docs/operations.md) for
 | `CAMUNDA_AUTH_TYPE`                                       | `none`                              | `basic`, `bearer`, `passthrough`, or `none` — fallback for engines without an `auth`                                                                                |
 | `CAMUNDA_USERNAME` / `CAMUNDA_PASSWORD` / `CAMUNDA_TOKEN` | —                                   | Credentials for `basic`/`bearer`; `passthrough` forwards each caller's bearer token                                                                                 |
 | `PROMETHEUS_URL`                                          | `http://localhost:9090`             | Prometheus HTTP API — the analytics data source                                                                                                                     |
+| `PROMETHEUS_BEARER_TOKEN` / `…_USERNAME` / `…_PASSWORD`   | —                                   | Prometheus auth, bearer or basic (URL userinfo works too); `PROMETHEUS_HEADERS` adds JSON headers such as a tenant id                                               |
+| `CAMUNDA_REQUEST_TIMEOUT_MS` / `PROMETHEUS_TIMEOUT_MS`    | `30000`                             | Per-request deadline in ms for engine / Prometheus calls — a hung upstream fails the tool call with a timeout error                                                 |
 
 ### Multi-engine
 

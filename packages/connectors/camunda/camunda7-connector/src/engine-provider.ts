@@ -24,6 +24,12 @@ export interface EngineAuth {
   token?: string
 }
 
+/** Module-wide client settings (not per engine), handed to every provider's client factory. */
+export interface EngineClientSettings {
+  /** Per-request deadline in ms (`CAMUNDA_REQUEST_TIMEOUT_MS`); the client's default when unset. */
+  timeoutMs?: number
+}
+
 export interface EngineEntry {
   id: string
   baseUrl: string
@@ -66,7 +72,7 @@ export interface EngineCockpitStrategy {
 export interface EngineProvider {
   flavor: EngineFlavor
   /** REST-client factory — identical across vendors today; the hook exists for real divergence. */
-  createClient(entry: EngineEntry, auth: EngineAuth): Client
+  createClient(entry: EngineEntry, auth: EngineAuth, settings?: EngineClientSettings): Client
   cockpit: EngineCockpitStrategy
   branding: { displayName: string }
 }

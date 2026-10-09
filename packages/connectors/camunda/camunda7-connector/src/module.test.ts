@@ -122,6 +122,50 @@ describe("CAMUNDA_ALLOW_DEPLOYMENTS", () => {
 })
 
 /**
+ * The per-request engine deadline: strict like the deployment flag — a typo
+ * must fail the boot, not be coerced into some other deadline (or none).
+ */
+describe("CAMUNDA_REQUEST_TIMEOUT_MS", () => {
+  const engine = { id: "prod-a", baseUrl: "http://engine.example/engine-rest" }
+  const parsed = (requestTimeoutMs?: unknown) =>
+    camunda7ConfigSchema.parse({ engines: [engine], requestTimeoutMs }).requestTimeoutMs
+
+  it("parses whole milliseconds from env text or a direct caller's number; unset = default", () => {
+    expect(parsed("30000")).toBe(30_000)
+    expect(parsed("1")).toBe(1)
+    expect(parsed(5_000)).toBe(5_000)
+    expect(parsed("2147483647")).toBe(2_147_483_647)
+    expect(parsed(undefined)).toBeUndefined()
+  })
+
+  it.each(["30s", "3e4", "-1", "0", "1.5", "", " 30000", "2147483648", 0, 2.5, -5])(
+    "fails the boot on %j, naming the variable",
+    (raw) => {
+      expect(() => parsed(raw)).toThrow(/CAMUNDA_REQUEST_TIMEOUT_MS/)
+    },
+  )
+
+  it("configFromEnv trims (empty = unset) and leaves the verdict to the strict schema", () => {
+    const fromEnv = (value?: string) =>
+      camunda7Module.configFromEnv({ CAMUNDA_REQUEST_TIMEOUT_MS: value }).requestTimeoutMs
+    expect(fromEnv(" 5000 ")).toBe("5000")
+    expect(fromEnv("30s")).toBe("30s")
+    expect(fromEnv("  ")).toBeUndefined()
+    expect(fromEnv(undefined)).toBeUndefined()
+    expect(camunda7Module.knownEnvVars).toContain("CAMUNDA_REQUEST_TIMEOUT_MS")
+  })
+
+  it("reaches every engine client: a junk value fails createPlugin, a valid one boots", () => {
+    const server = { tool: vi.fn(), use: vi.fn(), prompt: vi.fn() } as unknown as MCPServer
+    expect(() =>
+      camunda7Module.createPlugin({ engines: [engine], requestTimeoutMs: "soon" }, {}),
+    ).toThrow(/CAMUNDA_REQUEST_TIMEOUT_MS/)
+    const plugin = camunda7Module.createPlugin({ engines: [engine], requestTimeoutMs: "250" }, {})
+    expect(() => plugin.registerTools?.(server)).not.toThrow()
+  })
+})
+
+/**
  * The engine id is a JOIN KEY against the metrics `engine_id` label, not a
  * display name — a mismatch makes every engine-scoped analytics query (BPMN
  * heatmap, engine compare) return empty instead of failing. These lock the

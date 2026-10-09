@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { Client } from "@miragon-ai/camunda7-client"
 import type { EngineProvider } from "../engine-provider.js"
-import { resolveEngine, type EngineRegistry } from "./resolve-engine.js"
+import { resolveEngine, type EngineCallContext, type EngineRegistry } from "./resolve-engine.js"
 
 /**
  * Optional `engine` parameter spread into every operations tool's input
@@ -31,14 +31,21 @@ export interface EngineContext {
  * single-default) before delegating. Keeps individual tool files small — the
  * only diff is the `withEngine(...)` wrap and adding `...engineParamShape` to
  * `inputSchema`.
+ *
+ * The optional third argument is the tool call's context: its `signal`
+ * aborts the engine READS when the MCP request is cancelled. The toolkit
+ * registrar (2.5) calls handlers as `(client, args)` only, so registrar tools
+ * get no cancellation yet — once it passes mcp-use's `ctx` as the third
+ * argument (Miragon/mcp-toolkit#175) it flows through here unchanged.
  */
 export function withEngine<TArgs extends { engine?: string }, TResult>(
   fn: (client: Client, args: TArgs, ctx: EngineContext) => Promise<TResult>,
-): (registry: EngineRegistry, args: TArgs) => Promise<TResult> {
-  return async (registry, args) => {
+): (registry: EngineRegistry, args: TArgs, call?: EngineCallContext) => Promise<TResult> {
+  return async (registry, args, call) => {
     const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
       args.engine,
       registry,
+      call,
     )
     return fn(client, args, { engineId, baseUrl, cockpitUrl, provider })
   }

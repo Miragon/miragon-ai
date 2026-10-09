@@ -1,6 +1,6 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
-import { createPrometheusClient } from "@miragon-ai/analytics-client"
+import { createPrometheusClient, type PrometheusConfig } from "@miragon-ai/analytics-client"
 import { installMcpRequestContext } from "@miragon-ai/widget-shell/server"
 import { registerTools } from "./tools/index.js"
 import { registerSettingsTools } from "./settings-tools.js"
@@ -9,9 +9,12 @@ import { definition } from "./definition.js"
 import type { ProfileSource } from "./server-locale.js"
 import { analyticsToolsets } from "./toolsets.js"
 
-export interface AnalyticsPluginConfig {
-  /** Base URL of the Prometheus HTTP API (e.g. http://localhost:9090). */
-  url: string
+/**
+ * `PrometheusConfig` carries the connection: the base URL (e.g.
+ * http://localhost:9090), optional bearer/basic auth + extra headers, and the
+ * per-query deadline (`timeoutMs`).
+ */
+export interface AnalyticsPluginConfig extends PrometheusConfig {
   /**
    * Optional BPMN-XML lookup used by widget tools that enrich metric data with
    * engine lookups — currently the BPMN heatmap, which fetches the diagram XML.
@@ -38,7 +41,14 @@ export interface AnalyticsPluginConfig {
 }
 
 export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer> {
-  const client = createPrometheusClient({ url: config.url })
+  const client = createPrometheusClient({
+    url: config.url,
+    bearerToken: config.bearerToken,
+    username: config.username,
+    password: config.password,
+    headers: config.headers,
+    timeoutMs: config.timeoutMs,
+  })
   return {
     definition,
     appConfig: { client },

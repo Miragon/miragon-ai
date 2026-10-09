@@ -8,7 +8,12 @@ import {
   showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
-import { queries, schemas, type PrometheusClient } from "@miragon-ai/analytics-client"
+import {
+  queries,
+  schemas,
+  withCallerSignal,
+  type PrometheusClient,
+} from "@miragon-ai/analytics-client"
 import {
   ANALYTICS_BPMN_HEATMAP_DATA,
   ANALYTICS_DASHBOARD_DATA,
@@ -85,7 +90,7 @@ export function registerWidgetTools(
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
-      const data = await queries.dashboardData(ch, {
+      const data = await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
         processDefinitionKey: args.processDefinitionKey,
         period,
         engine: args.engine,
@@ -139,7 +144,7 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const data = await queries.failureDashboardData(ch, {
+      const data = await queries.failureDashboardData(withCallerSignal(ch, ctx.signal), {
         engine: args.engine,
       })
       return buildComposedView({
@@ -178,7 +183,7 @@ export function registerWidgetTools(
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
-      const heat = await queries.elementHeat(ch, { ...args, period })
+      const heat = await queries.elementHeat(withCallerSignal(ch, ctx.signal), { ...args, period })
       const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
       // Model summary only — the bpmnXml must never reach the text channel;
       // the widget renders the diagram from structuredContent.
@@ -216,7 +221,7 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args, ctx) => {
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
-      const heat = await queries.elementHeat(ch, { ...args, period })
+      const heat = await queries.elementHeat(withCallerSignal(ch, ctx.signal), { ...args, period })
       const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
       const data = {
         processDefinitionKey: args.processDefinitionKey,
@@ -252,7 +257,7 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args, ctx) => {
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
-      const data = await queries.dashboardData(ch, {
+      const data = await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
         processDefinitionKey: args.processDefinitionKey,
         period,
         engine: args.engine,
@@ -273,8 +278,10 @@ export function registerWidgetTools(
       }),
       ...appOnly,
     },
-    withToolErrors(async (args) => {
-      const data = await queries.failureDashboardData(ch, { engine: args.engine })
+    withToolErrors(async (args, ctx) => {
+      const data = await queries.failureDashboardData(withCallerSignal(ch, ctx.signal), {
+        engine: args.engine,
+      })
       return buildDataFeedResult({ ...data })
     }),
   )

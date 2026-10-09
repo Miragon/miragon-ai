@@ -54,6 +54,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
+        ctx,
       )
       const data = await buildIncidentsDashboardData(client, {
         baseUrl,
@@ -96,6 +97,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
+        ctx,
       )
       const data = await buildProcessIncidentsData(client, {
         baseUrl,
@@ -138,6 +140,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
+        ctx,
       )
       const data = await buildIncidentDetailData(client, {
         baseUrl,
@@ -174,7 +177,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = await resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildEngineHealthData(client, engineId, healthThresholds)
       const top = data.clusters[0]
       return buildSingleWidgetView({
@@ -213,7 +216,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const { client, engineId } = await resolveEngine(args.engine, registry)
+      const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildClusterDetailData(client, engineId, {
         activityId: args.activityId,
         incidentType: args.incidentType,

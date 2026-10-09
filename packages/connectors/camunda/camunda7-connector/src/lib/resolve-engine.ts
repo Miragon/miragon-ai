@@ -4,7 +4,7 @@ import {
   createBackendRegistry,
   type BackendRegistry,
 } from "@miragon/mcp-toolkit-core/tools"
-import type { Client } from "@miragon-ai/camunda7-client"
+import { withCallerSignal, type Client } from "@miragon-ai/camunda7-client"
 import type { EngineProvider } from "../engine-provider.js"
 import { providerForEntry } from "../providers/index.js"
 
@@ -120,16 +120,30 @@ async function savedDefault(registry: EngineRegistry): Promise<string | undefine
 }
 
 /**
+ * The slice of a tool call's context engine calls honor: mcp-use's handler
+ * `ctx` satisfies it structurally (`ctx.signal` aborts when the MCP client
+ * cancels the request or drops the connection).
+ */
+export interface EngineCallContext {
+  signal?: AbortSignal
+}
+
+/**
  * Resolves an engine for the current tool call (precedence: explicit `override`
  * > the caller's saved default engine > the only configured engine, else
  * throws). Thin adapter over the toolkit backend registry that re-exposes the
  * camunda7 ergonomic shape and re-throws the toolkit's failures as the
  * module's own `EngineNotSelectedError` / `UnknownEngineError` so the error
  * contract (codes, `availableEngines`, the remediation hint) is preserved.
+ *
+ * Pass the handler's `ctx` as `call` so the returned client's READS abort
+ * with the MCP request (`withCallerSignal` — writes always run to completion
+ * or the client's own deadline).
  */
 export async function resolveEngine(
   override: string | undefined,
   registry: EngineRegistry,
+  call?: EngineCallContext,
 ): Promise<{
   client: Client
   engineId: string
@@ -140,7 +154,7 @@ export async function resolveEngine(
   try {
     const backend = registry.backends.resolve(override ?? (await savedDefault(registry)))
     return {
-      client: backend.client,
+      client: withCallerSignal(backend.client, call?.signal),
       engineId: backend.id,
       baseUrl: backend.meta?.baseUrl ?? "",
       cockpitUrl: backend.meta?.cockpitUrl,

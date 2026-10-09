@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { createCamunda7Client } from "./client.js"
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 function headers(client: ReturnType<typeof createCamunda7Client>): Headers {
   return client.getConfig().headers as Headers
@@ -88,7 +92,7 @@ describe("createCamunda7Client", () => {
       tokenProvider: () => undefined,
     })
     await expect(tokenless.get({ url: "/engine", fetch: unauthorized })).rejects.toThrow(
-      /no bearer token to pass through/,
+      /^\[401\] empty response body\. The MCP request carried no bearer token to pass through\.$/,
     )
 
     const rejected = createCamunda7Client({
@@ -99,6 +103,32 @@ describe("createCamunda7Client", () => {
     await expect(rejected.get({ url: "/engine", fetch: unauthorized })).rejects.toThrow(
       /rejected the forwarded bearer token/,
     )
+  })
+
+  it("rejects a deadline that is not a positive integer a timer can hold", () => {
+    const baseUrl = "http://localhost:8410/engine-rest"
+    for (const timeoutMs of [0, -1, 1.5, Number.NaN, 2_147_483_648]) {
+      expect(() => createCamunda7Client({ baseUrl, timeoutMs })).toThrow(RangeError)
+    }
+    expect(() => createCamunda7Client({ baseUrl, timeoutMs: 2_147_483_647 })).not.toThrow()
+  })
+
+  it("sends every request with a deadline signal that also follows the caller's", async () => {
+    let sent: { request?: Request; signal?: AbortSignal | null } = {}
+    vi.stubGlobal("fetch", (request: Request, init?: RequestInit) => {
+      sent = { request, signal: init?.signal }
+      return Promise.resolve(
+        new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } }),
+      )
+    })
+    const caller = new AbortController()
+    const client = createCamunda7Client({ baseUrl: "http://localhost:8410/engine-rest" })
+    await client.get({ url: "/engine", signal: caller.signal })
+    expect(sent.request?.url).toBe("http://localhost:8410/engine-rest/engine")
+    expect(sent.signal).toBeInstanceOf(AbortSignal)
+    expect(sent.signal?.aborted).toBe(false)
+    caller.abort()
+    expect(sent.signal?.aborted).toBe(true)
   })
 
   it("passthrough: leaves the other request headers untouched", async () => {
