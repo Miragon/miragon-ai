@@ -51,6 +51,11 @@ external infrastructure.
    (JSON for in-widget self-fetch). The `_show_`/`_data` **naming is
    load-bearing**: `server/test/widget-contract.e2e.test.ts` asserts the widget
    `_meta` contract by name across ALL composed modules, including yours.
+   All three take **strict input** — the registrar with `{ strictInput: true }`,
+   raw `server.tool()` with `strictToolInput(shape)` from
+   `@miragon-ai/widget-shell/server` — so an unknown key is a tool error naming
+   the valid keys, never a silently dropped filter
+   (`server/test/strict-input.e2e.test.ts`).
 3. **Widgets hang off a four-link chain** (component map → module catalogue →
    server registry → `tool-names.ts`); a missed link is a SILENTLY absent
    widget. Guarded by each module's `catalogue-sync.test.ts` and the server's

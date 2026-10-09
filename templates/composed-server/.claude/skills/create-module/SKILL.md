@@ -78,8 +78,9 @@ The contract, field by field (see `notesModule`):
 - `src/definition.ts` — the module catalogue: `name`, `steps: []`, and one
   entry per widget (start with `widgets: []` if you have none yet).
 - `src/tools.ts` — plain tools **for the model**, registered through
-  `createToolRegistrar(server, store)` (from `@miragon/mcp-toolkit-core/tools`)
-  — the second argument is threaded into every handler as its first parameter.
+  `createToolRegistrar(server, store, { strictInput: true })` (from
+  `@miragon/mcp-toolkit-core/tools`) — the second argument is threaded into
+  every handler as its first parameter; `strictInput` refuses unknown keys.
   Raw `server.tool()` is reserved for the widget path (`widget-tools.ts`).
 
 Tool conventions (they carry the contract, so they are not cosmetic):
