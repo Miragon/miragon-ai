@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { CAMUNDA7_ENGINELESS_TOOLS } from "@miragon-ai/camunda7-connector"
 import { bootServer, type BootedServer } from "./boot-server.js"
 import { isModelVisible } from "./golden.js"
 
@@ -100,6 +101,19 @@ describe("strict tool inputs on the wire (full surface)", () => {
         .map((param) => `${tool.name}.${param} → ${RETIRED[param]}`),
     )
     expect(offenders).toEqual([])
+  })
+
+  // The cockpit's model context and the Ask-AI prompts tell the model to pass
+  // the viewed `engine` on every camunda7_* call except the tools they name
+  // (`engineCallRule`). Strict input refuses an `engine` a tool does not take,
+  // so that exception must be exactly the model-visible camunda7 tools that
+  // advertise none — a new engine-less tool fails here, not at the model.
+  it("the engine-pinning prompts exempt exactly the model-visible camunda7 tools without `engine`", () => {
+    const engineless = moduleTools
+      .filter((tool) => tool.name.startsWith("camunda7_") && isModelVisible(tool))
+      .filter((tool) => !Object.hasOwn(tool.inputSchema.properties ?? {}, "engine"))
+      .map((tool) => tool.name)
+    expect(engineless.sort()).toEqual([...CAMUNDA7_ENGINELESS_TOOLS].sort())
   })
 
   it("every module tool refuses an unknown key with a tool error naming the valid keys", async () => {

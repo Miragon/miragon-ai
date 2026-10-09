@@ -238,11 +238,11 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
 
   // Pick (or switch) the active engine — navigation only, side-effect free.
   // The cockpit threads `engine` into every view, its model context tells
-  // the model to pass it on every camunda7_* call, and the Ask-AI prompts
-  // carry it (`engineArg`/`engineCallRule`); the caller's saved default
-  // engine (which retargets every later engine-less tool call) changes only
-  // through an explicit action: the settings page or `camunda7_engine`
-  // action "select".
+  // the model to pass it on every camunda7_* call that takes one, and the
+  // Ask-AI prompts carry it (`engineArg`/`engineCallRule`); the caller's saved
+  // default engine (which retargets every later engine-less tool call)
+  // changes only through an explicit action: the settings page or
+  // `camunda7_engine` action "select".
   const enterEngine = (id: string) => dispatch({ type: "enter-engine", id })
   const switchEngine = (id: string) => dispatch({ type: "switch-engine", id })
 
