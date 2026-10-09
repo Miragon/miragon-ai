@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
-import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
+import { WidgetFixtureHost, type HostActionLog } from "@miragon/mcp-toolkit-ui/app"
 import { CAMUNDA7_WIDGET_ACTIONS, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
 import type { IncidentInstance, VariableValue } from "../view-models.js"
+import { IncidentsTab } from "./instance-detail/incidents-tab.js"
 import { VariablesTable } from "./instance-sections.js"
 import { IncidentTable } from "./process-incidents/incident-table.js"
 import { useIncidentRecovery } from "./process-incidents/use-incident-recovery.js"
@@ -103,6 +104,36 @@ describe("incident rows offer the action the engine accepts", () => {
       ]),
     )
     expect(await screen.findAllByText("Retried")).toHaveLength(2)
+  })
+
+  it("keeps the row's ticket handoff on the instance's engine next to its recovery action", async () => {
+    // #332 pins every Ask-AI call template to the viewed engine; #328 swapped
+    // the rows' resolve props for `recovery`. The instance tab carries both.
+    const actions: HostActionLog[] = []
+    const OnProdB: ComponentType<Record<string, unknown>> = () => {
+      const recovery = useIncidentRecovery("prod-b", INCIDENTS)
+      return <IncidentsTab incidents={INCIDENTS} recovery={recovery} engine="prod-b" />
+    }
+    render(
+      <WidgetFixtureHost
+        widget={OnProdB}
+        data={{}}
+        tools={{ [CAMUNDA7_WIDGET_ACTIONS_DATA]: ALL_ACTIONS }}
+        onHostAction={(action) => actions.push(action)}
+      />,
+    )
+    await waitFor(async () => expect(await rowButtons("message job")).toContain("Retry"))
+    expect(await rowButtons("message custom")).toContain("Resolve")
+    const row = (await screen.findByText("message job")).closest("tr")!
+    fireEvent.click(within(row).getByRole("button", { name: "Draft ticket" }))
+    const prompts = actions
+      .filter((a) => a.type === "sendFollowUpMessage")
+      .map((a) => (a as { prompt: string }).prompt)
+    expect(prompts).toHaveLength(1)
+    expect(prompts[0]).toContain(
+      'camunda7_format_incident_issue({ engine: "prod-b", incidentId: "job" })',
+    )
+    expect(prompts[0]).toContain('Pass engine: "prod-b" on every camunda7_* call')
   })
 
   it("hides Retry when the toolset lacks the retries tool", async () => {
