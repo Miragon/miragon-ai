@@ -90,6 +90,60 @@ jobs:
 
       - run: pnpm test:pg
 
+  # Playwright host simulation of the BUILT widget bundle
+  # (apps/mcp-server-camunda7/test-host/README.md): the view document the real
+  # server serves, rendered in a sandboxed iframe behind a SEP-1865 host shim —
+  # the only check that runs the bundle's provider stack, the vite `dedupe`
+  # and the view recovery lifecycle in a browser. Not path-filtered: the
+  # bundle is assembled from every package plus the toolkit and mcp-use pins.
+  host-sim:
+    name: Widget host simulation (test:host)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.1.0
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The global setup boots `createApp` against the workspace packages' dist.
+      - run: pnpm build
+
+      # Browser cache keyed on the exact @playwright/test pin, which decides
+      # the browser build; system libraries are not cacheable and are
+      # installed on every run.
+      - id: playwright
+        run: echo "version=$(node -p "require('./apps/mcp-server-camunda7/package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
+
+      - id: playwright-cache
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-shell
+
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @miragon-ai/mcp-server-camunda7 exec playwright install --with-deps --only-shell chromium
+
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @miragon-ai/mcp-server-camunda7 exec playwright install-deps chromium
+
+      - run: pnpm --filter @miragon-ai/mcp-server-camunda7 test:host
+
+      # Traces + failure screenshots of the failed scenarios.
+      - if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: host-sim-results
+          path: apps/mcp-server-camunda7/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
   quality:
     name: Lint + Format
     runs-on: ubuntu-latest
