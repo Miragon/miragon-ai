@@ -21,7 +21,6 @@ onMounted(() => {
 
 <template>
   <div class="convo" :class="{ shown }">
-    <div class="glow" aria-hidden="true" />
     <div class="win">
       <div class="bar">
         <span class="live"><span class="dot" />playground</span>
@@ -73,6 +72,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* Colours come from the theme's CSS variables (custom.css → CI tokens):
+   --vp-c-brand-1 (green on the dark ground, per the CI) marks the assistant
+   and everything interactive, the brand gradient only the window's top
+   edge. */
 .convo {
   position: relative;
   width: 100%;
@@ -80,37 +83,23 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* Ambient brand glow behind the window */
-.glow {
-  position: absolute;
-  inset: -12% -8% -20%;
-  background: radial-gradient(
-    ellipse at 60% 30%,
-    rgba(0, 230, 118, 0.14) 0%,
-    rgba(61, 90, 241, 0.06) 45%,
-    transparent 72%
-  );
-  filter: blur(36px);
-  pointer-events: none;
-}
-
 .win {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  background: #0c0c0c;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: var(--cd-radius-lg);
+  background: var(--vp-c-bg-soft);
   overflow: hidden;
-  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.8);
+  box-shadow: var(--cd-shadow-3);
 }
-/* Signature green→blue hairline across the top edge */
+/* Brand gradient across the top edge */
 .win::before {
   content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #00e676 30%, #3d5af1 70%, transparent);
+  height: 2px;
+  background: var(--cd-gradient-brand);
 }
 
 .bar {
@@ -118,26 +107,25 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 11px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font-family: "SF Mono", ui-monospace, "Menlo", monospace;
+  border-bottom: 1px solid var(--vp-c-divider);
+  font-family: var(--vp-font-family-mono);
   font-size: 11.5px;
 }
 .live {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #98989d;
+  color: var(--vp-c-text-2);
 }
 .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #00e676;
-  box-shadow: 0 0 8px rgba(0, 230, 118, 0.7);
+  background: var(--cd-gruen);
   animation: hc-pulse 2s ease-in-out infinite;
 }
 .host {
-  color: #56565b;
+  color: var(--vp-c-text-3);
 }
 
 .body {
@@ -160,14 +148,14 @@ onMounted(() => {
 .who {
   display: block;
   margin-bottom: 6px;
-  font-family: "SF Mono", ui-monospace, "Menlo", monospace;
+  font-family: var(--vp-font-family-mono);
   font-size: 10.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6e6e73;
+  color: var(--vp-c-text-3);
 }
 .turn.asst .who {
-  color: #00b388;
+  color: var(--vp-c-brand-1);
 }
 
 .turn.user {
@@ -178,29 +166,29 @@ onMounted(() => {
   display: inline-block;
   padding: 10px 14px;
   border-radius: 12px 12px 12px 4px;
-  background: #17181a;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #f5f5f7;
+  background: var(--vp-c-bg-elv);
+  border: 1px solid var(--vp-c-divider);
+  color: var(--vp-c-text-1);
   font-size: 14px;
   line-height: 1.45;
 }
 
 .line {
   margin: 0 0 12px;
-  color: #c8c8cd;
+  color: var(--vp-c-text-2);
   font-size: 14px;
   line-height: 1.5;
 }
 .line b {
-  color: #f5f5f7;
+  color: var(--vp-c-text-1);
   font-weight: 600;
 }
 
 /* Rendered "widget" card — mirrors the real analytics widgets */
 .widget {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: #121315;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: var(--cd-radius-md);
+  background: var(--vp-c-bg-elv);
   padding: 14px 16px;
 }
 .w-head {
@@ -213,13 +201,13 @@ onMounted(() => {
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #98989d;
+  color: var(--vp-c-text-2);
 }
 .w-total {
-  font-family: "SF Mono", ui-monospace, "Menlo", monospace;
+  font-family: var(--vp-font-family-mono);
   font-size: 18px;
   font-weight: 600;
-  color: #ff6b6b;
+  color: var(--vp-c-text-1);
 }
 .w-row {
   display: grid;
@@ -229,36 +217,37 @@ onMounted(() => {
   padding: 7px 0;
 }
 .pk {
-  font-family: "SF Mono", ui-monospace, "Menlo", monospace;
+  font-family: var(--vp-font-family-mono);
   font-size: 12.5px;
-  color: #e6e6e9;
+  color: var(--vp-c-text-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .track {
   height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--cd-radius-pill);
+  background: var(--vp-c-default-soft);
   overflow: hidden;
 }
+/* Incidents are an error state: the CI's functional danger colour. */
 .fill {
   display: block;
   height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #ff9500, #ff6b6b);
+  border-radius: var(--cd-radius-pill);
+  background: var(--cd-danger);
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.7s var(--cd-ease);
   transition-delay: calc(1.1s + var(--j) * 0.12s);
 }
 .shown .fill {
   transform: scaleX(1);
 }
 .n {
-  font-family: "SF Mono", ui-monospace, "Menlo", monospace;
+  font-family: var(--vp-font-family-mono);
   font-size: 13px;
-  color: #f5f5f7;
+  color: var(--vp-c-text-1);
   text-align: right;
 }
 .w-foot {
@@ -267,17 +256,17 @@ onMounted(() => {
   justify-content: space-between;
   margin-top: 10px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--vp-c-divider);
 }
 .tag {
-  font-family: "SF Mono", ui-monospace, "Menlo", monospace;
+  font-family: var(--vp-font-family-mono);
   font-size: 11px;
-  color: #6e6e73;
+  color: var(--vp-c-text-3);
 }
 .act {
   font-size: 12px;
   font-weight: 600;
-  color: #00e676;
+  color: var(--vp-c-brand-1);
 }
 
 .input {
@@ -286,41 +275,41 @@ onMounted(() => {
   gap: 8px;
   margin: 12px 14px 16px;
   padding: 11px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  background: #141414;
+  border: 1px solid var(--vp-c-border);
+  border-radius: var(--cd-radius-pill);
+  background: var(--vp-c-bg);
   text-decoration: none;
   cursor: pointer;
   transition:
-    border-color 0.2s,
-    background 0.2s;
+    border-color var(--cd-motion-fast) var(--cd-ease),
+    background var(--cd-motion-fast) var(--cd-ease);
 }
 .input:hover {
-  border-color: rgba(0, 230, 118, 0.45);
-  background: #161616;
+  border-color: var(--vp-c-brand-1);
+  background: var(--vp-c-bg-alt);
 }
 .caret {
   width: 2px;
   height: 15px;
-  background: #00e676;
+  background: var(--vp-c-brand-1);
   animation: hc-blink 1.1s step-end infinite;
 }
 .ph {
   font-size: 13px;
-  color: #56565b;
-  transition: color 0.2s;
+  color: var(--vp-c-text-3);
+  transition: color var(--cd-motion-fast) var(--cd-ease);
 }
 .input:hover .ph {
-  color: #98989d;
+  color: var(--vp-c-text-2);
 }
 .go {
   margin-left: auto;
   font-size: 13px;
-  color: #56565b;
-  transition: color 0.2s;
+  color: var(--vp-c-text-3);
+  transition: color var(--cd-motion-fast) var(--cd-ease);
 }
 .input:hover .go {
-  color: #00e676;
+  color: var(--vp-c-brand-1);
 }
 
 @keyframes hc-pulse {

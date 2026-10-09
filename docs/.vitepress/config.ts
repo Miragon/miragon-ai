@@ -6,8 +6,14 @@ export default withMermaid({
     "AI-driven process management for Camunda 7 / CIB Seven via the Model Context Protocol.",
   cleanUrls: true,
   lastUpdated: true,
+  // Shiki's VitePress default dark theme (github-dark) renders comments at
+  // 3.9:1 on the dark code background; github-dark-default keeps every token
+  // colour above WCAG AA. Light stays on the default github-light.
+  markdown: {
+    theme: { light: "github-light", dark: "github-dark-default" },
+  },
   // Doc pages offer the normal light/dark toggle; the landing page alone
-  // always carries the dark miragon.ai brand (scoped in theme/custom.css).
+  // always carries the dark Miragon CI theme (scoped in theme/custom.css).
   head: [
     // consentmanager.net cookie consent with autoblocking, same setup as the
     // marketing site (miragon-ai-website/index.html) — blocks third-party
@@ -24,21 +30,29 @@ export default withMermaid({
         "data-cmp-codesrc": "0",
       },
     ],
-    ["link", { rel: "icon", type: "image/png", href: "/favicon.png" }],
-    ["meta", { name: "theme-color", content: "#00e676" }],
+    // The CI app icon (green comet on blue), with a PNG fallback.
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/logo/miragon-komet-blau.svg" }],
+    ["link", { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon.png" }],
+    // CI primary blue (--cd-blau), as on the CI site
+    ["meta", { name: "theme-color", content: "#335DE5" }],
   ],
-  // Preload the self-hosted Inter Variable (hashed filename, so a static
+  // Preload the self-hosted Geist Variable (hashed filename, so a static
   // head link can't point at it — see vitepress.dev site-config#transformhead).
   transformHead({ assets }) {
-    const inter = assets.find((file) => /inter-latin-wght-normal\.[\w-]+\.woff2/.test(file))
-    if (inter) {
+    const geist = assets.find((file) => /geist-latin-wght-normal\.[\w-]+\.woff2/.test(file))
+    if (geist) {
       return [
-        ["link", { rel: "preload", href: inter, as: "font", type: "font/woff2", crossorigin: "" }],
+        ["link", { rel: "preload", href: geist, as: "font", type: "font/woff2", crossorigin: "" }],
       ]
     }
   },
   themeConfig: {
-    logo: { src: "/logo.svg", alt: "Miragon" },
+    // Official CI wordmarks: green (the standard) on light, white on dark.
+    logo: {
+      light: "/logo/miragon-logo-gruen.svg",
+      dark: "/logo/miragon-logo-weiss.svg",
+      alt: "Miragon",
+    },
     // The wordmark already reads MIRAGON — no text next to it.
     siteTitle: false,
     nav: [

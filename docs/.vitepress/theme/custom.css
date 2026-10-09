@@ -1,22 +1,39 @@
 /**
- * miragon.ai brand for the docs — tokens lifted from the marketing site
- * (miragon-ai-website/src/global.css and LandingPage.module.css).
+ * Miragon corporate design for the docs site.
+ *
+ * Token source: the Miragon corporate identity (CI) — ci.miragon.io (move
+ * planned; until then corporate-identity.netlify.app), source of truth
+ * `brand/tokens.json` in Miragon/corporate-identity. Its generated token set
+ * (`--cd-*`) is vendored verbatim in cd-tokens.generated.css; this file only
+ * MAPS VitePress' variables onto it. A CI change means re-copying that one
+ * file — never edit it here.
+ *
+ * Every dark value below is a `--cd-*` token or a color-mix() of tokens (white
+ * lifts of `--cd-schwarz` for surfaces, text and lines), and the theme
+ * components read these variables. The only colour literals left are the
+ * light-mode green scale, kept until the light follow-up. Text/background
+ * pairs reach WCAG AA (CI contrast.json for the raw tokens).
  *
  * Scoping:
- * - Doc pages stay on the normal VitePress surfaces with the light/dark
- *   toggle; only the brand accents (green scale), fonts, and pill buttons
- *   apply everywhere.
- * - The landing page (`:root:has(.VPHome)`) always carries the full dark
- *   brand — black surfaces, green→blue hero gradient, glow, orbital hero
- *   animation, fade-up entrances — regardless of the chosen appearance.
+ * - Dark appearance (`.dark` doc pages) and the landing page
+ *   (`:root:has(.VPHome)`, always dark regardless of the toggle) share ONE
+ *   mapping, the CI's rule for dark grounds: `--cd-schwarz` is the only dark
+ *   surface (no dark blue), text is white, links and accent text are
+ *   `--cd-gruen` (10.1:1), buttons stay `--cd-blau` with a white label, and
+ *   `--cd-blau-hell` is only for blue that must stay blue (focus rings).
+ * - Light appearance keeps its previous green brand scale for now (the CI
+ *   alignment of light mode is a separate follow-up); typeface and logo are
+ *   global.
  */
 
-/* ── Global: typography ─────────────────────────────────────────────── */
+/* ── Global: typography (Geist / Geist Mono, self-hosted via @fontsource) ─ */
 
 :root {
   --vp-font-family-base:
-    "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --vp-font-family-mono: "SF Mono", ui-monospace, "Menlo", "Fira Code", "Courier New", monospace;
+    "Geist Variable", "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --vp-font-family-mono:
+    "Geist Mono Variable", "Geist Mono", ui-monospace, "SFMono-Regular", "Menlo", "Consolas",
+    monospace;
 }
 
 .vp-doc h1 {
@@ -26,28 +43,14 @@
   letter-spacing: -0.02em;
 }
 
-/* ── Global: brand scale ────────────────────────────────────────────── */
-/* Light mode needs darker greens for contrast on white; the signature
-   #00e676 stays as the solid button background (black label) in both. */
+/* ── Light appearance: previous green brand scale (follow-up) ──────────── */
 
 :root {
   --vp-c-brand-1: #00754b;
   --vp-c-brand-2: #008757;
   --vp-c-brand-3: #00e676;
   --vp-c-brand-soft: rgba(0, 230, 118, 0.14);
-}
 
-.dark {
-  --vp-c-brand-1: #00e676;
-  --vp-c-brand-2: #00b388;
-  --vp-c-brand-3: #00e676;
-  --vp-c-brand-soft: rgba(0, 230, 118, 0.16);
-}
-
-/* ── Global: buttons (pill + green/black, Nav.module.css .btnPrimary) ── */
-
-:root,
-.dark {
   --vp-button-brand-border: transparent;
   --vp-button-brand-text: #000000;
   --vp-button-brand-bg: #00e676;
@@ -59,61 +62,133 @@
   --vp-button-brand-active-bg: #00b388;
 }
 
+/* ── Dark appearance + landing page: the CI dark theme ─────────────────── */
+
+.dark,
+:root:has(.VPHome) {
+  /* Brand scale exactly as on the CI site: green text and links, blue
+     button fills (white on green would be 1.67:1). */
+  --vp-c-brand-1: var(--cd-gruen);
+  --vp-c-brand-2: var(--cd-gruen);
+  --vp-c-brand-3: var(--cd-blau);
+  --vp-c-brand-soft: color-mix(in srgb, var(--cd-gruen) 14%, transparent);
+
+  /* Brand buttons: blue fill, white label (5.47:1; hover/active on the
+     deeper --cd-blau-link, 6.56:1). */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: var(--cd-weiss);
+  --vp-button-brand-bg: var(--cd-blau);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: var(--cd-weiss);
+  --vp-button-brand-hover-bg: var(--cd-blau-link);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: var(--cd-weiss);
+  --vp-button-brand-active-bg: var(--cd-blau-link);
+
+  /* Surfaces: --cd-schwarz plus white lifts of it (alt: sidebar, code
+     blocks; soft: tables, cards; elv: popovers, dialogs). */
+  --vp-c-bg: var(--cd-schwarz);
+  --vp-c-bg-alt: color-mix(in srgb, var(--cd-weiss) 3%, var(--cd-schwarz));
+  --vp-c-bg-soft: color-mix(in srgb, var(--cd-weiss) 5%, var(--cd-schwarz));
+  --vp-c-bg-elv: color-mix(in srgb, var(--cd-weiss) 7%, var(--cd-schwarz));
+
+  /* Text: text-3 still clears 4.5:1 on every surface above. */
+  --vp-c-text-1: color-mix(in srgb, var(--cd-weiss) 92%, var(--cd-schwarz));
+  --vp-c-text-2: color-mix(in srgb, var(--cd-weiss) 72%, var(--cd-schwarz));
+  --vp-c-text-3: color-mix(in srgb, var(--cd-weiss) 62%, var(--cd-schwarz));
+
+  /* Lines */
+  --vp-c-border: color-mix(in srgb, var(--cd-weiss) 20%, var(--cd-schwarz));
+  --vp-c-divider: color-mix(in srgb, var(--cd-weiss) 10%, var(--cd-schwarz));
+  /* Not the bg: the gutter draws the edge under the sticky nav, the mobile
+     local nav and code-group tabs. */
+  --vp-c-gutter: var(--vp-c-divider);
+  /* Form fields: the CI's --cd-kontur role (input borders, ≥ 3:1). */
+  --vp-input-border-color: var(--cd-kontur);
+
+  /* Neutral scale (alt buttons, badges, inline-code background) */
+  --vp-c-gray-1: color-mix(in srgb, var(--cd-weiss) 28%, var(--cd-schwarz));
+  --vp-c-gray-2: color-mix(in srgb, var(--cd-weiss) 20%, var(--cd-schwarz));
+  --vp-c-gray-3: color-mix(in srgb, var(--cd-weiss) 13%, var(--cd-schwarz));
+  --vp-c-gray-soft: color-mix(in srgb, var(--cd-weiss) 5%, transparent);
+  --vp-c-neutral-inverse: var(--cd-schwarz);
+
+  /* Overlays: the CI's --cd-schwarz backdrop with opacity */
+  --vp-backdrop-bg-color: color-mix(in srgb, var(--cd-schwarz) 60%, transparent);
+}
+
+/* ── Dark appearance: Mermaid diagrams ──────────────────────────────── */
+/* Mermaid's own dark theme is neutral grey and its edge labels miss WCAG AA
+   (#ccc on #585858, 4.45:1), so dark diagrams follow the CI instead: nodes
+   as --cd-blau surfaces with white labels (5.47:1), edges and the subgraph
+   edge in --cd-kontur (≥ 3:1), edge labels in text-2. Mermaid injects
+   id-scoped styles into every SVG, hence !important; light mode keeps
+   Mermaid's default theme. */
+.dark .mermaid :is(.node rect, .node circle, .node ellipse, .node polygon, .node path) {
+  fill: var(--cd-blau) !important;
+  stroke: var(--cd-blau) !important;
+}
+.dark .mermaid .cluster rect {
+  fill: var(--vp-c-bg-alt) !important;
+  stroke: var(--cd-kontur) !important;
+}
+.dark .mermaid :is(.flowchart-link, .edgePaths .path) {
+  stroke: var(--cd-kontur) !important;
+}
+.dark .mermaid :is(.marker, .arrowheadPath, .arrowMarkerPath) {
+  fill: var(--cd-kontur) !important;
+  stroke: var(--cd-kontur) !important;
+}
+.dark .mermaid .node :is(.nodeLabel, .label text) {
+  color: var(--cd-weiss) !important;
+  fill: var(--cd-weiss) !important;
+}
+.dark .mermaid .cluster-label .nodeLabel {
+  color: var(--vp-c-text-1) !important;
+}
+.dark .mermaid :is(.labelBkg, span.edgeLabel, span.edgeLabel p) {
+  background-color: var(--vp-c-bg) !important;
+}
+.dark .mermaid span.edgeLabel {
+  color: var(--vp-c-text-2) !important;
+}
+.dark .mermaid .edgeLabel rect {
+  fill: var(--vp-c-bg) !important;
+  opacity: 1 !important;
+}
+
+/* ── Global: buttons ────────────────────────────────────────────────── */
+
 .VPButton {
-  border-radius: 999px !important;
+  border-radius: var(--cd-radius-pill) !important;
   font-weight: 600;
 }
 
-/* ── Landing page only: the full dark brand ─────────────────────────── */
-/* .VPHome exists only on the home layout; :has() lets the black theme
-   apply there independently of the light/dark toggle. */
+/* ── Landing page only ──────────────────────────────────────────────── */
+/* .VPHome exists only on the home layout; :has() applies the dark mapping
+   above there independently of the light/dark toggle. What follows is what
+   only the landing needs on top of it. */
 
 :root:has(.VPHome) {
   color-scheme: dark;
 
-  /* Brand scale (dark values, regardless of toggle) */
-  --vp-c-brand-1: #00e676;
-  --vp-c-brand-2: #00b388;
-  --vp-c-brand-3: #00e676;
-  --vp-c-brand-soft: rgba(0, 230, 118, 0.16);
-
-  /* Surfaces */
-  --vp-c-bg: #000000;
-  --vp-c-bg-alt: #0a0a0a;
-  --vp-c-bg-elv: #141414;
-  --vp-c-bg-soft: #141414;
-
-  /* Text */
-  --vp-c-text-1: #f5f5f7;
-  --vp-c-text-2: #98989d;
-  --vp-c-text-3: #6e6e73;
-
-  /* Hairlines */
-  --vp-c-border: rgba(255, 255, 255, 0.12);
-  --vp-c-divider: rgba(255, 255, 255, 0.08);
-  --vp-c-gutter: rgba(255, 255, 255, 0.08);
-
-  /* Ghost secondary buttons on dark */
-  --vp-button-alt-border: rgba(255, 255, 255, 0.12);
-  --vp-button-alt-text: #f5f5f7;
+  /* Ghost secondary buttons */
+  --vp-button-alt-border: var(--vp-c-border);
+  --vp-button-alt-text: var(--vp-c-text-1);
   --vp-button-alt-bg: transparent;
-  --vp-button-alt-hover-border: rgba(255, 255, 255, 0.25);
-  --vp-button-alt-hover-text: #f5f5f7;
-  --vp-button-alt-hover-bg: rgba(255, 255, 255, 0.06);
-  --vp-button-alt-active-border: rgba(255, 255, 255, 0.25);
-  --vp-button-alt-active-text: #f5f5f7;
-  --vp-button-alt-active-bg: rgba(255, 255, 255, 0.1);
+  --vp-button-alt-hover-border: var(--vp-c-text-3);
+  --vp-button-alt-hover-text: var(--vp-c-text-1);
+  --vp-button-alt-hover-bg: var(--vp-c-default-soft);
+  --vp-button-alt-active-border: var(--vp-c-text-3);
+  --vp-button-alt-active-text: var(--vp-c-text-1);
+  --vp-button-alt-active-bg: var(--vp-c-default-soft);
 
-  /* Hero: signature green→blue gradient name + ambient glow */
-  --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(135deg, #00e676 0%, #3d5af1 100%);
-  --vp-home-hero-image-background-image: radial-gradient(
-    ellipse,
-    rgba(0, 230, 118, 0.1) 0%,
-    rgba(61, 90, 241, 0.06) 55%,
-    transparent 70%
-  );
-  --vp-home-hero-image-filter: blur(80px);
+  /* Hero: plain heading colour — the CI rules out gradient text — and no
+     ambient glow behind the hero image. */
+  --vp-home-hero-name-color: var(--vp-c-text-1);
+  --vp-home-hero-name-background: transparent;
+  --vp-home-hero-image-background-image: none;
+  --vp-home-hero-image-filter: none;
 }
 
 /* The toggle has no effect on the forced-dark landing — hide it there. */
@@ -121,7 +196,23 @@
   display: none;
 }
 
-/* Tight marketing-style tracking on the hero */
+/* Logo: the CI prescribes the white wordmark on dark backgrounds. VitePress
+   picks the light/dark logo by the .dark class, which the forced-dark
+   landing may not carry. */
+:root:has(.VPHome) .VPNavBarTitle .VPImage.light {
+  display: none;
+}
+:root:has(.VPHome) .VPNavBarTitle .VPImage.dark {
+  display: inline-block;
+}
+
+/* Code blocks: the landing is dark in light appearance too, so it needs
+   Shiki's dark token colours (VitePress only switches them on .dark). */
+:root:has(.VPHome) .vp-code span {
+  color: var(--shiki-dark, inherit);
+}
+
+/* Tight tracking on the hero */
 :root:has(.VPHome) .VPHero .name,
 :root:has(.VPHome) .VPHero .text {
   letter-spacing: -0.04em;
@@ -129,8 +220,7 @@
 
 /* The hero image slot holds a full conversation panel, not a logo — free it
    from VitePress' fixed 320px logo container so it flows in normal height
-   (otherwise it overflows and the hero text overlaps it on mobile). The
-   panel carries its own glow, so drop the default hero image backdrop. */
+   (otherwise it overflows and the hero text overlaps it on mobile). */
 :root:has(.VPHome) .VPHero .image-container {
   width: auto;
   height: auto;
@@ -157,19 +247,19 @@
 }
 
 /* Feature cards → quiet editorial directory: no fill, a top hairline that
-   turns brand-green on hover, so they recede behind the hero signature
-   instead of competing with it as four more boxes. */
+   takes the brand accent on hover, so they recede behind the hero instead
+   of competing with it as four more boxes. */
 :root:has(.VPHome) .VPFeature {
   background-color: transparent;
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: 1px solid var(--vp-c-border);
   border-radius: 0;
   padding: 22px 0 0;
-  transition: border-color 0.25s;
+  transition: border-color var(--cd-motion-base) var(--cd-ease);
 }
 :root:has(.VPHome) .VPFeature:hover {
   background-color: transparent;
-  border-top-color: #00e676;
+  border-top-color: var(--vp-c-brand-1);
 }
 :root:has(.VPHome) .VPFeature .title {
   font-size: 16px;
@@ -180,7 +270,7 @@
   line-height: 1.6;
 }
 
-/* ── Landing entrances (LandingPage.module.css fadeUp pattern) ──────── */
+/* ── Landing entrances (fade-up) ────────────────────────────────────── */
 
 @keyframes mgn-fade-up {
   from {
