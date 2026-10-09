@@ -1,8 +1,8 @@
-// Extends the default theme with the miragon.ai brand (see custom.css) and
-// mounts the hero conversation signature on the landing page.
-// theme-without-fonts drops VitePress' bundled Inter so we don't ship the
-// font twice — @fontsource-variable/inter is the site's own copy, matching
-// the marketing site (miragon-ai-website uses the same package).
+// Extends the default theme with the Miragon corporate design (see
+// custom.css) and mounts the hero conversation signature on the landing page.
+// theme-without-fonts drops VitePress' bundled Inter: the CI typeface is
+// Geist / Geist Mono, self-hosted through @fontsource (italic included for
+// emphasis and quotes).
 import { h } from "vue"
 import type { Theme } from "vitepress"
 import DefaultTheme from "vitepress/theme-without-fonts"
@@ -11,7 +11,12 @@ import CockpitToConversation from "./CockpitToConversation.vue"
 import TryItOut from "./TryItOut.vue"
 import BrandContact from "./BrandContact.vue"
 import LegalFooter from "./LegalFooter.vue"
-import "@fontsource-variable/inter"
+import "@fontsource-variable/geist"
+import "@fontsource-variable/geist/wght-italic.css"
+import "@fontsource-variable/geist-mono"
+// CI tokens (--cd-*), vendored verbatim from Miragon/corporate-identity —
+// loaded before custom.css, which maps the VitePress variables onto them.
+import "./cd-tokens.generated.css"
 import "./custom.css"
 
 export default {

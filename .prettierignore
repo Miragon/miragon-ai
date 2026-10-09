@@ -19,3 +19,8 @@ apps/*/test/__golden__/
 # Vite dev-server cache of the docs site (git-ignored via Vite's own nested
 # .gitignore, which Prettier does not read)
 docs/.vitepress/cache/
+
+# CI design tokens, vendored verbatim from Miragon/corporate-identity
+# (docs/.vitepress/theme/tokens.generated.css there) — re-copied on every CI
+# change, never formatted or hand-edited here.
+docs/.vitepress/theme/cd-tokens.generated.css

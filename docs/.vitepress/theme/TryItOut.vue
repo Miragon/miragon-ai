@@ -1,8 +1,9 @@
 <!--
   Prominent "try it now" CTA lower on the landing page, modelled on the
-  marketing site's CtaBanner (centered card, gradient hairline, green orb
-  glow). The button opens the hosted playground in the MCP inspector; the
+  marketing site's CtaBanner (centered card under a brand-gradient edge).
+  The button opens the hosted playground in the MCP inspector; the
   example-prompt hint shows newcomers a concrete first thing to ask.
+  Colours come from the theme's CSS variables (custom.css → CI tokens).
 -->
 <script setup lang="ts">
 const INSPECTOR_URL =
@@ -13,7 +14,6 @@ const INSPECTOR_URL =
   <section class="tio" aria-label="Try it out">
     <div class="card">
       <div class="grad-line" aria-hidden="true" />
-      <div class="orb" aria-hidden="true" />
 
       <p class="eyebrow"><span class="dot" />Live playground</p>
       <h2 class="title">Talk to your processes.</h2>
@@ -47,32 +47,19 @@ const INSPECTOR_URL =
   margin: 0 auto;
   padding: 56px 40px;
   text-align: center;
-  background: #141414;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 28px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: var(--cd-radius-lg);
 }
 
-/* Signature green→blue hairline across the top edge */
+/* Brand gradient across the top edge */
 .grad-line {
   position: absolute;
   top: 0;
-  left: 10%;
-  right: 10%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #00e676 30%, #3d5af1 70%, transparent);
-}
-
-/* Ambient green glow behind the headline */
-.orb {
-  position: absolute;
-  top: -40%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 300px;
-  background: radial-gradient(ellipse, rgba(0, 230, 118, 0.08) 0%, transparent 65%);
-  filter: blur(40px);
-  pointer-events: none;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--cd-gradient-brand);
 }
 
 .eyebrow {
@@ -85,14 +72,14 @@ const INSPECTOR_URL =
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #98989d;
+  color: var(--vp-c-text-2);
 }
+/* Live indicator */
 .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #00e676;
-  box-shadow: 0 0 8px rgba(0, 230, 118, 0.7);
+  background: var(--cd-gruen);
   animation: tio-pulse 2s ease-in-out infinite;
 }
 @keyframes tio-pulse {
@@ -112,7 +99,7 @@ const INSPECTOR_URL =
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
-  color: #f5f5f7;
+  color: var(--vp-c-text-1);
   border: none;
 }
 
@@ -122,7 +109,7 @@ const INSPECTOR_URL =
   margin: 0 auto 32px;
   font-size: 16px;
   line-height: 1.7;
-  color: #98989d;
+  color: var(--vp-c-text-2);
 }
 
 .cta {
@@ -131,22 +118,23 @@ const INSPECTOR_URL =
   align-items: center;
   gap: 8px;
   padding: 13px 28px;
-  border-radius: 999px;
-  background: #00e676;
-  color: #000;
+  border-radius: var(--cd-radius-pill);
+  background: var(--vp-button-brand-bg);
+  color: var(--vp-button-brand-text);
   font-size: 15px;
   font-weight: 600;
   text-decoration: none;
   transition:
-    opacity 0.2s,
-    transform 0.2s;
+    background var(--cd-motion-fast) var(--cd-ease),
+    transform var(--cd-motion-fast) var(--cd-ease);
 }
 .cta:hover {
-  opacity: 0.88;
+  background: var(--vp-button-brand-hover-bg);
+  color: var(--vp-button-brand-hover-text);
   transform: translateY(-1px);
 }
 .arrow {
-  transition: transform 0.2s;
+  transition: transform var(--cd-motion-fast) var(--cd-ease);
 }
 .cta:hover .arrow {
   transform: translateX(3px);
@@ -163,15 +151,25 @@ const INSPECTOR_URL =
   font-size: 13px;
 }
 .hint-label {
-  color: #6e6e73;
+  color: var(--vp-c-text-3);
   letter-spacing: 0.04em;
 }
 .prompt {
   padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 230, 118, 0.28);
-  background: rgba(0, 230, 118, 0.06);
-  color: #00e676;
-  font-family: "SF Mono", ui-monospace, "Menlo", "Courier New", monospace;
+  border-radius: var(--cd-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--vp-c-brand-1) 30%, transparent);
+  background: color-mix(in srgb, var(--vp-c-brand-1) 8%, transparent);
+  color: var(--vp-c-brand-1);
+  font-family: var(--vp-font-family-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+  .cta,
+  .arrow {
+    transition: none;
+  }
 }
 </style>

@@ -5,6 +5,9 @@
   POST, urlencoded) — it stays in the DOM via v-show so the prerendered
   HTML carries the data-netlify markup Netlify's form detection needs.
   Calendly loads client-side only (onMounted), keeping SSG builds clean.
+  Colours come from the theme's CSS variables (custom.css → CI tokens) —
+  the Calendly embed included, whose URL colours are read from the tokens
+  at mount time.
 -->
 <template>
   <section id="contact" class="contact">
@@ -12,7 +15,7 @@
       <span class="label">Book a call</span>
       <h3 class="title">
         Let's talk about your<br />
-        journey to <span class="grad">process intelligence.</span>
+        journey to process intelligence.
       </h3>
       <p class="desc">
         Pick a slot that works for you — 30 minutes, no agenda required. We'll talk through your
@@ -118,8 +121,28 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue"
 
-const CALENDLY_URL =
-  "https://calendly.com/miragon-ai/miragon-ai-discovery-call?background_color=1a1a1a&text_color=ffffff&primary_color=00e676"
+const CALENDLY_URL = "https://calendly.com/miragon-ai/miragon-ai-discovery-call"
+// Calendly embed colours (6-digit hex, no "#") ← CI tokens, so the embed
+// follows a token update without a second copy of the values here. The
+// primary stays white: Calendly draws bookable dates in the primary on a tint
+// of itself, which no CI accent clears at WCAG AA there (--cd-gruen 4.1:1,
+// --cd-blau-hell 3.5:1).
+const CALENDLY_COLORS = {
+  background_color: "--cd-schwarz",
+  text_color: "--cd-weiss",
+  primary_color: "--cd-weiss",
+} as const
+
+function calendlyUrl(el: HTMLElement): string {
+  const style = getComputedStyle(el)
+  const params = new URLSearchParams()
+  for (const [param, token] of Object.entries(CALENDLY_COLORS)) {
+    const hex = style.getPropertyValue(token).trim().replace(/^#/, "")
+    if (/^[0-9a-f]{6}$/i.test(hex)) params.set(param, hex.toLowerCase())
+  }
+  const query = params.toString()
+  return query ? `${CALENDLY_URL}?${query}` : CALENDLY_URL
+}
 
 const mailOpen = ref(false)
 const name = ref("")
@@ -184,7 +207,10 @@ function startPolling() {
     if (Calendly?.initInlineWidget && calendlyRef.value && !calendlyReady.value) {
       clearInterval(pollTimer)
       calendlyReady.value = true
-      Calendly.initInlineWidget({ url: CALENDLY_URL, parentElement: calendlyRef.value })
+      Calendly.initInlineWidget({
+        url: calendlyUrl(calendlyRef.value),
+        parentElement: calendlyRef.value,
+      })
     } else if (attempts >= 40) {
       clearInterval(pollTimer)
     }
@@ -229,7 +255,7 @@ onBeforeUnmount(() => {
   gap: 48px;
   margin-top: 64px;
   padding-top: 48px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--vp-c-divider);
 }
 @media (max-width: 900px) {
   .contact {
@@ -245,14 +271,14 @@ onBeforeUnmount(() => {
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #98989d;
+  color: var(--vp-c-text-2);
   margin-bottom: 20px;
 }
 .label::before {
   content: "";
   width: 20px;
   height: 1px;
-  background: #00e676;
+  background: var(--vp-c-brand-1);
 }
 
 .title {
@@ -261,27 +287,19 @@ onBeforeUnmount(() => {
   letter-spacing: -0.03em;
   line-height: 1.1;
   margin: 0 0 20px;
-  color: #f5f5f7;
-}
-
-.grad {
-  background: linear-gradient(135deg, #00e676 0%, #3d5af1 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  color: var(--vp-c-text-1);
 }
 
 .desc {
   font-size: 16px;
   line-height: 1.75;
-  color: #98989d;
+  color: var(--vp-c-text-2);
   margin: 0 0 28px;
 }
 
 .divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--vp-c-divider);
   margin-bottom: 20px;
 }
 
@@ -294,14 +312,14 @@ onBeforeUnmount(() => {
   padding: 0;
   font-size: 14px;
   font-weight: 500;
-  color: #f5f5f7;
+  color: var(--vp-c-text-1);
   cursor: pointer;
 }
 .mailToggle:hover {
-  color: #00e676;
+  color: var(--vp-c-brand-1);
 }
 .chevron {
-  transition: transform 0.2s;
+  transition: transform var(--cd-motion-fast) var(--cd-ease);
 }
 .chevron.open {
   transform: rotate(180deg);
@@ -339,28 +357,34 @@ onBeforeUnmount(() => {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #98989d;
+  color: var(--vp-c-text-2);
 }
 
 .input {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 10px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-input-border-color);
+  border-radius: var(--cd-radius-md);
   padding: 11px 14px;
   font-size: 14px;
   font-family: inherit;
-  color: #f5f5f7;
+  color: var(--vp-c-text-1);
   outline: none;
   transition:
-    border-color 0.2s,
-    background 0.2s;
+    border-color var(--cd-motion-fast) var(--cd-ease),
+    background var(--cd-motion-fast) var(--cd-ease);
 }
 .input::placeholder {
-  color: #6e6e73;
+  color: var(--vp-c-text-3);
 }
+/* Focus is blue that must stay blue on a dark ground: --cd-blau-hell
+   (5.38:1 on --cd-schwarz); the border change alone is too faint a cue. */
 .input:focus {
-  border-color: rgba(0, 230, 118, 0.5);
-  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--cd-blau-hell);
+  background: var(--vp-c-bg-elv);
+}
+.input:focus-visible {
+  outline: 2px solid var(--cd-blau-hell);
+  outline-offset: 2px;
 }
 .textarea {
   resize: vertical;
@@ -374,18 +398,19 @@ onBeforeUnmount(() => {
   margin-top: 4px;
   padding: 10px 20px;
   border: none;
-  border-radius: 999px;
-  background: #00e676;
-  color: #000;
+  border-radius: var(--cd-radius-pill);
+  background: var(--vp-button-brand-bg);
+  color: var(--vp-button-brand-text);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition:
-    opacity 0.2s,
-    transform 0.2s;
+    background var(--cd-motion-fast) var(--cd-ease),
+    transform var(--cd-motion-fast) var(--cd-ease);
 }
 .sendBtn:hover:not(:disabled) {
-  opacity: 0.88;
+  background: var(--vp-button-brand-hover-bg);
+  color: var(--vp-button-brand-hover-text);
   transform: translateY(-1px);
 }
 .sendBtn:disabled {
@@ -397,32 +422,38 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
-  color: #6e6e73;
+  color: var(--vp-c-text-3);
 }
 .privacyNote a {
-  color: #98989d;
+  color: var(--vp-c-text-2);
   text-decoration: underline;
 }
 .privacyNote a:hover {
-  color: #00e676;
+  color: var(--vp-c-brand-1);
 }
 
+/* Status messages: readable text on the CI's functional soft tints, the
+   positive one edged in the green accent. */
 .sentMsg {
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: #00e676;
+  color: var(--vp-c-text-1);
   padding: 12px 16px;
-  border: 1px solid rgba(0, 230, 118, 0.25);
-  border-radius: 10px;
-  background: rgba(0, 230, 118, 0.06);
+  border: 1px solid var(--cd-gruen);
+  border-radius: var(--cd-radius-md);
+  background: var(--cd-success-soft);
 }
 
 .errorMsg {
   margin: 0;
   font-size: 14px;
-  color: #ff6b6b;
+  color: var(--vp-c-text-1);
+  padding: 12px 16px;
+  border: 1px solid var(--cd-danger);
+  border-radius: var(--cd-radius-md);
+  background: var(--cd-danger-soft);
 }
 
 .honeypot {
@@ -434,21 +465,21 @@ onBeforeUnmount(() => {
 
 .calendlyWrap {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 28px;
+  border: 1px solid var(--vp-c-border);
+  border-radius: var(--cd-radius-lg);
   overflow: clip;
-  background: #0a0a0a;
+  background: var(--cd-schwarz);
 }
-/* Signature gradient hairline on top of the frame */
+/* Brand gradient across the top edge of the frame */
 .calendlyWrap::before {
   content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
+  height: 2px;
   z-index: 1;
-  background: linear-gradient(90deg, transparent, #00e676 30%, #3d5af1 70%, transparent);
+  background: var(--cd-gradient-brand);
 }
 
 .calendlyFrame {
@@ -462,6 +493,6 @@ onBeforeUnmount(() => {
   height: 100%;
   margin: 0;
   font-size: 13px;
-  color: #6e6e73;
+  color: var(--vp-c-text-3);
 }
 </style>

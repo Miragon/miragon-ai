@@ -3,7 +3,8 @@
   marketing site's landing page (miragon-ai-website LandingPage.tsx, Mova
   showcase), distilled for the docs landing: the three role-based value
   props map 1:1 onto this platform's modules (operations tools, analytics,
-  incident resolution). Rendered on the (always dark) landing page only.
+  incident resolution). Rendered on the (always dark) landing page only;
+  colours come from the theme's CSS variables (custom.css → CI tokens).
 -->
 <script setup lang="ts">
 import OrbitalVisual from "./OrbitalVisual.vue"
@@ -64,7 +65,7 @@ import OrbitalVisual from "./OrbitalVisual.vue"
 .c2c {
   margin-top: 64px;
   padding-top: 48px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--vp-c-divider);
 }
 
 .label {
@@ -75,14 +76,14 @@ import OrbitalVisual from "./OrbitalVisual.vue"
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #98989d;
+  color: var(--vp-c-text-2);
   margin-bottom: 20px;
 }
 .label::before {
   content: "";
   width: 20px;
   height: 1px;
-  background: #00e676;
+  background: var(--vp-c-brand-1);
 }
 
 .grid {
@@ -104,13 +105,13 @@ import OrbitalVisual from "./OrbitalVisual.vue"
   letter-spacing: -0.03em;
   line-height: 1.1;
   margin: 0 0 20px;
-  color: #f5f5f7;
+  color: var(--vp-c-text-1);
 }
 
 .desc {
   font-size: 16px;
   line-height: 1.75;
-  color: #98989d;
+  color: var(--vp-c-text-2);
   margin: 0;
 }
 
@@ -137,14 +138,14 @@ import OrbitalVisual from "./OrbitalVisual.vue"
   align-items: flex-start;
   gap: 16px;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  transition: background 0.2s;
+  border-bottom: 1px solid var(--vp-c-divider);
+  transition: background var(--cd-motion-fast) var(--cd-ease);
 }
 .feature:last-child {
   border-bottom: none;
 }
 .feature:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--vp-c-bg-alt);
 }
 
 .chip {
@@ -152,12 +153,12 @@ import OrbitalVisual from "./OrbitalVisual.vue"
   align-items: center;
   justify-content: center;
   padding: 4px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 230, 118, 0.28);
-  background: rgba(0, 230, 118, 0.06);
+  border-radius: var(--cd-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--vp-c-brand-1) 30%, transparent);
+  background: color-mix(in srgb, var(--vp-c-brand-1) 8%, transparent);
   font-size: 12px;
   font-weight: 600;
-  color: #00e676;
+  color: var(--vp-c-brand-1);
   flex-shrink: 0;
 }
 
@@ -165,7 +166,7 @@ import OrbitalVisual from "./OrbitalVisual.vue"
   display: block;
   font-size: 11px;
   font-weight: 500;
-  color: #6e6e73;
+  color: var(--vp-c-text-3);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 4px;
@@ -174,7 +175,7 @@ import OrbitalVisual from "./OrbitalVisual.vue"
 .text {
   font-size: 13px;
   line-height: 1.6;
-  color: #98989d;
+  color: var(--vp-c-text-2);
   margin: 0;
 }
 </style>
