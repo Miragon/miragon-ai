@@ -159,7 +159,7 @@ show their defaults and cannot be saved.
 | `MCP_MAX_BODY_BYTES`                         | Request-body cap (default 4 MiB; larger bodies get 413 before they are read)                           |
 | `MCP_METRICS_TOKEN`                          | Bearer token `/metrics` requires (default: open)                                                       |
 | `MCP_OAUTH`                                  | OAuth resource server (`keycloak` / `auth0` JSON, needs `MCP_URL`) — the only caller identity          |
-| `MCP_ACTIVE_MODULES`                         | Comma list with optional toolsets, e.g. `camunda7:operations,notes` (default: every module, read-only) |
+| `MCP_ACTIVE_MODULES`                         | Modules (default: all), e.g. `camunda7:operations,notes`; no suffix: read-only, `MCP_OAUTH` → standard |
 | `MCP_PROFILE_DIR`                            | Filesystem persistence for user profiles (default: in-memory)                                          |
 | `MCP_DASHBOARD_DIR`                          | Filesystem persistence for saved dashboards — only used under `MCP_OAUTH` (see below)                  |
 | `CAMUNDA_*`, `PROMETHEUS_URL`, `NOTES_TITLE` | Module config — see `.env.example` for the full list                                                   |

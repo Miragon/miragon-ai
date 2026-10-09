@@ -110,12 +110,13 @@ export const myToolsets = createToolsetVocabulary("<name>", MY_TOOLSETS, "read-o
 - Accept it in your config schema (`toolset: z.string().optional()`) and
   resolve it once in `createPlugin` with `myToolsets.resolve(config.toolset)`.
 - The third argument is your READ-ONLY FLOOR (it must permit no durable
-  write). No suffix on an unauthenticated boot — always, in this template,
-  which installs no OAuth — an empty or unknown suffix (with a warning), and a
-  direct `createPlugin` caller passing no toolset all land there.
-- `authenticatedDefault` is the no-suffix default under OAuth: your standard
-  non-admin toolset. Never make it your widest one — an admin-like toolset
-  must only be reachable by naming it.
+  write). No suffix on a boot without `MCP_OAUTH`, an empty or unknown suffix
+  (with a warning), and a direct `createPlugin` caller passing no toolset all
+  land there.
+- `authenticatedDefault` is the no-suffix default under `MCP_OAUTH` (which
+  `server/src/app.ts` wires through `oauthFromEnv`) — so every OAuth boot
+  that names no suffix runs it: your standard non-admin toolset. Never make it
+  your widest one — an admin-like toolset must only be reachable by naming it.
 - Filter registrar tools by their annotations (read-only ⇔
   `readOnlyHint: true`), and gate durable writes registered outside the
   registrar on `myToolsets.allowsDurableWrites(myToolsets.resolve(config.toolset))`
@@ -161,8 +162,9 @@ typo coverage and boot warnings show up here), and call your tools in the
 inspector at `http://localhost:8400/mcp/inspector` — or headless via the
 mcp-use client/screenshot commands in `CLAUDE.md` → Verification. Also verify
 the selection path: `MCP_ACTIVE_MODULES=<name> pnpm dev` must expose exactly
-your module's tools — its read-only toolset if you declared `toolsets` (the
-boot log's `Toolsets —` line says which).
+your module's tools — if you declared `toolsets`, its read-only floor without
+`MCP_OAUTH` and its `authenticatedDefault` with it (the boot log's
+`Toolsets —` line says which).
 
 ## Anti-patterns
 

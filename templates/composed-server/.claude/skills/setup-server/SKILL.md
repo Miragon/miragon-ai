@@ -31,7 +31,8 @@ so a rendered notes widget proves server, widget bundle, and inspector work.
 Then read the boot log: every warning there is actionable (unknown env var,
 missing Prometheus URL, engine auth problems), and one info line
 (`[acme-mcp] Toolsets — camunda7:read-only (default without OAuth), …`) states
-what each module may do — read-only until you widen it (Step 3).
+what each module may do — read-only until you widen it or set `MCP_OAUTH`
+(Step 3).
 
 ## Step 2 — connect the engine and Prometheus
 
@@ -95,6 +96,12 @@ MCP_ACTIVE_MODULES=camunda7:operations,analytics:standard,notes
   identity — which is exactly why the suffix must stay explicit there, and why
   settings cannot be saved there: identity reaches the server only through
   `MCP_OAUTH`.
+- Unknown module names warn and are skipped; a suffix on a module without
+  toolsets (e.g. `notes:read-only`) warns and is ignored — that module
+  registers all its tools.
+- All widgets stay in the one Vite bundle regardless — inactive modules just
+  register no tools. Module selection is runtime-only; there is no per-module
+  bundle.
 
 ### OAuth — sign-in and per-user settings
 
@@ -113,13 +120,6 @@ tool) persists under the signed-in user. Without `MCP_OAUTH` there is no caller
 identity: settings render their defaults and every save refuses. A bad
 `MCP_OAUTH` (invalid JSON, unknown provider or key, stray `MCP_USE_OAUTH_*`
 vars) fails the boot.
-
-- Unknown module names warn and are skipped; a suffix on a module without
-  toolsets (e.g. `notes:read-only`) warns and is ignored — that module
-  registers all its tools.
-- All widgets stay in the one Vite bundle regardless — inactive modules just
-  register no tools. Module selection is runtime-only; there is no per-module
-  bundle.
 
 ## Step 4 — persistence
 
@@ -247,5 +247,5 @@ missing-URL warnings — is part of done.
 | Analytics tools return empty results      | `CAMUNDA_ENGINE_ID` doesn't match the engine's metrics `ENGINE_ID`, or `PROMETHEUS_URL` points at the wrong port                                                                                                    |
 | "Unknown environment variable" at boot    | typo, or a var this build doesn't read — `.env.example` is the authoritative list                                                                                                                                   |
 | Widget UI changes don't show up           | the bundle is read once at boot — restart `pnpm dev` at the repo root (it rebuilds modules + bundle on start)                                                                                                       |
-| A tool is missing                         | module not in `MCP_ACTIVE_MODULES`, or its toolset filtered it — without a suffix camunda7/analytics run `read-only` (see the boot log's `Toolsets —` line); deployments also need `CAMUNDA_ALLOW_DEPLOYMENTS=true` |
+| A tool is missing                         | module not in `MCP_ACTIVE_MODULES`, or its toolset filtered it — with no suffix and no `MCP_OAUTH` it is `read-only` (see the boot log's `Toolsets —` line); deployments also need `CAMUNDA_ALLOW_DEPLOYMENTS=true` |
 | Claude Desktop shows no tools at all      | a `"url"` entry in `claude_desktop_config.json` (stdio only — use the `mcp-remote` bridge from Step 7), or the app wasn't restarted                                                                                 |

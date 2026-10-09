@@ -1,6 +1,7 @@
 import path from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { createApp } from "../src/app.js"
+import { stubNeutralEnv } from "./neutral-env.js"
 
 const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
 
@@ -12,18 +13,7 @@ const KEYCLOAK = JSON.stringify({
 
 /** Boot `createApp` with a neutral env plus `MCP_OAUTH` (mcp-use reads `MCP_URL` from process.env). */
 async function boot(mcpOAuth: string | undefined) {
-  for (const [name, value] of Object.entries({
-    CAMUNDA_BASE_URL: "http://localhost:1",
-    CAMUNDA_ENGINES_FILE: undefined,
-    CAMUNDA_ENGINES_JSON: undefined,
-    MCP_ACTIVE_MODULES: undefined,
-    MCP_PROFILE_DIR: undefined,
-    MCP_DASHBOARD_DIR: undefined,
-    MCP_URL: "https://mcp.acme.example",
-    MCP_OAUTH: mcpOAuth,
-  })) {
-    vi.stubEnv(name, value)
-  }
+  stubNeutralEnv({ MCP_URL: "https://mcp.acme.example", MCP_OAUTH: mcpOAuth })
   return createApp(process.env, { bundle: { jsPath: FIXTURE_JS } })
 }
 
