@@ -243,23 +243,27 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
   )
 
   const save = useToolMutation(CAMUNDA7_SAVE_USER_PROFILE)
-  const [form, setForm] = useState<FormState>(() =>
+  const viewForm = () =>
     fromProfile(
       view.profile,
       view.availableEngines.map((e) => e.id),
-    ),
-  )
+    )
+  // The baseline is what the user last saw persisted: the view's profile,
+  // advanced to the submitted form after each successful save. A standalone
+  // render (`camunda7_show_user_profile`) gets its view as fixed props and
+  // never refetches, so diffing against `view.profile` would make reverting a
+  // saved change compare equal to the ORIGINAL view and save nothing.
+  const [baseline, setBaseline] = useState<FormState>(viewForm)
+  const [form, setForm] = useState<FormState>(baseline)
   const [savedAt, setSavedAt] = useState<string | null>(null)
 
-  // Re-sync the baseline after a save (the feed refetches via refreshCockpitData).
-  useResetOnChange(view.profile.updatedAt, () =>
-    setForm(
-      fromProfile(
-        view.profile,
-        view.availableEngines.map((e) => e.id),
-      ),
-    ),
-  )
+  // Re-sync form and baseline from server truth whenever the view's profile
+  // changes (the cockpit feed refetches via refreshCockpitData after a save).
+  useResetOnChange(view.profile.updatedAt, () => {
+    const next = viewForm()
+    setBaseline(next)
+    setForm(next)
+  })
 
   const engines = view.availableEngines
   const engineGroups = groupEnginesByEnvironment(engines)
@@ -287,13 +291,21 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
   }
 
   function handleSave() {
-    const engineIds = engines.map((e) => e.id)
-    save.mutate(changedPreferences(form, fromProfile(view.profile, engineIds), engineIds), {
-      onSuccess: () => {
-        setSavedAt(formatTime(new Date().toISOString()))
-        refreshCockpitData()
+    const submitted = form
+    save.mutate(
+      changedPreferences(
+        submitted,
+        baseline,
+        engines.map((e) => e.id),
+      ),
+      {
+        onSuccess: () => {
+          setBaseline(submitted)
+          setSavedAt(formatTime(new Date().toISOString()))
+          refreshCockpitData()
+        },
       },
-    })
+    )
   }
 
   const allEnginesAllowed = form.allowedEngineIds.length >= engines.length

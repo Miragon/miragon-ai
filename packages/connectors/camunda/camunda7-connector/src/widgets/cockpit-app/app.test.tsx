@@ -30,6 +30,7 @@ const ENGINES = [
 /** Boots the cockpit with a recording `camunda7_engine` fixture. */
 function renderCockpit() {
   const engineCalls: Array<Record<string, unknown>> = []
+  const modelContexts: string[] = []
   const engineTool = (args: Record<string, unknown>) => {
     engineCalls.push(args)
     return args.action === "list"
@@ -54,9 +55,10 @@ function renderCockpit() {
       widget={Cockpit}
       data={{}}
       tools={{ [CAMUNDA7_ENGINE]: engineTool, [CAMUNDA7_COCKPIT_OVERVIEW_DATA]: overview }}
+      onModelContext={(text) => modelContexts.push(text)}
     />,
   )
-  return { engineCalls }
+  return { engineCalls, modelContexts }
 }
 
 describe("CockpitApp navigation is side-effect free", () => {
@@ -76,5 +78,16 @@ describe("CockpitApp navigation is side-effect free", () => {
     // default is an explicit action on the settings page.
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(engineCalls.filter((args) => args.action !== "list")).toEqual([])
+  })
+
+  // Navigation no longer moves the saved default (prod-b in this fixture), so
+  // the model must be told to scope its calls to the VIEWED engine — an
+  // engine-less call would answer from the default engine instead.
+  it("tells the model to pass the viewed engine on every camunda7_* call", async () => {
+    const { modelContexts } = renderCockpit()
+    fireEvent.click(await screen.findByRole("button", { name: /prod-a/ }))
+    await waitFor(() =>
+      expect(modelContexts.at(-1)).toContain('Pass engine: "prod-a" on every camunda7_* call'),
+    )
   })
 })

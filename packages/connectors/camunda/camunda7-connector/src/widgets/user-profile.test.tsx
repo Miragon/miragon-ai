@@ -55,9 +55,11 @@ function renderPanel(view: UserProfileView = VIEW, dashboards: unknown[] = []) {
     />,
   )
   const save = async () => {
-    fireEvent.click(screen.getByRole("button", { name: "Save" }))
-    await waitFor(() => expect(saves).toHaveLength(1))
-    return saves[0]
+    const before = saves.length
+    // Not pending: the button reads "Save" again once the previous save settled.
+    fireEvent.click(await screen.findByRole("button", { name: "Save" }))
+    await waitFor(() => expect(saves).toHaveLength(before + 1))
+    return saves[before]
   }
   return { save }
 }
@@ -99,6 +101,26 @@ describe("UserProfileWidget save — only what the user changed", () => {
     const { save } = renderPanel(VIEW, [{ id: "d1", name: "Ops" }])
     fireEvent.click(await screen.findByRole("checkbox", { name: "Ops" }))
     expect(await save()).toEqual({ pinnedDashboardIds: ["d1"] })
+  })
+
+  // Standalone (camunda7_show_user_profile) the panel renders from fixed
+  // props and never refetches, so the baseline must advance with each save:
+  // otherwise reverting a saved change compares equal to the ORIGINAL view
+  // and silently saves nothing.
+  it("a saved change can be reverted in the same standalone panel", async () => {
+    const { save } = renderPanel()
+    fireEvent.change(screen.getByLabelText("Default engine"), { target: { value: "prod-b" } })
+    expect(await save()).toEqual({ defaultEngineId: "prod-b" })
+    fireEvent.change(screen.getByLabelText("Default engine"), { target: { value: "prod-a" } })
+    expect(await save()).toEqual({ defaultEngineId: "prod-a" })
+  })
+
+  it("a second save sends only what changed since the first", async () => {
+    const { save } = renderPanel()
+    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "dark" } })
+    expect(await save()).toEqual({ theme: "dark" })
+    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
+    expect(await save()).toEqual({ language: "de" })
   })
 
   it("never sends an unset role (the stored role stays)", async () => {

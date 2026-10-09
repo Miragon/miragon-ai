@@ -134,8 +134,9 @@ export function mergeStoredProfile(
     // explicitly set to `undefined` clears on serialization) and leaves other
     // modules' slices intact. Merging here — inside the store's per-key
     // serialization — rather than replacing means two concurrent saves of
-    // DISJOINT fields in the same slice both survive; the save tool's
-    // pre-read (`mergeRawSlice`) alone cannot guarantee that.
+    // DISJOINT fields in the same slice both survive, as long as each save
+    // carries its patch alone (`saveModuleSlice`): a slice pre-read outside
+    // this lock would carry stale values that win here.
     modules: mergeModuleSlices(prevRecord.modules, input.modules),
     id: key,
     // Once user-bound, always user-bound — a later save without auth context

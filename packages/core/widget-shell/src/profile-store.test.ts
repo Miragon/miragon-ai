@@ -11,7 +11,7 @@ import {
 } from "./profile-store.js"
 import { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
 import { defaultProfileRecord } from "./profile-record.js"
-import { mergeRawSlice } from "./profile-slice.js"
+import { saveModuleSlice } from "./profile-slice.js"
 
 describe("defaultProfileRecord", () => {
   it("returns a complete, defaulted record for an unsaved key", () => {
@@ -120,19 +120,17 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
 
   it("keeps concurrent saves from DIFFERENT modules — no module's update is lost", async () => {
     const store = await makeStore()
-    // Exactly the tool paths: each module's save tool pre-reads its RAW slice
-    // (`mergeRawSlice`, outside any lock) and hands the store a complete slice;
-    // the model may fire camunda7_engine "select" and analytics_save_settings
-    // in one turn. Repeated, because an unserialized read-merge-write loses
-    // one of them only when the two calls interleave.
+    // Exactly the tool paths: each module's save tool hands the store its
+    // patch (`saveModuleSlice`); the model may fire camunda7_engine "select"
+    // and analytics_save_settings in one turn. Repeated, because an
+    // unserialized read-merge-write loses one of them only when the two
+    // calls interleave.
     for (let round = 0; round < 10; round += 1) {
       const key = `user-${round}`
       await store.save(key, { modules: { camunda7: { pinnedDashboardIds: ["d1"] } } })
-      const saveSlice = async (module: string, patch: Record<string, unknown>) =>
-        store.save(key, { modules: { [module]: await mergeRawSlice(store, key, module, patch) } })
       await Promise.all([
-        saveSlice("camunda7", { defaultEngineId: "prod-a" }),
-        saveSlice("analytics", { defaultPeriod: "30d" }),
+        saveModuleSlice(store, key, "camunda7", { defaultEngineId: "prod-a" }),
+        saveModuleSlice(store, key, "analytics", { defaultPeriod: "30d" }),
         store.save(key, { theme: "dark" }),
       ])
       const profile = await store.get(key)
@@ -142,6 +140,36 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
       })
       expect(profile?.theme).toBe("dark")
     }
+  })
+
+  it("keeps concurrent saves of different fields in the SAME slice: a stale value never wins", async () => {
+    const store = await makeStore()
+    // The model fires camunda7_engine "select" and camunda7_save_user_profile
+    // in one turn, and the field the select changes ALREADY holds a value.
+    // A save tool that hands the store a pre-read slice (read outside the
+    // lock) writes that stale value back. The patch alone, merged inside the
+    // store's per-key serialization, keeps both.
+    for (let round = 0; round < 10; round += 1) {
+      const key = `user-${round}`
+      await store.save(key, { modules: { camunda7: { defaultEngineId: "prod-a", extra: 1 } } })
+      await Promise.all([
+        saveModuleSlice(store, key, "camunda7", { defaultEngineId: "prod-b" }),
+        saveModuleSlice(store, key, "camunda7", { pinnedDashboardIds: ["d1"] }),
+      ])
+      expect((await store.get(key))?.modules?.camunda7).toEqual({
+        defaultEngineId: "prod-b",
+        pinnedDashboardIds: ["d1"],
+        extra: 1,
+      })
+    }
+  })
+
+  it("saveModuleSlice clears a field patched to undefined and reports the saved slice", async () => {
+    const store = await makeStore()
+    await saveModuleSlice(store, "sess-1", "camunda7", { defaultEngineId: "prod-a", keep: true })
+    const slice = await saveModuleSlice(store, "sess-1", "camunda7", { defaultEngineId: undefined })
+    expect(slice).toEqual({ keep: true })
+    expect((await store.get("sess-1"))?.modules?.camunda7).toEqual({ keep: true })
   })
 
   it("stamps the auth user id and never demotes the record on later keyless saves", async () => {

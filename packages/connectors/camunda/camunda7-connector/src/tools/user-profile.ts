@@ -4,7 +4,6 @@ import {
   appOnly,
   buildDataFeedResult as rawData,
   buildSingleWidgetView,
-  mergeRawSlice,
   requireProfileKey,
   showToolBinding,
   withToolErrors,
@@ -162,22 +161,28 @@ export function registerUserProfileTools(
       // back from structuredContent.
     },
     withToolErrors(async (params, ctx) => {
-      // Keyless refusal + raw-slice merge are the shared slice-write contract
-      // (`@miragon-ai/widget-shell/server`) — every module's save tool uses
-      // the same pair.
+      // Keyless refusal + a patch-only slice save are the shared slice-write
+      // contract (`requireProfileKey` + `saveModuleSlice` in
+      // `@miragon-ai/widget-shell/server`). This tool also carries the
+      // record-level language/theme, so it hands the store the same patch
+      // itself: ONLY the given fields, merged by the store over the RAW
+      // stored slice under its per-key lock, so a concurrent
+      // `camunda7_engine` "select" is never reverted by a stale pre-read.
       const key = requireProfileKey(ctx)
       const { language, theme, ...sliceInput } = params
-      const nextSlice = await mergeRawSlice(store, key, CAMUNDA7_MODULE_KEY, sliceInput)
+      const slicePatch: Record<string, unknown> = { ...sliceInput }
       // The settings UI sends an empty string for the "(auto)"/"(none)" option
-      // of an optional id field — that clears the stored value.
+      // of an optional id field. That CLEARS the stored value: an explicit
+      // `undefined` overrides the stored field in the store's merge (a
+      // deleted key would leave the old default in place).
       for (const field of ["defaultEngineId", "defaultDashboardId"]) {
-        if (nextSlice[field] === "") delete nextSlice[field]
+        if (slicePatch[field] === "") slicePatch[field] = undefined
       }
       // Stamping the auth user id marks the record user-bound — exempt from
       // the session-TTL cleanup.
       const saved = await store.save(
         key,
-        { language, theme, modules: { [CAMUNDA7_MODULE_KEY]: nextSlice } },
+        { language, theme, modules: { [CAMUNDA7_MODULE_KEY]: slicePatch } },
         { userId: resolveAuthUserId(ctx) },
       )
       const profile = toUserProfile(saved)

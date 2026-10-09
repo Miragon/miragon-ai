@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
-import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
+import { createInMemoryProfileStore, runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import {
   analyticsSettingsSaveInput,
   analyticsSettingsSchema,
@@ -246,15 +246,7 @@ describe("registerSettingsTools", () => {
   })
 
   it("round-trips a keyless save through the shared record", async () => {
-    const records = new Map<string, { modules?: Record<string, unknown> }>()
-    const store: ProfileSource = {
-      get: (key) => Promise.resolve(records.get(key)),
-      save: (key, input) => {
-        const next = { ...(records.get(key) ?? {}), ...input }
-        records.set(key, next)
-        return Promise.resolve(next)
-      },
-    }
+    const store = createInMemoryProfileStore()
     const tool = vi.fn()
     registerSettingsTools({ tool } as unknown as MCPServer, store, "standard")
     type Handler = (
@@ -282,34 +274,55 @@ describe("registerSettingsTools", () => {
     ])
     // Only the provided field is persisted — no defaults materialized into
     // storage, so a later default change applies to fields never set.
-    expect(records.get("anonymous")).toEqual({
-      modules: { analytics: { defaultPeriod: "30d" } },
+    expect((await store.get("anonymous"))?.modules).toEqual({
+      analytics: { defaultPeriod: "30d" },
     })
     const data = await handlerFor(ANALYTICS_SETTINGS_DATA)({})
     expect(data.structuredContent?.settings).toEqual({ defaultPeriod: "30d", minBucketSize: 10 })
   })
 
-  it("a partial save keeps the other saved value (merge over the raw slice)", async () => {
-    const records = new Map<string, { modules?: Record<string, unknown> }>()
-    const store: ProfileSource = {
-      get: (key) => Promise.resolve(records.get(key)),
-      save: (key, input) => {
-        const next = { ...(records.get(key) ?? {}), ...input }
-        records.set(key, next)
-        return Promise.resolve(next)
-      },
-    }
+  it("a partial save keeps the other saved value (the store merges the patch)", async () => {
+    const store = createInMemoryProfileStore()
     const tool = vi.fn()
     registerSettingsTools({ tool } as unknown as MCPServer, store, "standard")
     const call = tool.mock.calls.find(
       (c) => (c[0] as { name: string }).name === ANALYTICS_SAVE_SETTINGS,
     )
-    const save = call![1] as (params: unknown) => Promise<unknown>
+    const save = call![1] as (params: unknown) => Promise<{ structuredContent?: unknown }>
 
     await save({ defaultPeriod: "30d" })
-    await save({ minBucketSize: 5 })
-    expect(records.get("anonymous")).toEqual({
-      modules: { analytics: { defaultPeriod: "30d", minBucketSize: 5 } },
+    const saved = await save({ minBucketSize: 5 })
+    expect((await store.get("anonymous"))?.modules).toEqual({
+      analytics: { defaultPeriod: "30d", minBucketSize: 5 },
+    })
+    // The report is the SAVED slice, not just this call's patch.
+    expect(saved.structuredContent).toEqual({ defaultPeriod: "30d", minBucketSize: 5 })
+  })
+
+  it("concurrent saves of the two fields keep both, even when one already held a value", async () => {
+    // Writes land after a round-trip, like a database's: the second save runs
+    // while the first one's write is still in flight. A save that handed the
+    // store a slice pre-read outside its lock would write the stale period back.
+    const inner = createInMemoryProfileStore()
+    await inner.save("anonymous", { modules: { analytics: { defaultPeriod: "7d" } } })
+    const store: ProfileSource = {
+      get: (key) => inner.get(key),
+      save: async (key, input, opts) => {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        return inner.save(key, input, opts)
+      },
+    }
+    const tool = vi.fn()
+    registerSettingsTools({ tool } as unknown as MCPServer, store, "standard")
+    const save = tool.mock.calls.find(
+      (c) => (c[0] as { name: string }).name === ANALYTICS_SAVE_SETTINGS,
+    )![1] as (params: unknown) => Promise<unknown>
+
+    const first = save({ defaultPeriod: "30d" })
+    await new Promise((resolve) => setTimeout(resolve, 1))
+    await Promise.all([first, save({ minBucketSize: 25 })])
+    expect((await inner.get("anonymous"))?.modules).toEqual({
+      analytics: { defaultPeriod: "30d", minBucketSize: 25 },
     })
   })
 

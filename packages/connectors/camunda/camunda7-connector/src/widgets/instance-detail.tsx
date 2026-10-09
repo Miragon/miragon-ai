@@ -84,6 +84,7 @@ export function InstanceDetailWidget({
           pendingIds={actions.pendingIds}
           resolveError={actions.resolveError}
           onResolve={actions.canResolve ? actions.setConfirmResolveId : undefined}
+          engine={engineId}
         />
       ),
     },
@@ -127,6 +128,7 @@ export function InstanceDetailWidget({
         <InstanceHeader
           instance={instance}
           status={status}
+          engineId={engineId}
           engineClause={engineClause}
           activeActivityIds={data.activeActivityIds}
           incidentActivityIds={data.incidentActivityIds}

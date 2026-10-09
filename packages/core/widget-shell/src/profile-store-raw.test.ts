@@ -10,7 +10,7 @@ import {
   type ProfileStore,
 } from "./profile-store.js"
 import { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
-import { mergeRawSlice } from "./profile-slice.js"
+import { saveModuleSlice } from "./profile-slice.js"
 
 /**
  * Saves merge over the RAW stored document, never over its parsed view — the
@@ -134,17 +134,20 @@ function rawDocumentContract(makeHarness: () => Promise<RawHarness>) {
     await seedRaw("user-1", STORED)
 
     // The analytics settings save path, end to end.
-    const slice = await mergeRawSlice(store, "user-1", "analytics", { minBucketSize: 25 })
-    const saved = await store.save(
+    const slice = await saveModuleSlice(
+      store,
       "user-1",
-      { modules: { analytics: slice } },
+      "analytics",
+      { minBucketSize: 25 },
       { userId: "user-1" },
     )
 
     const modules = { ...STORED.modules, analytics: { defaultPeriod: "30d", minBucketSize: 25 } }
-    expect(saved.modules).toEqual(modules)
-    expect(saved.createdAt).toBe(STORED.createdAt)
-    expect(await readRaw("user-1")).toEqual({ ...STORED, modules, updatedAt: saved.updatedAt })
+    expect(slice).toEqual(modules.analytics)
+    const saved = await store.get("user-1")
+    expect(saved?.modules).toEqual(modules)
+    expect(saved?.createdAt).toBe(STORED.createdAt)
+    expect(await readRaw("user-1")).toEqual({ ...STORED, modules, updatedAt: saved?.updatedAt })
   })
 
   it("never mangles a document from a NEWER build (rolling-deploy skew)", async () => {

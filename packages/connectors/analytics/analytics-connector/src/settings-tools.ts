@@ -4,8 +4,8 @@ import {
   appOnly,
   buildDataFeedResult,
   buildSingleWidgetView,
-  mergeRawSlice,
   requireProfileKey,
+  saveModuleSlice,
   showToolBinding,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
@@ -131,19 +131,21 @@ export function registerSettingsTools(
       // structuredContent.
     },
     withToolErrors(async (params, ctx) => {
-      // Keyless refusal + raw-slice merge are the shared slice-write contract
-      // (`@miragon-ai/widget-shell/server`) — every module's save tool uses
-      // the same pair.
+      // Keyless refusal + a patch-only slice save are the shared slice-write
+      // contract (`@miragon-ai/widget-shell/server`) — every module's save
+      // tool uses the same pair. The store merges the patch under its per-key
+      // lock, so a concurrent save of the other field is never reverted.
       const key = requireProfileKey(ctx)
-      const nextSlice = await mergeRawSlice(store, key, ANALYTICS_MODULE_KEY, params)
       // Stamping the auth user id marks the record user-bound — exempt from
       // the app's session-TTL cleanup.
-      await save(
+      const savedSlice = await saveModuleSlice(
+        { get: (k) => store.get(k), save },
         key,
-        { modules: { [ANALYTICS_MODULE_KEY]: nextSlice } },
+        ANALYTICS_MODULE_KEY,
+        params,
         { userId: resolveSettingsAuthUserId(ctx) },
       )
-      const effective = parseAnalyticsSettings({ [ANALYTICS_MODULE_KEY]: nextSlice })
+      const effective = parseAnalyticsSettings({ [ANALYTICS_MODULE_KEY]: savedSlice })
       const t = await localizeFor(store, ctx)
       return {
         content: [

@@ -58,9 +58,10 @@ export const CAMUNDA7_PROCESS_LIST_DATA = "camunda7_process_list_data"
 export const CAMUNDA7_SHOW_USER_PROFILE = "camunda7_show_user_profile"
 export const CAMUNDA7_USER_PROFILE_DATA = "camunda7_user_profile_data"
 export const CAMUNDA7_SAVE_USER_PROFILE = "camunda7_save_user_profile"
-// Engine management (list / select / current). Widgets call it for the engine
-// list and to save the default engine on an in-cockpit switch, so the name is
-// load-bearing beyond prompt hints.
+// Engine management (list / select / current). Widgets call it ONLY to read
+// the engine list (`list`), so the name is load-bearing beyond prompt hints.
+// No widget writes through it: cockpit navigation never saves a default; the
+// default changes only via the settings page or an explicit model `select`.
 export const CAMUNDA7_ENGINE = "camunda7_engine"
 // The engine writes widgets trigger in place (`useToolMutation`). The
 // deployment's toolset may not register them (`camunda7:read-only` drops every

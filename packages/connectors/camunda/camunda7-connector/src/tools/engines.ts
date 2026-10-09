@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { mergeRawSlice, type ProfileStore } from "@miragon-ai/widget-shell/server"
+import { saveModuleSlice, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import { UnknownEngineError, type EngineRegistry, type EngineEntry } from "../lib/resolve-engine.js"
 import { environmentOf, groupEnginesByEnvironment } from "../lib/environments.js"
 import { providerForEntry } from "../providers/index.js"
@@ -164,14 +164,16 @@ export function registerEngineTools(
                 "pass the per-call `engine` parameter instead, or configure MCP_OAUTH so the default persists per user.",
             )
           }
-          const nextSlice = await mergeRawSlice(profileStore, key, CAMUNDA7_MODULE_KEY, {
-            defaultEngineId: id,
-          })
+          // The patch alone (the shared slice-write contract): the store
+          // merges it under its per-key lock, so a settings save racing this
+          // select keeps its fields and cannot revert the new default.
           // Stamping the auth user id marks the record user-bound — exempt
           // from the session-TTL cleanup (same pair as every settings save).
-          await profileStore.save(
+          await saveModuleSlice(
+            profileStore,
             key,
-            { modules: { [CAMUNDA7_MODULE_KEY]: nextSlice } },
+            CAMUNDA7_MODULE_KEY,
+            { defaultEngineId: id },
             { userId: resolveAuthUserId() },
           )
           return { defaultEngineId: id }

@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { mergeRawSlice, parseModuleSlice, requireProfileKey } from "./profile-slice.js"
+import {
+  mergeRawSlice,
+  parseModuleSlice,
+  requireProfileKey,
+  saveModuleSlice,
+} from "./profile-slice.js"
 import { runWithMcpRequestInfo } from "./request-context.js"
 import type { ProfileSource } from "./profile.js"
 
@@ -43,6 +48,43 @@ describe("mergeRawSlice", () => {
   it("never reads a foreign module's slice", async () => {
     const store = storeWith({ other: { x: 1 } })
     expect(await mergeRawSlice(store, "k", "notes", {})).toEqual({})
+  })
+})
+
+describe("saveModuleSlice", () => {
+  it("hands the store the patch alone and reports the slice off the saved record", async () => {
+    const save = vi.fn<NonNullable<ProfileSource["save"]>>(() =>
+      Promise.resolve({ modules: { notes: { sortOrder: "desc", futureField: 42 } } }),
+    )
+    const get = vi.fn<ProfileSource["get"]>()
+    const slice = await saveModuleSlice(
+      { get, save },
+      "k",
+      "notes",
+      { sortOrder: "desc" },
+      {
+        userId: "user-7",
+      },
+    )
+    expect(save).toHaveBeenCalledWith(
+      "k",
+      { modules: { notes: { sortOrder: "desc" } } },
+      { userId: "user-7" },
+    )
+    // No pre-read: a slice read outside the store's lock would be stale.
+    expect(get).not.toHaveBeenCalled()
+    expect(slice).toEqual({ sortOrder: "desc", futureField: 42 })
+  })
+
+  it("reads the slice back when a custom store's save returns nothing", async () => {
+    const save = vi.fn<NonNullable<ProfileSource["save"]>>(() => Promise.resolve(undefined))
+    const get = vi.fn<ProfileSource["get"]>(() =>
+      Promise.resolve({ modules: { notes: { sortOrder: "asc" } } }),
+    )
+    expect(await saveModuleSlice({ get, save }, "k", "notes", { sortOrder: "asc" })).toEqual({
+      sortOrder: "asc",
+    })
+    expect(get).toHaveBeenCalledWith("k")
   })
 })
 

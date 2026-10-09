@@ -9,7 +9,9 @@ import {
   type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
 import type { Client } from "@miragon-ai/camunda7-client"
+import type { MCPServer } from "mcp-use"
 import { registerEngineTools } from "./engines.js"
+import { registerUserProfileTools } from "./user-profile.js"
 import {
   createEngineRegistry,
   UnknownEngineError,
@@ -17,7 +19,7 @@ import {
 } from "../lib/resolve-engine.js"
 import { CAMUNDA7_MODULE_KEY } from "../lib/profile-schema.js"
 import type { Camunda7Toolset } from "../lib/toolsets.js"
-import { CAMUNDA7_ENGINE } from "../tool-names.js"
+import { CAMUNDA7_ENGINE, CAMUNDA7_SAVE_USER_PROFILE } from "../tool-names.js"
 
 const ENGINES = [
   { id: "alpha", baseUrl: "http://alpha/engine-rest", cockpitUrl: "http://alpha/cockpit" },
@@ -223,6 +225,43 @@ describe("camunda7_engine select (durable default)", () => {
     await expect(under(USER, () => call({ action: "select" }))).rejects.toThrow(
       /requires an engineId/,
     )
+  })
+})
+
+describe("camunda7_engine select racing a settings save in the same slice", () => {
+  it("keeps both writes: a stale pre-read of the default never reverts the select", async () => {
+    // One model turn, two tools: select changes a field that already holds a
+    // value while the profile save changes another field of the same slice.
+    // Writes land after a round-trip, like a database's, so the profile save
+    // runs while the select's write is still in flight.
+    const inner = createInMemoryProfileStore()
+    const store: ProfileStore = {
+      ...inner,
+      save: async (key, input, opts) => {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        return inner.save(key, input, opts)
+      },
+    }
+    await inner.save("user-1", { modules: { [CAMUNDA7_MODULE_KEY]: { defaultEngineId: "alpha" } } })
+    const { call } = harness("operations", store)
+    const tool = vi.fn()
+    const registry = { engines: [] } as unknown as EngineRegistry
+    registerUserProfileTools({ tool } as unknown as MCPServer, store, registry, "operations")
+    const saveProfile = tool.mock.calls.find(
+      (c) => (c[0] as { name: string }).name === CAMUNDA7_SAVE_USER_PROFILE,
+    )![1] as (params: unknown) => Promise<{ isError?: boolean }>
+
+    const [, saved] = await under(USER, async () => {
+      const selected = call({ action: "select", engineId: "beta" })
+      // The select has read the profile and is now inside its write.
+      await new Promise((resolve) => setTimeout(resolve, 1))
+      return Promise.all([selected, saveProfile({ pinnedDashboardIds: ["d1"] })])
+    })
+    expect(saved.isError).toBeUndefined()
+    expect((await store.get("user-1"))?.modules?.[CAMUNDA7_MODULE_KEY]).toEqual({
+      defaultEngineId: "beta",
+      pinnedDashboardIds: ["d1"],
+    })
   })
 })
 

@@ -148,7 +148,12 @@ export {
   type ServerT,
   type Translator,
 } from "./server-locale.js"
-export { mergeRawSlice, parseModuleSlice, requireProfileKey } from "./profile-slice.js"
+export {
+  mergeRawSlice,
+  parseModuleSlice,
+  requireProfileKey,
+  saveModuleSlice,
+} from "./profile-slice.js"
 export { catalogueSyncIssues } from "./catalogue-sync.js"
 
 /**

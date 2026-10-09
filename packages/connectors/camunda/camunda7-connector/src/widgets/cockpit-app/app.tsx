@@ -14,6 +14,7 @@ import {
   type CockpitView,
 } from "../nav-core.js"
 import { camunda7BaseWidgets } from "../registry.js"
+import { engineCallRule } from "../lib/engine-scope.js"
 import { translator } from "../../messages/index.js"
 import { CAMUNDA7_ENGINE } from "../../tool-names.js"
 import { NavBreadcrumb } from "./breadcrumb.js"
@@ -236,10 +237,12 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   }, [scope.kind, soleEngineId])
 
   // Pick (or switch) the active engine — navigation only, side-effect free.
-  // The cockpit threads `engine` into every view and model context
-  // explicitly; the caller's saved default engine (which retargets every
-  // later engine-less tool call) changes only through an explicit action:
-  // the settings page or `camunda7_engine` action "select".
+  // The cockpit threads `engine` into every view, its model context tells
+  // the model to pass it on every camunda7_* call, and the Ask-AI prompts
+  // carry it (`engineArg`/`engineCallRule`); the caller's saved default
+  // engine (which retargets every later engine-less tool call) changes only
+  // through an explicit action: the settings page or `camunda7_engine`
+  // action "select".
   const enterEngine = (id: string) => dispatch({ type: "enter-engine", id })
   const switchEngine = (id: string) => dispatch({ type: "switch-engine", id })
 
@@ -300,7 +303,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   return (
     <WidgetShell>
       <HostModelContext
-        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}". ${describeCurrentView(current)} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
+        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}".${engineCallRule(engineId)} ${describeCurrentView(current)} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
       >
         {null}
       </HostModelContext>

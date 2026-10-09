@@ -53,7 +53,10 @@ function userIdOf(user: { userId?: unknown; id?: unknown } | undefined): string 
  * write back a `modules` patch. Deliberately narrower than camunda7's
  * `ProfileStore` — a module has no business with `delete`/`cleanupSessions` or
  * with another module's slice. `save` merges per module key on the store side,
- * so writing `modules.<yours>` never touches a foreign slice.
+ * one level deep and atomically per key: a `modules.<yours>` patch spreads
+ * over your stored slice (`undefined` clears a field) and never touches a
+ * foreign slice, which is what lets a save carry its patch alone
+ * (`saveModuleSlice`).
  */
 export interface ProfileSource {
   get(key: string): Promise<ProfileSlice | undefined>
