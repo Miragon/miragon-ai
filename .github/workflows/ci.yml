@@ -52,6 +52,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          # Full history: `pnpm lint` runs scripts/check-ratchets.mjs, which
+          # diffs every ratchet against the merge base with the PR base (and
+          # reads the branch's commit trailers) — it refuses a shallow clone.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6.1.0
 
