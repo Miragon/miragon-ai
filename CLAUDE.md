@@ -229,16 +229,35 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    components live in packages — and no boot plumbing either. The bundle root's provider
    stack (`AppShellProviders`: theme → host bridge → display mode → `ProfileGate` →
    host widget registry; order is load-bearing) plus `LocalizedAppView` live in
-   `@miragon-ai/widget-shell/widgets`, the mcp-use boot workarounds
-   (`installToolCallLogging`, `swallowDevCliViewsPrime`, `resolvePort`) and the
-   operational HTTP routes (`installMetrics` — the Prometheus scrape, labels
-   bounded by construction: tool catalogue + known routes, never users/sessions/
-   arguments; `installHealthEndpoints` — `/health/live|ready`, readiness probes
-   the server's OWN dependencies only, never engines or Prometheus; metrics
-   BEFORE health, hono only counts routes registered after its middleware) in
-   `/server` — so `src/ui/main.tsx` and `src/index.ts` stay composition (registry,
-   profile-feed name, app-specific layers like `Camunda7StandaloneShell`) and a
-   toolkit/mcp-use migration lands once instead of in every composed-server fork.
+   `@miragon-ai/widget-shell/widgets`, and the whole server boot lives in `/server`:
+   `createComposedServer` owns the ORDER (env-typo warnings + HTTP edge policy + the
+   OAuth/`MCP_URL` check → ONE `resolveBoot`, authenticated exactly when the root hands
+   in an OAuth provider → boot log → the root's `setup(boot)` (plugins, persistence) →
+   `createFrameworkApp` with `serverInfo` (version from the root's `package.json`, title,
+   `instructions`) → request context → `installToolCallLogging` →
+   `swallowDevCliViewsPrime` → `installMetrics` (labels bounded by construction: tool
+   catalogue + known routes, never users/sessions/arguments; optional
+   `MCP_METRICS_TOKEN` bearer) → `installHttpEdgeGuard` → `installHealthEndpoints`
+   (readiness probes the server's OWN dependencies only, never engines or Prometheus;
+   503 `draining` during shutdown) — metrics first, hono only counts routes registered
+   after its middleware) and its `listen()` serves production through
+   `createBodyLimitedListener` (mcp-use's public `toNodeHandler` behind the
+   `MCP_MAX_BODY_BYTES` cap — 413 before buffering — an in-flight body budget of 4× the
+   cap — 503 — and a 30 s request timeout; a request the guard refuses is never read,
+   both decide by the one `edgeRejection`) with the graceful drain (stop accepting →
+   in-flight finish, bounded, readiness 503 `draining` → `app.close()` → the root's
+   `runtime.shutdown()`). The edge (`resolveHttpEdgePolicy`) is DNS-rebinding protection:
+   Host on every request, Origin on non-GET requests that carry one, admitted only when
+   localhost-class, `MCP_URL`'s or in `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` —
+   `/health*` and `/metrics` are exempt (probes and scrapers address a container by IP);
+   never swap it for mcp-use's `allowedHosts`, which guards those too. Each app owns ONE
+   `createApp(env, deps?)` (`src/app.ts`: its OAuth decision, persistence, plugins) that
+   `src/index.ts` (production and `mcp-use dev`, which owns the socket — no cap, no drain —
+   and the Host check: the guard defers that half to the CLI, which admits its tunnel host)
+   AND the e2e suites boot — never a test-only re-implementation of the boot — so
+   `src/ui/main.tsx` and `src/index.ts` stay composition (registry, profile-feed name,
+   app-specific layers like `Camunda7StandaloneShell`) and a toolkit/mcp-use migration
+   lands once instead of in every composed-server fork.
    Cross-module UI is tiered: `shell:*` widgets via
    `props.dataKey`; raw tool-name strings with graceful degradation (reference:
    `process-incidents/flow.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a

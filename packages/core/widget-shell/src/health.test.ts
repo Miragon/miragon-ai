@@ -109,6 +109,36 @@ describe("installHealthEndpoints", () => {
     expect(String(warn.mock.calls[0][1])).toContain("timed out after 10ms")
   })
 
+  it("answers 503 draining once the host drains — without running the checks — while live stays up", async () => {
+    const check = vi.fn()
+    let draining = false
+    const { call } = install({ readiness: { db: check }, draining: () => draining })
+    expect((await call("/health/ready")).status).toBe(200)
+
+    draining = true
+    const ready = await call("/health/ready")
+    expect(ready.status).toBe(503)
+    expect(ready.body).toEqual({ status: "draining", checks: {} })
+    expect((await call("/health")).status).toBe(503)
+    expect(check).toHaveBeenCalledTimes(1)
+    expect((await call("/health/live")).status).toBe(200)
+  })
+
+  it("reports draining for a probe that was in flight when the drain began", async () => {
+    let draining = false
+    const { call } = install({
+      readiness: {
+        db: () => {
+          draining = true
+        },
+      },
+      draining: () => draining,
+    })
+    const res = await call("/health/ready")
+    expect(res.status).toBe(503)
+    expect(res.body).toEqual({ status: "draining", checks: { db: "up" } })
+  })
+
   it("the bare prefix aliases readiness", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined)
     const { call } = install({

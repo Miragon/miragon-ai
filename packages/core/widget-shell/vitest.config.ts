@@ -12,8 +12,12 @@ export default mergeConfig(
         // adapters left the measurement (shared `coverage.exclude` — they are
         // only executable under `pnpm test:pg`), so the numbers now describe
         // the code this run actually exercises; measured statements 85.35 /
-        // branches 88.55 / functions 95.04 / lines 86.86.
-        thresholds: { statements: 83, branches: 86, functions: 93, lines: 84 },
+        // branches 88.55 / functions 95.04 / lines 86.86. Raised 2026-10-08
+        // (#324: the shared boot, HTTP edge and body-capped listener landed
+        // with their suites): measured 90.76 / 90.94 / 96.31 / 91.91. Raised
+        // again with the #324 review fixes (in-flight budget, guard before the
+        // body): measured 91.24 / 91.57 / 96.47 / 92.32.
+        thresholds: { statements: 89, branches: 89, functions: 94, lines: 90 },
       },
     },
   }),

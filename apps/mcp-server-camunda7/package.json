@@ -9,6 +9,9 @@
     "directory": "apps/mcp-server-camunda7"
   },
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {

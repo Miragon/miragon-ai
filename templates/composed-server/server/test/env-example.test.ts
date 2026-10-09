@@ -12,7 +12,10 @@ import { KNOWN_ENV_VARS } from "../src/setup.js"
  * undiscoverable. Add yours to `.env.example` when you add a module.
  */
 
-/** Read on purpose, not `PORT` in APP_ENV_VARS: index.ts consumes it directly. */
+/**
+ * Read on purpose, not in APP_ENV_VARS: `PORT` is consumed by `listen()` of
+ * `createComposedServer` (`@miragon-ai/widget-shell/server`), not by a module.
+ */
 const EXTRA_ALLOWED = ["PORT"]
 
 const ENV_EXAMPLE = path.join(import.meta.dirname, "..", "..", ".env.example")

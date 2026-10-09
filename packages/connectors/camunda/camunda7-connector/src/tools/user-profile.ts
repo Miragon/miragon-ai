@@ -92,9 +92,10 @@ export function registerUserProfileTools(
     const record = key ? await store.get(key) : undefined
     return {
       profile: record ? toUserProfile(record) : defaultUserProfile(),
+      // By id + environment only — the engine REST baseUrl is internal
+      // topology the settings panel has no use for.
       availableEngines: registry.engines.map((e) => ({
         id: e.id,
-        baseUrl: e.baseUrl,
         environment: environmentOf(e),
       })),
       // Toolset gate (decided up front) AND per-request identity: without a

@@ -6,7 +6,7 @@ import { analyticsModule } from "@miragon-ai/analytics-connector"
 import {
   composeModules,
   createShellPlugin,
-  frameworkWritesAllowed,
+  HTTP_EDGE_ENV_VARS,
   type ProfileStore,
   type ResolveBootOptions,
   type ResolvedBoot,
@@ -24,11 +24,13 @@ const MODULES: readonly ModuleDefinition[] = [camunda7Module, analyticsModule]
 
 /**
  * App-owned env vars; each module contributes its own slice via
- * `knownEnvVars`. Foreign prefixes owned by dependencies (`MCP_USE_*`,
- * `MCP_INSPECTOR_*`) are exempt inside `composeModules`.
+ * `knownEnvVars`, the shared HTTP edge (`MCP_URL`, the Host/Origin
+ * allow-lists, the body cap, the metrics token) via `HTTP_EDGE_ENV_VARS`.
+ * Foreign prefixes owned by dependencies (`MCP_USE_*`, `MCP_INSPECTOR_*`) are
+ * exempt inside `composeModules`.
  */
 const APP_ENV_VARS = [
-  "MCP_URL",
+  ...HTTP_EDGE_ENV_VARS,
   "MCP_OAUTH",
   "MCP_ACTIVE_MODULES",
   "MCP_DASHBOARD_DIR",
@@ -45,7 +47,12 @@ const APP_ENV_VARS = [
   "MCP_DEBUG_LEVEL",
 ]
 
-const composition = composeModules<SharedResources>({
+/**
+ * The composition `createApp` hands to the shared boot
+ * (`createComposedServer`), which resolves the selection ONCE per boot —
+ * authenticated exactly when `createApp` installs an OAuth provider.
+ */
+export const composition = composeModules<SharedResources>({
   label: "miragon-ai",
   modules: MODULES,
   appEnvVars: APP_ENV_VARS,
@@ -57,11 +64,10 @@ export const emitBootWarnings = composition.emitBootWarnings
 export const logEffectiveToolsets = composition.logEffectiveToolsets
 
 /**
- * The module selection, resolved ONCE per boot: each module's effective
- * toolset (fail closed — no suffix is the read-only floor unless `index.ts`
- * installed OAuth) threaded into its config. Plugins, `AppConfig` and the
- * builder decision all derive from this one value. The default (no OAuth)
- * keeps argument-less callers (tests) on the restrictive side.
+ * The module selection as the boot resolves it: each module's effective
+ * toolset (fail closed — no suffix is the read-only floor unless OAuth is
+ * installed) threaded into its config. The default (no OAuth) keeps
+ * argument-less callers (tests) on the restrictive side.
  */
 export function resolveBoot(
   options: ResolveBootOptions = {},
@@ -72,31 +78,6 @@ export function resolveBoot(
 
 export function getAppConfig(boot: ResolvedBoot = resolveBoot()): AppConfig {
   return { activeApps: boot.entries, pipelines: {} }
-}
-
-/**
- * Whether to switch on the toolkit's visual builder and its dashboard tools
- * (`get-builder-catalogue`, `save/list/load/delete-dashboard`). No module
- * toolset filters them, and the dashboard writes are keyed by user, so they
- * exist only under OAuth while no module runs on its read-only floor
- * (`frameworkWritesAllowed`). `render-view`/`refresh-view` stay regardless.
- */
-export function builderEnabled(boot: ResolvedBoot): boolean {
-  return frameworkWritesAllowed(boot)
-}
-
-/**
- * The boot decision `index.ts` makes, single-sourced so the e2e helpers run
- * it too: the selection is authenticated exactly when an OAuth provider was
- * actually BUILT from MCP_OAUTH (unset/blank builds none → the read-only
- * defaults) — never from the raw env var — and the builder follows from it.
- */
-export function selectBoot(
-  oauthProvider: object | undefined,
-  env: NodeJS.ProcessEnv = process.env,
-): { boot: ResolvedBoot; builder: boolean } {
-  const boot = resolveBoot({ authenticated: oauthProvider !== undefined }, env)
-  return { boot, builder: builderEnabled(boot) }
 }
 
 /**
@@ -118,8 +99,8 @@ function buildSharedResources(
 }
 
 /**
- * `index.ts` passes the store `initRuntime` selected (possibly Postgres) and
- * its once-per-boot selection; the defaults keep argument-less callers (tests)
+ * `createApp` passes the store `initRuntime` selected (possibly Postgres) and
+ * the once-per-boot selection; the defaults keep argument-less callers (tests)
  * on the filesystem/in-memory path and the unauthenticated defaults without
  * duplicating either selection here.
  */

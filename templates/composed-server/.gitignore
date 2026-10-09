@@ -4,8 +4,11 @@ coverage/
 *.tsbuildinfo
 # mcp-use dev artifacts (tool-registry types)
 .mcp-use/
-# local credentials — `.env.example` is the committed template and must survive
-# the wildcard below (it would otherwise match `.env.*`).
-.env
-.env.*
-!.env.example
+# Local credentials and dev persistence (MCP_PROFILE_DIR / MCP_DASHBOARD_DIR
+# records are keyed by user id or e-mail) — in every package, never in the
+# image or the repo. `.env.example` is the committed template.
+**/.env*
+!**/.env.example
+**/.profiles
+**/.dashboards
+**/.data

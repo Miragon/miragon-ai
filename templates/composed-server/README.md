@@ -30,7 +30,7 @@ The image takes its config from the environment — it never reads `.env`.
 ```bash
 pnpm install          # once, then commit pnpm-lock.yaml (the build uses --frozen-lockfile)
 docker build -t my-mcp-server .
-docker run -p 8400:8400 \
+docker run -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8410/engine-rest \
   -e PROMETHEUS_URL=http://host.docker.internal:8460 \
   my-mcp-server
@@ -150,7 +150,10 @@ JVM). See the `setup-server` skill before widening a server others can reach.
 | Variable                                     | Effect                                                                                                 |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `PORT`                                       | HTTP port (default 8400)                                                                               |
-| `MCP_URL`                                    | Public base URL (behind a proxy/gateway)                                                               |
+| `MCP_URL`                                    | Public base URL (behind a proxy/gateway) — also the `Host`/`Origin` the server accepts                 |
+| `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_ORIGINS`  | Further hostnames / origins the server accepts (default: localhost-class and `MCP_URL`'s only)         |
+| `MCP_MAX_BODY_BYTES`                         | Request-body cap (default 4 MiB; larger bodies get 413 before they are read)                           |
+| `MCP_METRICS_TOKEN`                          | Bearer token `/metrics` requires (default: open)                                                       |
 | `MCP_ACTIVE_MODULES`                         | Comma list with optional toolsets, e.g. `camunda7:operations,notes` (default: every module, read-only) |
 | `MCP_PROFILE_DIR`                            | Filesystem persistence for user profiles (default: in-memory)                                          |
 | `MCP_PROFILE_SESSION_TTL_DAYS`               | Expiry for session-keyed profile records (default 30, `0` = off)                                       |
@@ -171,7 +174,10 @@ docker run -p 8400:8400 \
 ```
 
 - `MCP_URL` is the public base URL when the server sits behind a proxy or MCP
-  gateway; `PORT` changes the HTTP port.
+  gateway; `PORT` changes the HTTP port. The server answers 403 to any `Host`
+  (or browser `Origin`) that is not localhost-class, `MCP_URL`'s or listed in
+  `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` — DNS-rebinding protection — so a
+  deployment reached under any other name must set them.
 - The server boots read-only. It has no auth of its own, so put an
   authenticating gateway in front before widening `MCP_ACTIVE_MODULES` — the
   server cannot see the gateway's login, which is why the toolsets stay
@@ -179,12 +185,16 @@ docker run -p 8400:8400 \
 - The profile store is in-memory by default — without the volume, user
   settings are lost on every restart. Saved dashboards need more: the visual
   builder and its dashboard tools are registered only when the server installs
-  OAuth and no module runs read-only (`builderEnabled`), so on this
+  OAuth and no module runs read-only (`frameworkWritesAllowed`), so on this
   unauthenticated server `MCP_DASHBOARD_DIR` has no effect until you add OAuth
   (see the stock server).
 - `/health/live`, `/health/ready` and `/metrics` (Prometheus) are served next
-  to `/mcp`, outside any OAuth gate — the image's `HEALTHCHECK` polls
-  `/health/ready`; point Kubernetes probes and a ServiceMonitor at them.
+  to `/mcp`, outside any OAuth gate and the `Host` check (`MCP_METRICS_TOKEN`
+  protects the scrape) — the image's `HEALTHCHECK` polls `/health/ready`;
+  point Kubernetes probes and a ServiceMonitor at them. On SIGTERM the server
+  stops accepting and lets in-flight requests finish (readiness answers those
+  503 `draining`); on Kubernetes add a `preStop` sleep so the endpoint is
+  removed before new connections are refused.
 
 ## Going further
 

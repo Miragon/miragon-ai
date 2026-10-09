@@ -126,7 +126,7 @@ then reinstall so the lockfile matches:
    `server/package.json`'s dependencies, and in every import
    (`server/src/setup.ts`, `server/src/ui/widget-registry.ts`,
    `server/test/widget-registry.test.ts`)
-3. the `acme-mcp` labels in `server/src/index.ts` and `setup.ts`
+3. the `acme-mcp` labels in `server/src/app.ts` and `setup.ts`
 4. `pnpm install` to refresh `pnpm-lock.yaml` (the Docker build uses
    `--frozen-lockfile`)
 
@@ -140,7 +140,7 @@ colors live here.
 ```bash
 pnpm install                    # once, then COMMIT pnpm-lock.yaml
 docker build -t my-mcp-server .
-docker run -p 8400:8400 \
+docker run -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8410/engine-rest \
   -e MCP_PROFILE_DIR=/data/profiles -v mcp-data:/data \
   my-mcp-server
@@ -148,7 +148,10 @@ docker run -p 8400:8400 \
 
 - Config comes from the environment — the image does not read `.env`.
 - `PORT` sets the HTTP port (default 8400); `MCP_URL` is the public base URL
-  when running behind a proxy or MCP gateway.
+  when running behind a proxy or MCP gateway — and, with
+  `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS`, the only non-localhost
+  `Host`/`Origin` the server accepts: anything else gets 403 (DNS-rebinding
+  protection), with the message naming the variable to set.
 - Federation/aggregation across MCP servers belongs in an external gateway
   (e.g. agentgateway) IN FRONT of this server — this repo builds one
   self-contained server; don't add upstream/proxy mechanics to it.
@@ -197,6 +200,11 @@ Prometheus configured:
 ```bash
 pnpm exec dotenv -e .env -- pnpm --filter ./server exec mcp-use dev --tunnel --no-open
 ```
+
+Under `mcp-use dev` the CLI checks `Host` itself and admits its tunnel host,
+so the tunnel needs no `MCP_ALLOWED_HOSTS` (browser `Origin`s are still
+checked). A built server (`pnpm start`, the image) behind a tunnel or proxy
+needs `MCP_URL` set to the public URL — else every call gets 403.
 
 ## Step 8 — verify
 

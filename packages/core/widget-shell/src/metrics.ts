@@ -14,8 +14,10 @@
  *   Grafana dashboards expect — deliberately NOT prefixed.
  *
  * Outside mcp-use's OAuth gate like the health probes (scoped to the MCP base
- * path); front `/metrics` with network policy if the scrape must stay private.
+ * path): set `token` (the composed server's `MCP_METRICS_TOKEN`) to require
+ * `Authorization: Bearer <token>`, or front `/metrics` with network policy.
  */
+import { createHash, timingSafeEqual } from "node:crypto"
 import { collectDefaultMetrics, Counter, Histogram, Registry } from "prom-client"
 import type { HttpRouteHost } from "./health.js"
 import { toolCallOutcome, toolNameOf, type ToolCallMiddlewareHost } from "./host-boot.js"
@@ -47,10 +49,26 @@ export interface MetricsOptions {
   routes?: readonly string[]
   /** Registry to populate (default: a fresh one — never the global registry, so hosts and tests stay isolated). */
   registry?: Registry
+  /** Bearer token the scrape requires (401 otherwise); unset = open. */
+  token?: string
 }
 
 const DEFAULT_ROUTES: readonly string[] = ["/mcp", "/health", "/metrics", "/.well-known"]
 const DURATION_BUCKETS = [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30]
+
+const digest = (value: string): Buffer => createHash("sha256").update(value).digest()
+
+/** Constant-time `Authorization: Bearer <token>` check (hashing equalizes the lengths). */
+export function bearerMatches(authorization: string | undefined, token: string): boolean {
+  const match = /^Bearer\s+(.+)$/i.exec(authorization?.trim() ?? "")
+  return match !== null && timingSafeEqual(digest(match[1]), digest(token))
+}
+
+/** The `Authorization` header from a hono-shaped route ctx (structural, like the other ports). */
+const authorizationOf = (ctx: unknown): string | undefined =>
+  (ctx as { req?: { header?(name: string): string | undefined } } | undefined)?.req?.header?.(
+    "authorization",
+  )
 
 /** Exact match or a sub-path of a known route keeps its label; anything else folds into `other`. */
 export function routeLabel(path: string, routes: readonly string[] = DEFAULT_ROUTES): string {
@@ -74,6 +92,7 @@ export function installMetrics(server: MetricsHost, options: MetricsOptions = {}
     defaultMetrics = true,
     routes = DEFAULT_ROUTES,
     registry = new Registry(),
+    token,
   } = options
   if (defaultMetrics) collectDefaultMetrics({ register: registry })
 
@@ -135,13 +154,17 @@ export function installMetrics(server: MetricsHost, options: MetricsOptions = {}
     }
   })
 
-  server.get(
-    path,
-    async () =>
-      new Response(await registry.metrics(), {
-        headers: { "content-type": registry.contentType, "cache-control": "no-store" },
-      }),
-  )
+  server.get(path, async (ctx) => {
+    if (token !== undefined && !bearerMatches(authorizationOf(ctx), token)) {
+      return new Response("Unauthorized\n", {
+        status: 401,
+        headers: { "www-authenticate": 'Bearer realm="metrics"', "cache-control": "no-store" },
+      })
+    }
+    return new Response(await registry.metrics(), {
+      headers: { "content-type": registry.contentType, "cache-control": "no-store" },
+    })
+  })
 
   return registry
 }

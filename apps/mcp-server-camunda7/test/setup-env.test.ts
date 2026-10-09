@@ -2,17 +2,17 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { frameworkWritesAllowed } from "@miragon-ai/widget-shell/server"
 import {
-  builderEnabled,
   emitBootWarnings,
   getAppConfig,
   getPlugins,
   logEffectiveToolsets,
   resolveBoot,
-  selectBoot,
   warnUnknownEnvVars,
 } from "../src/setup.js"
-import { getOAuthConfigFromEnv } from "../src/oauth.js"
+import { createApp } from "../src/app.js"
+import { createTestRuntime } from "./boot-server.js"
 
 const FILE_ENGINES = [{ id: "from-file", baseUrl: "http://file.example/engine-rest" }]
 const JSON_ENGINES = [{ id: "from-json", baseUrl: "http://json.example/engine-rest" }]
@@ -182,18 +182,27 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
     expect(info).toHaveBeenCalledTimes(1)
   })
 
-  it("selectBoot derives the selection from the provider ACTUALLY built from MCP_OAUTH", () => {
+  it("createApp derives the selection from the provider ACTUALLY built from MCP_OAUTH", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    vi.spyOn(console, "info").mockImplementation(() => {})
     vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
-    // `getOAuthConfigFromEnv(undefined)` falls back to process.env.MCP_OAUTH.
-    vi.stubEnv("MCP_OAUTH", undefined)
-    const toolsets = (selection: ReturnType<typeof selectBoot>) =>
-      Object.fromEntries(selection.boot.entries.map((e) => [e.app, e.config.toolset]))
+    vi.stubEnv("MCP_URL", "https://mcp.example.com")
+    const boot = async (raw: string | undefined) => {
+      vi.stubEnv("MCP_OAUTH", raw)
+      const { boot: selection, builder } = await createApp(process.env, {
+        runtime: createTestRuntime(),
+        bundle: { jsPath: path.join(import.meta.dirname, "fixtures", "mcp-app.js") },
+      })
+      const toolsets = Object.fromEntries(selection.entries.map((e) => [e.app, e.config.toolset]))
+      return { toolsets, builder }
+    }
 
     // Unset or blank MCP_OAUTH builds no provider → unauthenticated defaults.
     for (const raw of [undefined, "", "   "]) {
-      const anonymous = selectBoot(getOAuthConfigFromEnv(raw).provider)
-      expect(toolsets(anonymous)).toEqual({ camunda7: "read-only", analytics: "read-only" })
-      expect(anonymous.builder).toBe(false)
+      expect(await boot(raw)).toEqual({
+        toolsets: { camunda7: "read-only", analytics: "read-only" },
+        builder: false,
+      })
     }
 
     const keycloak = JSON.stringify({
@@ -201,18 +210,32 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
       serverUrl: "https://kc.example.com",
       realm: "r",
     })
-    const authenticated = selectBoot(getOAuthConfigFromEnv(keycloak).provider)
-    expect(toolsets(authenticated)).toEqual({ camunda7: "operations", analytics: "standard" })
-    expect(authenticated.builder).toBe(true)
+    expect(await boot(keycloak)).toEqual({
+      toolsets: { camunda7: "operations", analytics: "standard" },
+      builder: true,
+    })
+  })
+
+  it("fails the boot when OAuth is installed without MCP_URL (no token audience)", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    vi.spyOn(console, "info").mockImplementation(() => {})
+    vi.stubEnv("MCP_URL", undefined)
+    vi.stubEnv(
+      "MCP_OAUTH",
+      JSON.stringify({ provider: "keycloak", serverUrl: "https://kc.example.com", realm: "r" }),
+    )
+    await expect(createApp(process.env, { runtime: createTestRuntime() })).rejects.toThrow(
+      /OAuth needs MCP_URL/,
+    )
   })
 
   it("enables the dashboard builder only under OAuth with no read-only module", () => {
     vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
-    expect(builderEnabled(resolveBoot())).toBe(false)
-    expect(builderEnabled(resolveBoot({ authenticated: true }))).toBe(true)
+    expect(frameworkWritesAllowed(resolveBoot())).toBe(false)
+    expect(frameworkWritesAllowed(resolveBoot({ authenticated: true }))).toBe(true)
 
     vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:admin,analytics:read-only")
-    expect(builderEnabled(resolveBoot({ authenticated: true }))).toBe(false)
+    expect(frameworkWritesAllowed(resolveBoot({ authenticated: true }))).toBe(false)
   })
 
   it("passes the toolset through for modules that support it (analytics:read-only)", () => {
