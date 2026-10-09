@@ -122,6 +122,29 @@ describe("camunda7_query_historic_process_instances", () => {
   })
 })
 
+describe("camunda7_query_historic_incidents", () => {
+  it("filters by instance, process, activity, type, status and create window", async () => {
+    const requests = await requestsOf("camunda7_query_historic_incidents", {
+      processInstanceId: "pi-1",
+      processDefinitionKey: "invoice",
+      activityId: "ServiceTask_1",
+      incidentType: "failedJob",
+      open: true,
+      createTimeAfter: "2026-10-01",
+      createTimeBefore: "2026-10-02T12:00:00+02:00",
+    })
+    expectBothQueries(requests, "/history/incident", {
+      processInstanceId: "pi-1",
+      processDefinitionKey: "invoice",
+      activityId: "ServiceTask_1",
+      incidentType: "failedJob",
+      open: "true",
+      createTimeAfter: "2026-10-01T00:00:00.000+0000",
+      createTimeBefore: "2026-10-02T12:00:00.000+0200",
+    })
+  })
+})
+
 describe("camunda7_query_historic_task_instances", () => {
   it("takes `assignee` like camunda7_list_tasks and sends the engine's taskAssignee", async () => {
     const requests = await requestsOf("camunda7_query_historic_task_instances", {
@@ -212,6 +235,7 @@ describe("false boolean filters never reach the engine", () => {
       "camunda7_list_process_instances",
       "camunda7_list_tasks",
       "camunda7_query_historic_activity_instances",
+      "camunda7_query_historic_incidents",
       "camunda7_query_historic_process_instances",
       "camunda7_query_historic_task_instances",
     ])

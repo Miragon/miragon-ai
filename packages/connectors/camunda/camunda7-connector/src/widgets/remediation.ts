@@ -33,7 +33,10 @@ export function remediatePrompt(cluster: RemediationCluster, engine?: string): s
     `1) Confirm the root cause with camunda7_list_incidents({ engine: "${e}", activityId: "${cluster.activityId}", ` +
     `incidentType: "${cluster.incidentType}"` +
     procFilter +
-    ` }) and camunda7_query_historic_activity_instances; classify it: transient / data / config / model.\n` +
+    ` }), camunda7_query_historic_incidents({ engine: "${e}", activityId: "${cluster.activityId}"` +
+    procFilter +
+    ` }) — has it failed before, since when? — and camunda7_get_job_stacktrace({ engine: "${e}", ` +
+    `jobId: <id of one failed job> }); classify it: transient / data / config / model.\n` +
     `2) Choose the fix by class — transient (external system back up) → retry; bad input data → fix the ` +
     `variable (camunda7_set_process_instance_variable) then retry; code/model defect → do NOT retry (it ` +
     `re-fails), escalate and draft a ticket (camunda7_format_incident_issue).\n` +

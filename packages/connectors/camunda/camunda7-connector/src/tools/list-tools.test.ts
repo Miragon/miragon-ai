@@ -20,6 +20,8 @@ vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
   getHistoricTaskInstancesCount: vi.fn(),
   getHistoricVariableInstances: vi.fn(),
   getHistoricVariableInstancesCount: vi.fn(),
+  getHistoricIncidents: vi.fn(),
+  getHistoricIncidentsCount: vi.fn(),
   getExternalTasks: vi.fn(),
   getExternalTasksCount: vi.fn(),
   getProcessDefinitions: vi.fn(),
@@ -195,6 +197,12 @@ const cases: readonly ListCase[] = [
       processDefinitionKey: "invoice",
       activityId: "send-mail",
     },
+  },
+  {
+    tool: "camunda7_query_historic_incidents",
+    list: sdk.getHistoricIncidents,
+    count: sdk.getHistoricIncidentsCount,
+    filterArgs: { activityId: "callWms", open: true },
   },
   {
     tool: "camunda7_list_process_definitions",

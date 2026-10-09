@@ -52,7 +52,7 @@ const SORTED_TOOLS = [...tools.values()].flatMap((config) => {
 
 describe("sortBy/sortOrder are sent as the pair the engine requires", () => {
   it("covers every sortable list tool (the guard is not vacuous)", () => {
-    expect(SORTED_TOOLS.length).toBeGreaterThanOrEqual(11)
+    expect(SORTED_TOOLS.length).toBeGreaterThanOrEqual(12)
   })
 
   it.each(SORTED_TOOLS)("$name: sortBy alone sorts ascending", async ({ name, field }) => {
@@ -88,6 +88,28 @@ describe("history date filters take ISO 8601 and reach the engine in its format"
       })
     }
     expect(engine.requests).toHaveLength(2)
+  })
+
+  it("converts the historic incidents' createTimeAfter/createTimeBefore — list AND count", async () => {
+    const engine = await engineWith({}, { body: [] })
+    await call(engine, "camunda7_query_historic_incidents", {
+      activityId: "callWms",
+      resolved: true,
+      createTimeAfter: "2026-10-01",
+      createTimeBefore: "2026-10-08T12:00:00+02:00",
+    })
+    expect(engine.requests.map((r) => r.path)).toEqual([
+      "/history/incident",
+      "/history/incident/count",
+    ])
+    for (const request of engine.requests) {
+      expect(request.query).toMatchObject({
+        activityId: "callWms",
+        resolved: "true",
+        createTimeAfter: "2026-10-01T00:00:00.000+0000",
+        createTimeBefore: "2026-10-08T12:00:00.000+0200",
+      })
+    }
   })
 
   it("refuses an unparseable date before any request", async () => {
@@ -189,6 +211,45 @@ describe("camunda7_list_tasks candidate groups", () => {
   it("tells the model a candidate group lists only unassigned tasks by default", () => {
     const schema = tools.get("camunda7_list_tasks")?.inputSchema as Record<string, z.ZodType>
     expect(schema.candidateGroup.description).toContain("only UNASSIGNED ones")
+  })
+})
+
+/**
+ * #340: the job stacktrace read goes through the engine contract
+ * (`fetchJobStacktrace`: text/plain, 404 → null) and hands the model the
+ * condensed trace — exception lines, the Caused-by chain, user frames.
+ */
+describe("camunda7_get_job_stacktrace", () => {
+  const TRACE = [
+    "org.cibseven.bpm.engine.ProcessEngineException: WMS unreachable",
+    "\tat com.acme.wms.WmsClient.send(WmsClient.java:42)",
+    "\tat org.cibseven.bpm.engine.impl.Foo.bar(Foo.java:1)",
+    "Caused by: java.net.ConnectException: Connection refused",
+    "\tat java.base/sun.nio.ch.Net.connect0(Native Method)",
+  ].join("\n")
+
+  it("reads text/plain and returns the condensed trace", async () => {
+    const engine = await engineWith({
+      "GET /job/j-1/stacktrace": { body: TRACE, contentType: "text/plain" },
+    })
+    const result = (await call(engine, "camunda7_get_job_stacktrace", { jobId: "j-1" })) as {
+      jobId: string
+      stacktrace: string
+    }
+    expect(engine.requests[0].headers.accept).toBe("text/plain")
+    expect(result.jobId).toBe("j-1")
+    expect(result.stacktrace).toContain("ProcessEngineException: WMS unreachable")
+    expect(result.stacktrace).toContain("at com.acme.wms.WmsClient.send")
+    expect(result.stacktrace).toContain("Caused by: java.net.ConnectException")
+    expect(result.stacktrace).not.toContain("org.cibseven.bpm.engine.impl.Foo")
+  })
+
+  it("answers null for a job without a trace (or gone: 404)", async () => {
+    const engine = await engineWith({ "GET /job/gone/stacktrace": { status: 404, body: {} } })
+    expect(await call(engine, "camunda7_get_job_stacktrace", { jobId: "gone" })).toEqual({
+      jobId: "gone",
+      stacktrace: null,
+    })
   })
 })
 

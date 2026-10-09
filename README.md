@@ -159,9 +159,11 @@ BPM operations across these domains (`category`): `engines`, `process-definition
   `set_external_task_retries`
 - **Incidents & jobs** — `list_incidents`, `resolve_incident` (custom incidents; the engine's
   `failedJob`/`failedExternalTask` clear by a retry), `format_incident_issue`, `list_jobs`,
-  `set_job_retries`
-- **History, migrations & batches** — `query_historic_*` (ISO 8601 dates), migration tools; batch
-  tools return a queued `batchId` that `get_batch` follows
+  `get_job_stacktrace`, `set_job_retries`
+- **History, migrations & batches** — `query_historic_*` (ISO 8601 dates; incidents incl. resolved
+  ones), migration tools; batch tools return a queued `batchId` that `get_batch` follows
+- **Lists** — one page as `{ items, totalCount, hasMore, nextOffset? }`, `maxResults` ≤ 100;
+  variable reads cut values over 2000 characters (`truncated: true`)
 - **Widgets** — `show_cockpit_dashboard`, `show_process_list`/`detail`, `show_incidents_dashboard`,
   `show_bpmn_viewer`, `show_history_timeline`, `show_job_panel`, …
 

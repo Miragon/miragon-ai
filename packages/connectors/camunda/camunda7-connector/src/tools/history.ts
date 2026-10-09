@@ -3,6 +3,7 @@ import {
   queryHistoricActivityInstancesInput,
   queryHistoricTaskInstancesInput,
   queryHistoricVariableInstancesInput,
+  queryHistoricIncidentsInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
@@ -22,6 +23,8 @@ import {
   getHistoricTaskInstancesCount,
   getHistoricVariableInstances,
   getHistoricVariableInstancesCount,
+  getHistoricIncidents,
+  getHistoricIncidentsCount,
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
@@ -177,6 +180,45 @@ export function registerHistoryTools(register: Register) {
         getHistoricVariableInstancesCount({ client, query: filters }),
       ])
       return toPaginatedList(truncateVariableRows(items), count, args.firstResult)
+    }),
+  })
+
+  register({
+    name: "camunda7_query_historic_incidents",
+    category: "history",
+    description:
+      "Query historic incidents — open and resolved, with createTime/endTime — to tell a systemic " +
+      "failure (the same activity failing across instances, since when) from a one-off; the runtime " +
+      "incident list forgets resolved ones. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+    inputSchema: { ...queryHistoricIncidentsInput.shape, ...engineParamShape },
+    outputSchema: paginatedListOutput,
+    handler: withEngine(async (client, args) => {
+      const filters = {
+        processInstanceId: args.processInstanceId,
+        processDefinitionKey: args.processDefinitionKey,
+        activityId: args.activityId,
+        incidentType: args.incidentType,
+        // True-only: the engine ignores a false (an incident may also be
+        // deleted, so neither flag has a complement to send instead).
+        open: trueOnly(args.open),
+        resolved: trueOnly(args.resolved),
+        createTimeAfter: toOptionalEngineDate(args.createTimeAfter),
+        createTimeBefore: toOptionalEngineDate(args.createTimeBefore),
+      }
+      const [items, count] = await Promise.all([
+        getHistoricIncidents({
+          client,
+          query: {
+            ...filters,
+            firstResult: args.firstResult,
+            maxResults: args.maxResults,
+            ...engineSorting(args),
+          },
+        }),
+        getHistoricIncidentsCount({ client, query: filters }),
+      ])
+      return toPaginatedList(items, count, args.firstResult)
     }),
   })
 }

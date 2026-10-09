@@ -43,3 +43,12 @@ export const setJobRetriesBatchInput = z.object({
   retries: z.number().int().min(0).describe("Number of retries to set on every job. Must be >= 0."),
   dueDate: engineDateParam("New due date; a past one runs the jobs at once"),
 })
+
+/**
+ * A job's exception stacktrace (`GET /job/{id}/stacktrace`, read via the
+ * engine contract's `fetchJobStacktrace`) — the failure detail
+ * `camunda7_list_jobs` only summarises as `exceptionMessage`.
+ */
+export const getJobStacktraceInput = z.object({
+  jobId: z.string().min(1).describe("The job ID (e.g. from camunda7_list_jobs)"),
+})

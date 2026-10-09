@@ -38,12 +38,18 @@ export {
 export { correlateMessageInput, throwSignalInput } from "./messages-signals.js"
 export { listDeploymentsInput, createDeploymentInput, getDeploymentInput } from "./deployments.js"
 export { listIncidentsInput, resolveIncidentInput, formatIncidentIssueInput } from "./incidents.js"
-export { listJobsInput, setJobRetriesInput, setJobRetriesBatchInput } from "./jobs.js"
+export {
+  listJobsInput,
+  getJobStacktraceInput,
+  setJobRetriesInput,
+  setJobRetriesBatchInput,
+} from "./jobs.js"
 export {
   queryHistoricProcessInstancesInput,
   queryHistoricActivityInstancesInput,
   queryHistoricTaskInstancesInput,
   queryHistoricVariableInstancesInput,
+  queryHistoricIncidentsInput,
 } from "./history.js"
 export { createMigrationPlanInput, migrateProcessInstancesAsyncInput } from "./migrations.js"
 export { getBatchInput } from "./batches.js"

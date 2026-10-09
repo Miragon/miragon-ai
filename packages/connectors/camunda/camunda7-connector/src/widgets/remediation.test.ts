@@ -26,6 +26,16 @@ describe("remediatePrompt scopes both calls to the cluster", () => {
     )
   })
 
+  it("checks recurrence in the incident history and reads one failed job's stacktrace", () => {
+    const prompt = remediatePrompt(CLUSTER, "prod")
+    expect(prompt).toContain(
+      'camunda7_query_historic_incidents({ engine: "prod", activityId: "ServiceTask_1", processDefinitionKey: "invoice" })',
+    )
+    expect(prompt).toContain(
+      'camunda7_get_job_stacktrace({ engine: "prod", jobId: <id of one failed job> })',
+    )
+  })
+
   it("asks for the key instead of inventing one when the process is unknown", () => {
     const prompt = remediatePrompt({ ...CLUSTER, processDefinitionKeys: [UNKNOWN_KEY] })
     expect(prompt).toContain(

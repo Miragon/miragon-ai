@@ -34,9 +34,10 @@ export function camunda7Instructions(input: Camunda7InstructionsInput): string {
     "camunda7 (Camunda 7 / CIB Seven engine REST API):",
     `- Engine routing: ${routingRule(input)}`,
     "- Dates are ISO 8601: a date (2026-07-01) or a date-time with offset (2026-07-01T12:00:00Z).",
-    "- Tool families: process definitions and instances, tasks (incl. forms), incidents, jobs, " +
-      "external tasks, deployments; history (camunda7_query_historic_*) covers finished instances, " +
-      "activities, tasks and variables. camunda7_show_* tools render a widget for the user.",
+    "- Tool families: process definitions and instances, tasks (incl. forms), incidents, jobs " +
+      "(incl. stacktraces), external tasks, deployments; history (camunda7_query_historic_*) covers " +
+      "finished instances, activities, tasks, variables and resolved incidents. camunda7_show_* " +
+      "tools render a widget for the user.",
     "- Health: camunda7_show_engine_health judges ONE engine from its open incidents, read live " +
       "from the engine; camunda7_show_incidents_dashboard lists the open incidents per process; " +
       "camunda7_open_cockpit is the navigable operations app.",
