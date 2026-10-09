@@ -1589,7 +1589,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`): fields (type, required, readonly) pre-filled with current values. Never submit readonly fields. Without form fields, fields is empty and formKey names the task's own form, if any.",
+    "description": "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`): fields (type, required, readonly) pre-filled with current values. Never submit readonly fields. Without form fields, fields is empty and formKey (or formRef, a linked Camunda Form) names the task's own form, if any.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {

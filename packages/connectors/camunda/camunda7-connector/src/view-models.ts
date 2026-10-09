@@ -62,10 +62,16 @@ export interface TaskFormSchema {
   fields: TaskFormField[]
   /** The task's own form (embedded/external/Camunda Form) — set only without form fields. */
   formKey?: string
+  /** Key of a Camunda Form the task links (`camunda:formRef`) — set only without form fields or formKey. */
+  formRef?: string
 }
 
 export interface OpenUserTask extends TaskData {
-  formSchema: TaskFormSchema
+  /**
+   * Null when the server could not build it (the BPMN was unreadable) — the
+   * form then loads it through `camunda7_get_task_form`, never as "no form".
+   */
+  formSchema: TaskFormSchema | null
 }
 
 export interface TaskDashboardData {
@@ -226,7 +232,12 @@ export interface IncidentInstance {
   incidentType: string
   incidentMessage: string | null
   incidentTimestamp: string
-  recovery: IncidentRecovery
+  /**
+   * Always set by the feeds — optional because a result stored before it
+   * existed reaches the current view as is (a reopened conversation). Read it
+   * through `recoveryOf` (`widgets/lib/incident-recovery.ts`).
+   */
+  recovery?: IncidentRecovery
   /** Pre-built jump-out URL into the Cockpit instance page. Null when no
    *  cockpitUrl is configured or scheme validation rejected the input. */
   cockpitInstanceUrl: string | null
@@ -433,8 +444,11 @@ export interface IncidentDetailData {
 
   // Failure tab — null when the incident has no associated job (e.g. external-task incidents)
   job: IncidentDetailJob | null
-  /** What clears it — retry for the built-in types, resolve for custom ones. */
-  recovery: IncidentRecovery
+  /**
+   * What clears it — retry for the built-in types, resolve for custom ones.
+   * Optional like {@link IncidentInstance.recovery}: read it through `recoveryOf`.
+   */
+  recovery?: IncidentRecovery
 
   // Instance tab — same shape as InstanceDetailData
   instance: {

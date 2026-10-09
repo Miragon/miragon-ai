@@ -9,6 +9,7 @@ import {
 import type { IncidentDetailData, IncidentDetailJob } from "../../view-models.js"
 
 import { engineArg, engineCallRule } from "../lib/engine-scope.js"
+import { recoveryOf } from "../lib/incident-recovery.js"
 import { fenceUntrusted } from "../lib/untrusted.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -186,7 +187,7 @@ function RetryButton({
   retried: boolean
 }) {
   const t = useT()
-  const task = data.recovery.action === "retry-external-task"
+  const task = recoveryOf(data).action === "retry-external-task"
   const aria = task ? t("incidentFailure.retryTaskAria") : t("incidentFailure.retryAria")
   const retriedAria = task ? t("incidentFailure.retriedTaskAria") : t("incidentFailure.retriedAria")
   return (

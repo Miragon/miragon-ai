@@ -20,6 +20,7 @@ import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { engineArg, engineCallRule } from "../lib/engine-scope.js"
 import { useT } from "../../messages/use-t.js"
+import { recoveryOf } from "../lib/incident-recovery.js"
 import type { IncidentRecoveryState } from "./use-incident-recovery.js"
 
 /** Page size — mirrors the feed's server default. */
@@ -34,7 +35,7 @@ function RecoveryButton({
   recovery: IncidentRecoveryState
 }) {
   const t = useT()
-  const action = recovery.actionFor(incident.recovery)
+  const action = recovery.actionFor(incident)
   if (!action) return null
   return (
     <Button
@@ -99,7 +100,7 @@ export function IncidentTable({
       <ListTable ariaLabel={t("procIncTable.tableLabel")} columns={columns}>
         {visible.map((incident) => {
           const done = recovery.doneIds.has(incident.id)
-          const retried = incident.recovery.action !== "resolve"
+          const retried = recoveryOf(incident).action !== "resolve"
           const instanceUrl = incident.cockpitInstanceUrl
           return (
             <Fragment key={incident.id}>

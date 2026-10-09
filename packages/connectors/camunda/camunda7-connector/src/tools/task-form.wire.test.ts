@@ -118,6 +118,20 @@ describe("camunda7_get_task_form", () => {
       formKey: "embedded:app:forms/review.html",
     })
   })
+
+  it("names a linked Camunda Form (camunda:formRef) — the task has no formKey then", async () => {
+    const engine = await engineWith({
+      "GET /task/t-1": {
+        body: { ...TASK, camundaFormRef: { key: "invoiceForm", binding: "latest", version: null } },
+      },
+      "GET /process-definition/def-1/xml": { body: { bpmn20Xml: "<definitions/>" } },
+    })
+    expect(await call(engine, "camunda7_get_task_form", { taskId: "t-1" })).toEqual({
+      taskId: "t-1",
+      fields: [],
+      formRef: "invoiceForm",
+    })
+  })
 })
 
 const STACK = "java.lang.IllegalStateException: boom\n\tat com.acme.Billing.charge(Billing.java:42)"

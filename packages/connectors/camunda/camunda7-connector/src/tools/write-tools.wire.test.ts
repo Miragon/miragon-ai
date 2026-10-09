@@ -10,6 +10,7 @@ import {
 } from "./test-support/fake-engine.js"
 import { RUNTIME_WRITE_CASES, type WireRequest } from "./test-support/write-cases.js"
 import { OPERATIONS_WRITE_CASES } from "./test-support/write-cases-operations.js"
+import { FORM_BPMN, TASK, TASK_WRITE_CASES, taskRoutes } from "./test-support/write-cases-tasks.js"
 
 /**
  * Guard for #328: every engine WRITE tool against a recording fake engine — a
@@ -21,7 +22,7 @@ import { OPERATIONS_WRITE_CASES } from "./test-support/write-cases-operations.js
  */
 
 const tools = captureTools((register) => registerTools(register, { allowDeployments: true }))
-const CASES = [...RUNTIME_WRITE_CASES, ...OPERATIONS_WRITE_CASES]
+const CASES = [...RUNTIME_WRITE_CASES, ...TASK_WRITE_CASES, ...OPERATIONS_WRITE_CASES]
 
 const engines: FakeEngine[] = []
 afterEach(async () => {
@@ -132,5 +133,44 @@ describe("writes the engine would misread are refused before any request", () =>
       }),
     ).toThrow(/ISO 8601/)
     expect(engine.requests).toHaveLength(0)
+  })
+})
+
+describe("complete_task never picks its endpoint on a guess", () => {
+  const writes = (engine: FakeEngine) => engine.requests.filter((r) => r.method !== "GET")
+
+  it("fails without a write when the task's BPMN cannot be read — a form could be hiding there", async () => {
+    const engine = await engineWith({
+      ...taskRoutes(TASK, FORM_BPMN),
+      "GET /process-definition/def-1/xml": { status: 403, body: { message: "not authorized" } },
+    })
+    await expect(
+      callTool(toolConfig("camunda7_complete_task"), registryFor(engine), { taskId: "t-1" }),
+    ).rejects.toThrow(/^\[403\] not authorized/)
+    expect(writes(engine)).toEqual([])
+  })
+
+  it("fails without a write when the values an omitted field would lose cannot be read", async () => {
+    const engine = await engineWith({
+      ...taskRoutes(TASK, FORM_BPMN),
+      "GET /task/t-1/variables": { status: 500, body: { message: "Cannot deserialize object" } },
+    })
+    await expect(
+      callTool(toolConfig("camunda7_complete_task"), registryFor(engine), {
+        taskId: "t-1",
+        variables: { amount: { value: 5, type: "Long" } },
+      }),
+    ).rejects.toThrow(/Cannot deserialize object/)
+    expect(writes(engine)).toEqual([])
+  })
+
+  it("fails for an unknown task", async () => {
+    const engine = await engineWith({
+      "GET /task/t-1": { status: 404, body: { message: "No matching task with id t-1" } },
+    })
+    await expect(
+      callTool(toolConfig("camunda7_complete_task"), registryFor(engine), { taskId: "t-1" }),
+    ).rejects.toThrow(/No matching task with id t-1/)
+    expect(writes(engine)).toEqual([])
   })
 })

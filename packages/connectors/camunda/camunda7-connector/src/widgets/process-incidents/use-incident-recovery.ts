@@ -2,7 +2,8 @@ import { useState } from "react"
 import { useToolMutation } from "@miragon/mcp-toolkit-ui"
 import { useResetOnChange } from "@miragon-ai/widget-shell/widgets"
 
-import type { IncidentInstance, IncidentRecovery } from "../../view-models.js"
+import type { IncidentInstance } from "../../view-models.js"
+import { recoveryOf } from "../lib/incident-recovery.js"
 import { refreshCockpitData } from "../refresh.js"
 import { useCanRun } from "../widget-actions.js"
 
@@ -49,8 +50,8 @@ export function useIncidentRecovery(engineId: string | undefined, resetOn: unkno
   const [confirmResolveId, setConfirmResolveId] = useState<string | null>(null)
   useResetOnChange(resetOn, () => setDoneIds(new Set()))
 
-  function actionFor(recovery: IncidentRecovery): RowAction | null {
-    switch (recovery.action) {
+  function actionFor(incident: IncidentInstance): RowAction | null {
+    switch (recoveryOf(incident).action) {
       case "resolve":
         return canRun("camunda7_resolve_incident") ? "resolve" : null
       case "retry-job":
@@ -79,7 +80,9 @@ export function useIncidentRecovery(engineId: string | undefined, resetOn: unkno
   }
 
   /** The row button: Resolve asks for confirmation first, Retry runs at once. */
-  function act({ id, recovery }: IncidentInstance) {
+  function act(incident: IncidentInstance) {
+    const { id } = incident
+    const recovery = recoveryOf(incident)
     if (recovery.action === "resolve") {
       resolveMutation.reset()
       setConfirmResolveId(id)

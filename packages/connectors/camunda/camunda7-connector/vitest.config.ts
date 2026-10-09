@@ -25,7 +25,10 @@ export default mergeConfig(
         // 40.44 / functions 47.64 / lines 55.62). Raised 2026-10-09 with the
         // engine-contract wire guards over every write tool (#328; measured
         // statements 61.86 / branches 44.95 / functions 55.72 / lines 63.05).
-        thresholds: { statements: 59, branches: 42, functions: 53, lines: 61 },
+        // Raised 2026-10-09 with the #328 review guards — task completion,
+        // the incident-detail and task-form widget suites (measured
+        // statements 66.56 / branches 52.07 / functions 60.53 / lines 67.96).
+        thresholds: { statements: 64, branches: 50, functions: 58, lines: 65 },
       },
     },
   }),

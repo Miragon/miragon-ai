@@ -15,6 +15,7 @@ import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ConfirmDialog } from "./confirm-dialog.js"
 import { DetailPage } from "./detail-page.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
+import { recoveryOf } from "./lib/incident-recovery.js"
 import { IncidentDetailHeader } from "./incident-detail/header.js"
 import { InstanceTab } from "./incident-detail/instance-tab.js"
 import { IncidentKpis } from "./incident-detail/kpis.js"
@@ -25,14 +26,19 @@ import { useT } from "../messages/use-t.js"
 
 export type { IncidentDetailData }
 
+/** The detail's recovery — an old stored payload falls back to its type and job. */
+function detailRecovery(data: IncidentDetailData): IncidentRecovery {
+  return recoveryOf(data, data.job?.id)
+}
+
 /**
  * The retry tool that clears this incident (built-in types refuse resolve),
  * or null for a custom or propagated one — from the feed's `recovery`.
  */
 function retryToolFor(data: IncidentDetailData) {
-  if (data.recovery.action === "retry-job") return "camunda7_set_job_retries" as const
-  if (data.recovery.action === "retry-external-task")
-    return "camunda7_set_external_task_retries" as const
+  const { action } = detailRecovery(data)
+  if (action === "retry-job") return "camunda7_set_job_retries" as const
+  if (action === "retry-external-task") return "camunda7_set_external_task_retries" as const
   return null
 }
 
@@ -56,7 +62,10 @@ function useRemedies(data: IncidentDetailData | null) {
   const externalTaskRetryMutation = useToolMutation("camunda7_set_external_task_retries")
   const retryTool = data ? retryToolFor(data) : null
   return {
-    canResolve: data?.recovery.action === "resolve" && canRun("camunda7_resolve_incident"),
+    canResolve:
+      data !== null &&
+      detailRecovery(data).action === "resolve" &&
+      canRun("camunda7_resolve_incident"),
     canRetry: retryTool !== null && canRun(retryTool),
     retryMutation:
       retryTool === "camunda7_set_external_task_retries"
@@ -152,7 +161,7 @@ export function IncidentDetailWidget({
   }
 
   function handleRetry() {
-    const args = data ? retryArgs(data.recovery) : null
+    const args = data ? retryArgs(detailRecovery(data)) : null
     if (!args) return
     retryMutation.mutate(
       { ...args, engine: engineId },

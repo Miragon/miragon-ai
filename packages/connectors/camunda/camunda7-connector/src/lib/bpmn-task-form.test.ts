@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { extractEmbeddedFormFields } from "./bpmn-task-form.js"
+import { extractEmbeddedFormFields, formFieldSubmitRules } from "./bpmn-task-form.js"
 
 const bpmn = (fields: string) => `<?xml version="1.0"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn">
@@ -82,5 +82,34 @@ describe("extractEmbeddedFormFields", () => {
     expect(
       extractEmbeddedFormFields(bpmn('<camunda:formField type="string" />'), "review"),
     ).toEqual([])
+  })
+})
+
+describe("formFieldSubmitRules", () => {
+  it("names the fields a submit would default, and the ones it may not send", () => {
+    const xml = bpmn(`
+      <camunda:formField id="priority" type="long" defaultValue="50" />
+      <camunda:formField id="approved" type="boolean" defaultValue="\${false}">
+        <camunda:validation><camunda:constraint name="readonly" /></camunda:validation>
+      </camunda:formField>
+      <camunda:formField id="legacy" type="string" defaultValue="x">
+        <camunda:properties><camunda:property id="readonly" value="true" /></camunda:properties>
+      </camunda:formField>
+      <camunda:formField id="note" type="string" />`)
+    expect(formFieldSubmitRules(xml, "review")).toEqual([
+      { name: "priority", hasDefault: true, engineReadonly: false },
+      { name: "approved", hasDefault: true, engineReadonly: true },
+      // The legacy property is a UI hint: the engine submits (and defaults) the field.
+      { name: "legacy", hasDefault: true, engineReadonly: false },
+      { name: "note", hasDefault: false, engineReadonly: false },
+    ])
+  })
+
+  it("has no rules for an unknown task, a task without formData or a field without id", () => {
+    expect(formFieldSubmitRules(bpmn('<camunda:formField id="a" />'), "missing")).toEqual([])
+    expect(formFieldSubmitRules(bpmn(""), "review")).toEqual([])
+    expect(formFieldSubmitRules(bpmn('<camunda:formField defaultValue="1" />'), "review")).toEqual(
+      [],
+    )
   })
 })

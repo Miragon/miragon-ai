@@ -8,18 +8,18 @@ import {
   getTaskVariablesInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { engineSorting, readTaskVariables, toEngineVariables } from "@miragon-ai/camunda7-client"
+import { engineSorting, readTaskVariables } from "@miragon-ai/camunda7-client"
 import {
   getTasks,
   getTasksCount,
   getTask,
   claim,
   unclaim,
-  submit,
   setAssignee,
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { completeUserTask } from "../lib/task-completion.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
@@ -100,21 +100,15 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_complete_task",
     category: "tasks",
     description:
-      "Complete a user task by ID, optionally setting variables. Submitted as the task form: the engine enforces its " +
-      "form fields (required, readonly, types).",
+      "Complete a user task by ID, optionally setting variables. A task with form fields is submitted as its form: " +
+      "the engine enforces them (required, readonly, types); omitted fields keep their value. A delegated task " +
+      '(delegationState PENDING) is resolved back to its owner instead and stays open (outcome "resolved").',
     annotations: { openWorldHint: true },
     inputSchema: { ...completeTaskInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) => {
-      // `/submit-form`, not `/complete`: only the form endpoint runs the
-      // task's form-field validation and type conversion. A task without
-      // form fields completes exactly as through `/complete`.
-      await submit({
-        client,
-        path: { id: args.taskId },
-        body: { variables: toEngineVariables(args.variables) },
-      })
-      return { success: true, taskId: args.taskId }
-    }),
+    // The endpoint (submit-form / complete / resolve) follows from the task — lib/task-completion.ts.
+    handler: withEngine(async (client, args) =>
+      completeUserTask(client, args.taskId, args.variables),
+    ),
   })
 
   register({

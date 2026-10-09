@@ -33,7 +33,7 @@ const OBJECT_INFO = {
   serializationDataFormat: "application/json",
 }
 
-/** Process instances, tasks, messages and signals. */
+/** Process instances, tasks (complete_task: `write-cases-tasks.ts`), messages and signals. */
 export const RUNTIME_WRITE_CASES: WriteCase[] = [
   {
     toolName: "camunda7_start_process_instance",
@@ -177,36 +177,6 @@ export const RUNTIME_WRITE_CASES: WriteCase[] = [
     args: { taskId: "t-1" },
     wire: [{ method: "POST", path: "/task/t-1/unclaim" }],
     result: { success: true, taskId: "t-1" },
-  },
-  {
-    toolName: "camunda7_complete_task",
-    title: "submits through the form endpoint, so the engine validates the form fields",
-    args: {
-      taskId: "t-1",
-      variables: {
-        amount: { value: 5, type: "Long" },
-        due: { value: "2026-10-01T08:30:00+02:00", type: "Date" },
-      },
-    },
-    wire: [
-      {
-        method: "POST",
-        path: "/task/t-1/submit-form",
-        body: {
-          variables: {
-            amount: { value: 5, type: "Long" },
-            due: { value: "2026-10-01T08:30:00.000+0200", type: "Date" },
-          },
-        },
-      },
-    ],
-    result: { success: true, taskId: "t-1" },
-  },
-  {
-    toolName: "camunda7_complete_task",
-    title: "submits an empty form when no variables are given",
-    args: { taskId: "t-1" },
-    wire: [{ method: "POST", path: "/task/t-1/submit-form", body: {} }],
   },
   {
     toolName: "camunda7_set_task_assignee",

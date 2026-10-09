@@ -14,6 +14,8 @@ interface TaskMeta {
   processDefinitionId?: string | null
   /** The task's own form (embedded/external/`camunda-forms:`), if any. */
   formKey?: string | null
+  /** A linked Camunda Form (`camunda:formRef`) — the task then has no formKey. */
+  camundaFormRef?: { key?: string | null } | null
 }
 
 export interface BuildTaskFormSchemaOptions {
@@ -34,7 +36,7 @@ export function registerTaskFormTools(register: Register) {
     description:
       "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`): fields " +
       "(type, required, readonly) pre-filled with current values. Never submit readonly fields. Without form fields, " +
-      "fields is empty and formKey names the task's own form, if any.",
+      "fields is empty and formKey (or formRef, a linked Camunda Form) names the task's own form, if any.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getTaskFormInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args): Promise<TaskFormSchema> => {
@@ -57,7 +59,7 @@ export async function buildTaskFormSchema(
 ): Promise<TaskFormSchema> {
   const taskMeta: TaskMeta = options.task ?? (await getTask({ client, path: { id: taskId } }))
   const taskDefinitionKey = taskMeta.taskDefinitionKey ?? null
-  const formKey = taskMeta.formKey ? { formKey: taskMeta.formKey } : {}
+  const ownForm = ownFormOf(taskMeta)
 
   const bpmnXml =
     "bpmnXml" in options
@@ -66,7 +68,7 @@ export async function buildTaskFormSchema(
 
   const fields =
     bpmnXml && taskDefinitionKey ? extractEmbeddedFormFields(bpmnXml, taskDefinitionKey) : []
-  if (fields.length === 0) return { taskId, fields: [], ...formKey }
+  if (fields.length === 0) return { taskId, fields: [], ...ownForm }
 
   // Populate defaultValue for all fields from current task variables so the
   // operator sees the actual values (especially important for readonly
@@ -81,6 +83,18 @@ export async function buildTaskFormSchema(
   })
 
   return { taskId, fields: filledFields }
+}
+
+/**
+ * The task's own form when it has no `<camunda:formData>` fields: its formKey
+ * (embedded/external/deployed Camunda Form), or the key of a Camunda Form it
+ * links by `camunda:formRef` — the engine validates neither on submit, so a
+ * caller must not read the empty fields as "no form".
+ */
+function ownFormOf(task: TaskMeta): Pick<TaskFormSchema, "formKey" | "formRef"> {
+  if (task.formKey) return { formKey: task.formKey }
+  const formRef = task.camundaFormRef?.key
+  return formRef ? { formRef } : {}
 }
 
 async function fetchBpmnXml(

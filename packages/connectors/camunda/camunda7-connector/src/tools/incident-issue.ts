@@ -85,7 +85,7 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
   const incidentType = incident.incidentType ?? "unknown"
   const definitionKey = processDefinition?.key ?? "unknown-process"
   const title = `[Bug]: Engine incident (${incidentType}) in ${definitionKey}`
-  const condensedStack = stacktrace ? condenseStacktrace(stacktrace) : null
+  const condensedStack = stacktrace ? boundFailureText(condenseStacktrace(stacktrace)) : null
   const cockpitLink = buildIssueCockpitLink(input)
 
   const body = buildIssueBody(input, {
@@ -146,7 +146,7 @@ interface IssueBodyContext {
 /** The draft's stacktrace paragraph: the trace, why it is missing, or that there is none. */
 function stacktraceSection({ condensedStack, stacktraceError }: IssueBodyContext): string {
   if (condensedStack) {
-    return `Stacktrace (condensed — framework/JDK frames removed):\n\n\`\`\`\n${condensedStack}\n\`\`\``
+    return `Stacktrace (condensed — framework/JDK frames removed):\n\n${codeFence(condensedStack)}`
   }
   return stacktraceError
     ? `_Stacktrace could not be loaded: ${stacktraceError}_`
@@ -165,7 +165,7 @@ function buildIssueBody(input: BuildIssueInput, context: IssueBodyContext): stri
     )}\` of process \`${definitionKey}\`.`,
     "",
     incident.incidentMessage
-      ? `Engine message:\n\n\`\`\`\n${incident.incidentMessage}\n\`\`\``
+      ? `Engine message:\n\n${codeFence(incident.incidentMessage)}`
       : "_No incident message reported by the engine._",
     "",
     "### Steps to Reproduce",
@@ -250,6 +250,36 @@ function buildPrefilledIssueUrl(
   }
   const params = new URLSearchParams({ title, body: bodyForUrl, labels: labelsParam })
   return `${base}?${params.toString()}`
+}
+
+/**
+ * Upper bound for the failure text in the draft. A worker's error details are
+ * free text of any size (a downstream HTML error page, a whole log), and the
+ * draft goes back to the model in full — so a longer text keeps its head
+ * (the error) and its tail (the root cause, in a Java trace), with a note.
+ */
+const MAX_FAILURE_TEXT = 6000
+const FAILURE_TEXT_TAIL = 1500
+
+function boundFailureText(text: string): string {
+  if (text.length <= MAX_FAILURE_TEXT) return text
+  const head = text.slice(0, MAX_FAILURE_TEXT - FAILURE_TEXT_TAIL)
+  const tail = text.slice(-FAILURE_TEXT_TAIL)
+  const cut = text.length - head.length - tail.length
+  return `${head}\n… [${cut} characters truncated] …\n${tail}`
+}
+
+/**
+ * A fenced code block the text cannot close: the fence is one backtick longer
+ * than the longest backtick run inside (at least three). Engine and worker
+ * text is untrusted — a plain ``` inside it would end the block, and the rest
+ * would render as markdown in the filed ticket (mentions, links, images).
+ */
+function codeFence(text: string): string {
+  let longest = 0
+  for (const run of text.matchAll(/`+/g)) longest = Math.max(longest, run[0].length)
+  const fence = "`".repeat(Math.max(3, longest + 1))
+  return `${fence}\n${text}\n${fence}`
 }
 
 /**

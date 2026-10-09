@@ -424,6 +424,8 @@ export const deSweep: MessageCatalog = {
   "taskForm.loading": "Aufgabenformular wird geladen…",
   "taskForm.namePlaceholder": "Name",
   "taskForm.removeVariable": "Variable entfernen",
+  "taskForm.resolved":
+    "Die Aufgabe war delegiert und ging deshalb an ihren Besitzer ({owner}) zurück, statt abgeschlossen zu werden — sie bleibt offen.",
   "taskForm.required": "erforderlich",
   "taskForm.valuePlaceholder": "Wert",
   "taskForm.variableName": "Variablenname",

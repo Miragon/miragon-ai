@@ -104,6 +104,7 @@ the dashboard picker says "Saved dashboards are unavailable".
 - Failed jobs and failed external tasks clear by a retry, not by "resolve" —
   the incident views offer **Retry** for them and **Resolve** only for custom
   incidents. Batch actions (batch retries, migrations) only queue work: ask
-  for the batch status afterwards.
+  for the batch status afterwards. Completing a task that was delegated in
+  Tasklist hands it back to its owner, and the task stays open.
 - If a tool isn't doing what you expect, ask the assistant to show you the raw
   arguments — it'll print them and you can spot mismatches quickly.

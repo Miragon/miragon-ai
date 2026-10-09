@@ -40,6 +40,54 @@ export function extractEmbeddedFormFields(
   bpmnXml: string,
   taskDefinitionKey: string,
 ): TaskFormField[] {
+  return formFieldElements(bpmnXml, taskDefinitionKey).flatMap(
+    ({ attrs, inner }) => parseFormField(attrs, inner) ?? [],
+  )
+}
+
+/**
+ * How the engine treats a form field on `/submit-form` — the facts the task
+ * completion needs, which the form view model does not carry.
+ */
+export interface FormFieldSubmitRule {
+  name: string
+  /**
+   * The field declares a `defaultValue`: when it is NOT submitted, the engine
+   * writes that default over the variable's current value
+   * (`FormFieldHandler.handleSubmit`).
+   */
+  hasDefault: boolean
+  /**
+   * The standard `readonly` constraint: the engine refuses a submitted value.
+   * The legacy `<camunda:property id="readonly">` is a UI hint only — the
+   * engine accepts (and defaults) such a field like any other.
+   */
+  engineReadonly: boolean
+}
+
+/** The submit rules of the user task's `<camunda:formField>`s, in BPMN order. */
+export function formFieldSubmitRules(
+  bpmnXml: string,
+  taskDefinitionKey: string,
+): FormFieldSubmitRule[] {
+  return formFieldElements(bpmnXml, taskDefinitionKey).flatMap(({ attrs, inner }) => {
+    const name = readAttr(attrs, "id")
+    if (!name) return []
+    return [
+      {
+        name,
+        hasDefault: readAttr(attrs, "defaultValue") !== null,
+        engineReadonly: parseConstraints(inner).has("readonly"),
+      },
+    ]
+  })
+}
+
+/** The raw `<camunda:formField>` elements (attribute string + inner XML) of a user task. */
+function formFieldElements(
+  bpmnXml: string,
+  taskDefinitionKey: string,
+): Array<{ attrs: string; inner: string }> {
   // Find the user task block
   const blockRe = new RegExp(
     `<(?:[\\w]+:)?userTask\\b[^>]*\\bid="${escapeRegex(taskDefinitionKey)}"[^>]*>([\\s\\S]*?)<\\/(?:[\\w]+:)?userTask>`,
@@ -56,16 +104,12 @@ export function extractEmbeddedFormFields(
   if (!formDataMatch) return []
   const formDataBlock = formDataMatch[1] ?? ""
 
-  // Parse individual formField elements (self-closing and block)
-  const fields: TaskFormField[] = []
+  // Individual formField elements (self-closing and block)
   const fieldBlockRe = /<(?:[\w]+:)?formField\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:[\w]+:)?formField>)/g
-
-  for (const match of formDataBlock.matchAll(fieldBlockRe)) {
-    const field = parseFormField(match[1] ?? "", match[2] ?? "")
-    if (field) fields.push(field)
-  }
-
-  return fields
+  return [...formDataBlock.matchAll(fieldBlockRe)].map((match) => ({
+    attrs: match[1] ?? "",
+    inner: match[2] ?? "",
+  }))
 }
 
 /** Parse a single `<camunda:formField>` from its attribute string + inner XML. */

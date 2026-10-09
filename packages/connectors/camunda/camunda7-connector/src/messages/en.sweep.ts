@@ -423,6 +423,8 @@ export const enSweep: MessageCatalog = {
   "taskForm.loading": "Loading task form…",
   "taskForm.namePlaceholder": "name",
   "taskForm.removeVariable": "Remove variable",
+  "taskForm.resolved":
+    "The task was delegated, so it went back to its owner ({owner}) instead of being completed — it stays open.",
   "taskForm.required": "required",
   "taskForm.valuePlaceholder": "value",
   "taskForm.variableName": "Variable name",

@@ -9,21 +9,26 @@ const SRC = fileURLToPath(new URL("./", import.meta.url))
 
 /**
  * Generated SDK operations whose REST contract differs from the client
- * defaults. Each has ONE wrapper in the engine contract
- * (`@miragon-ai/camunda7-client`) that applies the override — a direct call
+ * defaults. Each has ONE wrapper that applies the override — a direct call
  * would silently lose it (#328): the text endpoints answer the default
  * `Accept: application/json` with a 406, the variable reads deserialize
  * Object values eagerly (one missing class fails the whole read) and render
- * Json as Jackson's view of the Spin node.
+ * Json as Jackson's view of the Spin node. The wrappers live in the engine
+ * contract (`@miragon-ai/camunda7-client`) unless `home` names the one module
+ * of this package that may make the raw call.
  */
-const CONTRACT_WRAPPED: Record<string, string> = {
-  getStacktrace: "fetchJobStacktrace",
-  getExternalTaskErrorDetails: "fetchExternalTaskErrorDetails",
-  getProcessInstanceVariables: "readProcessInstanceVariables",
-  getTaskVariables: "readTaskVariables",
-  // `/task/{id}/complete` skips the task's form validation; complete through
-  // `submit` (`/task/{id}/submit-form`).
-  complete: "submit",
+const TASK_COMPLETION = { wrapper: "completeUserTask", home: "lib/task-completion.ts" }
+const CONTRACT_WRAPPED: Record<string, { wrapper: string; home?: string }> = {
+  getStacktrace: { wrapper: "fetchJobStacktrace" },
+  getExternalTaskErrorDetails: { wrapper: "fetchExternalTaskErrorDetails" },
+  getProcessInstanceVariables: { wrapper: "readProcessInstanceVariables" },
+  getTaskVariables: { wrapper: "readTaskVariables" },
+  // A task's completion endpoint follows from the task: `/submit-form` runs
+  // its form fields but resets omitted defaults and RESOLVES a delegated task,
+  // `/complete` validates nothing, `/resolve` hands a delegated task back.
+  complete: TASK_COMPLETION,
+  submit: TASK_COMPLETION,
+  resolve: TASK_COMPLETION,
 }
 
 function sources(): Array<{ file: string; text: string }> {
@@ -45,12 +50,26 @@ describe("engine calls with a contract override go through the engine contract",
     expect(sources().filter(({ text }) => sdkImports(text).length > 0).length).toBeGreaterThan(10)
   })
 
-  it.each(Object.entries(CONTRACT_WRAPPED))("no module calls %s directly", (raw, wrapper) => {
-    for (const { file, text } of sources()) {
-      expect(
-        sdkImports(text),
-        `${file}: use ${wrapper} (engine contract) instead of the raw SDK ${raw}`,
-      ).not.toContain(raw)
+  it.each(Object.entries(CONTRACT_WRAPPED))(
+    "no module calls %s directly",
+    (raw, { wrapper, home }) => {
+      for (const { file, text } of sources()) {
+        if (file === home) continue
+        expect(
+          sdkImports(text),
+          `${file}: use ${wrapper} (engine contract) instead of the raw SDK ${raw}`,
+        ).not.toContain(raw)
+      }
+    },
+  )
+
+  it("each in-package home really makes its raw calls (the exemption is not stale)", () => {
+    const homed = Object.entries(CONTRACT_WRAPPED).filter(([, { home }]) => home !== undefined)
+    expect(homed.length).toBeGreaterThan(0)
+    for (const [raw, { home }] of homed) {
+      const source = sources().find(({ file }) => file === home)
+      expect(source, `${home} is missing`).toBeDefined()
+      expect(sdkImports(source?.text ?? ""), `${home} should import ${raw}`).toContain(raw)
     }
   })
 

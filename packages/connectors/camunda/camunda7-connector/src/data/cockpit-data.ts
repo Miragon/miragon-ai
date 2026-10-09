@@ -324,6 +324,8 @@ export async function buildInstanceDetailData(
   ])
 
   let bpmnXml: string | null = null
+  // A failed read is not "no BPMN": the open tasks' forms are then UNKNOWN.
+  let bpmnUnreadable = false
   const definitionId = (instance as { definitionId?: string } | null)?.definitionId
   if (definitionId) {
     try {
@@ -333,7 +335,7 @@ export async function buildInstanceDetailData(
       })
       bpmnXml = (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? null
     } catch {
-      bpmnXml = null
+      bpmnUnreadable = true
     }
   }
 
@@ -341,11 +343,13 @@ export async function buildInstanceDetailData(
   const openTasks: InstanceDetailData["openTasks"] = await Promise.all(
     taskList.map(async (task) => ({
       ...task,
-      // The /task row carries everything the form needs (incl. formKey).
-      formSchema: await buildTaskFormSchema(client, task.id, {
-        task,
-        bpmnXml,
-      }).catch(() => ({ taskId: task.id, fields: [] })),
+      // The /task row carries everything the form needs (incl. formKey). A
+      // schema that cannot be built is null, never `{ fields: [] }` ("no
+      // form"): the widget then loads it through camunda7_get_task_form,
+      // which fails loudly instead of offering a form task without its form.
+      formSchema: bpmnUnreadable
+        ? null
+        : await buildTaskFormSchema(client, task.id, { task, bpmnXml }).catch(() => null),
     })),
   )
 
