@@ -134,7 +134,13 @@ export function createPlugin(
       // One registrar for the whole module, wrapped in the toolset filter so a
       // `camunda7:read-only` / `:operations` / `:admin` deployment only
       // advertises its subset — always filtered, there is no "everything".
-      const register = withToolsetFilter(createToolRegistrar(server, registry), toolset)
+      // Strict input: an unknown (e.g. misnamed) key is a tool error naming
+      // the valid keys, never a silently stripped filter that widens the
+      // result to the whole engine (#329).
+      const register = withToolsetFilter(
+        createToolRegistrar(server, registry, { strictInput: true }),
+        toolset,
+      )
       // The toolset is threaded through so the engine tool registers its
       // toolset-shaped variant (read-only: no durable "select") and its
       // handler can still refuse "select" on its own.

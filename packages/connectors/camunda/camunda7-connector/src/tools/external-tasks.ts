@@ -6,7 +6,7 @@ import {
   handleExternalTaskFailureInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { engineSorting, toEngineVariables } from "@miragon-ai/camunda7-client"
+import { complementaryFlags, engineSorting, toEngineVariables } from "@miragon-ai/camunda7-client"
 import {
   getExternalTasks,
   getExternalTasksCount,
@@ -38,10 +38,8 @@ export function registerExternalTaskTools(register: Register) {
       const filters = {
         topicName: args.topicName,
         workerId: args.workerId,
-        locked: args.locked,
-        notLocked: args.notLocked,
-        withRetriesLeft: args.withRetriesLeft,
-        noRetriesLeft: args.noRetriesLeft,
+        ...complementaryFlags(args, "locked", "notLocked"),
+        ...complementaryFlags(args, "withRetriesLeft", "noRetriesLeft"),
         processInstanceId: args.processInstanceId,
         processDefinitionKey: args.processDefinitionKey,
         activityId: args.activityId,

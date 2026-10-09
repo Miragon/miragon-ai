@@ -1,4 +1,3 @@
-import { z } from "zod"
 import type { MCPServer } from "mcp-use"
 import {
   appOnly,
@@ -8,6 +7,7 @@ import {
   showToolBinding,
   withToolErrors,
   type ProfileStore,
+  strictToolInput,
 } from "@miragon-ai/widget-shell/server"
 import { allowsProfileSave, type Camunda7Toolset } from "../lib/toolsets.js"
 import {
@@ -108,7 +108,7 @@ export function registerUserProfileTools(
       description:
         "Open the user profile & settings panel: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({}),
+      inputSchema: strictToolInput({}),
       ...showToolBinding(CAMUNDA7_SHOW_USER_PROFILE, "Profile & Settings"),
     },
     withToolErrors(async (_params, ctx) => {
@@ -131,7 +131,7 @@ export function registerUserProfileTools(
       description:
         "Internal JSON feed (no UI) for the caller's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({}),
+      inputSchema: strictToolInput({}),
       // visibility "app" + widgetAccessible: same dual app-only contract as
       // the widget-tools feeds (see `widget-tools/shared.ts`).
       ...appOnly,
@@ -152,7 +152,7 @@ export function registerUserProfileTools(
       annotations: { idempotentHint: true },
       // The flat input is a tool-API convenience; the handler splits it into
       // the record's cross-module fields and this module's own slice.
-      inputSchema: userProfileToolSaveInput,
+      inputSchema: strictToolInput(userProfileToolSaveInput.shape),
       // No `view`/`visibility`: this is a normal model-visible tool returning
       // a text summary; the widget also calls it and reads the updated profile
       // back from structuredContent.

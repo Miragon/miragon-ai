@@ -138,6 +138,12 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
      `buildDataFeedResult(data)` from `@miragon-ai/widget-shell/server` — the single
      implementation of this invariant
 
+   All three take STRICT input: the registrars run with `strictInput: true`, raw
+   `server.tool()` registrations declare `strictToolInput(…)`
+   (`@miragon-ai/widget-shell/server`) — an unknown key is a tool error listing the valid
+   keys, never a silently stripped filter (`test/strict-input.e2e.test.ts` in the app).
+   Parameter names follow the guide in the add-bpm-feature skill.
+
 6. **Widgets compose from the shared kit (`@miragon-ai/widget-shell/widgets`) — never
    re-inline its primitives.** `ViewDataState` for the loading/error/no-data guard;
    `QueryFallback` + `TableSkeleton` for self-fetching widgets (a missing `isError`

@@ -43,7 +43,7 @@ describe("elementBottleneck", () => {
       processDefinitionKey: "miraveloLeasing",
       period: "7d",
       minBucketSize: 1,
-      limit: 10,
+      maxResults: 10,
     })
 
     expect(res.activities).toHaveLength(2)
@@ -73,7 +73,7 @@ describe("elementBottleneck", () => {
       processDefinitionKey: "miraveloLeasing",
       period: "7d",
       minBucketSize: 8,
-      limit: 10,
+      maxResults: 10,
     })
     // only A (count 10) clears the threshold; B (count 5) is suppressed
     expect(res.activities.map((r) => r.activity_id)).toEqual(["A"])
@@ -86,7 +86,7 @@ describe("elementBottleneck", () => {
       processDefinitionKey: "myKey",
       period: "30d",
       minBucketSize: 1,
-      limit: 5,
+      maxResults: 5,
     })
     const queries = instant.mock.calls.map((c) => c[0])
     expect(queries.every((q) => q.includes('process_definition_key="myKey"'))).toBe(true)

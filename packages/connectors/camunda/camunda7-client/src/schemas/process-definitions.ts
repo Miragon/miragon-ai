@@ -1,10 +1,10 @@
 import { z } from "zod"
-import { sortOrderParam } from "./shared.js"
+import { flagParam, likeParam, sortOrderParam } from "./shared.js"
 
 export const listProcessDefinitionsInput = z.object({
-  key: z.string().optional().describe("Filter by exact process definition key"),
-  nameLike: z.string().optional().describe("Filter by name (substring match)"),
-  latestVersion: z.boolean().optional().describe("Only return latest versions"),
+  processDefinitionKey: z.string().optional().describe("Filter by exact process definition key"),
+  nameLike: likeParam("Filter by name"),
+  latestVersion: flagParam("true = only the latest version of each definition"),
   maxResults: z
     .number()
     .int()

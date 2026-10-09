@@ -125,10 +125,10 @@ const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
       queries.findFailedInstances(ch, {
         processDefinitionKey: "invoice",
         incidentType: "failedJob",
-        limit: 10,
+        maxResults: 10,
         engine: "prod-a",
       }),
-    (ch) => queries.findFailedInstances(ch, { limit: 10 }),
+    (ch) => queries.findFailedInstances(ch, { maxResults: 10 }),
   ],
   elementBottleneck: [
     (ch) =>
@@ -136,7 +136,7 @@ const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
         processDefinitionKey: "invoice",
         period: "7d",
         minBucketSize: 1,
-        limit: 10,
+        maxResults: 10,
         engine: "prod-a",
       }),
   ],

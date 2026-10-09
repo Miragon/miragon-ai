@@ -1,13 +1,14 @@
 import { z } from "zod"
-import { engineDateParam, firstResultParam, sortOrderParam } from "./shared.js"
+import { engineDateParam, firstResultParam, flagParam, sortOrderParam } from "./shared.js"
 
 export const listJobsInput = z.object({
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
-  withRetriesLeft: z.boolean().optional().describe("Only jobs with retries > 0"),
-  noRetriesLeft: z.boolean().optional().describe("Only jobs with retries = 0 (failed)"),
-  active: z.boolean().optional().describe("Only active jobs"),
-  suspended: z.boolean().optional().describe("Only suspended jobs"),
+  activityId: z.string().optional().describe("Filter by the activity the job belongs to"),
+  withRetriesLeft: flagParam("true = only jobs with retries > 0, false = only failed (0 retries)"),
+  noRetriesLeft: flagParam("true = only failed jobs (0 retries), false = only retries > 0"),
+  active: flagParam("true = only active jobs, false = only suspended"),
+  suspended: flagParam("true = only suspended jobs, false = only active"),
   firstResult: firstResultParam,
   maxResults: z.number().int().positive().optional().default(20),
   sortBy: z

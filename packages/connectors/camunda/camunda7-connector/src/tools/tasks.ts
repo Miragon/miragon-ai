@@ -8,7 +8,12 @@ import {
   getTaskVariablesInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { engineSorting, readTaskVariables } from "@miragon-ai/camunda7-client"
+import {
+  complementaryFlags,
+  engineSorting,
+  readTaskVariables,
+  trueOnly,
+} from "@miragon-ai/camunda7-client"
 import {
   getTasks,
   getTasksCount,
@@ -38,10 +43,10 @@ export function registerTaskTools(register: Register) {
         assignee: args.assignee,
         candidateGroup: args.candidateGroup,
         // The engine refuses includeAssignedTasks without a candidate filter.
-        includeAssignedTasks: args.candidateGroup ? args.includeAssignedTasks : undefined,
+        includeAssignedTasks: args.candidateGroup ? trueOnly(args.includeAssignedTasks) : undefined,
         processDefinitionKey: args.processDefinitionKey,
         processInstanceId: args.processInstanceId,
-        unassigned: args.unassigned,
+        ...complementaryFlags({ unassigned: args.unassigned }, "unassigned", "assigned"),
       }
       const [items, count] = await Promise.all([
         getTasks({

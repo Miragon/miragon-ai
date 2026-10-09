@@ -1,4 +1,3 @@
-import { z } from "zod"
 import type { MCPServer } from "mcp-use"
 import {
   appOnly,
@@ -7,6 +6,7 @@ import {
   buildSingleWidgetView,
   showToolBinding,
   withToolErrors,
+  strictToolInput,
 } from "@miragon-ai/widget-shell/server"
 import {
   queries,
@@ -81,7 +81,7 @@ export function registerWidgetTools(
       description:
         "Show aggregated process metrics and KPIs from Prometheus with per-activity bottleneck breakdown.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
         period: optionalPeriod,
         ...schemas.engineFilterShape,
@@ -138,7 +138,7 @@ export function registerWidgetTools(
       description:
         "Show current incident/failure state from Prometheus, grouped by incident type, activity, and process definition (point-in-time — what is failing right now).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...schemas.engineFilterShape,
       }),
       ...showToolBinding("analytics_show_failure_dashboard", "Failure Analysis Dashboard"),
@@ -178,7 +178,7 @@ export function registerWidgetTools(
       description:
         "Render a process definition's BPMN diagram with a per-element heat overlay from metrics, with a Frequency↔Duration toggle (traversal count vs average duration per element). Node-level only — sequence-flow/edge heat is not available from metrics — and rendered on the latest deployed version's diagram (activity metrics carry no version label). Needs the camunda7 client to fetch the BPMN XML; otherwise the widget shows a fallback.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object(heatmapInputShape),
+      inputSchema: strictToolInput(heatmapInputShape),
       ...showToolBinding("analytics_show_bpmn_heatmap", "BPMN Heatmap"),
     },
     withToolErrors(async (args, ctx) => {
@@ -217,7 +217,7 @@ export function registerWidgetTools(
       description:
         "Internal JSON feed (no UI) for the BPMN heatmap — per-element execution frequency + average duration over a window, plus the latest BPMN XML. Lets another widget (e.g. the CIB Seven cockpit) render the heatmap inline. Prefer analytics_show_bpmn_heatmap for a standalone view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object(heatmapInputShape),
+      inputSchema: strictToolInput(heatmapInputShape),
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
@@ -249,7 +249,7 @@ export function registerWidgetTools(
       description:
         "Internal JSON feed (no UI) for the analytics dashboard widgets' self-fetch. Prefer analytics_show_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
         period: optionalPeriod,
         ...schemas.engineFilterShape,
@@ -274,7 +274,7 @@ export function registerWidgetTools(
       description:
         "Internal JSON feed (no UI) for the failure dashboard widgets' self-fetch. Prefer analytics_show_failure_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...schemas.engineFilterShape,
       }),
       ...appOnly,

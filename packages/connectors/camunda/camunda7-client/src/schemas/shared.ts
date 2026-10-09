@@ -50,6 +50,26 @@ export const sortOrderParam = z
   .describe("Default asc; ignored without sortBy")
 
 /**
+ * An optional `…Like` filter. The tools send it through `engineLike`, which
+ * wraps a value without `%` into a substring match — the engine itself would
+ * match it EXACTLY — so the description promises a substring.
+ */
+export function likeParam(description: string) {
+  return z.string().optional().describe(`${description} (substring; % wildcards allowed)`)
+}
+
+/**
+ * An optional boolean filter. The engine IGNORES a `false` (no filter, not a
+ * negation), so the tools never forward one: a flag with a complement is
+ * sent as the complement (`complementaryFlags`), any other is dropped
+ * (`trueOnly`). The description says which, e.g.
+ * `"true = only active, false = only suspended"`.
+ */
+export function flagParam(description: string) {
+  return z.boolean().optional().describe(description)
+}
+
+/**
  * An optional ISO 8601 date filter, converted to the engine's own format by
  * `toEngineDate` in the tool handler. Validated by a refinement, not a
  * pattern: the accepted forms are named in the description instead of a

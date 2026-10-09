@@ -5,7 +5,7 @@ import {
   getDeploymentInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { engineSorting } from "@miragon-ai/camunda7-client"
+import { engineLike, engineSorting } from "@miragon-ai/camunda7-client"
 import { getDeployments, getDeployment, createDeployment } from "@miragon-ai/camunda7-client/sdk"
 import type { MultiFormDeploymentDto } from "@miragon-ai/camunda7-client/types"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
@@ -57,7 +57,9 @@ export function registerDeploymentTools(
       "Get a deployment by ID — returns deployment timestamp + source, used for pre/post deployment correlation (commit-hash → deployment-ID → timestamp).",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getDeploymentInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) => getDeployment({ client, path: { id: args.id } })),
+    handler: withEngine(async (client, args) =>
+      getDeployment({ client, path: { id: args.deploymentId } }),
+    ),
   })
 
   register({
@@ -71,7 +73,7 @@ export function registerDeploymentTools(
         client,
         query: {
           name: args.name,
-          nameLike: args.nameLike,
+          nameLike: engineLike(args.nameLike),
           maxResults: args.maxResults,
           ...engineSorting(args),
         },

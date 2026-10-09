@@ -6,6 +6,7 @@ import {
   appOnly,
   buildDataFeedResult as rawData,
   withToolErrors,
+  strictToolInput,
 } from "@miragon-ai/widget-shell/server"
 import {
   buildCockpitDashboardData,
@@ -67,7 +68,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the cockpit overview — per-definition stats. Prefer camunda7_open_cockpit.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({ ...engineParamShape }),
+      inputSchema: strictToolInput({ ...engineParamShape }),
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
@@ -83,7 +84,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the engine health verdict + incident clusters. Prefer camunda7_show_engine_health / camunda7_open_cockpit.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({ ...engineParamShape }),
+      inputSchema: strictToolInput({ ...engineParamShape }),
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
@@ -99,7 +100,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for one failure cluster's detail. Prefer camunda7_show_cluster_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({ ...clusterDetailShape, ...engineParamShape }),
+      inputSchema: strictToolInput({ ...clusterDetailShape, ...engineParamShape }),
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
@@ -124,7 +125,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for a definition's running instances. Prefer camunda7_show_process_instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...processInstancesFilterShape,
         ...pagingShape,
         ...engineParamShape,
@@ -138,7 +139,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
           processDefinitionKey: args.processDefinitionKey,
           active: args.active,
           suspended: args.suspended,
-          withIncidentsOnly: args.withIncidentsOnly,
+          withIncidents: args.withIncidents,
           businessKeyLike: args.businessKeyLike,
           firstResult: args.firstResult,
           maxResults: args.maxResults,
@@ -154,7 +155,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the BPMN viewer — diagram XML plus live overlays. Prefer camunda7_show_bpmn_viewer.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         processInstanceId: z.string().optional().describe("Instance to overlay live state for."),
         processDefinitionKey: z.string().optional().describe("Definition for a static diagram."),
         version: z.number().int().positive().optional(),
@@ -181,7 +182,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for deployed process definitions, offset-paged. Prefer camunda7_show_process_list.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...processListFilterShape,
         ...pagingShape,
         ...engineParamShape,
@@ -192,7 +193,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       return rawData({
         ...(await buildProcessListData(client, engineId, {
-          key: args.key,
+          processDefinitionKey: args.processDefinitionKey,
           nameLike: args.nameLike,
           latestVersion: args.latestVersion,
           firstResult: args.firstResult,
@@ -209,7 +210,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for a single process instance. Prefer camunda7_show_instance_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         processInstanceId: z.string().describe("The process instance ID"),
         ...engineParamShape,
       }),
@@ -238,7 +239,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       title: "Jobs data (internal)",
       description: "Internal JSON feed (no UI) for jobs. Prefer camunda7_show_job_panel.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...jobsFilterShape,
         ...pagingShape,
         ...engineParamShape,
@@ -265,7 +266,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the incidents dashboard — open incidents grouped by process. Prefer camunda7_show_incidents_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...incidentsDashboardFilterShape,
         ...engineParamShape,
       }),
@@ -295,7 +296,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the unified definition view — header, KPIs (incl. failed jobs), BPMN overlays, activity-grouped incidents. Prefer camunda7_show_process_detail / camunda7_show_process_incidents.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
         ...engineParamShape,
       }),
@@ -324,7 +325,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for one activity's incident rows, offset-paged. Prefer camunda7_show_process_incidents.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...activityIncidentsFilterShape,
         ...pagingShape,
         ...engineParamShape,
@@ -357,7 +358,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for a single incident — stacktrace, BPMN with the failing activity, variables, activity tree, history. Prefer camunda7_show_incident_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         incidentId: z.string().describe("The incident ID to inspect"),
         ...engineParamShape,
       }),

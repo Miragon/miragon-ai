@@ -119,7 +119,7 @@ describe("buildClusterDetailData paging", () => {
     const searchQuery = mockedGetProcessInstances.mock.calls[0]?.[0]?.query as {
       businessKeyLike?: string
     }
-    expect(searchQuery.businessKeyLike).toBe("ORDER")
+    expect(searchQuery.businessKeyLike).toBe("%ORDER%")
     // List + total narrow to the intersection; cluster KPIs stay cluster-wide.
     expect(data.totalMatching).toBe(2)
     expect(data.incidents.map((r) => r.processInstanceId)).toEqual(["p3", "p7"])

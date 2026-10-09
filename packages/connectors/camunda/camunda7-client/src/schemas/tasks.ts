@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { firstResultParam, sortOrderParam, variableSchema } from "./shared.js"
+import { firstResultParam, flagParam, sortOrderParam, variableSchema } from "./shared.js"
 
 export const listTasksInput = z.object({
   assignee: z.string().optional().describe("Filter by assignee user ID"),
@@ -13,7 +13,7 @@ export const listTasksInput = z.object({
     .describe("With candidateGroup: include tasks already claimed"),
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
-  unassigned: z.boolean().optional().describe("Only return unassigned tasks"),
+  unassigned: flagParam("true = only unassigned tasks, false = only assigned"),
   firstResult: firstResultParam,
   maxResults: z
     .number()

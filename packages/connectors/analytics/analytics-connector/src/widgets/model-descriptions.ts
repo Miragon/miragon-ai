@@ -143,8 +143,8 @@ export const describeFailureRates: DescribeForModel<FailureDashboardData> = (dat
     }. ` +
     // Not analytics_version_compare: it cannot split incidents by version, so
     // its failure rates are null (#327).
-    `Check for a regression with analytics_compare_execution_periods (period over period) ` +
-    `or analytics_cluster_compare (around a deployment).`
+    `Check for a regression period over period with analytics_compare_execution_periods, ` +
+    `or around a deployment with analytics_cluster_compare.`
   )
 }
 

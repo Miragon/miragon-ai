@@ -1,10 +1,12 @@
 import { z } from "zod"
-import { firstResultParam, sortOrderParam, variableSchema } from "./shared.js"
+import { firstResultParam, flagParam, sortOrderParam, variableSchema } from "./shared.js"
 
 /**
  * Read-only external-task query (`GET /external-task`) — inspects what the
  * workers see without locking, completing or failing anything. The boolean
- * filters are TRUE-ONLY on the engine side: `false` matches every task.
+ * filters are TRUE-ONLY on the engine side (`false` matches every task), so
+ * the tool sends a `false` as its complement (locked/notLocked,
+ * withRetriesLeft/noRetriesLeft — `complementaryFlags`).
  */
 export const listExternalTasksInput = z.object({
   topicName: z.string().optional().describe("Filter by external task topic"),
@@ -12,22 +14,16 @@ export const listExternalTasksInput = z.object({
     .string()
     .optional()
     .describe("Filter by the id of the worker that most recently locked the task"),
-  locked: z
-    .boolean()
-    .optional()
-    .describe("true = only tasks currently locked (lock not expired); false matches all"),
-  notLocked: z
-    .boolean()
-    .optional()
-    .describe("true = only tasks currently NOT locked (no lock, or it expired); false matches all"),
-  withRetriesLeft: z
-    .boolean()
-    .optional()
-    .describe("true = only tasks with retries > 0 (or not set yet); false matches all"),
-  noRetriesLeft: z
-    .boolean()
-    .optional()
-    .describe("true = only tasks with 0 retries (failed, an incident exists); false matches all"),
+  locked: flagParam("true = only tasks locked now (lock not expired), false = only not locked"),
+  notLocked: flagParam(
+    "true = only tasks not locked (no lock, or it expired), false = only locked",
+  ),
+  withRetriesLeft: flagParam(
+    "true = only tasks with retries > 0 (or not set yet), false = only failed (0 retries)",
+  ),
+  noRetriesLeft: flagParam(
+    "true = only failed tasks (0 retries, an incident exists), false = only retries left",
+  ),
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
   activityId: z.string().optional().describe("Filter by the activity the task was created for"),

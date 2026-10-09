@@ -116,7 +116,7 @@ export {
   DASHBOARD_STORE_MIGRATIONS,
 } from "./dashboard-store-postgres.js"
 export { createSql, postgresReadinessCheck, runMigrations, type Migration } from "./postgres.js"
-export { appOnly, showToolBinding } from "./widget-tool-bindings.js"
+export { appOnly, showToolBinding, strictToolInput } from "./widget-tool-bindings.js"
 export {
   composeModules,
   frameworkWritesAllowed,

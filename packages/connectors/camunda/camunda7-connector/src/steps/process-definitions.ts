@@ -1,4 +1,5 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
+import { engineLike } from "@miragon-ai/camunda7-client"
 import { getProcessDefinitions } from "@miragon-ai/camunda7-client/sdk"
 import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 
@@ -23,7 +24,7 @@ export const loadProcessDefinitionsStep: PipelineStepDefinition<Camunda7StepAppC
       client,
       query: {
         key: filterKey,
-        nameLike,
+        nameLike: engineLike(nameLike),
         latestVersion: true,
         maxResults: 100,
         sortBy: "name",

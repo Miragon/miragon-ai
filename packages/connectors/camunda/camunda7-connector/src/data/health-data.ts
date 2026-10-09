@@ -1,4 +1,4 @@
-import { toEngineDate, type Client } from "@miragon-ai/camunda7-client"
+import { engineLike, toEngineDate, type Client } from "@miragon-ai/camunda7-client"
 import {
   getHistoricProcessInstancesCount,
   getIncidents,
@@ -360,7 +360,10 @@ export async function buildClusterDetailData(
     args.businessKeyLike
       ? getProcessInstances({
           client,
-          query: { businessKeyLike: args.businessKeyLike, maxResults: INCIDENT_SCAN_LIMIT },
+          query: {
+            businessKeyLike: engineLike(args.businessKeyLike),
+            maxResults: INCIDENT_SCAN_LIMIT,
+          },
         })
       : Promise.resolve(null),
   ])

@@ -1,5 +1,4 @@
 import type { MCPServer } from "mcp-use"
-import { z } from "zod"
 import {
   appOnly,
   buildDataFeedResult,
@@ -8,6 +7,7 @@ import {
   saveModuleSlice,
   showToolBinding,
   withToolErrors,
+  strictToolInput,
 } from "@miragon-ai/widget-shell/server"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
 import {
@@ -80,7 +80,7 @@ export function registerSettingsTools(
       description:
         "Open the analytics settings section: the default look-back period and the minimum comparison bucket size applied when analytics calls omit them.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({}),
+      inputSchema: strictToolInput({}),
       ...showToolBinding("analytics_show_settings", "Analytics Settings"),
     },
     withToolErrors(async (_params, ctx) => {
@@ -103,7 +103,7 @@ export function registerSettingsTools(
       description:
         "Internal JSON feed (no UI) for the analytics settings section's self-fetch. Prefer analytics_show_settings.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({}),
+      inputSchema: strictToolInput({}),
       ...appOnly,
     },
     withToolErrors(async (_params, ctx) => buildDataFeedResult({ ...(await loadView(ctx)) })),
@@ -124,7 +124,7 @@ export function registerSettingsTools(
       // (MCP presumes a write destructive unless told otherwise): it merges
       // the caller's own slice, nothing is deleted or overwritten wholesale.
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
-      inputSchema: analyticsSettingsSaveInput,
+      inputSchema: strictToolInput(analyticsSettingsSaveInput.shape),
       // No view binding / app visibility: a normal model-visible tool; the
       // settings widget also calls it and reads the saved slice back from
       // structuredContent.

@@ -117,13 +117,15 @@ type Handler = (registry: EngineRegistry, args: Record<string, unknown>) => Prom
 
 /**
  * Calls a captured tool the way the server does: the input is validated (and
- * defaulted) by the tool's own schema first, then the handler runs.
+ * defaulted) by the tool's own schema first — STRICT, like the plugin's
+ * registrar (`strictInput`), so an unknown key fails here too — then the
+ * handler runs.
  */
 export function callTool(
   config: ToolConfig<EngineRegistry>,
   registry: EngineRegistry,
   args: Record<string, unknown>,
 ): Promise<unknown> {
-  const parsed = z.object(config.inputSchema).parse(args)
+  const parsed = z.strictObject(config.inputSchema ?? {}).parse(args)
   return (config as unknown as { handler: Handler }).handler(registry, parsed)
 }

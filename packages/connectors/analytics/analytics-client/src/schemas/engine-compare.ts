@@ -5,7 +5,7 @@ export const engineCompareInput = z.object({
     .string()
     .min(1)
     .describe(
-      "The process definition key to compare on both engines — REQUIRED. Engines run different process mixes, so comparing their whole workloads measures the mix, not the engines; scoping to ONE process is what makes the delta attributable. Discover keys deployed on several engines with analytics_engine_landscape (field `sharedProcessKeys`).",
+      "The process definition key to compare on both engines — REQUIRED. Engines run different process mixes, so comparing their whole workloads measures the mix, not the engines; scoping to ONE process is what makes the delta attributable. Discover keys deployed on several engines in the `sharedProcessKeys` field of analytics_engine_landscape.",
     ),
   engineA: z
     .string()

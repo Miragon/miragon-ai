@@ -147,7 +147,7 @@ export interface ProcessListData {
    *  fetch without `latestVersion` would mix all versions into a latest-only
    *  page 0). */
   filters: {
-    key?: string
+    processDefinitionKey?: string
     nameLike?: string
     latestVersion: boolean
   }
@@ -201,7 +201,7 @@ export interface ProcessInstancesData {
   filters: {
     active?: boolean
     suspended?: boolean
-    withIncidentsOnly?: boolean
+    withIncidents?: boolean
     businessKeyLike?: string
   }
   engineId?: string

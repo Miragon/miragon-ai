@@ -10,7 +10,7 @@ export const elementBottleneckInput = z.object({
     .min(1)
     .default(10)
     .describe("Minimum number of executions per activity before it is returned."),
-  limit: z
+  maxResults: z
     .number()
     .int()
     .min(1)

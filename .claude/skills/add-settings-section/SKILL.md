@@ -142,6 +142,10 @@ Three render paths, three tools — model them on `registerSettingsTools`:
 | `<module>_settings_data` | `...appOnly` (`visibility: "app"` + `openai/widgetAccessible`, no view) | `buildDataFeedResult(view)`                          |
 | `<module>_save_settings` | none (plain model-visible tool)                                         | text summary + `structuredContent` = effective slice |
 
+All three declare `inputSchema: strictToolInput(…)` (`@miragon-ai/widget-shell/server`;
+the save tool: `strictToolInput(mySettingsSaveInput.shape)`) — a bare `z.object` would
+strip a misnamed setting and report a save that changed nothing.
+
 Two rules the save tool must honor:
 
 - **Toolset gate.** The save is a durable write registered OUTSIDE the registrar, so the

@@ -48,9 +48,9 @@ describe("listExternalTasksInput", () => {
   })
 
   it.each(["locked", "notLocked", "withRetriesLeft", "noRetriesLeft"] as const)(
-    "tells the model that %s is a true-only flag",
+    "tells the model what %s=false selects (sent as the complementary flag)",
     (flag) => {
-      expect(listExternalTasksInput.shape[flag].description).toContain("false matches all")
+      expect(listExternalTasksInput.shape[flag].description).toMatch(/^true = .+, false = only /)
     },
   )
 

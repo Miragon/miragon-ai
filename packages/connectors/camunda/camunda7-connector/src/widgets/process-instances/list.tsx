@@ -171,19 +171,18 @@ function deriveInstancesFilters({
   echoed,
   active,
   suspended,
-  withIncidentsOnly,
+  withIncidents,
   businessKeyLike,
 }: {
   activeChip: InstanceChip
   echoed: ProcessInstancesData["filters"] | undefined
   active?: boolean
   suspended?: boolean
-  withIncidentsOnly?: boolean
+  withIncidents?: boolean
   businessKeyLike?: string
 }) {
   const wantActive = active ?? echoed?.active
-  const wantIncidents =
-    activeChip === CHIP_INCIDENTS || !!(withIncidentsOnly ?? echoed?.withIncidentsOnly)
+  const wantIncidents = activeChip === CHIP_INCIDENTS || !!(withIncidents ?? echoed?.withIncidents)
   const wantSuspended = activeChip === CHIP_SUSPENDED || !!(suspended ?? echoed?.suspended)
   const baseBusinessKey = businessKeyLike ?? echoed?.businessKeyLike
   return { wantActive, wantIncidents, wantSuspended, baseBusinessKey }
@@ -199,7 +198,7 @@ function buildInstancesFilterArgs(
   if (scope.pdk) filterArgs.processDefinitionKey = scope.pdk
   if (scope.feedEngine) filterArgs.engine = scope.feedEngine
   if (filters.wantActive) filterArgs.active = true
-  if (filters.wantIncidents) filterArgs.withIncidentsOnly = true
+  if (filters.wantIncidents) filterArgs.withIncidents = true
   if (filters.wantSuspended) filterArgs.suspended = true
   if (filters.baseBusinessKey) filterArgs.businessKeyLike = filters.baseBusinessKey
   return filterArgs
@@ -239,7 +238,7 @@ export function ProcessInstancesView({
   engine,
   active,
   suspended,
-  withIncidentsOnly,
+  withIncidents,
   businessKeyLike,
 }: {
   data?: ProcessInstancesData | null
@@ -247,7 +246,7 @@ export function ProcessInstancesView({
   engine?: string
   active?: boolean
   suspended?: boolean
-  withIncidentsOnly?: boolean
+  withIncidents?: boolean
   businessKeyLike?: string
 }) {
   const t = useT()
@@ -263,7 +262,7 @@ export function ProcessInstancesView({
       echoed: scope.echoed,
       active,
       suspended,
-      withIncidentsOnly,
+      withIncidents,
       businessKeyLike,
     }),
   )
@@ -388,7 +387,7 @@ export function ProcessInstancesWidget(props: {
   engine?: string
   active?: boolean
   suspended?: boolean
-  withIncidentsOnly?: boolean
+  withIncidents?: boolean
   businessKeyLike?: string
 }) {
   return (

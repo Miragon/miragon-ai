@@ -10,6 +10,7 @@ import {
   loadBpmnViewerStep,
   loadJobsStep,
 } from "./steps/index.js"
+import { processInstancesFilterShape } from "./feed-contracts.js"
 
 const processListPropsSchema = z.toJSONSchema(
   z.object({
@@ -75,13 +76,10 @@ const activityIncidentListPropsSchema = z.toJSONSchema(
 const processInstancesPropsSchema = z.toJSONSchema(
   z.object({
     processDefinitionKey: z.string().describe("Process definition key whose instances to list."),
-    active: z.boolean().optional().describe("Only running (non-suspended) instances."),
-    suspended: z.boolean().optional().describe("Only suspended instances."),
-    withIncidentsOnly: z
-      .boolean()
-      .optional()
-      .describe("Only instances that currently have an open incident."),
-    businessKeyLike: z.string().optional().describe("Filter by a substring of the business key."),
+    active: processInstancesFilterShape.active,
+    suspended: processInstancesFilterShape.suspended,
+    withIncidents: processInstancesFilterShape.withIncidents,
+    businessKeyLike: processInstancesFilterShape.businessKeyLike,
   }),
 )
 
