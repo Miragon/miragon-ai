@@ -26,11 +26,7 @@ const serverTestFiles = [
 export const complexityRatchet = {}
 
 // Frozen at current length rounded up to the next 10 lines.
-export const maxLinesRatchet = {
-  "packages/connectors/camunda/camunda7-connector/src/data/incident-panel-data.ts": 420,
-  "packages/connectors/camunda/camunda7-connector/src/data/incident-panel-data.test.ts": 420,
-  "packages/connectors/camunda/camunda7-connector/src/data/cockpit-data.ts": 410,
-}
+export const maxLinesRatchet = {}
 
 // ── Pattern-gate selectors (`no-restricted-syntax`) ─────────────────────────
 

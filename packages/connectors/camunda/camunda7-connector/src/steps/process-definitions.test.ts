@@ -14,14 +14,21 @@ afterEach(async () => {
 })
 
 async function queryFor(keys: Record<string, unknown>) {
-  const engine = await startFakeEngine({}, { body: [] })
+  const engine = await startFakeEngine(
+    { "GET /process-definition/count": { body: { count: 0 } } },
+    { body: [] },
+  )
   engines.push(engine)
   await loadProcessDefinitionsStep.execute(
     { steps: {}, keys, errors: [] },
     { registry: registryFor(engine), engines: [] },
   )
-  expect(engine.requests.map((r) => r.path)).toEqual(["/process-definition"])
-  return engine.requests[0].query
+  // The page and its exact total — the show tool's builder (#335 N63).
+  expect(engine.requests.map((r) => r.path).sort()).toEqual([
+    "/process-definition",
+    "/process-definition/count",
+  ])
+  return engine.requests.find((r) => r.path === "/process-definition")!.query
 }
 
 describe("camunda7:load-process-definitions", () => {

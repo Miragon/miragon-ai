@@ -27,6 +27,27 @@ function collect(node: TreeNode | null): string[] {
   return ids
 }
 
+/**
+ * Token count per activity of ONE instance: its activity and transition
+ * instances below the root (the root node is the process instance itself).
+ * A multi-instance or parallel activity counts once per token.
+ */
+export function countActivityInstances(tree: unknown): Map<string, number> {
+  const counts = new Map<string, number>()
+  const add = (id: string | undefined) => {
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1)
+  }
+  const visit = (node: TreeNode) => {
+    for (const child of node.childActivityInstances ?? []) {
+      add(child.activityId)
+      visit(child)
+    }
+    for (const transition of node.childTransitionInstances ?? []) add(transition.activityId)
+  }
+  if (tree) visit(tree)
+  return counts
+}
+
 export function collectIncidentActivityIds(incidents: unknown): string[] {
   const rows = Array.isArray(incidents) ? (incidents as Array<{ activityId?: string | null }>) : []
   return [...new Set(rows.map((i) => i.activityId).filter(Boolean) as string[])]

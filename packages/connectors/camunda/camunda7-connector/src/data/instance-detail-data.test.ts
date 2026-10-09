@@ -1,24 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { cibsevenProvider } from "../providers/index.js"
 
-// The instance-detail and job-panel half of `cockpit-data.ts`; the dashboard and
-// list builders live in `cockpit-data.test.ts` (split to stay inside the
-// per-file line budget). `cockpit-data.ts` imports the whole SDK surface, so the
-// factory has to name every export even though this file drives only a subset.
+// The instance-detail builder with a mocked SDK: the form wiring and the
+// enrichment fallbacks. Its primary reads failing (engine down, unknown id)
+// is the rejection table in `honest-numbers.test.ts`.
 vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
   getActivityInstanceTree: vi.fn(),
   getIncidents: vi.fn(),
-  getJobs: vi.fn(),
-  getJobsCount: vi.fn(),
+  getIncidentsCount: vi.fn(),
   getProcessDefinitionBpmn20Xml: vi.fn(),
+  getProcessDefinitionByKey: vi.fn(),
   getProcessDefinitionStatistics: vi.fn(),
-  getProcessDefinitions: vi.fn(),
-  getProcessDefinitionsCount: vi.fn(),
   getProcessInstance: vi.fn(),
   getProcessInstanceVariables: vi.fn(),
-  getProcessInstances: vi.fn(),
-  getProcessInstancesCount: vi.fn(),
   getTasks: vi.fn(),
+  getTasksCount: vi.fn(),
 }))
 
 vi.mock("../tools/task-form.js", () => ({ buildTaskFormSchema: vi.fn() }))
@@ -26,35 +22,28 @@ vi.mock("../tools/task-form.js", () => ({ buildTaskFormSchema: vi.fn() }))
 import {
   getActivityInstanceTree,
   getIncidents,
-  getJobs,
-  getJobsCount,
+  getIncidentsCount,
   getProcessDefinitionBpmn20Xml,
   getProcessInstance,
   getProcessInstanceVariables,
   getTasks,
+  getTasksCount,
 } from "@miragon-ai/camunda7-client/sdk"
 import { buildTaskFormSchema } from "../tools/task-form.js"
 
-import { buildInstanceDetailData, buildJobPanelData } from "./cockpit-data.js"
+import { buildInstanceDetailData } from "./instance-detail-data.js"
 
 const mockedActivityTree = vi.mocked(getActivityInstanceTree)
 const mockedIncidents = vi.mocked(getIncidents)
-const mockedJobs = vi.mocked(getJobs)
-const mockedJobsCount = vi.mocked(getJobsCount)
+const mockedIncidentsCount = vi.mocked(getIncidentsCount)
 const mockedBpmn = vi.mocked(getProcessDefinitionBpmn20Xml)
 const mockedInstance = vi.mocked(getProcessInstance)
 const mockedVariables = vi.mocked(getProcessInstanceVariables)
 const mockedTasks = vi.mocked(getTasks)
+const mockedTasksCount = vi.mocked(getTasksCount)
 const mockedFormSchema = vi.mocked(buildTaskFormSchema)
 
-const fakeClient = {} as Parameters<typeof buildJobPanelData>[0]
-
-/** Last `query` a mocked SDK call was invoked with — the filter mapping is half
- *  the contract of these builders, so the tests assert on it directly. */
-function lastQuery(fn: { mock: { calls: unknown[][] } }): Record<string, unknown> {
-  const call = fn.mock.calls.at(-1)?.[0] as { query?: Record<string, unknown> }
-  return call.query ?? {}
-}
+const fakeClient = {} as Parameters<typeof buildInstanceDetailData>[0]
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -70,6 +59,8 @@ describe("buildInstanceDetailData", () => {
     mockedVariables.mockResolvedValue({})
     mockedIncidents.mockResolvedValue([] as never)
     mockedTasks.mockResolvedValue([] as never)
+    mockedIncidentsCount.mockResolvedValue({ count: 0 })
+    mockedTasksCount.mockResolvedValue({ count: 0 })
     mockedBpmn.mockResolvedValue({ bpmn20Xml: "<xml/>" })
     mockedFormSchema.mockResolvedValue({ taskId: "t1", fields: [] })
   })
@@ -101,7 +92,7 @@ describe("buildInstanceDetailData", () => {
       { baseUrl: "http://localhost:8080/engine-rest", provider: cibsevenProvider },
     )
 
-    const [incident] = data.incidents ?? []
+    const [incident] = data.incidents
     expect(incident?.cockpitInstanceUrl).toContain("p1")
   })
 
@@ -194,93 +185,29 @@ describe("buildInstanceDetailData", () => {
       bpmnXml: null,
     })
   })
-})
 
-describe("buildJobPanelData", () => {
-  beforeEach(() => {
-    mockedJobs.mockResolvedValue([] as never)
-    mockedJobsCount.mockResolvedValue({ count: 0 })
-  })
+  it("reports the exact open incident and task totals from /count, not the capped lists", async () => {
+    mockedIncidents.mockResolvedValueOnce([{ id: "i1", activityId: "A1" }] as never)
+    mockedIncidentsCount.mockResolvedValueOnce({ count: 140 })
+    mockedTasks.mockResolvedValueOnce([{ id: "t1" }] as never)
+    mockedTasksCount.mockResolvedValueOnce({ count: 75 })
+    mockedFormSchema.mockResolvedValue({ taskId: "t1", fields: [] })
 
-  const job = (over: Record<string, unknown> = {}) => ({
-    id: "j1",
-    processInstanceId: "p1",
-    retries: 0,
-    suspended: false,
-    priority: 50,
-    ...over,
-  })
-
-  it("reports the global all-jobs total when not filtered to failures", async () => {
-    mockedJobs.mockResolvedValueOnce([job()] as never)
-    mockedJobsCount
-      .mockResolvedValueOnce({ count: 4 }) // failed
-      .mockResolvedValueOnce({ count: 17 }) // all
-
-    const data = await buildJobPanelData(fakeClient, "engine-a", {})
-
-    expect(data.totalCount).toBe(17)
-    expect(data.failedCount).toBe(4)
-    expect(lastQuery(mockedJobs).noRetriesLeft).toBeUndefined()
-  })
-
-  it("reports the failed total and filters the page when failedOnly is set", async () => {
-    mockedJobsCount.mockResolvedValueOnce({ count: 4 }).mockResolvedValueOnce({ count: 17 })
-
-    const data = await buildJobPanelData(fakeClient, "engine-a", { failedOnly: true })
-
-    expect(data.totalCount).toBe(4)
-    expect(lastQuery(mockedJobs).noRetriesLeft).toBe(true)
-    expect(data.filters).toEqual({ processDefinitionKey: undefined, failedOnly: true })
-  })
-
-  it("nulls the optional job fields instead of shipping undefined", async () => {
-    mockedJobs.mockResolvedValueOnce([job({ retries: 3, suspended: true, priority: 10 })] as never)
-
-    const data = await buildJobPanelData(fakeClient, "engine-a", {})
-
-    expect(data.jobs[0]).toEqual({
-      id: "j1",
+    const data = await buildInstanceDetailData(fakeClient, "engine-a", {
       processInstanceId: "p1",
-      processDefinitionKey: null,
-      processDefinitionId: null,
-      activityId: null,
-      retries: 3,
-      exceptionMessage: null,
-      dueDate: null,
-      suspended: true,
-      priority: 10,
-      createTime: null,
     })
+
+    expect([data.incidents.length, data.incidentCount]).toEqual([1, 140])
+    expect([data.openTasks.length, data.openTaskCount]).toEqual([1, 75])
+    expect(mockedIncidentsCount.mock.calls[0]?.[0]?.query).toEqual({ processInstanceId: "p1" })
+    expect(mockedTasksCount.mock.calls[0]?.[0]?.query).toEqual({ processInstanceId: "p1" })
   })
 
-  it("degrades to zero failures and the page length when both counts fail", async () => {
-    mockedJobs.mockResolvedValueOnce([job(), job({ id: "j2" })] as never)
-    mockedJobsCount.mockRejectedValue(new Error("boom"))
+  it("fails — never '0 open incidents' — when the incident read fails", async () => {
+    mockedIncidents.mockRejectedValueOnce(new Error("503"))
 
-    const data = await buildJobPanelData(fakeClient, "engine-a", {})
-
-    expect(data.failedCount).toBe(0)
-    expect(data.totalCount).toBe(2)
-  })
-
-  it("returns an empty page when the job list call fails", async () => {
-    mockedJobs.mockRejectedValueOnce(new Error("boom"))
-
-    const data = await buildJobPanelData(fakeClient, "engine-a", { processDefinitionKey: "K1" })
-
-    expect(data.jobs).toEqual([])
-    expect(lastQuery(mockedJobsCount)).toMatchObject({ processDefinitionKey: "K1" })
-  })
-
-  it("defaults paging to the first page of 50", async () => {
-    await buildJobPanelData(fakeClient, "engine-a", {})
-
-    expect(lastQuery(mockedJobs)).toMatchObject({
-      firstResult: 0,
-      maxResults: 50,
-      sortBy: "jobId",
-      sortOrder: "desc",
-    })
+    await expect(
+      buildInstanceDetailData(fakeClient, "engine-a", { processInstanceId: "p1" }),
+    ).rejects.toThrow("503")
   })
 })

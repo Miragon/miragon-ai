@@ -75,9 +75,10 @@ describe("resolveStepEngine", () => {
     // The message must name the selectable ids — the error path serialises
     // only code + message, so this is the LLM's one shot at seeing them.
     // Without a `canSaveDefault` probe the save is never offered: a hint the
-    // caller cannot follow costs a dead round trip.
+    // caller cannot follow costs a dead round trip. A step has no `engine`
+    // parameter (render-view takes keys), so the hint names its view key.
     await expect(resolveStepEngine(appConfig)).rejects.toThrow(
-      "No engine specified and no default engine saved. Pass `engine` — one of: alpha, beta.",
+      "No engine specified and no default engine saved. Set the `camunda7:engine` view key — one of: alpha, beta.",
     )
   })
 

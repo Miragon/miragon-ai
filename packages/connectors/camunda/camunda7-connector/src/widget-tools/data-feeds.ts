@@ -10,17 +10,17 @@ import {
 } from "@miragon-ai/widget-shell/server"
 import {
   buildCockpitDashboardData,
-  buildInstanceDetailData,
   buildJobPanelData,
   buildProcessInstancesData,
   buildProcessListData,
 } from "../data/cockpit-data.js"
+import { buildInstanceDetailData } from "../data/instance-detail-data.js"
 import { buildClusterDetailData, buildEngineHealthData } from "../data/health-data.js"
+import { buildIncidentsDashboardData } from "../data/incidents-dashboard-data.js"
 import {
   buildActivityIncidentsData,
-  buildIncidentsDashboardData,
   buildProcessIncidentsData,
-} from "../data/incident-panel-data.js"
+} from "../data/process-incidents-data.js"
 import { buildIncidentDetailData } from "../data/incident-detail-data.js"
 import { buildBpmnViewerData } from "../data/bpmn-viewer-data.js"
 import {

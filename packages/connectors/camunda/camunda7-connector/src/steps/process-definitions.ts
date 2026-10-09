@@ -1,43 +1,40 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import { engineLike } from "@miragon-ai/camunda7-client"
-import { getProcessDefinitions } from "@miragon-ai/camunda7-client/sdk"
-import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
+import { buildProcessListData } from "../data/cockpit-data.js"
+import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
+import { ENGINE_KEY, stepEngine, stringKey } from "./shared.js"
 
 /**
- * Loads the list of deployed process definitions. Widgets like
- * `camunda7:process-list` read the result from `camunda7:definitions`.
+ * The deployed process definitions (latest version each, first page, exact
+ * total) — adapter over {@link buildProcessListData}, the builder of
+ * `camunda7_show_process_list`. Consumed by `camunda7:process-list`.
  */
 export const loadProcessDefinitionsStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-process-definitions",
+  description:
+    "Deployed process definitions (latest version of each, first page, exact total). Powers camunda7:process-list.",
   dataType: "camunda7:processDefinitionList",
   requires: [],
+  optionalKeys: [
+    ENGINE_KEY,
+    {
+      key: "camunda7:processDefinitionKey",
+      description: "Restrict the list to this exact definition key.",
+    },
+    {
+      key: "camunda7:nameLike",
+      description: "Filter by definition name (substring; % wildcards allowed).",
+    },
+  ],
   produces: ["camunda7:definitions"],
   execute: async (context, appConfig) => {
-    const { client } = await resolveStepEngine(
-      appConfig,
-      context.keys["camunda7:engine"] as string | undefined,
-    )
-    const filterKey = context.keys["camunda7:processDefinitionKey"] as string | undefined
-    const nameLike = context.keys["camunda7:nameLike"] as string | undefined
-
-    const definitions = await getProcessDefinitions({
-      client,
-      query: {
-        key: filterKey,
-        nameLike: engineLike(nameLike),
-        latestVersion: true,
-        maxResults: 100,
-        sortBy: "name",
-        sortOrder: "asc",
-      },
+    const { client, engineId } = await stepEngine(context, appConfig)
+    const data = await buildProcessListData(client, engineId, {
+      processDefinitionKey: stringKey(context, "camunda7:processDefinitionKey"),
+      nameLike: stringKey(context, "camunda7:nameLike"),
     })
-
-    const list = Array.isArray(definitions) ? definitions : []
     return {
-      data: { definitions: list, totalCount: list.length },
-      keys: {
-        "camunda7:definitions": list,
-      },
+      data,
+      keys: { "camunda7:definitions": data.definitions },
       _app: "camunda7",
       _step: "load-process-definitions",
     }

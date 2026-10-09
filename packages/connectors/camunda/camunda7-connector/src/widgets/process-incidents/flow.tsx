@@ -93,11 +93,14 @@ function FlowModeToolbar({
   mode,
   onChange,
   heatmapUnavailable,
+  incidentsCaption,
 }: {
   options: SegmentedControlOption<FlowMode>[]
   mode: FlowMode
   onChange: (mode: FlowMode) => void
   heatmapUnavailable: boolean
+  /** Scope of the incident overlays: the diagram's version vs the key-wide counts. */
+  incidentsCaption: string
 }) {
   const t = useT()
   return (
@@ -108,9 +111,12 @@ function FlowModeToolbar({
         onChange={onChange}
         ariaLabel={t("procIncFlow.modeAria")}
       />
-      {heatmapUnavailable ? (
-        <span className="text-muted-foreground text-xs">{t("procIncFlow.heatmapUnavailable")}</span>
-      ) : mode !== "incidents" ? (
+      {mode === "incidents" ? (
+        <span className="text-muted-foreground text-xs">
+          {incidentsCaption}
+          {heatmapUnavailable && ` · ${t("procIncFlow.heatmapUnavailable")}`}
+        </span>
+      ) : (
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground text-xs">
             {mode === "frequency"
@@ -122,7 +128,7 @@ function FlowModeToolbar({
             moreLabel={t("procIncFlow.legendMore")}
           />
         </div>
-      ) : null}
+      )}
     </div>
   )
 }
@@ -211,6 +217,7 @@ export function ProcessDefinitionFlow({
               mode={mode}
               onChange={setMode}
               heatmapUnavailable={heatmapUnavailable}
+              incidentsCaption={t("procIncFlow.diagramVersion", { version: data.diagramVersion })}
             />
             {mode === "incidents" ? (
               <BpmnDiagram bpmnXml={data.bpmnXml} height={DIAGRAM_HEIGHT} highlights={highlights} />

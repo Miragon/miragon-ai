@@ -9,15 +9,11 @@ import {
   withToolErrors,
   strictToolInput,
 } from "@miragon-ai/widget-shell/server"
-import type { CockpitAppData, CockpitEngineInfo, HistoryTimelineData } from "../view-models.js"
-import {
-  getHistoricActivityInstances,
-  getHistoricActivityInstancesCount,
-  getHistoricProcessInstances,
-} from "@miragon-ai/camunda7-client/sdk"
+import type { CockpitAppData, CockpitEngineInfo } from "../view-models.js"
 import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
 import { buildProcessInstancesData, buildProcessListData } from "../data/cockpit-data.js"
-import { buildProcessIncidentsData } from "../data/incident-panel-data.js"
+import { buildHistoryTimelineData } from "../data/history-timeline-data.js"
+import { buildProcessIncidentsData } from "../data/process-incidents-data.js"
 import {
   CAMUNDA7_OPEN_COCKPIT,
   CAMUNDA7_SHOW_HISTORY_TIMELINE,
@@ -207,11 +203,10 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
         entries: [{ dataType: "camunda7:processIncidents", data: { ...data, engineId } }],
         summary: t("c7sum.processDetail", {
           processDefinitionKey: data.processDefinitionKey,
-          version: data.version != null ? ` v${data.version}` : "",
-          // null = statistics unavailable — never report it as a confident 0.
-          runningInstances: data.runningInstances ?? "unknown",
+          diagramVersion: data.diagramVersion,
+          runningInstances: data.runningInstances,
           openIncidents: data.incidentCount,
-          failedJobs: data.failedJobs ?? "unknown",
+          failedJobs: data.failedJobs,
         }),
       })
     }),
@@ -235,43 +230,12 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
-      const [activities, activitiesCount, instances] = await Promise.all([
-        getHistoricActivityInstances({
-          client,
-          query: {
-            processInstanceId: args.processInstanceId,
-            sortBy: "startTime",
-            sortOrder: "asc",
-            firstResult: args.firstResult,
-            maxResults: args.maxResults ?? MAX_PAGE_SIZE,
-          },
-        }),
-        // Honest total via /count — the page above is capped, so its length
-        // would silently understate long-running instances.
-        getHistoricActivityInstancesCount({
-          client,
-          query: { processInstanceId: args.processInstanceId },
-        }).catch(() => null),
-        getHistoricProcessInstances({
-          client,
-          query: { processInstanceId: args.processInstanceId, maxResults: 1 },
-        }),
-      ])
-
-      const instArray = (
-        Array.isArray(instances) ? instances : []
-      ) as HistoryTimelineData["processInstance"][]
-      const actArray = (
-        Array.isArray(activities) ? activities : []
-      ) as HistoryTimelineData["activities"]
-      const inst = instArray[0] ?? null
-
-      const data: HistoryTimelineData = {
-        processInstance: inst,
-        activities: actArray,
-        totalActivities: activitiesCount?.count ?? actArray.length,
-        engineId,
-      }
+      // Shared builder with the `camunda7:load-history-timeline` step.
+      const data = await buildHistoryTimelineData(client, engineId, {
+        processInstanceId: args.processInstanceId,
+        firstResult: args.firstResult,
+        maxResults: args.maxResults,
+      })
       return buildSingleWidgetView({
         widget: "camunda7:history-timeline",
         app: "camunda7",
@@ -281,7 +245,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
         summary: t("c7sum.historyTimeline", {
           processInstanceId: args.processInstanceId,
           totalActivities: data.totalActivities,
-          notFound: inst ? "" : t("c7sum.historyTimeline.notFound"),
+          notFound: data.processInstance ? "" : t("c7sum.historyTimeline.notFound"),
         }),
       })
     }),

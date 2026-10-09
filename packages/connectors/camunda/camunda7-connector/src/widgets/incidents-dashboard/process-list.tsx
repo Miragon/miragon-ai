@@ -11,6 +11,7 @@ import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { GroupSummaryRow, IncidentGroupIcon } from "../group-summary-row.js"
 import { useViewData } from "../use-view-data.js"
 import { useT } from "../../messages/use-t.js"
+import { formatCount } from "../lib/format-count.js"
 
 import {
   AskAiButton,
@@ -20,7 +21,6 @@ import {
   OpenInCockpitLink,
   SectionHeading,
   TableEmptyState,
-  VersionChip,
   ViewDataState,
   WidgetShell,
   formatTimestamp,
@@ -46,6 +46,8 @@ function incidentVolumeTone(unfilteredIncidentCount: number): ToneVariant {
 
 interface DisplayProcess extends IncidentsDashboardProcess {
   tone: ToneVariant
+  /** The card's count pill: every open incident, or (Last 24h chip) the new ones — null = unknown. */
+  shownCount: number | null
 }
 
 function ProcessSummary({
@@ -67,49 +69,37 @@ function ProcessSummary({
     <GroupSummaryRow
       tone={tone}
       title={process.processDefinitionName ?? process.processDefinitionKey}
-      titleSuffix={
-        process.version !== null ? <VersionChip version={process.version} className="ml-0" /> : null
-      }
       subline={
         <>
-          {process.affectedActivityCount}{" "}
+          {formatCount(process.affectedActivityCount)}{" "}
           {process.affectedActivityCount === 1
             ? t("incidentsList.activitySingular")
             : t("incidentsList.activityPlural")}{" "}
           ·{" "}
-          {process.runningInstances !== null
-            ? t("incidentsList.instancesCount", {
-                count: process.runningInstances.toLocaleString(),
-              })
-            : t("incidentsList.instancesUnknown")}{" "}
+          {t("incidentsList.instancesCount", {
+            count: process.runningInstances.toLocaleString(),
+          })}{" "}
           · {t("incidentsList.lastSeen", { time: formatTimestamp(process.latestIncident) })}
         </>
       }
       stats={[
         {
-          value: (
-            <>
-              {process.affectedActivityCount}
-              {process.totalActivityCount !== null && (
-                <span className="text-muted-foreground font-normal">
-                  {" "}
-                  /{process.totalActivityCount}
-                </span>
-              )}
-            </>
-          ),
+          value: formatCount(process.affectedActivityCount),
           label: t("incidentsList.activitiesLabel"),
         },
-        { value: `+${process.last24hCount}`, label: t("incidentsList.last24hLabel") },
+        {
+          value: process.last24hCount === null ? formatCount(null) : `+${process.last24hCount}`,
+          label: t("incidentsList.last24hLabel"),
+        },
       ]}
-      count={process.incidentCount}
+      count={formatCount(process.shownCount)}
       countTone={tone}
       actions={
         <>
           <AskAiButton
             variant="subtle"
             label={t("incidentsList.analyze")}
-            prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, version v${process.version ?? "n/a"}) on engine ${engineId}. ${process.affectedActivityCount} activity/activities are affected, ${process.last24hCount} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances ?? "unknown"} running instances. Use camunda7_list_incidents({ processDefinitionKey: "${process.processDefinitionKey}" }) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
+            prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, all versions; latest version v${process.latestVersion}) on engine ${engineId}. ${process.affectedActivityCount ?? "An unknown number of"} activity/activities are affected, ${process.last24hCount ?? "an unknown number"} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances} running instances. Use camunda7_list_incidents({ processDefinitionKey: "${process.processDefinitionKey}" }) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
           />
           <DrillButton
             onDrill={onOpenDetail}
@@ -135,20 +125,81 @@ function ActivityRow({ activity }: { activity: IncidentsDashboardActivity }) {
       title={activity.activityName ?? activity.activityId}
       subline={activity.representativeMessage ?? activity.activityId}
       stats={[{ value: formatTimestamp(activity.firstSeen), label: t("incidentsList.firstSeen") }]}
-      count={activity.incidentCount}
+      count={activity.scannedIncidentCount}
       className="border-border border-b pl-7 last:border-b-0"
     />
   )
 }
 
-function ActivityList({ activities }: { activities: IncidentsDashboardActivity[] }) {
+/**
+ * The card's activity breakdown. It comes from the newest-first recency scan,
+ * so when the scan holds only part of the process's incidents the list says
+ * so — the exact per-activity counts live in the definition view.
+ */
+function ActivityList({ process }: { process: DisplayProcess }) {
+  const t = useT()
   return (
     <div className="bg-muted">
-      {activities.map((a) => (
+      {process.scannedIncidentCount < process.incidentCount && (
+        <p className="text-muted-foreground border-border border-b px-4 py-2 pl-7 text-xs">
+          {t("incidentsList.breakdownPartial", {
+            scanned: process.scannedIncidentCount,
+            total: process.incidentCount,
+          })}
+        </p>
+      )}
+      {process.activities.map((a) => (
         <ActivityRow key={a.activityId} activity={a} />
       ))}
     </div>
   )
+}
+
+/** A recency count the scan cannot vouch for (null) may still be non-zero — never filtered out. */
+const mayHaveLast24h = (count: number | null) => count === null || count > 0
+
+function matchesSearch(activity: IncidentsDashboardActivity, q: string): boolean {
+  return (
+    (activity.activityName ?? "").toLowerCase().includes(q) ||
+    activity.activityId.toLowerCase().includes(q) ||
+    (activity.representativeMessage ?? "").toLowerCase().includes(q)
+  )
+}
+
+/**
+ * The cards the chips + search leave. Filters narrow the LIST — the cards and
+ * their activity rows — never the numbers: a card keeps its exact key-wide
+ * counts (the Last 24h chip shows the key's exact 24h count instead), because
+ * a sum over the scanned breakdown would understate any partially scanned
+ * process.
+ */
+function filterProcesses(
+  processes: IncidentsDashboardProcess[],
+  search: string,
+  showLast24h: boolean,
+): DisplayProcess[] {
+  const q = search.trim().toLowerCase()
+  return processes
+    .map<DisplayProcess | null>((p) => {
+      if (showLast24h && !mayHaveLast24h(p.last24hCount)) return null
+      let activities = showLast24h
+        ? p.activities.filter((a) => mayHaveLast24h(a.last24hCount))
+        : p.activities
+      const processMatches =
+        (p.processDefinitionName ?? "").toLowerCase().includes(q) ||
+        p.processDefinitionKey.toLowerCase().includes(q)
+      if (q.length > 0 && !processMatches) {
+        activities = activities.filter((a) => matchesSearch(a, q))
+        if (activities.length === 0) return null
+      }
+      return {
+        ...p,
+        activities,
+        shownCount: showLast24h ? p.last24hCount : p.incidentCount,
+        tone: incidentVolumeTone(p.incidentCount),
+      }
+    })
+    .filter((p): p is DisplayProcess => p !== null)
 }
 
 /**
@@ -180,46 +231,10 @@ export function IncidentProcessListView({
   const [activeChip, setActiveChip] = useState<IncidentChip>(TYPE_ALL)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  const filteredProcesses = useMemo<DisplayProcess[]>(() => {
-    if (!data) return []
-    const q = search.trim().toLowerCase()
-    const isFiltering = q.length > 0 || activeChip !== TYPE_ALL
-    const showLast24h = activeChip === TYPE_LAST24H
-
-    return data.processes
-      .map<DisplayProcess | null>((p) => {
-        let activities = showLast24h ? p.activities.filter((a) => a.last24hCount > 0) : p.activities
-
-        const processMatchesSearch =
-          q.length === 0 ||
-          (p.processDefinitionName ?? "").toLowerCase().includes(q) ||
-          p.processDefinitionKey.toLowerCase().includes(q)
-
-        if (q.length > 0 && !processMatchesSearch) {
-          activities = activities.filter(
-            (a) =>
-              (a.activityName ?? "").toLowerCase().includes(q) ||
-              a.activityId.toLowerCase().includes(q) ||
-              (a.representativeMessage ?? "").toLowerCase().includes(q),
-          )
-        }
-
-        if (isFiltering && activities.length === 0) return null
-
-        const incidentCount = activities.reduce(
-          (sum, a) => sum + (showLast24h ? a.last24hCount : a.incidentCount),
-          0,
-        )
-        return {
-          ...p,
-          activities,
-          incidentCount,
-          affectedActivityCount: activities.length,
-          tone: incidentVolumeTone(p.incidentCount),
-        }
-      })
-      .filter((p): p is DisplayProcess => p !== null)
-  }, [data, search, activeChip])
+  const filteredProcesses = useMemo<DisplayProcess[]>(
+    () => (data ? filterProcesses(data.processes, search, activeChip === TYPE_LAST24H) : []),
+    [data, search, activeChip],
+  )
 
   if (!data) {
     return (
@@ -297,7 +312,7 @@ export function IncidentProcessListView({
                 />
               }
             >
-              <ActivityList activities={p.activities} />
+              <ActivityList process={p} />
             </GroupCard>
           ))
         )}

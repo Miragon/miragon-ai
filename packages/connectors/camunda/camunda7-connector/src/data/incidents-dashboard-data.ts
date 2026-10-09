@@ -1,0 +1,118 @@
+import { latestEngineDate, toEngineDate, type Client } from "@miragon-ai/camunda7-client"
+import { getIncidentsCount } from "@miragon-ai/camunda7-client/sdk"
+import type {
+  IncidentsDashboardActivity,
+  IncidentsDashboardData,
+  IncidentsDashboardProcess,
+} from "../view-models.js"
+import type { EngineProvider } from "../engine-provider.js"
+import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
+import { fetchStatsByKey, type KeyStats } from "./definition-info.js"
+import { countOf, DAY_MS } from "./engine-reads.js"
+import {
+  groupBy,
+  scanFacts,
+  scanIncidents,
+  type IncidentRow,
+  type IncidentScan,
+} from "./incident-scan.js"
+
+export interface IncidentsDashboardOptions {
+  baseUrl: string
+  cockpitUrl?: string
+  provider: EngineProvider
+  processDefinitionKey?: string
+  incidentType?: string
+}
+
+/**
+ * The open-incidents overview across process definitions. Every count is
+ * exact and KEY-wide (all versions): the totals from `/incident/count`, the
+ * process axis and each process's incident + running-instance counts from the
+ * definition statistics. The newest-first recency scan only adds the
+ * per-activity breakdown and timestamps — and says how much of each process
+ * it covers (`scannedIncidentCount`), so a process whose incidents all lie
+ * beyond the scan still appears with its exact count (#335 N61).
+ */
+export async function buildIncidentsDashboardData(
+  client: Client,
+  options: IncidentsDashboardOptions,
+): Promise<IncidentsDashboardData> {
+  const cutoffMs = Date.now() - DAY_MS
+  const filter = {
+    processDefinitionKeyIn: options.processDefinitionKey,
+    incidentType: options.incidentType,
+  }
+  const [scan, totalCount, last24hCount, statsByKey] = await Promise.all([
+    scanIncidents(client, filter),
+    getIncidentsCount({ client, query: filter }).then(countOf),
+    getIncidentsCount({
+      client,
+      query: { ...filter, incidentTimestampAfter: toEngineDate(new Date(cutoffMs)) },
+    }).then(countOf),
+    fetchStatsByKey(client, { incidentsForType: options.incidentType }),
+  ])
+
+  const scannedByKey = groupBy(scan.rows, (r) => r.processDefinitionKey)
+  const processes = [...statsByKey.entries()]
+    .filter(([key, stats]) => stats.incidentCount > 0 && matchesKey(key, options))
+    .sort((a, b) => b[1].incidentCount - a[1].incidentCount)
+    .map(([key, stats]) =>
+      toProcess(key, stats, scannedByKey.get(key) ?? [], { scan, cutoffMs, options }),
+    )
+
+  return {
+    totalCount,
+    processCount: processes.length,
+    affectedActivityCount: processes.every((p) => p.affectedActivityCount !== null)
+      ? processes.reduce((sum, p) => sum + (p.affectedActivityCount ?? 0), 0)
+      : null,
+    last24hCount,
+    latestIncident: latestEngineDate(scan.rows.map((r) => r.incidentTimestamp)),
+    processes,
+  }
+}
+
+function matchesKey(key: string, options: IncidentsDashboardOptions): boolean {
+  return options.processDefinitionKey === undefined || key === options.processDefinitionKey
+}
+
+function toProcess(
+  key: string,
+  stats: KeyStats,
+  scanned: IncidentRow[],
+  ctx: { scan: IncidentScan; cutoffMs: number; options: IncidentsDashboardOptions },
+): IncidentsDashboardProcess {
+  // The breakdown is complete only when the scan holds every incident of the key.
+  const fullyScanned = ctx.scan.complete || scanned.length >= stats.incidentCount
+  const facts = scanFacts(scanned, { fullyScanned, scan: ctx.scan, cutoffMs: ctx.cutoffMs })
+  const activities: IncidentsDashboardActivity[] = [
+    ...groupBy(scanned, (r) => r.activityId).entries(),
+  ]
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([activityId, rows]) => ({
+      activityId,
+      // No BPMN on the overview — the definition view resolves display names.
+      activityName: null,
+      scannedIncidentCount: rows.length,
+      ...scanFacts(rows, { fullyScanned, scan: ctx.scan, cutoffMs: ctx.cutoffMs }),
+    }))
+
+  return {
+    processDefinitionKey: key,
+    processDefinitionName: stats.latest.name,
+    latestVersion: stats.latest.version,
+    runningInstances: stats.instances,
+    incidentCount: stats.incidentCount,
+    scannedIncidentCount: scanned.length,
+    affectedActivityCount: fullyScanned ? activities.length : null,
+    last24hCount: facts.last24hCount,
+    latestIncident: facts.latestIncident,
+    cockpitUrl: buildProcessCockpitUrl(
+      ctx.options,
+      { key, version: stats.latest.version, definitionId: stats.latest.id || null },
+      { tab: "incidents" },
+    ),
+    activities,
+  }
+}

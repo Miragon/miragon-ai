@@ -3,7 +3,6 @@ import {
   DrillButton,
   OpenInCockpitLink,
   StatusBadge,
-  VersionChip,
   ViewDataState,
   WidgetHeader,
   WidgetShell,
@@ -32,7 +31,7 @@ function buildAnalyzePrompt(data: ProcessIncidentsData, title: string, engineId:
     data.totalActivityCount != null
       ? `${data.activities.length} of ${data.totalActivityCount}`
       : `${data.activities.length}`
-  return `Triage the health of process definition \`${title}\` (key \`${data.processDefinitionKey}\`${data.version != null ? `, version ${data.version}` : ""}, engine \`${engineId}\`). Current state: ${data.incidentCount} open incident(s), ${data.failedJobs ?? "unknown"} failed job(s), ${affectedActivities} activities affected, ${data.runningInstances ?? "unknown"} running instances. Problem activities: ${problemActivityList}. Use camunda7_list_incidents({ processDefinitionKey: "${data.processDefinitionKey}" }) and camunda7_list_jobs({ processDefinitionKey: "${data.processDefinitionKey}", noRetriesLeft: true }) to pull the real incident/exception messages, cluster them by root cause, and use camunda7_query_historic_activity_instances to see whether the same failures recur. Tell me: the single most likely root cause per cluster, which activities are symptoms vs. sources, and a concrete recommended fix (batch retry, variable change, modification, or migration). Do NOT mutate anything — diagnosis only.`
+  return `Triage the health of process definition \`${title}\` (key \`${data.processDefinitionKey}\`, all versions; diagram version ${data.diagramVersion}, engine \`${engineId}\`). Current state: ${data.incidentCount} open incident(s), ${data.failedJobs ?? "unknown"} failed job(s), ${affectedActivities} activities affected, ${data.runningInstances ?? "unknown"} running instances. Problem activities: ${problemActivityList}. Use camunda7_list_incidents({ processDefinitionKey: "${data.processDefinitionKey}" }) and camunda7_list_jobs({ processDefinitionKey: "${data.processDefinitionKey}", noRetriesLeft: true }) to pull the real incident/exception messages, cluster them by root cause, and use camunda7_query_historic_activity_instances to see whether the same failures recur. Tell me: the single most likely root cause per cluster, which activities are symptoms vs. sources, and a concrete recommended fix (batch retry, variable change, modification, or migration). Do NOT mutate anything — diagnosis only.`
 }
 
 /** Tone icon + open-incident badge column of the header. */
@@ -64,23 +63,24 @@ function HeaderBadge({ data }: { data: ProcessIncidentsData }) {
   )
 }
 
-/** Sub line: definition key, running-instance count, last event, cockpit link. */
+/**
+ * Sub line: definition key + its scope (every version — the view is key-wide),
+ * running-instance count, last event, cockpit link.
+ */
 function HeaderSub({ data }: { data: ProcessIncidentsData }) {
   const t = useT()
   const cockpitUrl = data.cockpitUrl
   return (
     <>
       <span className="font-mono text-xs">{data.processDefinitionKey}</span>
-      {data.runningInstances !== null && (
-        <>
-          <span className="text-muted-foreground">·</span>
-          <span>
-            {t("procIncHeader.runningInstances", {
-              count: data.runningInstances.toLocaleString(),
-            })}
-          </span>
-        </>
-      )}
+      <span className="text-muted-foreground">·</span>
+      <span>{t("procIncHeader.allVersions")}</span>
+      <span className="text-muted-foreground">·</span>
+      <span>
+        {t("procIncHeader.runningInstances", {
+          count: data.runningInstances.toLocaleString(),
+        })}
+      </span>
       {data.latestIncident && (
         <>
           <span className="text-muted-foreground">·</span>
@@ -146,7 +146,6 @@ export function ProcessDetailHeader({
         size="detail"
         badge={<HeaderBadge data={data} />}
         title={title}
-        titleSuffix={data.version !== null ? <VersionChip version={data.version} /> : undefined}
         sub={<HeaderSub data={data} />}
         actions={<AskAiButton prompt={analyzePrompt} variant="primary" />}
       />

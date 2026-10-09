@@ -9,7 +9,8 @@ import {
   withToolErrors,
   strictToolInput,
 } from "@miragon-ai/widget-shell/server"
-import { buildInstanceDetailData, buildJobPanelData } from "../data/cockpit-data.js"
+import { buildJobPanelData } from "../data/cockpit-data.js"
+import { buildInstanceDetailData } from "../data/instance-detail-data.js"
 import { buildBpmnViewerData } from "../data/bpmn-viewer-data.js"
 import {
   CAMUNDA7_SHOW_BPMN_VIEWER,
@@ -69,8 +70,8 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
             : "",
           state,
           activeActivities: data.activeActivityIds.length,
-          openIncidents: data.incidents?.length ?? 0,
-          openTasks: data.openTasks.length,
+          openIncidents: data.incidentCount,
+          openTasks: data.openTaskCount,
         }),
       })
     }),
@@ -136,7 +137,9 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       }
 
       // Model summary only — the (often tens-of-KB) bpmnXml must never reach
-      // the text channel; the widget renders it from structuredContent.
+      // the text channel; the widget renders it from structuredContent. An
+      // instance target reports only that instance's facts (statsScope
+      // "instance": its own failed jobs, never the definition's).
       const totalFailedJobs = data.activityStats.reduce((sum, s) => sum + s.failedJobs, 0)
       const target = data.processInstanceId
         ? t("c7sum.bpmnViewer.targetInstance", { processInstanceId: data.processInstanceId })

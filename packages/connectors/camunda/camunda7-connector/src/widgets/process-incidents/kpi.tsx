@@ -48,8 +48,8 @@ export function ProcessDefinitionKpi({
   const cells: KpiCell[] = [
     {
       label: t("procIncKpi.running"),
-      value: data.runningInstances !== null ? data.runningInstances.toLocaleString() : "—",
-      tone: data.runningInstances !== null && data.runningInstances > 0 ? "success" : undefined,
+      value: data.runningInstances.toLocaleString(),
+      tone: data.runningInstances > 0 ? "success" : undefined,
       onClick: () =>
         go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey }),
       ariaLabel: t("procIncKpi.runningAria", { name: title }),
@@ -66,8 +66,8 @@ export function ProcessDefinitionKpi({
     },
     {
       label: t("procIncKpi.failedJobs"),
-      value: data.failedJobs !== null ? data.failedJobs : "—",
-      tone: data.failedJobs !== null && data.failedJobs > 0 ? "warning" : undefined,
+      value: data.failedJobs,
+      tone: data.failedJobs > 0 ? "warning" : undefined,
     },
     { label: t("procIncKpi.activitiesAffected"), value: totalActivityFraction },
   ]

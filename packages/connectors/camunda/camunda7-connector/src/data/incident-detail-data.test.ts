@@ -35,9 +35,22 @@ const incident = (over: Record<string, unknown>) => ({
   ...over,
 })
 
+/** The incident's instance — primary: the tabs present its state as fact. */
+const INSTANCE: FakeRoutes = {
+  "GET /process-instance/pi-1": { body: { id: "pi-1", definitionId: "def-1", suspended: false } },
+  "GET /process-instance/pi-1/activity-instances": {
+    body: { id: "pi-1", activityId: "def", childActivityInstances: [] },
+  },
+  "GET /process-instance/pi-1/variables": { body: {} },
+}
+
 async function build(routes: FakeRoutes) {
-  // Optional lookups the routes leave out answer 404 and degrade.
-  const engine = await startFakeEngine(routes, { status: 404, body: { message: "not here" } })
+  // Enrichment lookups the routes leave out (diagram, definition name,
+  // history total, stacktrace) answer 404 and degrade.
+  const engine = await startFakeEngine(
+    { ...INSTANCE, ...routes },
+    { status: 404, body: { message: "not here" } },
+  )
   engines.push(engine)
   const { client } = await resolveEngine(undefined, registryFor(engine))
   const data = await buildIncidentDetailData(client, {

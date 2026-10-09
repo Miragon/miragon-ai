@@ -1,128 +1,159 @@
 import type { Client } from "@miragon-ai/camunda7-client"
 import {
-  getProcessDefinitions,
+  getProcessDefinitionByKey,
   getProcessDefinitionStatistics,
 } from "@miragon-ai/camunda7-client/sdk"
+import { rowsOf } from "./engine-reads.js"
+
+/**
+ * Definition lookups shared by every builder (CLAUDE.md invariant 7): the
+ * id parsers, the single-key lookup and the per-KEY fold of the engine's
+ * per-VERSION definition statistics. A process definition key spans every
+ * deployed version, and old versions keep running after a redeploy — so a
+ * view that is about a key sums over all of them, and only a diagram is ever
+ * one version.
+ */
 
 export interface DefinitionInfo {
   id: string
   key: string
   name: string | null
-  version: number | null
+  version: number
+}
+
+/**
+ * Camunda 7 / CIB Seven definition ids are `<key>:<version>:<deploymentId>`.
+ * `/incident` and `/process-instance` rows carry the id but not the key, so
+ * the key is parsed from it — the whole id when it has no `:`.
+ */
+export function processDefinitionKeyFromId(id: string): string {
+  const idx = id.indexOf(":")
+  return idx > 0 ? id.slice(0, idx) : id
+}
+
+/** The version segment of a definition id; null when it is no number. */
+export function definitionVersionFromId(id: string | null | undefined): number | null {
+  const segment = id?.split(":")[1]
+  return segment && /^\d+$/.test(segment) ? Number(segment) : null
+}
+
+interface RawDefinition {
+  id?: string | null
+  key?: string | null
+  name?: string | null
+  version?: number | null
+}
+
+function toDefinitionInfo(raw: RawDefinition, key: string): DefinitionInfo {
+  return {
+    id: raw.id ?? "",
+    key: raw.key ?? key,
+    name: raw.name ?? null,
+    version: typeof raw.version === "number" ? raw.version : (definitionVersionFromId(raw.id) ?? 0),
+  }
+}
+
+/**
+ * The latest deployed version of `key` — `GET /process-definition/key/{key}`,
+ * one indexed lookup. An unknown key is the engine's 404, and it propagates:
+ * a mistyped key is a not-found error, never a view of zeros.
+ */
+export async function fetchLatestDefinition(client: Client, key: string): Promise<DefinitionInfo> {
+  const raw = (await getProcessDefinitionByKey({ client, path: { key } })) as RawDefinition
+  return toDefinitionInfo(raw ?? {}, key)
+}
+
+interface IncidentStatRow {
+  incidentType?: string | null
+  incidentCount?: number | null
 }
 
 interface DefinitionStatsRow {
   id?: string | null
   instances?: number | null
-  definition?: {
-    id?: string | null
-    key?: string | null
-    name?: string | null
-    version?: number | null
-  } | null
+  failedJobs?: number | null
+  incidents?: IncidentStatRow[] | null
+  definition?: RawDefinition | null
+}
+
+/** One key's definition statistics, summed over EVERY deployed version. */
+export interface KeyStats {
+  /** The key's highest deployed version (name, version, id for links). */
+  latest: DefinitionInfo
+  instances: number
+  failedJobs: number
+  /** Open incidents per incident type. */
+  incidentsByType: Map<string, number>
+  incidentCount: number
+  /** Ids of the versions that carry open incidents — where activity statistics are read. */
+  incidentVersionIds: string[]
+}
+
+function incidentSum(row: DefinitionStatsRow): number {
+  return (row.incidents ?? []).reduce((sum, i) => sum + (i.incidentCount ?? 0), 0)
+}
+
+function addVersion(stats: KeyStats, row: DefinitionStatsRow, version: DefinitionInfo): void {
+  stats.instances += row.instances ?? 0
+  stats.failedJobs += row.failedJobs ?? 0
+  for (const incident of row.incidents ?? []) {
+    const type = incident.incidentType ?? "unknown"
+    stats.incidentsByType.set(
+      type,
+      (stats.incidentsByType.get(type) ?? 0) + (incident.incidentCount ?? 0),
+    )
+  }
+  const incidents = incidentSum(row)
+  stats.incidentCount += incidents
+  if (incidents > 0 && version.id) stats.incidentVersionIds.push(version.id)
+  if (version.version > stats.latest.version) stats.latest = version
 }
 
 /**
- * Name / latest version / running-instance count per definition key, resolved
- * from the cluster-wide definition statistics in a single round-trip, with a
- * `/process-definition` fallback for keys that carry no running instances (or
- * when stats are unavailable). Shared by the incident panels and the process
- * detail builder so the stats-with-fallback trick lives exactly once.
+ * Folds `/process-definition/statistics` (one row per deployed VERSION) into
+ * one entry per KEY: instances, failed jobs and incidents summed over all
+ * versions, the latest version kept for display. Rows without a key cannot be
+ * attributed and are skipped.
  */
-export async function fetchDefinitionInfo(
-  client: Client,
-  keys: string[],
-): Promise<Map<string, { info: DefinitionInfo; instances: number | null }>> {
-  if (keys.length === 0) return new Map()
-
-  const stats = (await getProcessDefinitionStatistics({
-    client,
-    query: {},
-  }).catch(() => [])) as unknown as DefinitionStatsRow[]
-
-  const byKey = collectStatsRows(stats, new Set(keys))
-
-  // Fallback for keys not in stats (e.g. all instances ended) — fetch via /process-definition.
-  const missing = keys.filter((k) => !byKey.has(k))
-  if (missing.length > 0) {
-    await fetchFallbackDefinitions(client, missing, byKey)
-  }
-
-  return byKey
-}
-
-interface DefinitionEntry {
-  info: DefinitionInfo
-  instances: number | null
-}
-
-/** Folds the cluster-wide statistics rows into a per-key map of wanted definitions. */
-function collectStatsRows(
-  stats: DefinitionStatsRow[],
-  wantedKeys: Set<string>,
-): Map<string, DefinitionEntry> {
-  const byKey = new Map<string, DefinitionEntry>()
-  for (const row of Array.isArray(stats) ? stats : []) {
-    const def = row.definition
-    if (!def?.key || !wantedKeys.has(def.key)) continue
-    const existing = byKey.get(def.key)
-    const candidate: DefinitionInfo = {
-      id: def.id ?? "",
-      key: def.key,
-      name: def.name ?? null,
-      version: typeof def.version === "number" ? def.version : null,
+export function foldStatsByKey(rows: unknown): Map<string, KeyStats> {
+  const byKey = new Map<string, KeyStats>()
+  for (const row of rowsOf<DefinitionStatsRow>(rows)) {
+    const key = row.definition?.key
+    if (!key) continue
+    const version = toDefinitionInfo({ ...row.definition, id: row.definition?.id ?? row.id }, key)
+    const stats = byKey.get(key) ?? {
+      latest: version,
+      instances: 0,
+      failedJobs: 0,
+      incidentsByType: new Map<string, number>(),
+      incidentCount: 0,
+      incidentVersionIds: [],
     }
-    // Prefer the latest version for the same key.
-    if (
-      !existing ||
-      (candidate.version !== null &&
-        (existing.info.version === null || candidate.version > existing.info.version))
-    ) {
-      byKey.set(def.key, { info: candidate, instances: row.instances ?? null })
-    }
+    addVersion(stats, row, version)
+    byKey.set(key, stats)
   }
   return byKey
 }
 
-/** Resolves the missing keys via `/process-definition` and records them into `byKey`. */
-async function fetchFallbackDefinitions(
+/**
+ * The engine's definition statistics folded per key — ONE engine-wide call
+ * (the endpoint has no key filter), so callers read it only when a view
+ * genuinely spans keys or needs the versions behind a key.
+ */
+export async function fetchStatsByKey(
   client: Client,
-  missing: string[],
-  byKey: Map<string, DefinitionEntry>,
-): Promise<void> {
-  const defs = (await getProcessDefinitions({
+  query: { failedJobs?: boolean; incidentsForType?: string },
+): Promise<Map<string, KeyStats>> {
+  // `incidentsForType` narrows the incident counts to one type; without it
+  // every type is counted (`incidents: true`). The engine takes one or the other.
+  const stats = await getProcessDefinitionStatistics({
     client,
     query: {
-      keysIn: missing.join(","),
-      latestVersion: true,
+      failedJobs: query.failedJobs,
+      ...(query.incidentsForType
+        ? { incidentsForType: query.incidentsForType }
+        : { incidents: true }),
     },
-  }).catch(() => [])) as unknown as Array<{
-    id?: string
-    key?: string
-    name?: string | null
-    version?: number
-  }>
-  for (const d of Array.isArray(defs) ? defs : []) {
-    if (!d.key) continue
-    byKey.set(d.key, {
-      info: {
-        id: d.id ?? "",
-        key: d.key,
-        name: d.name ?? null,
-        version: typeof d.version === "number" ? d.version : null,
-      },
-      instances: 0,
-    })
-  }
-}
-
-/** Single-key convenience over {@link fetchDefinitionInfo}. */
-export async function fetchSingleDefinitionInfo(
-  client: Client,
-  key: string,
-): Promise<{ info: DefinitionInfo | null; runningInstances: number | null }> {
-  const hit = (await fetchDefinitionInfo(client, [key])).get(key)
-  return hit
-    ? { info: hit.info, runningInstances: hit.instances }
-    : { info: null, runningInstances: null }
+  })
+  return foldStatsByKey(stats)
 }

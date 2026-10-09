@@ -4,7 +4,10 @@ import { describe, expect, it } from "vitest"
 // hundreds of wrappers into this package's coverage measurement.
 import {
   ENGINE_DATE_INPUT_FORMS,
+  earliestEngineDate,
+  engineDateMillis,
   isEngineDateInput,
+  latestEngineDate,
   toEngineDate,
   toOptionalEngineDate,
 } from "./dates.js"
@@ -91,5 +94,54 @@ describe("toOptionalEngineDate", () => {
   it("leaves an absent filter absent and converts a present one", () => {
     expect(toOptionalEngineDate(undefined)).toBeUndefined()
     expect(toOptionalEngineDate("2026-10-01")).toBe("2026-10-01T00:00:00.000+0000")
+  })
+})
+
+describe("engineDateMillis — engine timestamps order by instant (#335 N71)", () => {
+  it.each([
+    ["2026-10-25T02:30:00.000+0200", Date.UTC(2026, 9, 25, 0, 30)],
+    ["2026-10-25T02:10:00.000+0100", Date.UTC(2026, 9, 25, 1, 10)],
+    ["2026-10-01T08:30:00.250-0530", Date.UTC(2026, 9, 1, 14, 0, 0, 250)],
+    ["2026-10-01T08:30:00.000+0000", Date.UTC(2026, 9, 1, 8, 30)],
+    ["2026-10-01T08:30:00Z", Date.UTC(2026, 9, 1, 8, 30)],
+    ["2026-10-01T08:30:00+02:00", Date.UTC(2026, 9, 1, 6, 30)],
+    ["2026-10-01", Date.UTC(2026, 9, 1)],
+  ])("%s → its instant", (value, millis) => {
+    expect(engineDateMillis(value)).toBe(millis)
+  })
+
+  it.each([null, undefined, "", "yesterday", "2026-02-30T00:00:00.000+0000", "2026-10-01T08:30"])(
+    "%j → null, never a guessed instant",
+    (value) => {
+      expect(engineDateMillis(value)).toBeNull()
+    },
+  )
+})
+
+describe("latestEngineDate / earliestEngineDate", () => {
+  // The DST fall-back hour: textually "02:30+0200" > "02:10+0100", but the
+  // +0100 stamp is 40 minutes LATER.
+  const beforeFallBack = "2026-10-25T02:30:00.000+0200"
+  const afterFallBack = "2026-10-25T02:10:00.000+0100"
+
+  it("picks by instant, not by string, and returns the value as given", () => {
+    expect(latestEngineDate([beforeFallBack, afterFallBack])).toBe(afterFallBack)
+    expect(latestEngineDate([afterFallBack, beforeFallBack])).toBe(afterFallBack)
+    expect(earliestEngineDate([afterFallBack, beforeFallBack])).toBe(beforeFallBack)
+    expect(earliestEngineDate([beforeFallBack, afterFallBack])).toBe(beforeFallBack)
+  })
+
+  it("keeps the first of equal instants", () => {
+    const zulu = "2026-10-01T08:30:00.000Z"
+    const engine = "2026-10-01T10:30:00.000+0200"
+    expect(latestEngineDate([zulu, engine])).toBe(zulu)
+    expect(earliestEngineDate([engine, zulu])).toBe(engine)
+  })
+
+  it("skips unparseable values and answers null when nothing parses", () => {
+    expect(latestEngineDate([null, "nope", beforeFallBack, undefined])).toBe(beforeFallBack)
+    expect(earliestEngineDate(["nope", afterFallBack])).toBe(afterFallBack)
+    expect(latestEngineDate([])).toBeNull()
+    expect(earliestEngineDate([null, ""])).toBeNull()
   })
 })

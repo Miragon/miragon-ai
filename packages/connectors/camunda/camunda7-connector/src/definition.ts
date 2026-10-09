@@ -32,13 +32,13 @@ const bpmnViewerPropsSchema = z.toJSONSchema(
       .string()
       .optional()
       .describe(
-        "Render the diagram with live overlays (active activities, incidents, failed-job counts) for a running instance.",
+        "Render the diagram with the running instance's OWN overlays: its active activities, incidents, tokens and failed jobs.",
       ),
     processDefinitionKey: z
       .string()
       .optional()
       .describe(
-        "Render the static diagram of a process definition (no instance overlays). Combine with `version` to pin a specific revision.",
+        "Render the diagram of a process definition version; its badges count every running instance of that version. Combine with `version` to pin a specific revision.",
       ),
     version: z
       .number()
@@ -48,6 +48,10 @@ const bpmnViewerPropsSchema = z.toJSONSchema(
       .describe(
         "Specific definition version. Requires `processDefinitionKey`. Defaults to latest.",
       ),
+    engine: z
+      .string()
+      .optional()
+      .describe("Engine id. Omitted → saved default engine or single default."),
   }),
 )
 
@@ -132,43 +136,67 @@ export const definition: AppDefinition = {
   widgets: [
     {
       id: "camunda7:process-list",
+      description:
+        "Deployed process definitions (latest version of each by default) with search and the exact total.",
+      consumes: ["camunda7:processDefinitionList"],
       requires: [],
       size: "full",
       propsSchema: processListPropsSchema,
     },
     {
       id: "camunda7:instance-detail",
+      description:
+        "One running process instance: state, open user tasks and incidents (exact totals), variables, history, diagram.",
+      consumes: ["camunda7:processInstance"],
       requires: ["camunda7:instance"],
       size: "full",
     },
     {
       id: "camunda7:incident-overview-kpi",
+      description:
+        "Open-incident KPIs across all definitions: exact total, affected processes, last 24h.",
+      consumes: ["camunda7:incidentsDashboard"],
       requires: ["camunda7:incidentsDashboardData"],
       size: "full",
     },
     {
       id: "camunda7:incident-process-list",
+      description:
+        "Open incidents per definition key (all versions, exact counts); each card's activity breakdown covers its newest incidents.",
+      consumes: ["camunda7:incidentsDashboard"],
       requires: ["camunda7:incidentsDashboardData"],
       size: "full",
     },
     {
       id: "camunda7:process-detail-header",
+      description:
+        "Header of the definition view of one key (all versions): running instances, latest incident, AI analysis.",
+      consumes: ["camunda7:processIncidents"],
       requires: ["camunda7:processIncidentsData"],
       size: "full",
     },
     {
       id: "camunda7:process-definition-kpi",
+      description:
+        "KPI strip of one definition key over all its versions: running instances, open incidents, last 24h, failed jobs.",
+      consumes: ["camunda7:processIncidents"],
       requires: ["camunda7:processIncidentsData"],
       size: "full",
     },
     {
       id: "camunda7:process-definition-flow",
+      description:
+        "The key's latest diagram with incident overlays summed over all versions, or the execution heatmap (needs analytics).",
+      consumes: ["camunda7:processIncidents"],
       requires: ["camunda7:processIncidentsData"],
       size: "full",
       propsSchema: processDefinitionFlowPropsSchema,
     },
     {
       id: "camunda7:activity-incident-list",
+      description:
+        "One key's open incidents grouped by activity (exact counts over all versions); each group pages its incidents.",
+      consumes: ["camunda7:processIncidents"],
       requires: ["camunda7:processIncidentsData"],
       size: "full",
       propsSchema: activityIncidentListPropsSchema,
@@ -177,12 +205,17 @@ export const definition: AppDefinition = {
       // Self-fetching: loads camunda7_incident_detail_data for the given
       // incidentId (no pipeline step), like its camunda7_show_incident_detail tool.
       id: "camunda7:incident-detail",
+      description:
+        "One incident: failure and stacktrace, its instance's state and variables, the diagram, and the recovery it allows.",
       requires: [],
       size: "full",
       propsSchema: incidentDetailPropsSchema,
     },
     {
       id: "camunda7:history-timeline",
+      description:
+        "The activity history of one process instance as a timeline (paged, exact total).",
+      consumes: ["camunda7:historyTimeline"],
       requires: ["camunda7:historyProcessInstance", "camunda7:historyActivities"],
       size: "full",
     },
@@ -190,6 +223,8 @@ export const definition: AppDefinition = {
       // Self-fetching: loads camunda7_engine_health_data for the engine (no
       // pipeline step), eager-rendered by camunda7_show_engine_health.
       id: "camunda7:engine-health",
+      description:
+        "The engine verdict from its open incidents (rule stated), exact totals and the top failure clusters.",
       requires: [],
       size: "full",
       propsSchema: engineHealthPropsSchema,
@@ -198,17 +233,25 @@ export const definition: AppDefinition = {
       // Self-fetching: loads camunda7_cluster_detail_data for one failure
       // cluster (no pipeline step), eager-rendered by camunda7_show_cluster_detail.
       id: "camunda7:cluster-detail",
+      description:
+        "One failure cluster (activity, incident type, message): its KPIs and the affected instances.",
       requires: [],
       size: "full",
       propsSchema: clusterDetailPropsSchema,
     },
     {
       id: "camunda7:process-health-kpi",
+      description:
+        "Landscape KPIs over all definition keys: definitions, running instances, failed jobs, open incidents.",
+      consumes: ["camunda7:cockpitDashboard"],
       requires: ["camunda7:cockpitDashboardData"],
       size: "full",
     },
     {
       id: "camunda7:process-definitions-table",
+      description:
+        "One row per definition key: running instances, failed jobs and incidents summed over all versions.",
+      consumes: ["camunda7:cockpitDashboard"],
       requires: ["camunda7:cockpitDashboardData"],
       size: "full",
     },
@@ -216,33 +259,47 @@ export const definition: AppDefinition = {
       // Self-fetching: loads camunda7_process_instances_data for the given
       // processDefinitionKey (no pipeline step).
       id: "camunda7:process-instances",
+      description:
+        "Running process instances (filterable, paged) with exact totals and per-row incident flags.",
       requires: [],
       size: "full",
       propsSchema: processInstancesPropsSchema,
     },
     {
       id: "camunda7:bpmn-viewer",
+      description:
+        "A BPMN diagram: a running instance with its own tokens, incidents and failed jobs, or a definition version.",
+      consumes: ["camunda7:bpmnViewer"],
       requires: [],
       size: "full",
       propsSchema: bpmnViewerPropsSchema,
     },
     {
       id: "camunda7:bpmn-viewer-header",
+      description:
+        "Header of the BPMN viewer: the instance, its active and incident activity counts, AI analysis.",
+      consumes: ["camunda7:bpmnViewer"],
       requires: ["camunda7:bpmnViewerData"],
       size: "full",
     },
     {
       id: "camunda7:bpmn-viewer-legend",
+      description: "Legend of the BPMN viewer's overlays, naming whose counts the badges show.",
+      consumes: ["camunda7:bpmnViewer"],
       requires: ["camunda7:bpmnViewerData"],
       size: "full",
     },
     {
       id: "camunda7:bpmn-flow-viewer",
+      description: "The BPMN viewer's canvas with token, incident and failed-job overlays.",
+      consumes: ["camunda7:bpmnViewer"],
       requires: ["camunda7:bpmnViewerData"],
       size: "full",
     },
     {
       id: "camunda7:job-panel",
+      description: "Jobs (paged) with the exact totals of all and of failed jobs.",
+      consumes: ["camunda7:jobPanel"],
       requires: ["camunda7:jobPanelData"],
       size: "full",
     },
@@ -250,6 +307,8 @@ export const definition: AppDefinition = {
       // Self-fetching: loads camunda7_user_profile_data for the signed-in caller
       // (no pipeline step), eager-rendered by camunda7_show_user_profile.
       id: "camunda7:user-profile",
+      description:
+        "The signed-in user's settings (language, theme, default engine) — opened by camunda7_show_user_profile.",
       requires: [],
       size: "full",
     },
@@ -257,6 +316,8 @@ export const definition: AppDefinition = {
       // Consolidated client-side cockpit app (camunda7_open_cockpit). Bootstraps
       // itself from camunda7_list_engines and the per-view data feeds.
       id: "camunda7:cockpit-app",
+      description:
+        "The whole navigable cockpit — opened by camunda7_open_cockpit, not composed into a view.",
       requires: [],
       size: "full",
     },

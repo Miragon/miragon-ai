@@ -171,7 +171,13 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
 7. **Shared server data paths are single-sourced.** Definition name/version/instance
    lookups come from `packages/connectors/camunda/camunda7-connector/src/data/definition-info.ts`;
    `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step — never
-   fork them. Every engine REST rule the client defaults miss — engine dates
+   fork them. Every camunda7 view has ONE builder in `src/data/` behind its show tool,
+   `*_data` feed and pipeline step (`steps/steps.test.ts` holds them equal), and every
+   builder follows the honest-numbers rule (`data/engine-reads.ts`): **primary rows/counts
+   propagate errors; enrichment degrades to `null` (rendered "—"), never 0**; totals come
+   from `/count` or statistics, never a capped page or scan; a definition view spans every
+   version of its key (`data/honest-numbers.test.ts` — one rejection case per builder).
+   Every engine REST rule the client defaults miss — engine dates
    (`toEngineDate`), paired sorting (`engineSorting`), serialized variable writes
    (`toEngineVariable(s)`), text/plain endpoints, raw variable reads, incident recovery,
    queued batches — lives in the engine contract,

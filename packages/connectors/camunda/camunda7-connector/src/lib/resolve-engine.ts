@@ -95,15 +95,21 @@ export function createEngineRegistry(
  * reaches the model) — naming them here saves the LLM a
  * `camunda7_list_engines` roundtrip before it can pick one. It names
  * `camunda7_select_engine` only when `canSaveDefault`: without a caller
- * identity or under a read-only toolset the save would refuse.
+ * identity or under a read-only toolset the save would refuse. `selector`
+ * names how the caller passes an engine — the tool parameter by default, the
+ * `camunda7:engine` view key for a pipeline step (render-view has no
+ * `engine` parameter).
  */
 export class EngineNotSelectedError extends Error {
   readonly code = "ENGINE_NOT_SELECTED" as const
   readonly availableEngines: EngineEntry[]
-  constructor(availableEngines: EngineEntry[], { canSaveDefault = false } = {}) {
+  constructor(
+    availableEngines: EngineEntry[],
+    { canSaveDefault = false, selector = "Pass `engine`" } = {},
+  ) {
     const ids = availableEngines.map((e) => e.id).join(", ")
     super(
-      `No engine specified and no default engine saved. Pass \`engine\` — one of: ${ids}.` +
+      `No engine specified and no default engine saved. ${selector} — one of: ${ids}.` +
         (canSaveDefault
           ? " To route later calls without it, save a default with camunda7_select_engine."
           : ""),
@@ -217,9 +223,10 @@ export interface Camunda7StepAppConfig {
  * Resolve the engine for a pipeline step. Steps have no per-call `engine`
  * argument, so they honour an optional `camunda7:engine` view key, then fall
  * back to the caller's saved default engine or the only configured engine
- * (same precedence as {@link resolveEngine}).
+ * (same precedence as {@link resolveEngine}). With several engines and no
+ * default, the error names the view key — the step's only engine selector.
  */
-export function resolveStepEngine(
+export async function resolveStepEngine(
   appConfig: Camunda7StepAppConfig,
   override?: string,
 ): Promise<{
@@ -229,5 +236,14 @@ export function resolveStepEngine(
   cockpitUrl?: string
   provider: EngineProvider
 }> {
-  return resolveEngine(override, appConfig.registry)
+  try {
+    return await resolveEngine(override, appConfig.registry)
+  } catch (e) {
+    if (e instanceof EngineNotSelectedError) {
+      throw new EngineNotSelectedError(appConfig.registry.engines, {
+        selector: "Set the `camunda7:engine` view key",
+      })
+    }
+    throw e
+  }
 }

@@ -47,7 +47,11 @@ export function InstanceDetailWidget({
   const isActionable = !instance.ended && !cancelled
 
   const variableEntries = Object.entries(variables)
-  const activeIncidents = (incidents ?? []).filter((i) => !actions.recovery.doneIds.has(i.id))
+  const activeIncidents = incidents.filter((i) => !actions.recovery.doneIds.has(i.id))
+  // The lists are capped; the counts are the engine's exact totals minus what
+  // this view already resolved/completed — never the length of a capped list.
+  const openIncidentCount = data.incidentCount - (incidents.length - activeIncidents.length)
+  const openTaskCount = data.openTaskCount - (data.openTasks.length - visibleTasks.length)
   // When neither the prop nor the fetched id is known the prompts omit the engine
   // clause entirely (the saved default engine applies) — never inline a
   // placeholder as if it were an engine id.
@@ -59,7 +63,7 @@ export function InstanceDetailWidget({
     {
       id: "tasks",
       label: t("instanceDetail.tabTasks"),
-      count: visibleTasks.length,
+      count: openTaskCount,
       // In-progress task-form input must survive a tab switch.
       keepMounted: true,
       content: (
@@ -76,7 +80,7 @@ export function InstanceDetailWidget({
     {
       id: "incidents",
       label: t("instanceDetail.tabIncidents"),
-      count: activeIncidents.length,
+      count: openIncidentCount,
       content: <IncidentsTab incidents={incidents} recovery={actions.recovery} engine={engineId} />,
     },
     {
@@ -133,8 +137,8 @@ export function InstanceDetailWidget({
       kpi={
         <InstanceKpis
           status={status}
-          openTaskCount={visibleTasks.length}
-          openIncidentCount={activeIncidents.length}
+          openTaskCount={openTaskCount}
+          openIncidentCount={openIncidentCount}
           variableCount={variableEntries.length}
         />
       }

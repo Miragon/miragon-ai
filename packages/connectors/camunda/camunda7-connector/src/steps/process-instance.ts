@@ -1,18 +1,21 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import { buildInstanceDetailData } from "../data/cockpit-data.js"
-import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
+import { buildInstanceDetailData } from "../data/instance-detail-data.js"
+import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
+import { ENGINE_KEY, requiredKey, stepEngine } from "./shared.js"
 
 /**
- * Loads the full detail of a single process instance: core instance data,
- * activity instance tree, variables, incidents, BPMN XML, and open user tasks.
- * Thin adapter over {@link buildInstanceDetailData} — the same builder the
- * `camunda7_show_instance_detail` widget tool uses. Widget
- * `camunda7:instance-detail` reads these keys.
+ * One running process instance: state, activity tree, variables, open
+ * incidents and user tasks, BPMN. Adapter over {@link buildInstanceDetailData},
+ * the builder of `camunda7_show_instance_detail` (cockpit links included).
+ * Consumed by `camunda7:instance-detail`.
  */
 export const loadProcessInstanceStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-process-instance",
+  description:
+    "One running process instance: state, activity tree, variables, open incidents and user tasks, BPMN. Powers camunda7:instance-detail.",
   dataType: "camunda7:processInstance",
   requires: ["camunda7:processInstanceId"],
+  optionalKeys: [ENGINE_KEY],
   produces: [
     "camunda7:instance",
     "camunda7:activityTree",
@@ -21,14 +24,13 @@ export const loadProcessInstanceStep: PipelineStepDefinition<Camunda7StepAppConf
     "camunda7:bpmnXml",
   ],
   execute: async (context, appConfig) => {
-    const { client, engineId } = await resolveStepEngine(
-      appConfig,
-      context.keys["camunda7:engine"] as string | undefined,
+    const { client, engineId, baseUrl, cockpitUrl, provider } = await stepEngine(context, appConfig)
+    const data = await buildInstanceDetailData(
+      client,
+      engineId,
+      { processInstanceId: requiredKey(context, "camunda7:processInstanceId") },
+      { baseUrl, cockpitUrl, provider },
     )
-    const processInstanceId = context.keys["camunda7:processInstanceId"] as string
-
-    const data = await buildInstanceDetailData(client, engineId, { processInstanceId })
-
     return {
       data,
       keys: {

@@ -28,7 +28,11 @@ export default mergeConfig(
         // Raised 2026-10-09 with the #328 review guards — task completion,
         // the incident-detail and task-form widget suites (measured
         // statements 66.56 / branches 52.07 / functions 60.53 / lines 67.96).
-        thresholds: { statements: 64, branches: 50, functions: 58, lines: 65 },
+        // Raised 2026-10-10 with the #335 honest-numbers guards — the per-
+        // builder rejection table, the recording-engine builder suites and the
+        // step-twin test (measured statements 76.75 / branches 62.91 /
+        // functions 73.30 / lines 78.03).
+        thresholds: { statements: 74, branches: 60, functions: 71, lines: 76 },
       },
     },
   }),

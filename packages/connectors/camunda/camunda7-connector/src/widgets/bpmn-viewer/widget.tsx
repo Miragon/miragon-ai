@@ -11,6 +11,8 @@ export interface BpmnViewerProps {
   processInstanceId?: string
   processDefinitionKey?: string
   version?: number
+  /** Engine to read from; omitted → the caller's saved default or the single engine. */
+  engine?: string
 }
 
 /** Tool args for the *_data feed — only the props that are actually set. */
@@ -18,17 +20,20 @@ function feedArgs({
   processInstanceId,
   processDefinitionKey,
   version,
+  engine,
 }: BpmnViewerProps): Record<string, unknown> {
   const queryArgs: Record<string, unknown> = {}
   if (processInstanceId) queryArgs.processInstanceId = processInstanceId
   if (processDefinitionKey) queryArgs.processDefinitionKey = processDefinitionKey
   if (version !== undefined) queryArgs.version = version
+  if (engine) queryArgs.engine = engine
   return queryArgs
 }
 
-function feedKey({ processInstanceId, processDefinitionKey, version }: BpmnViewerProps) {
+function feedKey({ processInstanceId, processDefinitionKey, version, engine }: BpmnViewerProps) {
   return [
     "camunda7:bpmn-viewer",
+    engine ?? null,
     processInstanceId ?? null,
     processDefinitionKey ?? null,
     version ?? null,
@@ -66,8 +71,9 @@ export function BpmnViewerWidget({
   processInstanceId,
   processDefinitionKey,
   version,
+  engine,
 }: { data: BpmnViewerData | null } & BpmnViewerProps) {
-  const scope: BpmnViewerProps = { processInstanceId, processDefinitionKey, version }
+  const scope: BpmnViewerProps = { processInstanceId, processDefinitionKey, version, engine }
 
   const canSelfFetch = Boolean(processInstanceId || processDefinitionKey)
 

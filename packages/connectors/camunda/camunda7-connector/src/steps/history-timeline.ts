@@ -1,60 +1,31 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import type { HistoryTimelineData } from "../view-models.js"
-import {
-  getHistoricActivityInstances,
-  getHistoricProcessInstances,
-} from "@miragon-ai/camunda7-client/sdk"
-import { resolveStepEngine, type Camunda7StepAppConfig } from "../lib/resolve-engine.js"
+import { buildHistoryTimelineData } from "../data/history-timeline-data.js"
+import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
+import { ENGINE_KEY, requiredKey, stepEngine } from "./shared.js"
 
 /**
- * Loads the activity execution timeline for a specific process instance.
- * Consumed by `camunda7:history-timeline`.
+ * The activity timeline of one process instance (first page, exact total) —
+ * adapter over {@link buildHistoryTimelineData}, the builder of
+ * `camunda7_show_history_timeline`. Consumed by `camunda7:history-timeline`.
  */
 export const loadHistoryTimelineStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-history-timeline",
+  description:
+    "The activity history of one process instance (first page, exact total; the widget pages the rest). Powers camunda7:history-timeline.",
   dataType: "camunda7:historyTimeline",
   requires: ["camunda7:processInstanceId"],
+  optionalKeys: [ENGINE_KEY],
   produces: ["camunda7:historyProcessInstance", "camunda7:historyActivities"],
   execute: async (context, appConfig) => {
-    const { client } = await resolveStepEngine(
-      appConfig,
-      context.keys["camunda7:engine"] as string | undefined,
-    )
-    const processInstanceId = context.keys["camunda7:processInstanceId"] as string
-
-    const [activities, instances] = await Promise.all([
-      getHistoricActivityInstances({
-        client,
-        query: {
-          processInstanceId,
-          sortBy: "startTime",
-          sortOrder: "asc",
-          maxResults: 500,
-        },
-      }),
-      getHistoricProcessInstances({
-        client,
-        query: { processInstanceId, maxResults: 1 },
-      }),
-    ])
-
-    const actArray = (
-      Array.isArray(activities) ? activities : []
-    ) as HistoryTimelineData["activities"]
-    const instArray = (
-      Array.isArray(instances) ? instances : []
-    ) as HistoryTimelineData["processInstance"][]
-    const processInstance = instArray[0] ?? null
-
+    const { client, engineId } = await stepEngine(context, appConfig)
+    const data = await buildHistoryTimelineData(client, engineId, {
+      processInstanceId: requiredKey(context, "camunda7:processInstanceId"),
+    })
     return {
-      data: {
-        processInstance,
-        activities: actArray,
-        totalActivities: actArray.length,
-      } satisfies HistoryTimelineData,
+      data,
       keys: {
-        "camunda7:historyProcessInstance": processInstance,
-        "camunda7:historyActivities": actArray,
+        "camunda7:historyProcessInstance": data.processInstance,
+        "camunda7:historyActivities": data.activities,
       },
       _app: "camunda7",
       _step: "load-history-timeline",

@@ -251,10 +251,32 @@ exception that uses `server.tool()` directly):
   `@miragon-ai/widget-shell/server`, aliased `rawData` in `widget-tools.ts`) so the
   in-widget `callTool()` gets JSON back instead of the host rendering a new widget.
   Wrap every handler in `withToolErrors` (from `@miragon-ai/widget-shell/server`).
-- Shared data paths: definition name/version/instance lookups come from
-  `src/data/definition-info.ts`; the BPMN viewer payload comes from
-  `src/data/bpmn-viewer-data.ts`, which feeds BOTH the widget tool and the pipeline
-  step (`steps/bpmn-viewer.ts`) — never fork either.
+- Shared data paths: every number a view shows comes from ONE builder in `src/data/`
+  that its show tool, its `*_data` feed AND its pipeline step call — never fork one.
+  Definition lookups (id parsers, the key lookup, the per-KEY fold of the per-version
+  statistics) come from `src/data/definition-info.ts`; the BPMN viewer payload from
+  `src/data/bpmn-viewer-data.ts`.
+- **Honest numbers** (`src/data/engine-reads.ts`): PRIMARY rows and counts — what the
+  view exists to show, and every number its `summary` reports — propagate engine
+  failures (read them through `countOf`/`rowsOf`; `withToolErrors` turns the throw into
+  a tool error), and an unknown id is the engine's 404 — never a view of zeros. Only
+  ENRICHMENT (display names, diagram XML, cockpit links, optional history) degrades, via
+  `optional(...)`, and to `null` — never to a `0`, `[]` or `{}` that reads as a fact.
+  Widgets render that null as "—" (`formatCount`, `src/widgets/lib/format-count.ts`),
+  summaries as "unknown". Totals come from `/count` endpoints or statistics, never from
+  the length of a capped page or scan: a recency scan (`INCIDENT_SCAN_LIMIT`) only
+  enriches and says how far it reaches (`scannedIncidentCount`, null facts). A view about
+  a process definition KEY spans every deployed version (key-scoped `/count`, statistics
+  summed per key); only a diagram is one version, and it is labelled. Engine timestamps
+  compare by instant (`engineDateMillis`/`latestEngineDate`/`earliestEngineDate` from
+  `@miragon-ai/camunda7-client`), never as strings. A new builder adds its case to the
+  rejection table in `src/data/honest-numbers.test.ts` — the table fails without it.
+- Pipeline steps (`src/steps/`) are thin adapters over their show tool's builder
+  (`stepEngine`/`requiredKey`/`stringKey` from `src/steps/shared.ts`), stamp `engineId`,
+  and declare a `description` plus `optionalKeys` (always `ENGINE_KEY`, and every scoping
+  key the step reads) so `get-framework-manifest` shows them. A failure throws — never a
+  success-shaped empty payload. Add the step to the twin table in
+  `src/steps/steps.test.ts`, which holds its output EQUAL to the show tool's.
 - The `show_*`/`*_data` naming is load-bearing:
   `apps/mcp-server-camunda7/test/widget-contract.e2e.test.ts` enforces the widget `_meta` on
   every `*_show_*` tool and app-only visibility on every `*_data` feed **by name**.

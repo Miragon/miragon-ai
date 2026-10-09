@@ -1,148 +1,79 @@
-import {
-  complementaryFlags,
-  engineLike,
-  incidentRecovery,
-  readProcessInstanceVariables,
-  trueOnly,
-  type Client,
-} from "@miragon-ai/camunda7-client"
+import { complementaryFlags, engineLike, trueOnly, type Client } from "@miragon-ai/camunda7-client"
 import type {
   CockpitDashboardData,
-  InstanceDetailData,
+  DefinitionStat,
   JobPanelData,
+  ProcessInstanceRow,
   ProcessInstancesData,
   ProcessListData,
-  TaskData,
 } from "../view-models.js"
 import {
   getProcessDefinitions,
   getProcessDefinitionsCount,
-  getProcessInstance,
   getProcessInstances,
   getProcessInstancesCount,
-  getActivityInstanceTree,
-  getIncidents,
-  getTasks,
-  getProcessDefinitionBpmn20Xml,
-  getProcessDefinitionStatistics,
   getJobs,
   getJobsCount,
 } from "@miragon-ai/camunda7-client/sdk"
-import { buildTaskFormSchema } from "../tools/task-form.js"
-import { collectActiveActivityIds, collectIncidentActivityIds } from "../lib/activity-tree.js"
-import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
-import type { EngineProvider } from "../engine-provider.js"
 import type {
   JobsFilters,
   PagingArgs,
   ProcessInstancesFilters,
   ProcessListFilters,
 } from "../feed-contracts.js"
-import { processDefinitionKeyFromId } from "./incident-panel-data.js"
+import {
+  definitionVersionFromId,
+  fetchLatestDefinition,
+  fetchStatsByKey,
+  processDefinitionKeyFromId,
+} from "./definition-info.js"
+import { countOf, rowsOf } from "./engine-reads.js"
 
 /**
- * Pure data builders shared by the `camunda7_show_*` widget tools AND the
- * data-only `camunda7_cockpit_data` feed. The widget tools wrap the result in a
- * UI view (`_meta.ui.resourceUri`); the cockpit app calls the data feed instead, because a
- * widget-tool result is rendered by the host rather than returned to an
- * in-widget `callTool()` — so the app would hang waiting for data.
+ * Pure data builders shared by the `camunda7_show_*` widget tools, their
+ * app-only `*_data` feeds and the pipeline steps. Every one follows the
+ * honest-numbers rule (`./engine-reads.ts`): primary rows and counts
+ * propagate engine failures, enrichment degrades to null.
  */
 
+/**
+ * The process landscape, one row per KEY (#335 N60): instances, failed jobs
+ * and incidents summed over every deployed version — the scope of the
+ * definition view each row drills into. One engine-wide statistics call; its
+ * failure is the view's failure (no "0 instances" fallback).
+ */
 export async function buildCockpitDashboardData(
   client: Client,
   engineId: string,
 ): Promise<CockpitDashboardData> {
-  let rows: Array<{
-    id?: string | null
-    instances?: number
-    failedJobs?: number
-    incidents?: Array<{ incidentType?: string | null; incidentCount?: number | null }> | null
-    definition?: {
-      id?: string | null
-      key?: string | null
-      name?: string | null
-      version?: number | null
-    }
-  }>
+  const statsByKey = await fetchStatsByKey(client, { failedJobs: true })
 
-  try {
-    const stats = await getProcessDefinitionStatistics({
-      client,
-      query: { failedJobs: true, incidents: true },
-    })
-    rows = Array.isArray(stats) ? stats : []
-  } catch {
-    const [defs, incidents] = await Promise.all([
-      getProcessDefinitions({
-        client,
-        query: { latestVersion: true, maxResults: 100, sortBy: "name", sortOrder: "asc" },
-      }),
-      getIncidents({ client, query: { maxResults: 500 } }).catch(() => []),
-    ])
-    const defArray = Array.isArray(defs) ? defs : []
-    const incArray = Array.isArray(incidents) ? incidents : []
+  const definitions: DefinitionStat[] = [...statsByKey.entries()].map(([key, stats]) => ({
+    id: stats.latest.id,
+    key,
+    name: stats.latest.name,
+    latestVersion: stats.latest.version,
+    instances: stats.instances,
+    failedJobs: stats.failedJobs,
+    incidents: [...stats.incidentsByType.entries()].map(([incidentType, incidentCount]) => ({
+      incidentType,
+      incidentCount,
+    })),
+  }))
 
-    const incByDef = new Map<string, number>()
-    for (const inc of incArray as Array<{ processDefinitionId?: string }>) {
-      const k = inc.processDefinitionId ?? ""
-      incByDef.set(k, (incByDef.get(k) ?? 0) + 1)
-    }
-
-    rows = (
-      defArray as Array<{
-        id?: string | null
-        key?: string | null
-        name?: string | null
-        version?: number | null
-      }>
-    ).map((d) => ({
-      id: d.id,
-      instances: 0,
-      failedJobs: 0,
-      incidents: incByDef.has(d.id ?? "")
-        ? [{ incidentType: "failedJob", incidentCount: incByDef.get(d.id ?? "") ?? 0 }]
-        : [],
-      definition: d,
-    }))
-  }
-
-  let totalRunning = 0
-  let totalFailed = 0
-  let totalIncidents = 0
-
-  const definitions = rows.map((row) => {
-    const incidents = (row.incidents ?? []).map((i) => ({
-      incidentType: i.incidentType ?? "unknown",
-      incidentCount: i.incidentCount ?? 0,
-    }))
-    const incidentSum = incidents.reduce((s, i) => s + i.incidentCount, 0)
-    totalRunning += row.instances ?? 0
-    totalFailed += row.failedJobs ?? 0
-    totalIncidents += incidentSum
-    return {
-      id: row.definition?.id ?? row.id ?? "",
-      key: row.definition?.key ?? "",
-      name: row.definition?.name ?? null,
-      version: row.definition?.version ?? 0,
-      instances: row.instances ?? 0,
-      failedJobs: row.failedJobs ?? 0,
-      incidents,
-    }
-  })
-
-  definitions.sort((a, b) => {
-    const aIssues = a.failedJobs + a.incidents.reduce((s, i) => s + i.incidentCount, 0)
-    const bIssues = b.failedJobs + b.incidents.reduce((s, i) => s + i.incidentCount, 0)
-    if (aIssues !== bIssues) return bIssues - aIssues
-    return b.instances - a.instances
-  })
+  const issuesOf = (d: DefinitionStat) =>
+    d.failedJobs + d.incidents.reduce((s, i) => s + i.incidentCount, 0)
+  definitions.sort((a, b) => issuesOf(b) - issuesOf(a) || b.instances - a.instances)
 
   return {
     summary: {
       totalDefinitions: definitions.length,
-      totalRunningInstances: totalRunning,
-      totalFailedJobs: totalFailed,
-      totalIncidents,
+      totalRunningInstances: definitions.reduce((s, d) => s + d.instances, 0),
+      totalFailedJobs: definitions.reduce((s, d) => s + d.failedJobs, 0),
+      totalIncidents: definitions.reduce(
+        (s, d) => s + d.incidents.reduce((t, i) => t + i.incidentCount, 0),
+        0,
+      ),
     },
     definitions,
     engineId,
@@ -153,9 +84,9 @@ export async function buildCockpitDashboardData(
 export type ProcessListArgs = ProcessListFilters & PagingArgs
 
 /**
- * One page of deployed process definitions with an honest total from
- * `/process-definition/count` — shared by `camunda7_show_process_list` and
- * its `camunda7_process_list_data` feed twin.
+ * One page of deployed process definitions with the exact total from
+ * `/process-definition/count` — shared by `camunda7_show_process_list`, its
+ * `camunda7_process_list_data` feed and the `camunda7:load-process-definitions` step.
  */
 export async function buildProcessListData(
   client: Client,
@@ -168,7 +99,7 @@ export async function buildProcessListData(
     nameLike: engineLike(args.nameLike),
     latestVersion: trueOnly(latestVersion),
   }
-  const [definitions, countRes] = await Promise.all([
+  const [definitions, totalCount] = await Promise.all([
     getProcessDefinitions({
       client,
       query: {
@@ -178,15 +109,12 @@ export async function buildProcessListData(
         sortBy: "name",
         sortOrder: "asc",
       },
-    }),
-    // Count failures degrade to the page length instead of failing the list.
-    getProcessDefinitionsCount({ client, query: filters }).catch(() => null),
+    }).then((rows) => rowsOf<ProcessListData["definitions"][number]>(rows)),
+    getProcessDefinitionsCount({ client, query: filters }).then(countOf),
   ])
-  const defArray = Array.isArray(definitions) ? definitions : []
-  const count = (countRes as { count?: unknown } | null)?.count
   return {
-    definitions: defArray as ProcessListData["definitions"],
-    totalCount: typeof count === "number" ? count : defArray.length,
+    definitions,
+    totalCount,
     filters: {
       processDefinitionKey: args.processDefinitionKey,
       nameLike: args.nameLike,
@@ -212,39 +140,58 @@ function toProcessInstanceFilter(args: ProcessInstancesArgs) {
   }
 }
 
-// Camunda definition ids are `{key}:{version}:{deploymentId}`.
-function parseDefinitionVersion(definitionId: string | null | undefined): number | null {
-  const seg = definitionId?.split(":")[1]
-  const n = seg ? Number(seg) : NaN
-  return Number.isFinite(n) ? n : null
+type ProcessInstanceFilter = ReturnType<typeof toProcessInstanceFilter>
+
+interface RawInstance {
+  id?: string | null
+  definitionId?: string | null
+  businessKey?: string | null
+  suspended?: boolean | null
 }
 
-function toInstanceSummaries(
-  instancesRaw: unknown,
-  incidentsRaw: unknown,
-): ProcessInstancesData["instances"] {
-  const instanceArray = (Array.isArray(instancesRaw) ? instancesRaw : []) as Array<{
-    id?: string | null
-    definitionId?: string | null
-    businessKey?: string | null
-    suspended?: boolean | null
-  }>
-  const incidentArray = (Array.isArray(incidentsRaw) ? incidentsRaw : []) as Array<{
-    processInstanceId?: string | null
-  }>
-  const incidentInstanceIds = new Set(
-    incidentArray.map((i) => i.processInstanceId).filter((x): x is string => !!x),
+/**
+ * Totals over the WHOLE filtered set (#335 N65) — never counts of the
+ * returned page. A filter that already decides a total answers it without a
+ * call (`withIncident` = every match, `active` = none suspended).
+ */
+function filteredTotals(client: Client, filter: ProcessInstanceFilter) {
+  const count = (query: ProcessInstanceFilter) =>
+    getProcessInstancesCount({ client, query }).then(countOf)
+  const total = count(filter)
+  return Promise.all([
+    total,
+    filter.withIncident ? total : count({ ...filter, withIncident: true }),
+    filter.suspended
+      ? total
+      : filter.active
+        ? Promise.resolve(0)
+        : count({ ...filter, suspended: true }),
+  ])
+}
+
+/**
+ * Which of THIS page's instances have an open incident — one query scoped to
+ * the page's ids (#335 N65), not an engine-wide incident scan.
+ */
+async function instancesWithIncident(
+  client: Client,
+  pageIds: string[],
+  filter: ProcessInstanceFilter,
+): Promise<Set<string>> {
+  if (filter.withIncident || pageIds.length === 0) {
+    return new Set(filter.withIncident ? pageIds : [])
+  }
+  const flagged = rowsOf<RawInstance>(
+    await getProcessInstances({
+      client,
+      query: {
+        processInstanceIds: pageIds.join(","),
+        withIncident: true,
+        maxResults: pageIds.length,
+      },
+    }),
   )
-  return instanceArray
-    .filter((i): i is typeof i & { id: string } => !!i.id)
-    .map((i) => ({
-      id: i.id,
-      businessKey: i.businessKey ?? null,
-      processDefinitionKey: i.definitionId ? processDefinitionKeyFromId(i.definitionId) : null,
-      version: parseDefinitionVersion(i.definitionId),
-      suspended: i.suspended ?? false,
-      hasIncident: incidentInstanceIds.has(i.id),
-    }))
+  return new Set(flagged.map((i) => i.id).filter((id): id is string => !!id))
 }
 
 export async function buildProcessInstancesData(
@@ -254,7 +201,7 @@ export async function buildProcessInstancesData(
 ): Promise<ProcessInstancesData> {
   const filter = toProcessInstanceFilter(args)
 
-  const [instancesRaw, countRes, defsRaw, incidentsRaw] = await Promise.all([
+  const [raw, [totalCount, withIncidentCount, suspendedCount], definition] = await Promise.all([
     getProcessInstances({
       client,
       query: {
@@ -264,34 +211,37 @@ export async function buildProcessInstancesData(
         sortBy: "businessKey",
         sortOrder: "asc",
       },
-    }),
-    getProcessInstancesCount({ client, query: filter }).catch(() => null),
-    // Display-name lookup only makes sense with a definition scope; the
-    // engine-wide list titles itself.
+    }).then((rows) => rowsOf<RawInstance>(rows)),
+    filteredTotals(client, filter),
+    // A scoped list names its definition — and an unknown key is the
+    // engine's 404, not "0 running instances".
     args.processDefinitionKey
-      ? getProcessDefinitions({
-          client,
-          query: { key: args.processDefinitionKey, latestVersion: true, maxResults: 1 },
-        }).catch(() => [])
-      : Promise.resolve([]),
-    // /incident filters by `processDefinitionKeyIn` (comma list); one key here,
-    // engine-wide when unscoped.
-    getIncidents({
-      client,
-      query: { processDefinitionKeyIn: args.processDefinitionKey, maxResults: 2000 },
-    }).catch(() => []),
+      ? fetchLatestDefinition(client, args.processDefinitionKey)
+      : Promise.resolve(null),
   ])
 
-  const defArray = (Array.isArray(defsRaw) ? defsRaw : []) as Array<{ name?: string | null }>
-  const instances = toInstanceSummaries(instancesRaw, incidentsRaw)
+  const page = raw.filter((i): i is RawInstance & { id: string } => !!i.id)
+  const flagged = await instancesWithIncident(
+    client,
+    page.map((i) => i.id),
+    filter,
+  )
+  const instances: ProcessInstanceRow[] = page.map((i) => ({
+    id: i.id,
+    businessKey: i.businessKey ?? null,
+    processDefinitionKey: i.definitionId ? processDefinitionKeyFromId(i.definitionId) : null,
+    version: definitionVersionFromId(i.definitionId),
+    suspended: i.suspended ?? false,
+    hasIncident: flagged.has(i.id),
+  }))
 
   return {
     processDefinitionKey: args.processDefinitionKey ?? null,
-    processDefinitionName: defArray[0]?.name ?? null,
-    totalCount: countRes?.count ?? instances.length,
+    processDefinitionName: definition?.name ?? null,
+    totalCount,
     returnedCount: instances.length,
-    withIncidentCount: instances.filter((i) => i.hasIncident).length,
-    suspendedCount: instances.filter((i) => i.suspended).length,
+    withIncidentCount,
+    suspendedCount,
     instances,
     filters: {
       active: args.active,
@@ -303,115 +253,32 @@ export async function buildProcessInstancesData(
   }
 }
 
-export async function buildInstanceDetailData(
-  client: Client,
-  engineId: string,
-  args: { processInstanceId: string },
-  /** Cockpit-URL context for the per-incident jump-out links; absent → null links. */
-  urls?: { baseUrl: string; cockpitUrl?: string; provider: EngineProvider },
-): Promise<InstanceDetailData> {
-  const [instance, activityTree, variables, incidents, openTasksRaw] = await Promise.all([
-    getProcessInstance({ client, path: { id: args.processInstanceId } }),
-    getActivityInstanceTree({ client, path: { id: args.processInstanceId } }).catch(() => null),
-    readProcessInstanceVariables(client, args.processInstanceId).catch(() => ({})),
-    getIncidents({
-      client,
-      query: { processInstanceId: args.processInstanceId, maxResults: 100 },
-    }).catch(() => []),
-    getTasks({
-      client,
-      query: {
-        processInstanceId: args.processInstanceId,
-        maxResults: 50,
-        sortBy: "created",
-        sortOrder: "asc",
-      },
-    }).catch(() => []),
-  ])
-
-  let bpmnXml: string | null = null
-  // A failed read is not "no BPMN": the open tasks' forms are then UNKNOWN.
-  let bpmnUnreadable = false
-  const definitionId = (instance as { definitionId?: string } | null)?.definitionId
-  if (definitionId) {
-    try {
-      const xmlResponse = await getProcessDefinitionBpmn20Xml({
-        client,
-        path: { id: definitionId },
-      })
-      bpmnXml = (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? null
-    } catch {
-      bpmnUnreadable = true
-    }
-  }
-
-  const taskList = (Array.isArray(openTasksRaw) ? openTasksRaw : []) as TaskData[]
-  const openTasks: InstanceDetailData["openTasks"] = await Promise.all(
-    taskList.map(async (task) => ({
-      ...task,
-      // The /task row carries everything the form needs (incl. formKey). A
-      // schema that cannot be built is null, never `{ fields: [] }` ("no
-      // form"): the widget then loads it through camunda7_get_task_form,
-      // which fails loudly instead of offering a form task without its form.
-      formSchema: bpmnUnreadable
-        ? null
-        : await buildTaskFormSchema(client, task.id, { task, bpmnXml }).catch(() => null),
-    })),
-  )
-
-  // Explicit mapping instead of a cast: the raw /incident rows carry no
-  // cockpitInstanceUrl — the old `as unknown as` silently shipped rows whose
-  // required url field was missing, so the per-incident Cockpit links never
-  // rendered on the instance detail.
-  const defKey = definitionId ? processDefinitionKeyFromId(definitionId) : null
-  const versionSegment = definitionId?.split(":")[1]
-  const defVersion = versionSegment && /^\d+$/.test(versionSegment) ? Number(versionSegment) : null
-  const incidentRows: InstanceDetailData["incidents"] = (
-    Array.isArray(incidents) ? incidents : []
-  ).map((i) => ({
-    id: i.id ?? "",
-    processInstanceId: i.processInstanceId ?? args.processInstanceId,
-    incidentType: i.incidentType ?? "unknown",
-    incidentMessage: i.incidentMessage ?? null,
-    incidentTimestamp: i.incidentTimestamp ?? "",
-    recovery: incidentRecovery(i),
-    cockpitInstanceUrl:
-      urls && defKey
-        ? buildInstanceCockpitUrl(
-            urls,
-            {
-              key: defKey,
-              version: defVersion,
-              definitionId: definitionId ?? null,
-              instanceId: args.processInstanceId,
-            },
-            { tab: "incidents" },
-          )
-        : null,
-  }))
-
-  return {
-    instance: instance as unknown as InstanceDetailData["instance"],
-    activityTree: activityTree as unknown as InstanceDetailData["activityTree"],
-    variables: variables as unknown as InstanceDetailData["variables"],
-    incidents: incidentRows,
-    bpmnXml,
-    activeActivityIds: collectActiveActivityIds(activityTree),
-    incidentActivityIds: collectIncidentActivityIds(incidents),
-    openTasks,
-    engineId,
-  }
+interface RawJob {
+  id: string
+  processInstanceId: string
+  processDefinitionKey?: string | null
+  processDefinitionId?: string | null
+  failedActivityId?: string | null
+  retries: number
+  exceptionMessage?: string | null
+  dueDate?: string | null
+  suspended: boolean
+  priority: number
+  createTime?: string | null
 }
 
+/**
+ * One page of jobs plus the two GLOBAL totals (`/job/count`) behind the KPIs
+ * and the "X of Y" footer. All three are primary: an unreachable engine is a
+ * tool error, never "0 jobs, 0 failed".
+ */
 export async function buildJobPanelData(
   client: Client,
   engineId: string,
   args: JobsFilters & PagingArgs,
 ): Promise<JobPanelData> {
   const baseQuery = { processDefinitionKey: args.processDefinitionKey }
-  // One page of jobs + two cheap /job/count calls so the KPIs and the "X of Y"
-  // footer are the GLOBAL totals (not capped to the fetched page).
-  const [jobsRaw, failedCountRes, allCountRes] = await Promise.all([
+  const [raw, failedCount, allCount] = await Promise.all([
     getJobs({
       client,
       query: {
@@ -422,48 +289,32 @@ export async function buildJobPanelData(
         sortBy: "jobId",
         sortOrder: "desc",
       },
-    }).catch(() => []),
-    getJobsCount({ client, query: { ...baseQuery, noRetriesLeft: true } }).catch(() => null),
-    getJobsCount({ client, query: baseQuery }).catch(() => null),
+    }).then((rows) => rowsOf<RawJob>(rows)),
+    getJobsCount({ client, query: { ...baseQuery, noRetriesLeft: true } }).then(countOf),
+    getJobsCount({ client, query: baseQuery }).then(countOf),
+    // A scoped panel for an unknown key is the engine's 404, not "0 jobs".
+    args.processDefinitionKey
+      ? fetchLatestDefinition(client, args.processDefinitionKey)
+      : Promise.resolve(null),
   ])
-
-  const raw = Array.isArray(jobsRaw)
-    ? (jobsRaw as Array<{
-        id: string
-        processInstanceId: string
-        processDefinitionKey?: string | null
-        processDefinitionId?: string | null
-        activityId?: string | null
-        retries: number
-        exceptionMessage?: string | null
-        dueDate?: string | null
-        suspended: boolean
-        priority: number
-        createTime?: string | null
-      }>)
-    : []
-
-  const jobs = raw.map((j) => ({
-    id: j.id,
-    processInstanceId: j.processInstanceId,
-    processDefinitionKey: j.processDefinitionKey ?? null,
-    processDefinitionId: j.processDefinitionId ?? null,
-    activityId: j.activityId ?? null,
-    retries: j.retries,
-    exceptionMessage: j.exceptionMessage ?? null,
-    dueDate: j.dueDate ?? null,
-    suspended: j.suspended,
-    priority: j.priority,
-    createTime: j.createTime ?? null,
-  }))
-
-  const failedCount = failedCountRes?.count ?? 0
-  const allCount = allCountRes?.count ?? jobs.length
 
   return {
     totalCount: args.failedOnly ? failedCount : allCount,
     failedCount,
-    jobs,
+    jobs: raw.map((j) => ({
+      id: j.id,
+      processInstanceId: j.processInstanceId,
+      processDefinitionKey: j.processDefinitionKey ?? null,
+      processDefinitionId: j.processDefinitionId ?? null,
+      // The engine's job carries the activity it failed at, not an `activityId`.
+      activityId: j.failedActivityId ?? null,
+      retries: j.retries,
+      exceptionMessage: j.exceptionMessage ?? null,
+      dueDate: j.dueDate ?? null,
+      suspended: j.suspended,
+      priority: j.priority,
+      createTime: j.createTime ?? null,
+    })),
     filters: {
       processDefinitionKey: args.processDefinitionKey,
       failedOnly: args.failedOnly,
