@@ -120,6 +120,23 @@ describe("vitest coverage thresholds (raise-only, never removed)", () => {
     const twice = `${base}\nexport const other = { coverage: { thresholds: { lines: 1 } } }`
     assert.match(checkRatchetFile(PKG_VITEST, base, twice)[0], /2 `coverage` blocks/)
   })
+
+  it("flags a package that stops merging sharedConfig (vitest's default is coverage off)", () => {
+    const standalone = base.replace("mergeConfig(sharedConfig, defineConfig(", "(defineConfig(")
+    assert.match(
+      checkRatchetFile(PKG_VITEST, base, standalone).join("\n"),
+      /no longer merges sharedConfig/,
+    )
+    const selfEnabled = vitestConfig({ thresholds: BASE_THRESHOLDS, extra: "enabled: true," })
+    assert.deepEqual(
+      checkRatchetFile(
+        PKG_VITEST,
+        base,
+        selfEnabled.replace("mergeConfig(sharedConfig, defineConfig(", "(defineConfig("),
+      ),
+      [],
+    )
+  })
 })
 
 describe("coverage exclude (shrink-only)", () => {
@@ -139,6 +156,14 @@ export const sharedConfig = defineConfig({
     assert.equal(violations.length, 1)
     assert.match(violations[0], /new coverage\.exclude entry "\*\*\/src\/hard\.ts"/)
     assert.deepEqual(checkRatchetFile("vitest.shared.ts", base, shared(["**/src/postgres.ts"])), [])
+  })
+
+  it("flags dropping `enabled: true` — vitest then defaults to coverage off", () => {
+    const dropped = base.replace("enabled: true, ", "")
+    assert.match(
+      checkRatchetFile("vitest.shared.ts", base, dropped)[0],
+      /coverage\.enabled is now undefined \(was true\)/,
+    )
   })
 
   it("reads the real shared config", () => {
@@ -395,6 +420,26 @@ describe("knip policy (ignore lists shrink-only)", () => {
     assert.match(checkRatchetFile("knip.jsonc", base, nested)[0], /left-pad/)
   })
 
+  it("flags a config-level issue-type exclude, a relaxed rule and a boolean ignore", () => {
+    const relaxed = (extra) => base.replace('"ignore":', `${extra}, "ignore":`)
+    assert.match(
+      checkRatchetFile("knip.jsonc", base, relaxed('"exclude": ["files"]'))[0],
+      /exclude: files/,
+    )
+    assert.match(
+      checkRatchetFile("knip.jsonc", base, relaxed('"rules": { "dependencies": "warn" }'))[0],
+      /rules\.dependencies: warn/,
+    )
+    assert.match(
+      checkRatchetFile("knip.jsonc", base, relaxed('"ignoreExportsUsedInFile": true'))[0],
+      /ignoreExportsUsedInFile: true/,
+    )
+    assert.deepEqual(
+      checkRatchetFile("knip.jsonc", base, relaxed('"rules": { "files": "error" }')),
+      [],
+    )
+  })
+
   it("accepts shrinking and reads the real knip.jsonc", () => {
     assert.deepEqual(checkRatchetFile("knip.jsonc", base, base.replace('"vue",', "")), [])
     const real = readFileSync("knip.jsonc", "utf8")
@@ -447,6 +492,42 @@ describe("root scripts (no gate unhooked)", () => {
     )
     const looser = base.replace("exports,types", "exports,types,files")
     assert.match(checkRatchetFile("package.json", base, looser)[0], /excludes "files"/)
+  })
+
+  it("flags a chained gate script hollowed out, accepts one that grows or tightens", () => {
+    const withScripts = (scripts) =>
+      JSON.stringify({
+        scripts: {
+          lint: "turbo run lint && pnpm lint:architecture && pnpm lint:deadcode",
+          "lint:architecture": "depcruise apps/*/src packages/*/src --config .dc.cjs",
+          "lint:deadcode": "knip --exclude exports,types",
+          ...scripts,
+        },
+      })
+    const old = withScripts({})
+    assert.match(
+      checkRatchetFile("package.json", old, withScripts({ "lint:architecture": "true" }))[0],
+      /"lint:architecture" gate lost "depcruise"/,
+    )
+    assert.match(
+      checkRatchetFile(
+        "package.json",
+        old,
+        withScripts({ "lint:architecture": "depcruise apps/*/src --config .dc.cjs" }),
+      )[0],
+      /lost "packages\/\*\/src"/,
+    )
+    assert.deepEqual(
+      checkRatchetFile(
+        "package.json",
+        old,
+        withScripts({
+          "lint:architecture": "depcruise apps/*/src packages/*/src docs/src --config .dc.cjs",
+          "lint:deadcode": "knip --exclude exports",
+        }),
+      ),
+      [],
+    )
   })
 })
 

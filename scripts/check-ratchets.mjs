@@ -10,7 +10,8 @@
  *
  *   <pkg>/vitest.config.ts          coverage thresholds raise-only, never removed;
  *   vitest.shared.ts                coverage `exclude` shrink-only; `enabled`
- *                                   never switched off
+ *                                   never switched off (incl. a package that
+ *                                   stops merging sharedConfig)
  *   <pkg>/stryker.config.json       thresholds.break raise-only; `mutate`
  *                                   grow-only (an entry may leave only when
  *                                   break rises in the same diff, or when it
@@ -21,12 +22,15 @@
  *                                   the global complexity / max-lines budgets
  *                                   never raised or removed; no new override
  *                                   of either rule; `ignores` shrink-only
- *   knip.jsonc                      every ignore list shrink-only
+ *   knip.jsonc                      every ignore list, the issue-type `exclude`
+ *                                   and non-"error" `rules` shrink-only
  *   apps/<app>/test/__golden__/char-budgets.json
  *                                   model-visible tool-surface budgets
  *                                   shrink-only, never removed
- *   package.json (root)             no gate drops out of `lint`/`test`;
- *                                   `lint:deadcode --exclude` shrink-only
+ *   package.json (root)             no gate drops out of `lint`/`test`, and a
+ *                                   chained gate script never loses an
+ *                                   argument; `lint:deadcode --exclude`
+ *                                   shrink-only
  *
  * The SINGLE documented escape is a commit trailer in the branch range:
  *
@@ -145,15 +149,23 @@ const COVERAGE_METRICS = ["statements", "branches", "functions", "lines"]
 
 /**
  * The coverage ratchet of a vitest config: `{ thresholds, exclude, enabled,
- * opaque }`, or `{ error }` when the file cannot be read unambiguously (the
- * comparison then fails closed).
+ * opaque, usesShared }`, or `{ error }` when the file cannot be read
+ * unambiguously (the comparison then fails closed). `usesShared`: the config
+ * passes `sharedConfig` (vitest.shared.ts — where coverage is ENABLED) into a
+ * call such as `mergeConfig`; vitest's own default is coverage off.
  */
 export function extractVitestCoverage(relPath, text) {
   const blocks = []
+  let usesShared = false
   walk(parseSource(relPath, text), (node) => {
     if (ts.isPropertyAssignment(node) && propName(node.name) === "coverage") blocks.push(node)
+    if (
+      ts.isCallExpression(node) &&
+      node.arguments.some((arg) => ts.isIdentifier(arg) && arg.text === "sharedConfig")
+    )
+      usesShared = true
   })
-  const result = { thresholds: null, exclude: [], enabled: undefined, opaque: [] }
+  const result = { thresholds: null, exclude: [], enabled: undefined, opaque: [], usesShared }
   if (blocks.length === 0) return result
   if (blocks.length > 1)
     return { error: `${blocks.length} \`coverage\` blocks — the ratchet needs exactly one` }
@@ -281,11 +293,19 @@ export function extractEslintRatchets(relPath, text) {
 export function collectKnipIgnores(node, prefix = "", into = new Set()) {
   if (!node || typeof node !== "object") return into
   for (const [key, value] of Object.entries(node)) {
-    if (/^ignore/.test(key) && Array.isArray(value)) {
+    // `ignore*` lists/maps, the config-level issue-type `exclude`, and
+    // `rules` switched to "off"/"warn" all make knip report less.
+    const lax = /^ignore/.test(key) || key === "exclude"
+    if (lax && Array.isArray(value)) {
       for (const item of value) into.add(`${prefix}${key}: ${String(item)}`)
-    } else if (/^ignore/.test(key) && value && typeof value === "object") {
+    } else if (lax && value && typeof value === "object") {
       for (const [sub, subValue] of Object.entries(value))
         into.add(`${prefix}${key}.${sub}: ${JSON.stringify(subValue)}`)
+    } else if (lax && value === true) {
+      into.add(`${prefix}${key}: true`)
+    } else if (key === "rules" && value && typeof value === "object") {
+      for (const [rule, level] of Object.entries(value))
+        if (level !== "error") into.add(`${prefix}rules.${rule}: ${String(level)}`)
     } else if (value && typeof value === "object" && !Array.isArray(value)) {
       collectKnipIgnores(value, `${prefix}${key}.`, into)
     }
@@ -337,9 +357,19 @@ function compareVitest(relPath, oldText, newText) {
       )
     }
   }
-  if (old.enabled !== false && cur.enabled !== undefined && cur.enabled !== true) {
+  // vitest's default is coverage OFF: an explicit `true` that disappears is as
+  // much a switch-off as a `false` that appears.
+  const switchedOff =
+    (cur.enabled !== undefined && cur.enabled !== true) ||
+    (old.enabled === true && cur.enabled !== true)
+  if (old.enabled !== false && switchedOff) {
     violations.push(
-      `${relPath} -> coverage.enabled is now ${String(cur.enabled)}. Switching coverage off disables every threshold.`,
+      `${relPath} -> coverage.enabled is now ${String(cur.enabled)} (was ${String(old.enabled)}). Switching coverage off disables every threshold.`,
+    )
+  }
+  if (old.usesShared && !cur.usesShared && cur.enabled !== true) {
+    violations.push(
+      `${relPath} no longer merges sharedConfig and does not enable coverage itself — the thresholds would never be enforced.`,
     )
   }
   for (const entry of cur.opaque) {
@@ -500,17 +530,40 @@ const chainSegments = (script) =>
         .filter(Boolean)
     : []
 
+const EXCLUDE_FLAG = /--exclude[= ]([\w,]+)/g
+
 const deadcodeExcludes = (script) =>
-  [...String(script ?? "").matchAll(/--exclude[= ]([\w,]+)/g)].flatMap((m) => m[1].split(","))
+  [...String(script ?? "").matchAll(EXCLUDE_FLAG)].flatMap((m) => m[1].split(","))
+
+/** A script's arguments (the `--exclude` list compared separately). */
+const scriptTokens = (script) =>
+  String(script ?? "")
+    .replace(EXCLUDE_FLAG, "")
+    .split(/\s+/)
+    .filter(Boolean)
 
 function compareRootScripts(relPath, oldJson, newJson) {
   const violations = []
+  const oldScripts = oldJson?.scripts ?? {}
+  const newScripts = newJson?.scripts ?? {}
   for (const name of ["lint", "test"]) {
-    const kept = new Set(chainSegments(newJson?.scripts?.[name]))
-    for (const segment of chainSegments(oldJson?.scripts?.[name])) {
+    const kept = new Set(chainSegments(newScripts[name]))
+    for (const segment of chainSegments(oldScripts[name])) {
       if (!kept.has(segment)) {
         violations.push(
           `${relPath} -> "${segment}" dropped out of \`pnpm ${name}\`. Gates are never unhooked from the chain.`,
+        )
+        continue
+      }
+      // A chained `pnpm <script>` must keep doing what it did: hollowing the
+      // script out (`"lint:ratchets": "true"`) unhooks the gate just the same.
+      const script = /^pnpm (?:run )?([\w:-]+)$/.exec(segment)?.[1]
+      if (!script || !(script in oldScripts)) continue
+      const tokens = new Set(scriptTokens(newScripts[script]))
+      const lost = scriptTokens(oldScripts[script]).filter((token) => !tokens.has(token))
+      if (lost.length > 0) {
+        violations.push(
+          `${relPath} -> the "${script}" gate lost ${lost.map((t) => `"${t}"`).join(", ")}. A gate's command may grow, never shrink.`,
         )
       }
     }

@@ -490,11 +490,12 @@ These directions are machine-checked, not review-only: `scripts/check-ratchets.m
 (`pnpm lint:ratchets`, part of `pnpm lint`) compares every ratchet against the MERGE BASE
 with `origin/main` (`origin/$GITHUB_BASE_REF` in CI, which therefore checks out with
 `fetch-depth: 0`) — never against the PR's own files — and fails on a lowered/removed
-coverage threshold, a new coverage `exclude`, a lowered `thresholds.break`, a shrunk
-`mutate` list (unless `break` rises in the same diff or the entry's file is gone), a
-new or raised ESLint debt entry, a raised global budget, any new complexity/max-lines
-override, a new ESLint or knip ignore, a grown tools/list char budget, or a gate dropped
-out of the root `lint`/`test` chain. The working tree is the new side, so uncommitted
+coverage threshold, coverage switched off or a new coverage `exclude`, a lowered
+`thresholds.break`, a shrunk `mutate` list (unless `break` rises in the same diff or the
+entry's file is gone), a new or raised ESLint debt entry, a raised global budget, any new
+complexity/max-lines override, a new ESLint or knip ignore/exclude, a grown tools/list
+char budget, or a gate dropped out of (or hollowed out in) the root `lint`/`test` chain.
+The working tree is the new side, so uncommitted
 loosening fails locally too. The single escape is a commit trailer
 `Ratchet-Exception: <reason>` in the branch range — it turns the failures into loud
 warnings for the reviewer; never weaken the checker instead.
