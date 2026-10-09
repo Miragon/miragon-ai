@@ -9,6 +9,7 @@
     "src/data/**/*.ts",
     "src/lib/**/*.ts",
     "src/module.ts",
+    "src/tools/deployments.ts",
     "src/tools/engines.ts",
     "!src/**/*.test.ts"
   ],
