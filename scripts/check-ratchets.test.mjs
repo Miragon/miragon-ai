@@ -923,7 +923,7 @@ describe("inline suppressions (shrink-only)", () => {
     ]) {
       const violations = compareSuppressions(rel, code, `${comment}\n${code}`)
       assert.ok(violations.length > 0, comment)
-      assert.match(violations[0], new RegExp(`${rel.replace(/[.]/g, "\\.")}:1`), comment)
+      assert.ok(violations[0].includes(`${rel}:1`), `${comment}: ${violations[0]}`)
     }
   })
 
