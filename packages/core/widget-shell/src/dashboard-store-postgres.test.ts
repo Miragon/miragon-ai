@@ -1,6 +1,6 @@
 import postgres from "postgres"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import { DashboardOwnershipError } from "@miragon/mcp-toolkit-core/tools"
+import { DashboardOwnershipError, DashboardUnreadableError } from "@miragon/mcp-toolkit-core/tools"
 import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import {
   createPostgresDashboardStore,
@@ -10,6 +10,16 @@ import { postgresReadinessCheck, runMigrations } from "./postgres.js"
 import { PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
 
 const LAYOUT = [{ row: [{ widget: "shell:kpi-grid" }] }]
+
+/** A record payload that passes the toolkit's schema — for rows written raw. */
+const validRecord = (id: string) => ({
+  id,
+  name: id,
+  layout: LAYOUT,
+  schemaVersion: 1,
+  createdAt: "2026-10-01T00:00:00.000Z",
+  updatedAt: "2026-10-01T00:00:00.000Z",
+})
 
 /** updatedAt has millisecond precision — space writes out for stable ordering. */
 const tick = () => new Promise((resolve) => setTimeout(resolve, 10))
@@ -128,28 +138,41 @@ describe.skipIf(!TEST_DATABASE_URL)("postgres persistence", () => {
       await expect(
         store.save({ id: alices.id, name: "stolen", layout: LAYOUT, userId: "bob" }),
       ).rejects.toBeInstanceOf(DashboardOwnershipError)
+      expect(await store.get(alices.id, {})).toEqual(alices)
+    })
 
-      // A global record (no owner) stays writable by anyone — and the write
-      // must not adopt the writer as owner.
+    // The toolkit 2.6 DashboardStore contract (isDashboardOwnedBy): an
+    // owner-less record — saved on a boot without OAuth — belongs to no
+    // identified caller. The 2.5 rule handed it to EVERY caller, so after
+    // turning OAuth on, any user could read, overwrite or delete it.
+    it("keeps an owner-less record away from identified callers", async () => {
       const global = await store.save({ name: "global", layout: LAYOUT })
-      const written = await store.save({
-        id: global.id,
-        name: "edited",
-        layout: LAYOUT,
-        userId: "bob",
-      })
+
+      expect(await store.get(global.id, { userId: "bob" })).toBeUndefined()
+      await expect(
+        store.save({ id: global.id, name: "claimed", layout: LAYOUT, userId: "bob" }),
+      ).rejects.toBeInstanceOf(DashboardOwnershipError)
+      expect(await store.delete(global.id, { userId: "bob" })).toBe(false)
+      expect(await store.get(global.id, {})).toEqual(global)
+
+      // Global scope (no caller id) still reads and writes it — without
+      // adopting an owner.
+      const written = await store.save({ id: global.id, name: "edited", layout: LAYOUT })
+      expect(written).toMatchObject({ name: "edited" })
       expect(written.userId).toBeUndefined()
+      expect(await store.delete(global.id, {})).toBe(true)
     })
 
     it("enforces ownership on get and delete", async () => {
       const alices = await store.save({ name: "alice's", layout: LAYOUT, userId: "alice" })
       expect(await store.get(alices.id, { userId: "bob" })).toBeUndefined()
+      expect(await store.get(alices.id, { userId: "alice" })).toEqual(alices)
       expect(await store.delete(alices.id, { userId: "bob" })).toBe(false)
       expect(await store.delete(alices.id, { userId: "alice" })).toBe(true)
       expect(await store.get(alices.id, {})).toBeUndefined()
     })
 
-    it("lists own + global records as summaries, newest first", async () => {
+    it("lists only the caller's own records as owner-stamped summaries, newest first", async () => {
       await store.save({ name: "global", layout: LAYOUT })
       await tick()
       await store.save({ name: "alice's", layout: LAYOUT, userId: "alice" })
@@ -157,30 +180,107 @@ describe.skipIf(!TEST_DATABASE_URL)("postgres persistence", () => {
       await store.save({ name: "bob's", layout: LAYOUT, userId: "bob" })
 
       const forAlice = await store.list({ userId: "alice" })
-      expect(forAlice.map((s) => s.name)).toEqual(["alice's", "global"])
-      // Summary shape: no layout/steps/keys payload.
+      expect(forAlice.map((s) => s.name)).toEqual(["alice's"])
+      // Summary shape: the owner (DashboardSummary.userId, which the toolkit's
+      // dashboard tools re-check), no layout/steps/keys payload.
+      expect(forAlice[0].userId).toBe("alice")
       expect(Object.keys(forAlice[0]).sort()).toEqual([
         "description",
         "id",
         "name",
         "title",
         "updatedAt",
+        "userId",
       ])
 
       const unfiltered = await store.list({})
-      expect(unfiltered.map((s) => s.name)).toEqual(["bob's", "alice's", "global"])
+      expect(unfiltered.map((s) => [s.name, s.userId])).toEqual([
+        ["bob's", "bob"],
+        ["alice's", "alice"],
+        ["global", undefined],
+      ])
     })
 
-    it("fail-soft skips corrupt rows on read paths and leaves them in place", async () => {
-      await sql`
-        INSERT INTO dashboards (id, record, updated_at)
-        VALUES ('corrupt', '{"name": "no layout"}'::jsonb, now())
-      `
-      expect(await store.list({})).toEqual([])
-      expect(await store.get("corrupt", {})).toBeUndefined()
-      expect(await store.delete("corrupt", {})).toBe(false)
-      const rows = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM dashboards`
-      expect(rows[0].n).toBe(1)
+    // A row this build cannot read (corrupt, or written by a NEWER build during
+    // a rolling upgrade) is a conflict, never "absent": treated as absent, a
+    // save with its id would overwrite it and stamp the writer as its owner.
+    // Its mirrored user_id column still attributes it.
+    describe("an unreadable row", () => {
+      const insertRaw = async (id: string, userId: string | null, record: object) => {
+        await sql`
+          INSERT INTO dashboards (id, user_id, record, updated_at)
+          VALUES (${id}, ${userId}, ${sql.json(record as postgres.JSONValue)}, now())
+        `
+      }
+      const rowOf = async (id: string) =>
+        (
+          await sql<{ user_id: string | null; record: unknown }[]>`
+          SELECT user_id, record FROM dashboards WHERE id = ${id}
+        `
+        )[0]
+
+      it("refuses get, save and delete for its owner and stays in place", async () => {
+        await insertRaw("corrupt", "alice", { name: "no layout", userId: "alice" })
+        const before = await rowOf("corrupt")
+
+        await expect(store.get("corrupt", { userId: "alice" })).rejects.toBeInstanceOf(
+          DashboardUnreadableError,
+        )
+        await expect(
+          store.save({ id: "corrupt", name: "fresh", layout: LAYOUT, userId: "alice" }),
+        ).rejects.toBeInstanceOf(DashboardUnreadableError)
+        await expect(store.delete("corrupt", { userId: "alice" })).rejects.toBeInstanceOf(
+          DashboardUnreadableError,
+        )
+        // Global scope addresses every row, so it gets the same conflict.
+        await expect(store.get("corrupt", {})).rejects.toBeInstanceOf(DashboardUnreadableError)
+        await expect(
+          store.save({ id: "corrupt", name: "fresh", layout: LAYOUT }),
+        ).rejects.toBeInstanceOf(DashboardUnreadableError)
+        expect(await rowOf("corrupt")).toEqual(before)
+      })
+
+      it("is invisible to — and never claimable by — another identified caller", async () => {
+        await insertRaw("alices-corrupt", "alice", { name: "no layout", userId: "alice" })
+        await insertRaw("global-corrupt", null, { name: "no layout" })
+        const before = [await rowOf("alices-corrupt"), await rowOf("global-corrupt")]
+
+        for (const id of ["alices-corrupt", "global-corrupt"]) {
+          expect(await store.get(id, { userId: "bob" })).toBeUndefined()
+          expect(await store.delete(id, { userId: "bob" })).toBe(false)
+          await expect(
+            store.save({ id, name: "claimed", layout: LAYOUT, userId: "bob" }),
+          ).rejects.toBeInstanceOf(DashboardOwnershipError)
+        }
+        expect(await store.list({ userId: "bob" })).toEqual([])
+        expect([await rowOf("alices-corrupt"), await rowOf("global-corrupt")]).toEqual(before)
+      })
+
+      it("is reported in listings where it is attributable, with the reason", async () => {
+        await insertRaw("corrupt", "alice", { name: "no layout", userId: "alice" })
+        await tick()
+        await insertRaw("newer", null, { ...validRecord("newer"), schemaVersion: 99 })
+
+        // The mirrored columns stand in for the unreadable payload.
+        const [{ updated_at }] = await sql<{ updated_at: Date }[]>`
+          SELECT updated_at FROM dashboards WHERE id = 'corrupt'
+        `
+        expect(await store.list({ userId: "alice" })).toEqual([
+          {
+            id: "corrupt",
+            name: "corrupt",
+            userId: "alice",
+            updatedAt: updated_at.toISOString(),
+            unreadable: "does not match the current record schema",
+          },
+        ])
+
+        const unfiltered = await store.list({})
+        expect(unfiltered.map((s) => [s.id, s.unreadable])).toEqual([
+          ["newer", "written by a newer schemaVersion 99 (this build reads up to 1)"],
+          ["corrupt", "does not match the current record schema"],
+        ])
+      })
     })
   })
 })
