@@ -111,10 +111,17 @@ export async function initRuntime(
   }
 
   const sql = await createSql(databaseUrl)
-  const applied = await runMigrations(sql, [
-    ...PROFILE_STORE_MIGRATIONS,
-    ...DASHBOARD_STORE_MIGRATIONS,
-  ])
+  let applied: string[]
+  try {
+    applied = await runMigrations(sql, [...PROFILE_STORE_MIGRATIONS, ...DASHBOARD_STORE_MIGRATIONS])
+  } catch (error) {
+    // The boot fails here, so nothing else will ever end this client: close
+    // it, or its open connections keep the failing process (and the
+    // database sessions) alive. The migration error is what the operator
+    // needs — a failing close must not replace it.
+    await sql.end({ timeout: 5 }).catch(() => {})
+    throw error
+  }
   if (applied.length > 0) {
     console.log(`[miragon-ai] applied database migrations: ${applied.join(", ")}`)
   }
