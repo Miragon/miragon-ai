@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.18.0](https://github.com/Miragon/miragon-ai/compare/v0.17.0...v0.18.0) (2026-10-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **server:** requests whose Host (or, on non-GET requests, Origin) is not localhost-class, MCP_URL's or allow-listed via MCP_ALLOWED_HOSTS / MCP_ALLOWED_ORIGINS get 403 (`*` disables a check), so a server reached under a public name must set MCP_URL or the allow-lists; request bodies over MCP_MAX_BODY_BYTES (default 4194304) get 413; MCP_OAUTH now requires MCP_URL; and camunda7_engine "list", UserProfileView.availableEngines and CockpitEngineInfo no longer carry the engine REST baseUrl.
+* **analytics:** @miragon-ai/analytics-client's VersionCompareKpi failed_count, failure_rate_pct, incident_count and incident_rate_pct (and the two rate deltas) are now `number | null` and always null, and VersionCompareResult gains a required `notes: string[]`. analytics_version_compare and analytics_show_version_compare report these KPIs as unavailable instead of 0; the previous zeros were never measured values.
+* toolsets fail closed. Without a suffix in MCP_ACTIVE_MODULES a module no longer gets every tool: unauthenticated boots (no MCP_OAUTH) run each module read-only; with MCP_OAUTH the defaults are camunda7:operations and the new analytics:standard; admin is reached only by naming it; an empty (camunda7:) or unknown suffix falls back to read-only, even under OAuth. camunda7_create_deployment additionally requires CAMUNDA_ALLOW_DEPLOYMENTS=true (deploying is code execution inside the engine JVM). camunda7_throw_signal and the external-task worker protocol (fetch_and_lock, complete_external_task, handle_external_task_failure) are admin-only; the new camunda7_list_external_tasks (read-only) and camunda7_set_external_task_retries (operations) cover reading and recovering external tasks. The dashboard builder and its tools need OAuth and no read-only module. A server behind an auth-terminating gateway looks unauthenticated and must name its toolsets. Restore the previous surface with MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard (+ CAMUNDA_ALLOW_DEPLOYMENTS=true for deployments, MCP_OAUTH for dashboards). Package API: a direct createPlugin call without `toolset` (camunda7 or analytics) now registers the read-only floor, so pass the toolset explicitly (camunda7 also needs `allowDeployments: true` for deployments); createToolsetVocabulary().resolve(undefined) returns the floor instead of undefined, and ToolsetVocabulary gained module/fallback/authenticatedDefault/effective/allowsDurableWrites, so build vocabularies with createToolsetVocabulary; modules declare `toolsets` instead of the deprecated supportsToolsets (which keeps a raw pass-through but blocks the dashboard builder); composed servers boot via composeModules().resolveBoot(env, { authenticated }) and logEffectiveToolsets.
+
+### Features
+
+* fail-closed toolset defaults and opt-in deployments ([#351](https://github.com/Miragon/miragon-ai/issues/351)) ([005cdd9](https://github.com/Miragon/miragon-ai/commit/005cdd9d97d9909348723f91f3a0bfe3cf47f1ec))
+
+
+### Bug Fixes
+
+* **analytics:** version-compare incident KPIs unavailable instead of 0; label-checked metrics contract ([#356](https://github.com/Miragon/miragon-ai/issues/356)) ([144f410](https://github.com/Miragon/miragon-ai/commit/144f4103e42902266f6adfd03546008afa229e59))
+* **camunda7,analytics:** actionable engine errors, upstream timeouts and Prometheus auth ([#357](https://github.com/Miragon/miragon-ai/issues/357)) ([8d1045d](https://github.com/Miragon/miragon-ai/commit/8d1045d7db81f41fcc488ff9839df92b58d9337f))
+* **camunda7:** send deployment resources as real multipart parts ([#355](https://github.com/Miragon/miragon-ai/issues/355)) ([dab051c](https://github.com/Miragon/miragon-ai/commit/dab051ca7c0eebec1629e566104a33f5ae5f654b))
+* **server:** DNS-rebinding protection, pre-auth body cap, graceful drain and one createApp factory ([#358](https://github.com/Miragon/miragon-ai/issues/358)) ([e1fa024](https://github.com/Miragon/miragon-ai/commit/e1fa0244ee13e416f1c8131277169c4b7de85edb))
+
 ## [0.17.0](https://github.com/Miragon/miragon-ai/compare/v0.16.0...v0.17.0) (2026-09-30)
 
 
