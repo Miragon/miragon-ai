@@ -36,7 +36,12 @@ describe("camunda7Module.instructions", () => {
   ])("never offers the save under %s", (_label, toolset, authenticated) => {
     const text = snippet(TWO, toolset, authenticated)
     expect(text).not.toContain("camunda7_select_engine")
-    expect(text).toContain("This deployment cannot save a default: pass `engine` on every call.")
+    // Scoped: strict input (#329) refuses an `engine` on the tools that take
+    // none (camunda7_list_engines, the profile tools), so "every call" alone
+    // would cost a refused call there.
+    expect(text).toContain(
+      "This deployment cannot save a default: pass `engine` on every call that takes it.",
+    )
   })
 
   it("states the cut-value rule for variable reads once", () => {

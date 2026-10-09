@@ -31,7 +31,7 @@ function routingRule({ engineIds, canSaveDefault }: Camunda7InstructionsInput): 
     "with ENGINE_NOT_SELECTED. " +
     (canSaveDefault
       ? "camunda7_select_engine saves the caller's default."
-      : "This deployment cannot save a default: pass `engine` on every call.")
+      : "This deployment cannot save a default: pass `engine` on every call that takes it.")
   )
 }
 
