@@ -13,28 +13,46 @@ import type { ProcessIncidentsData } from "../../view-models.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useNav } from "../navigation.js"
 import { useViewData } from "../use-view-data.js"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 import { diagramActivityFraction } from "./activity-scope.js"
 
-// AI handoff prompt — fully self-contained (engine + concrete ids inlined) so
-// the chat follow-up needs no ambient context. The problem-activity list is
-// baked in here from the in-scope `data.activities`.
-function buildAnalyzePrompt(data: ProcessIncidentsData, title: string, engineId: string): string {
-  const problemActivityList =
-    data.activities
-      .map(
-        (a) =>
-          `"${a.activityName ?? a.activityId} (${a.activityId}): ${a.incidentCount} incidents"`,
-      )
-      .join(", ") || "(none reported)"
-
-  // Both sides over the diagram; activities only older versions have stay
-  // in the problem list above, never in the fraction.
+/**
+ * Triage of ONE definition's health: cluster its incidents by root cause and
+ * recommend a fix per cluster. The problem activities travel as their ids;
+ * the definition's name is the deployer's text — quoted.
+ */
+export function triageProcessHandOff(
+  data: ProcessIncidentsData,
+  engine: string | undefined,
+): HandOff {
   const fraction = diagramActivityFraction(data)
-  const affectedActivities = fraction
-    ? `${fraction.affected} of ${fraction.total}`
-    : `${data.activities.length}`
-  return `Triage the health of process definition \`${title}\` (key \`${data.processDefinitionKey}\`, all versions; diagram version ${data.diagramVersion}, engine \`${engineId}\`). Current state: ${data.incidentCount} open incident(s), ${data.failedJobs ?? "unknown"} failed job(s), ${affectedActivities} activities affected, ${data.runningInstances ?? "unknown"} running instances. Problem activities: ${problemActivityList}. Use camunda7_list_incidents({ processDefinitionKey: "${data.processDefinitionKey}" }) and camunda7_list_jobs({ processDefinitionKey: "${data.processDefinitionKey}", noRetriesLeft: true }) to pull the real incident/exception messages, cluster them by root cause, and use camunda7_query_historic_activity_instances to see whether the same failures recur. Tell me: the single most likely root cause per cluster, which activities are symptoms vs. sources, and a concrete recommended fix (batch retry, variable change, modification, or migration). Do NOT mutate anything — diagnosis only.`
+  return {
+    intent: "askAi.process.triage",
+    ids: { engine, processDefinitionKey: data.processDefinitionKey, noRetriesLeft: true },
+    // Every count spans all versions of the key; only the diagram is one
+    // version (#335 N60) — so the activity fraction is the diagram's own
+    // ("1 of 2"), and activities only older versions have are named apart.
+    facts: {
+      countScope: "allVersions",
+      diagramVersion: data.diagramVersion,
+      openIncidents: data.incidentCount,
+      failedJobs: data.failedJobs,
+      runningInstances: data.runningInstances,
+      problemActivities: data.activities.map((a) => a.activityId),
+      affectedDiagramActivities: fraction?.affected,
+      diagramActivities: fraction?.total,
+      affectedOnlyInOlderVersions: fraction?.olderVersionsOnly || undefined,
+    },
+    untrusted: [{ label: "processName", text: data.processDefinitionName }],
+    tools: [
+      "camunda7_list_incidents",
+      "camunda7_list_jobs",
+      "camunda7_get_job_stacktrace",
+      "camunda7_query_historic_incidents",
+      "camunda7_query_historic_activity_instances",
+    ],
+  }
 }
 
 /** Tone icon + open-incident badge column of the header. */
@@ -117,6 +135,7 @@ export function ProcessDetailHeader({
 }) {
   const t = useT()
   const go = useNav()
+  const { ask } = useHandOff()
   const { data, loading, error } = useViewData<ProcessIncidentsData>(
     initialData,
     ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
@@ -139,9 +158,6 @@ export function ProcessDetailHeader({
   }
 
   const title = data.processDefinitionName ?? data.processDefinitionKey
-  const engineId = engine ?? data.engineId ?? "default"
-
-  const analyzePrompt = buildAnalyzePrompt(data, title, engineId)
 
   return (
     <WidgetShell>
@@ -150,7 +166,12 @@ export function ProcessDetailHeader({
         badge={<HeaderBadge data={data} />}
         title={title}
         sub={<HeaderSub data={data} />}
-        actions={<AskAiButton prompt={analyzePrompt} variant="primary" />}
+        actions={
+          <AskAiButton
+            prompt={ask(triageProcessHandOff(data, engine ?? data.engineId))}
+            variant="primary"
+          />
+        }
       />
       <div className="flex flex-wrap items-center gap-2">
         <DrillButton

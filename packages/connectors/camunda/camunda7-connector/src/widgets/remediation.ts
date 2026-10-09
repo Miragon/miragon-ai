@@ -1,10 +1,14 @@
 /**
- * Shared guarded-remediation handoff, used by the engine-health overview's
+ * Shared guarded-remediation hand-off, used by the engine-health overview's
  * cluster rows AND the cluster-detail view — the AI-first replacement for a
- * blunt "retry all": classify → check idempotency → scope the retry to THIS
- * cluster's jobs only → confirm. The agent does the judgment + (on
- * confirmation) the execution; a widget never one-clicks a destructive batch.
+ * blunt "retry all". The prompt only carries the cluster's ids and the tools
+ * this deployment has; the playbook itself (classify → idempotency gate →
+ * retry scoped to THIS cluster's failed jobs → confirm) is generic and lives
+ * in the module's server instructions (`instructions.ts`), gated by the same
+ * toolset. A widget never one-clicks a destructive batch.
  */
+import type { ToolSurface } from "@miragon-ai/widget-shell/widgets"
+import type { HandOff } from "./lib/hand-off.js"
 
 import type { ClusterCounts } from "../view-models.js"
 
@@ -18,36 +22,72 @@ export interface RemediationCluster extends ClusterCounts {
   representativeMessage: string | null
 }
 
-export function remediatePrompt(cluster: RemediationCluster, engine?: string): string {
-  const e = engine ?? "the current engine"
-  const procs = cluster.processDefinitionKeys.filter((k) => k !== UNKNOWN_KEY)
-  const procFilter = procs[0] ? `, processDefinitionKey: "${procs[0]}"` : ""
-  const keyArg = procs[0] ? `"${procs[0]}"` : "<processDefinitionKey>"
-  return (
-    `Help me fix this incident cluster on engine "${e}", step by step and in plain language for a ` +
-    `distribution-center support operator (no Camunda jargon). The cluster: activity ` +
-    `"${cluster.activityId}" failing as ${cluster.incidentType} — ${cluster.incidentCount ?? `at least ${cluster.scannedIncidentCount}`} incidents` +
-    (cluster.last24hCount ? ` (${cluster.last24hCount} in the last 24h)` : "") +
-    (procs.length ? ` across ${procs.join(", ")}` : "") +
-    `. Sample message: ${cluster.representativeMessage ?? "(none)"}.\n\n` +
-    `1) Confirm the root cause with camunda7_list_incidents({ engine: "${e}", activityId: "${cluster.activityId}", ` +
-    `incidentType: "${cluster.incidentType}"` +
-    procFilter +
-    ` }), camunda7_query_historic_incidents({ engine: "${e}", activityId: "${cluster.activityId}"` +
-    procFilter +
-    ` }) — has it failed before, since when? — and camunda7_get_job_stacktrace({ engine: "${e}", ` +
-    `jobId: <id of one failed job> }); classify it: transient / data / config / model.\n` +
-    `2) Choose the fix by class — transient (external system back up) → retry; bad input data → read the ` +
-    `variable whole (camunda7_get_process_instance_variables({ engine: "${e}", ` +
-    `processInstanceId: <the instance>, variableName: <the variable> })), fix it ` +
-    `(camunda7_set_process_instance_variable), then retry; code/model defect → do NOT retry (it ` +
-    `re-fails), escalate and draft a ticket (camunda7_format_incident_issue).\n` +
-    `3) Idempotency gate: before any retry, decide whether re-running "${cluster.activityId}" could cause ` +
-    `a real-world side effect (double shipment, double booking). If unsure, say so and do not retry.\n` +
-    `4) If a retry is safe, scope it to THIS cluster ONLY — never "retry all": list exactly these failed ` +
-    `jobs via camunda7_list_jobs({ engine: "${e}", activityId: "${cluster.activityId}", ` +
-    `processDefinitionKey: ${keyArg}, noRetriesLeft: true }) ` +
-    `and propose camunda7_set_job_retries_batch on exactly those job ids.\n\n` +
-    `Show me the plan and the affected count first, and execute nothing until I confirm.`
-  )
+/**
+ * A cluster's size as a hand-off fact: the exact `incidentCount`, or — when a
+ * capped scan vouches only for its share (#335) — that share as
+ * `incidentCountAtLeast`, never passed off as the total.
+ */
+export function clusterCountFacts(counts: ClusterCounts): {
+  incidentCount?: number
+  incidentCountAtLeast?: number
+} {
+  return counts.incidentCount === null
+    ? { incidentCountAtLeast: counts.scannedIncidentCount }
+    : { incidentCount: counts.incidentCount }
+}
+
+export interface RemediationHandOff {
+  handOff: HandOff
+  /**
+   * Whether the deployment can apply a fix (a retry tool is registered for
+   * the model). Without one the hand-off is a diagnosis + ticket draft, and
+   * the button says so.
+   */
+  canFix: boolean
+}
+
+/**
+ * The cluster hand-off for `engine` — always the id the operator is looking
+ * at (never a placeholder: `engine` is a boot-time enum, so anything else is
+ * a refused call); omitted, the call routes like any engine-less one.
+ */
+export function remediationHandOff(
+  cluster: RemediationCluster,
+  engine: string | undefined,
+  surface: ToolSurface,
+): RemediationHandOff {
+  const keys = cluster.processDefinitionKeys.filter((k) => k !== UNKNOWN_KEY)
+  const canFix =
+    surface.has("camunda7_set_job_retries") || surface.has("camunda7_set_job_retries_batch")
+  return {
+    canFix,
+    handOff: {
+      intent: canFix ? "askAi.cluster.fix" : "askAi.cluster.diagnose",
+      ids: {
+        engine,
+        activityId: cluster.activityId,
+        incidentType: cluster.incidentType,
+        // One key scopes every call; several scope the incident list only.
+        processDefinitionKey: keys.length === 1 ? keys[0] : undefined,
+        processDefinitionKeyIn: keys.length > 1 ? keys : undefined,
+      },
+      facts: {
+        ...clusterCountFacts(cluster),
+        // An unknown 24h count is left out, never a 0 (#335).
+        last24h: cluster.last24hCount ? cluster.last24hCount : undefined,
+      },
+      untrusted: [{ label: "sampleMessage", text: cluster.representativeMessage }],
+      tools: [
+        "camunda7_list_incidents",
+        "camunda7_query_historic_incidents",
+        "camunda7_get_job_stacktrace",
+        "camunda7_list_jobs",
+        "camunda7_get_process_instance_variables",
+        "camunda7_set_process_instance_variable",
+        "camunda7_set_job_retries",
+        "camunda7_set_job_retries_batch",
+        "camunda7_format_incident_issue",
+      ],
+    },
+  }
 }

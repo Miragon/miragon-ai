@@ -9,28 +9,29 @@ import type { FailureDashboardData } from "@miragon-ai/analytics-client"
 import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
+import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 
 /**
- * Build the self-contained cross-pattern triage prompt for the surface-level
- * "✦ Analyze failures" handoff. Every concrete id/number is inlined here so the
- * agent gets the full point-in-time snapshot without relying on ambient context.
- * The failure dashboard is cross-engine (no single engine in scope), so the
- * prompt asks the agent to confirm live state across engines itself.
+ * Triage of the open-incident snapshot. Only the headline numbers travel —
+ * the patterns themselves are read through the tools (bounded, and their
+ * messages stay tool output instead of the user's own words).
  */
-function buildAnalyzeFailuresPrompt(data: FailureDashboardData): string {
-  const errorPatterns = data.errorPatterns
-    .map(
-      (p) =>
-        `${p.incidentCount} open "${p.incidentType}" incident(s) in process ${p.processDefinitionKey}`,
-    )
-    .join("; ")
-  const processBreakdown = data.processBreakdown
-    .map(
-      (b) =>
-        `${b.processDefinitionKey}: ${b.openIncidents} open incident(s), ${b.deadJobs} dead job(s), ${b.runningNow} running (${b.incidentRatePct ?? "n/a"} open incidents per 100 running)`,
-    )
-    .join("; ")
-  return `Triage the current open-incident snapshot from the failure dashboard. There are ${data.totalIncidents} open incidents in ${data.uniqueErrorPatterns} groups by incident type and process; the most affected process is \`${data.mostAffectedProcess ?? "unknown"}\`. The groups are: ${errorPatterns}. The per-process breakdown is: ${processBreakdown}. The metric carries no incident message, activity or timestamps — read those from the live incidents. Group the incidents by likely common cause, distinguish a broad systemic outage (one cause spanning many processes) from isolated per-process bugs, and give a ranked, prioritized action list (which groups to fix first and why) using their incidentCount and incidentRatePct. Confirm with the live engine state via analytics_find_failed_instances and camunda7_list_incidents before recommending, since this snapshot is point-in-time across all engines. Do not mutate anything — analysis only.`
+export function failureSummaryHandOff(data: FailureDashboardData): HandOff {
+  return {
+    intent: "askAi.failureSummary",
+    ids: { engine: engineIdsOf(data.engines) },
+    facts: {
+      openIncidentsNow: data.totalIncidents,
+      incidentGroups: data.uniqueErrorPatterns,
+      mostAffectedProcess: data.mostAffectedProcess,
+    },
+    tools: [
+      "analytics_find_failed_instances",
+      "analytics_show_failure_dashboard",
+      "camunda7_list_incidents",
+      "camunda7_query_historic_incidents",
+    ],
+  }
 }
 
 export function FailureSummaryKpi({
@@ -39,6 +40,7 @@ export function FailureSummaryKpi({
 }: { data: FailureDashboardData | null } & FailureScopeProps) {
   const fallbackQuery = useFailureDashboardSelfFetch(initialData, { engine })
   const t = useT()
+  const { ask } = useHandOff()
 
   return (
     <QueryGate
@@ -53,7 +55,7 @@ export function FailureSummaryKpi({
             icon="⚠"
             iconTone="critical"
             title={t("aFailureSummary.title")}
-            actions={<AskAiButton variant="primary" prompt={buildAnalyzeFailuresPrompt(data)} />}
+            actions={<AskAiButton variant="primary" prompt={ask(failureSummaryHandOff(data))} />}
           />
           <KpiGrid
             variant="soft"

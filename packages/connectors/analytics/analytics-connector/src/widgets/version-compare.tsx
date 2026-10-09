@@ -7,8 +7,9 @@ import {
   ComparisonCard,
   ComparisonEmptyState,
   buildComparisonMetrics,
-  describeDeltas,
+  deltaFacts,
 } from "./comparison-shared.js"
+import { engineIdsOf, useHandOff, type HandOff } from "./hand-off.js"
 
 export type VersionCompareData = VersionCompareResult | null
 
@@ -20,20 +21,35 @@ export function versionCompareNote(t: T, caveats: VersionCompareCaveats): string
   return caveats.incidentRatesUnavailable ? t("aVersionCompare.incidentKpisUnavailable") : undefined
 }
 
-/** The Ask-AI prompt, carrying the same caveat as the on-screen note. */
-export function versionCompareAskAiPrompt(
+/**
+ * Interpret a version comparison, carrying the on-screen caveat as a fact:
+ * the incident rates are not measured per version (unknown, never 0). The
+ * comparison is process-wide — the tool takes no element scope (#336).
+ */
+export function versionCompareHandOff(
   data: VersionCompareResult,
   caveats: VersionCompareCaveats,
-): string {
-  const { processDefinitionKey: key, versionA, versionB, windowDays } = data
-  const incidentCaveat = caveats.incidentRatesUnavailable
-    ? " Incident rates are NOT measured per version (the incident metric carries no process-version label) — treat them as unknown, not as zero."
-    : ""
-  return `Interpret the version comparison for process ${key}, v${versionA} (baseline) vs v${versionB} (candidate), over a ${windowDays}-day window. The on-screen deltas are: ${describeDeltas(data.delta)}.${incidentCaveat} First call analytics_version_compare(processDefinitionKey="${key}", versionA=${versionA}, versionB=${versionB}, windowDays=${windowDays}) to confirm the numbers and the 'suppressed' flag, then call analytics_element_bottleneck(processDefinitionKey="${key}", period="${windowDays}d") to find which activity drives any duration regression (its incident counts cover every version of the key, not one). Tell me in 3-4 sentences: is v${versionB} a genuine regression or just noise / low sample size, which element is responsible, and the single recommended next action (roll running instances back to v${versionA}, hold the rollout, or accept).`
+): HandOff {
+  return {
+    intent: "askAi.versionCompare",
+    ids: {
+      engine: engineIdsOf(data.engines),
+      processDefinitionKey: data.processDefinitionKey,
+      versionA: data.versionA,
+      versionB: data.versionB,
+      windowDays: data.windowDays,
+    },
+    facts: {
+      ...deltaFacts(data.delta, data.suppressed),
+      incidentRatesMeasured: caveats.incidentRatesUnavailable ? false : undefined,
+    },
+    tools: ["analytics_version_compare", "analytics_element_bottleneck"],
+  }
 }
 
 export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
   const t = useT()
+  const { ask } = useHandOff()
   if (!data) return <ComparisonEmptyState>{t("aVersionCompare.emptyNoData")}</ComparisonEmptyState>
 
   const a = data.kpis.find((k) => k.bucket === "versionA")
@@ -53,7 +69,7 @@ export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
       afterLabel={`v${data.versionB}`}
       metrics={metrics}
       note={versionCompareNote(t, caveats)}
-      actions={<AskAiButton prompt={versionCompareAskAiPrompt(data, caveats)} variant="primary" />}
+      actions={<AskAiButton prompt={ask(versionCompareHandOff(data, caveats))} variant="primary" />}
       badges={
         <>
           <Badge>{data.processDefinitionKey}</Badge>

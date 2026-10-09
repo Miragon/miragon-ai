@@ -34,6 +34,20 @@ export { LivePill, StatusBadge, CountPill } from "./pills.js"
 export { LogText, LOG_TEXT_PREVIEW } from "./log-text.js"
 export { useHostActions, buildShowWidgetIntent, type HostActions } from "./use-host-actions.js"
 export { AskAiButton, type AskAiButtonProps, type AskAiVariant } from "./ask-ai-button.js"
+export {
+  askAiPrompt,
+  modelContextText,
+  fenceUntrusted,
+  EMPTY_TOOL_SURFACE,
+  MAX_UNTRUSTED_CHARS,
+  type AskAiPrompt,
+  type AskAiPromptSpec,
+  type HandOffParts,
+  type HandOffValue,
+  type ModelContextSpec,
+  type ToolSurface,
+  type UntrustedText,
+} from "./ask-ai-prompt.js"
 export { DrillButton } from "@miragon/mcp-toolkit-ui"
 export { OpenInCockpitLink } from "./open-in-cockpit-link.js"
 export { ListFooter } from "@miragon/mcp-toolkit-ui"

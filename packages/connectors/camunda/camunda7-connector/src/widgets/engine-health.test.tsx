@@ -1,12 +1,24 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, render, screen } from "@testing-library/react"
+import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import { EngineHealthVerdict } from "./engine-health.js"
 import type { EngineHealthData } from "../view-models.js"
+import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
+import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  queryClient.clear()
+})
+
+/** The hand-offs follow the deployment's surface — these fixtures run as `operations`. */
+let tools: Record<string, unknown>
+beforeAll(async () => {
+  tools = { [CAMUNDA7_WIDGET_ACTIONS_DATA]: await widgetActionsFeedFor("operations") }
+})
 
 const RULE =
   "From the engine's open incidents, read live: critical at >=50 open or >=25 in one cluster, degraded with any, else ok."
@@ -81,15 +93,19 @@ const HEALTHY: EngineHealthData = {
 const Widget = EngineHealthVerdict as unknown as ComponentType<Record<string, unknown>>
 
 describe("EngineHealthVerdict (fixture render)", () => {
-  it("renders the verdict header, KPIs and the incident clusters with drill + ask handoffs", () => {
+  it("renders the verdict header, KPIs and the incident clusters with drill + ask handoffs", async () => {
     render(
-      <WidgetFixtureHost widget={Widget} data={DEGRADED as unknown as Record<string, unknown>} />,
+      <WidgetFixtureHost
+        widget={Widget}
+        data={DEGRADED as unknown as Record<string, unknown>}
+        tools={tools}
+      />,
     )
 
     // Verdict header (title + deterministic headline) and the top-level AI handoff.
     expect(screen.getByText("Engine Overview")).toBeTruthy()
     expect(screen.getByText("Degraded — 51 open incidents across 3 activities")).toBeTruthy()
-    expect(screen.getByText("Analyze")).toBeTruthy()
+    expect(await screen.findByText("Analyze")).toBeTruthy()
 
     // KPI row.
     expect(screen.getByText("Running instances")).toBeTruthy()
@@ -107,7 +123,7 @@ describe("EngineHealthVerdict (fixture render)", () => {
     // Each cluster carries both launchpads: a deterministic drill + the guarded
     // remediation handoff to the agent.
     expect(screen.getAllByText("Open")).toHaveLength(2)
-    expect(screen.getAllByText("Fix")).toHaveLength(2)
+    expect(await screen.findAllByText("Fix")).toHaveLength(2)
   })
 
   it("renders the stable verdict with no cluster list when there are no incidents", () => {

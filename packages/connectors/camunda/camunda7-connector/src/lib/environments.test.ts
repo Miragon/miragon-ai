@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   DEFAULT_ENVIRONMENT_ID,
   environmentOf,
+  enginesByEnvironment,
   formatEnginesByEnvironment,
   groupEnginesByEnvironment,
 } from "./environments.js"
@@ -74,5 +75,23 @@ describe("formatEnginesByEnvironment", () => {
       ]),
     ).toBe("a, b")
     expect(formatEnginesByEnvironment([])).toBe("")
+  })
+})
+
+describe("enginesByEnvironment", () => {
+  it("pairs each engine with its environment when more than one exists", () => {
+    expect(
+      enginesByEnvironment([
+        { id: "prod-eu", engines: [{ id: "a" }, { id: "c" }] },
+        { id: "prod-us", engines: [{ id: "b" }] },
+      ]),
+    ).toEqual(["prod-eu/a", "prod-eu/c", "prod-us/b"])
+  })
+
+  it("adds nothing for a single environment — or none", () => {
+    expect(
+      enginesByEnvironment([{ id: DEFAULT_ENVIRONMENT_ID, engines: [{ id: "a" }, { id: "b" }] }]),
+    ).toBeUndefined()
+    expect(enginesByEnvironment([])).toBeUndefined()
   })
 })

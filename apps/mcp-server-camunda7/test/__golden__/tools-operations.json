@@ -1595,7 +1595,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Build a structured, tracker-agnostic ticket draft (title, markdown body, labels) from a Camunda 7 / CIB Seven incident. Does NOT file anything — present the draft in the chat for review and reuse; the user decides where it goes (their issue tracker via whatever integration is available, the optional prefilled GitHub URL, or copy-paste).",
+    "description": "Build a structured, tracker-agnostic ticket draft (title, markdown body, labels) from a Camunda 7 / CIB Seven incident. Does NOT file anything — present the draft in the chat for review and reuse; the user decides where it goes (their issue tracker via whatever integration is available, the prefilled GitHub URL of the configured repository, or copy-paste).",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1607,12 +1607,7 @@
           "type": "string"
         },
         "incidentId": {
-          "description": "The incident ID to build a GitHub issue payload for",
-          "type": "string"
-        },
-        "repository": {
-          "description": "Override the target GitHub repository in `owner/repo` form. Defaults to the configured incident-issue repository.",
-          "pattern": "^[^/\\s]+\\/[^/\\s]+$",
+          "description": "The incident ID to draft a ticket for",
           "type": "string"
         }
       },
@@ -4753,7 +4748,7 @@
       "openWorldHint": false,
       "readOnlyHint": true
     },
-    "description": "Internal JSON feed (no UI): which engine write actions the widgets may offer in this deployment.",
+    "description": "Internal JSON feed (no UI): which engine write actions the widgets may offer and which tools the model has in this deployment.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},

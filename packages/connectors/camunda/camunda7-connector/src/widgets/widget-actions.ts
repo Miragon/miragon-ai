@@ -1,8 +1,25 @@
 import { useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { CAMUNDA7_WIDGET_ACTIONS_DATA, type Camunda7WidgetAction } from "../tool-names.js"
 
-interface WidgetActionsFeed {
+export interface WidgetActionsFeed {
+  /** The in-widget engine writes this deployment registers. */
   allowedActions?: string[]
+  /** Every camunda7 tool this deployment registers for the model (#338). */
+  modelTools?: string[]
+}
+
+/**
+ * The deployment's `camunda7_widget_actions_data` answer — undefined until it
+ * arrives (or when it errors). The key sits outside the `camunda7:` prefix on
+ * purpose — the answer is deployment config, and `refreshCockpitData`
+ * refetches that namespace after every mutation.
+ */
+export function useWidgetActionsFeed(): WidgetActionsFeed | undefined {
+  return useToolQuery<WidgetActionsFeed>(
+    ["camunda7-widget-actions"],
+    CAMUNDA7_WIDGET_ACTIONS_DATA,
+    {},
+  ).data
 }
 
 /**
@@ -13,16 +30,8 @@ interface WidgetActionsFeed {
  *
  * Fails closed: until the feed answers (or when it errors) nothing is allowed,
  * so a button may appear a moment late but never vanishes under the cursor.
- * The key sits outside the `camunda7:` prefix on purpose — the answer is
- * deployment config, and `refreshCockpitData` refetches that namespace after
- * every mutation.
  */
 export function useCanRun(): (action: Camunda7WidgetAction) => boolean {
-  const { data } = useToolQuery<WidgetActionsFeed>(
-    ["camunda7-widget-actions"],
-    CAMUNDA7_WIDGET_ACTIONS_DATA,
-    {},
-  )
-  const allowed = data?.allowedActions
+  const allowed = useWidgetActionsFeed()?.allowedActions
   return (action) => allowed?.includes(action) ?? false
 }

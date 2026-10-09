@@ -23,15 +23,34 @@ import type { ErrorPatternItem, FailureDashboardData } from "@miragon-ai/analyti
 import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
+import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 
 /**
- * The per-group Ask-AI prompt. The open-incident gauge carries only the
- * incident type and the process — the message and the failing activity come
- * from the live incidents, so the prompt names no field the data cannot fill.
+ * Root cause of ONE group of open incidents. The open-incident gauge carries
+ * only the incident type and the process (#336) — the message and the
+ * failing activity come from the live incidents, so the hand-off passes no
+ * field the data cannot fill. A custom incident type is any string: unless
+ * id-shaped it is quoted as untrusted data, never inlined.
  */
-export function errorPatternAskAiPrompt(pattern: ErrorPatternItem): string {
-  const { incidentType, processDefinitionKey: key, incidentCount } = pattern
-  return `Root-cause this group of open CIB Seven incidents on the current engine: ${incidentCount} open "${incidentType}" incident(s) in process definition "${key}". The metric carries no incident message, activity or timestamps, so read them from the live incidents with camunda7_list_incidents({ processDefinitionKey: "${key}", incidentType: "${incidentType}" }), then inspect the history of the activity they fail at via camunda7_query_historic_activity_instances. Tell me the likely root cause, whether this is transient (e.g. a retryable/timing/external dependency blip) or systemic (a code/config/data defect), and the recommended fix. Explanation only — do not change anything.`
+export function errorPatternHandOff(
+  pattern: ErrorPatternItem,
+  data: Pick<FailureDashboardData, "engines">,
+): HandOff {
+  return {
+    intent: "askAi.errorPattern",
+    ids: {
+      engine: engineIdsOf(data.engines),
+      processDefinitionKey: pattern.processDefinitionKey,
+      incidentType: pattern.incidentType,
+    },
+    facts: { openIncidentsNow: pattern.incidentCount },
+    tools: [
+      "analytics_find_failed_instances",
+      "camunda7_list_incidents",
+      "camunda7_query_historic_incidents",
+      "camunda7_query_historic_activity_instances",
+    ],
+  }
 }
 
 export function ErrorPatternsTable({
@@ -39,6 +58,7 @@ export function ErrorPatternsTable({
   engine,
 }: { data: FailureDashboardData | null } & FailureScopeProps) {
   const t = useT()
+  const { ask } = useHandOff()
   const fallbackQuery = useFailureDashboardSelfFetch(initialData, { engine })
   return (
     <QueryGate initialData={initialData} query={fallbackQuery} skeleton={<TableSkeleton />}>
@@ -101,7 +121,7 @@ export function ErrorPatternsTable({
                             variant="icon"
                             title={t("aErrorPatterns.analyzeLabel")}
                             label={t("aErrorPatterns.analyzeLabel")}
-                            prompt={errorPatternAskAiPrompt(pattern)}
+                            prompt={ask(errorPatternHandOff(pattern, data))}
                           />
                         </TableCell>
                       </TableRow>

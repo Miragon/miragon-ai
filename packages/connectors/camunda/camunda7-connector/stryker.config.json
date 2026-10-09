@@ -11,6 +11,7 @@
     "src/module.ts",
     "src/tools/deployments.ts",
     "src/tools/engines.ts",
+    "src/widget-tools/model-surface.ts",
     "!src/**/*.test.ts"
   ],
   "inPlace": true,

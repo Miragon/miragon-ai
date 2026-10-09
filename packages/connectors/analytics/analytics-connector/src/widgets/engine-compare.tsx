@@ -6,13 +6,35 @@ import {
   ComparisonCard,
   ComparisonEmptyState,
   buildComparisonMetrics,
-  describeDeltas,
+  deltaFacts,
 } from "./comparison-shared.js"
+import { useHandOff, type HandOff } from "./hand-off.js"
 
 export type EngineCompareData = EngineCompareResult | null
 
+/**
+ * Interpret ONE process on two engines. The process is held fixed, so a real
+ * gap is the engine's (or its environment's) — confirmed by the comparison,
+ * then by each engine's live snapshot.
+ */
+export function engineCompareHandOff(data: EngineCompareResult): HandOff {
+  return {
+    intent: "askAi.engineCompare",
+    ids: {
+      processDefinitionKey: data.processDefinitionKey,
+      engineA: data.engineA,
+      engineB: data.engineB,
+      windowDays: data.windowDays,
+      activityId: data.activityId,
+    },
+    facts: deltaFacts(data.delta, data.suppressed),
+    tools: ["analytics_engine_compare", "analytics_engine_health"],
+  }
+}
+
 export function EngineCompareWidget({ data }: { data: EngineCompareData }) {
   const t = useT()
+  const { ask } = useHandOff()
   if (!data) return <ComparisonEmptyState>{t("aEngineCompare.emptyNoData")}</ComparisonEmptyState>
 
   const a = data.kpis.find((k) => k.bucket === "engineA")
@@ -23,11 +45,6 @@ export function EngineCompareWidget({ data }: { data: EngineCompareData }) {
 
   const metrics = buildComparisonMetrics(t, a, b, data.delta)
 
-  const elementScope = data.activityId ? `, scoped to BPMN element ${data.activityId}` : ""
-  // The process is fixed on both sides, so the remaining question is genuinely
-  // about the engines — not about which workload each of them happens to run.
-  const interpretPrompt = `Interpret the comparison of process "${data.processDefinitionKey}" running on engine ${data.engineA} (baseline) vs ${data.engineB} over a ${data.windowDays}-day window${elementScope}. The on-screen deltas are: ${describeDeltas(data.delta)}. First call analytics_engine_compare(processDefinitionKey="${data.processDefinitionKey}", engineA="${data.engineA}", engineB="${data.engineB}", windowDays=${data.windowDays}) to confirm the numbers and the 'suppressed' flag, then call analytics_engine_health for both engines' live operational snapshot. Since the same process is measured on both engines, a real gap points at the engine or its environment (load, resources, workers, configuration) rather than at a different workload. Tell me in 3-4 sentences: does ${data.engineB} genuinely run this process worse than ${data.engineA} or is the difference noise, which metric drives the gap, and the single recommended next action.`
-
   return (
     <ComparisonCard
       title={t("aEngineCompare.title")}
@@ -35,7 +52,7 @@ export function EngineCompareWidget({ data }: { data: EngineCompareData }) {
       beforeLabel={data.engineA}
       afterLabel={data.engineB}
       metrics={metrics}
-      actions={<AskAiButton prompt={interpretPrompt} variant="primary" />}
+      actions={<AskAiButton prompt={ask(engineCompareHandOff(data))} variant="primary" />}
       badges={
         <>
           <Badge variant="secondary">

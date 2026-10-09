@@ -52,11 +52,6 @@ export function InstanceDetailWidget({
   // this view already resolved/completed — never the length of a capped list.
   const openIncidentCount = data.incidentCount - (incidents.length - activeIncidents.length)
   const openTaskCount = data.openTaskCount - (data.openTasks.length - visibleTasks.length)
-  // When neither the prop nor the fetched id is known the prompts omit the engine
-  // clause entirely (the saved default engine applies) — never inline a
-  // placeholder as if it were an engine id.
-  const engineClause = engineId ? `, engine ${engineId}` : ""
-
   const status = instanceStatus(t, { cancelled, ended: instance.ended, isSuspended })
 
   const tabs: DetailPageTab[] = [
@@ -95,7 +90,6 @@ export function InstanceDetailWidget({
           instanceId={instance.id}
           definitionId={instance.definitionId}
           engineId={engineId}
-          engineClause={engineClause}
           readOnly={instance.ended || cancelled}
         />
       ),
@@ -108,7 +102,6 @@ export function InstanceDetailWidget({
           instanceId={instance.id}
           definitionId={instance.definitionId}
           engineId={engineId}
-          engineClause={engineClause}
         />
       ),
     },
@@ -124,7 +117,6 @@ export function InstanceDetailWidget({
           instance={instance}
           status={status}
           engineId={engineId}
-          engineClause={engineClause}
           activeActivityIds={data.activeActivityIds}
           incidentActivityIds={data.incidentActivityIds}
           isSuspended={isSuspended}
@@ -156,9 +148,10 @@ export function InstanceDetailWidget({
     >
       <InstanceModelContext
         instance={instance}
+        engineId={engineId}
         cancelled={cancelled}
         isSuspended={isSuspended}
-        openIncidentCount={activeIncidents.length}
+        openIncidentCount={openIncidentCount}
       />
       <InstanceActionDialogs actions={actions} />
     </DetailPage>

@@ -1,19 +1,60 @@
 import { AskAiButton, LivePill, WidgetHeader } from "@miragon-ai/widget-shell/widgets"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
+
+/**
+ * Triage of the running instances — of one definition (scoped list) or of the
+ * whole engine. The process name is the deployer's text — quoted.
+ */
+export function triageInstancesHandOff({
+  scopedKey,
+  processName,
+  total,
+  engine,
+}: {
+  scopedKey: string | null
+  processName: string | null
+  total: number
+  engine: string | undefined
+}): HandOff {
+  return scopedKey
+    ? {
+        intent: "askAi.instances.triageProcess",
+        ids: { engine, processDefinitionKey: scopedKey },
+        facts: { runningInstances: total },
+        untrusted: [{ label: "processName", text: processName }],
+        tools: [
+          "camunda7_list_incidents",
+          "camunda7_query_historic_incidents",
+          "camunda7_query_historic_activity_instances",
+        ],
+      }
+    : {
+        intent: "askAi.instances.triageEngine",
+        ids: { engine },
+        facts: { runningInstances: total },
+        tools: ["camunda7_list_incidents", "camunda7_query_historic_incidents"],
+      }
+}
 
 export function InstancesHeader({
   title,
+  processName,
   scopedKey,
   total,
-  resolvedEngine,
+  engine,
 }: {
   title: string
+  /** The definition's name — null when it has none (or the list is engine-wide). */
+  processName: string | null
   /** The list's definition scope — null in the engine-wide list. */
   scopedKey: string | null
   total: number
-  resolvedEngine: string
+  /** The engine the list was fetched from — undefined when the default routed it. */
+  engine: string | undefined
 }) {
   const t = useT()
+  const { ask } = useHandOff()
   return (
     <WidgetHeader
       icon="▶"
@@ -35,11 +76,7 @@ export function InstancesHeader({
       actions={
         <AskAiButton
           variant="primary"
-          prompt={
-            scopedKey
-              ? `Triage the running instances of CIB Seven process "${title}" (key ${scopedKey}, engine ${resolvedEngine}). There are ${total} running instances total. Use camunda7_list_incidents (processDefinitionKey ${scopedKey}) and camunda7_query_historic_activity_instances to group the incidents by failed activity and incident type, identify the dominant failure mode, and tell me how many instances are likely fixable by a job retry vs. needing a variable change or modification. Give me a prioritized triage: which cluster to fix first and the single recommended remediation per cluster. Do not mutate anything yet — recommendations only.`
-              : `Triage the running process instances on CIB Seven engine ${resolvedEngine} — ${total} across all definitions. Use camunda7_list_incidents (engine ${resolvedEngine}) to group the current failures by process definition, failed activity and incident type, identify which definitions carry the most incident-affected instances, and tell me how many are likely fixable by a job retry vs. needing a variable change or modification. Give me a prioritized triage per definition. Do not mutate anything yet — recommendations only.`
-          }
+          prompt={ask(triageInstancesHandOff({ scopedKey, processName, total, engine }))}
         />
       }
     />

@@ -3,18 +3,12 @@ import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext, WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
 import { ViewDataState, WidgetShell, useHostWidgets } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "../../view-models.js"
-import { formatEnginesByEnvironment, groupEnginesByEnvironment } from "../../lib/environments.js"
+import { groupEnginesByEnvironment } from "../../lib/environments.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
-import {
-  buildViewParams,
-  describeCurrentView,
-  intentToView,
-  popTo,
-  pushView,
-  type CockpitView,
-} from "../nav-core.js"
+import { buildViewParams, intentToView, popTo, pushView, type CockpitView } from "../nav-core.js"
 import { camunda7BaseWidgets } from "../registry.js"
-import { engineCallRule } from "../lib/engine-scope.js"
+import { useHandOff } from "../lib/hand-off.js"
+import { cockpitContext, fleetContext } from "./model-context.js"
 import { translator } from "../../messages/index.js"
 import { CAMUNDA7_LIST_ENGINES } from "../../tool-names.js"
 import { NavBreadcrumb } from "./breadcrumb.js"
@@ -157,17 +151,6 @@ function EngineSwitcher({
   )
 }
 
-/**
- * The fleet-mode model context. Names each engine's environment when more than
- * one exists — the model sees the fleet only through this string, while the
- * widget visibly groups its tiles per environment.
- */
-function fleetModelContext(engineGroups: Array<{ id: string; engines: Array<{ id: string }> }>) {
-  const grouped = engineGroups.length > 1
-  const summary = formatEnginesByEnvironment(engineGroups)
-  return `Support is in the consolidated CIB Seven cockpit in CROSS-ENGINE mode across engines${grouped ? " grouped by environment —" : ":"} ${summary}. This is an OVERVIEW across engines, not a ranking between them: the engines run different process definitions, so per-engine failure rates or durations describe each engine's process mix rather than the engine. ${grouped ? "Attribute findings to their environment when relevant. " : ""}Offer the cross-engine landscape (analytics_engine_landscape — what runs where, absolute load, job backlog), fleet-wide failure & performance analyses, and per-engine health. A like-for-like engine KPI comparison (analytics_engine_compare) is only sound for a process definition deployed on several engines and requires that processDefinitionKey. Drilling into an engine switches to that engine's single-engine cockpit.`
-}
-
 function EnginesEmptyState({
   hasTransport,
   enginesQuery,
@@ -209,6 +192,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   // shell strings here; the rendered leaf widgets read it the same way. Theme is
   // applied document-wide by the ProfileGate too, so the cockpit stays unaware.
   const locale = useLocale()
+  const { context } = useHandOff()
 
   // The host root's full widget registry (HostWidgetsProvider) merged under
   // this module's own widgets: composed views (the settings tab) reference
@@ -235,9 +219,9 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   }, [scope.kind, soleEngineId])
 
   // Pick (or switch) the active engine — navigation only, side-effect free.
-  // The cockpit threads `engine` into every view, its model context tells
-  // the model to pass it on every camunda7_* call that takes one, and the
-  // Ask-AI prompts carry it (`engineArg`/`engineCallRule`); the caller's saved
+  // The cockpit threads `engine` into every view, and its model context and
+  // every Ask-AI hand-off carry it as an id (the module's server instructions
+  // tell the model to pass it on); the caller's saved
   // default engine (which retargets every later engine-less tool call)
   // changes only through an explicit action: the settings page or
   // `camunda7_select_engine`.
@@ -265,7 +249,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   if (scope.kind === "fleet") {
     return (
       <WidgetShell>
-        <HostModelContext content={fleetModelContext(engineGroups)}>{null}</HostModelContext>
+        <HostModelContext content={context(fleetContext(engineGroups))}>{null}</HostModelContext>
         {engines.length > 1 && (
           <nav
             aria-label={translator(locale, "cockpit.aria.breadcrumb")}
@@ -300,9 +284,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
 
   return (
     <WidgetShell>
-      <HostModelContext
-        content={`Support is in the consolidated CIB Seven cockpit (camunda7_open_cockpit) on engine "${engineId}".${engineCallRule(engineId)} ${describeCurrentView(current)} Navigation is client-side; drill definitions → instances → instance. Offer agentic help (analyze incident, prepare modification/migration, create ticket) when relevant.`}
-      >
+      <HostModelContext content={context(cockpitContext(engineId, current))}>
         {null}
       </HostModelContext>
       <div className="flex flex-col gap-6 md:flex-row md:items-start">

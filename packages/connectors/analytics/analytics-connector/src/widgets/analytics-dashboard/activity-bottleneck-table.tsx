@@ -15,6 +15,38 @@ import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
 import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
+import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
+
+type ActivityRow = AnalyticsDashboardData["activityBreakdown"][number]
+
+/**
+ * Why ONE activity of one process is a bottleneck — over the scope of the
+ * data on screen (its `engines` and `period` echo), so the follow-up reads
+ * exactly the numbers shown.
+ */
+export function activityBottleneckHandOff(
+  act: ActivityRow,
+  data: Pick<AnalyticsDashboardData, "engines" | "period">,
+): HandOff {
+  return {
+    intent: "askAi.activityBottleneck",
+    ids: {
+      engine: engineIdsOf(data.engines),
+      processDefinitionKey: act.processDefinitionKey,
+      period: data.period,
+    },
+    // Durations are null when nothing ended in the window — left out, never 0.
+    facts: {
+      activityId: act.activityId,
+      activityType: act.activityType,
+      executionCount: act.executionCount,
+      avgDurationMs: act.avgDurationMs,
+      p95DurationMs: act.p95DurationMs,
+      totalTimeMs: act.totalTimeMs,
+    },
+    tools: ["analytics_element_bottleneck", "analytics_analyze_process_performance"],
+  }
+}
 
 /**
  * One row per (process, activity): BPMN ids are only unique within one model,
@@ -27,6 +59,7 @@ export function ActivityBottleneckTable({
   engine,
 }: { data: AnalyticsDashboardData | null } & DashboardScopeProps) {
   const t = useT()
+  const { ask } = useHandOff()
   const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period, engine })
 
   return (
@@ -102,7 +135,7 @@ export function ActivityBottleneckTable({
                             variant="icon"
                             label={t("aBottleneck.analyzeLabel")}
                             title={t("aBottleneck.analyzeLabel")}
-                            prompt={`Explain in plain language why activity "${act.activityId}" (type ${act.activityType}) of process definition key "${act.processDefinitionKey}" on the current engine is a bottleneck over the ${data.period} window. On-screen for this activity: executionCount=${act.executionCount}, avgDurationMs=${act.avgDurationMs}, p95DurationMs=${act.p95DurationMs}, totalTimeMs=${act.totalTimeMs}. Use analytics_element_bottleneck({processDefinitionKey: "${act.processDefinitionKey}", period: "${data.period}"}) and find activity "${act.activityId}" in its ranking and, if you need process-level context, analytics_analyze_process_performance({processDefinitionKey: "${act.processDefinitionKey}", period: "${data.period}"}). Tell me (1) whether the cost is driven by high per-execution duration (avg/p95) or by sheer execution count, (2) whether the wait is most likely wait time (async/external task, job queue, message/timer) vs compute time inside the activity given its type "${act.activityType}", and (3) the single most impactful thing to look at next. Explanation only — do not change anything.`}
+                            prompt={ask(activityBottleneckHandOff(act, data))}
                           />
                         </TableCell>
                       </TableRow>

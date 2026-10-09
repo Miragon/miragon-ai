@@ -35,7 +35,9 @@ export default mergeConfig(
         // review guards — every read of every builder broken in turn, the
         // capped-scan health suites and the step-twin request equality
         // (measured statements 77.26 / branches 63.80 / functions 74.06 /
-        // lines 78.57).
+        // lines 78.57). The #338 hand-offs rendered against each toolset's
+        // live surface (measured standalone 74.1 / 60.39 / 69.05 / 75.57)
+        // stay under the stacked floor.
         thresholds: { statements: 75, branches: 61, functions: 72, lines: 76 },
       },
     },

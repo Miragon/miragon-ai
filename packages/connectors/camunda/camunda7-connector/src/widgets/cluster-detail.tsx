@@ -20,7 +20,8 @@ import { DetailPage } from "./detail-page.js"
 import { CockpitListFooter } from "./list-footer.js"
 import { useNav } from "./navigation.js"
 import { CAMUNDA7_CLUSTER_DETAIL_DATA } from "../tool-names.js"
-import { remediatePrompt } from "./remediation.js"
+import { clusterCountFacts, remediationHandOff } from "./remediation.js"
+import { useHandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { useT } from "../messages/use-t.js"
 
@@ -28,20 +29,33 @@ import { useT } from "../messages/use-t.js"
 const PAGE_SIZE = 50
 
 /**
- * Grounding line: the agent knows exactly which failure cluster the operator
- * is inspecting, so "fix this" or "why?" needs no restating of scope.
+ * Grounding context: the agent knows exactly which failure cluster the
+ * operator is inspecting, so "fix this" or "why?" needs no restating of scope.
+ * The sample message is engine text — quoted, never inlined.
  */
-function describeCluster(data: ClusterDetailData): string {
-  return (
-    `The operator is inspecting ONE failure cluster on engine "${data.engineId}": activity ` +
-    `"${data.activityId}" failing as ${data.incidentType} — ${data.incidentCount ?? `at least ${data.scannedIncidentCount}`} incidents ` +
-    `(${data.lastHourCount ?? "unknown"} in the last hour, ${data.last24hCount ?? "unknown"} in 24h), first seen ` +
-    `${data.firstSeen ?? "unknown"}, latest ${data.latestIncident ?? "unknown"}, across process ` +
-    `definition(s) ${data.processDefinitionKeys.join(", ") || "unknown"}. Sample message: ` +
-    `${data.representativeMessage ?? "(none)"}. The list shows the affected instances with their ` +
-    `business keys. Use camunda7_list_incidents / camunda7_get_process_instance to go deeper; ` +
-    `propose remediation only scoped to this cluster and never execute without confirmation.`
-  )
+export function describeCluster(data: ClusterDetailData): ViewContext {
+  return {
+    summary:
+      "The operator is inspecting ONE failure cluster and its affected instances (with their business keys). Propose remediation only scoped to this cluster.",
+    ids: {
+      engine: data.engineId,
+      activityId: data.activityId,
+      incidentType: data.incidentType,
+      processDefinitionKeyIn: data.processDefinitionKeys,
+    },
+    // Counts a capped scan cannot vouch for are a lower bound or left out —
+    // never a 0 (#335); the list then covers only the newest scanned ones.
+    facts: {
+      ...clusterCountFacts(data),
+      lastHour: data.lastHourCount,
+      last24h: data.last24hCount,
+      firstSeen: data.firstSeen,
+      latestIncident: data.latestIncident,
+      listCoversNewest: listCapped(data) ? data.scannedIncidentCount : undefined,
+    },
+    untrusted: [{ label: "sampleMessage", text: data.representativeMessage }],
+    tools: ["camunda7_list_incidents", "camunda7_get_process_instance"],
+  }
 }
 
 /**
@@ -80,6 +94,20 @@ function clusterFeedParams({
 /** Header block: failing activity, incident-type badge, and the guarded "Fix" handoff. */
 function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: string }) {
   const t = useT()
+  const { ask, surface } = useHandOff()
+  const { handOff, canFix } = remediationHandOff(
+    {
+      activityId: data.activityId,
+      incidentType: data.incidentType,
+      incidentCount: data.incidentCount,
+      scannedIncidentCount: data.scannedIncidentCount,
+      last24hCount: data.last24hCount,
+      processDefinitionKeys: data.processDefinitionKeys,
+      representativeMessage: data.representativeMessage,
+    },
+    engineId,
+    surface,
+  )
   return (
     <WidgetHeader
       icon="⚠"
@@ -99,19 +127,8 @@ function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: 
       actions={
         <AskAiButton
           variant="primary"
-          label={t("clusterDetail.fix")}
-          prompt={remediatePrompt(
-            {
-              activityId: data.activityId,
-              incidentType: data.incidentType,
-              incidentCount: data.incidentCount,
-              scannedIncidentCount: data.scannedIncidentCount,
-              last24hCount: data.last24hCount,
-              processDefinitionKeys: data.processDefinitionKeys,
-              representativeMessage: data.representativeMessage,
-            },
-            engineId,
-          )}
+          label={canFix ? t("clusterDetail.fix") : t("askAi.cluster.diagnoseLabel")}
+          prompt={ask(handOff)}
         />
       }
     />
@@ -324,9 +341,14 @@ export function ClusterDetailView({
         </>
       }
     >
-      <HostModelContext content={describeCluster(data)}>{null}</HostModelContext>
+      <ClusterModelContext data={data} />
     </DetailPage>
   )
+}
+
+function ClusterModelContext({ data }: { data: ClusterDetailData }) {
+  const { context } = useHandOff()
+  return <HostModelContext content={context(describeCluster(data))}>{null}</HostModelContext>
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   SettingsInput,
   WidgetShell,
   formatTime,
+  modelContextText,
   useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 import { PERIODS, type Period } from "@miragon-ai/analytics-client"
@@ -125,7 +126,7 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
     /* Inline (not via adaptDataWidget): the cockpit settings tab renders this
        widget without pipeline data, and only the mounted component knows the
        self-fetched view. HostModelContext renders its children unchanged. */
-    <HostModelContext content={describeAnalyticsSettings(view, {})}>
+    <HostModelContext content={modelContextText(describeAnalyticsSettings(view))}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">{t("aSettings.heading")}</h2>

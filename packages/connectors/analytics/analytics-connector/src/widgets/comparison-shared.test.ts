@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import type { CompareKpiDelta } from "@miragon-ai/analytics-client"
 import { translator } from "../messages/index.js"
 import type { T } from "../messages/use-t.js"
-import { buildComparisonMetrics, describeDeltas } from "./comparison-shared.js"
+import { buildComparisonMetrics, deltaFacts } from "./comparison-shared.js"
 
 const t: T = (key, params) => translator("en", key, params)
 
@@ -104,10 +104,15 @@ describe("buildComparisonMetrics", () => {
   })
 })
 
-describe("describeDeltas", () => {
-  it("names starts per day and leaves a never-measured element delta out", () => {
-    expect(describeDeltas(delta)).toBe(
-      "starts per day +10.0%, incident rate -2.0pp, avg duration +5.0%, p95 duration —",
-    )
+describe("deltaFacts", () => {
+  it("names starts per day and leaves a never-measured delta null — never a 0", () => {
+    expect(deltaFacts(delta, false)).toEqual({
+      startedPerDayDeltaPct: 10,
+      incidentRateDeltaPp: -2,
+      elementIncidentRateDeltaPp: null,
+      avgDurationDeltaPct: 5,
+      p95DurationDeltaPct: null,
+      suppressed: false,
+    })
   })
 })

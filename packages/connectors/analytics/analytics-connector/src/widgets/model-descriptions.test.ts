@@ -199,18 +199,21 @@ describe("describeFailureRates", () => {
 
 describe("failure-dashboard scope (N83/N116)", () => {
   it("names the engines from the data, not from cell props — a self-fetch keeps its label", () => {
-    expect(describeFailureSummary(failures(["prod-a", "prod-b"]), {})).toContain(
-      '(incidents open right now across engines "prod-a", "prod-b" (aggregated))',
-    )
+    const fleet = describeFailureSummary(failures(["prod-a", "prod-b"]), {})
+    expect(fleet).toContain('Ids: engine=["prod-a","prod-b"]')
+    expect(fleet).toContain("(aggregated)")
     // Props claiming another engine never override what the data covers.
     expect(describeFailureSummary(failures(["prod-a"]), { engine: "prod-b" })).toContain(
-      'on engine "prod-a"',
+      'Ids: engine="prod-a"\n',
     )
   })
 
   it("presents only fields the open-incident metric fills (N117)", () => {
     const text = describeErrorPatterns(failures(["prod-a"]), {})
-    expect(text).toContain('largest: 6 "failedJob" in "order"')
+    expect(text).toContain(
+      'On screen: groups=1, largestGroupIncidentType="failedJob", largestGroupIncidents=6',
+    )
+    expect(text).toContain('processDefinitionKey="order"')
     expect(text).toContain("no message, activity or timestamps")
   })
 })
@@ -286,7 +289,8 @@ describe("dashboard model descriptions", () => {
       }),
       {},
     )
-    expect(text).toContain('top bottleneck activity StartEvent_1 of process "invoice"')
+    expect(text).toContain('topProcessDefinitionKey="invoice", topActivityId="StartEvent_1"')
+    expect(text).toContain('Ids: engine=["prod-a","prod-b"], period="7d"')
   })
 })
 

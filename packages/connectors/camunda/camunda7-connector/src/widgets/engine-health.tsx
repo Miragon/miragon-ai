@@ -17,8 +17,8 @@ import type { EngineHealthCluster, EngineHealthData, EngineHealthStatus } from "
 import { useNav, type OnNavigate } from "./navigation.js"
 import { CAMUNDA7_ENGINE_HEALTH_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
-import { remediatePrompt, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
-import { fenceUntrusted } from "./lib/untrusted.js"
+import { remediationHandOff, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
+import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { useT } from "../messages/use-t.js"
 
@@ -28,80 +28,86 @@ const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; glyph: string; lab
   critical: { tone: "critical", glyph: "✕", labelKey: "engineHealth.statusCritical" },
 }
 
+/** The activity ids of the incident clusters, most affected first. */
+function clusterActivities(data: EngineHealthData): string[] {
+  return data.clusters.map((c) => c.activityId)
+}
+
 /**
- * Model-context line so the agent always knows what the operator is looking at —
+ * Model context so the agent always knows what the operator is looking at —
  * the verdict, the headline numbers, and the dominant cluster — without the
  * operator having to restate it. This is the grounding half of the "ask the AI"
  * loop: when they click a handoff button, the agent already has the picture.
  */
-function describeHealth(data: EngineHealthData, engine?: string): string {
+export function describeHealth(data: EngineHealthData, engine?: string): ViewContext {
   const { summary, clusters, status } = data
   const top = clusters[0]
-  const topLine = top
-    ? ` Dominant cluster: activity "${top.activityId}" failing as ${top.incidentType} ` +
-      `(${top.incidentCount ?? `at least ${top.scannedIncidentCount}`} incidents across ${top.processDefinitionKeys.length} definition(s)).`
-    : ""
-  return (
-    `The operator is viewing the engine health overview for engine ` +
-    `"${engine ?? data.engineId}". Verdict: ${status}. ${summary.totalIncidents} open ` +
-    `incidents (${summary.lastHourIncidents} in the last hour, ` +
-    `${summary.last24hIncidents} in the last 24h) across ` +
-    `${summary.affectedActivities ?? "an unknown number of"} activities and ${summary.affectedDefinitions} process ` +
-    `definitions; ${summary.runningInstances} running instances` +
-    (summary.started24h !== null
-      ? `, throughput 24h: ${summary.started24h} started / ${summary.completed24h ?? "?"} completed`
-      : "") +
-    `.${topLine} ` +
-    `Use analytics_engine_health and analytics_show_failure_dashboard for the live ops ` +
-    `snapshot, camunda7_list_incidents to drill into a cluster.`
-  )
+  return {
+    summary: "The operator is viewing the engine health overview of one engine.",
+    ids: { engine: engine ?? data.engineId },
+    facts: {
+      verdict: status,
+      openIncidents: summary.totalIncidents,
+      lastHour: summary.lastHourIncidents,
+      last24h: summary.last24hIncidents,
+      affectedActivities: summary.affectedActivities,
+      affectedDefinitions: summary.affectedDefinitions,
+      runningInstances: summary.runningInstances,
+      started24h: summary.started24h,
+      completed24h: summary.completed24h,
+      topClusterActivity: top?.activityId,
+      topClusterType: top?.incidentType,
+      // A capped scan vouches only for the cluster's scanned share (#335).
+      topClusterIncidents: top?.incidentCount ?? undefined,
+      topClusterIncidentsAtLeast:
+        top?.incidentCount === null ? top.scannedIncidentCount : undefined,
+    },
+    tools: [
+      "analytics_engine_health",
+      "analytics_show_failure_dashboard",
+      "camunda7_list_incidents",
+      "camunda7_show_cluster_detail",
+    ],
+  }
 }
 
 /** Hand the whole verdict to the agent: assess + name the first concrete action. */
-function triagePrompt(data: EngineHealthData, engine?: string): string {
-  const { summary, clusters } = data
-  const e = engine ?? data.engineId
-  const clusterLines = clusters
-    .map(
-      (c) =>
-        `- activity "${c.activityId}" / ${c.incidentType}: ${c.incidentCount ?? `at least ${c.scannedIncidentCount}`} incidents` +
-        (c.processDefinitionKeys[0] && c.processDefinitionKeys[0] !== UNKNOWN
-          ? ` (process ${c.processDefinitionKeys.join(", ")})`
-          : ""),
-    )
-    .join("\n")
-  return (
-    `Assess the operational health of CIB Seven / Camunda 7 engine "${e}" and tell me what ` +
-    `to do first, in plain language for a distribution-center support operator (no Camunda ` +
-    `jargon). Current state: ${summary.totalIncidents} open incidents ` +
-    `(${summary.lastHourIncidents} new in the last hour, ${summary.last24hIncidents} in 24h) ` +
-    `across ${summary.affectedActivities ?? "an unknown number of"} activities ` +
-    `and ${summary.affectedDefinitions} process definitions, ${summary.runningInstances} ` +
-    `running instances. Top incident clusters:\n${clusterLines || "- none"}\n\n` +
-    `Call analytics_engine_health (engine: ${e}) and analytics_show_failure_dashboard ` +
-    `(engine: ${e}) for the live snapshot. Then: rank the clusters by impact, name the single ` +
-    `most urgent problem in business terms, give the most likely root cause, and recommend the ` +
-    `first concrete remediation step (batch retry, variable fix, migration, or escalation). Do ` +
-    `not execute any mutating change without my confirmation.`
-  )
+export function triageHandOff(data: EngineHealthData, engine?: string): HandOff {
+  const { summary } = data
+  return {
+    intent: "askAi.health.triage",
+    ids: { engine: engine ?? data.engineId },
+    facts: {
+      openIncidents: summary.totalIncidents,
+      lastHour: summary.lastHourIncidents,
+      last24h: summary.last24hIncidents,
+      affectedActivities: summary.affectedActivities,
+      affectedDefinitions: summary.affectedDefinitions,
+      runningInstances: summary.runningInstances,
+      clusterActivities: clusterActivities(data),
+    },
+    tools: [
+      "analytics_engine_health",
+      "analytics_show_failure_dashboard",
+      "camunda7_list_incidents",
+      "camunda7_query_historic_incidents",
+    ],
+  }
 }
 
 /**
  * Diagnose handoff for the error state: the engine being unreachable is itself
  * an incident the operator can't assess alone — hand it to the agent instead of
- * leaving them with a bare red box.
+ * leaving them with a bare red box. The error text is the engine's (or the
+ * network's) — quoted, never inlined.
  */
-function diagnosePrompt(engine: string | undefined, message: string): string {
-  const e = engine ? `engine "${engine}"` : "the configured engine"
-  return (
-    `The engine health check for ${e} failed with ${fenceUntrusted(message)}. Diagnose why the ` +
-    `CIB Seven / Camunda 7 engine is not reachable, in plain language for a support ` +
-    `operator. Start with camunda7_list_engines to see the configured engines, then try a cheap read like camunda7_list_process_definitions(` +
-    `{ maxResults: 1${engine ? `, engine: "${engine}"` : ""} }) to confirm whether the ` +
-    `engine answers at all. Distinguish: engine down / wrong base URL / authentication ` +
-    `failure / network issue. State the most likely cause and the concrete next step. ` +
-    `Do not change anything.`
-  )
+export function diagnoseHandOff(engine: string | undefined, message: string): HandOff {
+  return {
+    intent: "askAi.health.diagnoseUnreachable",
+    ids: { engine, maxResults: 1 },
+    untrusted: [{ label: "error", text: message }],
+    tools: ["camunda7_list_engines", "camunda7_list_process_definitions"],
+  }
 }
 
 /** One cross-process incident cluster: deterministic facts + two handoffs (drill / ask). */
@@ -115,6 +121,8 @@ function ClusterRow({
   go: OnNavigate
 }) {
   const t = useT()
+  const { ask, surface } = useHandOff()
+  const { handOff, canFix } = remediationHandOff(cluster, engine, surface)
   const primaryKey = cluster.processDefinitionKeys.find((k) => k !== UNKNOWN)
   // Drill keeps the cluster scope: activity + type + message signature travel
   // into the cluster-detail view (instead of falling back to a per-process or
@@ -161,8 +169,8 @@ function ClusterRow({
           </DrillButton>
           <AskAiButton
             variant="subtle"
-            label={t("engineHealth.clusterFix")}
-            prompt={remediatePrompt(cluster, engine)}
+            label={canFix ? t("engineHealth.clusterFix") : t("askAi.cluster.diagnoseLabel")}
+            prompt={ask(handOff)}
           />
         </>
       }
@@ -181,13 +189,14 @@ function HealthUnavailable({
   error: Error | null
 }) {
   const t = useT()
+  const { ask } = useHandOff()
   if (error) {
     return (
       <div className="flex flex-col items-start gap-3">
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>
         </Alert>
-        <AskAiButton variant="primary" prompt={diagnosePrompt(engine, error.message)} />
+        <AskAiButton variant="primary" prompt={ask(diagnoseHandOff(engine, error.message))} />
       </div>
     )
   }
@@ -326,6 +335,7 @@ export function EngineHealthView({
   const t = useT()
   const go = useNav()
   const callTool = useCallTool()
+  const { ask, context } = useHandOff()
   // Always ready: unlike the per-process widgets (whose feeds require an id),
   // the health feed's `engine` is optional — resolveEngine falls back to the
   // caller's saved default engine or the single configured engine. Gating on
@@ -391,7 +401,7 @@ export function EngineHealthView({
 
   return (
     <>
-      <HostModelContext content={describeHealth(data, engine)}>{null}</HostModelContext>
+      <HostModelContext content={context(describeHealth(data, engine))}>{null}</HostModelContext>
       <WidgetHeader
         icon={status.glyph}
         iconTone={status.tone}
@@ -401,7 +411,7 @@ export function EngineHealthView({
           <AskAiButton
             variant="primary"
             label={t("engineHealth.whatShouldIDo")}
-            prompt={triagePrompt(data, engine)}
+            prompt={ask(triageHandOff(data, engine))}
           />
         }
       />

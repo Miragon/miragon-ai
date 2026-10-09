@@ -8,19 +8,50 @@ import {
 
 import type { IncidentDetailData, IncidentDetailJob } from "../../view-models.js"
 
-import { engineArg, engineCallRule } from "../lib/engine-scope.js"
 import { recoveryOf } from "../lib/incident-recovery.js"
-import { fenceUntrusted } from "../lib/untrusted.js"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 
-export function draftTicketPrompt(data: IncidentDetailData): string {
-  const engineId = data.engineId ?? "default"
-  return `Draft an incident ticket for CIB Seven incident \`${data.incidentId}\` (${data.incidentType}) at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}${data.businessKey ? `, business key ${data.businessKey}` : ""}, engine \`${engineId}\`. Build the draft with camunda7_format_incident_issue({ ${engineArg(data.engineId)}incidentId: '${data.incidentId}' }), include the error (${fenceUntrusted(data.incidentMessage ?? data.job?.exceptionMessage)}) and stacktrace, and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.${engineCallRule(data.engineId)}`
+/** The engine's error text for the incident — the incident message, else the job's exception. */
+function errorText(data: IncidentDetailData): string | null | undefined {
+  return data.incidentMessage ?? data.job?.exceptionMessage
 }
 
-export function explainErrorPrompt(data: IncidentDetailData): string {
-  const engineId = data.engineId ?? "default"
-  return `Explain the failure on CIB Seven incident \`${data.incidentId}\` at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}, engine \`${engineId}\`. The reported error is ${fenceUntrusted(data.incidentMessage ?? data.job?.exceptionMessage)}${data.job?.stacktrace ? `, with a Java stacktrace on job ${data.job.id}` : ""}. In plain language: what does this exception mean, what most likely caused it here, and is it transient (safe to retry) or deterministic (will re-fail)? Read the full trace with camunda7_incident_detail_data({ ${engineArg(data.engineId)}incidentId: "${data.incidentId}" }) if needed. Explanation only — do not change anything.${engineCallRule(data.engineId)}`
+/** A ticket draft for THIS incident — built by the format tool, never filed. */
+export function draftTicketHandOff(data: IncidentDetailData): HandOff {
+  return {
+    intent: "askAi.incident.draftTicket",
+    ids: { engine: data.engineId, incidentId: data.incidentId },
+    facts: { incidentType: data.incidentType },
+    untrusted: [{ label: "incidentMessage", text: errorText(data) }],
+    tools: ["camunda7_format_incident_issue"],
+  }
+}
+
+/**
+ * What this incident's error means. The full failure text is read through a
+ * model-visible tool — the job's stacktrace, a worker's error details via the
+ * external-task list, or both condensed in the ticket draft — never through
+ * the app-only incident feed the host hides from the model.
+ */
+export function explainErrorHandOff(data: IncidentDetailData): HandOff {
+  return {
+    intent: "askAi.incident.explainError",
+    ids: {
+      engine: data.engineId,
+      incidentId: data.incidentId,
+      jobId: data.job?.id,
+      processInstanceId: data.processInstanceId,
+      activityId: data.activityId,
+    },
+    facts: { incidentType: data.incidentType },
+    untrusted: [{ label: "incidentMessage", text: errorText(data) }],
+    tools: [
+      "camunda7_get_job_stacktrace",
+      "camunda7_list_external_tasks",
+      "camunda7_format_incident_issue",
+    ],
+  }
 }
 
 export function FailureTab({
@@ -138,13 +169,14 @@ function ActionsRow({
   retryError?: string | null
 }) {
   const t = useT()
+  const { ask } = useHandOff()
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-2">
         <AskAiButton
           variant="subtle"
           label={t("incidentFailure.draftTicketLabel")}
-          prompt={draftTicketPrompt(data)}
+          prompt={ask(draftTicketHandOff(data))}
         />
         {onRetry && (
           <RetryButton data={data} onRetry={onRetry} retrying={retrying} retried={retried} />
@@ -210,6 +242,7 @@ function RetryButton({
 
 function ErrorMessageSection({ data }: { data: IncidentDetailData }) {
   const t = useT()
+  const { ask } = useHandOff()
   return (
     <div>
       <SectionHeading
@@ -218,7 +251,7 @@ function ErrorMessageSection({ data }: { data: IncidentDetailData }) {
           <AskAiButton
             variant="subtle"
             label={t("incidentFailure.explainErrorLabel")}
-            prompt={explainErrorPrompt(data)}
+            prompt={ask(explainErrorHandOff(data))}
           />
         }
       />

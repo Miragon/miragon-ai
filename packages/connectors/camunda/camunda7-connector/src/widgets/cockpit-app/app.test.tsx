@@ -92,13 +92,12 @@ describe("CockpitApp navigation is side-effect free", () => {
   })
 
   // Navigation no longer moves the saved default (prod-b in this fixture), so
-  // the model must be told to scope its calls to the VIEWED engine — an
-  // engine-less call would answer from the default engine instead.
-  it("tells the model to pass the viewed engine on every camunda7_* call", async () => {
+  // the model must learn the VIEWED engine — an engine-less call would answer
+  // from the default engine instead. The context carries it as an id; the
+  // module's server instructions say to pass it on.
+  it("tells the model which engine the operator is viewing", async () => {
     const { modelContexts } = renderCockpit()
     fireEvent.click(await screen.findByRole("button", { name: /prod-a/ }))
-    await waitFor(() =>
-      expect(modelContexts.at(-1)).toContain('Pass engine: "prod-a" on every camunda7_* call'),
-    )
+    await waitFor(() => expect(modelContexts.at(-1)).toContain('Ids: engine="prod-a"'))
   })
 })

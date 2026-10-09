@@ -20,6 +20,7 @@ import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { CockpitListFooter } from "./list-footer.js"
 import { refreshCockpitData } from "./refresh.js"
 import { useCanRun } from "./widget-actions.js"
+import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { useT } from "../messages/use-t.js"
 
 export type { JobPanelData }
@@ -39,6 +40,92 @@ function buildJobsFeed(initialData: JobPanelData | null, engine?: string, failed
   return { feedEngine, effectiveFailedOnly, args }
 }
 
+type Job = JobPanelData["jobs"][number]
+
+/** What the operator sees in the job panel — the model's grounding for follow-ups. */
+export function describeJobPanel(
+  data: JobPanelData,
+  engineId: string | undefined,
+  loaded: number,
+  failedOnly: boolean | undefined,
+): ViewContext {
+  return {
+    summary: "The operator is viewing the job management panel.",
+    ids: { engine: engineId },
+    facts: {
+      totalJobs: data.totalCount,
+      failedJobs: data.failedCount,
+      loaded,
+      failedOnly: failedOnly === true ? true : undefined,
+    },
+    tools: [
+      "camunda7_list_jobs",
+      "camunda7_list_incidents",
+      "camunda7_set_job_retries",
+      "camunda7_set_job_retries_batch",
+    ],
+  }
+}
+
+/**
+ * Triage of every failed job on the engine. The batch retry is one of the
+ * tools only where the deployment registers it (admin) — elsewhere the
+ * surface drops it and per-job retries (operations) or nothing (read-only)
+ * remain for the recommendation.
+ */
+export function triageJobsHandOff(data: JobPanelData, engineId: string | undefined): HandOff {
+  return {
+    intent: "askAi.jobs.triage",
+    ids: { engine: engineId, noRetriesLeft: true },
+    facts: { totalJobs: data.totalCount, failedJobs: data.failedCount },
+    tools: [
+      "camunda7_list_jobs",
+      "camunda7_get_job_stacktrace",
+      "camunda7_list_incidents",
+      "camunda7_query_historic_incidents",
+      "camunda7_set_process_instance_variable",
+      "camunda7_set_job_retries",
+      "camunda7_set_job_retries_batch",
+      "camunda7_format_incident_issue",
+    ],
+  }
+}
+
+/** Why ONE failed job failed — its exception text is engine data, quoted. */
+export function explainJobHandOff(job: Job, engineId: string | undefined): HandOff {
+  return {
+    intent: "askAi.jobs.explainFailure",
+    ids: {
+      engine: engineId,
+      jobId: job.id,
+      processInstanceId: job.processInstanceId,
+      processDefinitionKey: job.processDefinitionKey,
+      activityId: job.activityId,
+    },
+    facts: { retries: job.retries },
+    untrusted: [{ label: "exceptionMessage", text: job.exceptionMessage }],
+    tools: [
+      "camunda7_get_job_stacktrace",
+      "camunda7_get_process_instance",
+      "camunda7_get_process_instance_variables",
+      "camunda7_list_incidents",
+    ],
+  }
+}
+
+/** A ticket draft for the incident behind ONE failed job (found by instance + activity). */
+export function draftJobTicketHandOff(job: Job, engineId: string | undefined): HandOff {
+  return {
+    intent: "askAi.jobs.draftTicket",
+    ids: {
+      engine: engineId,
+      processInstanceId: job.processInstanceId,
+      activityId: job.activityId,
+    },
+    tools: ["camunda7_list_incidents", "camunda7_format_incident_issue"],
+  }
+}
+
 export function JobPanelWidget({
   data: initialData = null,
   engine,
@@ -54,6 +141,7 @@ export function JobPanelWidget({
   const retryMutation = useToolMutation("camunda7_set_job_retries")
   const canRun = useCanRun()
   const canRetry = canRun("camunda7_set_job_retries")
+  const { ask, context } = useHandOff()
   const { feedEngine, effectiveFailedOnly, args } = buildJobsFeed(initialData, engine, failedOnly)
   const paged = usePagedViewData<JobPanelData["jobs"][number], JobPanelData>({
     initialData,
@@ -122,16 +210,7 @@ export function JobPanelWidget({
       {/* Rendered in-component (not via the adapter's describeForModel) because
           this widget self-fetches in the cockpit, where the adapter has no data. */}
       <HostModelContext
-        content={[
-          `Viewing the Job Management panel on engine "${engineId}"` +
-            `${failedOnly ? " filtered to failed jobs only" : ""}: ` +
-            `${totalCount} job(s) total, ${failedCount} failed (no retries left), ` +
-            `${jobs.length} loaded.`,
-          canRetry
-            ? `Retry one with camunda7_set_job_retries, all failed ones via ` +
-              `camunda7_set_job_retries_batch; matching incidents via camunda7_list_incidents.`
-            : `Matching incidents via camunda7_list_incidents.`,
-        ].join(" ")}
+        content={context(describeJobPanel(data, engineId, jobs.length, failedOnly))}
       >
         {null}
       </HostModelContext>
@@ -144,10 +223,7 @@ export function JobPanelWidget({
           )}
         </div>
         {failedJobs.length > 0 && (
-          <AskAiButton
-            variant="primary"
-            prompt={`Triage the failed jobs (retries == 0) on engine "${engineId}" surfaced in the Job Management panel. The engine reports ${totalCount} total jobs and ${failedCount} failed. Use camunda7_list_jobs({engine: "${engineId}", noRetriesLeft: true}) to load the exact failed set, then: (1) cluster the jobs by normalized exceptionMessage and by activityId/processDefinitionKey; (2) for each cluster name the most likely root cause — read one representative trace with camunda7_get_job_stacktrace — cross-checking with camunda7_list_incidents({engine: "${engineId}"}) and camunda7_query_historic_incidents({engine: "${engineId}", activityId}) to see whether the same activity keeps failing across instances, resolved incidents included (systemic), or failed once; (3) recommend a concrete action per cluster — transient/infra errors -> batch retry via camunda7_set_job_retries_batch, bad input data -> camunda7_set_process_instance_variable then retry, code/deployment defect -> escalate and draft a ticket. Return a short ranked table: cluster | likely cause | affected count | recommended action. Do not execute any retry or mutation; recommend only.`}
-          />
+          <AskAiButton variant="primary" prompt={ask(triageJobsHandOff(data, engineId))} />
         )}
       </div>
       <KpiGrid
@@ -214,13 +290,13 @@ export function JobPanelWidget({
                           variant="icon"
                           label={t("jobPanel.explainFailure")}
                           title={t("jobPanel.explainFailure")}
-                          prompt={`Explain why job ${job.id} failed on engine "${engineId}". It is on activity "${job.activityId}" of process "${job.processDefinitionKey}" (definition ${job.processDefinitionId}), instance ${job.processInstanceId}, retries=${job.retries}, created ${job.createTime}. Reported exception: "${job.exceptionMessage}". Steps: (1) read the full context with camunda7_get_process_instance({engine: "${engineId}", processInstanceId: "${job.processInstanceId}"}) and camunda7_get_process_instance_variables for the input that reached this activity; (2) find the matching incident with camunda7_list_incidents({engine: "${engineId}", processInstanceId: "${job.processInstanceId}"}); (3) check whether activity "${job.activityId}" fails in other instances too with camunda7_list_incidents({engine: "${engineId}", processDefinitionKey: "${job.processDefinitionKey}", activityId: "${job.activityId}"}). Then answer in plain language: what broke, whether it is transient (data/infra) or deterministic (code/config), and an explicit verdict — SAFE TO RETRY or WILL RE-FAIL — with one-line justification. Do not mutate anything.`}
+                          prompt={ask(explainJobHandOff(job, engineId))}
                         />
                         <AskAiButton
                           variant="icon"
                           label={t("jobPanel.draftTicket")}
                           title={t("jobPanel.draftTicket")}
-                          prompt={`Draft an incident ticket for the incident behind failed job ${job.id} on engine "${engineId}". This job has no incidentId directly, so first FIND the incident: call camunda7_list_incidents({ engine: "${engineId}", processInstanceId: "${job.processInstanceId}" }) and pick the incident for this job (activity "${job.activityId}" of process "${job.processDefinitionKey}", instance ${job.processInstanceId}; reported exception: "${job.exceptionMessage}"). Then build the draft with camunda7_format_incident_issue({ engine: "${engineId}", incidentId: "<found incident id>" }) and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`}
+                          prompt={ask(draftJobTicketHandOff(job, engineId))}
                         />
                         {canRetry && (
                           <Button

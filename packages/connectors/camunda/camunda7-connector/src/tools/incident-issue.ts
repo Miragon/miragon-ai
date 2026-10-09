@@ -26,9 +26,12 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export interface IncidentIssueConfig {
   /**
-   * Optional `owner/repo` of a GitHub repository. Purely a convenience for
-   * GitHub customers (enables `prefilledUrl` + a default target) — the ticket
-   * draft itself is tracker-agnostic and never filed by this server.
+   * The ONE GitHub repository (`owner/repo`) drafts target — operator config
+   * (`CAMUNDA_INCIDENT_ISSUE_REPO`), never a tool or prompt argument: the
+   * prefilled URL carries the whole draft, so a model-chosen target (steered
+   * by injected incident text) would publish diagnostics anywhere. Without it
+   * there is no prefilled URL; the draft itself is tracker-agnostic and never
+   * filed by this server.
    */
   repository?: string
 }
@@ -44,14 +47,15 @@ export interface IncidentIssuePayload {
   body: string
   labels: string[]
   /**
-   * GitHub convenience: repository in `owner/repo` form when one is
-   * configured/overridden, else `null`. Irrelevant for non-GitHub trackers.
+   * GitHub convenience: the configured repository (`owner/repo`), else
+   * `null`. Irrelevant for non-GitHub trackers.
    */
   suggestedRepository: string | null
   /**
-   * GitHub convenience: browser URL to GitHub's "new issue" page with
-   * title/body/labels prefilled via query params — one-click submission
-   * without any integration. `null` if no repository configured. URL length
+   * GitHub convenience: browser URL to the configured repository's "new
+   * issue" page with title/body/labels prefilled via query params — one-click
+   * submission without any integration. `null` without a configured
+   * repository. Its body leaves out the internal cockpit link, and its length
    * is capped at GitHub's ~8KB limit.
    */
   prefilledUrl: string | null
@@ -88,16 +92,23 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
   const condensedStack = stacktrace ? boundFailureText(condenseStacktrace(stacktrace)) : null
   const cockpitLink = buildIssueCockpitLink(input)
 
-  const body = buildIssueBody(input, {
+  const context: IssueBodyContext = {
     incidentType,
     definitionKey,
     condensedStack,
     stacktraceError: stacktraceError ?? null,
     cockpitLink,
-  })
+  }
+  const body = buildIssueBody(input, context)
 
+  // The URL leaves the network: no internal host in it, whatever the repository.
   const prefilledUrl = repository
-    ? buildPrefilledIssueUrl(repository, title, body, ISSUE_LABELS)
+    ? buildPrefilledIssueUrl(
+        repository,
+        title,
+        buildIssueBody(input, { ...context, cockpitLink: null }),
+        ISSUE_LABELS,
+      )
     : null
 
   return {
@@ -387,7 +398,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
     description:
       "Build a structured, tracker-agnostic ticket draft (title, markdown body, labels) from a Camunda 7 / CIB Seven incident. " +
       "Does NOT file anything — present the draft in the chat for review and reuse; the user decides where it goes " +
-      "(their issue tracker via whatever integration is available, the optional prefilled GitHub URL, or copy-paste).",
+      "(their issue tracker via whatever integration is available, the prefilled GitHub URL of the configured repository, or copy-paste).",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...formatIncidentIssueInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args, { baseUrl, cockpitUrl, provider }) => {
@@ -416,7 +427,8 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
         fetchFailureText(client, incident),
       ])
 
-      const repository = args.repository ?? config.repository ?? null
+      // The operator's repository — never an argument (see IncidentIssueConfig).
+      const repository = config.repository ?? null
       return buildIncidentIssuePayload({
         incident,
         processInstance,
@@ -431,12 +443,6 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
 
 const incidentIssuePromptSchema = z.object({
   incidentId: z.string().describe("The Camunda 7 / CIB Seven incident ID to draft a ticket for"),
-  repository: z
-    .string()
-    .optional()
-    .describe(
-      "Optional `owner/repo` — only relevant if the user later chooses to file the draft on GitHub",
-    ),
 })
 
 /**
@@ -456,8 +462,8 @@ export function registerIncidentIssuePrompt(server: MCPServer, config: IncidentI
         "a prefilled GitHub link, or copy-paste) — filing only happens on explicit request.",
       schema: incidentIssuePromptSchema,
     },
-    async ({ incidentId, repository }) => {
-      const target = repository ?? config.repository
+    async ({ incidentId }) => {
+      const target = config.repository
       const githubClause = target
         ? `If they choose GitHub without naming a repository, default to \`${target}\`; without any GitHub integration, offer \`prefilledUrl\` as a one-click link (\`[Create issue on GitHub](<prefilledUrl>)\`).`
         : "If they choose GitHub, ask which `owner/repo` should receive it."
@@ -465,9 +471,7 @@ export function registerIncidentIssuePrompt(server: MCPServer, config: IncidentI
         `You will draft a ticket for Camunda 7 / CIB Seven incident \`${incidentId}\`.`,
         "",
         "Steps:",
-        `1. Call the \`camunda7_format_incident_issue\` tool with \`incidentId="${incidentId}"\`${
-          repository ? ` and \`repository="${repository}"\`` : ""
-        }.`,
+        `1. Call the \`camunda7_format_incident_issue\` tool with \`incidentId="${incidentId}"\`.`,
         "2. Present the draft to the user in the chat: the title, the full markdown body, and the labels. The draft is the deliverable — it must be reviewable and reusable as-is (copy-paste into any tracker).",
         "3. Ask the user whether and where it should be filed. Do NOT file it anywhere on your own.",
         `4. Only if the user names a destination, use whatever matching capability is exposed to you (a GitHub MCP server / connector, a Jira or other tracker integration, or a CLI tool) — do NOT insist on a specific tool name. ${githubClause}`,

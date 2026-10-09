@@ -30,19 +30,20 @@ export function fmtPp(n: number | null): string {
 }
 
 /**
- * One-line, null-safe delta summary for the AskAi prompts — the same em-dash
- * treatment as the on-screen table, so a zero-baseline never reads "null%".
+ * The on-screen deltas as hand-off facts (#338) — null deltas (a zero
+ * baseline) are left out, like the em-dash on screen, never sent as 0.
  */
-export function describeDeltas(delta: CompareKpiDelta): string {
-  return [
-    `starts per day ${fmtPct(delta.started_per_day_delta_pct)}`,
-    `incident rate ${fmtPp(delta.incident_rate_delta_pp)}`,
-    ...(delta.element_incident_rate_delta_pp === null
-      ? []
-      : [`element incident rate ${fmtPp(delta.element_incident_rate_delta_pp)}`]),
-    `avg duration ${fmtPct(delta.avg_duration_delta_pct)}`,
-    `p95 duration ${fmtPct(delta.p95_duration_delta_pct)}`,
-  ].join(", ")
+export function deltaFacts(delta: CompareKpiDelta, suppressed: boolean) {
+  return {
+    // Starts compare PER DAY, so a clamped (shorter) window compares fairly.
+    startedPerDayDeltaPct: delta.started_per_day_delta_pct,
+    incidentRateDeltaPp: delta.incident_rate_delta_pp,
+    // Non-null only when the comparison was scoped to an element.
+    elementIncidentRateDeltaPp: delta.element_incident_rate_delta_pp,
+    avgDurationDeltaPct: delta.avg_duration_delta_pct,
+    p95DurationDeltaPct: delta.p95_duration_delta_pct,
+    suppressed,
+  }
 }
 
 /** Deltas inside this band read as unchanged (rounding jitter) — no tone. */

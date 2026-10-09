@@ -193,21 +193,24 @@ export function viewToIntent(view: CockpitView): NavIntent {
   }
 }
 
+/** The entity a client-side routed view has selected — by kind, for the model contexts. */
+export interface SelectedEntity {
+  incidentId?: string
+  processInstanceId?: string
+  processDefinitionKey?: string
+}
+
 /**
- * The app-level model-context line for a client-side routed view: names the
- * current view and its selected entity so drill-down views whose widgets carry
- * no leaf `<ModelContext>` still resolve "this incident/process" follow-up
- * questions correctly. Shared by the cockpit app and the standalone shell so
+ * The selected entity of a client-side routed view, so drill-down views whose
+ * widgets carry no leaf model context still resolve "this incident/process"
+ * follow-up questions. Shared by the cockpit app and the standalone shell so
  * silent (chat-free) navigation never leaves the model blind.
  */
-export function describeCurrentView(view: CockpitView): string {
-  const selectedEntity =
-    "incidentId" in view
-      ? ` Selected incident: ${view.incidentId}.`
-      : "processInstanceId" in view
-        ? ` Selected process instance: ${view.processInstanceId}.`
-        : "processDefinitionKey" in view && view.processDefinitionKey
-          ? ` Selected process definition: ${view.processDefinitionKey}.`
-          : ""
-  return `Current view: ${view.section}.${selectedEntity}`
+export function selectedEntity(view: CockpitView): SelectedEntity {
+  if ("incidentId" in view) return { incidentId: view.incidentId }
+  if ("processInstanceId" in view) return { processInstanceId: view.processInstanceId }
+  if ("processDefinitionKey" in view && view.processDefinitionKey) {
+    return { processDefinitionKey: view.processDefinitionKey }
+  }
+  return {}
 }

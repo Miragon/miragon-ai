@@ -69,6 +69,8 @@ export interface WidgetToolsContext {
   profileStore: ProfileStore
   /** The deployment's resolved toolset (from the `MCP_ACTIVE_MODULES` suffix or the auth-dependent default). */
   toolset: Camunda7Toolset
+  /** The module's model-visible tool names (recorded at registration; read lazily). */
+  modelTools: () => string[]
   /** The `engine` parameter narrowed to the configured ids (`engineParamShapeFor`) — spread it into every input. */
   engineParam: EngineParamShape
 }

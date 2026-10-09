@@ -1,8 +1,13 @@
 import { WidgetRenderer, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { AskAiButton, CountPill, SectionHeading, TONE_DOT } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
-import { formatEnginesByEnvironment, groupEnginesByEnvironment } from "../../lib/environments.js"
+import {
+  enginesByEnvironment,
+  formatEnginesByEnvironment,
+  groupEnginesByEnvironment,
+} from "../../lib/environments.js"
 import { useT } from "../../messages/use-t.js"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useEngineHealth } from "./engine-health.js"
 import { filterLayoutToWidgets } from "./views.js"
 
@@ -123,6 +128,43 @@ function LandscapeSection({
   )
 }
 
+/** The fleet the hand-offs are about: every engine id, plus `environment/engine` pairs when grouped. */
+interface Fleet {
+  engineIds: string[]
+  environments: string[] | undefined
+}
+
+/**
+ * The cross-engine overview. The "never rank engines by a rate" rule is the
+ * analytics module's server instruction — the prompt only names the fleet.
+ */
+export function fleetOverviewHandOff({ engineIds, environments }: Fleet): HandOff {
+  return {
+    intent: "askAi.fleet.overview",
+    ids: { engine: engineIds },
+    facts: { environments },
+    tools: ["analytics_engine_landscape", "analytics_engine_health", "analytics_engine_compare"],
+  }
+}
+
+export function fleetFailuresHandOff({ engineIds, environments }: Fleet): HandOff {
+  return {
+    intent: "askAi.fleet.failures",
+    ids: { engine: engineIds },
+    facts: { environments },
+    tools: ["analytics_show_failure_dashboard"],
+  }
+}
+
+export function fleetPerformanceHandOff({ engineIds, environments }: Fleet): HandOff {
+  return {
+    intent: "askAi.fleet.performance",
+    ids: { engine: engineIds, period: "7d" },
+    facts: { environments },
+    tools: ["analytics_show_dashboard"],
+  }
+}
+
 /**
  * The cross-engine ("fleet") cockpit mode — an OVERVIEW across all configured
  * engines, not a scoreboard between them. Engines host different processes, so
@@ -146,15 +188,16 @@ export function FleetView({
   widgets: Record<string, WidgetComponent>
 }) {
   const t = useT()
+  const { ask } = useHandOff()
   const ids = engines.map((e) => e.id)
-  const idArray = ids.map((id) => `"${id}"`).join(", ")
   // Health tiles group by environment (single default group renders flat) —
   // the fleet itself stays ALL engines: the landscape and the fleet-wide
   // analyses deliberately span every environment.
   const engineGroups = groupEnginesByEnvironment(engines)
-  // The AI prompts see the fleet only through this string — name each engine's
-  // environment when more than one exists, matching the grouping on screen.
   const idList = formatEnginesByEnvironment(engineGroups)
+  // The hand-offs name each engine's environment only when more than one
+  // exists, matching the grouping on screen.
+  const fleet: Fleet = { engineIds: ids, environments: enginesByEnvironment(engineGroups) }
 
   return (
     <div className="flex flex-col gap-6">
@@ -172,10 +215,7 @@ export function FleetView({
               : t("fleet.engineCountOther", { count: engines.length, list: idList })}
           </div>
         </div>
-        <AskAiButton
-          variant="primary"
-          prompt={`Give me a cross-engine overview of the CIB Seven fleet (engines ${idList}). Start with analytics_engine_landscape({engine: [${idArray}]}) for the landscape: which process definitions run on which engine, the absolute load per engine (running instances, open incidents, failed jobs) and the engine-owned job backlog. Then call analytics_engine_health per engine for the live ops snapshot. Important: do NOT rank the engines by failure rate, incident rate or duration — the engines run different processes, so those aggregates describe each engine's process mix rather than the engine itself. Judge engines against each other only on the process-independent signals (executable/suspended job backlog, open external tasks, whether an engine reports metrics at all) and on absolute counts of trouble. Tell me: where the most work and the most trouble physically sit, whether any engine has a job backlog the others don't, whether any engine is silent, and where to start. If the landscape reports sharedProcessKeys (a definition deployed on several engines), that is the ONE place a like-for-like KPI comparison holds — use analytics_engine_compare with that processDefinitionKey. Recommend only — do not mutate anything.`}
-        />
+        <AskAiButton variant="primary" prompt={ask(fleetOverviewHandOff(fleet))} />
       </header>
 
       <section className="flex flex-col gap-4">
@@ -207,12 +247,12 @@ export function FleetView({
           <AskAiButton
             variant="subtle"
             label={t("fleet.failureAnalysis")}
-            prompt={`Analyze failures across the entire CIB Seven fleet (engines ${idList}). Use analytics_show_failure_dashboard({engine: [${idArray}]}) to group incidents fleet-wide by error pattern, activity and process definition. Tell me the dominant cross-engine failure cluster, whether it is isolated to one engine or systemic across the fleet, and the highest-leverage remediation. Attribute a cluster to an engine only when the same process definition also runs elsewhere without it — otherwise the difference is the process, not the engine.`}
+            prompt={ask(fleetFailuresHandOff(fleet))}
           />
           <AskAiButton
             variant="subtle"
             label={t("fleet.performance")}
-            prompt={`Give me a fleet-wide process-performance overview across CIB Seven engines ${idList}. Use analytics_show_dashboard({engine: [${idArray}], period: "7d"}) for the aggregate throughput / duration / incident picture, then call out the worst-performing process definitions across the fleet and the main bottleneck. Rank PROCESSES, not engines — a per-engine average over a different set of processes is not a statement about the engine.`}
+            prompt={ask(fleetPerformanceHandOff(fleet))}
           />
         </div>
       </section>

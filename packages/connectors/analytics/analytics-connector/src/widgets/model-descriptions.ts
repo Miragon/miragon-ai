@@ -3,8 +3,13 @@ import type {
   CompareKpiDelta,
   FailureDashboardData,
 } from "@miragon-ai/analytics-client"
-import { formatDuration } from "@miragon-ai/widget-shell/widgets"
+import {
+  formatDuration,
+  modelContextText,
+  type ModelContextSpec,
+} from "@miragon-ai/widget-shell/widgets"
 import type { DescribeForModel } from "@miragon-ai/widget-shell/ui"
+import { ANALYTICS_ONLY_SURFACE, engineIdsOf, isAggregate } from "./hand-off.js"
 import type { ClusterCompareData } from "./cluster-compare.js"
 import type { VersionCompareData } from "./version-compare.js"
 import type { EngineCompareData } from "./engine-compare.js"
@@ -39,6 +44,9 @@ function engineScope(engines: readonly string[] | null): string {
 /** A figure that was not measured reads "not measured" — never a plausible 0. */
 const measured = (value: number | null, unit = ""): string =>
   value === null ? "not measured" : `${value}${unit}`
+
+/** Said whenever a figure adds up several engines (the deliberate fleet aggregate). */
+const AGGREGATED = " The figures add up every engine listed (aggregated)."
 
 /** Shared scope line for the four split analytics-dashboard widgets. */
 function dashboardScope(data: AnalyticsDashboardData): string {
@@ -78,20 +86,32 @@ export const describeDefinitionBreakdown: DescribeForModel<AnalyticsDashboardDat
   )
 }
 
+/**
+ * The bottleneck table: one row per (process, activity) — BPMN ids are only
+ * unique within one model, so the top row names its process too.
+ */
 export const describeActivityBottlenecks: DescribeForModel<AnalyticsDashboardData> = (data) => {
   const top = [...data.activityBreakdown].sort((a, b) => b.totalTimeMs - a.totalTimeMs)[0]
-  return (
-    `Viewing the activity-bottleneck table for ${dashboardScope(data)}: ` +
-    `${data.activityBreakdown.length} (process, activity) row(s)` +
-    `${
-      top
-        ? `; top bottleneck activity ${top.activityId} of process "${top.processDefinitionKey}" — ` +
-          `${top.executionCount} executions, total ${formatDuration(top.totalTimeMs)}, ` +
-          `p95 ${formatDuration(top.p95DurationMs)}`
-        : ""
-    }. ` +
-    `Investigate with analytics_element_bottleneck for that process.`
-  )
+  return modelContextText({
+    summary:
+      "The operator is viewing the activity-bottleneck table of the process analytics: one row per (process, activity)." +
+      (isAggregate(data.engines) ? AGGREGATED : ""),
+    ids: {
+      engine: engineIdsOf(data.engines),
+      processDefinitionKey: data.processDefinitionKey ?? undefined,
+      period: data.period,
+    },
+    facts: {
+      rows: data.activityBreakdown.length,
+      topProcessDefinitionKey: top?.processDefinitionKey,
+      topActivityId: top?.activityId,
+      topExecutions: top?.executionCount,
+      topTotalTimeMs: top?.totalTimeMs,
+      topP95DurationMs: top?.p95DurationMs,
+    },
+    tools: ["analytics_element_bottleneck"],
+    surface: ANALYTICS_ONLY_SURFACE,
+  })
 }
 
 /** Shared lead-in for the three failure-dashboard widgets (point-in-time, no period). */
@@ -99,20 +119,47 @@ function failureScope(data: FailureDashboardData): string {
   return `(incidents open right now${engineScope(data.engines)})`
 }
 
+/**
+ * The failure summary (point-in-time). A pure description cannot query the
+ * camunda7 surface, so it names analytics tools only; the Ask-AI hand-off
+ * (live surface) adds the camunda7 ones where the deployment has them.
+ */
 export const describeFailureSummary: DescribeForModel<FailureDashboardData> = (data) =>
-  `Viewing the failure dashboard ${failureScope(data)}: ${data.totalIncidents} open incident(s) ` +
-  `in ${data.uniqueErrorPatterns} group(s) by incident type and process` +
-  `${data.mostAffectedProcess ? `; most affected process "${data.mostAffectedProcess}"` : ""}. ` +
-  `Drill in with analytics_find_failed_instances or camunda7_list_incidents.`
+  modelContextText({
+    summary:
+      "The operator is viewing the failure dashboard: the incidents open right now (point-in-time, no period), grouped by incident type and process." +
+      (isAggregate(data.engines) ? AGGREGATED : ""),
+    ids: { engine: engineIdsOf(data.engines) },
+    facts: {
+      openIncidents: data.totalIncidents,
+      incidentGroups: data.uniqueErrorPatterns,
+      mostAffectedProcess: data.mostAffectedProcess,
+    },
+    tools: ["analytics_find_failed_instances"],
+    surface: ANALYTICS_ONLY_SURFACE,
+  })
 
+/**
+ * The open-incident groups. The gauge carries only incident type, process and
+ * count — no message, activity or timestamps. A custom incident type is any
+ * string: unless id-shaped it is quoted as untrusted data (#338).
+ */
 export const describeErrorPatterns: DescribeForModel<FailureDashboardData> = (data) => {
   const top = [...data.errorPatterns].sort((a, b) => b.incidentCount - a.incidentCount)[0]
-  return (
-    `Viewing the open-incident groups ${failureScope(data)}: ${data.errorPatterns.length} group(s) ` +
-    `by incident type and process (the metric carries no message, activity or timestamps)` +
-    `${top ? `; largest: ${top.incidentCount} "${top.incidentType}" in "${top.processDefinitionKey}"` : ""}. ` +
-    `Messages and failing activities come from camunda7_list_incidents.`
-  )
+  return modelContextText({
+    summary:
+      "The operator is viewing the incidents open right now (point-in-time), grouped by incident type and process; the metric carries no message, activity or timestamps." +
+      (isAggregate(data.engines) ? AGGREGATED : ""),
+    ids: { engine: engineIdsOf(data.engines), processDefinitionKey: top?.processDefinitionKey },
+    // A value that is not id-shaped moves into the untrusted fence by itself.
+    facts: {
+      groups: data.errorPatterns.length,
+      largestGroupIncidentType: top?.incidentType,
+      largestGroupIncidents: top?.incidentCount,
+    },
+    tools: ["analytics_find_failed_instances"],
+    surface: ANALYTICS_ONLY_SURFACE,
+  })
 }
 
 export const describeFailureRates: DescribeForModel<FailureDashboardData> = (data) => {
@@ -228,11 +275,25 @@ function maxEntry(values: Record<string, number>): [string, number] | null {
   return best
 }
 
-export const describeAnalyticsSettings: DescribeForModel<AnalyticsSettingsViewData> = (data) =>
-  `Viewing the analytics settings section: default period ${data.settings.defaultPeriod}, ` +
-  `min bucket size ${data.settings.minBucketSize}. These apply whenever an analytics call ` +
-  `omits period/minBucketSize` +
-  `${data.canSave ? "; change them here or via analytics_save_settings" : " (read-only in this deployment)"}.`
+/**
+ * The settings section. Its save tool is named only while the section can
+ * save (`canSave`: the toolset registers the write AND the caller has an
+ * identity to save under) — the model is never told about a write that fails.
+ * Rendered in-component (the section self-fetches), hence a spec, not a text.
+ */
+export function describeAnalyticsSettings(data: AnalyticsSettingsViewData): ModelContextSpec {
+  return {
+    summary:
+      "The operator is viewing the analytics settings: the defaults every analytics call uses when it omits period or minBucketSize.",
+    facts: {
+      defaultPeriod: data.settings.defaultPeriod,
+      minBucketSize: data.settings.minBucketSize,
+      editable: data.canSave,
+    },
+    tools: ["analytics_save_settings"],
+    surface: { has: (tool) => tool === "analytics_save_settings" && data.canSave },
+  }
+}
 
 export const describeBpmnHeatmap: DescribeForModel<AnalyticsBpmnHeatmapData> = (data) => {
   const hottest = maxEntry(data.frequency)

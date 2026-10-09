@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
@@ -8,6 +8,7 @@ import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
 import type { JobPanelData } from "../view-models.js"
 import { VariablesTable } from "./instance-sections.js"
 import { JobPanelWidget } from "./job-panel.js"
+import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
 
 afterEach(() => {
   cleanup()
@@ -37,6 +38,12 @@ const JOBS: JobPanelData = {
   filters: {},
   engineId: "default",
 }
+
+/** What a read-only deployment registers for the model — the hand-offs' surface there. */
+let readOnlyModelTools: string[]
+beforeAll(async () => {
+  readOnlyModelTools = (await widgetActionsFeedFor("read-only")).modelTools
+})
 
 const JobPanel = JobPanelWidget as unknown as ComponentType<Record<string, unknown>>
 
@@ -76,7 +83,7 @@ describe("write buttons follow the deployment's toolset", () => {
   })
 
   it("hides the job retry button in read-only but keeps the AI handoffs", async () => {
-    renderWith(JobPanel, { allowedActions: [] })
+    renderWith(JobPanel, { allowedActions: [], modelTools: readOnlyModelTools })
     await feedSettled()
     expect(screen.queryByText("Retry job")).toBeNull()
     expect(screen.getByLabelText("Explain this failure")).toBeTruthy()

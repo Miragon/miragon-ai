@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
   TONE_DOT,
   AskAiButton,
@@ -13,6 +14,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
 import { CockpitListFooter } from "./list-footer.js"
+import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { useT } from "../messages/use-t.js"
 
 export type { HistoryTimelineData }
@@ -55,6 +57,58 @@ const ACTIVITY_COLORS: Record<string, string> = {
   subProcess: "bg-pink-500 dark:bg-pink-400",
 }
 const ACTIVITY_COLOR_FALLBACK = TONE_DOT.neutral
+
+type TimelineInstance = NonNullable<HistoryTimelineData["processInstance"]>
+
+/**
+ * Where did this historic instance spend its time — the whole run, against
+ * its definition's metrics baseline (analytics, when active).
+ */
+export function explainInstanceHandOff(
+  instance: TimelineInstance,
+  engineId: string | undefined,
+  activityCount: number,
+): HandOff {
+  return {
+    intent: "askAi.history.explainInstance",
+    ids: {
+      engine: engineId,
+      processInstanceId: instance.id,
+      processDefinitionKey: instance.processDefinitionKey,
+    },
+    facts: { durationMs: instance.durationInMillis, state: instance.state, activityCount },
+    untrusted: [{ label: "processName", text: instance.processDefinitionName }],
+    tools: [
+      "camunda7_query_historic_activity_instances",
+      "analytics_element_bottleneck",
+      "analytics_analyze_process_performance",
+    ],
+  }
+}
+
+/** Why ONE step took this long — the outlier row's hand-off. */
+export function explainActivityHandOff(
+  activity: HistoryEntry,
+  instance: TimelineInstance | null | undefined,
+  engineId: string | undefined,
+): HandOff {
+  return {
+    intent: "askAi.history.explainActivity",
+    ids: {
+      engine: engineId,
+      processInstanceId: instance?.id,
+      processDefinitionKey: instance?.processDefinitionKey,
+      activityId: activity.activityId,
+    },
+    facts: { durationMs: activity.durationInMillis, activityType: activity.activityType },
+    untrusted: [{ label: "activityName", text: activity.activityName }],
+    tools: [
+      "camunda7_query_historic_activity_instances",
+      "analytics_element_bottleneck",
+      "analytics_analyze_process_performance",
+    ],
+  }
+}
 
 /**
  * Compact table look of the family: a real `<table>` (kit `Th`/`Td`) with
@@ -137,6 +191,7 @@ export function HistoryTimelineView({
   variant?: "timeline" | "table"
 }) {
   const t = useT()
+  const { ask } = useHandOff()
   if (activities.length === 0) {
     return (
       <TableEmptyState>
@@ -192,7 +247,13 @@ export function HistoryTimelineView({
           </div>
           <AskAiButton
             variant="primary"
-            prompt={`Explain why historic process instance ${processInstance.id} of ${processInstance.processDefinitionName ?? processInstance.processDefinitionKey} (key ${processInstance.processDefinitionKey}) on engine ${engineId} took ${processInstance.durationInMillis}ms end-to-end and is in state ${processInstance.state}, across ${totalActivities ?? activities.length} activities. Use camunda7_query_historic_activity_instances for instance ${processInstance.id} to get the full per-activity timeline, identify the single longest-running step (call out wait time at userTask/receiveTask vs. compute time at serviceTask), and check whether that step is normal by comparing against the definition with analytics_element_bottleneck / analytics_analyze_process_performance for processDefinitionKey ${processInstance.processDefinitionKey}. Conclude with the bottleneck activity and whether this instance is an outlier.`}
+            prompt={ask(
+              explainInstanceHandOff(
+                processInstance,
+                engineId,
+                totalActivities ?? activities.length,
+              ),
+            )}
           />
         </div>
       )}
@@ -232,7 +293,7 @@ export function HistoryTimelineView({
                         variant="icon"
                         label={t("historyTimeline.whySoLong")}
                         title={t("historyTimeline.whySoLong")}
-                        prompt={`Explain in plain language why the activity ${activity.activityName ?? activity.activityId} (id ${activity.activityId}, type ${activity.activityType}) took ${activity.durationInMillis}ms on historic process instance ${processInstance?.id ?? "the current instance"}${engineId ? ` on engine ${engineId}` : " on the current engine"}. Is this wait time (a userTask or receiveTask waiting on a human or message) or compute time (a serviceTask doing work)? Use camunda7_query_historic_activity_instances for this instance to confirm the activity's timing, and cross-check whether this duration is normal for ${activity.activityType} ${activity.activityId} by calling analytics_element_bottleneck and analytics_analyze_process_performance for processDefinitionKey ${processInstance?.processDefinitionKey ?? "this process definition"}. State whether this step is the bottleneck and whether ${activity.durationInMillis}ms is typical or an outlier. Explanation only — do not change anything.`}
+                        prompt={ask(explainActivityHandOff(activity, processInstance, engineId))}
                       />
                     )}
                   </div>
@@ -333,6 +394,41 @@ export function PagedHistoryView({
  * long instance is a "Load more" away on the same engine, never a silently
  * cut timeline.
  */
+/**
+ * The timeline the operator is looking at, with the definition baseline
+ * (analytics, when active) for the "is this normal" follow-up. Rendered
+ * in-component — the tool list follows the live surface.
+ */
+export function describeHistoryTimeline(data: HistoryTimelineData): ViewContext {
+  const pi = data.processInstance
+  return {
+    summary: pi
+      ? "The operator is viewing the activity history timeline of one process instance."
+      : "The operator is viewing an activity history timeline.",
+    ids: {
+      engine: data.engineId,
+      processInstanceId: pi?.id,
+      processDefinitionKey: pi?.processDefinitionKey,
+    },
+    facts: {
+      state: pi?.state,
+      activities: data.totalActivities,
+      startTime: pi?.startTime,
+      endTime: pi?.endTime,
+      stillRunning: pi ? pi.endTime === null : undefined,
+    },
+    untrusted: [{ label: "processName", text: pi?.processDefinitionName }],
+    tools: ["camunda7_query_historic_activity_instances", "analytics_element_bottleneck"],
+  }
+}
+
+function HistoryModelContext({ data }: { data: HistoryTimelineData }) {
+  const { context } = useHandOff()
+  return (
+    <HostModelContext content={context(describeHistoryTimeline(data))}>{null}</HostModelContext>
+  )
+}
+
 export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | null }) {
   const t = useT()
   // Stable identity per payload: the paged hook resets on a new page 0.
@@ -352,6 +448,7 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
 
   return (
     <WidgetShell>
+      <HistoryModelContext data={data} />
       {data.processInstance ? (
         <PagedHistoryView
           processInstanceId={data.processInstance.id}

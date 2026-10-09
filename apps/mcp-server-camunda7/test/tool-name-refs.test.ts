@@ -1,5 +1,3 @@
-import fs from "node:fs"
-import path from "node:path"
 import ts from "typescript"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { bootServer, listToolNames, type BootedServer } from "./boot-server.js"
@@ -9,6 +7,7 @@ import {
   findParamRefs,
   type ParamRef,
 } from "./prompt-param-refs.js"
+import { scanSources } from "./source-scan.js"
 
 /**
  * Raw tool-name references vs the composed tool surface (#322 N187).
@@ -27,34 +26,6 @@ import {
  * module's constants — and a stale name there silently falls back to English
  * and the system theme for every widget.
  */
-
-const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..")
-
-/**
- * Source roots: apps/<app>/src, packages/core/<pkg>/src,
- * packages/connectors/<family>/<pkg>/src.
- */
-function sourceRoots(): string[] {
-  const dirs = (root: string) =>
-    fs
-      .readdirSync(root, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .map((d) => path.join(root, d.name))
-  const packages = path.join(REPO_ROOT, "packages")
-  return [
-    ...dirs(path.join(REPO_ROOT, "apps")),
-    ...dirs(path.join(packages, "core")),
-    ...dirs(path.join(packages, "connectors")).flatMap(dirs),
-  ]
-    .map((pkg) => path.join(pkg, "src"))
-    .filter((src) => fs.existsSync(src))
-}
-
-const isScannedSource = (file: string) =>
-  /\.tsx?$/.test(file) &&
-  !/\.test\.tsx?$/.test(file) &&
-  !/\.test-support\.ts$/.test(file) &&
-  !file.split(path.sep).includes("generated")
 
 interface ToolNameRef {
   name: string
@@ -83,16 +54,6 @@ function findToolNameLiterals(
   }
   visit(source)
   return refs
-}
-
-function scanSources<T>(scan: (file: string, text: string) => T[]): T[] {
-  return sourceRoots().flatMap((src) =>
-    fs
-      .readdirSync(src, { recursive: true, encoding: "utf8" })
-      .map((rel) => path.join(src, rel))
-      .filter(isScannedSource)
-      .flatMap((file) => scan(path.relative(REPO_ROOT, file), fs.readFileSync(file, "utf8"))),
-  )
 }
 
 describe("raw tool-name literals name real tools (full surface)", () => {
@@ -129,7 +90,6 @@ describe("raw tool-name literals name real tools (full surface)", () => {
     const helpers = new Map(
       helperDecls.filter(([name]) => helperNames.indexOf(name) === helperNames.lastIndexOf(name)),
     )
-    expect(helpers.has("engineArg")).toBe(true)
     paramRefs = scanSources((file, text) => findParamRefs(file, text, prefixes, helpers))
   })
 
@@ -183,26 +143,18 @@ describe("raw tool-name literals name real tools (full surface)", () => {
     ).toEqual([])
   })
 
-  it("sees the quoted parameters of the Ask-AI prompts (the scanner is not blind)", () => {
+  // The Ask-AI hand-offs no longer quote parameters as prose — their ids are
+  // typed (`hand-off-surface.test.ts` checks them); what is left here are the
+  // descriptions and the server instructions.
+  it("sees the parameters the instructions and descriptions quote (the scanner is not blind)", () => {
     const quoted = new Set(paramRefs.map((ref) => `${ref.tool}.${ref.param}`))
     expect([...quoted]).toEqual(
       expect.arrayContaining([
-        "camunda7_list_incidents.processDefinitionKey",
-        "camunda7_list_jobs.noRetriesLeft",
-        // remediation.ts: the cluster scope of the retry
+        // instructions.ts: the cluster scope of the guarded retry
         "camunda7_list_jobs.activityId",
-        "camunda7_list_jobs.engine",
-        "camunda7_list_incidents.activityId",
-        "camunda7_list_incidents.incidentType",
-        // engineArg(…) helper calls
-        "camunda7_format_incident_issue.engine",
-        // a prose `name=value, name=value` run
-        "analytics_analyze_process_performance.includeActivityBreakdown",
-        "analytics_cluster_compare.deploymentTimestamp",
-        "camunda7_list_process_definitions.maxResults",
+        "analytics_element_bottleneck.processDefinitionKey",
       ]),
     )
-    expect(paramRefs.length).toBeGreaterThanOrEqual(40)
   })
 })
 

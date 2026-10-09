@@ -1,12 +1,7 @@
 import { useMemo, useState } from "react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import {
-  SectionHeading,
-  truncate,
-  useDetailView,
-  useResetOnChange,
-} from "@miragon-ai/widget-shell/widgets"
+import { SectionHeading, useDetailView, useResetOnChange } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData, IncidentRecovery } from "../view-models.js"
 
@@ -21,6 +16,7 @@ import { InstanceTab } from "./incident-detail/instance-tab.js"
 import { IncidentKpis } from "./incident-detail/kpis.js"
 import { refreshCockpitData } from "./refresh.js"
 import { useCanRun } from "./widget-actions.js"
+import { useHandOff, type ViewContext } from "./lib/hand-off.js"
 import { PagedHistoryView } from "./history-timeline.js"
 import { useT } from "../messages/use-t.js"
 
@@ -74,30 +70,61 @@ function useRemedies(data: IncidentDetailData | null) {
   }
 }
 
-function modelSummary(
-  data: IncidentDetailData,
-  resolved: boolean,
-  { canResolve, canRetry }: { canResolve: boolean; canRetry: boolean },
-): string {
-  const incidentMessage = data.incidentMessage ?? data.job?.exceptionMessage
-  // Only the writes this deployment's toolset exposes — the model has no others.
-  const writes = [canResolve && "camunda7_resolve_incident", canRetry && retryToolFor(data)].filter(
-    Boolean,
+/** The writes that clear an incident — only the one that fits its type is ever named. */
+const REMEDY_TOOLS = new Set<string>([
+  "camunda7_resolve_incident",
+  "camunda7_set_job_retries",
+  "camunda7_set_external_task_retries",
+])
+
+/**
+ * The incident the operator is looking at. Only the remedy that clears THIS
+ * incident is named (the engine refuses to resolve the built-in types), none
+ * once it was cleared in this session — and the surface keeps it only where
+ * the deployment registers it. Engine text is quoted, never inlined.
+ */
+export function describeIncident(data: IncidentDetailData, resolved: boolean): ViewContext {
+  const remedy = resolved
+    ? null
+    : detailRecovery(data).action === "resolve"
+      ? "camunda7_resolve_incident"
+      : retryToolFor(data)
+  return {
+    summary: "The operator is viewing one incident.",
+    ids: {
+      engine: data.engineId,
+      incidentId: data.incidentId,
+      processInstanceId: data.processInstanceId,
+      jobId: data.job?.id,
+    },
+    facts: {
+      incidentType: data.incidentType,
+      processDefinitionKey: data.processDefinitionKey,
+      activityId: data.activityId,
+      version: data.processDefinitionVersion,
+      retriesLeft: data.job?.retries,
+      clearedInThisSession: resolved || undefined,
+    },
+    untrusted: [
+      { label: "incidentMessage", text: data.incidentMessage ?? data.job?.exceptionMessage },
+      { label: "activityName", text: data.activityName },
+      { label: "processName", text: data.processDefinitionName },
+    ],
+    tools: [
+      "camunda7_show_instance_detail",
+      "camunda7_get_job_stacktrace",
+      "camunda7_resolve_incident",
+      "camunda7_set_job_retries",
+      "camunda7_set_external_task_retries",
+    ].filter((tool) => !REMEDY_TOOLS.has(tool) || tool === remedy),
+  }
+}
+
+function IncidentModelContext({ data, resolved }: { data: IncidentDetailData; resolved: boolean }) {
+  const { context } = useHandOff()
+  return (
+    <HostModelContext content={context(describeIncident(data, resolved))}>{null}</HostModelContext>
   )
-  const jobClause = data.job ? ` (job ${data.job.id}, ${data.job.retries} retries left)` : ""
-  const instanceHint = "instance context via camunda7_show_instance_detail."
-  return [
-    `Viewing CIB Seven incident ${data.incidentId} (type ${data.incidentType}` +
-      `${resolved ? ", marked resolved in this session" : ""}) at activity ` +
-      `${data.activityName ?? data.activityId} (${data.activityId}) on process instance ` +
-      `${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}` +
-      `${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}, ` +
-      `engine ${data.engineId ?? "default"}.`,
-    `Message: ${incidentMessage ? `"${truncate(incidentMessage, 160)}"` : "(none reported)"}.`,
-    writes.length > 0
-      ? `Act via ${writes.join(" / ")}${jobClause}; full ${instanceHint}`
-      : `Full ${instanceHint}`,
-  ].join(" ")
 }
 
 export function IncidentDetailWidget({
@@ -240,9 +267,7 @@ export function IncidentDetailWidget({
     >
       {/* Rendered in-component (not via the adapter's describeForModel) because
           this widget self-fetches in the cockpit, where the adapter has no data. */}
-      <HostModelContext content={modelSummary(data, resolved, { canResolve, canRetry })}>
-        {null}
-      </HostModelContext>
+      <IncidentModelContext data={data} resolved={resolved || retried} />
 
       <ConfirmDialog
         open={confirmResolve}

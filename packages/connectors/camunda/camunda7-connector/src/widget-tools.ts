@@ -23,6 +23,12 @@ export interface Camunda7WidgetToolsOptions {
    * "omitted = everything" reading.
    */
   toolset: Camunda7Toolset
+  /**
+   * The module's model-visible tool names, read when the feed is called (all
+   * registrations are done by then) — what `camunda7_widget_actions_data`
+   * reports as `modelTools`. Omitted (tests, embeds): none.
+   */
+  modelTools?: () => string[]
 }
 
 /**
@@ -50,6 +56,7 @@ export function registerWidgetTools(
     healthThresholds,
     profileStore,
     toolset: options.toolset,
+    modelTools: options.modelTools ?? (() => []),
     engineParam: engineParamShapeFor(registry.engines),
   }
   registerCockpitWidgetTools(ctx)

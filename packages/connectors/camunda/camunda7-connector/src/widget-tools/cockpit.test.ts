@@ -25,6 +25,7 @@ function openCockpit(engines: Parameters<typeof createEngineRegistry>[0]): Handl
     healthThresholds: DEFAULT_HEALTH_THRESHOLDS,
     profileStore: createInMemoryProfileStore(),
     toolset: "read-only",
+    modelTools: () => [],
     engineParam: engineParamShape,
   })
   const call = tool.mock.calls.find(

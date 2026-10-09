@@ -42,10 +42,8 @@ export function groupEnginesByEnvironment<E extends { environment?: string }>(
 
 /**
  * The env-grouped engine id list as prose — `"prod-eu: a, b; prod-us: c"`,
- * flat `"a, b, c"` when only one environment exists. The model-facing fleet
- * strings (model context, Ask-AI prompts) must describe the fleet exactly the
- * way the widget groups it on screen, so every one of them derives from this
- * single formatter over the SAME groups the widget renders.
+ * flat `"a, b, c"` when only one environment exists — the fleet line on
+ * screen.
  */
 export function formatEnginesByEnvironment(
   groups: Array<EnvironmentGroup<{ id: string }>>,
@@ -53,4 +51,19 @@ export function formatEnginesByEnvironment(
   return groups.length > 1
     ? groups.map((g) => `${g.id}: ${g.engines.map((e) => e.id).join(", ")}`).join("; ")
     : (groups[0]?.engines ?? []).map((e) => e.id).join(", ")
+}
+
+/**
+ * The same grouping for the model-facing hand-offs and contexts — one
+ * `environment/engine` pair per engine, id-shaped so `askAiPrompt` inlines it
+ * — or undefined for a single environment (the engine ids then say it all).
+ * Derived from the SAME groups the widget renders, so the model sees the
+ * fleet exactly the way the screen groups it.
+ */
+export function enginesByEnvironment(
+  groups: Array<EnvironmentGroup<{ id: string }>>,
+): string[] | undefined {
+  return groups.length > 1
+    ? groups.flatMap((g) => g.engines.map((e) => `${g.id}/${e.id}`))
+    : undefined
 }

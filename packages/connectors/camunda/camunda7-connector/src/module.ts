@@ -377,9 +377,11 @@ export const camunda7Module = {
    */
   instructions(config: Record<string, unknown>, { authenticated }: { authenticated: boolean }) {
     const parsed = camunda7ConfigSchema.parse(config)
+    const toolset = camunda7Toolsets.resolve(parsed.toolset)
     return camunda7Instructions({
       engineIds: parsed.engines.map((e) => e.id),
-      canSaveDefault: authenticated && allowsProfileSave(camunda7Toolsets.resolve(parsed.toolset)),
+      canSaveDefault: authenticated && allowsProfileSave(toolset),
+      toolset,
     })
   },
 

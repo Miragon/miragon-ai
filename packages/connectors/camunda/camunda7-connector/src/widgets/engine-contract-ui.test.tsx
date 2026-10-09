@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
@@ -10,6 +10,7 @@ import { IncidentsTab } from "./instance-detail/incidents-tab.js"
 import { VariablesTable } from "./instance-sections.js"
 import { IncidentTable } from "./process-incidents/incident-table.js"
 import { useIncidentRecovery } from "./process-incidents/use-incident-recovery.js"
+import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
 
 /**
  * #328 in the widgets: the engine refuses to resolve its built-in incident
@@ -23,7 +24,14 @@ afterEach(() => {
   queryClient.clear()
 })
 
-const ALL_ACTIONS = { allowedActions: [...CAMUNDA7_WIDGET_ACTIONS] }
+const ALL_ACTIONS: { allowedActions: string[]; modelTools: string[] } = {
+  allowedActions: [...CAMUNDA7_WIDGET_ACTIONS],
+  modelTools: [],
+}
+// The hand-offs name what an admin deployment registers for the model.
+beforeAll(async () => {
+  ALL_ACTIONS.modelTools = (await widgetActionsFeedFor("admin")).modelTools
+})
 
 function incident(id: string, over: Partial<IncidentInstance>): IncidentInstance {
   return {
@@ -107,8 +115,8 @@ describe("incident rows offer the action the engine accepts", () => {
   })
 
   it("keeps the row's ticket handoff on the instance's engine next to its recovery action", async () => {
-    // #332 pins every Ask-AI call template to the viewed engine; #328 swapped
-    // the rows' resolve props for `recovery`. The instance tab carries both.
+    // Every Ask-AI hand-off carries the viewed engine as an id (#338); #328
+    // swapped the rows' resolve props for `recovery`. The instance tab carries both.
     const actions: HostActionLog[] = []
     const OnProdB: ComponentType<Record<string, unknown>> = () => {
       const recovery = useIncidentRecovery("prod-b", INCIDENTS)
@@ -130,10 +138,8 @@ describe("incident rows offer the action the engine accepts", () => {
       .filter((a) => a.type === "sendFollowUpMessage")
       .map((a) => (a as { prompt: string }).prompt)
     expect(prompts).toHaveLength(1)
-    expect(prompts[0]).toContain(
-      'camunda7_format_incident_issue({ engine: "prod-b", incidentId: "job" })',
-    )
-    expect(prompts[0]).toContain('Pass engine: "prod-b" on every camunda7_* call')
+    expect(prompts[0]).toContain('Ids: engine="prod-b", incidentId="job"')
+    expect(prompts[0]).toContain("Tools: camunda7_format_incident_issue")
   })
 
   it("hides Retry when the toolset lacks the retries tool", async () => {
