@@ -15,13 +15,20 @@ import { bootServer, listToolNames, type BootedServer } from "./boot-server.js"
  * the heatmap overlay silently absent — and the module's own tests stub the
  * same stale literal. Only the app sees every module at once, so this is
  * where the names are checked: every `<module>_…` string literal in any
- * package's non-test source must name a tool of the full surface.
+ * package's or app's non-test source must name a tool of the full surface.
+ * The apps count too: the composition root hardcodes the profile feed
+ * (`src/ui/main.tsx`) so the host bundle needs no build-time dependency on a
+ * module's constants — and a stale name there silently falls back to English
+ * and the system theme for every widget.
  */
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..")
 
-/** Package source roots: packages/core/<pkg>/src, packages/connectors/<family>/<pkg>/src. */
-function packageSourceRoots(): string[] {
+/**
+ * Source roots: apps/<app>/src, packages/core/<pkg>/src,
+ * packages/connectors/<family>/<pkg>/src.
+ */
+function sourceRoots(): string[] {
   const dirs = (root: string) =>
     fs
       .readdirSync(root, { withFileTypes: true })
@@ -29,6 +36,7 @@ function packageSourceRoots(): string[] {
       .map((d) => path.join(root, d.name))
   const packages = path.join(REPO_ROOT, "packages")
   return [
+    ...dirs(path.join(REPO_ROOT, "apps")),
     ...dirs(path.join(packages, "core")),
     ...dirs(path.join(packages, "connectors")).flatMap(dirs),
   ]
@@ -71,8 +79,8 @@ function findToolNameLiterals(
   return refs
 }
 
-function scanPackages(prefixes: readonly string[]): ToolNameRef[] {
-  return packageSourceRoots().flatMap((src) =>
+function scanSources(prefixes: readonly string[]): ToolNameRef[] {
+  return sourceRoots().flatMap((src) =>
     fs
       .readdirSync(src, { recursive: true, encoding: "utf8" })
       .map((rel) => path.join(src, rel))
@@ -106,18 +114,18 @@ describe("raw tool-name literals name real tools (full surface)", () => {
     // Module prefixes come from the surface itself: `camunda7_…`, `analytics_…`.
     const prefixes = [...new Set(names.flatMap((n) => /^([a-z0-9]+)_/.exec(n)?.[1] ?? []))]
     expect(prefixes.sort()).toEqual(["analytics", "camunda7"])
-    refs = scanPackages(prefixes)
+    refs = scanSources(prefixes)
   })
 
   afterAll(async () => {
     await server?.close()
   })
 
-  it("every `<module>_…` literal in package sources is a registered tool", () => {
+  it("every `<module>_…` literal in app and package sources is a registered tool", () => {
     const stale = refs.filter((ref) => !tools.has(ref.name)).map((r) => `${r.name} (${r.at})`)
     expect(
       stale,
-      "A package names a tool the composed server does not register — renamed or removed? " +
+      "A source names a tool the composed server does not register — renamed or removed? " +
         "Fix the literal (a cross-module reference degrades SILENTLY at runtime).",
     ).toEqual([])
   })
@@ -129,6 +137,13 @@ describe("raw tool-name literals name real tools (full surface)", () => {
     expect(camunda7Refs).toEqual(
       expect.arrayContaining(["analytics_settings_data", "analytics_bpmn_heatmap_data"]),
     )
+  })
+
+  it("sees the composition root's hardcoded profile feed (apps are scanned too)", () => {
+    const appRefs = refs
+      .filter((r) => r.at.startsWith("apps/mcp-server-camunda7/src/ui/main.tsx:"))
+      .map((r) => r.name)
+    expect(appRefs).toContain("camunda7_user_profile_data")
   })
 })
 

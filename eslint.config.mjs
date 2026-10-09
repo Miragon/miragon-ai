@@ -36,24 +36,30 @@ export const maxLinesRatchet = {
 
 const TOOL_MEMBER = "/^(tool|registerTool)$/"
 const REGISTRAR_MESSAGE =
-  "Operations tools are registered through createToolRegistrar in src/tools/ (see .claude/skills/add-bpm-feature); raw server.tool() — in any spelling: computed key, .call/.bind/.apply, destructuring, Reflect.get — is reserved for the widget-tools files."
+  "Operations tools are registered through createToolRegistrar in src/tools/ (see .claude/skills/add-bpm-feature); raw server.tool() — also via a computed key, .call/.bind/.apply, destructuring or Reflect.get — is reserved for the widget-tools files."
 
 // Invariant 1. Not just the canonical `x.tool(...)`: every syntactic route
-// to the member (an agent "working around" the gate reaches for exactly
-// these). Parameter destructuring and object literals stay allowed — test
-// fakes build `{ tool } as unknown as MCPServer`.
+// to the member that names it literally (an agent "working around" the gate
+// reaches for exactly these). A key computed at runtime stays out of any
+// selector's reach — that is review's job. Parameter destructuring and object
+// literals stay allowed — test fakes build `{ tool } as unknown as MCPServer`.
+// Inline `eslint-disable` of this rule (or of complexity/max-lines) is caught
+// by scripts/check-ratchets.mjs, not here: a directive could disable a rule
+// that polices directives.
 const registrarGate = [
   // x.tool(...), x?.tool(...), x.tool.call/bind/apply(...), const t = x.tool
   `MemberExpression[computed=false][property.name=${TOOL_MEMBER}]`,
   // x["tool"], x[`tool`]
   `MemberExpression[computed=true][property.value=${TOOL_MEMBER}]`,
   `MemberExpression[computed=true] > TemplateLiteral.property > TemplateElement[value.raw=${TOOL_MEMBER}]`,
-  // const { tool } = x, const { "tool": t } = x, ({ tool } = x)
+  // const { tool } = x, const { "tool": t } = x, ({ tool } = x), ({ "tool": t } = x)
   `VariableDeclarator > ObjectPattern.id > Property[key.name=${TOOL_MEMBER}]`,
   `VariableDeclarator > ObjectPattern.id > Property[key.value=${TOOL_MEMBER}]`,
   `AssignmentExpression > ObjectPattern.left > Property[key.name=${TOOL_MEMBER}]`,
-  // Reflect.get(x, "tool")
+  `AssignmentExpression > ObjectPattern.left > Property[key.value=${TOOL_MEMBER}]`,
+  // Reflect.get(x, "tool"), Reflect.get(x, `tool`)
   `CallExpression[callee.object.name='Reflect'][callee.property.name='get'] > Literal.arguments[value=${TOOL_MEMBER}]`,
+  `CallExpression[callee.object.name='Reflect'][callee.property.name='get'] > TemplateLiteral.arguments > TemplateElement[value.raw=${TOOL_MEMBER}]`,
 ].map((selector) => ({ selector, message: REGISTRAR_MESSAGE }))
 
 // Invariant 6.

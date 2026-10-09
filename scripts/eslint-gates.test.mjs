@@ -66,7 +66,9 @@ const REGISTRAR_ESCAPES = {
   "destructured + renamed": 'const { registerTool: register } = server\nregister("x")',
   "destructured string key": 'const { "tool": t } = server\nt("x")',
   "destructuring assignment": 'let tool\n;({ tool } = server)\ntool("x")',
+  "destructuring assignment, string key": 'let t\n;({ "tool": t } = server)\nt.call(server, "x")',
   "Reflect.get": 'Reflect.get(server, "tool")("x", {}, handler)',
+  "Reflect.get, template key": 'Reflect.get(server, `tool`).call(server, "x")',
 }
 
 describe("registrar gate (invariant 1) catches every spelling", () => {

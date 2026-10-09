@@ -9,28 +9,53 @@
  * the PR's own files) and fails on any move in the forbidden direction:
  *
  *   <pkg>/vitest.config.ts          coverage thresholds raise-only, never removed;
- *   vitest.shared.ts                coverage `exclude` shrink-only; `enabled`
- *                                   never switched off (incl. a package that
- *                                   stops merging sharedConfig)
+ *   vitest.shared.ts                coverage `exclude` and test `exclude`
+ *                                   shrink-only; coverage `include` and test
+ *                                   `include` grow-only (a coverage `include`
+ *                                   never appears: without one vitest measures
+ *                                   every loaded file); `enabled` never
+ *                                   switched off (incl. a package that stops
+ *                                   merging sharedConfig)
  *   <pkg>/stryker.config.json       thresholds.break raise-only; `mutate`
  *                                   grow-only (an entry may leave only when
  *                                   break rises in the same diff, or when it
  *                                   names a file that no longer exists);
- *                                   mutator.excludedMutations shrink-only
+ *                                   mutator.excludedMutations shrink-only;
+ *                                   every other option that decides which
+ *                                   mutants exist or how they count pinned
  *   eslint.config.mjs               complexityRatchet / maxLinesRatchet
  *                                   shrink-only (no new entry, no raised value);
  *                                   the global complexity / max-lines budgets
  *                                   never raised or removed; no new override
- *                                   of either rule; `ignores` shrink-only
- *   knip.jsonc                      every ignore list, the issue-type `exclude`
- *                                   and non-"error" `rules` shrink-only
+ *                                   of either rule; no gate rule newly "off" or
+ *                                   "warn"; `ignores` shrink-only per block
+ *                                   scope; every shape the AST cannot read (a
+ *                                   non-literal `rules`, a spread, a local
+ *                                   import, Object.entries(…)) frozen — PLUS
+ *                                   the effective config ESLint itself computes
+ *                                   per source file, base vs working tree
+ *                                   (scripts/eslint-effective-config.mjs)
+ *   knip.jsonc                      every ignore list, the issue-type `exclude`,
+ *                                   non-"error" `rules` and `entry` globs
+ *                                   shrink-only; `include`/`project` never
+ *                                   appear or shrink; never deleted
  *   apps/<app>/test/__golden__/char-budgets.json
  *                                   model-visible tool-surface budgets
  *                                   shrink-only, never removed
- *   package.json (root)             no gate drops out of `lint`/`test`, and a
- *                                   chained gate script never loses an
- *                                   argument; `lint:deadcode --exclude`
- *                                   shrink-only
+ *   package.json (root)             no gate drops out of `lint`/`test`, and the
+ *                                   chains only gain plain `pnpm <script>`
+ *                                   gates; every chained gate script and the
+ *                                   gates CI runs directly are pinned (only an
+ *                                   `--exclude` list may shrink); no `knip` key
+ *   <pkg>/package.json              lint / typecheck / test / test:mutation pinned
+ *   shadowing configs               an eslint.config.* besides the root .mjs, a
+ *                                   knip config besides knip.jsonc, a Stryker
+ *                                   config besides stryker.config.json — each
+ *                                   tool would load it INSTEAD of the ratchet
+ *   inline suppressions             `eslint-disable` of a gate rule (or of every
+ *                                   rule), inline gate-rule config, `v8|c8|
+ *                                   istanbul ignore`, `Stryker disable` in
+ *                                   apps/ and packages/ sources: shrink-only
  *
  * The SINGLE documented escape is a commit trailer in the branch range:
  *
@@ -40,7 +65,9 @@
  * applies to every PR). There is no other bypass.
  *
  * Run: node scripts/check-ratchets.mjs [baseRef]   (`pnpm lint:ratchets`;
- * default origin/$GITHUB_BASE_REF in CI, else origin/main; CI needs
+ * default origin/main. In CI the base is ALWAYS origin/$GITHUB_BASE_REF — a
+ * positional ref is ignored there, and a pull request whose merge base is
+ * HEAD fails instead of comparing the branch with itself; CI needs
  * fetch-depth: 0). The working tree is the "new" side, so uncommitted
  * loosening fails locally too.
  */
@@ -56,15 +83,34 @@ export const EXCEPTION_TRAILER = /^Ratchet-Exception: .+/m
 
 const PKG = String.raw`(?:apps/[^/]+|packages/core/[^/]+|packages/connectors/[^/]+/[^/]+)`
 
+// Config files a tool loads BEFORE (or instead of) the ratcheted one:
+// ESLint resolves the nearest eslint.config.{js,mjs,cjs,ts,mts,cts} upward
+// from each linted file (.js first); knip tries knip.json, knip.jsonc,
+// .knip.json(c), knip.{ts,js}, knip.config.{ts,js} in the root; Stryker tries
+// {,.}stryker.{conf,config}.{json,js,mjs,cjs} in the package dir, .conf first.
+const SHADOW_CONFIGS = [
+  {
+    pattern: /^(?:(?:apps|packages)\/.+\/)?eslint\.config\.(?:[cm]?js|[cm]?ts)$/,
+    replaces: "eslint.config.mjs",
+  },
+  { pattern: /^\.?knip(?:\.config)?\.(?:jsonc?|[cm]?js|[cm]?ts)$/, replaces: "knip.jsonc" },
+  {
+    pattern: new RegExp(`^${PKG}/\\.?stryker\\.(?:conf|config)\\.(?:json|[cm]?js)$`),
+    replaces: "the package's stryker.config.json",
+  },
+]
+
 /** Which ratchet a repo-relative path carries, or null when it carries none. */
 export function ratchetKind(relPath) {
   if (relPath === "vitest.shared.ts" || new RegExp(`^${PKG}/vitest\\.config\\.ts$`).test(relPath))
     return "vitest"
   if (new RegExp(`^${PKG}/stryker\\.config\\.json$`).test(relPath)) return "stryker"
   if (relPath === "eslint.config.mjs") return "eslint"
-  if (relPath === "knip.jsonc" || relPath === "knip.json") return "knip"
+  if (relPath === "knip.jsonc") return "knip"
+  if (SHADOW_CONFIGS.some(({ pattern }) => pattern.test(relPath))) return "shadow-config"
   if (/^apps\/[^/]+\/test\/__golden__\/char-budgets\.json$/.test(relPath)) return "char-budgets"
   if (relPath === "package.json") return "root-scripts"
+  if (new RegExp(`^${PKG}/package\\.json$`).test(relPath)) return "package-scripts"
   return null
 }
 
@@ -73,9 +119,15 @@ export function ratchetKind(relPath) {
 /** Whitespace- and trailing-comma-insensitive source text: prettier-stable keys. */
 const normalize = (text) => text.replace(/\s+/g, "").replace(/,([\]}])/g, "$1")
 
+function scriptKind(relPath) {
+  if (relPath.endsWith(".tsx")) return ts.ScriptKind.TSX
+  if (/\.[cm]?ts$/.test(relPath)) return ts.ScriptKind.TS
+  if (relPath.endsWith(".jsx")) return ts.ScriptKind.JSX
+  return ts.ScriptKind.JS
+}
+
 function parseSource(relPath, text) {
-  const kind = relPath.endsWith(".ts") ? ts.ScriptKind.TS : ts.ScriptKind.JS
-  return ts.createSourceFile(relPath, text, ts.ScriptTarget.Latest, true, kind)
+  return ts.createSourceFile(relPath, text, ts.ScriptTarget.Latest, true, scriptKind(relPath))
 }
 
 function propName(name) {
@@ -89,6 +141,12 @@ function propName(name) {
     return name.text
   return undefined
 }
+
+/** A property's static name — also for `{ name }` shorthand — or undefined. */
+const memberName = (prop) =>
+  ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop)
+    ? propName(prop.name)
+    : undefined
 
 function walk(node, visit) {
   visit(node)
@@ -147,25 +205,58 @@ function topLevelArrays(sourceFile) {
 
 const COVERAGE_METRICS = ["statements", "branches", "functions", "lines"]
 
+/** Entries of an `include`/`exclude` list: literal strings, else normalized source. */
+const listEntries = (node) => arrayEntries(node) ?? [normalize(node.getText())]
+
 /**
- * The coverage ratchet of a vitest config: `{ thresholds, exclude, enabled,
- * opaque, usesShared }`, or `{ error }` when the file cannot be read
- * unambiguously (the comparison then fails closed). `usesShared`: the config
- * passes `sharedConfig` (vitest.shared.ts — where coverage is ENABLED) into a
- * call such as `mergeConfig`; vitest's own default is coverage off.
+ * The measured-surface ratchets of a vitest config: `{ thresholds, exclude,
+ * include, enabled, testInclude, testExclude, opaque, usesShared }`, or
+ * `{ error }` when the file cannot be read unambiguously (the comparison then
+ * fails closed). `include`/`testInclude` are null when the key is absent.
+ * `usesShared`: the config passes `sharedConfig` (vitest.shared.ts — where
+ * coverage is ENABLED) into a call such as `mergeConfig`; vitest's own
+ * default is coverage off.
  */
 export function extractVitestCoverage(relPath, text) {
   const blocks = []
+  const testBlocks = []
   let usesShared = false
   walk(parseSource(relPath, text), (node) => {
     if (ts.isPropertyAssignment(node) && propName(node.name) === "coverage") blocks.push(node)
+    if (ts.isPropertyAssignment(node) && propName(node.name) === "test") testBlocks.push(node)
     if (
       ts.isCallExpression(node) &&
       node.arguments.some((arg) => ts.isIdentifier(arg) && arg.text === "sharedConfig")
     )
       usesShared = true
   })
-  const result = { thresholds: null, exclude: [], enabled: undefined, opaque: [], usesShared }
+  const result = {
+    thresholds: null,
+    exclude: [],
+    include: null,
+    enabled: undefined,
+    testInclude: null,
+    testExclude: [],
+    opaque: [],
+    usesShared,
+  }
+  if (testBlocks.length > 1)
+    return { error: `${testBlocks.length} \`test\` blocks — the ratchet needs at most one` }
+  if (testBlocks.length === 1) {
+    const test = testBlocks[0].initializer
+    if (!ts.isObjectLiteralExpression(test))
+      return { error: "`test` is not an object literal — the ratchet cannot read it" }
+    for (const prop of test.properties) {
+      if (!ts.isPropertyAssignment(prop)) {
+        // A spread or shorthand could carry include/exclude the AST cannot see.
+        result.opaque.push(`test: ${normalize(prop.getText())}`)
+        continue
+      }
+      const name = propName(prop.name)
+      if (name === "include") result.testInclude = listEntries(prop.initializer)
+      else if (name === "exclude") result.testExclude = listEntries(prop.initializer)
+    }
+  }
   if (blocks.length === 0) return result
   if (blocks.length > 1)
     return { error: `${blocks.length} \`coverage\` blocks — the ratchet needs exactly one` }
@@ -190,7 +281,9 @@ export function extractVitestCoverage(relPath, text) {
         }
       }
     } else if (name === "exclude") {
-      result.exclude = arrayEntries(prop.initializer) ?? [normalize(prop.initializer.getText())]
+      result.exclude = listEntries(prop.initializer)
+    } else if (name === "include") {
+      result.include = listEntries(prop.initializer)
     } else if (name === "enabled") {
       const value = literalValue(prop.initializer)
       result.enabled = typeof value === "boolean" ? value : normalize(prop.initializer.getText())
@@ -207,21 +300,79 @@ export function extractVitestCoverage(relPath, text) {
  */
 function isExemptionBlock(block) {
   if (!block || !ts.isObjectLiteralExpression(block)) return false
-  const keys = block.properties.map((p) => (ts.isPropertyAssignment(p) ? propName(p.name) : null))
+  const keys = block.properties.map((p) => memberName(p) ?? null)
   return keys.includes("rules") || keys.every((k) => k === "ignores" || k === "name")
 }
 
+/**
+ * What an `ignores` entry of `block` exempts its files FROM: every rule for
+ * the global-ignores block, else the rules the block applies. An ignore is
+ * keyed by this scope, so copying an exemption into a broader block (the
+ * global ignores) reads as new even though the string already exists.
+ */
+function ignoresScope(block) {
+  const rules = block.properties.find((p) => memberName(p) === "rules")
+  if (!rules) return "every rule (global ignores)"
+  if (ts.isPropertyAssignment(rules) && ts.isObjectLiteralExpression(rules.initializer)) {
+    const names = rules.initializer.properties.map((r) => memberName(r) ?? normalize(r.getText()))
+    return `rules ${names.sort().join(", ")}`
+  }
+  return `rules ${normalize(rules.getText())}`
+}
+
+/** The `files` of a config block as a comparable key ("<all files>" when absent). */
+function blockFiles(block) {
+  const filesProp = ts.isObjectLiteralExpression(block)
+    ? block.properties.find((p) => ts.isPropertyAssignment(p) && propName(p.name) === "files")
+    : undefined
+  return filesProp ? normalize(filesProp.initializer.getText()) : "<all files>"
+}
+
+/**
+ * The config blocks of `export default …`: the arguments of a
+ * `tseslint.config(…)`/`defineConfig(…)` call (array arguments flattened) or
+ * the elements of an array literal.
+ */
+function configElements(sourceFile) {
+  const exported = sourceFile.statements.find(ts.isExportAssignment)
+  if (!exported) return []
+  const expression = exported.expression
+  const items = ts.isCallExpression(expression) ? [...expression.arguments] : [expression]
+  return items.flatMap((item) => (ts.isArrayLiteralExpression(item) ? [...item.elements] : [item]))
+}
+
+const isObjectEntriesCall = (node) =>
+  ts.isCallExpression(node) &&
+  ts.isPropertyAccessExpression(node.expression) &&
+  ts.isIdentifier(node.expression.expression) &&
+  node.expression.expression.text === "Object" &&
+  node.expression.name.text === "entries"
+
+const isDynamicImport = (node) =>
+  ts.isCallExpression(node) &&
+  (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+    (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+
 const BUDGET_RULES = ["complexity", "max-lines"]
+/** The rules the architecture and budget gates set — never relaxed per file. */
+const GATE_RULES = [...BUDGET_RULES, "no-restricted-syntax"]
 const RATCHET_MAPS = ["complexityRatchet", "maxLinesRatchet"]
 const LAX_SEVERITIES = new Set(["off", "warn", 0, 1])
 
 /**
  * The ESLint ratchets of eslint.config.mjs:
  * - `maps`: the exported debt maps (file → frozen value);
- * - `budgets`: every complexity/max-lines rule setting, keyed by
- *   rule + `files` + value shape (numbers masked), with its numeric values
- *   and whether it is a budget ("error") or an exemption ("off"/"warn");
- * - `ignores`: every entry of every `ignores` array.
+ * - `budgets`: every gate-rule setting (complexity, max-lines,
+ *   no-restricted-syntax), keyed by rule + `files` + value shape (numbers
+ *   masked), with its numeric values and whether it is an exemption
+ *   ("off"/"warn");
+ * - `ignores`: every entry of every exempting `ignores` list, keyed by the
+ *   scope it exempts from (see ignoresScope);
+ * - `opaque`: every shape the AST cannot see into — a non-literal or spread
+ *   `rules`, a computed rule key, a spread into a config block, a config
+ *   element that is not an object literal, a local or dynamic import, the
+ *   argument of each Object.entries(…). The comparison freezes them: a new
+ *   one fails closed.
  */
 export function extractEslintRatchets(relPath, text) {
   const sourceFile = parseSource(relPath, text)
@@ -229,8 +380,13 @@ export function extractEslintRatchets(relPath, text) {
   const errors = []
   const budgets = {}
   const ignores = []
+  const opaque = []
 
   for (const statement of sourceFile.statements) {
+    if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
+      const specifier = statement.moduleSpecifier.text
+      if (specifier.startsWith(".")) opaque.push(`local import "${specifier}"`)
+    }
     if (!ts.isVariableStatement(statement)) continue
     for (const decl of statement.declarationList.declarations) {
       const name = ts.isIdentifier(decl.name) ? decl.name.text : undefined
@@ -252,24 +408,43 @@ export function extractEslintRatchets(relPath, text) {
     }
   }
 
+  for (const element of configElements(sourceFile)) {
+    if (!ts.isObjectLiteralExpression(element)) {
+      opaque.push(`config element \`${normalize(element.getText())}\``)
+      continue
+    }
+    for (const prop of element.properties)
+      if (ts.isSpreadAssignment(prop))
+        opaque.push(`spread into a config block \`${normalize(prop.getText())}\``)
+  }
+
   const consts = topLevelArrays(sourceFile)
   walk(sourceFile, (node) => {
-    if (!ts.isPropertyAssignment(node)) return
+    if (isDynamicImport(node)) opaque.push(`dynamic import \`${normalize(node.getText())}\``)
+    if (isObjectEntriesCall(node))
+      opaque.push(`Object.entries(${normalize(node.arguments[0]?.getText() ?? "")})`)
+    if (!ts.isPropertyAssignment(node) && !ts.isShorthandPropertyAssignment(node)) return
     const name = propName(node.name)
-    if (name === "ignores" && isExemptionBlock(node.parent)) {
-      ignores.push(
-        ...(arrayEntries(node.initializer, consts) ?? [normalize(node.initializer.getText())]),
-      )
-    }
-    if (name !== "rules" || !ts.isObjectLiteralExpression(node.initializer)) return
     const block = node.parent
-    const filesProp = ts.isObjectLiteralExpression(block)
-      ? block.properties.find((p) => ts.isPropertyAssignment(p) && propName(p.name) === "files")
-      : undefined
-    const files = filesProp ? normalize(filesProp.initializer.getText()) : "<all files>"
-    for (const rule of node.initializer.properties) {
+    const value = ts.isShorthandPropertyAssignment(node) ? node.name : node.initializer
+    if (name === "ignores" && isExemptionBlock(block)) {
+      const scope = ignoresScope(block)
+      for (const entry of arrayEntries(value, consts) ?? [normalize(value.getText())])
+        ignores.push(`${scope} :: ${entry}`)
+    }
+    if (name !== "rules") return
+    const files = blockFiles(block)
+    if (!ts.isObjectLiteralExpression(value)) {
+      opaque.push(`rules \`${normalize(value.getText())}\` (files ${files})`)
+      return
+    }
+    for (const rule of value.properties) {
       const ruleName = ts.isPropertyAssignment(rule) ? propName(rule.name) : undefined
-      if (!BUDGET_RULES.includes(ruleName)) continue
+      if (ruleName === undefined) {
+        opaque.push(`rules entry \`${normalize(rule.getText())}\` (files ${files})`)
+        continue
+      }
+      if (!GATE_RULES.includes(ruleName)) continue
       const valueText = normalize(rule.initializer.getText())
       const severityNode = ts.isArrayLiteralExpression(rule.initializer)
         ? rule.initializer.elements[0]
@@ -280,24 +455,28 @@ export function extractEslintRatchets(relPath, text) {
       })
       const key = `${ruleName} | files ${files} | ${valueText.replace(/\d+(\.\d+)?/g, "#")}`
       budgets[key] = {
+        rule: ruleName,
         numbers,
         exemption: LAX_SEVERITIES.has(literalValue(severityNode)),
       }
     }
   })
 
-  return { maps, budgets, ignores, errors }
+  return { maps, budgets, ignores, opaque, errors }
 }
 
-/** knip ignore entries, flattened to `path.key: value` strings. */
+/** knip ignore-like entries, flattened to `path.key: value` strings. */
 export function collectKnipIgnores(node, prefix = "", into = new Set()) {
   if (!node || typeof node !== "object") return into
   for (const [key, value] of Object.entries(node)) {
-    // `ignore*` lists/maps, the config-level issue-type `exclude`, and
-    // `rules` switched to "off"/"warn" all make knip report less.
-    const lax = /^ignore/.test(key) || key === "exclude"
+    // `ignore*` lists/maps, the config-level issue-type `exclude`, `entry`
+    // globs (an entry marks files as used) and `rules` switched to
+    // "off"/"warn" all make knip report less.
+    const lax = /^ignore/.test(key) || key === "exclude" || key === "entry"
     if (lax && Array.isArray(value)) {
       for (const item of value) into.add(`${prefix}${key}: ${String(item)}`)
+    } else if (lax && typeof value === "string") {
+      into.add(`${prefix}${key}: ${value}`)
     } else if (lax && value && typeof value === "object") {
       for (const [sub, subValue] of Object.entries(value))
         into.add(`${prefix}${key}.${sub}: ${JSON.stringify(subValue)}`)
@@ -313,6 +492,22 @@ export function collectKnipIgnores(node, prefix = "", into = new Set()) {
   return into
 }
 
+/**
+ * knip's narrowing lists, by path: the issue-type `include` and a
+ * workspace's `project` files. Absent, knip checks every issue type and every
+ * project file — so these may never appear, and never shrink.
+ */
+export function collectKnipScopes(node, prefix = "", into = new Map()) {
+  if (!node || typeof node !== "object" || Array.isArray(node)) return into
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "include" || key === "project")
+      into.set(`${prefix}${key}`, [value].flat().map(String))
+    else if (value && typeof value === "object" && !Array.isArray(value))
+      collectKnipScopes(value, `${prefix}${key}.`, into)
+  }
+  return into
+}
+
 /** JSON with comments + trailing commas (knip.jsonc); throws on a syntax error. */
 export function parseJsonc(relPath, text) {
   const { config, error } = ts.parseConfigFileTextToJson(relPath, text)
@@ -320,7 +515,130 @@ export function parseJsonc(relPath, text) {
   return config
 }
 
+// ── Inline suppressions (comments that switch a gate off in place) ──────────
+
+/** The rules a directive must not switch off: the architecture and budget gates. */
+const GATE_RULE_NAMES = new Set(GATE_RULES)
+
+/** Cheap pre-filter: a file without any of these carries no suppression. */
+const SUPPRESSION_HINT = /eslint|(?:v8|c8|istanbul)\s+ignore|stryker\s+disable/i
+/** The same pre-filter as a POSIX ERE for `git grep -i -E` on the merge base. */
+const SUPPRESSION_GREP = "eslint|(v8|c8|istanbul)[[:space:]]+ignore|stryker[[:space:]]+disable"
+
+/**
+ * Every comment of a source file, once each: the leading and trailing trivia
+ * of every token. JSX text and JSDoc nodes are skipped — their text is not
+ * trivia, and scanning it would read prose as comments.
+ */
+function sourceComments(relPath, text) {
+  const sourceFile = parseSource(relPath, text)
+  const ranges = new Map()
+  const collect = (pos) => {
+    for (const range of [
+      ...(ts.getLeadingCommentRanges(text, pos) ?? []),
+      ...(ts.getTrailingCommentRanges(text, pos) ?? []),
+    ])
+      ranges.set(range.pos, range)
+  }
+  const visit = (node) => {
+    if (node.kind === ts.SyntaxKind.JsxText || ts.isJSDoc(node)) return
+    const children = node.getChildren(sourceFile)
+    if (children.length === 0) collect(node.pos)
+    else children.forEach(visit)
+  }
+  visit(sourceFile)
+  return [...ranges.values()]
+    .sort((a, b) => a.pos - b.pos)
+    .map((range) => ({
+      block: range.kind === ts.SyntaxKind.MultiLineCommentTrivia,
+      value: text.slice(
+        range.pos + 2,
+        range.kind === ts.SyntaxKind.MultiLineCommentTrivia ? range.end - 2 : range.end,
+      ),
+      line: sourceFile.getLineAndCharacterOfPosition(range.pos).line + 1,
+    }))
+}
+
+/**
+ * The suppressions one comment carries, normalized ([] for an ordinary
+ * comment). ESLint reads a directive only at the start of the comment and
+ * ends its rule list at a ` -- description`.
+ */
+function classifyComment({ block, value }) {
+  const [head] = value.trim().split(/\s-{2,}\s/)
+  const disable = /^(eslint-disable(?:-next-line|-line)?)(?:\s+([\s\S]*))?$/.exec(head.trim())
+  if (disable) {
+    const rules = (disable[2] ?? "")
+      .split(",")
+      .map((rule) => rule.trim())
+      .filter(Boolean)
+    if (rules.length === 0) return [`${disable[1]} (every rule)`]
+    return rules.filter((rule) => GATE_RULE_NAMES.has(rule)).map((rule) => `${disable[1]} ${rule}`)
+  }
+  const inlineConfig = /^eslint\s+([\s\S]+)$/.exec(head.trim())
+  if (inlineConfig && block) {
+    return [...inlineConfig[1].matchAll(/(?:^|,)\s*["']?([@\w/-]+)["']?\s*:/g)]
+      .map((match) => match[1])
+      .filter((rule) => GATE_RULE_NAMES.has(rule))
+      .map((rule) => `eslint ${rule}: … (inline rule config)`)
+  }
+  const coverage = /^(v8|c8|istanbul)\s+ignore(?:\s+([\w-]+))?/i.exec(head.trim())
+  if (coverage && coverage[2]?.toLowerCase() !== "stop")
+    return [`${coverage[1].toLowerCase()} ignore${coverage[2] ? ` ${coverage[2]}` : ""}`]
+  const stryker = /^stryker\s+disable(?:\s+([\w-]+))?/i.exec(head.trim())
+  if (stryker) return [`Stryker disable${stryker[1] ? ` ${stryker[1]}` : ""}`]
+  return []
+}
+
+/**
+ * The gate-suppressing comments of one source file: `eslint-disable*` naming
+ * complexity / max-lines / no-restricted-syntax (or no rule — that is every
+ * rule), inline `/* eslint <gate rule>: … *\/` config, coverage hints
+ * (`v8|c8|istanbul ignore`) and `Stryker disable`.
+ */
+export function suppressionDirectives(relPath, text) {
+  if (!SUPPRESSION_HINT.test(text)) return []
+  return sourceComments(relPath, text).flatMap((comment) =>
+    classifyComment(comment).map((directive) => ({ directive, line: comment.line })),
+  )
+}
+
+/** Inline suppressions are shrink-only per file (null text = file absent). */
+export function compareSuppressions(relPath, oldText, newText) {
+  if (newText === null || newText === undefined) return []
+  const before = new Map()
+  for (const { directive } of oldText ? suppressionDirectives(relPath, oldText) : [])
+    before.set(directive, (before.get(directive) ?? 0) + 1)
+  const now = new Map()
+  for (const { directive, line } of suppressionDirectives(relPath, newText))
+    now.set(directive, [...(now.get(directive) ?? []), line])
+  const violations = []
+  for (const [directive, lines] of now) {
+    const had = before.get(directive) ?? 0
+    if (lines.length > had) {
+      violations.push(
+        `${relPath}:${lines.join(",")} -> new inline \`${directive}\` (${had} -> ${lines.length}). An inline suppression is an exemption the config ratchets cannot see — fix the code instead (split the function or file, register through the registrar, write the test).`,
+      )
+    }
+  }
+  return violations
+}
+
 // ── Direction policies ───────────────────────────────────────────────────────
+
+/** An include list (null = absent) only grows; it never appears or vanishes. */
+function includeChanges(relPath, key, before, after, why) {
+  if (before === null) {
+    return after === null ? [] : [`${relPath} -> ${key} appeared (${after.join(", ")}). ${why}`]
+  }
+  if (after === null) return [`${relPath} -> ${key} was removed (was ${before.join(", ")}). ${why}`]
+  return before
+    .filter((entry) => !after.includes(entry))
+    .map(
+      (entry) =>
+        `${relPath} -> ${key} lost "${entry}". Include lists only grow — narrowing them measures less.`,
+    )
+}
 
 function compareVitest(relPath, oldText, newText) {
   const old = extractVitestCoverage(relPath, oldText)
@@ -357,6 +675,29 @@ function compareVitest(relPath, oldText, newText) {
       )
     }
   }
+  violations.push(
+    ...includeChanges(
+      relPath,
+      "coverage.include",
+      old.include,
+      cur.include,
+      "Without one vitest measures every file the tests load; an include list can drop files from that measurement (the ratchet cannot tell a narrowing from a widening).",
+    ),
+    ...includeChanges(
+      relPath,
+      "test.include",
+      old.testInclude,
+      cur.testInclude,
+      "Tests that never run never load the code they cover.",
+    ),
+  )
+  for (const entry of cur.testExclude) {
+    if (!old.testExclude.includes(entry)) {
+      violations.push(
+        `${relPath} -> new test.exclude entry "${entry}". Tests that never run never load the code they cover — the measured surface only grows.`,
+      )
+    }
+  }
   // vitest's default is coverage OFF: an explicit `true` that disappears is as
   // much a switch-off as a `false` that appears.
   const switchedOff =
@@ -375,11 +716,61 @@ function compareVitest(relPath, oldText, newText) {
   for (const entry of cur.opaque) {
     if (!old.opaque.includes(entry)) {
       violations.push(
-        `${relPath} -> new spread/shorthand \`${entry}\` inside coverage. The ratchet reads literals only — inline the values.`,
+        `${relPath} -> new spread/shorthand \`${entry}\` inside coverage/test. The ratchet reads literals only — inline the values.`,
       )
     }
   }
   return violations
+}
+
+/** Stryker options that only shape reports, caching or parallelism — free to change. */
+const STRYKER_FREE_KEYS = new Set([
+  "$schema",
+  "allowConsoleColors",
+  "cleanTempDir",
+  "clearTextReporter",
+  "concurrency",
+  "dashboard",
+  "fileLogLevel",
+  "htmlReporter",
+  "incremental",
+  "incrementalFile",
+  "jsonReporter",
+  "logLevel",
+  "reporters",
+  "tempDirName",
+])
+
+/** Key-order-insensitive JSON (undefined stays undefined). */
+const stableJson = (value) =>
+  JSON.stringify(value, (_, v) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
+  )
+
+/**
+ * The options of a Stryker config outside the dedicated policies (mutate,
+ * thresholds.break, mutator.excludedMutations) and the free report/cache keys.
+ */
+function strykerPinnedView(json) {
+  const view = {}
+  for (const [key, value] of Object.entries(json ?? {})) {
+    if (STRYKER_FREE_KEYS.has(key) || key === "mutate") continue
+    if (key === "thresholds" || key === "mutator") {
+      const {
+        break: _break,
+        high: _high,
+        low: _low,
+        excludedMutations: _excluded,
+        ...rest
+      } = value ?? {}
+      if (Object.keys(rest).length > 0) view[key] = rest
+      continue
+    }
+    view[key] = value
+  }
+  return view
 }
 
 function compareStryker(relPath, oldJson, newJson, fileExists) {
@@ -427,6 +818,17 @@ function compareStryker(relPath, oldJson, newJson, fileExists) {
       )
     }
   }
+  const before = strykerPinnedView(oldJson)
+  const after = strykerPinnedView(newJson)
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    const was = stableJson(before[key])
+    const now = stableJson(after[key])
+    if (was !== now) {
+      violations.push(
+        `${relPath} -> "${key}" changed (${was ?? "unset"} -> ${now ?? "unset"}). Outside mutate/thresholds every Stryker option decides which mutants exist or how they count (ignoreStatic, ignorers, mutator.plugins, the test runner and its config — and a timed-out mutant counts as killed, so timeoutMS too): pinned to the merge base.`,
+      )
+    }
+  }
   return violations
 }
 
@@ -462,9 +864,18 @@ function compareEslint(relPath, oldText, newText) {
   for (const [key, setting] of Object.entries(cur.budgets)) {
     const before = old.budgets[key]
     if (!before) {
-      violations.push(
-        `${relPath} -> new ${key.split(" | ")[0]} setting (${key}). New code gets the global budget; an override or exemption is new debt — fix the code instead.`,
-      )
+      if (BUDGET_RULES.includes(setting.rule)) {
+        violations.push(
+          `${relPath} -> new ${setting.rule} setting (${key}). New code gets the global budget; an override or exemption is new debt — fix the code instead.`,
+        )
+      } else if (setting.exemption) {
+        violations.push(
+          `${relPath} -> new ${setting.rule} exemption (${key}). Switching a gate rule off or to "warn" for some files exempts them from the gate — fix the code instead.`,
+        )
+      }
+      // A new no-restricted-syntax "error" block may legitimately add a gate;
+      // the effective-config comparison sees one that REPLACES another gate's
+      // selectors for files both match.
       continue
     }
     setting.numbers.forEach((value, i) => {
@@ -476,16 +887,29 @@ function compareEslint(relPath, oldText, newText) {
     })
   }
   for (const [key, setting] of Object.entries(old.budgets)) {
-    if (!cur.budgets[key] && !setting.exemption && setting.numbers.length > 0) {
+    if (
+      BUDGET_RULES.includes(setting.rule) &&
+      !cur.budgets[key] &&
+      !setting.exemption &&
+      setting.numbers.length > 0
+    ) {
       violations.push(
         `${relPath} -> the budget setting "${key}" was removed. The global complexity/max-lines budgets are never dropped.`,
       )
     }
   }
+  for (const entry of cur.opaque) {
+    if (!old.opaque.includes(entry)) {
+      violations.push(
+        `${relPath} -> new ${entry}. The ratchet reads literals only — a non-literal rules object, a spread, an import or Object.entries(…) can carry an exemption it cannot see; inline the literal values instead.`,
+      )
+    }
+  }
   for (const entry of cur.ignores) {
     if (!old.ignores.includes(entry)) {
+      const [scope, glob] = entry.split(" :: ")
       violations.push(
-        `${relPath} -> new \`ignores\` entry "${entry}". Ignore lists are shrink-only — an ignored file escapes every gate in that block.`,
+        `${relPath} -> new \`ignores\` entry "${glob}" (exempts from: ${scope}). Ignore lists are shrink-only per block — an ignored file escapes every gate in that block, and the global ignores exempt it from every rule.`,
       )
     }
   }
@@ -493,14 +917,31 @@ function compareEslint(relPath, oldText, newText) {
 }
 
 function compareKnip(relPath, oldJson, newJson) {
+  if (newJson === null) {
+    return [
+      `${relPath} was removed — knip then runs on its defaults or on whichever knip.json/knip.ts it finds, and every ratcheted list goes with it.`,
+    ]
+  }
   const oldIgnores = collectKnipIgnores(oldJson)
   const violations = []
-  for (const entry of collectKnipIgnores(newJson ?? {})) {
+  for (const entry of collectKnipIgnores(newJson)) {
     if (!oldIgnores.has(entry)) {
       violations.push(
-        `${relPath} -> new ignore entry "${entry}". Ignore lists are shrink-only — delete the dead code / declare the dependency instead.`,
+        `${relPath} -> new "${entry}". knip's ignore lists, issue-type excludes, relaxed rules and entry globs are shrink-only — each makes knip report less (an entry marks files as used). Delete the dead code / declare the dependency instead.`,
       )
     }
+  }
+  const oldScopes = collectKnipScopes(oldJson)
+  for (const [key, entries] of collectKnipScopes(newJson)) {
+    const before = oldScopes.get(key)
+    if (!before) {
+      violations.push(
+        `${relPath} -> "${key.split(".").pop()}" appeared at ${key}. knip checks every issue type and every project file by default — an include/project list can only narrow that.`,
+      )
+      continue
+    }
+    for (const lost of before.filter((entry) => !entries.includes(entry)))
+      violations.push(`${relPath} -> ${key} lost "${lost}". knip's measured scope only grows.`)
   }
   return violations
 }
@@ -530,53 +971,109 @@ const chainSegments = (script) =>
         .filter(Boolean)
     : []
 
+const normalizeCommand = (script) =>
+  String(script ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+
 const EXCLUDE_FLAG = /--exclude[= ]([\w,]+)/g
 
-const deadcodeExcludes = (script) =>
+const excludeList = (script) =>
   [...String(script ?? "").matchAll(EXCLUDE_FLAG)].flatMap((m) => m[1].split(","))
 
-/** A script's arguments (the `--exclude` list compared separately). */
-const scriptTokens = (script) =>
-  String(script ?? "")
-    .replace(EXCLUDE_FLAG, "")
-    .split(/\s+/)
-    .filter(Boolean)
+/** The root chains whose segments are gates. */
+const ROOT_CHAINS = ["lint", "test"]
+/** Root gates CI (or the docs) run directly, outside the lint/test chains. */
+const DIRECT_ROOT_GATES = ["build", "typecheck", "format:check", "test:pg", "test:mutation"]
+/** The only shape a NEW chain segment may take. */
+const PLAIN_PNPM_SEGMENT = /^pnpm (?:run )?([\w:-]+)$/
+/** Per-package scripts that turbo runs as gates. */
+const PACKAGE_GATES = ["lint", "typecheck", "test", "test:mutation"]
+
+/**
+ * Why `after` is not the pinned gate command `before` — null when it is,
+ * or when only an `--exclude` list shrank (the one tightening a gate command
+ * takes without the trailer).
+ */
+function gateCommandChange(before, after) {
+  if (normalizeCommand(before) === normalizeCommand(after)) return null
+  const withoutExcludes = (script) => normalizeCommand(String(script).replace(EXCLUDE_FLAG, ""))
+  if (withoutExcludes(before) === withoutExcludes(after)) {
+    const allowed = new Set(excludeList(before))
+    const grown = excludeList(after).filter((kind) => !allowed.has(kind))
+    if (grown.length === 0) return null
+    return `now excludes ${grown.map((kind) => `"${kind}"`).join(", ")} — an --exclude list only shrinks (the command is otherwise pinned to the merge base)`
+  }
+  return `changed: "${normalizeCommand(before)}" -> "${normalizeCommand(after)}". Gate commands are pinned to the merge base — an added argument (a base ref, \`|| true\`, \`--include\`, \`--config\`, a test-name filter) hollows a gate as surely as a removed one; a deliberate change carries the Ratchet-Exception trailer`
+}
 
 function compareRootScripts(relPath, oldJson, newJson) {
   const violations = []
   const oldScripts = oldJson?.scripts ?? {}
   const newScripts = newJson?.scripts ?? {}
-  for (const name of ["lint", "test"]) {
-    const kept = new Set(chainSegments(newScripts[name]))
-    for (const segment of chainSegments(oldScripts[name])) {
-      if (!kept.has(segment)) {
+  const pinned = new Set(DIRECT_ROOT_GATES)
+  for (const name of ROOT_CHAINS) {
+    const before = chainSegments(oldScripts[name])
+    const after = chainSegments(newScripts[name])
+    for (const segment of before) {
+      const script = PLAIN_PNPM_SEGMENT.exec(segment)?.[1]
+      if (script) pinned.add(script)
+      if (!after.includes(segment)) {
         violations.push(
           `${relPath} -> "${segment}" dropped out of \`pnpm ${name}\`. Gates are never unhooked from the chain.`,
         )
-        continue
       }
-      // A chained `pnpm <script>` must keep doing what it did: hollowing the
-      // script out (`"lint:ratchets": "true"`) unhooks the gate just the same.
-      const script = /^pnpm (?:run )?([\w:-]+)$/.exec(segment)?.[1]
-      if (!script || !(script in oldScripts)) continue
-      const tokens = new Set(scriptTokens(newScripts[script]))
-      const lost = scriptTokens(oldScripts[script]).filter((token) => !tokens.has(token))
-      if (lost.length > 0) {
+    }
+    for (const segment of after) {
+      if (!before.includes(segment) && !PLAIN_PNPM_SEGMENT.test(segment)) {
         violations.push(
-          `${relPath} -> the "${script}" gate lost ${lost.map((t) => `"${t}"`).join(", ")}. A gate's command may grow, never shrink.`,
+          `${relPath} -> \`pnpm ${name}\` gained "${segment}". The chain only grows by plain \`pnpm <script>\` gates — any other command or shell operator (\`||\`, \`;\`, \`|\`, \`exit\`) can end the chain early or swallow its exit code.`,
         )
       }
     }
   }
-  const oldExcludes = deadcodeExcludes(oldJson?.scripts?.["lint:deadcode"])
-  for (const kind of deadcodeExcludes(newJson?.scripts?.["lint:deadcode"])) {
-    if (!oldExcludes.includes(kind)) {
+  for (const script of [...pinned].sort()) {
+    if (typeof oldScripts[script] !== "string") continue
+    if (typeof newScripts[script] !== "string") {
       violations.push(
-        `${relPath} -> lint:deadcode now excludes "${kind}". knip's measured issue types only grow.`,
+        `${relPath} -> "${script}" was removed — a gate CI runs or chains goes with it.`,
+      )
+      continue
+    }
+    const change = gateCommandChange(oldScripts[script], newScripts[script])
+    if (change) violations.push(`${relPath} -> the "${script}" gate ${change}.`)
+  }
+  if (newJson && Object.hasOwn(newJson, "knip")) {
+    violations.push(
+      `${relPath} -> a \`knip\` key (package.json#knip). knip merges it UNDER knip.jsonc, so every key knip.jsonc leaves out (include, exclude, rules, ignore…) would come from here, unratcheted — keep the knip config in knip.jsonc.`,
+    )
+  }
+  return violations
+}
+
+function comparePackageScripts(relPath, oldJson, newJson) {
+  if (newJson === null) return [] // the package left the workspace; its other ratchets say so
+  const violations = []
+  for (const script of PACKAGE_GATES) {
+    const before = oldJson?.scripts?.[script]
+    if (typeof before !== "string") continue
+    const after = newJson?.scripts?.[script]
+    if (typeof after !== "string") {
+      violations.push(
+        `${relPath} -> "${script}" was removed — turbo then skips the package's ${script} gate silently.`,
+      )
+    } else if (normalizeCommand(before) !== normalizeCommand(after)) {
+      violations.push(
+        `${relPath} -> the "${script}" gate changed: "${normalizeCommand(before)}" -> "${normalizeCommand(after)}". A package's gate commands are pinned to the merge base — \`--coverage.enabled=false\`, \`--rule 'complexity: off'\`, \`|| true\` or a dropped \`tsc -p\` project switch the gate off while the command still "runs" it. A deliberate change carries the Ratchet-Exception trailer.`,
       )
     }
   }
   return violations
+}
+
+function shadowViolation(relPath) {
+  const { replaces } = SHADOW_CONFIGS.find(({ pattern }) => pattern.test(relPath))
+  return `${relPath} would be loaded INSTEAD of ${replaces} — the tool resolves it first, while this check (and mutation-diff.mjs) keep reading the ratcheted file, so every threshold, ignore list and gate in it could be swapped out unseen. Edit ${replaces} instead.`
 }
 
 /**
@@ -585,8 +1082,11 @@ function compareRootScripts(relPath, oldJson, newJson) {
  * entries); it defaults to "exists", the conservative answer.
  */
 export function checkRatchetFile(relPath, oldText, newText, fileExists = () => true) {
-  if (oldText === null || oldText === undefined) return [] // introduced in this diff
   const kind = ratchetKind(relPath)
+  // A shadowing config fails whenever it exists — introducing one is the attack.
+  if (kind === "shadow-config")
+    return newText === null || newText === undefined ? [] : [shadowViolation(relPath)]
+  if (oldText === null || oldText === undefined) return [] // introduced in this diff
   if (kind === "vitest") return compareVitest(relPath, oldText, newText)
   if (kind === "eslint") return compareEslint(relPath, oldText, newText)
 
@@ -610,12 +1110,97 @@ export function checkRatchetFile(relPath, oldText, newText, fileExists = () => t
   if (kind === "knip") return compareKnip(relPath, oldJson, newJson)
   if (kind === "char-budgets") return compareCharBudgets(relPath, oldJson, newJson)
   if (kind === "root-scripts") return compareRootScripts(relPath, oldJson, newJson)
+  if (kind === "package-scripts") return comparePackageScripts(relPath, oldJson, newJson)
   return []
 }
 
+/**
+ * The ref to compare against. In CI (GITHUB_BASE_REF set) it is always the
+ * PR base: a positional ref there would let a PR re-point its own gate
+ * (`check-ratchets.mjs HEAD` compares the branch with itself).
+ */
+export function resolveBaseRef(argv, env) {
+  const positional = argv[2]
+  if (env.GITHUB_BASE_REF) {
+    const ref = `origin/${env.GITHUB_BASE_REF}`
+    return positional !== undefined && positional !== ref
+      ? { ref, ignoredArg: positional }
+      : { ref }
+  }
+  return { ref: positional ?? "origin/main" }
+}
+
+/** A pull-request run: one whose merge base equals HEAD compared nothing. */
+export const isPullRequest = (env) => /^pull_request/.test(env.GITHUB_EVENT_NAME ?? "")
+
 // ── CLI ──────────────────────────────────────────────────────────────────────
 
-function main() {
+/** Sources the inline-suppression scan and the effective ESLint config cover. */
+const SOURCE_FILE = /^(?:apps|packages)\/(?!(?:.*\/)?node_modules\/).*\.(?:[cm]?[jt]s|[jt]sx)$/
+
+function scanSuppressions(git, mergeBase, listed) {
+  let baseCandidates = new Set()
+  try {
+    baseCandidates = new Set(
+      git("grep", "-l", "-I", "-i", "-E", SUPPRESSION_GREP, mergeBase, "--", "apps", "packages")
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => line.slice(line.indexOf(":") + 1)),
+    )
+  } catch {
+    // exit 1: no file on the base mentions a suppression
+  }
+  const violations = []
+  for (const rel of listed) {
+    if (!SOURCE_FILE.test(rel)) continue
+    const abs = path.join(repoRoot, rel)
+    if (!fs.existsSync(abs)) continue
+    const newText = fs.readFileSync(abs, "utf8")
+    if (!SUPPRESSION_HINT.test(newText)) continue
+    const oldText = baseCandidates.has(rel) ? git("show", `${mergeBase}:${rel}`) : null
+    violations.push(...compareSuppressions(rel, oldText, newText))
+  }
+  return violations
+}
+
+/**
+ * The effective-config half of the ESLint ratchet — run whenever
+ * eslint.config.mjs differs from the base. The base text is evaluated from a
+ * temporary sibling file (same directory: same `import.meta.dirname`, same
+ * package resolution); the config imports nothing local, which the AST half
+ * enforces.
+ */
+async function effectiveEslintViolations(git, mergeBase, listed) {
+  const rel = "eslint.config.mjs"
+  const abs = path.join(repoRoot, rel)
+  let baseText
+  try {
+    baseText = git("show", `${mergeBase}:${rel}`)
+  } catch {
+    return [] // no config on the base: nothing to compare
+  }
+  if (!fs.existsSync(abs) || fs.readFileSync(abs, "utf8") === baseText) return []
+  const baseFile = path.join(repoRoot, `.check-ratchets-base-${process.pid}.eslint.mjs`)
+  fs.writeFileSync(baseFile, baseText)
+  try {
+    const { compareEffectiveEslint } = await import("./eslint-effective-config.mjs")
+    return await compareEffectiveEslint({
+      cwd: repoRoot,
+      baseConfigFile: baseFile,
+      newConfigFile: abs,
+      files: listed.filter((f) => SOURCE_FILE.test(f) && fs.existsSync(path.join(repoRoot, f))),
+      label: rel,
+    })
+  } catch (error) {
+    return [
+      `${rel} -> the effective-config comparison could not run (${String(error?.message ?? error).split("\n")[0]}). A ratchet the gate cannot evaluate is a disabled ratchet.`,
+    ]
+  } finally {
+    fs.rmSync(baseFile, { force: true })
+  }
+}
+
+async function main() {
   const git = (...args) =>
     execFileSync("git", args, {
       cwd: repoRoot,
@@ -628,9 +1213,12 @@ function main() {
     process.exit(1)
   }
 
-  const baseRef =
-    process.argv[2] ??
-    (process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "origin/main")
+  const { ref: baseRef, ignoredArg } = resolveBaseRef(process.argv, process.env)
+  if (ignoredArg) {
+    console.log(
+      `check-ratchets: ignoring the base ref "${ignoredArg}" — in CI the base is always the PR base (${baseRef}).`,
+    )
+  }
 
   if (git("rev-parse", "--is-shallow-repository").trim() === "true") {
     fail(
@@ -646,27 +1234,36 @@ function main() {
     )
   }
   if (mergeBase === git("rev-parse", "HEAD").trim()) {
+    if (isPullRequest(process.env)) {
+      fail(
+        `HEAD is the merge base with ${baseRef} on a pull request — the check would compare the branch with itself and pass vacuously. Refusing.`,
+      )
+    }
     console.log(
       `check-ratchets: HEAD is the merge base with ${baseRef} — comparing the working tree against it.`,
     )
   }
 
-  const listed = (out) => out.split("\n").filter((f) => f && ratchetKind(f) !== null)
-  const baseFiles = new Set(listed(git("ls-tree", "-r", "--name-only", mergeBase)))
-  const headFiles = listed(git("ls-files", "--cached", "--others", "--exclude-standard"))
+  const listed = git("ls-files", "--cached", "--others", "--exclude-standard")
+    .split("\n")
+    .filter(Boolean)
+  const ratchets = (files) => files.filter((f) => ratchetKind(f) !== null)
+  const baseFiles = new Set(ratchets(git("ls-tree", "-r", "--name-only", mergeBase).split("\n")))
   const fileExists = (rel) => fs.existsSync(path.join(repoRoot, rel))
 
   const violations = []
-  for (const rel of [...new Set([...baseFiles, ...headFiles])].sort()) {
+  for (const rel of [...new Set([...baseFiles, ...ratchets(listed)])].sort()) {
     const oldText = baseFiles.has(rel) ? git("show", `${mergeBase}:${rel}`) : null
     const abs = path.join(repoRoot, rel)
     const newText = fs.existsSync(abs) ? fs.readFileSync(abs, "utf8") : null
     violations.push(...checkRatchetFile(rel, oldText, newText, fileExists))
   }
+  violations.push(...scanSuppressions(git, mergeBase, listed))
+  violations.push(...(await effectiveEslintViolations(git, mergeBase, listed)))
 
   if (violations.length === 0) {
     console.log(
-      `check-ratchets: ${baseFiles.size} ratchet file(s) vs ${baseRef} (${mergeBase.slice(0, 9)}) — all move in the right direction.`,
+      `check-ratchets: ${baseFiles.size} ratchet file(s) + inline suppressions vs ${baseRef} (${mergeBase.slice(0, 9)}) — all move in the right direction.`,
     )
     return
   }
@@ -696,4 +1293,4 @@ function main() {
 }
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
-if (isMain) main()
+if (isMain) await main()
