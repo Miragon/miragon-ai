@@ -29,12 +29,16 @@ export function allowedEngines(settings: Camunda7Settings, engines: EngineEntry[
  * picker only prefer them. Never throws: no caller identity, or a profile
  * store that is down (a preferences-database outage), reads as the defaults —
  * logged once, sanitized, by `readProfileAdvisory` — so no engine call ever
- * fails on (or leaks the host:port of) the preferences database. Reads the
- * ambient request identity (argument-less `resolveProfileKey`), so it works
- * from registrar handlers and the registry's per-call lookup alike.
+ * fails on (or leaks the host:port of) the preferences database. Pass the
+ * handler `ctx` wherever one exists; without it (pipeline steps) the caller
+ * resolves from the ambient request info — the same `resolveProfileKey`
+ * either way, so the tool surface and the routing read the same profile.
  */
-export async function advisoryCamunda7Settings(store: ProfileSource): Promise<Camunda7Settings> {
-  return parseCamunda7Settings(await readProfileAdvisory(store, resolveProfileKey()))
+export async function advisoryCamunda7Settings(
+  store: ProfileSource,
+  ctx?: unknown,
+): Promise<Camunda7Settings> {
+  return parseCamunda7Settings(await readProfileAdvisory(store, resolveProfileKey(ctx)))
 }
 
 /**
@@ -47,8 +51,9 @@ export async function advisoryCamunda7Settings(store: ProfileSource): Promise<Ca
 export async function profileDefaultEngineId(
   store: ProfileSource,
   engines: EngineEntry[],
+  ctx?: unknown,
 ): Promise<string | undefined> {
-  const settings = await advisoryCamunda7Settings(store)
+  const settings = await advisoryCamunda7Settings(store, ctx)
   const id = settings.defaultEngineId
   return id && allowedEngines(settings, engines).some((e) => e.id === id) ? id : undefined
 }

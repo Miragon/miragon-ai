@@ -105,3 +105,26 @@ describe("analytics_compare_execution_periods PromQL", () => {
     )
   })
 })
+
+describe("analytics_analyze_process_performance saved defaults", () => {
+  it("resolves the CALLER's saved period from the handler ctx the registrar hands it", async () => {
+    const store = {
+      get: (key: string) =>
+        Promise.resolve(
+          key === "user-1" ? { modules: { analytics: { defaultPeriod: "30d" } } } : undefined,
+        ),
+    }
+    const handlers = captureHandlers((register) => registerPerformanceTools(register, store))
+    const handler = handlers.get("analytics_analyze_process_performance")!
+    const firstQueryFor = async (ctx?: unknown) => {
+      const { client, queries } = recordingClient()
+      await handler(client, { processDefinitionKey: "order" }, ctx as never)
+      return queries[0]
+    }
+
+    expect(await firstQueryFor({ auth: { user: { id: "user-1" } } })).toContain("[30d]")
+    // Another caller, and a request without any identity, get the schema default.
+    expect(await firstQueryFor({ auth: { user: { id: "user-2" } } })).toContain("[7d]")
+    expect(await firstQueryFor()).toContain("[7d]")
+  })
+})

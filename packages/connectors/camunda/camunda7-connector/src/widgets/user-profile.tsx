@@ -135,7 +135,7 @@ function changedPreferences(
 const helpCls = "text-muted-foreground text-xs"
 
 /**
- * Profile & settings panel. Self-fetches the current session's profile +
+ * Profile & settings panel. Self-fetches the signed-in caller's profile +
  * configured engine list (or receives it via `initialData` from the
  * `camunda7_show_user_profile` tool), applies the profile theme, and provides
  * the profile language to its own subtree so the panel is localized in both the

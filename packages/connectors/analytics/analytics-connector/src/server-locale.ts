@@ -21,21 +21,17 @@ import { translator } from "./messages/index.js"
 export type { ProfileSlice, ProfileSource } from "@miragon-ai/widget-shell/server"
 
 /**
- * Resolve the profile key for the in-flight request: the authenticated user id
- * (off the tool-handler `ctx`, or off the ambient request info for handlers
- * without a `ctx`), else the MCP session id (a gateway-stamped
- * `Mcp-Session-Id` — mcp-use 2 issues none itself), else the shared anonymous
- * record when there is NO request context at all (stdio, tests). An HTTP
- * request without any identity resolves `undefined` — reads fall back to
- * defaults, saves fail visibly, so unrelated keyless clients never cross-share
- * one record.
+ * Resolve the profile key for the in-flight request: the OAuth caller (off the
+ * tool-handler `ctx`), else `anonymous` for an explicitly declared local
+ * caller (stdio, tests). A request without OAuth resolves `undefined` — reads
+ * fall back to defaults, saves fail visibly, so unrelated callers never
+ * cross-share one record.
  */
 export const resolveSettingsKey = resolveProfileKey
 
 /**
- * Just the authenticated-user half of {@link resolveSettingsKey} — the save
- * path stamps it onto the record (`opts.userId`), marking it user-bound and
- * exempt from the app's session-TTL cleanup.
+ * Just the OAuth half of {@link resolveSettingsKey} — the save path stamps it
+ * onto the record as its owner (`opts.userId`).
  */
 export const resolveSettingsAuthUserId = resolveAuthUserId
 

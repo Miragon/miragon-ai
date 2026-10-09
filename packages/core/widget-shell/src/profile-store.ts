@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
-import { ANONYMOUS_PROFILE_KEY } from "./profile.js"
 import { PROFILE_SCHEMA_VERSION } from "./profile-constants.js"
 import { migrateStoredProfile, parseStoredProfile } from "./profile-migrations.js"
 import {
@@ -12,9 +11,9 @@ import {
 } from "./profile-record.js"
 
 /**
- * Persistence for user profiles, keyed by the profile key (the authenticated
- * user id when the deployment runs with `MCP_OAUTH`, else the MCP session id —
- * see {@link resolveProfileKey} in `profile.ts`). Deliberately mirrors the
+ * Persistence for user profiles, keyed by the profile key (the OAuth caller's
+ * id, or `anonymous` for an explicitly declared local caller — see
+ * `resolveProfileKey` in `profile.ts`). Deliberately mirrors the
  * toolkit's `DashboardStore` shape: an in-memory default plus a
  * one-file-per-record filesystem store selected by an env var (and a postgres
  * implementation in `profile-store-postgres.ts` selected by `DATABASE_URL` in
@@ -37,8 +36,7 @@ export interface ProfileStore {
    * Merge `input` over the RAW stored record (or defaults) — atomically per
    * key, so concurrent saves of disjoint fields or module slices all survive
    * ({@link mergeStoredProfile}); stamps `updatedAt`. `opts.userId` (the
-   * authenticated user, when known) marks the record as user-bound — the
-   * marker that exempts it from {@link cleanupSessions}.
+   * authenticated caller, when known) is stamped as the record's owner.
    */
   save(
     key: string,
@@ -46,17 +44,10 @@ export interface ProfileStore {
     opts?: ProfileSaveOptions,
   ): Promise<ProfileRecord>
   delete(key: string): Promise<boolean>
-  /**
-   * Delete SESSION-keyed records (no `userId`, not the shared anonymous
-   * record) whose `updatedAt` is older than `olderThan`; returns the count.
-   * Session ids die with their MCP session, so these rows are unreachable
-   * garbage — user-bound records never expire here.
-   */
-  cleanupSessions(olderThan: Date): Promise<number>
 }
 
 export interface ProfileSaveOptions {
-  /** Authenticated user id to stamp onto the record (absent for session saves). */
+  /** The authenticated caller, stamped as the record's owner (absent for `anonymous`). */
   userId?: string
 }
 
@@ -139,8 +130,7 @@ export function mergeStoredProfile(
     // this lock would carry stale values that win here.
     modules: mergeModuleSlices(prevRecord.modules, input.modules),
     id: key,
-    // Once user-bound, always user-bound — a later save without auth context
-    // must not demote the record back into the session-TTL cleanup scope.
+    // A stamped owner sticks: a later save without auth context keeps it.
     userId: opts?.userId ?? prevRecord.userId,
     createdAt: prevRecord.createdAt || now,
     updatedAt: now,
@@ -188,29 +178,7 @@ export function createInMemoryProfileStore(): ProfileStore {
     delete(key) {
       return Promise.resolve(byKey.delete(key))
     },
-    cleanupSessions(olderThan) {
-      let removed = 0
-      for (const key of [...byKey.keys()]) {
-        const record = read(key)
-        if (record && isExpiredSessionRecord(key, record, olderThan) && byKey.delete(key)) {
-          removed += 1
-        }
-      }
-      return Promise.resolve(removed)
-    },
   }
-}
-
-/** The one cleanup predicate all store implementations share. */
-export function isExpiredSessionRecord(
-  key: string,
-  record: ProfileRecord,
-  olderThan: Date,
-): boolean {
-  if (key === ANONYMOUS_PROFILE_KEY) return false
-  if (record.userId) return false
-  const updatedAt = Date.parse(record.updatedAt)
-  return Number.isFinite(updatedAt) && updatedAt < olderThan.getTime()
 }
 
 /**
@@ -275,11 +243,8 @@ export function createFileSystemProfileStore(options: { dir: string }): ProfileS
     }
   }
 
-  const readRecord = async (key: string): Promise<ProfileRecord | undefined> =>
-    parseStoredProfile(await readJson(key), key)
-
   return {
-    get: readRecord,
+    get: async (key) => parseStoredProfile(await readJson(key), key),
     save(key, input, opts) {
       const file = fileFor(key)
       return withFileLock(file, async () => {
@@ -303,38 +268,6 @@ export function createFileSystemProfileStore(options: { dir: string }): ProfileS
           throw err
         }
       })
-    },
-    async cleanupSessions(olderThan) {
-      let entries: string[]
-      try {
-        entries = await fs.readdir(dir)
-      } catch (err) {
-        if (isMissing(err)) return 0
-        throw err
-      }
-      let removed = 0
-      for (const entry of entries) {
-        // Only our records; corrupt files stay (fail-soft — a save overwrites
-        // them), tmp files belong to an in-flight write.
-        if (!entry.endsWith(".json")) continue
-        const key = decodeURIComponent(entry.slice(0, -".json".length))
-        const file = fileFor(key)
-        // Check + unlink under the key's lock: a save landing in between
-        // would otherwise be deleted although it just refreshed `updatedAt`.
-        const expired = await withFileLock(file, async () => {
-          const record = await readRecord(key)
-          if (!record || !isExpiredSessionRecord(key, record, olderThan)) return false
-          try {
-            await fs.unlink(file)
-            return true
-          } catch (err) {
-            if (isMissing(err)) return false
-            throw err
-          }
-        })
-        if (expired) removed += 1
-      }
-      return removed
     },
   }
 }

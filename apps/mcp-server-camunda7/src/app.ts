@@ -4,9 +4,9 @@ import type { OAuthProvider } from "mcp-use/oauth"
 import {
   createComposedServer,
   frameworkWritesAllowed,
+  oauthFromEnv,
   type ComposedServer,
 } from "@miragon-ai/widget-shell/server"
-import { getOAuthConfigFromEnv, oauthSecretEnvVarNames } from "./oauth.js"
 import { initRuntime, type RuntimeBackends } from "./persistence/index.js"
 import { composition, getPlugins } from "./setup.js"
 
@@ -49,31 +49,21 @@ export interface AppDeps {
 
 /**
  * The composition root — the ONE boot sequence `src/index.ts` (production and
- * `mcp-use dev`) and the e2e suites share. App-owned here: the OAuth decision
- * (`MCP_OAUTH` → provider), persistence (`initRuntime`) and the plugins with
- * their cross-module wiring (`setup.ts`); the order of everything else lives
- * in the shared `createComposedServer` (`@miragon-ai/widget-shell/server`).
+ * `mcp-use dev`) and the e2e suites share. App-owned here: persistence
+ * (`initRuntime`) and the plugins with their cross-module wiring
+ * (`setup.ts`); the OAuth provider comes from the shared `oauthFromEnv` and
+ * the order of everything else lives in the shared `createComposedServer`
+ * (both `@miragon-ai/widget-shell/server`) — wired exactly like the
+ * composed-server template.
  */
 export async function createApp(
   env: NodeJS.ProcessEnv = process.env,
   deps: AppDeps = {},
 ): Promise<ComposedServer> {
-  // MCP_OAUTH turns the server into an OAuth resource server: mcp-use rejects
-  // /mcp requests without a valid bearer token (401 + WWW-Authenticate) and
-  // serves the .well-known discovery metadata. Whether a provider was BUILT
-  // decides every module's default toolset (no suffix = the read-only floor
-  // without OAuth, the standard toolset with it), and a bad MCP_OAUTH fails
-  // the boot before migrations.
-  const oauth = "oauth" in deps ? deps.oauth : getOAuthConfigFromEnv(env.MCP_OAUTH).provider
-  if (!oauth) {
-    // Without OAuth there is no caller identity: modules without an explicit
-    // toolset run read-only, and — mcp-use 2 serves HTTP statelessly and
-    // issues no MCP session ids — profile/settings saves (incl. the default
-    // engine) refuse per call even under a wider explicit toolset.
-    console.warn(
-      `[${LABEL}] MCP_OAUTH is unset — modules without an explicit toolset run read-only, and user settings (incl. the default engine) cannot be saved. Set MCP_OAUTH, or widen with MCP_ACTIVE_MODULES=<module>:<toolset> (anyone who reaches this port gets that surface).`,
-    )
-  }
+  // MCP_OAUTH → the provider (the only caller-identity source). Whether one
+  // was BUILT decides every module's default toolset, and a bad MCP_OAUTH
+  // fails the boot before migrations.
+  const oauth = "oauth" in deps ? deps.oauth : oauthFromEnv({ env, label: LABEL })
 
   return createComposedServer({
     label: LABEL,
@@ -88,8 +78,6 @@ export async function createApp(
     composition,
     env,
     oauth,
-    // Secrets named inside MCP_OAUTH belong to the typo warner's allowlist.
-    extraKnownEnvVars: oauthSecretEnvVarNames(env.MCP_OAUTH),
     bundle: deps.bundle ?? {
       jsPath: path.join(PACKAGE_ROOT, "dist", "mcp-app.js"),
       cssPath: path.join(PACKAGE_ROOT, "dist", "mcp-app.css"),

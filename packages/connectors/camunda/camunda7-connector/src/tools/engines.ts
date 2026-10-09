@@ -74,14 +74,11 @@ export function registerEngineTools(
   // pick from (shared rule: `allowedEngines`). Advisory like the default
   // engine: a profile-store outage lists every engine instead of failing the
   // one tool a multi-engine caller needs to route (select still fails
-  // visibly — at its write). The lookup resolves the caller off the ambient
-  // request context (argument-less `resolveProfileKey`) although the toolkit
-  // 2.6 registrar hands the handler mcp-use's ctx: the engine routing's
-  // saved-default lookup (`profileDefaultEngineId`) has no ctx and reads
-  // through the same `advisoryCamunda7Settings`, so this tool and the routing
-  // always agree on whose profile they read.
-  const allowedEnginesFor = async (reg: EngineRegistry): Promise<EngineEntry[]> =>
-    allowedEngines(await advisoryCamunda7Settings(profileStore), reg.engines)
+  // visibly — at its write). The caller resolves from the handler ctx, the
+  // same `resolveProfileKey` the engine routing's saved-default lookup uses,
+  // so this tool and the routing always agree on whose profile they read.
+  const allowedEnginesFor = async (reg: EngineRegistry, ctx: unknown): Promise<EngineEntry[]> =>
+    allowedEngines(await advisoryCamunda7Settings(profileStore, ctx), reg.engines)
 
   register({
     name: CAMUNDA7_ENGINE,
@@ -101,11 +98,11 @@ export function registerEngineTools(
         .optional()
         .describe('Engine id to select (required for action="select"), e.g. "prod-a".'),
     },
-    handler: async (reg: EngineRegistry, args) => {
+    handler: async (reg: EngineRegistry, args, ctx) => {
       const action = args.action
       switch (action) {
         case "list": {
-          const available = await allowedEnginesFor(reg)
+          const available = await allowedEnginesFor(reg, ctx)
           return {
             // Deliberately WITHOUT the engine's REST baseUrl: it is internal
             // network topology the model never needs (it routes by `id`);
@@ -129,7 +126,7 @@ export function registerEngineTools(
             // The saved default (validated against the allowed engines) — the
             // engine operations tools use when no per-call override is given,
             // and the cockpit's landing engine.
-            defaultEngineId: (await profileDefaultEngineId(profileStore, reg.engines)) ?? null,
+            defaultEngineId: (await profileDefaultEngineId(profileStore, reg.engines, ctx)) ?? null,
           }
         }
         case "select": {
@@ -140,7 +137,7 @@ export function registerEngineTools(
           if (!reg.engines.some((e) => e.id === id)) {
             throw new UnknownEngineError(id, reg.engines)
           }
-          const available = await allowedEnginesFor(reg)
+          const available = await allowedEnginesFor(reg, ctx)
           if (!available.some((e) => e.id === id)) {
             throw new Error(
               `Engine "${id}" is not available for this profile. ` +
@@ -157,30 +154,30 @@ export function registerEngineTools(
           // Keyless refusal mirrors requireProfileKey (the shared slice-write
           // contract) with the select-specific remediation: the per-call
           // override needs no identity at all.
-          const key = resolveProfileKey()
+          const key = resolveProfileKey(ctx)
           if (!key) {
             throw new Error(
-              "No caller identity to save a default engine under (mcp-use 2 issues no MCP session ids) — " +
-                "pass the per-call `engine` parameter instead, or configure MCP_OAUTH so the default persists per user.",
+              "No caller identity to save a default engine under — a saved default is per signed-in user (the server needs MCP_OAUTH); " +
+                "pass the per-call `engine` parameter instead.",
             )
           }
           // The patch alone (the shared slice-write contract): the store
           // merges it under its per-key lock, so a settings save racing this
-          // select keeps its fields and cannot revert the new default.
-          // Stamping the auth user id marks the record user-bound — exempt
-          // from the session-TTL cleanup (same pair as every settings save).
+          // select keeps its fields and cannot revert the new default. The
+          // OAuth caller is stamped as the record's owner (same pair as every
+          // settings save).
           await saveModuleSlice(
             profileStore,
             key,
             CAMUNDA7_MODULE_KEY,
             { defaultEngineId: id },
-            { userId: resolveAuthUserId() },
+            { userId: resolveAuthUserId(ctx) },
           )
           return { defaultEngineId: id }
         }
         case "current":
           return {
-            defaultEngineId: (await profileDefaultEngineId(profileStore, reg.engines)) ?? null,
+            defaultEngineId: (await profileDefaultEngineId(profileStore, reg.engines, ctx)) ?? null,
           }
       }
     },

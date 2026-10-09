@@ -3,6 +3,7 @@ import path from "node:path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { RunningServer } from "@miragon-ai/widget-shell/server"
 import { createApp } from "../src/app.js"
+import { stubNeutralEnv } from "./neutral-env.js"
 
 const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
 
@@ -41,17 +42,7 @@ describe("HTTP surface (createApp)", () => {
   let base: string
 
   beforeAll(async () => {
-    vi.stubEnv("CAMUNDA_BASE_URL", "http://localhost:1")
-    vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
-    vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
-    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
-    vi.stubEnv("MCP_PROFILE_DIR", undefined)
-    vi.stubEnv("MCP_DASHBOARD_DIR", undefined)
-    vi.stubEnv("MCP_URL", undefined)
-    vi.stubEnv("MCP_ALLOWED_HOSTS", undefined)
-    vi.stubEnv("MCP_ALLOWED_ORIGINS", undefined)
-    vi.stubEnv("MCP_MAX_BODY_BYTES", undefined)
-    vi.stubEnv("MCP_METRICS_TOKEN", undefined)
+    stubNeutralEnv()
 
     const composed = await createApp(process.env, { bundle: { jsPath: FIXTURE_JS } })
     server = await composed.listen({ port: 0, host: "127.0.0.1" })

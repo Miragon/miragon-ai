@@ -82,10 +82,10 @@ external infrastructure.
 8. **Toolsets fail closed.** A module opts into the `module:toolset` suffix by
    declaring `toolsets: createToolsetVocabulary(...)` on its definition (the
    old `supportsToolsets` flag is deprecated); the composition resolves ONE
-   concrete toolset per module per boot and logs it. This server installs no
-   OAuth, so a module without a suffix runs its read-only floor, an
-   empty/unknown suffix falls back to it, and an admin-like toolset is only
-   reachable by naming it. Gate durable writes on the vocabulary
+   concrete toolset per module per boot and logs it. Without `MCP_OAUTH`
+   (`oauthFromEnv` in `server/src/app.ts`) a module without a suffix runs its
+   read-only floor, an empty/unknown suffix falls back to it, and an
+   admin-like toolset is only reachable by naming it. Gate durable writes on the vocabulary
    (`allowsDurableWrites(resolve(toolset))`) — never on a name compare or on
    `toolset === undefined`, both of which fail open. Details: `create-module`
    Step 5.

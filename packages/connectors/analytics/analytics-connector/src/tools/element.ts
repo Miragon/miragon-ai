@@ -18,8 +18,8 @@ export function registerElementTools(register: Register, profileStore?: ProfileS
       period: optionalPeriod,
       minBucketSize: optionalMinBucketSize,
     },
-    handler: async (ch, args) => {
-      const settings = await settingsFor(profileStore)
+    handler: async (ch, args, ctx) => {
+      const settings = await settingsFor(profileStore, ctx)
       return queries.elementBottleneck(ch, {
         ...args,
         period: args.period ?? settings.defaultPeriod,

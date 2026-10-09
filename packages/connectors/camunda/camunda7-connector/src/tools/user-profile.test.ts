@@ -15,6 +15,9 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+/** A signed-in caller's handler ctx (mcp-use's flattened `ctx.auth`). */
+const CTX = { auth: { user: { id: "user-1" } } }
+
 type Handler = (
   params: unknown,
   ctx?: unknown,
@@ -95,7 +98,7 @@ describe("registerUserProfileTools toolset filtering", () => {
 describe("canSave mirrors the registered tool surface", () => {
   const feedCanSave = async (toolset: Camunda7Toolset) => {
     const { names, handlerFor } = register(toolset)
-    const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
+    const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, CTX)
     return {
       canSave: result.structuredContent?.canSave,
       hasSaveTool: names.includes(CAMUNDA7_SAVE_USER_PROFILE),
@@ -161,16 +164,31 @@ describe("engine disclosure (#324)", () => {
   })
 })
 
-describe("anonymous round-trip", () => {
-  it("reads a keyless save back on the next load (shared anonymous record)", async () => {
+describe("caller round-trip", () => {
+  it("reads the caller's save back on the next load — and only the caller's", async () => {
     const { handlerFor } = register()
 
-    // No request context in tests → resolveProfileKey() is undefined → both
-    // paths must land on the SAME shared anonymous record.
-    await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" })
-    const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
+    // The save and the read resolve the SAME record from the handler ctx.
+    await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }, CTX)
+    const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, CTX)
     const profile = result.structuredContent?.profile as { language: string } | undefined
     expect(profile?.language).toBe("de")
+
+    const other = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)(
+      {},
+      { auth: { user: { id: "u-2" } } },
+    )
+    expect((other.structuredContent?.profile as { language: string }).language).toBe("en")
+  })
+
+  it("an explicitly declared local caller round-trips through the anonymous record", async () => {
+    const store = createInMemoryProfileStore()
+    const { handlerFor } = register("operations", undefined, store)
+    const local = <T>(fn: () => T): T => runWithMcpRequestInfo({ anonymousCaller: true }, fn)
+    await local(() => handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }))
+    const result = await local(() => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}))
+    expect(result.structuredContent?.canSave).toBe(true)
+    expect((await store.get("anonymous"))?.language).toBe("de")
   })
 })
 
@@ -183,7 +201,7 @@ describe("clearing an optional id from the settings page", () => {
   it('"" clears the saved default engine and default dashboard, other fields stay', async () => {
     const store = createInMemoryProfileStore()
     const { handlerFor } = register("operations", undefined, store)
-    const save = handlerFor(CAMUNDA7_SAVE_USER_PROFILE)
+    const save = (params: unknown) => handlerFor(CAMUNDA7_SAVE_USER_PROFILE)(params, CTX)
     await save({ defaultEngineId: "prod-a", defaultDashboardId: "d1", pinnedDashboardIds: ["d1"] })
 
     const cleared = await save({ defaultEngineId: "", defaultDashboardId: "" })
@@ -191,24 +209,23 @@ describe("clearing an optional id from the settings page", () => {
     expect(cleared.structuredContent?.defaultDashboardId).toBeUndefined()
     expect(cleared.structuredContent?.pinnedDashboardIds).toEqual(["d1"])
 
-    const view = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
+    const view = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, CTX)
     const profile = view.structuredContent?.profile as Record<string, unknown>
     expect(profile.defaultEngineId).toBeUndefined()
     expect(profile.defaultDashboardId).toBeUndefined()
-    expect((await store.get("anonymous"))?.modules?.camunda7).toEqual({
+    expect((await store.get("user-1"))?.modules?.camunda7).toEqual({
       pinnedDashboardIds: ["d1"],
     })
   })
 })
 
 /**
- * HTTP without OAuth: mcp-use 2 issues no MCP session ids, so a request-scoped
- * ambient info WITHOUT identity is the norm there. The view must go read-only
- * (no Save button whose click errors) and the save tool must refuse with a
- * cause the operator can act on; an authenticated user restores the full
- * round-trip.
+ * HTTP without OAuth: a request-scoped ambient info WITHOUT identity is the
+ * norm there. The view must go read-only (no Save button whose click errors)
+ * and the save tool must refuse with a cause the operator can act on; an
+ * authenticated user restores the full round-trip.
  */
-describe("identity gating (mcp-use 2: no session ids)", () => {
+describe("identity gating (OAuth is the only identity)", () => {
   it("reports canSave false to the view when the request carries no identity", async () => {
     const { handlerFor } = register()
     const result = await runWithMcpRequestInfo({}, () => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}))

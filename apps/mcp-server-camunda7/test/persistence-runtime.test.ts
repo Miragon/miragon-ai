@@ -4,10 +4,7 @@ import path from "node:path"
 import { describe, expect, it, vi } from "vitest"
 import { createDefaultProfileStore, initRuntime } from "../src/persistence/index.js"
 
-const env = (overrides: Record<string, string> = {}): NodeJS.ProcessEnv => ({
-  MCP_PROFILE_SESSION_TTL_DAYS: "0",
-  ...overrides,
-})
+const env = (overrides: Record<string, string> = {}): NodeJS.ProcessEnv => ({ ...overrides })
 
 describe("initRuntime (non-database path)", () => {
   it("selects in-memory stores and a resolvable shutdown when nothing is configured", async () => {
@@ -25,12 +22,6 @@ describe("initRuntime (non-database path)", () => {
       env({ MCP_PROFILE_DIR: path.join(dir, "p"), MCP_DASHBOARD_DIR: path.join(dir, "d") }),
     )
     expect(runtime.dashboardStore).toBeDefined()
-    await runtime.shutdown()
-  })
-
-  it("runs the session cleanup at boot when a TTL is configured", async () => {
-    const runtime = await initRuntime(env({ MCP_PROFILE_SESSION_TTL_DAYS: "1" }))
-    // In-memory store, nothing to expire — the sweep must still settle quietly.
     await runtime.shutdown()
   })
 
@@ -85,13 +76,24 @@ describe("initRuntime (non-database path)", () => {
       vi.restoreAllMocks()
     }
   })
+})
 
-  it("warns that REDIS_URL is ignored since mcp-use 2 removed the session-backend seam", async () => {
+describe("initRuntime (database path)", () => {
+  it("fails the boot on a DATABASE_URL it cannot reach — never degrades to the dir knobs or memory", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     try {
-      const runtime = await initRuntime(env({ REDIS_URL: "redis://localhost:6379" }))
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("REDIS_URL"))
-      await runtime.shutdown()
+      // Port 1 on loopback refuses at once: the migrations are the first query.
+      await expect(
+        initRuntime(
+          env({
+            DATABASE_URL: "postgres://miragon:miragon@127.0.0.1:1/miragon",
+            MCP_PROFILE_DIR: "/nonexistent/profiles",
+          }),
+        ),
+      ).rejects.toThrow()
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("DATABASE_URL is set — ignoring MCP_PROFILE_DIR/MCP_DASHBOARD_DIR"),
+      )
     } finally {
       warn.mockRestore()
     }

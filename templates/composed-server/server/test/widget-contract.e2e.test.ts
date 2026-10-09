@@ -5,14 +5,16 @@ import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/cli
 import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "@miragon-ai/camunda7-connector"
 import type { RunningServer } from "@miragon-ai/widget-shell/server"
 import { createApp, packageVersion, SERVER_INSTRUCTIONS } from "../src/app.js"
+import { stubNeutralEnv } from "./neutral-env.js"
 
 const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
 
 /**
  * Boot the REAL composition in-process (`createApp`, exactly what
  * `src/index.ts` runs, with a stand-in widget bundle) and list its tools. The
- * camunda7 module boots against a dead engine URL — tools register fine; only
- * actual calls would fail.
+ * env is neutral (`stubNeutralEnv`): no OAuth, edge override or store
+ * directory from the developer's shell, and a dead engine URL — tools
+ * register fine; only actual calls would fail.
  */
 async function bootAndList(activeModules: string | undefined): Promise<{
   app: RunningServer
@@ -20,15 +22,7 @@ async function bootAndList(activeModules: string | undefined): Promise<{
   origin: string
   tools: ToolEntry[]
 }> {
-  vi.stubEnv("CAMUNDA_BASE_URL", "http://localhost:1")
-  vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
-  vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
-  vi.stubEnv("CAMUNDA_COCKPIT_URL", undefined)
-  vi.stubEnv("CAMUNDA_ALLOW_DEPLOYMENTS", undefined)
-  vi.stubEnv("MCP_ACTIVE_MODULES", activeModules)
-  // Persistence must stay in-memory regardless of the dev shell's env.
-  vi.stubEnv("MCP_PROFILE_DIR", undefined)
-  vi.stubEnv("MCP_DASHBOARD_DIR", undefined)
+  stubNeutralEnv({ MCP_ACTIVE_MODULES: activeModules })
 
   const composed = await createApp(process.env, { bundle: { jsPath: FIXTURE_JS } })
   const app = await composed.listen({ port: 0, host: "127.0.0.1" })
@@ -222,9 +216,10 @@ describe("widget wire contract (dual-protocol _meta)", () => {
 })
 
 /**
- * Toolsets fail closed: this server installs no OAuth, so no selection that
- * does not NAME `camunda7:admin` may list an admin-only tool — not unset, not
- * an empty or unknown suffix — and the dashboard writes stay off.
+ * Toolsets fail closed: without `MCP_OAUTH` (the neutral env clears it) no
+ * selection that does not NAME `camunda7:admin` may list an admin-only tool —
+ * not unset, not an empty or unknown suffix — and the dashboard writes stay
+ * off.
  */
 describe("fail-closed toolsets", () => {
   it.each([undefined, "all", "camunda7:", "camunda7:bogus,analytics:,notes"])(

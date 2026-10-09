@@ -94,7 +94,7 @@ Model both tools on `modules/mcp-notes/src/widget-tools.ts`:
 - A widget-path tool that performs a **durable write** must honor the module's
   toolset itself (the registrar's filter never sees it) — gate it on the
   module's `toolsets` vocabulary, where a missing toolset is the read-only
-  floor (the default here: this server has no OAuth), never "everything"; see
+  floor (the no-suffix default without `MCP_OAUTH`), never "everything"; see
   the add-settings-section skill and
   `node_modules/@miragon-ai/analytics-connector/src/settings-tools.ts`.
 

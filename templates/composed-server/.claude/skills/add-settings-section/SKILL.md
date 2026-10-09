@@ -6,7 +6,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 
 # add-settings-section — per-user settings for your module
 
-Settings live in ONE profile record per user/session, shared by all modules —
+Settings live in ONE profile record per signed-in user, shared by all modules —
 that is the `profileStore` the server threads into every module via
 `SharedResources`. The record itself is platform-owned and connector-free
 (`language`, `theme`, metadata); your module owns a **slice** under
@@ -71,11 +71,14 @@ silently split one user's settings across two records:
 
 ```ts
 import {
-  resolveProfileKey, // auth user id > Mcp-Session-Id > anonymous (stdio/tests) > undefined
-  resolveAuthUserId, // stamped as opts.userId on save → record exempt from session-TTL cleanup
+  resolveProfileKey, // OAuth caller (from ctx) > declared local caller "anonymous" > undefined
+  resolveAuthUserId, // the OAuth caller alone — stamped as opts.userId (the record's owner)
   type ProfileSource, // the narrow read/write port a module consumes
 } from "@miragon-ai/widget-shell/server"
 ```
+
+Always pass the handler's `ctx` (`resolveProfileKey(ctx)`): raw `server.tool`
+callbacks get it as their second argument, registrar handlers as their third.
 
 The store arrives via `shared.profileStore` in `createPlugin` — add
 `profileStore?: ProfileSource` to your module's structural shared-resources
@@ -83,9 +86,9 @@ interface (the field is already documented in `modules/mcp-notes/src/module.ts`)
 and treat it as optional. `save` is optional on the port too: no store or no
 `save` means the section is read-only — skip registering the save tool and
 report `canSave: false`.
-`resolveProfileKey` returning `undefined` (HTTP request without a session id)
-means reads fall back to defaults and saves must fail **visibly** — keyless
-clients must never share one record.
+`resolveProfileKey` returning `undefined` (a request without `MCP_OAUTH` — the
+only caller identity) means reads fall back to defaults and saves must fail
+**visibly** — callers without an identity must never share one record.
 
 ## Step 4 — the tool triple (`src/settings-tools.ts`)
 
@@ -177,11 +180,11 @@ pnpm build && pnpm typecheck && pnpm test
 Then in the inspector (or headless via the mcp-use client/screenshot commands
 in `CLAUDE.md` → Verification): call `<module>_show_settings`, save a value,
 reload the widget — a value that doesn't survive the reload means the merge or
-the key resolution is wrong. With `toolsets` declared, the default boot is your
-read-only floor (this server has no OAuth), so name the write toolset first,
-e.g. `MCP_ACTIVE_MODULES=<module>:standard,…` in `.env`. Save also needs a
-caller identity: when the section still renders disabled fields, the request
-resolved no profile key — the correct, fail-closed outcome without one.
+the key resolution is wrong. Saving needs a caller identity, i.e. `MCP_OAUTH`
+(see the setup-server skill) and a signed-in inspector/client: without it the
+section renders disabled fields — the correct, fail-closed outcome. With
+`toolsets` declared, a boot without OAuth also puts your module on its
+read-only floor; under OAuth a no-suffix module runs its standard toolset.
 
 ## Anti-patterns
 

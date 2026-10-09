@@ -34,7 +34,6 @@ const BASE_ENV: Record<string, string | undefined> = {
   MCP_MAX_BODY_BYTES: undefined,
   MCP_METRICS_TOKEN: undefined,
   DATABASE_URL: undefined,
-  REDIS_URL: undefined,
   MCP_PROFILE_DIR: undefined,
   MCP_DASHBOARD_DIR: undefined,
 }
@@ -74,9 +73,11 @@ export function createTestOAuthProvider(): OAuthProvider<unknown> {
         })
       },
     }),
+    // The subject as `id` only — the shape mcp-use's own Keycloak/Auth0
+    // providers map; caller resolution must not need any other spelling.
     mapAuthInfo: (authInfo) => {
       const sub = String(authInfo.extra?.sub)
-      return { user: { id: sub, userId: sub }, payload: { sub }, permissions: [] }
+      return { user: { id: sub }, payload: { sub }, permissions: [] }
     },
   })
 }
@@ -92,12 +93,21 @@ export function createTestRuntime(overrides: Partial<RuntimeBackends> = {}): Run
   }
 }
 
-/** Modern-envelope MCP client against the in-process server (mcp-use 2 wire). */
-export async function connectClient(port: number, token?: string): Promise<Client> {
+/**
+ * Modern-envelope MCP client against the in-process server (mcp-use 2 wire).
+ * `headers` go out on every request (e.g. a client-chosen `Mcp-Session-Id`).
+ */
+export async function connectClient(
+  port: number,
+  token?: string,
+  headers: Record<string, string> = {},
+): Promise<Client> {
   const client = new Client({ name: "e2e-test", version: "0.0.0" })
   await client.connect(
     new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`), {
-      ...(token ? { requestInit: { headers: { Authorization: `Bearer ${token}` } } } : {}),
+      requestInit: {
+        headers: { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      },
     }),
   )
   return client

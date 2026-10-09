@@ -41,7 +41,9 @@ package customers build their own connectors and composed servers on (see the
 - **Server boot** (`./server`) — `createComposedServer({ label, info, composition, bundle, setup,
 oauth? })` is the one boot sequence every composed server shares: env-typo warnings, the HTTP
   edge policy, ONE `resolveBoot` (authenticated exactly when you pass the OAuth provider you
-  install), the boot log, your `setup(boot)` (plugins + persistence), `createFrameworkApp` with
+  install — build it with `oauthFromEnv({ env, label })` from `MCP_OAUTH` and spread
+  `OAUTH_ENV_VARS` into your known vars; it is the only caller identity), the boot log, your
+  `setup(boot)` (plugins + persistence), `createFrameworkApp` with
   `serverInfo`/`instructions`, request context, tool-call logging, `/metrics` (optional
   `MCP_METRICS_TOKEN`), the Host/Origin guard and `/health/*`. `mcp-use dev` serves the returned
   `app`; production calls `listen({ handleSignals: true })` — mcp-use's `toNodeHandler` behind a
@@ -61,11 +63,11 @@ oauth? })` is the one boot sequence every composed server shares: env-typo warni
 
 ## Exports
 
-| Subpath     | Contents                                                                                                                                                                                                                                                                                                   |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `./server`  | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, `composeModules` / `frameworkWritesAllowed` / `createToolsetVocabulary`, `createComposedServer` and its edge pieces, the profile + dashboard stores and the Postgres client/migration runner |
-| `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                                                                                                                                          |
-| `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and `useApplyTheme`                                                                                                                                                                                                                     |
+| Subpath     | Contents                                                                                                                                                                                                                                                                                                                                                          |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./server`  | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, `composeModules` / `frameworkWritesAllowed` / `createToolsetVocabulary`, `createComposedServer` and its edge pieces, `oauthFromEnv`, caller identity (`resolveProfileKey`), the profile + dashboard stores and the Postgres client/migration runner |
+| `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                                                                                                                                                                                                 |
+| `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and `useApplyTheme`                                                                                                                                                                                                                                                                            |
 
 The `@miragon/mcp-toolkit-*`, `react`/`react-dom`, `zod` and `@tanstack/react-query` deps are
 **peer dependencies** — they must resolve to a single instance across the host bundle (see the

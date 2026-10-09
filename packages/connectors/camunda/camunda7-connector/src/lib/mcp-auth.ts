@@ -9,15 +9,15 @@ import { getMcpRequestInfo } from "@miragon-ai/widget-shell/server"
  * Reads the raw `Authorization` header off the repo-owned ambient request
  * info (`getMcpRequestInfo`, `@miragon-ai/widget-shell/server`) — the
  * AsyncLocalStorage installed once per server via `installMcpRequestContext`
- * (mcp-use 2.x dropped the 1.x `getRequestContext` store; the plugin's
- * `registerTools` installs the replacement, the same source
- * [[resolveProfileKey]] reads the session id from). Every engine call in this
- * module happens inside a `tools/call` request — including widget `*_data`
- * feeds and pipeline steps, which the host performs over its own MCP
- * connection — so the context is present whenever it matters.
+ * (the host and this plugin's `registerTools` both install it): this
+ * interceptor runs deep inside a hey-api call chain, with no handler `ctx` in
+ * reach. Every engine call in this module happens inside a `tools/call`
+ * request — including widget `*_data` feeds and pipeline steps, which the
+ * host performs over its own MCP connection — so the context is present
+ * whenever it matters.
  *
  * Returns the token without the `Bearer ` scheme prefix. `undefined` when
- * there is no request context (stdio transport, boot), no `Authorization`
+ * there is no request context (boot, a missing install), no `Authorization`
  * header (e.g. the inspector without OAuth), or a non-Bearer scheme — callers
  * then hit the engine unauthenticated and surface its 401. That guardrail
  * presumes the engine has REST authentication enabled; a default Camunda 7 /

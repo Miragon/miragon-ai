@@ -14,10 +14,10 @@ export function registerPerformanceTools(register: Register, profileStore?: Prof
       "Analyze process performance from metrics: throughput, P50/P95 duration, incident-based failure rate, and per-activity breakdown over a rolling window.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...schemas.analyzePerformanceInput.shape, period: optionalPeriod },
-    handler: async (ch, args) =>
+    handler: async (ch, args, ctx) =>
       queries.analyzePerformance(ch, {
         ...args,
-        period: args.period ?? (await settingsFor(profileStore)).defaultPeriod,
+        period: args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod,
       }),
   })
 

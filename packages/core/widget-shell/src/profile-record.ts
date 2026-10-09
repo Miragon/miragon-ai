@@ -14,8 +14,9 @@ import {
  * Everything a connector wants to persist lives in ITS slice (validated
  * fail-soft by the owning module), never as a new top-level field here.
  *
- * `id` is the profile key (the authenticated user id under `MCP_OAUTH`, else
- * the MCP session id — see `resolveProfileKey` in `profile.ts`).
+ * `id` is the profile key (the OAuth caller's id, or `anonymous` for an
+ * explicitly declared local caller — see `resolveProfileKey` in `profile.ts`);
+ * `userId` is the owner a save stamped (absent on the anonymous record).
  */
 export const profileRecordSchema = z.object({
   language: z
@@ -91,8 +92,8 @@ function fieldOrDefault<T>(schema: z.ZodType<T>, value: unknown): T {
  * not part of the view, but they stay in the stored document: saves merge over
  * the RAW document (`mergeStoredProfile` in `profile-store.ts`), never over
  * this projection. Timestamps a hand-edited document lacks fall back to each
- * other, then to `""` — undatable, so the session cleanup never expires it
- * (the next save stamps both). `id` is the caller's (the store key wins).
+ * other, then to `""` (the next save stamps both). `id` is the caller's (the
+ * store key wins).
  */
 export function projectProfileRecord(doc: Record<string, unknown>, id: string): ProfileRecord {
   const whole = profileRecordSchema.safeParse(doc)

@@ -90,7 +90,7 @@ _"switch the UI to German"_, _"default my analytics to 30 days"_. Only the
 setting you name changes; the rest keeps its value.
 
 Settings are saved per user account, so they need a deployment with login:
-signed in, they follow you across sessions. Without a login — and on a
+signed in, they follow you across conversations. Without a login — and on a
 read-only deployment — the page shows the defaults but hides Save. Saved
 dashboards exist only with login on a deployment that allows writes; otherwise
 the dashboard picker says "Saved dashboards are unavailable".

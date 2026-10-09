@@ -35,7 +35,7 @@ export interface AnalyticsWidgetToolsOptions {
   /** Used by the BPMN heatmap to fetch the diagram XML. Absent → non-diagram fallback. */
   fetchBpmnXml?: FetchBpmnXml
   /**
-   * Profile store: locale for model-facing summaries plus the session's saved
+   * Profile store: locale for model-facing summaries plus the caller's saved
    * analytics defaults (`modules.analytics`) — the "explicit arg > saved
    * setting > schema default" resolution for `period`/`minBucketSize`.
    */
@@ -58,8 +58,9 @@ export function registerWidgetTools(
   ch: PrometheusClient,
   options: AnalyticsWidgetToolsOptions = {},
 ) {
-  // Resolve the request locale via `await localizeFor(profileStore)` inside each
-  // handler to localize its model-facing `summary` (→ "en" when no store/session).
+  // Resolve the request locale via `await localizeFor(profileStore, ctx)` inside
+  // each handler to localize its model-facing `summary` (→ "en" without a store
+  // or a caller identity).
   const profileStore = options.profileStore
 
   /**

@@ -38,8 +38,8 @@ export function registerWidgetTools(
     ...DEFAULT_HEALTH_THRESHOLDS,
     ...options.healthThresholds,
   }
-  // Resolve the request locale via `await localizeFor(profileStore)` inside each
-  // handler to localize its model-facing `summary`. Falls back to an empty
+  // Resolve the request locale via `await localizeFor(profileStore, ctx)` inside
+  // each handler to localize its model-facing `summary`. Falls back to an empty
   // in-memory store (→ locale "en") when none is injected (tests/embeds).
   const profileStore = options.profileStore ?? createInMemoryProfileStore()
 

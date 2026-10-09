@@ -38,9 +38,8 @@ export interface AnalyticsSettingsView {
   settings: AnalyticsSettings
   /**
    * False without a writable store, in the `read-only` toolset (also what a
-   * missing toolset resolves to), or when the request carries no resolvable
-   * profile identity (mcp-use 2 issues no MCP session ids — identity comes
-   * from OAuth or a gateway-stamped `Mcp-Session-Id`) — the widget hides Save.
+   * missing toolset resolves to), or when the request carries no caller
+   * identity (no OAuth — see `resolveProfileKey`) — the widget hides Save.
    */
   canSave: boolean
 }
@@ -79,7 +78,7 @@ export function registerSettingsTools(
       name: "analytics_show_settings",
       title: "Analytics Settings",
       description:
-        "Open the analytics settings section for this session: the default look-back period and the minimum comparison bucket size applied when analytics calls omit them.",
+        "Open the analytics settings section: the default look-back period and the minimum comparison bucket size applied when analytics calls omit them.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: z.object({}),
       ...showToolBinding("analytics_show_settings", "Analytics Settings"),
@@ -120,7 +119,7 @@ export function registerSettingsTools(
       name: ANALYTICS_SAVE_SETTINGS,
       title: "Save analytics settings",
       description:
-        "Update the session's analytics defaults. Only the provided fields change; omitted fields keep their value. The saved defaults apply whenever an analytics call omits `period` or `minBucketSize`.",
+        "Update the caller's analytics defaults. Only the provided fields change; omitted fields keep their value. The saved defaults apply whenever an analytics call omits `period` or `minBucketSize`.",
       // The module's only non-read-only tool, and explicitly NOT destructive
       // (MCP presumes a write destructive unless told otherwise): it merges
       // the caller's own slice, nothing is deleted or overwritten wholesale.
@@ -136,8 +135,7 @@ export function registerSettingsTools(
       // tool uses the same pair. The store merges the patch under its per-key
       // lock, so a concurrent save of the other field is never reverted.
       const key = requireProfileKey(ctx)
-      // Stamping the auth user id marks the record user-bound — exempt from
-      // the app's session-TTL cleanup.
+      // The OAuth caller is stamped as the record's owner.
       const savedSlice = await saveModuleSlice(
         { get: (k) => store.get(k), save },
         key,

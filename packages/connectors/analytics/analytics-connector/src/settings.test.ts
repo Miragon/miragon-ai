@@ -16,6 +16,9 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+/** A signed-in caller's handler ctx (mcp-use's flattened `ctx.auth`). */
+const CTX = { auth: { user: { id: "user-1" } } }
+
 describe("analyticsSettingsSchema", () => {
   it("fills every default from an empty object", () => {
     expect(analyticsSettingsSchema.parse({})).toEqual({ defaultPeriod: "7d", minBucketSize: 10 })
@@ -80,27 +83,29 @@ describe("settingsFor", () => {
       get: () =>
         Promise.resolve({ modules: { analytics: { defaultPeriod: "14d", minBucketSize: 3 } } }),
     }
-    expect(await settingsFor(store)).toEqual({ defaultPeriod: "14d", minBucketSize: 3 })
+    expect(await settingsFor(store, CTX)).toEqual({ defaultPeriod: "14d", minBucketSize: 3 })
+    // No caller identity → the defaults, never someone else's slice.
+    expect(await settingsFor(store)).toEqual({ defaultPeriod: "7d", minBucketSize: 10 })
   })
 
   it("falls back to defaults when the store throws (outage must not fail analytics reads)", async () => {
     const store: ProfileSource = {
       get: () => Promise.reject(new Error("connection refused")),
     }
-    expect(await settingsFor(store)).toEqual({ defaultPeriod: "7d", minBucketSize: 10 })
+    expect(await settingsFor(store, CTX)).toEqual({ defaultPeriod: "7d", minBucketSize: 10 })
   })
 })
 
 describe("localizeFor", () => {
   it("binds the translate to the profile language", async () => {
     const store: ProfileSource = { get: () => Promise.resolve({ language: "de" }) }
-    const t = await localizeFor(store)
+    const t = await localizeFor(store, CTX)
     expect(t("aSettings.heading")).toBe("Analyse-Einstellungen")
   })
 
   it("falls back to English on a store OUTAGE, like settingsFor", async () => {
     const store: ProfileSource = { get: () => Promise.reject(new Error("connection refused")) }
-    const t = await localizeFor(store)
+    const t = await localizeFor(store, CTX)
     expect(t("aSettings.heading")).toBe("Analytics Settings")
   })
 })
@@ -245,7 +250,7 @@ describe("registerSettingsTools", () => {
     }
   })
 
-  it("round-trips a keyless save through the shared record", async () => {
+  it("round-trips a save through the caller's record", async () => {
     const store = createInMemoryProfileStore()
     const tool = vi.fn()
     registerSettingsTools({ tool } as unknown as MCPServer, store, "standard")
@@ -262,7 +267,7 @@ describe("registerSettingsTools", () => {
       return call[1] as Handler
     }
 
-    const saved = await handlerFor(ANALYTICS_SAVE_SETTINGS)({ defaultPeriod: "30d" })
+    const saved = await handlerFor(ANALYTICS_SAVE_SETTINGS)({ defaultPeriod: "30d" }, CTX)
     // The widget reads the EFFECTIVE slice back from structuredContent; the
     // model gets the localized confirmation.
     expect(saved.structuredContent).toEqual({ defaultPeriod: "30d", minBucketSize: 10 })
@@ -274,10 +279,10 @@ describe("registerSettingsTools", () => {
     ])
     // Only the provided field is persisted — no defaults materialized into
     // storage, so a later default change applies to fields never set.
-    expect((await store.get("anonymous"))?.modules).toEqual({
+    expect((await store.get("user-1"))?.modules).toEqual({
       analytics: { defaultPeriod: "30d" },
     })
-    const data = await handlerFor(ANALYTICS_SETTINGS_DATA)({})
+    const data = await handlerFor(ANALYTICS_SETTINGS_DATA)({}, CTX)
     expect(data.structuredContent?.settings).toEqual({ defaultPeriod: "30d", minBucketSize: 10 })
   })
 
@@ -288,11 +293,14 @@ describe("registerSettingsTools", () => {
     const call = tool.mock.calls.find(
       (c) => (c[0] as { name: string }).name === ANALYTICS_SAVE_SETTINGS,
     )
-    const save = call![1] as (params: unknown) => Promise<{ structuredContent?: unknown }>
+    const save = call![1] as (
+      params: unknown,
+      ctx: unknown,
+    ) => Promise<{ structuredContent?: unknown }>
 
-    await save({ defaultPeriod: "30d" })
-    const saved = await save({ minBucketSize: 5 })
-    expect((await store.get("anonymous"))?.modules).toEqual({
+    await save({ defaultPeriod: "30d" }, CTX)
+    const saved = await save({ minBucketSize: 5 }, CTX)
+    expect((await store.get("user-1"))?.modules).toEqual({
       analytics: { defaultPeriod: "30d", minBucketSize: 5 },
     })
     // The report is the SAVED slice, not just this call's patch.
@@ -304,7 +312,7 @@ describe("registerSettingsTools", () => {
     // while the first one's write is still in flight. A save that handed the
     // store a slice pre-read outside its lock would write the stale period back.
     const inner = createInMemoryProfileStore()
-    await inner.save("anonymous", { modules: { analytics: { defaultPeriod: "7d" } } })
+    await inner.save("user-1", { modules: { analytics: { defaultPeriod: "7d" } } })
     const store: ProfileSource = {
       get: (key) => inner.get(key),
       save: async (key, input, opts) => {
@@ -316,19 +324,19 @@ describe("registerSettingsTools", () => {
     registerSettingsTools({ tool } as unknown as MCPServer, store, "standard")
     const save = tool.mock.calls.find(
       (c) => (c[0] as { name: string }).name === ANALYTICS_SAVE_SETTINGS,
-    )![1] as (params: unknown) => Promise<unknown>
+    )![1] as (params: unknown, ctx: unknown) => Promise<unknown>
 
-    const first = save({ defaultPeriod: "30d" })
+    const first = save({ defaultPeriod: "30d" }, CTX)
     await new Promise((resolve) => setTimeout(resolve, 1))
-    await Promise.all([first, save({ minBucketSize: 25 })])
-    expect((await inner.get("anonymous"))?.modules).toEqual({
+    await Promise.all([first, save({ minBucketSize: 25 }, CTX)])
+    expect((await inner.get("user-1"))?.modules).toEqual({
       analytics: { defaultPeriod: "30d", minBucketSize: 25 },
     })
   })
 
-  // HTTP without OAuth: mcp-use 2 issues no MCP session ids, so the ambient
-  // request info exists but carries no identity — the section must go
-  // read-only and the save tool must refuse with an actionable cause.
+  // HTTP without OAuth: the ambient request info exists but carries no
+  // identity — the section must go read-only and the save tool must refuse
+  // with an actionable cause.
   it("identity gating: canSave false + save refusal without identity, true with an auth user", async () => {
     const tool = vi.fn()
     registerSettingsTools(
@@ -364,7 +372,7 @@ describe("registerSettingsTools", () => {
     expect(authed.structuredContent?.canSave).toBe(true)
   })
 
-  it("stamps the auth user id on the saved record (user-bound, exempt from session TTL)", async () => {
+  it("stamps the OAuth caller on the saved record as its owner", async () => {
     const save = vi.fn<NonNullable<ProfileSource["save"]>>(() => Promise.resolve({}))
     const tool = vi.fn()
     registerSettingsTools(

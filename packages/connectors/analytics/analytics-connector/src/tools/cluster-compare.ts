@@ -14,10 +14,10 @@ export function registerClusterCompareTools(register: Register, profileStore?: P
       "Pre/Post deployment correlation from metrics. Given a deployment timestamp and windows before/after, compute instance KPIs + per-element incident rate and the delta, using PromQL historical windows. Results are flagged `suppressed` if either window has fewer than minBucketSize instances. Typical flow: commit-hash → camunda7_get_deployment → deployment.timestamp → this tool.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...schemas.clusterCompareInput.shape, minBucketSize: optionalMinBucketSize },
-    handler: async (ch, args) =>
+    handler: async (ch, args, ctx) =>
       queries.clusterCompare(ch, {
         ...args,
-        minBucketSize: args.minBucketSize ?? (await settingsFor(profileStore)).minBucketSize,
+        minBucketSize: args.minBucketSize ?? (await settingsFor(profileStore, ctx)).minBucketSize,
       }),
   })
 }

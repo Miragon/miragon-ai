@@ -11,7 +11,6 @@ import {
   PROFILE_STORE_MIGRATIONS,
   profileStoreFromEnv,
   runMigrations,
-  startProfileSessionCleanup,
   type PersistenceSelection,
   type ProfileStore,
   type ReadinessCheck,
@@ -42,22 +41,6 @@ export interface RuntimeBackends {
 }
 
 /**
- * mcp-use 1.x accepted pluggable Redis session/stream backends
- * (`RedisSessionStore`/`RedisStreamManager` via `serverOptions`) for
- * multi-instance session sharing without sticky routing. mcp-use 2 removed
- * that seam — sessions are instance-local again. Warn instead of silently
- * ignoring the knob so a multi-instance deployment learns it needs sticky
- * routing (or an upstream session-sharing successor) before scaling out.
- */
-function warnIgnoredRedisUrl(env: NodeJS.ProcessEnv): void {
-  if (env.REDIS_URL?.trim()) {
-    console.warn(
-      "[miragon-ai] REDIS_URL is set, but mcp-use 2 no longer accepts pluggable session/stream backends — ignoring it. Multi-instance deployments need sticky routing until an upstream successor exists.",
-    )
-  }
-}
-
-/**
  * The non-database profile store selection — the shared `profileStoreFromEnv`
  * (filesystem when `MCP_PROFILE_DIR` is set, in-memory otherwise). Also the
  * default `setup.ts` falls back to when `getPlugins()` is called without an
@@ -66,9 +49,6 @@ function warnIgnoredRedisUrl(env: NodeJS.ProcessEnv): void {
 export function createDefaultProfileStore(env: NodeJS.ProcessEnv = process.env): ProfileStore {
   return profileStoreFromEnv(env)
 }
-
-const startSessionCleanup = (store: ProfileStore, env: NodeJS.ProcessEnv): (() => void) =>
-  startProfileSessionCleanup(store, { env, label: "miragon-ai" })
 
 /** What the boot that consumes the backends actually keeps. */
 export interface InitRuntimeOptions {
@@ -111,20 +91,15 @@ export async function initRuntime(
   env: NodeJS.ProcessEnv = process.env,
   options: InitRuntimeOptions = {},
 ): Promise<RuntimeBackends> {
-  warnIgnoredRedisUrl(env)
   const databaseUrl = env.DATABASE_URL?.trim()
   if (!databaseUrl) {
     announce(persistenceFromEnv(env), env, options)
-    const profileStore = createDefaultProfileStore(env)
-    const stopCleanup = startSessionCleanup(profileStore, env)
     return {
-      profileStore,
+      profileStore: createDefaultProfileStore(env),
       dashboardStore: env.MCP_DASHBOARD_DIR
         ? createFileSystemDashboardStore({ dir: env.MCP_DASHBOARD_DIR })
         : undefined,
-      shutdown: async () => {
-        stopCleanup()
-      },
+      shutdown: () => Promise.resolve(),
       readiness: {},
     }
   }
@@ -145,15 +120,10 @@ export async function initRuntime(
   }
   announce({ profiles: "postgres", dashboards: "postgres" }, env, options)
 
-  const profileStore = createPostgresProfileStore({ sql })
-  const stopCleanup = startSessionCleanup(profileStore, env)
   return {
-    profileStore,
+    profileStore: createPostgresProfileStore({ sql }),
     dashboardStore: createPostgresDashboardStore({ sql, label: "miragon-ai" }),
-    shutdown: async () => {
-      stopCleanup()
-      await sql.end({ timeout: 5 })
-    },
+    shutdown: () => sql.end({ timeout: 5 }),
     readiness: { database: postgresReadinessCheck(sql) },
   }
 }

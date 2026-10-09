@@ -20,14 +20,25 @@ function fakeServer() {
   return { server, middlewares }
 }
 
+/** What the installed middleware hands the handler for `ctx`. */
+async function seenFor(ctx: unknown): Promise<unknown> {
+  const { server, middlewares } = fakeServer()
+  installMcpRequestContext(server)
+  let seen: unknown = "sentinel"
+  await middlewares[0](ctx, async () => {
+    seen = getMcpRequestInfo()
+  })
+  return seen
+}
+
 describe("runWithMcpRequestInfo / getMcpRequestInfo", () => {
   it("is undefined outside a request", () => {
     expect(getMcpRequestInfo()).toBeUndefined()
   })
 
   it("exposes the info inside the run scope only", () => {
-    const inside = runWithMcpRequestInfo({ sessionId: "s-1" }, () => getMcpRequestInfo())
-    expect(inside).toEqual({ sessionId: "s-1" })
+    const inside = runWithMcpRequestInfo({ anonymousCaller: true }, () => getMcpRequestInfo())
+    expect(inside).toEqual({ anonymousCaller: true })
     expect(getMcpRequestInfo()).toBeUndefined()
   })
 })
@@ -40,63 +51,41 @@ describe("installMcpRequestContext", () => {
     expect(middlewares).toHaveLength(1)
   })
 
-  it("derives session id, auth user and authorization for downstream handlers", async () => {
-    const { server, middlewares } = fakeServer()
-    installMcpRequestContext(server)
+  it("derives the OAuth caller and the Authorization header for downstream handlers", async () => {
     const headers: Record<string, string> = { Authorization: "Bearer tok-123" }
+    // The middleware auth shape: the SDK AuthInfo, provider user under `extra`.
     const ctx = {
       request: { header: (name: string) => headers[name] },
-      session: { sessionId: "sess-9" },
-      auth: { token: "tok-123", extra: { user: { userId: "user-7" } } },
+      auth: { token: "tok-123", extra: { user: { id: "user-7" }, payload: { sub: "user-7" } } },
     }
-    let seen: unknown
-    await middlewares[0](ctx, async () => {
-      seen = getMcpRequestInfo()
-    })
-    expect(seen).toEqual({
-      sessionId: "sess-9",
-      authUserId: "user-7",
-      authorization: "Bearer tok-123",
-    })
+    expect(await seenFor(ctx)).toEqual({ authUserId: "user-7", authorization: "Bearer tok-123" })
   })
 
-  it("falls back to the Mcp-Session-Id header and tolerates a missing auth", async () => {
-    const { server, middlewares } = fakeServer()
-    installMcpRequestContext(server)
-    const headers: Record<string, string> = { "mcp-session-id": "sess-h" }
-    const ctx = { request: { header: (name: string) => headers[name] } }
-    let seen: unknown
-    await middlewares[0](ctx, async () => {
-      seen = getMcpRequestInfo()
-    })
-    expect(seen).toEqual({ sessionId: "sess-h", authUserId: undefined, authorization: undefined })
+  it("never turns a client-chosen Mcp-Session-Id into an identity", async () => {
+    const headers: Record<string, string> = {
+      "mcp-session-id": "victim",
+      "Mcp-Session-Id": "victim",
+    }
+    const ctx = {
+      request: { header: (name: string) => headers[name] },
+      session: { sessionId: "victim" },
+    }
+    expect(await seenFor(ctx)).toEqual({ authUserId: undefined, authorization: undefined })
   })
 
-  it("leaves the store EMPTY for non-HTTP transports (stdio → anonymous-profile signal)", async () => {
-    const { server, middlewares } = fakeServer()
-    installMcpRequestContext(server)
-    let seen: unknown = "sentinel"
-    await middlewares[0]({}, async () => {
-      seen = getMcpRequestInfo()
-    })
-    expect(seen).toBeUndefined()
+  it("never declares an anonymous caller — only runWithMcpRequestInfo can", async () => {
+    expect(await seenFor({})).toEqual({ authUserId: undefined, authorization: undefined })
   })
 
   it("ignores a non-string auth user id and a throwing header accessor", async () => {
-    const { server, middlewares } = fakeServer()
-    installMcpRequestContext(server)
     const ctx = {
       request: {
         header: () => {
           throw new Error("no request")
         },
       },
-      auth: { extra: { user: { userId: 42 } } },
+      auth: { extra: { user: { id: 42 } } },
     }
-    let seen: unknown
-    await middlewares[0](ctx, async () => {
-      seen = getMcpRequestInfo()
-    })
-    expect(seen).toEqual({ sessionId: undefined, authUserId: undefined, authorization: undefined })
+    expect(await seenFor(ctx)).toEqual({ authUserId: undefined, authorization: undefined })
   })
 })

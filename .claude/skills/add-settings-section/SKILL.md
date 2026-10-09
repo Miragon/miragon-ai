@@ -6,7 +6,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 
 # add-settings-section — module-owned user settings
 
-Settings live in ONE profile record per user/session, shared by all modules. The record
+Settings live in ONE profile record per signed-in user, shared by all modules. The record
 and its store are CORE (`packages/core/widget-shell/src/profile-record.ts` +
 `profile-store*.ts`, exported from `@miragon-ai/widget-shell/server`) and connector-free:
 `language`, `theme`, metadata, and the `profile.modules.<module>` transport. Each module
@@ -116,15 +116,17 @@ in the app's `module-contract.ts`) — modules stick to the narrow port, composi
 wire the full store. Alias them to your module's vocabulary if the call sites read
 better that way (`export const resolveSettingsKey = resolveProfileKey`).
 
-`resolveProfileKey(ctx)` precedence: auth user id (`ctx.auth.user.userId`, else the
-request context's `auth` var) > the `Mcp-Session-Id` header > `ANONYMOUS_PROFILE_KEY`
-when there is **no** request context at all (stdio/tests) > `undefined` for an HTTP
-request without a session id (reads fall back to defaults, saves fail visibly — keyless
-clients must never cross-share one record).
+`resolveProfileKey(ctx)` precedence, fail-closed: the OAuth caller (`MCP_OAUTH`, read
+from `ctx.auth` through the toolkit's `resolveCaller`; ctx-less paths such as pipeline
+steps fall back to the ambient request info) > `ANONYMOUS_PROFILE_KEY` only for an
+EXPLICITLY declared local caller (`runWithMcpRequestInfo({ anonymousCaller: true }, …)` —
+tests) > `undefined` otherwise: a request without OAuth, or no request context at all
+(reads fall back to defaults, saves fail visibly — callers without an identity must
+never cross-share one record). Nothing a client picks itself (a session id, a header)
+is ever a key. Always pass the handler's `ctx`.
 
-`resolveAuthUserId(ctx)` is the auth-only half: the save path stamps it as `opts.userId`,
-which marks the record user-bound and exempt from the app's session-TTL cleanup
-(`MCP_PROFILE_SESSION_TTL_DAYS`).
+`resolveAuthUserId(ctx)` is the OAuth half alone: the save path stamps it as
+`opts.userId`, the record's owner.
 
 The store reaches your module via `SharedResources.profileStore`, threaded into
 `createPlugin` by the app (`apps/mcp-server-camunda7/src/module-contract.ts`) — take it
