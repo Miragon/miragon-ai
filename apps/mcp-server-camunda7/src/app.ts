@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import type { OAuthProvider } from "mcp-use/oauth"
-import { createComposedServer, type ComposedServer } from "@miragon-ai/widget-shell/server"
+import {
+  createComposedServer,
+  frameworkWritesAllowed,
+  type ComposedServer,
+} from "@miragon-ai/widget-shell/server"
 import { getOAuthConfigFromEnv, oauthSecretEnvVarNames } from "./oauth.js"
 import { initRuntime, type RuntimeBackends } from "./persistence/index.js"
 import { composition, getPlugins } from "./setup.js"
@@ -94,7 +98,8 @@ export async function createApp(
       // Postgres when DATABASE_URL is set (migrations run here, before the
       // server listens — the healthcheck grace periods cover it), else
       // filesystem/in-memory.
-      const runtime = deps.runtime ?? (await initRuntime(env))
+      const runtime =
+        deps.runtime ?? (await initRuntime(env, { dashboards: frameworkWritesAllowed(boot) }))
       return {
         plugins: getPlugins(runtime.profileStore, boot),
         // Toolkit dashboards: only registered with the builder (OAuth and no

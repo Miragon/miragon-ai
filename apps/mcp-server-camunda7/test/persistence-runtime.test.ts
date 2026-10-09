@@ -34,6 +34,58 @@ describe("initRuntime (non-database path)", () => {
     await runtime.shutdown()
   })
 
+  it("warns LOUDLY when a production boot keeps profiles and dashboards in memory", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {})
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      const runtime = await initRuntime(env({ NODE_ENV: "production" }))
+      expect(log).toHaveBeenCalledWith(
+        "[miragon-ai] persistence: profiles=memory, dashboards=memory",
+      )
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /user profiles and saved dashboards are kept IN MEMORY.*Set DATABASE_URL/,
+        ),
+      )
+      await runtime.shutdown()
+    } finally {
+      vi.restoreAllMocks()
+    }
+  })
+
+  it("announces filesystem persistence without a warning, and stays quiet outside production", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {})
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      const dir = mkdtempSync(path.join(tmpdir(), "mcp-profile-"))
+      const durable = await initRuntime(
+        env({
+          NODE_ENV: "production",
+          MCP_PROFILE_DIR: path.join(dir, "p"),
+          MCP_DASHBOARD_DIR: path.join(dir, "d"),
+        }),
+      )
+      expect(log).toHaveBeenCalledWith(
+        "[miragon-ai] persistence: profiles=filesystem, dashboards=filesystem",
+      )
+      const dev = await initRuntime(env())
+      expect(warn).not.toHaveBeenCalled()
+      await durable.shutdown()
+      await dev.shutdown()
+
+      // Without the dashboard builder no dashboard is ever saved: only the
+      // profile store is announced (and warned about).
+      const noBuilder = await initRuntime(env({ NODE_ENV: "production" }), { dashboards: false })
+      expect(log).toHaveBeenCalledWith("[miragon-ai] persistence: profiles=memory")
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringMatching(/WARNING: user profiles are kept IN MEMORY/),
+      )
+      await noBuilder.shutdown()
+    } finally {
+      vi.restoreAllMocks()
+    }
+  })
+
   it("warns that REDIS_URL is ignored since mcp-use 2 removed the session-backend seam", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     try {

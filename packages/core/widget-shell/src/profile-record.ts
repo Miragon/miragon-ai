@@ -73,3 +73,40 @@ export function defaultProfileRecord(key: string): ProfileRecord {
     updatedAt: now,
   }
 }
+
+const nonEmptyString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.length > 0 ? value : undefined
+
+/** The field's own value when it validates, else the field's default. */
+function fieldOrDefault<T>(schema: z.ZodType<T>, value: unknown): T {
+  const parsed = schema.safeParse(value)
+  return parsed.success ? parsed.data : schema.parse(undefined)
+}
+
+/**
+ * The typed VIEW of a stored profile document (current-shape, or written by a
+ * NEWER build), degrading per FIELD: a value this build cannot validate — a
+ * locale added later, a non-object `modules` — falls back to that field's
+ * default while everything else survives. Keys this build does not know are
+ * not part of the view, but they stay in the stored document: saves merge over
+ * the RAW document (`mergeStoredProfile` in `profile-store.ts`), never over
+ * this projection. Timestamps a hand-edited document lacks fall back to each
+ * other, then to `""` — undatable, so the session cleanup never expires it
+ * (the next save stamps both). `id` is the caller's (the store key wins).
+ */
+export function projectProfileRecord(doc: Record<string, unknown>, id: string): ProfileRecord {
+  const whole = profileRecordSchema.safeParse(doc)
+  if (whole.success) return { ...whole.data, id }
+  const { shape } = profileRecordSchema
+  const updatedAt = nonEmptyString(doc.updatedAt) ?? nonEmptyString(doc.createdAt) ?? ""
+  return {
+    language: fieldOrDefault(shape.language, doc.language),
+    theme: fieldOrDefault(shape.theme, doc.theme),
+    modules: fieldOrDefault(shape.modules, doc.modules),
+    id,
+    userId: fieldOrDefault(shape.userId, doc.userId),
+    createdAt: nonEmptyString(doc.createdAt) ?? updatedAt,
+    updatedAt,
+    schemaVersion: PROFILE_SCHEMA_VERSION,
+  }
+}

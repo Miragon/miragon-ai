@@ -11,6 +11,7 @@ import {
 } from "./profile-store.js"
 import { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
 import { defaultProfileRecord } from "./profile-record.js"
+import { mergeRawSlice } from "./profile-slice.js"
 
 describe("defaultProfileRecord", () => {
   it("returns a complete, defaulted record for an unsaved key", () => {
@@ -104,15 +105,43 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
     expect(await store.delete("sess-1")).toBe(false)
   })
 
-  it("survives two concurrent saves of the same key (last-write-wins, no error)", async () => {
+  it("keeps both of two concurrent saves of disjoint top-level fields", async () => {
     const store = await makeStore()
     // The settings page has two independent save buttons — overlapping saves
-    // must both complete (per-call tmp files on the filesystem store).
+    // must both land: every store merges INSIDE its per-key serialization.
     await Promise.all([
       store.save("sess-1", { theme: "dark" }),
       store.save("sess-1", { language: "de" }),
     ])
-    expect(await store.get("sess-1")).toBeDefined()
+    const profile = await store.get("sess-1")
+    expect(profile?.theme).toBe("dark")
+    expect(profile?.language).toBe("de")
+  })
+
+  it("keeps concurrent saves from DIFFERENT modules — no module's update is lost", async () => {
+    const store = await makeStore()
+    // Exactly the tool paths: each module's save tool pre-reads its RAW slice
+    // (`mergeRawSlice`, outside any lock) and hands the store a complete slice;
+    // the model may fire camunda7_engine "select" and analytics_save_settings
+    // in one turn. Repeated, because an unserialized read-merge-write loses
+    // one of them only when the two calls interleave.
+    for (let round = 0; round < 10; round += 1) {
+      const key = `user-${round}`
+      await store.save(key, { modules: { camunda7: { pinnedDashboardIds: ["d1"] } } })
+      const saveSlice = async (module: string, patch: Record<string, unknown>) =>
+        store.save(key, { modules: { [module]: await mergeRawSlice(store, key, module, patch) } })
+      await Promise.all([
+        saveSlice("camunda7", { defaultEngineId: "prod-a" }),
+        saveSlice("analytics", { defaultPeriod: "30d" }),
+        store.save(key, { theme: "dark" }),
+      ])
+      const profile = await store.get(key)
+      expect(profile?.modules).toEqual({
+        camunda7: { pinnedDashboardIds: ["d1"], defaultEngineId: "prod-a" },
+        analytics: { defaultPeriod: "30d" },
+      })
+      expect(profile?.theme).toBe("dark")
+    }
   })
 
   it("stamps the auth user id and never demotes the record on later keyless saves", async () => {
@@ -153,6 +182,30 @@ describe("createFileSystemProfileStore", () => {
   profileStoreContract(async () =>
     createFileSystemProfileStore({ dir: await mkdtemp(path.join(tmpdir(), "profile-store-")) }),
   )
+
+  it("serializes saves per key across two store instances on the same directory", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
+    const a = createFileSystemProfileStore({ dir })
+    const b = createFileSystemProfileStore({ dir })
+    await Promise.all([
+      a.save("sess-1", { modules: { camunda7: { defaultEngineId: "prod-a" } } }),
+      b.save("sess-1", { modules: { analytics: { defaultPeriod: "30d" } } }),
+    ])
+    expect((await a.get("sess-1"))?.modules).toEqual({
+      camunda7: { defaultEngineId: "prod-a" },
+      analytics: { defaultPeriod: "30d" },
+    })
+  })
+
+  it("keeps serving the key after a failed save (the lock is released on error)", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
+    // A FILE where the store expects its directory: every write fails.
+    const blocked = path.join(dir, "blocked")
+    await writeFile(blocked, "", "utf-8")
+    const store = createFileSystemProfileStore({ dir: blocked })
+    await expect(store.save("sess-1", { theme: "dark" })).rejects.toThrow()
+    await expect(store.save("sess-1", { theme: "dark" })).rejects.toThrow()
+  })
 
   it("upgrades a persisted v1 record on read (flat fields → module slices)", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
@@ -196,15 +249,21 @@ describe("createFileSystemProfileStore", () => {
     expect(migrated).not.toHaveProperty("allowedEngineIds")
   })
 
-  it("treats a record written by a NEWER build as absent instead of mangling it", async () => {
+  it("never expires a session record it cannot date", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
     const store = createFileSystemProfileStore({ dir })
-    await writeFile(
-      path.join(dir, "future.json"),
-      JSON.stringify({ ...V1_RECORD, schemaVersion: 99 }),
-      "utf-8",
-    )
-    expect(await store.get("future")).toBeUndefined()
+    await writeFile(path.join(dir, "undated.json"), JSON.stringify({ schemaVersion: 3 }), "utf-8")
+    expect(await store.cleanupSessions(new Date(Date.now() + 60_000))).toBe(0)
+    expect(await store.get("undated")).toMatchObject({ id: "undated", updatedAt: "" })
+  })
+
+  it("treats a file that is not JSON as absent and replaces it on the next save", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
+    const store = createFileSystemProfileStore({ dir })
+    await writeFile(path.join(dir, "broken.json"), "{ not json", "utf-8")
+    expect(await store.get("broken")).toBeUndefined()
+    expect((await store.save("broken", { theme: "dark" })).theme).toBe("dark")
+    expect((await store.get("broken"))?.theme).toBe("dark")
   })
 })
 
@@ -271,19 +330,22 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
 
   profileStoreContract(() => Promise.resolve(createPostgresProfileStore({ sql })))
 
-  it("treats a corrupt row as absent and overwrites it on the next save", async () => {
+  it("reads a row missing every field best-effort and keeps it on save", async () => {
     const store = createPostgresProfileStore({ sql })
     await sql`
       INSERT INTO user_profiles (key, profile)
-      VALUES ('sess-corrupt', '{"schemaVersion": 999}'::jsonb)
+      VALUES ('sess-sparse', '{"schemaVersion": 999}'::jsonb)
     `
-    expect(await store.get("sess-corrupt")).toBeUndefined()
+    expect(await store.get("sess-sparse")).toMatchObject({
+      id: "sess-sparse",
+      language: "en",
+      theme: "system",
+      modules: {},
+    })
 
-    const saved = await store.save("sess-corrupt", { theme: "dark" })
+    const saved = await store.save("sess-sparse", { theme: "dark" })
     expect(saved.theme).toBe("dark")
-    // Merged over defaults, not over the corrupt garbage.
-    expect(saved.language).toBe("en")
-    expect(await store.get("sess-corrupt")).toEqual(saved)
+    expect(await store.get("sess-sparse")).toEqual(saved)
   })
 
   it("upgrades a v1 row on read (flat fields → module slices)", async () => {
@@ -298,19 +360,6 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
       schemaVersion: 3,
       modules: { analytics: { defaultPeriod: "30d", minBucketSize: 25 } },
     })
-  })
-
-  it("merges concurrent partial saves of the same key without losing fields", async () => {
-    const store = createPostgresProfileStore({ sql })
-    // SELECT…FOR UPDATE serializes the two transactions; whichever commits
-    // second merges over the first's row, so neither field may get lost.
-    await Promise.all([
-      store.save("sess-1", { theme: "dark" }),
-      store.save("sess-1", { language: "de" }),
-    ])
-    const profile = await store.get("sess-1")
-    expect(profile?.theme).toBe("dark")
-    expect(profile?.language).toBe("de")
   })
 
   it("merges concurrent saves of disjoint fields in the SAME module slice", async () => {

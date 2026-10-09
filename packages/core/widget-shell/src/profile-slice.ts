@@ -61,8 +61,11 @@ export function requireProfileKey(ctx?: unknown): string {
  * defaults are not silently materialized into storage for fields the caller
  * never set. The returned object is the complete next slice value the tool
  * reports back; the store then merges it one level deep over the stored
- * slice INSIDE its per-key lock, so a concurrent save of disjoint fields in
- * the same slice survives even though this pre-read runs outside it.
+ * slice INSIDE its per-key serialization (every `ProfileStore`: the postgres
+ * transaction lock, the filesystem store's per-key mutex, the in-memory
+ * store's synchronous merge), so a concurrent save of disjoint fields in the
+ * same slice — or of another module's slice — survives even though this
+ * pre-read runs outside it.
  */
 export async function mergeRawSlice(
   store: ProfileSource,

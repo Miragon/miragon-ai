@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs"
 import path from "node:path"
-import { createComposedServer, type ComposedServer } from "@miragon-ai/widget-shell/server"
+import {
+  announcePersistence,
+  createComposedServer,
+  frameworkWritesAllowed,
+  persistenceFromEnv,
+  type ComposedServer,
+} from "@miragon-ai/widget-shell/server"
 import {
   composition,
   createDashboardStore,
@@ -60,6 +66,14 @@ export async function createApp(
       cssPath: path.join(PACKAGE_ROOT, "dist", "mcp-app.css"),
     },
     setup: (boot) => {
+      // Logs the selection; a NODE_ENV=production boot on in-memory stores
+      // warns loudly (settings vanish on every restart) but still boots.
+      // Dashboards only count once the builder is on (OAuth, no read-only module).
+      const { profiles, dashboards } = persistenceFromEnv(env)
+      announcePersistence(
+        { profiles, ...(frameworkWritesAllowed(boot) ? { dashboards } : {}) },
+        { env, label: "acme-mcp" },
+      )
       const profileStore = createProfileStore(env)
       const stopCleanup = startSessionCleanup(profileStore, env)
       return {

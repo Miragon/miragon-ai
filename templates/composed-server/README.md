@@ -183,7 +183,8 @@ docker run -p 8400:8400 \
   server cannot see the gateway's login, which is why the toolsets stay
   explicit there.
 - The profile store is in-memory by default — without the volume, user
-  settings are lost on every restart. Saved dashboards need more: the visual
+  settings are lost on every restart (a `NODE_ENV=production` boot warns about
+  it in its log). Saved dashboards need more: the visual
   builder and its dashboard tools are registered only when the server installs
   OAuth and no module runs read-only (`frameworkWritesAllowed`), so on this
   unauthenticated server `MCP_DASHBOARD_DIR` has no effect until you add OAuth

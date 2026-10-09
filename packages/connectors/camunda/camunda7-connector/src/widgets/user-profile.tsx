@@ -87,6 +87,51 @@ function fromProfile(p: UserProfile, engineIds: string[]): FormState {
   }
 }
 
+const sameSet = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((id) => b.includes(id))
+
+/** The single-valued preferences, compared by value. */
+const SCALAR_FIELDS = [
+  "language",
+  "theme",
+  "defaultEngineId",
+  "defaultDashboardId",
+  "preferredRole",
+] as const
+
+/**
+ * The save payload: ONLY the preferences the user changed against the form's
+ * baseline. The panel may render from a cached (stale) view, and another
+ * writer (the model's `camunda7_engine` "select", a second tab) may have
+ * changed the profile meanwhile — re-sending untouched fields would silently
+ * write the old values back. The save input is default-free, so an omitted
+ * field stays unchanged on the server.
+ */
+function changedPreferences(
+  form: FormState,
+  baseline: FormState,
+  engineIds: string[],
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {}
+  for (const field of SCALAR_FIELDS) {
+    if (form[field] !== baseline[field]) payload[field] = form[field]
+  }
+  // "" = unset → never sent: the enum stays valid and the stored role unchanged.
+  if (payload.preferredRole === "") delete payload.preferredRole
+  if (!sameSet(form.pinnedDashboardIds, baseline.pinnedDashboardIds)) {
+    payload.pinnedDashboardIds = form.pinnedDashboardIds
+  }
+  if (!sameSet(form.allowedEngineIds, baseline.allowedEngineIds)) {
+    // Everything checked persists as [] — the documented "all engines"
+    // encoding — so engines configured later are included automatically
+    // instead of freezing today's expanded list.
+    payload.allowedEngineIds = sameSet(form.allowedEngineIds, engineIds)
+      ? []
+      : form.allowedEngineIds
+  }
+  return payload
+}
+
 const helpCls = "text-muted-foreground text-xs"
 
 /**
@@ -242,32 +287,13 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
   }
 
   function handleSave() {
-    // Everything checked persists as [] — the documented "all engines"
-    // encoding — so engines configured later are included automatically
-    // instead of freezing today's expanded list.
-    const engineIdSet = new Set(engines.map((e) => e.id))
-    const allEnginesChecked =
-      engineIdSet.size > 0 &&
-      form.allowedEngineIds.length === engineIdSet.size &&
-      form.allowedEngineIds.every((id) => engineIdSet.has(id))
-    save.mutate(
-      {
-        language: form.language,
-        theme: form.theme,
-        allowedEngineIds: allEnginesChecked ? [] : form.allowedEngineIds,
-        defaultEngineId: form.defaultEngineId,
-        defaultDashboardId: form.defaultDashboardId,
-        pinnedDashboardIds: form.pinnedDashboardIds,
-        // "" = unset → omit so the enum stays valid and the value is unchanged.
-        ...(form.preferredRole ? { preferredRole: form.preferredRole } : {}),
+    const engineIds = engines.map((e) => e.id)
+    save.mutate(changedPreferences(form, fromProfile(view.profile, engineIds), engineIds), {
+      onSuccess: () => {
+        setSavedAt(formatTime(new Date().toISOString()))
+        refreshCockpitData()
       },
-      {
-        onSuccess: () => {
-          setSavedAt(formatTime(new Date().toISOString()))
-          refreshCockpitData()
-        },
-      },
-    )
+    })
   }
 
   const allEnginesAllowed = form.allowedEngineIds.length >= engines.length

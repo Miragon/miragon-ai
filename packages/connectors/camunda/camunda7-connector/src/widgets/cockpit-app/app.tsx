@@ -1,6 +1,6 @@
 import { useEffect, useReducer } from "react"
 import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
-import { HostModelContext, WidgetRenderer, useHostBridge } from "@miragon/mcp-toolkit-ui/app"
+import { HostModelContext, WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
 import { ViewDataState, WidgetShell, useHostWidgets } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "../../view-models.js"
 import { formatEnginesByEnvironment, groupEnginesByEnvironment } from "../../lib/environments.js"
@@ -189,12 +189,6 @@ function EnginesEmptyState({
 }
 
 export function CockpitApp({ data }: { data: CockpitAppData | null }) {
-  // Host-portable tool transport for imperative calls (saving the default engine).
-  // Requesting fullscreen is no longer a widget concern since mcp-use 2.x:
-  // the HostBridge carries no `requestDisplayMode`, and the app shell
-  // (`McpAppView`) owns the fullscreen affordance instead.
-  const { callTool } = useHostBridge()
-
   // The query transport (AppQueryProvider). Absent when the host wires no
   // callTool — then every useToolQuery stays disabled (pending forever), so the
   // loading state below must not wait on the engines query.
@@ -241,25 +235,13 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     }
   }, [scope.kind, soleEngineId])
 
-  // Pick (or switch) the active engine. The cockpit threads `engine` into its
-  // own views explicitly, but we ALSO save it as the caller's default engine
-  // (profile) so delegated/agentic paths (incidents, "ask AI" actions) and the
-  // next cockpit landing use the engine the user is looking at. Fails soft:
-  // without a caller identity or under a read-only toolset the save refuses,
-  // and the per-call override keeps everything working.
-  function saveDefaultEngine(id: string) {
-    void callTool(CAMUNDA7_ENGINE, { action: "select", engineId: id }).catch(() => {
-      /* override on each call still works even if the default cannot be saved */
-    })
-  }
-  function enterEngine(id: string) {
-    dispatch({ type: "enter-engine", id })
-    saveDefaultEngine(id)
-  }
-  function switchEngine(id: string) {
-    dispatch({ type: "switch-engine", id })
-    saveDefaultEngine(id)
-  }
+  // Pick (or switch) the active engine — navigation only, side-effect free.
+  // The cockpit threads `engine` into every view and model context
+  // explicitly; the caller's saved default engine (which retargets every
+  // later engine-less tool call) changes only through an explicit action:
+  // the settings page or `camunda7_engine` action "select".
+  const enterEngine = (id: string) => dispatch({ type: "enter-engine", id })
+  const switchEngine = (id: string) => dispatch({ type: "switch-engine", id })
 
   // Deterministic, client-side navigation — every view is hosted in-app and
   // routed in-place by the reducer (no LLM round-trip, no chat handoff). Nav

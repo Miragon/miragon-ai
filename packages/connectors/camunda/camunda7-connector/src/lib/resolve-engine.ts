@@ -37,9 +37,11 @@ export interface EngineRegistry {
   backends: BackendRegistry<Client, EngineMeta>
   engines: EngineEntry[]
   /**
-   * The caller's saved default engine (undefined when none is saved or no
-   * caller identity resolves). Injected by the plugin so this module's lib
-   * stays free of profile plumbing; async because it reads the profile store.
+   * The caller's saved default engine (undefined when none is saved, no
+   * caller identity resolves, or the store is unreachable — the lookup is
+   * advisory and must never throw). Injected by the plugin so this module's
+   * lib stays free of profile plumbing; async because it reads the profile
+   * store. Not consulted when only one engine is configured.
    */
   defaultEngineId?: () => Promise<string | undefined>
 }
@@ -112,9 +114,12 @@ export class UnknownEngineError extends Error {
  * The caller's saved default, validated against the CONFIGURED engines: a
  * stored id that no longer matches any engine degrades to "no default"
  * (single-default fallback or {@link EngineNotSelectedError}) instead of
- * failing every call on a stale preference.
+ * failing every call on a stale preference. With one engine configured the
+ * preference cannot change the outcome, so the per-call profile read is
+ * skipped entirely.
  */
 async function savedDefault(registry: EngineRegistry): Promise<string | undefined> {
+  if (registry.engines.length <= 1) return undefined
   const id = await registry.defaultEngineId?.()
   return id && registry.engines.some((e) => e.id === id) ? id : undefined
 }

@@ -1,8 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
 import type { Client } from "@miragon-ai/camunda7-client"
+import {
+  ANONYMOUS_PROFILE_KEY,
+  createInMemoryProfileStore,
+  type ProfileStore,
+} from "@miragon-ai/widget-shell/server"
 import { createPlugin, type Camunda7PluginConfig } from "./plugin.js"
-import { resolveEngine, type Camunda7StepAppConfig } from "./lib/resolve-engine.js"
+import {
+  EngineNotSelectedError,
+  resolveEngine,
+  type Camunda7StepAppConfig,
+} from "./lib/resolve-engine.js"
 import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "./lib/toolsets.js"
 import {
   CAMUNDA7_ENGINE,
@@ -85,6 +94,56 @@ describe("createPlugin toolset wiring (fail-closed)", () => {
     expect((await bootSurface({ toolset: "admin", allowDeployments: true })).names).toContain(
       "camunda7_create_deployment",
     )
+  })
+})
+
+describe("createPlugin default-engine routing — the saved default is advisory", () => {
+  /** A preferences database that is down: the driver error names its host:port. */
+  const downStore = () => {
+    const fail = () =>
+      Promise.reject(
+        Object.assign(new Error("connect ECONNREFUSED 10.1.2.3:5432"), { code: "ECONNREFUSED" }),
+      )
+    return { get: vi.fn(fail), save: fail, delete: fail, cleanupSessions: fail }
+  }
+  const MULTI = [
+    { id: "a", baseUrl: "http://a.example/engine-rest" },
+    { id: "b", baseUrl: "http://b.example/engine-rest" },
+  ]
+  const registryOf = (engines: Camunda7PluginConfig["engines"], profileStore: ProfileStore) =>
+    (createPlugin({ engines }, { profileStore }).appConfig as unknown as Camunda7StepAppConfig)
+      .registry
+
+  it("one engine: resolves it without consulting the profile store at all", async () => {
+    const store = downStore()
+    const registry = registryOf([MULTI[0]], store)
+    expect((await resolveEngine(undefined, registry)).engineId).toBe("a")
+    expect(store.get).not.toHaveBeenCalled()
+  })
+
+  it("an explicit engine resolves during an outage", async () => {
+    const registry = registryOf(MULTI, downStore())
+    expect((await resolveEngine("b", registry)).engineId).toBe("b")
+  })
+
+  it("several engines, none named: the outage degrades to 'no saved default' — no host:port", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const registry = registryOf(MULTI, downStore())
+    const error = await resolveEngine(undefined, registry).then(
+      () => undefined,
+      (e: unknown) => e as Error,
+    )
+    expect(error).toBeInstanceOf(EngineNotSelectedError)
+    expect(error?.message).not.toMatch(/10\.1\.2\.3|5432|ECONNREFUSED/)
+    // Logged for operators — sanitized to the error class + code.
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Error ECONNREFUSED"))
+    expect(warn.mock.calls.flat().join(" ")).not.toMatch(/10\.1\.2\.3|5432/)
+  })
+
+  it("several engines, store healthy: the caller's saved default still routes", async () => {
+    const store = createInMemoryProfileStore()
+    await store.save(ANONYMOUS_PROFILE_KEY, { modules: { camunda7: { defaultEngineId: "b" } } })
+    expect((await resolveEngine(undefined, registryOf(MULTI, store))).engineId).toBe("b")
   })
 })
 

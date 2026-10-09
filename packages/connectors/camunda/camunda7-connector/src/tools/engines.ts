@@ -4,8 +4,12 @@ import { mergeRawSlice, type ProfileStore } from "@miragon-ai/widget-shell/serve
 import { UnknownEngineError, type EngineRegistry, type EngineEntry } from "../lib/resolve-engine.js"
 import { environmentOf, groupEnginesByEnvironment } from "../lib/environments.js"
 import { providerForEntry } from "../providers/index.js"
-import { allowedEngines, profileDefaultEngineId } from "../lib/engine-preferences.js"
-import { parseCamunda7Settings, CAMUNDA7_MODULE_KEY } from "../lib/profile-schema.js"
+import {
+  advisoryCamunda7Settings,
+  allowedEngines,
+  profileDefaultEngineId,
+} from "../lib/engine-preferences.js"
+import { CAMUNDA7_MODULE_KEY } from "../lib/profile-schema.js"
 import { resolveAuthUserId, resolveProfileKey } from "../lib/resolve-profile-key.js"
 import { allowsProfileSave, type Camunda7Toolset } from "../lib/toolsets.js"
 import { CAMUNDA7_ENGINE } from "../tool-names.js"
@@ -67,17 +71,17 @@ export function registerEngineTools(
     : z.enum(READ_ACTIONS)
 
   // The user-profile `allowedEngineIds` curates which engines the caller may
-  // pick from (shared rule: `allowedEngines`). resolveProfileKey resolves
-  // auth user id → session id → stdio-anonymous off the ambient request
-  // context. It stays argument-less although the toolkit 2.6 registrar hands
-  // the handler mcp-use's ctx: the engine routing's saved-default lookup
-  // (`profileDefaultEngineId`) has no ctx and reads the same way, so this
-  // tool and the routing always agree on whose profile they read.
-  const allowedEnginesFor = async (reg: EngineRegistry): Promise<EngineEntry[]> => {
-    const key = resolveProfileKey()
-    const profile = key ? await profileStore.get(key) : undefined
-    return allowedEngines(parseCamunda7Settings(profile), reg.engines)
-  }
+  // pick from (shared rule: `allowedEngines`). Advisory like the default
+  // engine: a profile-store outage lists every engine instead of failing the
+  // one tool a multi-engine caller needs to route (select still fails
+  // visibly — at its write). The lookup resolves the caller off the ambient
+  // request context (argument-less `resolveProfileKey`) although the toolkit
+  // 2.6 registrar hands the handler mcp-use's ctx: the engine routing's
+  // saved-default lookup (`profileDefaultEngineId`) has no ctx and reads
+  // through the same `advisoryCamunda7Settings`, so this tool and the routing
+  // always agree on whose profile they read.
+  const allowedEnginesFor = async (reg: EngineRegistry): Promise<EngineEntry[]> =>
+    allowedEngines(await advisoryCamunda7Settings(profileStore), reg.engines)
 
   register({
     name: CAMUNDA7_ENGINE,

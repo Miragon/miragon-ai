@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { z } from "zod"
 import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import {
@@ -6,6 +6,7 @@ import {
   createInMemoryProfileStore,
   runWithMcpRequestInfo,
   type McpRequestInfo,
+  type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
 import type { Client } from "@miragon-ai/camunda7-client"
 import { registerEngineTools } from "./engines.js"
@@ -37,8 +38,10 @@ type Handler = (reg: EngineRegistry, args: EngineToolArgs) => Promise<Record<str
  * always explicit; the default is `operations`, an authenticated boot's
  * no-suffix toolset (profile writes allowed).
  */
-function harness(toolset: Camunda7Toolset = "operations") {
-  const store = createInMemoryProfileStore()
+function harness(
+  toolset: Camunda7Toolset = "operations",
+  store: ProfileStore = createInMemoryProfileStore(),
+) {
   const registry = createEngineRegistry(ENGINES, (e) => ({ __engine: e.id }) as unknown as Client)
   let registered: ToolConfig<EngineRegistry> | undefined
   const recorder = Object.assign(
@@ -220,6 +223,36 @@ describe("camunda7_engine select (durable default)", () => {
     await expect(under(USER, () => call({ action: "select" }))).rejects.toThrow(
       /requires an engineId/,
     )
+  })
+})
+
+describe("camunda7_engine during a profile-store outage", () => {
+  /** A preferences database that is down: the driver error names its host:port. */
+  const down = (): ProfileStore => {
+    const fail = () =>
+      Promise.reject(
+        Object.assign(new Error("connect ECONNREFUSED 10.1.2.3:5432"), { code: "ECONNREFUSED" }),
+      )
+    return { get: fail, save: fail, delete: fail, cleanupSessions: fail }
+  }
+
+  it("list/current still answer — every engine, no saved default — and leak no host:port", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const { call } = harness("operations", down())
+    const list = await under(USER, () => call({ action: "list" }))
+    expect((list.engines as Array<{ id: string }>).map((e) => e.id)).toEqual(["alpha", "beta"])
+    expect(list.defaultEngineId).toBeNull()
+    expect(await under(USER, () => call({ action: "current" }))).toEqual({
+      defaultEngineId: null,
+    })
+    expect(JSON.stringify(list)).not.toMatch(/10\.1\.2\.3|5432/)
+    expect(warn.mock.calls.flat().join(" ")).not.toMatch(/10\.1\.2\.3|5432/)
+    warn.mockRestore()
+  })
+
+  it("select (a durable write) still fails visibly", async () => {
+    const { call } = harness("operations", down())
+    await expect(under(USER, () => call({ action: "select", engineId: "beta" }))).rejects.toThrow()
   })
 })
 
