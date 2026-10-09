@@ -9,6 +9,7 @@ import {
   type SeriesCatalog,
 } from "./promql-labels.test-support.js"
 import { alertExpressions, dashboardQueries } from "./promql-sources.test-support.js"
+import { ENGINE_ALERT_NAME_PATTERN } from "./queries/health.js"
 import {
   SCENARIOS,
   exportedQueryFunctions,
@@ -110,6 +111,16 @@ describe("metrics contract — labels in alert rules and dashboards", () => {
     }
     // The rules aggregate by engine_id — `engineHealth` filters ALERTS on it.
     expect(alertLabels.has("engine_id")).toBe(true)
+  })
+
+  it("every shipped alert rule is named so engineHealth recognises it as the module's own", () => {
+    // Engine-less alerts (CibSevenEngineNoMetrics) only count when their name
+    // matches — a rule outside the pattern would silently drop out of the
+    // fleet-wide verdict, and a shared Prometheus' foreign alerts must not count.
+    const names = [...alertsYaml.matchAll(/^\s*-\s*alert:\s*(\S+)\s*$/gm)].map((m) => m[1])
+    expect(names).toHaveLength(alertRules.length)
+    const own = new RegExp(`^(?:${ENGINE_ALERT_NAME_PATTERN})$`)
+    expect(names.filter((name) => !own.test(name))).toEqual([])
   })
 
   it("Grafana dashboard queries name only declared labels", () => {

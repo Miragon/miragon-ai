@@ -56,7 +56,8 @@ second engine dialect cheap:
   client, and app.
 - **Modules are peers.** `mcp-*` packages never import each other. Cross-module
   capabilities are injected by the app — e.g. the camunda7 module's BPMN-XML
-  lookup feeding the analytics heatmap (`SharedResources.fetchBpmnXml`).
+  lookup feeding the analytics heatmap (`SharedResources.fetchBpmnXml`) and its
+  configured engine ids, the only engines analytics reads (`engineIds`).
 - **Modules are self-contained.** Each exports a module definition — config
   schema, env mapping, known env vars, toolset vocabulary, boot warnings,
   plugin factory (`packages/*/src/module.ts`). The app only selects modules

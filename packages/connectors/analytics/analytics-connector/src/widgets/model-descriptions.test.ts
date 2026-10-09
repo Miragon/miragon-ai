@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest"
 import {
+  describeActivityBottlenecks,
   describeEngineLandscape,
+  describeErrorPatterns,
+  describeExecutionPerformance,
+  describeExecutionSummary,
   describeFailureRates,
+  describeFailureSummary,
   describeVersionCompare,
 } from "./model-descriptions.js"
 import type {
+  AnalyticsDashboardData,
   EngineLandscapeEngine,
   EngineLandscapeResult,
   FailureDashboardData,
@@ -92,10 +98,10 @@ const versionKpi = (version: number, over: Partial<VersionCompareKpi> = {}): Ver
   bucket: version === 1 ? "versionA" : "versionB",
   instance_count: 100,
   completed_count: 90,
-  failed_count: null,
-  failure_rate_pct: null,
   incident_count: null,
   incident_rate_pct: null,
+  element_incident_count: null,
+  element_incident_rate_pct: null,
   avg_duration_sec: 10,
   p95_duration_sec: 20,
   ...over,
@@ -103,92 +109,181 @@ const versionKpi = (version: number, over: Partial<VersionCompareKpi> = {}): Ver
 
 const versionCompare = (
   kpis: VersionCompareKpi[],
-  activityId: string | null = null,
+  engines: string[] | null = ["prod-a"],
 ): VersionCompareResult => ({
+  engines,
   processDefinitionKey: "order",
   versionA: 1,
   versionB: 2,
   windowDays: 14,
-  activityId,
   minBucketSize: 10,
   suppressed: false,
   kpis,
   delta: {
-    instance_count_delta_pct: 0,
-    failure_rate_delta_pp: null,
+    started_per_day_delta_pct: 0,
     incident_rate_delta_pp: null,
+    element_incident_rate_delta_pp: null,
     avg_duration_delta_pct: 25,
     p95_duration_delta_pct: null,
   },
   notes: [],
 })
 
+/** Version KPIs once the incident metric carries a version label (#337). */
+const measured = {
+  incident_count: 1,
+  incident_rate_pct: 1,
+} as unknown as Partial<VersionCompareKpi>
+
 describe("describeVersionCompare", () => {
   it("names the measured delta and flags the incident rates as unknown, not zero (#327)", () => {
     const text = describeVersionCompare(versionCompare([versionKpi(1), versionKpi(2)]), {})
 
-    expect(text).toContain("most notable delta: avg duration +25%")
+    expect(text).toContain(
+      'over a 14d window on engine "prod-a": most notable delta: avg duration +25%',
+    )
     expect(text).toContain("not measured per version")
     expect(text).toContain("unknown, not zero")
   })
 
+  it("names every engine of a fleet comparison (K33)", () => {
+    const text = describeVersionCompare(
+      versionCompare([versionKpi(1), versionKpi(2)], ["prod-a", "prod-b"]),
+      {},
+    )
+    expect(text).toContain('across engines "prod-a", "prod-b" (aggregated)')
+  })
+
   it("drops the caveat once the incident rates are measured", () => {
-    const measured = { failure_rate_pct: 1, incident_rate_pct: 1 }
     const text = describeVersionCompare(
       versionCompare([versionKpi(1, measured), versionKpi(2, measured)]),
       {},
     )
     expect(text).not.toContain("not measured per version")
   })
+})
 
-  it("never presents an activityId that scoped nothing as the comparison's scope", () => {
-    const text = describeVersionCompare(
-      versionCompare([versionKpi(1), versionKpi(2)], "Task_check"),
-      {},
-    )
-
-    // The process-wide delta must not read as the element's.
-    expect(text).not.toContain("element Task_check:")
-    expect(text).toContain("over a 14d window: most notable delta: avg duration +25%")
-    expect(text).toContain("activityId Task_check has no effect")
-    expect(text).toContain("every figure covers the whole process")
-  })
-
-  it("scopes only the incident KPIs to the element once they are measured", () => {
-    const measured = { failure_rate_pct: 1, incident_rate_pct: 1 }
-    const text = describeVersionCompare(
-      versionCompare([versionKpi(1, measured), versionKpi(2, measured)], "Task_check"),
-      {},
-    )
-    expect(text).toContain("(incident KPIs scoped to element Task_check)")
-    expect(text).not.toContain("has no effect")
-  })
+const failures = (engines: string[] | null): FailureDashboardData => ({
+  engines,
+  totalIncidents: 6,
+  uniqueErrorPatterns: 1,
+  mostAffectedProcess: "order",
+  errorPatterns: [{ incidentType: "failedJob", processDefinitionKey: "order", incidentCount: 6 }],
+  processBreakdown: [
+    {
+      processDefinitionKey: "order",
+      runningNow: 50,
+      deadJobs: 3,
+      openIncidents: 6,
+      incidentRatePct: 12,
+    },
+  ],
 })
 
 describe("describeFailureRates", () => {
-  const failures: FailureDashboardData = {
-    totalIncidents: 3,
-    uniqueErrorPatterns: 1,
-    mostAffectedProcess: "order",
-    errorPatterns: [],
-    processBreakdown: [
-      {
-        processDefinitionKey: "order",
-        totalInstances: 50,
-        failedCount: 6,
-        incidentCount: 3,
-        failureRatePct: 12,
-      },
-    ],
-  }
+  it("states live open incidents per running instance and routes the regression check (#327)", () => {
+    const text = describeFailureRates(failures(["prod-a"]), {})
 
-  it("routes the regression check to tools that measure failure rates (#327)", () => {
-    const text = describeFailureRates(failures, {})
-
-    expect(text).toContain('highest "order" at 12%')
+    expect(text).toContain('(incidents open right now on engine "prod-a")')
+    expect(text).toContain(
+      'highest rate "order" with 6 open incident(s) on 50 running instance(s) (12%)',
+    )
     expect(text).toContain("analytics_compare_execution_periods")
     expect(text).toContain("analytics_cluster_compare")
-    // Its failure rates are null per version — a wasted call for this question.
+    // Its incident rates are null per version — a wasted call for this question.
     expect(text).not.toContain("analytics_version_compare")
+  })
+})
+
+describe("failure-dashboard scope (N83/N116)", () => {
+  it("names the engines from the data, not from cell props — a self-fetch keeps its label", () => {
+    expect(describeFailureSummary(failures(["prod-a", "prod-b"]), {})).toContain(
+      '(incidents open right now across engines "prod-a", "prod-b" (aggregated))',
+    )
+    // Props claiming another engine never override what the data covers.
+    expect(describeFailureSummary(failures(["prod-a"]), { engine: "prod-b" })).toContain(
+      'on engine "prod-a"',
+    )
+  })
+
+  it("presents only fields the open-incident metric fills (N117)", () => {
+    const text = describeErrorPatterns(failures(["prod-a"]), {})
+    expect(text).toContain('largest: 6 "failedJob" in "order"')
+    expect(text).toContain("no message, activity or timestamps")
+  })
+})
+
+const dashboard = (over: Partial<AnalyticsDashboardData> = {}): AnalyticsDashboardData => ({
+  processDefinitionKey: null,
+  period: "7d",
+  engines: ["prod-a", "prod-b"],
+  totalCount: 40,
+  completedCount: 30,
+  incidentsCreated: 5,
+  incidentsResolved: 2,
+  incidentRatePct: 12.5,
+  avgDurationMs: 60_000,
+  medianDurationMs: 45_000,
+  p95DurationMs: 187_000,
+  runningNow: 156,
+  openIncidentsNow: 12,
+  activityBreakdown: [],
+  definitionBreakdown: [],
+  ...over,
+})
+
+describe("dashboard model descriptions", () => {
+  it("labels the fleet aggregate with its engines and the period it covers (K33)", () => {
+    expect(describeExecutionSummary(dashboard(), {})).toContain(
+      'for 0 process definition(s) over 7d across engines "prod-a", "prod-b" (aggregated)',
+    )
+  })
+
+  it("keeps window flows and the live gauges apart (N77)", () => {
+    const text = describeExecutionSummary(dashboard(), {})
+    expect(text).toContain(
+      "within the period 40 instance(s) started, 30 completed, 5 incident(s) created",
+    )
+    expect(text).toContain("right now 156 running and 12 incident(s) open")
+  })
+
+  it("never reads an unreported gauge or an empty duration window as 0 (N78)", () => {
+    const text = describeExecutionSummary(
+      dashboard({ runningNow: null, openIncidentsNow: null }),
+      {},
+    )
+    expect(text).toContain("not measured running and not measured incident(s) open")
+    const perf = describeExecutionPerformance(
+      dashboard({
+        avgDurationMs: null,
+        medianDurationMs: null,
+        p95DurationMs: null,
+        incidentRatePct: null,
+      }),
+      {},
+    )
+    expect(perf).toContain("(none ended)")
+    expect(perf).toContain("not measured incidents per 100 started instances")
+    expect(perf).not.toMatch(/\b0(ms|s)\b/)
+  })
+
+  it("names the process of the top activity — ids repeat across models (N84)", () => {
+    const text = describeActivityBottlenecks(
+      dashboard({
+        activityBreakdown: [
+          {
+            processDefinitionKey: "invoice",
+            activityId: "StartEvent_1",
+            activityType: "startEvent",
+            executionCount: 9,
+            avgDurationMs: 10,
+            p95DurationMs: 20,
+            totalTimeMs: 90,
+          },
+        ],
+      }),
+      {},
+    )
+    expect(text).toContain('top bottleneck activity StartEvent_1 of process "invoice"')
   })
 })

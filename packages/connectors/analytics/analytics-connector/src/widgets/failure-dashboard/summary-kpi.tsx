@@ -6,7 +6,7 @@ import {
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/analytics-client"
-import { useFailureDashboardSelfFetch } from "./lib.js"
+import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -21,20 +21,23 @@ function buildAnalyzeFailuresPrompt(data: FailureDashboardData): string {
   const errorPatterns = data.errorPatterns
     .map(
       (p) =>
-        `"${p.incidentMessage}" at activity ${p.activityId} in process ${p.processDefinitionKey} (${p.incidentCount}×, first ${p.firstOccurrence}, last ${p.lastOccurrence}, sample instances ${p.sampleInstanceIds.join(", ")})`,
+        `${p.incidentCount} open "${p.incidentType}" incident(s) in process ${p.processDefinitionKey}`,
     )
     .join("; ")
   const processBreakdown = data.processBreakdown
     .map(
       (b) =>
-        `${b.processDefinitionKey}: ${b.failedCount} failed / ${b.totalInstances} total = ${b.failureRatePct}%, ${b.incidentCount} incidents`,
+        `${b.processDefinitionKey}: ${b.openIncidents} open incident(s), ${b.deadJobs} dead job(s), ${b.runningNow} running (${b.incidentRatePct ?? "n/a"} open incidents per 100 running)`,
     )
     .join("; ")
-  return `Triage the current open-incident snapshot from the failure dashboard. There are ${data.totalIncidents} open incidents across ${data.uniqueErrorPatterns} distinct error patterns; the most affected process is \`${data.mostAffectedProcess ?? "unknown"}\`. The top error patterns are: ${errorPatterns}. The per-process failure breakdown is: ${processBreakdown}. Group the patterns by likely common cause, distinguish a broad systemic outage (one cause spanning many processes) from isolated per-process bugs, and give a ranked, prioritized action list (which patterns to fix first and why) using their incidentCount, failureRatePct and recency. Confirm with the live engine state via analytics_find_failed_instances and camunda7_list_incidents before recommending, since this snapshot is point-in-time across all engines. Do not mutate anything — analysis only.`
+  return `Triage the current open-incident snapshot from the failure dashboard. There are ${data.totalIncidents} open incidents in ${data.uniqueErrorPatterns} groups by incident type and process; the most affected process is \`${data.mostAffectedProcess ?? "unknown"}\`. The groups are: ${errorPatterns}. The per-process breakdown is: ${processBreakdown}. The metric carries no incident message, activity or timestamps — read those from the live incidents. Group the incidents by likely common cause, distinguish a broad systemic outage (one cause spanning many processes) from isolated per-process bugs, and give a ranked, prioritized action list (which groups to fix first and why) using their incidentCount and incidentRatePct. Confirm with the live engine state via analytics_find_failed_instances and camunda7_list_incidents before recommending, since this snapshot is point-in-time across all engines. Do not mutate anything — analysis only.`
 }
 
-export function FailureSummaryKpi({ data: initialData }: { data: FailureDashboardData | null }) {
-  const fallbackQuery = useFailureDashboardSelfFetch(initialData)
+export function FailureSummaryKpi({
+  data: initialData,
+  engine,
+}: { data: FailureDashboardData | null } & FailureScopeProps) {
+  const fallbackQuery = useFailureDashboardSelfFetch(initialData, { engine })
   const t = useT()
 
   return (

@@ -40,6 +40,9 @@ afterAll(async () => {
   await new Promise<void>((resolve) => prometheus.close(() => resolve()))
 })
 
+/** A standalone analytics boot names the engines it may read (`engine-ids.ts`). */
+const ENGINES = { ANALYTICS_ENGINE_IDS: "prod-a,prod-b" }
+
 /** Boots the module from env the way the composition root does; returns its tools. */
 function boot(env: NodeJS.ProcessEnv) {
   const tools = new Map<string, ToolCallback>()
@@ -50,7 +53,10 @@ function boot(env: NodeJS.ProcessEnv) {
     use: () => {},
   } as unknown as MCPServer
   const plugin = analyticsModule.createPlugin(
-    { ...analyticsModule.configFromEnv({ PROMETHEUS_URL: url, ...env }), toolset: "read-only" },
+    {
+      ...analyticsModule.configFromEnv({ PROMETHEUS_URL: url, ...ENGINES, ...env }),
+      toolset: "read-only",
+    },
     {},
   )
   plugin.registerTools?.(server)
@@ -104,7 +110,10 @@ describe("Prometheus config reaches the wire", () => {
     } as unknown as MCPServer
     analyticsModule
       .createPlugin(
-        { ...analyticsModule.configFromEnv({ PROMETHEUS_URL: url }), toolset: "read-only" },
+        {
+          ...analyticsModule.configFromEnv({ PROMETHEUS_URL: url, ...ENGINES }),
+          toolset: "read-only",
+        },
         {},
       )
       .registerWidgetTools?.(server)
@@ -114,7 +123,8 @@ describe("Prometheus config reaches the wire", () => {
     // named.
     const args = {
       processDefinitionKey: "order",
-      deploymentTimestamp: "2026-10-01T00:00:00Z",
+      // Relative to now: compare windows are held inside the retention.
+      deploymentTimestamp: new Date(Date.now() - 3 * 86_400_000).toISOString(),
       engineA: "prod-a",
       engineB: "prod-b",
     }

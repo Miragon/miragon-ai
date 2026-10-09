@@ -12,21 +12,22 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 import { AskAiButton, Section, WidgetShell, formatDuration } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
-import { useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
+import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
 
+/**
+ * One row per (process, activity): BPMN ids are only unique within one model,
+ * so the same id in two processes is two rows — the process column says which.
+ */
 export function ActivityBottleneckTable({
   data: initialData,
   processDefinitionKey,
   period,
-}: {
-  data: AnalyticsDashboardData | null
-  processDefinitionKey?: string
-  period?: AnalyticsDashboardPeriod
-}) {
+  engine,
+}: { data: AnalyticsDashboardData | null } & DashboardScopeProps) {
   const t = useT()
-  const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period })
+  const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period, engine })
 
   return (
     <QueryGate
@@ -58,6 +59,7 @@ export function ActivityBottleneckTable({
                 <Table aria-label={t("aBottleneck.tableLabel")}>
                   <TableHeader>
                     <TableRow>
+                      <TableHead scope="col">{t("aBottleneck.colProcess")}</TableHead>
                       <TableHead scope="col">{t("aBottleneck.colActivity")}</TableHead>
                       <TableHead scope="col">{t("aBottleneck.colType")}</TableHead>
                       <TableHead scope="col" className="text-right">
@@ -77,10 +79,11 @@ export function ActivityBottleneckTable({
                   </TableHeader>
                   <TableBody>
                     {data.activityBreakdown.map((act) => (
-                      <TableRow key={act.activityId}>
+                      <TableRow key={`${act.processDefinitionKey}:${act.activityId}`}>
                         <TableCell className="font-mono text-sm">
-                          {act.activityName || act.activityId}
+                          {act.processDefinitionKey}
                         </TableCell>
+                        <TableCell className="font-mono text-sm">{act.activityId}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{act.activityType}</Badge>
                         </TableCell>
@@ -99,7 +102,7 @@ export function ActivityBottleneckTable({
                             variant="icon"
                             label={t("aBottleneck.analyzeLabel")}
                             title={t("aBottleneck.analyzeLabel")}
-                            prompt={`Explain in plain language why activity "${act.activityName || act.activityId}" (id ${act.activityId}, type ${act.activityType})${processDefinitionKey ? ` of process definition key "${processDefinitionKey}"` : " (cluster-wide, all process definitions)"} on the current engine is a bottleneck over the ${period ?? "7d"} window. On-screen for this activity: executionCount=${act.executionCount}, avgDurationMs=${act.avgDurationMs}, p95DurationMs=${act.p95DurationMs}, totalTimeMs=${act.totalTimeMs}. Use analytics_element_bottleneck${processDefinitionKey ? `({processDefinitionKey: "${processDefinitionKey}", period: "${period ?? "7d"}"})` : " for each relevant process definition"} and find activity "${act.activityId}" in its ranking and, if you need process-level context, analytics_analyze_process_performance${processDefinitionKey ? `({processDefinitionKey: "${processDefinitionKey}", period: "${period ?? "7d"}"})` : ""}. Tell me (1) whether the cost is driven by high per-execution duration (avg/p95) or by sheer execution count, (2) whether the wait is most likely wait time (async/external task, job queue, message/timer) vs compute time inside the activity given its type "${act.activityType}", and (3) the single most impactful thing to look at next. Explanation only — do not change anything.`}
+                            prompt={`Explain in plain language why activity "${act.activityId}" (type ${act.activityType}) of process definition key "${act.processDefinitionKey}" on the current engine is a bottleneck over the ${data.period} window. On-screen for this activity: executionCount=${act.executionCount}, avgDurationMs=${act.avgDurationMs}, p95DurationMs=${act.p95DurationMs}, totalTimeMs=${act.totalTimeMs}. Use analytics_element_bottleneck({processDefinitionKey: "${act.processDefinitionKey}", period: "${data.period}"}) and find activity "${act.activityId}" in its ranking and, if you need process-level context, analytics_analyze_process_performance({processDefinitionKey: "${act.processDefinitionKey}", period: "${data.period}"}). Tell me (1) whether the cost is driven by high per-execution duration (avg/p95) or by sheer execution count, (2) whether the wait is most likely wait time (async/external task, job queue, message/timer) vs compute time inside the activity given its type "${act.activityType}", and (3) the single most impactful thing to look at next. Explanation only — do not change anything.`}
                           />
                         </TableCell>
                       </TableRow>

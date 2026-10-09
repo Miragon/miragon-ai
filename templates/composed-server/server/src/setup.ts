@@ -3,7 +3,11 @@ import { createFileSystemDashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import type { MCPServer } from "mcp-use"
 
-import { camunda7Module, createBpmnXmlFetcher } from "@miragon-ai/camunda7-connector"
+import {
+  camunda7Module,
+  configuredEngineIds,
+  createBpmnXmlFetcher,
+} from "@miragon-ai/camunda7-connector"
 import { analyticsModule, type FetchBpmnXml } from "@miragon-ai/analytics-connector"
 import { notesModule } from "@acme/mcp-notes"
 import {
@@ -35,6 +39,13 @@ export interface SharedResources {
    * heatmap. Absent when camunda7 is inactive — consumers degrade gracefully.
    */
   fetchBpmnXml?: FetchBpmnXml
+  /**
+   * The engine ids this server is configured for (camunda7's engines) — the
+   * only engines analytics reads from a Prometheus that may be shared with
+   * other teams. Absent when camunda7 is inactive: analytics then takes
+   * `ANALYTICS_ENGINE_IDS`, else refuses every engine read.
+   */
+  engineIds?: readonly string[]
 }
 
 /**
@@ -131,12 +142,17 @@ function buildSharedResources(
   entries: AppConfigEntry[],
   profileStore: ProfileStore,
 ): SharedResources {
-  // camunda7's BPMN-XML lookup for modules that need diagram XML without an
-  // engine-SDK dependency (the analytics heatmap). Absent when camunda7 is
-  // inactive — consumers degrade gracefully.
+  // From camunda7, for modules without an engine-SDK dependency: the BPMN-XML
+  // lookup (the analytics heatmap) and the configured engine ids (the only
+  // engines analytics reads). Absent when camunda7 is inactive — the heatmap
+  // degrades, analytics falls back to ANALYTICS_ENGINE_IDS, else fails closed.
   const camunda7Entry = entries.find((e) => e.app === camunda7Module.name)
   if (!camunda7Entry) return { profileStore }
-  return { profileStore, fetchBpmnXml: createBpmnXmlFetcher(camunda7Entry.config) }
+  return {
+    profileStore,
+    fetchBpmnXml: createBpmnXmlFetcher(camunda7Entry.config),
+    engineIds: configuredEngineIds(camunda7Entry.config),
+  }
 }
 
 /**

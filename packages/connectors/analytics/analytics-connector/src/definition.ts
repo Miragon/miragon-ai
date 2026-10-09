@@ -3,6 +3,14 @@ import type { AppDefinition } from "@miragon/mcp-toolkit-core"
 import { PERIODS } from "@miragon-ai/analytics-client"
 import { loadDashboardStep, loadFailureDashboardStep } from "./steps/index.js"
 
+/** The self-fetch's engine scope — a configured engine id or several; omitted = all of them. */
+const engineScopeProp = z
+  .union([z.string(), z.array(z.string())])
+  .optional()
+  .describe(
+    "Configured engine id(s) the self-fetch is scoped to. When omitted, every configured engine is aggregated.",
+  )
+
 const dashboardPropsSchema = z.toJSONSchema(
   z.object({
     processDefinitionKey: z
@@ -15,8 +23,11 @@ const dashboardPropsSchema = z.toJSONSchema(
       .enum(PERIODS)
       .optional()
       .describe("Time window for the self-fetch when no upstream pipeline step populates data."),
+    engine: engineScopeProp,
   }),
 )
+
+const failurePropsSchema = z.toJSONSchema(z.object({ engine: engineScopeProp }))
 
 const engineLandscapePropsSchema = z.toJSONSchema(
   z.object({
@@ -24,7 +35,7 @@ const engineLandscapePropsSchema = z.toJSONSchema(
       .union([z.string(), z.array(z.string())])
       .optional()
       .describe(
-        "Engine ids to include in the landscape. Pass all configured ids so engines reporting no metrics stay visible; when omitted, only engines with Prometheus series appear.",
+        "Engine ids to include in the landscape; when omitted, every configured engine (one reporting no metrics shows as not reporting).",
       ),
   }),
 )
@@ -36,7 +47,7 @@ export const definition: AppDefinition = {
     {
       id: "analytics:execution-summary-kpi",
       description:
-        "Top-line execution KPIs (total / completed / running / failed / incidents) over the selected period.",
+        "Top-line KPIs: instances started and completed and incidents created within the period, plus instances running and incidents open right now.",
       requires: [],
       consumes: ["analytics:dashboard"],
       size: "full",
@@ -45,7 +56,7 @@ export const definition: AppDefinition = {
     {
       id: "analytics:execution-performance-kpi",
       description:
-        "Duration KPIs for completed instances (avg, median, p95) over the selected period.",
+        "Duration KPIs of the instances that ended within the period (avg, median, p95) and incidents per 100 started instances.",
       requires: [],
       consumes: ["analytics:dashboard"],
       size: "full",
@@ -54,7 +65,7 @@ export const definition: AppDefinition = {
     {
       id: "analytics:process-definition-breakdown",
       description:
-        "Per-process-definition breakdown of instance counts, failure counts, and average duration.",
+        "Per-process-definition breakdown: instances started and completed and incidents created within the period, instances running now, average duration.",
       requires: [],
       consumes: ["analytics:dashboard"],
       size: "full",
@@ -63,7 +74,7 @@ export const definition: AppDefinition = {
     {
       id: "analytics:activity-bottleneck-table",
       description:
-        "Top activities by total time spent — surfaces bottlenecks across the process landscape.",
+        "Top (process, activity) pairs by total time spent within the period — surfaces bottlenecks across the process landscape.",
       requires: [],
       consumes: ["analytics:dashboard"],
       size: "full",
@@ -72,25 +83,29 @@ export const definition: AppDefinition = {
     {
       id: "analytics:failure-summary-kpi",
       description:
-        "Failure summary KPIs (total incidents, unique error patterns, most affected process).",
+        "Failure summary KPIs right now (open incidents, incident groups by type × process, most affected process).",
       requires: [],
       consumes: ["analytics:failureDashboard"],
       size: "full",
+      propsSchema: failurePropsSchema,
     },
     {
       id: "analytics:error-patterns-table",
       description:
-        "Top incident patterns grouped by incident type + activity + process, with counts.",
+        "The incidents open right now, grouped by incident type and process definition, with counts.",
       requires: [],
       consumes: ["analytics:failureDashboard"],
       size: "full",
+      propsSchema: failurePropsSchema,
     },
     {
       id: "analytics:failure-rate-table",
-      description: "Per-process-definition failure rates (failed / total, incident count, %).",
+      description:
+        "Per-process live failure state: running instances, dead jobs, open incidents and open incidents per 100 running instances.",
       requires: [],
       consumes: ["analytics:failureDashboard"],
       size: "full",
+      propsSchema: failurePropsSchema,
     },
     {
       id: "analytics:cluster-compare",
@@ -103,7 +118,7 @@ export const definition: AppDefinition = {
     {
       id: "analytics:version-compare",
       description:
-        "Side-by-side per-version comparison of KPIs (failure/incident rate, duration) across two process versions.",
+        "Side-by-side per-version comparison of KPIs (starts, durations of the instances that ended; incident rates are not measured per version) across two process versions.",
       requires: [],
       consumes: ["analytics:versionCompare"],
       size: "full",
@@ -111,7 +126,7 @@ export const definition: AppDefinition = {
     {
       id: "analytics:engine-compare",
       description:
-        "Side-by-side comparison of KPIs (failure/incident rate, duration, throughput) for ONE process definition as it runs on two engines (e.g. prod-a vs prod-b). Requires a processDefinitionKey — see analytics:engine-landscape for which definitions qualify.",
+        "Side-by-side comparison of KPIs (starts, incident rate, durations of the instances that ended) for ONE process definition as it runs on two engines (e.g. prod-a vs prod-b). Requires a processDefinitionKey — see analytics:engine-landscape for which definitions qualify.",
       requires: [],
       consumes: ["analytics:engineCompare"],
       size: "full",

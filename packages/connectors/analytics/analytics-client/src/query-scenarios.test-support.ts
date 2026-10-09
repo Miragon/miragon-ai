@@ -57,6 +57,13 @@ export function recordingClient(
 export type Scenario = (ch: PrometheusClient) => Promise<unknown>
 
 /**
+ * ISO timestamp `days` before now (whole days, at call time — so a guard that
+ * pins the clock sees windows relative to ITS now). Scenario windows must sit
+ * inside the retention or the query refuses them.
+ */
+export const isoDaysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString()
+
+/**
  * Representative argument sets for EVERY exported query function — typed as a
  * total map over the `queries` namespace, so a new export without a scenario
  * fails `pnpm typecheck` (and the runtime check in each guard). Between them
@@ -78,10 +85,10 @@ export const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
     (ch) =>
       queries.comparePeriods(ch, {
         processDefinitionKey: "invoice",
-        periodAFrom: "2026-09-01T00:00:00Z",
-        periodATo: "2026-09-08T00:00:00Z",
-        periodBFrom: "2026-09-08T00:00:00Z",
-        periodBTo: "2026-09-15T00:00:00Z",
+        periodAFrom: isoDaysAgo(14),
+        periodATo: isoDaysAgo(7),
+        periodBFrom: isoDaysAgo(7),
+        periodBTo: isoDaysAgo(0),
         includeActivityBreakdown: true,
         engine: ["prod-a", "prod-b"],
       }),
@@ -114,15 +121,16 @@ export const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
       queries.clusterCompare(ch, {
         processDefinitionKey: "invoice",
         activityId: "Task_check",
-        deploymentTimestamp: "2026-09-08T00:00:00Z",
+        deploymentTimestamp: isoDaysAgo(10),
         windowBeforeDays: 7,
         windowAfterDays: 7,
         minBucketSize: 1,
         engine: "prod-a",
       }),
+    // A recent deployment: the post-deploy window reaches past now.
     (ch) =>
       queries.clusterCompare(ch, {
-        deploymentTimestamp: "2026-09-08T00:00:00Z",
+        deploymentTimestamp: isoDaysAgo(2),
         windowBeforeDays: 7,
         windowAfterDays: 7,
         minBucketSize: 1,
@@ -135,7 +143,6 @@ export const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
         versionA: 1,
         versionB: 2,
         windowDays: 14,
-        activityId: "Task_check",
         minBucketSize: 1,
         engine: ["prod-a", "prod-b"],
       }),
@@ -163,6 +170,7 @@ export const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
   engineHealth: [
     (ch) => queries.engineHealth(ch, {}),
     (ch) => queries.engineHealth(ch, { engine: "prod-a" }),
+    (ch) => queries.engineHealth(ch, { engine: ["prod-a", "prod-b"], includeFleetAlerts: true }),
   ],
 }
 

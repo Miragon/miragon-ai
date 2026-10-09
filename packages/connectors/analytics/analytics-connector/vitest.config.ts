@@ -17,7 +17,10 @@ export default mergeConfig(
         // helpers under test (measured statements 43.62 / branches 22.13 /
         // functions 40.8 / lines 45.32), and with the Prometheus config +
         // ctx.signal sweep over every widget tool (43.32 / 16.15 / 32.35 / 45.12).
-        thresholds: { statements: 41, branches: 20, functions: 38, lines: 43 },
+        // Raised 2026-10-10 with the engine-scope sweep over every
+        // Prometheus-reading tool and the model-description/summary guards
+        // (#336; measured 61.89 / 36.97 / 60.48 / 62.76).
+        thresholds: { statements: 59, branches: 34, functions: 58, lines: 60 },
       },
     },
   }),

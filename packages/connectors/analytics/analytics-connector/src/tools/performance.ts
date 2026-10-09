@@ -3,20 +3,25 @@ import { schemas, queries } from "@miragon-ai/analytics-client"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { ProfileSource } from "../server-locale.js"
 import { optionalPeriod, settingsFor } from "../settings.js"
+import { withEngineScope, type AnalyticsEngineScope } from "../engine-ids.js"
 
 type Register = ReturnType<typeof createToolRegistrar<PrometheusClient>>
 
-export function registerPerformanceTools(register: Register, profileStore?: ProfileSource) {
+export function registerPerformanceTools(
+  register: Register,
+  engineScope: AnalyticsEngineScope,
+  profileStore?: ProfileSource,
+) {
   register({
     name: "analytics_analyze_process_performance",
     category: "analytics",
     description:
-      "Analyze process performance from metrics: throughput, P50/P95 duration, incident-based failure rate, and per-activity breakdown over a rolling window.",
+      "Analyze process performance from metrics over a rolling window: starts, completions, incidents created (incidents, not failed instances) per 100 starts, P50/P95 duration of the instances that ENDED in the window (null when none did), and a per-activity breakdown.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...schemas.analyzePerformanceInput.shape, period: optionalPeriod },
     handler: async (ch, args, ctx) =>
       queries.analyzePerformance(ch, {
-        ...args,
+        ...withEngineScope(engineScope, args),
         period: args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod,
       }),
   })
@@ -25,9 +30,9 @@ export function registerPerformanceTools(register: Register, profileStore?: Prof
     name: "analytics_compare_execution_periods",
     category: "analytics",
     description:
-      "Compare process execution metrics between two time periods (before/after deployment, regression analysis). Uses PromQL historical windows — both periods must fall within Prometheus retention.",
+      "Compare process execution metrics between two explicit time windows (before/after a change, regression analysis), using PromQL historical windows. Windows are clamped to now and the 30-day retention and reported as measured (`partial` when cut short); a reversed or wholly out-of-range window is refused. Compare windows of different length by started_per_day.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: schemas.comparePeriodsInput.shape,
-    handler: async (ch, args) => queries.comparePeriods(ch, args),
+    handler: async (ch, args) => queries.comparePeriods(ch, withEngineScope(engineScope, args)),
   })
 }

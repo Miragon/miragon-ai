@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import type { PrometheusClient, VersionCompareResult } from "@miragon-ai/analytics-client"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
+import { createEngineScope } from "../engine-ids.js"
 import { registerVersionCompareTools } from "./version-compare.js"
 
 type Config = ToolConfig<PrometheusClient>
@@ -11,7 +12,7 @@ function captureConfig(): Config {
   const register = Object.assign((config: Config) => configs.push(config), {
     getRegisteredTools: (): RegisteredToolMeta[] => [],
   })
-  registerVersionCompareTools(register as never)
+  registerVersionCompareTools(register as never, createEngineScope(["prod-a"]))
   expect(configs.map((c) => c.name)).toEqual(["analytics_version_compare"])
   return configs[0]
 }
@@ -49,14 +50,14 @@ describe("analytics_version_compare", () => {
     for (const kpi of res.kpis) {
       expect(kpi).toMatchObject({
         instance_count: 20,
-        failed_count: null,
-        failure_rate_pct: null,
         incident_count: null,
         incident_rate_pct: null,
+        element_incident_count: null,
+        element_incident_rate_pct: null,
       })
     }
-    expect(res.delta.failure_rate_delta_pp).toBeNull()
     expect(res.delta.incident_rate_delta_pp).toBeNull()
+    expect(res.delta.element_incident_rate_delta_pp).toBeNull()
     expect(res.notes.join(" ")).toContain("NOT zero")
   })
 

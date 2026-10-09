@@ -14,21 +14,32 @@ import {
 import {
   AskAiButton,
   CountPill,
-  LogText,
   Section,
   TableEmptyState,
   TableSkeleton,
   WidgetShell,
-  formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
-import type { FailureDashboardData } from "@miragon-ai/analytics-client"
-import { useFailureDashboardSelfFetch } from "./lib.js"
+import type { ErrorPatternItem, FailureDashboardData } from "@miragon-ai/analytics-client"
+import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
 
-export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboardData | null }) {
+/**
+ * The per-group Ask-AI prompt. The open-incident gauge carries only the
+ * incident type and the process — the message and the failing activity come
+ * from the live incidents, so the prompt names no field the data cannot fill.
+ */
+export function errorPatternAskAiPrompt(pattern: ErrorPatternItem): string {
+  const { incidentType, processDefinitionKey: key, incidentCount } = pattern
+  return `Root-cause this group of open CIB Seven incidents on the current engine: ${incidentCount} open "${incidentType}" incident(s) in process definition "${key}". The metric carries no incident message, activity or timestamps, so read them from the live incidents with camunda7_list_incidents({ processDefinitionKey: "${key}", incidentType: "${incidentType}" }), then inspect the history of the activity they fail at via camunda7_query_historic_activity_instances. Tell me the likely root cause, whether this is transient (e.g. a retryable/timing/external dependency blip) or systemic (a code/config/data defect), and the recommended fix. Explanation only — do not change anything.`
+}
+
+export function ErrorPatternsTable({
+  data: initialData,
+  engine,
+}: { data: FailureDashboardData | null } & FailureScopeProps) {
   const t = useT()
-  const fallbackQuery = useFailureDashboardSelfFetch(initialData)
+  const fallbackQuery = useFailureDashboardSelfFetch(initialData, { engine })
   return (
     <QueryGate initialData={initialData} query={fallbackQuery} skeleton={<TableSkeleton />}>
       {(data) => {
@@ -65,14 +76,11 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
                 <Table aria-label={t("aErrorPatterns.tableAriaLabel")}>
                   <TableHeader>
                     <TableRow>
-                      <TableHead scope="col">{t("aErrorPatterns.columnError")}</TableHead>
-                      <TableHead scope="col">{t("aErrorPatterns.columnActivity")}</TableHead>
+                      <TableHead scope="col">{t("aErrorPatterns.columnIncidentType")}</TableHead>
                       <TableHead scope="col">{t("aErrorPatterns.columnProcess")}</TableHead>
                       <TableHead scope="col" className="text-right">
                         {t("aErrorPatterns.columnCount")}
                       </TableHead>
-                      <TableHead scope="col">{t("aErrorPatterns.columnFirstSeen")}</TableHead>
-                      <TableHead scope="col">{t("aErrorPatterns.columnLastSeen")}</TableHead>
                       <TableHead scope="col" className="text-right">
                         <span className="sr-only">{t("aErrorPatterns.columnAi")}</span>
                       </TableHead>
@@ -80,40 +88,20 @@ export function ErrorPatternsTable({ data: initialData }: { data: FailureDashboa
                   </TableHeader>
                   <TableBody>
                     {data.errorPatterns.map((pattern) => (
-                      // Identity-keyed so LogText's uncontrolled <details> never
-                      // keeps its open state across a refetch reorder (another
-                      // row's stack trace would show as "open").
-                      <TableRow
-                        key={`${pattern.processDefinitionKey}:${pattern.activityId}:${pattern.incidentMessage}`}
-                      >
-                        <TableCell className="max-w-xs">
-                          <LogText text={pattern.incidentMessage} />
-                          {pattern.sampleInstanceIds.length > 0 && (
-                            <div className="text-muted-foreground mt-1 text-xs">
-                              {t("aErrorPatterns.sampleIdsLabel")}{" "}
-                              {pattern.sampleInstanceIds.map((id) => id.slice(0, 8)).join(", ")}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{pattern.activityId}</TableCell>
+                      <TableRow key={`${pattern.processDefinitionKey}:${pattern.incidentType}`}>
+                        <TableCell className="font-mono text-sm">{pattern.incidentType}</TableCell>
                         <TableCell className="font-mono text-sm">
                           {pattern.processDefinitionKey}
                         </TableCell>
                         <TableCell className="text-right">
                           <CountPill tone="critical">{pattern.incidentCount}</CountPill>
                         </TableCell>
-                        <TableCell className="text-muted-foreground font-mono text-xs">
-                          {formatTimestamp(pattern.firstOccurrence)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground font-mono text-xs">
-                          {formatTimestamp(pattern.lastOccurrence)}
-                        </TableCell>
                         <TableCell className="text-right">
                           <AskAiButton
                             variant="icon"
                             title={t("aErrorPatterns.analyzeLabel")}
                             label={t("aErrorPatterns.analyzeLabel")}
-                            prompt={`Root-cause this CIB Seven error pattern across the fleet on the current engine. The pattern is incident message "${pattern.incidentMessage}" at activity "${pattern.activityId || "(unknown activity)"}" in process definition "${pattern.processDefinitionKey}", with ${pattern.incidentCount} incident(s) first seen ${pattern.firstOccurrence} and last seen ${pattern.lastOccurrence}${pattern.sampleInstanceIds.length > 0 ? `, sample instance ids ${pattern.sampleInstanceIds.join(", ")}` : ""}. Pull the open incident patterns with analytics_find_failed_instances({ processDefinitionKey: "${pattern.processDefinitionKey}" }) and the live incidents with camunda7_list_incidents({ processDefinitionKey: "${pattern.processDefinitionKey}"${pattern.activityId ? `, activityId: "${pattern.activityId}"` : ""} }), then inspect the failing activity history via camunda7_query_historic_activity_instances for activity "${pattern.activityId || pattern.processDefinitionKey}". Tell me the likely root cause, whether this is transient (e.g. a retryable/timing/external dependency blip) or systemic (a code/config/data defect), and the recommended fix. Explanation only — do not change anything.`}
+                            prompt={errorPatternAskAiPrompt(pattern)}
                           />
                         </TableCell>
                       </TableRow>

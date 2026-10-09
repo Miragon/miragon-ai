@@ -7,6 +7,7 @@ import { registerWidgetTools, type FetchBpmnXml } from "./widget-tools.js"
 import { definition } from "./definition.js"
 import type { ProfileSource } from "./server-locale.js"
 import { analyticsToolsets } from "./toolsets.js"
+import { createEngineScope } from "./engine-ids.js"
 
 /**
  * `PrometheusConfig` carries the connection: the base URL (e.g.
@@ -37,6 +38,12 @@ export interface AnalyticsPluginConfig extends PrometheusConfig {
    * resolved fail-closed here.
    */
   toolset?: string
+  /**
+   * The engine ids analytics may read — the server's configured engines.
+   * Empty or absent: every engine-reading tool refuses (fail-closed), see
+   * `engine-ids.ts`.
+   */
+  engineIds?: readonly string[]
 }
 
 export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer> {
@@ -48,16 +55,18 @@ export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer
     headers: config.headers,
     timeoutMs: config.timeoutMs,
   })
+  const engineScope = createEngineScope(config.engineIds)
   return {
     definition,
-    appConfig: { client },
+    appConfig: { client, engineScope },
     // Every caller-dependent read (saved defaults, summary locale) resolves
     // from the handler ctx — this module needs no ambient request context.
-    registerTools: (server) => registerTools(server, client, config.profileStore),
+    registerTools: (server) => registerTools(server, client, engineScope, config.profileStore),
     registerWidgetTools: (server) => {
       registerWidgetTools(server, client, {
         fetchBpmnXml: config.fetchBpmnXml,
         profileStore: config.profileStore,
+        engineScope,
       })
       registerSettingsTools(server, config.profileStore, analyticsToolsets.resolve(config.toolset))
     },

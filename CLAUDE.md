@@ -259,91 +259,93 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    read-only floor; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
    app's `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
    only declares the module list and wires `SharedResources` (profile store +
-   `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap;
-   analytics has NO engine-SDK dependency). Apps own no domain UI: widget catalogues and
-   components live in packages — and no boot plumbing either. The bundle root's provider
-   stack (`AppShellProviders`: theme → host bridge → display mode → `ProfileGate` →
-   host widget registry; order is load-bearing) plus `LocalizedAppView` live in
-   `@miragon-ai/widget-shell/widgets`, and the whole server boot lives in `/server`:
-   `createComposedServer` owns the ORDER (env-typo warnings + HTTP edge policy + the
-   OAuth/`MCP_URL` check → ONE `resolveBoot`, authenticated exactly when the root hands
-   in an OAuth provider → boot log → the root's `setup(boot)` (plugins, persistence) →
-   `createFrameworkApp` with `serverInfo` (version from the root's `package.json`, title,
-   `instructions`) → request context → `installToolCallLogging` →
-   `swallowDevCliViewsPrime` → `installMetrics` (labels bounded by construction: tool
-   catalogue + known routes, never users/sessions/arguments; optional
-   `MCP_METRICS_TOKEN` bearer) → `installHttpEdgeGuard` → `installHealthEndpoints`
-   (readiness probes the server's OWN dependencies only, never engines or Prometheus;
-   503 `draining` during shutdown) — metrics first, hono only counts routes registered
-   after its middleware) and its `listen()` serves production through
-   `createBodyLimitedListener` (mcp-use's public `toNodeHandler` behind the
-   `MCP_MAX_BODY_BYTES` cap — 413 before buffering — an in-flight body budget of 4× the
-   cap — 503 — and a 30 s request timeout; a request the guard refuses is never read,
-   both decide by the one `edgeRejection`) with the graceful drain (stop accepting →
-   in-flight finish, bounded, readiness 503 `draining` → `app.close()` → the root's
-   `runtime.shutdown()`). The edge (`resolveHttpEdgePolicy`) is DNS-rebinding protection:
-   Host on every request, Origin on non-GET requests that carry one, admitted only when
-   localhost-class, `MCP_URL`'s or in `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` —
-   `/health*` and `/metrics` are exempt (probes and scrapers address a container by IP);
-   never swap it for mcp-use's `allowedHosts`, which guards those too. Each app owns ONE
-   `createApp(env, deps?)` (`src/app.ts`: its OAuth decision, persistence, plugins) that
-   `src/index.ts` (production and `mcp-use dev`, which owns the socket — no cap, no drain —
-   and the Host check: the guard defers that half to the CLI, which admits its tunnel host)
-   AND the e2e suites boot — never a test-only re-implementation of the boot — so
-   `src/ui/main.tsx` and `src/index.ts` stay composition (registry, profile-feed name,
-   app-specific layers like `Camunda7StandaloneShell`) and a toolkit/mcp-use migration
-   lands once instead of in every composed-server fork.
-   Cross-module UI is tiered: `shell:*` widgets via
-   `props.dataKey`; raw tool-name strings with graceful degradation (reference:
-   `process-incidents/flow.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
-   dedicated package created with the first real view — never in the app, never as
-   module-to-module imports. The host bundle is static — `MCP_ACTIVE_MODULES` changes only
-   the server's tool surface — so a widget-registry lookup cannot tell a runtime-INACTIVE
-   module; a surface that only makes sense with another module probes one of its cheap
-   feeds (reference: `useAnalyticsActive` → `analytics_settings_data`, gating camunda7's
-   cross-engine view) and appears once confirmed. Graceful degradation hides a stale raw
-   name at runtime, so `apps/mcp-server-camunda7/test/tool-name-refs.test.ts` checks every
-   `<module>_…` string literal in app and package sources (incl. the composition root's
-   hardcoded profile feed) against the full booted tool surface.
-   The settings page follows the same tiers: each module
-   owns its settings section (widget + `*_data` feed + save tool; reference:
-   `analytics:settings` + `analytics-connector/src/settings-tools.ts` — the save tool honors
-   `analytics:read-only`), its slice persists under `profile.modules.<module>`
-   (validated fail-soft by the owning module — camunda7's save tool deliberately
-   excludes `modules`), and composed views reference foreign section widgets by raw
-   id — resolved through `HostWidgetsProvider` (host root) and dropped by
-   `filterLayoutToWidgets` when unresolvable, so a missing module's section disappears
-   instead of erroring. The settings LAYOUT is not hand-maintained: `settingsLayout`
-   (`camunda7-connector/src/widgets/cockpit-app/views.ts`) assembles the page from the
-   HOST's widget registry — camunda7's own `camunda7:user-profile` panel first, then one
-   row per `<module>:settings` id in registration order — so a custom module in a
-   composed server contributes its section without an edit in the camunda7 package.
-   The convention (`<module>:settings`) is therefore load-bearing, and the failure mode
-   stays silent (a section whose widget never reaches the host registry is simply
-   absent), so `apps/mcp-server-camunda7/test/widget-registry.test.ts` asserts the
-   assembled layout against both module catalogues (the template test does the same for
-   its modules). Save-input schemas at tool
-   boundaries must be default-FREE (zod 4 re-applies `.default()`s through `.partial()`,
-   materializing omitted fields into silent resets — derive them with `withoutDefaults`
-   from `@miragon-ai/widget-shell/server`; see
-   `userProfileToolSaveInput`/`analyticsSettingsSaveInput`). A durable write registered
-   outside the tool registrar gates itself against the module's declared toolset names
-   (`allowsDurableWrites` in `analytics-connector/src/toolsets.ts`, `isToolInToolset` in
-   camunda7) — never an ad-hoc `toolset === "read-only"` compare, which fails open for
-   every other name, and never a `toolset === undefined` shortcut either: an absent
-   toolset no longer means "everything", the vocabulary resolves it to the read-only
-   floor — and carries that same decision into its view as `canSave`, so the
-   section renders disabled fields instead of a Save button whose click would resolve to
-   an unknown tool. In-widget engine writes follow the same rule: every tool a widget
-   mutates is listed in `CAMUNDA7_WIDGET_ACTIONS` (`tool-names.ts`) and its button renders
-   only when `useCanRun()` allows it (fed by `camunda7_widget_actions_data` →
-   `allowedWidgetActions`) — hidden, not disabled; `src/widget-actions.test.ts` fails on
-   an unlisted in-widget write. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
-   per-engine runtime config (`flavor` → `EngineProvider` in
-   `packages/connectors/camunda/camunda7-connector/src/providers/` — the port holds ONLY real differences:
-   cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)
-   would be a new module + client + app. Extract shared packages on the second concrete
-   consumer, never speculatively.
+   `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap —
+   - `engineIds`, camunda7's configured engines: the ONLY engines analytics reads, else
+     `ANALYTICS_ENGINE_IDS`, else every analytics tool refuses; analytics has NO
+     engine-SDK dependency). Apps own no domain UI: widget catalogues and
+     components live in packages — and no boot plumbing either. The bundle root's provider
+     stack (`AppShellProviders`: theme → host bridge → display mode → `ProfileGate` →
+     host widget registry; order is load-bearing) plus `LocalizedAppView` live in
+     `@miragon-ai/widget-shell/widgets`, and the whole server boot lives in `/server`:
+     `createComposedServer` owns the ORDER (env-typo warnings + HTTP edge policy + the
+     OAuth/`MCP_URL` check → ONE `resolveBoot`, authenticated exactly when the root hands
+     in an OAuth provider → boot log → the root's `setup(boot)` (plugins, persistence) →
+     `createFrameworkApp` with `serverInfo` (version from the root's `package.json`, title,
+     `instructions`) → request context → `installToolCallLogging` →
+     `swallowDevCliViewsPrime` → `installMetrics` (labels bounded by construction: tool
+     catalogue + known routes, never users/sessions/arguments; optional
+     `MCP_METRICS_TOKEN` bearer) → `installHttpEdgeGuard` → `installHealthEndpoints`
+     (readiness probes the server's OWN dependencies only, never engines or Prometheus;
+     503 `draining` during shutdown) — metrics first, hono only counts routes registered
+     after its middleware) and its `listen()` serves production through
+     `createBodyLimitedListener` (mcp-use's public `toNodeHandler` behind the
+     `MCP_MAX_BODY_BYTES` cap — 413 before buffering — an in-flight body budget of 4× the
+     cap — 503 — and a 30 s request timeout; a request the guard refuses is never read,
+     both decide by the one `edgeRejection`) with the graceful drain (stop accepting →
+     in-flight finish, bounded, readiness 503 `draining` → `app.close()` → the root's
+     `runtime.shutdown()`). The edge (`resolveHttpEdgePolicy`) is DNS-rebinding protection:
+     Host on every request, Origin on non-GET requests that carry one, admitted only when
+     localhost-class, `MCP_URL`'s or in `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` —
+     `/health*` and `/metrics` are exempt (probes and scrapers address a container by IP);
+     never swap it for mcp-use's `allowedHosts`, which guards those too. Each app owns ONE
+     `createApp(env, deps?)` (`src/app.ts`: its OAuth decision, persistence, plugins) that
+     `src/index.ts` (production and `mcp-use dev`, which owns the socket — no cap, no drain —
+     and the Host check: the guard defers that half to the CLI, which admits its tunnel host)
+     AND the e2e suites boot — never a test-only re-implementation of the boot — so
+     `src/ui/main.tsx` and `src/index.ts` stay composition (registry, profile-feed name,
+     app-specific layers like `Camunda7StandaloneShell`) and a toolkit/mcp-use migration
+     lands once instead of in every composed-server fork.
+     Cross-module UI is tiered: `shell:*` widgets via
+     `props.dataKey`; raw tool-name strings with graceful degradation (reference:
+     `process-incidents/flow.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
+     dedicated package created with the first real view — never in the app, never as
+     module-to-module imports. The host bundle is static — `MCP_ACTIVE_MODULES` changes only
+     the server's tool surface — so a widget-registry lookup cannot tell a runtime-INACTIVE
+     module; a surface that only makes sense with another module probes one of its cheap
+     feeds (reference: `useAnalyticsActive` → `analytics_settings_data`, gating camunda7's
+     cross-engine view) and appears once confirmed. Graceful degradation hides a stale raw
+     name at runtime, so `apps/mcp-server-camunda7/test/tool-name-refs.test.ts` checks every
+     `<module>_…` string literal in app and package sources (incl. the composition root's
+     hardcoded profile feed) against the full booted tool surface.
+     The settings page follows the same tiers: each module
+     owns its settings section (widget + `*_data` feed + save tool; reference:
+     `analytics:settings` + `analytics-connector/src/settings-tools.ts` — the save tool honors
+     `analytics:read-only`), its slice persists under `profile.modules.<module>`
+     (validated fail-soft by the owning module — camunda7's save tool deliberately
+     excludes `modules`), and composed views reference foreign section widgets by raw
+     id — resolved through `HostWidgetsProvider` (host root) and dropped by
+     `filterLayoutToWidgets` when unresolvable, so a missing module's section disappears
+     instead of erroring. The settings LAYOUT is not hand-maintained: `settingsLayout`
+     (`camunda7-connector/src/widgets/cockpit-app/views.ts`) assembles the page from the
+     HOST's widget registry — camunda7's own `camunda7:user-profile` panel first, then one
+     row per `<module>:settings` id in registration order — so a custom module in a
+     composed server contributes its section without an edit in the camunda7 package.
+     The convention (`<module>:settings`) is therefore load-bearing, and the failure mode
+     stays silent (a section whose widget never reaches the host registry is simply
+     absent), so `apps/mcp-server-camunda7/test/widget-registry.test.ts` asserts the
+     assembled layout against both module catalogues (the template test does the same for
+     its modules). Save-input schemas at tool
+     boundaries must be default-FREE (zod 4 re-applies `.default()`s through `.partial()`,
+     materializing omitted fields into silent resets — derive them with `withoutDefaults`
+     from `@miragon-ai/widget-shell/server`; see
+     `userProfileToolSaveInput`/`analyticsSettingsSaveInput`). A durable write registered
+     outside the tool registrar gates itself against the module's declared toolset names
+     (`allowsDurableWrites` in `analytics-connector/src/toolsets.ts`, `isToolInToolset` in
+     camunda7) — never an ad-hoc `toolset === "read-only"` compare, which fails open for
+     every other name, and never a `toolset === undefined` shortcut either: an absent
+     toolset no longer means "everything", the vocabulary resolves it to the read-only
+     floor — and carries that same decision into its view as `canSave`, so the
+     section renders disabled fields instead of a Save button whose click would resolve to
+     an unknown tool. In-widget engine writes follow the same rule: every tool a widget
+     mutates is listed in `CAMUNDA7_WIDGET_ACTIONS` (`tool-names.ts`) and its button renders
+     only when `useCanRun()` allows it (fed by `camunda7_widget_actions_data` →
+     `allowedWidgetActions`) — hidden, not disabled; `src/widget-actions.test.ts` fails on
+     an unlisted in-widget write. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
+     per-engine runtime config (`flavor` → `EngineProvider` in
+     `packages/connectors/camunda/camunda7-connector/src/providers/` — the port holds ONLY real differences:
+     cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)
+     would be a new module + client + app. Extract shared packages on the second concrete
+     consumer, never speculatively.
 
 ## Contracts
 

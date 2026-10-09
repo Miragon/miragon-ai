@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import {
-  VERSION_ACTIVITY_SCOPE_NOTE,
-  VERSION_INCIDENT_KPIS_NOTE,
-  versionCompare,
-} from "./version-compare.js"
+import { VERSION_INCIDENT_KPIS_NOTE, versionCompare } from "./version-compare.js"
 import type { PrometheusClient, PromSample } from "../prometheus.js"
 
 const v = (value: number): PromSample => ({ metric: {}, value })
@@ -67,10 +63,10 @@ describe("versionCompare", () => {
         bucket: "versionA",
         instance_count: 100,
         completed_count: 80,
-        failed_count: null,
-        failure_rate_pct: null,
         incident_count: null,
         incident_rate_pct: null,
+        element_incident_count: null,
+        element_incident_rate_pct: null,
         avg_duration_sec: 10,
         p95_duration_sec: 20,
       },
@@ -79,18 +75,18 @@ describe("versionCompare", () => {
         bucket: "versionB",
         instance_count: 50,
         completed_count: 40,
-        failed_count: null,
-        failure_rate_pct: null,
         incident_count: null,
         incident_rate_pct: null,
+        element_incident_count: null,
+        element_incident_rate_pct: null,
         avg_duration_sec: 12.1,
         p95_duration_sec: 30,
       },
     ])
     expect(res.delta).toEqual({
-      instance_count_delta_pct: -50,
-      failure_rate_delta_pp: null,
+      started_per_day_delta_pct: -50,
       incident_rate_delta_pp: null,
+      element_incident_rate_delta_pp: null,
       avg_duration_delta_pct: 21,
       p95_duration_delta_pct: 50,
     })
@@ -98,7 +94,7 @@ describe("versionCompare", () => {
     // The note is what a model reads next to the nulls: it must name every
     // nulled field and say why, and that they are unknown rather than zero.
     expect(VERSION_INCIDENT_KPIS_NOTE).toContain(
-      "failed_count, failure_rate_pct, incident_count, incident_rate_pct and their deltas are null",
+      "incident_count, incident_rate_pct and the incident-rate deltas are null",
     )
     expect(VERSION_INCIDENT_KPIS_NOTE).toContain("NOT zero")
     expect(VERSION_INCIDENT_KPIS_NOTE).toContain("no process_definition_version label")
@@ -106,30 +102,28 @@ describe("versionCompare", () => {
     expect(VERSION_INCIDENT_KPIS_NOTE).toContain("per process definition key only")
   })
 
-  it("echoes the request and explains that activityId scopes nothing", async () => {
+  it("echoes the request and has no element scope (an element only ever narrowed incidents)", async () => {
     const { ch } = mockClient(versions)
-    const res = await versionCompare(ch, { ...base, activityId: "Task_check" })
+    const res = await versionCompare(ch, base)
 
     expect(res).toMatchObject({
       processDefinitionKey: "order",
       versionA: 1,
       versionB: 2,
       windowDays: 14,
-      activityId: "Task_check",
       minBucketSize: 10,
       suppressed: false,
     })
-    expect(res.notes).toEqual([VERSION_INCIDENT_KPIS_NOTE, VERSION_ACTIVITY_SCOPE_NOTE])
-    expect(VERSION_ACTIVITY_SCOPE_NOTE).toContain("activityId has no effect")
-    expect((await versionCompare(ch, base)).activityId).toBeNull()
+    expect(res).not.toHaveProperty("activityId")
   })
 
   it("returns null deltas on a zero baseline instead of dividing by zero", async () => {
     const { ch } = mockClient({ "2": versions["2"] })
     const res = await versionCompare(ch, { ...base, minBucketSize: 1 })
 
-    expect(res.kpis[0]).toMatchObject({ instance_count: 0, avg_duration_sec: 0 })
-    expect(res.delta.instance_count_delta_pct).toBeNull()
+    // No series for v1 at all: unmeasured, never a 0 s duration.
+    expect(res.kpis[0]).toMatchObject({ instance_count: 0, avg_duration_sec: null })
+    expect(res.delta.started_per_day_delta_pct).toBeNull()
     expect(res.delta.avg_duration_delta_pct).toBeNull()
     expect(res.delta.p95_duration_delta_pct).toBeNull()
     expect(res.suppressed).toBe(true)
@@ -140,7 +134,7 @@ describe("versionCompare", () => {
     [{ "1": 49, "2": 50 }, 50, true],
     [{ "1": 50, "2": 49 }, 50, true],
   ])("suppresses below minBucketSize per version (%j, min %i)", async (counts, min, expected) => {
-    const canned = (started: number) => ({ started, completed: 0, avg: 1, p95: 1 })
+    const canned = (started: number) => ({ started, completed: started, avg: 1, p95: 1 })
     const { ch } = mockClient({ "1": canned(counts["1"]), "2": canned(counts["2"]) })
     const res = await versionCompare(ch, { ...base, minBucketSize: min })
     expect(res.suppressed).toBe(expected)

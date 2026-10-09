@@ -1,4 +1,5 @@
 import {
+  engineIdsOf,
   engineMatcher,
   escapeLabelValue,
   selector,
@@ -7,53 +8,85 @@ import {
   type PrometheusClient,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
-import { byLabel, first, kpiQueries, parseIsoSeconds, round1 } from "./helpers.js"
+import {
+  byLabel,
+  first,
+  firstOrNull,
+  kpiQueries,
+  parseIsoSeconds,
+  ratePct,
+  round1,
+  round1OrNull,
+} from "./helpers.js"
+import { clampWindow, daysOf, isoOf, nowSeconds, rangeAt, type ClampedWindow } from "./windows.js"
 
 export interface PerformanceKPI {
   process_definition_key: string
+  /** Instances started in the window. */
   total_instances: number
+  /** Instances that ended with state COMPLETED in the window. */
   completed: number
-  failed: number
-  failure_rate_pct: number
-  avg_duration_sec: number
-  median_duration_sec: number
-  p95_duration_sec: number
-  earliest: string
-  latest: string
+  /** Incidents created in the window — incidents, not failed instances. */
+  incident_count: number
+  /** `incident_count` per 100 started instances (may exceed 100); null when nothing started. */
+  incident_rate_pct: number | null
+  /** Durations of the instances that ENDED in the window; null when none did. */
+  avg_duration_sec: number | null
+  median_duration_sec: number | null
+  p95_duration_sec: number | null
 }
 
 export interface ActivityBreakdownRow {
   activity_id: string
-  activity_name: string | null
+  /** Not a metric label — resolve names from the BPMN. Always null. */
+  activity_name: null
   activity_type: string
   execution_count: number
-  avg_duration_sec: number
-  median_duration_sec: number
-  p95_duration_sec: number
+  avg_duration_sec: number | null
+  median_duration_sec: number | null
+  p95_duration_sec: number | null
   total_time_sec: number
 }
 
 export interface PeriodComparisonKpi {
   period: string
+  /** The window actually measured, after clamping to now and retention. */
+  window_from: string
+  window_to: string
+  window_days: number
+  /** True when clamping cut the requested window short. */
+  partial: boolean
   total_instances: number
+  /** `total_instances` per day — the figure to compare across windows of different length. */
+  started_per_day: number | null
   completed: number
-  failed: number
-  failure_rate_pct: number
-  avg_duration_sec: number
-  median_sec: number
-  p95_sec: number
+  incident_count: number
+  incident_rate_pct: number | null
+  avg_duration_sec: number | null
+  median_sec: number | null
+  p95_sec: number | null
 }
 
 export interface PeriodActivityComparisonRow {
   activity_id: string
-  activity_name: string | null
+  activity_name: null
   period: string
   executions: number
-  avg_sec: number
-  p95_sec: number
+  avg_sec: number | null
+  p95_sec: number | null
+}
+
+/** Result of {@link analyzePerformance}. */
+export interface PerformanceResult {
+  /** The engine ids covered; `null` = every engine Prometheus holds (unscoped library call). */
+  engines: string[] | null
+  kpi: PerformanceKPI | null
+  activityBreakdown: ActivityBreakdownRow[]
 }
 
 export interface PeriodComparisonResult {
+  /** The engine ids covered; `null` = every engine Prometheus holds (unscoped library call). */
+  engines: string[] | null
   kpiComparison: PeriodComparisonKpi[]
   activityComparison?: PeriodActivityComparisonRow[]
 }
@@ -75,10 +108,10 @@ function pdkSelector(
  * Process performance KPIs over a rolling window, from OTEL metrics.
  *
  * Counts come from `increase()` over the period; durations from the histogram
- * (`histogram_quantile` for p50/p95, sum/count for the mean). `failed` is
- * incident-based — metrics carry no per-instance terminal-failure state — and
- * `activity_name`/`earliest`/`latest` are not on metrics, so they degrade to
- * null/"" (resolve names from the BPMN; drill into instances via camunda7).
+ * (`histogram_quantile` for p50/p95, sum/count for the mean) and cover the
+ * instances that ENDED in the window — `null` when none did. `incident_count`
+ * counts incidents created (metrics carry no per-instance terminal-failure
+ * state). `kpi` is null only when the window saw no start, end or incident.
  */
 export async function analyzePerformance(
   ch: PrometheusClient,
@@ -88,7 +121,7 @@ export async function analyzePerformance(
     includeActivityBreakdown: boolean
     engine?: EngineFilterInput
   },
-): Promise<{ kpi: PerformanceKPI | null; activityBreakdown: ActivityBreakdownRow[] }> {
+): Promise<PerformanceResult> {
   const range = (params.period as Period) ?? "7d"
   const q = kpiQueries(
     {
@@ -108,22 +141,22 @@ export async function analyzePerformance(
   ])
 
   const totalInstances = Math.round(first(total))
-  const failed = Math.round(first(incidents))
-  const kpi: PerformanceKPI | null =
-    totalInstances > 0
-      ? {
-          process_definition_key: params.processDefinitionKey,
-          total_instances: totalInstances,
-          completed: Math.round(first(completed)),
-          failed,
-          failure_rate_pct: totalInstances > 0 ? round1((failed * 100) / totalInstances) : 0,
-          avg_duration_sec: round1(first(avg)),
-          median_duration_sec: round1(first(median)),
-          p95_duration_sec: round1(first(p95)),
-          earliest: "",
-          latest: "",
-        }
-      : null
+  const completedCount = Math.round(first(completed))
+  const incidentCount = Math.round(first(incidents))
+  const avgSec = firstOrNull(avg)
+  const observed = totalInstances > 0 || completedCount > 0 || incidentCount > 0 || avgSec !== null
+  const kpi: PerformanceKPI | null = observed
+    ? {
+        process_definition_key: params.processDefinitionKey,
+        total_instances: totalInstances,
+        completed: completedCount,
+        incident_count: incidentCount,
+        incident_rate_pct: ratePct(incidentCount, totalInstances),
+        avg_duration_sec: round1OrNull(avgSec),
+        median_duration_sec: round1OrNull(firstOrNull(median)),
+        p95_duration_sec: round1OrNull(firstOrNull(p95)),
+      }
+    : null
 
   let activityBreakdown: ActivityBreakdownRow[] = []
   if (params.includeActivityBreakdown) {
@@ -135,7 +168,7 @@ export async function analyzePerformance(
     )
   }
 
-  return { kpi, activityBreakdown }
+  return { engines: engineIdsOf(params.engine), kpi, activityBreakdown }
 }
 
 async function activityBreakdownRows(
@@ -145,29 +178,35 @@ async function activityBreakdownRows(
   engineId: EngineFilterInput,
 ): Promise<ActivityBreakdownRow[]> {
   const sel = pdkSelector(key, engineId)
-  const [counts, sums, p95] = await Promise.all([
+  // By-clauses stay literal: the contract test attributes each one to its series.
+  const [counts, sums, median, p95] = await Promise.all([
     ch.instant(
       `sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}${rangeExpr}))`,
     ),
     ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${rangeExpr}))`),
     ch.instant(
+      `histogram_quantile(0.5, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${rangeExpr})))`,
+    ),
+    ch.instant(
       `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${rangeExpr})))`,
     ),
   ])
   const sumBy = byLabel(sums, "activity_id")
+  const medianBy = byLabel(median, "activity_id")
   const p95By = byLabel(p95, "activity_id")
   const rows: ActivityBreakdownRow[] = counts.map((c) => {
     const id = c.metric.activity_id ?? ""
     const count = Math.round(c.value)
-    const totalSec = sumBy[id] ?? 0
+    const sumSec = sumBy[id]
+    const totalSec = sumSec ?? 0
     return {
       activity_id: id,
       activity_name: null,
       activity_type: c.metric.activity_type ?? "",
       execution_count: count,
-      avg_duration_sec: count > 0 ? round1(totalSec / count) : 0,
-      median_duration_sec: 0,
-      p95_duration_sec: round1(p95By[id] ?? 0),
+      avg_duration_sec: sumSec !== undefined && count > 0 ? round1(sumSec / count) : null,
+      median_duration_sec: round1OrNull(medianBy[id] ?? null),
+      p95_duration_sec: round1OrNull(p95By[id] ?? null),
       total_time_sec: round1(totalSec),
     }
   })
@@ -175,9 +214,12 @@ async function activityBreakdownRows(
 }
 
 /**
- * Compare two execution windows. Uses real historical windows via the PromQL
- * `@ <end>` modifier (each period is `[duration] @ end`), subject to Prometheus
- * retention and data existing at that time.
+ * Compare two explicit execution windows. Each is read as a real historical
+ * window via the PromQL `@ <end>` modifier, clamped to `[now − retention,
+ * now]` and reported with its ACTUAL bounds (`window_*`, `partial`). Windows
+ * of different length are not comparable by count, so each KPI row also
+ * carries `started_per_day`. A reversed window, or one entirely in the future
+ * or before retention, is refused.
  */
 export async function comparePeriods(
   ch: PrometheusClient,
@@ -191,13 +233,17 @@ export async function comparePeriods(
     engine?: EngineFilterInput
   },
 ): Promise<PeriodComparisonResult> {
-  const a = promWindow("periodA", params.periodAFrom, params.periodATo)
-  const b = promWindow("periodB", params.periodBFrom, params.periodBTo)
+  const now = nowSeconds()
+  const a = explicitWindow("periodA", params.periodAFrom, params.periodATo, now)
+  const b = explicitWindow("periodB", params.periodBFrom, params.periodBTo, now)
   const [kpiA, kpiB] = await Promise.all([
     periodKpi(ch, params.processDefinitionKey, "Period A", a, params.engine),
     periodKpi(ch, params.processDefinitionKey, "Period B", b, params.engine),
   ])
-  const result: PeriodComparisonResult = { kpiComparison: [kpiA, kpiB] }
+  const result: PeriodComparisonResult = {
+    engines: engineIdsOf(params.engine),
+    kpiComparison: [kpiA, kpiB],
+  }
 
   if (params.includeActivityBreakdown) {
     const [actA, actB] = await Promise.all([
@@ -211,22 +257,25 @@ export async function comparePeriods(
   return result
 }
 
-interface PromWindow {
-  rangeExpr: string
-}
-
-function promWindow(name: "periodA" | "periodB", from: string, to: string): PromWindow {
-  const fromSec = parseIsoSeconds(from, `${name}From`)
-  const toSec = parseIsoSeconds(to, `${name}To`)
-  const durationSec = Math.max(1, toSec - fromSec)
-  return { rangeExpr: `[${durationSec}s] @ ${toSec}` }
+function explicitWindow(
+  name: "periodA" | "periodB",
+  from: string,
+  to: string,
+  now: number,
+): ClampedWindow {
+  return clampWindow(
+    name,
+    parseIsoSeconds(from, `${name}From`),
+    parseIsoSeconds(to, `${name}To`),
+    now,
+  )
 }
 
 async function periodKpi(
   ch: PrometheusClient,
   key: string,
   label: string,
-  w: PromWindow,
+  w: ClampedWindow,
   engineId: EngineFilterInput,
 ): Promise<PeriodComparisonKpi> {
   const q = kpiQueries(
@@ -234,7 +283,7 @@ async function periodKpi(
       sel: pdkSelector(key, engineId),
       completedSel: pdkSelector(key, engineId, 'state="COMPLETED"'),
     },
-    w.rangeExpr,
+    rangeAt(w),
   )
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
     ch.instant(q.started),
@@ -245,16 +294,22 @@ async function periodKpi(
     ch.instant(q.p95Duration),
   ])
   const totalInstances = Math.round(first(total))
-  const failed = Math.round(first(incidents))
+  const incidentCount = Math.round(first(incidents))
+  const days = daysOf(w.seconds)
   return {
     period: label,
+    window_from: isoOf(w.from),
+    window_to: isoOf(w.to),
+    window_days: days,
+    partial: w.partial,
     total_instances: totalInstances,
+    started_per_day: days > 0 ? round1(totalInstances / days) : null,
     completed: Math.round(first(completed)),
-    failed,
-    failure_rate_pct: totalInstances > 0 ? round1((failed * 100) / totalInstances) : 0,
-    avg_duration_sec: round1(first(avg)),
-    median_sec: round1(first(median)),
-    p95_sec: round1(first(p95)),
+    incident_count: incidentCount,
+    incident_rate_pct: ratePct(incidentCount, totalInstances),
+    avg_duration_sec: round1OrNull(firstOrNull(avg)),
+    median_sec: round1OrNull(firstOrNull(median)),
+    p95_sec: round1OrNull(firstOrNull(p95)),
   }
 }
 
@@ -262,11 +317,11 @@ async function periodActivities(
   ch: PrometheusClient,
   key: string,
   label: string,
-  w: PromWindow,
+  w: ClampedWindow,
   engineId: EngineFilterInput,
 ): Promise<PeriodActivityComparisonRow[]> {
   const sel = pdkSelector(key, engineId)
-  const r = w.rangeExpr
+  const r = rangeAt(w)
   const [counts, sums, p95] = await Promise.all([
     ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}${r}))`),
     ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${r}))`),
@@ -279,13 +334,14 @@ async function periodActivities(
   return counts.map((c) => {
     const id = c.metric.activity_id ?? ""
     const executions = Math.round(c.value)
+    const sumSec = sumBy[id]
     return {
       activity_id: id,
       activity_name: null,
       period: label,
       executions,
-      avg_sec: executions > 0 ? round1((sumBy[id] ?? 0) / executions) : 0,
-      p95_sec: round1(p95By[id] ?? 0),
+      avg_sec: sumSec !== undefined && executions > 0 ? round1(sumSec / executions) : null,
+      p95_sec: round1OrNull(p95By[id] ?? null),
     }
   })
 }

@@ -18,9 +18,12 @@ export const isoDatetimeString = z.string().refine((v) => Number.isFinite(Date.p
  * Same parameter name as the camunda7 operations tools' per-call override,
  * but a Prometheus label filter — no saved default, and with subset support:
  *
- *   - Omitted → aggregates across all engines (cross-engine view, the default).
+ *   - Omitted → the server's configured engines, aggregated (the fleet view).
  *   - One id → restricts to one engine.
  *   - Array  → restricts to that subset (e.g. for prod-only or A-vs-B compare).
+ *
+ * The analytics module resolves it against the configured engine ids (an id
+ * outside them is refused) before any query runs.
  *
  * The description stays one line: the semantics are stated once in the
  * module's server instructions (`analytics-connector/src/instructions.ts`).
@@ -29,5 +32,5 @@ export const engineFilterShape = {
   engine: z
     .union([z.string(), z.array(z.string())])
     .optional()
-    .describe("Engine id(s) to scope to; omitted = all engines (see server instructions)"),
+    .describe("Engine id(s) to scope to; omitted = all configured (see server instructions)"),
 }

@@ -3,7 +3,7 @@ import type {
   CompareKpiDelta,
   FailureDashboardData,
 } from "@miragon-ai/analytics-client"
-import { formatDuration, truncate, type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
+import { formatDuration, type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
 import type { DescribeForModel } from "@miragon-ai/widget-shell/ui"
 import type { ClusterCompareData } from "./cluster-compare.js"
 import type { VersionCompareData } from "./version-compare.js"
@@ -19,130 +19,116 @@ import { versionCompareCaveats } from "../version-compare-caveats.js"
  * identity + active filters + the headline number(s) a user is most likely to
  * ask about, plus the natural follow-up tool(s).
  *
- * Scope filters (`processDefinitionKey`, `period`, `engine`) only travel as
- * layout-cell props — the dashboard data does not echo them — so the helpers
- * read the props bag and fall back to the server-side defaults where a prop is
- * absent (standalone `analytics_show_*` calls pass no widget props).
+ * The scope comes from the DATA, never from the cell props: every analytics
+ * result echoes what it covers (process key, period, `engines`), so a widget
+ * that self-fetched, was saved or composed by render-view describes exactly
+ * the numbers on screen — including which engines a fleet aggregate adds up.
  */
 
-function strProp(props: Readonly<Record<string, unknown>>, key: string): string | undefined {
-  const value = props[key]
-  return typeof value === "string" && value.length > 0 ? value : undefined
+/**
+ * ` on engine "a"` / ` across engines "a", "b" (aggregated)` from a result's
+ * `engines` echo; "" for an unscoped library result (`null`).
+ */
+function engineScope(engines: readonly string[] | null): string {
+  if (!engines || engines.length === 0) return ""
+  if (engines.length === 1) return ` on engine "${engines[0]}"`
+  return ` across engines ${engines.map((id) => `"${id}"`).join(", ")} (aggregated)`
 }
 
-/** ` on engine "x"` / ` on engines "a", "b"` when scoped via props, else "". */
-function engineScope(props: Readonly<Record<string, unknown>>): string {
-  const value = props.engine
-  if (typeof value === "string" && value.length > 0) return ` on engine "${value}"`
-  if (Array.isArray(value)) {
-    const ids = value.filter((id): id is string => typeof id === "string" && id.length > 0)
-    if (ids.length > 0) return ` on engines ${ids.map((id) => `"${id}"`).join(", ")}`
-  }
-  return ""
-}
+/** A figure that was not measured reads "not measured" — never a plausible 0. */
+const measured = (value: number | null, unit = ""): string =>
+  value === null ? "not measured" : `${value}${unit}`
 
 /** Shared scope line for the four split analytics-dashboard widgets. */
-function dashboardScope(
-  data: AnalyticsDashboardData,
-  props: Readonly<Record<string, unknown>>,
-): string {
-  const processDefinitionKey = strProp(props, "processDefinitionKey")
-  // The show tool passes the RESOLVED period as a cell prop; a prop-less
-  // render self-fetches, where the feed applies the saved profile default.
-  const period = strProp(props, "period") ?? "the profile default period"
-  const scope = processDefinitionKey
-    ? `process "${processDefinitionKey}"`
+function dashboardScope(data: AnalyticsDashboardData): string {
+  const scope = data.processDefinitionKey
+    ? `process "${data.processDefinitionKey}"`
     : `${data.definitionBreakdown.length} process definition(s)`
-  return `${scope} over ${period}${engineScope(props)}`
+  return `${scope} over ${data.period}${engineScope(data.engines)}`
 }
 
-export const describeExecutionSummary: DescribeForModel<AnalyticsDashboardData> = (data, props) =>
-  `Viewing the process-analytics dashboard (execution summary) for ${dashboardScope(data, props)}: ` +
-  `${data.totalCount} instances — ${data.completedCount} completed, ${data.runningCount} running, ` +
-  `${data.failedCount} failed, ${data.incidentCount} open incident(s), failure rate ${data.failureRatePct}%. ` +
+export const describeExecutionSummary: DescribeForModel<AnalyticsDashboardData> = (data) =>
+  `Viewing the process-analytics dashboard (execution summary) for ${dashboardScope(data)}: ` +
+  `within the period ${data.totalCount} instance(s) started, ${data.completedCount} completed, ` +
+  `${data.incidentsCreated} incident(s) created (incidents, not failed instances); right now ` +
+  `${measured(data.runningNow)} running and ${measured(data.openIncidentsNow)} incident(s) open ` +
+  `(live gauges, independent of the period). ` +
   `Drill deeper with analytics_analyze_process_performance or analytics_find_failed_instances.`
 
-export const describeExecutionPerformance: DescribeForModel<AnalyticsDashboardData> = (
-  data,
-  props,
-) =>
-  `Viewing the process-analytics performance KPIs for ${dashboardScope(data, props)}: ` +
-  `avg duration ${formatDuration(data.avgDurationMs)}, median ${formatDuration(data.medianDurationMs)}, ` +
-  `p95 ${formatDuration(data.p95DurationMs)}, failure rate ${data.failureRatePct}%. ` +
+export const describeExecutionPerformance: DescribeForModel<AnalyticsDashboardData> = (data) =>
+  `Viewing the process-analytics performance KPIs for ${dashboardScope(data)}: ` +
+  `durations of the instances that ended in the period — avg ${formatDuration(data.avgDurationMs)}, ` +
+  `median ${formatDuration(data.medianDurationMs)}, p95 ${formatDuration(data.p95DurationMs)}` +
+  `${data.avgDurationMs === null ? " (none ended)" : ""}; ` +
+  `${measured(data.incidentRatePct, "%")} incidents per 100 started instances. ` +
   `Find the slow step with analytics_element_bottleneck.`
 
-export const describeDefinitionBreakdown: DescribeForModel<AnalyticsDashboardData> = (
-  data,
-  props,
-) => {
+export const describeDefinitionBreakdown: DescribeForModel<AnalyticsDashboardData> = (data) => {
   const top = [...data.definitionBreakdown].sort((a, b) => b.totalInstances - a.totalInstances)[0]
   return (
-    `Viewing the per-definition breakdown for ${dashboardScope(data, props)}` +
+    `Viewing the per-definition breakdown for ${dashboardScope(data)}` +
     `${
       top
-        ? `; busiest "${top.processDefinitionKey}" with ${top.totalInstances} instances (${top.failed} failed)`
+        ? `; busiest "${top.processDefinitionKey}" with ${top.totalInstances} instance(s) started ` +
+          `(${top.incidentsCreated} incident(s) created, ${measured(top.runningNow)} running now)`
         : ""
     }. ` +
     `Scope to one process with analytics_show_dashboard({ processDefinitionKey }).`
   )
 }
 
-export const describeActivityBottlenecks: DescribeForModel<AnalyticsDashboardData> = (
-  data,
-  props,
-) => {
+export const describeActivityBottlenecks: DescribeForModel<AnalyticsDashboardData> = (data) => {
   const top = [...data.activityBreakdown].sort((a, b) => b.totalTimeMs - a.totalTimeMs)[0]
   return (
-    `Viewing the activity-bottleneck table for ${dashboardScope(data, props)}: ` +
-    `${data.activityBreakdown.length} activities` +
+    `Viewing the activity-bottleneck table for ${dashboardScope(data)}: ` +
+    `${data.activityBreakdown.length} (process, activity) row(s)` +
     `${
       top
-        ? `; top bottleneck "${top.activityName || top.activityId}" (${top.activityId}) — ` +
+        ? `; top bottleneck activity ${top.activityId} of process "${top.processDefinitionKey}" — ` +
           `${top.executionCount} executions, total ${formatDuration(top.totalTimeMs)}, ` +
           `p95 ${formatDuration(top.p95DurationMs)}`
         : ""
     }. ` +
-    `Investigate with analytics_element_bottleneck.`
+    `Investigate with analytics_element_bottleneck for that process.`
   )
 }
 
 /** Shared lead-in for the three failure-dashboard widgets (point-in-time, no period). */
-function failureScope(props: Readonly<Record<string, unknown>>): string {
-  return `(point-in-time open incidents${engineScope(props)})`
+function failureScope(data: FailureDashboardData): string {
+  return `(incidents open right now${engineScope(data.engines)})`
 }
 
-export const describeFailureSummary: DescribeForModel<FailureDashboardData> = (data, props) =>
-  `Viewing the failure dashboard ${failureScope(props)}: ${data.totalIncidents} open incident(s) ` +
-  `across ${data.uniqueErrorPatterns} error pattern(s)` +
+export const describeFailureSummary: DescribeForModel<FailureDashboardData> = (data) =>
+  `Viewing the failure dashboard ${failureScope(data)}: ${data.totalIncidents} open incident(s) ` +
+  `in ${data.uniqueErrorPatterns} group(s) by incident type and process` +
   `${data.mostAffectedProcess ? `; most affected process "${data.mostAffectedProcess}"` : ""}. ` +
   `Drill in with analytics_find_failed_instances or camunda7_list_incidents.`
 
-export const describeErrorPatterns: DescribeForModel<FailureDashboardData> = (data, props) => {
+export const describeErrorPatterns: DescribeForModel<FailureDashboardData> = (data) => {
   const top = [...data.errorPatterns].sort((a, b) => b.incidentCount - a.incidentCount)[0]
   return (
-    `Viewing the error-patterns table ${failureScope(props)}: ${data.errorPatterns.length} pattern(s)` +
-    `${
-      top
-        ? `; top: "${truncate(top.incidentMessage, 100)}" at activity ${top.activityId} ` +
-          `in "${top.processDefinitionKey}" (${top.incidentCount}×)`
-        : ""
-    }. ` +
-    `Root-cause with analytics_find_failed_instances + camunda7_list_incidents.`
+    `Viewing the open-incident groups ${failureScope(data)}: ${data.errorPatterns.length} group(s) ` +
+    `by incident type and process (the metric carries no message, activity or timestamps)` +
+    `${top ? `; largest: ${top.incidentCount} "${top.incidentType}" in "${top.processDefinitionKey}"` : ""}. ` +
+    `Messages and failing activities come from camunda7_list_incidents.`
   )
 }
 
-export const describeFailureRates: DescribeForModel<FailureDashboardData> = (data, props) => {
-  const top = [...data.processBreakdown].sort((a, b) => b.failureRatePct - a.failureRatePct)[0]
+export const describeFailureRates: DescribeForModel<FailureDashboardData> = (data) => {
+  const top = [...data.processBreakdown].sort(
+    (a, b) => (b.incidentRatePct ?? -1) - (a.incidentRatePct ?? -1),
+  )[0]
   return (
-    `Viewing failure rates by process ${failureScope(props)}: ${data.processBreakdown.length} process(es)` +
+    `Viewing open incidents by process ${failureScope(data)}: ${data.processBreakdown.length} process(es)` +
     `${
       top
-        ? `; highest "${top.processDefinitionKey}" at ${top.failureRatePct}% ` +
-          `(${top.failedCount}/${top.totalInstances} failed, ${top.incidentCount} incident(s))`
+        ? `; highest rate "${top.processDefinitionKey}" with ${top.openIncidents} open incident(s) ` +
+          `on ${top.runningNow} running instance(s) (${measured(top.incidentRatePct, "%")}), ` +
+          `${top.deadJobs} dead job(s)`
         : ""
     }. ` +
     // Not analytics_version_compare: it cannot split incidents by version, so
-    // its failure rates are null (#327).
+    // its incident rates are null (#327).
     `Check for a regression period over period with analytics_compare_execution_periods, ` +
     `or around a deployment with analytics_cluster_compare.`
   )
@@ -155,15 +141,15 @@ export const describeFailureRates: DescribeForModel<FailureDashboardData> = (dat
  */
 function mostNotableDelta(delta: CompareKpiDelta): string {
   const candidates = [
-    { label: "failure rate", value: delta.failure_rate_delta_pp, unit: "pp" },
     { label: "incident rate", value: delta.incident_rate_delta_pp, unit: "pp" },
+    { label: "element incident rate", value: delta.element_incident_rate_delta_pp, unit: "pp" },
     { label: "avg duration", value: delta.avg_duration_delta_pct, unit: "%" },
     { label: "p95 duration", value: delta.p95_duration_delta_pct, unit: "%" },
-    { label: "instance count", value: delta.instance_count_delta_pct, unit: "%" },
+    { label: "starts per day", value: delta.started_per_day_delta_pct, unit: "%" },
   ].filter(
     (c): c is { label: string; value: number; unit: string } => c.value != null && c.value !== 0,
   )
-  if (candidates.length === 0) return "no metric moved"
+  if (candidates.length === 0) return "no measured metric moved"
   const top = candidates.reduce((max, c) => (Math.abs(c.value) > Math.abs(max.value) ? c : max))
   return `most notable delta: ${top.label} ${top.value > 0 ? "+" : ""}${top.value}${top.unit}`
 }
@@ -173,29 +159,27 @@ const suppressedNote = (suppressed: boolean): string =>
 
 export const describeClusterCompare: DescribeForModel<ClusterCompareData> = (data) =>
   `Comparing pre/post deployment KPIs around ${data.deploymentTimestamp} ` +
-  `(-${data.windowDays.before}d/+${data.windowDays.after}d)` +
+  `(measured -${data.windowDays.before}d/+${data.windowDays.after}d` +
+  `${data.partial ? ", partial: a window was cut short at now or the retention — starts compare per day" : ""})` +
   `${data.processDefinitionKey ? ` for process "${data.processDefinitionKey}"` : " cluster-wide"}` +
+  `${engineScope(data.engines)}` +
   `${data.activityId ? `, element ${data.activityId}` : ""}: ${mostNotableDelta(data.delta)}` +
   `${suppressedNote(data.suppressed)}. ` +
+  `Durations cover only instances that ended in a window. ` +
   `Confirm with analytics_cluster_compare; find the driving activity with analytics_element_bottleneck.`
 
 /**
  * Version compare: the incident metric has no version label, so its rates come
- * back null — and `activityId`, which only scopes them, then scopes nothing. The
- * element is never presented as the scope of the process-wide deltas.
+ * back null — said in so many words, never left to read as zero.
  */
 export const describeVersionCompare: DescribeForModel<VersionCompareData> = (data) => {
-  const { incidentRatesUnavailable, ignoredActivityId } = versionCompareCaveats(data)
+  const { incidentRatesUnavailable } = versionCompareCaveats(data)
   return (
     `Comparing process "${data.processDefinitionKey}" v${data.versionA} (baseline) vs ` +
-    `v${data.versionB} over a ${data.windowDays}d window` +
-    `${data.activityId && !ignoredActivityId ? ` (incident KPIs scoped to element ${data.activityId})` : ""}: ` +
+    `v${data.versionB} over a ${data.windowDays}d window${engineScope(data.engines)}: ` +
     `${mostNotableDelta(data.delta)}${suppressedNote(data.suppressed)}. ` +
     (incidentRatesUnavailable
-      ? "Failure and incident rates are not measured per version (no version label on the incident metric) — unknown, not zero. "
-      : "") +
-    (ignoredActivityId
-      ? `activityId ${ignoredActivityId} has no effect (it only scopes the incident rates): every figure covers the whole process, not that element. `
+      ? "Incident rates are not measured per version (no version label on the incident metric) — unknown, not zero. "
       : "") +
     `Confirm with analytics_version_compare; find the driving activity with analytics_element_bottleneck.`
   )

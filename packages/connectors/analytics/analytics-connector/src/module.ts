@@ -6,6 +6,7 @@ import { analyticsToolsets } from "./toolsets.js"
 import { analyticsInstructions } from "./instructions.js"
 import type { FetchBpmnXml } from "./widget-tools.js"
 import type { ProfileSource } from "./server-locale.js"
+import { NO_ENGINE_SCOPE_MESSAGE } from "./engine-ids.js"
 
 /**
  * Self-contained module definition for host apps: everything the app needs to
@@ -66,6 +67,23 @@ const analyticsConfigSchema = z.object({
     )
     .optional(),
   /**
+   * `ANALYTICS_ENGINE_IDS` — the engine ids a STANDALONE analytics boot may
+   * read (comma-separated `engine_id` values). Only the fallback: when the
+   * composition root injects its configured engines (`shared.engineIds`,
+   * from camunda7) those win. See `engine-ids.ts`.
+   */
+  engineIds: z
+    .union([
+      z.array(z.string()),
+      z.string().transform((text) =>
+        text
+          .split(",")
+          .map((id) => id.trim())
+          .filter((id) => id.length > 0),
+      ),
+    ])
+    .optional(),
+  /**
    * The effective toolset the composition root resolved from the
    * `MCP_ACTIVE_MODULES` suffix — always a concrete declared name there. The
    * module's tools are read-only by nature; the toolset only gates the one
@@ -80,6 +98,34 @@ const analyticsConfigSchema = z.object({
 interface AnalyticsModuleShared {
   profileStore?: ProfileSource
   fetchBpmnXml?: FetchBpmnXml
+  /**
+   * The engine ids this server is configured for (the camunda7 module's
+   * engines) — analytics reads only these. Wins over `ANALYTICS_ENGINE_IDS`.
+   */
+  engineIds?: readonly string[]
+}
+
+/**
+ * The engine ids analytics covers: the injected ones, else
+ * `ANALYTICS_ENGINE_IDS`, else none (fail-closed). Warns at boot for the two
+ * surprising cases — no scope at all, and an env list the injected one
+ * overrides.
+ */
+function effectiveEngineIds(
+  injected: readonly string[] | undefined,
+  fromEnv: readonly string[] | undefined,
+): readonly string[] {
+  if (injected && injected.length > 0) {
+    if (fromEnv && fromEnv.length > 0) {
+      console.warn(
+        `[analytics] ANALYTICS_ENGINE_IDS is ignored: the server's configured engines (${injected.join(", ")}) scope analytics.`,
+      )
+    }
+    return injected
+  }
+  if (fromEnv && fromEnv.length > 0) return fromEnv
+  console.warn(`[analytics] ${NO_ENGINE_SCOPE_MESSAGE}`)
+  return []
 }
 
 export const analyticsModule = {
@@ -102,6 +148,7 @@ export const analyticsModule = {
       password: verbatim("PROMETHEUS_PASSWORD"),
       headers: trimmed("PROMETHEUS_HEADERS"),
       timeoutMs: trimmed("PROMETHEUS_TIMEOUT_MS"),
+      engineIds: trimmed("ANALYTICS_ENGINE_IDS"),
     }
   },
 
@@ -113,6 +160,7 @@ export const analyticsModule = {
     "PROMETHEUS_PASSWORD",
     "PROMETHEUS_HEADERS",
     "PROMETHEUS_TIMEOUT_MS",
+    "ANALYTICS_ENGINE_IDS",
   ] as const,
 
   /**
@@ -137,8 +185,9 @@ export const analyticsModule = {
 
   /**
    * The module's server-instructions snippet: what `engine` means here (a
-   * metric filter — the fleet aggregate when omitted, camunda7's saved
-   * default does not apply), the periods and the health routing.
+   * metric filter over the configured engines — their fleet aggregate when
+   * omitted, camunda7's saved default does not apply), the periods and the
+   * health routing.
    */
   instructions(): string {
     return analyticsInstructions()
@@ -148,9 +197,10 @@ export const analyticsModule = {
     config: Record<string, unknown>,
     shared: AnalyticsModuleShared,
   ): AppPlugin<MCPServer> {
-    const { toolset, ...parsed } = analyticsConfigSchema.parse(config)
+    const { toolset, engineIds, ...parsed } = analyticsConfigSchema.parse(config)
     return createPlugin({
       ...parsed,
+      engineIds: effectiveEngineIds(shared.engineIds, engineIds),
       // Resolved once, here: missing → the read-only floor, unknown → warning +
       // floor. The plugin only ever sees a declared name.
       toolset: analyticsToolsets.resolve(toolset),

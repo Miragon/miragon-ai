@@ -37,8 +37,14 @@ describe("engineMatcher", () => {
     // matcher into two alternatives. The regex backslash is itself doubled for
     // the PromQL string literal (Go escape rules), so the wire text carries
     // `\\.` and RE2 sees `\.`.
-    expect(engineMatcher(["engine.prod-1"])).toBe('engine_id=~"engine\\\\.prod-1"')
+    expect(engineMatcher(["engine.prod-1", "x"])).toBe('engine_id=~"engine\\\\.prod-1|x"')
     expect(engineMatcher(["a|b", "c+d"])).toBe('engine_id=~"a\\\\|b|c\\\\+d"')
+  })
+
+  it("builds an exact (literal) matcher for a one-element list", () => {
+    // The analytics tools always resolve `engine` to a list: one engine must
+    // still read as the exact match it is.
+    expect(engineMatcher(["engine.prod-1"])).toBe('engine_id="engine.prod-1"')
   })
 })
 

@@ -1,7 +1,11 @@
 import type { AppConfig, AppConfigEntry, AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
 
-import { camunda7Module, createBpmnXmlFetcher } from "@miragon-ai/camunda7-connector"
+import {
+  camunda7Module,
+  configuredEngineIds,
+  createBpmnXmlFetcher,
+} from "@miragon-ai/camunda7-connector"
 import { analyticsModule } from "@miragon-ai/analytics-connector"
 import {
   composeModules,
@@ -89,12 +93,18 @@ function buildSharedResources(
   entries: AppConfigEntry[],
   profileStore: ProfileStore,
 ): SharedResources {
-  // BPMN-XML lookup from the camunda7 module (its primary engine) for modules
-  // that need diagram XML but must not depend on the engine SDK — most notably
-  // the analytics heatmap. Absent when camunda7 is inactive (consumers degrade).
+  // From the camunda7 module, for modules that must not depend on the engine
+  // SDK: the BPMN-XML lookup (its primary engine — the analytics heatmap) and
+  // the configured engine ids (the only engines analytics reads from a
+  // possibly shared Prometheus). Absent when camunda7 is inactive: the heatmap
+  // degrades, analytics falls back to ANALYTICS_ENGINE_IDS, else fails closed.
   const camunda7Entry = entries.find((e) => e.app === camunda7Module.name)
   if (!camunda7Entry) return { profileStore }
-  return { profileStore, fetchBpmnXml: createBpmnXmlFetcher(camunda7Entry.config) }
+  return {
+    profileStore,
+    fetchBpmnXml: createBpmnXmlFetcher(camunda7Entry.config),
+    engineIds: configuredEngineIds(camunda7Entry.config),
+  }
 }
 
 /**

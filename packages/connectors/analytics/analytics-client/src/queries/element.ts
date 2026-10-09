@@ -1,4 +1,5 @@
 import {
+  engineIdsOf,
   engineMatcher,
   escapeLabelValue,
   selector,
@@ -7,24 +8,30 @@ import {
   type PrometheusClient,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
-import { byLabel, round1 } from "./helpers.js"
+import { byLabel, ratePct, round1, round1OrNull } from "./helpers.js"
 
 export interface ElementBottleneckRow {
   activity_id: string
   activity_name: string | null
   activity_type: string
   execution_count: number
-  avg_duration_sec: number
-  p95_duration_sec: number
+  /** Mean duration of the executions that ended in the window; null when none did. */
+  avg_duration_sec: number | null
+  /** p95 from the duration histogram; null when it holds no sample. */
+  p95_duration_sec: number | null
   total_time_sec: number
   avg_wait_sec: number | null
   total_wait_sec: number | null
+  /** Incidents created at this activity in the window. */
   incident_count: number
-  incident_rate_pct: number
+  /** `incident_count` per 100 executions (may exceed 100); null without executions. */
+  incident_rate_pct: number | null
   bottleneck_score_sec: number
 }
 
 export interface ElementBottleneckResult {
+  /** The engine ids covered; `null` = every engine Prometheus holds (unscoped library call). */
+  engines: string[] | null
   activities: ElementBottleneckRow[]
   minBucketSize: number
   suppressedActivities: number
@@ -86,13 +93,13 @@ export async function elementBottleneck(
       activity_name: null,
       activity_type: typeBy[id] ?? "",
       execution_count: count,
-      avg_duration_sec: count > 0 ? round1(totalSec / count) : 0,
-      p95_duration_sec: round1(p95By[id] ?? 0),
+      avg_duration_sec: count > 0 && sumBy[id] !== undefined ? round1(totalSec / count) : null,
+      p95_duration_sec: round1OrNull(p95By[id] ?? null),
       total_time_sec: round1(totalSec),
       avg_wait_sec: null,
       total_wait_sec: null,
       incident_count: incidentCount,
-      incident_rate_pct: count > 0 ? round1((incidentCount * 100) / count) : 0,
+      incident_rate_pct: ratePct(incidentCount, count),
       bottleneck_score_sec: round1(totalSec),
     }
   })
@@ -104,6 +111,7 @@ export async function elementBottleneck(
 
   const aboveThreshold = all.filter((r) => r.execution_count >= minBucket).length
   return {
+    engines: engineIdsOf(params.engine),
     activities: kept,
     minBucketSize: minBucket,
     suppressedActivities: Math.max(0, all.length - aboveThreshold),

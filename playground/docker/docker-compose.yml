@@ -246,6 +246,8 @@ services:
       # Must stay in sync with the cibseven service's ENGINE_ID — that value is
       # the `engine_id` metric label every engine-scoped analytics query (BPMN
       # heatmap, engine compare) joins on. A mismatch is silent: empty results.
+      # Analytics reads only the configured engines, so this single-engine
+      # default leaves prod-b's metrics out until CAMUNDA_ENGINES_JSON lists it.
       - CAMUNDA_ENGINE_ID=prod-a
       - CAMUNDA_COCKPIT_URL=http://localhost:8410/webapp
       - CAMUNDA_AUTH_TYPE=basic

@@ -1,4 +1,5 @@
 import {
+  engineIdsOf,
   engineMatcher,
   escapeLabelValue,
   selector,
@@ -8,7 +9,7 @@ import {
   type PromSample,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
-import { byLabel, first, kpiQueries, round1 } from "./helpers.js"
+import { byLabel, first, firstOrNull, kpiQueries, ratePct } from "./helpers.js"
 import type {
   ActivityBreakdownItem,
   AnalyticsDashboardData,
@@ -20,15 +21,26 @@ import type {
 
 /** Seconds -> integer milliseconds (preserves the sub-100ms precision the dashboard formats). */
 const ms = (sec: number) => Math.round(sec * 1000)
+const msOrNull = (sec: number | null) => (sec === null ? null : ms(sec))
 
 /**
- * Aggregated dashboard KPIs + activity / definition breakdowns over a rolling
- * window, from the engine's process metrics. Shared by the dashboard pipeline step and the
- * `analytics_show_dashboard` widget tool. `failedCount`/`failureRatePct` are
- * incident-based (consistent with every other analytics tool, so the numbers
- * reconcile tool-to-tool); `incidentCount` is the currently-open net
- * (created − resolved). `runningCount` is derived (started − ended),
- * `activityName` is unavailable on metrics.
+ * Aggregated dashboard KPIs + activity / definition breakdowns, from the
+ * engine's process metrics. Shared by the dashboard pipeline step and the
+ * `analytics_show_dashboard` widget tool. Two kinds of figures, never mixed:
+ *
+ * - FLOWS within the window (`period`): starts, completions, incidents created
+ *   and resolved, and the durations of the instances that ended — `increase()`
+ *   over the range. Durations are null when nothing ended; `incidentRatePct` is null
+ *   when nothing started.
+ * - LIVE STATE right now: `runningNow` / `openIncidentsNow` from the state
+ *   gauges (`camunda_process_instances_running`, `camunda_incidents_open`) —
+ *   the same numbers the failure dashboard, engine health and the landscape
+ *   read, independent of the window. A counter difference within the window
+ *   is no substitute: it misses every instance started before the window.
+ *
+ * The activity breakdown groups by (process, activity): BPMN ids are only
+ * unique within one model, so `StartEvent_1` of two processes are two rows.
+ * The result echoes its scope (process key, period, engines).
  */
 export async function dashboardData(
   ch: PrometheusClient,
@@ -44,45 +56,49 @@ export async function dashboardData(
   const r = `[${range}]`
   const q = kpiQueries({ sel, completedSel }, r)
 
+  // By-clauses stay literal: the contract test attributes each one to its series.
   const [
     started,
-    endedAll,
     completed,
     incCreated,
     incResolved,
     avg,
     median,
     p95,
+    runningNow,
+    openIncidentsNow,
     actCount,
     actSum,
     actP95,
-    actType,
     defStarted,
     defCompleted,
-    defEndedAll,
-    defFailed,
+    defIncidents,
     defDurSum,
     defDurCount,
+    defRunning,
   ] = await Promise.all([
     ch.instant(q.started),
-    ch.instant(`sum(increase(${M.processInstanceEnded}${sel}${r}))`),
     ch.instant(q.completed),
     ch.instant(q.incidents),
     ch.instant(`sum(increase(${M.incidentResolved}${sel}${r}))`),
     ch.instant(q.avgDuration),
     ch.instant(q.medianDuration),
     ch.instant(q.p95Duration),
-    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}${r}))`),
-    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${r}))`),
+    ch.instant(`sum(${M.processInstancesRunning}${sel})`),
+    ch.instant(`sum(${M.incidentsOpen}${sel})`),
     ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${r})))`,
+      `sum by (process_definition_key, activity_id, activity_type)(increase(${M.activityEnded}${sel}${r}))`,
     ),
-    ch.instant(`sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}${r}))`),
+    ch.instant(
+      `sum by (process_definition_key, activity_id)(increase(${M.activityDuration}_sum${sel}${r}))`,
+    ),
+    ch.instant(
+      `histogram_quantile(0.95, sum by (process_definition_key, activity_id, le)(increase(${M.activityDuration}_bucket${sel}${r})))`,
+    ),
     ch.instant(`sum by (process_definition_key)(increase(${M.processInstanceStarted}${sel}${r}))`),
     ch.instant(
       `sum by (process_definition_key)(increase(${M.processInstanceEnded}${completedSel}${r}))`,
     ),
-    ch.instant(`sum by (process_definition_key)(increase(${M.processInstanceEnded}${sel}${r}))`),
     ch.instant(`sum by (process_definition_key)(increase(${M.incidentCreated}${sel}${r}))`),
     ch.instant(
       `sum by (process_definition_key)(increase(${M.processInstanceDuration}_sum${sel}${r}))`,
@@ -90,66 +106,83 @@ export async function dashboardData(
     ch.instant(
       `sum by (process_definition_key)(increase(${M.processInstanceDuration}_count${sel}${r}))`,
     ),
+    ch.instant(`sum by (process_definition_key)(${M.processInstancesRunning}${sel})`),
   ])
 
   const totalCount = Math.round(first(started))
-  const completedCount = Math.round(first(completed))
-  const endedCount = Math.round(first(endedAll))
-  // Incident-based failure count, matching the other analytics tools so the
-  // numbers reconcile. `openIncidents` is the distinct "still open now" signal.
-  const failedCount = Math.round(first(incCreated))
-  const openIncidents = Math.max(0, Math.round(first(incCreated) - first(incResolved)))
-
-  const activityBreakdown = buildActivityBreakdown(actCount, actSum, actP95, actType)
-  const definitionBreakdown = buildDefinitionBreakdown(
-    defStarted,
-    defCompleted,
-    defEndedAll,
-    defFailed,
-    defDurSum,
-    defDurCount,
-  )
+  const incidentsCreated = Math.round(first(incCreated))
+  const runningGauge = firstOrNull(runningNow)
+  const openIncidentsGauge = firstOrNull(openIncidentsNow)
 
   return {
+    processDefinitionKey: params.processDefinitionKey ?? null,
+    period: params.period,
+    engines: engineIdsOf(params.engine),
     totalCount,
-    completedCount,
-    runningCount: Math.max(0, totalCount - endedCount),
-    failedCount,
-    incidentCount: openIncidents,
-    failureRatePct: totalCount > 0 ? round1((failedCount * 100) / totalCount) : 0,
-    avgDurationMs: first(avg) > 0 ? ms(first(avg)) : null,
-    medianDurationMs: first(median) > 0 ? ms(first(median)) : null,
-    p95DurationMs: first(p95) > 0 ? ms(first(p95)) : null,
-    activityBreakdown,
-    definitionBreakdown,
+    completedCount: Math.round(first(completed)),
+    incidentsCreated,
+    incidentsResolved: Math.round(first(incResolved)),
+    incidentRatePct: ratePct(incidentsCreated, totalCount),
+    avgDurationMs: msOrNull(firstOrNull(avg)),
+    medianDurationMs: msOrNull(firstOrNull(median)),
+    p95DurationMs: msOrNull(firstOrNull(p95)),
+    runningNow: runningGauge === null ? null : Math.round(runningGauge),
+    openIncidentsNow: openIncidentsGauge === null ? null : Math.round(openIncidentsGauge),
+    activityBreakdown: buildActivityBreakdown(actCount, actSum, actP95),
+    definitionBreakdown: buildDefinitionBreakdown({
+      started: defStarted,
+      completed: defCompleted,
+      incidents: defIncidents,
+      durSum: defDurSum,
+      durCount: defDurCount,
+      running: defRunning,
+    }),
   }
 }
 
+/** Composite (process, activity) key — activity ids repeat across models. */
+const activityKey = (s: PromSample) =>
+  `${s.metric.process_definition_key ?? ""}\u0000${s.metric.activity_id ?? ""}`
+
+function byActivityKey(samples: PromSample[]): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const s of samples) out.set(activityKey(s), s.value)
+  return out
+}
+
 function buildActivityBreakdown(
-  counts: PromSample[],
+  typedCounts: PromSample[],
   sums: PromSample[],
   p95: PromSample[],
-  types: PromSample[],
 ): ActivityBreakdownItem[] {
-  const sumBy = byLabel(sums, "activity_id")
-  const p95By = byLabel(p95, "activity_id")
-  const typeBy: Record<string, string> = {}
-  for (const t of types) {
-    const id = t.metric.activity_id
-    if (id !== undefined && typeBy[id] === undefined) typeBy[id] = t.metric.activity_type ?? ""
+  // One row per (process, activity); the type is fixed within one model.
+  const rows = new Map<string, { key: string; id: string; type: string; count: number }>()
+  for (const s of typedCounts) {
+    const k = activityKey(s)
+    const row = rows.get(k) ?? {
+      key: s.metric.process_definition_key ?? "",
+      id: s.metric.activity_id ?? "",
+      type: s.metric.activity_type ?? "",
+      count: 0,
+    }
+    row.count += s.value
+    rows.set(k, row)
   }
-  return counts
-    .map((c) => {
-      const id = c.metric.activity_id ?? ""
-      const count = Math.round(c.value)
-      const totalSec = sumBy[id] ?? 0
+  const sumBy = byActivityKey(sums)
+  const p95By = byActivityKey(p95)
+  return [...rows.entries()]
+    .map(([k, row]) => {
+      const count = Math.round(row.count)
+      const sumSec = sumBy.get(k)
+      const totalSec = sumSec ?? 0
+      const p95Sec = p95By.get(k)
       return {
-        activityId: id,
-        activityName: "",
-        activityType: typeBy[id] ?? "",
+        processDefinitionKey: row.key,
+        activityId: row.id,
+        activityType: row.type,
         executionCount: count,
-        avgDurationMs: count > 0 ? ms(totalSec / count) : 0,
-        p95DurationMs: ms(p95By[id] ?? 0),
+        avgDurationMs: sumSec !== undefined && count > 0 ? ms(sumSec / count) : null,
+        p95DurationMs: p95Sec === undefined ? null : ms(p95Sec),
         totalTimeMs: ms(totalSec),
       }
     })
@@ -157,34 +190,44 @@ function buildActivityBreakdown(
     .slice(0, 20)
 }
 
-function buildDefinitionBreakdown(
-  started: PromSample[],
-  completed: PromSample[],
-  endedAll: PromSample[],
-  failed: PromSample[],
-  durSum: PromSample[],
-  durCount: PromSample[],
-): DefinitionBreakdownItem[] {
-  const completedBy = byLabel(completed, "process_definition_key")
-  const endedBy = byLabel(endedAll, "process_definition_key")
-  const failedBy = byLabel(failed, "process_definition_key")
-  const sumBy = byLabel(durSum, "process_definition_key")
-  const countBy = byLabel(durCount, "process_definition_key")
-  return started
-    .map((s) => {
-      const key = s.metric.process_definition_key ?? ""
-      const total = Math.round(s.value)
+function buildDefinitionBreakdown(s: {
+  started: PromSample[]
+  completed: PromSample[]
+  incidents: PromSample[]
+  durSum: PromSample[]
+  durCount: PromSample[]
+  running: PromSample[]
+}): DefinitionBreakdownItem[] {
+  const startedBy = byLabel(s.started, "process_definition_key")
+  const completedBy = byLabel(s.completed, "process_definition_key")
+  const incidentsBy = byLabel(s.incidents, "process_definition_key")
+  const sumBy = byLabel(s.durSum, "process_definition_key")
+  const countBy = byLabel(s.durCount, "process_definition_key")
+  const runningBy = byLabel(s.running, "process_definition_key")
+  // No running gauge at all = the engines report no state gauges: unknown, not 0.
+  const runningReported = s.running.length > 0
+  // A definition belongs in the breakdown when it started work in the window
+  // OR has work running now — a long-running process must not vanish.
+  const keys = new Set([...Object.keys(startedBy), ...Object.keys(runningBy)])
+  return [...keys]
+    .map((key) => {
       const cnt = countBy[key] ?? 0
       return {
         processDefinitionKey: key,
-        totalInstances: total,
+        totalInstances: Math.round(startedBy[key] ?? 0),
         completed: Math.round(completedBy[key] ?? 0),
-        running: Math.max(0, total - Math.round(endedBy[key] ?? 0)),
-        failed: Math.round(failedBy[key] ?? 0),
+        runningNow: runningReported ? Math.round(runningBy[key] ?? 0) : null,
+        incidentsCreated: Math.round(incidentsBy[key] ?? 0),
         avgDurationMs: cnt > 0 ? ms((sumBy[key] ?? 0) / cnt) : null,
       }
     })
-    .sort((a, b) => b.totalInstances - a.totalInstances)
+    .filter((d) => d.totalInstances > 0 || (d.runningNow ?? 0) > 0)
+    .sort(
+      (a, b) =>
+        b.totalInstances - a.totalInstances ||
+        (b.runningNow ?? 0) - (a.runningNow ?? 0) ||
+        a.processDefinitionKey.localeCompare(b.processDefinitionKey),
+    )
 }
 
 /**
@@ -193,9 +236,10 @@ function buildDefinitionBreakdown(
  *
  * Point-in-time ("what is failing now"), so it is robust regardless of how the
  * data arrived — unlike a rate window over `incident_created`, which reads zero
- * on backdated/bulk-imported history. `failureRatePct` is open incidents over
- * currently-running instances. Reduced fidelity: patterns are grouped by
- * `incident_type` (no raw messages / activity id / sample ids).
+ * on backdated/bulk-imported history. Per process: instances running now, dead
+ * jobs, open incidents and open incidents per 100 running instances. Groups
+ * are (process, incident type) — the gauge carries no message, activity id,
+ * timestamps or instance ids, so the rows carry none either.
  */
 export async function failureDashboardData(
   ch: PrometheusClient,
@@ -214,13 +258,9 @@ export async function failureDashboardData(
   // the top 50 for display.
   const allPatterns: ErrorPatternItem[] = patterns
     .map((s) => ({
-      incidentMessage: s.metric.incident_type ?? "",
-      activityId: "",
+      incidentType: s.metric.incident_type ?? "",
       processDefinitionKey: s.metric.process_definition_key ?? "",
       incidentCount: Math.round(s.value),
-      firstOccurrence: "",
-      lastOccurrence: "",
-      sampleInstanceIds: [] as string[],
     }))
     .filter((p) => p.incidentCount > 0)
     .sort((a, b) => b.incidentCount - a.incidentCount)
@@ -233,20 +273,21 @@ export async function failureDashboardData(
   const processBreakdown: ProcessFailureItem[] = Object.keys(incidentBy)
     .map((key) => {
       const running = Math.round(runningBy[key] ?? 0)
-      const incidentCount = Math.round(incidentBy[key] ?? 0)
+      const openIncidents = Math.round(incidentBy[key] ?? 0)
       return {
         processDefinitionKey: key,
-        totalInstances: running,
-        failedCount: Math.round(deadBy[key] ?? 0),
-        incidentCount,
-        failureRatePct: running > 0 ? round1((incidentCount * 100) / running) : 0,
+        runningNow: running,
+        deadJobs: Math.round(deadBy[key] ?? 0),
+        openIncidents,
+        incidentRatePct: ratePct(openIncidents, running),
       }
     })
-    .filter((p) => p.incidentCount > 0)
-    .sort((a, b) => b.incidentCount - a.incidentCount)
+    .filter((p) => p.openIncidents > 0)
+    .sort((a, b) => b.openIncidents - a.openIncidents)
 
   const totalIncidents = allPatterns.reduce((s, p) => s + p.incidentCount, 0)
   return {
+    engines: engineIdsOf(params.engine),
     totalIncidents,
     uniqueErrorPatterns: allPatterns.length,
     mostAffectedProcess:

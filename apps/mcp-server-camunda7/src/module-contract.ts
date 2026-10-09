@@ -37,6 +37,13 @@ export interface SharedResources {
    * module is inactive — consumers degrade gracefully.
    */
   fetchBpmnXml?: FetchBpmnXml
+  /**
+   * The engine ids this server is configured for (the camunda7 module's
+   * engines) — the only engines analytics reads, from a Prometheus that may be
+   * shared with other teams. Absent when camunda7 is inactive: analytics then
+   * takes `ANALYTICS_ENGINE_IDS`, else refuses every engine read.
+   */
+  engineIds?: readonly string[]
 }
 
 /**

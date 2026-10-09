@@ -9,7 +9,7 @@ export const clusterCompareInput = z.object({
   activityId: z
     .string()
     .optional()
-    .describe("Restrict incident count to a single BPMN element (optional)"),
+    .describe("Also count the incidents at this BPMN element (element_incident_*; optional)"),
   deploymentTimestamp: isoDatetimeString.describe(
     "Deployment timestamp (ISO datetime). Pulled from camunda7_get_deployment.",
   ),
@@ -26,12 +26,12 @@ export const clusterCompareInput = z.object({
     .min(1)
     .max(30)
     .default(7)
-    .describe("Window size after the deployment, in days (max 30 — Prometheus retention)"),
+    .describe("Window size after the deployment, in days (max 30); clamped to now"),
   minBucketSize: z
     .number()
     .int()
     .min(1)
     .default(10)
-    .describe("Minimum instance count per window before results are trusted"),
+    .describe("Minimum started and completed instances per window before results are trusted"),
   ...engineFilterShape,
 })

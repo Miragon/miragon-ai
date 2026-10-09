@@ -61,6 +61,10 @@ operaton | camunda7`) and `auth` — overrides the single-engine shorthand
   then fails. The server warns at boot when unset. A protected Prometheus takes
   `PROMETHEUS_BEARER_TOKEN` or `PROMETHEUS_USERNAME`/`PROMETHEUS_PASSWORD`
   (plus `PROMETHEUS_HEADERS`, a JSON object, e.g. for a tenant id).
+- Analytics reads only the server's configured engines — camunda7's engine ids
+  (a shared Prometheus never exposes other teams' engines). Without camunda7,
+  name them in `ANALYTICS_ENGINE_IDS` (comma-separated `engine_id`s); with
+  neither, every analytics tool refuses.
 - `CAMUNDA_REQUEST_TIMEOUT_MS` / `PROMETHEUS_TIMEOUT_MS` — per-request
   deadlines (default 30000 ms); a hung upstream then fails the tool call with
   a timeout error instead of holding it.
