@@ -127,6 +127,7 @@ const ADMIN_ADDS: readonly string[] = [
   "camunda7_create_migration_plan",
   "camunda7_delete_process_instance",
   "camunda7_fetch_and_lock",
+  "camunda7_get_batch",
   "camunda7_handle_external_task_failure",
   "camunda7_migrate_process_instances_async",
   "camunda7_modify_process_instance",

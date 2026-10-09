@@ -12,6 +12,7 @@ import { NativeSelect } from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
 import type { TaskFormField, TaskFormSchema } from "../view-models.js"
 import { coerceValue } from "./lib/coerce-value.js"
+import { refreshCockpitData } from "./refresh.js"
 
 interface TaskCompleteFormProps {
   taskId: string
@@ -31,7 +32,14 @@ interface ManualEntry {
   type: string
 }
 
-const TYPE_OPTIONS = ["String", "Boolean", "Long", "Double", "Json"]
+const TYPE_OPTIONS = ["String", "Boolean", "Long", "Double", "Date", "Json"]
+
+/** What `camunda7_complete_task` reports: a delegated task is resolved, not completed. */
+interface TaskCompletion {
+  outcome?: "completed" | "resolved"
+  /** For a resolved task: its owner, now its assignee again. */
+  assignee?: string | null
+}
 
 export function TaskCompleteForm({
   taskId,
@@ -84,16 +92,19 @@ interface BodyProps {
 
 function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }: BodyProps) {
   const t = useT()
-  const completeMutation = useToolMutation("camunda7_complete_task")
+  const completeMutation = useToolMutation<TaskCompletion>("camunda7_complete_task")
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() =>
     initialFieldValues(schema),
   )
   const [manualEntries, setManualEntries] = useState<ManualEntry[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
+  // A delegated task went back to its owner and stays open — never shown as completed.
+  const [resolvedTo, setResolvedTo] = useState<{ owner: string | null } | null>(null)
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitError(null)
+    setResolvedTo(null)
 
     const variables: Record<string, { value: unknown; type?: string }> = {}
 
@@ -133,7 +144,15 @@ function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }:
     completeMutation.mutate(
       { taskId, variables, engine },
       {
-        onSuccess: () => onCompleted?.(),
+        onSuccess: (result) => {
+          if (result?.outcome === "resolved") {
+            setResolvedTo({ owner: result.assignee ?? null })
+            // The task card shows the owner as its assignee again.
+            refreshCockpitData()
+            return
+          }
+          onCompleted?.()
+        },
         onError: (error) => setSubmitError(error instanceof Error ? error.message : String(error)),
       },
     )
@@ -145,7 +164,11 @@ function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }:
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       {schema.fields.length === 0 && manualEntries.length === 0 && (
-        <p className="text-muted-foreground text-sm">{t("taskForm.empty")}</p>
+        <p className="text-muted-foreground text-sm">
+          {schema.formKey || schema.formRef
+            ? t("taskForm.externalForm", { formKey: schema.formKey ?? schema.formRef ?? "" })
+            : t("taskForm.empty")}
+        </p>
       )}
       {readonlyFields.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -203,6 +226,13 @@ function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }:
           </Button>
         </div>
       </div>
+      {resolvedTo && (
+        <Alert role="status">
+          <AlertDescription>
+            {t("taskForm.resolved", { owner: resolvedTo.owner ?? "—" })}
+          </AlertDescription>
+        </Alert>
+      )}
       {submitError && (
         <Alert variant="destructive">
           <AlertDescription>{submitError}</AlertDescription>
@@ -317,6 +347,8 @@ function FieldRow({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="h-8"
+        // ISO 8601, converted to the engine's date format server-side.
+        placeholder={field.type === "Date" ? "YYYY-MM-DD" : undefined}
         disabled={disabled}
       />
     </div>

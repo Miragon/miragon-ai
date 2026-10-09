@@ -1,9 +1,16 @@
 import { z } from "zod"
-import { firstResultParam, variableSchema } from "./shared.js"
+import { firstResultParam, sortOrderParam, variableSchema } from "./shared.js"
 
 export const listTasksInput = z.object({
   assignee: z.string().optional().describe("Filter by assignee user ID"),
-  candidateGroup: z.string().optional().describe("Filter by candidate group"),
+  candidateGroup: z
+    .string()
+    .optional()
+    .describe("Tasks offered to this group — only UNASSIGNED ones unless includeAssignedTasks"),
+  includeAssignedTasks: z
+    .boolean()
+    .optional()
+    .describe("With candidateGroup: include tasks already claimed"),
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
   unassigned: z.boolean().optional().describe("Only return unassigned tasks"),
@@ -29,7 +36,7 @@ export const listTasksInput = z.object({
     ])
     .optional()
     .describe("Sort field"),
-  sortOrder: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
+  sortOrder: sortOrderParam,
 })
 
 export const getTaskInput = z.object({

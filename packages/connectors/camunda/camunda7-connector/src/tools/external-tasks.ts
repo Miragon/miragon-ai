@@ -6,6 +6,7 @@ import {
   handleExternalTaskFailureInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import { engineSorting, toEngineVariables } from "@miragon-ai/camunda7-client"
 import {
   getExternalTasks,
   getExternalTasksCount,
@@ -19,19 +20,6 @@ import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
-
-/**
- * The engine sorts only by an explicit PAIR — `sortBy` without `sortOrder`
- * (or the reverse) is a 400. A `sortBy` alone therefore sorts ascending; a
- * `sortOrder` alone has no field to apply to and is dropped.
- */
-function externalTaskSorting<TField extends string>(args: {
-  sortBy?: TField
-  sortOrder?: "asc" | "desc"
-}): { sortBy?: TField; sortOrder?: "asc" | "desc" } {
-  if (!args.sortBy) return {}
-  return { sortBy: args.sortBy, sortOrder: args.sortOrder ?? "asc" }
-}
 
 export function registerExternalTaskTools(register: Register) {
   register({
@@ -65,7 +53,7 @@ export function registerExternalTaskTools(register: Register) {
             ...filters,
             firstResult: args.firstResult,
             maxResults: args.maxResults,
-            ...externalTaskSorting(args),
+            ...engineSorting(args),
           },
         }),
         getExternalTasksCount({ client, query: filters }),
@@ -134,7 +122,7 @@ export function registerExternalTaskTools(register: Register) {
         path: { id: args.externalTaskId },
         body: {
           workerId: args.workerId,
-          variables: args.variables,
+          variables: toEngineVariables(args.variables),
         },
       })
       return { success: true, externalTaskId: args.externalTaskId }
@@ -146,7 +134,7 @@ export function registerExternalTaskTools(register: Register) {
     category: "external-tasks",
     description:
       "External-task WORKER protocol: report a failure for an external task locked by the given worker. Sets the error " +
-      "message, remaining retries and retry timeout; retries = 0 creates an incident.",
+      "message, the REQUIRED remaining retries and the retry timeout; retries = 0 raises an incident at once.",
     annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: { ...handleExternalTaskFailureInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {

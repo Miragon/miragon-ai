@@ -4,12 +4,23 @@ import { ListTable, TableEmptyState, Td, useResetOnChange } from "@miragon-ai/wi
 
 import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
-import { coerceValue } from "./lib/coerce-value.js"
+import { coerceValue, isEditableVariable } from "./lib/coerce-value.js"
 import { refreshCockpitData } from "./refresh.js"
 import { useCanRun } from "./widget-actions.js"
 
+/** A serialized Json/Object value, pretty-printed when it is valid JSON. */
+function prettyJson(serialized: string): string {
+  try {
+    return JSON.stringify(JSON.parse(serialized), null, 2)
+  } catch {
+    return serialized
+  }
+}
+
 export function formatVariableValue(value: unknown, type?: string): string {
   if (value === null || value === undefined) return "—"
+  // The feeds read variables serialized: Json/Object values arrive as strings.
+  if ((type === "Json" || type === "Object") && typeof value === "string") return prettyJson(value)
   if (type === "Json" || type === "Object" || typeof value === "object") {
     return JSON.stringify(value, null, 2)
   }
@@ -18,6 +29,17 @@ export function formatVariableValue(value: unknown, type?: string): string {
     return String(value)
   }
   return JSON.stringify(value)
+}
+
+/**
+ * The raw value to edit, not its display form: a serialized Json/Object
+ * string is edited (and written back) as that very string.
+ */
+function editText(value: unknown, type?: string): string {
+  if (value === null || value === undefined) return ""
+  if (typeof value === "string") return value
+  if (typeof value === "object") return JSON.stringify(value)
+  return formatVariableValue(value, type)
 }
 
 export function ActivityNode({ node, depth = 0 }: { node: ActivityTree; depth?: number }) {
@@ -56,8 +78,7 @@ function VariableRow({
   const t = useT()
 
   function startEdit() {
-    const v = variable.value
-    setEditValue(typeof v === "object" ? JSON.stringify(v) : formatVariableValue(v, variable.type))
+    setEditValue(editText(variable.value, variable.type))
     setEditError(null)
     // Clear a prior failed save so the stale server error doesn't reappear when
     // the operator reopens the row.
@@ -83,6 +104,8 @@ function VariableRow({
         variableName: name,
         value: parsed,
         type: variable.type,
+        // An Object is written back with the type name + format it was read with.
+        valueInfo: variable.valueInfo,
         engine,
       },
       {
@@ -151,7 +174,7 @@ function VariableRow({
       </Td>
       {editable && (
         <Td align="right" className="w-16">
-          {!editing && (
+          {!editing && isEditableVariable(variable) && (
             <Button variant="ghost" size="sm" onClick={startEdit}>
               {t("instanceSections.edit")}
             </Button>

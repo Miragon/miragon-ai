@@ -1,23 +1,18 @@
 import type { InstanceDetailData } from "../../view-models.js"
-import { IncidentTable, type ResolveError } from "../process-incidents/incident-table.js"
+import { IncidentTable } from "../process-incidents/incident-table.js"
+import type { IncidentRecoveryState } from "../process-incidents/use-incident-recovery.js"
 import { useNav } from "../navigation.js"
 import { useT } from "../../messages/use-t.js"
 
 /** The "Incidents" tab body. */
 export function IncidentsTab({
   incidents,
-  resolvedIds,
-  pendingIds,
-  resolveError,
-  onResolve,
+  recovery,
   engine,
 }: {
   incidents: InstanceDetailData["incidents"]
-  resolvedIds: Set<string>
-  pendingIds: Set<string>
-  resolveError: ResolveError | null
-  /** Omitted when the deployment's toolset has no resolve tool — no button. */
-  onResolve?: (incidentId: string) => void
+  /** Row actions + their optimistic state (`useIncidentRecovery`). */
+  recovery: IncidentRecoveryState
   /** The instance's engine, pinned into the rows' AI handoffs. */
   engine?: string
 }) {
@@ -32,10 +27,7 @@ export function IncidentsTab({
   return (
     <IncidentTable
       incidents={incidents ?? []}
-      resolvedIds={resolvedIds}
-      pendingIds={pendingIds}
-      resolveError={resolveError}
-      onResolve={onResolve}
+      recovery={recovery}
       onAnalyze={(incidentId) => go({ type: "incident-detail", incidentId })}
       hideInstanceColumn
       previewCount={5}

@@ -1,10 +1,15 @@
 import { formatIncidentIssueInput } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
+  fetchExternalTaskErrorDetails,
+  fetchJobStacktrace,
+  incidentRecovery,
+  type Client,
+} from "@miragon-ai/camunda7-client"
+import {
   getIncident,
   getProcessDefinition,
   getProcessInstance,
-  getStacktrace,
 } from "@miragon-ai/camunda7-client/sdk"
 import type {
   IncidentDto,
@@ -57,8 +62,10 @@ interface BuildIssueInput {
   incident: IncidentDto
   processInstance?: ProcessInstanceDto | null
   processDefinition?: ProcessDefinitionDto | null
-  /** Raw exception stacktrace (typically `getStacktrace` for the failed job). */
+  /** Raw failure text: the failed job's stacktrace or the worker's error details. */
   stacktrace?: string | null
+  /** Why the stacktrace could not be loaded — said in the draft instead of "none available". */
+  stacktraceError?: string | null
   /** Resolved-engine link context for the cockpit deep link (see `lib/cockpit-url.ts`). */
   engine: EngineLink
   repository: string | null
@@ -74,14 +81,20 @@ const ISSUE_LABELS = ["bug", "incident"]
  * the SDK.
  */
 export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssuePayload {
-  const { incident, processDefinition, stacktrace, repository } = input
+  const { incident, processDefinition, stacktrace, stacktraceError, repository } = input
   const incidentType = incident.incidentType ?? "unknown"
   const definitionKey = processDefinition?.key ?? "unknown-process"
   const title = `[Bug]: Engine incident (${incidentType}) in ${definitionKey}`
-  const condensedStack = stacktrace ? condenseStacktrace(stacktrace) : null
+  const condensedStack = stacktrace ? boundFailureText(condenseStacktrace(stacktrace)) : null
   const cockpitLink = buildIssueCockpitLink(input)
 
-  const body = buildIssueBody(input, { incidentType, definitionKey, condensedStack, cockpitLink })
+  const body = buildIssueBody(input, {
+    incidentType,
+    definitionKey,
+    condensedStack,
+    stacktraceError: stacktraceError ?? null,
+    cockpitLink,
+  })
 
   const prefilledUrl = repository
     ? buildPrefilledIssueUrl(repository, title, body, ISSUE_LABELS)
@@ -126,13 +139,24 @@ interface IssueBodyContext {
   incidentType: string
   definitionKey: string
   condensedStack: string | null
+  stacktraceError: string | null
   cockpitLink: string | null
+}
+
+/** The draft's stacktrace paragraph: the trace, why it is missing, or that there is none. */
+function stacktraceSection({ condensedStack, stacktraceError }: IssueBodyContext): string {
+  if (condensedStack) {
+    return `Stacktrace (condensed — framework/JDK frames removed):\n\n${codeFence(condensedStack)}`
+  }
+  return stacktraceError
+    ? `_Stacktrace could not be loaded: ${stacktraceError}_`
+    : "_No stacktrace available._"
 }
 
 /** Markdown body of the draft, section by section (see {@link buildIncidentIssuePayload}). */
 function buildIssueBody(input: BuildIssueInput, context: IssueBodyContext): string {
   const { incident, engine } = input
-  const { incidentType, definitionKey, condensedStack, cockpitLink } = context
+  const { incidentType, definitionKey, cockpitLink } = context
   return [
     "### Description",
     "",
@@ -141,7 +165,7 @@ function buildIssueBody(input: BuildIssueInput, context: IssueBodyContext): stri
     )}\` of process \`${definitionKey}\`.`,
     "",
     incident.incidentMessage
-      ? `Engine message:\n\n\`\`\`\n${incident.incidentMessage}\n\`\`\``
+      ? `Engine message:\n\n${codeFence(incident.incidentMessage)}`
       : "_No incident message reported by the engine._",
     "",
     "### Steps to Reproduce",
@@ -158,9 +182,7 @@ function buildIssueBody(input: BuildIssueInput, context: IssueBodyContext): stri
     "",
     `An incident of type \`${incidentType}\` is raised.`,
     "",
-    condensedStack
-      ? `Stacktrace (condensed — framework/JDK frames removed):\n\n\`\`\`\n${condensedStack}\n\`\`\``
-      : "_No stacktrace available._",
+    stacktraceSection(context),
     "",
     "### Engine context",
     "",
@@ -231,6 +253,36 @@ function buildPrefilledIssueUrl(
 }
 
 /**
+ * Upper bound for the failure text in the draft. A worker's error details are
+ * free text of any size (a downstream HTML error page, a whole log), and the
+ * draft goes back to the model in full — so a longer text keeps its head
+ * (the error) and its tail (the root cause, in a Java trace), with a note.
+ */
+const MAX_FAILURE_TEXT = 6000
+const FAILURE_TEXT_TAIL = 1500
+
+function boundFailureText(text: string): string {
+  if (text.length <= MAX_FAILURE_TEXT) return text
+  const head = text.slice(0, MAX_FAILURE_TEXT - FAILURE_TEXT_TAIL)
+  const tail = text.slice(-FAILURE_TEXT_TAIL)
+  const cut = text.length - head.length - tail.length
+  return `${head}\n… [${cut} characters truncated] …\n${tail}`
+}
+
+/**
+ * A fenced code block the text cannot close: the fence is one backtick longer
+ * than the longest backtick run inside (at least three). Engine and worker
+ * text is untrusted — a plain ``` inside it would end the block, and the rest
+ * would render as markdown in the filed ticket (mentions, links, images).
+ */
+function codeFence(text: string): string {
+  let longest = 0
+  for (const run of text.matchAll(/`+/g)) longest = Math.max(longest, run[0].length)
+  const fence = "`".repeat(Math.max(3, longest + 1))
+  return `${fence}\n${text}\n${fence}`
+}
+
+/**
  * Reduces a Java stacktrace to the actionable parts:
  *   - the first exception line (`com.foo.Bar: message`)
  *   - up to N frames per exception, prioritising user code over framework internals
@@ -269,6 +321,8 @@ function pickFrames(frames: string[]): string[] {
 
 export function condenseStacktrace(raw: string): string {
   const lines = raw.split(/\r?\n/)
+  // Free text (a worker's error details) has no frames to trim — keep it whole.
+  if (!lines.some(isFrame)) return raw.trim()
   const sections: { head: string; frames: string[] }[] = []
   let current: { head: string; frames: string[] } | null = null
 
@@ -303,6 +357,29 @@ export function condenseStacktrace(raw: string): string {
   return out.join("\n")
 }
 
+/**
+ * The incident's failure text through the engine contract: a failedJob's
+ * stacktrace, a failedExternalTask's worker error details. Optional for the
+ * draft — but a failed load is reported as such, never as "none available".
+ */
+async function fetchFailureText(
+  client: Client,
+  incident: IncidentDto,
+): Promise<{ stacktrace: string | null; stacktraceError: string | null }> {
+  const recovery = incidentRecovery(incident)
+  try {
+    const stacktrace =
+      recovery.action === "retry-job"
+        ? await fetchJobStacktrace(client, recovery.jobId)
+        : recovery.action === "retry-external-task"
+          ? await fetchExternalTaskErrorDetails(client, recovery.externalTaskId)
+          : null
+    return { stacktrace, stacktraceError: null }
+  } catch (error) {
+    return { stacktrace: null, stacktraceError: (error as Error).message }
+  }
+}
+
 export function registerIncidentIssueTools(register: Register, config: IncidentIssueConfig) {
   register({
     name: "camunda7_format_incident_issue",
@@ -323,18 +400,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
         path: { id: args.incidentId },
       })
 
-      // For `failedJob` incidents, `configuration` holds the failed job ID.
-      // The stacktrace endpoint returns 404 for non-job incidents and for jobs
-      // without an exception — both are non-fatal here, so swallow.
-      const stacktracePromise =
-        incident.incidentType === "failedJob" && incident.configuration
-          ? getStacktrace({
-              client,
-              path: { id: incident.configuration },
-            }).catch(() => null)
-          : Promise.resolve(null)
-
-      const [processInstance, processDefinition, stacktrace] = await Promise.all([
+      const [processInstance, processDefinition, failure] = await Promise.all([
         incident.processInstanceId
           ? getProcessInstance({
               client,
@@ -347,7 +413,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
               path: { id: incident.processDefinitionId },
             })
           : Promise.resolve(null),
-        stacktracePromise,
+        fetchFailureText(client, incident),
       ])
 
       const repository = args.repository ?? config.repository ?? null
@@ -355,7 +421,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
         incident,
         processInstance,
         processDefinition,
-        stacktrace,
+        ...failure,
         engine: { baseUrl, cockpitUrl, provider },
         repository,
       })

@@ -175,6 +175,9 @@ export const deSweep: MessageCatalog = {
   "incidentFailure.retryAria": "Job wiederholen (Wiederholungen auf 1 setzen)",
   "incidentFailure.retryButton": "Job wiederholen",
   "incidentFailure.retryError": "Wiederholung fehlgeschlagen: {message}",
+  "incidentFailure.retryTaskAria": "External Task wiederholen (Wiederholungen auf 1 setzen)",
+  "incidentFailure.retryTaskButton": "Aufgabe wiederholen",
+  "incidentFailure.retriedTaskAria": "External Task wiederholt",
   "incidentFailure.stacktraceTitle": "Stacktrace",
   "incidentFailure.stacktraceUnavailableHint": "nicht verfügbar",
   "incidentHistory.columnActivity": "Aktivität",
@@ -230,7 +233,7 @@ export const deSweep: MessageCatalog = {
     "Die Ausführung wird an den aktuellen Aktivitäten fortgesetzt.",
   "instanceDetail.confirmActivateTitle": "Diese Prozessinstanz aktivieren?",
   "instanceDetail.confirmCancelDescription":
-    "Dadurch werden die laufende Instanz und alle ihre Token gelöscht. Diese Aktion ist unwiderruflich.",
+    "Dadurch werden die laufende Instanz und alle ihre Token gelöscht, einschließlich der Instanzen, die ihre Call Activities gestartet haben. Diese Aktion ist unwiderruflich.",
   "instanceDetail.confirmCancelTitle": "Diese Prozessinstanz abbrechen?",
   "instanceDetail.confirmResolveDescription":
     "Der Incident wird auf der Engine als gelöst markiert — die eigentliche Ursache wird dadurch nicht behoben.",
@@ -400,6 +403,11 @@ export const deSweep: MessageCatalog = {
   "procIncTable.resolve": "Auflösen",
   "procIncTable.resolved": "Behoben",
   "procIncTable.resolveError": "Auflösen fehlgeschlagen: {message}",
+  "procIncTable.retried": "Wiederholt",
+  "procIncTable.retry": "Wiederholen",
+  "procIncTable.retryError": "Wiederholung fehlgeschlagen: {message}",
+  "procIncTable.retryHint":
+    "Setzt die Wiederholungen auf 1 — Engine-Incidents dieses Typs werden durch Wiederholen behoben, nicht durch Auflösen",
   "procIncTable.showMoreOne": "{count} weiteren Vorfall in dieser Aktivität anzeigen",
   "procIncTable.showMoreOther": "{count} weitere Vorfälle in dieser Aktivität anzeigen",
   "procIncTable.tableLabel": "Vorfälle in dieser Aktivität",
@@ -410,10 +418,14 @@ export const deSweep: MessageCatalog = {
   "taskForm.empty": "Für diese Aufgabe ist kein Formular definiert.",
   "taskForm.errorInvalid": "Ungültiger Wert für {name}: erwartet wurde {type}",
   "taskForm.errorRequired": "Wähle einen Wert für {name}, bevor du die Aufgabe abschließt",
+  "taskForm.externalForm":
+    "Diese Aufgabe nutzt ein eigenes Formular ({formKey}), das hier nicht angezeigt wird — öffne es in der Tasklist oder füge Variablen manuell hinzu.",
   "taskForm.loadError": "Aufgabenformular konnte nicht geladen werden: {message}",
   "taskForm.loading": "Aufgabenformular wird geladen…",
   "taskForm.namePlaceholder": "Name",
   "taskForm.removeVariable": "Variable entfernen",
+  "taskForm.resolved":
+    "Die Aufgabe war delegiert und ging deshalb an ihren Besitzer ({owner}) zurück, statt abgeschlossen zu werden — sie bleibt offen.",
   "taskForm.required": "erforderlich",
   "taskForm.valuePlaceholder": "Wert",
   "taskForm.variableName": "Variablenname",

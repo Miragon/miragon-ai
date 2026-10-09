@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { firstResultParam, variableSchema } from "./shared.js"
+import { firstResultParam, sortOrderParam, variableSchema, variableValueInfo } from "./shared.js"
 
 export const startProcessInstanceInput = z.object({
   processDefinitionKey: z.string().describe("The key of the process definition to start"),
@@ -17,7 +17,7 @@ export const listProcessInstancesInput = z.object({
   sortBy: z
     .enum(["instanceId", "definitionKey", "definitionId", "tenantId", "businessKey"])
     .optional(),
-  sortOrder: z.enum(["asc", "desc"]).optional(),
+  sortOrder: sortOrderParam,
 })
 
 export const getProcessInstanceInput = z.object({
@@ -30,6 +30,15 @@ export const getActivityInstanceTreeInput = z.object({
 
 export const deleteProcessInstanceInput = z.object({
   processInstanceId: z.string().describe("The process instance ID to delete"),
+  skipSubprocesses: z
+    .boolean()
+    .optional()
+    .describe("Keep the instances its call activities started (default: deleted too)"),
+  skipCustomListeners: z
+    .boolean()
+    .optional()
+    .describe("Skip custom execution listeners (e.g. when one fails the delete)"),
+  skipIoMappings: z.boolean().optional().describe("Skip input/output mappings"),
 })
 
 export const modifyProcessInstanceInput = z.object({
@@ -59,8 +68,12 @@ export const getProcessInstanceVariablesInput = z.object({
 export const setProcessInstanceVariableInput = z.object({
   processInstanceId: z.string().describe("The process instance ID"),
   variableName: z.string().describe("The variable name"),
-  value: z.unknown().describe("The variable value"),
-  type: z.string().optional().describe("The variable type (String, Integer, Boolean, etc.)"),
+  value: z.unknown().describe("The value (Json/Object: serialized string or parsed JSON)"),
+  type: z
+    .string()
+    .optional()
+    .describe("Variable type (String, Long, Boolean, Date: ISO 8601, Json, Object, …)"),
+  valueInfo: variableValueInfo,
 })
 
 export const setProcessInstanceSuspensionInput = z.object({

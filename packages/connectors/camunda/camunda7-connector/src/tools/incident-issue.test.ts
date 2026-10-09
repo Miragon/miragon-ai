@@ -248,3 +248,47 @@ describe("buildIncidentIssuePayload", () => {
     )
   })
 })
+
+describe("buildIncidentIssuePayload with untrusted failure text", () => {
+  const incident = {
+    id: "inc-1",
+    incidentType: "failedExternalTask",
+    processDefinitionId: "invoice:1:abc",
+    processInstanceId: "pi-42",
+  }
+  const draft = (over: { stacktrace?: string; incidentMessage?: string }) =>
+    buildIncidentIssuePayload({
+      incident: { ...incident, incidentMessage: over.incidentMessage },
+      processDefinition: { key: "invoice", version: 7 },
+      stacktrace: over.stacktrace,
+      engine: engineWithoutCockpit,
+      repository: null,
+    }).body
+
+  it("bounds a worker's free-text error details to their head and tail", () => {
+    const details = `HEAD-${"x".repeat(50_000)}-TAIL`
+    const body = draft({ stacktrace: details })
+    expect(body.length).toBeLessThan(10_000)
+    expect(body).toContain("HEAD-")
+    expect(body).toContain("-TAIL")
+    expect(body).toMatch(/… \[\d+ characters truncated\] …/)
+  })
+
+  it("keeps a short failure text whole", () => {
+    expect(draft({ stacktrace: "SMTP 550\nmailbox full" })).toContain("SMTP 550\nmailbox full")
+  })
+
+  it("fences failure text with a longer fence than any backtick run inside it", () => {
+    const hostile = "boom\n```\n@octocat please look ![x](https://evil.example/x.png)\n````"
+    const body = draft({ stacktrace: hostile })
+    // The text's own ``` / ```` cannot close the block: the fence is 5 long.
+    const fence = "`".repeat(5)
+    expect(body).toContain(`${fence}\n${hostile}\n${fence}`)
+  })
+
+  it("fences the engine message the same way", () => {
+    const body = draft({ incidentMessage: "bad ``` input" })
+    const fence = "`".repeat(4)
+    expect(body).toContain(`Engine message:\n\n${fence}\nbad \`\`\` input\n${fence}`)
+  })
+})

@@ -8,13 +8,14 @@ import {
   useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 
-import type { IncidentDetailData } from "../view-models.js"
+import type { IncidentDetailData, IncidentRecovery } from "../view-models.js"
 
 import { CAMUNDA7_INCIDENT_DETAIL_DATA } from "../tool-names.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { ConfirmDialog } from "./confirm-dialog.js"
 import { DetailPage } from "./detail-page.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
+import { recoveryOf } from "./lib/incident-recovery.js"
 import { IncidentDetailHeader } from "./incident-detail/header.js"
 import { InstanceTab } from "./incident-detail/instance-tab.js"
 import { IncidentKpis } from "./incident-detail/kpis.js"
@@ -25,6 +26,54 @@ import { useT } from "../messages/use-t.js"
 
 export type { IncidentDetailData }
 
+/** The detail's recovery — an old stored payload falls back to its type and job. */
+function detailRecovery(data: IncidentDetailData): IncidentRecovery {
+  return recoveryOf(data, data.job?.id)
+}
+
+/**
+ * The retry tool that clears this incident (built-in types refuse resolve),
+ * or null for a custom or propagated one — from the feed's `recovery`.
+ */
+function retryToolFor(data: IncidentDetailData) {
+  const { action } = detailRecovery(data)
+  if (action === "retry-job") return "camunda7_set_job_retries" as const
+  if (action === "retry-external-task") return "camunda7_set_external_task_retries" as const
+  return null
+}
+
+/** The retries call that clears a built-in incident; null when it is resolved instead. */
+function retryArgs(recovery: IncidentRecovery): Record<string, unknown> | null {
+  if (recovery.action === "retry-job") return { jobId: recovery.jobId, retries: 1 }
+  if (recovery.action === "retry-external-task") {
+    return { externalTaskId: recovery.externalTaskId, retries: 1 }
+  }
+  return null
+}
+
+/**
+ * Which remedy this deployment may offer for the incident: the engine refuses
+ * to resolve its built-in types (failedJob, failedExternalTask), so those get
+ * Retry through their retries tool and only custom incidents get Resolve.
+ */
+function useRemedies(data: IncidentDetailData | null) {
+  const canRun = useCanRun()
+  const jobRetryMutation = useToolMutation("camunda7_set_job_retries")
+  const externalTaskRetryMutation = useToolMutation("camunda7_set_external_task_retries")
+  const retryTool = data ? retryToolFor(data) : null
+  return {
+    canResolve:
+      data !== null &&
+      detailRecovery(data).action === "resolve" &&
+      canRun("camunda7_resolve_incident"),
+    canRetry: retryTool !== null && canRun(retryTool),
+    retryMutation:
+      retryTool === "camunda7_set_external_task_retries"
+        ? externalTaskRetryMutation
+        : jobRetryMutation,
+  }
+}
+
 function modelSummary(
   data: IncidentDetailData,
   resolved: boolean,
@@ -32,10 +81,9 @@ function modelSummary(
 ): string {
   const incidentMessage = data.incidentMessage ?? data.job?.exceptionMessage
   // Only the writes this deployment's toolset exposes — the model has no others.
-  const writes = [
-    canResolve && "camunda7_resolve_incident",
-    canRetry && "camunda7_set_job_retries",
-  ].filter(Boolean)
+  const writes = [canResolve && "camunda7_resolve_incident", canRetry && retryToolFor(data)].filter(
+    Boolean,
+  )
   const jobClause = data.job ? ` (job ${data.job.id}, ${data.job.retries} retries left)` : ""
   const instanceHint = "instance context via camunda7_show_instance_detail."
   return [
@@ -62,10 +110,6 @@ export function IncidentDetailWidget({
   engine?: string
 }) {
   const resolveMutation = useToolMutation("camunda7_resolve_incident")
-  const retryMutation = useToolMutation("camunda7_set_job_retries")
-  const canRun = useCanRun()
-  const canResolve = canRun("camunda7_resolve_incident")
-  const canRetry = canRun("camunda7_set_job_retries")
   const [resolved, setResolved] = useState(false)
   const [retried, setRetried] = useState(false)
   const [confirmResolve, setConfirmResolve] = useState(false)
@@ -85,6 +129,8 @@ export function IncidentDetailWidget({
     setResolved(false)
     setRetried(false)
   })
+
+  const { canResolve, canRetry, retryMutation } = useRemedies(data)
 
   const highlights = useMemo<BpmnHighlight[]>(
     () => [{ kind: "incident", activityIds: data ? [data.activityId] : [] }],
@@ -115,9 +161,10 @@ export function IncidentDetailWidget({
   }
 
   function handleRetry() {
-    if (!data?.job) return
+    const args = data ? retryArgs(detailRecovery(data)) : null
+    if (!args) return
     retryMutation.mutate(
-      { jobId: data.job.id, retries: 1, engine: engineId },
+      { ...args, engine: engineId },
       {
         onSuccess: () => {
           setRetried(true)

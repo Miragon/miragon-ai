@@ -145,7 +145,7 @@ describe("buildInstanceDetailData", () => {
     expect(data.bpmnXml).toBeNull()
   })
 
-  it("attaches a form schema per open task and degrades to an empty one on failure", async () => {
+  it("attaches a form schema per open task — null (never 'no form') when one fails", async () => {
     mockedTasks.mockResolvedValueOnce([
       { id: "t1", taskDefinitionKey: "Task_1", processDefinitionId: "K1:3:dep" },
       { id: "t2", taskDefinitionKey: "Task_2", processDefinitionId: "K1:3:dep" },
@@ -160,7 +160,39 @@ describe("buildInstanceDetailData", () => {
 
     expect(data.openTasks).toHaveLength(2)
     expect(data.openTasks[0].formSchema).toMatchObject({ taskId: "t1" })
-    expect(data.openTasks[1].formSchema).toEqual({ taskId: "t2", fields: [] })
+    expect(data.openTasks[1].formSchema).toBeNull()
+  })
+
+  it("leaves the open tasks' forms unknown (null) when the BPMN cannot be read", async () => {
+    // A 403/5xx on the diagram is not "no BPMN": a <camunda:formData> form
+    // could be hiding there, and an empty schema would offer the task
+    // without it. The widget loads the form itself and shows that error.
+    mockedBpmn.mockRejectedValueOnce(new Error("403 not authorized"))
+    mockedTasks.mockResolvedValueOnce([
+      { id: "t1", taskDefinitionKey: "Task_1", processDefinitionId: "K1:3:dep" },
+    ] as never)
+
+    const data = await buildInstanceDetailData(fakeClient, "engine-a", {
+      processInstanceId: "p1",
+    })
+
+    expect(data.openTasks[0].formSchema).toBeNull()
+    expect(mockedFormSchema).not.toHaveBeenCalled()
+  })
+
+  it("builds the forms from 'no BPMN' only when the instance names no definition", async () => {
+    mockedInstance.mockResolvedValueOnce({ id: "p1" })
+    mockedTasks.mockResolvedValueOnce([{ id: "t1", taskDefinitionKey: "Task_1" }] as never)
+
+    const data = await buildInstanceDetailData(fakeClient, "engine-a", {
+      processInstanceId: "p1",
+    })
+
+    expect(data.openTasks[0].formSchema).toEqual({ taskId: "t1", fields: [] })
+    expect(mockedFormSchema).toHaveBeenCalledWith(fakeClient, "t1", {
+      task: { id: "t1", taskDefinitionKey: "Task_1" },
+      bpmnXml: null,
+    })
   })
 })
 

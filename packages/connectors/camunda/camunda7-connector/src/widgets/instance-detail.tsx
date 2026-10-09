@@ -47,7 +47,7 @@ export function InstanceDetailWidget({
   const isActionable = !instance.ended && !cancelled
 
   const variableEntries = Object.entries(variables)
-  const activeIncidents = (incidents ?? []).filter((i) => !actions.resolvedIds.has(i.id))
+  const activeIncidents = (incidents ?? []).filter((i) => !actions.recovery.doneIds.has(i.id))
   // When neither the prop nor the fetched id is known the prompts omit the engine
   // clause entirely (the saved default engine applies) — never inline a
   // placeholder as if it were an engine id.
@@ -77,16 +77,7 @@ export function InstanceDetailWidget({
       id: "incidents",
       label: t("instanceDetail.tabIncidents"),
       count: activeIncidents.length,
-      content: (
-        <IncidentsTab
-          incidents={incidents}
-          resolvedIds={actions.resolvedIds}
-          pendingIds={actions.pendingIds}
-          resolveError={actions.resolveError}
-          onResolve={actions.canResolve ? actions.setConfirmResolveId : undefined}
-          engine={engineId}
-        />
-      ),
+      content: <IncidentsTab incidents={incidents} recovery={actions.recovery} engine={engineId} />,
     },
     {
       id: "variables",

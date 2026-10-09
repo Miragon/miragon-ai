@@ -71,6 +71,8 @@ export const CAMUNDA7_ENGINE = "camunda7_engine"
 // write missing from this list.
 export const CAMUNDA7_WIDGET_ACTIONS = [
   "camunda7_set_job_retries",
+  // The failedExternalTask incident's remedy — resolve refuses that type.
+  "camunda7_set_external_task_retries",
   "camunda7_resolve_incident",
   "camunda7_complete_task",
   "camunda7_set_process_instance_variable",

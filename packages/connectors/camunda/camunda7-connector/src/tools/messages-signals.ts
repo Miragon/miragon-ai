@@ -1,5 +1,6 @@
 import { correlateMessageInput, throwSignalInput } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import { toEngineVariables } from "@miragon-ai/camunda7-client"
 import { deliverMessage, throwSignal } from "@miragon-ai/camunda7-client/sdk"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
@@ -11,7 +12,9 @@ export function registerMessageSignalTools(register: Register) {
     name: "camunda7_correlate_message",
     category: "messages-signals",
     description:
-      "Correlate a message to trigger a message catch event or start a message start event.",
+      "Correlate a message to a waiting catch event or a message start event; target it via processInstanceId, " +
+      "businessKey or correlationKeys. Unless all=true the engine needs EXACTLY one match: several fail, and so does " +
+      "none without a message start event.",
     annotations: { openWorldHint: true },
     inputSchema: { ...correlateMessageInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) =>
@@ -19,9 +22,11 @@ export function registerMessageSignalTools(register: Register) {
         client,
         body: {
           messageName: args.messageName,
+          processInstanceId: args.processInstanceId,
           businessKey: args.businessKey,
-          correlationKeys: args.correlationKeys,
-          processVariables: args.processVariables,
+          correlationKeys: toEngineVariables(args.correlationKeys),
+          processVariables: toEngineVariables(args.processVariables),
+          all: args.all,
           resultEnabled: args.resultEnabled,
         },
       }),
@@ -43,7 +48,7 @@ export function registerMessageSignalTools(register: Register) {
         client,
         body: {
           name: args.name,
-          variables: args.variables,
+          variables: toEngineVariables(args.variables),
         },
       })
       return { success: true, signalName: args.name }

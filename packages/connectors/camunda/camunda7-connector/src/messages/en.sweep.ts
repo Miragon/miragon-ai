@@ -175,6 +175,9 @@ export const enSweep: MessageCatalog = {
   "incidentFailure.retryAria": "Retry job (set retries to 1)",
   "incidentFailure.retryButton": "Retry job",
   "incidentFailure.retryError": "Retry failed: {message}",
+  "incidentFailure.retryTaskAria": "Retry external task (set retries to 1)",
+  "incidentFailure.retryTaskButton": "Retry task",
+  "incidentFailure.retriedTaskAria": "External task retried",
   "incidentFailure.stacktraceTitle": "Stacktrace",
   "incidentFailure.stacktraceUnavailableHint": "not available",
   "incidentHistory.columnActivity": "Activity",
@@ -229,7 +232,7 @@ export const enSweep: MessageCatalog = {
   "instanceDetail.confirmActivateDescription": "Execution continues from the current activities.",
   "instanceDetail.confirmActivateTitle": "Activate this process instance?",
   "instanceDetail.confirmCancelDescription":
-    "This deletes the running instance and all of its tokens. This action is irreversible.",
+    "This deletes the running instance and all of its tokens, including the instances its call activities started. This action is irreversible.",
   "instanceDetail.confirmCancelTitle": "Cancel this process instance?",
   "instanceDetail.confirmResolveDescription":
     "This marks the incident as resolved on the engine — it does not fix the underlying fault.",
@@ -399,6 +402,11 @@ export const enSweep: MessageCatalog = {
   "procIncTable.resolve": "Resolve",
   "procIncTable.resolved": "Resolved",
   "procIncTable.resolveError": "Resolve failed: {message}",
+  "procIncTable.retried": "Retried",
+  "procIncTable.retry": "Retry",
+  "procIncTable.retryError": "Retry failed: {message}",
+  "procIncTable.retryHint":
+    "Sets retries to 1 — engine incidents of this type clear by a retry, not by resolving",
   "procIncTable.showMoreOne": "Show {count} more incident in this activity",
   "procIncTable.showMoreOther": "Show {count} more incidents in this activity",
   "procIncTable.tableLabel": "Incidents in this activity",
@@ -409,10 +417,14 @@ export const enSweep: MessageCatalog = {
   "taskForm.empty": "No form is defined for this task.",
   "taskForm.errorInvalid": "Invalid value for {name}: expected {type}",
   "taskForm.errorRequired": "Pick a value for {name} before completing the task",
+  "taskForm.externalForm":
+    "This task uses its own form ({formKey}), which is not rendered here — open it in the Tasklist or add variables manually.",
   "taskForm.loadError": "Could not load task form: {message}",
   "taskForm.loading": "Loading task form…",
   "taskForm.namePlaceholder": "name",
   "taskForm.removeVariable": "Remove variable",
+  "taskForm.resolved":
+    "The task was delegated, so it went back to its owner ({owner}) instead of being completed — it stays open.",
   "taskForm.required": "required",
   "taskForm.valuePlaceholder": "value",
   "taskForm.variableName": "Variable name",

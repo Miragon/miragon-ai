@@ -427,7 +427,7 @@ describe("buildActivityIncidentsData", () => {
 
   it("pages one activity's rows engine-side and enriches them with Cockpit URLs", async () => {
     mockedGetIncidents.mockResolvedValueOnce([
-      incident({ id: "i10", activityId: "A1", processInstanceId: "p10" }),
+      incident({ id: "i10", activityId: "A1", processInstanceId: "p10", configuration: "job-10" }),
       incident({ id: "i11", activityId: "A1", processInstanceId: "p11" }),
     ] as never)
     mockedGetIncidentsCount.mockResolvedValueOnce({ count: 25 })
@@ -460,7 +460,7 @@ describe("buildActivityIncidentsData", () => {
     })
     expect(data.totalCount).toBe(25)
     expect(data.incidents).toHaveLength(2)
-    // Each instance carries only the lean six fields — confirm no extras.
+    // Each instance carries only the lean seven fields — confirm no extras.
     expect(Object.keys(data.incidents[0]).sort()).toEqual([
       "cockpitInstanceUrl",
       "id",
@@ -468,6 +468,13 @@ describe("buildActivityIncidentsData", () => {
       "incidentTimestamp",
       "incidentType",
       "processInstanceId",
+      "recovery",
+    ])
+    // Built-in incidents are retried (never resolved); without a configuration
+    // (propagated from a called instance) there is nothing to act on here.
+    expect(data.incidents.map((i) => i.recovery)).toEqual([
+      { action: "retry-job", jobId: "job-10" },
+      { action: "none" },
     ])
     // Per-incident cockpit URL nests the instance under the process route.
     expect(data.incidents[0].cockpitInstanceUrl).toBe(

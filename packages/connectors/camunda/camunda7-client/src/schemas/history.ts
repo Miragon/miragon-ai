@@ -1,12 +1,12 @@
 import { z } from "zod"
-import { firstResultParam } from "./shared.js"
+import { engineDateParam, firstResultParam, sortOrderParam } from "./shared.js"
 
 export const queryHistoricProcessInstancesInput = z.object({
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
   finished: z.boolean().optional().describe("Only finished instances"),
   unfinished: z.boolean().optional().describe("Only unfinished (running) instances"),
-  startedBefore: z.string().optional().describe("Started before date (ISO 8601)"),
-  startedAfter: z.string().optional().describe("Started after date (ISO 8601)"),
+  startedBefore: engineDateParam("Started before"),
+  startedAfter: engineDateParam("Started after"),
   firstResult: firstResultParam,
   maxResults: z.number().int().positive().optional().default(20),
   sortBy: z
@@ -22,7 +22,7 @@ export const queryHistoricProcessInstancesInput = z.object({
       "businessKey",
     ])
     .optional(),
-  sortOrder: z.enum(["asc", "desc"]).optional(),
+  sortOrder: sortOrderParam,
 })
 
 export const queryHistoricActivityInstancesInput = z.object({
@@ -49,7 +49,7 @@ export const queryHistoricActivityInstancesInput = z.object({
       "tenantId",
     ])
     .optional(),
-  sortOrder: z.enum(["asc", "desc"]).optional(),
+  sortOrder: sortOrderParam,
 })
 
 export const queryHistoricTaskInstancesInput = z.object({
@@ -82,7 +82,7 @@ export const queryHistoricTaskInstancesInput = z.object({
       "tenantId",
     ])
     .optional(),
-  sortOrder: z.enum(["asc", "desc"]).optional(),
+  sortOrder: sortOrderParam,
 })
 
 export const queryHistoricVariableInstancesInput = z.object({
@@ -92,5 +92,5 @@ export const queryHistoricVariableInstancesInput = z.object({
   firstResult: firstResultParam,
   maxResults: z.number().int().positive().optional().default(50),
   sortBy: z.enum(["instanceId", "variableName", "tenantId"]).optional(),
-  sortOrder: z.enum(["asc", "desc"]).optional(),
+  sortOrder: sortOrderParam,
 })

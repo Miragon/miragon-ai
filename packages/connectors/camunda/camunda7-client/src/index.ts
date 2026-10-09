@@ -2,3 +2,4 @@ export { createCamunda7Client, withCallerSignal, DEFAULT_ENGINE_TIMEOUT_MS } fro
 export type { Client, Camunda7ClientOptions, Camunda7AuthType } from "./client.js"
 export { EngineRequestError, type EngineFailureKind } from "./engine-error.js"
 export * from "./schemas/index.js"
+export * from "./engine-contract/index.js"

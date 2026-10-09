@@ -147,16 +147,18 @@ A pnpm + Turbo monorepo. The server composes the two modules and serves them as 
 
 BPM operations across these domains (`category`): `engines`, `process-definitions`,
 `process-instances`, `tasks`, `external-tasks`, `messages-signals`, `deployments`, `incidents`,
-`jobs`, `history`, `migrations`. Highlights:
+`jobs`, `history`, `migrations`, `batches`. Highlights:
 
 - **Process definitions** — `list_process_definitions`, `get_process_definition_xml`
 - **Process instances** — `start`, `list`, `get`, `delete`, `modify`, `set_*_suspension`,
   `get_activity_instance_tree`, variables
 - **User & external tasks** — `list/get/claim/unclaim/complete`, `list_external_tasks`,
   `set_external_task_retries`
-- **Incidents & jobs** — `list_incidents`, `resolve_incident`, `format_incident_issue`,
-  `list_jobs`, `set_job_retries`
-- **History & migrations** — `query_historic_*`, migration tools
+- **Incidents & jobs** — `list_incidents`, `resolve_incident` (custom incidents; the engine's
+  `failedJob`/`failedExternalTask` clear by a retry), `format_incident_issue`, `list_jobs`,
+  `set_job_retries`
+- **History, migrations & batches** — `query_historic_*` (ISO 8601 dates), migration tools; batch
+  tools return a queued `batchId` that `get_batch` follows
 - **Widgets** — `show_cockpit_dashboard`, `show_process_list`/`detail`, `show_incidents_dashboard`,
   `show_bpmn_viewer`, `show_history_timeline`, `show_job_panel`, …
 

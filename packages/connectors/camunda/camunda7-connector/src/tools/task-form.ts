@@ -1,12 +1,8 @@
-import type { Client } from "@miragon-ai/camunda7-client"
+import { readTaskVariables, type Client, type VariableMap } from "@miragon-ai/camunda7-client"
 import type { TaskFormField, TaskFormSchema } from "../view-models.js"
 import { getTaskFormInput } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import {
-  getTask,
-  getTaskVariables,
-  getProcessDefinitionBpmn20Xml,
-} from "@miragon-ai/camunda7-client/sdk"
+import { getTask, getProcessDefinitionBpmn20Xml } from "@miragon-ai/camunda7-client/sdk"
 import { extractEmbeddedFormFields } from "../lib/bpmn-task-form.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
@@ -16,6 +12,10 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 interface TaskMeta {
   taskDefinitionKey?: string | null
   processDefinitionId?: string | null
+  /** The task's own form (embedded/external/`camunda-forms:`), if any. */
+  formKey?: string | null
+  /** A linked Camunda Form (`camunda:formRef`) — the task then has no formKey. */
+  camundaFormRef?: { key?: string | null } | null
 }
 
 export interface BuildTaskFormSchemaOptions {
@@ -34,7 +34,9 @@ export function registerTaskFormTools(register: Register) {
     name: "camunda7_get_task_form",
     category: "tasks",
     description:
-      "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`). Returns form fields with current variable values pre-filled. Fields marked readonly are for context only and will not be submitted. Returns an empty fields array when no form is defined on the task.",
+      "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`): fields " +
+      "(type, required, readonly) pre-filled with current values. Never submit readonly fields. Without form fields, " +
+      "fields is empty and formKey (or formRef, a linked Camunda Form) names the task's own form, if any.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getTaskFormInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args): Promise<TaskFormSchema> => {
@@ -44,33 +46,34 @@ export function registerTaskFormTools(register: Register) {
   })
 }
 
+/**
+ * The form schema of a task. The task and its BPMN are REQUIRED lookups — a
+ * failure (unknown task, no permission, engine down) throws instead of
+ * passing for "no form": a caller would otherwise complete the task without
+ * its form. Only the variable prefill degrades.
+ */
 export async function buildTaskFormSchema(
   client: Client,
   taskId: string,
   options: BuildTaskFormSchemaOptions = {},
 ): Promise<TaskFormSchema> {
-  const taskMeta = options.task ?? (await fetchTaskMeta(client, taskId))
-  const taskDefinitionKey = taskMeta?.taskDefinitionKey ?? null
-  const processDefinitionId = taskMeta?.processDefinitionId ?? null
+  const taskMeta: TaskMeta = options.task ?? (await getTask({ client, path: { id: taskId } }))
+  const taskDefinitionKey = taskMeta.taskDefinitionKey ?? null
+  const ownForm = ownFormOf(taskMeta)
 
   const bpmnXml =
     "bpmnXml" in options
       ? (options.bpmnXml ?? null)
-      : await fetchBpmnXml(client, processDefinitionId)
+      : await fetchBpmnXml(client, taskMeta.processDefinitionId ?? null)
 
-  if (!bpmnXml || !taskDefinitionKey) {
-    return { taskId, fields: [] }
-  }
-
-  const fields = extractEmbeddedFormFields(bpmnXml, taskDefinitionKey)
-
-  if (fields.length === 0) {
-    return { taskId, fields: [] }
-  }
+  const fields =
+    bpmnXml && taskDefinitionKey ? extractEmbeddedFormFields(bpmnXml, taskDefinitionKey) : []
+  if (fields.length === 0) return { taskId, fields: [], ...ownForm }
 
   // Populate defaultValue for all fields from current task variables so the
-  // operator sees the actual values (especially important for readonly fields).
-  const currentVars = await fetchTaskVariables(client, taskId)
+  // operator sees the actual values (especially important for readonly
+  // fields). Optional: a failed read leaves the fields empty.
+  const currentVars = await readTaskVariables(client, taskId).catch((): VariableMap => ({}))
   const filledFields: TaskFormField[] = fields.map((field) => {
     const varEntry = currentVars[field.name]
     if (varEntry !== undefined && field.defaultValue === undefined) {
@@ -82,9 +85,16 @@ export async function buildTaskFormSchema(
   return { taskId, fields: filledFields }
 }
 
-async function fetchTaskMeta(client: Client, taskId: string): Promise<TaskMeta | null> {
-  const result = await getTask({ client, path: { id: taskId } }).catch(() => null)
-  return result
+/**
+ * The task's own form when it has no `<camunda:formData>` fields: its formKey
+ * (embedded/external/deployed Camunda Form), or the key of a Camunda Form it
+ * links by `camunda:formRef` — the engine validates neither on submit, so a
+ * caller must not read the empty fields as "no form".
+ */
+function ownFormOf(task: TaskMeta): Pick<TaskFormSchema, "formKey" | "formRef"> {
+  if (task.formKey) return { formKey: task.formKey }
+  const formRef = task.camundaFormRef?.key
+  return formRef ? { formRef } : {}
 }
 
 async function fetchBpmnXml(
@@ -92,19 +102,9 @@ async function fetchBpmnXml(
   processDefinitionId: string | null,
 ): Promise<string | null> {
   if (!processDefinitionId) return null
-  const xmlResponse = (await getProcessDefinitionBpmn20Xml({
+  const xmlResponse = await getProcessDefinitionBpmn20Xml({
     client,
     path: { id: processDefinitionId },
-  }).catch(() => null)) as { bpmn20Xml?: string } | null
-  return xmlResponse?.bpmn20Xml ?? null
-}
-
-async function fetchTaskVariables(
-  client: Client,
-  taskId: string,
-): Promise<Record<string, { value: unknown; type?: string }>> {
-  const result = (await getTaskVariables({ client, path: { id: taskId } }).catch(
-    () => ({}),
-  )) as Record<string, { value: unknown; type?: string }>
-  return result
+  })
+  return xmlResponse.bpmn20Xml ?? null
 }

@@ -14,14 +14,20 @@ const WIDGETS_DIR = fileURLToPath(new URL("./widgets/", import.meta.url))
  */
 const SELF_GATED = new Set(["CAMUNDA7_SAVE_USER_PROFILE"])
 
-/** Every `useToolMutation(<arg>)` first argument in the widget sources, per file. */
+/**
+ * Every `useToolMutation(<arg>)` first argument in the widget sources, per
+ * file — also behind a type argument (`useToolMutation<Result>(<arg>)`), which
+ * would otherwise hide the call from both checks below.
+ */
 function mutationCalls(): Array<{ file: string; arg: string }> {
   const files = readdirSync(WIDGETS_DIR, { recursive: true, encoding: "utf8" }).filter(
     (f) => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f),
   )
   return files.flatMap((file) =>
     [
-      ...readFileSync(join(WIDGETS_DIR, file), "utf8").matchAll(/useToolMutation\(\s*([^,)\s]+)/g),
+      ...readFileSync(join(WIDGETS_DIR, file), "utf8").matchAll(
+        /useToolMutation(?:<[^>()]*>)?\(\s*([^,)\s]+)/g,
+      ),
     ].map((m) => ({ file, arg: m[1] })),
   )
 }

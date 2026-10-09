@@ -1,8 +1,14 @@
-import type { Client } from "@miragon-ai/camunda7-client"
+import {
+  fetchJobStacktrace,
+  incidentRecovery,
+  readProcessInstanceVariables,
+  type Client,
+} from "@miragon-ai/camunda7-client"
 import type {
   ActivityTree,
   IncidentDetailData,
   IncidentDetailJob,
+  IncidentRecovery,
   VariableValue,
 } from "../view-models.js"
 import {
@@ -13,8 +19,6 @@ import {
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitions,
   getProcessInstance,
-  getProcessInstanceVariables,
-  getStacktrace,
 } from "@miragon-ai/camunda7-client/sdk"
 
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
@@ -35,6 +39,7 @@ interface IncidentRecord {
   processInstanceId: string
   activityId: string
   jobId: string | null
+  recovery: IncidentRecovery
   incidentType: string
   incidentMessage: string | null
   incidentTimestamp: string
@@ -80,8 +85,13 @@ function normalizeIncident(
   failureSource: RawIncident,
 ): IncidentRecord {
   const incidentType = raw.incidentType ?? "unknown"
-  const jobId =
-    incidentType === "failedJob" ? (failureSource.configuration ?? raw.configuration ?? null) : null
+  // A delegated incident carries no configuration: its failure target (job
+  // or external task) is the root cause's.
+  const recovery = incidentRecovery({
+    incidentType,
+    configuration: failureSource.configuration ?? raw.configuration,
+  })
+  const jobId = recovery.action === "retry-job" ? recovery.jobId : null
   const activityId = raw.failedActivityId ?? raw.activityId ?? ""
   const message =
     failureSource.incidentMessage && failureSource.incidentMessage.length > 0
@@ -95,6 +105,7 @@ function normalizeIncident(
     processInstanceId: raw.processInstanceId ?? "",
     activityId,
     jobId,
+    recovery,
     incidentType,
     incidentMessage: message,
     incidentTimestamp: raw.incidentTimestamp ?? "",
@@ -141,30 +152,19 @@ async function fetchDefinitionMeta(
 async function fetchJob(client: Client, jobId: string): Promise<IncidentDetailJob | null> {
   const [jobsResponse, rawStacktrace] = await Promise.all([
     getJobs({ client, query: { jobId, maxResults: 1 } }).catch(() => []) as Promise<unknown>,
-    // The engine returns the stacktrace as `text/plain`, but the shared
-    // client is configured with `Accept: application/json` + the default
-    // `parseAs: 'json'` — both must be overridden, otherwise the response
-    // gets JSON.parsed (throws) and the catch below masks it as null.
-    getStacktrace({
-      client,
-      path: { id: jobId },
-      parseAs: "text",
-      headers: { Accept: "text/plain" },
-    }).catch(() => null) as Promise<unknown>,
+    // Optional enrichment: the failure tab renders without a stacktrace.
+    fetchJobStacktrace(client, jobId).catch(() => null),
   ])
 
   const jobs = (Array.isArray(jobsResponse) ? jobsResponse : []) as RawJob[]
   const job = jobs[0]
   if (!job) return null
 
-  const stacktrace =
-    typeof rawStacktrace === "string" && rawStacktrace.length > 0 ? rawStacktrace : null
-
   return {
     id: job.id ?? jobId,
     retries: typeof job.retries === "number" ? job.retries : 0,
     exceptionMessage: job.exceptionMessage ?? null,
-    stacktrace,
+    stacktrace: rawStacktrace,
     dueDate: job.dueDate ?? null,
   }
 }
@@ -208,7 +208,7 @@ function fetchIncidentContext(client: Client, incident: IncidentRecord): Promise
         ) as Promise<unknown>)
       : Promise.resolve(null),
     processInstanceId
-      ? (getProcessInstanceVariables({ client, path: { id: processInstanceId } }).catch(
+      ? (readProcessInstanceVariables(client, processInstanceId).catch(
           () => ({}),
         ) as Promise<unknown>)
       : Promise.resolve({}),
@@ -333,6 +333,7 @@ export async function buildIncidentDetailData(
     bpmnXml,
 
     job,
+    recovery: incident.recovery,
 
     instance: toInstanceSummary(rawInstance, incident),
     activityTree: activityTree as ActivityTree | null,

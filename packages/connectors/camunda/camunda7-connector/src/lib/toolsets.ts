@@ -70,7 +70,8 @@ export function resolveCamunda7Toolset(toolset?: string): Camunda7Toolset {
  *
  * `camunda7_create_migration_plan` is engine-read-only, but a migration plan
  * is useless without `camunda7_migrate_process_instances_async` — the pair
- * stays together in `admin`.
+ * stays together in `admin`. The same holds for `camunda7_get_batch`: it
+ * follows the batch ids only the admin batch tools hand out.
  */
 const ADMIN_ONLY_TOOLS: ReadonlySet<string> = new Set([
   "camunda7_delete_process_instance",
@@ -80,6 +81,7 @@ const ADMIN_ONLY_TOOLS: ReadonlySet<string> = new Set([
   "camunda7_create_migration_plan",
   "camunda7_migrate_process_instances_async",
   "camunda7_set_job_retries_batch",
+  "camunda7_get_batch",
   "camunda7_throw_signal",
   "camunda7_fetch_and_lock",
   "camunda7_complete_external_task",

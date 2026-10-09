@@ -1,22 +1,19 @@
 import { useState } from "react"
-import { useToolMutation } from "@miragon/mcp-toolkit-ui"
 import {
   GroupCard,
   SectionHeading,
   TONE_DOT,
   ViewDataState,
   WidgetShell,
-  useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
-import { refreshCockpitData } from "../refresh.js"
-import { useCanRun } from "../widget-actions.js"
 import { ConfirmDialog } from "../confirm-dialog.js"
 import { ActivitySummary } from "./activity-summary.js"
-import { PagedIncidentTable, type ResolveError } from "./incident-table.js"
+import { PagedIncidentTable } from "./incident-table.js"
+import { useIncidentRecovery } from "./use-incident-recovery.js"
 import { EmptyStateWithSiblings } from "./empty-state.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -66,9 +63,6 @@ export function ActivityIncidentList({
   emptyVariant?: "siblings" | "note"
 }) {
   const t = useT()
-  const resolveMutation = useToolMutation("camunda7_resolve_incident")
-  const canRun = useCanRun()
-  const canResolve = canRun("camunda7_resolve_incident")
   const go = useNav()
   const { data, loading, error } = useViewData<ProcessIncidentsData>(
     initialData,
@@ -77,15 +71,13 @@ export function ActivityIncidentList({
     { processDefinitionKey, engine },
     !!processDefinitionKey,
   )
-  const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
-  const [resolveError, setResolveError] = useState<ResolveError | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [confirmResolveId, setConfirmResolveId] = useState<string | null>(null)
-
-  // The optimistic grey-out only bridges until the feed refetches — fresh data
-  // is server truth, so stale "resolved" marks must not survive it.
-  useResetOnChange(data, () => setResolvedIds(new Set()))
+  // Mutations must target the exact engine this data was fetched from (the prop
+  // in the cockpit, the server-resolved id standalone) — never fall back to the
+  // caller's default engine, which can differ if the default-engine save raced or failed.
+  const engineId = engine ?? data?.engineId
+  // The optimistic marks reset when the feed data changes (server truth).
+  const recovery = useIncidentRecovery(engineId, data)
 
   if (!data) {
     return (
@@ -100,41 +92,12 @@ export function ActivityIncidentList({
     )
   }
 
-  // Mutations must target the exact engine this data was fetched from (the prop
-  // in the cockpit, the server-resolved id standalone) — never fall back to the
-  // caller's default engine, which can differ if the default-engine save raced or failed.
-  const engineId = engine ?? data.engineId
-
   function jumpToProcess(processDefinitionKey: string) {
     go({ type: "process-incidents", processDefinitionKey })
   }
 
   function analyzeIncident(incidentId: string) {
     go({ type: "incident-detail", incidentId })
-  }
-
-  function handleResolve(incidentId: string) {
-    setResolveError(null)
-    setPendingIds((prev) => new Set(prev).add(incidentId))
-    resolveMutation.mutate(
-      { incidentId, engine: engineId },
-      {
-        onSuccess: () => {
-          setResolvedIds((prev) => new Set(prev).add(incidentId))
-          setConfirmResolveId(null)
-          // Sibling widgets (KPI, header, BPMN flow) share the feed key —
-          // refetch so their counts reflect the resolution.
-          refreshCockpitData()
-        },
-        onError: (err) => setResolveError({ incidentId, message: err.message }),
-        onSettled: () =>
-          setPendingIds((prev) => {
-            const next = new Set(prev)
-            next.delete(incidentId)
-            return next
-          }),
-      },
-    )
   }
 
   function toggleExpanded(activityId: string) {
@@ -178,10 +141,7 @@ export function ActivityIncidentList({
                 processDefinitionKey={data.processDefinitionKey}
                 activityId={activity.activityId}
                 engine={engineId}
-                resolvedIds={resolvedIds}
-                pendingIds={pendingIds}
-                resolveError={resolveError}
-                onResolve={canResolve ? setConfirmResolveId : undefined}
+                recovery={recovery}
                 onAnalyze={analyzeIncident}
               />
             </GroupCard>
@@ -194,24 +154,25 @@ export function ActivityIncidentList({
           dialog stays open until success so a failure is shown right here
           (and inline at the row once dismissed). */}
       <ConfirmDialog
-        open={confirmResolveId !== null}
+        open={recovery.confirmResolveId !== null}
         onOpenChange={(open) => {
-          if (!open) setConfirmResolveId(null)
+          if (!open) recovery.setConfirmResolveId(null)
         }}
         title={t("procIncTable.confirmResolveTitle")}
         description={t("procIncTable.confirmResolveDescription")}
         confirmLabel={t("procIncTable.resolve")}
         cancelLabel={t("confirmDialog.cancel")}
         pendingLabel={t("confirmDialog.working")}
-        pending={confirmResolveId !== null && pendingIds.has(confirmResolveId)}
+        pending={
+          recovery.confirmResolveId !== null && recovery.pendingIds.has(recovery.confirmResolveId)
+        }
         error={
-          confirmResolveId !== null && resolveError?.incidentId === confirmResolveId
-            ? resolveError.message
+          recovery.confirmResolveId !== null &&
+          recovery.error?.incidentId === recovery.confirmResolveId
+            ? recovery.error.message
             : null
         }
-        onConfirm={() => {
-          if (confirmResolveId) handleResolve(confirmResolveId)
-        }}
+        onConfirm={recovery.confirmResolve}
       />
     </WidgetShell>
   )
