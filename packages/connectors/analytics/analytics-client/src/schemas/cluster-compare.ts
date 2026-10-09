@@ -6,7 +6,7 @@ export const clusterCompareInput = z.object({
     .string()
     .optional()
     .describe("Restrict to a single process definition (optional)"),
-  elementId: z
+  activityId: z
     .string()
     .optional()
     .describe("Restrict incident count to a single BPMN element (optional)"),

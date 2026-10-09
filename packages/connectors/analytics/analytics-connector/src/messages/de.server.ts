@@ -28,7 +28,7 @@ export const deServer: MessageCatalog = {
   "aSum.versionCompare":
     'Versionsvergleich für "{key}" v{versionA} vs. v{versionB} über {windowDays} d: {delta}{incidents}{element}{suppressed}.',
   "aSum.versionElementIgnored":
-    " — elementId {element} wirkungslos (es grenzt nur die Vorfallsraten ein), alle Werte gelten für den ganzen Prozess",
+    " — activityId {element} wirkungslos (es grenzt nur die Vorfallsraten ein), alle Werte gelten für den ganzen Prozess",
   "aSum.versionIncidentsUnavailable":
     " — Fehler- und Vorfallsraten pro Version nicht verfügbar (die Vorfallsmetrik trägt kein Versionslabel), nicht 0",
 }

@@ -48,21 +48,24 @@ Renames ship without aliases.
 | Concept                  | Name                                                                                                                                                |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Process definition       | `processDefinitionKey` (all versions), `processDefinitionId` (one version); never bare `key`                                                        |
-| Entity ids               | `<entity>Id` — `processInstanceId`, `deploymentId`, `jobId`, `activityId`; never bare `id`                                                          |
+| Entity ids               | `<entity>Id` — `processInstanceId`, `deploymentId`, `jobId`, `activityId` (analytics too); never bare `id`, never `elementId`                       |
 | Several values           | `<name>In`, an array (`processDefinitionKeyIn`); merged with the single form via `engineKeyList`                                                    |
 | User filter              | `assignee` (the user a task is assigned to); a write that sets a user takes `userId`                                                                |
 | Business key / substring | `businessKey` exact, `businessKeyLike`/`nameLike` substring — `engineLike` wraps a `%`-less value                                                   |
 | Time bounds              | `<event>After`/`<event>Before` (`startedAfter`, `finishedBefore`, `incidentTimestampAfter`) via `engineDateParam` — ISO 8601 in, `toEngineDate` out |
-| Boolean filters          | `flagParam` + `complementaryFlags` (active/suspended, finished/unfinished, …) or `trueOnly` — the engine IGNORES `false`, so it is never forwarded  |
+| Boolean filters          | `flagParam` + `complementaryFlags` (active/suspended, …) or `trueOnly` — the engine IGNORES `false` (never sent); a both/neither pair is refused    |
 | Paging / result size     | `firstResult` + `maxResults` (also for a top-N cap: never `limit`)                                                                                  |
 | Sorting                  | `sortBy` + `sortOrder`, sent as a pair by `engineSorting`                                                                                           |
 
 The engine's own query names may differ (`taskAssignee`, `processInstanceBusinessKey`,
 `withIncident`): the handler maps them, the schema keeps the guide's name. Every
 filter a tool advertises is pinned on the wire in `src/tools/filters.wire.test.ts`
-(page query AND `/count`); a prompt that quotes a tool's parameter is checked
-against its schema by `apps/mcp-server-camunda7/test/tool-name-refs.test.ts` —
-write quoted arguments in call notation, `tool({ param: value })`.
+(page query AND `/count`); a retired spelling (`key`, `id`, `limit`, `elementId`, …) on
+any module tool fails `apps/mcp-server-camunda7/test/strict-input.e2e.test.ts`; a prompt
+that quotes a tool's parameter is checked against its schema by
+`apps/mcp-server-camunda7/test/tool-name-refs.test.ts` — write quoted arguments in call
+notation with literal names, `tool({ param: value })` (an interpolated name is reported
+as `${…}`).
 
 ## Step 2 — register the tool
 

@@ -103,13 +103,13 @@ const versionKpi = (version: number, over: Partial<VersionCompareKpi> = {}): Ver
 
 const versionCompare = (
   kpis: VersionCompareKpi[],
-  elementId: string | null = null,
+  activityId: string | null = null,
 ): VersionCompareResult => ({
   processDefinitionKey: "order",
   versionA: 1,
   versionB: 2,
   windowDays: 14,
-  elementId,
+  activityId,
   minBucketSize: 10,
   suppressed: false,
   kpis,
@@ -141,7 +141,7 @@ describe("describeVersionCompare", () => {
     expect(text).not.toContain("not measured per version")
   })
 
-  it("never presents an elementId that scoped nothing as the comparison's scope", () => {
+  it("never presents an activityId that scoped nothing as the comparison's scope", () => {
     const text = describeVersionCompare(
       versionCompare([versionKpi(1), versionKpi(2)], "Task_check"),
       {},
@@ -150,7 +150,7 @@ describe("describeVersionCompare", () => {
     // The process-wide delta must not read as the element's.
     expect(text).not.toContain("element Task_check:")
     expect(text).toContain("over a 14d window: most notable delta: avg duration +25%")
-    expect(text).toContain("elementId Task_check has no effect")
+    expect(text).toContain("activityId Task_check has no effect")
     expect(text).toContain("every figure covers the whole process")
   })
 

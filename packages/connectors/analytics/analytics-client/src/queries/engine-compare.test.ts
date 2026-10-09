@@ -38,7 +38,7 @@ describe("engineCompare", () => {
       engineB: "prod-b",
       processDefinitionKey: "order",
       windowDays: 14,
-      elementId: null,
+      activityId: null,
       minBucketSize: 10,
       suppressed: false,
     })

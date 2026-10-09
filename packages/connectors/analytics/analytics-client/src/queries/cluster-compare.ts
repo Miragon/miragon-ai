@@ -23,7 +23,7 @@ export type ClusterCompareDelta = CompareKpiDelta
 
 export interface ClusterCompareResult {
   processDefinitionKey: string | null
-  elementId: string | null
+  activityId: string | null
   deploymentTimestamp: string
   windowDays: { before: number; after: number }
   minBucketSize: number
@@ -39,13 +39,13 @@ const DAY = 86400
  * the PromQL `@ <end>` modifier so the before/after split is exact (subject to
  * Prometheus retention covering the deployment timestamp). `failed_count` /
  * `failure_rate_pct` are incident-based (consistent across the analytics tools);
- * `incident_count` is the same signal optionally scoped to `elementId`.
+ * `incident_count` is the same signal optionally scoped to `activityId`.
  */
 export async function clusterCompare(
   ch: PrometheusClient,
   params: {
     processDefinitionKey?: string
-    elementId?: string
+    activityId?: string
     deploymentTimestamp: string
     windowBeforeDays: number
     windowAfterDays: number
@@ -69,7 +69,7 @@ export async function clusterCompare(
   const suppressed = b.instance_count < minBucket || a.instance_count < minBucket
   return {
     processDefinitionKey: params.processDefinitionKey ?? null,
-    elementId: params.elementId ?? null,
+    activityId: params.activityId ?? null,
     deploymentTimestamp: params.deploymentTimestamp,
     windowDays: { before, after },
     minBucketSize: minBucket,
@@ -83,7 +83,7 @@ async function windowKpi(
   ch: PrometheusClient,
   params: {
     processDefinitionKey?: string
-    elementId?: string
+    activityId?: string
     engine?: EngineFilterInput
   },
   period: "before" | "after",
@@ -98,7 +98,7 @@ async function windowKpi(
   const completedSel = selector(keyMatcher, `state="COMPLETED"`, engine)
   const incidentSel = selector(
     keyMatcher,
-    params.elementId ? `activity_id="${escapeLabelValue(params.elementId)}"` : undefined,
+    params.activityId ? `activity_id="${escapeLabelValue(params.activityId)}"` : undefined,
     engine,
   )
 

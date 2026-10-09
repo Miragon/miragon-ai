@@ -21,7 +21,7 @@ export const engineCompareInput = z.object({
     .max(30)
     .default(14)
     .describe("Look-back window applied to both engines, in days (max 30 — Prometheus retention)."),
-  elementId: z
+  activityId: z
     .string()
     .optional()
     .describe("Restrict incident count to a single BPMN element (optional)."),

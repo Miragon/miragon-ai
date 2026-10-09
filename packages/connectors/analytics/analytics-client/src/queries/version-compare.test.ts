@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import {
-  VERSION_ELEMENT_SCOPE_NOTE,
+  VERSION_ACTIVITY_SCOPE_NOTE,
   VERSION_INCIDENT_KPIS_NOTE,
   versionCompare,
 } from "./version-compare.js"
@@ -106,22 +106,22 @@ describe("versionCompare", () => {
     expect(VERSION_INCIDENT_KPIS_NOTE).toContain("per process definition key only")
   })
 
-  it("echoes the request and explains that elementId scopes nothing", async () => {
+  it("echoes the request and explains that activityId scopes nothing", async () => {
     const { ch } = mockClient(versions)
-    const res = await versionCompare(ch, { ...base, elementId: "Task_check" })
+    const res = await versionCompare(ch, { ...base, activityId: "Task_check" })
 
     expect(res).toMatchObject({
       processDefinitionKey: "order",
       versionA: 1,
       versionB: 2,
       windowDays: 14,
-      elementId: "Task_check",
+      activityId: "Task_check",
       minBucketSize: 10,
       suppressed: false,
     })
-    expect(res.notes).toEqual([VERSION_INCIDENT_KPIS_NOTE, VERSION_ELEMENT_SCOPE_NOTE])
-    expect(VERSION_ELEMENT_SCOPE_NOTE).toContain("elementId has no effect")
-    expect((await versionCompare(ch, base)).elementId).toBeNull()
+    expect(res.notes).toEqual([VERSION_INCIDENT_KPIS_NOTE, VERSION_ACTIVITY_SCOPE_NOTE])
+    expect(VERSION_ACTIVITY_SCOPE_NOTE).toContain("activityId has no effect")
+    expect((await versionCompare(ch, base)).activityId).toBeNull()
   })
 
   it("returns null deltas on a zero baseline instead of dividing by zero", async () => {

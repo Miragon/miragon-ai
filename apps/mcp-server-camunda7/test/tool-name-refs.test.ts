@@ -3,7 +3,12 @@ import path from "node:path"
 import ts from "typescript"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { bootServer, listToolNames, type BootedServer } from "./boot-server.js"
-import { findParamRefs, type ParamRef } from "./prompt-param-refs.js"
+import {
+  OPAQUE_ARGUMENT,
+  collectTextHelpers,
+  findParamRefs,
+  type ParamRef,
+} from "./prompt-param-refs.js"
 
 /**
  * Raw tool-name references vs the composed tool surface (#322 N187).
@@ -117,7 +122,15 @@ describe("raw tool-name literals name real tools (full surface)", () => {
     const prefixes = [...new Set(names.flatMap((n) => /^([a-z0-9]+)_/.exec(n)?.[1] ?? []))]
     expect(prefixes.sort()).toEqual(["analytics", "camunda7"])
     refs = scanSources((file, text) => findToolNameLiterals(file, text, prefixes))
-    paramRefs = scanSources((file, text) => findParamRefs(file, text, prefixes))
+    // One-line text helpers (`engineArg`) resolve by name across the sources;
+    // a name declared twice is ambiguous and stays a placeholder.
+    const helperDecls = scanSources(collectTextHelpers)
+    const helperNames = helperDecls.map(([name]) => name)
+    const helpers = new Map(
+      helperDecls.filter(([name]) => helperNames.indexOf(name) === helperNames.lastIndexOf(name)),
+    )
+    expect(helpers.has("engineArg")).toBe(true)
+    paramRefs = scanSources((file, text) => findParamRefs(file, text, prefixes, helpers))
   })
 
   afterAll(async () => {
@@ -164,7 +177,9 @@ describe("raw tool-name literals name real tools (full surface)", () => {
     expect(
       wrong,
       "A source quotes a parameter the named tool does not advertise — fix the prompt " +
-        "(parentheses right after a tool name are read as its arguments).",
+        "(parentheses right after a tool name are read as its arguments). " +
+        `${OPAQUE_ARGUMENT} is an argument whose NAME is interpolated: write the parameter ` +
+        "names literally so they can be checked.",
     ).toEqual([])
   })
 
@@ -174,6 +189,15 @@ describe("raw tool-name literals name real tools (full surface)", () => {
       expect.arrayContaining([
         "camunda7_list_incidents.processDefinitionKey",
         "camunda7_list_jobs.noRetriesLeft",
+        // remediation.ts: the cluster scope of the retry
+        "camunda7_list_jobs.activityId",
+        "camunda7_list_jobs.engine",
+        "camunda7_list_incidents.activityId",
+        "camunda7_list_incidents.incidentType",
+        // engineArg(…) helper calls
+        "camunda7_format_incident_issue.engine",
+        // a prose `name=value, name=value` run
+        "analytics_analyze_process_performance.includeActivityBreakdown",
         "analytics_cluster_compare.deploymentTimestamp",
         "camunda7_list_process_definitions.maxResults",
       ]),
@@ -202,12 +226,61 @@ describe("findParamRefs", () => {
     ])
   })
 
-  it("joins concatenations and treats template expressions as values", () => {
+  it("joins concatenations and reads a conditional fragment as its text branch", () => {
     expect(
       scan('const a = "try camunda7_list_x(" + `{ maxResults: 1${e ? `, engine: "e"` : ""} })`'),
-    ).toEqual(["camunda7_list_x.maxResults"])
-    expect(scan("const a = `camunda7_y({${engineArg(id)}incidentId: '${id}'})`")).toEqual([
-      "camunda7_y.incidentId",
+    ).toEqual(["camunda7_list_x.maxResults", "camunda7_list_x.engine"])
+    expect(scan("const a = `camunda7_y(${x ? 1 : `b: ${x}`})`")).toEqual(["camunda7_y.b"])
+    // Each side of a conditional is checked in place.
+    expect(scan("const a = `camunda7_y${x ? `({ a: 1 })` : ` (b 2)`}`")).toEqual([
+      "camunda7_y.a",
+      "camunda7_y.b",
+    ])
+  })
+
+  it("inlines a same-file const text, but not a name declared twice", () => {
+    const scoped = [
+      'const scope = `engine: "${e}", activityId: "${id}"`',
+      "const a = `camunda7_y({ ${scope}, c: 1 })`",
+    ].join("\n")
+    expect(scan(scoped)).toEqual(["camunda7_y.engine", "camunda7_y.activityId", "camunda7_y.c"])
+    const twice = [
+      'function f() { const s = "a: 1" }',
+      'const s = "b: 1"',
+      "const a = `camunda7_y({ ${s} })`",
+    ].join("\n")
+    expect(scan(twice)).toEqual([`camunda7_y.${OPAQUE_ARGUMENT}`])
+  })
+
+  it("resolves one-line text helpers by name", () => {
+    const helperSource = [
+      'export function engineArg(id: string) { return id ? `engine: "${id}", ` : "" }',
+      'function multi() { const x = 1; return "a" }',
+    ].join("\n")
+    const helpers = new Map(collectTextHelpers("h.ts", helperSource))
+    expect([...helpers.keys()]).toEqual(["engineArg"])
+    const text = "const a = `camunda7_y({${engineArg(id)}incidentId: '${id}'})`"
+    expect(
+      findParamRefs("x.ts", text, ["camunda7"], helpers).map((r) => `${r.tool}.${r.param}`),
+    ).toEqual(["camunda7_y.engine", "camunda7_y.incidentId"])
+  })
+
+  it("reports an argument whose name is an unresolvable interpolation", () => {
+    expect(scan("const a = `camunda7_y({ ${scope}, c: 1 })`")).toEqual([
+      `camunda7_y.${OPAQUE_ARGUMENT}`,
+      "camunda7_y.c",
+    ])
+    expect(scan("const a = `camunda7_y({${engineArg(id)}incidentId: 1})`")).toEqual([
+      `camunda7_y.${OPAQUE_ARGUMENT}`,
+    ])
+    expect(scan('const a = `camunda7_y (${id ?? "(none)"})`')).toEqual([
+      `camunda7_y.${OPAQUE_ARGUMENT}`,
+    ])
+    // A placeholder in VALUE position is fine.
+    expect(scan('const a = `camunda7_y(a=${n}, b: "${m}", c ${o})`')).toEqual([
+      "camunda7_y.a",
+      "camunda7_y.b",
+      "camunda7_y.c",
     ])
   })
 
@@ -217,6 +290,14 @@ describe("findParamRefs", () => {
         'const a = "camunda7_x with processDefinitionKey=k; camunda7_y for instance 1; camunda7_z with that key"',
       ),
     ).toEqual(["camunda7_x.processDefinitionKey"])
+  })
+
+  it("reads every pair of a prose name=value run", () => {
+    expect(scan('const a = `analytics_x with a="${k}", b="7d", c=true to get, then: d`')).toEqual([
+      "analytics_x.a",
+      "analytics_x.b",
+      "analytics_x.c",
+    ])
   })
 
   it("ignores comments, unclosed lists and possessive apostrophes", () => {

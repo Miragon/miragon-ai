@@ -23,7 +23,6 @@ export function remediatePrompt(cluster: RemediationCluster, engine?: string): s
   const procs = cluster.processDefinitionKeys.filter((k) => k !== UNKNOWN_KEY)
   const procFilter = procs[0] ? `, processDefinitionKey: "${procs[0]}"` : ""
   const keyArg = procs[0] ? `"${procs[0]}"` : "<processDefinitionKey>"
-  const scope = `engine: "${e}", activityId: "${cluster.activityId}"`
   return (
     `Help me fix this incident cluster on engine "${e}", step by step and in plain language for a ` +
     `distribution-center support operator (no Camunda jargon). The cluster: activity ` +
@@ -31,7 +30,8 @@ export function remediatePrompt(cluster: RemediationCluster, engine?: string): s
     (cluster.last24hCount > 0 ? ` (${cluster.last24hCount} in the last 24h)` : "") +
     (procs.length ? ` across ${procs.join(", ")}` : "") +
     `. Sample message: ${cluster.representativeMessage ?? "(none)"}.\n\n` +
-    `1) Confirm the root cause with camunda7_list_incidents({ ${scope}, incidentType: "${cluster.incidentType}"` +
+    `1) Confirm the root cause with camunda7_list_incidents({ engine: "${e}", activityId: "${cluster.activityId}", ` +
+    `incidentType: "${cluster.incidentType}"` +
     procFilter +
     ` }) and camunda7_query_historic_activity_instances; classify it: transient / data / config / model.\n` +
     `2) Choose the fix by class — transient (external system back up) → retry; bad input data → fix the ` +
@@ -40,7 +40,8 @@ export function remediatePrompt(cluster: RemediationCluster, engine?: string): s
     `3) Idempotency gate: before any retry, decide whether re-running "${cluster.activityId}" could cause ` +
     `a real-world side effect (double shipment, double booking). If unsure, say so and do not retry.\n` +
     `4) If a retry is safe, scope it to THIS cluster ONLY — never "retry all": list exactly these failed ` +
-    `jobs via camunda7_list_jobs({ ${scope}, processDefinitionKey: ${keyArg}, noRetriesLeft: true }) ` +
+    `jobs via camunda7_list_jobs({ engine: "${e}", activityId: "${cluster.activityId}", ` +
+    `processDefinitionKey: ${keyArg}, noRetriesLeft: true }) ` +
     `and propose camunda7_set_job_retries_batch on exactly those job ids.\n\n` +
     `Show me the plan and the affected count first, and execute nothing until I confirm.`
   )

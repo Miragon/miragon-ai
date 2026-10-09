@@ -90,8 +90,8 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       })
       // Null incident KPIs (no version label on the incident metric) must not
       // read as "failure rate 0pp" — say why they are missing instead; nor may
-      // an elementId that scoped nothing read as the comparison's scope.
-      const { incidentRatesUnavailable, ignoredElementId } = versionCompareCaveats(data)
+      // an activityId that scoped nothing read as the comparison's scope.
+      const { incidentRatesUnavailable, ignoredActivityId } = versionCompareCaveats(data)
       return buildSingleWidgetView({
         widget: "analytics:version-compare",
         app: "analytics",
@@ -105,8 +105,8 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
           windowDays: data.windowDays,
           delta: compareDeltaSummary(data.delta),
           incidents: incidentRatesUnavailable ? t("aSum.versionIncidentsUnavailable") : "",
-          element: ignoredElementId
-            ? t("aSum.versionElementIgnored", { element: ignoredElementId })
+          element: ignoredActivityId
+            ? t("aSum.versionElementIgnored", { element: ignoredActivityId })
             : "",
           suppressed: suppressedNote(data.suppressed),
         }),

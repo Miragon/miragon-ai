@@ -307,18 +307,28 @@ describe("buildProcessInstancesData", () => {
 
   it("forwards the set filters as `true` and the business key as a substring", async () => {
     await buildProcessInstancesData(fakeClient, "engine-a", {
-      active: true,
       suspended: true,
       withIncidents: true,
       businessKeyLike: "BK",
     })
 
     expect(lastQuery(mockedInstances)).toMatchObject({
-      active: true,
       suspended: true,
       withIncident: true,
       businessKeyLike: "%BK%",
     })
+    expect(lastQuery(mockedInstances).active).toBeUndefined()
+  })
+
+  it("refuses active and suspended together instead of listing one state", async () => {
+    mockedInstances.mockClear()
+    await expect(
+      buildProcessInstancesData(fakeClient, "engine-a", { active: true, suspended: true }),
+    ).rejects.toThrow(/contradict each other/)
+    await expect(
+      buildProcessInstancesData(fakeClient, "engine-a", { active: false, suspended: false }),
+    ).rejects.toThrow(/contradict each other/)
+    expect(mockedInstances).not.toHaveBeenCalled()
   })
 
   it("skips the name lookup when unscoped and reports a null key", async () => {

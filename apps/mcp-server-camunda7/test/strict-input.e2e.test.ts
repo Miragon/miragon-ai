@@ -81,6 +81,27 @@ describe("strict tool inputs on the wire (full surface)", () => {
     expect(open, "tools whose advertised input accepts unknown keys").toEqual([])
   })
 
+  // Strict input makes the vocabulary load-bearing: a model that learned a
+  // name on one tool is REFUSED on the next tool that spells the same concept
+  // differently. The naming guide (add-bpm-feature skill) names one spelling
+  // per concept; these are the spellings it retired.
+  it("no module tool takes a name the naming guide replaced", () => {
+    const RETIRED: Record<string, string> = {
+      key: "processDefinitionKey",
+      id: "<entity>Id",
+      limit: "maxResults",
+      elementId: "activityId",
+      taskAssignee: "assignee",
+      withIncidentsOnly: "withIncidents",
+    }
+    const offenders = moduleTools.flatMap((tool) =>
+      Object.keys(tool.inputSchema.properties ?? {})
+        .filter((param) => Object.hasOwn(RETIRED, param))
+        .map((param) => `${tool.name}.${param} → ${RETIRED[param]}`),
+    )
+    expect(offenders).toEqual([])
+  })
+
   it("every module tool refuses an unknown key with a tool error naming the valid keys", async () => {
     const failures: string[] = []
     for (const tool of moduleTools) {

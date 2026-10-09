@@ -79,7 +79,7 @@ describe("analytics_engine_compare PromQL", () => {
     ])
   })
 
-  it("scopes to processDefinitionKey everywhere and elementId only on the incident query", async () => {
+  it("scopes to processDefinitionKey everywhere and activityId only on the incident query", async () => {
     const handlers = captureHandlers(registerEngineCompareTools)
     const { client, queries } = recordingClient()
 
@@ -88,7 +88,7 @@ describe("analytics_engine_compare PromQL", () => {
       engineB: "prod-b",
       windowDays: 7,
       processDefinitionKey: "order",
-      elementId: "Task_check",
+      activityId: "Task_check",
       minBucketSize: 1,
     })
 

@@ -250,6 +250,37 @@ describe("false boolean filters never reach the engine", () => {
   })
 })
 
+/**
+ * A complementary pair that asks for both states or neither has no honest
+ * engine answer: active/suspended and withRetriesLeft/noRetriesLeft set ONE
+ * engine field, so the engine keeps the flag it applies last and returns one
+ * state as if it were the filtered result; the other pairs return nothing.
+ * The tool refuses the contradiction before any request.
+ */
+describe("a contradictory flag pair is refused, not answered", () => {
+  it.each([
+    ["camunda7_list_process_instances", "active", "suspended"],
+    ["camunda7_list_jobs", "active", "suspended"],
+    ["camunda7_list_jobs", "withRetriesLeft", "noRetriesLeft"],
+    ["camunda7_list_external_tasks", "withRetriesLeft", "noRetriesLeft"],
+    ["camunda7_list_external_tasks", "locked", "notLocked"],
+    ["camunda7_query_historic_process_instances", "finished", "unfinished"],
+    ["camunda7_query_historic_activity_instances", "finished", "unfinished"],
+    ["camunda7_query_historic_task_instances", "finished", "unfinished"],
+  ] as const)("%s {%s, %s}: both false or both true", async (name, first, second) => {
+    const config = tools.get(name)
+    if (!config) throw new Error(`${name} is not registered`)
+    for (const value of [false, true]) {
+      const engine = await startFakeEngine({}, { body: [] })
+      engines.push(engine)
+      await expect(
+        callTool(config, registryFor(engine), { [first]: value, [second]: value }),
+      ).rejects.toThrow(`${first}: ${value} and ${second}: ${value} contradict each other`)
+      expect(engine.requests).toHaveLength(0)
+    }
+  })
+})
+
 function isBoolean(schema: z.ZodType): boolean {
   const inner = (schema as unknown as { unwrap: () => z.ZodType }).unwrap()
   return inner.def.type === "boolean"

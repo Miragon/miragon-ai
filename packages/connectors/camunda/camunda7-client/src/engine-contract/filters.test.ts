@@ -28,8 +28,17 @@ describe("complementaryFlags — false is sent as true on the complement", () =>
     expect(pair({ active: true, suspended: false })).toEqual({ active: true })
   })
 
-  it("asks for neither state when both are false", () => {
-    expect(pair({ active: false, suspended: false })).toEqual({ active: true, suspended: true })
+  // On active/suspended (process instances, jobs) and withRetriesLeft/
+  // noRetriesLeft (external tasks) both flags set ONE engine field, so the
+  // engine keeps whichever it applies last and answers one state as if it
+  // were the filtered result; the other pairs answer nothing. Neither is
+  // what the caller asked for — the contradiction is refused instead.
+  it("refuses a pair that asks for both states or neither", () => {
+    expect(() => pair({ active: false, suspended: false })).toThrow(RangeError)
+    expect(() => pair({ active: true, suspended: true })).toThrow(RangeError)
+    expect(() => pair({ active: false, suspended: false })).toThrow(
+      /active: false and suspended: false contradict each other/,
+    )
   })
 })
 

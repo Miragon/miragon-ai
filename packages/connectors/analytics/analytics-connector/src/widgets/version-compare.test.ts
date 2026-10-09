@@ -24,14 +24,14 @@ const versionKpi = (version: number, over: Partial<VersionCompareKpi> = {}): Ver
 const measured = { failure_rate_pct: 1, incident_rate_pct: 1 }
 
 const result = (
-  elementId: string | null,
+  activityId: string | null,
   over: Partial<VersionCompareKpi> = {},
 ): VersionCompareResult => ({
   processDefinitionKey: "order",
   versionA: 1,
   versionB: 2,
   windowDays: 14,
-  elementId,
+  activityId,
   minBucketSize: 10,
   suppressed: false,
   kpis: [versionKpi(1, over), versionKpi(2, over)],
@@ -54,7 +54,7 @@ describe("versionCompareNote", () => {
     expect(note(result(null))).toBe(t("aVersionCompare.incidentKpisUnavailable"))
   })
 
-  it("adds that an elementId scoped nothing (#327)", () => {
+  it("adds that an activityId scoped nothing (#327)", () => {
     const text = note(result("Task_check"))
     expect(text).toContain(t("aVersionCompare.incidentKpisUnavailable"))
     expect(text).toContain("The element filter Task_check has no effect here")
@@ -67,18 +67,18 @@ describe("versionCompareNote", () => {
 })
 
 describe("versionCompareAskAiPrompt", () => {
-  it("never presents an elementId that scoped nothing as the comparison's scope (#327)", () => {
+  it("never presents an activityId that scoped nothing as the comparison's scope (#327)", () => {
     const text = prompt(result("Task_check"))
 
     expect(text).not.toContain("scoped to BPMN element")
     expect(text).toContain("over a 14-day window. The on-screen deltas are:")
-    expect(text).toContain("The elementId Task_check has no effect here")
+    expect(text).toContain("The activityId Task_check has no effect here")
     expect(text).toContain("every figure covers the whole process, not that element")
     expect(text).toContain("treat them as unknown, not as zero")
   })
 
   it("names no element when none was passed", () => {
-    expect(prompt(result(null))).not.toContain("elementId")
+    expect(prompt(result(null))).not.toContain("activityId")
   })
 
   it("scopes only the incident KPIs to the element once they are measured", () => {

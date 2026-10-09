@@ -120,12 +120,12 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
-        "deploymentTimestamp": {
-          "description": "Deployment timestamp (ISO datetime). Pulled from camunda7_get_deployment.",
+        "activityId": {
+          "description": "Restrict incident count to a single BPMN element (optional)",
           "type": "string"
         },
-        "elementId": {
-          "description": "Restrict incident count to a single BPMN element (optional)",
+        "deploymentTimestamp": {
+          "description": "Deployment timestamp (ISO datetime). Pulled from camunda7_get_deployment.",
           "type": "string"
         },
         "engine": {
@@ -362,7 +362,7 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
-        "elementId": {
+        "activityId": {
           "description": "Restrict incident count to a single BPMN element (optional).",
           "type": "string"
         },
@@ -733,12 +733,12 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
-        "deploymentTimestamp": {
-          "description": "Deployment timestamp (ISO datetime). Pulled from camunda7_get_deployment.",
+        "activityId": {
+          "description": "Restrict incident count to a single BPMN element (optional)",
           "type": "string"
         },
-        "elementId": {
-          "description": "Restrict incident count to a single BPMN element (optional)",
+        "deploymentTimestamp": {
+          "description": "Deployment timestamp (ISO datetime). Pulled from camunda7_get_deployment.",
           "type": "string"
         },
         "engine": {
@@ -879,7 +879,7 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
-        "elementId": {
+        "activityId": {
           "description": "Restrict incident count to a single BPMN element (optional).",
           "type": "string"
         },
@@ -1079,8 +1079,8 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
-        "elementId": {
-          "description": "Currently has no effect: it only scopes the incident KPIs, which are unavailable per version (the incident metric carries no version label). Accepted for compatibility.",
+        "activityId": {
+          "description": "Currently has no effect: it only scopes the incident KPIs, which are unavailable per version (the incident metric carries no version label).",
           "type": "string"
         },
         "engine": {
@@ -1155,8 +1155,8 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
-        "elementId": {
-          "description": "Currently has no effect: it only scopes the incident KPIs, which are unavailable per version (the incident metric carries no version label). Accepted for compatibility.",
+        "activityId": {
+          "description": "Currently has no effect: it only scopes the incident KPIs, which are unavailable per version (the incident metric carries no version label).",
           "type": "string"
         },
         "engine": {

@@ -162,6 +162,25 @@ function deriveInstancesScope({
   return { pdk, echoed, feedEngine, resolvedEngine }
 }
 
+type RunState = Pick<InstancesFilterArgs, "active" | "suspended">
+
+/**
+ * The run-state pair every refetch sends. The feed maps a `false` onto its
+ * complement (`active: false` = only suspended), so the pair travels AS GIVEN
+ * — dropping a false would page an unfiltered set under page 0's total.
+ * Props win over the echo as a PAIR (a prop and an echoed flag never combine
+ * into a contradiction the feed refuses); the Suspended chip replaces it.
+ */
+function deriveRunState(
+  activeChip: InstanceChip,
+  props: RunState,
+  echoed: ProcessInstancesData["filters"] | undefined,
+): RunState {
+  if (activeChip === CHIP_SUSPENDED) return { suspended: true }
+  if (props.active !== undefined || props.suspended !== undefined) return props
+  return { active: echoed?.active, suspended: echoed?.suspended }
+}
+
 // Filters are SERVER-side: the chips and the search box re-query the feed
 // (search debounced by the scaffold) so they cover the whole result set, not
 // just the loaded page. Pagination is offset-based with an explicit
@@ -181,11 +200,10 @@ function deriveInstancesFilters({
   withIncidents?: boolean
   businessKeyLike?: string
 }) {
-  const wantActive = active ?? echoed?.active
+  const runState = deriveRunState(activeChip, { active, suspended }, echoed)
   const wantIncidents = activeChip === CHIP_INCIDENTS || !!(withIncidents ?? echoed?.withIncidents)
-  const wantSuspended = activeChip === CHIP_SUSPENDED || !!(suspended ?? echoed?.suspended)
   const baseBusinessKey = businessKeyLike ?? echoed?.businessKeyLike
-  return { wantActive, wantIncidents, wantSuspended, baseBusinessKey }
+  return { runState, wantIncidents, baseBusinessKey }
 }
 
 function buildInstancesFilterArgs(
@@ -197,9 +215,9 @@ function buildInstancesFilterArgs(
   const filterArgs: InstancesFilterArgs = {}
   if (scope.pdk) filterArgs.processDefinitionKey = scope.pdk
   if (scope.feedEngine) filterArgs.engine = scope.feedEngine
-  if (filters.wantActive) filterArgs.active = true
+  if (filters.runState.active !== undefined) filterArgs.active = filters.runState.active
+  if (filters.runState.suspended !== undefined) filterArgs.suspended = filters.runState.suspended
   if (filters.wantIncidents) filterArgs.withIncidents = true
-  if (filters.wantSuspended) filterArgs.suspended = true
   if (filters.baseBusinessKey) filterArgs.businessKeyLike = filters.baseBusinessKey
   return filterArgs
 }
