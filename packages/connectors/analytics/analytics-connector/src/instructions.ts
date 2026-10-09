@@ -17,6 +17,7 @@ export function analyticsInstructions(): string {
       "ISO 8601 date-times.",
     "- Health: analytics_engine_health judges from metrics and alert rules (critical only while a " +
       "critical alert fires); analytics_show_failure_dashboard and analytics_find_failed_instances " +
-      "show failure patterns over a period.",
+      "show the incidents open right now (point-in-time, no period) — for failures over a period " +
+      "use analytics_analyze_process_performance or analytics_element_bottleneck.",
   ].join("\n")
 }

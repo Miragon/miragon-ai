@@ -37,8 +37,10 @@ export function remediatePrompt(cluster: RemediationCluster, engine?: string): s
     procFilter +
     ` }) — has it failed before, since when? — and camunda7_get_job_stacktrace({ engine: "${e}", ` +
     `jobId: <id of one failed job> }); classify it: transient / data / config / model.\n` +
-    `2) Choose the fix by class — transient (external system back up) → retry; bad input data → fix the ` +
-    `variable (camunda7_set_process_instance_variable) then retry; code/model defect → do NOT retry (it ` +
+    `2) Choose the fix by class — transient (external system back up) → retry; bad input data → read the ` +
+    `variable whole (camunda7_get_process_instance_variables({ engine: "${e}", ` +
+    `processInstanceId: <the instance>, variableName: <the variable> })), fix it ` +
+    `(camunda7_set_process_instance_variable), then retry; code/model defect → do NOT retry (it ` +
     `re-fails), escalate and draft a ticket (camunda7_format_incident_issue).\n` +
     `3) Idempotency gate: before any retry, decide whether re-running "${cluster.activityId}" could cause ` +
     `a real-world side effect (double shipment, double booking). If unsure, say so and do not retry.\n` +

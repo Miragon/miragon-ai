@@ -43,4 +43,23 @@ describe("remediatePrompt scopes both calls to the cluster", () => {
     )
     expect(prompt).toContain("processDefinitionKey: <processDefinitionKey>, noRetriesLeft: true")
   })
+
+  it("executes nothing unconfirmed", () => {
+    expect(remediatePrompt(CLUSTER, "prod")).toMatch(/execute nothing until I confirm\.$/)
+  })
+})
+
+describe("remediatePrompt fixes bad data from the whole value", () => {
+  // The model-facing variable reads cut long values (`truncated: true`): a
+  // "fix the variable" step built from that read writes the prefix back and
+  // silently loses the rest. The fix must start from the whole read (#340).
+  it("reads a bad variable whole before it is set", () => {
+    const prompt = remediatePrompt(CLUSTER, "prod")
+    const read = prompt.indexOf(
+      'camunda7_get_process_instance_variables({ engine: "prod", processInstanceId: <the instance>, variableName: <the variable> })',
+    )
+    const write = prompt.indexOf("camunda7_set_process_instance_variable")
+    expect(read).toBeGreaterThan(-1)
+    expect(write).toBeGreaterThan(read)
+  })
 })

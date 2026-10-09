@@ -370,7 +370,10 @@ export const camunda7Module = {
    * The module's server-instructions snippet for this boot: the engine
    * routing rule over the CONFIGURED ids (the `engine` parameter itself only
    * carries a one-line description), the date format, the tool families and
-   * the health routing. Mentions saving a default only when a caller can.
+   * the health routing. Offers saving a default only when a caller can: the
+   * toolset registers the save AND OAuth is installed — without OAuth no
+   * request has a caller identity (#331), so the save would refuse and
+   * ENGINE_NOT_SELECTED does not offer it either.
    */
   instructions(config: Record<string, unknown>, { authenticated }: { authenticated: boolean }) {
     const parsed = camunda7ConfigSchema.parse(config)

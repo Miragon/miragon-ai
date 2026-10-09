@@ -1183,6 +1183,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -1287,6 +1288,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "messageSignature": {
@@ -1566,6 +1568,10 @@
         "processInstanceId": {
           "description": "The process instance ID",
           "type": "string"
+        },
+        "variableName": {
+          "description": "Return only this variable, whole (never cut)",
+          "type": "string"
         }
       },
       "required": [
@@ -1652,6 +1658,10 @@
         },
         "taskId": {
           "description": "The task ID",
+          "type": "string"
+        },
+        "variableName": {
+          "description": "Return only this variable, whole (never cut)",
           "type": "string"
         }
       },
@@ -1814,6 +1824,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -2750,6 +2761,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -2807,6 +2819,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "nameLike": {
@@ -3535,6 +3548,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "messageSignature": {
@@ -3631,8 +3645,10 @@
           "type": "integer"
         },
         "maxResults": {
-          "description": "Page size (default 500).",
+          "default": 100,
+          "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processInstanceId": {
@@ -3837,6 +3853,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -3994,6 +4011,7 @@
           "default": 50,
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -4061,6 +4079,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "nameLike": {

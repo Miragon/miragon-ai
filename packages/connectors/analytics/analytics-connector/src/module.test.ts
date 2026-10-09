@@ -113,6 +113,19 @@ describe("analyticsModule.instructions", () => {
     expect(text).toContain("period is one of 1d, 3d, 7d, 14d, 30d")
     expect(text).toMatch(/analytics_engine_health judges from metrics and alert rules/)
   })
+
+  // Both failure tools run instant queries over the open-incident gauge and
+  // take no period: calling them "over a period" made a model report today's
+  // open incidents as a week's history.
+  it("routes period failure questions away from the point-in-time failure tools", () => {
+    const text = analyticsModule.instructions()
+    expect(text).toContain(
+      "analytics_show_failure_dashboard and analytics_find_failed_instances show the incidents open " +
+        "right now (point-in-time, no period) — for failures over a period use " +
+        "analytics_analyze_process_performance or analytics_element_bottleneck.",
+    )
+    expect(text).not.toMatch(/failure patterns over a period/)
+  })
 })
 
 describe("analyticsModule env surface", () => {

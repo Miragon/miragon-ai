@@ -170,6 +170,38 @@ describe("variable reads bound oversized values with a truncation marker", () =>
     expect(result.small).toEqual(small)
   })
 
+  // The cut read is lossy: a value written back from it overwrites the stored
+  // one with its prefix. Naming the variable is the whole read a write starts
+  // from, and the writes the model feeds from these reads say so.
+  it.each([
+    [
+      "camunda7_get_process_instance_variables",
+      { processInstanceId: "pi-1" },
+      "GET /process-instance/pi-1/variables",
+    ],
+    ["camunda7_get_task_variables", { taskId: "t-1" }, "GET /task/t-1/variables"],
+  ])("%s with variableName returns that variable whole", async (name, args, route) => {
+    const payload = { value: big, type: "Json", valueInfo: {} }
+    const engine = await engineWith({ [route]: { body: { payload, small } } })
+    expect(await call(engine, name, { ...args, variableName: "payload" })).toEqual({ payload })
+    await expect(call(engine, name, { ...args, variableName: "nope" })).rejects.toThrow(
+      'No variable named "nope"',
+    )
+    // The named read still asks for the raw (serialized) values.
+    for (const request of engine.requests) {
+      expect(request.query).toMatchObject({ deserializeValues: "false" })
+    }
+  })
+
+  it.each(["camunda7_set_process_instance_variable", "camunda7_complete_task"])(
+    "%s forbids writing a cut value back",
+    (name) => {
+      expect(tools.get(name)?.description).toContain(
+        "Never write back a value read with truncated: true",
+      )
+    },
+  )
+
   it("camunda7_query_historic_variable_instances, per row", async () => {
     const engine = await engineWith({
       "GET /history/variable-instance": {

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import { HistoryTimelineWidget } from "./history-timeline.js"
 import type { HistoryTimelineData } from "../view-models.js"
@@ -70,5 +70,51 @@ describe("HistoryTimelineWidget (fixture render)", () => {
   it("renders the empty state when data is null", () => {
     render(<HistoryTimelineWidget data={null} />)
     expect(screen.getByText("No data available")).toBeTruthy()
+  })
+})
+
+/**
+ * The show tool returns one capped page (maxResults <= 100, like every list):
+ * a longer instance's timeline continues through "Load more" on the same
+ * engine and instance instead of ending silently at the page boundary.
+ */
+describe("HistoryTimelineWidget paging", () => {
+  const nextActivity = {
+    ...DATA.activities[1],
+    id: "a3",
+    activityId: "archive",
+    activityName: "Archive Invoice",
+    activityType: "serviceTask",
+  }
+
+  it("pages the rest of a long timeline from the history query", async () => {
+    const history = vi.fn(() => ({ items: [nextActivity], totalCount: 3 }))
+    render(
+      <WidgetFixtureHost
+        widget={Widget}
+        data={{ ...DATA, totalActivities: 3 }}
+        tools={{ camunda7_query_historic_activity_instances: history }}
+      />,
+    )
+    expect(screen.getByText("Invoice Process")).toBeTruthy()
+    expect(screen.getByText(/Showing 2 of 3 activities/)).toBeTruthy()
+
+    fireEvent.click(screen.getByText("Load more"))
+
+    expect(await screen.findByText("Archive Invoice")).toBeTruthy()
+    expect(history).toHaveBeenCalledWith({
+      processInstanceId: "pi-1",
+      sortBy: "startTime",
+      sortOrder: "asc",
+      engine: "default",
+      firstResult: 2,
+      maxResults: 100,
+    })
+    expect(screen.queryByText("Load more")).toBeNull()
+  })
+
+  it("offers no Load more when the page is the whole timeline", () => {
+    render(<WidgetFixtureHost widget={Widget} data={DATA as unknown as Record<string, unknown>} />)
+    expect(screen.queryByText("Load more")).toBeNull()
   })
 })

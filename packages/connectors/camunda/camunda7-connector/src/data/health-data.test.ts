@@ -8,9 +8,20 @@ vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
   getProcessInstances: vi.fn(),
 }))
 
-import { getIncidents, getProcessInstances } from "@miragon-ai/camunda7-client/sdk"
+import {
+  getHistoricProcessInstancesCount,
+  getIncidents,
+  getIncidentsCount,
+  getProcessDefinitionStatistics,
+  getProcessInstances,
+} from "@miragon-ai/camunda7-client/sdk"
 import type { Client } from "@miragon-ai/camunda7-client"
-import { buildClusterDetailData, healthVerdictRule } from "./health-data.js"
+import {
+  buildClusterDetailData,
+  buildEngineHealthData,
+  healthVerdictRule,
+  type EngineHealthThresholds,
+} from "./health-data.js"
 
 const mockedGetIncidents = vi.mocked(getIncidents)
 const mockedGetProcessInstances = vi.mocked(getProcessInstances)
@@ -156,5 +167,59 @@ describe("healthVerdictRule", () => {
     expect(healthVerdictRule({ criticalIncidents: 10, criticalClusterSize: 4 })).toBe(
       "From the engine's open incidents, read live: critical at >=10 open or >=4 in one cluster, degraded with any, else ok.",
     )
+  })
+})
+
+/**
+ * The rule text and the verdict logic live apart (healthVerdictRule /
+ * statusOf), so they are pinned TOGETHER: every boundary row checks the
+ * verdict the builder computes AND that the payload states the rule that
+ * produced it. A flipped comparison or a swapped `||` fails here, not only in
+ * production, where the stated rule would then describe a verdict the code
+ * does not apply.
+ */
+describe("buildEngineHealthData verdict", () => {
+  const T: EngineHealthThresholds = { criticalIncidents: 10, criticalClusterSize: 4 }
+
+  /** `sizes[i]` open incidents on activity `A<i>` — one cluster per activity. */
+  function scan(sizes: number[]): IncidentRowFixture[] {
+    return sizes.flatMap((size, cluster) =>
+      Array.from({ length: size }, (_, i) => ({
+        id: `i${cluster}-${i}`,
+        processDefinitionId: "K1:1:abc",
+        processInstanceId: `p${cluster}-${i}`,
+        incidentType: "failedJob",
+        activityId: `A${cluster}`,
+        incidentMessage: "boom",
+        incidentTimestamp: "2026-04-01T00:00:00.000Z",
+      })),
+    )
+  }
+
+  async function verdict(sizes: number[], count = sizes.reduce((a, b) => a + b, 0)) {
+    mockedGetIncidents.mockResolvedValue(scan(sizes))
+    vi.mocked(getIncidentsCount).mockResolvedValue({ count })
+    vi.mocked(getProcessDefinitionStatistics).mockResolvedValue([] as never)
+    vi.mocked(getHistoricProcessInstancesCount).mockResolvedValue({ count: 0 })
+    return buildEngineHealthData(client, "eng1", T)
+  }
+
+  it.each([
+    ["no open incident", [], "ok"],
+    ["one open incident", [1], "degraded"],
+    ["total one under the threshold, clusters under theirs", [3, 3, 3], "degraded"],
+    ["total AT the threshold, clusters under theirs", [3, 3, 3, 1], "critical"],
+    ["one cluster one under its threshold", [3], "degraded"],
+    ["one cluster AT its threshold, total far under", [4], "critical"],
+  ] as const)("%s → %s", async (_label, sizes, status) => {
+    const data = await verdict([...sizes])
+    expect(data.status).toBe(status)
+    expect(data.statusRule).toBe(healthVerdictRule(T))
+  })
+
+  it("judges the engine-wide /count, not the capped scan", async () => {
+    const data = await verdict([1, 1], 10)
+    expect(data.summary.totalIncidents).toBe(10)
+    expect(data.status).toBe("critical")
   })
 })

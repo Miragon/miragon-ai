@@ -32,7 +32,11 @@ import {
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
-import { truncateVariableMap, VARIABLE_TRUNCATION_NOTE } from "../lib/variable-truncation.js"
+import {
+  CUT_VALUE_WRITE_RULE,
+  VARIABLE_TRUNCATION_NOTE,
+  variableRead,
+} from "../lib/variable-truncation.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
@@ -162,15 +166,17 @@ export function registerProcessInstanceTools(register: Register) {
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getProcessInstanceVariablesInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) =>
-      truncateVariableMap(await readProcessInstanceVariables(client, args.processInstanceId)),
+      variableRead(
+        await readProcessInstanceVariables(client, args.processInstanceId),
+        args.variableName,
+      ),
     ),
   })
 
   register({
     name: "camunda7_set_process_instance_variable",
     category: "process-instances",
-    description:
-      "Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read).",
+    description: `Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read). ${CUT_VALUE_WRITE_RULE}`,
     annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...setProcessInstanceVariableInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {

@@ -5,6 +5,7 @@ import {
   maxResultsParam,
   sortOrderParam,
   variableSchema,
+  wholeVariableParam,
 } from "./shared.js"
 
 export const listTasksInput = z.object({
@@ -64,4 +65,5 @@ export const setTaskAssigneeInput = z.object({
 
 export const getTaskVariablesInput = z.object({
   taskId: z.string().describe("The task ID"),
+  variableName: wholeVariableParam,
 })

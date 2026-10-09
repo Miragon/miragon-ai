@@ -26,6 +26,17 @@ export const variableSchema = z
   .describe("Process variables map")
 
 /**
+ * The optional `variableName` of the runtime variable reads. A model-facing
+ * read cuts long string values (`truncated: true`); naming one variable
+ * returns it whole — the read a write-back must start from, since a cut value
+ * written back silently loses the rest.
+ */
+export const wholeVariableParam = z
+  .string()
+  .optional()
+  .describe("Return only this variable, whole (never cut)")
+
+/**
  * Shared pagination offset for every list/query input schema. Pairs with
  * `maxResults`: a list tool returns the page `[firstResult, firstResult +
  * maxResults)` plus a total count, so callers page through by passing the

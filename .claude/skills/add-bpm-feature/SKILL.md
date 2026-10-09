@@ -29,13 +29,20 @@ export const listProcessInstancesInput = z.object({
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
   businessKeyLike: likeParam("Filter by business key"),
   active: flagParam("true = only active instances, false = only suspended"),
-  maxResults: z.number().int().positive().optional().default(20).describe("Maximum results"),
+  firstResult: firstResultParam,
+  maxResults: maxResultsParam(), // capped at MAX_PAGE_SIZE (100); default page 20
+  sortBy: z.enum(["instanceId", "definitionKey"]).optional().describe("Sort field"),
+  sortOrder: sortOrderParam,
 })
 ```
 
-Every field gets a `.describe()`. The REST calls themselves use the generated SDK
-(imported from `@miragon-ai/camunda7-client/sdk`) — if the endpoint is missing there,
-the OpenAPI spec changed and you need `pnpm generate`, not a hand-written fetch.
+Every field gets a `.describe()`. A list/query tool pages with the shared params from
+`schemas/shared.ts` — `firstResultParam` + `maxResultsParam(defaultPageSize)` — never a
+hand-rolled `maxResults`: `src/tools/list-tools.test.ts` treats every registrar tool that
+takes `maxResults` as a list and fails it without the cap or the envelope (Step 2). The
+REST calls themselves use the generated SDK (imported from
+`@miragon-ai/camunda7-client/sdk`) — if the endpoint is missing there, the OpenAPI spec
+changed and you need `pnpm generate`, not a hand-written fetch.
 
 ### Parameter naming guide
 
@@ -54,7 +61,7 @@ Renames ship without aliases.
 | Business key / substring | `businessKey` exact, `businessKeyLike`/`nameLike` substring — `engineLike` wraps a `%`-less value                                                   |
 | Time bounds              | `<event>After`/`<event>Before` (`startedAfter`, `finishedBefore`, `incidentTimestampAfter`) via `engineDateParam` — ISO 8601 in, `toEngineDate` out |
 | Boolean filters          | `flagParam` + `complementaryFlags` (active/suspended, …) or `trueOnly` — the engine IGNORES `false` (never sent); a both/neither pair is refused    |
-| Paging / result size     | `firstResult` + `maxResults` (also for a top-N cap: never `limit`)                                                                                  |
+| Paging / result size     | `firstResult` + `maxResults` from `firstResultParam` + `maxResultsParam` (above; also for a top-N cap: never `limit`)                               |
 | Sorting                  | `sortBy` + `sortOrder`, sent as a pair by `engineSorting`                                                                                           |
 
 The engine's own query names may differ (`taskAssignee`, `processInstanceBusinessKey`,
@@ -75,7 +82,9 @@ Add the tool in `packages/connectors/camunda/camunda7-connector/src/tools/<domai
 ```ts
 import { listProcessInstancesInput } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { getProcessInstances } from "@miragon-ai/camunda7-client/sdk"
+import { complementaryFlags, engineLike, engineSorting } from "@miragon-ai/camunda7-client"
+import { getProcessInstances, getProcessInstancesCount } from "@miragon-ai/camunda7-client/sdk"
+import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -85,15 +94,33 @@ export function registerProcessInstanceTools(register: Register) {
   register({
     name: "camunda7_list_process_instances",
     category: "process-instances",
-    description: "List running process instances with optional filters.",
+    description:
+      "List running process instances with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listProcessInstancesInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) =>
-      getProcessInstances({
-        client,
-        query: { processDefinitionKey: args.processDefinitionKey /* … */ },
-      }),
-    ),
+    outputSchema: paginatedListOutput,
+    handler: withEngine(async (client, args) => {
+      // The filters in the engine's format (naming guide), shared by the page
+      // and its /count twin — fetched in parallel, so the envelope's total is honest.
+      const filters = {
+        processDefinitionKey: args.processDefinitionKey,
+        businessKeyLike: engineLike(args.businessKeyLike),
+        ...complementaryFlags(args, "active", "suspended"),
+      }
+      const [items, count] = await Promise.all([
+        getProcessInstances({
+          client,
+          query: {
+            ...filters,
+            firstResult: args.firstResult,
+            maxResults: args.maxResults,
+            ...engineSorting(args),
+          },
+        }),
+        getProcessInstancesCount({ client, query: filters }),
+      ])
+      return toPaginatedList(items, count, args.firstResult)
+    }),
   })
 }
 ```

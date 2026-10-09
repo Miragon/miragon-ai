@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
 
 /**
  * SINGLE SOURCE for the paged feeds' filter contracts. Each filter set used to
@@ -12,10 +13,15 @@ import { z } from "zod"
  * the wire, builders default them server-side.
  */
 
-/** Offset paging accepted by every paged `*_data` feed (and its show twin). */
+/**
+ * Offset paging accepted by every paged `*_data` feed (and its show twin).
+ * The page is capped at MAX_PAGE_SIZE like every registrar list: the show
+ * twins are model-visible, and a host that keeps `structuredContent` hands
+ * the whole page to the model. The widgets page at most that many rows.
+ */
 export const pagingShape = {
   firstResult: z.number().int().min(0).optional().describe("Offset for pagination (0-based)."),
-  maxResults: z.number().int().positive().optional().describe("Page size."),
+  maxResults: z.number().int().positive().max(MAX_PAGE_SIZE).optional().describe("Page size."),
 }
 export type PagingArgs = z.infer<z.ZodObject<typeof pagingShape>>
 

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest"
 import {
+  CUT_VALUE_WRITE_RULE,
   MAX_VARIABLE_VALUE_CHARS,
   truncateVariable,
   truncateVariableMap,
   truncateVariableRows,
   VARIABLE_TRUNCATION_NOTE,
+  variableRead,
 } from "./variable-truncation.js"
 
 const AT_CAP = "a".repeat(MAX_VARIABLE_VALUE_CHARS)
@@ -55,6 +57,41 @@ describe("truncateVariableMap / truncateVariableRows", () => {
   it("the description note names the cap and the marker", () => {
     expect(VARIABLE_TRUNCATION_NOTE).toBe(
       "String values over 2000 chars are cut (truncated: true, valueLength = full size).",
+    )
+  })
+})
+
+/**
+ * A cut value written back overwrites the stored value with its prefix. The
+ * model therefore needs ONE lossless read to start a write from: naming the
+ * variable returns it whole.
+ */
+describe("variableRead", () => {
+  const variables = { big: { value: OVER, type: "Json" }, small: { value: "s" } }
+
+  it("without a name, bounds every value like truncateVariableMap", () => {
+    expect(variableRead(variables)).toEqual(truncateVariableMap(variables))
+    expect(variableRead(variables).big).toMatchObject({ truncated: true })
+  })
+
+  it("with a name, returns only that variable — whole and unmarked", () => {
+    const read = variableRead(variables, "big")
+    expect(read).toEqual({ big: { value: OVER, type: "Json" } })
+    expect(read.big).toBe(variables.big)
+  })
+
+  it.each(["missing", "constructor", "__proto__"])(
+    "fails for a name the read does not hold (%s) instead of an empty map",
+    (name) => {
+      expect(() => variableRead(variables, name)).toThrow(
+        `No variable named "${name}" — omit variableName to list them all.`,
+      )
+    },
+  )
+
+  it("the write rule forbids sending a cut value back and names the whole read", () => {
+    expect(CUT_VALUE_WRITE_RULE).toBe(
+      "Never write back a value read with truncated: true — it is incomplete; read it whole first (variableName).",
     )
   })
 })

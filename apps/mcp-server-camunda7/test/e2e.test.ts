@@ -83,6 +83,30 @@ describe("mcp-server-camunda7 E2E smoke", () => {
     }
   })
 
+  // Structural, not a list: the show tools are model-visible too, and a host
+  // that keeps structuredContent hands their whole page to the model — so
+  // every tool on the wire that takes a page size caps it, show tools and
+  // app-only feeds included.
+  it("caps maxResults at 100 on every tool that takes it", async () => {
+    const { tools } = await client.listTools()
+    const paged = tools.filter(
+      (t) => (t.inputSchema as { properties?: Record<string, unknown> }).properties?.maxResults,
+    )
+    expect(paged.map((t) => t.name)).toEqual(
+      expect.arrayContaining([
+        "camunda7_list_process_instances",
+        "camunda7_show_history_timeline",
+        "camunda7_show_process_instances",
+        "camunda7_process_instances_data",
+      ]),
+    )
+    for (const tool of paged) {
+      const maxResults = (tool.inputSchema as { properties: Record<string, { maximum?: number }> })
+        .properties.maxResults
+      expect(maxResults.maximum, `${tool.name} caps its page size`).toBe(100)
+    }
+  })
+
   it("answers camunda7_list_engines from the engine registry without a live engine", async () => {
     const result = await client.callTool({ name: "camunda7_list_engines", arguments: {} })
     expect(result.isError).toBeFalsy()

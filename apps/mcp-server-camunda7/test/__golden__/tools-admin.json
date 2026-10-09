@@ -1216,6 +1216,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -1354,6 +1355,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "messageSignature": {
@@ -1469,7 +1471,7 @@
       "destructiveHint": false,
       "openWorldHint": true
     },
-    "description": "Complete a user task by ID, optionally setting variables. A task with form fields is submitted as its form: the engine enforces them (required, readonly, types); omitted fields keep their value. A delegated task (delegationState PENDING) is resolved back to its owner instead and stays open (outcome \"resolved\").",
+    "description": "Complete a user task by ID, optionally setting variables. A task with form fields is submitted as its form: the engine enforces them (required, readonly, types); omitted fields keep their value. A delegated task (delegationState PENDING) is resolved back to its owner instead and stays open (outcome \"resolved\"). Never write back a value read with truncated: true — it is incomplete; read it whole first (variableName).",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -2099,6 +2101,10 @@
         "processInstanceId": {
           "description": "The process instance ID",
           "type": "string"
+        },
+        "variableName": {
+          "description": "Return only this variable, whole (never cut)",
+          "type": "string"
         }
       },
       "required": [
@@ -2185,6 +2191,10 @@
         },
         "taskId": {
           "description": "The task ID",
+          "type": "string"
+        },
+        "variableName": {
+          "description": "Return only this variable, whole (never cut)",
           "type": "string"
         }
       },
@@ -2399,6 +2409,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -3495,6 +3506,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -3552,6 +3564,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "nameLike": {
@@ -4446,7 +4459,7 @@
       "idempotentHint": true,
       "openWorldHint": true
     },
-    "description": "Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read).",
+    "description": "Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read). Never write back a value read with truncated: true — it is incomplete; read it whole first (variableName).",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -4625,6 +4638,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "messageSignature": {
@@ -4721,8 +4735,10 @@
           "type": "integer"
         },
         "maxResults": {
-          "description": "Page size (default 500).",
+          "default": 100,
+          "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processInstanceId": {
@@ -4927,6 +4943,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -5084,6 +5101,7 @@
           "default": 50,
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -5151,6 +5169,7 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "nameLike": {

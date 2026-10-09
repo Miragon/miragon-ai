@@ -24,7 +24,11 @@ import {
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
-import { truncateVariableMap, VARIABLE_TRUNCATION_NOTE } from "../lib/variable-truncation.js"
+import {
+  CUT_VALUE_WRITE_RULE,
+  VARIABLE_TRUNCATION_NOTE,
+  variableRead,
+} from "../lib/variable-truncation.js"
 import { completeUserTask } from "../lib/task-completion.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -108,7 +112,8 @@ export function registerTaskTools(register: Register) {
     description:
       "Complete a user task by ID, optionally setting variables. A task with form fields is submitted as its form: " +
       "the engine enforces them (required, readonly, types); omitted fields keep their value. A delegated task " +
-      '(delegationState PENDING) is resolved back to its owner instead and stays open (outcome "resolved").',
+      '(delegationState PENDING) is resolved back to its owner instead and stays open (outcome "resolved"). ' +
+      CUT_VALUE_WRITE_RULE,
     annotations: { destructiveHint: false, openWorldHint: true },
     inputSchema: { ...completeTaskInput.shape, ...engineParamShape },
     // The endpoint (submit-form / complete / resolve) follows from the task — lib/task-completion.ts.
@@ -140,7 +145,7 @@ export function registerTaskTools(register: Register) {
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getTaskVariablesInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) =>
-      truncateVariableMap(await readTaskVariables(client, args.taskId)),
+      variableRead(await readTaskVariables(client, args.taskId), args.variableName),
     ),
   })
 }

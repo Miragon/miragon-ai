@@ -1,3 +1,5 @@
+import { MAX_VARIABLE_VALUE_CHARS } from "./lib/variable-truncation.js"
+
 /**
  * The camunda7 module's slice of the MCP server `instructions`
  * (`camunda7Module.instructions`, joined by the composition root). Rules that
@@ -9,8 +11,12 @@ export interface Camunda7InstructionsInput {
   /** The configured engine ids, in config order. */
   engineIds: readonly string[]
   /**
-   * Whether a caller on this boot can save a default engine: OAuth installed
-   * (a caller identity exists) AND the toolset registers the save.
+   * Whether a caller on this boot can save a default engine — decided at boot,
+   * so it must not contradict the per-call ENGINE_NOT_SELECTED text, which
+   * checks the caller's actual identity. True only when the toolset registers
+   * the save AND OAuth is installed: caller identity comes from OAuth alone
+   * (#331), so without it no request has an identity to save under, the save
+   * refuses, and ENGINE_NOT_SELECTED never names it either.
    */
   canSaveDefault: boolean
 }
@@ -38,6 +44,8 @@ export function camunda7Instructions(input: Camunda7InstructionsInput): string {
       "(incl. stacktraces), external tasks, deployments; history (camunda7_query_historic_*) covers " +
       "finished instances, activities, tasks, variables and resolved incidents. camunda7_show_* " +
       "tools render a widget for the user.",
+    `- Variable reads cut string values over ${MAX_VARIABLE_VALUE_CHARS} chars (truncated: true): ` +
+      "never write such a value back — read that variable whole with variableName first.",
     "- Health: camunda7_show_engine_health judges ONE engine from its open incidents, read live " +
       "from the engine; camunda7_show_incidents_dashboard lists the open incidents per process; " +
       "camunda7_open_cockpit is the navigable operations app.",

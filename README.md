@@ -163,7 +163,7 @@ BPM operations across these domains (`category`): `engines`, `process-definition
 - **History, migrations & batches** — `query_historic_*` (ISO 8601 dates; incidents incl. resolved
   ones), migration tools; batch tools return a queued `batchId` that `get_batch` follows
 - **Lists** — one page as `{ items, totalCount, hasMore, nextOffset? }`, `maxResults` ≤ 100;
-  variable reads cut values over 2000 characters (`truncated: true`)
+  variable reads cut values over 2000 characters (`truncated: true`); `variableName` reads one whole
 - **Widgets** — `show_cockpit_dashboard`, `show_process_list`/`detail`, `show_incidents_dashboard`,
   `show_bpmn_viewer`, `show_history_timeline`, `show_job_panel`, …
 

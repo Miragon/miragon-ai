@@ -2,74 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import type { Client } from "@miragon-ai/camunda7-client"
 
-vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
-  // list endpoints + their /count twins (the surface under test)
-  getProcessInstances: vi.fn(),
-  getProcessInstancesCount: vi.fn(),
-  getTasks: vi.fn(),
-  getTasksCount: vi.fn(),
-  getJobs: vi.fn(),
-  getJobsCount: vi.fn(),
-  getIncidents: vi.fn(),
-  getIncidentsCount: vi.fn(),
-  getHistoricProcessInstances: vi.fn(),
-  getHistoricProcessInstancesCount: vi.fn(),
-  getHistoricActivityInstances: vi.fn(),
-  getHistoricActivityInstancesCount: vi.fn(),
-  getHistoricTaskInstances: vi.fn(),
-  getHistoricTaskInstancesCount: vi.fn(),
-  getHistoricVariableInstances: vi.fn(),
-  getHistoricVariableInstancesCount: vi.fn(),
-  getHistoricIncidents: vi.fn(),
-  getHistoricIncidentsCount: vi.fn(),
-  getExternalTasks: vi.fn(),
-  getExternalTasksCount: vi.fn(),
-  getProcessDefinitions: vi.fn(),
-  getProcessDefinitionsCount: vi.fn(),
-  getDeployments: vi.fn(),
-  getDeploymentsCount: vi.fn(),
-  // unrelated endpoints imported by the same tool files
-  getProcessDefinitionBpmn20Xml: vi.fn(),
-  getDeployment: vi.fn(),
-  createDeployment: vi.fn(),
-  setExternalTaskResourceRetries: vi.fn(),
-  fetchAndLock: vi.fn(),
-  completeExternalTaskResource: vi.fn(),
-  handleFailure: vi.fn(),
-  startProcessInstanceByKey: vi.fn(),
-  getProcessInstance: vi.fn(),
-  deleteProcessInstance: vi.fn(),
-  modifyProcessInstance: vi.fn(),
-  getActivityInstanceTree: vi.fn(),
-  getProcessInstanceVariables: vi.fn(),
-  setProcessInstanceVariable: vi.fn(),
-  updateSuspensionStateById: vi.fn(),
-  getTask: vi.fn(),
-  claim: vi.fn(),
-  unclaim: vi.fn(),
-  complete: vi.fn(),
-  setAssignee: vi.fn(),
-  getTaskVariables: vi.fn(),
-  setJobRetries: vi.fn(),
-  setJobRetriesAsyncOperation: vi.fn(),
-  resolveIncident: vi.fn(),
-}))
+// Every SDK operation becomes a mock: the structural guards below capture
+// the FULL registrar surface (every domain file), and no captured handler may
+// reach a real engine.
+vi.mock("@miragon-ai/camunda7-client/sdk", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>()
+  return Object.fromEntries(Object.keys(actual).map((name) => [name, vi.fn()]))
+})
 
 import { z } from "zod"
 import * as sdk from "@miragon-ai/camunda7-client/sdk"
 import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
 import { paginatedListOutput } from "../lib/pagination.js"
 import { createEngineRegistry, type EngineRegistry } from "../lib/resolve-engine.js"
-import { registerProcessInstanceTools } from "./process-instances.js"
-import { registerTaskTools } from "./tasks.js"
-import { registerJobTools } from "./jobs.js"
-import { registerIncidentTools } from "./incidents.js"
-import { registerHistoryTools } from "./history.js"
-import { registerExternalTaskTools } from "./external-tasks.js"
-import { registerProcessDefinitionTools } from "./process-definitions.js"
-import { registerDeploymentTools } from "./deployments.js"
+import type { ProfileStore } from "@miragon-ai/widget-shell/server"
+import { registerTools } from "./index.js"
+import { registerIncidentIssueTools } from "./incident-issue.js"
+import { registerEngineTools } from "./engines.js"
 
-type Register = Parameters<typeof registerProcessInstanceTools>[0]
+type Register = Parameters<typeof registerTools>[0]
 type Config = ToolConfig<EngineRegistry>
 
 /** Captures registrar configs instead of registering them on a real server. */
@@ -82,15 +33,15 @@ function captureTools(...registerFns: Array<(register: Register) => void>): Map<
   return tools
 }
 
+/**
+ * Every registrar tool the plugin registers (plugin.ts: engines, the domain
+ * files behind `registerTools`, the incident issue) — a new domain file or a
+ * new tool lands under the guards below without anyone touching this test.
+ */
 const tools = captureTools(
-  registerProcessInstanceTools,
-  registerTaskTools,
-  registerJobTools,
-  registerIncidentTools,
-  registerHistoryTools,
-  registerExternalTaskTools,
-  registerProcessDefinitionTools,
-  (register) => registerDeploymentTools(register, { allowDeployments: true }),
+  (register) => registerEngineTools(register, {} as ProfileStore),
+  (register) => registerTools(register, { allowDeployments: true }),
+  (register) => registerIncidentIssueTools(register, {}),
 )
 
 const fakeClient = { fake: true } as unknown as Client
@@ -230,6 +181,20 @@ describe("every list/query tool shares one pagination contract", () => {
   const listTools = [...tools.values()].filter(
     (c) => c.inputSchema && "maxResults" in c.inputSchema,
   )
+
+  it("captures the whole registrar surface, every domain file included", () => {
+    const categories = new Set([...tools.values()].map((c) => c.category))
+    for (const category of [
+      "engines",
+      "messages-signals",
+      "migrations",
+      "batches",
+      "tasks",
+      "history",
+    ]) {
+      expect(categories, category).toContain(category)
+    }
+  })
 
   it("covers every case of the envelope table (the guard is not vacuous)", () => {
     expect(listTools.map((c) => c.name).sort()).toEqual(cases.map(({ tool }) => tool).sort())

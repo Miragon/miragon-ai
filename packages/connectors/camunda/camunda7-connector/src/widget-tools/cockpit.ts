@@ -15,6 +15,7 @@ import {
   getHistoricActivityInstancesCount,
   getHistoricProcessInstances,
 } from "@miragon-ai/camunda7-client/sdk"
+import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
 import { buildProcessInstancesData, buildProcessListData } from "../data/cockpit-data.js"
 import { buildProcessIncidentsData } from "../data/incident-panel-data.js"
 import {
@@ -224,13 +225,9 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processInstanceId: z.string().describe("The process instance ID"),
-        firstResult: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe("Offset for pagination (0-based)."),
-        maxResults: z.number().int().positive().optional().describe("Page size (default 500)."),
+        firstResult: pagingShape.firstResult,
+        // One capped page like every list; the widget pages the rest.
+        maxResults: pagingShape.maxResults.default(MAX_PAGE_SIZE),
         ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_HISTORY_TIMELINE, "History Timeline"),
@@ -246,7 +243,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
             sortBy: "startTime",
             sortOrder: "asc",
             firstResult: args.firstResult,
-            maxResults: args.maxResults ?? 500,
+            maxResults: args.maxResults ?? MAX_PAGE_SIZE,
           },
         }),
         // Honest total via /count — the page above is capped, so its length
