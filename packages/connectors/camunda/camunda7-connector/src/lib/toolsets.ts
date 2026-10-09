@@ -102,9 +102,9 @@ export const CAMUNDA7_ADMIN_ONLY_TOOLS: readonly string[] = Object.freeze([...AD
  *
  *   1. Tools in {@link ADMIN_ONLY_TOOLS} exist only in `admin`.
  *   2. Tools with `annotations.readOnlyHint: true` exist in every toolset —
- *      and `read-only` lists NOTHING else (no exemptions: a tool that must be
- *      discoverable there declares `readOnlyHint` for its read-only variant,
- *      see `camunda7_engine`).
+ *      and `read-only` lists NOTHING else (no exemptions: a read that must be
+ *      discoverable there is its own `readOnlyHint` tool, e.g.
+ *      `camunda7_list_engines` next to the write `camunda7_select_engine`).
  *   3. Everything else (engine writes: start/complete/claim/retries/…)
  *      exists in `operations` and `admin`.
  */
@@ -122,9 +122,10 @@ export function isToolInToolset(
 /**
  * The ONE durable-profile-write decision: whether `camunda7_save_user_profile`
  * exists in `toolset` — the registrar rule applied to the save tool (a write,
- * not admin-only → every toolset above the read-only floor). `camunda7_engine`
- * action `"select"` writes the same profile field, so it shares exactly this
- * decision; the settings panel reports it as `canSave`.
+ * not admin-only → every toolset above the read-only floor).
+ * `camunda7_select_engine` writes the same profile field and is a registrar
+ * write, so the filter applies exactly this decision to it; the settings panel
+ * reports it as `canSave`.
  */
 export function allowsProfileSave(toolset: Camunda7Toolset): boolean {
   return isToolInToolset({ name: CAMUNDA7_SAVE_USER_PROFILE }, toolset)

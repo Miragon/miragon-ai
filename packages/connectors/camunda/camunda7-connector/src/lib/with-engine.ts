@@ -1,20 +1,77 @@
 import { z } from "zod"
+import type { createToolRegistrar, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import type { Client } from "@miragon-ai/camunda7-client"
 import type { EngineProvider } from "../engine-provider.js"
 import { resolveEngine, type EngineCallContext, type EngineRegistry } from "./resolve-engine.js"
 
 /**
- * Optional `engine` parameter spread into every operations tool's input
- * schema. When set it overrides the caller's saved default engine for that one
- * call; when omitted, [[resolveEngine]] falls back to the saved default.
+ * The one-line `engine` description every camunda7 tool carries. The routing
+ * rule itself (per-call `engine` > saved default > the only engine) is stated
+ * ONCE in the module's server instructions (`instructions.ts`) — repeated on
+ * every tool it was a fifth of the whole tool surface.
+ */
+export const ENGINE_PARAM_DESCRIPTION = "Engine id (see server instructions)"
+
+/**
+ * The optional `engine` parameter as the tool files declare it: spread into
+ * every operations tool's input schema. When set it overrides the caller's
+ * saved default engine for that one call; when omitted, [[resolveEngine]]
+ * falls back to the saved default (or the only engine).
+ *
+ * The plugin advertises it narrowed to the CONFIGURED ids at boot
+ * ([[withEngineParam]] for registrar tools, `WidgetToolsContext.engineParam`
+ * for the widget path), so a model reads the valid ids off the schema. An id
+ * outside the enum fails validation — exactly the ids `resolveEngine` would
+ * reject as UNKNOWN_ENGINE anyway.
  */
 export const engineParamShape = {
-  engine: z
-    .string()
-    .optional()
-    .describe(
-      "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
-    ),
+  engine: z.string().optional().describe(ENGINE_PARAM_DESCRIPTION),
+}
+
+/** The `engine` parameter shape, unconstrained or narrowed to the configured ids. */
+export interface EngineParamShape {
+  engine: z.ZodOptional<z.ZodType<string>>
+}
+
+/**
+ * The boot-time `engine` parameter: an enum of the configured engine ids. A
+ * single engine still yields a single-value enum — never a dropped property:
+ * the widgets' Ask-AI hand-offs and prompts pass `engine` explicitly, and a
+ * strict input would refuse an unknown key.
+ */
+export function engineParamShapeFor(engines: readonly { id: string }[]): EngineParamShape {
+  const [first, ...rest] = engines.map((e) => e.id)
+  if (first === undefined) return engineParamShape
+  return {
+    engine: z
+      .enum([first, ...rest])
+      .optional()
+      .describe(ENGINE_PARAM_DESCRIPTION),
+  }
+}
+
+type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
+type ZodRawShape = Record<string, z.ZodType>
+
+/**
+ * Wraps a registrar so every tool that declares the {@link engineParamShape}
+ * `engine` parameter is advertised with the boot-time enum of `engines`
+ * instead ({@link engineParamShapeFor}). Only that exact placeholder is
+ * swapped — a tool with its own `engine` field keeps it.
+ */
+export function withEngineParam(register: Register, engines: readonly { id: string }[]): Register {
+  const { engine } = engineParamShapeFor(engines)
+  const narrowed = <TShape extends ZodRawShape>(config: ToolConfig<EngineRegistry, TShape>) => {
+    const shape = config.inputSchema
+    if (shape?.engine !== engineParamShape.engine) return register(config)
+    // Same field, narrower values: the handler's `engine?: string` holds.
+    const narrowedConfig: ToolConfig<EngineRegistry, TShape> = {
+      ...config,
+      inputSchema: { ...shape, engine },
+    }
+    return register(narrowedConfig)
+  }
+  return Object.assign(narrowed, { getRegisteredTools: () => register.getRegisteredTools() })
 }
 
 export interface EngineContext {

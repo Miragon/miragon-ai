@@ -1,5 +1,11 @@
 import { z } from "zod"
-import { firstResultParam, flagParam, sortOrderParam, variableSchema } from "./shared.js"
+import {
+  firstResultParam,
+  flagParam,
+  maxResultsParam,
+  sortOrderParam,
+  variableSchema,
+} from "./shared.js"
 
 /**
  * Read-only external-task query (`GET /external-task`) — inspects what the
@@ -28,7 +34,7 @@ export const listExternalTasksInput = z.object({
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
   activityId: z.string().optional().describe("Filter by the activity the task was created for"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum([
       "id",

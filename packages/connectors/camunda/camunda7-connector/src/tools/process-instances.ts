@@ -32,6 +32,11 @@ import {
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import {
+  CUT_VALUE_WRITE_RULE,
+  VARIABLE_TRUNCATION_NOTE,
+  variableRead,
+} from "../lib/variable-truncation.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
@@ -42,7 +47,7 @@ export function registerProcessInstanceTools(register: Register) {
     category: "process-instances",
     description:
       "Start a new process instance by process definition key. Optionally set a business key and initial variables.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, openWorldHint: true },
     inputSchema: { ...startProcessInstanceInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) =>
       startProcessInstanceByKey({
@@ -157,21 +162,22 @@ export function registerProcessInstanceTools(register: Register) {
   register({
     name: "camunda7_get_process_instance_variables",
     category: "process-instances",
-    description:
-      "Get all variables of a process instance (Json/Xml/Object: serialized string + valueInfo).",
+    description: `Get all variables of a process instance (Json/Xml/Object: serialized string + valueInfo). ${VARIABLE_TRUNCATION_NOTE}`,
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getProcessInstanceVariablesInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) =>
-      readProcessInstanceVariables(client, args.processInstanceId),
+      variableRead(
+        await readProcessInstanceVariables(client, args.processInstanceId),
+        args.variableName,
+      ),
     ),
   })
 
   register({
     name: "camunda7_set_process_instance_variable",
     category: "process-instances",
-    description:
-      "Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read).",
-    annotations: { openWorldHint: true },
+    description: `Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read). ${CUT_VALUE_WRITE_RULE}`,
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...setProcessInstanceVariableInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await setProcessInstanceVariable({
@@ -196,7 +202,7 @@ export function registerProcessInstanceTools(register: Register) {
     category: "process-instances",
     description:
       "Set the suspension state of a process instance. suspended=true suspends it (jobs, timers, and message correlations are frozen); suspended=false activates (unsuspends) it again.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...setProcessInstanceSuspensionInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await updateSuspensionStateById({

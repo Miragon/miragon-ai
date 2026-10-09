@@ -2,61 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import type { Client } from "@miragon-ai/camunda7-client"
 
-vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
-  // list endpoints + their /count twins (the surface under test)
-  getProcessInstances: vi.fn(),
-  getProcessInstancesCount: vi.fn(),
-  getTasks: vi.fn(),
-  getTasksCount: vi.fn(),
-  getJobs: vi.fn(),
-  getJobsCount: vi.fn(),
-  getIncidents: vi.fn(),
-  getIncidentsCount: vi.fn(),
-  getHistoricProcessInstances: vi.fn(),
-  getHistoricProcessInstancesCount: vi.fn(),
-  getHistoricActivityInstances: vi.fn(),
-  getHistoricActivityInstancesCount: vi.fn(),
-  getHistoricTaskInstances: vi.fn(),
-  getHistoricTaskInstancesCount: vi.fn(),
-  getHistoricVariableInstances: vi.fn(),
-  getHistoricVariableInstancesCount: vi.fn(),
-  getExternalTasks: vi.fn(),
-  getExternalTasksCount: vi.fn(),
-  // unrelated endpoints imported by the same tool files
-  setExternalTaskResourceRetries: vi.fn(),
-  fetchAndLock: vi.fn(),
-  completeExternalTaskResource: vi.fn(),
-  handleFailure: vi.fn(),
-  startProcessInstanceByKey: vi.fn(),
-  getProcessInstance: vi.fn(),
-  deleteProcessInstance: vi.fn(),
-  modifyProcessInstance: vi.fn(),
-  getActivityInstanceTree: vi.fn(),
-  getProcessInstanceVariables: vi.fn(),
-  setProcessInstanceVariable: vi.fn(),
-  updateSuspensionStateById: vi.fn(),
-  getTask: vi.fn(),
-  claim: vi.fn(),
-  unclaim: vi.fn(),
-  complete: vi.fn(),
-  setAssignee: vi.fn(),
-  getTaskVariables: vi.fn(),
-  setJobRetries: vi.fn(),
-  setJobRetriesAsyncOperation: vi.fn(),
-  resolveIncident: vi.fn(),
-}))
+// Every SDK operation becomes a mock: the structural guards below capture
+// the FULL registrar surface (every domain file), and no captured handler may
+// reach a real engine.
+vi.mock("@miragon-ai/camunda7-client/sdk", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>()
+  return Object.fromEntries(Object.keys(actual).map((name) => [name, vi.fn()]))
+})
 
+import { z } from "zod"
 import * as sdk from "@miragon-ai/camunda7-client/sdk"
+import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
 import { paginatedListOutput } from "../lib/pagination.js"
 import { createEngineRegistry, type EngineRegistry } from "../lib/resolve-engine.js"
-import { registerProcessInstanceTools } from "./process-instances.js"
-import { registerTaskTools } from "./tasks.js"
-import { registerJobTools } from "./jobs.js"
-import { registerIncidentTools } from "./incidents.js"
-import { registerHistoryTools } from "./history.js"
-import { registerExternalTaskTools } from "./external-tasks.js"
+import type { ProfileStore } from "@miragon-ai/widget-shell/server"
+import { registerTools } from "./index.js"
+import { registerIncidentIssueTools } from "./incident-issue.js"
+import { registerEngineTools } from "./engines.js"
 
-type Register = Parameters<typeof registerProcessInstanceTools>[0]
+type Register = Parameters<typeof registerTools>[0]
 type Config = ToolConfig<EngineRegistry>
 
 /** Captures registrar configs instead of registering them on a real server. */
@@ -69,13 +33,15 @@ function captureTools(...registerFns: Array<(register: Register) => void>): Map<
   return tools
 }
 
+/**
+ * Every registrar tool the plugin registers (plugin.ts: engines, the domain
+ * files behind `registerTools`, the incident issue) — a new domain file or a
+ * new tool lands under the guards below without anyone touching this test.
+ */
 const tools = captureTools(
-  registerProcessInstanceTools,
-  registerTaskTools,
-  registerJobTools,
-  registerIncidentTools,
-  registerHistoryTools,
-  registerExternalTaskTools,
+  (register) => registerEngineTools(register, {} as ProfileStore),
+  (register) => registerTools(register, { allowDeployments: true }),
+  (register) => registerIncidentIssueTools(register, {}),
 )
 
 const fakeClient = { fake: true } as unknown as Client
@@ -183,7 +149,72 @@ const cases: readonly ListCase[] = [
       activityId: "send-mail",
     },
   },
+  {
+    tool: "camunda7_query_historic_incidents",
+    list: sdk.getHistoricIncidents,
+    count: sdk.getHistoricIncidentsCount,
+    filterArgs: { activityId: "callWms", open: true },
+  },
+  {
+    tool: "camunda7_list_process_definitions",
+    list: sdk.getProcessDefinitions,
+    count: sdk.getProcessDefinitionsCount,
+    filterArgs: { processDefinitionKey: "invoice", latestVersion: true },
+    engineQuery: { key: "invoice", latestVersion: true },
+  },
+  {
+    tool: "camunda7_list_deployments",
+    list: sdk.getDeployments,
+    count: sdk.getDeploymentsCount,
+    filterArgs: { nameLike: "invoice" },
+    // A %-less LIKE value is a substring match (the engine would match it exactly).
+    engineQuery: { nameLike: "%invoice%" },
+  },
 ]
+
+/**
+ * Structural guards over EVERY registered tool, not the table above: a list
+ * tool is whatever takes `maxResults`, so a new one without the envelope or
+ * the page cap fails here without anyone updating a list.
+ */
+describe("every list/query tool shares one pagination contract", () => {
+  const listTools = [...tools.values()].filter(
+    (c) => c.inputSchema && "maxResults" in c.inputSchema,
+  )
+
+  it("captures the whole registrar surface, every domain file included", () => {
+    const categories = new Set([...tools.values()].map((c) => c.category))
+    for (const category of [
+      "engines",
+      "messages-signals",
+      "migrations",
+      "batches",
+      "tasks",
+      "history",
+    ]) {
+      expect(categories, category).toContain(category)
+    }
+  })
+
+  it("covers every case of the envelope table (the guard is not vacuous)", () => {
+    expect(listTools.map((c) => c.name).sort()).toEqual(cases.map(({ tool }) => tool).sort())
+  })
+
+  it.each(listTools.map((c) => [c.name, c] as const))(
+    "%s pages with the envelope and caps maxResults at MAX_PAGE_SIZE",
+    (_name, config) => {
+      expect(config.outputSchema).toBe(paginatedListOutput)
+      const input = z.object(config.inputSchema)
+      expect(input.shape).toHaveProperty("firstResult")
+      expect(input.safeParse({ maxResults: MAX_PAGE_SIZE }).success).toBe(true)
+      expect(input.safeParse({ maxResults: MAX_PAGE_SIZE + 1 }).success).toBe(false)
+    },
+  )
+
+  it("caps at 100 — one turn's worth of rows", () => {
+    expect(MAX_PAGE_SIZE).toBe(100)
+  })
+})
 
 describe.each(cases)("$tool pagination envelope", ({ tool, list, count, filterArgs, ...c }) => {
   const engineQuery = c.engineQuery ?? filterArgs

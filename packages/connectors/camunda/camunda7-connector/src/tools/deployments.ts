@@ -6,8 +6,14 @@ import {
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { engineLike, engineSorting } from "@miragon-ai/camunda7-client"
-import { getDeployments, getDeployment, createDeployment } from "@miragon-ai/camunda7-client/sdk"
+import {
+  getDeployments,
+  getDeploymentsCount,
+  getDeployment,
+  createDeployment,
+} from "@miragon-ai/camunda7-client/sdk"
 import type { MultiFormDeploymentDto } from "@miragon-ai/camunda7-client/types"
+import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -65,20 +71,29 @@ export function registerDeploymentTools(
   register({
     name: "camunda7_list_deployments",
     category: "deployments",
-    description: "List deployments with optional filters.",
+    description:
+      "List deployments with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listDeploymentsInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) =>
-      getDeployments({
-        client,
-        query: {
-          name: args.name,
-          nameLike: engineLike(args.nameLike),
-          maxResults: args.maxResults,
-          ...engineSorting(args),
-        },
-      }),
-    ),
+    outputSchema: paginatedListOutput,
+    handler: withEngine(async (client, args) => {
+      // The page and its /count share the filters in the engine's format (a
+      // %-less nameLike becomes a substring match).
+      const filters = { name: args.name, nameLike: engineLike(args.nameLike) }
+      const [items, count] = await Promise.all([
+        getDeployments({
+          client,
+          query: {
+            ...filters,
+            firstResult: args.firstResult,
+            maxResults: args.maxResults,
+            ...engineSorting(args),
+          },
+        }),
+        getDeploymentsCount({ client, query: filters }),
+      ])
+      return toPaginatedList(items, count, args.firstResult)
+    }),
   })
 
   // Deploying IS code execution inside the engine JVM — a deployed model's

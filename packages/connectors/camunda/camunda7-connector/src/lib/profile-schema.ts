@@ -26,7 +26,7 @@ export const camunda7SettingsSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Default engine: operations tools route here when no per-call `engine` override is given, and the cockpit lands on it. Saved via the settings page or `camunda7_engine` action "select".',
+      "Default engine: operations tools route here when no per-call `engine` override is given, and the cockpit lands on it. Saved via the settings page or camunda7_select_engine.",
     ),
   allowedEngineIds: z
     .array(z.string())
@@ -124,7 +124,7 @@ export const userProfileToolSaveInput = z
  * Composite payload the `show_user_profile` widget tool + `user_profile_data`
  * feed return: the profile itself plus the *full* configured engine list (so
  * the settings UI can offer every engine as an availability checkbox — it can't
- * re-source that from `camunda7_engine` "list", which is already filtered by
+ * re-source that from `camunda7_list_engines`, which is already filtered by
  * `allowedEngineIds`).
  */
 export interface UserProfileView {

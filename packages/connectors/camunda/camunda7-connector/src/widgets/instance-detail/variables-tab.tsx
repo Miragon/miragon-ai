@@ -28,7 +28,7 @@ export function VariablesTab({
         <AskAiButton
           variant="subtle"
           label={t("instanceDetail.explainVariables")}
-          prompt={`Explain and sanity-check the variables of CIB Seven process instance ${instanceId} (definition ${definitionId}${engineClause}). Use camunda7_get_process_instance_variables(${engineArg(engineId)}processInstanceId: "${instanceId}") for the authoritative values. For each meaningful variable say what it represents, and flag any value that looks missing, malformed, or inconsistent and could explain the current incident(s). If you find a likely-bad variable, propose the corrected value — but do not set it without my confirmation.${engineCallRule(engineId)}`}
+          prompt={`Explain and sanity-check the variables of CIB Seven process instance ${instanceId} (definition ${definitionId}${engineClause}). Use camunda7_get_process_instance_variables(${engineArg(engineId)}processInstanceId: "${instanceId}") to read them; a value marked truncated: true is cut, not malformed — read that variable whole (variableName) before judging it. For each meaningful variable say what it represents, and flag any value that looks missing, malformed, or inconsistent and could explain the current incident(s). If you find a likely-bad variable, propose the corrected value built from its whole value — but do not set it without my confirmation.${engineCallRule(engineId)}`}
         />
       </div>
       <VariablesTable

@@ -58,11 +58,13 @@ export const CAMUNDA7_PROCESS_LIST_DATA = "camunda7_process_list_data"
 export const CAMUNDA7_SHOW_USER_PROFILE = "camunda7_show_user_profile"
 export const CAMUNDA7_USER_PROFILE_DATA = "camunda7_user_profile_data"
 export const CAMUNDA7_SAVE_USER_PROFILE = "camunda7_save_user_profile"
-// Engine management (list / select / current). Widgets call it ONLY to read
-// the engine list (`list`), so the name is load-bearing beyond prompt hints.
-// No widget writes through it: cockpit navigation never saves a default; the
-// default changes only via the settings page or an explicit model `select`.
-export const CAMUNDA7_ENGINE = "camunda7_engine"
+// Engine management: the read-only engine list (+ the saved default) and the
+// durable default-engine save. Widgets call ONLY the list, so its name is
+// load-bearing beyond prompt hints. No widget writes a default: cockpit
+// navigation never saves one; it changes only via the settings page or an
+// explicit model call to the select tool.
+export const CAMUNDA7_LIST_ENGINES = "camunda7_list_engines"
+export const CAMUNDA7_SELECT_ENGINE = "camunda7_select_engine"
 // The engine writes widgets trigger in place (`useToolMutation`). The
 // deployment's toolset may not register them (`camunda7:read-only` drops every
 // write, `:operations` the admin-only ones), so the widgets ask the app-only
@@ -87,7 +89,8 @@ export const CAMUNDA7_WIDGET_ACTIONS_DATA = "camunda7_widget_actions_data"
 // the list against the advertised surface: a new engine-less tool fails there
 // instead of costing the model a refused call from every engine-pinned prompt.
 export const CAMUNDA7_ENGINELESS_TOOLS = [
-  CAMUNDA7_ENGINE,
+  CAMUNDA7_LIST_ENGINES,
+  CAMUNDA7_SELECT_ENGINE,
   CAMUNDA7_SHOW_USER_PROFILE,
   CAMUNDA7_SAVE_USER_PROFILE,
 ] as const

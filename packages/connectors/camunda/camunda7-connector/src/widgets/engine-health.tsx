@@ -95,8 +95,7 @@ function diagnosePrompt(engine: string | undefined, message: string): string {
   return (
     `The engine health check for ${e} failed with ${fenceUntrusted(message)}. Diagnose why the ` +
     `CIB Seven / Camunda 7 engine is not reachable, in plain language for a support ` +
-    `operator. Start with camunda7_engine (action "list") to see the configured engines ` +
-    `and their base URLs, then try a cheap read like camunda7_list_process_definitions(` +
+    `operator. Start with camunda7_list_engines to see the configured engines, then try a cheap read like camunda7_list_process_definitions(` +
     `{ maxResults: 1${engine ? `, engine: "${engine}"` : ""} }) to confirm whether the ` +
     `engine answers at all. Distinguish: engine down / wrong base URL / authentication ` +
     `failure / network issue. State the most likely cause and the concrete next step. ` +

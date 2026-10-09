@@ -5,7 +5,8 @@ import type { MCPServer } from "mcp-use"
 import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/camunda7-client/sdk"
 import { createPlugin, type Camunda7SharedResources } from "./plugin.js"
 import { providerForEntry } from "./providers/index.js"
-import { camunda7Toolsets } from "./lib/toolsets.js"
+import { allowsProfileSave, camunda7Toolsets } from "./lib/toolsets.js"
+import { camunda7Instructions } from "./instructions.js"
 
 /**
  * Self-contained module definition for host apps: config schema, env mapping,
@@ -363,6 +364,23 @@ export const camunda7Module = {
       )
     }
     return warnings
+  },
+
+  /**
+   * The module's server-instructions snippet for this boot: the engine
+   * routing rule over the CONFIGURED ids (the `engine` parameter itself only
+   * carries a one-line description), the date format, the tool families and
+   * the health routing. Offers saving a default only when a caller can: the
+   * toolset registers the save AND OAuth is installed — without OAuth no
+   * request has a caller identity (#331), so the save would refuse and
+   * ENGINE_NOT_SELECTED does not offer it either.
+   */
+  instructions(config: Record<string, unknown>, { authenticated }: { authenticated: boolean }) {
+    const parsed = camunda7ConfigSchema.parse(config)
+    return camunda7Instructions({
+      engineIds: parsed.engines.map((e) => e.id),
+      canSaveDefault: authenticated && allowsProfileSave(camunda7Toolsets.resolve(parsed.toolset)),
+    })
   },
 
   createPlugin(

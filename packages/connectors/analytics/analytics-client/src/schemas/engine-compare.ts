@@ -7,12 +7,7 @@ export const engineCompareInput = z.object({
     .describe(
       "The process definition key to compare on both engines — REQUIRED. Engines run different process mixes, so comparing their whole workloads measures the mix, not the engines; scoping to ONE process is what makes the delta attributable. Discover keys deployed on several engines in the `sharedProcessKeys` field of analytics_engine_landscape.",
     ),
-  engineA: z
-    .string()
-    .min(1)
-    .describe(
-      'First engine id (the baseline). Discover ids with the camunda7_engine tool (action "list").',
-    ),
+  engineA: z.string().min(1).describe("First engine id (the baseline)."),
   engineB: z.string().min(1).describe("Second engine id (the comparison)."),
   windowDays: z
     .number()

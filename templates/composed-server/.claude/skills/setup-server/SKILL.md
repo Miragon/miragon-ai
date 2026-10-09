@@ -53,7 +53,7 @@ Edit `.env` (every field is documented inline in `.env.example`):
 operaton | camunda7`) and `auth` — overrides the single-engine shorthand
   above. To group engines by environment, either set `environment` per entry
   or write the JSON as a map keyed by environment id
-  (`{"<environment>": [engines…]}`) — pickers and `camunda7_engine` `list`
+  (`{"<environment>": [engines…]}`) — pickers and `camunda7_list_engines`
   then offer a two-stage environment → engine selection. Engine ids stay
   globally unique across environments.
 - `PROMETHEUS_URL` — unset defaults to `http://localhost:9090`, which does
@@ -115,7 +115,7 @@ MCP_OAUTH={"provider":"keycloak","serverUrl":"https://kc.example.com","realm":"p
 (`@miragon-ai/widget-shell/server`) — the same helper the stock server uses.
 `/mcp` then answers 401 without a valid bearer token, the default toolsets rise
 to `operations`/`standard`, and every settings save (`camunda7_save_user_profile`,
-`analytics_save_settings`, `camunda7_engine` "select", your own module's save
+`analytics_save_settings`, `camunda7_select_engine`, your own module's save
 tool) persists under the signed-in user. Without `MCP_OAUTH` there is no caller
 identity: settings render their defaults and every save refuses. A bad
 `MCP_OAUTH` (invalid JSON, unknown provider or key, stray `MCP_USE_OAUTH_*`
@@ -233,8 +233,9 @@ needs `MCP_URL` set to the public URL — else every call gets 403.
 pnpm build && pnpm typecheck && pnpm test
 ```
 
-Then a functional pass in the inspector: `camunda7_engine` (engine reachable,
-auth works), one `camunda7_show_*` widget, one analytics tool (Prometheus
+Then a functional pass in the inspector: `camunda7_list_engines` (engines
+configured), one cheap read such as `camunda7_list_process_definitions` (engine
+reachable, auth works), one `camunda7_show_*` widget, one analytics tool (Prometheus
 reachable, `engine_id` matches). A clean boot log — no unknown-var or
 missing-URL warnings — is part of done.
 

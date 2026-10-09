@@ -55,6 +55,8 @@ describe("mcp-server-camunda7 E2E smoke", () => {
 
   it("advertises the pagination envelope on every list/query tool", async () => {
     const paginatedTools = [
+      "camunda7_list_process_definitions",
+      "camunda7_list_deployments",
       "camunda7_list_process_instances",
       "camunda7_list_tasks",
       "camunda7_list_jobs",
@@ -77,14 +79,36 @@ describe("mcp-server-camunda7 E2E smoke", () => {
       )
       const inputProps = (tool!.inputSchema as { properties?: Record<string, unknown> })?.properties
       expect(inputProps, `${name} should accept firstResult`).toHaveProperty("firstResult")
+      expect(inputProps?.maxResults, `${name} caps its page size`).toMatchObject({ maximum: 100 })
     }
   })
 
-  it("answers camunda7_engine (action list) from the engine registry without a live engine", async () => {
-    const result = await client.callTool({
-      name: "camunda7_engine",
-      arguments: { action: "list" },
-    })
+  // Structural, not a list: the show tools are model-visible too, and a host
+  // that keeps structuredContent hands their whole page to the model — so
+  // every tool on the wire that takes a page size caps it, show tools and
+  // app-only feeds included.
+  it("caps maxResults at 100 on every tool that takes it", async () => {
+    const { tools } = await client.listTools()
+    const paged = tools.filter(
+      (t) => (t.inputSchema as { properties?: Record<string, unknown> }).properties?.maxResults,
+    )
+    expect(paged.map((t) => t.name)).toEqual(
+      expect.arrayContaining([
+        "camunda7_list_process_instances",
+        "camunda7_show_history_timeline",
+        "camunda7_show_process_instances",
+        "camunda7_process_instances_data",
+      ]),
+    )
+    for (const tool of paged) {
+      const maxResults = (tool.inputSchema as { properties: Record<string, { maximum?: number }> })
+        .properties.maxResults
+      expect(maxResults.maximum, `${tool.name} caps its page size`).toBe(100)
+    }
+  })
+
+  it("answers camunda7_list_engines from the engine registry without a live engine", async () => {
+    const result = await client.callTool({ name: "camunda7_list_engines", arguments: {} })
     expect(result.isError).toBeFalsy()
     expect(textPayload(result)).toEqual({
       engines: [
@@ -111,14 +135,16 @@ describe("mcp-server-camunda7 E2E smoke", () => {
     expect(await ready.json()).toEqual({ status: "up", checks: { always: "up" } })
 
     // A real tools/call through the transport must reach the metrics middleware.
-    const call = await client.callTool({ name: "camunda7_engine", arguments: { action: "list" } })
+    const call = await client.callTool({ name: "camunda7_list_engines", arguments: {} })
     expect(call.isError).toBeFalsy()
 
     const metrics = await fetch(`${base}/metrics`)
     expect(metrics.status).toBe(200)
     expect(metrics.headers.get("content-type")).toContain("text/plain")
     const text = await metrics.text()
-    expect(text).toMatch(/^mcp_tool_calls_total\{tool="camunda7_engine",outcome="ok"\} [1-9]\d*$/m)
+    expect(text).toMatch(
+      /^mcp_tool_calls_total\{tool="camunda7_list_engines",outcome="ok"\} [1-9]\d*$/m,
+    )
     expect(text).toMatch(
       /^mcp_http_requests_total\{method="GET",route="\/health",status="200"\} [1-9]\d*$/m,
     )
@@ -126,6 +152,17 @@ describe("mcp-server-camunda7 E2E smoke", () => {
       /^mcp_http_requests_total\{method="POST",route="\/mcp",status="200"\} [1-9]\d*$/m,
     )
     expect(text).toContain("process_cpu_user_seconds_total")
+  })
+
+  it("states destructiveHint explicitly on every module write — MCP reads an absent hint as TRUE", async () => {
+    const { tools } = await client.listTools()
+    const writes = tools.filter(
+      (t) => /^(camunda7|analytics)_/.test(t.name) && t.annotations?.readOnlyHint !== true,
+    )
+    expect(writes.length).toBeGreaterThanOrEqual(20)
+    for (const tool of writes) {
+      expect(typeof tool.annotations?.destructiveHint, tool.name).toBe("boolean")
+    }
   })
 
   it("answers get-framework-manifest with the active modules", async () => {
@@ -189,7 +226,7 @@ describe("mcp-server-camunda7 E2E toolset surfaces", () => {
       const names = await listToolNames(server.client)
       expect(names.some((n) => n.startsWith("analytics_"))).toBe(false)
       expect(names).toEqual(
-        expect.arrayContaining(["camunda7_engine", "camunda7_list_external_tasks"]),
+        expect.arrayContaining(["camunda7_list_engines", "camunda7_list_external_tasks"]),
       )
     } finally {
       await server.close()
@@ -304,11 +341,68 @@ describe("mcp-server-camunda7 E2E read-only annotations", () => {
     expect(unannotated).toEqual([...UNANNOTATED_TOOLKIT_READS].sort())
   })
 
-  it("offers camunda7_engine without its durable 'select' action", async () => {
-    const { tools } = await server.client.listTools()
-    const engine = tools.find((t) => t.name === "camunda7_engine")
-    const action = (engine?.inputSchema as { properties?: Record<string, { enum?: string[] }> })
-      ?.properties?.action
-    expect(action?.enum).toEqual(["list", "current"])
+  it("lists the engines but never the durable camunda7_select_engine", async () => {
+    const names = await listToolNames(server.client)
+    expect(names).toContain("camunda7_list_engines")
+    expect(names).not.toContain("camunda7_select_engine")
+  })
+})
+
+/**
+ * The `engine` parameter on the wire: a boot-time enum of the CONFIGURED ids
+ * (the routing rule itself lives in the server instructions). An explicit id
+ * must stay accepted everywhere it was before — the widgets' Ask-AI hand-offs
+ * and prompts pass it — also with a single engine.
+ */
+describe("mcp-server-camunda7 E2E engine parameter", () => {
+  type Properties = Record<string, { enum?: string[]; type?: string }>
+  const engineEnums = async (client: Client) => {
+    const { tools } = await client.listTools()
+    return tools.flatMap((t) => {
+      const engine = (t.inputSchema as { properties?: Properties }).properties?.engine
+      return engine && t.name.startsWith("camunda7_") ? [{ name: t.name, engine }] : []
+    })
+  }
+
+  it("a multi-engine boot advertises the enum of the configured ids on every camunda7 tool", async () => {
+    const server = await bootServer({
+      env: {
+        CAMUNDA_ENGINES_JSON: JSON.stringify([
+          { id: "prod-a", baseUrl: "http://localhost:1/engine-rest" },
+          { id: "prod-b", baseUrl: "http://localhost:2/engine-rest" },
+        ]),
+      },
+    })
+    try {
+      const params = await engineEnums(server.client)
+      expect(params.length).toBeGreaterThan(40)
+      for (const { name, engine } of params) {
+        expect(engine.enum, name).toEqual(["prod-a", "prod-b"])
+      }
+      expect(server.client.getInstructions()).toContain("engines prod-a, prod-b")
+    } finally {
+      await server.close()
+    }
+  })
+
+  it("a single-engine boot keeps `engine` and accepts the explicit id", async () => {
+    const server = await bootServer()
+    try {
+      for (const { name, engine } of await engineEnums(server.client)) {
+        expect(engine.enum, name).toEqual(["default"])
+      }
+      const result = await server.client.callTool({
+        name: "camunda7_open_cockpit",
+        arguments: { engine: "default" },
+      })
+      expect(result.isError).toBeFalsy()
+      const unknown = await server.client.callTool({
+        name: "camunda7_open_cockpit",
+        arguments: { engine: "prod-z" },
+      })
+      expect(unknown.isError).toBe(true)
+    } finally {
+      await server.close()
+    }
   })
 })

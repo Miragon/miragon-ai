@@ -17,14 +17,13 @@ import {
   CAMUNDA7_SHOW_JOB_PANEL,
 } from "../tool-names.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
-import { engineParamShape } from "../lib/with-engine.js"
 import { jobsFilterShape, pagingShape } from "../feed-contracts.js"
 import { localizeFor } from "../lib/server-locale.js"
 import { type WidgetToolsContext } from "./shared.js"
 
 /** Single-instance drill-downs: instance detail, BPMN viewer, job panel. */
 export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
-  const { server, registry, profileStore } = ctx
+  const { server, registry, profileStore, engineParam } = ctx
 
   server.tool(
     {
@@ -35,7 +34,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processInstanceId: z.string().describe("The process instance ID to inspect"),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_INSTANCE_DETAIL, "Process Instance Detail"),
     },
@@ -101,7 +100,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
           .describe(
             "Specific definition version. Requires `processDefinitionKey`. Defaults to the latest version when omitted.",
           ),
-        ...engineParamShape,
+        ...engineParam,
       })
         .refine((v) => v.processInstanceId || v.processDefinitionKey, {
           message: "Provide either `processInstanceId` or `processDefinitionKey`.",
@@ -170,7 +169,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
         ...jobsFilterShape,
         failedOnly: jobsFilterShape.failedOnly.default(false),
         ...pagingShape,
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_JOB_PANEL, "Job Management Panel"),
     },

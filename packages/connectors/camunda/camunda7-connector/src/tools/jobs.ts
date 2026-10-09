@@ -1,5 +1,6 @@
 import {
   listJobsInput,
+  getJobStacktraceInput,
   setJobRetriesInput,
   setJobRetriesBatchInput,
 } from "@miragon-ai/camunda7-client/schemas"
@@ -7,6 +8,7 @@ import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   complementaryFlags,
   engineSorting,
+  fetchJobStacktrace,
   queuedBatch,
   toOptionalEngineDate,
 } from "@miragon-ai/camunda7-client"
@@ -19,6 +21,7 @@ import {
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
+import { boundFailureText, condenseStacktrace } from "./incident-issue.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
@@ -56,11 +59,30 @@ export function registerJobTools(register: Register) {
   })
 
   register({
+    name: "camunda7_get_job_stacktrace",
+    category: "jobs",
+    description:
+      "Get the exception stacktrace of a failed job, condensed to the exception lines, the Caused-by " +
+      "chain and user-code frames (framework frames trimmed). stacktrace is null when the job has " +
+      "none or no longer exists.",
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+    inputSchema: { ...getJobStacktraceInput.shape, ...engineParamShape },
+    handler: withEngine(async (client, args) => {
+      // The engine contract owns the text/plain read (and the 404 → null).
+      const raw = await fetchJobStacktrace(client, args.jobId)
+      return {
+        jobId: args.jobId,
+        stacktrace: raw ? boundFailureText(condenseStacktrace(raw)) : null,
+      }
+    }),
+  })
+
+  register({
     name: "camunda7_set_job_retries",
     category: "jobs",
     description:
       "Set the number of retries for a failed job. Setting retries > 0 will re-execute the job.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...setJobRetriesInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await setJobRetries({

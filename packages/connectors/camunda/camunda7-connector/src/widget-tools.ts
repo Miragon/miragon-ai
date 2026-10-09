@@ -1,6 +1,7 @@
 import type { MCPServer } from "mcp-use"
 import { DEFAULT_HEALTH_THRESHOLDS, type EngineHealthThresholds } from "./data/health-data.js"
 import type { EngineRegistry } from "./lib/resolve-engine.js"
+import { engineParamShapeFor } from "./lib/with-engine.js"
 import type { Camunda7Toolset } from "./lib/toolsets.js"
 import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import type { WidgetToolsContext } from "./widget-tools/shared.js"
@@ -49,6 +50,7 @@ export function registerWidgetTools(
     healthThresholds,
     profileStore,
     toolset: options.toolset,
+    engineParam: engineParamShapeFor(registry.engines),
   }
   registerCockpitWidgetTools(ctx)
   registerInstanceWidgetTools(ctx)

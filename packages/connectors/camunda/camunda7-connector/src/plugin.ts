@@ -13,7 +13,9 @@ import { definition } from "./definition.js"
 import { createEngineRegistry, type EngineEntry } from "./lib/resolve-engine.js"
 import { profileDefaultEngineId } from "./lib/engine-preferences.js"
 import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
-import { resolveCamunda7Toolset, withToolsetFilter } from "./lib/toolsets.js"
+import { allowsProfileSave, resolveCamunda7Toolset, withToolsetFilter } from "./lib/toolsets.js"
+import { resolveProfileKey } from "./lib/resolve-profile-key.js"
+import { withEngineParam } from "./lib/with-engine.js"
 
 export interface Camunda7PluginConfig {
   engines: EngineEntry[]
@@ -84,8 +86,8 @@ export function createPlugin(
   shared: Camunda7SharedResources = {},
 ): AppPlugin<MCPServer> {
   const profileStore = shared.profileStore ?? createInMemoryProfileStore()
-  // Resolved ONCE per plugin: every gate below (registrar filter, engine
-  // "select", widget write buttons, profile save) reads this one concrete
+  // Resolved ONCE per plugin: every gate below (registrar filter, the
+  // ENGINE_NOT_SELECTED hint, widget write buttons, profile save) reads this one concrete
   // toolset — an unknown name warns here once and degrades to `read-only`.
   const toolset = resolveCamunda7Toolset(config.toolset)
   const registry = createEngineRegistry(
@@ -107,9 +109,14 @@ export function createPlugin(
       // Per-call fallback when no `engine` override is given: the caller's
       // saved default (`profile.modules.camunda7.defaultEngineId`), resolved
       // from the tool call's ctx (pipeline steps: the ambient request info) —
-      // the same store the settings tools write, so "select" and the
-      // settings page feed the same routing.
+      // the same store the settings tools write, so camunda7_select_engine
+      // and the settings page feed the same routing.
       defaultEngineId: (call) => profileDefaultEngineId(profileStore, config.engines, call),
+      // Whether ENGINE_NOT_SELECTED may point at camunda7_select_engine: the
+      // toolset registers the save AND this caller has an identity to save
+      // under — resolved from the same call ctx (the select handler refuses
+      // otherwise).
+      canSaveDefault: (call) => allowsProfileSave(toolset) && resolveProfileKey(call) !== undefined,
     },
   )
 
@@ -133,18 +140,16 @@ export function createPlugin(
       installMcpRequestContext(server)
       // One registrar for the whole module, wrapped in the toolset filter so a
       // `camunda7:read-only` / `:operations` / `:admin` deployment only
-      // advertises its subset — always filtered, there is no "everything".
+      // advertises its subset — always filtered, there is no "everything" —
+      // and in the boot-time `engine` enum of the configured ids.
       // Strict input: an unknown (e.g. misnamed) key is a tool error naming
       // the valid keys, never a silently stripped filter that widens the
       // result to the whole engine (#329).
-      const register = withToolsetFilter(
-        createToolRegistrar(server, registry, { strictInput: true }),
-        toolset,
+      const register = withEngineParam(
+        withToolsetFilter(createToolRegistrar(server, registry, { strictInput: true }), toolset),
+        config.engines,
       )
-      // The toolset is threaded through so the engine tool registers its
-      // toolset-shaped variant (read-only: no durable "select") and its
-      // handler can still refuse "select" on its own.
-      registerEngineTools(register, profileStore, toolset)
+      registerEngineTools(register, profileStore)
       // Deployments are opt-in on top of `admin` (code execution in the JVM).
       registerTools(register, { allowDeployments: config.allowDeployments })
       registerIncidentIssueTools(register, incidentIssueConfig)

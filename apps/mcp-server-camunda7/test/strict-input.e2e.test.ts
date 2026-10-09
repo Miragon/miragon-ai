@@ -73,6 +73,15 @@ describe("strict tool inputs on the wire (full surface)", () => {
     expect(moduleTools.every((tool) => /^(camunda7|analytics)_/.test(tool.name))).toBe(true)
     expect(moduleTools.filter(isModelVisible).length).toBeGreaterThanOrEqual(70)
     expect(moduleTools.filter((tool) => !isModelVisible(tool)).length).toBeGreaterThanOrEqual(15)
+    // The split engine pair and the history/stacktrace reads (#340) are probed like the rest.
+    expect(moduleTools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining([
+        "camunda7_list_engines",
+        "camunda7_select_engine",
+        "camunda7_query_historic_incidents",
+        "camunda7_get_job_stacktrace",
+      ]),
+    )
   })
 
   it("every module tool advertises additionalProperties: false", () => {

@@ -170,7 +170,7 @@ describe("Camunda7StandaloneShell", () => {
     const actions: HostActionLog[] = []
     renderShell(
       {
-        camunda7_engine: { engines: [{ id: "prod-a" }], defaultEngineId: "prod-a" },
+        camunda7_list_engines: { engines: [{ id: "prod-a" }], defaultEngineId: "prod-a" },
         camunda7_process_instances_data: INSTANCES_FEED,
       },
       actions,
@@ -189,7 +189,7 @@ describe("Camunda7StandaloneShell", () => {
       {
         // A hanging in-widget call (approval gate, broken transport): the shell
         // must never trap the user on the loading state.
-        camunda7_engine: () => new Promise(() => {}),
+        camunda7_list_engines: () => new Promise(() => {}),
       },
       actions,
     )
@@ -210,7 +210,7 @@ describe("Camunda7StandaloneShell", () => {
     renderShell(
       {
         // Multi-engine, no default saved: the shell cannot pick one.
-        camunda7_engine: { engines: [{ id: "a" }, { id: "b" }], defaultEngineId: null },
+        camunda7_list_engines: { engines: [{ id: "a" }, { id: "b" }], defaultEngineId: null },
       },
       actions,
     )

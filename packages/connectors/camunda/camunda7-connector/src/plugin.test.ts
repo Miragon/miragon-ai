@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
 import type { Client } from "@miragon-ai/camunda7-client"
+import { z } from "zod"
 import {
   createInMemoryProfileStore,
   runWithMcpRequestInfo,
+  type McpRequestInfo,
   type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
 import { createPlugin, type Camunda7PluginConfig } from "./plugin.js"
@@ -15,8 +17,9 @@ import {
 } from "./lib/resolve-engine.js"
 import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "./lib/toolsets.js"
 import {
-  CAMUNDA7_ENGINE,
+  CAMUNDA7_LIST_ENGINES,
   CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_SELECT_ENGINE,
   CAMUNDA7_WIDGET_ACTIONS_DATA,
 } from "./tool-names.js"
 
@@ -39,7 +42,10 @@ async function bootSurface(config: Partial<Camunda7PluginConfig>) {
   plugin.registerTools?.(server)
   plugin.registerWidgetTools?.(server)
   const calls = tool.mock.calls as Array<
-    [{ name: string; annotations?: Record<string, unknown> }, (p: unknown) => Promise<unknown>]
+    [
+      { name: string; annotations?: Record<string, unknown>; inputSchema?: z.ZodObject },
+      (p: unknown) => Promise<unknown>,
+    ]
   >
   const byName = new Map(
     calls.map(([definition, handler]) => [definition.name, { definition, handler }]),
@@ -61,10 +67,11 @@ describe("createPlugin toolset wiring (fail-closed)", () => {
     expect(names).not.toContain("camunda7_start_process_instance")
     expect(names).not.toContain(CAMUNDA7_SAVE_USER_PROFILE)
     expect(allowedActions).toEqual([])
-    // The engine tool registers its read-only variant.
-    expect(byName.get(CAMUNDA7_ENGINE)?.definition.annotations).toMatchObject({
+    // The engine list is a read; saving a default is a write the floor drops.
+    expect(byName.get(CAMUNDA7_LIST_ENGINES)?.definition.annotations).toMatchObject({
       readOnlyHint: true,
     })
+    expect(names).not.toContain(CAMUNDA7_SELECT_ENGINE)
   })
 
   it("resolves an unknown toolset ONCE (one warning) and degrades every path to read-only", async () => {
@@ -84,6 +91,7 @@ describe("createPlugin toolset wiring (fail-closed)", () => {
     })
     expect(names).toContain("camunda7_start_process_instance")
     expect(names).toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(names).toContain(CAMUNDA7_SELECT_ENGINE)
     for (const admin of CAMUNDA7_ADMIN_ONLY_TOOLS) expect(names).not.toContain(admin)
     expect(allowedActions).toContain("camunda7_resolve_incident")
   })
@@ -95,6 +103,120 @@ describe("createPlugin toolset wiring (fail-closed)", () => {
     expect((await bootSurface({ toolset: "admin", allowDeployments: true })).names).toContain(
       "camunda7_create_deployment",
     )
+  })
+})
+
+/** The advertised `engine` property of every tool that takes one, by tool name. */
+async function engineParams(engines: Camunda7PluginConfig["engines"]) {
+  const { byName } = await bootSurface({ engines, toolset: "admin", allowDeployments: true })
+  return [...byName.values()].flatMap(({ definition }) => {
+    const engine = definition.inputSchema?.shape.engine as z.ZodType | undefined
+    return engine ? [{ name: definition.name, engine }] : []
+  })
+}
+
+describe("createPlugin advertises `engine` as the boot-time enum of configured ids", () => {
+  const TWO = [
+    { id: "prod-a", baseUrl: "http://a.example/engine-rest" },
+    { id: "prod-b", baseUrl: "http://b.example/engine-rest" },
+  ]
+
+  it("several engines: every tool with `engine` (registrar AND widget path) lists exactly the ids", async () => {
+    const params = await engineParams(TWO)
+    // Sanity: both paths carry the parameter — otherwise this test is vacuous.
+    expect(params.map((p) => p.name)).toEqual(
+      expect.arrayContaining([
+        "camunda7_list_process_instances",
+        "camunda7_show_engine_health",
+        "camunda7_jobs_data",
+      ]),
+    )
+    for (const { name, engine } of params) {
+      const json = z.toJSONSchema(engine) as { enum?: string[]; description?: string }
+      expect(json.enum, name).toEqual(["prod-a", "prod-b"])
+      expect(json.description, name).toBe("Engine id (see server instructions)")
+      expect(engine.safeParse("prod-b").success, name).toBe(true)
+      expect(engine.safeParse(undefined).success, name).toBe(true)
+      expect(engine.safeParse("prod-c").success, name).toBe(false)
+    }
+  })
+
+  it("one engine: `engine` stays a single-value enum — an explicit id is still accepted", async () => {
+    const params = await engineParams([TWO[0]])
+    expect(params.length).toBeGreaterThan(40)
+    for (const { name, engine } of params) {
+      expect((z.toJSONSchema(engine) as { enum?: string[] }).enum, name).toEqual(["prod-a"])
+      expect(engine.safeParse("prod-a").success, name).toBe(true)
+    }
+  })
+})
+
+describe("camunda7_show_engine_health states its verdict rule (#340)", () => {
+  it("names the source and the deployment's OWN thresholds, and routes to analytics", async () => {
+    const { byName } = await bootSurface({ healthThresholds: { criticalIncidents: 10 } })
+    const description = (
+      byName.get("camunda7_show_engine_health")?.definition as {
+        description?: string
+      }
+    )?.description
+    expect(description).toContain(
+      "Verdict: From the engine's open incidents, read live: critical at >=10 open or >=25 in one cluster, degraded with any, else ok.",
+    )
+    expect(description).toContain("use analytics_engine_health")
+  })
+})
+
+describe("ENGINE_NOT_SELECTED names camunda7_select_engine only when the caller could save", () => {
+  const TWO = [
+    { id: "a", baseUrl: "http://a.example/engine-rest" },
+    { id: "b", baseUrl: "http://b.example/engine-rest" },
+  ]
+  /** A tool call's ctx for a signed-in caller (mcp-use's flattened `ctx.auth`). */
+  const callAs = (id: string) => ({ auth: { user: { id } } })
+  /**
+   * The failure a tool call (`call` = its ctx) or a ctx-less pipeline step
+   * (`call` omitted) sees under the ambient request info `info`.
+   */
+  const failure = async (toolset: string, call?: object, info: McpRequestInfo = {}) => {
+    const plugin = createPlugin({ engines: TWO, toolset })
+    const { registry } = plugin.appConfig as unknown as Camunda7StepAppConfig
+    return runWithMcpRequestInfo(info, () =>
+      resolveEngine(undefined, registry, call).then(
+        () => undefined,
+        (e: unknown) => e as Error,
+      ),
+    )
+  }
+
+  it("signed-in caller (the tool call's ctx) under operations: points at the save", async () => {
+    const error = await failure("operations", callAs("user-1"))
+    expect(error).toBeInstanceOf(EngineNotSelectedError)
+    expect(error?.message).toBe(
+      "No engine specified and no default engine saved. Pass `engine` — one of: a, b. " +
+        "To route later calls without it, save a default with camunda7_select_engine.",
+    )
+  })
+
+  it("a ctx-less pipeline step reads the ambient OAuth caller the same way", async () => {
+    const error = await failure("operations", undefined, { authUserId: "user-1" })
+    expect(error?.message).toContain("camunda7_select_engine")
+  })
+
+  it("no caller identity (no OAuth, no declared local caller): only the per-call override", async () => {
+    for (const error of [
+      await failure("operations", {}),
+      await failure("operations", undefined, {}),
+      await failure("operations"),
+    ]) {
+      expect(error?.message).toBe(
+        "No engine specified and no default engine saved. Pass `engine` — one of: a, b.",
+      )
+    }
+  })
+
+  it("read-only toolset: only the per-call override, even when signed in", async () => {
+    const error = await failure("read-only", callAs("user-1"))
+    expect(error?.message).not.toContain("camunda7_select_engine")
   })
 })
 

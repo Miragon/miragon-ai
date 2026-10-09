@@ -5,6 +5,7 @@ import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
 import { DEFAULT_HEALTH_THRESHOLDS } from "../data/health-data.js"
 import { createEngineRegistry } from "../lib/resolve-engine.js"
 import { CAMUNDA7_OPEN_COCKPIT } from "../tool-names.js"
+import { engineParamShape } from "../lib/with-engine.js"
 import { registerCockpitWidgetTools } from "./cockpit.js"
 
 type Handler = (
@@ -24,6 +25,7 @@ function openCockpit(engines: Parameters<typeof createEngineRegistry>[0]): Handl
     healthThresholds: DEFAULT_HEALTH_THRESHOLDS,
     profileStore: createInMemoryProfileStore(),
     toolset: "read-only",
+    engineParam: engineParamShape,
   })
   const call = tool.mock.calls.find(
     ([definition]) => (definition as { name: string }).name === CAMUNDA7_OPEN_COCKPIT,

@@ -38,8 +38,23 @@ export interface ComposableModule<TShared> {
   supportsToolsets?: boolean
   /** Optional boot-time hints (returned, and logged by the root) for active deployments. */
   bootWarnings?(env: NodeJS.ProcessEnv): string[]
+  /**
+   * Optional model-facing usage notes for this module — routing rules,
+   * argument conventions, which tool answers which question — joined into
+   * the server `instructions` ({@link ModuleComposition.instructions}), so
+   * the rule is stated ONCE instead of in every tool description. Receives
+   * the module's boot config (incl. its effective `toolset`) and the boot's
+   * auth mode; `undefined` contributes nothing.
+   */
+  instructions?(config: Record<string, unknown>, context: InstructionsContext): string | undefined
   /** Validates the raw config and builds the plugin; receives the shared resources. */
   createPlugin(config: Record<string, unknown>, shared: TShared): AppPlugin<MCPServer>
+}
+
+/** What a module's {@link ComposableModule.instructions} may depend on besides its config. */
+export interface InstructionsContext {
+  /** Whether the root installed OAuth — a caller identity (and per-user saves) exists. */
+  authenticated: boolean
 }
 
 export interface ActiveModuleRef {
@@ -121,6 +136,12 @@ export interface ModuleComposition<TShared> {
   emitBootWarnings: (env?: NodeJS.ProcessEnv) => string[]
   /** Log (console.info) and return the one boot line that states each active module's effective toolset. */
   logEffectiveToolsets: (boot: ResolvedBoot) => string
+  /**
+   * The active modules' instruction snippets for this boot, in module order,
+   * joined by a blank line — `undefined` when none contributes. The root
+   * prepends its own preamble (`createComposedServer` does).
+   */
+  instructions: (boot: ResolvedBoot) => string | undefined
 }
 
 export function composeModules<TShared>(options: {
@@ -314,6 +335,13 @@ export function composeModules<TShared>(options: {
       const line = `[${label}] Toolsets — ${modules || "no active modules"}`
       console.info(line)
       return line
+    },
+    instructions(boot) {
+      const context: InstructionsContext = { authenticated: boot.authenticated }
+      const snippets = boot.entries
+        .map((entry) => registry[entry.app]?.instructions?.(entry.config, context)?.trim())
+        .filter((snippet): snippet is string => Boolean(snippet))
+      return snippets.length > 0 ? snippets.join("\n\n") : undefined
     },
   }
 }

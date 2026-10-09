@@ -84,8 +84,8 @@ cross-engine view). Each module runs one toolset per boot:
 
 | Toolset               | Surface                                                                                                                        | No-suffix default |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------- |
-| `camunda7:read-only`  | `readOnlyHint` tools only — queries plus `camunda7_engine` `list`/`current`                                                    | without OAuth     |
-| `camunda7:operations` | + start, claim/assign/complete tasks, variables, job + external-task retries, resolve incidents, correlate messages            | with OAuth        |
+| `camunda7:read-only`  | `readOnlyHint` tools only — queries incl. `camunda7_list_engines`                                                              | without OAuth     |
+| `camunda7:operations` | + start, claim/assign/complete tasks, variables, job + external-task retries, resolve incidents, messages, default engine      | with OAuth        |
 | `camunda7:admin`      | + delete/modify/suspension, migrations, batch retries, signals, the external-task worker protocol, deployments (with the flag) | never             |
 | `analytics:read-only` | every analytics tool, no settings save                                                                                         | without OAuth     |
 | `analytics:standard`  | + `analytics_save_settings`                                                                                                    | with OAuth        |

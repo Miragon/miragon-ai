@@ -4,6 +4,7 @@ import {
   firstResultParam,
   flagParam,
   likeParam,
+  maxResultsParam,
   sortOrderParam,
 } from "./shared.js"
 
@@ -34,7 +35,7 @@ export const queryHistoricProcessInstancesInput = z.object({
     .describe("Only instances with an incident in this status"),
   ...timeWindow,
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum([
       "instanceId",
@@ -66,7 +67,7 @@ export const queryHistoricActivityInstancesInput = z.object({
   canceled: flagParam("true = only canceled activities"),
   ...timeWindow,
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(50),
+  maxResults: maxResultsParam(50),
   sortBy: z
     .enum([
       "activityInstanceId",
@@ -90,7 +91,7 @@ export const queryHistoricTaskInstancesInput = z.object({
   assignee: z.string().optional().describe("Filter by assignee user ID"),
   ...finishedFlags("tasks"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum([
       "taskId",
@@ -121,7 +122,39 @@ export const queryHistoricVariableInstancesInput = z.object({
   variableName: z.string().optional().describe("Filter by exact variable name"),
   variableNameLike: likeParam("Filter by variable name"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(50),
+  maxResults: maxResultsParam(50),
   sortBy: z.enum(["instanceId", "variableName", "tenantId"]).optional(),
+  sortOrder: sortOrderParam,
+})
+
+/**
+ * Historic incidents (`GET /history/incident`): open AND resolved ones with
+ * their create/end timestamps — the recurrence and "since when" questions the
+ * runtime incident list cannot answer once an incident is resolved. The
+ * `open`/`resolved` filters are TRUE-ONLY (`trueOnly`): an incident can also be
+ * deleted, so neither is the other's complement, and the engine ignores a
+ * `false` — the tool drops it instead of claiming a filter.
+ */
+export const queryHistoricIncidentsInput = z.object({
+  processInstanceId: z.string().optional().describe("Filter by process instance ID"),
+  processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
+  activityId: z.string().optional().describe("Filter by the activity the incident occurred on"),
+  incidentType: z.string().optional().describe("Filter by incident type (e.g. failedJob)"),
+  open: flagParam("true = only open incidents"),
+  resolved: flagParam("true = only resolved incidents"),
+  createTimeAfter: engineDateParam("Created after"),
+  createTimeBefore: engineDateParam("Created before"),
+  firstResult: firstResultParam,
+  maxResults: maxResultsParam(),
+  sortBy: z
+    .enum([
+      "createTime",
+      "endTime",
+      "incidentType",
+      "activityId",
+      "processInstanceId",
+      "processDefinitionKey",
+    ])
+    .optional(),
   sortOrder: sortOrderParam,
 })

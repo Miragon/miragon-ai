@@ -120,7 +120,7 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
   it("keeps concurrent saves from DIFFERENT modules — no module's update is lost", async () => {
     const store = await makeStore()
     // Exactly the tool paths: each module's save tool hands the store its
-    // patch (`saveModuleSlice`); the model may fire camunda7_engine "select"
+    // patch (`saveModuleSlice`); the model may fire camunda7_select_engine
     // and analytics_save_settings in one turn. Repeated, because an
     // unserialized read-merge-write loses one of them only when the two
     // calls interleave.
@@ -143,7 +143,7 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
 
   it("keeps concurrent saves of different fields in the SAME slice: a stale value never wins", async () => {
     const store = await makeStore()
-    // The model fires camunda7_engine "select" and camunda7_save_user_profile
+    // The model fires camunda7_select_engine and camunda7_save_user_profile
     // in one turn, and the field the select changes ALREADY holds a value.
     // A save tool that hands the store a pre-read slice (read outside the
     // lock) writes that stale value back. The patch alone, merged inside the

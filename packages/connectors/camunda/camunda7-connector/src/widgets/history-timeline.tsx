@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import {
   TONE_DOT,
@@ -250,22 +251,36 @@ const HISTORY_PAGE_SIZE = 100
 /** Registrar history query — returns a `{ items, totalCount }` pagination envelope. */
 const HISTORY_QUERY_TOOL = "camunda7_query_historic_activity_instances"
 
+/** One page of the history query, in its envelope shape. */
+interface HistoryPage {
+  items?: HistoryEntry[]
+  totalCount?: number
+}
+
 /**
- * Self-fetching, offset-paged entry into the history family: pages the
- * registrar history query with the house Load-more pattern (usePagedViewData +
- * ListFooter) instead of one capped fetch. Used by the instance detail's
- * audit tab (`variant="timeline"`) and the incident detail's history tab
- * (`variant="table"`); both mount lazily on first tab activation.
+ * Offset-paged entry into the history family: pages the registrar history
+ * query with the house Load-more pattern (usePagedViewData + ListFooter)
+ * instead of one capped fetch. Self-fetching in the instance detail's audit
+ * tab (`variant="timeline"`) and the incident detail's history tab
+ * (`variant="table"`), which both mount lazily on first tab activation; the
+ * standalone timeline hands in the show tool's first page (`initialPage`) and
+ * its instance header.
  */
 export function PagedHistoryView({
   processInstanceId,
   engine,
   variant = "timeline",
+  initialPage = null,
+  processInstance,
 }: {
   processInstanceId: string
   /** Explicit engine routing; omitted → the caller's saved default engine. */
   engine?: string
   variant?: "timeline" | "table"
+  /** Page 0 handed in (no self-fetch); "Load more" continues after it. */
+  initialPage?: HistoryPage | null
+  /** Instance summary header (timeline variant only). */
+  processInstance?: HistoryTimelineData["processInstance"]
 }) {
   const t = useT()
   const args: Record<string, unknown> = {
@@ -274,8 +289,8 @@ export function PagedHistoryView({
     sortOrder: "asc",
   }
   if (engine) args.engine = engine
-  const paged = usePagedViewData<HistoryEntry, { items?: HistoryEntry[]; totalCount?: number }>({
-    initialData: null,
+  const paged = usePagedViewData<HistoryEntry, HistoryPage>({
+    initialData: initialPage,
     key: ["camunda7:instance-history", engine ?? null, processInstanceId],
     tool: HISTORY_QUERY_TOOL,
     args,
@@ -300,14 +315,31 @@ export function PagedHistoryView({
 
   return (
     <div className="flex flex-col gap-2">
-      <HistoryTimelineView variant={variant} activities={paged.items} />
+      <HistoryTimelineView
+        variant={variant}
+        activities={paged.items}
+        processInstance={processInstance}
+        engineId={engine}
+        totalActivities={paged.total}
+      />
       <CockpitListFooter paged={paged} noun={t("historyTimeline.footerNoun")} />
     </div>
   )
 }
 
+/**
+ * The standalone timeline (`camunda7_show_history_timeline`). The show tool
+ * returns one capped page — the model may read it whole — so the rest of a
+ * long instance is a "Load more" away on the same engine, never a silently
+ * cut timeline.
+ */
 export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | null }) {
   const t = useT()
+  // Stable identity per payload: the paged hook resets on a new page 0.
+  const initialPage = useMemo<HistoryPage | null>(
+    () => (data ? { items: data.activities, totalCount: data.totalActivities } : null),
+    [data],
+  )
   if (!data) {
     return (
       <WidgetShell>
@@ -320,12 +352,21 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
 
   return (
     <WidgetShell>
-      <HistoryTimelineView
-        activities={data.activities}
-        processInstance={data.processInstance}
-        engineId={data.engineId}
-        totalActivities={data.totalActivities}
-      />
+      {data.processInstance ? (
+        <PagedHistoryView
+          processInstanceId={data.processInstance.id}
+          engine={data.engineId}
+          initialPage={initialPage}
+          processInstance={data.processInstance}
+        />
+      ) : (
+        // Unknown to history: nothing to page (and no id to scope a page by).
+        <HistoryTimelineView
+          activities={data.activities}
+          engineId={data.engineId}
+          totalActivities={data.totalActivities}
+        />
+      )}
     </WidgetShell>
   )
 }

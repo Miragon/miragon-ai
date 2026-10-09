@@ -26,6 +26,17 @@ export const variableSchema = z
   .describe("Process variables map")
 
 /**
+ * The optional `variableName` of the runtime variable reads. A model-facing
+ * read cuts long string values (`truncated: true`); naming one variable
+ * returns it whole — the read a write-back must start from, since a cut value
+ * written back silently loses the rest.
+ */
+export const wholeVariableParam = z
+  .string()
+  .optional()
+  .describe("Return only this variable, whole (never cut)")
+
+/**
  * Shared pagination offset for every list/query input schema. Pairs with
  * `maxResults`: a list tool returns the page `[firstResult, firstResult +
  * maxResults)` plus a total count, so callers page through by passing the
@@ -38,6 +49,29 @@ export const firstResultParam = z
   .optional()
   .default(0)
   .describe("Zero-based index of the first result to return (pagination offset)")
+
+/**
+ * The largest page any list/query tool returns. One page is what a model
+ * reads in one turn: an uncapped `maxResults` let a single call pull an
+ * engine's whole history into the context. More rows are one `nextOffset`
+ * call away — the envelope says so.
+ */
+export const MAX_PAGE_SIZE = 100
+
+/**
+ * The shared `maxResults` field of every list/query input schema: capped at
+ * {@link MAX_PAGE_SIZE}, with a per-tool default page size.
+ */
+export function maxResultsParam(defaultPageSize = 20) {
+  return z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_PAGE_SIZE)
+    .optional()
+    .default(defaultPageSize)
+    .describe("Page size")
+}
 
 /**
  * Sort direction of every list query. The engine sorts only by a sortBy +

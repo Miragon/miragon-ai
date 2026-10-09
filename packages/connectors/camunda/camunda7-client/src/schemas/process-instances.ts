@@ -3,9 +3,11 @@ import {
   firstResultParam,
   flagParam,
   likeParam,
+  maxResultsParam,
   sortOrderParam,
   variableSchema,
   variableValueInfo,
+  wholeVariableParam,
 } from "./shared.js"
 
 export const startProcessInstanceInput = z.object({
@@ -22,7 +24,7 @@ export const listProcessInstancesInput = z.object({
   suspended: flagParam("true = only suspended instances, false = only active"),
   withIncidents: flagParam("true = only instances with an open incident"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20).describe("Maximum results"),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum(["instanceId", "definitionKey", "definitionId", "tenantId", "businessKey"])
     .optional(),
@@ -72,6 +74,7 @@ export const modifyProcessInstanceInput = z.object({
 
 export const getProcessInstanceVariablesInput = z.object({
   processInstanceId: z.string().describe("The process instance ID"),
+  variableName: wholeVariableParam,
 })
 
 export const setProcessInstanceVariableInput = z.object({

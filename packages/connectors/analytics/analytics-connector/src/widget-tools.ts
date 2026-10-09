@@ -136,7 +136,7 @@ export function registerWidgetTools(
       name: "analytics_show_failure_dashboard",
       title: "Failure Analysis Dashboard",
       description:
-        "Show current incident/failure state from Prometheus, grouped by incident type, activity, and process definition (point-in-time — what is failing right now).",
+        "Show current incident/failure state from Prometheus, grouped by incident type, activity, and process definition (point-in-time — what is failing right now). Use to show the metric view to the user; for one engine's live incident clusters use camunda7_show_engine_health.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         ...schemas.engineFilterShape,

@@ -38,7 +38,6 @@ import {
   CAMUNDA7_PROCESS_LIST_DATA,
 } from "../tool-names.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
-import { engineParamShape } from "../lib/with-engine.js"
 import {
   activityIncidentsFilterShape,
   jobsFilterShape,
@@ -54,7 +53,7 @@ import {
 
 /** The app-only `*_data` JSON feeds (SEP-1865) behind every widget above. */
 export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
-  const { server, registry, healthThresholds } = ctx
+  const { server, registry, healthThresholds, engineParam } = ctx
 
   // ── Per-view data feeds (plain, no UI) ──────────────────────────────────
   // Reused by the cockpit app's loaders AND each widget's own self-fetch. Each
@@ -68,7 +67,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the cockpit overview — per-definition stats. Prefer camunda7_open_cockpit.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({ ...engineParamShape }),
+      inputSchema: strictToolInput({ ...engineParam }),
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
@@ -84,7 +83,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for the engine health verdict + incident clusters. Prefer camunda7_show_engine_health / camunda7_open_cockpit.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({ ...engineParamShape }),
+      inputSchema: strictToolInput({ ...engineParam }),
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
@@ -100,7 +99,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       description:
         "Internal JSON feed (no UI) for one failure cluster's detail. Prefer camunda7_show_cluster_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({ ...clusterDetailShape, ...engineParamShape }),
+      inputSchema: strictToolInput({ ...clusterDetailShape, ...engineParam }),
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
@@ -128,7 +127,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       inputSchema: strictToolInput({
         ...processInstancesFilterShape,
         ...pagingShape,
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...appOnly,
     },
@@ -159,7 +158,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
         processInstanceId: z.string().optional().describe("Instance to overlay live state for."),
         processDefinitionKey: z.string().optional().describe("Definition for a static diagram."),
         version: z.number().int().positive().optional(),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...appOnly,
     },
@@ -185,7 +184,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       inputSchema: strictToolInput({
         ...processListFilterShape,
         ...pagingShape,
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...appOnly,
     },
@@ -212,7 +211,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processInstanceId: z.string().describe("The process instance ID"),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...appOnly,
     },
@@ -242,7 +241,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       inputSchema: strictToolInput({
         ...jobsFilterShape,
         ...pagingShape,
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...appOnly,
     },
@@ -268,7 +267,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         ...incidentsDashboardFilterShape,
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...appOnly,
     },
@@ -298,7 +297,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...appOnly,
     },
@@ -328,7 +327,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       inputSchema: strictToolInput({
         ...activityIncidentsFilterShape,
         ...pagingShape,
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...appOnly,
     },
@@ -360,7 +359,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         incidentId: z.string().describe("The incident ID to inspect"),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...appOnly,
     },

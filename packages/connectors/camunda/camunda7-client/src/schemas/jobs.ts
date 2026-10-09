@@ -1,5 +1,11 @@
 import { z } from "zod"
-import { engineDateParam, firstResultParam, flagParam, sortOrderParam } from "./shared.js"
+import {
+  engineDateParam,
+  firstResultParam,
+  flagParam,
+  maxResultsParam,
+  sortOrderParam,
+} from "./shared.js"
 
 export const listJobsInput = z.object({
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
@@ -10,7 +16,7 @@ export const listJobsInput = z.object({
   active: flagParam("true = only active jobs, false = only suspended"),
   suspended: flagParam("true = only suspended jobs, false = only active"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum([
       "jobId",
@@ -36,4 +42,13 @@ export const setJobRetriesBatchInput = z.object({
   jobIds: z.array(z.string()).min(1).describe("IDs of the jobs whose retries should be set."),
   retries: z.number().int().min(0).describe("Number of retries to set on every job. Must be >= 0."),
   dueDate: engineDateParam("New due date; a past one runs the jobs at once"),
+})
+
+/**
+ * A job's exception stacktrace (`GET /job/{id}/stacktrace`, read via the
+ * engine contract's `fetchJobStacktrace`) — the failure detail
+ * `camunda7_list_jobs` only summarises as `exceptionMessage`.
+ */
+export const getJobStacktraceInput = z.object({
+  jobId: z.string().min(1).describe("The job ID (e.g. from camunda7_list_jobs)"),
 })

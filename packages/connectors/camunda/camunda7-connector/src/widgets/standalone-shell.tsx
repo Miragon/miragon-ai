@@ -21,7 +21,7 @@ import {
 } from "./nav-core.js"
 import { navigateViaHost, NavProvider, type OnNavigate } from "./navigation.js"
 import { camunda7BaseWidgets } from "./registry.js"
-import { CAMUNDA7_ENGINE } from "../tool-names.js"
+import { CAMUNDA7_LIST_ENGINES } from "../tool-names.js"
 
 interface EnginesResult {
   engines: Array<{ id: string }>
@@ -152,8 +152,8 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
   // the toolkit's singleton query client.
   const enginesQuery = useToolQuery<EnginesResult>(
     ["camunda7:engines"],
-    CAMUNDA7_ENGINE,
-    { action: "list" },
+    CAMUNDA7_LIST_ENGINES,
+    {},
     { enabled: stack.length > 0 && !stepEngineId },
   )
   const queried = enginesQuery.data

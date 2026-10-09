@@ -103,6 +103,31 @@ describe("analyticsModule toolset policy", () => {
   })
 })
 
+describe("analyticsModule.instructions", () => {
+  it("states once that `engine` is a metric filter the camunda7 default does not touch", () => {
+    const text = analyticsModule.instructions()
+    expect(text).toContain(
+      "`engine` is a metric filter, not routing: omitted = the aggregate over every engine " +
+        "(camunda7's saved default engine does not apply)",
+    )
+    expect(text).toContain("period is one of 1d, 3d, 7d, 14d, 30d")
+    expect(text).toMatch(/analytics_engine_health judges from metrics and alert rules/)
+  })
+
+  // Both failure tools run instant queries over the open-incident gauge and
+  // take no period: calling them "over a period" made a model report today's
+  // open incidents as a week's history.
+  it("routes period failure questions away from the point-in-time failure tools", () => {
+    const text = analyticsModule.instructions()
+    expect(text).toContain(
+      "analytics_show_failure_dashboard and analytics_find_failed_instances show the incidents open " +
+        "right now (point-in-time, no period) — for failures over a period use " +
+        "analytics_analyze_process_performance or analytics_element_bottleneck.",
+    )
+    expect(text).not.toMatch(/failure patterns over a period/)
+  })
+})
+
 describe("analyticsModule env surface", () => {
   it("maps PROMETHEUS_URL, treating a blank value as unset", () => {
     expect(analyticsModule.configFromEnv({ PROMETHEUS_URL: " http://p:9090 " })).toEqual({
@@ -256,7 +281,18 @@ describe("the analytics toolset rule holds structurally for every registered too
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: true,
+      openWorldHint: false,
     })
+  })
+
+  it("every write states destructiveHint explicitly — MCP reads an absent hint as TRUE", () => {
+    const writes = surfaceFor({ toolset: "standard" }).filter(
+      (tool) => tool.annotations?.readOnlyHint !== true,
+    )
+    expect(writes.map((tool) => tool.name)).toEqual([EXEMPT_DURABLE_WRITE])
+    for (const tool of writes) {
+      expect(typeof tool.annotations?.destructiveHint, tool.name).toBe("boolean")
+    }
   })
 
   it("no analytics tool is destructive — the module has no admin tier to hold one", () => {

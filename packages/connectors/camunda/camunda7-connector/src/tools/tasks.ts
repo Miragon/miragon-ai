@@ -24,6 +24,11 @@ import {
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import {
+  CUT_VALUE_WRITE_RULE,
+  VARIABLE_TRUNCATION_NOTE,
+  variableRead,
+} from "../lib/variable-truncation.js"
 import { completeUserTask } from "../lib/task-completion.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -77,7 +82,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_claim_task",
     category: "tasks",
     description: "Claim a user task for a specific user.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...claimTaskInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await claim({
@@ -93,7 +98,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_unclaim_task",
     category: "tasks",
     description: "Unclaim (release) a user task, removing the current assignee.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...unclaimTaskInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await unclaim({ client, path: { id: args.taskId } })
@@ -107,8 +112,9 @@ export function registerTaskTools(register: Register) {
     description:
       "Complete a user task by ID, optionally setting variables. A task with form fields is submitted as its form: " +
       "the engine enforces them (required, readonly, types); omitted fields keep their value. A delegated task " +
-      '(delegationState PENDING) is resolved back to its owner instead and stays open (outcome "resolved").',
-    annotations: { openWorldHint: true },
+      '(delegationState PENDING) is resolved back to its owner instead and stays open (outcome "resolved"). ' +
+      CUT_VALUE_WRITE_RULE,
+    annotations: { destructiveHint: false, openWorldHint: true },
     inputSchema: { ...completeTaskInput.shape, ...engineParamShape },
     // The endpoint (submit-form / complete / resolve) follows from the task — lib/task-completion.ts.
     handler: withEngine(async (client, args) =>
@@ -120,7 +126,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_set_task_assignee",
     category: "tasks",
     description: "Set the assignee of a user task.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...setTaskAssigneeInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await setAssignee({
@@ -135,10 +141,11 @@ export function registerTaskTools(register: Register) {
   register({
     name: "camunda7_get_task_variables",
     category: "tasks",
-    description:
-      "Get all variables of a user task (Json/Xml/Object: serialized string + valueInfo).",
+    description: `Get all variables of a user task (Json/Xml/Object: serialized string + valueInfo). ${VARIABLE_TRUNCATION_NOTE}`,
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getTaskVariablesInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) => readTaskVariables(client, args.taskId)),
+    handler: withEngine(async (client, args) =>
+      variableRead(await readTaskVariables(client, args.taskId), args.variableName),
+    ),
   })
 }

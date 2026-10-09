@@ -5,6 +5,7 @@ import { DEFAULT_HEALTH_THRESHOLDS } from "../data/health-data.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { resolveCamunda7Toolset, type Camunda7Toolset } from "../lib/toolsets.js"
 import { CAMUNDA7_WIDGET_ACTIONS, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
+import { engineParamShape } from "../lib/with-engine.js"
 import { registerWidgetActionsFeed } from "./actions.js"
 
 afterEach(() => {
@@ -22,6 +23,7 @@ function registerFeed(toolset: Camunda7Toolset) {
     healthThresholds: DEFAULT_HEALTH_THRESHOLDS,
     profileStore: createInMemoryProfileStore(),
     toolset,
+    engineParam: engineParamShape,
   })
   expect(tool).toHaveBeenCalledOnce()
   const [definition, handler] = tool.mock.calls[0] as [Record<string, unknown>, Handler]

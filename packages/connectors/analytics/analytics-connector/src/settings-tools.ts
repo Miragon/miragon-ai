@@ -123,7 +123,12 @@ export function registerSettingsTools(
       // The module's only non-read-only tool, and explicitly NOT destructive
       // (MCP presumes a write destructive unless told otherwise): it merges
       // the caller's own slice, nothing is deleted or overwritten wholesale.
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
       inputSchema: strictToolInput(analyticsSettingsSaveInput.shape),
       // No view binding / app visibility: a normal model-visible tool; the
       // settings widget also calls it and reads the saved slice back from

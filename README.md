@@ -159,9 +159,11 @@ BPM operations across these domains (`category`): `engines`, `process-definition
   `set_external_task_retries`
 - **Incidents & jobs** — `list_incidents`, `resolve_incident` (custom incidents; the engine's
   `failedJob`/`failedExternalTask` clear by a retry), `format_incident_issue`, `list_jobs`,
-  `set_job_retries`
-- **History, migrations & batches** — `query_historic_*` (ISO 8601 dates), migration tools; batch
-  tools return a queued `batchId` that `get_batch` follows
+  `get_job_stacktrace`, `set_job_retries`
+- **History, migrations & batches** — `query_historic_*` (ISO 8601 dates; incidents incl. resolved
+  ones), migration tools; batch tools return a queued `batchId` that `get_batch` follows
+- **Lists** — one page as `{ items, totalCount, hasMore, nextOffset? }`, `maxResults` ≤ 100;
+  variable reads cut values over 2000 characters (`truncated: true`); `variableName` reads one whole
 - **Widgets** — `show_cockpit_dashboard`, `show_process_list`/`detail`, `show_incidents_dashboard`,
   `show_bpmn_viewer`, `show_history_timeline`, `show_job_panel`, …
 
@@ -190,8 +192,8 @@ unknown suffix warns and falls back to read-only, even under OAuth.
 
 | Toolset               | Surface                                                                                                                                                                                                                                   | No-suffix default |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `camunda7:read-only`  | Queries only (`list_*`, `get_*`, `query_*`) plus `camunda7_engine` `list`/`current` — monitoring without writes                                                                                                                           | without OAuth     |
-| `camunda7:operations` | Read-only plus day-to-day engine writes: start instances, claim/assign/complete tasks, variables, job and external-task retries, resolve incidents, correlate messages                                                                    | with OAuth        |
+| `camunda7:read-only`  | Queries only (`list_*`, `get_*`, `query_*`, incl. `camunda7_list_engines`) — monitoring without writes                                                                                                                                    | without OAuth     |
+| `camunda7:operations` | Read-only plus day-to-day writes: start instances, claim/assign/complete tasks, variables, job and external-task retries, resolve incidents, correlate messages, the saved default engine                                                 | with OAuth        |
 | `camunda7:admin`      | Everything: adds delete/modify/suspend, migrations, batch retries, `throw_signal` (engine-wide broadcast), the external-task worker protocol (`fetch_and_lock`, `complete_external_task`, `handle_external_task_failure`) and deployments | never             |
 | `analytics:read-only` | Every analytics tool and widget; no settings save                                                                                                                                                                                         | without OAuth     |
 | `analytics:standard`  | Adds `analytics_save_settings`                                                                                                                                                                                                            | with OAuth        |
@@ -236,11 +238,12 @@ The server can route to several engines — CIB Seven, Operaton and Camunda 7 mi
 Tag each engine in its metrics plugin
 (`ENGINE_ID`), register them in the server (`CAMUNDA_ENGINES_JSON` / `CAMUNDA_ENGINES_FILE` —
 `ENGINE_ID` must match the registered `id`, or that engine's analytics come back empty), and the
-host discovers them via the `camunda7_engine` tool (`list` / `select` / `current`); `select` saves
-an engine as the caller's default (a per-user profile setting, so it needs `MCP_OAUTH` identity and
-a toolset that allows writes).
-Every operations tool also accepts a per-call `engine` override, which works without any identity. Analytics tools take an optional `engine`
-filter to aggregate or compare. Each engine entry may carry its own `auth`
+host discovers them via `camunda7_list_engines` (read-only); `camunda7_select_engine` saves an
+engine as the caller's default (a per-user profile setting, so it needs `MCP_OAUTH` identity and a
+toolset that allows writes). Every operations tool also accepts a per-call `engine` override —
+advertised as an enum of the configured ids — which works without any identity. Analytics tools
+take an optional `engine` filter to aggregate or compare. The server `instructions` state the
+routing rule once for every tool. Each engine entry may carry its own `auth`
 (`{type, username?, password?, token?}`); entries without one use the global `CAMUNDA_*` settings.
 Entries may also declare their vendor via `flavor` (`cibseven` | `operaton` | `camunda7`, default
 `cibseven`), which selects the engine's cockpit-link routes and display name.
@@ -253,7 +256,7 @@ landscape plus fleet-wide failure and performance analyses) needs the analytics 
 Fleets that span several environments (each environment hosting some services with an engine)
 group their engines per environment: the cockpit landing becomes a two-stage selection
 (pick the environment first, then one of its engines), and the engine switcher, the settings
-page and `camunda7_engine` `list` group their engines by environment. Either write the
+page and `camunda7_list_engines` group their engines by environment. Either write the
 engines JSON as a map keyed by environment id, or tag entries individually:
 
 ```json

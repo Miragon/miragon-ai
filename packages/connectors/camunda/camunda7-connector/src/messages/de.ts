@@ -129,7 +129,7 @@ export const de: MessageCatalog = {
     "Verlaufs-Zeitleiste für Prozessinstanz {processInstanceId}: {totalActivities} historische Aktivitäten{notFound}.",
   "c7sum.historyTimeline.notFound": " (keine historische Prozessinstanz gefunden)",
   "c7sum.engineHealth":
-    'Engine "{engineId}" — {status}: {totalIncidents} offene Vorfälle über {affectedActivities} Aktivitäten, {runningInstances} laufende Instanzen.{topCluster}',
+    'Engine "{engineId}" — {status} ({rule}): {totalIncidents} offene Vorfälle über {affectedActivities} Aktivitäten, {runningInstances} laufende Instanzen.{topCluster}',
   "c7sum.engineHealth.topCluster":
     ' Größter Cluster: Aktivität "{activityId}" / {incidentType}, {incidentCount} Vorfälle.',
   "c7sum.engineHealth.noIncidents": " Keine offenen Vorfälle.",

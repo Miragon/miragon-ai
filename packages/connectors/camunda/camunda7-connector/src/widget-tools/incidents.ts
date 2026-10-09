@@ -9,7 +9,11 @@ import {
   withToolErrors,
   strictToolInput,
 } from "@miragon-ai/widget-shell/server"
-import { buildClusterDetailData, buildEngineHealthData } from "../data/health-data.js"
+import {
+  buildClusterDetailData,
+  buildEngineHealthData,
+  healthVerdictRule,
+} from "../data/health-data.js"
 import {
   buildIncidentsDashboardData,
   buildProcessIncidentsData,
@@ -23,7 +27,6 @@ import {
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
 } from "../tool-names.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
-import { engineParamShape } from "../lib/with-engine.js"
 import { localizeFor } from "../lib/server-locale.js"
 import {
   type WidgetToolsContext,
@@ -35,18 +38,18 @@ import {
 
 /** Incident triage: dashboard, per-definition views, detail, engine health, clusters. */
 export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
-  const { server, registry, healthThresholds, profileStore } = ctx
+  const { server, registry, healthThresholds, profileStore, engineParam } = ctx
 
   server.tool(
     {
       name: CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
       title: "Incidents Dashboard",
       description:
-        "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view.",
+        "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view. Use for open incidents by process; for an engine verdict with cross-process clusters use camunda7_show_engine_health.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         ...incidentsDashboardFilterShape,
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_INCIDENTS_DASHBOARD, "Incidents Dashboard"),
     },
@@ -89,7 +92,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_PROCESS_INCIDENTS, "Process Incidents"),
     },
@@ -132,7 +135,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         incidentId: z.string().describe("The incident ID to inspect"),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_INCIDENT_DETAIL, "Incident Detail"),
     },
@@ -171,9 +174,11 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       name: CAMUNDA7_SHOW_ENGINE_HEALTH,
       title: "Engine Health Overview",
       description:
-        "Show the AI-first engine overview: a deterministic health verdict (ok / degraded / critical) with running-instance and incident KPIs and the top incident clusters, grouped cross-process by failing activity + incident type. The home base for triaging what is wrong on a CIB Seven / Camunda 7 engine — each cluster drills in or hands off to AI for root cause + remediation.",
+        "Show ONE engine's health overview: a deterministic verdict (ok / degraded / critical) with running-instance and incident KPIs and the top incident clusters, grouped cross-process by failing activity + incident type; each cluster drills in or hands off to AI. " +
+        `Verdict: ${healthVerdictRule(healthThresholds)} ` +
+        "Use for what is failing on an engine right now; for metric trends, job backlog or firing alerts use analytics_engine_health.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({ ...engineParamShape }),
+      inputSchema: strictToolInput({ ...engineParam }),
       ...showToolBinding(CAMUNDA7_SHOW_ENGINE_HEALTH, "Engine Health Overview"),
     },
     withToolErrors(async (args, ctx) => {
@@ -190,6 +195,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
         summary: t("c7sum.engineHealth", {
           engineId,
           status: data.status,
+          rule: data.statusRule,
           totalIncidents: data.summary.totalIncidents,
           affectedActivities: data.summary.affectedActivities,
           runningInstances: data.summary.runningInstances,
@@ -212,7 +218,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Drill into ONE failure cluster: the affected process instances (business keys first), the full sample failure message, and the time profile (new in last hour / 24h) for an activity failing with a given incident type. The middle layer between the engine health overview and a single incident's detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({ ...clusterDetailShape, ...engineParamShape }),
+      inputSchema: strictToolInput({ ...clusterDetailShape, ...engineParam }),
       ...showToolBinding(CAMUNDA7_SHOW_CLUSTER_DETAIL, "Failure Cluster Detail"),
     },
     withToolErrors(async (args, ctx) => {

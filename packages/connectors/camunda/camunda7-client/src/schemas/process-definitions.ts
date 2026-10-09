@@ -1,17 +1,18 @@
 import { z } from "zod"
-import { flagParam, likeParam, sortOrderParam } from "./shared.js"
+import {
+  firstResultParam,
+  flagParam,
+  likeParam,
+  maxResultsParam,
+  sortOrderParam,
+} from "./shared.js"
 
 export const listProcessDefinitionsInput = z.object({
   processDefinitionKey: z.string().optional().describe("Filter by exact process definition key"),
   nameLike: likeParam("Filter by name"),
   latestVersion: flagParam("true = only the latest version of each definition"),
-  maxResults: z
-    .number()
-    .int()
-    .positive()
-    .optional()
-    .default(20)
-    .describe("Maximum number of results"),
+  firstResult: firstResultParam,
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum(["category", "key", "id", "name", "version", "deploymentId", "deployTime", "versionTag"])
     .optional()

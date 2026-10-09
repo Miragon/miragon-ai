@@ -18,8 +18,9 @@ is `private` and not published to npm.
   an empty or unknown suffix falls back to read-only, and the boot log states the result. The
   toolkit's dashboard builder is registered only under OAuth while no module runs read-only.
   Modules self-describe via their `src/module.ts` (`configFromEnv`, `knownEnvVars`, `bootWarnings`,
-  plugin factory) against the app-owned port in [`src/module-contract.ts`](src/module-contract.ts) —
-  the app only selects modules and wires shared resources.
+  `instructions`, plugin factory) against the app-owned port in
+  [`src/module-contract.ts`](src/module-contract.ts) — the app only selects modules and wires shared
+  resources.
 - **Bundles the widget UI** — Vite builds the two-file bundle `dist/mcp-app.js` + `dist/mcp-app.css`,
   a self-contained bundle (React, Tailwind, all widgets). mcp-use serves it behind one
   `ui://views/<tool>.html` view resource per widget tool (derived from each tool's `view` binding).

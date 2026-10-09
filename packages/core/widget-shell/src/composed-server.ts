@@ -50,6 +50,7 @@ import {
 } from "./http-edge.js"
 import { installMetrics } from "./metrics.js"
 import { createBodyLimitedListener, type BodyLimitedListener } from "./node-listener.js"
+import { installToolSchemaTrim } from "./tool-schema-trim.js"
 import { installMcpRequestContext } from "./request-context.js"
 
 /** What the server reports as `serverInfo` (plus the `instructions` it advertises). */
@@ -60,7 +61,12 @@ export interface ComposedServerInfo {
   title?: string
   description?: string
   websiteUrl?: string
-  /** Short, factual usage notes surfaced to the model by clients. */
+  /**
+   * The root's own preamble of the server `instructions` (short, factual).
+   * The active modules' snippets (`ComposableModule.instructions`) follow it,
+   * so routing rules each module owns reach the model without the root
+   * restating them.
+   */
   instructions?: string
 }
 
@@ -79,7 +85,11 @@ export interface ComposedServerRuntime {
 /** The composition members the boot needs — none depends on the root's shared-resources type. */
 export type BootComposition = Pick<
   ModuleComposition<never>,
-  "warnUnknownEnvVars" | "resolveBoot" | "emitBootWarnings" | "logEffectiveToolsets"
+  | "warnUnknownEnvVars"
+  | "resolveBoot"
+  | "emitBootWarnings"
+  | "logEffectiveToolsets"
+  | "instructions"
 >
 
 export interface ComposedServerOptions {
@@ -182,6 +192,16 @@ function assertOAuthResource(
   }
 }
 
+/** The root's preamble, then every active module's snippet — blank-line separated. */
+function serverInstructions(
+  options: ComposedServerOptions,
+  boot: ResolvedBoot,
+): string | undefined {
+  const parts = [options.info.instructions?.trim(), options.composition.instructions(boot)]
+  const text = parts.filter((part): part is string => Boolean(part)).join("\n\n")
+  return text || undefined
+}
+
 async function buildFrameworkApp(
   options: ComposedServerOptions,
   boot: ResolvedBoot,
@@ -189,7 +209,8 @@ async function buildFrameworkApp(
   runtime: ComposedServerRuntime,
 ): Promise<MCPServer<unknown>> {
   const { info, oauth } = options
-  const { title, websiteUrl, instructions } = info
+  const { title, websiteUrl } = info
+  const instructions = serverInstructions(options, boot)
   const frameworkOptions = {
     name: info.name,
     version: info.version,
@@ -375,10 +396,12 @@ export async function createComposedServer(
 
   // Ambient per-request info (OAuth caller, Authorization header) for the
   // consumers without a handler `ctx`; one log line per tools/call (no
-  // arguments/results — they can carry credentials or PII); the dev-CLI
-  // views-prime workaround (no-op outside `mcp-use dev`).
+  // arguments/results — they can carry credentials or PII); input schemas
+  // trimmed of keys a model never needs (`$schema`, safe-integer bounds); the
+  // dev-CLI views-prime workaround (no-op outside `mcp-use dev`).
   installMcpRequestContext(app)
   installToolCallLogging(app, label)
+  installToolSchemaTrim(app)
   swallowDevCliViewsPrime(app, env)
   installMetrics(app, { path: METRICS_PATH, token: edge.metricsToken })
   installHttpEdgeGuard(app, guard, { exemptPaths: EXEMPT_PATHS })

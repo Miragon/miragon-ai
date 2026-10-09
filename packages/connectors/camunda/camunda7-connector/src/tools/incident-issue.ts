@@ -261,7 +261,7 @@ function buildPrefilledIssueUrl(
 const MAX_FAILURE_TEXT = 6000
 const FAILURE_TEXT_TAIL = 1500
 
-function boundFailureText(text: string): string {
+export function boundFailureText(text: string): string {
   if (text.length <= MAX_FAILURE_TEXT) return text
   const head = text.slice(0, MAX_FAILURE_TEXT - FAILURE_TEXT_TAIL)
   const tail = text.slice(-FAILURE_TEXT_TAIL)

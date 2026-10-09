@@ -122,6 +122,29 @@ describe("camunda7_query_historic_process_instances", () => {
   })
 })
 
+describe("camunda7_query_historic_incidents", () => {
+  it("filters by instance, process, activity, type, status and create window", async () => {
+    const requests = await requestsOf("camunda7_query_historic_incidents", {
+      processInstanceId: "pi-1",
+      processDefinitionKey: "invoice",
+      activityId: "ServiceTask_1",
+      incidentType: "failedJob",
+      open: true,
+      createTimeAfter: "2026-10-01",
+      createTimeBefore: "2026-10-02T12:00:00+02:00",
+    })
+    expectBothQueries(requests, "/history/incident", {
+      processInstanceId: "pi-1",
+      processDefinitionKey: "invoice",
+      activityId: "ServiceTask_1",
+      incidentType: "failedJob",
+      open: "true",
+      createTimeAfter: "2026-10-01T00:00:00.000+0000",
+      createTimeBefore: "2026-10-02T12:00:00.000+0200",
+    })
+  })
+})
+
 describe("camunda7_query_historic_task_instances", () => {
   it("takes `assignee` like camunda7_list_tasks and sends the engine's taskAssignee", async () => {
     const requests = await requestsOf("camunda7_query_historic_task_instances", {
@@ -149,9 +172,7 @@ describe("plain list tools carry their show twins' filters", () => {
       nameLike: "Inv",
       latestVersion: true,
     })
-    expect(requests).toHaveLength(1)
-    expect(requests[0].path).toBe("/process-definition")
-    expect(requests[0].query).toMatchObject({
+    expectBothQueries(requests, "/process-definition", {
       key: "invoice",
       nameLike: "%Inv%",
       latestVersion: "true",
@@ -160,7 +181,7 @@ describe("plain list tools carry their show twins' filters", () => {
 
   it("keeps a LIKE value that already carries a wildcard", async () => {
     const requests = await requestsOf("camunda7_list_deployments", { nameLike: "release-%" })
-    expect(requests[0].query).toMatchObject({ nameLike: "release-%" })
+    expectBothQueries(requests, "/deployment", { nameLike: "release-%" })
   })
 
   it("camunda7_list_jobs: activityId scopes a failure cluster's retry set", async () => {
@@ -214,6 +235,7 @@ describe("false boolean filters never reach the engine", () => {
       "camunda7_list_process_instances",
       "camunda7_list_tasks",
       "camunda7_query_historic_activity_instances",
+      "camunda7_query_historic_incidents",
       "camunda7_query_historic_process_instances",
       "camunda7_query_historic_task_instances",
     ])

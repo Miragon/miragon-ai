@@ -15,6 +15,9 @@ export {
   type Period,
 } from "./prometheus.js"
 export { METRIC_NAMES, type MetricName } from "./metric-names.js"
+// A constant, not a query: kept out of the `queries` namespace, whose every
+// member the metrics-contract scenarios enumerate.
+export { ENGINE_HEALTH_STATUS_RULE } from "./queries/health.js"
 export * as schemas from "./schemas/index.js"
 export * as queries from "./queries/index.js"
 export * as widgets from "./widgets.js"
