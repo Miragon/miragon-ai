@@ -208,6 +208,13 @@ pnpm build && pnpm typecheck && pnpm test && pnpm lint
 pnpm --filter @miragon-ai/mcp-server-camunda7 test:host
 ```
 
+A new or changed tool changes the wire surface: add its name to
+`apps/mcp-server-camunda7/test/expected-tools.ts`, then refresh the per-toolset goldens with
+`GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test` and commit the
+`test/__golden__/` diff (descriptions and schemas are what the model reads — review them).
+If `char-budgets.json` grew, `pnpm lint` fails until the commit carries a
+`Ratchet-Exception: <why the model must read more>` trailer — trim wording first.
+
 `pnpm typecheck` is the **only** automated check that type-checks widget `.tsx` code
 (`tsc -p tsconfig.widgets.json`) — never skip it. For widgets also do a manual render
 check: `docker compose -f playground/docker/docker-compose.yml up -d`, `pnpm dev`, then call the
