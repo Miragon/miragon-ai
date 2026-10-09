@@ -25,8 +25,12 @@ export default mergeConfig(
         // branches 77.27 / functions 94.44 / lines 83.33. Raised 2026-10-08
         // (#324: `createApp` replaced the e2e re-implementation of the boot,
         // so the suites now execute the real composition root): measured
-        // 87.74 / 80.23 / 93.75 / 88.27.
-        thresholds: { statements: 85, branches: 78, functions: 92, lines: 86 },
+        // 87.74 / 80.23 / 93.75 / 88.27. Raised 2026-10-09 (#333): the
+        // tools/list golden helper (test/golden.ts) is fully exercised by its
+        // self-test, and test/ helpers sit inside this package's measured
+        // scope (like boot-server.ts) — raised so that padding cannot become
+        // headroom for src/: measured 90.09 / 84.67 / 94.73 / 90.52.
+        thresholds: { statements: 88, branches: 82, functions: 92, lines: 88 },
       },
     },
   }),

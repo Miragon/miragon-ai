@@ -47,11 +47,59 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # The Postgres persistence path (advisory-lock first create, ownership
+  # predicate, JSONB encoding, the migration runner, the readiness probe) is
+  # executable only against a real database: its suites `describe.skipIf`
+  # without TEST_DATABASE_URL and skip in the job above. This job gives them
+  # one — same image and credentials as the compose stack's test database
+  # (playground/docker/docker-compose.yml + postgres/init.sql), which is what
+  # `pnpm test:pg` defaults to locally.
+  postgres:
+    name: Postgres adapters (test:pg)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.1-alpine
+        env:
+          POSTGRES_USER: miragon
+          POSTGRES_PASSWORD: miragon
+          POSTGRES_DB: miragon_test
+        ports:
+          - 8440:5432
+        options: >-
+          --health-cmd "pg_isready -U miragon -d miragon_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      TEST_DATABASE_URL: postgres://miragon:miragon@localhost:8440/miragon_test
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.1.0
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The suites import sibling workspace packages through their dist.
+      - run: pnpm build
+
+      - run: pnpm test:pg
+
   quality:
     name: Lint + Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          # Full history: `pnpm lint` runs scripts/check-ratchets.mjs, which
+          # diffs every ratchet against the merge base with the PR base (and
+          # reads the branch's commit trailers) — it refuses a shallow clone.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6.1.0
 

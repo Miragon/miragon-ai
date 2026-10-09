@@ -53,6 +53,8 @@
     "build": "tsc",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
     "generate": "openapi-ts",
     "spec:refresh": "sh ./scripts/refresh-spec.sh",
     "test:mutation": "stryker run"

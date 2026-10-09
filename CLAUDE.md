@@ -88,9 +88,13 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    gate or fold it into a toolset. Tools registered outside the registrar (the
    widget-tools path) that perform durable writes must honor the toolset themselves —
    pattern: `camunda7_save_user_profile` in `src/tools/user-profile.ts`. An ESLint gate
-   (`no-restricted-syntax` in `eslint.config.mjs`) blocks raw `server.tool()` outside
-   exactly the widget-path files (in camunda7: `widget-tools.ts` + the `widget-tools/`
-   domain registrars + `tools/user-profile.ts`).
+   (`no-restricted-syntax` in `eslint.config.mjs`) blocks raw `server.tool()` — also via a
+   computed key, `.call`/`.bind`/`.apply`, destructuring (declaration or assignment, incl.
+   string keys) and `Reflect.get` (string or template key), `.ts` and `.tsx`; an inline
+   `eslint-disable` of it fails `pnpm lint:ratchets` — outside exactly the widget-path files (in camunda7: `widget-tools.ts` + the
+   `widget-tools/` domain registrars + `tools/user-profile.ts`). `no-restricted-syntax` is
+   one rule: a later flat-config block REPLACES its selectors, so a glob two gates share
+   gets one block with the union; `scripts/eslint-gates.test.mjs` pins that per path.
 
 2. **Never talk to an engine directly.** All engine access goes through
    `resolveEngine`/`withEngine` (`packages/connectors/camunda/camunda7-connector/src/lib/`), which implements the
@@ -266,7 +270,11 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    the server's tool surface — so a widget-registry lookup cannot tell a runtime-INACTIVE
    module; a surface that only makes sense with another module probes one of its cheap
    feeds (reference: `useAnalyticsActive` → `analytics_settings_data`, gating camunda7's
-   cross-engine view) and appears once confirmed. The settings page follows the same tiers: each module
+   cross-engine view) and appears once confirmed. Graceful degradation hides a stale raw
+   name at runtime, so `apps/mcp-server-camunda7/test/tool-name-refs.test.ts` checks every
+   `<module>_…` string literal in app and package sources (incl. the composition root's
+   hardcoded profile feed) against the full booted tool surface.
+   The settings page follows the same tiers: each module
    owns its settings section (widget + `*_data` feed + save tool; reference:
    `analytics:settings` + `analytics-connector/src/settings-tools.ts` — the save tool honors
    `analytics:read-only`), its slice persists under `profile.modules.<module>`
@@ -375,6 +383,18 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
   `apps/mcp-server-camunda7/test/widget-contract.e2e.test.ts` (on the wire, **by name**: every
   `*_show_*` tool must carry the widget `_meta`, every `*_data` feed must be app-only —
   the naming convention is load-bearing; don't weaken the name checks).
+- **The tools/list wire payload is a golden, per toolset.**
+  `apps/mcp-server-camunda7/test/tools-list.golden.test.ts` boots `createApp` for
+  read-only (unauthenticated default), operations (default under OAuth) and admin (full
+  surface) and compares the complete sorted tools/list — descriptions, titles, annotations,
+  `_meta` incl. `ui.visibility`, input/output schemas — against
+  `test/__golden__/tools-*.json`. The ONLY update path is
+  `GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test` (refused in CI);
+  never hand-edit a golden. `__golden__/char-budgets.json` pins each surface's
+  model-visible size (name + title + description + inputSchema of non-app-only tools):
+  the test pins it exactly and `pnpm lint` makes it shrink-only, so a tool change that
+  makes the model read MORE text needs a `Ratchet-Exception:` trailer (see Verification).
+  The name lists in `test/expected-tools.ts` stay the reviewable per-toolset summary.
 - **Federation/aggregation happens in an external MCP gateway (agentgateway) IN FRONT of
   this server; this repo builds one self-contained MCP server including its UI.** No
   upstream/proxy mechanics in the code — don't reintroduce a proxies/upstream option
@@ -431,18 +451,19 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
 
 ## Verification — what each check actually covers
 
-| Check                | Coverage                                                                                                                                                                                                                                                                                                                              |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm build`         | tsc emit of server code + the server app's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                                                                                                            |
-| `pnpm typecheck`     | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in the two connector packages, `tsc -p tsconfig.ui.json` in the server app                                                                                                                                                                           |
-| `pnpm test`          | Vitest unit tests (lib + query logic) **plus** the server app e2e smoke + widget wire-contract tests (in-process boot, loopback HTTP); **no widget rendering**; enforces the per-package coverage ratchet (frozen thresholds in each `vitest.config.ts`)                                                                              |
-| `pnpm lint`          | ESLint over each package's `src` (the server app also `test`/`test-host`) incl. the pattern gates (registrar-only tools, widget-shell date formatting), then the root `lint:architecture` (dependency-cruiser) and `lint:deadcode` — knip over files/dependencies/unlisted (unused exports are report-only for now: `pnpm exec knip`) |
-| `pnpm test:mutation` | Diff-scoped Stryker run (`scripts/mutation-diff.mjs`): changed files inside a package's `mutate` allowlist must keep the mutation score above the package's `thresholds.break` (`stryker.config.json`); runs in CI as "Mutation (changed files)". The gate bypasses the package's incremental cache, so a local run and CI agree      |
-| `pnpm fitness`       | Aggregated fitness report — architecture graph, ratchet debt, per-package coverage + mutation scores (diff-scoped in CI — the file count next to each score says over what); its own CI job, fed by the test + mutation jobs' artifacts                                                                                               |
-| `./gradlew build`    | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                                                                                                   |
-| `test:host`          | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin                                                                                |
-| `pnpm test:pg`       | The opt-in database slice: reruns the suites with `TEST_DATABASE_URL` pointed at the compose stack's test database, which un-skips the Postgres store + migration-runner tests (`describe.skipIf`). **The only check that executes the Postgres adapters** — required for changes to `postgres.ts` or any `*-store-postgres.ts`       |
-| Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only). The default boot is read-only — write paths need an explicit suffix, e.g. `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env`     |
+| Check                | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`         | tsc emit of server code + the server app's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `pnpm typecheck`     | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in the two connector packages, `tsc -p tsconfig.ui.json` in the server app                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `pnpm test`          | Vitest unit tests (lib + query logic) **plus** the server app e2e smoke + widget wire-contract tests + per-toolset tools/list goldens (in-process boot, loopback HTTP); **no widget rendering**; enforces the per-package coverage ratchet (frozen thresholds in each `vitest.config.ts`); then `test:scripts` — `node --test` over `scripts/*.test.mjs` (the gate scripts' own tests + the ESLint pattern-gate self-test)                                                                                                                                                                                                                                                                           |
+| `pnpm lint`          | ESLint over each package's `src` (the server app also `test`/`test-host`) incl. the pattern gates (registrar-only tools, widget-shell date formatting), then `lint:architecture` (dependency-cruiser), `lint:naming`, `lint:package-scripts` (every package with `src/` runs the canonical `eslint src` / `tsc --noEmit` (+ `tsc -p` per extra tsconfig) / `vitest run` (+ `stryker run`) — turbo silently skips a missing script, and a flag can switch a present one off), `lint:ratchets` (`scripts/check-ratchets.mjs`, below; needs the merge base — `git fetch origin`) and `lint:deadcode` — knip over files/dependencies/unlisted (unused exports are report-only for now: `pnpm exec knip`) |
+| `pnpm test:mutation` | Diff-scoped Stryker run (`scripts/mutation-diff.mjs`): changed files inside a package's `mutate` allowlist must keep the mutation score above the package's `thresholds.break` (`stryker.config.json`); runs in CI as "Mutation (changed files)". The gate bypasses the package's incremental cache, so a local run and CI agree. More than 25 in-scope files in one package FAIL the gate unless the branch carries a reviewed `Mutation-Cap-Exception: <reason>` trailer                                                                                                                                                                                                                           |
+| `pnpm fitness`       | Aggregated fitness report — architecture graph, ratchet debt, per-package coverage + mutation scores (diff-scoped in CI — the file count next to each score says over what); its own CI job, fed by the test + mutation jobs' artifacts                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `./gradlew build`    | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `test:host`          | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle (SEP-1865 shim; structuredContent keep/strip scenarios); required for changes to the widget shell, `src/ui/`, or the toolkit pin                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `pnpm test:pg`       | The database slice: reruns the suites with `TEST_DATABASE_URL` pointed at the compose stack's test database, which un-skips the Postgres store + migration-runner tests (`describe.skipIf`). **The only check that executes the Postgres adapters**; runs in CI as "Postgres adapters (test:pg)" against a `postgres:` service container — run it locally for changes to `postgres.ts` or any `*-store-postgres.ts`                                                                                                                                                                                                                                                                                  |
+| Docker build         | `.github/workflows/docker-build.yml`: plain `docker build` of the root `Dockerfile` (no push) on every PR touching it, `apps/`, `packages/` or a root file the build stage copies                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only). The default boot is read-only — write paths need an explicit suffix, e.g. `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env`                                                                                                                                                                                                                                                                                                                                                                    |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
 every change; widget changes additionally need `test:host` plus a manual render check via
@@ -466,3 +487,35 @@ every mutant would survive by construction. That exclusion is scoped to those tw
 patterns and is not a precedent for excluding code that the default run CAN execute. The knip ignore
 lists in `knip.jsonc` follow the same convention: every entry carries its reason and
 the lists may only shrink; gating the unused-exports report is the next expansion.
+
+These directions are machine-checked, not review-only: `scripts/check-ratchets.mjs`
+(`pnpm lint:ratchets`, part of `pnpm lint`) compares every ratchet against the MERGE BASE
+with `origin/main` (in CI always `origin/$GITHUB_BASE_REF` — a positional base ref is
+ignored there, a PR whose merge base is HEAD fails, and the job checks out with
+`fetch-depth: 0`) — never against the PR's own files — and fails on a lowered/removed
+coverage threshold, coverage switched off, a new coverage or test `exclude`, a coverage
+`include` that appears or a narrowed `include`, a lowered `thresholds.break`, a shrunk
+`mutate` list (unless `break` rises in the same diff or the entry's file is gone), any
+other changed Stryker option that decides which mutants exist or count (`ignoreStatic`,
+`ignorers`, `timeoutMS`, the runner…), a new or raised ESLint debt entry, a raised global
+budget, any new complexity/max-lines override or gate rule switched off/to warn, a new
+ESLint ignore (keyed by the block it exempts from) or knip ignore/exclude/`entry`, a knip
+`include`/`project`, a grown tools/list char budget, a gate dropped from the root
+`lint`/`test` chain or a chain gaining anything but a plain `pnpm <script>`, and ANY change
+to a gate command — the chained root scripts plus `build`/`typecheck`/`format:check`/
+`test:pg`/`test:mutation`, and each package's `lint`/`typecheck`/`test`/`test:mutation`
+(only an `--exclude` list may shrink). It fails closed on what it cannot read: a
+non-literal `rules`, a spread, a local import or `Object.entries(…)` in `eslint.config.mjs`
+is frozen, and on top of the AST reading `scripts/eslint-effective-config.mjs` asks ESLint
+itself for the effective complexity/max-lines/`no-restricted-syntax` settings of every
+source file (plus a sample path per glob) under the base and the new config. A shadowing
+config fails whenever it exists — any `eslint.config.*` besides the root `.mjs`, a
+`knip.json`/`.knip.json(c)`/`knip.{ts,js}`/`knip.config.*` or `package.json#knip` besides
+`knip.jsonc`, a `stryker.conf.*`/`.stryker.*` besides `stryker.config.json` — because each
+tool would load it INSTEAD of the ratcheted file; deleting `knip.jsonc` fails too. Inline
+suppressions are shrink-only: an `eslint-disable` naming complexity, max-lines or
+`no-restricted-syntax` (or no rule), inline gate-rule config, `v8|c8|istanbul ignore` or
+`Stryker disable` in `apps/`/`packages/` sources. The working tree is the new side, so
+uncommitted loosening fails locally too. The single escape is a commit trailer
+`Ratchet-Exception: <reason>` in the branch range — it turns the failures into loud
+warnings for the reviewer; never weaken the checker instead.

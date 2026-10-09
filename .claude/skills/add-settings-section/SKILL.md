@@ -228,7 +228,9 @@ Section ids stay raw strings on purpose (tier-2 cross-module reference):
 emptied row when one resolves nowhere, so a host without your module degrades to "section
 absent" instead of erroring.
 
-Also add the three tool names to `apps/mcp-server-camunda7/test/expected-tools.ts`, and
+Also add the three tool names to `apps/mcp-server-camunda7/test/expected-tools.ts`, refresh
+the tools/list goldens (`GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test`,
+commit `test/__golden__/`; a grown char budget needs a `Ratchet-Exception:` trailer), and
 document any new env var in `docs/operations.md` (see the `docs-style` skill).
 
 ## Step 7 — tests

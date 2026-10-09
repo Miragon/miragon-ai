@@ -1,0 +1,39 @@
+name: Docker build
+
+# The root Dockerfile used to be built for the first time by the release train
+# (publish-to-docker.yml), i.e. after merge. This builds it on every PR that
+# touches what the image is made of — the Dockerfile, the workspace sources
+# and every root file the build stage copies — so a broken image fails the PR
+# instead of the release. Plain `docker build`, nothing is pushed.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .npmrc
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+      - tsconfig.base.json
+      - apps/**
+      - packages/**
+      - .github/workflows/docker-build.yml
+
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Docker build (no push)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - run: docker build --tag miragon-ai-server:pr-${{ github.event.pull_request.number }} .

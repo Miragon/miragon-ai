@@ -57,6 +57,8 @@
     "build": "tsc",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
     "test:mutation": "stryker run"
   },
   "peerDependencies": {

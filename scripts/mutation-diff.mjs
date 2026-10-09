@@ -11,20 +11,28 @@
  * outside it — they have no render tests, so mutating them would only produce
  * no-coverage noise).
  *
+ * A package with more than FILE_CAP in-scope changed files FAILS the gate
+ * (it used to be skipped with exit 0 — a large refactor then got no mutation
+ * check at all). Split the change, or opt out explicitly and reviewably with
+ * a commit trailer in the branch range:
+ *
+ *   Mutation-Cap-Exception: <reason, e.g. the full local run's score>
+ *
  * Usage: node scripts/mutation-diff.mjs [baseRef]   (default origin/main)
  */
-import { execSync, spawnSync } from "node:child_process"
+import { execFileSync, spawnSync } from "node:child_process"
 import { existsSync, readFileSync, rmSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import picomatch from "picomatch"
 
 /** Gitignored, per-package, wiped before every gate run — see below. */
 const GATE_INCREMENTAL_FILE = ".stryker-tmp/diff-gate-incremental.json"
 
-const base = process.argv[2] ?? "origin/main"
-const mergeBase = execSync(`git merge-base ${base} HEAD`, { encoding: "utf8" }).trim()
-const changed = execSync(`git diff --name-only ${mergeBase} HEAD`, { encoding: "utf8" })
-  .split("\n")
-  .filter(Boolean)
+/** Guard against unbounded runtime on huge diffs — loudly, never silently. */
+export const FILE_CAP = 25
+
+export const CAP_EXCEPTION_TRAILER = /^Mutation-Cap-Exception: .+/m
 
 /**
  * Mirror Stryker's own `mutate` semantics. picomatch instead of a hand-rolled
@@ -34,63 +42,99 @@ const changed = execSync(`git diff --name-only ${mergeBase} HEAD`, { encoding: "
  * separately on purpose — picomatch ORs an array, so passing `mutate` verbatim
  * would make a single `!…` entry match everything else.
  */
-function inMutateScope(relFile, mutatePatterns) {
+export function inMutateScope(relFile, mutatePatterns) {
   const positives = mutatePatterns.filter((p) => !p.startsWith("!"))
   const negatives = mutatePatterns.filter((p) => p.startsWith("!")).map((p) => p.slice(1))
   return picomatch.isMatch(relFile, positives) && !picomatch.isMatch(relFile, negatives)
 }
 
-const byPackage = new Map()
-for (const file of changed) {
-  // Package roots: packages/core/<pkg> and packages/connectors/<family>/<pkg>.
-  const match = /^(packages\/(?:core\/[^/]+|connectors\/[^/]+\/[^/]+))\/(.+)$/.exec(file)
-  if (!match || !existsSync(file)) continue
-  const [, pkg, rel] = match
-  const configPath = `${pkg}/stryker.config.json`
-  if (!existsSync(configPath)) continue
-  const { mutate } = JSON.parse(readFileSync(configPath, "utf8"))
-  if (!inMutateScope(rel, mutate)) continue
-  if (!byPackage.has(pkg)) byPackage.set(pkg, [])
-  byPackage.get(pkg).push(rel)
-}
-
-if (byPackage.size === 0) {
-  console.log(`mutation-diff: no changed files inside any mutation scope vs ${base} — skipping.`)
-  process.exit(0)
-}
-
-// Guard against unbounded runtime on huge diffs — loudly, never silently.
-const FILE_CAP = 25
-let failed = false
-for (const [pkg, files] of byPackage) {
-  if (files.length > FILE_CAP) {
-    console.log(
-      `mutation-diff: ${pkg} changed ${files.length} in-scope files (cap ${FILE_CAP}) — ` +
-        `SKIPPING the diff gate here. Run \`pnpm --filter ./${pkg} run test:mutation\` ` +
-        `locally for the full picture.`,
-    )
-    continue
+/**
+ * Which packages run and which hit the cap (pure; unit-tested). Over the cap
+ * a package FAILS the gate unless `exceptionReason` (the trailer line) is set
+ * — then it is skipped with a loud warning instead.
+ */
+export function planMutationRuns(byPackage, { cap = FILE_CAP, exceptionReason } = {}) {
+  const runs = []
+  const capped = []
+  for (const [pkg, files] of byPackage) {
+    if (files.length > cap) capped.push({ pkg, count: files.length })
+    else runs.push({ pkg, files })
   }
-  console.log(`mutation-diff: ${pkg} → ${files.length} file(s)\n  ${files.join("\n  ")}`)
-  // Off the package's incremental cache, on a throwaway file wiped every run:
-  // that cache would fold the OTHER files' cached results back into the score
-  // and the gate would pass locally on a file that fails on CI's fresh
-  // checkout. Also keeps reports/mutation-report.json scoped to the diff.
-  rmSync(`${pkg}/${GATE_INCREMENTAL_FILE}`, { force: true })
-  const result = spawnSync(
-    "pnpm",
-    [
-      "--filter",
-      `./${pkg}`,
-      "run",
-      "test:mutation",
-      "--mutate",
-      files.join(","),
-      "--incrementalFile",
-      GATE_INCREMENTAL_FILE,
-    ],
-    { stdio: "inherit" },
-  )
-  if (result.status !== 0) failed = true
+  return { runs, capped, failed: capped.length > 0 && !exceptionReason }
 }
-process.exit(failed ? 1 : 0)
+
+function main() {
+  const git = (...args) => execFileSync("git", args, { encoding: "utf8" })
+  const base = process.argv[2] ?? "origin/main"
+  const mergeBase = git("merge-base", base, "HEAD").trim()
+  const changed = git("diff", "--name-only", mergeBase, "HEAD").split("\n").filter(Boolean)
+
+  const byPackage = new Map()
+  for (const file of changed) {
+    // Package roots: packages/core/<pkg> and packages/connectors/<family>/<pkg>.
+    const match = /^(packages\/(?:core\/[^/]+|connectors\/[^/]+\/[^/]+))\/(.+)$/.exec(file)
+    if (!match || !existsSync(file)) continue
+    const [, pkg, rel] = match
+    const configPath = `${pkg}/stryker.config.json`
+    if (!existsSync(configPath)) continue
+    const { mutate } = JSON.parse(readFileSync(configPath, "utf8"))
+    if (!inMutateScope(rel, mutate)) continue
+    if (!byPackage.has(pkg)) byPackage.set(pkg, [])
+    byPackage.get(pkg).push(rel)
+  }
+
+  if (byPackage.size === 0) {
+    console.log(`mutation-diff: no changed files inside any mutation scope vs ${base} — skipping.`)
+    process.exit(0)
+  }
+
+  const exceptionReason = CAP_EXCEPTION_TRAILER.exec(
+    git("log", `${mergeBase}..HEAD`, "--format=%B"),
+  )?.[0]
+  const plan = planMutationRuns(byPackage, { exceptionReason })
+  for (const { pkg, count } of plan.capped) {
+    const local = `pnpm --filter ./${pkg} run test:mutation`
+    if (exceptionReason) {
+      console.log(
+        `::warning::mutation-diff: ${pkg} changed ${count} in-scope files (cap ${FILE_CAP}) — ` +
+          `NOT mutation-tested, waved through by "${exceptionReason}". Reviewers: check that ` +
+          `the reason names a full local run (${local}).`,
+      )
+    } else {
+      console.error(
+        `::error::mutation-diff: ${pkg} changed ${count} in-scope files (cap ${FILE_CAP}) — the ` +
+          `diff gate cannot cover it. Split the change, or run \`${local}\` locally and add a ` +
+          `commit trailer "Mutation-Cap-Exception: <reason + score>" (reviewed like any commit).`,
+      )
+    }
+  }
+
+  let failed = plan.failed
+  for (const { pkg, files } of plan.runs) {
+    console.log(`mutation-diff: ${pkg} → ${files.length} file(s)\n  ${files.join("\n  ")}`)
+    // Off the package's incremental cache, on a throwaway file wiped every run:
+    // that cache would fold the OTHER files' cached results back into the score
+    // and the gate would pass locally on a file that fails on CI's fresh
+    // checkout. Also keeps reports/mutation-report.json scoped to the diff.
+    rmSync(`${pkg}/${GATE_INCREMENTAL_FILE}`, { force: true })
+    const result = spawnSync(
+      "pnpm",
+      [
+        "--filter",
+        `./${pkg}`,
+        "run",
+        "test:mutation",
+        "--mutate",
+        files.join(","),
+        "--incrementalFile",
+        GATE_INCREMENTAL_FILE,
+      ],
+      { stdio: "inherit" },
+    )
+    if (result.status !== 0) failed = true
+  }
+  process.exit(failed ? 1 : 0)
+}
+
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+if (isMain) main()
