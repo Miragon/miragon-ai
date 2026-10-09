@@ -26,9 +26,6 @@
         "test/**/*.test.ts",
         "test-host/**/*.{ts,mjs}",
       ],
-      // Widget-bundle stand-in read at runtime via a path (never imported) by
-      // the in-process e2e boots — invisible to the module graph.
-      "ignore": ["test/fixtures/**"],
       "ignoreDependencies": [
         // Referenced from src/ui/geist-latin.css (@font-face src url), which
         // the module graph does not traverse.
