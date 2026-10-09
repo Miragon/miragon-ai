@@ -36,6 +36,7 @@ export const enSweep: MessageCatalog = {
   "aComparison.metricIncidentRate": "Incident rate",
   "aComparison.metricInstances": "Instances",
   "aComparison.metricP95Duration": "P95 duration",
+  "aComparison.valueUnavailable": "n/a",
   "aDefBreakdown.avgDuration": "avg {duration}",
   "aDefBreakdown.completedCount": "{count} completed",
   "aDefBreakdown.emptyState": "No process definitions in the selected window.",
@@ -154,10 +155,15 @@ export const enSweep: MessageCatalog = {
   "aSettings.section": "Analytics defaults",
   "aSettings.subtitle": "Defaults applied when an analytics call omits a value.",
   "aVersionCompare.badgeElement": "element: {element}",
+  "aVersionCompare.badgeElementIgnored": "element {element}: ignored",
   "aVersionCompare.badgeInsufficientSignal": "Insufficient signal (min {min} instances/version)",
   "aVersionCompare.badgeWindow": "window: {days}d",
+  "aVersionCompare.elementIgnored":
+    "The element filter {element} has no effect here: it only scopes the failure and incident rates. Every figure covers the whole process.",
   "aVersionCompare.emptyIncomplete": "Incomplete KPI data.",
   "aVersionCompare.emptyNoData": "No version-comparison data.",
+  "aVersionCompare.incidentKpisUnavailable":
+    "Failure and incident rates are not available per version: the incident metric carries no process-version label. Instance counts and durations are exact.",
   "aVersionCompare.tableLabel": "Version metric comparison",
   "aVersionCompare.title": "Version comparison",
 }

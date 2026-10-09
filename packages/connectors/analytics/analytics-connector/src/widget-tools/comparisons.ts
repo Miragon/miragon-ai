@@ -10,6 +10,7 @@ import { queries, schemas } from "@miragon-ai/analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
 import { localizeFor } from "../server-locale.js"
 import { optionalMinBucketSize, settingsFor } from "../settings.js"
+import { versionCompareCaveats } from "../version-compare-caveats.js"
 import { compareDeltaSummary, suppressedNote, type AnalyticsWidgetToolsContext } from "./shared.js"
 
 /**
@@ -68,7 +69,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       name: "analytics_show_version_compare",
       title: "Process Version Comparison",
       description:
-        "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
+        "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Instance counts and durations are exact per version; failure and incident rates show as n/a — the incident metric carries no version label, so they are not measured per version (never read them as zero). Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: z.object({
         ...schemas.versionCompareInput.shape,
@@ -81,6 +82,10 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       const minBucketSize =
         args.minBucketSize ?? (await settingsFor(profileStore, toolCtx)).minBucketSize
       const data = await queries.versionCompare(ch, { ...args, minBucketSize })
+      // Null incident KPIs (no version label on the incident metric) must not
+      // read as "failure rate 0pp" — say why they are missing instead; nor may
+      // an elementId that scoped nothing read as the comparison's scope.
+      const { incidentRatesUnavailable, ignoredElementId } = versionCompareCaveats(data)
       return buildSingleWidgetView({
         widget: "analytics:version-compare",
         app: "analytics",
@@ -93,6 +98,10 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
           versionB: data.versionB,
           windowDays: data.windowDays,
           delta: compareDeltaSummary(data.delta),
+          incidents: incidentRatesUnavailable ? t("aSum.versionIncidentsUnavailable") : "",
+          element: ignoredElementId
+            ? t("aSum.versionElementIgnored", { element: ignoredElementId })
+            : "",
           suppressed: suppressedNote(data.suppressed),
         }),
       })

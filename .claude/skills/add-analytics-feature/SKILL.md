@@ -54,6 +54,16 @@ entries (documented allowlist in the test); the Kotlin side checks the label key
 instrument attaches. Don't weaken these guards. Keep labels model-bounded (never
 instance ids, business keys, variable values).
 
+**Label contract:** `src/metrics-contract-labels.test.ts` runs every exported query
+function against a recording client and checks each label the sent PromQL names — matchers,
+`by`/`without`, `on`/`ignoring`/`group_*` — against the labels the contract declares for
+that series; alert rules and Grafana dashboards go through the same checker. Its
+`SCENARIOS` map is total over the `queries` namespace, so a new export without an entry
+fails `pnpm typecheck`. Give the entry argument sets that switch on every optional matcher
+(engine filter single and multi, element/incident scope, process scope present and
+absent). A PromQL shape the checker (`src/promql-{parse,labels,sources}.test-support.ts`)
+rejects means extending the checker, never bypassing it.
+
 ## Step 2 — PromQL snapshot test
 
 Co-locate `<topic>.test.ts` next to the query. Use the mock-client pattern from
@@ -74,7 +84,8 @@ expect(queries.every((q) => q.includes('process_definition_key="myKey"'))).toBe(
 expect(queries.every((q) => q.includes("[30d]"))).toBe(true)
 ```
 
-Also cover the mapping logic (ranking, thresholds, rounding, null fields).
+Also cover the mapping logic (ranking, thresholds, rounding, null fields), and add the
+function's `SCENARIOS` entry to the label-contract test (Step 1).
 
 ## Step 3 — input schema
 

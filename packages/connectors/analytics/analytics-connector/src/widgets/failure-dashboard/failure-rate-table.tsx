@@ -14,10 +14,20 @@ import {
   TableSkeleton,
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
-import type { FailureDashboardData } from "@miragon-ai/analytics-client"
+import type { FailureDashboardData, ProcessFailureItem } from "@miragon-ai/analytics-client"
 import { useFailureDashboardSelfFetch } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
+
+/**
+ * The per-process Ask-AI prompt. The regression check goes to the tools that
+ * measure failure rates over time — analytics_version_compare cannot split
+ * incidents by version, so its failure rates are null (#327).
+ */
+export function failureRateAskAiPrompt(proc: ProcessFailureItem): string {
+  const key = proc.processDefinitionKey
+  return `Explain in plain language why process definition "${key}" on the current engine shows a ${proc.failureRatePct}% failure rate (${proc.failedCount} failed and ${proc.incidentCount} incident(s) out of ${proc.totalInstances} instances). Determine whether this is a regression by comparing recent time periods with analytics_compare_execution_periods (processDefinitionKey "${key}") or, around a deployment, the windows before and after it with analytics_cluster_compare (processDefinitionKey "${key}"), and identify the dominant failing activity with analytics_element_bottleneck (processDefinitionKey "${key}"). Summarize what is driving this failure rate. Explanation only — do not change anything.`
+}
 
 export function FailureRateTable({ data: initialData }: { data: FailureDashboardData | null }) {
   const fallbackQuery = useFailureDashboardSelfFetch(initialData)
@@ -85,7 +95,7 @@ export function FailureRateTable({ data: initialData }: { data: FailureDashboard
                             variant="icon"
                             title={t("aFailureRate.analyzeLabel")}
                             label={t("aFailureRate.analyzeLabel")}
-                            prompt={`Explain in plain language why process definition "${proc.processDefinitionKey}" on the current engine shows a ${proc.failureRatePct}% failure rate (${proc.failedCount} failed and ${proc.incidentCount} incident(s) out of ${proc.totalInstances} instances). Determine whether this is a regression by comparing recent versions with analytics_version_compare (processDefinitionKey "${proc.processDefinitionKey}") and recent time periods with analytics_compare_execution_periods (processDefinitionKey "${proc.processDefinitionKey}"), and identify the dominant failing activity with analytics_element_bottleneck (processDefinitionKey "${proc.processDefinitionKey}"). Summarize what is driving this failure rate. Explanation only — do not change anything.`}
+                            prompt={failureRateAskAiPrompt(proc)}
                           />
                         </TableCell>
                       </TableRow>

@@ -20,7 +20,9 @@ export const versionCompareInput = z.object({
   elementId: z
     .string()
     .optional()
-    .describe("Restrict incident count to a single BPMN element (optional)."),
+    .describe(
+      "Currently has no effect: it only scopes the incident KPIs, which are unavailable per version (the incident metric carries no version label). Accepted for compatibility.",
+    ),
   minBucketSize: z
     .number()
     .int()

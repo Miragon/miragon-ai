@@ -10,6 +10,7 @@ import type { VersionCompareData } from "./version-compare.js"
 import type { EngineCompareData } from "./engine-compare.js"
 import type { EngineLandscapeData } from "./engine-landscape.js"
 import type { AnalyticsSettingsViewData } from "./settings-section.js"
+import { versionCompareCaveats } from "../version-compare-caveats.js"
 
 /**
  * Model-context descriptions for every analytics widget, attached centrally via
@@ -140,7 +141,10 @@ export const describeFailureRates: DescribeForModel<FailureDashboardData> = (dat
           `(${top.failedCount}/${top.totalInstances} failed, ${top.incidentCount} incident(s))`
         : ""
     }. ` +
-    `Check for regressions with analytics_version_compare.`
+    // Not analytics_version_compare: it cannot split incidents by version, so
+    // its failure rates are null (#327).
+    `Check for a regression with analytics_compare_execution_periods (period over period) ` +
+    `or analytics_cluster_compare (around a deployment).`
   )
 }
 
@@ -175,12 +179,27 @@ export const describeClusterCompare: DescribeForModel<ClusterCompareData> = (dat
   `${suppressedNote(data.suppressed)}. ` +
   `Confirm with analytics_cluster_compare; find the driving activity with analytics_element_bottleneck.`
 
-export const describeVersionCompare: DescribeForModel<VersionCompareData> = (data) =>
-  `Comparing process "${data.processDefinitionKey}" v${data.versionA} (baseline) vs ` +
-  `v${data.versionB} over a ${data.windowDays}d window` +
-  `${data.elementId ? `, element ${data.elementId}` : ""}: ${mostNotableDelta(data.delta)}` +
-  `${suppressedNote(data.suppressed)}. ` +
-  `Confirm with analytics_version_compare; find the driving activity with analytics_element_bottleneck.`
+/**
+ * Version compare: the incident metric has no version label, so its rates come
+ * back null — and `elementId`, which only scopes them, then scopes nothing. The
+ * element is never presented as the scope of the process-wide deltas.
+ */
+export const describeVersionCompare: DescribeForModel<VersionCompareData> = (data) => {
+  const { incidentRatesUnavailable, ignoredElementId } = versionCompareCaveats(data)
+  return (
+    `Comparing process "${data.processDefinitionKey}" v${data.versionA} (baseline) vs ` +
+    `v${data.versionB} over a ${data.windowDays}d window` +
+    `${data.elementId && !ignoredElementId ? ` (incident KPIs scoped to element ${data.elementId})` : ""}: ` +
+    `${mostNotableDelta(data.delta)}${suppressedNote(data.suppressed)}. ` +
+    (incidentRatesUnavailable
+      ? "Failure and incident rates are not measured per version (no version label on the incident metric) — unknown, not zero. "
+      : "") +
+    (ignoredElementId
+      ? `elementId ${ignoredElementId} has no effect (it only scopes the incident rates): every figure covers the whole process, not that element. `
+      : "") +
+    `Confirm with analytics_version_compare; find the driving activity with analytics_element_bottleneck.`
+  )
+}
 
 export const describeEngineCompare: DescribeForModel<EngineCompareData> = (data) =>
   `Comparing process "${data.processDefinitionKey}" on engine "${data.engineA}" (baseline) vs ` +
