@@ -48,11 +48,10 @@ describe("getOAuthProviderFromEnv", () => {
   })
 
   it("mirrors the 2.x user id as the 1.x userId spelling (dashboard/profile scoping)", () => {
-    // The toolkit's dashboard tools scope by ctx.auth.user.userId; the 2.x
-    // providers expose only `id`. Without the mirror, extractUserId yields
-    // undefined and per-user dashboard scoping collapses (cross-user
-    // list/load/delete). The mirror also keeps 1.x user-keyed records
-    // (key = token sub via userId) resolving unchanged.
+    // The 2.x providers expose only `id`; the shim adds the 1.x `userId`
+    // spelling. Redundant since toolkit 2.6 (its resolveCaller reads `id`
+    // first) and slated for removal in #331 — this pins the shim's own
+    // contract while it still ships, not a dependency on it.
     const provider = getOAuthProviderFromEnv(
       JSON.stringify({
         provider: "keycloak",

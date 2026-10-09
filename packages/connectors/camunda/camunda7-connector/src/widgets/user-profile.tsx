@@ -34,6 +34,24 @@ interface DashboardSummary {
   id: string
   name: string
   title?: string
+  /**
+   * Set (since toolkit 2.6) when the store holds the record but cannot read
+   * it — a newer `schemaVersion` mid rolling upgrade, a corrupt row. Its
+   * `name` is then just the id, and `load-dashboard` refuses it.
+   */
+  unreadable?: string
+}
+
+/**
+ * The dashboards the picker offers: unreadable records left out (they could
+ * be chosen but never opened), pinned ones first — the one behavior the pin
+ * promises. A saved default or pin that points at an unreadable record stays
+ * in the form state untouched, so it survives until the record reads again.
+ */
+function pickableDashboards(items: DashboardSummary[], pinnedIds: string[]): DashboardSummary[] {
+  return items
+    .filter((d) => d.unreadable === undefined)
+    .sort((a, b) => Number(pinnedIds.includes(b.id)) - Number(pinnedIds.includes(a.id)))
 }
 
 /** Language names are endonyms — shown in their own language, not the UI locale. */
@@ -174,10 +192,9 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
     "list-dashboards",
     {},
   )
-  const pinnedIds = view.profile.pinnedDashboardIds ?? []
-  // Pinned dashboards sort first — the one behavior the pin promises.
-  const dashboards = [...(dashboardsQuery.data?.items ?? [])].sort(
-    (a, b) => Number(pinnedIds.includes(b.id)) - Number(pinnedIds.includes(a.id)),
+  const dashboards = pickableDashboards(
+    dashboardsQuery.data?.items ?? [],
+    view.profile.pinnedDashboardIds ?? [],
   )
 
   const save = useToolMutation(CAMUNDA7_SAVE_USER_PROFILE)

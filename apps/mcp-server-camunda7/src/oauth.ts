@@ -168,12 +168,15 @@ export function getOAuthConfigFromEnv(
 
 /**
  * Mirror the 2.x provider user's `id` (the token subject) as the 1.x `userId`
- * spelling. Load-bearing, not cosmetic: the toolkit's dashboard tools scope
- * every list/load/delete by `ctx.auth.user.userId` — with the 2.x providers'
- * `id`-only user object that extraction yields `undefined`, which collapses
- * per-user scoping into "everyone sees (and can delete) everything". It also
- * keeps existing user-keyed profile/dashboard rows (stored under the 1.x
- * `userId` = token sub) resolving to the same records.
+ * spelling. Redundant since toolkit 2.6 and kept only until #331 consolidates
+ * caller resolution — nothing depends on it any more. The toolkit's dashboard
+ * tools resolve the caller through `resolveCaller` (`user.id`, then
+ * `user.userId`, then the token `sub`) and refuse an authenticated call that
+ * resolves no id instead of serving it in global scope; the repo's own
+ * `resolveAuthUserId` and the ambient request info accept `userId` or `id`,
+ * so profile/dashboard rows keyed by the 1.x `userId` (= token sub) resolve
+ * the same with or without it. (Under toolkit 2.5 it was load-bearing:
+ * dashboard scoping read only `ctx.auth.user.userId`.)
  *
  * Returns the `unknown` user slot the server is typed with: since mcp-use 2.7
  * the provider's optional `setup(host)` hook takes the user type in parameter

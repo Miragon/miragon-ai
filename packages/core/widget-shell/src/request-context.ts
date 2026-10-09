@@ -4,14 +4,16 @@
  * request context into every handler; 2.x only hands a `ctx` to `server.tool`
  * callbacks and middleware).
  *
- * Why ambient at all: toolkit registrar handlers (`createToolRegistrar`,
- * `createWidgetToolRegistrar`) receive `(client, args)` WITHOUT a ctx, and the
- * camunda7 REST client's passthrough-auth interceptor runs deep inside a
- * hey-api call chain — neither can thread a per-call `ctx` through. This store
- * restores the 1.x semantics for exactly the two ambient consumers:
- * profile-key resolution ([[resolveProfileKey]] — which also feeds the
- * per-call default-engine lookup) and the passthrough bearer token
- * (`resolveMcpBearerToken`).
+ * Why ambient at all: since toolkit 2.6 the registrars (`createToolRegistrar`,
+ * `createWidgetToolRegistrar`) hand mcp-use's `ctx` to handlers as their third
+ * argument, so a handler CAN reach the caller directly — but not every
+ * consumer has that ctx in hand: the camunda7 REST client's passthrough-auth
+ * interceptor runs deep inside a hey-api call chain, and the per-call
+ * default-engine lookup is an argument-less callback. This store restores the
+ * 1.x semantics for exactly the two ambient consumers: profile-key resolution
+ * ([[resolveProfileKey]] — its session-id and stdio-anonymous rungs read only
+ * this store, ctx or not, and it also feeds the per-call default-engine
+ * lookup) and the passthrough bearer token (`resolveMcpBearerToken`).
  *
  * Installed once per server via [[installMcpRequestContext]] (idempotent) —
  * the composition root (`index.ts` of the host app) calls it right after

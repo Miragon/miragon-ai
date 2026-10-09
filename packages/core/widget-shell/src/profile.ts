@@ -79,8 +79,9 @@ export interface ProfileSlice {
  *   1. the authenticated user id — from the tool-handler `ctx.auth.user.userId`
  *      when a `ctx` is passed, otherwise from the ambient request info
  *      (`request-context.ts` — the repo-owned mcp-use-2.x replacement for the
- *      removed request-context AsyncLocalStorage), so registrar handlers
- *      without a `ctx` still resolve the auth user;
+ *      removed request-context AsyncLocalStorage), so callers without a
+ *      `ctx` in hand (the argument-less per-call default-engine lookup) still
+ *      resolve the auth user;
  *   2. otherwise the MCP session id (transport session / `Mcp-Session-Id`
  *      header, from the same ambient info). mcp-use 2 itself issues no
  *      session ids (stateless HTTP serving), so this rung only matches when
@@ -109,8 +110,8 @@ export function resolveProfileKey(ctx?: unknown): string | undefined {
 
 /**
  * Just the authenticated-user half of {@link resolveProfileKey}: the user id
- * from the tool-handler `ctx.auth`, or from the ambient request info
- * (registrar handlers without a `ctx`), else `undefined`. Save paths
+ * from the tool-handler `ctx.auth`, or from the ambient request info (callers
+ * that pass no `ctx`), else `undefined`. Save paths
  * use this to STAMP `userId` onto the persisted record — the marker that
  * exempts a row from the session-TTL cleanup (a record without `userId` is
  * session-keyed and expires).
