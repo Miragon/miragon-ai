@@ -103,6 +103,18 @@ describe("analyticsModule toolset policy", () => {
   })
 })
 
+describe("analyticsModule.instructions", () => {
+  it("states once that `engine` is a metric filter the camunda7 default does not touch", () => {
+    const text = analyticsModule.instructions()
+    expect(text).toContain(
+      "`engine` is a metric filter, not routing: omitted = the aggregate over every engine " +
+        "(camunda7's saved default engine does not apply)",
+    )
+    expect(text).toContain("period is one of 1d, 3d, 7d, 14d, 30d")
+    expect(text).toMatch(/analytics_engine_health judges from metrics and alert rules/)
+  })
+})
+
 describe("analyticsModule env surface", () => {
   it("maps PROMETHEUS_URL, treating a blank value as unset", () => {
     expect(analyticsModule.configFromEnv({ PROMETHEUS_URL: " http://p:9090 " })).toEqual({
@@ -256,7 +268,18 @@ describe("the analytics toolset rule holds structurally for every registered too
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: true,
+      openWorldHint: false,
     })
+  })
+
+  it("every write states destructiveHint explicitly — MCP reads an absent hint as TRUE", () => {
+    const writes = surfaceFor({ toolset: "standard" }).filter(
+      (tool) => tool.annotations?.readOnlyHint !== true,
+    )
+    expect(writes.map((tool) => tool.name)).toEqual([EXEMPT_DURABLE_WRITE])
+    for (const tool of writes) {
+      expect(typeof tool.annotations?.destructiveHint, tool.name).toBe("boolean")
+    }
   })
 
   it("no analytics tool is destructive — the module has no admin tier to hold one", () => {

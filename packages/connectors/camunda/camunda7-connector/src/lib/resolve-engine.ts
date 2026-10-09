@@ -46,6 +46,14 @@ export interface EngineRegistry {
    * one engine is configured.
    */
   defaultEngineId?: (call?: EngineCallContext) => Promise<string | undefined>
+  /**
+   * Whether the CURRENT caller could save a default engine — the toolset
+   * allows the profile write AND a caller identity resolves (from the tool
+   * call's `ctx`, the same ctx-first rule as `defaultEngineId`). Decides
+   * whether {@link EngineNotSelectedError} points at `camunda7_select_engine`:
+   * a hint the caller cannot follow costs a dead round trip. Absent = no.
+   */
+  canSaveDefault?: (call?: EngineCallContext) => boolean
 }
 
 /**
@@ -57,7 +65,7 @@ export interface EngineRegistry {
 export function createEngineRegistry(
   engines: EngineEntry[],
   clientFor: (engine: EngineEntry) => Client,
-  opts?: { defaultEngineId?: EngineRegistry["defaultEngineId"] },
+  opts?: Pick<EngineRegistry, "defaultEngineId" | "canSaveDefault">,
 ): EngineRegistry {
   const backends = createBackendRegistry<Client, EngineMeta>(
     engines.map((e) => ({
@@ -69,7 +77,12 @@ export function createEngineRegistry(
     })),
     { label: "engine" },
   )
-  return { backends, engines, defaultEngineId: opts?.defaultEngineId }
+  return {
+    backends,
+    engines,
+    defaultEngineId: opts?.defaultEngineId,
+    canSaveDefault: opts?.canSaveDefault,
+  }
 }
 
 /**
@@ -80,18 +93,20 @@ export function createEngineRegistry(
  * The message lists the available engine ids because the error path only
  * serialises code + message (the structured `availableEngines` field never
  * reaches the model) — naming them here saves the LLM a
- * `camunda7_engine` (action "list") roundtrip before it can pick one.
+ * `camunda7_list_engines` roundtrip before it can pick one. It names
+ * `camunda7_select_engine` only when `canSaveDefault`: without a caller
+ * identity or under a read-only toolset the save would refuse.
  */
 export class EngineNotSelectedError extends Error {
   readonly code = "ENGINE_NOT_SELECTED" as const
   readonly availableEngines: EngineEntry[]
-  constructor(availableEngines: EngineEntry[]) {
+  constructor(availableEngines: EngineEntry[], { canSaveDefault = false } = {}) {
+    const ids = availableEngines.map((e) => e.id).join(", ")
     super(
-      `No engine specified and no default engine saved. Available engines: ${availableEngines
-        .map((e) => e.id)
-        .join(
-          ", ",
-        )}. Pass the per-call \`engine\` parameter (camunda7_engine action "list" shows the ids). Where the toolset allows it, a signed-in user can also save a default with camunda7_engine action "select".`,
+      `No engine specified and no default engine saved. Pass \`engine\` — one of: ${ids}.` +
+        (canSaveDefault
+          ? " To route later calls without it, save a default with camunda7_select_engine."
+          : ""),
     )
     this.name = "EngineNotSelectedError"
     this.availableEngines = availableEngines
@@ -176,7 +191,11 @@ export async function resolveEngine(
       provider: backend.meta?.provider ?? providerForEntry({ id: backend.id }),
     }
   } catch (e) {
-    if (e instanceof BackendNotSelectedError) throw new EngineNotSelectedError(registry.engines)
+    if (e instanceof BackendNotSelectedError) {
+      throw new EngineNotSelectedError(registry.engines, {
+        canSaveDefault: registry.canSaveDefault?.(call) ?? false,
+      })
+    }
     if (e instanceof UnknownBackendError)
       throw new UnknownEngineError(e.requestedId, registry.engines)
     throw e

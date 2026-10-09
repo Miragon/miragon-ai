@@ -102,7 +102,7 @@ const SCALAR_FIELDS = [
 /**
  * The save payload: ONLY the preferences the user changed against the form's
  * baseline. The panel may render from a cached (stale) view, and another
- * writer (the model's `camunda7_engine` "select", a second tab) may have
+ * writer (the model's `camunda7_select_engine`, a second tab) may have
  * changed the profile meanwhile — re-sending untouched fields would silently
  * write the old values back. The save input is default-free, so an omitted
  * field stays unchanged on the server.

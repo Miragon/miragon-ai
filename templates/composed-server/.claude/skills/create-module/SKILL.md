@@ -67,6 +67,11 @@ The contract, field by field (see `notesModule`):
   `profileStore?: ProfileSource`) and tolerate their absence.
 - Optional `bootWarnings(env)` — return actionable hints for misconfigured
   deployments (see the analytics module's Prometheus-URL warning).
+- Optional `instructions(config, { authenticated })` — a short snippet the
+  server appends to its MCP `instructions` (the rules that hold for EVERY tool
+  of your module: routing, argument conventions, which tool answers what), so
+  tool descriptions stay one-liners. `config` carries the effective `toolset`;
+  return `undefined` to add nothing.
 
 ## Step 4 — catalogue and tools
 
@@ -86,7 +91,8 @@ Tool conventions (they carry the contract, so they are not cosmetic):
 - Every input field gets a `.describe()`.
 - Annotations: reads get `{ readOnlyHint: true, idempotentHint: true }`
   (+ `openWorldHint: true` when they talk to an external system); writes drop
-  `readOnlyHint`; irreversible operations add `destructiveHint: true`.
+  `readOnlyHint`; every write states `destructiveHint` explicitly (MCP reads an
+  absent hint as `true`): `true` for irreversible operations, `false` otherwise.
 - Write tools that only flip state return a small `{ success: true, … }`
   object, not the raw (often empty) upstream response.
 

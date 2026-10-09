@@ -74,7 +74,7 @@ export function registerUserProfileTools(
 ): void {
   // The save tool is a durable write registered OUTSIDE the registrar, so it
   // gates itself against the (already concrete) toolset — the same registrar
-  // rule, via the one profile-write decision `camunda7_engine`'s "select"
+  // rule, via the one profile-write decision `camunda7_select_engine`
   // shares. Decided up front because the two view tools report the outcome as
   // `canSave`, which is what hides the panel's Save button; a view that
   // claimed otherwise would offer a write that resolves to an unknown tool.
@@ -149,7 +149,9 @@ export function registerUserProfileTools(
       title: "Save user profile",
       description:
         'Update the caller\'s user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like "switch the UI to German" (language: "de") or "only let me pick the prod engines" (allowedEngineIds). Engine availability is curation, not access control.',
-      annotations: { idempotentHint: true },
+      // A local profile write: explicitly non-destructive (MCP presumes a
+      // write destructive unless told otherwise) and closed-world.
+      annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
       // The flat input is a tool-API convenience; the handler splits it into
       // the record's cross-module fields and this module's own slice.
       inputSchema: strictToolInput(userProfileToolSaveInput.shape),
@@ -164,7 +166,7 @@ export function registerUserProfileTools(
       // record-level language/theme, so it hands the store the same patch
       // itself: ONLY the given fields, merged by the store over the RAW
       // stored slice under its per-key lock, so a concurrent
-      // `camunda7_engine` "select" is never reverted by a stale pre-read.
+      // `camunda7_select_engine` is never reverted by a stale pre-read.
       const key = requireProfileKey(ctx)
       const { language, theme, ...sliceInput } = params
       const slicePatch: Record<string, unknown> = { ...sliceInput }

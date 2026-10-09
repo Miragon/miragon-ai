@@ -1,6 +1,6 @@
 /**
  * The environment grouping over the flat engine list — single-sourced so the
- * `camunda7_engine` list output, the cockpit's two-stage landing chooser, the
+ * `camunda7_list_engines` output, the cockpit's two-stage landing chooser, the
  * sidebar switcher and the settings panel all derive the SAME map. The
  * environment is a selection/grouping level only: engine ids stay flat and
  * globally unique (the join key against the metrics' `engine_id` label and the

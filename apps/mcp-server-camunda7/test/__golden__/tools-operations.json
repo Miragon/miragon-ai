@@ -7,7 +7,6 @@
     },
     "description": "Analyze process performance from metrics: throughput, P50/P95 duration, incident-based failure rate, and per-activity breakdown over a rolling window.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -22,7 +21,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "includeActivityBreakdown": {
           "default": true,
@@ -68,7 +67,6 @@
     },
     "description": "Internal JSON feed (no UI) for the BPMN heatmap — per-element execution frequency + average duration over a window, plus the latest BPMN XML. Lets another widget (e.g. the CIB Seven cockpit) render the heatmap inline. Prefer analytics_show_bpmn_heatmap for a standalone view.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -83,7 +81,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "period": {
           "description": "Analysis time period. Omitted → the user's saved analytics default (else 7d).",
@@ -117,7 +115,6 @@
     },
     "description": "Pre/Post deployment correlation from metrics. Given a deployment timestamp and windows before/after, compute instance KPIs + per-element incident rate and the delta, using PromQL historical windows. Results are flagged `suppressed` if either window has fewer than minBucketSize instances. Typical flow: commit-hash → camunda7_get_deployment → deployment.timestamp → this tool.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -140,11 +137,10 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "minBucketSize": {
           "description": "Minimum per-window instance count before results are flagged `suppressed`. Omitted → the user's saved analytics default (else 10).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
@@ -182,7 +178,6 @@
     },
     "description": "Compare process execution metrics between two time periods (before/after deployment, regression analysis). Uses PromQL historical windows — both periods must fall within Prometheus retention.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -197,7 +192,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "includeActivityBreakdown": {
           "default": false,
@@ -252,7 +247,6 @@
     },
     "description": "Internal JSON feed (no UI) for the analytics dashboard widgets' self-fetch. Prefer analytics_show_dashboard.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -267,7 +261,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "period": {
           "description": "Analysis time period. Omitted → the user's saved analytics default (else 7d).",
@@ -298,7 +292,6 @@
     },
     "description": "Rank activities by execution-time contribution and incident rate over a rolling window, from process metrics. Activities with fewer than `minBucketSize` executions are suppressed. Note: queue/wait time is not available from metrics.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -313,7 +306,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "maxResults": {
           "default": 20,
@@ -324,7 +317,6 @@
         },
         "minBucketSize": {
           "description": "Minimum per-window instance count before results are flagged `suppressed`. Omitted → the user's saved analytics default (else 10).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
@@ -357,9 +349,8 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Compare ONE process definition as it runs on two CIB Seven engines (e.g. prod-a vs prod-b) over a shared rolling window, from metrics. processDefinitionKey is required: engines host different process mixes, so comparing their whole workloads would measure the mix rather than the engines — holding the process fixed is what makes the delta attributable. Returns instance counts, completion/failure ratios, durations (avg, p95) and incident rate per engine, plus a delta. Flagged `suppressed` when either engine has fewer than minBucketSize instances. For the unscoped cross-engine picture (what runs where, load, job backlog, which keys are deployed on several engines) use analytics_engine_landscape first; its `sharedProcessKeys` are the valid inputs here. Discover engine ids with the camunda7_engine tool (action \"list\").",
+    "description": "Compare ONE process definition as it runs on two CIB Seven engines (e.g. prod-a vs prod-b) over a shared rolling window, from metrics. processDefinitionKey is required: engines host different process mixes, so comparing their whole workloads would measure the mix rather than the engines — holding the process fixed is what makes the delta attributable. Returns instance counts, completion/failure ratios, durations (avg, p95) and incident rate per engine, plus a delta. Flagged `suppressed` when either engine has fewer than minBucketSize instances. For the unscoped cross-engine picture (what runs where, load, job backlog, which keys are deployed on several engines) use analytics_engine_landscape first; its `sharedProcessKeys` are the valid inputs here.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -367,7 +358,7 @@
           "type": "string"
         },
         "engineA": {
-          "description": "First engine id (the baseline). Discover ids with the camunda7_engine tool (action \"list\").",
+          "description": "First engine id (the baseline).",
           "minLength": 1,
           "type": "string"
         },
@@ -378,7 +369,6 @@
         },
         "minBucketSize": {
           "description": "Minimum per-window instance count before results are flagged `suppressed`. Omitted → the user's saved analytics default (else 10).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
@@ -412,7 +402,6 @@
     },
     "description": "Live operational health of the CIB Seven engine(s), from Prometheus state gauges: running WIP, open incidents by type, dead jobs (retries exhausted), executable/suspended job backlog, open/unassigned user tasks, external-task backlog, deployed definitions, and which alert rules are firing/pending. A one-call ops snapshot with an overall status (healthy/degraded/critical). Optional engine filter.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -427,7 +416,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         }
       },
       "type": "object"
@@ -442,7 +431,6 @@
     },
     "description": "Cross-engine overview of the process landscape: which process definitions run on which engine (the inventory matrix), the absolute load per engine (running instances, open incidents, failed jobs), and the engine-owned job backlog (executable/suspended/future-due jobs, open external tasks). Reports counts, not rates, on purpose — engines host different process mixes, so a per-engine failure rate or average duration measures the mix rather than the engine. The backlog gauges carry no process label and therefore DO compare across engines. Returns `sharedProcessKeys`: the definitions deployed on more than one engine, the only sound inputs for analytics_engine_compare. Pass the full configured engine list to also surface engines reporting no metrics at all (`reporting: false`).",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -457,7 +445,7 @@
               "type": "array"
             }
           ],
-          "description": "Engine ids to include. Pass the FULL list of configured engines to also surface engines that report no metrics at all (they come back with `reporting: false`); when omitted, only engines Prometheus holds series for appear. Discover ids with the camunda7_engine tool (action \"list\")."
+          "description": "Engine ids to include. Pass the FULL list of configured engines to also surface engines that report no metrics at all (they come back with `reporting: false`); when omitted, only engines Prometheus holds series for appear."
         }
       },
       "type": "object"
@@ -480,7 +468,6 @@
     },
     "description": "Internal JSON feed (no UI) for the cross-engine landscape widget's self-fetch — also consumed by the camunda7 cockpit's cross-engine mode. Prefer analytics_show_engine_landscape.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -495,7 +482,7 @@
               "type": "array"
             }
           ],
-          "description": "Engine ids to include. Pass the FULL list of configured engines to also surface engines that report no metrics at all (they come back with `reporting: false`); when omitted, only engines Prometheus holds series for appear. Discover ids with the camunda7_engine tool (action \"list\")."
+          "description": "Engine ids to include. Pass the FULL list of configured engines to also surface engines that report no metrics at all (they come back with `reporting: false`); when omitted, only engines Prometheus holds series for appear."
         }
       },
       "type": "object"
@@ -519,7 +506,6 @@
     },
     "description": "Internal JSON feed (no UI) for the failure dashboard widgets' self-fetch. Prefer analytics_show_failure_dashboard.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -534,7 +520,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         }
       },
       "type": "object"
@@ -550,7 +536,6 @@
     },
     "description": "List currently-open incident patterns from process metrics, grouped by incident type and process definition (point-in-time — what is failing right now). For the actual failed instances (ids, messages), drill in with camunda7_list_incidents / camunda7_query_historic_process_instances.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -565,7 +550,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "incidentType": {
           "description": "Filter by incident type (e.g. failedJob)",
@@ -591,11 +576,11 @@
     "annotations": {
       "destructiveHint": false,
       "idempotentHint": true,
+      "openWorldHint": false,
       "readOnlyHint": false
     },
     "description": "Update the caller's analytics defaults. Only the provided fields change; omitted fields keep their value. The saved defaults apply whenever an analytics call omits `period` or `minBucketSize`.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "defaultPeriod": {
@@ -611,7 +596,6 @@
         },
         "minBucketSize": {
           "description": "New minimum comparison bucket size. Omitted → unchanged.",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         }
@@ -637,7 +621,6 @@
     },
     "description": "Internal JSON feed (no UI) for the analytics settings section's self-fetch. Prefer analytics_show_settings.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {},
       "type": "object"
@@ -664,7 +647,6 @@
     },
     "description": "Render a process definition's BPMN diagram with a per-element heat overlay from metrics, with a Frequency↔Duration toggle (traversal count vs average duration per element). Node-level only — sequence-flow/edge heat is not available from metrics — and rendered on the latest deployed version's diagram (activity metrics carry no version label). Needs the camunda7 client to fetch the BPMN XML; otherwise the widget shows a fallback.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -679,7 +661,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "period": {
           "description": "Analysis time period. Omitted → the user's saved analytics default (else 7d).",
@@ -730,7 +712,6 @@
     },
     "description": "Visualize before/after KPI deltas around a deployment timestamp. Results are flagged `suppressed` when either window has fewer than minBucketSize instances.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -753,11 +734,10 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "minBucketSize": {
           "description": "Minimum per-window instance count before results are flagged `suppressed`. Omitted → the user's saved analytics default (else 10).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
@@ -813,7 +793,6 @@
     },
     "description": "Show aggregated process metrics and KPIs from Prometheus with per-activity bottleneck breakdown.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -828,7 +807,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "period": {
           "description": "Analysis time period. Omitted → the user's saved analytics default (else 7d).",
@@ -876,7 +855,6 @@
     },
     "description": "Visualize KPI deltas for ONE process definition as it runs on two CIB Seven engines (e.g. prod-a vs prod-b) over a shared time window. processDefinitionKey is required — engines host different process mixes, so an unscoped engine-vs-engine comparison would measure the mix, not the engines. Results are flagged `suppressed` when either engine has fewer than minBucketSize instances. For the cross-engine picture use analytics_show_engine_landscape.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -884,7 +862,7 @@
           "type": "string"
         },
         "engineA": {
-          "description": "First engine id (the baseline). Discover ids with the camunda7_engine tool (action \"list\").",
+          "description": "First engine id (the baseline).",
           "minLength": 1,
           "type": "string"
         },
@@ -895,7 +873,6 @@
         },
         "minBucketSize": {
           "description": "Minimum per-window instance count before results are flagged `suppressed`. Omitted → the user's saved analytics default (else 10).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
@@ -947,7 +924,6 @@
     },
     "description": "Show the cross-engine process landscape: which process definitions run on which engine, the absolute load per engine (running instances, open incidents, failed jobs) and the engine-owned job backlog. Counts, not rates — engines host different process mixes, so per-engine rates would measure the mix. Highlights the definitions deployed on several engines, the only sound targets for analytics_show_engine_compare.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -962,7 +938,7 @@
               "type": "array"
             }
           ],
-          "description": "Engine ids to include. Pass the FULL list of configured engines to also surface engines that report no metrics at all (they come back with `reporting: false`); when omitted, only engines Prometheus holds series for appear. Discover ids with the camunda7_engine tool (action \"list\")."
+          "description": "Engine ids to include. Pass the FULL list of configured engines to also surface engines that report no metrics at all (they come back with `reporting: false`); when omitted, only engines Prometheus holds series for appear."
         }
       },
       "type": "object"
@@ -995,7 +971,6 @@
     },
     "description": "Show current incident/failure state from Prometheus, grouped by incident type, activity, and process definition (point-in-time — what is failing right now).",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -1010,7 +985,7 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         }
       },
       "type": "object"
@@ -1043,7 +1018,6 @@
     },
     "description": "Open the analytics settings section: the default look-back period and the minimum comparison bucket size applied when analytics calls omit them.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {},
       "type": "object"
@@ -1076,7 +1050,6 @@
     },
     "description": "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Instance counts and durations are exact per version; failure and incident rates show as n/a — the incident metric carries no version label, so they are not measured per version (never read them as zero). Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -1095,11 +1068,10 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "minBucketSize": {
           "description": "Minimum per-window instance count before results are flagged `suppressed`. Omitted → the user's saved analytics default (else 10).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
@@ -1110,13 +1082,11 @@
         },
         "versionA": {
           "description": "First process definition version (the baseline).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
         "versionB": {
           "description": "Second process definition version (the candidate).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
@@ -1152,7 +1122,6 @@
     },
     "description": "Compare KPIs between two deployed process definition versions of the same processDefinitionKey over a shared rolling window, from metrics. The version is an exact label on the process-instance series, so instance counts, completed counts and durations (avg, p95) per version plus their deltas are precise. failed_count, failure_rate_pct, incident_count, incident_rate_pct and their deltas are null — NOT zero: the incident metric carries no version label, so incidents cannot be split by version (see `notes`); for incident figures per process key (all versions together) use analytics_analyze_process_performance or analytics_element_bottleneck. Flagged `suppressed` when either version has fewer than minBucketSize instances. Pair with camunda7_list_process_definitions to discover versions.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -1171,11 +1140,10 @@
               "type": "array"
             }
           ],
-          "description": "Optional engine id (or list of ids) to scope the query. When omitted, aggregates across all engines. Use the `camunda7_engine` tool (action \"list\") to discover ids."
+          "description": "Engine id(s) to scope to; omitted = all engines (see server instructions)"
         },
         "minBucketSize": {
           "description": "Minimum per-window instance count before results are flagged `suppressed`. Omitted → the user's saved analytics default (else 10).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
@@ -1186,13 +1154,11 @@
         },
         "versionA": {
           "description": "First process definition version (the baseline).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
         "versionB": {
           "description": "Second process definition version (the candidate).",
-          "maximum": 9007199254740991,
           "minimum": 1,
           "type": "integer"
         },
@@ -1229,7 +1195,6 @@
     },
     "description": "Internal JSON feed (no UI) for one activity's incident rows, offset-paged. Prefer camunda7_show_process_incidents.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -1237,19 +1202,20 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -1282,11 +1248,13 @@
     },
     "description": "Internal JSON feed (no UI) for the BPMN viewer — diagram XML plus live overlays. Prefer camunda7_show_bpmn_viewer.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processDefinitionKey": {
@@ -1299,7 +1267,6 @@
         },
         "version": {
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         }
       },
@@ -1310,15 +1277,19 @@
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": true
     },
     "description": "Claim a user task for a specific user.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "taskId": {
@@ -1354,7 +1325,6 @@
     },
     "description": "Internal JSON feed (no UI) for one failure cluster's detail. Prefer camunda7_show_cluster_detail.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -1366,12 +1336,14 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -1382,7 +1354,6 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "messageSignature": {
@@ -1415,11 +1386,13 @@
     },
     "description": "Internal JSON feed (no UI) for the cockpit overview — per-definition stats. Prefer camunda7_open_cockpit.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         }
       },
@@ -1430,15 +1403,18 @@
   },
   {
     "annotations": {
+      "destructiveHint": false,
       "openWorldHint": true
     },
     "description": "Complete a user task by ID, optionally setting variables. A task with form fields is submitted as its form: the engine enforces them (required, readonly, types); omitted fields keep their value. A delegated task (delegationState PENDING) is resolved back to its owner instead and stays open (outcome \"resolved\").",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "taskId": {
@@ -1485,11 +1461,11 @@
   },
   {
     "annotations": {
+      "destructiveHint": false,
       "openWorldHint": true
     },
     "description": "Correlate a message to a waiting catch event or a message start event; target it via processInstanceId, businessKey or correlationKeys. Unless all=true the engine needs EXACTLY one match: several fail, and so does none without a message start event.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "all": {
@@ -1531,7 +1507,10 @@
           "type": "object"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "messageName": {
@@ -1586,37 +1565,6 @@
     "name": "camunda7_correlate_message"
   },
   {
-    "annotations": {
-      "destructiveHint": false,
-      "idempotentHint": true
-    },
-    "description": "Manage which CIB Seven / Camunda 7 engine operations tools talk to. action=\"list\" returns the engines available to this profile grouped by ENVIRONMENT (`environments` maps each environment to its engine ids; every engine entry names its `environment`) plus the saved default engine (if any) — pick an environment first, then one of its engines; action=\"select\" (requires engineId) saves that engine as the caller's default — all subsequent operations tool calls without a per-call `engine` override route to it (a durable per-user setting, the same field the settings page edits); action=\"current\" reports the saved default engine (or null). With more than one engine configured, pass the per-call `engine` parameter or save a default first.",
-    "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "additionalProperties": false,
-      "properties": {
-        "action": {
-          "description": "Engine-management action to perform.",
-          "enum": [
-            "list",
-            "select",
-            "current"
-          ],
-          "type": "string"
-        },
-        "engineId": {
-          "description": "Engine id to select (required for action=\"select\"), e.g. \"prod-a\".",
-          "type": "string"
-        }
-      },
-      "required": [
-        "action"
-      ],
-      "type": "object"
-    },
-    "name": "camunda7_engine"
-  },
-  {
     "_meta": {
       "openai/widgetAccessible": true,
       "ui": {
@@ -1632,11 +1580,13 @@
     },
     "description": "Internal JSON feed (no UI) for the engine health verdict + incident clusters. Prefer camunda7_show_engine_health / camunda7_open_cockpit.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         }
       },
@@ -1653,11 +1603,13 @@
     },
     "description": "Build a structured, tracker-agnostic ticket draft (title, markdown body, labels) from a Camunda 7 / CIB Seven incident. Does NOT file anything — present the draft in the chat for review and reuse; the user decides where it goes (their issue tracker via whatever integration is available, the optional prefilled GitHub URL, or copy-paste).",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "incidentId": {
@@ -1685,11 +1637,13 @@
     },
     "description": "Get the activity instance tree of a running process instance. Shows which activities are currently active.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processInstanceId": {
@@ -1712,7 +1666,6 @@
     },
     "description": "Get a deployment by ID — returns deployment timestamp + source, used for pre/post deployment correlation (commit-hash → deployment-ID → timestamp).",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "deploymentId": {
@@ -1721,7 +1674,10 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         }
       },
@@ -1740,11 +1696,13 @@
     },
     "description": "Get the BPMN 2.0 XML of a process definition by ID. Returns the raw BPMN XML string.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processDefinitionId": {
@@ -1767,11 +1725,13 @@
     },
     "description": "Get details of a single process instance by ID.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processInstanceId": {
@@ -1794,11 +1754,13 @@
     },
     "description": "Get all variables of a process instance (Json/Xml/Object: serialized string + valueInfo).",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processInstanceId": {
@@ -1821,11 +1783,13 @@
     },
     "description": "Get details of a single user task by ID.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "taskId": {
@@ -1848,11 +1812,13 @@
     },
     "description": "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`): fields (type, required, readonly) pre-filled with current values. Never submit readonly fields. Without form fields, fields is empty and formKey (or formRef, a linked Camunda Form) names the task's own form, if any.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "taskId": {
@@ -1875,11 +1841,13 @@
     },
     "description": "Get all variables of a user task (Json/Xml/Object: serialized string + valueInfo).",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "taskId": {
@@ -1910,11 +1878,13 @@
     },
     "description": "Internal JSON feed (no UI) for a single incident — stacktrace, BPMN with the failing activity, variables, activity tree, history. Prefer camunda7_show_incident_detail.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "incidentId": {
@@ -1946,11 +1916,13 @@
     },
     "description": "Internal JSON feed (no UI) for the incidents dashboard — open incidents grouped by process. Prefer camunda7_show_incidents_dashboard.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "incidentType": {
@@ -1983,11 +1955,13 @@
     },
     "description": "Internal JSON feed (no UI) for a single process instance. Prefer camunda7_show_instance_detail.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processInstanceId": {
@@ -2019,11 +1993,13 @@
     },
     "description": "Internal JSON feed (no UI) for jobs. Prefer camunda7_show_job_panel.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "failedOnly": {
@@ -2032,14 +2008,12 @@
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -2060,17 +2034,18 @@
     },
     "description": "List deployments with optional filters.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "maxResults": {
           "default": 20,
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "name": {
@@ -2106,12 +2081,25 @@
   {
     "annotations": {
       "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "List the engines available to this profile, grouped by environment (`environments` maps each to its engine ids), plus the caller's saved default engine (`defaultEngineId`, null when none).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "camunda7_list_engines"
+  },
+  {
+    "annotations": {
+      "idempotentHint": true,
       "openWorldHint": true,
       "readOnlyHint": true
     },
     "description": "List external tasks (service-task work handed to external workers) with optional filters — topic, worker, lock state, retries, process instance/definition, activity. Read-only: it never locks, completes or fails a task (noRetriesLeft finds the failed ones; where the toolset allows engine writes, camunda7_set_external_task_retries hands them back to their workers). Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -2119,13 +2107,15 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "default": 0,
           "description": "Zero-based index of the first result to return (pagination offset)",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -2136,7 +2126,6 @@
         "maxResults": {
           "default": 20,
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "noRetriesLeft": {
@@ -2234,7 +2223,6 @@
     },
     "description": "List incidents (errors) in the engine: failed jobs, external task failures, etc. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -2242,13 +2230,15 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "default": 0,
           "description": "Zero-based index of the first result to return (pagination offset)",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -2267,7 +2257,6 @@
         "maxResults": {
           "default": 20,
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionId": {
@@ -2360,7 +2349,6 @@
     },
     "description": "List jobs (timers, async continuations) with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "active": {
@@ -2372,20 +2360,21 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "default": 0,
           "description": "Zero-based index of the first result to return (pagination offset)",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
         "maxResults": {
           "default": 20,
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "noRetriesLeft": {
@@ -2476,11 +2465,13 @@
     },
     "description": "List deployed process definitions with optional filters. Returns key, name, version, and deployment info.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "latestVersion": {
@@ -2491,7 +2482,6 @@
           "default": 20,
           "description": "Maximum number of results",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "nameLike": {
@@ -2537,7 +2527,6 @@
     },
     "description": "List running process instances with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "active": {
@@ -2553,13 +2542,15 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "default": 0,
           "description": "Zero-based index of the first result to return (pagination offset)",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -2567,7 +2558,6 @@
           "default": 20,
           "description": "Maximum results",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -2646,7 +2636,6 @@
     },
     "description": "List user tasks with optional filters. Each task carries ID, name, assignee, process info, and timestamps. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "assignee": {
@@ -2658,13 +2647,15 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "default": 0,
           "description": "Zero-based index of the first result to return (pagination offset)",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -2676,7 +2667,6 @@
           "default": 20,
           "description": "Maximum number of results",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -2771,11 +2761,13 @@
     },
     "description": "Open the consolidated CIB Seven operations cockpit — a single app that navigates client-side (no extra tool calls) across the process landscape: overview, per-definition running instances, instance detail, plus quick access to human tasks, jobs and deployments. The Support entry point.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         }
       },
@@ -2806,11 +2798,13 @@
     },
     "description": "Internal JSON feed (no UI) for the unified definition view — header, KPIs (incl. failed jobs), BPMN overlays, activity-grouped incidents. Prefer camunda7_show_process_detail / camunda7_show_process_incidents.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processDefinitionKey": {
@@ -2842,7 +2836,6 @@
     },
     "description": "Internal JSON feed (no UI) for a definition's running instances. Prefer camunda7_show_process_instances.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "active": {
@@ -2854,19 +2847,20 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -2903,16 +2897,17 @@
     },
     "description": "Internal JSON feed (no UI) for deployed process definitions, offset-paged. Prefer camunda7_show_process_list.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -2923,7 +2918,6 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "nameLike": {
@@ -2948,7 +2942,6 @@
     },
     "description": "Query historic activity instances, i.e. which BPMN activities were executed in a process instance. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -2964,7 +2957,10 @@
           "type": "boolean"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "finished": {
@@ -2982,14 +2978,12 @@
         "firstResult": {
           "default": 0,
           "description": "Zero-based index of the first result to return (pagination offset)",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
         "maxResults": {
           "default": 50,
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionId": {
@@ -3081,7 +3075,6 @@
     },
     "description": "Query historic process instances (completed and running) with filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "businessKey": {
@@ -3093,7 +3086,10 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "finished": {
@@ -3111,7 +3107,6 @@
         "firstResult": {
           "default": 0,
           "description": "Zero-based index of the first result to return (pagination offset)",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -3126,7 +3121,6 @@
         "maxResults": {
           "default": 20,
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -3221,7 +3215,6 @@
     },
     "description": "Query historic task instances (completed and open user tasks). Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "assignee": {
@@ -3229,7 +3222,10 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "finished": {
@@ -3239,14 +3235,12 @@
         "firstResult": {
           "default": 0,
           "description": "Zero-based index of the first result to return (pagination offset)",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
         "maxResults": {
           "default": 20,
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -3338,24 +3332,24 @@
     },
     "description": "Query historic variable instances, i.e. variable values from process history (serialized, with valueInfo). Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "default": 0,
           "description": "Zero-based index of the first result to return (pagination offset)",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
         "maxResults": {
           "default": 50,
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processInstanceId": {
@@ -3426,15 +3420,18 @@
   },
   {
     "annotations": {
+      "destructiveHint": false,
       "openWorldHint": true
     },
     "description": "Resolve a custom incident by ID. The engine refuses failedJob/failedExternalTask (400) — retry those: camunda7_set_job_retries / camunda7_set_external_task_retries on the incident's configuration id.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "incidentId": {
@@ -3451,11 +3448,12 @@
   },
   {
     "annotations": {
-      "idempotentHint": true
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     "description": "Update the caller's user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like \"switch the UI to German\" (language: \"de\") or \"only let me pick the prod engines\" (allowedEngineIds). Engine availability is curation, not access control.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "allowedEngineIds": {
@@ -3470,7 +3468,7 @@
           "type": "string"
         },
         "defaultEngineId": {
-          "description": "Default engine: operations tools route here when no per-call `engine` override is given, and the cockpit lands on it. Saved via the settings page or `camunda7_engine` action \"select\".",
+          "description": "Default engine: operations tools route here when no per-call `engine` override is given, and the cockpit lands on it. Saved via the settings page or camunda7_select_engine.",
           "type": "string"
         },
         "language": {
@@ -3516,15 +3514,40 @@
     "annotations": {
       "destructiveHint": false,
       "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "description": "Save an engine as the caller's default: camunda7 tool calls without `engine` then route to it (a durable per-user setting, the same field the settings page edits). Needs a signed-in caller.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "engineId": {
+          "description": "Engine id to save as the default, e.g. \"prod-a\"",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "engineId"
+      ],
+      "type": "object"
+    },
+    "name": "camunda7_select_engine"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": true
     },
     "description": "Set the retries of an external task. Retries > 0 hand a failed task back to its workers and clear its failedExternalTask incident (camunda7_resolve_incident cannot resolve that incident type); 0 raises an incident. Never locks, completes or fails the task itself.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "externalTaskId": {
@@ -3533,7 +3556,6 @@
         },
         "retries": {
           "description": "Number of retries to set; > 0 makes a failed task available to its workers again",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         }
@@ -3548,15 +3570,19 @@
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": true
     },
     "description": "Set the number of retries for a failed job. Setting retries > 0 will re-execute the job.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "jobId": {
@@ -3565,7 +3591,6 @@
         },
         "retries": {
           "description": "Number of retries to set",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         }
@@ -3580,15 +3605,19 @@
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": true
     },
     "description": "Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read).",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processInstanceId": {
@@ -3626,15 +3655,19 @@
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": true
     },
     "description": "Set the assignee of a user task.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "taskId": {
@@ -3673,11 +3706,13 @@
     },
     "description": "Show an interactive BPMN diagram. Pass `processInstanceId` to overlay active activities, incidents, and failed-job counts for a running instance, or pass `processDefinitionKey` (with optional `version`) to view the diagram of a process definition without instance overlays.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processDefinitionKey": {
@@ -3691,7 +3726,6 @@
         "version": {
           "description": "Specific definition version. Requires `processDefinitionKey`. Defaults to the latest version when omitted.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         }
       },
@@ -3725,7 +3759,6 @@
     },
     "description": "Drill into ONE failure cluster: the affected process instances (business keys first), the full sample failure message, and the time profile (new in last hour / 24h) for an activity failing with a given incident type. The middle layer between the engine health overview and a single incident's detail.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "activityId": {
@@ -3737,12 +3770,14 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -3753,7 +3788,6 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "messageSignature": {
@@ -3795,11 +3829,13 @@
     },
     "description": "Show the AI-first engine overview: a deterministic health verdict (ok / degraded / critical) with running-instance and incident KPIs and the top incident clusters, grouped cross-process by failing activity + incident type. The home base for triaging what is wrong on a CIB Seven / Camunda 7 engine — each cluster drills in or hands off to AI for root cause + remediation.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         }
       },
@@ -3833,23 +3869,23 @@
     },
     "description": "Show activity timeline for a process instance.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
         "maxResults": {
           "description": "Page size (default 500).",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processInstanceId": {
@@ -3890,11 +3926,13 @@
     },
     "description": "Detail view for a single incident: failure stacktrace, BPMN with the failing activity highlighted, instance variables and activity tree, and a history timeline. Drill-in target from camunda7_show_process_incidents.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "incidentId": {
@@ -3935,11 +3973,13 @@
     },
     "description": "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "incidentType": {
@@ -3981,11 +4021,13 @@
     },
     "description": "Show detailed view of a single process instance with activity tree, variables, and incidents.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processInstanceId": {
@@ -4026,11 +4068,13 @@
     },
     "description": "Show jobs with a focus on failed jobs (no retries left). Displays error messages and retry status.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "failedOnly": {
@@ -4040,14 +4084,12 @@
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -4085,11 +4127,13 @@
     },
     "description": "Open the unified process-definition view: header with actions, KPI strip (running instances, incidents, failed jobs), BPMN flow (incident overlays or execution heatmap) and the activity-grouped incident list. Drill-in target from cockpit-dashboard rows; camunda7_show_process_incidents opens the same view with incident focus.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processDefinitionKey": {
@@ -4130,11 +4174,13 @@
     },
     "description": "Open the unified process-definition view focused on its incidents: header, KPI strip, BPMN diagram in incident-overlay mode, and the activity-grouped incident table with per-incident actions (resolve, jump to Cockpit). Same view as camunda7_show_process_detail — this entry point sets the incident focus.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processDefinitionKey": {
@@ -4175,7 +4221,6 @@
     },
     "description": "List running process instances as a filterable table (business key, version, suspended/incident state). Scope to one definition via processDefinitionKey, or omit it for ALL running instances engine-wide. Drill-in target from the cockpit definitions table and process-detail; each row opens camunda7_show_instance_detail.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "active": {
@@ -4187,12 +4232,14 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -4200,7 +4247,6 @@
           "default": 50,
           "description": "Page size.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -4246,16 +4292,17 @@
     },
     "description": "Show deployed process definitions as a card grid view.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "firstResult": {
           "description": "Offset for pagination (0-based).",
-          "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
         },
@@ -4267,7 +4314,6 @@
         "maxResults": {
           "description": "Page size.",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991,
           "type": "integer"
         },
         "nameLike": {
@@ -4309,7 +4355,6 @@
     },
     "description": "Open the user profile & settings panel: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {},
       "type": "object"
@@ -4325,11 +4370,11 @@
   },
   {
     "annotations": {
+      "destructiveHint": false,
       "openWorldHint": true
     },
     "description": "Start a new process instance by process definition key. Optionally set a business key and initial variables.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "businessKey": {
@@ -4337,7 +4382,10 @@
           "type": "string"
         },
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "processDefinitionKey": {
@@ -4384,15 +4432,19 @@
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": true
     },
     "description": "Unclaim (release) a user task, removing the current assignee.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
         "engine": {
-          "description": "Optional engine id override for this single call. When omitted, the caller's saved default engine (if one was saved) is used; when only one engine is configured, that one is used.",
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
           "type": "string"
         },
         "taskId": {
@@ -4423,7 +4475,6 @@
     },
     "description": "Internal JSON feed (no UI) for the caller's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {},
       "type": "object"
@@ -4447,7 +4498,6 @@
     },
     "description": "Internal JSON feed (no UI): which engine write actions the widgets may offer in this deployment.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {},
       "type": "object"
@@ -4458,7 +4508,6 @@
   {
     "description": "Permanently removes a dashboard by id.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
         "id": {
           "description": "Dashboard id as returned by `save-dashboard` or `list-dashboards`.",
@@ -4483,7 +4532,6 @@
     },
     "description": "App-only. Returns the live pipeline context plus the reachable / unreachable widgets, available steps and key catalogue for the current keys + steps. Used by the in-iframe LayoutBuilder.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
         "keys": {
           "additionalProperties": {},
@@ -4553,7 +4601,6 @@
     },
     "description": "Returns the full dashboard bundle. The returned `{ keys, steps, layout, title }` fields can be handed straight to `render-view`.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
         "id": {
           "description": "Dashboard id as returned by `save-dashboard` or `list-dashboards`.",
@@ -4578,7 +4625,6 @@
     },
     "description": "Re-runs the pipeline with the stored parameters.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
         "keys": {
           "additionalProperties": {},
@@ -4799,7 +4845,6 @@
     },
     "description": "Builds a UI from pipeline steps and widgets. IMPORTANT: call get-framework-manifest first to learn which step-ids and widget-ids are available — only use ids listed there. Each widget entry's optional `propsSchema` (JSON Schema) describes the per-instance `props` you can set on a layout cell to scope or configure that widget (e.g. one tab per `processDefinitionKey`).",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
         "keys": {
           "additionalProperties": {},
@@ -5014,7 +5059,6 @@
   {
     "description": "Persists a dashboard (render-view input bundle + name). Pass an existing `id` to update, omit to create. The builder UI's Save button invokes this tool.",
     "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
         "description": {
           "description": "Optional free-text summary shown in lists.",

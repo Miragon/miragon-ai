@@ -116,7 +116,8 @@ Non-negotiables:
   `camunda7:read-only|operations|admin` toolset filtering stays correct — `read-only`
   membership is derived from `readOnlyHint: true`. `src/lib/toolsets.test.ts` enforces
   the rule structurally over every registered tool (`destructiveHint` ⇒ admin-only,
-  read-only ⇒ `readOnlyHint`) — get the annotations right; never edit the test to pass.
+  read-only ⇒ `readOnlyHint`, every write states `destructiveHint` explicitly) — get
+  the annotations right; never edit the test to pass.
 - Toolsets fail CLOSED: with no suffix a deployment runs `read-only` (no OAuth) or
   `operations` (OAuth); `admin` is only ever reached by naming it. So an `operations`
   tool is on for every authenticated default deployment and an `admin` tool for none —
@@ -127,14 +128,19 @@ Non-negotiables:
 
 ### Annotation conventions
 
-| Operation                               | Annotations                                                         |
-| --------------------------------------- | ------------------------------------------------------------------- |
-| Read / list / get                       | `{ readOnlyHint: true, idempotentHint: true, openWorldHint: true }` |
-| Write (start, set variable, suspend, …) | `{ openWorldHint: true }`                                           |
-| Delete / irreversible (delete, modify)  | `{ destructiveHint: true, openWorldHint: true }`                    |
-| Engine-wide / worker / deploy           | `{ destructiveHint: true, openWorldHint: true }` (admin-only)       |
+| Operation                                     | Annotations                                                             |
+| --------------------------------------------- | ----------------------------------------------------------------------- |
+| Read / list / get                             | `{ readOnlyHint: true, idempotentHint: true, openWorldHint: true }`     |
+| Set-style write (variable, retries, assignee) | `{ destructiveHint: false, idempotentHint: true, openWorldHint: true }` |
+| Other write (start, complete, correlate, …)   | `{ destructiveHint: false, openWorldHint: true }`                       |
+| Delete / irreversible (delete, modify)        | `{ destructiveHint: true, openWorldHint: true }` (admin-only)           |
+| Engine-wide / worker / deploy                 | `{ destructiveHint: true, openWorldHint: true }` (admin-only)           |
 
-Every camunda7 tool carries `openWorldHint: true` (it talks to an external engine).
+MCP reads an ABSENT `destructiveHint` as `true`, so every write states it — `false` is a
+deliberate claim, not a default. `idempotentHint: true` marks writes that repeat to the
+same state. Every engine tool carries `openWorldHint: true` (it talks to an external
+engine); tools that only touch the local profile store (`camunda7_select_engine`, the
+settings saves) say `openWorldHint: false`.
 
 ## Step 3 — wire a new domain file
 

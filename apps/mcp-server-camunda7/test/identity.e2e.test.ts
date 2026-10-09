@@ -81,7 +81,7 @@ describe("caller identity on the wire (createApp)", () => {
         /No caller identity/,
       )
       expect(
-        refusal(await call(client, "camunda7_engine", { action: "select", engineId: "default" })),
+        refusal(await call(client, "camunda7_select_engine", { engineId: "default" })),
       ).toMatch(/No caller identity/)
 
       expect(await runtime.profileStore.get(SESSION)).toEqual(before)
@@ -142,6 +142,21 @@ describe("caller identity on the wire (createApp)", () => {
       expect(aliceRecord?.modules).toMatchObject({ analytics: { defaultPeriod: "30d" } })
       expect(bobRecord).toMatchObject({ language: "en", theme: "dark", userId: "bob" })
       expect(bobRecord?.modules).not.toHaveProperty("analytics")
+    })
+
+    it("saves a default engine for the caller alone (camunda7_select_engine / _list_engines)", async () => {
+      expect(
+        (await call(alice, "camunda7_select_engine", { engineId: "default" })).isError,
+      ).toBeFalsy()
+      expect(payload(await call(alice, "camunda7_list_engines"))).toMatchObject({
+        defaultEngineId: "default",
+      })
+      expect(payload(await call(bob, "camunda7_list_engines"))).toMatchObject({
+        defaultEngineId: null,
+      })
+      expect((await runtime.profileStore.get("alice"))?.modules).toMatchObject({
+        camunda7: { defaultEngineId: "default" },
+      })
     })
   })
 })

@@ -53,7 +53,7 @@ Edit `.env` (every field is documented inline in `.env.example`):
 operaton | camunda7`) and `auth` — overrides the single-engine shorthand
   above. To group engines by environment, either set `environment` per entry
   or write the JSON as a map keyed by environment id
-  (`{"<environment>": [engines…]}`) — pickers and `camunda7_engine` `list`
+  (`{"<environment>": [engines…]}`) — pickers and `camunda7_list_engines`
   then offer a two-stage environment → engine selection. Engine ids stay
   globally unique across environments.
 - `PROMETHEUS_URL` — unset defaults to `http://localhost:9090`, which does
@@ -233,8 +233,9 @@ needs `MCP_URL` set to the public URL — else every call gets 403.
 pnpm build && pnpm typecheck && pnpm test
 ```
 
-Then a functional pass in the inspector: `camunda7_engine` (engine reachable,
-auth works), one `camunda7_show_*` widget, one analytics tool (Prometheus
+Then a functional pass in the inspector: `camunda7_list_engines` (engines
+configured), one cheap read such as `camunda7_list_process_definitions` (engine
+reachable, auth works), one `camunda7_show_*` widget, one analytics tool (Prometheus
 reachable, `engine_id` matches). A clean boot log — no unknown-var or
 missing-URL warnings — is part of done.
 

@@ -11,6 +11,7 @@ import { providerForEntry } from "../providers/index.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../tool-names.js"
 import { registerWidgetDataFeeds } from "../widget-tools/data-feeds.js"
 import { registerProcessInstanceTools } from "./process-instances.js"
+import { engineParamShape } from "../lib/with-engine.js"
 
 /**
  * Guard for #325, end to end: the text a MODEL reads when an engine call
@@ -206,6 +207,7 @@ describe("widget-path feeds honor the MCP request's ctx.signal", () => {
       healthThresholds: DEFAULT_HEALTH_THRESHOLDS,
       profileStore: createInMemoryProfileStore(),
       toolset: "read-only",
+      engineParam: engineParamShape,
     })
     const controller = new AbortController()
     setTimeout(() => controller.abort(), 30)

@@ -3,6 +3,7 @@ import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
 import { createPlugin } from "./plugin.js"
 import { analyticsToolsets } from "./toolsets.js"
+import { analyticsInstructions } from "./instructions.js"
 import type { FetchBpmnXml } from "./widget-tools.js"
 import type { ProfileSource } from "./server-locale.js"
 
@@ -132,6 +133,15 @@ export const analyticsModule = {
     return [
       "PROMETHEUS_URL is not set — defaulting to http://localhost:9090. The repo's Compose stack publishes Prometheus on :8460 (PROMETHEUS_URL=http://localhost:8460).",
     ]
+  },
+
+  /**
+   * The module's server-instructions snippet: what `engine` means here (a
+   * metric filter — the fleet aggregate when omitted, camunda7's saved
+   * default does not apply), the periods and the health routing.
+   */
+  instructions(): string {
+    return analyticsInstructions()
   },
 
   createPlugin(

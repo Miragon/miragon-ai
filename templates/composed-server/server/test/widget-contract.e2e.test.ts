@@ -78,7 +78,14 @@ describe("widget wire contract (dual-protocol _meta)", () => {
       version: packageVersion(),
       title: "Acme MCP",
     })
-    expect(client.getInstructions()).toBe(SERVER_INSTRUCTIONS)
+    // Your preamble first, then each active module's own snippet — joined by
+    // the shared boot, so the Miragon modules' routing rules (camunda7's
+    // engine precedence, analytics' engine filter) reach the model with no
+    // code here. A custom module adds one via `instructions` on its definition.
+    const instructions = client.getInstructions() ?? ""
+    expect(instructions.startsWith(`${SERVER_INSTRUCTIONS}\n\n`)).toBe(true)
+    expect(instructions).toContain('one engine is configured ("default"); `engine` may be omitted.')
+    expect(instructions).toContain("analytics (Prometheus metrics of the engines):")
   })
 
   it("registers the custom notes module alongside the Miragon modules", () => {

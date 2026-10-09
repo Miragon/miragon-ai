@@ -74,8 +74,20 @@ describe("resolveStepEngine", () => {
     await expect(resolveStepEngine(appConfig)).rejects.toThrow(EngineNotSelectedError)
     // The message must name the selectable ids — the error path serialises
     // only code + message, so this is the LLM's one shot at seeing them.
+    // Without a `canSaveDefault` probe the save is never offered: a hint the
+    // caller cannot follow costs a dead round trip.
     await expect(resolveStepEngine(appConfig)).rejects.toThrow(
-      'No engine specified and no default engine saved. Available engines: alpha, beta. Pass the per-call `engine` parameter (camunda7_engine action "list" shows the ids). Where the toolset allows it, a signed-in user can also save a default with camunda7_engine action "select".',
+      "No engine specified and no default engine saved. Pass `engine` — one of: alpha, beta.",
+    )
+  })
+
+  it("points at camunda7_select_engine only when the registry says the caller can save", async () => {
+    const registry = createEngineRegistry(MULTI, (e) => ({ __engine: e.id }) as unknown as Client, {
+      canSaveDefault: () => true,
+    })
+    await expect(resolveEngine(undefined, registry)).rejects.toThrow(
+      "No engine specified and no default engine saved. Pass `engine` — one of: alpha, beta. " +
+        "To route later calls without it, save a default with camunda7_select_engine.",
     )
   })
 

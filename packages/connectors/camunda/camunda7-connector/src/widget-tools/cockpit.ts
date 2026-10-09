@@ -26,7 +26,6 @@ import {
 } from "../tool-names.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
 import { environmentOf } from "../lib/environments.js"
-import { engineParamShape } from "../lib/with-engine.js"
 import {
   pagingShape,
   processInstancesFilterShape,
@@ -37,7 +36,7 @@ import { type WidgetToolsContext, definitionViewLayout } from "./shared.js"
 
 /** The cockpit entry + the definition/instance list & detail show-tools. */
 export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
-  const { server, registry, profileStore } = ctx
+  const { server, registry, profileStore, engineParam } = ctx
 
   server.tool(
     {
@@ -46,7 +45,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Open the consolidated CIB Seven operations cockpit — a single app that navigates client-side (no extra tool calls) across the process landscape: overview, per-definition running instances, instance detail, plus quick access to human tasks, jobs and deployments. The Support entry point.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({ ...engineParamShape }),
+      inputSchema: strictToolInput({ ...engineParam }),
       ...showToolBinding(CAMUNDA7_OPEN_COCKPIT, "Open Cockpit"),
     },
     withToolErrors(async (args, ctx) => {
@@ -96,7 +95,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
         ...processListFilterShape,
         latestVersion: processListFilterShape.latestVersion.default(true),
         ...pagingShape,
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_PROCESS_LIST, "Process Definitions"),
     },
@@ -142,7 +141,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
         ...processInstancesFilterShape,
         firstResult: pagingShape.firstResult,
         maxResults: pagingShape.maxResults.default(50),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_PROCESS_INSTANCES, "Process Instances"),
     },
@@ -184,7 +183,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processDefinitionKey: z.string().describe("Process definition key to display"),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_PROCESS_DETAIL, "Process Definition Detail"),
     },
@@ -232,7 +231,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
           .optional()
           .describe("Offset for pagination (0-based)."),
         maxResults: z.number().int().positive().optional().describe("Page size (default 500)."),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_HISTORY_TIMELINE, "History Timeline"),
     },

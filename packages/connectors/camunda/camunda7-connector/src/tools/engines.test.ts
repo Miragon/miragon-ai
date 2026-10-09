@@ -15,129 +15,87 @@ import { registerUserProfileTools } from "./user-profile.js"
 import {
   createEngineRegistry,
   UnknownEngineError,
+  type EngineEntry,
   type EngineRegistry,
 } from "../lib/resolve-engine.js"
 import { CAMUNDA7_MODULE_KEY } from "../lib/profile-schema.js"
-import type { Camunda7Toolset } from "../lib/toolsets.js"
-import { CAMUNDA7_ENGINE, CAMUNDA7_SAVE_USER_PROFILE } from "../tool-names.js"
+import {
+  CAMUNDA7_LIST_ENGINES,
+  CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_SELECT_ENGINE,
+} from "../tool-names.js"
 
 const ENGINES = [
   { id: "alpha", baseUrl: "http://alpha/engine-rest", cockpitUrl: "http://alpha/cockpit" },
   { id: "beta", baseUrl: "http://beta/engine-rest" },
 ]
 
-interface EngineToolArgs {
-  action: "list" | "select" | "current"
-  engineId?: string
-}
 type Handler = (
   reg: EngineRegistry,
-  args: EngineToolArgs,
+  args: Record<string, unknown>,
   ctx?: unknown,
 ) => Promise<Record<string, unknown>>
 
 /**
- * Registers the real engine tool against a recording registrar and exposes its
- * handler directly — the registrar/toolset mechanics have their own tests
- * (`lib/toolsets.test.ts`); here we pin the handler contract: what `select`
- * persists, whom it refuses, and what `list`/`current` report. The toolset is
- * always explicit; the default is `operations`, an authenticated boot's
- * no-suffix toolset (profile writes allowed).
+ * Registers the real engine tool pair against a recording registrar and
+ * exposes the handlers directly — the registrar/toolset mechanics have their
+ * own tests (`lib/toolsets.test.ts`: the select write stays out of
+ * `read-only`); here we pin the handler contract: what select persists, whom
+ * it refuses, and what the list reports.
  */
 function harness(
-  toolset: Camunda7Toolset = "operations",
   store: ProfileStore = createInMemoryProfileStore(),
+  engines: EngineEntry[] = ENGINES,
 ) {
-  const registry = createEngineRegistry(ENGINES, (e) => ({ __engine: e.id }) as unknown as Client)
-  let registered: ToolConfig<EngineRegistry> | undefined
+  const registry = createEngineRegistry(engines, (e) => ({ __engine: e.id }) as unknown as Client)
+  const configs = new Map<string, ToolConfig<EngineRegistry>>()
   const recorder = Object.assign(
     (config: ToolConfig<EngineRegistry>) => {
-      registered = config
+      configs.set(config.name, config)
     },
     { getRegisteredTools: () => [] },
   )
-  registerEngineTools(recorder as never, store, toolset)
-  if (!registered) throw new Error("camunda7_engine did not register")
-  const config = registered
-  const handler = (config as unknown as { handler: Handler }).handler
-  const call = (args: EngineToolArgs, ctx?: unknown) => handler(registry, args, ctx)
-  return { store, call, config }
+  registerEngineTools(recorder as never, store)
+  const handlerOf = (name: string) => {
+    const config = configs.get(name)
+    if (!config) throw new Error(`${name} did not register`)
+    return (config as unknown as { handler: Handler }).handler
+  }
+  const list = (ctx?: unknown) => handlerOf(CAMUNDA7_LIST_ENGINES)(registry, {}, ctx)
+  const select = (engineId: string, ctx?: unknown) =>
+    handlerOf(CAMUNDA7_SELECT_ENGINE)(registry, { engineId }, ctx)
+  return { store, list, select, configs }
 }
 
-/**
- * The tool's SHAPE follows the toolset at registration: `read-only` must list
- * strictly `readOnlyHint` tools (no exemption), so there the engine tool
- * registers without its durable `select` action.
- */
-describe("camunda7_engine registration variant per toolset", () => {
-  const actionsOf = (config: ToolConfig<EngineRegistry>) =>
-    (config.inputSchema as unknown as { action: z.ZodEnum }).action.options
-
-  it("read-only: a genuine read-only tool offering only list/current", () => {
-    const { config } = harness("read-only")
-    expect(config.name).toBe(CAMUNDA7_ENGINE)
-    expect(config.annotations).toEqual({ readOnlyHint: true, idempotentHint: true })
-    expect(actionsOf(config)).toEqual(["list", "current"])
-    expect(config.description).not.toContain('action="select"')
-    expect(config.description).toContain("does not allow saving a default engine")
-  })
-
-  it.each(["operations", "admin"] as const)(
-    "%s: idempotent, explicitly non-destructive, all three actions",
-    (toolset) => {
-      const { config } = harness(toolset)
-      expect(config.annotations).toEqual({ idempotentHint: true, destructiveHint: false })
-      expect(actionsOf(config)).toEqual(["list", "select", "current"])
-      expect(config.description).toContain('action="select" (requires engineId)')
-      expect(config.description).not.toContain("does not allow saving a default engine")
-    },
-  )
-
-  /** The model-facing contract: what each variant tells the model it can do. */
-  const LEAD =
-    "Manage which CIB Seven / Camunda 7 engine operations tools talk to. " +
-    'action="list" returns the engines available to this profile grouped by ENVIRONMENT ' +
-    "(`environments` maps each environment to its engine ids; every engine entry names its `environment`) " +
-    "plus the saved default engine (if any) — pick an environment first, then one of its engines; "
-
-  it("operations/admin describe the durable select and how routing falls back", () => {
-    expect(harness("operations").config.description).toBe(
-      LEAD +
-        'action="select" (requires engineId) saves that engine as the caller\'s default — ' +
-        "all subsequent operations tool calls without a per-call `engine` override route to it " +
-        "(a durable per-user setting, the same field the settings page edits); " +
-        'action="current" reports the saved default engine (or null). ' +
-        "With more than one engine configured, pass the per-call `engine` parameter or save a default first.",
+describe("the engine tool pair: a read and a write, no action switch", () => {
+  it("camunda7_list_engines is a genuine read-only tool without input", () => {
+    const config = harness().configs.get(CAMUNDA7_LIST_ENGINES)!
+    expect(config.category).toBe("engines")
+    expect(config.annotations).toEqual({
+      readOnlyHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    })
+    expect(config.inputSchema).toEqual({})
+    expect(config.description).toBe(
+      "List the engines available to this profile, grouped by environment (`environments` maps each " +
+        "to its engine ids), plus the caller's saved default engine (`defaultEngineId`, null when none).",
     )
   })
 
-  it("read-only describes list/current and points at the per-call override only", () => {
-    expect(harness("read-only").config.description).toBe(
-      LEAD +
-        'action="current" reports the saved default engine (or null). ' +
-        "This deployment's toolset does not allow saving a default engine — with more than one engine " +
-        "configured, pass the per-call `engine` parameter.",
-    )
-  })
-
-  it("keeps its category and parameter docs in every variant", () => {
-    for (const toolset of ["read-only", "operations"] as const) {
-      const { config } = harness(toolset)
-      const shape = config.inputSchema as unknown as Record<string, z.ZodType>
-      expect(config.category).toBe("engines")
-      expect(shape.action.description).toBe("Engine-management action to perform.")
-      expect(shape.engineId.description).toBe(
-        'Engine id to select (required for action="select"), e.g. "prod-a".',
-      )
-    }
-  })
-
-  it("the read-only input schema rejects select before the handler runs", () => {
-    const schema = z.object(harness("read-only").config.inputSchema)
-    expect(schema.safeParse({ action: "select", engineId: "beta" }).success).toBe(false)
-    expect(schema.safeParse({ action: "list" }).success).toBe(true)
-    const writable = z.object(harness("operations").config.inputSchema)
-    expect(writable.safeParse({ action: "select", engineId: "beta" }).success).toBe(true)
+  it("camunda7_select_engine is an explicitly non-destructive, idempotent local write", () => {
+    const config = harness().configs.get(CAMUNDA7_SELECT_ENGINE)!
+    expect(config.category).toBe("engines")
+    expect(config.annotations).toEqual({
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    })
+    expect(config.description).toContain("Save an engine as the caller's default")
+    const schema = z.object(config.inputSchema)
+    expect(schema.safeParse({ engineId: "beta" }).success).toBe(true)
+    expect(schema.safeParse({}).success).toBe(false)
+    expect(schema.safeParse({ engineId: "" }).success).toBe(false)
   })
 })
 
@@ -146,10 +104,10 @@ const under = <T>(info: McpRequestInfo, fn: () => Promise<T>): Promise<T> =>
   runWithMcpRequestInfo(info, fn)
 const USER = { authUserId: "user-1" }
 
-describe("camunda7_engine select (durable default)", () => {
+describe("camunda7_select_engine (durable default)", () => {
   it("persists the default engine into the caller's profile slice and stamps the auth user", async () => {
-    const { store, call } = harness()
-    const result = await under(USER, () => call({ action: "select", engineId: "beta" }))
+    const { store, select } = harness()
+    const result = await under(USER, () => select("beta"))
     expect(result).toEqual({ defaultEngineId: "beta" })
 
     const record = await store.get("user-1")
@@ -159,29 +117,25 @@ describe("camunda7_engine select (durable default)", () => {
   })
 
   it("resolves the caller from the handler ctx the registrar hands it", async () => {
-    const { store, call } = harness()
-    await call({ action: "select", engineId: "beta" }, { auth: { user: { id: "user-2" } } })
+    const { store, select, list } = harness()
+    await select("beta", { auth: { user: { id: "user-2" } } })
     expect(await store.get("user-2")).toMatchObject({
       userId: "user-2",
       modules: { [CAMUNDA7_MODULE_KEY]: { defaultEngineId: "beta" } },
     })
-    expect(await call({ action: "current" }, { auth: { user: { id: "user-2" } } })).toEqual({
-      defaultEngineId: "beta",
-    })
+    expect((await list({ auth: { user: { id: "user-2" } } })).defaultEngineId).toBe("beta")
     // The default is that caller's alone.
-    expect(await call({ action: "current" }, { auth: { user: { id: "user-3" } } })).toEqual({
-      defaultEngineId: null,
-    })
+    expect((await list({ auth: { user: { id: "user-3" } } })).defaultEngineId).toBeNull()
   })
 
   it("merges over the raw stored slice — sibling settings survive a select", async () => {
-    const { store, call } = harness()
+    const { store, select } = harness()
     await store.save("user-1", {
       modules: {
         [CAMUNDA7_MODULE_KEY]: { pinnedDashboardIds: ["d1"], futureField: "kept" },
       },
     })
-    await under(USER, () => call({ action: "select", engineId: "alpha" }))
+    await under(USER, () => select("alpha"))
     expect((await store.get("user-1"))?.modules?.[CAMUNDA7_MODULE_KEY]).toMatchObject({
       defaultEngineId: "alpha",
       pinnedDashboardIds: ["d1"],
@@ -190,70 +144,45 @@ describe("camunda7_engine select (durable default)", () => {
   })
 
   it("persists under the anonymous record only for an explicitly declared local caller", async () => {
-    const { store, call } = harness()
-    await under({ anonymousCaller: true }, () => call({ action: "select", engineId: "beta" }))
+    const { store, select } = harness()
+    await under({ anonymousCaller: true }, () => select("beta"))
     expect((await store.get(ANONYMOUS_PROFILE_KEY))?.modules?.[CAMUNDA7_MODULE_KEY]).toMatchObject({
       defaultEngineId: "beta",
     })
   })
 
   it("refuses without a caller identity, pointing at the per-call override", async () => {
-    const { store, call } = harness()
+    const { store, select } = harness()
     // An HTTP request without OAuth, and no request context at all (a missing
     // middleware install): neither is an identity, neither reaches a record.
-    for (const select of [
-      () => under({}, () => call({ action: "select", engineId: "beta" })),
-      () => call({ action: "select", engineId: "beta" }),
+    for (const selectWithoutIdentity of [
+      () => under({}, () => select("beta")),
+      () => select("beta"),
     ]) {
-      await expect(select()).rejects.toThrow(
+      await expect(selectWithoutIdentity()).rejects.toThrow(
         /No caller identity to save a default engine under.*per-call `engine` parameter/,
       )
     }
     expect(await store.get(ANONYMOUS_PROFILE_KEY)).toBeUndefined()
   })
 
-  it("refuses under a read-only toolset (durable write), pointing at the per-call override", async () => {
-    const { store, call } = harness("read-only")
-    await expect(under(USER, () => call({ action: "select", engineId: "beta" }))).rejects.toThrow(
-      /toolset does not allow saving a default engine.*per-call `engine` parameter/,
-    )
-    expect(await store.get("user-1")).toBeUndefined()
-  })
-
-  it("still saves under the operations toolset (writes allowed)", async () => {
-    const { store, call } = harness("operations")
-    await under(USER, () => call({ action: "select", engineId: "beta" }))
-    expect((await store.get("user-1"))?.modules?.[CAMUNDA7_MODULE_KEY]).toMatchObject({
-      defaultEngineId: "beta",
-    })
-  })
-
   it("rejects an unknown engine id with the module's error contract", async () => {
-    const { call } = harness()
-    await expect(under(USER, () => call({ action: "select", engineId: "gamma" }))).rejects.toThrow(
-      UnknownEngineError,
-    )
+    const { select } = harness()
+    await expect(under(USER, () => select("gamma"))).rejects.toThrow(UnknownEngineError)
   })
 
   it("rejects an engine outside the profile's allowedEngineIds curation", async () => {
-    const { store, call } = harness()
+    const { store, select } = harness()
     await store.save("user-1", {
       modules: { [CAMUNDA7_MODULE_KEY]: { allowedEngineIds: ["alpha"] } },
     })
-    await expect(under(USER, () => call({ action: "select", engineId: "beta" }))).rejects.toThrow(
+    await expect(under(USER, () => select("beta"))).rejects.toThrow(
       /not available for this profile/,
-    )
-  })
-
-  it("requires an engineId", async () => {
-    const { call } = harness()
-    await expect(under(USER, () => call({ action: "select" }))).rejects.toThrow(
-      /requires an engineId/,
     )
   })
 })
 
-describe("camunda7_engine select racing a settings save in the same slice", () => {
+describe("camunda7_select_engine racing a settings save in the same slice", () => {
   it("keeps both writes: a stale pre-read of the default never reverts the select", async () => {
     // One model turn, two tools: select changes a field that already holds a
     // value while the profile save changes another field of the same slice.
@@ -268,7 +197,7 @@ describe("camunda7_engine select racing a settings save in the same slice", () =
       },
     }
     await inner.save("user-1", { modules: { [CAMUNDA7_MODULE_KEY]: { defaultEngineId: "alpha" } } })
-    const { call } = harness("operations", store)
+    const { select } = harness(store)
     const tool = vi.fn()
     const registry = { engines: [] } as unknown as EngineRegistry
     registerUserProfileTools({ tool } as unknown as MCPServer, store, registry, "operations")
@@ -277,7 +206,7 @@ describe("camunda7_engine select racing a settings save in the same slice", () =
     )![1] as (params: unknown) => Promise<{ isError?: boolean }>
 
     const [, saved] = await under(USER, async () => {
-      const selected = call({ action: "select", engineId: "beta" })
+      const selected = select("beta")
       // The select has read the profile and is now inside its write.
       await new Promise((resolve) => setTimeout(resolve, 1))
       return Promise.all([selected, saveProfile({ pinnedDashboardIds: ["d1"] })])
@@ -290,7 +219,7 @@ describe("camunda7_engine select racing a settings save in the same slice", () =
   })
 })
 
-describe("camunda7_engine during a profile-store outage", () => {
+describe("the engine tools during a profile-store outage", () => {
   /** A preferences database that is down: the driver error names its host:port. */
   const down = (): ProfileStore => {
     const fail = () =>
@@ -300,78 +229,69 @@ describe("camunda7_engine during a profile-store outage", () => {
     return { get: fail, save: fail, delete: fail }
   }
 
-  it("list/current still answer — every engine, no saved default — and leak no host:port", async () => {
+  it("the list still answers — every engine, no saved default — and leaks no host:port", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    const { call } = harness("operations", down())
-    const list = await under(USER, () => call({ action: "list" }))
+    const { list: listEngines } = harness(down())
+    const list = await under(USER, () => listEngines())
     expect((list.engines as Array<{ id: string }>).map((e) => e.id)).toEqual(["alpha", "beta"])
     expect(list.defaultEngineId).toBeNull()
-    expect(await under(USER, () => call({ action: "current" }))).toEqual({
-      defaultEngineId: null,
-    })
     expect(JSON.stringify(list)).not.toMatch(/10\.1\.2\.3|5432/)
     expect(warn.mock.calls.flat().join(" ")).not.toMatch(/10\.1\.2\.3|5432/)
     warn.mockRestore()
   })
 
   it("select (a durable write) still fails visibly", async () => {
-    const { call } = harness("operations", down())
-    await expect(under(USER, () => call({ action: "select", engineId: "beta" }))).rejects.toThrow()
+    const { select } = harness(down())
+    await expect(under(USER, () => select("beta"))).rejects.toThrow()
   })
 })
 
-describe("camunda7_engine list / current", () => {
+describe("camunda7_list_engines", () => {
   it("reports null when no default is saved", async () => {
-    const { call } = harness()
-    const list = await under(USER, () => call({ action: "list" }))
+    const { list: listEngines } = harness()
+    const list = await under(USER, () => listEngines())
     expect(list.defaultEngineId).toBeNull()
-    expect(await under(USER, () => call({ action: "current" }))).toEqual({
-      defaultEngineId: null,
-    })
   })
 
-  it("reports the saved default consistently across list and current", async () => {
-    const { call } = harness()
-    await under(USER, () => call({ action: "select", engineId: "beta" }))
-    const list = await under(USER, () => call({ action: "list" }))
+  it("reports the default select saved", async () => {
+    const { list: listEngines, select } = harness()
+    await under(USER, () => select("beta"))
+    const list = await under(USER, () => listEngines())
     expect(list.defaultEngineId).toBe("beta")
-    expect(await under(USER, () => call({ action: "current" }))).toEqual({
-      defaultEngineId: "beta",
-    })
   })
 
   it("nulls a stale default that no longer names a configured engine", async () => {
-    const { store, call } = harness()
+    const { store, list: listEngines } = harness()
     await store.save("user-1", {
       modules: { [CAMUNDA7_MODULE_KEY]: { defaultEngineId: "gone" } },
     })
-    expect((await under(USER, () => call({ action: "current" }))).defaultEngineId).toBeNull()
+    expect((await under(USER, () => listEngines())).defaultEngineId).toBeNull()
   })
 
   it("nulls a default excluded by the allowedEngineIds curation and filters the list", async () => {
-    const { store, call } = harness()
+    const { store, list: listEngines } = harness()
     await store.save("user-1", {
       modules: {
         [CAMUNDA7_MODULE_KEY]: { defaultEngineId: "beta", allowedEngineIds: ["alpha"] },
       },
     })
-    const list = await under(USER, () => call({ action: "list" }))
+    const list = await under(USER, () => listEngines())
     expect((list.engines as Array<{ id: string }>).map((e) => e.id)).toEqual(["alpha"])
     expect(list.defaultEngineId).toBeNull()
   })
 
   it("falls back to all engines when the allow-list matches nothing (stale curation)", async () => {
-    const { store, call } = harness()
+    const { store, list: listEngines } = harness()
     await store.save("user-1", {
       modules: { [CAMUNDA7_MODULE_KEY]: { allowedEngineIds: ["gone"] } },
     })
-    const list = await under(USER, () => call({ action: "list" }))
+    const list = await under(USER, () => listEngines())
     expect((list.engines as Array<{ id: string }>).map((e) => e.id)).toEqual(["alpha", "beta"])
   })
 
   it("never hands the model an engine's internal REST baseUrl — only a configured cockpitUrl", async () => {
-    const { call } = harness()
-    const list = await under(USER, () => call({ action: "list" }))
+    const { list: listEngines } = harness()
+    const list = await under(USER, () => listEngines())
     expect(list.engines).toEqual([
       expect.objectContaining({ id: "alpha", cockpitUrl: "http://alpha/cockpit" }),
       expect.objectContaining({ id: "beta" }),
@@ -383,8 +303,8 @@ describe("camunda7_engine list / current", () => {
   })
 
   it("groups an environment-less config into the single default environment", async () => {
-    const { call } = harness()
-    const list = await under(USER, () => call({ action: "list" }))
+    const { list: listEngines } = harness()
+    const list = await under(USER, () => listEngines())
     expect((list.engines as Array<{ environment: string }>).map((e) => e.environment)).toEqual([
       "default",
       "default",
@@ -393,24 +313,12 @@ describe("camunda7_engine list / current", () => {
   })
 
   it("maps environments to their engines in config order — the two-stage selection view", async () => {
-    const store = createInMemoryProfileStore()
-    const registry = createEngineRegistry(
-      [
-        { id: "eu-a", baseUrl: "http://eu-a/engine-rest", environment: "prod-eu" },
-        { id: "us-a", baseUrl: "http://us-a/engine-rest", environment: "prod-us" },
-        { id: "eu-b", baseUrl: "http://eu-b/engine-rest", environment: "prod-eu" },
-      ],
-      (e) => ({ __engine: e.id }) as unknown as Client,
-    )
-    let handler: Handler | undefined
-    const recorder = Object.assign(
-      (config: ToolConfig<EngineRegistry>) => {
-        handler = (config as unknown as { handler: Handler }).handler
-      },
-      { getRegisteredTools: () => [] },
-    )
-    registerEngineTools(recorder as never, store, "read-only")
-    const list = await under(USER, () => handler!(registry, { action: "list" }))
+    const { list: listEngines } = harness(createInMemoryProfileStore(), [
+      { id: "eu-a", baseUrl: "http://eu-a/engine-rest", environment: "prod-eu" },
+      { id: "us-a", baseUrl: "http://us-a/engine-rest", environment: "prod-us" },
+      { id: "eu-b", baseUrl: "http://eu-b/engine-rest", environment: "prod-eu" },
+    ])
+    const list = await under(USER, () => listEngines())
     expect(
       (list.engines as Array<{ id: string; environment: string }>).map((e) => [
         e.id,

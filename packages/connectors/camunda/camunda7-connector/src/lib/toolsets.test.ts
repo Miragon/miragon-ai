@@ -38,7 +38,7 @@ function configsFor(toolset: Camunda7Toolset, { allowDeployments = false } = {})
     getRegisteredTools: () => [],
   }) as unknown as Register
   const register = withToolsetFilter(recorder, toolset)
-  registerEngineTools(register, createInMemoryProfileStore(), toolset)
+  registerEngineTools(register, createInMemoryProfileStore())
   registerTools(register, { allowDeployments })
   registerIncidentIssueTools(register, {})
   return configs
@@ -71,6 +71,8 @@ const ADMIN_ONLY = [
 ]
 
 const ENGINE_WRITES = [
+  // the saved default engine (a profile write, like camunda7_save_user_profile)
+  "camunda7_select_engine",
   "camunda7_start_process_instance",
   "camunda7_complete_task",
   "camunda7_claim_task",
@@ -88,10 +90,10 @@ describe("withToolsetFilter over the real camunda7 tool surface", () => {
     }
   })
 
-  it("read-only keeps the queries and the engine tool's read-only variant", () => {
+  it("read-only keeps the queries, the engine list included", () => {
     expect(toolNamesFor("read-only")).toEqual(
       expect.arrayContaining([
-        "camunda7_engine",
+        "camunda7_list_engines",
         "camunda7_list_process_instances",
         "camunda7_get_process_instance",
         "camunda7_query_historic_process_instances",
@@ -256,9 +258,8 @@ describe("isToolInToolset (the rule, per branch)", () => {
  * Structural guards: unlike the hand-maintained lists above, these derive the
  * expectation from each tool's OWN annotations — a future tool that forgets
  * its ADMIN_ONLY_TOOLS entry or mis-declares readOnlyHint fails here without
- * anyone updating a test list. Configs are recorded PER toolset, so a tool
- * whose shape follows the toolset (camunda7_engine) is judged by the variant
- * that toolset actually advertises.
+ * anyone updating a test list. Configs are recorded PER toolset, so every
+ * tool is judged by what that toolset actually advertises.
  */
 describe("toolset rule holds structurally for every registered tool", () => {
   it("every destructiveHint tool is kept out of operations (i.e. is admin-only)", () => {
@@ -273,6 +274,18 @@ describe("toolset rule holds structurally for every registered tool", () => {
         operations.has(config.name),
         `${config.name} carries destructiveHint but is advertised in operations — add it to ADMIN_ONLY_TOOLS`,
       ).toBe(false)
+    }
+  })
+
+  it("every write states destructiveHint explicitly — MCP defaults an absent hint to TRUE", () => {
+    const writes = configsFor("admin", FULL).filter((c) => c.annotations?.readOnlyHint !== true)
+    // Sanity: the surface does carry writes — otherwise this test is vacuous.
+    expect(writes.length).toBeGreaterThanOrEqual(20)
+    for (const config of writes) {
+      expect(
+        typeof config.annotations?.destructiveHint,
+        `${config.name} is a write without an explicit destructiveHint — hosts read the absent hint as destructive`,
+      ).toBe("boolean")
     }
   })
 

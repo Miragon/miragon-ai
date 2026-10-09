@@ -77,7 +77,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_claim_task",
     category: "tasks",
     description: "Claim a user task for a specific user.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...claimTaskInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await claim({
@@ -93,7 +93,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_unclaim_task",
     category: "tasks",
     description: "Unclaim (release) a user task, removing the current assignee.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...unclaimTaskInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await unclaim({ client, path: { id: args.taskId } })
@@ -108,7 +108,7 @@ export function registerTaskTools(register: Register) {
       "Complete a user task by ID, optionally setting variables. A task with form fields is submitted as its form: " +
       "the engine enforces them (required, readonly, types); omitted fields keep their value. A delegated task " +
       '(delegationState PENDING) is resolved back to its owner instead and stays open (outcome "resolved").',
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, openWorldHint: true },
     inputSchema: { ...completeTaskInput.shape, ...engineParamShape },
     // The endpoint (submit-form / complete / resolve) follows from the task — lib/task-completion.ts.
     handler: withEngine(async (client, args) =>
@@ -120,7 +120,7 @@ export function registerTaskTools(register: Register) {
     name: "camunda7_set_task_assignee",
     category: "tasks",
     description: "Set the assignee of a user task.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...setTaskAssigneeInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await setAssignee({

@@ -4,7 +4,11 @@ import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
-import { CAMUNDA7_COCKPIT_OVERVIEW_DATA, CAMUNDA7_ENGINE } from "../../tool-names.js"
+import {
+  CAMUNDA7_COCKPIT_OVERVIEW_DATA,
+  CAMUNDA7_LIST_ENGINES,
+  CAMUNDA7_SELECT_ENGINE,
+} from "../../tool-names.js"
 import { CockpitApp } from "./app.js"
 
 const toolkitDefaults = queryClient.getDefaultOptions()
@@ -27,15 +31,18 @@ const ENGINES = [
   { id: "prod-b", environment: "default" },
 ]
 
-/** Boots the cockpit with a recording `camunda7_engine` fixture. */
+/** Boots the cockpit with recording engine-list and engine-select fixtures. */
 function renderCockpit() {
-  const engineCalls: Array<Record<string, unknown>> = []
+  const listCalls: Array<Record<string, unknown>> = []
+  const selectCalls: Array<Record<string, unknown>> = []
   const modelContexts: string[] = []
-  const engineTool = (args: Record<string, unknown>) => {
-    engineCalls.push(args)
-    return args.action === "list"
-      ? { engines: ENGINES, environments: [], defaultEngineId: "prod-b" }
-      : { defaultEngineId: args.engineId ?? null }
+  const listEngines = (args: Record<string, unknown>) => {
+    listCalls.push(args)
+    return { engines: ENGINES, environments: [], defaultEngineId: "prod-b" }
+  }
+  const selectEngine = (args: Record<string, unknown>) => {
+    selectCalls.push(args)
+    return { defaultEngineId: args.engineId ?? null }
   }
   const overview = (args: Record<string, unknown>) => ({
     summary: {
@@ -54,16 +61,20 @@ function renderCockpit() {
     <WidgetFixtureHost
       widget={Cockpit}
       data={{}}
-      tools={{ [CAMUNDA7_ENGINE]: engineTool, [CAMUNDA7_COCKPIT_OVERVIEW_DATA]: overview }}
+      tools={{
+        [CAMUNDA7_LIST_ENGINES]: listEngines,
+        [CAMUNDA7_SELECT_ENGINE]: selectEngine,
+        [CAMUNDA7_COCKPIT_OVERVIEW_DATA]: overview,
+      }}
       onModelContext={(text) => modelContexts.push(text)}
     />,
   )
-  return { engineCalls, modelContexts }
+  return { listCalls, selectCalls, modelContexts }
 }
 
 describe("CockpitApp navigation is side-effect free", () => {
   it("entering and switching engines never writes the saved default engine", async () => {
-    const { engineCalls } = renderCockpit()
+    const { listCalls, selectCalls } = renderCockpit()
 
     // Landing chooser → operate one engine.
     fireEvent.click(await screen.findByRole("button", { name: /prod-a/ }))
@@ -73,11 +84,11 @@ describe("CockpitApp navigation is side-effect free", () => {
     await waitFor(() => expect((switcher as HTMLSelectElement).value).toBe("prod-b"))
 
     // The transport reached the fixture (the engine list was read) …
-    expect(engineCalls).toContainEqual({ action: "list" })
+    expect(listCalls).toContainEqual({})
     // … but no navigation step persisted anything: making an engine the
     // default is an explicit action on the settings page.
     await new Promise((resolve) => setTimeout(resolve, 20))
-    expect(engineCalls.filter((args) => args.action !== "list")).toEqual([])
+    expect(selectCalls).toEqual([])
   })
 
   // Navigation no longer moves the saved default (prod-b in this fixture), so

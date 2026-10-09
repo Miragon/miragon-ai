@@ -5,7 +5,7 @@ import type { EngineEntry } from "./resolve-engine.js"
 
 /**
  * The profile-driven engine preferences, single-sourced so the tool surface
- * (`camunda7_engine`), the per-call default-engine fallback ([[resolveEngine]]
+ * (`camunda7_list_engines`/`camunda7_select_engine`), the per-call default-engine fallback ([[resolveEngine]]
  * via the registry's injected lookup) and any view all apply the SAME rules —
  * a drift here would let a user save a default they then cannot resolve.
  */

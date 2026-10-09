@@ -16,7 +16,7 @@ import {
 import { camunda7BaseWidgets } from "../registry.js"
 import { engineCallRule } from "../lib/engine-scope.js"
 import { translator } from "../../messages/index.js"
-import { CAMUNDA7_ENGINE } from "../../tool-names.js"
+import { CAMUNDA7_LIST_ENGINES } from "../../tool-names.js"
 import { NavBreadcrumb } from "./breadcrumb.js"
 import { cockpitViews, filterLayoutToWidgets } from "./views.js"
 import { useAnalyticsActive } from "./analytics-probe.js"
@@ -195,13 +195,11 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   // loading state below must not wait on the engines query.
   const queryCallTool = useCallTool()
 
-  // Authoritative engine source: the stable `camunda7_engine` tool's "list"
-  // action (needs no saved default itself). Decoupled from the open_cockpit
+  // Authoritative engine source: the stable, read-only `camunda7_list_engines`
+  // tool (needs no saved default itself). Decoupled from the open_cockpit
   // bootstrap so the picker/switcher work regardless of how the app was
   // launched.
-  const enginesQuery = useToolQuery<EnginesResult>(["camunda7:engines"], CAMUNDA7_ENGINE, {
-    action: "list",
-  })
+  const enginesQuery = useToolQuery<EnginesResult>(["camunda7:engines"], CAMUNDA7_LIST_ENGINES, {})
   const engines = enginesQuery.data?.engines ?? data?.engines ?? []
   // The environment→engine map (single default group when none is configured)
   // — drives the sidebar switcher's optgroups.
@@ -242,7 +240,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   // Ask-AI prompts carry it (`engineArg`/`engineCallRule`); the caller's saved
   // default engine (which retargets every later engine-less tool call)
   // changes only through an explicit action: the settings page or
-  // `camunda7_engine` action "select".
+  // `camunda7_select_engine`.
   const enterEngine = (id: string) => dispatch({ type: "enter-engine", id })
   const switchEngine = (id: string) => dispatch({ type: "switch-engine", id })
 

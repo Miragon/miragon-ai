@@ -229,6 +229,22 @@ describe("createComposedServer — on the wire", () => {
     expect(server.url).toBe(`http://127.0.0.1:${server.port}/mcp`)
   })
 
+  it("appends each active module's instructions to the root's preamble", async () => {
+    const instructed = composeModules<object>({
+      label: "test-root",
+      modules: [
+        {
+          ...alpha,
+          instructions: (config, { authenticated }) =>
+            `alpha routes to ${String(config.url)} (${authenticated ? "signed in" : "anonymous"}).`,
+        },
+      ],
+    })
+    const { server } = await boot({ composition: instructed })
+    const result = rpcResult((await initialize(server.port)).body)
+    expect(result.instructions).toBe("Be brief.\n\nalpha routes to default (anonymous).")
+  })
+
   it("guards /mcp by Host and Origin but leaves the probes and the scrape to IP callers", async () => {
     const { server } = await boot()
     expect((await initialize(server.port, { host: "attacker.example" })).status).toBe(403)

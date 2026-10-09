@@ -234,6 +234,41 @@ describe("logEffectiveToolsets", () => {
   })
 })
 
+describe("instructions", () => {
+  const instructed = (name: string) =>
+    moduleOf(name, {
+      instructions: (config, { authenticated }) =>
+        `${name}: toolset ${String(config.toolset)}, url ${String(config.url)}, ` +
+        `${authenticated ? "signed in" : "anonymous"}`,
+    })
+
+  it("joins the ACTIVE modules' snippets in selection order, each from its own boot config", () => {
+    const composition = compose([instructed("alpha"), instructed("beta"), instructed("gamma")])
+    const boot = composition.resolveBoot(
+      { MCP_ACTIVE_MODULES: "beta:admin,alpha", ALPHA_URL: "http://a" },
+      { authenticated: true },
+    )
+    expect(composition.instructions(boot)).toBe(
+      "beta: toolset admin, url default, signed in\n\n" +
+        "alpha: toolset operations, url http://a, signed in",
+    )
+  })
+
+  it("skips modules without a snippet or with an empty one; none at all is undefined", () => {
+    const composition = compose([
+      instructed("alpha"),
+      moduleOf("beta"),
+      moduleOf("gamma", { instructions: () => "  " }),
+    ])
+    expect(composition.instructions(composition.resolveBoot({}))).toBe(
+      "alpha: toolset read-only, url default, anonymous",
+    )
+    expect(
+      composition.instructions(composition.resolveBoot({ MCP_ACTIVE_MODULES: "beta,gamma" })),
+    ).toBeUndefined()
+  })
+})
+
 describe("frameworkWritesAllowed", () => {
   const boot = (authenticated: boolean, env: NodeJS.ProcessEnv) =>
     compose([

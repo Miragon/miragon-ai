@@ -15,7 +15,7 @@ export function registerMessageSignalTools(register: Register) {
       "Correlate a message to a waiting catch event or a message start event; target it via processInstanceId, " +
       "businessKey or correlationKeys. Unless all=true the engine needs EXACTLY one match: several fail, and so does " +
       "none without a message start event.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, openWorldHint: true },
     inputSchema: { ...correlateMessageInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) =>
       deliverMessage({

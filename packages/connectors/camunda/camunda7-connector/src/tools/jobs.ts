@@ -60,7 +60,7 @@ export function registerJobTools(register: Register) {
     category: "jobs",
     description:
       "Set the number of retries for a failed job. Setting retries > 0 will re-execute the job.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...setJobRetriesInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await setJobRetries({

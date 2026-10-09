@@ -98,7 +98,7 @@ survive. Reads are fail-soft throughout: an unreadable value or an unreachable
 store yields defaults rather than an error — the saved default engine included
 — so a profile-store hiccup can't break a call that only needs the engine or
 Prometheus. Navigating the cockpit never changes the default engine; only the
-settings page or `camunda7_engine` action `select` does.
+settings page or `camunda7_select_engine` does.
 
 The settings page composes one section widget per module and assembles itself
 from the widgets the server actually bundles — every widget id ending in

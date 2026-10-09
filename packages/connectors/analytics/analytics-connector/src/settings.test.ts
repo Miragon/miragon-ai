@@ -241,7 +241,7 @@ describe("registerSettingsTools", () => {
       [ANALYTICS_SETTINGS_DATA, readOnlyRead],
       [
         ANALYTICS_SAVE_SETTINGS,
-        { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+        { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       ],
     ])
     for (const { name, title, description } of definitions) {

@@ -98,7 +98,7 @@ describe("HTTP edge — default policy (no MCP_URL: localhost-class only)", () =
     expect(errorMessage(res.body)).toMatch(/Host "attacker\.example" is not allowed/)
   })
 
-  it("reports the package.json version, a title and the instructions as serverInfo", () => {
+  it("reports the package.json version, a title and the instructions on initialize", () => {
     const pkg = JSON.parse(
       fs.readFileSync(path.join(import.meta.dirname, "..", "package.json"), "utf8"),
     ) as { version: string }
@@ -108,7 +108,12 @@ describe("HTTP edge — default policy (no MCP_URL: localhost-class only)", () =
       title: "Miragon AI",
       websiteUrl: "https://github.com/Miragon/miragon-ai",
     })
-    expect(server.client.getInstructions()).toBe(SERVER_INSTRUCTIONS)
+    // The root's preamble, then each active module's own snippet — the
+    // engine routing rule lives there, not in 60-odd tool descriptions.
+    const instructions = server.client.getInstructions() ?? ""
+    expect(instructions.startsWith(`${SERVER_INSTRUCTIONS}\n\ncamunda7 (`)).toBe(true)
+    expect(instructions).toContain('one engine is configured ("default"); `engine` may be omitted.')
+    expect(instructions).toContain("\n\nanalytics (Prometheus metrics of the engines):")
   })
 })
 

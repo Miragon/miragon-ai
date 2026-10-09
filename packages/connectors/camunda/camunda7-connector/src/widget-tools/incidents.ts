@@ -23,7 +23,6 @@ import {
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
 } from "../tool-names.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
-import { engineParamShape } from "../lib/with-engine.js"
 import { localizeFor } from "../lib/server-locale.js"
 import {
   type WidgetToolsContext,
@@ -35,7 +34,7 @@ import {
 
 /** Incident triage: dashboard, per-definition views, detail, engine health, clusters. */
 export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
-  const { server, registry, healthThresholds, profileStore } = ctx
+  const { server, registry, healthThresholds, profileStore, engineParam } = ctx
 
   server.tool(
     {
@@ -46,7 +45,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         ...incidentsDashboardFilterShape,
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_INCIDENTS_DASHBOARD, "Incidents Dashboard"),
     },
@@ -89,7 +88,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processDefinitionKey: z.string().describe("Process definition key to drill into"),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_PROCESS_INCIDENTS, "Process Incidents"),
     },
@@ -132,7 +131,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         incidentId: z.string().describe("The incident ID to inspect"),
-        ...engineParamShape,
+        ...engineParam,
       }),
       ...showToolBinding(CAMUNDA7_SHOW_INCIDENT_DETAIL, "Incident Detail"),
     },
@@ -173,7 +172,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Show the AI-first engine overview: a deterministic health verdict (ok / degraded / critical) with running-instance and incident KPIs and the top incident clusters, grouped cross-process by failing activity + incident type. The home base for triaging what is wrong on a CIB Seven / Camunda 7 engine — each cluster drills in or hands off to AI for root cause + remediation.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({ ...engineParamShape }),
+      inputSchema: strictToolInput({ ...engineParam }),
       ...showToolBinding(CAMUNDA7_SHOW_ENGINE_HEALTH, "Engine Health Overview"),
     },
     withToolErrors(async (args, ctx) => {
@@ -212,7 +211,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Drill into ONE failure cluster: the affected process instances (business keys first), the full sample failure message, and the time profile (new in last hour / 24h) for an activity failing with a given incident type. The middle layer between the engine health overview and a single incident's detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({ ...clusterDetailShape, ...engineParamShape }),
+      inputSchema: strictToolInput({ ...clusterDetailShape, ...engineParam }),
       ...showToolBinding(CAMUNDA7_SHOW_CLUSTER_DETAIL, "Failure Cluster Detail"),
     },
     withToolErrors(async (args, ctx) => {

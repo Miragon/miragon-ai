@@ -13,11 +13,14 @@ import { composition, createDashboardStore, createProfileStore, getPlugins } fro
 /** `src/` under tsx/vitest, `dist/` when compiled — the package root is one level up either way. */
 const PACKAGE_ROOT = path.join(import.meta.dirname, "..")
 
-/** What the server advertises as `instructions`: short and factual — tool descriptions carry the rest. */
+/**
+ * The preamble of the server `instructions`: short and factual. Every active
+ * module appends its own snippet (`instructions` on its module definition —
+ * e.g. camunda7's engine routing), and tool descriptions carry the rest.
+ */
 export const SERVER_INSTRUCTIONS =
   "Camunda 7 / CIB Seven operations, process analytics and team notes. " +
   "Toolsets fail closed: a tool missing from tools/list is not enabled on this deployment. " +
-  "With several engines, pass `engine` on each call. " +
   "On hosts that render MCP Apps, prefer the *_show_* tools to present results to the user."
 
 /** The version in `package.json` — reported as `serverInfo.version`, never a hard-coded copy. */

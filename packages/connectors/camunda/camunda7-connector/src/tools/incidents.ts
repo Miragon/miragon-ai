@@ -53,7 +53,7 @@ export function registerIncidentTools(register: Register) {
     description:
       "Resolve a custom incident by ID. The engine refuses failedJob/failedExternalTask (400) — retry those: " +
       "camunda7_set_job_retries / camunda7_set_external_task_retries on the incident's configuration id.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, openWorldHint: true },
     inputSchema: { ...resolveIncidentInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await resolveIncident({ client, path: { id: args.incidentId } })

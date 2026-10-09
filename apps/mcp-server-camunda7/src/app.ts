@@ -16,13 +16,14 @@ const LABEL = "miragon-ai"
 const PACKAGE_ROOT = path.join(import.meta.dirname, "..")
 
 /**
- * What the server advertises as `instructions` — deliberately short and
- * factual (the tool descriptions carry the details).
+ * The preamble of the server `instructions` — deliberately short and factual.
+ * Each active module appends its own snippet (engine routing, dates, tool
+ * families, health routing — `ComposableModule.instructions`), and the tool
+ * descriptions carry the per-tool details.
  */
 export const SERVER_INSTRUCTIONS =
   "Camunda 7 / CIB Seven operations and Prometheus-backed process analytics. " +
   "Toolsets fail closed: a tool missing from tools/list is not enabled on this deployment. " +
-  'With several engines, pass `engine` on each call (camunda7_engine action "list" names them). ' +
   "On hosts that render MCP Apps, prefer the *_show_* tools to present results to the user."
 
 /** The version release-please maintains in `package.json` — never a hard-coded copy. */

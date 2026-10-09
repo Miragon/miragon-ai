@@ -42,7 +42,7 @@ export function registerProcessInstanceTools(register: Register) {
     category: "process-instances",
     description:
       "Start a new process instance by process definition key. Optionally set a business key and initial variables.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, openWorldHint: true },
     inputSchema: { ...startProcessInstanceInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) =>
       startProcessInstanceByKey({
@@ -171,7 +171,7 @@ export function registerProcessInstanceTools(register: Register) {
     category: "process-instances",
     description:
       "Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read).",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...setProcessInstanceVariableInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await setProcessInstanceVariable({
@@ -196,7 +196,7 @@ export function registerProcessInstanceTools(register: Register) {
     category: "process-instances",
     description:
       "Set the suspension state of a process instance. suspended=true suspends it (jobs, timers, and message correlations are frozen); suspended=false activates (unsuspends) it again.",
-    annotations: { openWorldHint: true },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...setProcessInstanceSuspensionInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await updateSuspensionStateById({

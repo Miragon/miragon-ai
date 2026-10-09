@@ -4,6 +4,7 @@ import type { EngineHealthThresholds } from "../data/health-data.js"
 import { clusterDetailFilterShape, pagingShape } from "../feed-contracts.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import type { Camunda7Toolset } from "../lib/toolsets.js"
+import type { EngineParamShape } from "../lib/with-engine.js"
 import type { ProfileStore } from "@miragon-ai/widget-shell/server"
 
 /**
@@ -68,4 +69,6 @@ export interface WidgetToolsContext {
   profileStore: ProfileStore
   /** The deployment's resolved toolset (from the `MCP_ACTIVE_MODULES` suffix or the auth-dependent default). */
   toolset: Camunda7Toolset
+  /** The `engine` parameter narrowed to the configured ids (`engineParamShapeFor`) — spread it into every input. */
+  engineParam: EngineParamShape
 }
