@@ -77,11 +77,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core/widget-shell
       '@miragon/mcp-toolkit-core':
-        specifier: 2.5.0
-        version: 2.5.0(mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
+        specifier: 2.6.0
+        version: 2.6.0(mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
       mcp-use:
-        specifier: 2.7.1
-        version: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+        specifier: 2.7.3
+        version: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
       postgres:
         specifier: 3.4.9
         version: 3.4.9
@@ -93,8 +93,8 @@ importers:
         specifier: 5.3.0
         version: 5.3.0
       '@miragon/mcp-toolkit-ui':
-        specifier: 2.5.0
-        version: 2.5.0(0df93eaa67f5593289908c441ffbc788)
+        specifier: 2.6.0
+        version: 2.6.0(481d18c68c18246b9e0f5b27500245b4)
       '@modelcontextprotocol/client':
         specifier: 2.1.0
         version: 2.1.0
@@ -202,11 +202,11 @@ importers:
         version: link:../../../core/widget-shell
     devDependencies:
       '@miragon/mcp-toolkit-core':
-        specifier: 2.5.0
-        version: 2.5.0(mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
+        specifier: 2.6.0
+        version: 2.6.0(mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
       '@miragon/mcp-toolkit-ui':
-        specifier: 2.5.0
-        version: 2.5.0(668d06feb09d11ca7c202293808ce046)
+        specifier: 2.6.0
+        version: 2.6.0(2cea540ab062825581bd1d061c6b0d51)
       '@stryker-mutator/core':
         specifier: 10.0.0
         version: 10.0.0(@types/node@26.6.3)
@@ -220,8 +220,8 @@ importers:
         specifier: 18.30.1
         version: 18.30.1
       mcp-use:
-        specifier: 2.7.1
-        version: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+        specifier: 2.7.3
+        version: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -269,11 +269,11 @@ importers:
         version: link:../../../core/widget-shell
     devDependencies:
       '@miragon/mcp-toolkit-core':
-        specifier: 2.5.0
-        version: 2.5.0(mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
+        specifier: 2.6.0
+        version: 2.6.0(mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
       '@miragon/mcp-toolkit-ui':
-        specifier: 2.5.0
-        version: 2.5.0(668d06feb09d11ca7c202293808ce046)
+        specifier: 2.6.0
+        version: 2.6.0(2cea540ab062825581bd1d061c6b0d51)
       '@stryker-mutator/core':
         specifier: 10.0.0
         version: 10.0.0(@types/node@26.6.3)
@@ -293,8 +293,8 @@ importers:
         specifier: 20.14.5
         version: 20.14.5
       mcp-use:
-        specifier: 2.7.1
-        version: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+        specifier: 2.7.3
+        version: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -327,11 +327,11 @@ importers:
         version: 3.7.0
     devDependencies:
       '@miragon/mcp-toolkit-core':
-        specifier: 2.5.0
-        version: 2.5.0(mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
+        specifier: 2.6.0
+        version: 2.6.0(mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
       '@miragon/mcp-toolkit-ui':
-        specifier: 2.5.0
-        version: 2.5.0(668d06feb09d11ca7c202293808ce046)
+        specifier: 2.6.0
+        version: 2.6.0(2cea540ab062825581bd1d061c6b0d51)
       '@stryker-mutator/core':
         specifier: 10.0.0
         version: 10.0.0(@types/node@26.6.3)
@@ -351,8 +351,8 @@ importers:
         specifier: 20.14.5
         version: 20.14.5
       mcp-use:
-        specifier: 2.7.1
-        version: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+        specifier: 2.7.3
+        version: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
       postgres:
         specifier: 3.4.9
         version: 3.4.9
@@ -1596,33 +1596,33 @@ packages:
     resolution: {integrity: sha512-9I2Zn6+NJLfaGoz9jN3lpwDgAYvfGeNYdbAIjJOqzs4Tpc+VU3Jqq4IofSUBKajiDS8k9fZIg18/z13mpk1bsA==}
     engines: {node: '>=8'}
 
-  '@mcp-use/cli@4.1.17':
-    resolution: {integrity: sha512-tXuDPA8/mXbYT0ac6xBR8fC1YNK7otvCkpOqe3MQ8RfJBDmyip51MCnC3pkecqUrpg3k7Y/CjmSamr9Orlv9yQ==}
+  '@mcp-use/cli@4.2.1':
+    resolution: {integrity: sha512-qUQ4rmElGic1VawW1ixKOdzdmlSJqSRD68CiZHvmq9pxOKx4APU+/QWokaTsJdjxgEqv6CYh4O/X7wEW1OQK6g==}
     engines: {node: '>=22.22.2'}
     hasBin: true
     peerDependencies:
-      '@mcp-use/client': ^2.0.1 || ^2.1.0 || ^2.1.1 || ^2.1.2 || ^2.1.3 || ^2.1.4 || ^2.1.5 || ^2.2.0 || ^2.2.1 || ^2.2.2 || ^2.2.3 || ^2.2.4 || ^2.2.5 || ^2.3.0 || ^2.3.1 || ^2.3.2 || ^2.3.3 || ^2.3.4
-      '@mcp-use/inspector': ^20.3.8 || ^20.3.9 || ^20.3.10 || ^20.3.11 || ^20.3.12 || ^20.3.13
+      '@mcp-use/client': ^2.0.1 || ^2.1.0 || ^2.1.1 || ^2.1.2 || ^2.1.3 || ^2.1.4 || ^2.1.5 || ^2.2.0 || ^2.2.1 || ^2.2.2 || ^2.2.3 || ^2.2.4 || ^2.2.5 || ^2.3.0 || ^2.3.1 || ^2.3.2 || ^2.3.3 || ^2.3.4 || ^2.3.5 || ^2.4.0
+      '@mcp-use/inspector': ^20.3.8 || ^20.3.9 || ^20.3.10 || ^20.3.11 || ^20.3.12 || ^20.3.13 || ^20.3.14 || ^20.3.15
     peerDependenciesMeta:
       '@mcp-use/client':
         optional: true
       '@mcp-use/inspector':
         optional: true
 
-  '@mcp-use/inspector@20.3.13':
-    resolution: {integrity: sha512-WCG2pwGRHE8/faT75ywe+qWYw6zNEeaXEQT71Zsc0Mu5+vPvi2lPqrhQcQagJpmj2HBS0GXdSmS/f0DrVWugFw==}
+  '@mcp-use/inspector@20.3.15':
+    resolution: {integrity: sha512-ibI/Z6JHNmIXoro7PXjCFz07xtuwPqFHsc/ijZEm8UaxrpjsLpWMEsV/hfssUEWhiIp5LDmwJ721llj2jWrwMg==}
     engines: {node: '>=22.22.2'}
     hasBin: true
     peerDependencies:
       '@base-ui/react': ^1.6.0
-      '@mcp-use/agent': ^2.0.16 || ^2.0.17 || ^2.0.18 || ^2.0.19
-      '@mcp-use/client': ^2.0.1 || ^2.1.0 || ^2.1.1 || ^2.1.2 || ^2.1.3 || ^2.1.4 || ^2.1.5 || ^2.2.0 || ^2.2.1 || ^2.2.2 || ^2.2.3 || ^2.2.4 || ^2.2.5 || ^2.3.0 || ^2.3.1 || ^2.3.2 || ^2.3.3 || ^2.3.4
+      '@mcp-use/agent': ^2.0.16 || ^2.0.17 || ^2.0.18 || ^2.0.19 || ^2.0.20
+      '@mcp-use/client': ^2.0.1 || ^2.1.0 || ^2.1.1 || ^2.1.2 || ^2.1.3 || ^2.1.4 || ^2.1.5 || ^2.2.0 || ^2.2.1 || ^2.2.2 || ^2.2.3 || ^2.2.4 || ^2.2.5 || ^2.3.0 || ^2.3.1 || ^2.3.2 || ^2.3.3 || ^2.3.4 || ^2.3.5 || ^2.4.0
       class-variance-authority: ^0.7.1
       clsx: ^2.1.1
       express: ^4.21.2 || ^5.0.0
       lucide-react: ^0.562.0
       markdown-to-jsx: ^9.7.4
-      mcp-use: ^2.4.3 || ^2.4.4 || ^2.5.0 || ^2.5.1 || ^2.5.2 || ^2.6.0 || ^2.6.1 || ^2.7.0 || ^2.7.1
+      mcp-use: ^2.4.3 || ^2.4.4 || ^2.5.0 || ^2.5.1 || ^2.5.2 || ^2.6.0 || ^2.6.1 || ^2.7.0 || ^2.7.1 || ^2.7.2 || ^2.7.3
       motion: ^12.34.2
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
@@ -1667,19 +1667,19 @@ packages:
   '@mermaid-js/parser@1.2.1':
     resolution: {integrity: sha512-n12NohV3mrUyUL2o93IgG/ifeW9FTyeJn3zDxkhwa8MJ9Fxg3HQMlA3RiGmD/3UnJvheztkjjQAjA2T4LmUcpw==}
 
-  '@miragon/mcp-toolkit-core@2.5.0':
-    resolution: {integrity: sha512-yghupBVn1mltXlkuAfohzLW6btKG2ScNJ8fH/tePb+uiK78snELn7BEkspvbe26+4tX5FLengkpRgFRqSb9JzQ==}
+  '@miragon/mcp-toolkit-core@2.6.0':
+    resolution: {integrity: sha512-yx4KkdQ7uJ6geMpQ0n77JeTETrrq2l6OYcNc4US/N10u60bzMa7hmB3r68NVUPpKijece2cDrDPDSPBy9fgOcA==}
     engines: {node: '>=22.22.2'}
     peerDependencies:
-      mcp-use: 2.7.1
+      mcp-use: 2.7.3
       zod: ^4.4.0
 
-  '@miragon/mcp-toolkit-ui@2.5.0':
-    resolution: {integrity: sha512-7GXUBFBDJfIJamCqhHUqDPwrt6XVJ8qLnSyR1nr9gMa5ulo/y9hqf0Nxvpqi0Wnk1+/SrmcViCsAPAUpeColew==}
+  '@miragon/mcp-toolkit-ui@2.6.0':
+    resolution: {integrity: sha512-nVcKMIcxNvrnnBTW2s16knptgvfNzOoDp6FwUzNekHTWat0lQ+37It/AIOTFkug/TcNT/18vYkhYAXMQMEMeRQ==}
     engines: {node: '>=22.22.2'}
     peerDependencies:
-      '@miragon/mcp-toolkit-core': ~2.5.0
-      mcp-use: 2.7.1
+      '@miragon/mcp-toolkit-core': ~2.6.0
+      mcp-use: 2.7.3
       react: ^19.2.0
       react-dom: ^19.2.0
       tailwindcss: ^4.3.0
@@ -5003,12 +5003,12 @@ packages:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
 
-  mcp-use@2.7.1:
-    resolution: {integrity: sha512-M/dVP56g1tqbvRiY4veXD/KJVbk3L44e/6o65ytmDc446X+Fxij3dpjY4fZTmYTgDiZRd3X6J+9HKuTK9CmSLA==}
+  mcp-use@2.7.3:
+    resolution: {integrity: sha512-/v4Gj0gyHgpSkus4pxl0mDTpNWjUNgv44cMp7uvrAs+cRkPLXCdmF+6IcEo5rsTIwaJuv2PpA/MHuf+4EolEGQ==}
     engines: {node: '>=22.22.2'}
     hasBin: true
     peerDependencies:
-      '@mcp-use/client': ^2.0.1 || ^2.1.0 || ^2.1.1 || ^2.1.2 || ^2.1.3 || ^2.1.4 || ^2.1.5 || ^2.2.0 || ^2.2.1 || ^2.2.2 || ^2.2.3 || ^2.2.4 || ^2.2.5 || ^2.3.0 || ^2.3.1 || ^2.3.2 || ^2.3.3 || ^2.3.4
+      '@mcp-use/client': ^2.0.1 || ^2.1.0 || ^2.1.1 || ^2.1.2 || ^2.1.3 || ^2.1.4 || ^2.1.5 || ^2.2.0 || ^2.2.1 || ^2.2.2 || ^2.2.3 || ^2.2.4 || ^2.2.5 || ^2.3.0 || ^2.3.1 || ^2.3.2 || ^2.3.3 || ^2.3.4 || ^2.3.5 || ^2.4.0
       react: ^19.0.0
       react-dom: ^19.0.0
       vite: ^8.0.0
@@ -7359,14 +7359,14 @@ snapshots:
 
   '@lukeed/ms@2.0.2': {}
 
-  '@mcp-use/cli@4.1.17(@mcp-use/inspector@20.3.13(3b5302cc62d90fb53fdf0c0aec6f02c8))(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)':
+  '@mcp-use/cli@4.2.1(@mcp-use/inspector@20.3.15(b4a74cdbb28255033eb92c8790b4a8c9))(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)':
     dependencies:
       '@tailwindcss/vite': 4.3.3(vite@8.0.16(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))
       '@vitejs/plugin-react': 6.0.5(vite@8.0.16(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))
       tailwindcss: 4.3.3
       vite: 8.0.16(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
     optionalDependencies:
-      '@mcp-use/inspector': 20.3.13(3b5302cc62d90fb53fdf0c0aec6f02c8)
+      '@mcp-use/inspector': 20.3.15(b4a74cdbb28255033eb92c8790b4a8c9)
     transitivePeerDependencies:
       - '@rolldown/plugin-babel'
       - '@types/node'
@@ -7383,14 +7383,14 @@ snapshots:
       - tsx
       - yaml
 
-  '@mcp-use/cli@4.1.17(@mcp-use/inspector@20.3.13(a927e2322886039e9acd08508016f2d6))(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)':
+  '@mcp-use/cli@4.2.1(@mcp-use/inspector@20.3.15(f02fa29b957b0e5713f5f7b9f033e17b))(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)':
     dependencies:
       '@tailwindcss/vite': 4.3.3(vite@8.0.16(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))
       '@vitejs/plugin-react': 6.0.5(vite@8.0.16(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))
       tailwindcss: 4.3.3
       vite: 8.0.16(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
     optionalDependencies:
-      '@mcp-use/inspector': 20.3.13(a927e2322886039e9acd08508016f2d6)
+      '@mcp-use/inspector': 20.3.15(f02fa29b957b0e5713f5f7b9f033e17b)
     transitivePeerDependencies:
       - '@rolldown/plugin-babel'
       - '@types/node'
@@ -7407,23 +7407,7 @@ snapshots:
       - tsx
       - yaml
 
-  '@mcp-use/inspector@20.3.13(3b5302cc62d90fb53fdf0c0aec6f02c8)':
-    optionalDependencies:
-      '@base-ui/react': 1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      class-variance-authority: 0.7.1
-      clsx: 2.1.1
-      express: 5.2.1
-      lucide-react: 0.562.0(react@19.3.0)
-      markdown-to-jsx: 9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3))
-      mcp-use: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
-      motion: 12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
-      react-resizable-panels: 4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      sonner: 2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      tailwind-merge: 3.7.0
-
-  '@mcp-use/inspector@20.3.13(a927e2322886039e9acd08508016f2d6)':
+  '@mcp-use/inspector@20.3.15(b4a74cdbb28255033eb92c8790b4a8c9)':
     optionalDependencies:
       '@base-ui/react': 1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       class-variance-authority: 0.7.1
@@ -7431,7 +7415,23 @@ snapshots:
       express: 5.2.1
       lucide-react: 1.48.0(react@19.3.0)
       markdown-to-jsx: 9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3))
-      mcp-use: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+      mcp-use: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+      motion: 12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+      react-resizable-panels: 4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      sonner: 2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      tailwind-merge: 3.7.0
+
+  '@mcp-use/inspector@20.3.15(f02fa29b957b0e5713f5f7b9f033e17b)':
+    optionalDependencies:
+      '@base-ui/react': 1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      class-variance-authority: 0.7.1
+      clsx: 2.1.1
+      express: 5.2.1
+      lucide-react: 0.562.0(react@19.3.0)
+      markdown-to-jsx: 9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3))
+      mcp-use: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
       motion: 12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
@@ -7454,26 +7454,26 @@ snapshots:
     dependencies:
       '@chevrotain/types': 11.1.2
 
-  '@miragon/mcp-toolkit-core@2.5.0(mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)':
+  '@miragon/mcp-toolkit-core@2.6.0(mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)':
     dependencies:
-      mcp-use: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+      mcp-use: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
       zod: 4.6.5
 
-  '@miragon/mcp-toolkit-core@2.5.0(mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)':
+  '@miragon/mcp-toolkit-core@2.6.0(mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)':
     dependencies:
-      mcp-use: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+      mcp-use: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
       zod: 4.6.5
 
-  '@miragon/mcp-toolkit-ui@2.5.0(0df93eaa67f5593289908c441ffbc788)':
+  '@miragon/mcp-toolkit-ui@2.6.0(2cea540ab062825581bd1d061c6b0d51)':
     dependencies:
       '@base-ui/react': 1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@fontsource-variable/geist': 5.3.0
-      '@miragon/mcp-toolkit-core': 2.5.0(mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
+      '@miragon/mcp-toolkit-core': 2.6.0(mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
       '@tanstack/react-query': 5.103.2(react@19.3.0)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       lucide-react: 1.47.0(react@19.3.0)
-      mcp-use: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+      mcp-use: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
       radix-ui: 1.6.7(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
@@ -7486,16 +7486,16 @@ snapshots:
       - '@types/react-dom'
       - date-fns
 
-  '@miragon/mcp-toolkit-ui@2.5.0(668d06feb09d11ca7c202293808ce046)':
+  '@miragon/mcp-toolkit-ui@2.6.0(481d18c68c18246b9e0f5b27500245b4)':
     dependencies:
       '@base-ui/react': 1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@fontsource-variable/geist': 5.3.0
-      '@miragon/mcp-toolkit-core': 2.5.0(mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
+      '@miragon/mcp-toolkit-core': 2.6.0(mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5))(zod@4.6.5)
       '@tanstack/react-query': 5.103.2(react@19.3.0)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       lucide-react: 1.47.0(react@19.3.0)
-      mcp-use: 2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
+      mcp-use: 2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5)
       radix-ui: 1.6.7(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
@@ -10816,10 +10816,10 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
-  mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5):
+  mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@0.562.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5):
     dependencies:
-      '@mcp-use/cli': 4.1.17(@mcp-use/inspector@20.3.13(3b5302cc62d90fb53fdf0c0aec6f02c8))(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
-      '@mcp-use/inspector': 20.3.13(3b5302cc62d90fb53fdf0c0aec6f02c8)
+      '@mcp-use/cli': 4.2.1(@mcp-use/inspector@20.3.15(f02fa29b957b0e5713f5f7b9f033e17b))(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
+      '@mcp-use/inspector': 20.3.15(f02fa29b957b0e5713f5f7b9f033e17b)
       '@modelcontextprotocol/client': 2.0.0
       '@modelcontextprotocol/core': 2.0.0
       '@modelcontextprotocol/ext-apps': 2.0.0(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/core@2.0.0)(@modelcontextprotocol/server@2.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
@@ -10858,10 +10858,10 @@ snapshots:
       - yaml
       - zod
 
-  mcp-use@2.7.1(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5):
+  mcp-use@2.7.3(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/node@26.6.3)(class-variance-authority@0.7.1)(clsx@2.1.1)(esbuild@0.28.1)(express@5.2.1)(jiti@2.7.0)(lucide-react@1.48.0(react@19.3.0))(markdown-to-jsx@9.7.15(react@19.3.0)(vue@3.5.41(typescript@6.0.3)))(motion@12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react-resizable-panels@4.10.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(sonner@2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwind-merge@3.7.0)(tsx@4.21.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))(yaml@2.9.1)(zod@4.6.5):
     dependencies:
-      '@mcp-use/cli': 4.1.17(@mcp-use/inspector@20.3.13(a927e2322886039e9acd08508016f2d6))(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
-      '@mcp-use/inspector': 20.3.13(a927e2322886039e9acd08508016f2d6)
+      '@mcp-use/cli': 4.2.1(@mcp-use/inspector@20.3.15(b4a74cdbb28255033eb92c8790b4a8c9))(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
+      '@mcp-use/inspector': 20.3.15(b4a74cdbb28255033eb92c8790b4a8c9)
       '@modelcontextprotocol/client': 2.0.0
       '@modelcontextprotocol/core': 2.0.0
       '@modelcontextprotocol/ext-apps': 2.0.0(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/core@2.0.0)(@modelcontextprotocol/server@2.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)

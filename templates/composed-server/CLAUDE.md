@@ -62,9 +62,9 @@ external infrastructure.
    `devDependencies`: upgrade all `@miragon-ai/*` packages together to one
    version. The consumer-shared libraries are ranged `peerDependencies`
    instead — `react`/`react-dom` (`^19.2.0`), `zod` (`^4.4.0`) and
-   `@miragon/mcp-toolkit-*` (`~2.5.0`) — so they dedupe against your app's
+   `@miragon/mcp-toolkit-*` (`~2.6.0`) — so they dedupe against your app's
    copy; keep an exact copy of each in `devDependencies` for local builds.
-   **`mcp-use` stays exactly pinned** even as a peer (`2.7.1`): a duplicate
+   **`mcp-use` stays exactly pinned** even as a peer (`2.7.3`): a duplicate
    `mcp-use` instance breaks the React context and hangs every in-widget query
    on "Loading…" (invariant #4). `@mcp-use/client` (a dev dependency of `server/`) is
    pre-pinned to the newest version mcp-use's optional peer range accepts, so

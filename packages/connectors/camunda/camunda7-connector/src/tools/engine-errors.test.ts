@@ -175,6 +175,28 @@ describe("engine errors as the model reads them (registrar tool)", () => {
   })
 })
 
+describe("registrar tools honor the MCP request's ctx.signal", () => {
+  // Since toolkit 2.6 the registrar hands mcp-use's ctx to the handler as its
+  // third argument; `withEngine` forwards it to `resolveEngine`, so every
+  // operations tool's engine READS abort with the request.
+  it("a cancelled request aborts the engine read before the deadline", async () => {
+    const { server, tools } = fakeServer()
+    registerProcessInstanceTools(
+      createToolRegistrar(server, registryFor([{ id: "prod-a", baseUrl }], 10_000)),
+    )
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(), 30)
+    const started = Date.now()
+    const result = await tools.get("camunda7_get_process_instance")!(
+      { processInstanceId: "hang" },
+      { signal: controller.signal },
+    )
+    expect(Date.now() - started).toBeLessThan(5_000)
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toBe("request to engine prod-a was cancelled by the caller")
+  })
+})
+
 describe("widget-path feeds honor the MCP request's ctx.signal", () => {
   it("a cancelled request aborts the engine read before the deadline", async () => {
     const { server, tools } = fakeServer()

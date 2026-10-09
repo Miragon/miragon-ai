@@ -33,10 +33,14 @@ export interface EngineContext {
  * `inputSchema`.
  *
  * The optional third argument is the tool call's context: its `signal`
- * aborts the engine READS when the MCP request is cancelled. The toolkit
- * registrar (2.5) calls handlers as `(client, args)` only, so registrar tools
- * get no cancellation yet — once it passes mcp-use's `ctx` as the third
- * argument (Miragon/mcp-toolkit#175) it flows through here unchanged.
+ * aborts the engine READS (GET/HEAD/OPTIONS — `withCallerSignal`) when the
+ * MCP client cancels the request or disconnects; writes always run to
+ * completion or the client's own deadline. Since toolkit 2.6 the registrar
+ * calls handlers as `(client, args, ctx)` with mcp-use's `ctx`, so this is
+ * live for EVERY registrar tool wrapped here, not only the widget feeds: a
+ * multi-step handler can stop at any read — before its write, or after a
+ * write that has landed — but never aborts the write itself. Pinned in
+ * `tools/engine-errors.test.ts`.
  */
 export function withEngine<TArgs extends { engine?: string }, TResult>(
   fn: (client: Client, args: TArgs, ctx: EngineContext) => Promise<TResult>,

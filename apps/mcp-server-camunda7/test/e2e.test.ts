@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { Client } from "@modelcontextprotocol/client"
 import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "@miragon-ai/camunda7-connector"
 import { bootServer, createTestRuntime, listToolNames, type BootedServer } from "./boot-server.js"
@@ -166,10 +166,19 @@ describe("mcp-server-camunda7 E2E toolset surfaces", () => {
     ],
     ["explicit admin + deployments under OAuth", FULL_SURFACE, EXPECTED_TOOLS_ADMIN],
   ])("%s", async (_label, options, expected) => {
+    // mcp-use keeps the LAST registration of a tool name, so a duplicate makes
+    // one tool silently vanish; the toolkit's install guard (2.6+) reports it
+    // as a console warning naming both owners.
+    const warn = vi.spyOn(console, "warn")
     const server = await bootServer(options)
     try {
       expect(await listToolNames(server.client)).toEqual([...expected])
+      const duplicates = warn.mock.calls
+        .map((args) => args.map(String).join(" "))
+        .filter((line) => line.includes("Duplicate tool name"))
+      expect(duplicates).toEqual([])
     } finally {
+      warn.mockRestore()
       await server.close()
     }
   })
@@ -271,7 +280,7 @@ describe("mcp-server-camunda7 E2E fail-closed guard", () => {
  * the widget tools and the framework tools alike. The ONLY exemptions are the
  * toolkit's `render-view` (model-visible) and `refresh-view` (app-only): both
  * are reads by construction (every registered pipeline step is a `load-*`
- * read) but ship unannotated in @miragon/mcp-toolkit-core 2.5, and a
+ * read) but ship unannotated in @miragon/mcp-toolkit-core 2.6, and a
  * view-bound tool cannot be re-registered app-side (mcp-toolkit#177).
  */
 describe("mcp-server-camunda7 E2E read-only annotations", () => {

@@ -359,14 +359,14 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
   consumer-shared libraries are published as RANGED `peerDependencies` so a downstream
   React + zod app dedupes them against its own copy instead of getting a second
   instance: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*`
-  `~2.5.0` (2.5.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
+  `~2.6.0` (2.6.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
   appears as an EXACT `devDependency` so the in-repo build/tests resolve a concrete
-  version. **`mcp-use` is the exception: exactly pinned even as a peer** (`2.7.1`) — a
+  version. **`mcp-use` is the exception: exactly pinned even as a peer** (`2.7.3`) — a
   duplicate `mcp-use` instance breaks the React context and hangs every in-widget query
   on "Loading…" (invariant #4), so its exact pin is load-bearing. Name the required
   `mcp-use` version in each package README and the release changelog. Toolkit updates are
   still deliberate version bumps across all packages — never bump a single package in
-  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.5.0` → `mcp-use@2.7.1`;
+  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.6.0` → `mcp-use@2.7.3`;
   `zod`/`react` it peers as ranges), so a toolkit MAJOR/MINOR bump is a joint toolkit + `mcp-use` bump across
   every package incl. `templates/composed-server` — `scripts/test-template.sh` fails if
   the template is left behind.
@@ -440,8 +440,8 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository.** In `devDependencies` it is
-  exactly pinned (`save-exact`, currently `2.5.0`); in the published surface it is a
-  ranged `peerDependency` (`~2.5.0`) so consumers dedupe it. Toolkit changes arrive here
+  exactly pinned (`save-exact`, currently `2.6.0`); in the published surface it is a
+  ranged `peerDependency` (`~2.6.0`) so consumers dedupe it. Toolkit changes arrive here
   as a deliberate, repo-wide version bump — since 1.0 the toolkit follows semver
   (breaking changes arrive as major bumps).
 - **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,

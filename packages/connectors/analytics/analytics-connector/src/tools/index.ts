@@ -15,9 +15,10 @@ import { registerHealthTools } from "./health.js"
  * `profileStore` feeds the saved analytics defaults (`modules.analytics`) into
  * every tool that takes `period`/`minBucketSize` — the same "explicit arg >
  * saved setting > schema default" resolution as the widget tools, so the
- * settings contract holds across the whole tool surface. Registrar handlers
- * carry no ctx; the key resolves off the request context (auth → session →
- * stdio-anonymous).
+ * settings contract holds across the whole tool surface. The handlers call
+ * `settingsFor` without the ctx the toolkit 2.6 registrar hands them; the key
+ * resolves off the ambient request context (auth → session →
+ * stdio-anonymous), which carries the same auth user.
  */
 export function registerTools(
   server: MCPServer,
