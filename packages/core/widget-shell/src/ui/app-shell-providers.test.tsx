@@ -115,16 +115,20 @@ function mount(host: ReturnType<typeof createFakeHost>) {
 const probe = () => document.querySelector("[data-testid=probe]")?.textContent
 const root = document.documentElement
 
+const CLIENT_DEFAULTS = queryClient.getDefaultOptions()
+
 afterEach(async () => {
   await disposeView()
   document.getElementById("root")?.remove()
   // The toolkit's query client is a module singleton shared by every mount.
   await queryClient.cancelQueries()
   queryClient.clear()
+  queryClient.setDefaultOptions(CLIENT_DEFAULTS)
   root.className = ""
   root.lang = ""
   root.removeAttribute("data-theme")
   root.removeAttribute("style")
+  vi.unstubAllGlobals()
 })
 
 describe("AppShellProviders (real mcp-use view runtime)", () => {
@@ -164,14 +168,34 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     await vi.waitFor(() => expect(probe()).toBe("en|inline|demo:widget"))
   })
 
-  it("still renders, in English, on a host that cannot call server tools", async () => {
+  it("still renders, in English and the OS theme, on a host that cannot call server tools", async () => {
     // No `serverTools` capability: every tool call (the profile feed
     // included) rejects inside the guest — the gate must degrade, not crash.
+    // The toolkit's client keeps react-query's default retries (~7 s of
+    // backoff), during which the gate is merely LOADING — indistinguishable
+    // from the fallback. Fail at once, and assert only after the failure.
+    queryClient.setDefaultOptions({
+      ...CLIENT_DEFAULTS,
+      queries: { ...CLIENT_DEFAULTS.queries, retry: false },
+    })
+    // A dark OS, so the theme fallback is observable (light is the default).
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    )
     const host = createFakeHost({ hostContext: {}, hostCapabilities: {} })
     mount(host)
 
+    await vi.waitFor(() =>
+      expect(queryClient.getQueryState(["camunda7:profile-gate", {}])?.status).toBe("error"),
+    )
     await vi.waitFor(() => expect(probe()).toBe("en|inline|demo:widget"))
     expect(host.toolCalls()).toEqual([])
     expect(root.lang).toBe("en")
+    expect(root.classList.contains("dark")).toBe(true)
   })
 })

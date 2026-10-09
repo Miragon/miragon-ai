@@ -113,8 +113,16 @@
       const view = await viewResponse.json()
       if (!viewResponse.ok) throw new Error(view.error?.message ?? "view read failed")
       const meta = `<meta http-equiv="Content-Security-Policy" content="${cspFor(view.csp)}">`
+      // The CSP must open <head>, ahead of every script, or the "nothing is
+      // blocked" check runs without one — refuse a document without a <head>.
+      const headOpen = /<head(?:\s[^>]*)?>/i
+      if (!headOpen.test(view.html)) {
+        const reason = "view document has no <head>: the CSP cannot be injected"
+        log.errors.push(reason)
+        throw new Error(reason)
+      }
       // A replacer function, so the CSP text is never read as a `$` pattern.
-      iframe.srcdoc = view.html.replace(/<head>/i, () => `<head>${meta}`)
+      iframe.srcdoc = view.html.replace(headOpen, (head) => `${head}${meta}`)
 
       async function deliverLifecycle() {
         post({

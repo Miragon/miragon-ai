@@ -52,11 +52,30 @@ function stubOsPreference(dark: boolean) {
 
 const isDark = () => document.documentElement.classList.contains("dark")
 
+const CLIENT_DEFAULTS = queryClient.getDefaultOptions()
+
+/**
+ * Make a failed fetch terminal at once. The toolkit's client keeps
+ * react-query's default retries (3, backing off ~7 s), and while they run the
+ * query is still PENDING — which renders exactly like the fallback, so a
+ * failure test that does not wait for the error state never reaches it.
+ */
+function failFast() {
+  queryClient.setDefaultOptions({
+    ...CLIENT_DEFAULTS,
+    queries: { ...CLIENT_DEFAULTS.queries, retry: false },
+  })
+}
+
+/** The gate's query, under the feed's module default key (args `{}` appended). */
+const gateQueryStatus = () => queryClient.getQueryState(["camunda7:profile-gate", {}])?.status
+
 afterEach(async () => {
   cleanup()
   // The toolkit's query client is a module singleton shared by every mount.
   await queryClient.cancelQueries()
   queryClient.clear()
+  queryClient.setDefaultOptions(CLIENT_DEFAULTS)
   document.documentElement.classList.remove("dark")
   document.documentElement.lang = ""
   vi.unstubAllGlobals()
@@ -101,13 +120,14 @@ describe("ProfileGate", () => {
 
   it("falls back to English and the OS theme when the feed fails (e.g. the module is disabled)", async () => {
     stubOsPreference(true)
+    failFast()
     const callTool = vi.fn().mockRejectedValue(new Error("unknown tool"))
     renderGate(callTool)
 
-    await waitFor(() => expect(callTool).toHaveBeenCalled())
-    await act(async () => {
-      await Promise.resolve()
-    })
+    // Assert the fallback only once the query has FAILED — before that the
+    // gate is merely loading, which the test above already covers.
+    await waitFor(() => expect(gateQueryStatus()).toBe("error"))
+    expect(callTool).toHaveBeenCalledTimes(1)
     expect(screen.getByTestId("locale").textContent).toBe("en")
     expect(document.documentElement.lang).toBe("en")
     expect(isDark()).toBe(true)

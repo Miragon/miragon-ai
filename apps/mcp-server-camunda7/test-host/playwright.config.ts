@@ -15,7 +15,11 @@ export default defineConfig({
   // recovery grace) clear of CPU starvation on the runner.
   fullyParallel: true,
   workers: CI ? 2 : undefined,
-  retries: CI ? 1 : 0,
+  // Never retry: the gate exists for race-shaped invariants (grace timer vs.
+  // tool-result, single-flight re-execution, the cancelled latch). A retry
+  // turns a regression that fails one run in N into a green "flaky" pass —
+  // a red run is the signal, investigate it with the retained trace.
+  retries: 0,
   forbidOnly: CI,
   reporter: [["list"]],
   use: {

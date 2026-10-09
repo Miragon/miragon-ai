@@ -21,6 +21,12 @@ const RENDER_TOOL = "camunda7_show_process_list"
 const PROFILE_FEED = "camunda7_user_profile_data"
 /** The toolkit's `DEFAULT_ASSUME_STRIPPED_AFTER_MS` — the recovery grace timer. */
 const RECOVERY_GRACE_MS = 2_500
+/**
+ * Long enough after the last lifecycle event (delivery, recovered render) for
+ * a grace timer armed or RE-armed by it to fire — the window every
+ * re-execution count must outlast, or a duplicate call lands after the check.
+ */
+const OUTLAST_GRACE_MS = RECOVERY_GRACE_MS + 1_000
 const TOOLKIT_LIFECYCLE_ISSUE = "https://github.com/Miragon/mcp-toolkit/issues/176"
 const TOOLKIT_HOST_CONTEXT_ISSUE = "https://github.com/Miragon/mcp-toolkit/issues/178"
 const HOST_THEME_ISSUE = "https://github.com/Miragon/miragon-ai/issues/339"
@@ -126,16 +132,18 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     // server's single-widget layout, not an empty one.
     await expect(app.getByRole("heading", { name: "Process Definitions" }).first()).toBeVisible()
     // Harness self-checks: the frame runs mcp-use's synthesized document
-    // (its inline view config), sandboxed to an opaque origin.
+    // (its inline view config), sandboxed to an opaque origin, under the
+    // host's CSP — the first element of <head>, ahead of every script.
     expect(
       await app.locator("html").evaluate(() => ({
         viewConfig: "__mcpUseViewConfig" in globalThis,
         origin: window.origin,
+        csp: document.head.firstElementChild?.getAttribute("http-equiv") ?? null,
       })),
-    ).toEqual({ viewConfig: true, origin: "null" })
+    ).toEqual({ viewConfig: true, origin: "null", csp: "Content-Security-Policy" })
     await waitForDelivery(page, "result")
     // Outlast the recovery grace timer: a conforming host must never trigger it.
-    await page.waitForTimeout(RECOVERY_GRACE_MS + 1_000)
+    await page.waitForTimeout(OUTLAST_GRACE_MS)
 
     const log = await hostLog(page)
     expect(await reExecutions(page)).toHaveLength(0)
@@ -146,8 +154,24 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     expect(log.sizeChanges.at(-1)?.height ?? 0).toBeGreaterThan(200)
     expect(log.errors).toEqual([])
     // Nothing the served document needs is blocked by its own declared CSP,
-    // and nothing throws.
+    // and nothing throws …
     expect(errors).toEqual([])
+    // … and that CSP is in force, so the empty list measured something: a
+    // load it does not allow is refused (and logged — after the check above).
+    expect(
+      await app.locator("html").evaluate(
+        () =>
+          new Promise<string | null>((resolve) => {
+            document.addEventListener(
+              "securitypolicyviolation",
+              (event) => resolve(event.effectiveDirective),
+              { once: true },
+            )
+            new Image().src = "https://csp-probe.invalid/pixel.png"
+            setTimeout(() => resolve(null), 2_000)
+          }),
+      ),
+    ).toBe("img-src")
   })
 
   test("in-widget query: the server-side search refetches through the app-only feed", async ({
@@ -179,7 +203,9 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page, { structuredContent: "strip" })
 
     await expectProcessList(app)
-    await page.waitForTimeout(1_000)
+    // The recovered render is the last event: a grace timer re-armed by the
+    // recovered payload would fire a second call inside this window.
+    await page.waitForTimeout(OUTLAST_GRACE_MS)
     expect(await reExecutions(page)).toEqual([
       { name: RENDER_TOOL, arguments: { engine: HEALTHY_ENGINE } },
     ])
@@ -194,7 +220,8 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       // Rendered from the premature recovery, before the host delivered.
       await expectProcessList(app)
       await waitForDelivery(page, "result")
-      await page.waitForTimeout(500)
+      // The host's late delivery is the last event; outlast a timer it re-arms.
+      await page.waitForTimeout(OUTLAST_GRACE_MS)
 
       // Never a duplicate render: the host payload replaces the recovered one.
       await expect(definitionsTable(app)).toHaveCount(1)
@@ -215,7 +242,9 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       const log = await hostLog(page)
       // A genuine isError result from the real server (engine 503).
       expect(log.originalResult?.isError).toBe(true)
-      await page.waitForTimeout(RECOVERY_GRACE_MS + 500)
+      // The recovery fires one grace period in; outlast a second one, so a
+      // timer re-armed by the recovered (error) result would show.
+      await page.waitForTimeout(RECOVERY_GRACE_MS + OUTLAST_GRACE_MS)
 
       expect(
         await reExecutions(page),
@@ -234,7 +263,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
 
     await waitForDelivery(page, "cancelled")
     await expect(app.getByText("Tool call was cancelled.")).toBeVisible()
-    await page.waitForTimeout(RECOVERY_GRACE_MS + 1_000)
+    await page.waitForTimeout(OUTLAST_GRACE_MS)
     expect(await reExecutions(page)).toHaveLength(0)
     await expect(app.getByText("Tool call was cancelled.")).toBeVisible()
   })
