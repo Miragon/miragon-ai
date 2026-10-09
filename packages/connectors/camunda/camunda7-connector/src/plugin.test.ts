@@ -151,6 +151,21 @@ describe("createPlugin advertises `engine` as the boot-time enum of configured i
   })
 })
 
+describe("camunda7_show_engine_health states its verdict rule (#340)", () => {
+  it("names the source and the deployment's OWN thresholds, and routes to analytics", async () => {
+    const { byName } = await bootSurface({ healthThresholds: { criticalIncidents: 10 } })
+    const description = (
+      byName.get("camunda7_show_engine_health")?.definition as {
+        description?: string
+      }
+    )?.description
+    expect(description).toContain(
+      "Verdict: From the engine's open incidents, read live: critical at >=10 open or >=25 in one cluster, degraded with any, else ok.",
+    )
+    expect(description).toContain("use analytics_engine_health")
+  })
+})
+
 describe("ENGINE_NOT_SELECTED names camunda7_select_engine only when the caller could save", () => {
   const TWO = [
     { id: "a", baseUrl: "http://a.example/engine-rest" },

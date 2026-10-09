@@ -9,7 +9,11 @@ import {
   withToolErrors,
   strictToolInput,
 } from "@miragon-ai/widget-shell/server"
-import { buildClusterDetailData, buildEngineHealthData } from "../data/health-data.js"
+import {
+  buildClusterDetailData,
+  buildEngineHealthData,
+  healthVerdictRule,
+} from "../data/health-data.js"
 import {
   buildIncidentsDashboardData,
   buildProcessIncidentsData,
@@ -41,7 +45,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       name: CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
       title: "Incidents Dashboard",
       description:
-        "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view.",
+        "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view. Use for open incidents by process; for an engine verdict with cross-process clusters use camunda7_show_engine_health.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         ...incidentsDashboardFilterShape,
@@ -170,7 +174,9 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       name: CAMUNDA7_SHOW_ENGINE_HEALTH,
       title: "Engine Health Overview",
       description:
-        "Show the AI-first engine overview: a deterministic health verdict (ok / degraded / critical) with running-instance and incident KPIs and the top incident clusters, grouped cross-process by failing activity + incident type. The home base for triaging what is wrong on a CIB Seven / Camunda 7 engine — each cluster drills in or hands off to AI for root cause + remediation.",
+        "Show ONE engine's health overview: a deterministic verdict (ok / degraded / critical) with running-instance and incident KPIs and the top incident clusters, grouped cross-process by failing activity + incident type; each cluster drills in or hands off to AI. " +
+        `Verdict: ${healthVerdictRule(healthThresholds)} ` +
+        "Use for what is failing on an engine right now; for metric trends, job backlog or firing alerts use analytics_engine_health.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({ ...engineParam }),
       ...showToolBinding(CAMUNDA7_SHOW_ENGINE_HEALTH, "Engine Health Overview"),
@@ -189,6 +195,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
         summary: t("c7sum.engineHealth", {
           engineId,
           status: data.status,
+          rule: data.statusRule,
           totalIncidents: data.summary.totalIncidents,
           affectedActivities: data.summary.affectedActivities,
           runningInstances: data.summary.runningInstances,

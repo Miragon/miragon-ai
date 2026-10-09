@@ -10,7 +10,7 @@ vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
 
 import { getIncidents, getProcessInstances } from "@miragon-ai/camunda7-client/sdk"
 import type { Client } from "@miragon-ai/camunda7-client"
-import { buildClusterDetailData } from "./health-data.js"
+import { buildClusterDetailData, healthVerdictRule } from "./health-data.js"
 
 const mockedGetIncidents = vi.mocked(getIncidents)
 const mockedGetProcessInstances = vi.mocked(getProcessInstances)
@@ -144,5 +144,17 @@ describe("buildClusterDetailData paging", () => {
     expect(query.processInstanceIds?.split(",")).toHaveLength(10)
     expect(query.processInstanceIds?.startsWith("p50")).toBe(true)
     expect(data.incidents[0]?.businessKey).toBe("ORDER-50")
+  })
+})
+
+/**
+ * #340: the verdict states its source and thresholds wherever it travels, so
+ * it cannot be mistaken for analytics_engine_health's alert-based status.
+ */
+describe("healthVerdictRule", () => {
+  it("names the source and the deployment's own thresholds", () => {
+    expect(healthVerdictRule({ criticalIncidents: 10, criticalClusterSize: 4 })).toBe(
+      "From the engine's open incidents, read live: critical at >=10 open or >=4 in one cluster, degraded with any, else ok.",
+    )
   })
 })

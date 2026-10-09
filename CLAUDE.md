@@ -72,7 +72,8 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    Destructive/admin tools must also be listed in `src/lib/toolsets.ts` (`ADMIN_ONLY_TOOLS`)
    so the `camunda7:read-only|operations|admin` toolset filtering stays correct —
    `src/lib/toolsets.test.ts` enforces the rule structurally over every registered tool
-   (`destructiveHint` ⇒ admin-only, read-only ⇒ `readOnlyHint`), so get the annotations
+   (`destructiveHint` ⇒ admin-only, read-only ⇒ `readOnlyHint`, every write states
+   `destructiveHint` explicitly — MCP reads an absent hint as `true`), so get the annotations
    right rather than editing the test. Toolsets are FAIL-CLOSED: without a suffix a module
    runs its read-only floor on an unauthenticated boot and its standard toolset (camunda7
    `operations`, analytics `standard`) under OAuth; `admin` is never implied, and an
@@ -231,7 +232,9 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    are machine-enforced by `.dependency-cruiser.cjs` via the root
    `pnpm lint:architecture` (part of `pnpm lint`). Each module exports its definition in
    `src/module.ts` (config schema, `configFromEnv`, `knownEnvVars`, `toolsets`,
-   `bootWarnings`, plugin factory) conforming STRUCTURALLY (no import) to the port. The
+   `bootWarnings`, `instructions` — its slice of the MCP server instructions, where rules
+   that hold for every tool (camunda7's engine routing) live instead of 60 descriptions —
+   plugin factory) conforming STRUCTURALLY (no import) to the port. The
    port SHAPE (`ComposableModule<TShared>`) and the whole composition-root machinery
    (`composeModules`: `MCP_ACTIVE_MODULES` parsing incl. `module:toolset` suffix;
    `resolveBoot(env, { authenticated })`, which resolves ONE concrete toolset per module

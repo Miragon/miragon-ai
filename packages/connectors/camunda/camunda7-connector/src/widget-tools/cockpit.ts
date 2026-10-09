@@ -43,7 +43,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       name: CAMUNDA7_OPEN_COCKPIT,
       title: "Open Cockpit",
       description:
-        "Open the consolidated CIB Seven operations cockpit — a single app that navigates client-side (no extra tool calls) across the process landscape: overview, per-definition running instances, instance detail, plus quick access to human tasks, jobs and deployments. The Support entry point.",
+        "Open the consolidated CIB Seven operations cockpit — a single app that navigates client-side (no extra tool calls) across the process landscape: overview, per-definition running instances, instance detail, plus quick access to human tasks, jobs and deployments. Use to browse and act; for a health verdict use camunda7_show_engine_health.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({ ...engineParam }),
       ...showToolBinding(CAMUNDA7_OPEN_COCKPIT, "Open Cockpit"),

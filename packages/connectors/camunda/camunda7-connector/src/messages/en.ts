@@ -133,7 +133,7 @@ export const en: MessageCatalog = {
     "History timeline for process instance {processInstanceId}: {totalActivities} historic activities{notFound}.",
   "c7sum.historyTimeline.notFound": " (no historic process instance found)",
   "c7sum.engineHealth":
-    'Engine "{engineId}" — {status}: {totalIncidents} open incidents across {affectedActivities} activities, {runningInstances} running instances.{topCluster}',
+    'Engine "{engineId}" — {status} ({rule}): {totalIncidents} open incidents across {affectedActivities} activities, {runningInstances} running instances.{topCluster}',
   "c7sum.engineHealth.topCluster":
     ' Top cluster: activity "{activityId}" / {incidentType}, {incidentCount} incidents.',
   "c7sum.engineHealth.noIncidents": " No open incidents.",

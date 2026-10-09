@@ -502,6 +502,8 @@ export interface EngineHealthCluster {
 export interface EngineHealthData {
   /** Deterministic traffic-light verdict from incident volume + cluster size. */
   status: EngineHealthStatus
+  /** How `status` was decided, in words (source + thresholds) — `healthVerdictRule`. */
+  statusRule: string
   /** Deterministic plain-language headline, e.g. "Degraded — 51 open incidents across 3 activities". */
   headline: string
   summary: {

@@ -8,8 +8,12 @@ import type { EngineHealthData } from "../view-models.js"
 
 afterEach(cleanup)
 
+const RULE =
+  "From the engine's open incidents, read live: critical at >=50 open or >=25 in one cluster, degraded with any, else ok."
+
 const DEGRADED: EngineHealthData = {
   status: "degraded",
+  statusRule: RULE,
   headline: "Degraded — 51 open incidents across 3 activities",
   summary: {
     totalIncidents: 51,
@@ -54,6 +58,7 @@ const DEGRADED: EngineHealthData = {
 
 const HEALTHY: EngineHealthData = {
   status: "ok",
+  statusRule: RULE,
   headline: "Stable — no open incidents (312 running instances)",
   summary: {
     totalIncidents: 0,

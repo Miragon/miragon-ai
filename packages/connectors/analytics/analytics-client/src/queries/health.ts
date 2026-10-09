@@ -18,8 +18,21 @@ export interface HealthAlert {
   scope: string
 }
 
+/**
+ * How {@link engineHealth} decides `status`, in words — carried in every
+ * result (`statusRule`) and the tool description, so no reader mistakes this
+ * alert-based verdict for camunda7_show_engine_health's incident-count one:
+ * the two judge different data by different rules and may disagree for the
+ * same engine (500 open incidents without a firing critical alert stay
+ * "degraded" here).
+ */
+export const ENGINE_HEALTH_STATUS_RULE =
+  "From Prometheus: critical only while an alert rule with severity=critical fires; degraded with any firing alert, dead job or open incident; else healthy."
+
 export interface EngineHealthResult {
   status: "healthy" | "degraded" | "critical"
+  /** How `status` was decided ({@link ENGINE_HEALTH_STATUS_RULE}). */
+  statusRule: string
   runningInstances: number
   runningByDefinition: HealthCount[]
   openIncidents: number
@@ -114,6 +127,7 @@ export async function engineHealth(
 
   return {
     status,
+    statusRule: ENGINE_HEALTH_STATUS_RULE,
     runningInstances,
     runningByDefinition,
     openIncidents,

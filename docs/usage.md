@@ -106,5 +106,10 @@ the dashboard picker says "Saved dashboards are unavailable".
   incidents. Batch actions (batch retries, migrations) only queue work: ask
   for the batch status afterwards. Completing a task that was delegated in
   Tasklist hands it back to its owner, and the task stays open.
+- The two health checks judge different things and say how: the engine
+  overview rates one engine by its open incidents (by default critical at 50
+  open or 25 in one cluster), the analytics health by Prometheus alert rules
+  (critical only while a critical alert fires). "Has this activity failed
+  before?" is answered from incident history, resolved incidents included.
 - If a tool isn't doing what you expect, ask the assistant to show you the raw
   arguments — it'll print them and you can spot mismatches quickly.

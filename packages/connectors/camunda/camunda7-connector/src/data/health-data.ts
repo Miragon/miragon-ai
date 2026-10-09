@@ -67,6 +67,19 @@ interface ClusterAcc {
   latest: string | null
 }
 
+/**
+ * The verdict rule in words — stated in the tool description and carried in
+ * every payload (`statusRule`), so no reader mistakes this incident-count
+ * verdict for analytics_engine_health's alert-based one: the two judge
+ * different data by different rules and may disagree for the same engine.
+ */
+export function healthVerdictRule(t: EngineHealthThresholds): string {
+  return (
+    `From the engine's open incidents, read live: critical at >=${t.criticalIncidents} open ` +
+    `or >=${t.criticalClusterSize} in one cluster, degraded with any, else ok.`
+  )
+}
+
 function statusOf(
   totalIncidents: number,
   topClusterSize: number,
@@ -302,6 +315,7 @@ export async function buildEngineHealthData(
 
   return {
     status,
+    statusRule: healthVerdictRule(thresholds),
     headline,
     summary: {
       totalIncidents,

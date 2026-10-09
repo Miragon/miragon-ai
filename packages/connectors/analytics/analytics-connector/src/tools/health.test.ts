@@ -86,3 +86,38 @@ describe("analytics_engine_health PromQL", () => {
     expect(queries.every((q) => q.includes('engine_id=~"prod-a|prod-b"'))).toBe(true)
   })
 })
+
+/**
+ * #340: two health tools judge different data by different rules — each
+ * states its own in the description AND the result, and routes to the other.
+ */
+describe("analytics_engine_health verdict labeling", () => {
+  const RULE =
+    "From Prometheus: critical only while an alert rule with severity=critical fires; degraded with any firing alert, dead job or open incident; else healthy."
+
+  it("carries the status rule in every result", async () => {
+    const handlers = captureHandlers(registerHealthTools)
+    const { client } = recordingClient()
+    const result = (await handlers.get("analytics_engine_health")!(client, {})) as {
+      status: string
+      statusRule: string
+    }
+    expect(result.status).toBe("healthy")
+    expect(result.statusRule).toBe(RULE)
+  })
+
+  it("states the rule and the routing to camunda7_show_engine_health in its description", () => {
+    let description = ""
+    const register = Object.assign(
+      (config: ToolConfig<PrometheusClient>) => {
+        description = config.description
+      },
+      { getRegisteredTools: (): RegisteredToolMeta[] => [] },
+    )
+    registerHealthTools(register as never)
+    expect(description).toContain(`Status: ${RULE}`)
+    expect(description).toContain(
+      "Use for fleet-wide or metric-based health; for one engine's live incident clusters use camunda7_show_engine_health.",
+    )
+  })
+})

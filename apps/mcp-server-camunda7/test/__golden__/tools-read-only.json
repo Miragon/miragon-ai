@@ -400,7 +400,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Live operational health of the CIB Seven engine(s), from Prometheus state gauges: running WIP, open incidents by type, dead jobs (retries exhausted), executable/suspended job backlog, open/unassigned user tasks, external-task backlog, deployed definitions, and which alert rules are firing/pending. A one-call ops snapshot with an overall status (healthy/degraded/critical). Optional engine filter.",
+    "description": "Live operational health of the CIB Seven engine(s), from Prometheus state gauges: running WIP, open incidents by type, dead jobs (retries exhausted), executable/suspended job backlog, open/unassigned user tasks, external-task backlog, deployed definitions, and which alert rules are firing/pending. Status: From Prometheus: critical only while an alert rule with severity=critical fires; degraded with any firing alert, dead job or open incident; else healthy. Use for fleet-wide or metric-based health; for one engine's live incident clusters use camunda7_show_engine_health.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -534,7 +534,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "List currently-open incident patterns from process metrics, grouped by incident type and process definition (point-in-time — what is failing right now). For the actual failed instances (ids, messages), drill in with camunda7_list_incidents / camunda7_query_historic_process_instances.",
+    "description": "List currently-open incident patterns from process metrics, grouped by incident type and process definition (point-in-time — what is failing right now). Use for counts across engines; for the actual failed instances (ids, messages) use camunda7_list_incidents, for past ones camunda7_query_historic_incidents.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -936,7 +936,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Show current incident/failure state from Prometheus, grouped by incident type, activity, and process definition (point-in-time — what is failing right now).",
+    "description": "Show current incident/failure state from Prometheus, grouped by incident type, activity, and process definition (point-in-time — what is failing right now). Use to show the metric view to the user; for one engine's live incident clusters use camunda7_show_engine_health.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -2648,7 +2648,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Open the consolidated CIB Seven operations cockpit — a single app that navigates client-side (no extra tool calls) across the process landscape: overview, per-definition running instances, instance detail, plus quick access to human tasks, jobs and deployments. The Support entry point.",
+    "description": "Open the consolidated CIB Seven operations cockpit — a single app that navigates client-side (no extra tool calls) across the process landscape: overview, per-definition running instances, instance detail, plus quick access to human tasks, jobs and deployments. Use to browse and act; for a health verdict use camunda7_show_engine_health.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3574,7 +3574,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Show the AI-first engine overview: a deterministic health verdict (ok / degraded / critical) with running-instance and incident KPIs and the top incident clusters, grouped cross-process by failing activity + incident type. The home base for triaging what is wrong on a CIB Seven / Camunda 7 engine — each cluster drills in or hands off to AI for root cause + remediation.",
+    "description": "Show ONE engine's health overview: a deterministic verdict (ok / degraded / critical) with running-instance and incident KPIs and the top incident clusters, grouped cross-process by failing activity + incident type; each cluster drills in or hands off to AI. Verdict: From the engine's open incidents, read live: critical at >=50 open or >=25 in one cluster, degraded with any, else ok. Use for what is failing on an engine right now; for metric trends, job backlog or firing alerts use analytics_engine_health.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3718,7 +3718,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view.",
+    "description": "Overview of open incidents across all process definitions: KPIs, filter, per-process group cards with activity summaries. From a card the operator can drill into the per-process detail view. Use for open incidents by process; for an engine verdict with cross-process clusters use camunda7_show_engine_health.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
