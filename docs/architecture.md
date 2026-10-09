@@ -80,8 +80,9 @@ second engine dialect cheap:
 
 Preferences live in one profile record per user, shared by every module and
 persisted in Postgres (`DATABASE_URL`), on disk (`MCP_PROFILE_DIR`), or in
-memory — in that order of precedence. The record is keyed by the authenticated
-user when the server runs with `MCP_OAUTH`, otherwise by the MCP session id.
+memory — in that order of precedence. The record is keyed by the signed-in user:
+`MCP_OAUTH` is the only caller identity, so without it settings show their
+defaults and cannot be saved.
 
 | Part                     | Owner        | Contents                                                          |
 | ------------------------ | ------------ | ----------------------------------------------------------------- |

@@ -56,8 +56,8 @@ function summarize(p: UserProfile): string {
  *   - `camunda7_user_profile_data`  — app-only feed (backs the widget self-fetch),
  *   - `camunda7_save_user_profile`  — model-visible write (partial update).
  *
- * All three resolve the profile key from the request (auth user id → session id)
- * and never talk to an engine; the engine *registry* is read only for the full
+ * All three resolve the profile key from the request (the OAuth caller — see
+ * `resolveProfileKey`) and never talk to an engine; the engine *registry* is read only for the full
  * configured engine list the settings UI offers as availability checkboxes.
  *
  * The save tool is a durable write (shared profile store), so it honors
@@ -81,12 +81,9 @@ export function registerUserProfileTools(
   const canSave = allowsProfileSave(toolset)
 
   const loadView = async (ctx: unknown): Promise<UserProfileView> => {
-    // Same key precedence as the save path (resolveProfileKey maps stdio to
-    // the shared anonymous record), so a keyless save is read back instead of
-    // being write-only. An HTTP request without any identity resolves no key —
-    // that renders defaults, and since mcp-use 2 issues no MCP session ids it
-    // is the NORM for un-authenticated HTTP deployments (identity comes from
-    // OAuth or a gateway-stamped Mcp-Session-Id).
+    // Same key resolution as the save path, so a save is always read back. A
+    // request without OAuth resolves no key and renders the defaults — the
+    // NORM on an unauthenticated deployment.
     const key = resolveProfileKey(ctx)
     const record = key ? await store.get(key) : undefined
     return {
@@ -109,7 +106,7 @@ export function registerUserProfileTools(
       name: CAMUNDA7_SHOW_USER_PROFILE,
       title: "Profile & Settings",
       description:
-        "Open the user profile & settings panel for this MiragonAI session: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
+        "Open the user profile & settings panel: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: z.object({}),
       ...showToolBinding(CAMUNDA7_SHOW_USER_PROFILE, "Profile & Settings"),
@@ -132,7 +129,7 @@ export function registerUserProfileTools(
       name: CAMUNDA7_USER_PROFILE_DATA,
       title: "User profile data (internal)",
       description:
-        "Internal JSON feed (no UI) for the current session's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
+        "Internal JSON feed (no UI) for the caller's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: z.object({}),
       // visibility "app" + widgetAccessible: same dual app-only contract as
@@ -151,7 +148,7 @@ export function registerUserProfileTools(
       name: CAMUNDA7_SAVE_USER_PROFILE,
       title: "Save user profile",
       description:
-        'Update the current session\'s user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like "switch the UI to German" (language: "de") or "only let me pick the prod engines" (allowedEngineIds). Engine availability is curation, not access control.',
+        'Update the caller\'s user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like "switch the UI to German" (language: "de") or "only let me pick the prod engines" (allowedEngineIds). Engine availability is curation, not access control.',
       annotations: { idempotentHint: true },
       // The flat input is a tool-API convenience; the handler splits it into
       // the record's cross-module fields and this module's own slice.
@@ -178,8 +175,7 @@ export function registerUserProfileTools(
       for (const field of ["defaultEngineId", "defaultDashboardId"]) {
         if (slicePatch[field] === "") slicePatch[field] = undefined
       }
-      // Stamping the auth user id marks the record user-bound — exempt from
-      // the session-TTL cleanup.
+      // The OAuth caller is stamped as the record's owner.
       const saved = await store.save(
         key,
         { language, theme, modules: { [CAMUNDA7_MODULE_KEY]: slicePatch } },

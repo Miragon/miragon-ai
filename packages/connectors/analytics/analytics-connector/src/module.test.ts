@@ -43,8 +43,6 @@ function surfaceFor(config: Record<string, unknown>): RecordedTool[] {
     tool: (definition: RecordedTool) => {
       tools.push(definition)
     },
-    // installMcpRequestContext registers its middleware here.
-    use: () => {},
   } as unknown as MCPServer
   const plugin = analyticsModule.createPlugin(
     { url: "http://prometheus.invalid", ...config },

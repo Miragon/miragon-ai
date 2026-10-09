@@ -26,10 +26,10 @@ export interface EngineMeta {
  * {@link BackendRegistry} (id validation, single-default fallback) alongside
  * the static configured engine list and the injected default-engine lookup.
  *
- * There is deliberately NO per-session selection state: mcp-use 2 serves HTTP
- * statelessly (no MCP session ids), and in-memory selection state would break
- * behind any load balancer with more than one replica. The durable equivalent
- * is the profile's `modules.camunda7.defaultEngineId`, surfaced here as
+ * There is deliberately NO in-memory selection state: the server is
+ * stateless, and such state would break behind any load balancer with more
+ * than one replica. The durable equivalent is the signed-in caller's
+ * `modules.camunda7.defaultEngineId` profile field, surfaced here as
  * {@link EngineRegistry.defaultEngineId} and consulted per call by
  * [[resolveEngine]] when no explicit override is given.
  */
@@ -41,9 +41,11 @@ export interface EngineRegistry {
    * caller identity resolves, or the store is unreachable — the lookup is
    * advisory and must never throw). Injected by the plugin so this module's
    * lib stays free of profile plumbing; async because it reads the profile
-   * store. Not consulted when only one engine is configured.
+   * store. Handed the tool call's `ctx` when there is one (the caller
+   * resolves from it), nothing for pipeline steps. Not consulted when only
+   * one engine is configured.
    */
-  defaultEngineId?: () => Promise<string | undefined>
+  defaultEngineId?: (call?: EngineCallContext) => Promise<string | undefined>
 }
 
 /**
@@ -55,7 +57,7 @@ export interface EngineRegistry {
 export function createEngineRegistry(
   engines: EngineEntry[],
   clientFor: (engine: EngineEntry) => Client,
-  opts?: { defaultEngineId?: () => Promise<string | undefined> },
+  opts?: { defaultEngineId?: EngineRegistry["defaultEngineId"] },
 ): EngineRegistry {
   const backends = createBackendRegistry<Client, EngineMeta>(
     engines.map((e) => ({
@@ -118,19 +120,24 @@ export class UnknownEngineError extends Error {
  * preference cannot change the outcome, so the per-call profile read is
  * skipped entirely.
  */
-async function savedDefault(registry: EngineRegistry): Promise<string | undefined> {
+async function savedDefault(
+  registry: EngineRegistry,
+  call: EngineCallContext | undefined,
+): Promise<string | undefined> {
   if (registry.engines.length <= 1) return undefined
-  const id = await registry.defaultEngineId?.()
+  const id = await registry.defaultEngineId?.(call)
   return id && registry.engines.some((e) => e.id === id) ? id : undefined
 }
 
 /**
  * The slice of a tool call's context engine calls honor: mcp-use's handler
  * `ctx` satisfies it structurally (`ctx.signal` aborts when the MCP client
- * cancels the request or drops the connection).
+ * cancels the request or drops the connection; `ctx.auth` names the caller
+ * whose saved default engine routes the call).
  */
 export interface EngineCallContext {
   signal?: AbortSignal
+  auth?: unknown
 }
 
 /**
@@ -141,9 +148,10 @@ export interface EngineCallContext {
  * module's own `EngineNotSelectedError` / `UnknownEngineError` so the error
  * contract (codes, `availableEngines`, the remediation hint) is preserved.
  *
- * Pass the handler's `ctx` as `call` so the returned client's READS abort
- * with the MCP request (`withCallerSignal` — writes always run to completion
- * or the client's own deadline).
+ * Pass the handler's `ctx` as `call` so the saved default is the CALLER's
+ * (resolved from `ctx.auth`) and the returned client's READS abort with the
+ * MCP request (`withCallerSignal` — writes always run to completion or the
+ * client's own deadline).
  */
 export async function resolveEngine(
   override: string | undefined,
@@ -157,7 +165,7 @@ export async function resolveEngine(
   provider: EngineProvider
 }> {
   try {
-    const backend = registry.backends.resolve(override ?? (await savedDefault(registry)))
+    const backend = registry.backends.resolve(override ?? (await savedDefault(registry, call)))
     return {
       client: withCallerSignal(backend.client, call?.signal),
       engineId: backend.id,

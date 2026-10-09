@@ -1,45 +1,57 @@
 /**
- * Repo-owned ambient MCP request info — the mcp-use 2.x replacement for the
- * removed `getRequestContext` AsyncLocalStorage (1.x propagated the Hono
- * request context into every handler; 2.x only hands a `ctx` to `server.tool`
- * callbacks and middleware).
+ * Repo-owned ambient MCP request info — for the few consumers that run
+ * WITHOUT a tool-handler `ctx` in hand.
  *
- * Why ambient at all: since toolkit 2.6 the registrars (`createToolRegistrar`,
- * `createWidgetToolRegistrar`) hand mcp-use's `ctx` to handlers as their third
- * argument, so a handler CAN reach the caller directly — but not every
- * consumer has that ctx in hand: the camunda7 REST client's passthrough-auth
- * interceptor runs deep inside a hey-api call chain, and the per-call
- * default-engine lookup is an argument-less callback. This store restores the
- * 1.x semantics for exactly the two ambient consumers: profile-key resolution
- * ([[resolveProfileKey]] — its session-id and stdio-anonymous rungs read only
- * this store, ctx or not, and it also feeds the per-call default-engine
- * lookup) and the passthrough bearer token (`resolveMcpBearerToken`).
+ * Since toolkit 2.6 every handler gets mcp-use's `ctx` (registrar handlers as
+ * their third argument, raw `server.tool` callbacks as their second), and
+ * caller identity resolves from it ([[resolveProfileKey]] reads `ctx.auth`
+ * first). What remains ctx-less: pipeline steps (`render-view` /
+ * `refresh-view` hand a step no `ctx`, so a step's saved-default-engine
+ * lookup reads the caller here) and the camunda7 REST client's
+ * passthrough-auth interceptor, which runs deep inside a hey-api call chain
+ * (`resolveMcpBearerToken`). This store carries exactly what those need: the
+ * OAuth caller's id and the raw `Authorization` header — nothing a client can
+ * pick for itself becomes an identity here.
+ *
+ * Fail-closed by construction: outside a request — or when no middleware was
+ * installed — there is no store, and no store means NO identity (saves
+ * refuse, reads fall back to defaults), never a shared record.
  *
  * Installed once per server via [[installMcpRequestContext]] (idempotent) —
- * the composition root (`index.ts` of the host app) calls it right after
- * `createFrameworkApp`. Lives on the `/server` path only: `node:async_hooks`
- * must never reach the widget bundle.
+ * `createComposedServer` does it right after `createFrameworkApp`. Lives on
+ * the `/server` path only: `node:async_hooks` must never reach the widget
+ * bundle.
  */
 import { AsyncLocalStorage } from "node:async_hooks"
+import { resolveCallerId } from "@miragon/mcp-toolkit-core"
 
-/** The per-request slice the ambient consumers actually need. */
+/** The per-request slice the ctx-less consumers actually need. */
 export interface McpRequestInfo {
-  /** MCP session id (transport session, else the `Mcp-Session-Id` header). */
-  sessionId?: string
-  /** Authenticated user id (mcp-use OAuth: `auth.extra.user.userId`). */
+  /** The OAuth caller's id, read off the request's auth like `resolveCaller` does. */
   authUserId?: string
+  /**
+   * Declares the request's caller as THE single local user of a transport
+   * without auth (stdio, tests) — it resolves to `ANONYMOUS_PROFILE_KEY`.
+   * Never derived from a request: the HTTP middleware does not set it, so
+   * only code that runs work under [[runWithMcpRequestInfo]] can declare it.
+   */
+  anonymousCaller?: boolean
   /** Raw `Authorization` header value, scheme included (e.g. `Bearer …`). */
   authorization?: string
 }
 
 const storage = new AsyncLocalStorage<McpRequestInfo>()
 
-/** The current request's info, or `undefined` outside one (stdio, boot, tests). */
+/** The current request's info, or `undefined` outside one (boot, tests, no middleware). */
 export function getMcpRequestInfo(): McpRequestInfo | undefined {
   return storage.getStore()
 }
 
-/** Test seam: run `fn` under a fixed request info (mirrors 1.x `runWithContext`). */
+/**
+ * Run `fn` under a fixed request info — the test seam, and the only way to
+ * declare an `anonymousCaller` (a transport without auth that serves exactly
+ * one local user).
+ */
 export function runWithMcpRequestInfo<T>(info: McpRequestInfo, fn: () => T): T {
   return storage.run(info, fn)
 }
@@ -47,12 +59,12 @@ export function runWithMcpRequestInfo<T>(info: McpRequestInfo, fn: () => T): T {
 /**
  * The slice of mcp-use's middleware ctx this module reads — structural (like
  * the toolkit's `RoleFilterContext`) so the exact upstream type stays out of
- * the public surface.
+ * the public surface. `auth` is read through the toolkit's `resolveCaller`,
+ * which knows the middleware shape (`auth.extra.user`).
  */
 interface MiddlewareCtxLike {
   request?: { header(name: string): string | undefined }
-  session?: { sessionId?: string }
-  auth?: { token?: string; extra?: { user?: unknown } }
+  auth?: unknown
 }
 
 function deriveInfo(ctx: MiddlewareCtxLike): McpRequestInfo {
@@ -63,16 +75,8 @@ function deriveInfo(ctx: MiddlewareCtxLike): McpRequestInfo {
       return undefined
     }
   }
-  // mcp-use 2 middleware auth is the SDK `AuthInfo`, with the provider-mapped
-  // user under `extra.user`; its subject is `id` (2.x providers) or `userId`
-  // (legacy spelling) — accept both, mirroring `resolveAuthUserId`.
-  const user = ctx.auth?.extra?.user as { userId?: unknown; id?: unknown } | undefined
-  const userId = [user?.userId, user?.id].find(
-    (c): c is string => typeof c === "string" && c.length > 0,
-  )
   return {
-    sessionId: ctx.session?.sessionId ?? header("Mcp-Session-Id") ?? header("mcp-session-id"),
-    authUserId: userId,
+    authUserId: resolveCallerId(ctx),
     authorization: header("Authorization") ?? header("authorization"),
   }
 }
@@ -95,13 +99,5 @@ const installed = new WeakSet<McpMiddlewareHost>()
 export function installMcpRequestContext(server: McpMiddlewareHost): void {
   if (installed.has(server)) return
   installed.add(server)
-  server.use("mcp:*", (ctx, next) => {
-    const mw = ctx as MiddlewareCtxLike
-    // Only HTTP exchanges carry request info. Leaving the store EMPTY (not
-    // `{}`) for other transports preserves the 1.x contract consumers key on:
-    // "no request context at all" is the stdio/boot signal that maps profile
-    // reads to the shared anonymous record (resolveProfileKey, rule 3).
-    if (!mw.request && !mw.session) return next()
-    return storage.run(deriveInfo(mw), () => next())
-  })
+  server.use("mcp:*", (ctx, next) => storage.run(deriveInfo(ctx as MiddlewareCtxLike), next))
 }

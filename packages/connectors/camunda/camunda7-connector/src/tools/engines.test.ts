@@ -30,7 +30,11 @@ interface EngineToolArgs {
   action: "list" | "select" | "current"
   engineId?: string
 }
-type Handler = (reg: EngineRegistry, args: EngineToolArgs) => Promise<Record<string, unknown>>
+type Handler = (
+  reg: EngineRegistry,
+  args: EngineToolArgs,
+  ctx?: unknown,
+) => Promise<Record<string, unknown>>
 
 /**
  * Registers the real engine tool against a recording registrar and exposes its
@@ -56,7 +60,7 @@ function harness(
   if (!registered) throw new Error("camunda7_engine did not register")
   const config = registered
   const handler = (config as unknown as { handler: Handler }).handler
-  const call = (args: EngineToolArgs) => handler(registry, args)
+  const call = (args: EngineToolArgs, ctx?: unknown) => handler(registry, args, ctx)
   return { store, call, config }
 }
 
@@ -150,8 +154,24 @@ describe("camunda7_engine select (durable default)", () => {
 
     const record = await store.get("user-1")
     expect(record?.modules?.[CAMUNDA7_MODULE_KEY]).toMatchObject({ defaultEngineId: "beta" })
-    // The auth-user stamp marks the record user-bound (exempt from session TTL).
+    // The OAuth caller is stamped as the record's owner.
     expect(record?.userId).toBe("user-1")
+  })
+
+  it("resolves the caller from the handler ctx the registrar hands it", async () => {
+    const { store, call } = harness()
+    await call({ action: "select", engineId: "beta" }, { auth: { user: { id: "user-2" } } })
+    expect(await store.get("user-2")).toMatchObject({
+      userId: "user-2",
+      modules: { [CAMUNDA7_MODULE_KEY]: { defaultEngineId: "beta" } },
+    })
+    expect(await call({ action: "current" }, { auth: { user: { id: "user-2" } } })).toEqual({
+      defaultEngineId: "beta",
+    })
+    // The default is that caller's alone.
+    expect(await call({ action: "current" }, { auth: { user: { id: "user-3" } } })).toEqual({
+      defaultEngineId: null,
+    })
   })
 
   it("merges over the raw stored slice — sibling settings survive a select", async () => {
@@ -169,10 +189,9 @@ describe("camunda7_engine select (durable default)", () => {
     })
   })
 
-  it("persists under the shared anonymous record for context-free transports (stdio)", async () => {
+  it("persists under the anonymous record only for an explicitly declared local caller", async () => {
     const { store, call } = harness()
-    // No ambient request info at all = stdio/tests → the deliberate shared key.
-    await call({ action: "select", engineId: "beta" })
+    await under({ anonymousCaller: true }, () => call({ action: "select", engineId: "beta" }))
     expect((await store.get(ANONYMOUS_PROFILE_KEY))?.modules?.[CAMUNDA7_MODULE_KEY]).toMatchObject({
       defaultEngineId: "beta",
     })
@@ -180,10 +199,16 @@ describe("camunda7_engine select (durable default)", () => {
 
   it("refuses without a caller identity, pointing at the per-call override", async () => {
     const { store, call } = harness()
-    // HTTP request without auth or session id: identity resolves to no key.
-    await expect(under({}, () => call({ action: "select", engineId: "beta" }))).rejects.toThrow(
-      /No caller identity to save a default engine under.*per-call `engine` parameter/,
-    )
+    // An HTTP request without OAuth, and no request context at all (a missing
+    // middleware install): neither is an identity, neither reaches a record.
+    for (const select of [
+      () => under({}, () => call({ action: "select", engineId: "beta" })),
+      () => call({ action: "select", engineId: "beta" }),
+    ]) {
+      await expect(select()).rejects.toThrow(
+        /No caller identity to save a default engine under.*per-call `engine` parameter/,
+      )
+    }
     expect(await store.get(ANONYMOUS_PROFILE_KEY)).toBeUndefined()
   })
 
@@ -272,7 +297,7 @@ describe("camunda7_engine during a profile-store outage", () => {
       Promise.reject(
         Object.assign(new Error("connect ECONNREFUSED 10.1.2.3:5432"), { code: "ECONNREFUSED" }),
       )
-    return { get: fail, save: fail, delete: fail, cleanupSessions: fail }
+    return { get: fail, save: fail, delete: fail }
   }
 
   it("list/current still answer — every engine, no saved default — and leak no host:port", async () => {

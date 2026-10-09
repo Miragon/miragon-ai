@@ -80,18 +80,40 @@ MCP_ACTIVE_MODULES=camunda7:operations,analytics:standard,notes
 
 - camunda7 supports `read-only | operations | admin`; analytics
   `read-only | standard` (`standard` adds the settings save).
-- **Fail-closed default.** This server installs no OAuth, so a module without
-  a suffix runs `read-only`; an empty (`camunda7:`) or unknown suffix warns and
-  falls back to `read-only`; `admin` (delete/modify, migrations, signals, the
-  external-task worker protocol) is only ever reached by naming it. Check the
-  boot log's `Toolsets —` line after every change.
+- **Fail-closed default.** Without `MCP_OAUTH` a module without a suffix runs
+  `read-only`; with it, its standard toolset (camunda7 `operations`, analytics
+  `standard`). An empty (`camunda7:`) or unknown suffix warns and falls back to
+  `read-only`; `admin` (delete/modify, migrations, signals, the external-task
+  worker protocol) is only ever reached by naming it. Check the boot log's
+  `Toolsets —` line after every change.
 - `camunda7_create_deployment` additionally needs `CAMUNDA_ALLOW_DEPLOYMENTS=true`
   next to `camunda7:admin` — deploying a BPMN/DMN runs code inside the engine
   JVM (JUEL expressions, scripts). Strict `true`/`false` (empty = unset); junk fails the boot.
-- Widening is a security decision: the server listens on all interfaces with
-  no auth of its own, so write toolsets are open to anyone who reaches the
-  port. Behind an authenticating gateway the server still sees no identity —
-  which is exactly why the suffix must stay explicit there.
+- Widening is a security decision: without `MCP_OAUTH` the server listens on
+  all interfaces with no auth, so write toolsets are open to anyone who
+  reaches the port. Behind an authenticating gateway the server still sees no
+  identity — which is exactly why the suffix must stay explicit there, and why
+  settings cannot be saved there: identity reaches the server only through
+  `MCP_OAUTH`.
+
+### OAuth — sign-in and per-user settings
+
+```bash
+MCP_URL=https://mcp.example.com     # the token audience (RFC 8707) — required with OAuth
+MCP_OAUTH={"provider":"keycloak","serverUrl":"https://kc.example.com","realm":"platform"}
+# or: MCP_OAUTH={"provider":"auth0","domain":"tenant.eu.auth0.com"}
+```
+
+`server/src/app.ts` wires it through `oauthFromEnv`
+(`@miragon-ai/widget-shell/server`) — the same helper the stock server uses.
+`/mcp` then answers 401 without a valid bearer token, the default toolsets rise
+to `operations`/`standard`, and every settings save (`camunda7_save_user_profile`,
+`analytics_save_settings`, `camunda7_engine` "select", your own module's save
+tool) persists under the signed-in user. Without `MCP_OAUTH` there is no caller
+identity: settings render their defaults and every save refuses. A bad
+`MCP_OAUTH` (invalid JSON, unknown provider or key, stray `MCP_USE_OAUTH_*`
+vars) fails the boot.
+
 - Unknown module names warn and are skipped; a suffix on a module without
   toolsets (e.g. `notes:read-only`) warns and is ignored — that module
   registers all its tools.
@@ -105,15 +127,14 @@ Both stores default to **in-memory** — everything is lost on restart. For real
 deployments point them at directories (mounted volumes in Docker):
 
 ```bash
-MCP_PROFILE_DIR=./.data/profiles       # per-user settings (language, theme, module slices)
-MCP_DASHBOARD_DIR=./.data/dashboards   # saved builder dashboards — only once OAuth is installed (builder is off without it)
-MCP_PROFILE_SESSION_TTL_DAYS=30        # expiry for session-keyed records; 0 disables
+MCP_PROFILE_DIR=./.data/profiles       # per-user settings (language, theme, module slices) — filled under MCP_OAUTH
+MCP_DASHBOARD_DIR=./.data/dashboards   # saved builder dashboards — only under MCP_OAUTH (builder is off without it)
 ```
 
-OAuth, Postgres stores, and Redis session backends are deliberately trimmed
-from this template — the stock server (`apps/mcp-server-camunda7` in the
-[miragon-ai repo](https://github.com/Miragon/miragon-ai)) is the reference for
-all three (README, "Going further").
+Postgres stores are deliberately trimmed from this template — the stock server
+(`apps/mcp-server-camunda7` in the
+[miragon-ai repo](https://github.com/Miragon/miragon-ai)) is the reference
+(README, "Going further").
 
 ## Step 5 — make it yours
 

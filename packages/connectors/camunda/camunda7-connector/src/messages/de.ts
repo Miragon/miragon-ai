@@ -49,7 +49,7 @@ export const de: MessageCatalog = {
   // ── Profil-/Einstellungs-Panel ──────────────────────────────────────────────
   "profile.heading": "Profil & Einstellungen",
   "profile.subtitle":
-    "Einstellungen für diese Sitzung — Engine-Verfügbarkeit, Sprache, Theme und Dashboards.",
+    "Persönliche Einstellungen — Engine-Verfügbarkeit, Sprache, Theme und Dashboards.",
   "profile.save": "Speichern",
   "profile.saving": "Speichern…",
   "profile.saved": ({ time }) => `Gespeichert ${String(time)}`,

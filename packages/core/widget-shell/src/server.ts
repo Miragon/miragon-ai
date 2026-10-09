@@ -24,7 +24,6 @@ export {
   resolveAuthUserId,
   resolveProfileKey,
   withoutDefaults,
-  type ProfileAuthContext,
   type ProfileSlice,
   type ProfileSource,
 } from "./profile.js"
@@ -35,6 +34,7 @@ export {
   type McpMiddlewareHost,
   type McpRequestInfo,
 } from "./request-context.js"
+export { OAUTH_ENV_VARS, oauthFromEnv, type OAuthFromEnvOptions } from "./oauth-env.js"
 export {
   installToolCallLogging,
   resolvePort,
@@ -103,7 +103,6 @@ export { parseStoredProfile } from "./profile-migrations.js"
 export {
   createFileSystemProfileStore,
   createInMemoryProfileStore,
-  isExpiredSessionRecord,
   mergeProfile,
   mergeStoredProfile,
   type MergedProfile,
@@ -132,7 +131,6 @@ export {
   announcePersistence,
   persistenceFromEnv,
   profileStoreFromEnv,
-  startProfileSessionCleanup,
   type PersistenceBackend,
   type PersistenceSelection,
 } from "./profile-store-env.js"

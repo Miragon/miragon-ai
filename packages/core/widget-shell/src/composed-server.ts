@@ -95,7 +95,7 @@ export interface ComposedServerOptions {
    * the selection authenticated (never inferred from an env var).
    */
   oauth?: OAuthProvider<unknown>
-  /** Env vars consumed outside the composition (e.g. secrets named inside an OAuth config). */
+  /** Env vars consumed outside the composition (e.g. a secret named in the root's config). */
   extraKnownEnvVars?: Iterable<string>
   /**
    * Defaults to `process.env`. mcp-use reads `MCP_URL` from `process.env`
@@ -373,8 +373,8 @@ export async function createComposedServer(
   const app = await buildFrameworkApp(options, boot, builder, runtime)
   const state = { draining: false }
 
-  // Ambient per-request info (session id, auth user, Authorization header)
-  // for consumers without a handler `ctx`; one log line per tools/call (no
+  // Ambient per-request info (OAuth caller, Authorization header) for the
+  // consumers without a handler `ctx`; one log line per tools/call (no
   // arguments/results — they can carry credentials or PII); the dev-CLI
   // views-prime workaround (no-op outside `mcp-use dev`).
   installMcpRequestContext(app)

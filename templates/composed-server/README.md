@@ -138,14 +138,18 @@ their config from the environment). A variable under a watched prefix (`MCP_`,
 `CAMUNDA_`, `PROMETHEUS_`, plus each module's own) that the server does not
 read prints a warning at boot, so typos surface immediately.
 
-Toolsets fail closed: this server installs no OAuth, so camunda7 and analytics
-run **read-only** without a `module:toolset` suffix (queries, widgets,
-analytics — no writes; a module without toolsets, like notes, registers all
-its tools), and the boot log names the effective toolsets. Writes are opt-in by
-naming them — camunda7 `operations`/`admin`, analytics `standard`; `admin` is
-never implied, and `camunda7_create_deployment` additionally needs
+Toolsets fail closed: without `MCP_OAUTH` camunda7 and analytics run
+**read-only** without a `module:toolset` suffix (queries, widgets, analytics —
+no writes; a module without toolsets, like notes, registers all its tools);
+with it they run their standard toolset (camunda7 `operations`, analytics
+`standard`). The boot log names the effective toolsets. `admin` is never
+implied, and `camunda7_create_deployment` additionally needs
 `CAMUNDA_ALLOW_DEPLOYMENTS=true` (deploying a BPMN runs code in the engine
 JVM). See the `setup-server` skill before widening a server others can reach.
+
+`MCP_OAUTH` (Keycloak or Auth0) is also the only caller identity: user settings
+and saved dashboards belong to the signed-in user. Without it the settings
+show their defaults and cannot be saved.
 
 | Variable                                     | Effect                                                                                                 |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -154,10 +158,10 @@ JVM). See the `setup-server` skill before widening a server others can reach.
 | `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_ORIGINS`  | Further hostnames / origins the server accepts (default: localhost-class and `MCP_URL`'s only)         |
 | `MCP_MAX_BODY_BYTES`                         | Request-body cap (default 4 MiB; larger bodies get 413 before they are read)                           |
 | `MCP_METRICS_TOKEN`                          | Bearer token `/metrics` requires (default: open)                                                       |
+| `MCP_OAUTH`                                  | OAuth resource server (`keycloak` / `auth0` JSON, needs `MCP_URL`) — the only caller identity          |
 | `MCP_ACTIVE_MODULES`                         | Comma list with optional toolsets, e.g. `camunda7:operations,notes` (default: every module, read-only) |
 | `MCP_PROFILE_DIR`                            | Filesystem persistence for user profiles (default: in-memory)                                          |
-| `MCP_PROFILE_SESSION_TTL_DAYS`               | Expiry for session-keyed profile records (default 30, `0` = off)                                       |
-| `MCP_DASHBOARD_DIR`                          | Filesystem persistence for saved dashboards — only used once the server installs OAuth (see below)     |
+| `MCP_DASHBOARD_DIR`                          | Filesystem persistence for saved dashboards — only used under `MCP_OAUTH` (see below)                  |
 | `CAMUNDA_*`, `PROMETHEUS_URL`, `NOTES_TITLE` | Module config — see `.env.example` for the full list                                                   |
 
 ## Deploying
@@ -178,17 +182,16 @@ docker run -p 8400:8400 \
   (or browser `Origin`) that is not localhost-class, `MCP_URL`'s or listed in
   `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` — DNS-rebinding protection — so a
   deployment reached under any other name must set them.
-- The server boots read-only. It has no auth of its own, so put an
-  authenticating gateway in front before widening `MCP_ACTIVE_MODULES` — the
-  server cannot see the gateway's login, which is why the toolsets stay
-  explicit there.
+- Without `MCP_OAUTH` the server boots read-only and unauthenticated. Set
+  `MCP_OAUTH` (plus `MCP_URL`, the token audience) to require sign-in, save
+  per-user settings and raise the default toolsets. An authenticating gateway
+  in front is invisible to the server: it still sees no identity, so settings
+  stay unsaved and any widened toolset is open to whoever passes the gateway.
 - The profile store is in-memory by default — without the volume, user
   settings are lost on every restart (a `NODE_ENV=production` boot warns about
   it in its log). Saved dashboards need more: the visual
-  builder and its dashboard tools are registered only when the server installs
-  OAuth and no module runs read-only (`frameworkWritesAllowed`), so on this
-  unauthenticated server `MCP_DASHBOARD_DIR` has no effect until you add OAuth
-  (see the stock server).
+  builder and its dashboard tools are registered only under `MCP_OAUTH` with no
+  module on read-only (`frameworkWritesAllowed`).
 - `/health/live`, `/health/ready` and `/metrics` (Prometheus) are served next
   to `/mcp`, outside any OAuth gate and the `Host` check (`MCP_METRICS_TOKEN`
   protects the scrape) — the image's `HEALTHCHECK` polls `/health/ready`;
@@ -201,6 +204,6 @@ docker run -p 8400:8400 \
 
 The stock server (`apps/mcp-server-camunda7` in the
 [miragon-ai repo](https://github.com/Miragon/miragon-ai)) additionally ships,
-and is the reference for: OAuth (Keycloak/Auth0/OIDC), Postgres profile and
-dashboard stores for multi-instance deployments, and a Playwright host
-simulation of the widget bundle.
+and is the reference for: Postgres profile and dashboard stores for
+multi-instance deployments, and a Playwright host simulation of the widget
+bundle.

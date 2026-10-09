@@ -5,13 +5,7 @@
  * silently split a user's settings across two keys. This barrel keeps the
  * module's import path stable.
  *
- * @see ANONYMOUS_PROFILE_KEY — the shared fallback record for stdio/tests.
- * @see resolveProfileKey — auth user id > `Mcp-Session-Id` > anonymous > undefined.
- * @see resolveAuthUserId — the auth-only half, stamped onto saved records.
+ * @see resolveProfileKey — OAuth caller > declared local caller (`anonymous`) > undefined.
+ * @see resolveAuthUserId — the OAuth half, stamped onto saved records as their owner.
  */
-export {
-  ANONYMOUS_PROFILE_KEY,
-  resolveAuthUserId,
-  resolveProfileKey,
-  type ProfileAuthContext,
-} from "@miragon-ai/widget-shell/server"
+export { resolveAuthUserId, resolveProfileKey } from "@miragon-ai/widget-shell/server"

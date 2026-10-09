@@ -16,8 +16,10 @@ export default mergeConfig(
         // (#324: the shared boot, HTTP edge and body-capped listener landed
         // with their suites): measured 90.76 / 90.94 / 96.31 / 91.91. Raised
         // again with the #324 review fixes (in-flight budget, guard before the
-        // body): measured 91.24 / 91.57 / 96.47 / 92.32.
-        thresholds: { statements: 89, branches: 89, functions: 94, lines: 90 },
+        // body): measured 91.24 / 91.57 / 96.47 / 92.32. Raised again with
+        // #331 (session cleanup gone, `oauthFromEnv` fully covered): measured
+        // 92.66 / 93.26 / 97.22 / 93.45.
+        thresholds: { statements: 90, branches: 91, functions: 95, lines: 91 },
       },
     },
   }),

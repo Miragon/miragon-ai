@@ -1,5 +1,4 @@
 import type postgres from "postgres"
-import { ANONYMOUS_PROFILE_KEY } from "./profile.js"
 import { parseStoredProfile } from "./profile-migrations.js"
 import { mergeStoredProfile, type ProfileStore } from "./profile-store.js"
 
@@ -8,8 +7,8 @@ import { mergeStoredProfile, type ProfileStore } from "./profile-store.js"
  * (which tracks applied names in its `schema_migrations` table). The full
  * profile record lives in one JSONB column — it is tiny (<1 KB) and its shape
  * is governed by `profileRecordSchema`/`schemaVersion`, not by table columns.
- * `user_id` is mirrored out for the future session→user migration once auth
- * lands (see `resolveProfileKey`).
+ * `user_id` mirrors the record's owner (the OAuth caller; NULL for the
+ * declared `anonymous` record).
  */
 export const PROFILE_STORE_MIGRATIONS: ReadonlyArray<{
   name: string
@@ -95,20 +94,6 @@ export function createPostgresProfileStore(options: { sql: postgres.Sql }): Prof
     async delete(key) {
       const result = await sql`DELETE FROM user_profiles WHERE key = ${key}`
       return result.count > 0
-    },
-    async cleanupSessions(olderThan) {
-      // Session-keyed rows only: `user_id` is stamped by the save path when
-      // the request carried an authenticated user, so user-bound records and
-      // the shared anonymous record never expire. Predicate mirrors
-      // `isExpiredSessionRecord` (SQL side of the same rule) — hence the
-      // constant, not a literal, so the two can't drift apart.
-      const result = await sql`
-        DELETE FROM user_profiles
-        WHERE user_id IS NULL
-          AND key <> ${ANONYMOUS_PROFILE_KEY}
-          AND updated_at < ${olderThan}
-      `
-      return result.count
     },
   }
 }

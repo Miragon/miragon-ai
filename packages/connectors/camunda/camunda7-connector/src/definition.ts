@@ -249,7 +249,7 @@ export const definition: AppDefinition = {
       size: "full",
     },
     {
-      // Self-fetching: loads camunda7_user_profile_data for the current session
+      // Self-fetching: loads camunda7_user_profile_data for the signed-in caller
       // (no pipeline step), eager-rendered by camunda7_show_user_profile.
       id: "camunda7:user-profile",
       requires: [],

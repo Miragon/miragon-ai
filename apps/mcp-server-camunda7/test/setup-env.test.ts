@@ -414,7 +414,7 @@ describe("warnUnknownEnvVars", () => {
     expect(unknown).toEqual([])
   })
 
-  it("accepts extra secret names (e.g. from MCP_OAUTH) via the extra allowlist", () => {
+  it("accepts extra secret names (named in a config the root reads) via the extra allowlist", () => {
     expect(
       warnUnknownEnvVars({ MCP_IDP_CLIENT_SECRET: "secret" }, ["MCP_IDP_CLIENT_SECRET"]),
     ).toEqual([])

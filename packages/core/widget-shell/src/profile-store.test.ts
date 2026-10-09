@@ -3,7 +3,6 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import postgres from "postgres"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import { ANONYMOUS_PROFILE_KEY } from "./profile.js"
 import {
   createFileSystemProfileStore,
   createInMemoryProfileStore,
@@ -172,33 +171,12 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
     expect((await store.get("sess-1"))?.modules?.camunda7).toEqual({ keep: true })
   })
 
-  it("stamps the auth user id and never demotes the record on later keyless saves", async () => {
+  it("stamps the owner and keeps it on later saves without auth context", async () => {
     const store = await makeStore()
     const created = await store.save("user-1", { language: "de" }, { userId: "user-1" })
     expect(created.userId).toBe("user-1")
     const updated = await store.save("user-1", { theme: "dark" })
     expect(updated.userId).toBe("user-1")
-  })
-
-  it("cleanupSessions expires only session-keyed records (never anonymous or user-bound)", async () => {
-    const store = await makeStore()
-    await store.save("sess-1", { theme: "dark" })
-    // The constant, not the literal: every implementation must exempt the same
-    // key, so a value change has to fail the SQL and the in-process stores alike.
-    await store.save(ANONYMOUS_PROFILE_KEY, { language: "de" })
-    await store.save("user-1", { theme: "dark" }, { userId: "user-1" })
-
-    // Future cutoff → every session record is old enough; scope must still hold.
-    const removed = await store.cleanupSessions(new Date(Date.now() + 60_000))
-    expect(removed).toBe(1)
-    expect(await store.get("sess-1")).toBeUndefined()
-    expect(await store.get(ANONYMOUS_PROFILE_KEY)).toBeDefined()
-    expect((await store.get("user-1"))?.userId).toBe("user-1")
-
-    // Epoch cutoff → nothing is old enough.
-    await store.save("sess-2", { theme: "light" })
-    expect(await store.cleanupSessions(new Date(0))).toBe(0)
-    expect(await store.get("sess-2")).toBeDefined()
   })
 }
 
@@ -277,12 +255,14 @@ describe("createFileSystemProfileStore", () => {
     expect(migrated).not.toHaveProperty("allowedEngineIds")
   })
 
-  it("never expires a session record it cannot date", async () => {
+  it("reads a record it cannot date (the next save stamps both timestamps)", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
     const store = createFileSystemProfileStore({ dir })
     await writeFile(path.join(dir, "undated.json"), JSON.stringify({ schemaVersion: 3 }), "utf-8")
-    expect(await store.cleanupSessions(new Date(Date.now() + 60_000))).toBe(0)
     expect(await store.get("undated")).toMatchObject({ id: "undated", updatedAt: "" })
+    const saved = await store.save("undated", { theme: "dark" })
+    expect(saved.updatedAt).not.toBe("")
+    expect(saved.createdAt).toBe(saved.updatedAt)
   })
 
   it("treats a file that is not JSON as absent and replaces it on the next save", async () => {

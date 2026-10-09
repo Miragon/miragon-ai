@@ -2,14 +2,15 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
 import type { Client } from "@miragon-ai/camunda7-client"
 import {
-  ANONYMOUS_PROFILE_KEY,
   createInMemoryProfileStore,
+  runWithMcpRequestInfo,
   type ProfileStore,
 } from "@miragon-ai/widget-shell/server"
 import { createPlugin, type Camunda7PluginConfig } from "./plugin.js"
 import {
   EngineNotSelectedError,
   resolveEngine,
+  resolveStepEngine,
   type Camunda7StepAppConfig,
 } from "./lib/resolve-engine.js"
 import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "./lib/toolsets.js"
@@ -104,8 +105,10 @@ describe("createPlugin default-engine routing — the saved default is advisory"
       Promise.reject(
         Object.assign(new Error("connect ECONNREFUSED 10.1.2.3:5432"), { code: "ECONNREFUSED" }),
       )
-    return { get: vi.fn(fail), save: fail, delete: fail, cleanupSessions: fail }
+    return { get: vi.fn(fail), save: fail, delete: fail }
   }
+  /** A tool call's ctx for a signed-in caller (mcp-use's flattened `ctx.auth`). */
+  const callAs = (id: string) => ({ auth: { user: { id } } })
   const MULTI = [
     { id: "a", baseUrl: "http://a.example/engine-rest" },
     { id: "b", baseUrl: "http://b.example/engine-rest" },
@@ -129,7 +132,7 @@ describe("createPlugin default-engine routing — the saved default is advisory"
   it("several engines, none named: the outage degrades to 'no saved default' — no host:port", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     const registry = registryOf(MULTI, downStore())
-    const error = await resolveEngine(undefined, registry).then(
+    const error = await resolveEngine(undefined, registry, callAs("user-1")).then(
       () => undefined,
       (e: unknown) => e as Error,
     )
@@ -140,10 +143,27 @@ describe("createPlugin default-engine routing — the saved default is advisory"
     expect(warn.mock.calls.flat().join(" ")).not.toMatch(/10\.1\.2\.3|5432/)
   })
 
-  it("several engines, store healthy: the caller's saved default still routes", async () => {
+  it("several engines, store healthy: the CALLER's saved default routes — nobody else's", async () => {
     const store = createInMemoryProfileStore()
-    await store.save(ANONYMOUS_PROFILE_KEY, { modules: { camunda7: { defaultEngineId: "b" } } })
-    expect((await resolveEngine(undefined, registryOf(MULTI, store))).engineId).toBe("b")
+    await store.save("user-1", { modules: { camunda7: { defaultEngineId: "b" } } })
+    const registry = registryOf(MULTI, store)
+    expect((await resolveEngine(undefined, registry, callAs("user-1"))).engineId).toBe("b")
+    // Another signed-in caller, or no caller identity at all, has no default.
+    await expect(resolveEngine(undefined, registry, callAs("user-2"))).rejects.toBeInstanceOf(
+      EngineNotSelectedError,
+    )
+    await expect(resolveEngine(undefined, registry)).rejects.toBeInstanceOf(EngineNotSelectedError)
+  })
+
+  it("a ctx-less pipeline step routes by the ambient OAuth caller", async () => {
+    const store = createInMemoryProfileStore()
+    await store.save("user-1", { modules: { camunda7: { defaultEngineId: "b" } } })
+    const appConfig = createPlugin({ engines: MULTI }, { profileStore: store })
+      .appConfig as unknown as Camunda7StepAppConfig
+    const step = await runWithMcpRequestInfo({ authUserId: "user-1" }, () =>
+      resolveStepEngine(appConfig),
+    )
+    expect(step.engineId).toBe("b")
   })
 })
 

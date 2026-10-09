@@ -72,7 +72,7 @@ export interface Camunda7PluginConfig {
 /**
  * Cross-cutting resources the server threads into the plugin. Currently just
  * the {@link ProfileStore} (shared with the analytics module so both can read
- * the same per-session preferences). Optional so the plugin stays usable
+ * the same per-user preferences). Optional so the plugin stays usable
  * standalone (tests, embedding) — it falls back to an in-memory store.
  */
 export interface Camunda7SharedResources {
@@ -105,10 +105,11 @@ export function createPlugin(
     },
     {
       // Per-call fallback when no `engine` override is given: the caller's
-      // saved default (`profile.modules.camunda7.defaultEngineId`), read off
-      // the ambient request identity — the same store the settings tools
-      // write, so "select" and the settings page feed the same routing.
-      defaultEngineId: () => profileDefaultEngineId(profileStore, config.engines),
+      // saved default (`profile.modules.camunda7.defaultEngineId`), resolved
+      // from the tool call's ctx (pipeline steps: the ambient request info) —
+      // the same store the settings tools write, so "select" and the
+      // settings page feed the same routing.
+      defaultEngineId: (call) => profileDefaultEngineId(profileStore, config.engines, call),
     },
   )
 
@@ -126,9 +127,9 @@ export function createPlugin(
       engines: config.engines,
     },
     registerTools: (server) => {
-      // Ambient request info FIRST: passthrough auth (resolveMcpBearerToken)
-      // and profile-key resolution (which also feeds the default-engine
-      // lookup) read it. Idempotent — the host may install it too.
+      // Ambient request info FIRST for the ctx-less paths: passthrough auth
+      // (resolveMcpBearerToken) and the pipeline steps' default-engine
+      // lookup read it. Idempotent — the host installs it too.
       installMcpRequestContext(server)
       // One registrar for the whole module, wrapped in the toolset filter so a
       // `camunda7:read-only` / `:operations` / `:admin` deployment only

@@ -10,8 +10,10 @@ import { runWithMcpRequestInfo } from "./request-context.js"
 import type { ProfileSource } from "./profile.js"
 
 describe("requireProfileKey", () => {
-  it("resolves the anonymous key without any request context (stdio/tests)", () => {
-    expect(requireProfileKey()).toBe("anonymous")
+  it("resolves the anonymous key for an explicitly declared local caller", () => {
+    expect(runWithMcpRequestInfo({ anonymousCaller: true }, () => requireProfileKey())).toBe(
+      "anonymous",
+    )
   })
 
   it("resolves the auth user id when the request carries one", () => {
@@ -21,7 +23,13 @@ describe("requireProfileKey", () => {
   })
 
   it("refuses an identity-less HTTP request with the operator-actionable error", () => {
-    expect(() => runWithMcpRequestInfo({}, () => requireProfileKey())).toThrow(/MCP_OAUTH/)
+    expect(() => runWithMcpRequestInfo({}, () => requireProfileKey())).toThrow(
+      "No caller identity to save the profile under — settings are saved per signed-in user, so the server needs MCP_OAUTH.",
+    )
+  })
+
+  it("refuses without any request context (a missing middleware install) — never 'anonymous'", () => {
+    expect(() => requireProfileKey()).toThrow(/No caller identity/)
   })
 })
 

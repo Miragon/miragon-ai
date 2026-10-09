@@ -53,8 +53,7 @@ export const en: MessageCatalog = {
 
   // ── Profile / settings panel ────────────────────────────────────────────────
   "profile.heading": "Profile & Settings",
-  "profile.subtitle":
-    "Preferences for this session — engine availability, language, theme and dashboards.",
+  "profile.subtitle": "Personal preferences — engine availability, language, theme and dashboards.",
   "profile.save": "Save",
   "profile.saving": "Saving…",
   "profile.saved": ({ time }) => `Saved ${String(time)}`,

@@ -25,10 +25,10 @@ export type ProfileStoreSatisfiesModulePort = Assert<
  */
 export interface SharedResources {
   /**
-   * One per-session preference store for the whole server, so engine
+   * One per-user preference store for the whole server, so engine
    * availability, locale, theme, dashboard and analytics defaults come from
-   * one source. Filesystem-backed when `MCP_PROFILE_DIR` is set (survives
-   * restarts), else in-memory.
+   * one source. Postgres with `DATABASE_URL`, filesystem-backed when
+   * `MCP_PROFILE_DIR` is set (survives restarts), else in-memory.
    */
   profileStore: ProfileStore
   /**

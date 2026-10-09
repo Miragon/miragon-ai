@@ -4,16 +4,11 @@ import {
   announcePersistence,
   createComposedServer,
   frameworkWritesAllowed,
+  oauthFromEnv,
   persistenceFromEnv,
   type ComposedServer,
 } from "@miragon-ai/widget-shell/server"
-import {
-  composition,
-  createDashboardStore,
-  createProfileStore,
-  getPlugins,
-  startSessionCleanup,
-} from "./setup.js"
+import { composition, createDashboardStore, createProfileStore, getPlugins } from "./setup.js"
 
 /** `src/` under tsx/vitest, `dist/` when compiled — the package root is one level up either way. */
 const PACKAGE_ROOT = path.join(import.meta.dirname, "..")
@@ -42,9 +37,10 @@ export interface AppDeps {
  * The composition root `src/index.ts` and the tests share. The boot ORDER —
  * selection and boot log, the mcp-use server, request context, tool-call
  * logging, `/metrics`, the Host/Origin guard, `/health/*`, the body-capped
- * listener and the graceful drain — lives in `createComposedServer`
- * (`@miragon-ai/widget-shell/server`); this file only wires what is yours:
- * persistence and the plugins (`setup.ts`).
+ * listener and the graceful drain — lives in `createComposedServer`, the
+ * OAuth wiring in `oauthFromEnv` (both `@miragon-ai/widget-shell/server`);
+ * this file only wires what is yours: persistence and the plugins
+ * (`setup.ts`).
  */
 export async function createApp(
   env: NodeJS.ProcessEnv = process.env,
@@ -60,6 +56,10 @@ export async function createApp(
     },
     composition,
     env,
+    // MCP_OAUTH → the provider: the only caller identity (per-user settings
+    // and dashboards), and what raises the no-suffix toolsets above the
+    // read-only floor. Unset = unauthenticated, with a boot warning.
+    oauth: oauthFromEnv({ env, label: "acme-mcp" }),
     bundle: deps.bundle ?? {
       // Read ONCE at boot — after rebuilding the bundle, restart the server.
       jsPath: path.join(PACKAGE_ROOT, "dist", "mcp-app.js"),
@@ -74,15 +74,12 @@ export async function createApp(
         { profiles, ...(frameworkWritesAllowed(boot) ? { dashboards } : {}) },
         { env, label: "acme-mcp" },
       )
-      const profileStore = createProfileStore(env)
-      const stopCleanup = startSessionCleanup(profileStore, env)
       return {
-        plugins: getPlugins(profileStore, boot),
+        plugins: getPlugins(createProfileStore(env), boot),
         dashboardStore: createDashboardStore(env),
         // Readiness covers the stores YOU wire (a `SELECT 1` round trip for a
         // database) — never upstreams like the engine or Prometheus.
         readiness: {},
-        shutdown: async () => stopCleanup(),
       }
     },
   })

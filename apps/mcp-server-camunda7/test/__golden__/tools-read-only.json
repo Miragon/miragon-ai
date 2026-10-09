@@ -988,7 +988,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Open the analytics settings section for this session: the default look-back period and the minimum comparison bucket size applied when analytics calls omit them.",
+    "description": "Open the analytics settings section: the default look-back period and the minimum comparison bucket size applied when analytics calls omit them.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {},
@@ -3692,7 +3692,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Open the user profile & settings panel for this MiragonAI session: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
+    "description": "Open the user profile & settings panel: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {},
@@ -3721,7 +3721,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Internal JSON feed (no UI) for the current session's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
+    "description": "Internal JSON feed (no UI) for the caller's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {},

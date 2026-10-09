@@ -40,17 +40,17 @@ export function parseModuleSlice<T extends z.ZodRawShape>(
 }
 
 /**
- * Resolve the profile key for a durable write, refusing without one. An HTTP
- * request without any identity resolves no key (mcp-use 2 issues no MCP
- * session ids) — writing anyway would silently share one record across
- * unrelated keyless clients, so every module's save tool throws this same,
+ * Resolve the profile key for a durable write, refusing without one. Settings
+ * are saved per signed-in user: a request without OAuth resolves no key (see
+ * `resolveProfileKey`) — writing anyway would silently share one record across
+ * unrelated callers, so every module's save tool throws this same,
  * operator-actionable error instead.
  */
 export function requireProfileKey(ctx?: unknown): string {
   const key = resolveProfileKey(ctx)
   if (!key) {
     throw new Error(
-      "No caller identity to save the profile under (mcp-use 2 issues no MCP session ids) — configure MCP_OAUTH so settings persist per user.",
+      "No caller identity to save the profile under — settings are saved per signed-in user, so the server needs MCP_OAUTH.",
     )
   }
   return key

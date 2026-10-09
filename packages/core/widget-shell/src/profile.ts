@@ -14,45 +14,24 @@
  * Lives on the `/server` path only — the ambient request info pulls in
  * `node:async_hooks`, which must never reach the widget bundle.
  */
+import { resolveCaller } from "@miragon/mcp-toolkit-core"
 import { z } from "zod"
 import { getMcpRequestInfo } from "./request-context.js"
 
 /**
- * Shared fallback key for transports without any request context (stdio,
- * tests). Deliberately used by BOTH the read and the write path — a keyless
- * save persists under this record and is read back on the next load, so a local
- * stdio user gets one working (shared) profile instead of write-only saves that
- * never surface again. HTTP requests missing a session id do NOT map here (see
- * {@link resolveProfileKey}).
+ * The profile key of an EXPLICITLY declared local caller — a transport without
+ * auth that serves exactly one user (stdio, tests), declared via
+ * `runWithMcpRequestInfo({ anonymousCaller: true }, …)`. Never reached by an
+ * HTTP request: a request without OAuth has no identity at all.
  */
 export const ANONYMOUS_PROFILE_KEY = "anonymous"
-
-/**
- * The auth-carrying slice of an mcp-use tool-handler `ctx` (its second
- * argument). mcp-use populates `ctx.auth.user` from the OAuth provider; it's
- * absent until an auth layer is wired, which is exactly the fallback
- * {@link resolveProfileKey} handles. The 2.x provider user objects carry the
- * subject as `id` (Keycloak/Auth0/…); `userId` is kept as the legacy 1.x
- * spelling so stored records and custom providers keep resolving.
- */
-export interface ProfileAuthContext {
-  auth?: { user?: { userId?: unknown; id?: unknown } }
-}
-
-/** First non-empty string among the user object's id spellings. */
-function userIdOf(user: { userId?: unknown; id?: unknown } | undefined): string | undefined {
-  for (const candidate of [user?.userId, user?.id]) {
-    if (typeof candidate === "string" && candidate.length > 0) return candidate
-  }
-  return undefined
-}
 
 /**
  * The minimal structural view of the profile store a module needs for its own
  * settings slice: read the record, and (when the host wired a writable store)
  * write back a `modules` patch. Deliberately narrower than camunda7's
- * `ProfileStore` — a module has no business with `delete`/`cleanupSessions` or
- * with another module's slice. `save` merges per module key on the store side,
+ * `ProfileStore` — a module has no business with `delete` or with another
+ * module's slice. `save` merges per module key on the store side,
  * one level deep and atomically per key: a `modules.<yours>` patch spreads
  * over your stored slice (`undefined` clears a field) and never touches a
  * foreign slice, which is what lets a save carry its patch alone
@@ -77,53 +56,41 @@ export interface ProfileSlice {
 
 /**
  * Resolves the key a user profile hangs on — the single place that decides
- * "whose profile is this", shared by every module. Auth-ready by precedence:
+ * "whose profile is this", shared by every module. Fail-closed precedence:
  *
- *   1. the authenticated user id — from the tool-handler `ctx.auth.user.userId`
- *      when a `ctx` is passed, otherwise from the ambient request info
- *      (`request-context.ts` — the repo-owned mcp-use-2.x replacement for the
- *      removed request-context AsyncLocalStorage), so callers without a
- *      `ctx` in hand (the argument-less per-call default-engine lookup) still
- *      resolve the auth user;
- *   2. otherwise the MCP session id (transport session / `Mcp-Session-Id`
- *      header, from the same ambient info). mcp-use 2 itself issues no
- *      session ids (stateless HTTP serving), so this rung only matches when
- *      a fronting gateway stamps the header;
- *   3. {@link ANONYMOUS_PROFILE_KEY} when there is NO request context at all
- *      (stdio transport, tests) — the deliberate shared record;
- *   4. `undefined` for an HTTP request WITHOUT any identity — deliberately NOT
- *      the shared record, so unrelated keyless clients never cross-share one
- *      profile: reads fall back to defaults, saves fail visibly. Since
- *      mcp-use 2 this is the NORM for un-authenticated HTTP deployments —
- *      persistent settings need `MCP_OAUTH` (or a session-stamping gateway).
+ *   1. the OAuth caller — resolved from the handler `ctx` through the
+ *      toolkit's `resolveCaller` whenever a `ctx` is passed (registrar and
+ *      widget-tool handlers all have one), else from the ambient request
+ *      info the middleware derived the same way (ctx-less paths: pipeline
+ *      steps). An authenticated `ctx` decides ALONE: a provider that maps no
+ *      subject yields no key, never a fallback;
+ *   2. {@link ANONYMOUS_PROFILE_KEY} for an explicitly declared local caller
+ *      (`anonymousCaller` — stdio, tests; never set from a request);
+ *   3. `undefined` otherwise — an HTTP request without OAuth, or no request
+ *      context at all (a missing middleware install included). Reads fall back
+ *      to defaults, saves refuse (`requireProfileKey`).
  *
+ * Nothing a client chooses for itself (a session id, a header) is ever a key.
  * `ctx` is typed `unknown` so the mcp-use handler context (whose exact shape
- * isn't part of the stable surface) passes without a cast at the call site —
- * the auth slice is read defensively here.
+ * isn't part of the stable surface) passes without a cast at the call site.
  */
 export function resolveProfileKey(ctx?: unknown): string | undefined {
-  const userId = resolveAuthUserId(ctx)
-  if (userId) return userId
-
+  const caller = resolveCaller(ctx)
+  if (caller) return caller.userId
   const info = getMcpRequestInfo()
-  if (!info) return ANONYMOUS_PROFILE_KEY
-
-  return info.sessionId
+  if (info?.authUserId) return info.authUserId
+  return info?.anonymousCaller ? ANONYMOUS_PROFILE_KEY : undefined
 }
 
 /**
- * Just the authenticated-user half of {@link resolveProfileKey}: the user id
- * from the tool-handler `ctx.auth`, or from the ambient request info (callers
- * that pass no `ctx`), else `undefined`. Save paths
- * use this to STAMP `userId` onto the persisted record — the marker that
- * exempts a row from the session-TTL cleanup (a record without `userId` is
- * session-keyed and expires).
+ * Just the OAuth half of {@link resolveProfileKey}: the authenticated
+ * caller's id (from `ctx`, else the ambient request info), never the declared
+ * anonymous key. Save paths stamp it onto the record as its owner
+ * (`opts.userId`), so a record says which signed-in user it belongs to.
  */
 export function resolveAuthUserId(ctx?: unknown): string | undefined {
-  const ctxUserId = userIdOf((ctx as ProfileAuthContext | undefined)?.auth?.user)
-  if (ctxUserId) return ctxUserId
-
-  return getMcpRequestInfo()?.authUserId
+  const caller = resolveCaller(ctx)
+  return caller ? caller.userId : getMcpRequestInfo()?.authUserId
 }
 
 /**

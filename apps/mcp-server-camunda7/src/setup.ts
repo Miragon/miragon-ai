@@ -7,6 +7,7 @@ import {
   composeModules,
   createShellPlugin,
   HTTP_EDGE_ENV_VARS,
+  OAUTH_ENV_VARS,
   type ProfileStore,
   type ResolveBootOptions,
   type ResolvedBoot,
@@ -25,23 +26,21 @@ const MODULES: readonly ModuleDefinition[] = [camunda7Module, analyticsModule]
 /**
  * App-owned env vars; each module contributes its own slice via
  * `knownEnvVars`, the shared HTTP edge (`MCP_URL`, the Host/Origin
- * allow-lists, the body cap, the metrics token) via `HTTP_EDGE_ENV_VARS`.
+ * allow-lists, the body cap, the metrics token) via `HTTP_EDGE_ENV_VARS`,
+ * the shared OAuth wiring (`MCP_OAUTH`) via `OAUTH_ENV_VARS`.
  * Foreign prefixes owned by dependencies (`MCP_USE_*`, `MCP_INSPECTOR_*`) are
  * exempt inside `composeModules`.
  */
 const APP_ENV_VARS = [
   ...HTTP_EDGE_ENV_VARS,
-  "MCP_OAUTH",
+  ...OAUTH_ENV_VARS,
   "MCP_ACTIVE_MODULES",
   "MCP_DASHBOARD_DIR",
   "MCP_PROFILE_DIR",
-  "MCP_PROFILE_SESSION_TTL_DAYS",
-  // Postgres persistence for profiles + dashboards, and Redis MCP-session
-  // backends for multi-instance (both in src/persistence/). Listed for
-  // documentation AND because every known var contributes its prefix to the
-  // typo watcher.
+  // Postgres persistence for profiles + dashboards (src/persistence/). Listed
+  // for documentation AND because every known var contributes its prefix to
+  // the typo watcher.
   "DATABASE_URL",
-  "REDIS_URL",
   // mcp-use's own logger knob, consumed in-process (unprefixed, unlike the
   // rest of its MCP_USE_* family).
   "MCP_DEBUG_LEVEL",

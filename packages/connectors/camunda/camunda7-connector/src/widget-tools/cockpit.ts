@@ -57,7 +57,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       // so client-side navigation never depends on the saved default.
       let engineId: string | null
       try {
-        engineId = (await resolveEngine(args.engine, registry)).engineId
+        engineId = (await resolveEngine(args.engine, registry, ctx)).engineId
       } catch {
         // Multiple engines, no default saved → the app renders an engine picker.
         engineId = null

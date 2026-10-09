@@ -188,7 +188,12 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
      `packages/core/widget-shell/src/profile.ts` (`@miragon-ai/widget-shell/server`). A
      module-local copy of that precedence would silently split one user's settings across
      two records; the app's `module-contract.ts` carries a compile-time assertion that
-     camunda7's `ProfileStore` still satisfies the port.
+     camunda7's `ProfileStore` still satisfies the port. The only identity is the OAuth
+     caller (`resolveCaller` over the handler `ctx` — always pass it; ctx-less paths such
+     as pipeline steps read the ambient request info): nothing a client chooses (a session
+     id, a header) is a key, and a request without OAuth — or without any request context —
+     has NO identity (saves refuse), never the `anonymous` record, which only an explicitly
+     declared local caller (`anonymousCaller`) reaches.
      The whole PERSISTENCE layer follows the same rule: the postgres.js client
      (`createSql`), the migration runner (`runMigrations` + the `Migration` shape) and the
      Postgres dashboard store (`createPostgresDashboardStore`, implementing the toolkit's
@@ -229,7 +234,8 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    `logEffectiveToolsets`, the one boot line stating each module's toolset and why;
    env-typo warner with prefixes derived from every known var, boot warnings,
    AppConfig/plugin assembly) live in `@miragon-ai/widget-shell/server`. The root passes
-   `authenticated` only when it actually INSTALLED OAuth — never inferred from an env var.
+   `authenticated` only when it actually INSTALLED OAuth — never inferred from an env var;
+   every root builds that provider with the shared `oauthFromEnv` (`MCP_OAUTH`).
    Framework durable writes no module toolset filters (the toolkit builder's
    `get-builder-catalogue` + `save/list/load/delete-dashboard`) are registered only when
    `frameworkWritesAllowed(boot)` holds — OAuth installed AND no active module on its
@@ -407,8 +413,9 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
   this server; this repo builds one self-contained MCP server including its UI.** No
   upstream/proxy mechanics in the code — don't reintroduce a proxies/upstream option
   (federation was deliberately dropped in #162). A gateway that terminates auth in front
-  is invisible to this server: without `MCP_OAUTH` it boots read-only, so such a
-  deployment must name its toolsets in `MCP_ACTIVE_MODULES`. The generic
+  is invisible to this server: without `MCP_OAUTH` it boots read-only and has no caller
+  identity (no saved settings), so such a deployment must name its toolsets in
+  `MCP_ACTIVE_MODULES`. The generic
   `shell:kpi-grid`/`shell:data-table` widgets (catalogue + components in
   `@miragon-ai/widget-shell`) are always registered — they are the standard
   `render-view`/builder composition targets for KPI rows/tables, fed via `props.dataKey`.

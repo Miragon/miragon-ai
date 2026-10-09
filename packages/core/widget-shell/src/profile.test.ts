@@ -6,29 +6,66 @@ import {
   resolveProfileKey,
   withoutDefaults,
 } from "./profile.js"
+import { runWithMcpRequestInfo } from "./request-context.js"
 
-// Vitest runs without an mcp-use request context, so these tests cover the
-// ctx-auth branch and the stdio fallback; the session-header branch is
-// exercised on the wire by the app's e2e tests.
+/** A tool-handler `ctx` as mcp-use hands it to callbacks (flattened `auth.user`). */
+const authed = (user: Record<string, unknown>) => ({ auth: { user, payload: {} } })
+
 describe("resolveProfileKey", () => {
-  it("prefers the authenticated user id from the handler ctx", () => {
-    expect(resolveProfileKey({ auth: { user: { userId: "user-1" } } })).toBe("user-1")
+  it("resolves the OAuth caller from the handler ctx (any provider spelling)", () => {
+    expect(resolveProfileKey(authed({ id: "user-1" }))).toBe("user-1")
+    expect(resolveProfileKey(authed({ userId: "user-2" }))).toBe("user-2")
+    expect(resolveProfileKey({ auth: { payload: { sub: "user-3" } } })).toBe("user-3")
   })
 
-  it("ignores a non-string/empty auth user id", () => {
-    expect(resolveProfileKey({ auth: { user: { userId: "" } } })).toBe(ANONYMOUS_PROFILE_KEY)
-    expect(resolveProfileKey({ auth: { user: { userId: 42 } } })).toBe(ANONYMOUS_PROFILE_KEY)
+  it("lets an authenticated ctx decide alone — no subject is NO key, never a fallback", () => {
+    const anonymous = { anonymousCaller: true }
+    expect(runWithMcpRequestInfo(anonymous, () => resolveProfileKey(authed({ id: "" })))).toBe(
+      undefined,
+    )
+    expect(
+      runWithMcpRequestInfo({ authUserId: "user-9" }, () => resolveProfileKey(authed({ id: 42 }))),
+    ).toBeUndefined()
   })
 
-  it("maps 'no request context at all' (stdio, tests) to the shared anonymous record", () => {
-    expect(resolveProfileKey()).toBe(ANONYMOUS_PROFILE_KEY)
-    expect(resolveProfileKey(undefined)).toBe(ANONYMOUS_PROFILE_KEY)
+  it("falls back to the ambient OAuth caller for ctx-less paths (pipeline steps)", () => {
+    expect(runWithMcpRequestInfo({ authUserId: "user-7" }, () => resolveProfileKey())).toBe(
+      "user-7",
+    )
+    // A ctx WITHOUT auth (a signed-out call) does not shadow it.
+    expect(runWithMcpRequestInfo({ authUserId: "user-7" }, () => resolveProfileKey({}))).toBe(
+      "user-7",
+    )
+  })
+
+  it("resolves the anonymous key only for an EXPLICITLY declared local caller", () => {
+    expect(runWithMcpRequestInfo({ anonymousCaller: true }, () => resolveProfileKey())).toBe(
+      ANONYMOUS_PROFILE_KEY,
+    )
+  })
+
+  it("fails closed: no request context (missing middleware install) is no identity", () => {
+    expect(resolveProfileKey()).toBeUndefined()
+    expect(resolveProfileKey({})).toBeUndefined()
+  })
+
+  it("fails closed: an HTTP request without OAuth is no identity", () => {
+    expect(runWithMcpRequestInfo({}, () => resolveProfileKey())).toBeUndefined()
+    expect(
+      runWithMcpRequestInfo({ authorization: "Bearer x" }, () => resolveProfileKey()),
+    ).toBeUndefined()
   })
 })
 
 describe("resolveAuthUserId", () => {
-  it("returns only the authenticated user id, never a fallback key", () => {
-    expect(resolveAuthUserId({ auth: { user: { userId: "user-1" } } })).toBe("user-1")
+  it("returns only the OAuth caller, never the anonymous key", () => {
+    expect(resolveAuthUserId(authed({ id: "user-1" }))).toBe("user-1")
+    expect(runWithMcpRequestInfo({ authUserId: "user-7" }, () => resolveAuthUserId())).toBe(
+      "user-7",
+    )
+    expect(runWithMcpRequestInfo({ anonymousCaller: true }, () => resolveAuthUserId())).toBe(
+      undefined,
+    )
     expect(resolveAuthUserId()).toBeUndefined()
     expect(resolveAuthUserId({ auth: {} })).toBeUndefined()
   })

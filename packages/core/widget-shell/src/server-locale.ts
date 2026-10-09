@@ -11,10 +11,9 @@ export type Translator = (locale: string, key: string, params?: Record<string, u
 /**
  * Resolve the active locale for the in-flight request from the user profile
  * (`resolveProfileKey` → `language`), falling back to English. Pass the
- * tool-handler `ctx` so the lookup follows the SAME key precedence as the save
- * path (auth user id → session id → stdio-anonymous) — without it, a profile
- * saved under an auth user id would be missed and the summary silently falls
- * back to English.
+ * tool-handler `ctx` so the lookup resolves the caller exactly like the save
+ * path (`resolveProfileKey`: the OAuth caller from `ctx`) — without it, only
+ * the ambient request info can name the caller.
  *
  * Fail-soft on every axis — no store, no key, or a store OUTAGE: with
  * `DATABASE_URL` the store is a network call, and this runs as the first
