@@ -345,6 +345,40 @@ export default [
     assert.equal(violations.length, 1)
     assert.match(violations[0], /new `ignores` entry "packages\/x\/src\/tools\/raw\.ts"/)
   })
+
+  it("resolves exemption lists moved into constants, and still sees them grow", () => {
+    const gate = (list) =>
+      `${list}\nexport default [{ files: ["src/**"], ignores: [...exempt], rules: { "no-restricted-syntax": ["error"] } }]`
+    const literal = `const exempt = []\nexport default [{ files: ["src/**"], ignores: ["src/widget-tools.ts"], rules: { "no-restricted-syntax": ["error"] } }]`
+    assert.deepEqual(
+      checkRatchetFile(
+        "eslint.config.mjs",
+        literal,
+        gate('const exempt = ["src/widget-tools.ts"]'),
+      ),
+      [],
+    )
+    const grown = checkRatchetFile(
+      "eslint.config.mjs",
+      literal,
+      gate('const exempt = ["src/widget-tools.ts", "src/tools/raw.ts"]'),
+    )
+    assert.equal(grown.length, 1)
+    assert.match(grown[0], /src\/tools\/raw\.ts/)
+  })
+
+  it("ignores parser-project partitions (no rules) — they route files, not exempt them", () => {
+    const partition = (globs) =>
+      `export default [{ ignores: [${globs}], languageOptions: { parserOptions: {} } }]`
+    assert.deepEqual(
+      checkRatchetFile(
+        "eslint.config.mjs",
+        partition('"ui/**"'),
+        partition('"ui/**", "widgets/**"'),
+      ),
+      [],
+    )
+  })
 })
 
 describe("knip policy (ignore lists shrink-only)", () => {

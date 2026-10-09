@@ -107,13 +107,38 @@ function literalValue(node) {
   return undefined
 }
 
-/** Array-literal elements as comparable strings: literal values, else normalized source. */
-function arrayEntries(node) {
+/**
+ * Array-literal elements as comparable strings: literal values, else
+ * normalized source. `consts` (name → array-literal node) resolves an
+ * identifier or `...identifier` to the top-level array it names, so moving a
+ * list into a constant is not read as new entries.
+ */
+function arrayEntries(node, consts = new Map(), depth = 0) {
+  if (ts.isIdentifier(node) && consts.has(node.text) && depth < 8)
+    return arrayEntries(consts.get(node.text), consts, depth + 1)
   if (!ts.isArrayLiteralExpression(node)) return null
-  return node.elements.map((element) => {
+  return node.elements.flatMap((element) => {
+    if (ts.isSpreadElement(element) && depth < 8) {
+      const spread = arrayEntries(element.expression, consts, depth + 1)
+      if (spread) return spread
+    }
     const value = literalValue(element)
-    return typeof value === "string" ? value : normalize(element.getText())
+    return [typeof value === "string" ? value : normalize(element.getText())]
   })
+}
+
+/** Top-level `const name = [ … ]` declarations of a source file. */
+function topLevelArrays(sourceFile) {
+  const consts = new Map()
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue
+    for (const decl of statement.declarationList.declarations) {
+      if (ts.isIdentifier(decl.name) && decl.initializer)
+        if (ts.isArrayLiteralExpression(decl.initializer))
+          consts.set(decl.name.text, decl.initializer)
+    }
+  }
+  return consts
 }
 
 const COVERAGE_METRICS = ["statements", "branches", "functions", "lines"]
@@ -162,6 +187,18 @@ export function extractVitestCoverage(relPath, text) {
   return result
 }
 
+/**
+ * Whether an `ignores` list exempts files from gates: a global-ignores block
+ * (nothing but `ignores`/`name`) or a block that applies `rules`. A block
+ * that only routes files to a parser project (`languageOptions`) partitions
+ * rather than exempts, and stays out of the ratchet.
+ */
+function isExemptionBlock(block) {
+  if (!block || !ts.isObjectLiteralExpression(block)) return false
+  const keys = block.properties.map((p) => (ts.isPropertyAssignment(p) ? propName(p.name) : null))
+  return keys.includes("rules") || keys.every((k) => k === "ignores" || k === "name")
+}
+
 const BUDGET_RULES = ["complexity", "max-lines"]
 const RATCHET_MAPS = ["complexityRatchet", "maxLinesRatchet"]
 const LAX_SEVERITIES = new Set(["off", "warn", 0, 1])
@@ -203,11 +240,14 @@ export function extractEslintRatchets(relPath, text) {
     }
   }
 
+  const consts = topLevelArrays(sourceFile)
   walk(sourceFile, (node) => {
     if (!ts.isPropertyAssignment(node)) return
     const name = propName(node.name)
-    if (name === "ignores") {
-      ignores.push(...(arrayEntries(node.initializer) ?? [normalize(node.initializer.getText())]))
+    if (name === "ignores" && isExemptionBlock(node.parent)) {
+      ignores.push(
+        ...(arrayEntries(node.initializer, consts) ?? [normalize(node.initializer.getText())]),
+      )
     }
     if (name !== "rules" || !ts.isObjectLiteralExpression(node.initializer)) return
     const block = node.parent

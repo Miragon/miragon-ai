@@ -32,6 +32,50 @@ export const maxLinesRatchet = {
   "packages/connectors/camunda/camunda7-connector/src/data/cockpit-data.ts": 410,
 }
 
+// ── Pattern-gate selectors (`no-restricted-syntax`) ─────────────────────────
+
+const TOOL_MEMBER = "/^(tool|registerTool)$/"
+const REGISTRAR_MESSAGE =
+  "Operations tools are registered through createToolRegistrar in src/tools/ (see .claude/skills/add-bpm-feature); raw server.tool() — in any spelling: computed key, .call/.bind/.apply, destructuring, Reflect.get — is reserved for the widget-tools files."
+
+// Invariant 1. Not just the canonical `x.tool(...)`: every syntactic route
+// to the member (an agent "working around" the gate reaches for exactly
+// these). Parameter destructuring and object literals stay allowed — test
+// fakes build `{ tool } as unknown as MCPServer`.
+const registrarGate = [
+  // x.tool(...), x?.tool(...), x.tool.call/bind/apply(...), const t = x.tool
+  `MemberExpression[computed=false][property.name=${TOOL_MEMBER}]`,
+  // x["tool"], x[`tool`]
+  `MemberExpression[computed=true][property.value=${TOOL_MEMBER}]`,
+  `MemberExpression[computed=true] > TemplateLiteral.property > TemplateElement[value.raw=${TOOL_MEMBER}]`,
+  // const { tool } = x, const { "tool": t } = x, ({ tool } = x)
+  `VariableDeclarator > ObjectPattern.id > Property[key.name=${TOOL_MEMBER}]`,
+  `VariableDeclarator > ObjectPattern.id > Property[key.value=${TOOL_MEMBER}]`,
+  `AssignmentExpression > ObjectPattern.left > Property[key.name=${TOOL_MEMBER}]`,
+  // Reflect.get(x, "tool")
+  `CallExpression[callee.object.name='Reflect'][callee.property.name='get'] > Literal.arguments[value=${TOOL_MEMBER}]`,
+].map((selector) => ({ selector, message: REGISTRAR_MESSAGE }))
+
+// Invariant 6.
+const widgetDateGate = [
+  {
+    selector:
+      ":matches(NewExpression, CallExpression)[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
+    message:
+      "Use formatTimestamp/formatDate/formatTime from @miragon-ai/widget-shell/widgets — the single source for timestamp rendering (CLAUDE.md invariant 6).",
+  },
+  {
+    selector: "CallExpression[callee.property.name='toLocaleDateString']",
+    message:
+      "Use formatDate from @miragon-ai/widget-shell/widgets instead of Date#toLocaleDateString (CLAUDE.md invariant 6).",
+  },
+  {
+    selector: "CallExpression[callee.property.name='toLocaleTimeString']",
+    message:
+      "Use formatTime from @miragon-ai/widget-shell/widgets instead of Date#toLocaleTimeString (CLAUDE.md invariant 6).",
+  },
+]
+
 export default tseslint.config(
   {
     ignores: [
@@ -142,14 +186,21 @@ export default tseslint.config(
   // The AST-checkable slices of the CLAUDE.md invariants; the dependency
   // rules live in .dependency-cruiser.cjs (`pnpm lint:architecture`).
 
+  // `no-restricted-syntax` is ONE rule: in flat config a later block REPLACES
+  // an earlier block's options for every file both match — selector lists
+  // are never merged. Each gate's selectors therefore live in a constant
+  // (top of file), and a glob two gates share gets ONE block carrying the
+  // union (the connector widgets below). scripts/eslint-gates.test.mjs pins
+  // the effective options per path and lints known-bad spellings.
+
   // Invariant 1: operations tools go through createToolRegistrar. Raw
   // server.tool() is reserved for the widget-tools path (show_* / *_data
   // feeds + module settings) — exactly the ignores list below. A durable
   // write registered there must gate itself against the module's toolset.
   {
     files: [
-      "packages/connectors/analytics/analytics-connector/src/**/*.ts",
-      "packages/connectors/camunda/camunda7-connector/src/**/*.ts",
+      "packages/connectors/analytics/analytics-connector/src/**/*.{ts,tsx}",
+      "packages/connectors/camunda/camunda7-connector/src/**/*.{ts,tsx}",
     ],
     ignores: [
       "packages/connectors/analytics/analytics-connector/src/widget-tools.ts",
@@ -159,49 +210,24 @@ export default tseslint.config(
       "packages/connectors/camunda/camunda7-connector/src/widget-tools/**",
       "packages/connectors/camunda/camunda7-connector/src/tools/user-profile.ts",
     ],
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector:
-            "CallExpression[callee.type='MemberExpression'][callee.property.name=/^(tool|registerTool)$/]",
-          message:
-            "Operations tools are registered through createToolRegistrar in src/tools/ (see .claude/skills/add-bpm-feature); raw server.tool() is reserved for the widget-tools files.",
-        },
-      ],
-    },
+    rules: { "no-restricted-syntax": ["error", ...registrarGate] },
   },
 
   // Invariant 6: all date/time rendering in widgets goes through the
   // widget-shell format helpers so every module renders timestamps the same
   // way. Number#toLocaleString (thousands separators) is deliberately allowed.
   {
+    files: ["apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}"],
+    rules: { "no-restricted-syntax": ["error", ...widgetDateGate] },
+  },
+  // Connector widgets sit under BOTH gates — one block with the union, after
+  // the registrar block (whose options it replaces for these files).
+  {
     files: [
-      "apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}",
       "packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}",
       "packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}",
     ],
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector:
-            ":matches(NewExpression, CallExpression)[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
-          message:
-            "Use formatTimestamp/formatDate/formatTime from @miragon-ai/widget-shell/widgets — the single source for timestamp rendering (CLAUDE.md invariant 6).",
-        },
-        {
-          selector: "CallExpression[callee.property.name='toLocaleDateString']",
-          message:
-            "Use formatDate from @miragon-ai/widget-shell/widgets instead of Date#toLocaleDateString (CLAUDE.md invariant 6).",
-        },
-        {
-          selector: "CallExpression[callee.property.name='toLocaleTimeString']",
-          message:
-            "Use formatTime from @miragon-ai/widget-shell/widgets instead of Date#toLocaleTimeString (CLAUDE.md invariant 6).",
-        },
-      ],
-    },
+    rules: { "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate] },
   },
 
   // ── Ratchet metrics: complexity + file-length budgets ───────────────────
