@@ -116,9 +116,12 @@ export async function initRuntime(
     applied = await runMigrations(sql, [...PROFILE_STORE_MIGRATIONS, ...DASHBOARD_STORE_MIGRATIONS])
   } catch (error) {
     // The boot fails here, so nothing else will ever end this client: close
-    // it, or its open connections keep the failing process (and the
-    // database sessions) alive. The migration error is what the operator
-    // needs — a failing close must not replace it.
+    // it. The production entry (`node dist/index.js`) exits on the rejected
+    // top-level await regardless; a caller that SURVIVES the rejection — an
+    // in-process `createApp` boot in the e2e suites, a composed server that
+    // catches it, `mcp-use dev` re-importing the entry — would otherwise keep
+    // the pool's connections and their database sessions open. The migration
+    // error is what the operator needs — a failing close must not replace it.
     await sql.end({ timeout: 5 }).catch(() => {})
     throw error
   }

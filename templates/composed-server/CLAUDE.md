@@ -55,7 +55,8 @@ external infrastructure.
    raw `server.tool()` with `strictToolInput(shape)` from
    `@miragon-ai/widget-shell/server` — so an unknown key is a tool error naming
    the valid keys, never a silently dropped filter
-   (`server/test/strict-input.e2e.test.ts`).
+   (`server/test/strict-input.e2e.test.ts` probes every tool of every module
+   on every toolset it declares).
 3. **Widgets hang off a four-link chain** (component map → module catalogue →
    server registry → `tool-names.ts`); a missed link is a SILENTLY absent
    widget. Guarded by each module's `catalogue-sync.test.ts` and the server's

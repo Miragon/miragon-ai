@@ -27,9 +27,12 @@ afterEach(() => {
 })
 
 /**
- * A boot whose migrations fail must release the client it opened: the
- * pool's sockets would otherwise keep the failing process alive (and its
- * connections open against the database) instead of letting it exit.
+ * A boot whose migrations fail must release the client it opened. The
+ * production entry exits on the rejected top-level await anyway; the close
+ * is for callers that survive the rejection — in-process `createApp` boots,
+ * a composed server that catches the error, `mcp-use dev` re-importing the
+ * entry — which would otherwise keep the pool's connections and their
+ * database sessions open.
  */
 describe("initRuntime (database path, failing migrations)", () => {
   it("closes the client and fails the boot with the migration error", async () => {

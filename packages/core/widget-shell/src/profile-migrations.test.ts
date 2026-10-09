@@ -45,13 +45,28 @@ const V2_RECORD = {
   schemaVersion: 2,
 }
 
+/**
+ * The baseline as shipped, pinned HERE rather than read from the export: the
+ * completeness range below starts at it, so a baseline raised in step with a
+ * `PROFILE_SCHEMA_VERSION` bump would empty that range and let the bump pass
+ * without its migration — every stored record of the old version would then
+ * be adopted at the new one without its reshape. Moving the baseline drops
+ * migration history, which is an owner decision of its own, never part of a
+ * schema bump.
+ */
+const SHIPPED_BASELINE = 3
+
 describe("PROFILE_MIGRATIONS completeness", () => {
+  it("keeps the migration baseline where it shipped", () => {
+    expect(PROFILE_MIGRATION_BASELINE).toBe(SHIPPED_BASELINE)
+  })
+
   it("carries an entry for every version from the baseline up to PROFILE_SCHEMA_VERSION", () => {
     // The failure mode this guards: a PROFILE_SCHEMA_VERSION bump without its
     // migration entry ships, and every stored record reads un-migrated.
     const expected = Array.from(
-      { length: PROFILE_SCHEMA_VERSION - PROFILE_MIGRATION_BASELINE },
-      (_, i) => PROFILE_MIGRATION_BASELINE + i,
+      { length: PROFILE_SCHEMA_VERSION - SHIPPED_BASELINE },
+      (_, i) => SHIPPED_BASELINE + i,
     )
     const actual = Object.keys(PROFILE_MIGRATIONS)
       .map(Number)
