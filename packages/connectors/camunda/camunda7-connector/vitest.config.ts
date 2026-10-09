@@ -22,8 +22,10 @@ export default mergeConfig(
         // (measured statements 48.13 / branches 36.38 / functions 41.03 /
         // lines 48.75). Raised again 2026-10-08 with the ctx.signal sweep over
         // every widget tool and feed (measured statements 54.48 / branches
-        // 40.44 / functions 47.64 / lines 55.62).
-        thresholds: { statements: 52, branches: 38, functions: 45, lines: 53 },
+        // 40.44 / functions 47.64 / lines 55.62). Raised 2026-10-09 with the
+        // engine-contract wire guards over every write tool (#328; measured
+        // statements 61.86 / branches 44.95 / functions 55.72 / lines 63.05).
+        thresholds: { statements: 59, branches: 42, functions: 53, lines: 61 },
       },
     },
   }),

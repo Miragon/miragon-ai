@@ -8,15 +8,15 @@ import {
   getTaskVariablesInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import { engineSorting, readTaskVariables, toEngineVariables } from "@miragon-ai/camunda7-client"
 import {
   getTasks,
   getTasksCount,
   getTask,
   claim,
   unclaim,
-  complete,
+  submit,
   setAssignee,
-  getTaskVariables,
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
@@ -37,6 +37,8 @@ export function registerTaskTools(register: Register) {
       const filters = {
         assignee: args.assignee,
         candidateGroup: args.candidateGroup,
+        // The engine refuses includeAssignedTasks without a candidate filter.
+        includeAssignedTasks: args.candidateGroup ? args.includeAssignedTasks : undefined,
         processDefinitionKey: args.processDefinitionKey,
         processInstanceId: args.processInstanceId,
         unassigned: args.unassigned,
@@ -48,8 +50,7 @@ export function registerTaskTools(register: Register) {
             ...filters,
             firstResult: args.firstResult,
             maxResults: args.maxResults,
-            sortBy: args.sortBy,
-            sortOrder: args.sortOrder,
+            ...engineSorting(args),
           },
         }),
         getTasksCount({ client, query: filters }),
@@ -98,16 +99,19 @@ export function registerTaskTools(register: Register) {
   register({
     name: "camunda7_complete_task",
     category: "tasks",
-    description: "Complete a user task by ID. Optionally set variables when completing.",
+    description:
+      "Complete a user task by ID, optionally setting variables. Submitted as the task form: the engine enforces its " +
+      "form fields (required, readonly, types).",
     annotations: { openWorldHint: true },
     inputSchema: { ...completeTaskInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
-      await complete({
+      // `/submit-form`, not `/complete`: only the form endpoint runs the
+      // task's form-field validation and type conversion. A task without
+      // form fields completes exactly as through `/complete`.
+      await submit({
         client,
         path: { id: args.taskId },
-        body: {
-          variables: args.variables,
-        },
+        body: { variables: toEngineVariables(args.variables) },
       })
       return { success: true, taskId: args.taskId }
     }),
@@ -132,11 +136,10 @@ export function registerTaskTools(register: Register) {
   register({
     name: "camunda7_get_task_variables",
     category: "tasks",
-    description: "Get all variables of a user task.",
+    description:
+      "Get all variables of a user task (Json/Xml/Object: serialized string + valueInfo).",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getTaskVariablesInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) =>
-      getTaskVariables({ client, path: { id: args.taskId } }),
-    ),
+    handler: withEngine(async (client, args) => readTaskVariables(client, args.taskId)),
   })
 }

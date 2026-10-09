@@ -12,6 +12,7 @@ import { registerIncidentTools } from "./incidents.js"
 import { registerJobTools } from "./jobs.js"
 import { registerHistoryTools } from "./history.js"
 import { registerMigrationTools } from "./migrations.js"
+import { registerBatchTools } from "./batches.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
@@ -36,4 +37,5 @@ export function registerTools(register: Register, opts: RegisterToolsOptions = {
   registerJobTools(register)
   registerHistoryTools(register)
   registerMigrationTools(register)
+  registerBatchTools(register)
 }

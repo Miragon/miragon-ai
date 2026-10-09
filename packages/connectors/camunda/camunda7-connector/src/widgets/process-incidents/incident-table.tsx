@@ -20,33 +20,46 @@ import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { engineArg, engineCallRule } from "../lib/engine-scope.js"
 import { useT } from "../../messages/use-t.js"
+import type { IncidentRecoveryState } from "./use-incident-recovery.js"
 
 /** Page size — mirrors the feed's server default. */
 const INCIDENT_PAGE_SIZE = 10
 
-/** Failed resolve attempt, surfaced inline under the affected incident row. */
-export interface ResolveError {
-  incidentId: string
-  message: string
+/** The row's Resolve/Retry button — absent when the toolset or incident type offers none. */
+function RecoveryButton({
+  incident,
+  recovery,
+}: {
+  incident: IncidentInstance
+  recovery: IncidentRecoveryState
+}) {
+  const t = useT()
+  const action = recovery.actionFor(incident.recovery)
+  if (!action) return null
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={recovery.pendingIds.has(incident.id)}
+      title={action === "retry" ? t("procIncTable.retryHint") : undefined}
+      onClick={() => recovery.act(incident)}
+    >
+      {action === "retry" ? t("procIncTable.retry") : t("procIncTable.resolve")}
+    </Button>
+  )
 }
 
 export function IncidentTable({
   incidents,
-  resolvedIds,
-  pendingIds,
-  resolveError,
-  onResolve,
+  recovery,
   onAnalyze,
   hideInstanceColumn = false,
   previewCount,
   engine,
 }: {
   incidents: IncidentInstance[]
-  resolvedIds: Set<string>
-  pendingIds: Set<string>
-  resolveError: ResolveError | null
-  /** Omitted when the deployment's toolset has no resolve tool — no button. */
-  onResolve?: (incidentId: string) => void
+  /** Row actions + their optimistic state (`useIncidentRecovery`). */
+  recovery: IncidentRecoveryState
   onAnalyze: (incidentId: string) => void
   /**
    * Drop the instance column (and the grouped view's icon-column indent) when
@@ -85,11 +98,12 @@ export function IncidentTable({
     <div className="bg-muted">
       <ListTable ariaLabel={t("procIncTable.tableLabel")} columns={columns}>
         {visible.map((incident) => {
-          const resolved = resolvedIds.has(incident.id)
+          const done = recovery.doneIds.has(incident.id)
+          const retried = incident.recovery.action !== "resolve"
           const instanceUrl = incident.cockpitInstanceUrl
           return (
             <Fragment key={incident.id}>
-              <tr className={resolved ? "opacity-50" : undefined}>
+              <tr className={done ? "opacity-50" : undefined}>
                 {!hideInstanceColumn && (
                   <Td className={leadPad}>
                     <span className="text-m-blue font-mono text-xs font-medium">
@@ -110,8 +124,10 @@ export function IncidentTable({
                   {formatTimestamp(incident.incidentTimestamp)}
                 </Td>
                 <Td>
-                  {resolved ? (
-                    <StatusBadge tone="neutral">{t("procIncTable.resolved")}</StatusBadge>
+                  {done ? (
+                    <StatusBadge tone="neutral">
+                      {retried ? t("procIncTable.retried") : t("procIncTable.resolved")}
+                    </StatusBadge>
                   ) : (
                     <div className="flex items-center gap-1">
                       <DrillButton
@@ -135,28 +151,21 @@ export function IncidentTable({
                           "```",
                         ].join("\n")}
                       />
-                      {onResolve && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={pendingIds.has(incident.id)}
-                          onClick={() => onResolve(incident.id)}
-                        >
-                          {t("procIncTable.resolve")}
-                        </Button>
-                      )}
+                      <RecoveryButton incident={incident} recovery={recovery} />
                     </div>
                   )}
                 </Td>
               </tr>
-              {resolveError?.incidentId === incident.id && (
+              {recovery.error?.incidentId === incident.id && (
                 <tr>
                   <td
                     colSpan={columnCount}
                     className={`border-border border-b px-4 py-1.5 ${leadPad ?? ""}`}
                   >
                     <span className="text-critical text-xs">
-                      {t("procIncTable.resolveError", { message: resolveError.message })}
+                      {retried
+                        ? t("procIncTable.retryError", { message: recovery.error.message })
+                        : t("procIncTable.resolveError", { message: recovery.error.message })}
                     </span>
                   </td>
                 </tr>
@@ -192,21 +201,14 @@ export function PagedIncidentTable({
   processDefinitionKey,
   activityId,
   engine,
-  resolvedIds,
-  pendingIds,
-  resolveError,
-  onResolve,
+  recovery,
   onAnalyze,
 }: {
   processDefinitionKey: string
   activityId: string
   /** Explicit engine routing; omitted → the caller's saved default engine. */
   engine?: string
-  resolvedIds: Set<string>
-  pendingIds: Set<string>
-  resolveError: ResolveError | null
-  /** Omitted when the deployment's toolset has no resolve tool — no button. */
-  onResolve?: (incidentId: string) => void
+  recovery: IncidentRecoveryState
   onAnalyze: (incidentId: string) => void
 }) {
   const t = useT()
@@ -245,10 +247,7 @@ export function PagedIncidentTable({
       ) : (
         <IncidentTable
           incidents={paged.items}
-          resolvedIds={resolvedIds}
-          pendingIds={pendingIds}
-          resolveError={resolveError}
-          onResolve={onResolve}
+          recovery={recovery}
           onAnalyze={onAnalyze}
           engine={engine}
         />

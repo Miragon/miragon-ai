@@ -3,6 +3,7 @@ import {
   getProcessDefinitionXmlInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import { engineSorting } from "@miragon-ai/camunda7-client"
 import {
   getProcessDefinitions,
   getProcessDefinitionBpmn20Xml,
@@ -28,8 +29,7 @@ export function registerProcessDefinitionTools(register: Register) {
           nameLike: args.nameLike,
           latestVersion: args.latestVersion,
           maxResults: args.maxResults,
-          sortBy: args.sortBy,
-          sortOrder: args.sortOrder,
+          ...engineSorting(args),
         },
       }),
     ),

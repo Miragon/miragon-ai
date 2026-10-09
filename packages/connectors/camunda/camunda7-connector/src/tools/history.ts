@@ -5,6 +5,7 @@ import {
   queryHistoricVariableInstancesInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import { RAW_VARIABLES, engineSorting, toOptionalEngineDate } from "@miragon-ai/camunda7-client"
 import {
   getHistoricProcessInstances,
   getHistoricProcessInstancesCount,
@@ -35,8 +36,8 @@ export function registerHistoryTools(register: Register) {
         processDefinitionKey: args.processDefinitionKey,
         finished: args.finished,
         unfinished: args.unfinished,
-        startedBefore: args.startedBefore,
-        startedAfter: args.startedAfter,
+        startedBefore: toOptionalEngineDate(args.startedBefore),
+        startedAfter: toOptionalEngineDate(args.startedAfter),
       }
       const [items, count] = await Promise.all([
         getHistoricProcessInstances({
@@ -45,8 +46,7 @@ export function registerHistoryTools(register: Register) {
             ...filters,
             firstResult: args.firstResult,
             maxResults: args.maxResults,
-            sortBy: args.sortBy,
-            sortOrder: args.sortOrder,
+            ...engineSorting(args),
           },
         }),
         getHistoricProcessInstancesCount({ client, query: filters }),
@@ -77,8 +77,7 @@ export function registerHistoryTools(register: Register) {
             ...filters,
             firstResult: args.firstResult,
             maxResults: args.maxResults,
-            sortBy: args.sortBy,
-            sortOrder: args.sortOrder,
+            ...engineSorting(args),
           },
         }),
         getHistoricActivityInstancesCount({ client, query: filters }),
@@ -110,8 +109,7 @@ export function registerHistoryTools(register: Register) {
             ...filters,
             firstResult: args.firstResult,
             maxResults: args.maxResults,
-            sortBy: args.sortBy,
-            sortOrder: args.sortOrder,
+            ...engineSorting(args),
           },
         }),
         getHistoricTaskInstancesCount({ client, query: filters }),
@@ -124,7 +122,7 @@ export function registerHistoryTools(register: Register) {
     name: "camunda7_query_historic_variable_instances",
     category: "history",
     description:
-      "Query historic variable instances, i.e. variable values from process history. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
+      "Query historic variable instances, i.e. variable values from process history (serialized, with valueInfo). Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...queryHistoricVariableInstancesInput.shape, ...engineParamShape },
     outputSchema: paginatedListOutput,
@@ -139,10 +137,10 @@ export function registerHistoryTools(register: Register) {
           client,
           query: {
             ...filters,
+            ...RAW_VARIABLES,
             firstResult: args.firstResult,
             maxResults: args.maxResults,
-            sortBy: args.sortBy,
-            sortOrder: args.sortOrder,
+            ...engineSorting(args),
           },
         }),
         getHistoricVariableInstancesCount({ client, query: filters }),

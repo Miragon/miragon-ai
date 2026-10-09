@@ -1,4 +1,4 @@
-import type { Client } from "@miragon-ai/camunda7-client"
+import { toEngineDate, type Client } from "@miragon-ai/camunda7-client"
 import {
   getHistoricProcessInstancesCount,
   getIncidents,
@@ -248,9 +248,8 @@ export async function buildEngineHealthData(
   engineId: string,
   thresholds: EngineHealthThresholds = DEFAULT_HEALTH_THRESHOLDS,
 ): Promise<EngineHealthData> {
-  // The engine emits/accepts `yyyy-MM-dd'T'HH:mm:ss.SSS±HHMM` — a literal "Z"
-  // suffix is not part of that contract, so rewrite it for the history filters.
-  const dayAgoParam = new Date(Date.now() - DAY_MS).toISOString().replace("Z", "+0000")
+  // History filters take the engine's date format (engine contract).
+  const dayAgoParam = toEngineDate(new Date(Date.now() - DAY_MS))
 
   // Deliberately NO .catch(() => []) on the verdict inputs: a down or
   // unauthorized engine must surface as a tool error (via the withToolErrors

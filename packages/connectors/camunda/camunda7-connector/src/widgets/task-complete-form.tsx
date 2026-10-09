@@ -31,7 +31,7 @@ interface ManualEntry {
   type: string
 }
 
-const TYPE_OPTIONS = ["String", "Boolean", "Long", "Double", "Json"]
+const TYPE_OPTIONS = ["String", "Boolean", "Long", "Double", "Date", "Json"]
 
 export function TaskCompleteForm({
   taskId,
@@ -145,7 +145,11 @@ function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }:
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       {schema.fields.length === 0 && manualEntries.length === 0 && (
-        <p className="text-muted-foreground text-sm">{t("taskForm.empty")}</p>
+        <p className="text-muted-foreground text-sm">
+          {schema.formKey
+            ? t("taskForm.externalForm", { formKey: schema.formKey })
+            : t("taskForm.empty")}
+        </p>
       )}
       {readonlyFields.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -317,6 +321,8 @@ function FieldRow({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="h-8"
+        // ISO 8601, converted to the engine's date format server-side.
+        placeholder={field.type === "Date" ? "YYYY-MM-DD" : undefined}
         disabled={disabled}
       />
     </div>

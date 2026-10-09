@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { sortOrderParam } from "./shared.js"
 
 export const getDeploymentInput = z.object({
   id: z.string().min(1).describe("Deployment ID"),
@@ -9,7 +10,7 @@ export const listDeploymentsInput = z.object({
   nameLike: z.string().optional().describe("Filter by deployment name (substring)"),
   maxResults: z.number().int().positive().optional().default(20),
   sortBy: z.enum(["id", "name", "deploymentTime", "tenantId"]).optional(),
-  sortOrder: z.enum(["asc", "desc"]).optional(),
+  sortOrder: sortOrderParam,
 })
 
 /**

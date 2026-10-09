@@ -164,8 +164,14 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
 7. **Shared server data paths are single-sourced.** Definition name/version/instance
    lookups come from `packages/connectors/camunda/camunda7-connector/src/data/definition-info.ts`;
    `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step — never
-   fork them. Analytics periods derive from `PERIODS`/`PERIOD_RANGE` (analytics-client)
-   — no hardcoded enum copies. The profile STORE (record schema, in-memory/
+   fork them. Every engine REST rule the client defaults miss — engine dates
+   (`toEngineDate`), paired sorting (`engineSorting`), serialized variable writes
+   (`toEngineVariable(s)`), text/plain endpoints, raw variable reads, incident recovery,
+   queued batches — lives in the engine contract,
+   `packages/connectors/camunda/camunda7-client/src/engine-contract/`, used by `tools/` AND
+   `data/` (guards: `src/engine-contract.test.ts`, `src/tools/*.wire.test.ts` — every write
+   tool has a recording-fake-engine wire case). Analytics periods derive from
+   `PERIODS`/`PERIOD_RANGE` (analytics-client) — no hardcoded enum copies. The profile STORE (record schema, in-memory/
    filesystem/postgres implementations, migrations) is core:
    `packages/core/widget-shell/src/profile-{record,store,store-postgres,migrations}.ts`
    (`@miragon-ai/widget-shell/server`) — the record is connector-free (language,

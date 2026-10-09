@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { sortOrderParam } from "./shared.js"
 
 export const listProcessDefinitionsInput = z.object({
   key: z.string().optional().describe("Filter by exact process definition key"),
@@ -15,7 +16,7 @@ export const listProcessDefinitionsInput = z.object({
     .enum(["category", "key", "id", "name", "version", "deploymentId", "deployTime", "versionTag"])
     .optional()
     .describe("Sort field"),
-  sortOrder: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
+  sortOrder: sortOrderParam,
 })
 
 export const getProcessDefinitionXmlInput = z.object({

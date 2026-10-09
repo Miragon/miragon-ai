@@ -4,6 +4,7 @@ import {
   setJobRetriesBatchInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import { engineSorting, queuedBatch, toOptionalEngineDate } from "@miragon-ai/camunda7-client"
 import {
   getJobs,
   getJobsCount,
@@ -41,8 +42,7 @@ export function registerJobTools(register: Register) {
             ...filters,
             firstResult: args.firstResult,
             maxResults: args.maxResults,
-            sortBy: args.sortBy,
-            sortOrder: args.sortOrder,
+            ...engineSorting(args),
           },
         }),
         getJobsCount({ client, query: filters }),
@@ -72,7 +72,8 @@ export function registerJobTools(register: Register) {
     name: "camunda7_set_job_retries_batch",
     category: "jobs",
     description:
-      "Create a batch job to set retries on multiple jobs at once. Returns the batch id; progress and failures are tracked on the batch, not inline.",
+      'Queue a batch that sets retries on multiple jobs. Returns { batchId, status: "queued" } — not the outcome: ' +
+      "follow it with camunda7_get_batch.",
     annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: { ...setJobRetriesBatchInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
@@ -81,15 +82,10 @@ export function registerJobTools(register: Register) {
         body: {
           jobIds: args.jobIds,
           retries: args.retries,
-          dueDate: args.dueDate,
+          dueDate: toOptionalEngineDate(args.dueDate),
         },
       })
-      return {
-        success: true,
-        jobCount: args.jobIds.length,
-        retries: args.retries,
-        batch,
-      }
+      return { ...queuedBatch(batch), jobCount: args.jobIds.length, retries: args.retries }
     }),
   })
 }

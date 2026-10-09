@@ -5,6 +5,7 @@ import {
   getDeploymentInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import { engineSorting } from "@miragon-ai/camunda7-client"
 import { getDeployments, getDeployment, createDeployment } from "@miragon-ai/camunda7-client/sdk"
 import type { MultiFormDeploymentDto } from "@miragon-ai/camunda7-client/types"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
@@ -72,8 +73,7 @@ export function registerDeploymentTools(
           name: args.name,
           nameLike: args.nameLike,
           maxResults: args.maxResults,
-          sortBy: args.sortBy,
-          sortOrder: args.sortOrder,
+          ...engineSorting(args),
         },
       }),
     ),

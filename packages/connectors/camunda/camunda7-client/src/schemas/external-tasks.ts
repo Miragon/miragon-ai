@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { firstResultParam } from "./shared.js"
+import { firstResultParam, sortOrderParam, variableSchema } from "./shared.js"
 
 /**
  * Read-only external-task query (`GET /external-task`) — inspects what the
@@ -45,10 +45,7 @@ export const listExternalTasksInput = z.object({
     ])
     .optional()
     .describe("Sort field; sorts ascending unless sortOrder is given"),
-  sortOrder: z
-    .enum(["asc", "desc"])
-    .optional()
-    .describe("Sort direction for sortBy (default asc); ignored without sortBy"),
+  sortOrder: sortOrderParam,
 })
 
 /**
@@ -91,16 +88,7 @@ export const fetchAndLockInput = z.object({
 export const completeExternalTaskInput = z.object({
   externalTaskId: z.string().describe("The ID of the external task to complete"),
   workerId: z.string().describe("The ID of the worker that locked the task"),
-  variables: z
-    .record(
-      z.string(),
-      z.object({
-        value: z.unknown(),
-        type: z.string().optional(),
-      }),
-    )
-    .optional()
-    .describe("Variables to set when completing the task"),
+  variables: variableSchema.optional().describe("Variables to set when completing the task"),
 })
 
 export const handleExternalTaskFailureInput = z.object({
@@ -108,7 +96,9 @@ export const handleExternalTaskFailureInput = z.object({
   workerId: z.string().describe("The ID of the worker that locked the task"),
   errorMessage: z.string().optional().describe("Error message describing the failure"),
   errorDetails: z.string().optional().describe("Detailed error information (e.g. stack trace)"),
-  retries: z.number().int().min(0).optional().describe("Remaining retries (0 creates an incident)"),
+  // Required: the engine reads an omitted `retries` as 0 — an incident at
+  // once, and the retryTimeout is ignored.
+  retries: z.number().int().min(0).describe("Remaining retries; 0 raises an incident at once"),
   retryTimeout: z
     .number()
     .int()

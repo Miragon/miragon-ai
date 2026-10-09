@@ -1,4 +1,8 @@
-import type { Client } from "@miragon-ai/camunda7-client"
+import {
+  incidentRecovery,
+  readProcessInstanceVariables,
+  type Client,
+} from "@miragon-ai/camunda7-client"
 import type {
   CockpitDashboardData,
   InstanceDetailData,
@@ -14,7 +18,6 @@ import {
   getProcessInstances,
   getProcessInstancesCount,
   getActivityInstanceTree,
-  getProcessInstanceVariables,
   getIncidents,
   getTasks,
   getProcessDefinitionBpmn20Xml,
@@ -304,7 +307,7 @@ export async function buildInstanceDetailData(
   const [instance, activityTree, variables, incidents, openTasksRaw] = await Promise.all([
     getProcessInstance({ client, path: { id: args.processInstanceId } }),
     getActivityInstanceTree({ client, path: { id: args.processInstanceId } }).catch(() => null),
-    getProcessInstanceVariables({ client, path: { id: args.processInstanceId } }).catch(() => ({})),
+    readProcessInstanceVariables(client, args.processInstanceId).catch(() => ({})),
     getIncidents({
       client,
       query: { processInstanceId: args.processInstanceId, maxResults: 100 },
@@ -338,11 +341,9 @@ export async function buildInstanceDetailData(
   const openTasks: InstanceDetailData["openTasks"] = await Promise.all(
     taskList.map(async (task) => ({
       ...task,
+      // The /task row carries everything the form needs (incl. formKey).
       formSchema: await buildTaskFormSchema(client, task.id, {
-        task: {
-          taskDefinitionKey: task.taskDefinitionKey,
-          processDefinitionId: task.processDefinitionId,
-        },
+        task,
         bpmnXml,
       }).catch(() => ({ taskId: task.id, fields: [] })),
     })),
@@ -356,19 +357,14 @@ export async function buildInstanceDetailData(
   const versionSegment = definitionId?.split(":")[1]
   const defVersion = versionSegment && /^\d+$/.test(versionSegment) ? Number(versionSegment) : null
   const incidentRows: InstanceDetailData["incidents"] = (
-    (Array.isArray(incidents) ? incidents : []) as Array<{
-      id?: string | null
-      processInstanceId?: string | null
-      incidentType?: string | null
-      incidentMessage?: string | null
-      incidentTimestamp?: string | null
-    }>
+    Array.isArray(incidents) ? incidents : []
   ).map((i) => ({
     id: i.id ?? "",
     processInstanceId: i.processInstanceId ?? args.processInstanceId,
     incidentType: i.incidentType ?? "unknown",
     incidentMessage: i.incidentMessage ?? null,
     incidentTimestamp: i.incidentTimestamp ?? "",
+    recovery: incidentRecovery(i),
     cockpitInstanceUrl:
       urls && defKey
         ? buildInstanceCockpitUrl(

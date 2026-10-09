@@ -37,7 +37,7 @@ export const migrateProcessInstancesAsyncInput = z.object({
     .array(migrationInstruction)
     .optional()
     .describe(
-      "Explicit activity mappings. Omit to let the engine derive them from equal activity ids between source and target.",
+      "Explicit activity mappings. Omit to generate them from equal activity ids (as camunda7_create_migration_plan).",
     ),
   skipCustomListeners: z
     .boolean()

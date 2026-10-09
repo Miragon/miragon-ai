@@ -1,5 +1,6 @@
 import { listIncidentsInput, resolveIncidentInput } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
+import { engineSorting } from "@miragon-ai/camunda7-client"
 import { getIncidents, getIncidentsCount, resolveIncident } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
@@ -29,8 +30,7 @@ export function registerIncidentTools(register: Register) {
             ...filters,
             firstResult: args.firstResult,
             maxResults: args.maxResults,
-            sortBy: args.sortBy,
-            sortOrder: args.sortOrder,
+            ...engineSorting(args),
           },
         }),
         getIncidentsCount({ client, query: filters }),
@@ -42,7 +42,9 @@ export function registerIncidentTools(register: Register) {
   register({
     name: "camunda7_resolve_incident",
     category: "incidents",
-    description: "Resolve an incident by ID.",
+    description:
+      "Resolve a custom incident by ID. The engine refuses failedJob/failedExternalTask (400) — retry those: " +
+      "camunda7_set_job_retries / camunda7_set_external_task_retries on the incident's configuration id.",
     annotations: { openWorldHint: true },
     inputSchema: { ...resolveIncidentInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {

@@ -61,6 +61,7 @@ const ADMIN_ONLY = [
   "camunda7_create_migration_plan",
   "camunda7_migrate_process_instances_async",
   "camunda7_set_job_retries_batch",
+  "camunda7_get_batch",
   // engine-wide broadcast
   "camunda7_throw_signal",
   // the external-task worker protocol
@@ -325,6 +326,7 @@ describe("allowedWidgetActions mirrors the registered tool surface", () => {
     expect(allowedWidgetActions("read-only")).toEqual([])
     expect(allowedWidgetActions("operations")).toEqual([
       "camunda7_set_job_retries",
+      "camunda7_set_external_task_retries",
       "camunda7_resolve_incident",
       "camunda7_complete_task",
       "camunda7_set_process_instance_variable",

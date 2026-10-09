@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { firstResultParam } from "./shared.js"
+import { firstResultParam, sortOrderParam } from "./shared.js"
 
 export const listIncidentsInput = z.object({
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
@@ -26,7 +26,7 @@ export const listIncidentsInput = z.object({
       "tenantId",
     ])
     .optional(),
-  sortOrder: z.enum(["asc", "desc"]).optional(),
+  sortOrder: sortOrderParam,
 })
 
 export const resolveIncidentInput = z.object({

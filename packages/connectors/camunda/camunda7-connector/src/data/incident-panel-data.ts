@@ -1,4 +1,4 @@
-import type { Client } from "@miragon-ai/camunda7-client"
+import { incidentRecovery, toEngineDate, type Client } from "@miragon-ai/camunda7-client"
 import type {
   ActivityIncidentsData,
   IncidentInstance,
@@ -119,6 +119,7 @@ function toIncidentInstance(r: IncidentRow, ctx: IncidentInstanceContext): Incid
     incidentType: r.incidentType,
     incidentMessage: r.incidentMessage ?? null,
     incidentTimestamp: r.incidentTimestamp,
+    recovery: incidentRecovery(r),
     cockpitInstanceUrl: buildInstanceCockpitUrl(
       { baseUrl: ctx.baseUrl, cockpitUrl: ctx.cockpitUrl, provider: ctx.provider },
       {
@@ -146,14 +147,6 @@ function isOnOrAfter(timestamp: string, cutoffMs: number): boolean {
 function countFrom(res: unknown): number | null {
   const count = (res as { count?: unknown } | null)?.count
   return typeof count === "number" ? count : null
-}
-
-/**
- * The engine emits/accepts `yyyy-MM-dd'T'HH:mm:ss.SSS±HHMM` — a literal "Z"
- * suffix is not part of that contract (same rewrite as health-data.ts).
- */
-function engineTimestamp(ms: number): string {
-  return new Date(ms).toISOString().replace("Z", "+0000")
 }
 
 function maxTimestamp(values: string[]): string | null {
@@ -220,7 +213,7 @@ export async function buildIncidentsDashboardData(
     getIncidentsCount({ client, query: countFilters }).catch(() => null),
     getIncidentsCount({
       client,
-      query: { ...countFilters, incidentTimestampAfter: engineTimestamp(cutoffMs) },
+      query: { ...countFilters, incidentTimestampAfter: toEngineDate(new Date(cutoffMs)) },
     }).catch(() => null),
   ])
   const definitionInfo = await fetchDefinitionInfo(client, [...byKey.keys()])
@@ -299,7 +292,7 @@ export async function buildProcessIncidentsData(
     getIncidentsCount({ client, query: countFilters }).catch(() => null),
     getIncidentsCount({
       client,
-      query: { ...countFilters, incidentTimestampAfter: engineTimestamp(cutoffMs) },
+      query: { ...countFilters, incidentTimestampAfter: toEngineDate(new Date(cutoffMs)) },
     }).catch(() => null),
   ])
 

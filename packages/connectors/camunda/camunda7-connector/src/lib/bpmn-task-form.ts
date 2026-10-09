@@ -2,8 +2,11 @@
  * Best-effort BPMN parser for user task form definitions.
  *
  * `extractEmbeddedFormFields` reads `<camunda:formData>` from a user task and
- * returns structured form fields. Fields with `<camunda:property id="readonly"
- * value="true">` are marked as readonly (displayed but not submitted).
+ * returns structured form fields, with the two constraints a form must honour
+ * before submitting: `required` and `readonly` (displayed but not submitted —
+ * the engine rejects a submitted value for it). Both come from the standard
+ * `<camunda:validation><camunda:constraint name="…"/>`; `readonly` also from
+ * the legacy `<camunda:property id="readonly" value="true">`.
  */
 import type { TaskFormField } from "../view-models.js"
 
@@ -23,14 +26,15 @@ const CAMUNDA_TYPE_MAP: Record<string, string> = {
   long: "Long",
   integer: "Long",
   double: "Double",
-  date: "String",
+  // A date form field holds a Date variable — typed so a submit never
+  // rewrites it as a String (the value travels as ISO 8601).
+  date: "Date",
   enum: "String",
 }
 
 /**
  * Extract `<camunda:formField>` elements from the user task identified by
- * `taskDefinitionKey`. Fields with `<camunda:property id="readonly"
- * value="true">` are marked as readonly.
+ * `taskDefinitionKey`, with their `required`/`readonly` constraints.
  */
 export function extractEmbeddedFormFields(
   bpmnXml: string,
@@ -73,8 +77,10 @@ function parseFormField(attrs: string, inner: string): TaskFormField | null {
   const rawType = readAttr(attrs, "type") ?? undefined
   const type = rawType ? (CAMUNDA_TYPE_MAP[rawType.toLowerCase()] ?? rawType) : undefined
 
-  // Check for readonly custom property
-  const readonly = /camunda:property\b[^>]*\bid="readonly"[^>]*\bvalue="true"/.test(inner)
+  const constraints = parseConstraints(inner)
+  const readonly =
+    constraints.has("readonly") ||
+    /camunda:property\b[^>]*\bid="readonly"[^>]*\bvalue="true"/.test(inner)
 
   const suggestedValues = parseSuggestedValues(inner)
 
@@ -82,10 +88,28 @@ function parseFormField(attrs: string, inner: string): TaskFormField | null {
     name: id,
     label,
     type,
+    required: constraints.has("required") || undefined,
     readonly: readonly || undefined,
     suggestedValues: suggestedValues.length > 0 ? suggestedValues : undefined,
     source: "form-data",
   }
+}
+
+/**
+ * Names of the `<camunda:constraint>`s in a field's `<camunda:validation>`
+ * (`required`, `readonly`, `minlength`, …). Only the two argument-less ones
+ * are acted on; the engine enforces every constraint on submit anyway.
+ */
+function parseConstraints(inner: string): Set<string> {
+  const validation = inner.match(
+    /<(?:[\w]+:)?validation\b[^>]*>([\s\S]*?)<\/(?:[\w]+:)?validation>/,
+  )?.[1]
+  const names = new Set<string>()
+  for (const m of (validation ?? "").matchAll(/<(?:[\w]+:)?constraint\b([^>]*?)\/?>/g)) {
+    const name = readAttr(m[1] ?? "", "name")
+    if (name) names.add(name)
+  }
+  return names
 }
 
 /** Parse <camunda:values> for suggestedValues */

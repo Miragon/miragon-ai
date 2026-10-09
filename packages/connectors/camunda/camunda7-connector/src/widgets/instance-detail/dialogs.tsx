@@ -11,13 +11,9 @@ export function InstanceActionDialogs({ actions }: { actions: InstanceActions })
     setConfirmCancel,
     confirmSuspension,
     setConfirmSuspension,
-    confirmResolveId,
-    setConfirmResolveId,
-    pendingIds,
-    resolveError,
+    recovery,
     suspensionMutation,
     cancelMutation,
-    handleResolve,
     handleSuspendToggle,
     handleCancel,
   } = actions
@@ -59,24 +55,25 @@ export function InstanceActionDialogs({ actions }: { actions: InstanceActions })
       />
 
       <ConfirmDialog
-        open={confirmResolveId !== null}
+        open={recovery.confirmResolveId !== null}
         onOpenChange={(open) => {
-          if (!open) setConfirmResolveId(null)
+          if (!open) recovery.setConfirmResolveId(null)
         }}
         title={t("instanceDetail.confirmResolveTitle")}
         description={t("instanceDetail.confirmResolveDescription")}
         confirmLabel={t("instanceDetail.resolve")}
         cancelLabel={t("confirmDialog.cancel")}
         pendingLabel={t("confirmDialog.working")}
-        pending={confirmResolveId !== null && pendingIds.has(confirmResolveId)}
+        pending={
+          recovery.confirmResolveId !== null && recovery.pendingIds.has(recovery.confirmResolveId)
+        }
         error={
-          confirmResolveId !== null && resolveError?.incidentId === confirmResolveId
-            ? resolveError.message
+          recovery.confirmResolveId !== null &&
+          recovery.error?.incidentId === recovery.confirmResolveId
+            ? recovery.error.message
             : null
         }
-        onConfirm={() => {
-          if (confirmResolveId) handleResolve(confirmResolveId)
-        }}
+        onConfirm={recovery.confirmResolve}
       />
     </>
   )

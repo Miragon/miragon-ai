@@ -20,6 +20,8 @@ export const taskFormFieldSchema = z.object({
 export const taskFormSchema = z.object({
   taskId: z.string(),
   fields: z.array(taskFormFieldSchema),
+  /** Set when the task uses its own form (embedded/external/Camunda Form). */
+  formKey: z.string().optional(),
 })
 
 export type TaskFormFieldSource = z.infer<typeof taskFormFieldSourceSchema>

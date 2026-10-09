@@ -11,6 +11,12 @@ import {
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
+  engineSorting,
+  readProcessInstanceVariables,
+  toEngineVariable,
+  toEngineVariables,
+} from "@miragon-ai/camunda7-client"
+import {
   startProcessInstanceByKey,
   getProcessInstances,
   getProcessInstancesCount,
@@ -18,7 +24,6 @@ import {
   deleteProcessInstance,
   modifyProcessInstance,
   getActivityInstanceTree,
-  getProcessInstanceVariables,
   setProcessInstanceVariable,
   updateSuspensionStateById,
 } from "@miragon-ai/camunda7-client/sdk"
@@ -42,7 +47,7 @@ export function registerProcessInstanceTools(register: Register) {
         path: { key: args.processDefinitionKey },
         body: {
           businessKey: args.businessKey,
-          variables: args.variables,
+          variables: toEngineVariables(args.variables),
         },
       }),
     ),
@@ -70,8 +75,7 @@ export function registerProcessInstanceTools(register: Register) {
             ...filters,
             firstResult: args.firstResult,
             maxResults: args.maxResults,
-            sortBy: args.sortBy,
-            sortOrder: args.sortOrder,
+            ...engineSorting(args),
           },
         }),
         getProcessInstancesCount({ client, query: filters }),
@@ -106,11 +110,21 @@ export function registerProcessInstanceTools(register: Register) {
   register({
     name: "camunda7_delete_process_instance",
     category: "process-instances",
-    description: "Delete (cancel) a running process instance by ID. This action is irreversible.",
+    description:
+      "Delete (cancel) a running process instance by ID. Irreversible; cascades to the instances its call activities " +
+      "started (unless skipSubprocesses) and cancels the calling activity if it was itself called.",
     annotations: { destructiveHint: true, openWorldHint: true },
     inputSchema: { ...deleteProcessInstanceInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
-      await deleteProcessInstance({ client, path: { id: args.processInstanceId } })
+      await deleteProcessInstance({
+        client,
+        path: { id: args.processInstanceId },
+        query: {
+          skipSubprocesses: args.skipSubprocesses,
+          skipCustomListeners: args.skipCustomListeners,
+          skipIoMappings: args.skipIoMappings,
+        },
+      })
       return { success: true, processInstanceId: args.processInstanceId }
     }),
   })
@@ -139,25 +153,31 @@ export function registerProcessInstanceTools(register: Register) {
   register({
     name: "camunda7_get_process_instance_variables",
     category: "process-instances",
-    description: "Get all variables of a process instance.",
+    description:
+      "Get all variables of a process instance (Json/Xml/Object: serialized string + valueInfo).",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getProcessInstanceVariablesInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) =>
-      getProcessInstanceVariables({ client, path: { id: args.processInstanceId } }),
+      readProcessInstanceVariables(client, args.processInstanceId),
     ),
   })
 
   register({
     name: "camunda7_set_process_instance_variable",
     category: "process-instances",
-    description: "Set a single variable on a process instance.",
+    description:
+      "Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read).",
     annotations: { openWorldHint: true },
     inputSchema: { ...setProcessInstanceVariableInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) => {
       await setProcessInstanceVariable({
         client,
         path: { id: args.processInstanceId, varName: args.variableName },
-        body: { value: args.value, type: args.type },
+        body: toEngineVariable(args.variableName, {
+          value: args.value,
+          type: args.type,
+          valueInfo: args.valueInfo,
+        }),
       })
       return {
         success: true,

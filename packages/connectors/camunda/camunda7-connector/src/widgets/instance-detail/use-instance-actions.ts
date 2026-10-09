@@ -3,13 +3,14 @@ import { useToolMutation } from "@miragon/mcp-toolkit-ui"
 import { useResetOnChange } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData } from "../../view-models.js"
-import type { ResolveError } from "../process-incidents/incident-table.js"
+import { useIncidentRecovery } from "../process-incidents/use-incident-recovery.js"
 import { refreshCockpitData } from "../refresh.js"
 import { useCanRun } from "../widget-actions.js"
 
 /**
- * All mutation state of the instance-detail view: incident resolve marks,
- * suspend/activate, cancel, and the confirm-dialog switches. The UI faces of
+ * All mutation state of the instance-detail view: incident row actions
+ * (resolve/retry, `useIncidentRecovery`), suspend/activate, cancel, and the
+ * confirm-dialog switches. The UI faces of
  * this state are `InstanceHeader` (the action buttons) and
  * `InstanceActionDialogs` (the confirmations). The `can*` flags say which
  * actions the deployment's toolset exposes — the buttons render only for those.
@@ -21,26 +22,18 @@ export function useInstanceActions({
   engine?: string
   data: InstanceDetailData | null
 }) {
-  const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
-  const [resolveError, setResolveError] = useState<ResolveError | null>(null)
   // null = follow server state; true/false = local override after a suspend/activate.
   const [suspendedOverride, setSuspendedOverride] = useState<boolean | null>(null)
   const [cancelled, setCancelled] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [confirmSuspension, setConfirmSuspension] = useState(false)
-  const [confirmResolveId, setConfirmResolveId] = useState<string | null>(null)
-  const resolveMutation = useToolMutation("camunda7_resolve_incident")
   const suspensionMutation = useToolMutation("camunda7_set_process_instance_suspension")
   const cancelMutation = useToolMutation("camunda7_delete_process_instance")
   const canRun = useCanRun()
-  // The suspend/activate override and the optimistic resolved marks (mirrors
-  // process-incidents/list) only bridge the gap until the feed refetches —
-  // fresh server data must win again.
-  useResetOnChange(data, () => {
-    setSuspendedOverride(null)
-    setResolvedIds(new Set())
-  })
+  // The suspend/activate override only bridges the gap until the feed
+  // refetches — fresh server data must win again (the incident marks reset
+  // the same way inside useIncidentRecovery).
+  useResetOnChange(data, () => setSuspendedOverride(null))
 
   const isSuspended = suspendedOverride ?? data?.instance.suspended ?? false
   // Standalone (camunda7_show_instance_detail) the `engine` prop is undefined; fall
@@ -48,28 +41,7 @@ export function useInstanceActions({
   // prompts) must target the exact engine this data came from, never the caller's
   // default engine, which can differ if the default-engine save raced or failed.
   const engineId = engine ?? data?.engineId
-
-  function handleResolve(incidentId: string) {
-    setResolveError(null)
-    setPendingIds((prev) => new Set(prev).add(incidentId))
-    resolveMutation.mutate(
-      { incidentId, engine: engineId },
-      {
-        onSuccess: () => {
-          setResolvedIds((prev) => new Set(prev).add(incidentId))
-          setConfirmResolveId(null)
-          refreshCockpitData()
-        },
-        onError: (err) => setResolveError({ incidentId, message: err.message }),
-        onSettled: () =>
-          setPendingIds((prev) => {
-            const next = new Set(prev)
-            next.delete(incidentId)
-            return next
-          }),
-      },
-    )
-  }
+  const recovery = useIncidentRecovery(engineId, data)
 
   // The handlers below only fire from post-guard UI (data is loaded by then) —
   // the early returns exist for the type system.
@@ -115,22 +87,16 @@ export function useInstanceActions({
     engineId,
     isSuspended,
     cancelled,
-    canResolve: canRun("camunda7_resolve_incident"),
     canSuspend: canRun("camunda7_set_process_instance_suspension"),
     canCancel: canRun("camunda7_delete_process_instance"),
     isMutatingInstance: suspensionMutation.isPending || cancelMutation.isPending,
-    resolvedIds,
-    pendingIds,
-    resolveError,
+    recovery,
     confirmCancel,
     setConfirmCancel,
     confirmSuspension,
     setConfirmSuspension,
-    confirmResolveId,
-    setConfirmResolveId,
     suspensionMutation,
     cancelMutation,
-    handleResolve,
     handleSuspendToggle,
     handleCancel,
     requestSuspendToggle,

@@ -145,17 +145,8 @@ function ActionsRow({
           label={t("incidentFailure.draftTicketLabel")}
           prompt={draftTicketPrompt(data)}
         />
-        {data.job && onRetry && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRetry}
-            disabled={retrying || retried}
-            title={t("incidentFailure.retryAria")}
-            aria-label={retried ? t("incidentFailure.retriedAria") : t("incidentFailure.retryAria")}
-          >
-            {retried ? t("incidentFailure.retriedButton") : t("incidentFailure.retryButton")}
-          </Button>
+        {onRetry && (
+          <RetryButton data={data} onRetry={onRetry} retrying={retrying} retried={retried} />
         )}
         {resolved ? (
           <Badge variant="secondary">{t("incidentDetail.resolved")}</Badge>
@@ -179,6 +170,40 @@ function ActionsRow({
         </p>
       )}
     </div>
+  )
+}
+
+/** Retry — the only remedy for a failedJob / failedExternalTask incident. */
+function RetryButton({
+  data,
+  onRetry,
+  retrying,
+  retried,
+}: {
+  data: IncidentDetailData
+  onRetry: () => void
+  retrying: boolean
+  retried: boolean
+}) {
+  const t = useT()
+  const task = data.recovery.action === "retry-external-task"
+  const aria = task ? t("incidentFailure.retryTaskAria") : t("incidentFailure.retryAria")
+  const retriedAria = task ? t("incidentFailure.retriedTaskAria") : t("incidentFailure.retriedAria")
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onRetry}
+      disabled={retrying || retried}
+      title={aria}
+      aria-label={retried ? retriedAria : aria}
+    >
+      {retried
+        ? t("incidentFailure.retriedButton")
+        : task
+          ? t("incidentFailure.retryTaskButton")
+          : t("incidentFailure.retryButton")}
+    </Button>
   )
 }
 

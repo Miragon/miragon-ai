@@ -60,6 +60,8 @@ export interface TaskFormField {
 export interface TaskFormSchema {
   taskId: string
   fields: TaskFormField[]
+  /** The task's own form (embedded/external/Camunda Form) — set only without form fields. */
+  formKey?: string
 }
 
 export interface OpenUserTask extends TaskData {
@@ -205,12 +207,26 @@ export interface VariableValue {
   valueInfo?: Record<string, unknown>
 }
 
+/**
+ * What clears an incident — the engine contract's `incidentRecovery`
+ * (`@miragon-ai/camunda7-client`): the built-in types are retried
+ * (`camunda7_set_job_retries` / `camunda7_set_external_task_retries`), only
+ * custom ones resolved; `none` = propagated from a called instance, cleared by
+ * retrying its root cause.
+ */
+export type IncidentRecovery =
+  | { action: "resolve" }
+  | { action: "retry-job"; jobId: string }
+  | { action: "retry-external-task"; externalTaskId: string }
+  | { action: "none" }
+
 export interface IncidentInstance {
   id: string
   processInstanceId: string
   incidentType: string
   incidentMessage: string | null
   incidentTimestamp: string
+  recovery: IncidentRecovery
   /** Pre-built jump-out URL into the Cockpit instance page. Null when no
    *  cockpitUrl is configured or scheme validation rejected the input. */
   cockpitInstanceUrl: string | null
@@ -417,6 +433,8 @@ export interface IncidentDetailData {
 
   // Failure tab — null when the incident has no associated job (e.g. external-task incidents)
   job: IncidentDetailJob | null
+  /** What clears it — retry for the built-in types, resolve for custom ones. */
+  recovery: IncidentRecovery
 
   // Instance tab — same shape as InstanceDetailData
   instance: {

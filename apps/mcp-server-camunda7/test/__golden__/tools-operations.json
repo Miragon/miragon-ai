@@ -1404,7 +1404,7 @@
     "annotations": {
       "openWorldHint": true
     },
-    "description": "Complete a user task by ID. Optionally set variables when completing.",
+    "description": "Complete a user task by ID, optionally setting variables. Submitted as the task form: the engine enforces its form fields (required, readonly, types).",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -1420,11 +1420,19 @@
           "additionalProperties": {
             "properties": {
               "type": {
-                "description": "Variable type (String, Integer, Boolean, etc.)",
+                "description": "Variable type (String, Long, Boolean, Date: ISO 8601, Json, Object, …)",
                 "type": "string"
               },
               "value": {
                 "description": "Variable value"
+              },
+              "valueInfo": {
+                "additionalProperties": {},
+                "description": "Object: { objectTypeName, serializationDataFormat }",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -1450,10 +1458,14 @@
     "annotations": {
       "openWorldHint": true
     },
-    "description": "Correlate a message to trigger a message catch event or start a message start event.",
+    "description": "Correlate a message to a waiting catch event or a message start event; target it via processInstanceId, businessKey or correlationKeys. Unless all=true the engine needs EXACTLY one match: several fail, and so does none without a message start event.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
+        "all": {
+          "description": "Correlate to every match (default: exactly one)",
+          "type": "boolean"
+        },
         "businessKey": {
           "description": "Business key to correlate with",
           "type": "string"
@@ -1462,11 +1474,19 @@
           "additionalProperties": {
             "properties": {
               "type": {
-                "description": "Variable type (String, Integer, Boolean, etc.)",
+                "description": "Variable type (String, Long, Boolean, Date: ISO 8601, Json, Object, …)",
                 "type": "string"
               },
               "value": {
                 "description": "Variable value"
+              },
+              "valueInfo": {
+                "additionalProperties": {},
+                "description": "Object: { objectTypeName, serializationDataFormat }",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -1488,15 +1508,27 @@
           "description": "The name of the message",
           "type": "string"
         },
+        "processInstanceId": {
+          "description": "Correlate only to this process instance",
+          "type": "string"
+        },
         "processVariables": {
           "additionalProperties": {
             "properties": {
               "type": {
-                "description": "Variable type (String, Integer, Boolean, etc.)",
+                "description": "Variable type (String, Long, Boolean, Date: ISO 8601, Json, Object, …)",
                 "type": "string"
               },
               "value": {
                 "description": "Variable value"
+              },
+              "valueInfo": {
+                "additionalProperties": {},
+                "description": "Object: { objectTypeName, serializationDataFormat }",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -1723,7 +1755,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Get all variables of a process instance.",
+    "description": "Get all variables of a process instance (Json/Xml/Object: serialized string + valueInfo).",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -1775,7 +1807,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`). Returns form fields with current variable values pre-filled. Fields marked readonly are for context only and will not be submitted. Returns an empty fields array when no form is defined on the task.",
+    "description": "Load the form schema for a user task from its embedded BPMN form definition (`<camunda:formData>`): fields (type, required, readonly) pre-filled with current values. Never submit readonly fields. Without form fields, fields is empty and formKey names the task's own form, if any.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -1801,7 +1833,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Get all variables of a user task.",
+    "description": "Get all variables of a user task (Json/Xml/Object: serialized string + valueInfo).",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -2013,6 +2045,7 @@
           "type": "string"
         },
         "sortOrder": {
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -2089,7 +2122,7 @@
           "type": "string"
         },
         "sortOrder": {
-          "description": "Sort direction for sortBy (default asc); ignored without sortBy",
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -2203,6 +2236,7 @@
           "type": "string"
         },
         "sortOrder": {
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -2305,6 +2339,7 @@
           "type": "string"
         },
         "sortOrder": {
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -2405,7 +2440,7 @@
           "type": "string"
         },
         "sortOrder": {
-          "description": "Sort direction",
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -2468,6 +2503,7 @@
           "type": "string"
         },
         "sortOrder": {
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -2531,7 +2567,7 @@
           "type": "string"
         },
         "candidateGroup": {
-          "description": "Filter by candidate group",
+          "description": "Tasks offered to this group — only UNASSIGNED ones unless includeAssignedTasks",
           "type": "string"
         },
         "engine": {
@@ -2544,6 +2580,10 @@
           "maximum": 9007199254740991,
           "minimum": 0,
           "type": "integer"
+        },
+        "includeAssignedTasks": {
+          "description": "With candidateGroup: include tasks already claimed",
+          "type": "boolean"
         },
         "maxResults": {
           "default": 20,
@@ -2576,7 +2616,7 @@
           "type": "string"
         },
         "sortOrder": {
-          "description": "Sort direction",
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -2864,6 +2904,7 @@
           "type": "string"
         },
         "sortOrder": {
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -2962,6 +3003,7 @@
           "type": "string"
         },
         "sortOrder": {
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -2969,11 +3011,11 @@
           "type": "string"
         },
         "startedAfter": {
-          "description": "Started after date (ISO 8601)",
+          "description": "Started after (ISO 8601: date, or date-time with offset)",
           "type": "string"
         },
         "startedBefore": {
-          "description": "Started before date (ISO 8601)",
+          "description": "Started before (ISO 8601: date, or date-time with offset)",
           "type": "string"
         },
         "unfinished": {
@@ -3081,6 +3123,7 @@
           "type": "string"
         },
         "sortOrder": {
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -3139,7 +3182,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Query historic variable instances, i.e. variable values from process history. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
+    "description": "Query historic variable instances, i.e. variable values from process history (serialized, with valueInfo). Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -3173,6 +3216,7 @@
           "type": "string"
         },
         "sortOrder": {
+          "description": "Default asc; ignored without sortBy",
           "enum": [
             "asc",
             "desc"
@@ -3229,7 +3273,7 @@
     "annotations": {
       "openWorldHint": true
     },
-    "description": "Resolve an incident by ID.",
+    "description": "Resolve a custom incident by ID. The engine refuses failedJob/failedExternalTask (400) — retry those: camunda7_set_job_retries / camunda7_set_external_task_retries on the incident's configuration id.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -3379,7 +3423,7 @@
     "annotations": {
       "openWorldHint": true
     },
-    "description": "Set a single variable on a process instance.",
+    "description": "Set a single variable on a process instance. An Object needs valueInfo.objectTypeName (pass back the valueInfo read).",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -3392,11 +3436,19 @@
           "type": "string"
         },
         "type": {
-          "description": "The variable type (String, Integer, Boolean, etc.)",
+          "description": "Variable type (String, Long, Boolean, Date: ISO 8601, Json, Object, …)",
           "type": "string"
         },
         "value": {
-          "description": "The variable value"
+          "description": "The value (Json/Object: serialized string or parsed JSON)"
+        },
+        "valueInfo": {
+          "additionalProperties": {},
+          "description": "Object: { objectTypeName, serializationDataFormat }",
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "variableName": {
           "description": "The variable name",
@@ -4121,11 +4173,19 @@
           "additionalProperties": {
             "properties": {
               "type": {
-                "description": "Variable type (String, Integer, Boolean, etc.)",
+                "description": "Variable type (String, Long, Boolean, Date: ISO 8601, Json, Object, …)",
                 "type": "string"
               },
               "value": {
                 "description": "Variable value"
+              },
+              "valueInfo": {
+                "additionalProperties": {},
+                "description": "Object: { objectTypeName, serializationDataFormat }",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
               }
             },
             "required": [
