@@ -1,18 +1,30 @@
 import { defineConfig } from "@playwright/test"
 
+const CI = Boolean(process.env.CI)
+
 export default defineConfig({
   testDir: ".",
-  timeout: 30_000,
-  // Two scenarios against one static server — no parallel-worker gain, and a
-  // single worker keeps the __hostLog assertions free of cross-test noise.
-  workers: 1,
+  // Matches the .gitignore entry and the CI artifact upload.
+  outputDir: "../test-results",
+  // Boots the real server (built bundle) + stub engine + host backend once,
+  // on ephemeral ports; see global-setup.ts.
+  globalSetup: "./global-setup.ts",
+  timeout: 45_000,
+  // Every scenario owns its page and host log; the server is shared and only
+  // ever read. Two workers in CI keep the timing scenarios (the 2.5 s
+  // recovery grace) clear of CPU starvation on the runner.
+  fullyParallel: true,
+  workers: CI ? 2 : undefined,
+  retries: CI ? 1 : 0,
+  forbidOnly: CI,
   reporter: [["list"]],
   use: {
-    baseURL: "http://127.0.0.1:8788",
-  },
-  webServer: {
-    command: "node serve.mjs",
-    url: "http://127.0.0.1:8788/host-sim.html",
-    reuseExistingServer: !process.env.CI,
+    browserName: "chromium",
+    // The OS preference every scenario starts from — "dark host + light OS"
+    // depends on it being light.
+    colorScheme: "light",
+    viewport: { width: 1000, height: 780 },
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
   },
 })

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "customer-onboarding:2:5b0e3a51-2f4c-11f1-9c7e-0242ac120004",
+    "key": "customer-onboarding",
+    "category": "http://bpmn.io/schema/bpmn",
+    "description": null,
+    "name": "Customer Onboarding",
+    "version": 2,
+    "resource": "customer-onboarding.bpmn",
+    "deploymentId": "5b0e3a50-2f4c-11f1-9c7e-0242ac120004",
+    "diagram": null,
+    "suspended": true,
+    "tenantId": null,
+    "versionTag": null,
+    "historyTimeToLive": 180,
+    "startableInTasklist": true
+  },
+  {
+    "id": "invoice:3:7f1c2a9e-2f4b-11f1-9c7e-0242ac120004",
+    "key": "invoice",
+    "category": "http://www.omg.org/spec/BPMN/20100524/MODEL",
+    "description": null,
+    "name": "Invoice Receipt",
+    "version": 3,
+    "resource": "invoice.v3.bpmn",
+    "deploymentId": "7f1c2a9d-2f4b-11f1-9c7e-0242ac120004",
+    "diagram": null,
+    "suspended": false,
+    "tenantId": null,
+    "versionTag": "V3.0",
+    "historyTimeToLive": 30,
+    "startableInTasklist": true
+  },
+  {
+    "id": "order-fulfillment:7:9a4d6e12-2f4b-11f1-9c7e-0242ac120004",
+    "key": "order-fulfillment",
+    "category": "http://bpmn.io/schema/bpmn",
+    "description": "Picks, packs and ships a confirmed order.",
+    "name": "Order Fulfillment",
+    "version": 7,
+    "resource": "order-fulfillment.bpmn",
+    "deploymentId": "9a4d6e11-2f4b-11f1-9c7e-0242ac120004",
+    "diagram": null,
+    "suspended": false,
+    "tenantId": null,
+    "versionTag": null,
+    "historyTimeToLive": 90,
+    "startableInTasklist": false
+  }
+]
