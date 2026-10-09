@@ -14,12 +14,11 @@ afterEach(() => {
 describe("camunda7Module.toolsets (fail-closed policy)", () => {
   const vocabulary = camunda7Module.toolsets
 
-  it("declares the vocabulary instead of the deprecated supportsToolsets", () => {
+  it("declares its toolset vocabulary", () => {
     expect(vocabulary.module).toBe("camunda7")
     expect(vocabulary.names).toEqual(["read-only", "operations", "admin"])
     expect(vocabulary.fallback).toBe("read-only")
     expect(vocabulary.authenticatedDefault).toBe("operations")
-    expect(camunda7Module).not.toHaveProperty("supportsToolsets")
   })
 
   it("no suffix: read-only without OAuth, operations with it — never admin", () => {

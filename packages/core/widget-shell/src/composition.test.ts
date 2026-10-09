@@ -99,16 +99,28 @@ describe("activeModules / appEntries", () => {
     )
   })
 
-  it("passes the raw suffix through for the deprecated supportsToolsets flag, with a warning", () => {
+  it("passes no raw suffix through: the removed supportsToolsets flag makes no module toolset-bearing", () => {
+    // The pass-through is gone — a module declares a `toolsets` vocabulary
+    // or has none. A definition still carrying the old flag is a module
+    // WITHOUT toolsets: its suffix is ignored (warning) and its config never
+    // carries an unresolved name it might read as "everything".
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    const modules = [moduleOf("alpha", { toolsets: undefined, supportsToolsets: true })]
-    const boot = compose(modules).resolveBoot({ MCP_ACTIVE_MODULES: "alpha:custom" })
-    expect(boot.entries[0].config).toMatchObject({ toolset: "custom" })
-    expect(boot.toolsets).toEqual([
-      { module: "alpha", toolset: "custom", source: "legacy", durableWrites: false },
-    ])
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("deprecated supportsToolsets"))
-    expect(compose(modules).resolveBoot({}).entries[0].config).not.toHaveProperty("toolset")
+    const stale = { ...moduleOf("alpha", { toolsets: undefined }), supportsToolsets: true }
+    const composition = compose([stale])
+    const boot = composition.resolveBoot(
+      { MCP_ACTIVE_MODULES: "alpha:admin" },
+      { authenticated: true },
+    )
+    expect(boot.entries[0].config).not.toHaveProperty("toolset")
+    expect(boot.toolsets).toEqual([{ module: "alpha", source: "none", durableWrites: true }])
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledWith(
+      '[test-root] Module "alpha" has no toolsets — ignoring ":admin"',
+    )
+    vi.spyOn(console, "info").mockImplementation(() => {})
+    expect(composition.logEffectiveToolsets(boot)).toBe(
+      "[test-root] Toolsets — alpha (no toolsets)",
+    )
   })
 
   it("appConfig wraps the entries in the mcp-use shape", () => {
@@ -206,22 +218,16 @@ describe("logEffectiveToolsets", () => {
     expect(warn).toHaveBeenCalledTimes(1) // the typo, nothing from the log itself
   })
 
-  it("names the auth mode behind a default, and a deprecated pass-through", () => {
+  it("names the auth mode behind a default", () => {
     vi.spyOn(console, "info").mockImplementation(() => {})
-    vi.spyOn(console, "warn").mockImplementation(() => {})
-    const composition = compose([
-      moduleOf("alpha"),
-      moduleOf("beta", { toolsets: undefined, supportsToolsets: true }),
-    ])
-    const env = { MCP_ACTIVE_MODULES: "alpha,beta:x" }
+    const composition = compose([moduleOf("alpha"), moduleOf("beta", { toolsets: undefined })])
+    const env = { MCP_ACTIVE_MODULES: "alpha,beta" }
     expect(composition.logEffectiveToolsets(composition.resolveBoot(env))).toBe(
-      "[test-root] Toolsets — alpha:read-only (default without OAuth), beta:x (resolved by the module, deprecated)",
+      "[test-root] Toolsets — alpha:read-only (default without OAuth), beta (no toolsets)",
     )
     expect(
       composition.logEffectiveToolsets(composition.resolveBoot(env, { authenticated: true })),
-    ).toBe(
-      "[test-root] Toolsets — alpha:operations (default with OAuth), beta:x (resolved by the module, deprecated)",
-    )
+    ).toBe("[test-root] Toolsets — alpha:operations (default with OAuth), beta (no toolsets)")
   })
 
   it("says so when no module is active", () => {
@@ -294,17 +300,6 @@ describe("frameworkWritesAllowed", () => {
     expect(
       frameworkWritesAllowed(boot(true, { MCP_ACTIVE_MODULES: "alpha:admin,beta:read-only" })),
     ).toBe(false)
-  })
-
-  it("refuses them for a deprecated supportsToolsets module — its surface is unknowable here", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {})
-    const legacy = compose([
-      moduleOf("alpha"),
-      moduleOf("crm", { toolsets: undefined, supportsToolsets: true }),
-    ])
-    for (const env of [{}, { MCP_ACTIVE_MODULES: "alpha:admin,crm:admin" }]) {
-      expect(frameworkWritesAllowed(legacy.resolveBoot(env, { authenticated: true }))).toBe(false)
-    }
   })
 })
 

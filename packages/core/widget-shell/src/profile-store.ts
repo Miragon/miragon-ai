@@ -140,21 +140,6 @@ export function mergeStoredProfile(
 }
 
 /**
- * The typed half of {@link mergeStoredProfile} — the 0.18 signature, kept for
- * custom stores built on it. `existing` may be the RAW stored JSON (preferred:
- * unknown keys then survive) or an already-parsed record.
- */
-export function mergeProfile(
-  key: string,
-  existing: ProfileRecord | Record<string, unknown> | undefined,
-  input: ProfileRecordSaveInput,
-  now: string,
-  opts?: ProfileSaveOptions,
-): ProfileRecord {
-  return mergeStoredProfile(key, existing, input, now, opts).record
-}
-
-/**
  * Process-local store. The default when `MCP_PROFILE_DIR` is unset — fine for
  * dev and single-instance deployments; everything is lost on restart, and
  * behind a load balancer each replica sees its own records. Each save runs

@@ -85,8 +85,8 @@ external infrastructure.
    directions are guarded by `server/test/env-example.test.ts`; add your
    module's vars there.
 8. **Toolsets fail closed.** A module opts into the `module:toolset` suffix by
-   declaring `toolsets: createToolsetVocabulary(...)` on its definition (the
-   old `supportsToolsets` flag is deprecated); the composition resolves ONE
+   declaring `toolsets: createToolsetVocabulary(...)` on its definition (a
+   module without one has no toolsets); the composition resolves ONE
    concrete toolset per module per boot and logs it. Without `MCP_OAUTH`
    (`oauthFromEnv` in `server/src/app.ts`) a module without a suffix runs its
    read-only floor, an empty/unknown suffix falls back to it, and an

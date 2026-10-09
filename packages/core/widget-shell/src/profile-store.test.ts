@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from "node:fs/promises"
+import { mkdtemp, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import postgres from "postgres"
@@ -213,46 +213,32 @@ describe("createFileSystemProfileStore", () => {
     await expect(store.save("sess-1", { theme: "dark" })).rejects.toThrow()
   })
 
-  it("upgrades a persisted v1 record on read (flat fields → module slices)", async () => {
+  it("reads a record from before the migration baseline fail-soft and adopts it on save", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
     const store = createFileSystemProfileStore({ dir })
-    await writeFile(path.join(dir, "legacy.json"), JSON.stringify(V1_RECORD), "utf-8")
+    const file = path.join(dir, "early.json")
+    await writeFile(file, JSON.stringify(V1_RECORD), "utf-8")
 
-    const migrated = await store.get("legacy")
-    expect(migrated).toMatchObject({
+    // No error, no reset: the fields every record carries survive; the flat
+    // module preferences of the pre-baseline shape read as the defaults.
+    expect(await store.get("early")).toEqual({
+      id: "early",
       language: "de",
       theme: "dark",
+      modules: {},
+      createdAt: V1_RECORD.createdAt,
+      updatedAt: V1_RECORD.updatedAt,
       schemaVersion: 3,
-      modules: {
-        analytics: { defaultPeriod: "30d", minBucketSize: 25 },
-        camunda7: { pinnedDashboardIds: [] },
-      },
     })
-    expect(migrated).not.toHaveProperty("analyticsDefaultPeriod")
-    expect(migrated).not.toHaveProperty("pinnedDashboardIds")
-  })
 
-  it("upgrades a persisted v2 record on read (flat camunda7 fields → modules.camunda7)", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
-    const store = createFileSystemProfileStore({ dir })
-    await writeFile(path.join(dir, "v2.json"), JSON.stringify(V2_RECORD), "utf-8")
-
-    const migrated = await store.get("v2")
-    expect(migrated).toMatchObject({
-      language: "de",
+    const saved = await store.save("early", { modules: { analytics: { defaultPeriod: "7d" } } })
+    expect(saved).toMatchObject({ language: "de", modules: { analytics: { defaultPeriod: "7d" } } })
+    // Stamped at the baseline; the keys it does not know stay inert, raw.
+    expect(JSON.parse(await readFile(file, "utf-8"))).toMatchObject({
       schemaVersion: 3,
-      modules: {
-        analytics: { defaultPeriod: "14d" },
-        camunda7: {
-          defaultEngineId: "prod-a",
-          allowedEngineIds: ["prod-a", "prod-b"],
-          pinnedDashboardIds: ["d1"],
-          preferredRole: "operations",
-        },
-      },
+      analyticsDefaultPeriod: "30d",
+      modules: { analytics: { defaultPeriod: "7d" } },
     })
-    expect(migrated).not.toHaveProperty("defaultEngineId")
-    expect(migrated).not.toHaveProperty("allowedEngineIds")
   })
 
   it("reads a record it cannot date (the next save stamps both timestamps)", async () => {
@@ -275,9 +261,9 @@ describe("createFileSystemProfileStore", () => {
   })
 })
 
-/** A realistic record as the v1 build persisted it (flat analytics fields). */
+/** A record as a pre-baseline (v1) build persisted it: flat module fields. */
 const V1_RECORD = {
-  id: "legacy",
+  id: "early",
   language: "de",
   theme: "dark",
   pinnedDashboardIds: [],
@@ -286,21 +272,6 @@ const V1_RECORD = {
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   schemaVersion: 1,
-}
-
-/** A realistic record as the v2 build persisted it (flat camunda7 fields). */
-const V2_RECORD = {
-  id: "v2",
-  language: "de",
-  theme: "dark",
-  defaultEngineId: "prod-a",
-  allowedEngineIds: ["prod-a", "prod-b"],
-  pinnedDashboardIds: ["d1"],
-  preferredRole: "operations",
-  modules: { analytics: { defaultPeriod: "14d" } },
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z",
-  schemaVersion: 2,
 }
 
 // Opt-in integration slice (like test:host): needs a reachable Postgres, so it
@@ -356,18 +327,25 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
     expect(await store.get("sess-sparse")).toEqual(saved)
   })
 
-  it("upgrades a v1 row on read (flat fields → module slices)", async () => {
+  it("reads a row from before the migration baseline fail-soft and adopts it on save", async () => {
     const store = createPostgresProfileStore({ sql })
     await sql`
       INSERT INTO user_profiles (key, profile)
-      VALUES ('legacy', ${sql.json(V1_RECORD)})
+      VALUES ('early', ${sql.json(V1_RECORD)})
     `
-    const migrated = await store.get("legacy")
-    expect(migrated).toMatchObject({
+    expect(await store.get("early")).toMatchObject({
       language: "de",
+      theme: "dark",
+      modules: {},
       schemaVersion: 3,
-      modules: { analytics: { defaultPeriod: "30d", minBucketSize: 25 } },
     })
+
+    const saved = await store.save("early", { theme: "light" })
+    expect(saved).toMatchObject({ language: "de", theme: "light", modules: {} })
+    const rows = await sql<{ profile: Record<string, unknown> }[]>`
+      SELECT profile FROM user_profiles WHERE key = 'early'
+    `
+    expect(rows[0]?.profile).toMatchObject({ schemaVersion: 3, analyticsDefaultPeriod: "30d" })
   })
 
   it("merges concurrent saves of disjoint fields in the SAME module slice", async () => {

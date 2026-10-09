@@ -57,8 +57,7 @@ The contract, field by field (see `notesModule`):
   `ACME_`) to the watched set — your module gets the same typo coverage as the
   built-in ones.
 - `toolsets` — leave it out unless you implement Step 5 (the notes module has
-  none). The older `supportsToolsets` flag is deprecated: never set it to
-  `true` — declare `toolsets` instead.
+  none); without it a `<name>:<toolset>` suffix is ignored with a warning.
 - `createPlugin(config, shared)` — validate `config` with your zod schema
   (**this** is where validation lives) and return the `AppPlugin`: construct
   your data source/client once and pass it to both `registerTools` and

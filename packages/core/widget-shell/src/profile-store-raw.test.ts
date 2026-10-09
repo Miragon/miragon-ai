@@ -5,7 +5,6 @@ import postgres from "postgres"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import {
   createFileSystemProfileStore,
-  mergeProfile,
   mergeStoredProfile,
   type ProfileStore,
 } from "./profile-store.js"
@@ -51,19 +50,21 @@ describe("mergeStoredProfile", () => {
     })
   })
 
-  it("stamps createdAt on a document that carries none, and upgrades an older one", () => {
-    const { document } = mergeStoredProfile(
+  it("stamps createdAt on a document that carries none, and adopts a pre-baseline one", () => {
+    const { document, record } = mergeStoredProfile(
       "k",
       { analyticsDefaultPeriod: "30d", schemaVersion: 1 },
       {},
       NOW,
     )
+    // Adopted at the baseline: the unknown flat key stays raw, out of the view.
     expect(document).toMatchObject({
       createdAt: NOW,
       schemaVersion: 3,
-      modules: { analytics: { defaultPeriod: "30d" } },
+      modules: {},
+      analyticsDefaultPeriod: "30d",
     })
-    expect(document).not.toHaveProperty("analyticsDefaultPeriod")
+    expect(record.modules).toEqual({})
   })
 
   it("starts a never-saved key from the defaults", () => {
@@ -71,15 +72,6 @@ describe("mergeStoredProfile", () => {
       userId: "u-1",
     })
     expect(record).toMatchObject({ id: "k", language: "de", theme: "system", userId: "u-1" })
-  })
-
-  it("keeps the 0.18 mergeProfile signature (typed half only)", () => {
-    const previous = mergeProfile("k", undefined, { language: "de" }, NOW)
-    expect(mergeProfile("k", previous, { theme: "dark" }, NOW)).toMatchObject({
-      language: "de",
-      theme: "dark",
-      createdAt: previous.createdAt,
-    })
   })
 })
 

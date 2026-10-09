@@ -187,7 +187,8 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    `UserProfile` view in `camunda7-connector/src/lib/profile-schema.ts`).
    Records migrate on read through `parseStoredProfile` (shared by every store;
    per-FIELD fail-soft) — a `PROFILE_SCHEMA_VERSION` bump without a matching
-   `PROFILE_MIGRATIONS` entry leaves stored preferences un-migrated. Saves merge over
+   `PROFILE_MIGRATIONS` entry leaves stored preferences un-migrated (the history starts at
+   `PROFILE_MIGRATION_BASELINE`; older records are adopted, not upgraded). Saves merge over
    the RAW stored document (`mergeStoredProfile`, inside each store's per-key lock),
    never over the parsed view, so keys a newer build wrote survive. **Whose** profile a request touches is
    decided in exactly one place for ALL modules: `resolveProfileKey`/`resolveAuthUserId`
@@ -239,7 +240,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    (`composeModules`: `MCP_ACTIVE_MODULES` parsing incl. `module:toolset` suffix;
    `resolveBoot(env, { authenticated })`, which resolves ONE concrete toolset per module
    per boot from the module's declared `toolsets` vocabulary (`createToolsetVocabulary`;
-   the old `supportsToolsets` flag is deprecated) and threads it into `config.toolset`;
+   a module without one has no toolsets) and threads it into `config.toolset`;
    `logEffectiveToolsets`, the one boot line stating each module's toolset and why;
    env-typo warner with prefixes derived from every known var, boot warnings,
    AppConfig/plugin assembly) live in `@miragon-ai/widget-shell/server`. The root passes
@@ -248,7 +249,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    Framework durable writes no module toolset filters (the toolkit builder's
    `get-builder-catalogue` + `save/list/load/delete-dashboard`) are registered only when
    `frameworkWritesAllowed(boot)` holds — OAuth installed AND no active module on its
-   read-only floor or on the deprecated `supportsToolsets` pass-through; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
+   read-only floor; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
    app's `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
    only declares the module list and wires `SharedResources` (profile store +
    `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap;

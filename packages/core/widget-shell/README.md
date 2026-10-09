@@ -29,11 +29,11 @@ package customers build their own connectors and composed servers on (see the
   your server actually installed OAuth. `logEffectiveToolsets(boot)` prints the one boot line that
   states each module's toolset and why, and `frameworkWritesAllowed(boot)` decides whether
   framework writes no module toolset filters (the toolkit's dashboard builder) may be registered —
-  only with OAuth and no module on its read-only floor (a module still on the deprecated
-  `supportsToolsets` pass-through counts as restricted).
+  only with OAuth and no module on its read-only floor.
 - **Toolset vocabularies** (`./server`) — a module declares its toolsets as
   `toolsets: createToolsetVocabulary(module, names, floor, { authenticatedDefault })` on its
-  definition (the boolean `supportsToolsets` is deprecated). The rule is fail-closed: no suffix →
+  definition; a module without one has no toolsets (a suffix is ignored with a warning). The rule
+  is fail-closed: no suffix →
   `floor` without OAuth, `authenticatedDefault` (default: `floor`) with it; an empty or unknown
   suffix → `floor` with a warning; `resolve(undefined)` → `floor`. Nothing resolves to
   "everything" — a module's widest toolset is reachable only by naming it — and

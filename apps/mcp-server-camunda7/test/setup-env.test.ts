@@ -52,36 +52,36 @@ describe("setup.ts engine resolution precedence (ENGINES_FILE > ENGINES_JSON > B
   it("prefers CAMUNDA_ENGINES_FILE over ENGINES_JSON and BASE_URL", () => {
     vi.stubEnv("CAMUNDA_ENGINES_FILE", writeEnginesFile(FILE_ENGINES))
     vi.stubEnv("CAMUNDA_ENGINES_JSON", JSON.stringify(JSON_ENGINES))
-    vi.stubEnv("CAMUNDA_BASE_URL", "http://legacy.example/engine-rest")
+    vi.stubEnv("CAMUNDA_BASE_URL", "http://engine.example/engine-rest")
 
     expect(configuredEngines()).toEqual(FILE_ENGINES)
   })
 
   it("prefers CAMUNDA_ENGINES_JSON over BASE_URL when no file is set", () => {
     vi.stubEnv("CAMUNDA_ENGINES_JSON", JSON.stringify(JSON_ENGINES))
-    vi.stubEnv("CAMUNDA_BASE_URL", "http://legacy.example/engine-rest")
+    vi.stubEnv("CAMUNDA_BASE_URL", "http://engine.example/engine-rest")
 
     expect(configuredEngines()).toEqual(JSON_ENGINES)
   })
 
-  it("synthesizes a single `default` engine from legacy CAMUNDA_BASE_URL (+ cockpit URL)", () => {
-    vi.stubEnv("CAMUNDA_BASE_URL", "http://legacy.example/engine-rest")
-    vi.stubEnv("CAMUNDA_COCKPIT_URL", "http://legacy.example/camunda")
+  it("synthesizes a single `default` engine from the CAMUNDA_BASE_URL shorthand (+ cockpit URL)", () => {
+    vi.stubEnv("CAMUNDA_BASE_URL", "http://engine.example/engine-rest")
+    vi.stubEnv("CAMUNDA_COCKPIT_URL", "http://engine.example/camunda")
 
     expect(configuredEngines()).toEqual([
       {
         id: "default",
-        baseUrl: "http://legacy.example/engine-rest",
-        cockpitUrl: "http://legacy.example/camunda",
+        baseUrl: "http://engine.example/engine-rest",
+        cockpitUrl: "http://engine.example/camunda",
       },
     ])
   })
 
   it("omits cockpitUrl when only CAMUNDA_BASE_URL is set", () => {
-    vi.stubEnv("CAMUNDA_BASE_URL", "http://legacy.example/engine-rest")
+    vi.stubEnv("CAMUNDA_BASE_URL", "http://engine.example/engine-rest")
 
     expect(configuredEngines()).toEqual([
-      { id: "default", baseUrl: "http://legacy.example/engine-rest" },
+      { id: "default", baseUrl: "http://engine.example/engine-rest" },
     ])
   })
 

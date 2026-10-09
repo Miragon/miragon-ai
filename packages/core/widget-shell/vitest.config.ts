@@ -18,8 +18,10 @@ export default mergeConfig(
         // again with the #324 review fixes (in-flight budget, guard before the
         // body): measured 91.24 / 91.57 / 96.47 / 92.32. Raised again with
         // #331 (session cleanup gone, `oauthFromEnv` fully covered): measured
-        // 92.66 / 93.26 / 97.22 / 93.45.
-        thresholds: { statements: 90, branches: 91, functions: 95, lines: 91 },
+        // 92.66 / 93.26 / 97.22 / 93.45. Raised again with the pre-production
+        // compat removal (#322: the supportsToolsets pass-through, mergeRawSlice
+        // and the v1→v3 migration steps gone): measured 93.02 / 93.51 / 97.34 / 93.79.
+        thresholds: { statements: 91, branches: 91, functions: 95, lines: 91 },
       },
     },
   }),

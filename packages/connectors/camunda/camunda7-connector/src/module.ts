@@ -228,8 +228,8 @@ function normalizeEnginesConfig(raw: unknown): unknown {
  * Resolves the engine list from environment in this order of precedence:
  *   1. `CAMUNDA_ENGINES_FILE` — path to a JSON document (preferred at scale; fits ConfigMap workflows).
  *   2. `CAMUNDA_ENGINES_JSON` — inline JSON.
- *   3. `CAMUNDA_BASE_URL` (+ `CAMUNDA_COCKPIT_URL`) — backward-compat single-engine,
- *      synthesized as `id: CAMUNDA_ENGINE_ID ?? "default"`.
+ *   3. `CAMUNDA_BASE_URL` (+ `CAMUNDA_COCKPIT_URL`) — the single-engine shorthand
+ *      (the quick-start path), synthesized as `id: CAMUNDA_ENGINE_ID ?? "default"`.
  *
  * Both JSON sources accept the flat array form and the environment-map form
  * (see [[normalizeEnginesConfig]]). Falls back to the local default engine
@@ -255,12 +255,12 @@ function loadEnginesFromEnv(env: NodeJS.ProcessEnv): unknown {
     return normalizeEnginesConfig(JSON.parse(json))
   }
   const id = env.CAMUNDA_ENGINE_ID?.trim() || "default"
-  const legacyBaseUrl = env.CAMUNDA_BASE_URL?.trim()
-  if (legacyBaseUrl) {
+  const baseUrl = env.CAMUNDA_BASE_URL?.trim()
+  if (baseUrl) {
     return [
       {
         id,
-        baseUrl: legacyBaseUrl,
+        baseUrl,
         ...(env.CAMUNDA_COCKPIT_URL ? { cockpitUrl: env.CAMUNDA_COCKPIT_URL } : {}),
       },
     ]

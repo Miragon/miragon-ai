@@ -1,70 +1,48 @@
 import { PROFILE_SCHEMA_VERSION } from "./profile-constants.js"
 import { projectProfileRecord, type ProfileRecord } from "./profile-record.js"
 
-const asObject = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {}
+/** One record-level migration: reshapes the raw JSON of its FROM version in place. */
+type ProfileMigration = (raw: Record<string, unknown>) => void
 
 /**
- * Move flat top-level fields into a module's `modules.<module>` slice —
- * the recurring shape of every "a connector's preferences leave the flat
- * record" migration. Field values only move when the slice doesn't already
- * carry them (`??=`), so a record that somehow has both keeps the slice's.
- *
- * Historical field names are deliberately string knowledge here: migrations
- * describe the stored record's HISTORY, not any module's current schema, so
- * this core package never imports connector code for them.
+ * The oldest record version this build reads as stored — the start of the
+ * migration history. No history predates it (#322): records an earlier
+ * pre-production build wrote at an older version are ADOPTED at the
+ * baseline, never upgraded. Their fields this build does not know (the flat
+ * module preferences of v1/v2) stay inert in the raw document — saves keep
+ * them, the per-field projection ignores them — so those preferences read as
+ * their defaults, while the fields every record has carried (`language`,
+ * `theme`, `modules`) survive. A missing or out-of-range `schemaVersion`
+ * reads as the baseline too.
  */
-function moveFlatFieldsIntoSlice(
-  raw: Record<string, unknown>,
-  module: string,
-  moves: ReadonlyArray<{ from: string; to: string }>,
-): void {
-  const modules = asObject(raw.modules)
-  const slice = { ...asObject(modules[module]) }
-  for (const { from, to } of moves) {
-    if (raw[from] !== undefined) slice[to] ??= raw[from]
-    delete raw[from]
-  }
-  raw.modules = { ...modules, ...(Object.keys(slice).length > 0 ? { [module]: slice } : {}) }
-}
+export const PROFILE_MIGRATION_BASELINE = 3
 
 /**
- * Record-level migrations, keyed by the version they upgrade FROM. Every
- * `PROFILE_SCHEMA_VERSION` bump adds exactly one entry here, so a record
- * written by any older build upgrades on read instead of being reset to
- * defaults. Migrations transform the raw JSON — the migrated result still goes
- * through the per-field `projectProfileRecord`, which is the actual gate.
+ * Record-level migrations, keyed by the version they upgrade FROM: one entry
+ * for every version from {@link PROFILE_MIGRATION_BASELINE} up to
+ * `PROFILE_SCHEMA_VERSION`, so every `PROFILE_SCHEMA_VERSION` bump adds
+ * exactly one entry here and a stored record upgrades on read instead of
+ * losing its preferences. Migrations transform the raw JSON — the migrated
+ * result still goes through the per-field `projectProfileRecord`, which is
+ * the actual gate.
  *
  * Exported ONLY for the completeness test in `profile-migrations.test.ts`,
  * which fails the moment a `PROFILE_SCHEMA_VERSION` bump forgets its entry —
- * without it that mistake would surface as a silent preference reset on read.
+ * without it that mistake would surface as preferences read un-migrated.
  */
-export const PROFILE_MIGRATIONS: Record<number, (raw: Record<string, unknown>) => void> = {
-  // v1 → v2: the analytics preferences move from flat camunda7-owned fields
-  // into the module-owned `modules.analytics` slice (renamed to the slice's
-  // own vocabulary — the module, not the profile, prefixes them).
-  1: (raw) => {
-    moveFlatFieldsIntoSlice(raw, "analytics", [
-      { from: "analyticsDefaultPeriod", to: "defaultPeriod" },
-      { from: "analyticsMinBucketSize", to: "minBucketSize" },
-    ])
-  },
-  // v2 → v3: the camunda7 engine/dashboard preferences move from the flat
-  // record into the module-owned `modules.camunda7` slice; the record itself
-  // is connector-free since.
-  2: (raw) => {
-    moveFlatFieldsIntoSlice(
-      raw,
-      "camunda7",
-      [
-        "defaultEngineId",
-        "allowedEngineIds",
-        "pinnedDashboardIds",
-        "defaultDashboardId",
-        "preferredRole",
-      ].map((field) => ({ from: field, to: field })),
-    )
-  },
+export const PROFILE_MIGRATIONS: Readonly<Record<number, ProfileMigration>> = {}
+
+/** The history {@link migrateStoredProfile} walks — the shipped one unless a test injects its own. */
+interface ProfileMigrationHistory {
+  baseline: number
+  current: number
+  migrations: Readonly<Record<number, ProfileMigration>>
+}
+
+const SHIPPED_HISTORY: ProfileMigrationHistory = {
+  baseline: PROFILE_MIGRATION_BASELINE,
+  current: PROFILE_SCHEMA_VERSION,
+  migrations: PROFILE_MIGRATIONS,
 }
 
 /** A stored document after {@link migrateStoredProfile}, plus the version it is now at. */
@@ -79,28 +57,31 @@ export interface MigratedProfileDocument {
  * build can — the RAW half of the read gate, shared by the read path
  * ({@link parseStoredProfile}) and the save path (`mergeStoredProfile`):
  *
- *   - older versions upgrade through {@link PROFILE_MIGRATIONS} step by step;
+ *   - a version below the baseline is adopted AT the baseline (see
+ *     {@link PROFILE_MIGRATION_BASELINE});
+ *   - from there it upgrades through {@link PROFILE_MIGRATIONS} step by step;
  *   - a NEWER version (written by a newer build — rolling deploy, rollback)
  *     passes through untouched: an older build never reshapes it;
  *   - a missing migration (a build bug the completeness test catches) stops at
  *     the stuck version, so a fixed build can still upgrade the document.
  *
- * Unknown keys always survive. A missing/out-of-range `schemaVersion` is
- * treated as version 1 — every record ever written carried one, so this only
- * softens hand-edited files. `undefined` only for JSON that is no object.
+ * Unknown keys always survive. `undefined` only for JSON that is no object.
  */
-export function migrateStoredProfile(json: unknown): MigratedProfileDocument | undefined {
+export function migrateStoredProfile(
+  json: unknown,
+  history: ProfileMigrationHistory = SHIPPED_HISTORY,
+): MigratedProfileDocument | undefined {
   if (typeof json !== "object" || json === null || Array.isArray(json)) return undefined
   const doc: Record<string, unknown> = { ...(json as Record<string, unknown>) }
 
+  const { baseline, current, migrations } = history
   const rawVersion = doc.schemaVersion
-  let version =
-    typeof rawVersion === "number" && Number.isInteger(rawVersion) && rawVersion >= 1
-      ? rawVersion
-      : 1
+  // `Number.isInteger` is false for anything but an integer NUMBER.
+  let version = Number.isInteger(rawVersion) ? Math.max(rawVersion as number, baseline) : baseline
+  doc.schemaVersion = version
 
-  while (version < PROFILE_SCHEMA_VERSION) {
-    const migrate = PROFILE_MIGRATIONS[version]
+  while (version < current) {
+    const migrate = migrations[version]
     if (!migrate) {
       console.error(
         `[widget-shell] No profile migration from schema v${version} — reading the stored record best-effort and keeping it un-migrated`,

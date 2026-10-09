@@ -56,9 +56,8 @@ function surfaceFor(config: Record<string, unknown>): RecordedTool[] {
 const namesOf = (tools: RecordedTool[]) => tools.map((tool) => tool.name).sort()
 
 describe("analyticsModule toolset policy", () => {
-  it("declares its vocabulary instead of the deprecated supportsToolsets pass-through", () => {
+  it("declares its toolset vocabulary", () => {
     expect(analyticsModule.toolsets).toBe(analyticsToolsets)
-    expect(analyticsModule).not.toHaveProperty("supportsToolsets")
   })
 
   it("resolves the toolset in createPlugin: standard saves, a missing toolset is the floor", () => {
