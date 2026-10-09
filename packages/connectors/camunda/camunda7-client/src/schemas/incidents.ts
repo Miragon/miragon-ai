@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { engineDateParam, firstResultParam, sortOrderParam } from "./shared.js"
+import { engineDateParam, firstResultParam, maxResultsParam, sortOrderParam } from "./shared.js"
 
 export const listIncidentsInput = z.object({
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
@@ -23,7 +23,7 @@ export const listIncidentsInput = z.object({
   incidentTimestampAfter: engineDateParam("Raised after"),
   incidentTimestampBefore: engineDateParam("Raised before"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum([
       "incidentId",

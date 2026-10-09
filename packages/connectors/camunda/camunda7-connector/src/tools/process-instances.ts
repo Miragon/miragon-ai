@@ -32,6 +32,7 @@ import {
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { truncateVariableMap, VARIABLE_TRUNCATION_NOTE } from "../lib/variable-truncation.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
@@ -157,12 +158,11 @@ export function registerProcessInstanceTools(register: Register) {
   register({
     name: "camunda7_get_process_instance_variables",
     category: "process-instances",
-    description:
-      "Get all variables of a process instance (Json/Xml/Object: serialized string + valueInfo).",
+    description: `Get all variables of a process instance (Json/Xml/Object: serialized string + valueInfo). ${VARIABLE_TRUNCATION_NOTE}`,
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getProcessInstanceVariablesInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args) =>
-      readProcessInstanceVariables(client, args.processInstanceId),
+      truncateVariableMap(await readProcessInstanceVariables(client, args.processInstanceId)),
     ),
   })
 

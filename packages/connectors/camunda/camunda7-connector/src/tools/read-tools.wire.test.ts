@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { z } from "zod"
 import { registerTools } from "./index.js"
 import { registerIncidentIssueTools } from "./incident-issue.js"
+import { MAX_VARIABLE_VALUE_CHARS } from "../lib/variable-truncation.js"
 import {
   callTool,
   captureTools,
@@ -113,6 +114,62 @@ describe("variable reads never let the engine deserialize Object values", () => 
     expect(engine.requests.find((r) => r.path === path)?.query).toMatchObject({
       deserializeValues: "false",
     })
+  })
+})
+
+/**
+ * #340: a variable value is user-controlled and unbounded; a model-facing read
+ * cuts it at MAX_VARIABLE_VALUE_CHARS and SAYS so — never a silently shorter
+ * value that looks complete.
+ */
+describe("variable reads bound oversized values with a truncation marker", () => {
+  const big = "x".repeat(MAX_VARIABLE_VALUE_CHARS + 500)
+  const small = { value: "ok", type: "String", valueInfo: {} }
+
+  it.each([
+    [
+      "camunda7_get_process_instance_variables",
+      { processInstanceId: "pi-1" },
+      "GET /process-instance/pi-1/variables",
+    ],
+    ["camunda7_get_task_variables", { taskId: "t-1" }, "GET /task/t-1/variables"],
+  ])("%s", async (name, args, route) => {
+    const engine = await engineWith({
+      [route]: { body: { payload: { value: big, type: "Json", valueInfo: {} }, small } },
+    })
+    const result = (await call(engine, name, args)) as Record<string, Record<string, unknown>>
+    expect(result.payload).toEqual({
+      value: big.slice(0, MAX_VARIABLE_VALUE_CHARS),
+      type: "Json",
+      valueInfo: {},
+      truncated: true,
+      valueLength: big.length,
+    })
+    expect(result.small).toEqual(small)
+  })
+
+  it("camunda7_query_historic_variable_instances, per row", async () => {
+    const engine = await engineWith({
+      "GET /history/variable-instance": {
+        body: [
+          { name: "payload", value: big },
+          { name: "n", value: 42 },
+        ],
+      },
+      "GET /history/variable-instance/count": { body: { count: 2 } },
+    })
+    const result = (await call(engine, "camunda7_query_historic_variable_instances", {})) as {
+      items: Array<Record<string, unknown>>
+    }
+    expect(result.items).toEqual([
+      {
+        name: "payload",
+        value: big.slice(0, MAX_VARIABLE_VALUE_CHARS),
+        truncated: true,
+        valueLength: big.length,
+      },
+      { name: "n", value: 42 },
+    ])
   })
 })
 

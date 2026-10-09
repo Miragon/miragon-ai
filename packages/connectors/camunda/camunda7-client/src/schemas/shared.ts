@@ -40,6 +40,29 @@ export const firstResultParam = z
   .describe("Zero-based index of the first result to return (pagination offset)")
 
 /**
+ * The largest page any list/query tool returns. One page is what a model
+ * reads in one turn: an uncapped `maxResults` let a single call pull an
+ * engine's whole history into the context. More rows are one `nextOffset`
+ * call away — the envelope says so.
+ */
+export const MAX_PAGE_SIZE = 100
+
+/**
+ * The shared `maxResults` field of every list/query input schema: capped at
+ * {@link MAX_PAGE_SIZE}, with a per-tool default page size.
+ */
+export function maxResultsParam(defaultPageSize = 20) {
+  return z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_PAGE_SIZE)
+    .optional()
+    .default(defaultPageSize)
+    .describe("Page size")
+}
+
+/**
  * Sort direction of every list query. The engine sorts only by a sortBy +
  * sortOrder PAIR; the tools pair them (`engineSorting`), so a sortBy alone
  * sorts ascending.

@@ -1,5 +1,11 @@
 import { z } from "zod"
-import { engineDateParam, firstResultParam, flagParam, sortOrderParam } from "./shared.js"
+import {
+  engineDateParam,
+  firstResultParam,
+  flagParam,
+  maxResultsParam,
+  sortOrderParam,
+} from "./shared.js"
 
 export const listJobsInput = z.object({
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
@@ -10,7 +16,7 @@ export const listJobsInput = z.object({
   active: flagParam("true = only active jobs, false = only suspended"),
   suspended: flagParam("true = only suspended jobs, false = only active"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum([
       "jobId",

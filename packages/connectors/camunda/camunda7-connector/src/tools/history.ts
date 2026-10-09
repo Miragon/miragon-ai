@@ -25,6 +25,7 @@ import {
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { truncateVariableRows, VARIABLE_TRUNCATION_NOTE } from "../lib/variable-truncation.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
@@ -151,7 +152,8 @@ export function registerHistoryTools(register: Register) {
     name: "camunda7_query_historic_variable_instances",
     category: "history",
     description:
-      "Query historic variable instances, i.e. variable values from process history (serialized, with valueInfo). Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
+      "Query historic variable instances, i.e. variable values from process history (serialized, with valueInfo). " +
+      `${VARIABLE_TRUNCATION_NOTE} Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.`,
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...queryHistoricVariableInstancesInput.shape, ...engineParamShape },
     outputSchema: paginatedListOutput,
@@ -174,7 +176,7 @@ export function registerHistoryTools(register: Register) {
         }),
         getHistoricVariableInstancesCount({ client, query: filters }),
       ])
-      return toPaginatedList(items, count, args.firstResult)
+      return toPaginatedList(truncateVariableRows(items), count, args.firstResult)
     }),
   })
 }

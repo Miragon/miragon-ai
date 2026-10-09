@@ -149,9 +149,7 @@ describe("plain list tools carry their show twins' filters", () => {
       nameLike: "Inv",
       latestVersion: true,
     })
-    expect(requests).toHaveLength(1)
-    expect(requests[0].path).toBe("/process-definition")
-    expect(requests[0].query).toMatchObject({
+    expectBothQueries(requests, "/process-definition", {
       key: "invoice",
       nameLike: "%Inv%",
       latestVersion: "true",
@@ -160,7 +158,7 @@ describe("plain list tools carry their show twins' filters", () => {
 
   it("keeps a LIKE value that already carries a wildcard", async () => {
     const requests = await requestsOf("camunda7_list_deployments", { nameLike: "release-%" })
-    expect(requests[0].query).toMatchObject({ nameLike: "release-%" })
+    expectBothQueries(requests, "/deployment", { nameLike: "release-%" })
   })
 
   it("camunda7_list_jobs: activityId scopes a failure cluster's retry set", async () => {

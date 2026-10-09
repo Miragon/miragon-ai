@@ -22,7 +22,14 @@ vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
   getHistoricVariableInstancesCount: vi.fn(),
   getExternalTasks: vi.fn(),
   getExternalTasksCount: vi.fn(),
+  getProcessDefinitions: vi.fn(),
+  getProcessDefinitionsCount: vi.fn(),
+  getDeployments: vi.fn(),
+  getDeploymentsCount: vi.fn(),
   // unrelated endpoints imported by the same tool files
+  getProcessDefinitionBpmn20Xml: vi.fn(),
+  getDeployment: vi.fn(),
+  createDeployment: vi.fn(),
   setExternalTaskResourceRetries: vi.fn(),
   fetchAndLock: vi.fn(),
   completeExternalTaskResource: vi.fn(),
@@ -46,7 +53,9 @@ vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
   resolveIncident: vi.fn(),
 }))
 
+import { z } from "zod"
 import * as sdk from "@miragon-ai/camunda7-client/sdk"
+import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
 import { paginatedListOutput } from "../lib/pagination.js"
 import { createEngineRegistry, type EngineRegistry } from "../lib/resolve-engine.js"
 import { registerProcessInstanceTools } from "./process-instances.js"
@@ -55,6 +64,8 @@ import { registerJobTools } from "./jobs.js"
 import { registerIncidentTools } from "./incidents.js"
 import { registerHistoryTools } from "./history.js"
 import { registerExternalTaskTools } from "./external-tasks.js"
+import { registerProcessDefinitionTools } from "./process-definitions.js"
+import { registerDeploymentTools } from "./deployments.js"
 
 type Register = Parameters<typeof registerProcessInstanceTools>[0]
 type Config = ToolConfig<EngineRegistry>
@@ -76,6 +87,8 @@ const tools = captureTools(
   registerIncidentTools,
   registerHistoryTools,
   registerExternalTaskTools,
+  registerProcessDefinitionTools,
+  (register) => registerDeploymentTools(register, { allowDeployments: true }),
 )
 
 const fakeClient = { fake: true } as unknown as Client
@@ -183,7 +196,52 @@ const cases: readonly ListCase[] = [
       activityId: "send-mail",
     },
   },
+  {
+    tool: "camunda7_list_process_definitions",
+    list: sdk.getProcessDefinitions,
+    count: sdk.getProcessDefinitionsCount,
+    filterArgs: { processDefinitionKey: "invoice", latestVersion: true },
+    engineQuery: { key: "invoice", latestVersion: true },
+  },
+  {
+    tool: "camunda7_list_deployments",
+    list: sdk.getDeployments,
+    count: sdk.getDeploymentsCount,
+    filterArgs: { nameLike: "invoice" },
+    // A %-less LIKE value is a substring match (the engine would match it exactly).
+    engineQuery: { nameLike: "%invoice%" },
+  },
 ]
+
+/**
+ * Structural guards over EVERY registered tool, not the table above: a list
+ * tool is whatever takes `maxResults`, so a new one without the envelope or
+ * the page cap fails here without anyone updating a list.
+ */
+describe("every list/query tool shares one pagination contract", () => {
+  const listTools = [...tools.values()].filter(
+    (c) => c.inputSchema && "maxResults" in c.inputSchema,
+  )
+
+  it("covers every case of the envelope table (the guard is not vacuous)", () => {
+    expect(listTools.map((c) => c.name).sort()).toEqual(cases.map(({ tool }) => tool).sort())
+  })
+
+  it.each(listTools.map((c) => [c.name, c] as const))(
+    "%s pages with the envelope and caps maxResults at MAX_PAGE_SIZE",
+    (_name, config) => {
+      expect(config.outputSchema).toBe(paginatedListOutput)
+      const input = z.object(config.inputSchema)
+      expect(input.shape).toHaveProperty("firstResult")
+      expect(input.safeParse({ maxResults: MAX_PAGE_SIZE }).success).toBe(true)
+      expect(input.safeParse({ maxResults: MAX_PAGE_SIZE + 1 }).success).toBe(false)
+    },
+  )
+
+  it("caps at 100 — one turn's worth of rows", () => {
+    expect(MAX_PAGE_SIZE).toBe(100)
+  })
+})
 
 describe.each(cases)("$tool pagination envelope", ({ tool, list, count, filterArgs, ...c }) => {
   const engineQuery = c.engineQuery ?? filterArgs

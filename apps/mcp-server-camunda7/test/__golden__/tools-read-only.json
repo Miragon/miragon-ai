@@ -1522,7 +1522,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Get all variables of a process instance (Json/Xml/Object: serialized string + valueInfo).",
+    "description": "Get all variables of a process instance (Json/Xml/Object: serialized string + valueInfo). String values over 2000 chars are cut (truncated: true, valueLength = full size).",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1609,7 +1609,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Get all variables of a user task (Json/Xml/Object: serialized string + valueInfo).",
+    "description": "Get all variables of a user task (Json/Xml/Object: serialized string + valueInfo). String values over 2000 chars are cut (truncated: true, valueLength = full size).",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1802,7 +1802,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "List deployments with optional filters.",
+    "description": "List deployments with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1813,9 +1813,17 @@
           ],
           "type": "string"
         },
+        "firstResult": {
+          "default": 0,
+          "description": "Zero-based index of the first result to return (pagination offset)",
+          "minimum": 0,
+          "type": "integer"
+        },
         "maxResults": {
           "default": 20,
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "name": {
@@ -1846,7 +1854,40 @@
       },
       "type": "object"
     },
-    "name": "camunda7_list_deployments"
+    "name": "camunda7_list_deployments",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "hasMore": {
+          "description": "Whether more results exist beyond this page",
+          "type": "boolean"
+        },
+        "items": {
+          "description": "One page of results",
+          "items": {},
+          "type": "array"
+        },
+        "nextOffset": {
+          "description": "Present when hasMore is true: pass as firstResult to fetch the next page",
+          "maximum": 9007199254740991,
+          "minimum": -9007199254740991,
+          "type": "integer"
+        },
+        "totalCount": {
+          "description": "Total number of results matching the filters",
+          "maximum": 9007199254740991,
+          "minimum": -9007199254740991,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "totalCount",
+        "hasMore"
+      ],
+      "type": "object"
+    }
   },
   {
     "annotations": {
@@ -1895,7 +1936,9 @@
         },
         "maxResults": {
           "default": 20,
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "noRetriesLeft": {
@@ -2026,7 +2069,9 @@
         },
         "maxResults": {
           "default": 20,
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionId": {
@@ -2144,7 +2189,9 @@
         },
         "maxResults": {
           "default": 20,
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "noRetriesLeft": {
@@ -2233,7 +2280,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "List deployed process definitions with optional filters. Returns key, name, version, and deployment info.",
+    "description": "List deployed process definitions (key, name, version, deployment) with optional filters. Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -2244,14 +2291,21 @@
           ],
           "type": "string"
         },
+        "firstResult": {
+          "default": 0,
+          "description": "Zero-based index of the first result to return (pagination offset)",
+          "minimum": 0,
+          "type": "integer"
+        },
         "latestVersion": {
           "description": "true = only the latest version of each definition",
           "type": "boolean"
         },
         "maxResults": {
           "default": 20,
-          "description": "Maximum number of results",
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "nameLike": {
@@ -2287,7 +2341,40 @@
       },
       "type": "object"
     },
-    "name": "camunda7_list_process_definitions"
+    "name": "camunda7_list_process_definitions",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "hasMore": {
+          "description": "Whether more results exist beyond this page",
+          "type": "boolean"
+        },
+        "items": {
+          "description": "One page of results",
+          "items": {},
+          "type": "array"
+        },
+        "nextOffset": {
+          "description": "Present when hasMore is true: pass as firstResult to fetch the next page",
+          "maximum": 9007199254740991,
+          "minimum": -9007199254740991,
+          "type": "integer"
+        },
+        "totalCount": {
+          "description": "Total number of results matching the filters",
+          "maximum": 9007199254740991,
+          "minimum": -9007199254740991,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "totalCount",
+        "hasMore"
+      ],
+      "type": "object"
+    }
   },
   {
     "annotations": {
@@ -2326,8 +2413,9 @@
         },
         "maxResults": {
           "default": 20,
-          "description": "Maximum results",
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -2435,8 +2523,9 @@
         },
         "maxResults": {
           "default": 20,
-          "description": "Maximum number of results",
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -2753,7 +2842,9 @@
         },
         "maxResults": {
           "default": 50,
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionId": {
@@ -2890,7 +2981,9 @@
         },
         "maxResults": {
           "default": 20,
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -3010,7 +3103,9 @@
         },
         "maxResults": {
           "default": 20,
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processDefinitionKey": {
@@ -3100,7 +3195,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Query historic variable instances, i.e. variable values from process history (serialized, with valueInfo). Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
+    "description": "Query historic variable instances, i.e. variable values from process history (serialized, with valueInfo). String values over 2000 chars are cut (truncated: true, valueLength = full size). Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3119,7 +3214,9 @@
         },
         "maxResults": {
           "default": 50,
+          "description": "Page size",
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "type": "integer"
         },
         "processInstanceId": {

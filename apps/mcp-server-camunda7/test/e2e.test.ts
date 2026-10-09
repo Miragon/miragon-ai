@@ -55,6 +55,8 @@ describe("mcp-server-camunda7 E2E smoke", () => {
 
   it("advertises the pagination envelope on every list/query tool", async () => {
     const paginatedTools = [
+      "camunda7_list_process_definitions",
+      "camunda7_list_deployments",
       "camunda7_list_process_instances",
       "camunda7_list_tasks",
       "camunda7_list_jobs",
@@ -77,6 +79,7 @@ describe("mcp-server-camunda7 E2E smoke", () => {
       )
       const inputProps = (tool!.inputSchema as { properties?: Record<string, unknown> })?.properties
       expect(inputProps, `${name} should accept firstResult`).toHaveProperty("firstResult")
+      expect(inputProps?.maxResults, `${name} caps its page size`).toMatchObject({ maximum: 100 })
     }
   })
 

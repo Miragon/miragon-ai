@@ -4,6 +4,7 @@ import {
   firstResultParam,
   flagParam,
   likeParam,
+  maxResultsParam,
   sortOrderParam,
 } from "./shared.js"
 
@@ -34,7 +35,7 @@ export const queryHistoricProcessInstancesInput = z.object({
     .describe("Only instances with an incident in this status"),
   ...timeWindow,
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum([
       "instanceId",
@@ -66,7 +67,7 @@ export const queryHistoricActivityInstancesInput = z.object({
   canceled: flagParam("true = only canceled activities"),
   ...timeWindow,
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(50),
+  maxResults: maxResultsParam(50),
   sortBy: z
     .enum([
       "activityInstanceId",
@@ -90,7 +91,7 @@ export const queryHistoricTaskInstancesInput = z.object({
   assignee: z.string().optional().describe("Filter by assignee user ID"),
   ...finishedFlags("tasks"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum([
       "taskId",
@@ -121,7 +122,7 @@ export const queryHistoricVariableInstancesInput = z.object({
   variableName: z.string().optional().describe("Filter by exact variable name"),
   variableNameLike: likeParam("Filter by variable name"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(50),
+  maxResults: maxResultsParam(50),
   sortBy: z.enum(["instanceId", "variableName", "tenantId"]).optional(),
   sortOrder: sortOrderParam,
 })

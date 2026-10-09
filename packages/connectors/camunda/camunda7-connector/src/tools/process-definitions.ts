@@ -6,8 +6,10 @@ import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { engineLike, engineSorting, trueOnly } from "@miragon-ai/camunda7-client"
 import {
   getProcessDefinitions,
+  getProcessDefinitionsCount,
   getProcessDefinitionBpmn20Xml,
 } from "@miragon-ai/camunda7-client/sdk"
+import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -18,21 +20,33 @@ export function registerProcessDefinitionTools(register: Register) {
     name: "camunda7_list_process_definitions",
     category: "process-definitions",
     description:
-      "List deployed process definitions with optional filters. Returns key, name, version, and deployment info.",
+      "List deployed process definitions (key, name, version, deployment) with optional filters. " +
+      "Returns one page as { items, totalCount, hasMore, nextOffset? }. If hasMore is true, call again with firstResult = nextOffset.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...listProcessDefinitionsInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) =>
-      getProcessDefinitions({
-        client,
-        query: {
-          key: args.processDefinitionKey,
-          nameLike: engineLike(args.nameLike),
-          latestVersion: trueOnly(args.latestVersion),
-          maxResults: args.maxResults,
-          ...engineSorting(args),
-        },
-      }),
-    ),
+    outputSchema: paginatedListOutput,
+    handler: withEngine(async (client, args) => {
+      // The page and its /count share the filters in the engine's format: a
+      // %-less nameLike becomes a substring match, a false flag is dropped.
+      const filters = {
+        key: args.processDefinitionKey,
+        nameLike: engineLike(args.nameLike),
+        latestVersion: trueOnly(args.latestVersion),
+      }
+      const [items, count] = await Promise.all([
+        getProcessDefinitions({
+          client,
+          query: {
+            ...filters,
+            firstResult: args.firstResult,
+            maxResults: args.maxResults,
+            ...engineSorting(args),
+          },
+        }),
+        getProcessDefinitionsCount({ client, query: filters }),
+      ])
+      return toPaginatedList(items, count, args.firstResult)
+    }),
   })
 
   register({

@@ -3,6 +3,7 @@ import {
   firstResultParam,
   flagParam,
   likeParam,
+  maxResultsParam,
   sortOrderParam,
   variableSchema,
   variableValueInfo,
@@ -22,7 +23,7 @@ export const listProcessInstancesInput = z.object({
   suspended: flagParam("true = only suspended instances, false = only active"),
   withIncidents: flagParam("true = only instances with an open incident"),
   firstResult: firstResultParam,
-  maxResults: z.number().int().positive().optional().default(20).describe("Maximum results"),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum(["instanceId", "definitionKey", "definitionId", "tenantId", "businessKey"])
     .optional(),

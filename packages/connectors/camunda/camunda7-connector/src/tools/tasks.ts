@@ -24,6 +24,7 @@ import {
 } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
+import { truncateVariableMap, VARIABLE_TRUNCATION_NOTE } from "../lib/variable-truncation.js"
 import { completeUserTask } from "../lib/task-completion.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
@@ -135,10 +136,11 @@ export function registerTaskTools(register: Register) {
   register({
     name: "camunda7_get_task_variables",
     category: "tasks",
-    description:
-      "Get all variables of a user task (Json/Xml/Object: serialized string + valueInfo).",
+    description: `Get all variables of a user task (Json/Xml/Object: serialized string + valueInfo). ${VARIABLE_TRUNCATION_NOTE}`,
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getTaskVariablesInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) => readTaskVariables(client, args.taskId)),
+    handler: withEngine(async (client, args) =>
+      truncateVariableMap(await readTaskVariables(client, args.taskId)),
+    ),
   })
 }

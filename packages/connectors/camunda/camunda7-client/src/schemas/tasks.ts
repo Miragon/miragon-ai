@@ -1,5 +1,11 @@
 import { z } from "zod"
-import { firstResultParam, flagParam, sortOrderParam, variableSchema } from "./shared.js"
+import {
+  firstResultParam,
+  flagParam,
+  maxResultsParam,
+  sortOrderParam,
+  variableSchema,
+} from "./shared.js"
 
 export const listTasksInput = z.object({
   assignee: z.string().optional().describe("Filter by assignee user ID"),
@@ -15,13 +21,7 @@ export const listTasksInput = z.object({
   processInstanceId: z.string().optional().describe("Filter by process instance ID"),
   unassigned: flagParam("true = only unassigned tasks, false = only assigned"),
   firstResult: firstResultParam,
-  maxResults: z
-    .number()
-    .int()
-    .positive()
-    .optional()
-    .default(20)
-    .describe("Maximum number of results"),
+  maxResults: maxResultsParam(),
   sortBy: z
     .enum([
       "instanceId",
