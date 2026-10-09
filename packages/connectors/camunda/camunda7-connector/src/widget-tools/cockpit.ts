@@ -7,6 +7,7 @@ import {
   buildSingleWidgetView,
   showToolBinding,
   withToolErrors,
+  strictToolInput,
 } from "@miragon-ai/widget-shell/server"
 import type { CockpitAppData, CockpitEngineInfo, HistoryTimelineData } from "../view-models.js"
 import {
@@ -45,7 +46,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Open the consolidated CIB Seven operations cockpit — a single app that navigates client-side (no extra tool calls) across the process landscape: overview, per-definition running instances, instance detail, plus quick access to human tasks, jobs and deployments. The Support entry point.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({ ...engineParamShape }),
+      inputSchema: strictToolInput({ ...engineParamShape }),
       ...showToolBinding(CAMUNDA7_OPEN_COCKPIT, "Open Cockpit"),
     },
     withToolErrors(async (args, ctx) => {
@@ -91,7 +92,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       title: "Process Definitions",
       description: "Show deployed process definitions as a card grid view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...processListFilterShape,
         latestVersion: processListFilterShape.latestVersion.default(true),
         ...pagingShape,
@@ -103,14 +104,14 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       const t = await localizeFor(profileStore, ctx)
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildProcessListData(client, engineId, {
-        key: args.key,
+        processDefinitionKey: args.processDefinitionKey,
         nameLike: args.nameLike,
         latestVersion: args.latestVersion,
         firstResult: args.firstResult,
         maxResults: args.maxResults,
       })
       const filters = [
-        args.key && `key "${args.key}"`,
+        args.processDefinitionKey && `key "${args.processDefinitionKey}"`,
         args.nameLike && `name like "${args.nameLike}"`,
       ]
         .filter(Boolean)
@@ -137,7 +138,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       description:
         "List running process instances as a filterable table (business key, version, suspended/incident state). Scope to one definition via processDefinitionKey, or omit it for ALL running instances engine-wide. Drill-in target from the cockpit definitions table and process-detail; each row opens camunda7_show_instance_detail.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...processInstancesFilterShape,
         firstResult: pagingShape.firstResult,
         maxResults: pagingShape.maxResults.default(50),
@@ -152,7 +153,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
         processDefinitionKey: args.processDefinitionKey,
         active: args.active,
         suspended: args.suspended,
-        withIncidentsOnly: args.withIncidentsOnly,
+        withIncidents: args.withIncidents,
         businessKeyLike: args.businessKeyLike,
         firstResult: args.firstResult,
         maxResults: args.maxResults,
@@ -181,7 +182,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Open the unified process-definition view: header with actions, KPI strip (running instances, incidents, failed jobs), BPMN flow (incident overlays or execution heatmap) and the activity-grouped incident list. Drill-in target from cockpit-dashboard rows; camunda7_show_process_incidents opens the same view with incident focus.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         processDefinitionKey: z.string().describe("Process definition key to display"),
         ...engineParamShape,
       }),
@@ -222,7 +223,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       title: "History Timeline",
       description: "Show activity timeline for a process instance.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         processInstanceId: z.string().describe("The process instance ID"),
         firstResult: z
           .number()

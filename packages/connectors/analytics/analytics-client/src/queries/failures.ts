@@ -33,11 +33,11 @@ export async function findFailedInstances(
   params: {
     processDefinitionKey?: string
     incidentType?: string
-    limit: number
+    maxResults: number
     engine?: EngineFilterInput
   },
 ): Promise<ErrorPatternRow[]> {
-  const limit = Math.max(1, Math.floor(params.limit))
+  const limit = Math.max(1, Math.floor(params.maxResults))
   const sel = selector(
     params.processDefinitionKey
       ? `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`

@@ -11,8 +11,11 @@ import {
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
+  complementaryFlags,
+  engineLike,
   engineSorting,
   readProcessInstanceVariables,
+  trueOnly,
   toEngineVariable,
   toEngineVariables,
 } from "@miragon-ai/camunda7-client"
@@ -65,8 +68,9 @@ export function registerProcessInstanceTools(register: Register) {
       const filters = {
         processDefinitionKey: args.processDefinitionKey,
         businessKey: args.businessKey,
-        active: args.active,
-        suspended: args.suspended,
+        businessKeyLike: engineLike(args.businessKeyLike),
+        ...complementaryFlags(args, "active", "suspended"),
+        withIncident: trueOnly(args.withIncidents),
       }
       const [items, count] = await Promise.all([
         getProcessInstances({

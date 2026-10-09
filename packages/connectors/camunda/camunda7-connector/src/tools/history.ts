@@ -5,7 +5,14 @@ import {
   queryHistoricVariableInstancesInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { RAW_VARIABLES, engineSorting, toOptionalEngineDate } from "@miragon-ai/camunda7-client"
+import {
+  RAW_VARIABLES,
+  complementaryFlags,
+  engineLike,
+  engineSorting,
+  toOptionalEngineDate,
+  trueOnly,
+} from "@miragon-ai/camunda7-client"
 import {
   getHistoricProcessInstances,
   getHistoricProcessInstancesCount,
@@ -22,6 +29,23 @@ import { engineParamShape, withEngine } from "../lib/with-engine.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
+interface TimeWindow {
+  startedAfter?: string
+  startedBefore?: string
+  finishedAfter?: string
+  finishedBefore?: string
+}
+
+/** The start/end window a historic query takes: ISO 8601 in, engine dates out. */
+function engineTimeWindow(args: TimeWindow) {
+  return {
+    startedAfter: toOptionalEngineDate(args.startedAfter),
+    startedBefore: toOptionalEngineDate(args.startedBefore),
+    finishedAfter: toOptionalEngineDate(args.finishedAfter),
+    finishedBefore: toOptionalEngineDate(args.finishedBefore),
+  }
+}
+
 export function registerHistoryTools(register: Register) {
   register({
     name: "camunda7_query_historic_process_instances",
@@ -33,11 +57,14 @@ export function registerHistoryTools(register: Register) {
     outputSchema: paginatedListOutput,
     handler: withEngine(async (client, args) => {
       const filters = {
+        processInstanceId: args.processInstanceId,
         processDefinitionKey: args.processDefinitionKey,
-        finished: args.finished,
-        unfinished: args.unfinished,
-        startedBefore: toOptionalEngineDate(args.startedBefore),
-        startedAfter: toOptionalEngineDate(args.startedAfter),
+        processInstanceBusinessKey: args.businessKey,
+        processInstanceBusinessKeyLike: engineLike(args.businessKeyLike),
+        ...complementaryFlags(args, "finished", "unfinished"),
+        withIncidents: trueOnly(args.withIncidents),
+        incidentStatus: args.incidentStatus,
+        ...engineTimeWindow(args),
       }
       const [items, count] = await Promise.all([
         getHistoricProcessInstances({
@@ -66,9 +93,12 @@ export function registerHistoryTools(register: Register) {
     handler: withEngine(async (client, args) => {
       const filters = {
         processInstanceId: args.processInstanceId,
+        processDefinitionId: args.processDefinitionId,
+        activityId: args.activityId,
         activityType: args.activityType,
-        finished: args.finished,
-        unfinished: args.unfinished,
+        ...complementaryFlags(args, "finished", "unfinished"),
+        canceled: trueOnly(args.canceled),
+        ...engineTimeWindow(args),
       }
       const [items, count] = await Promise.all([
         getHistoricActivityInstances({
@@ -98,9 +128,8 @@ export function registerHistoryTools(register: Register) {
       const filters = {
         processInstanceId: args.processInstanceId,
         processDefinitionKey: args.processDefinitionKey,
-        taskAssignee: args.taskAssignee,
-        finished: args.finished,
-        unfinished: args.unfinished,
+        taskAssignee: args.assignee,
+        ...complementaryFlags(args, "finished", "unfinished"),
       }
       const [items, count] = await Promise.all([
         getHistoricTaskInstances({
@@ -130,7 +159,7 @@ export function registerHistoryTools(register: Register) {
       const filters = {
         processInstanceId: args.processInstanceId,
         variableName: args.variableName,
-        variableNameLike: args.variableNameLike,
+        variableNameLike: engineLike(args.variableNameLike),
       }
       const [items, count] = await Promise.all([
         getHistoricVariableInstances({

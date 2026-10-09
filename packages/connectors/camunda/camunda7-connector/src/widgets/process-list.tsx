@@ -37,7 +37,7 @@ function deriveProcessListScope(
   const echoed = initialData?.filters
   return {
     feedEngine: props.engine ?? initialData?.engineId,
-    effectiveKey: props.processDefinitionKey ?? echoed?.key,
+    effectiveKey: props.processDefinitionKey ?? echoed?.processDefinitionKey,
     baseNameLike: props.nameLike ?? echoed?.nameLike,
     effectiveLatest: props.latestVersion ?? echoed?.latestVersion,
   }
@@ -46,7 +46,7 @@ function deriveProcessListScope(
 function buildProcessListArgs(scope: ReturnType<typeof deriveProcessListScope>) {
   const args: Record<string, unknown> = {}
   if (scope.feedEngine) args.engine = scope.feedEngine
-  if (scope.effectiveKey) args.key = scope.effectiveKey
+  if (scope.effectiveKey) args.processDefinitionKey = scope.effectiveKey
   if (scope.baseNameLike) args.nameLike = scope.baseNameLike
   if (scope.effectiveLatest !== undefined) args.latestVersion = scope.effectiveLatest
   return args
@@ -180,7 +180,7 @@ export function ProcessListWidget({
               variant="icon"
               label={t("processList.healthCheckLabel")}
               title={t("processList.healthCheckLabel")}
-              prompt={`Assess the operational health of process definition \`${row.key}\` (version v${row.version}${row.versionTag ? ", tag " + row.versionTag : ""}) on engine ${data.engineId}. First call analytics_analyze_process_performance with processDefinitionKey="${row.key}", period="7d", includeActivityBreakdown=true to get throughput, P50/P95 duration and the incident-based failure rate with a per-activity breakdown. Then call camunda7_list_incidents with processDefinitionId filtered to this definition (resolve the id from \`${row.key}\` v${row.version} via camunda7_list_process_definitions if needed) to see live open incidents. Summarise: is this definition healthy or degraded, which activities are the worst offenders, the dominant incident message(s), and the single most likely root cause. End with one concrete recommended next step (e.g. retry jobs, fix variable, redeploy). Do not mutate anything.`}
+              prompt={`Assess the operational health of process definition \`${row.key}\` (version v${row.version}${row.versionTag ? ", tag " + row.versionTag : ""}) on engine ${data.engineId}. First call analytics_analyze_process_performance with processDefinitionKey="${row.key}", period="7d", includeActivityBreakdown=true to get throughput, P50/P95 duration and the incident-based failure rate with a per-activity breakdown. Then call camunda7_list_incidents({ processDefinitionId: "${row.id}" }) to see this version's live open incidents. Summarise: is this definition healthy or degraded, which activities are the worst offenders, the dominant incident message(s), and the single most likely root cause. End with one concrete recommended next step (e.g. retry jobs, fix variable, redeploy). Do not mutate anything.`}
             />
           </>
         )}

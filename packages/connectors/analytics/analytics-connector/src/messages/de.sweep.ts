@@ -19,7 +19,7 @@ export const deSweep: MessageCatalog = {
   "aClusterCompare.afterLabel": "Nachher",
   "aClusterCompare.beforeLabel": "Vorher",
   "aClusterCompare.deployBadge": "Deployment: {timestamp}",
-  "aClusterCompare.elementBadge": "Element: {elementId}",
+  "aClusterCompare.elementBadge": "Element: {activityId}",
   "aClusterCompare.incompleteData": "Unvollständige KPI-Daten.",
   "aClusterCompare.insufficientSignal":
     "Unzureichendes Signal (min. {minBucketSize} Instanzen/Fenster)",

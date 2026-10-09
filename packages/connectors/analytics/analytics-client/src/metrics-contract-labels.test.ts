@@ -125,10 +125,10 @@ const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
       queries.findFailedInstances(ch, {
         processDefinitionKey: "invoice",
         incidentType: "failedJob",
-        limit: 10,
+        maxResults: 10,
         engine: "prod-a",
       }),
-    (ch) => queries.findFailedInstances(ch, { limit: 10 }),
+    (ch) => queries.findFailedInstances(ch, { maxResults: 10 }),
   ],
   elementBottleneck: [
     (ch) =>
@@ -136,7 +136,7 @@ const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
         processDefinitionKey: "invoice",
         period: "7d",
         minBucketSize: 1,
-        limit: 10,
+        maxResults: 10,
         engine: "prod-a",
       }),
   ],
@@ -147,7 +147,7 @@ const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
     (ch) =>
       queries.clusterCompare(ch, {
         processDefinitionKey: "invoice",
-        elementId: "Task_check",
+        activityId: "Task_check",
         deploymentTimestamp: "2026-09-08T00:00:00Z",
         windowBeforeDays: 7,
         windowAfterDays: 7,
@@ -169,7 +169,7 @@ const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
         versionA: 1,
         versionB: 2,
         windowDays: 14,
-        elementId: "Task_check",
+        activityId: "Task_check",
         minBucketSize: 1,
         engine: ["prod-a", "prod-b"],
       }),
@@ -181,7 +181,7 @@ const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
         engineA: "prod-a",
         engineB: "prod-b",
         windowDays: 14,
-        elementId: "Task_check",
+        activityId: "Task_check",
         minBucketSize: 1,
       }),
   ],

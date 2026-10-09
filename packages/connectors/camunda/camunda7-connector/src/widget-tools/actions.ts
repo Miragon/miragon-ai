@@ -1,8 +1,8 @@
-import { z } from "zod"
 import {
   appOnly,
   buildDataFeedResult as rawData,
   withToolErrors,
+  strictToolInput,
 } from "@miragon-ai/widget-shell/server"
 import { allowedWidgetActions } from "../lib/toolsets.js"
 import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
@@ -25,7 +25,7 @@ export function registerWidgetActionsFeed(ctx: WidgetToolsContext) {
         "Internal JSON feed (no UI): which engine write actions the widgets may offer in this deployment.",
       // No engine I/O — the answer is deployment config.
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-      inputSchema: z.object({}),
+      inputSchema: strictToolInput({}),
       ...appOnly,
     },
     withToolErrors(() => Promise.resolve(rawData({ allowedActions }))),

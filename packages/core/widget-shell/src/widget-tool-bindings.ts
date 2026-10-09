@@ -31,6 +31,35 @@ export function showToolBinding(name: string, title: string) {
 }
 
 /**
+ * The strict input schema every raw `server.tool()` registration declares —
+ * the twin of the toolkit registrar's `strictInput` option for the widget
+ * path, which registers outside the registrar. A non-strict `z.object` lets
+ * mcp-use STRIP an unknown key before the handler runs: a misnamed optional
+ * filter then silently widens the result (#329). Strict, the schema is
+ * advertised with `additionalProperties: false`, and an unknown key fails
+ * validation with the toolkit's own message — every unknown key plus every
+ * valid one — as an `isError` result the model can correct in one retry.
+ *
+ * The message mirrors the toolkit's `unknownKeysMessage` (not exported);
+ * `widget-tool-bindings.test.ts` pins the two to the same text.
+ */
+export function strictToolInput<TShape extends z.ZodRawShape>(shape: TShape) {
+  const valid = Object.keys(shape)
+  return z.strictObject(shape, {
+    error: (issue) =>
+      issue.code === "unrecognized_keys" ? unknownKeysMessage(issue.keys, valid) : undefined,
+  })
+}
+
+function unknownKeysMessage(unknown: readonly string[], valid: readonly string[]): string {
+  const quote = (keys: readonly string[]) => keys.map((key) => JSON.stringify(key)).join(", ")
+  const head = `Unknown key${unknown.length === 1 ? "" : "s"} ${quote(unknown)}.`
+  return valid.length === 0
+    ? `${head} This tool takes no arguments.`
+    : `${head} Valid keys: ${quote(valid)}.`
+}
+
+/**
  * App-only marker for the internal `*_data` feeds — spread into each feed's
  * `server.tool` definition. `visibility: "app"` is mcp-use 2's first-class
  * field (emitted as SEP-1865 `_meta.ui.visibility: ["app"]`): conforming hosts

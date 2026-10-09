@@ -169,24 +169,32 @@ describe("buildProcessListData", () => {
     mockedDefsCount.mockResolvedValueOnce({ count: 42 })
 
     const data = await buildProcessListData(fakeClient, "engine-a", {
-      key: "K1",
+      processDefinitionKey: "K1",
       nameLike: "Ord",
       latestVersion: false,
       firstResult: 20,
       maxResults: 10,
     })
 
-    expect(lastQuery(mockedDefs)).toMatchObject({
+    const query = lastQuery(mockedDefs)
+    expect(query).toMatchObject({
       key: "K1",
-      nameLike: "Ord",
-      latestVersion: false,
+      // A LIKE value without % would match the name exactly.
+      nameLike: "%Ord%",
       firstResult: 20,
       maxResults: 10,
       sortBy: "name",
       sortOrder: "asc",
     })
+    // The engine ignores latestVersion=false — all versions means: not sent.
+    expect(query.latestVersion).toBeUndefined()
+    expect(lastQuery(mockedDefsCount).latestVersion).toBeUndefined()
     expect(data.totalCount).toBe(42)
-    expect(data.filters).toEqual({ key: "K1", nameLike: "Ord", latestVersion: false })
+    expect(data.filters).toEqual({
+      processDefinitionKey: "K1",
+      nameLike: "Ord",
+      latestVersion: false,
+    })
     expect(data.engineId).toBe("engine-a")
   })
 
@@ -273,11 +281,9 @@ describe("buildProcessInstancesData", () => {
     expect(data.suspendedCount).toBe(1)
   })
 
-  it("only forwards the boolean filters when they are set", async () => {
+  it("never forwards a false flag — the engine would ignore it", async () => {
     await buildProcessInstancesData(fakeClient, "engine-a", {
-      active: false,
-      suspended: false,
-      withIncidentsOnly: false,
+      withIncidents: false,
       businessKeyLike: "",
     })
 
@@ -288,20 +294,41 @@ describe("buildProcessInstancesData", () => {
     expect(query.businessKeyLike).toBeUndefined()
   })
 
-  it("forwards the set filters as `true`", async () => {
+  it("sends a false active/suspended as the complementary flag", async () => {
+    await buildProcessInstancesData(fakeClient, "engine-a", { suspended: false })
+    expect(lastQuery(mockedInstances)).toMatchObject({ active: true })
+    expect(lastQuery(mockedInstances).suspended).toBeUndefined()
+    expect(lastQuery(mockedInstancesCount)).toMatchObject({ active: true })
+
+    await buildProcessInstancesData(fakeClient, "engine-a", { active: false })
+    expect(lastQuery(mockedInstances)).toMatchObject({ suspended: true })
+    expect(lastQuery(mockedInstances).active).toBeUndefined()
+  })
+
+  it("forwards the set filters as `true` and the business key as a substring", async () => {
     await buildProcessInstancesData(fakeClient, "engine-a", {
-      active: true,
       suspended: true,
-      withIncidentsOnly: true,
+      withIncidents: true,
       businessKeyLike: "BK",
     })
 
     expect(lastQuery(mockedInstances)).toMatchObject({
-      active: true,
       suspended: true,
       withIncident: true,
-      businessKeyLike: "BK",
+      businessKeyLike: "%BK%",
     })
+    expect(lastQuery(mockedInstances).active).toBeUndefined()
+  })
+
+  it("refuses active and suspended together instead of listing one state", async () => {
+    mockedInstances.mockClear()
+    await expect(
+      buildProcessInstancesData(fakeClient, "engine-a", { active: true, suspended: true }),
+    ).rejects.toThrow(/contradict each other/)
+    await expect(
+      buildProcessInstancesData(fakeClient, "engine-a", { active: false, suspended: false }),
+    ).rejects.toThrow(/contradict each other/)
+    expect(mockedInstances).not.toHaveBeenCalled()
   })
 
   it("skips the name lookup when unscoped and reports a null key", async () => {

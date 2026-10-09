@@ -19,7 +19,7 @@ export const enSweep: MessageCatalog = {
   "aClusterCompare.afterLabel": "After",
   "aClusterCompare.beforeLabel": "Before",
   "aClusterCompare.deployBadge": "Deploy: {timestamp}",
-  "aClusterCompare.elementBadge": "element: {elementId}",
+  "aClusterCompare.elementBadge": "element: {activityId}",
   "aClusterCompare.incompleteData": "Incomplete KPI data.",
   "aClusterCompare.insufficientSignal":
     "Insufficient signal (min {minBucketSize} instances/window)",

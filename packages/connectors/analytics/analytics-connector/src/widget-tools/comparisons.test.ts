@@ -40,10 +40,10 @@ describe("analytics_show_version_compare", () => {
     const data = result.structuredContent.context.stepData.result.data as VersionCompareResult
     expect(data.kpis.map((k) => k.failure_rate_pct)).toEqual([null, null])
     expect(data.notes.length).toBeGreaterThan(0)
-    expect(summary).not.toContain("elementId")
+    expect(summary).not.toContain("activityId")
   })
 
-  it("says an elementId scoped nothing instead of implying an element scope (#327)", async () => {
+  it("says an activityId scoped nothing instead of implying an element scope (#327)", async () => {
     const show = handlers(ch).get("analytics_show_version_compare")!
     const result = await show(
       {
@@ -51,13 +51,13 @@ describe("analytics_show_version_compare", () => {
         versionA: 1,
         versionB: 2,
         windowDays: 14,
-        elementId: "Task_check",
+        activityId: "Task_check",
       },
       {},
     )
 
     const summary = result.content[0].text
-    expect(summary).toContain("elementId Task_check has no effect")
+    expect(summary).toContain("activityId Task_check has no effect")
     expect(summary).toContain("every figure covers the whole process")
   })
 })

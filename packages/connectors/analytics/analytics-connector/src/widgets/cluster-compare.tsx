@@ -26,7 +26,7 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
   const processScope = data.processDefinitionKey
     ? `, scoped to process ${data.processDefinitionKey}`
     : ""
-  const elementScope = data.elementId ? `, scoped to BPMN element ${data.elementId}` : ""
+  const elementScope = data.activityId ? `, scoped to BPMN element ${data.activityId}` : ""
   const interpretPrompt = `Interpret the pre/post deployment comparison around ${data.deploymentTimestamp} (-${data.windowDays.before}d baseline vs +${data.windowDays.after}d after)${processScope}${elementScope}. The on-screen deltas are: ${describeDeltas(data.delta)}. First call analytics_cluster_compare(deploymentTimestamp="${data.deploymentTimestamp}", windowBeforeDays=${data.windowDays.before}, windowAfterDays=${data.windowDays.after}${data.processDefinitionKey ? `, processDefinitionKey="${data.processDefinitionKey}"` : ""}) to confirm the numbers and the 'suppressed' flag, then call analytics_element_bottleneck to find which activity drives any regression. Tell me in 3-4 sentences: did the deployment cause a genuine regression or is it noise / low sample size, which metric (and element, if any) is responsible, and the single recommended next action (roll back the deployment, hold further rollouts, or accept).`
 
   return (
@@ -51,9 +51,9 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
             })}
           </Badge>
           {data.processDefinitionKey && <Badge>{data.processDefinitionKey}</Badge>}
-          {data.elementId && (
+          {data.activityId && (
             <Badge variant="outline">
-              {t("aClusterCompare.elementBadge", { elementId: data.elementId })}
+              {t("aClusterCompare.elementBadge", { activityId: data.activityId })}
             </Badge>
           )}
           {data.suppressed && (

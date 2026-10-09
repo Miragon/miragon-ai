@@ -138,8 +138,10 @@ The widget chain mirrors the camunda7 module:
    `propsSchema`) to `src/definition.ts`.
 4. The host map `apps/mcp-server-camunda7/src/ui/widget-registry.ts` spreads
    `analyticsWidgets` — verify your widget arrives there.
-5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with `inputSchema:`
-   and spread `...showToolBinding(TOOL_NAME, "Title")` (from
+5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with
+   `inputSchema: strictToolInput({ … })` (strict like the registrar's `strictInput`: an
+   unknown key is a tool error listing the valid ones — naming per the guide in the
+   add-bpm-feature skill, e.g. `maxResults`, never `limit`; `activityId`, never `elementId`) and spread `...showToolBinding(TOOL_NAME, "Title")` (from
    `@miragon-ai/widget-shell/server` — native `view` binding named after the tool + required
    passthrough `outputSchema` + the Apps-SDK `_meta` half; never hand-write
    `_meta.ui` keys, mcp-use owns them), returning `buildComposedView(...)` /

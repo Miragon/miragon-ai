@@ -24,7 +24,9 @@ export function registerTools(
   client: PrometheusClient,
   profileStore?: ProfileSource,
 ): void {
-  const register = createToolRegistrar(server, client)
+  // Strict input: an unknown (e.g. misnamed) key is a tool error naming the
+  // valid keys instead of a silently dropped filter (#329).
+  const register = createToolRegistrar(server, client, { strictInput: true })
   registerPerformanceTools(register, profileStore)
   registerFailureTools(register)
   registerElementTools(register, profileStore)

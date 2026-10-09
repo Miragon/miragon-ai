@@ -7,6 +7,7 @@ import {
   buildSingleWidgetView,
   showToolBinding,
   withToolErrors,
+  strictToolInput,
 } from "@miragon-ai/widget-shell/server"
 import { buildInstanceDetailData, buildJobPanelData } from "../data/cockpit-data.js"
 import { buildBpmnViewerData } from "../data/bpmn-viewer-data.js"
@@ -32,7 +33,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Show detailed view of a single process instance with activity tree, variables, and incidents.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         processInstanceId: z.string().describe("The process instance ID to inspect"),
         ...engineParamShape,
       }),
@@ -83,26 +84,25 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Show an interactive BPMN diagram. Pass `processInstanceId` to overlay active activities, incidents, and failed-job counts for a running instance, or pass `processDefinitionKey` (with optional `version`) to view the diagram of a process definition without instance overlays.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z
-        .object({
-          processInstanceId: z
-            .string()
-            .optional()
-            .describe("Process instance ID. Renders diagram with live overlays."),
-          processDefinitionKey: z
-            .string()
-            .optional()
-            .describe("Process definition key. Renders the static diagram (no overlays)."),
-          version: z
-            .number()
-            .int()
-            .positive()
-            .optional()
-            .describe(
-              "Specific definition version. Requires `processDefinitionKey`. Defaults to the latest version when omitted.",
-            ),
-          ...engineParamShape,
-        })
+      inputSchema: strictToolInput({
+        processInstanceId: z
+          .string()
+          .optional()
+          .describe("Process instance ID. Renders diagram with live overlays."),
+        processDefinitionKey: z
+          .string()
+          .optional()
+          .describe("Process definition key. Renders the static diagram (no overlays)."),
+        version: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe(
+            "Specific definition version. Requires `processDefinitionKey`. Defaults to the latest version when omitted.",
+          ),
+        ...engineParamShape,
+      })
         .refine((v) => v.processInstanceId || v.processDefinitionKey, {
           message: "Provide either `processInstanceId` or `processDefinitionKey`.",
         })
@@ -166,7 +166,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       description:
         "Show jobs with a focus on failed jobs (no retries left). Displays error messages and retry status.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...jobsFilterShape,
         failedOnly: jobsFilterShape.failedOnly.default(false),
         ...pagingShape,

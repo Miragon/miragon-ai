@@ -2,6 +2,7 @@ export { createPlugin } from "./plugin.js"
 export type { Camunda7PluginConfig, Camunda7SharedResources } from "./plugin.js"
 export { camunda7Module, camunda7ConfigSchema, createBpmnXmlFetcher } from "./module.js"
 export { CAMUNDA7_ADMIN_ONLY_TOOLS } from "./lib/toolsets.js"
+export { CAMUNDA7_ENGINELESS_TOOLS } from "./tool-names.js"
 export type {
   CockpitRef,
   EngineClientSettings,

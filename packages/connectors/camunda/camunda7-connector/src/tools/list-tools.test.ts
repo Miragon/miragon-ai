@@ -93,10 +93,20 @@ function callTool(name: string, args: Record<string, unknown>) {
 }
 
 /**
- * One row per converted list tool: the mocked page/count endpoints and the
- * filter args that must reach the count query (without pagination params).
+ * One row per converted list tool: the mocked page/count endpoints, the
+ * filter args, and — where the engine names or encodes them differently —
+ * the engine query they must become (`engineQuery`, default: the args as
+ * given) on BOTH the page and the count query (without pagination params).
  */
-const cases = [
+interface ListCase {
+  tool: string
+  list: (typeof sdk)[keyof typeof sdk]
+  count: (typeof sdk)[keyof typeof sdk]
+  filterArgs: Record<string, unknown>
+  engineQuery?: Record<string, unknown>
+}
+
+const cases: readonly ListCase[] = [
   {
     tool: "camunda7_list_process_instances",
     list: sdk.getProcessInstances,
@@ -137,7 +147,8 @@ const cases = [
     tool: "camunda7_query_historic_task_instances",
     list: sdk.getHistoricTaskInstances,
     count: sdk.getHistoricTaskInstancesCount,
-    filterArgs: { taskAssignee: "demo" },
+    filterArgs: { assignee: "demo" },
+    engineQuery: { taskAssignee: "demo" },
   },
   {
     tool: "camunda7_query_historic_variable_instances",
@@ -160,12 +171,24 @@ const cases = [
       processDefinitionKey: "invoice",
       activityId: "send-mail",
     },
+    // A false flag is never forwarded (the engine ignores it): it becomes
+    // its complement, which here agrees with the true one already given.
+    engineQuery: {
+      topicName: "invoice-mail",
+      workerId: "worker-1",
+      locked: true,
+      noRetriesLeft: true,
+      processInstanceId: "pi-1",
+      processDefinitionKey: "invoice",
+      activityId: "send-mail",
+    },
   },
-] as const
+]
 
-describe.each(cases)("$tool pagination envelope", ({ tool, list, count, filterArgs }) => {
-  const mockedList = vi.mocked(list)
-  const mockedCount = vi.mocked(count)
+describe.each(cases)("$tool pagination envelope", ({ tool, list, count, filterArgs, ...c }) => {
+  const engineQuery = c.engineQuery ?? filterArgs
+  const mockedList = vi.mocked(list as typeof sdk.getProcessInstances)
+  const mockedCount = vi.mocked(count as typeof sdk.getProcessInstancesCount)
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -190,10 +213,10 @@ describe.each(cases)("$tool pagination envelope", ({ tool, list, count, filterAr
     expect(mockedList).toHaveBeenCalledWith(
       expect.objectContaining({
         client: fakeClient,
-        query: expect.objectContaining({ ...filterArgs, firstResult: 2, maxResults: 2 }),
+        query: expect.objectContaining({ ...engineQuery, firstResult: 2, maxResults: 2 }),
       }),
     )
-    expect(mockedCount).toHaveBeenCalledWith({ client: fakeClient, query: filterArgs })
+    expect(mockedCount).toHaveBeenCalledWith({ client: fakeClient, query: engineQuery })
     const countQuery = mockedCount.mock.calls[0][0]?.query as Record<string, unknown>
     expect(countQuery).not.toHaveProperty("firstResult")
     expect(countQuery).not.toHaveProperty("maxResults")

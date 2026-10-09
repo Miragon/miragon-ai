@@ -143,6 +143,9 @@ A pnpm + Turbo monorepo. The server composes the two modules and serves them as 
 
 ## Tools
 
+Tool inputs are strict: an unknown or misnamed parameter is refused with the list of valid
+ones instead of being ignored (which used to widen a "filtered" answer to the whole engine).
+
 ### Camunda 7 module — `camunda7_*`
 
 BPM operations across these domains (`category`): `engines`, `process-definitions`,

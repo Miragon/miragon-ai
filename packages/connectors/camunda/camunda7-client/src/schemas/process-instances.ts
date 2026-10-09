@@ -1,5 +1,12 @@
 import { z } from "zod"
-import { firstResultParam, sortOrderParam, variableSchema, variableValueInfo } from "./shared.js"
+import {
+  firstResultParam,
+  flagParam,
+  likeParam,
+  sortOrderParam,
+  variableSchema,
+  variableValueInfo,
+} from "./shared.js"
 
 export const startProcessInstanceInput = z.object({
   processDefinitionKey: z.string().describe("The key of the process definition to start"),
@@ -9,9 +16,11 @@ export const startProcessInstanceInput = z.object({
 
 export const listProcessInstancesInput = z.object({
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
-  businessKey: z.string().optional().describe("Filter by business key"),
-  active: z.boolean().optional().describe("Only active instances"),
-  suspended: z.boolean().optional().describe("Only suspended instances"),
+  businessKey: z.string().optional().describe("Filter by exact business key"),
+  businessKeyLike: likeParam("Filter by business key"),
+  active: flagParam("true = only active instances, false = only suspended"),
+  suspended: flagParam("true = only suspended instances, false = only active"),
+  withIncidents: flagParam("true = only instances with an open incident"),
   firstResult: firstResultParam,
   maxResults: z.number().int().positive().optional().default(20).describe("Maximum results"),
   sortBy: z

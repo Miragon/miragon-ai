@@ -1,10 +1,10 @@
-import { z } from "zod"
 import {
   appOnly,
   buildDataFeedResult,
   buildSingleWidgetView,
   showToolBinding,
   withToolErrors,
+  strictToolInput,
 } from "@miragon-ai/widget-shell/server"
 import { queries, schemas, withCallerSignal } from "@miragon-ai/analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
@@ -34,7 +34,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       description:
         "Visualize before/after KPI deltas around a deployment timestamp. Results are flagged `suppressed` when either window has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...schemas.clusterCompareInput.shape,
         minBucketSize: optionalMinBucketSize,
       }),
@@ -74,7 +74,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       description:
         "Visualize KPI deltas between two deployed versions of the same processDefinitionKey within a shared time window. Instance counts and durations are exact per version; failure and incident rates show as n/a — the incident metric carries no version label, so they are not measured per version (never read them as zero). Results are flagged `suppressed` when either version has fewer than minBucketSize instances.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...schemas.versionCompareInput.shape,
         minBucketSize: optionalMinBucketSize,
       }),
@@ -90,8 +90,8 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       })
       // Null incident KPIs (no version label on the incident metric) must not
       // read as "failure rate 0pp" — say why they are missing instead; nor may
-      // an elementId that scoped nothing read as the comparison's scope.
-      const { incidentRatesUnavailable, ignoredElementId } = versionCompareCaveats(data)
+      // an activityId that scoped nothing read as the comparison's scope.
+      const { incidentRatesUnavailable, ignoredActivityId } = versionCompareCaveats(data)
       return buildSingleWidgetView({
         widget: "analytics:version-compare",
         app: "analytics",
@@ -105,8 +105,8 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
           windowDays: data.windowDays,
           delta: compareDeltaSummary(data.delta),
           incidents: incidentRatesUnavailable ? t("aSum.versionIncidentsUnavailable") : "",
-          element: ignoredElementId
-            ? t("aSum.versionElementIgnored", { element: ignoredElementId })
+          element: ignoredActivityId
+            ? t("aSum.versionElementIgnored", { element: ignoredActivityId })
             : "",
           suppressed: suppressedNote(data.suppressed),
         }),
@@ -122,7 +122,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       description:
         "Visualize KPI deltas for ONE process definition as it runs on two CIB Seven engines (e.g. prod-a vs prod-b) over a shared time window. processDefinitionKey is required — engines host different process mixes, so an unscoped engine-vs-engine comparison would measure the mix, not the engines. Results are flagged `suppressed` when either engine has fewer than minBucketSize instances. For the cross-engine picture use analytics_show_engine_landscape.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object({
+      inputSchema: strictToolInput({
         ...schemas.engineCompareInput.shape,
         minBucketSize: optionalMinBucketSize,
       }),
@@ -162,7 +162,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       description:
         "Show the cross-engine process landscape: which process definitions run on which engine, the absolute load per engine (running instances, open incidents, failed jobs) and the engine-owned job backlog. Counts, not rates — engines host different process mixes, so per-engine rates would measure the mix. Highlights the definitions deployed on several engines, the only sound targets for analytics_show_engine_compare.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object(schemas.engineLandscapeInput.shape),
+      inputSchema: strictToolInput(schemas.engineLandscapeInput.shape),
       ...showToolBinding("analytics_show_engine_landscape", "Cross-Engine Landscape"),
     },
     withToolErrors(async (args, toolCtx) => {
@@ -198,7 +198,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       description:
         "Internal JSON feed (no UI) for the cross-engine landscape widget's self-fetch — also consumed by the camunda7 cockpit's cross-engine mode. Prefer analytics_show_engine_landscape.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: z.object(schemas.engineLandscapeInput.shape),
+      inputSchema: strictToolInput(schemas.engineLandscapeInput.shape),
       ...appOnly,
     },
     withToolErrors(async (args, toolCtx) => {

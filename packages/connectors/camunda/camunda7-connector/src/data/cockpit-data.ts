@@ -1,6 +1,9 @@
 import {
+  complementaryFlags,
+  engineLike,
   incidentRecovery,
   readProcessInstanceVariables,
+  trueOnly,
   type Client,
 } from "@miragon-ai/camunda7-client"
 import type {
@@ -159,10 +162,11 @@ export async function buildProcessListData(
   engineId: string,
   args: ProcessListArgs,
 ): Promise<ProcessListData> {
+  const latestVersion = args.latestVersion ?? true
   const filters = {
-    key: args.key,
-    nameLike: args.nameLike,
-    latestVersion: args.latestVersion ?? true,
+    key: args.processDefinitionKey,
+    nameLike: engineLike(args.nameLike),
+    latestVersion: trueOnly(latestVersion),
   }
   const [definitions, countRes] = await Promise.all([
     getProcessDefinitions({
@@ -184,9 +188,9 @@ export async function buildProcessListData(
     definitions: defArray as ProcessListData["definitions"],
     totalCount: typeof count === "number" ? count : defArray.length,
     filters: {
-      key: args.key,
+      processDefinitionKey: args.processDefinitionKey,
       nameLike: args.nameLike,
-      latestVersion: filters.latestVersion,
+      latestVersion,
     },
     engineId,
   }
@@ -194,15 +198,17 @@ export async function buildProcessListData(
 
 export type ProcessInstancesArgs = ProcessInstancesFilters & PagingArgs
 
-// The Camunda REST API only accepts `true` for active/suspended/withIncident
-// (a `false` is rejected), so only forward the flags when set.
+// The engine IGNORES `false` for active/suspended/withIncident (HTTP 200, no
+// filter — not a rejection), so a forwarded false would silently list every
+// instance: active/suspended send a false as the complement, withIncident
+// only ever goes out as true. businessKeyLike is a LIKE pattern — a value
+// without `%` would match the business key exactly.
 function toProcessInstanceFilter(args: ProcessInstancesArgs) {
   return {
     processDefinitionKey: args.processDefinitionKey,
-    active: args.active ? true : undefined,
-    suspended: args.suspended ? true : undefined,
-    withIncident: args.withIncidentsOnly ? true : undefined,
-    businessKeyLike: args.businessKeyLike || undefined,
+    ...complementaryFlags(args, "active", "suspended"),
+    withIncident: trueOnly(args.withIncidents),
+    businessKeyLike: engineLike(args.businessKeyLike),
   }
 }
 
@@ -290,7 +296,7 @@ export async function buildProcessInstancesData(
     filters: {
       active: args.active,
       suspended: args.suspended,
-      withIncidentsOnly: args.withIncidentsOnly,
+      withIncidents: args.withIncidents,
       businessKeyLike: args.businessKeyLike,
     },
     engineId,

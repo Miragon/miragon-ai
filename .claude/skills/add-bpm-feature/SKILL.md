@@ -27,8 +27,8 @@ it from `src/schemas/index.ts`. Existing style (from `schemas/process-instances.
 ```ts
 export const listProcessInstancesInput = z.object({
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),
-  businessKey: z.string().optional().describe("Filter by business key"),
-  active: z.boolean().optional().describe("Only active instances"),
+  businessKeyLike: likeParam("Filter by business key"),
+  active: flagParam("true = only active instances, false = only suspended"),
   maxResults: z.number().int().positive().optional().default(20).describe("Maximum results"),
 })
 ```
@@ -36,6 +36,36 @@ export const listProcessInstancesInput = z.object({
 Every field gets a `.describe()`. The REST calls themselves use the generated SDK
 (imported from `@miragon-ai/camunda7-client/sdk`) — if the endpoint is missing there,
 the OpenAPI spec changed and you need `pnpm generate`, not a hand-written fetch.
+
+### Parameter naming guide
+
+Inputs are STRICT (the registrar runs with `strictInput: true`; raw `server.tool()`
+registrations use `strictToolInput(...)` from `@miragon-ai/widget-shell/server`): an
+unknown key is a tool error listing the valid keys. So one name per concept across every
+tool — a model that learned `assignee` on one tool must not be refused it on the next.
+Renames ship without aliases.
+
+| Concept                  | Name                                                                                                                                                |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Process definition       | `processDefinitionKey` (all versions), `processDefinitionId` (one version); never bare `key`                                                        |
+| Entity ids               | `<entity>Id` — `processInstanceId`, `deploymentId`, `jobId`, `activityId` (analytics too); never bare `id`, never `elementId`                       |
+| Several values           | `<name>In`, an array (`processDefinitionKeyIn`); merged with the single form via `engineKeyList`                                                    |
+| User filter              | `assignee` (the user a task is assigned to); a write that sets a user takes `userId`                                                                |
+| Business key / substring | `businessKey` exact, `businessKeyLike`/`nameLike` substring — `engineLike` wraps a `%`-less value                                                   |
+| Time bounds              | `<event>After`/`<event>Before` (`startedAfter`, `finishedBefore`, `incidentTimestampAfter`) via `engineDateParam` — ISO 8601 in, `toEngineDate` out |
+| Boolean filters          | `flagParam` + `complementaryFlags` (active/suspended, …) or `trueOnly` — the engine IGNORES `false` (never sent); a both/neither pair is refused    |
+| Paging / result size     | `firstResult` + `maxResults` (also for a top-N cap: never `limit`)                                                                                  |
+| Sorting                  | `sortBy` + `sortOrder`, sent as a pair by `engineSorting`                                                                                           |
+
+The engine's own query names may differ (`taskAssignee`, `processInstanceBusinessKey`,
+`withIncident`): the handler maps them, the schema keeps the guide's name. Every
+filter a tool advertises is pinned on the wire in `src/tools/filters.wire.test.ts`
+(page query AND `/count`); a retired spelling (`key`, `id`, `limit`, `elementId`, …) on
+any module tool fails `apps/mcp-server-camunda7/test/strict-input.e2e.test.ts`; a prompt
+that quotes a tool's parameter is checked against its schema by
+`apps/mcp-server-camunda7/test/tool-name-refs.test.ts` — write quoted arguments in call
+notation with literal names, `tool({ param: value })` (an interpolated name is reported
+as `${…}`).
 
 ## Step 2 — register the tool
 
@@ -164,6 +194,11 @@ hand.
 Then register the widget tool in `src/widget-tools.ts` (this file is the documented
 exception that uses `server.tool()` directly):
 
+- Every widget-path tool (show tool AND feed) declares
+  `inputSchema: strictToolInput({ … })` (from `@miragon-ai/widget-shell/server`) — never
+  a bare `z.object`, which strips an unknown key silently;
+  `apps/mcp-server-camunda7/test/strict-input.e2e.test.ts` refuses any module tool that
+  accepts one.
 - `show_*` tools: spread `...showToolBinding(TOOL_NAME_CONST, "Title")` (from
   `@miragon-ai/widget-shell/server`) into the definition and use `inputSchema:` (mcp-use 2
   field name) — the helper binds a native mcp-use view named after the tool

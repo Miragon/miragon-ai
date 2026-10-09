@@ -20,14 +20,21 @@ const DEFINITIONS = JSON.parse(
   readFileSync(path.join(import.meta.dirname, "fixtures", "process-definitions.json"), "utf8"),
 ) as ProcessDefinition[]
 
-/** `nameLike` follows the engine's SQL LIKE: `%` wildcards, case-insensitive here. */
+/**
+ * `nameLike` follows the engine's SQL LIKE (case-insensitive here): `%` is the
+ * only wildcard, so a value WITHOUT one matches the whole name exactly — the
+ * server must send a search as `%…%` (`engineLike`), or the search finds nothing.
+ */
+function likePattern(value: string): RegExp {
+  const escaped = value.split("%").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  return new RegExp(`^${escaped.join(".*")}$`, "i")
+}
+
 function filterDefinitions(query: URLSearchParams): ProcessDefinition[] {
   const key = query.get("key")
-  const nameLike = query.get("nameLike")?.replaceAll("%", "").toLowerCase()
-  return DEFINITIONS.filter(
-    (d) =>
-      (!key || d.key === key) && (!nameLike || (d.name ?? "").toLowerCase().includes(nameLike)),
-  )
+  const nameLike = query.get("nameLike")
+  const like = nameLike ? likePattern(nameLike) : null
+  return DEFINITIONS.filter((d) => (!key || d.key === key) && (!like || like.test(d.name ?? "")))
 }
 
 function route(url: URL): { status: number; body: unknown } {

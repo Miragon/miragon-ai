@@ -4,7 +4,12 @@ import {
   setJobRetriesBatchInput,
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { engineSorting, queuedBatch, toOptionalEngineDate } from "@miragon-ai/camunda7-client"
+import {
+  complementaryFlags,
+  engineSorting,
+  queuedBatch,
+  toOptionalEngineDate,
+} from "@miragon-ai/camunda7-client"
 import {
   getJobs,
   getJobsCount,
@@ -30,10 +35,9 @@ export function registerJobTools(register: Register) {
       const filters = {
         processInstanceId: args.processInstanceId,
         processDefinitionKey: args.processDefinitionKey,
-        withRetriesLeft: args.withRetriesLeft,
-        noRetriesLeft: args.noRetriesLeft,
-        active: args.active,
-        suspended: args.suspended,
+        activityId: args.activityId,
+        ...complementaryFlags(args, "withRetriesLeft", "noRetriesLeft"),
+        ...complementaryFlags(args, "active", "suspended"),
       }
       const [items, count] = await Promise.all([
         getJobs({

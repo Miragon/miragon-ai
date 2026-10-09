@@ -143,8 +143,8 @@ export const describeFailureRates: DescribeForModel<FailureDashboardData> = (dat
     }. ` +
     // Not analytics_version_compare: it cannot split incidents by version, so
     // its failure rates are null (#327).
-    `Check for a regression with analytics_compare_execution_periods (period over period) ` +
-    `or analytics_cluster_compare (around a deployment).`
+    `Check for a regression period over period with analytics_compare_execution_periods, ` +
+    `or around a deployment with analytics_cluster_compare.`
   )
 }
 
@@ -175,27 +175,27 @@ export const describeClusterCompare: DescribeForModel<ClusterCompareData> = (dat
   `Comparing pre/post deployment KPIs around ${data.deploymentTimestamp} ` +
   `(-${data.windowDays.before}d/+${data.windowDays.after}d)` +
   `${data.processDefinitionKey ? ` for process "${data.processDefinitionKey}"` : " cluster-wide"}` +
-  `${data.elementId ? `, element ${data.elementId}` : ""}: ${mostNotableDelta(data.delta)}` +
+  `${data.activityId ? `, element ${data.activityId}` : ""}: ${mostNotableDelta(data.delta)}` +
   `${suppressedNote(data.suppressed)}. ` +
   `Confirm with analytics_cluster_compare; find the driving activity with analytics_element_bottleneck.`
 
 /**
  * Version compare: the incident metric has no version label, so its rates come
- * back null — and `elementId`, which only scopes them, then scopes nothing. The
+ * back null — and `activityId`, which only scopes them, then scopes nothing. The
  * element is never presented as the scope of the process-wide deltas.
  */
 export const describeVersionCompare: DescribeForModel<VersionCompareData> = (data) => {
-  const { incidentRatesUnavailable, ignoredElementId } = versionCompareCaveats(data)
+  const { incidentRatesUnavailable, ignoredActivityId } = versionCompareCaveats(data)
   return (
     `Comparing process "${data.processDefinitionKey}" v${data.versionA} (baseline) vs ` +
     `v${data.versionB} over a ${data.windowDays}d window` +
-    `${data.elementId && !ignoredElementId ? ` (incident KPIs scoped to element ${data.elementId})` : ""}: ` +
+    `${data.activityId && !ignoredActivityId ? ` (incident KPIs scoped to element ${data.activityId})` : ""}: ` +
     `${mostNotableDelta(data.delta)}${suppressedNote(data.suppressed)}. ` +
     (incidentRatesUnavailable
       ? "Failure and incident rates are not measured per version (no version label on the incident metric) — unknown, not zero. "
       : "") +
-    (ignoredElementId
-      ? `elementId ${ignoredElementId} has no effect (it only scopes the incident rates): every figure covers the whole process, not that element. `
+    (ignoredActivityId
+      ? `activityId ${ignoredActivityId} has no effect (it only scopes the incident rates): every figure covers the whole process, not that element. `
       : "") +
     `Confirm with analytics_version_compare; find the driving activity with analytics_element_bottleneck.`
   )
@@ -204,7 +204,7 @@ export const describeVersionCompare: DescribeForModel<VersionCompareData> = (dat
 export const describeEngineCompare: DescribeForModel<EngineCompareData> = (data) =>
   `Comparing process "${data.processDefinitionKey}" on engine "${data.engineA}" (baseline) vs ` +
   `"${data.engineB}" over ${data.windowDays}d` +
-  `${data.elementId ? `, element ${data.elementId}` : ""}: ` +
+  `${data.activityId ? `, element ${data.activityId}` : ""}: ` +
   `${mostNotableDelta(data.delta)}${suppressedNote(data.suppressed)}. ` +
   `The process is held fixed, so the delta is attributable to the engine rather than to a ` +
   `different workload. Confirm with analytics_engine_compare; per-engine ops snapshot via ` +

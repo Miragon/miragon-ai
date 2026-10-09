@@ -8,9 +8,11 @@ describe("engine-scope prompt fragments", () => {
     )
   })
 
-  it("tells the model to pass the viewed engine on every call", () => {
+  // Strict input refuses an `engine` the tool does not take, so the rule names
+  // the engine-less tools instead of claiming EVERY camunda7_* call.
+  it("tells the model to pass the viewed engine on every call that takes one", () => {
     expect(engineCallRule("prod-b")).toBe(
-      ' Pass engine: "prod-b" on every camunda7_* call: without it a call routes to the saved default engine, which may be a different one.',
+      ' Pass engine: "prod-b" on every camunda7_* call except camunda7_engine, camunda7_show_user_profile and camunda7_save_user_profile, which take no engine: without it a call routes to the saved default engine, which may be a different one.',
     )
   })
 

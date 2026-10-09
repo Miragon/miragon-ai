@@ -3,8 +3,8 @@ import type { VersionCompareKpi, VersionCompareResult } from "@miragon-ai/analyt
 export interface VersionCompareCaveats {
   /** The failure/incident rates came back null: unknown, never 0. */
   incidentRatesUnavailable: boolean
-  /** The `elementId` the caller passed although it scoped nothing, else null. */
-  ignoredElementId: string | null
+  /** The `activityId` the caller passed although it scoped nothing, else null. */
+  ignoredActivityId: string | null
 }
 
 /**
@@ -13,20 +13,20 @@ export interface VersionCompareCaveats {
  * model description.
  *
  * The incident metric carries no process-version label, so the version compare
- * returns the failure/incident rates as null (#327). `elementId` only ever
+ * returns the failure/incident rates as null (#327). `activityId` only ever
  * scoped those incident KPIs — instances and durations are process-wide by
  * construction — so while they are unavailable it scopes nothing, and showing
  * it as the comparison's scope would pin process-wide deltas on one element.
  */
 export function versionCompareCaveats(data: {
   kpis: ReadonlyArray<Pick<VersionCompareKpi, "failure_rate_pct" | "incident_rate_pct">>
-  elementId: VersionCompareResult["elementId"]
+  activityId: VersionCompareResult["activityId"]
 }): VersionCompareCaveats {
   const incidentRatesUnavailable = data.kpis.some(
     (k) => k.failure_rate_pct === null || k.incident_rate_pct === null,
   )
   return {
     incidentRatesUnavailable,
-    ignoredElementId: incidentRatesUnavailable ? data.elementId : null,
+    ignoredActivityId: incidentRatesUnavailable ? data.activityId : null,
   }
 }

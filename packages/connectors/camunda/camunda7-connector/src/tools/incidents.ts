@@ -1,6 +1,6 @@
 import { listIncidentsInput, resolveIncidentInput } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { engineSorting } from "@miragon-ai/camunda7-client"
+import { engineKeyList, engineSorting, toOptionalEngineDate } from "@miragon-ai/camunda7-client"
 import { getIncidents, getIncidentsCount, resolveIncident } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
@@ -20,8 +20,16 @@ export function registerIncidentTools(register: Register) {
     handler: withEngine(async (client, args) => {
       const filters = {
         processInstanceId: args.processInstanceId,
+        // The engine filters incidents by key only as a comma list.
+        processDefinitionKeyIn: engineKeyList(
+          args.processDefinitionKey,
+          args.processDefinitionKeyIn,
+        ),
         processDefinitionId: args.processDefinitionId,
+        activityId: args.activityId,
         incidentType: args.incidentType,
+        incidentTimestampAfter: toOptionalEngineDate(args.incidentTimestampAfter),
+        incidentTimestampBefore: toOptionalEngineDate(args.incidentTimestampBefore),
       }
       const [items, count] = await Promise.all([
         getIncidents({

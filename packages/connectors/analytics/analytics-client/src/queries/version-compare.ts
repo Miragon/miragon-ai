@@ -39,7 +39,7 @@ export interface VersionCompareResult {
   versionA: number
   versionB: number
   windowDays: number
-  elementId: string | null
+  activityId: string | null
   minBucketSize: number
   suppressed: boolean
   kpis: VersionCompareKpi[]
@@ -59,9 +59,9 @@ export const VERSION_INCIDENT_KPIS_NOTE =
   "so incidents cannot be attributed to a version. Incident figures exist per process " +
   "definition key only."
 
-/** Added when the caller passed `elementId`: it only ever scoped the incident count. */
-export const VERSION_ELEMENT_SCOPE_NOTE =
-  "elementId has no effect: it only scopes the incident KPIs, which are unavailable per version."
+/** Added when the caller passed `activityId`: it only ever scoped the incident count. */
+export const VERSION_ACTIVITY_SCOPE_NOTE =
+  "activityId has no effect: it only scopes the incident KPIs, which are unavailable per version."
 
 /**
  * Side-by-side comparison of two deployed process definition versions, from
@@ -80,7 +80,7 @@ export async function versionCompare(
     versionA: number
     versionB: number
     windowDays: number
-    elementId?: string
+    activityId?: string
     minBucketSize: number
     engine?: EngineFilterInput
   },
@@ -102,7 +102,7 @@ export async function versionCompare(
     versionA,
     versionB,
     windowDays,
-    elementId: params.elementId ?? null,
+    activityId: params.activityId ?? null,
     minBucketSize: minBucket,
     suppressed,
     kpis: [a, b],
@@ -113,8 +113,8 @@ export async function versionCompare(
       avg_duration_delta_pct: pctChange(a.avg_duration_sec, b.avg_duration_sec),
       p95_duration_delta_pct: pctChange(a.p95_duration_sec, b.p95_duration_sec),
     },
-    notes: params.elementId
-      ? [VERSION_INCIDENT_KPIS_NOTE, VERSION_ELEMENT_SCOPE_NOTE]
+    notes: params.activityId
+      ? [VERSION_INCIDENT_KPIS_NOTE, VERSION_ACTIVITY_SCOPE_NOTE]
       : [VERSION_INCIDENT_KPIS_NOTE],
   }
 }

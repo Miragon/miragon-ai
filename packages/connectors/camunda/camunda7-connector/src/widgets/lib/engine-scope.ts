@@ -9,14 +9,25 @@
  * these strings address the model, not the user.
  */
 
+import { CAMUNDA7_ENGINELESS_TOOLS } from "../../tool-names.js"
+
 /** `engine: "<id>", ` to open a literal call template's arguments. */
 export function engineArg(engineId: string | null | undefined): string {
   return engineId ? `engine: "${engineId}", ` : ""
 }
 
-/** The closing instruction to pass the engine on EVERY camunda7_* call. */
+/** `a, b and c` — the engine-less tools as the rule names them. */
+const ENGINELESS_TOOL_LIST = `${CAMUNDA7_ENGINELESS_TOOLS.slice(0, -1).join(", ")} and ${CAMUNDA7_ENGINELESS_TOOLS.at(-1)}`
+
+/**
+ * The closing instruction to pass the engine on every camunda7_* call that
+ * takes one. The tools that route to no engine are named as the exception:
+ * strict input refuses an `engine` a tool does not take, so an unscoped
+ * "every call" turned a request like "show my settings" into a refused call
+ * and a retry.
+ */
 export function engineCallRule(engineId: string | null | undefined): string {
   return engineId
-    ? ` Pass engine: "${engineId}" on every camunda7_* call: without it a call routes to the saved default engine, which may be a different one.`
+    ? ` Pass engine: "${engineId}" on every camunda7_* call except ${ENGINELESS_TOOL_LIST}, which take no engine: without it a call routes to the saved default engine, which may be a different one.`
     : ""
 }

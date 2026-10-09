@@ -27,13 +27,22 @@ export const processInstancesFilterShape = {
     .describe(
       "Process definition key whose instances to list. Omit for ALL running instances engine-wide.",
     ),
-  active: z.boolean().optional().describe("Only running (non-suspended) instances."),
-  suspended: z.boolean().optional().describe("Only suspended instances."),
-  withIncidentsOnly: z
+  active: z
     .boolean()
     .optional()
-    .describe("Only instances that currently have an open incident."),
-  businessKeyLike: z.string().optional().describe("Filter by a substring of the business key."),
+    .describe("true = only running (non-suspended) instances, false = only suspended."),
+  suspended: z
+    .boolean()
+    .optional()
+    .describe("true = only suspended instances, false = only running."),
+  withIncidents: z
+    .boolean()
+    .optional()
+    .describe("true = only instances that currently have an open incident."),
+  businessKeyLike: z
+    .string()
+    .optional()
+    .describe("Filter by business key (substring; % wildcards allowed)."),
 }
 export type ProcessInstancesFilters = z.infer<z.ZodObject<typeof processInstancesFilterShape>>
 
@@ -57,7 +66,9 @@ export const clusterDetailFilterShape = {
   businessKeyLike: z
     .string()
     .optional()
-    .describe("Narrow the affected-instance list by a business-key substring."),
+    .describe(
+      "Narrow the affected-instance list by business key (substring; % wildcards allowed).",
+    ),
 }
 export type ClusterDetailFilters = z.infer<z.ZodObject<typeof clusterDetailFilterShape>>
 
@@ -70,8 +81,11 @@ export type ActivityIncidentsFilters = z.infer<z.ZodObject<typeof activityIncide
 
 // ── process definitions list ──────────────────────────────────────────────
 export const processListFilterShape = {
-  key: z.string().optional().describe("Filter by exact process definition key"),
-  nameLike: z.string().optional().describe("Filter by name (substring match)"),
-  latestVersion: z.boolean().optional().describe("Only return latest versions"),
+  processDefinitionKey: z.string().optional().describe("Filter by exact process definition key"),
+  nameLike: z.string().optional().describe("Filter by name (substring; % wildcards allowed)"),
+  latestVersion: z
+    .boolean()
+    .optional()
+    .describe("true = only the latest version of each definition, false = all versions"),
 }
 export type ProcessListFilters = z.infer<z.ZodObject<typeof processListFilterShape>>

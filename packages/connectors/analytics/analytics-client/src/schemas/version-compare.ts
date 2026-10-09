@@ -17,11 +17,11 @@ export const versionCompareInput = z.object({
     .describe(
       "Look-back window applied to both versions, in days (max 30 — Prometheus retention).",
     ),
-  elementId: z
+  activityId: z
     .string()
     .optional()
     .describe(
-      "Currently has no effect: it only scopes the incident KPIs, which are unavailable per version (the incident metric carries no version label). Accepted for compatibility.",
+      "Currently has no effect: it only scopes the incident KPIs, which are unavailable per version (the incident metric carries no version label).",
     ),
   minBucketSize: z
     .number()

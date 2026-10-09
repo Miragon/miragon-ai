@@ -81,3 +81,13 @@ export const CAMUNDA7_WIDGET_ACTIONS = [
 ] as const
 export type Camunda7WidgetAction = (typeof CAMUNDA7_WIDGET_ACTIONS)[number]
 export const CAMUNDA7_WIDGET_ACTIONS_DATA = "camunda7_widget_actions_data"
+// The model-visible tools that route to NO engine and so take no `engine`
+// argument — strict input refuses one. The prompts that pin the viewed engine
+// (`engineCallRule`) exempt exactly these, and the app's strict-input e2e pins
+// the list against the advertised surface: a new engine-less tool fails there
+// instead of costing the model a refused call from every engine-pinned prompt.
+export const CAMUNDA7_ENGINELESS_TOOLS = [
+  CAMUNDA7_ENGINE,
+  CAMUNDA7_SHOW_USER_PROFILE,
+  CAMUNDA7_SAVE_USER_PROFILE,
+] as const

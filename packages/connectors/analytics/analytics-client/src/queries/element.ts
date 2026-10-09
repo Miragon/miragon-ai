@@ -45,13 +45,13 @@ export async function elementBottleneck(
     processDefinitionKey: string
     period: Period
     minBucketSize: number
-    limit: number
+    maxResults: number
     engine?: EngineFilterInput
   },
 ): Promise<ElementBottleneckResult> {
   const range = params.period
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
-  const limit = Math.max(1, Math.floor(params.limit))
+  const limit = Math.max(1, Math.floor(params.maxResults))
   const sel = selector(
     `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
     engineMatcher(params.engine),

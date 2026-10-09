@@ -18,7 +18,7 @@ export interface EngineCompareResult {
   engineB: string
   processDefinitionKey: string
   windowDays: number
-  elementId: string | null
+  activityId: string | null
   minBucketSize: number
   suppressed: boolean
   kpis: EngineCompareKpi[]
@@ -44,7 +44,7 @@ export interface EngineCompareResult {
  *
  * `failed_count` / `failure_rate_pct` are incident-based (consistent across the
  * analytics tools); `incident_count` is the same signal optionally scoped to
- * `elementId`.
+ * `activityId`.
  */
 export async function engineCompare(
   ch: PrometheusClient,
@@ -53,7 +53,7 @@ export async function engineCompare(
     engineA: string
     engineB: string
     windowDays: number
-    elementId?: string
+    activityId?: string
     minBucketSize: number
   },
 ): Promise<EngineCompareResult> {
@@ -72,7 +72,7 @@ export async function engineCompare(
     engineB: params.engineB,
     processDefinitionKey: params.processDefinitionKey,
     windowDays,
-    elementId: params.elementId ?? null,
+    activityId: params.activityId ?? null,
     minBucketSize: minBucket,
     suppressed,
     kpis: [a, b],
@@ -82,7 +82,7 @@ export async function engineCompare(
 
 async function engineKpi(
   ch: PrometheusClient,
-  params: { processDefinitionKey: string; elementId?: string },
+  params: { processDefinitionKey: string; activityId?: string },
   bucket: "engineA" | "engineB",
   engineId: string,
   range: string,
@@ -93,7 +93,7 @@ async function engineKpi(
   const completedSel = selector(keyMatcher, `state="COMPLETED"`, engine)
   const incidentSel = selector(
     keyMatcher,
-    params.elementId ? `activity_id="${escapeLabelValue(params.elementId)}"` : undefined,
+    params.activityId ? `activity_id="${escapeLabelValue(params.activityId)}"` : undefined,
     engine,
   )
 
