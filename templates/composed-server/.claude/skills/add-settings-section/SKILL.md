@@ -100,20 +100,26 @@ wire-contract e2e test asserts by name):
 
 Rules the save tool must honor:
 
-- **Merge over the RAW stored slice, not the parsed one** — parsing first would
-  drop fields a newer build wrote and bake defaults into storage:
+- **Save the PATCH alone, never a slice you read first** — `requireProfileKey`
+  and `saveModuleSlice` from `@miragon-ai/widget-shell/server`:
 
   ```ts
-  const rawSlice = (await store.get(key))?.modules?.[MODULE_KEY]
-  const nextSlice = { ...(isObject(rawSlice) ? rawSlice : {}), ...params }
-  await store.save(
+  const key = requireProfileKey(ctx) // throws without an identity
+  const saved = await saveModuleSlice(
+    { get: (k) => store.get(k), save }, // save = store.save, checked before registering
     key,
-    { modules: { [MODULE_KEY]: nextSlice } },
+    MODULE_KEY,
+    params,
     { userId: resolveAuthUserId(ctx) },
   )
   ```
 
-  A missing key throws — a save must fail visibly, never silently no-op.
+  The store merges the patch over the RAW stored slice under its per-key
+  lock, so fields a newer build wrote survive, no defaults are baked into
+  storage, and a concurrent save of another field is never reverted. A slice
+  read before the save would write its stale values back. A field patched to
+  `undefined` clears it. A missing key throws — a save must fail visibly,
+  never silently no-op.
 
 - **Toolset gate** (only if your module declares `toolsets`): the save is a
   durable write registered outside the registrar, so it must gate itself — on

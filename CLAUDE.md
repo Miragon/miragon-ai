@@ -172,9 +172,11 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    theme, `modules.<module>` slices + metadata; camunda7's engine/dashboard
    preferences live in ITS slice, `modules.camunda7`, projected to a flat
    `UserProfile` view in `camunda7-connector/src/lib/profile-schema.ts`).
-   Records migrate on read through `parseStoredProfile` (shared by the
-   filesystem and postgres stores) — a `PROFILE_SCHEMA_VERSION` bump without a
-   matching `PROFILE_MIGRATIONS` entry silently resets stored preferences. **Whose** profile a request touches is
+   Records migrate on read through `parseStoredProfile` (shared by every store;
+   per-FIELD fail-soft) — a `PROFILE_SCHEMA_VERSION` bump without a matching
+   `PROFILE_MIGRATIONS` entry leaves stored preferences un-migrated. Saves merge over
+   the RAW stored document (`mergeStoredProfile`, inside each store's per-key lock),
+   never over the parsed view, so keys a newer build wrote survive. **Whose** profile a request touches is
    decided in exactly one place for ALL modules: `resolveProfileKey`/`resolveAuthUserId`
    - `ANONYMOUS_PROFILE_KEY` + the narrow `ProfileSource` port, in
      `packages/core/widget-shell/src/profile.ts` (`@miragon-ai/widget-shell/server`). A

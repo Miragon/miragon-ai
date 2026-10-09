@@ -8,17 +8,18 @@ import {
 
 import type { IncidentDetailData, IncidentDetailJob } from "../../view-models.js"
 
+import { engineArg, engineCallRule } from "../lib/engine-scope.js"
 import { fenceUntrusted } from "../lib/untrusted.js"
 import { useT } from "../../messages/use-t.js"
 
-function draftTicketPrompt(data: IncidentDetailData): string {
+export function draftTicketPrompt(data: IncidentDetailData): string {
   const engineId = data.engineId ?? "default"
-  return `Draft an incident ticket for CIB Seven incident \`${data.incidentId}\` (${data.incidentType}) at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}${data.businessKey ? `, business key ${data.businessKey}` : ""}, engine \`${engineId}\`. Build the draft with camunda7_format_incident_issue({ incidentId: '${data.incidentId}' }), include the error (${fenceUntrusted(data.incidentMessage ?? data.job?.exceptionMessage)}) and stacktrace, and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.`
+  return `Draft an incident ticket for CIB Seven incident \`${data.incidentId}\` (${data.incidentType}) at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""}${data.businessKey ? `, business key ${data.businessKey}` : ""}, engine \`${engineId}\`. Build the draft with camunda7_format_incident_issue({ ${engineArg(data.engineId)}incidentId: '${data.incidentId}' }), include the error (${fenceUntrusted(data.incidentMessage ?? data.job?.exceptionMessage)}) and stacktrace, and present the full draft (title, body, labels) to me in the chat for review and reuse. Do NOT file it anywhere yourself — I decide where it goes; only file it if I explicitly ask, via whatever issue-tracker integration is available.${engineCallRule(data.engineId)}`
 }
 
-function explainErrorPrompt(data: IncidentDetailData): string {
+export function explainErrorPrompt(data: IncidentDetailData): string {
   const engineId = data.engineId ?? "default"
-  return `Explain the failure on CIB Seven incident \`${data.incidentId}\` at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}, engine \`${engineId}\`. The reported error is ${fenceUntrusted(data.incidentMessage ?? data.job?.exceptionMessage)}${data.job?.stacktrace ? `, with a Java stacktrace on job ${data.job.id}` : ""}. In plain language: what does this exception mean, what most likely caused it here, and is it transient (safe to retry) or deterministic (will re-fail)? Read the full trace with camunda7_incident_detail_data({ incidentId: "${data.incidentId}" }) if needed. Explanation only — do not change anything.`
+  return `Explain the failure on CIB Seven incident \`${data.incidentId}\` at ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}, engine \`${engineId}\`. The reported error is ${fenceUntrusted(data.incidentMessage ?? data.job?.exceptionMessage)}${data.job?.stacktrace ? `, with a Java stacktrace on job ${data.job.id}` : ""}. In plain language: what does this exception mean, what most likely caused it here, and is it transient (safe to retry) or deterministic (will re-fail)? Read the full trace with camunda7_incident_detail_data({ ${engineArg(data.engineId)}incidentId: "${data.incidentId}" }) if needed. Explanation only — do not change anything.${engineCallRule(data.engineId)}`
 }
 
 export function FailureTab({

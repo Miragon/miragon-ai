@@ -105,9 +105,12 @@ export {
   createInMemoryProfileStore,
   isExpiredSessionRecord,
   mergeProfile,
+  mergeStoredProfile,
+  type MergedProfile,
   type ProfileSaveOptions,
   type ProfileStore,
 } from "./profile-store.js"
+export { readProfileAdvisory } from "./profile-advisory.js"
 export { createPostgresProfileStore, PROFILE_STORE_MIGRATIONS } from "./profile-store-postgres.js"
 export {
   createPostgresDashboardStore,
@@ -125,7 +128,14 @@ export {
   type ResolveBootOptions,
   type ResolvedBoot,
 } from "./composition.js"
-export { profileStoreFromEnv, startProfileSessionCleanup } from "./profile-store-env.js"
+export {
+  announcePersistence,
+  persistenceFromEnv,
+  profileStoreFromEnv,
+  startProfileSessionCleanup,
+  type PersistenceBackend,
+  type PersistenceSelection,
+} from "./profile-store-env.js"
 export {
   createToolsetVocabulary,
   type EffectiveSelection,
@@ -138,7 +148,12 @@ export {
   type ServerT,
   type Translator,
 } from "./server-locale.js"
-export { mergeRawSlice, parseModuleSlice, requireProfileKey } from "./profile-slice.js"
+export {
+  mergeRawSlice,
+  parseModuleSlice,
+  requireProfileKey,
+  saveModuleSlice,
+} from "./profile-slice.js"
 export { catalogueSyncIssues } from "./catalogue-sync.js"
 
 /**

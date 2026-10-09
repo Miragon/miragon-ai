@@ -10,6 +10,7 @@ export function IncidentsTab({
   pendingIds,
   resolveError,
   onResolve,
+  engine,
 }: {
   incidents: InstanceDetailData["incidents"]
   resolvedIds: Set<string>
@@ -17,6 +18,8 @@ export function IncidentsTab({
   resolveError: ResolveError | null
   /** Omitted when the deployment's toolset has no resolve tool — no button. */
   onResolve?: (incidentId: string) => void
+  /** The instance's engine, pinned into the rows' AI handoffs. */
+  engine?: string
 }) {
   const t = useT()
   const go = useNav()
@@ -36,6 +39,7 @@ export function IncidentsTab({
       onAnalyze={(incidentId) => go({ type: "incident-detail", incidentId })}
       hideInstanceColumn
       previewCount={5}
+      engine={engine}
     />
   )
 }

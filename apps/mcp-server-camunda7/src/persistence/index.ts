@@ -1,15 +1,18 @@
 import { createFileSystemDashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import type { DashboardStore } from "@miragon/mcp-toolkit-core/tools"
 import {
+  announcePersistence,
   createPostgresDashboardStore,
   createPostgresProfileStore,
   createSql,
   DASHBOARD_STORE_MIGRATIONS,
+  persistenceFromEnv,
   postgresReadinessCheck,
   PROFILE_STORE_MIGRATIONS,
   profileStoreFromEnv,
   runMigrations,
   startProfileSessionCleanup,
+  type PersistenceSelection,
   type ProfileStore,
   type ReadinessCheck,
 } from "@miragon-ai/widget-shell/server"
@@ -67,18 +70,51 @@ export function createDefaultProfileStore(env: NodeJS.ProcessEnv = process.env):
 const startSessionCleanup = (store: ProfileStore, env: NodeJS.ProcessEnv): (() => void) =>
   startProfileSessionCleanup(store, { env, label: "miragon-ai" })
 
+/** What the boot that consumes the backends actually keeps. */
+export interface InitRuntimeOptions {
+  /**
+   * Whether the toolkit's dashboard builder is registered
+   * (`frameworkWritesAllowed`) — without it no dashboard is ever saved, so
+   * the dashboard store stays out of the announcement. Default `true`.
+   */
+  dashboards?: boolean
+}
+
+/** The selected backends, logged on every path; volatile ones warn in production. */
+function announce(
+  { profiles, dashboards }: Required<PersistenceSelection>,
+  env: NodeJS.ProcessEnv,
+  options: InitRuntimeOptions,
+): void {
+  announcePersistence(
+    { profiles, ...(options.dashboards === false ? {} : { dashboards }) },
+    {
+      env,
+      label: "miragon-ai",
+      remedy:
+        "Set DATABASE_URL (Postgres, both stores), or MCP_PROFILE_DIR / MCP_DASHBOARD_DIR to directories on a persistent volume.",
+    },
+  )
+}
+
 /**
  * Select and initialize the persistence backends. Precedence: `DATABASE_URL`
  * (Postgres, both stores) beats the filesystem knobs `MCP_PROFILE_DIR`/
- * `MCP_DASHBOARD_DIR`, which beat the in-memory defaults. With Postgres the
+ * `MCP_DASHBOARD_DIR`, which beat the in-memory defaults. Every path logs its
+ * selection; a `NODE_ENV=production` boot that keeps a store in memory warns
+ * loudly (`announcePersistence`) — but still boots. With Postgres the
  * pending migrations run here, before the server starts listening — the
  * container/Fly healthcheck grace periods (15–30s) comfortably cover the two
  * small tables.
  */
-export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise<RuntimeBackends> {
+export async function initRuntime(
+  env: NodeJS.ProcessEnv = process.env,
+  options: InitRuntimeOptions = {},
+): Promise<RuntimeBackends> {
   warnIgnoredRedisUrl(env)
   const databaseUrl = env.DATABASE_URL?.trim()
   if (!databaseUrl) {
+    announce(persistenceFromEnv(env), env, options)
     const profileStore = createDefaultProfileStore(env)
     const stopCleanup = startSessionCleanup(profileStore, env)
     return {
@@ -107,7 +143,7 @@ export async function initRuntime(env: NodeJS.ProcessEnv = process.env): Promise
   if (applied.length > 0) {
     console.log(`[miragon-ai] applied database migrations: ${applied.join(", ")}`)
   }
-  console.log("[miragon-ai] profile + dashboard stores: postgres")
+  announce({ profiles: "postgres", dashboards: "postgres" }, env, options)
 
   const profileStore = createPostgresProfileStore({ sql })
   const stopCleanup = startSessionCleanup(profileStore, env)

@@ -162,20 +162,26 @@ Two rules the save tool must honor:
   "everything". When it says no, skip registration; the view then reports `canSave: false`
   and the widget hides its Save button — the tool surface stays honest.
 
-- **Merge over the RAW stored slice**, not the parsed one:
+- **Save the PATCH alone** (`requireProfileKey` + `saveModuleSlice` from
+  `@miragon-ai/widget-shell/server`), never a slice you read first:
 
   ```ts
-  const rawSlice = (await store.get(key))?.modules?.[MODULE_KEY]
-  const nextSlice = { ...(isObject(rawSlice) ? rawSlice : {}), ...params }
-  await save(
+  const key = requireProfileKey(ctx)
+  const saved = await saveModuleSlice(
+    { get: (k) => store.get(k), save }, // save = store.save, checked before registering
     key,
-    { modules: { [MODULE_KEY]: nextSlice } },
+    MODULE_KEY,
+    params,
     { userId: resolveSettingsAuthUserId(ctx) },
   )
+  const effective = parseMySettings({ [MODULE_KEY]: saved })
   ```
 
-  Parsing first would drop fields a newer build wrote and bake defaults into storage for
-  fields the caller never set. A missing key throws — a save must fail visibly.
+  The store merges the patch over the RAW stored slice under its per-key lock: fields a
+  newer build wrote survive, no defaults are baked into storage, and a concurrent save of
+  another field is never reverted. A slice read before the save runs outside that lock
+  and writes its stale values back. A field patched to `undefined` clears it. A missing
+  key throws — a save must fail visibly.
 
 ## Step 5 — the section widget
 

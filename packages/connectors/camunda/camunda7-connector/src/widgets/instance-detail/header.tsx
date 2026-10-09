@@ -9,6 +9,7 @@ import {
 
 import type { InstanceDetailData } from "../../view-models.js"
 import { type T, useT } from "../../messages/use-t.js"
+import { engineArg, engineCallRule } from "../lib/engine-scope.js"
 
 export interface InstanceStatus {
   label: string
@@ -35,6 +36,7 @@ export function instanceStatus(
 export function InstanceHeader({
   instance,
   status,
+  engineId,
   engineClause,
   activeActivityIds,
   incidentActivityIds,
@@ -46,6 +48,7 @@ export function InstanceHeader({
 }: {
   instance: InstanceDetailData["instance"]
   status: InstanceStatus
+  engineId?: string
   engineClause: string
   activeActivityIds: string[]
   incidentActivityIds: string[]
@@ -87,7 +90,7 @@ export function InstanceHeader({
             variant="primary"
             prompt={`Diagnose CIB Seven process instance ${instance.id}${
               instance.businessKey ? ` (business key ${instance.businessKey})` : ""
-            } of definition ${instance.definitionId}${engineClause}. It is currently at activities ${activeIds} with incidents at ${incidentIds}. Use camunda7_get_process_instance, camunda7_list_incidents({processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.`}
+            } of definition ${instance.definitionId}${engineClause}. It is currently at activities ${activeIds} with incidents at ${incidentIds}. Use camunda7_get_process_instance, camunda7_list_incidents({${engineArg(engineId)}processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.${engineCallRule(engineId)}`}
           />
           {isActionable && onRequestSuspendToggle && (
             <Button

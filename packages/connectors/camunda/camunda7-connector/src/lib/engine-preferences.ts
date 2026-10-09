@@ -1,4 +1,4 @@
-import type { ProfileSource } from "@miragon-ai/widget-shell/server"
+import { readProfileAdvisory, type ProfileSource } from "@miragon-ai/widget-shell/server"
 import { resolveProfileKey } from "./resolve-profile-key.js"
 import { parseCamunda7Settings, type Camunda7Settings } from "./profile-schema.js"
 import type { EngineEntry } from "./resolve-engine.js"
@@ -25,20 +25,30 @@ export function allowedEngines(settings: Camunda7Settings, engines: EngineEntry[
 }
 
 /**
+ * The caller's camunda7 settings for ADVISORY use — routing and the engine
+ * picker only prefer them. Never throws: no caller identity, or a profile
+ * store that is down (a preferences-database outage), reads as the defaults —
+ * logged once, sanitized, by `readProfileAdvisory` — so no engine call ever
+ * fails on (or leaks the host:port of) the preferences database. Reads the
+ * ambient request identity (argument-less `resolveProfileKey`), so it works
+ * from registrar handlers and the registry's per-call lookup alike.
+ */
+export async function advisoryCamunda7Settings(store: ProfileSource): Promise<Camunda7Settings> {
+  return parseCamunda7Settings(await readProfileAdvisory(store, resolveProfileKey()))
+}
+
+/**
  * The caller's saved default engine (`profile.modules.camunda7.defaultEngineId`),
- * or undefined when none is saved, no caller identity resolves, or the saved id
- * is not among the engines the profile may pick from (stale ids fail soft —
- * a removed engine must not poison every subsequent call). Reads the profile
- * off the ambient request identity (argument-less `resolveProfileKey`), so it
- * works from registrar handlers and the registry's per-call lookup alike.
+ * or undefined when none is saved, no caller identity resolves, the store is
+ * unreachable, or the saved id is not among the engines the profile may pick
+ * from (stale ids fail soft — a removed engine must not poison every
+ * subsequent call).
  */
 export async function profileDefaultEngineId(
   store: ProfileSource,
   engines: EngineEntry[],
 ): Promise<string | undefined> {
-  const key = resolveProfileKey()
-  const record = key ? await store.get(key) : undefined
-  const settings = parseCamunda7Settings(record)
+  const settings = await advisoryCamunda7Settings(store)
   const id = settings.defaultEngineId
   return id && allowedEngines(settings, engines).some((e) => e.id === id) ? id : undefined
 }

@@ -256,6 +256,32 @@ describe.skipIf(!TEST_DATABASE_URL)("postgres persistence", () => {
         expect([await rowOf("alices-corrupt"), await rowOf("global-corrupt")]).toEqual(before)
       })
 
+      // A row written by a NEWER build (mid rolling upgrade) whose payload
+      // carries no owner: only the mirrored user_id column attributes it. Read
+      // as absent, a save would turn into an ownership-free CREATE over it —
+      // whoever writes, it keeps its payload and its owner.
+      it("never lets a save turn it into an ownership-free CREATE", async () => {
+        await insertRaw("future", "alice", { schemaVersion: 99, name: "v99" })
+        await insertRaw("global-future", null, { schemaVersion: 99 })
+        const before = [await rowOf("future"), await rowOf("global-future")]
+
+        await expect(
+          store.save({ id: "future", name: "stolen", layout: LAYOUT, userId: "bob" }),
+        ).rejects.toBeInstanceOf(DashboardOwnershipError)
+        // Not even its owner replaces it: a conflict, never an overwrite.
+        await expect(
+          store.save({ id: "future", name: "mine", layout: LAYOUT, userId: "alice" }),
+        ).rejects.toBeInstanceOf(DashboardUnreadableError)
+        // A global unreadable row never adopts the writer.
+        await expect(
+          store.save({ id: "global-future", name: "edited", layout: LAYOUT, userId: "bob" }),
+        ).rejects.toBeInstanceOf(DashboardOwnershipError)
+        await expect(
+          store.save({ id: "global-future", name: "edited", layout: LAYOUT }),
+        ).rejects.toBeInstanceOf(DashboardUnreadableError)
+        expect([await rowOf("future"), await rowOf("global-future")]).toEqual(before)
+      })
+
       it("is reported in listings where it is attributable, with the reason", async () => {
         await insertRaw("corrupt", "alice", { name: "no layout", userId: "alice" })
         await tick()

@@ -90,11 +90,14 @@ user when the server runs with `MCP_OAUTH`, otherwise by the MCP session id.
 
 Each module owns its slice end to end: its own schema, its own save tool, and
 its own section on the settings page. Nothing central knows what a slice
-contains — the record only transports it, and a save merges per module key, so
-one module can never overwrite another's settings. Reads are fail-soft
-throughout: an unreadable slice or an unreachable store yields defaults rather
-than an error, so a profile-store hiccup can't break a call that only needs the
-engine or Prometheus.
+contains — the record only transports it, and a save merges per module key
+over the raw stored record, one save per user at a time, so one module can
+never overwrite another's settings and fields a newer server version wrote
+survive. Reads are fail-soft throughout: an unreadable value or an unreachable
+store yields defaults rather than an error — the saved default engine included
+— so a profile-store hiccup can't break a call that only needs the engine or
+Prometheus. Navigating the cockpit never changes the default engine; only the
+settings page or `camunda7_engine` action `select` does.
 
 The settings page composes one section widget per module and assembles itself
 from the widgets the server actually bundles — every widget id ending in

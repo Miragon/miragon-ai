@@ -1,5 +1,5 @@
 import { PROFILE_SCHEMA_VERSION } from "./profile-constants.js"
-import { profileRecordSchema, type ProfileRecord } from "./profile-record.js"
+import { projectProfileRecord, type ProfileRecord } from "./profile-record.js"
 
 const asObject = (value: unknown): Record<string, unknown> =>
   typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {}
@@ -33,7 +33,7 @@ function moveFlatFieldsIntoSlice(
  * `PROFILE_SCHEMA_VERSION` bump adds exactly one entry here, so a record
  * written by any older build upgrades on read instead of being reset to
  * defaults. Migrations transform the raw JSON — the migrated result still goes
- * through `profileRecordSchema.safeParse`, which is the actual gate.
+ * through the per-field `projectProfileRecord`, which is the actual gate.
  *
  * Exported ONLY for the completeness test in `profile-migrations.test.ts`,
  * which fails the moment a `PROFILE_SCHEMA_VERSION` bump forgets its entry —
@@ -67,44 +67,67 @@ export const PROFILE_MIGRATIONS: Record<number, (raw: Record<string, unknown>) =
   },
 }
 
+/** A stored document after {@link migrateStoredProfile}, plus the version it is now at. */
+export interface MigratedProfileDocument {
+  /** A shallow copy of the stored JSON, upgraded as far as the migrations reach. */
+  doc: Record<string, unknown>
+  version: number
+}
+
 /**
- * Parse a persisted profile record of ANY supported schema version into the
- * current shape — the single read gate shared by the filesystem and postgres
- * stores (mirroring the toolkit's tolerant `parseDashboardRecord`):
+ * Upgrade a persisted profile document of ANY schema version as far as this
+ * build can — the RAW half of the read gate, shared by the read path
+ * ({@link parseStoredProfile}) and the save path (`mergeStoredProfile`):
  *
  *   - older versions upgrade through {@link PROFILE_MIGRATIONS} step by step;
- *   - a NEWER version (written by a newer build) reads as `undefined` rather
- *     than being mangled — the next save of THIS build overwrites it, which is
- *     the store's documented last-write-wins behavior;
- *   - anything unparseable reads as `undefined` (fail-soft, like a corrupt file).
+ *   - a NEWER version (written by a newer build — rolling deploy, rollback)
+ *     passes through untouched: an older build never reshapes it;
+ *   - a missing migration (a build bug the completeness test catches) stops at
+ *     the stuck version, so a fixed build can still upgrade the document.
  *
- * A missing/invalid `schemaVersion` is treated as version 1 — every record
- * ever written carried one, so this only softens hand-edited files.
+ * Unknown keys always survive. A missing/out-of-range `schemaVersion` is
+ * treated as version 1 — every record ever written carried one, so this only
+ * softens hand-edited files. `undefined` only for JSON that is no object.
  */
-export function parseStoredProfile(json: unknown): ProfileRecord | undefined {
-  if (typeof json !== "object" || json === null) return undefined
-  const raw: Record<string, unknown> = { ...(json as Record<string, unknown>) }
+export function migrateStoredProfile(json: unknown): MigratedProfileDocument | undefined {
+  if (typeof json !== "object" || json === null || Array.isArray(json)) return undefined
+  const doc: Record<string, unknown> = { ...(json as Record<string, unknown>) }
 
-  const rawVersion = raw.schemaVersion
-  let version = typeof rawVersion === "number" && Number.isInteger(rawVersion) ? rawVersion : 1
-  if (version > PROFILE_SCHEMA_VERSION || version < 1) return undefined
+  const rawVersion = doc.schemaVersion
+  let version =
+    typeof rawVersion === "number" && Number.isInteger(rawVersion) && rawVersion >= 1
+      ? rawVersion
+      : 1
 
   while (version < PROFILE_SCHEMA_VERSION) {
     const migrate = PROFILE_MIGRATIONS[version]
     if (!migrate) {
-      // A bump without its migration entry is a build bug the completeness
-      // test catches; if one ever ships anyway, reset loudly instead of
-      // letting the schema strip the un-migrated fields in silence.
       console.error(
-        `[widget-shell] No profile migration from schema v${version} — treating the stored record as unreadable`,
+        `[widget-shell] No profile migration from schema v${version} — reading the stored record best-effort and keeping it un-migrated`,
       )
-      return undefined
+      break
     }
-    migrate(raw)
+    migrate(doc)
     version += 1
-    raw.schemaVersion = version
+    doc.schemaVersion = version
   }
+  return { doc, version }
+}
 
-  const parsed = profileRecordSchema.safeParse(raw)
-  return parsed.success ? parsed.data : undefined
+/**
+ * Parse a persisted profile document into the current typed record — the
+ * read gate shared by every store (mirroring the toolkit's tolerant
+ * `parseDashboardRecord`): {@link migrateStoredProfile}, then the per-FIELD
+ * projection `projectProfileRecord`, so one value this build cannot validate
+ * degrades only that field and a newer build's document reads best-effort
+ * instead of as "no record" (which the next save would have written defaults
+ * over). Pass the store `key` as the record id; without one the stored `id`
+ * is used, and a document carrying none reads as `undefined`, like JSON that
+ * is no object.
+ */
+export function parseStoredProfile(json: unknown, key?: string): ProfileRecord | undefined {
+  const migrated = migrateStoredProfile(json)
+  if (!migrated) return undefined
+  const id = key ?? (typeof migrated.doc.id === "string" ? migrated.doc.id : undefined)
+  return id === undefined ? undefined : projectProfileRecord(migrated.doc, id)
 }

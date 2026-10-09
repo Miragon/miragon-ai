@@ -1,8 +1,7 @@
 import type postgres from "postgres"
 import { ANONYMOUS_PROFILE_KEY } from "./profile.js"
 import { parseStoredProfile } from "./profile-migrations.js"
-import type { ProfileRecord } from "./profile-record.js"
-import { mergeProfile, type ProfileStore } from "./profile-store.js"
+import { mergeStoredProfile, type ProfileStore } from "./profile-store.js"
 
 /**
  * DDL owned by this store, executed by the composition root's migration runner
@@ -35,28 +34,24 @@ export const PROFILE_STORE_MIGRATIONS: ReadonlyArray<{
  * caller owns the `sql` client's lifecycle, so this package carries no runtime
  * dependency on the driver.
  *
- * Reads keep the filesystem store's fail-soft semantics: a row whose JSONB
- * fails `profileRecordSchema` is treated as "no record" and the next save
- * overwrites it. Saves run the shared `mergeProfile` inside a
- * `SELECT … FOR UPDATE` transaction, so concurrent partial updates of the same
- * key serialize instead of losing fields — safe for multiple server instances
- * sharing one database.
+ * Reads share the filesystem store's per-field fail-soft gate
+ * (`parseStoredProfile`): a value this build cannot validate degrades only its
+ * own field, and a newer build's row reads best-effort. Saves run the shared
+ * `mergeStoredProfile` over the RAW JSONB inside a per-key locked
+ * transaction, so concurrent partial updates of the same key serialize
+ * instead of losing fields, and nothing a newer replica wrote is dropped —
+ * safe for multiple server instances (and mixed versions) sharing one
+ * database.
  */
 export function createPostgresProfileStore(options: { sql: postgres.Sql }): ProfileStore {
   const { sql } = options
-
-  // Version upgrades + schema validation are shared with the filesystem store
-  // via `parseStoredProfile` — older rows migrate on read, newer/corrupt rows
-  // read as absent.
-  const parseRow = (row: { profile: unknown } | undefined): ProfileRecord | undefined =>
-    row ? parseStoredProfile(row.profile) : undefined
 
   return {
     async get(key) {
       const rows = await sql<{ profile: unknown }[]>`
         SELECT profile FROM user_profiles WHERE key = ${key}
       `
-      return parseRow(rows[0])
+      return parseStoredProfile(rows[0]?.profile, key)
     },
     async save(key, input, opts) {
       return await sql.begin(async (tx) => {
@@ -70,7 +65,13 @@ export function createPostgresProfileStore(options: { sql: postgres.Sql }): Prof
         const rows = await tx<{ profile: unknown }[]>`
           SELECT profile FROM user_profiles WHERE key = ${key} FOR UPDATE
         `
-        const record = mergeProfile(key, parseRow(rows[0]), input, new Date().toISOString(), opts)
+        const { document, record } = mergeStoredProfile(
+          key,
+          rows[0]?.profile,
+          input,
+          new Date().toISOString(),
+          opts,
+        )
         // sql.json, not JSON.stringify: postgres.js serializes parameters by
         // the server-described type, and the jsonb serializer stringifies
         // itself — a pre-stringified value gets double-encoded into a jsonb
@@ -80,7 +81,7 @@ export function createPostgresProfileStore(options: { sql: postgres.Sql }): Prof
           VALUES (
             ${key},
             ${record.userId ?? null},
-            ${tx.json(record as unknown as postgres.JSONValue)},
+            ${tx.json(document as postgres.JSONValue)},
             ${record.updatedAt}
           )
           ON CONFLICT (key) DO UPDATE SET

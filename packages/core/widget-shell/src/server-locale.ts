@@ -1,5 +1,6 @@
 import { resolveProfileKey } from "./profile.js"
 import type { ProfileSource } from "./profile.js"
+import { readProfileAdvisory } from "./profile-advisory.js"
 
 /** A locale-bound translate for server summaries: `t(key, params?) => string`. */
 export type ServerT = (key: string, params?: Record<string, unknown>) => string
@@ -25,13 +26,7 @@ export async function resolveProfileLocale(
   ctx?: unknown,
 ): Promise<string> {
   if (!store) return "en"
-  const key = resolveProfileKey(ctx)
-  if (!key) return "en"
-  try {
-    return (await store.get(key))?.language ?? "en"
-  } catch {
-    return "en"
-  }
+  return (await readProfileAdvisory(store, resolveProfileKey(ctx)))?.language ?? "en"
 }
 
 /**

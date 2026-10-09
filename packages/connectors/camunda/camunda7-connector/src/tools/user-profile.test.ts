@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
 import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import { registerUserProfileTools } from "./user-profile.js"
-import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
+import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { CAMUNDA7_TOOLSETS, resolveCamunda7Toolset, type Camunda7Toolset } from "../lib/toolsets.js"
 import {
@@ -32,10 +32,11 @@ type Handler = (
 function register(
   toolset: Camunda7Toolset = "operations",
   registry = { engines: [] } as unknown as EngineRegistry,
+  store: ProfileStore = createInMemoryProfileStore(),
 ) {
   const tool = vi.fn()
   const server = { tool } as unknown as MCPServer
-  registerUserProfileTools(server, createInMemoryProfileStore(), registry, toolset)
+  registerUserProfileTools(server, store, registry, toolset)
   const names = tool.mock.calls.map((c) => (c[0] as { name: string }).name)
   const definitionFor = (name: string): Record<string, unknown> => {
     const call = tool.mock.calls.find((c) => (c[0] as { name: string }).name === name)
@@ -170,6 +171,33 @@ describe("anonymous round-trip", () => {
     const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
     const profile = result.structuredContent?.profile as { language: string } | undefined
     expect(profile?.language).toBe("de")
+  })
+})
+
+/**
+ * The settings page sends "" for the "(auto)" default engine and the "(none)"
+ * default dashboard. That must CLEAR the stored value: a stale default keeps
+ * routing every engine-less tool call (writes included) to the old engine.
+ */
+describe("clearing an optional id from the settings page", () => {
+  it('"" clears the saved default engine and default dashboard, other fields stay', async () => {
+    const store = createInMemoryProfileStore()
+    const { handlerFor } = register("operations", undefined, store)
+    const save = handlerFor(CAMUNDA7_SAVE_USER_PROFILE)
+    await save({ defaultEngineId: "prod-a", defaultDashboardId: "d1", pinnedDashboardIds: ["d1"] })
+
+    const cleared = await save({ defaultEngineId: "", defaultDashboardId: "" })
+    expect(cleared.structuredContent?.defaultEngineId).toBeUndefined()
+    expect(cleared.structuredContent?.defaultDashboardId).toBeUndefined()
+    expect(cleared.structuredContent?.pinnedDashboardIds).toEqual(["d1"])
+
+    const view = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
+    const profile = view.structuredContent?.profile as Record<string, unknown>
+    expect(profile.defaultEngineId).toBeUndefined()
+    expect(profile.defaultDashboardId).toBeUndefined()
+    expect((await store.get("anonymous"))?.modules?.camunda7).toEqual({
+      pinnedDashboardIds: ["d1"],
+    })
   })
 })
 

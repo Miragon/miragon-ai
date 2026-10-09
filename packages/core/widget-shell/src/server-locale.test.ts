@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { createLocalizeFor, resolveProfileLocale } from "./server-locale.js"
 import { runWithMcpRequestInfo } from "./request-context.js"
 import type { ProfileSource } from "./profile.js"
@@ -22,8 +22,11 @@ describe("resolveProfileLocale", () => {
   })
 
   it("degrades to English on a store OUTAGE instead of failing the tool", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     const broken: ProfileSource = { get: () => Promise.reject(new Error("pg down")) }
     expect(await resolveProfileLocale(broken)).toBe("en")
+    expect(warn).toHaveBeenCalledOnce()
+    warn.mockRestore()
   })
 })
 
