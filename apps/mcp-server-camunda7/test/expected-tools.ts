@@ -17,7 +17,10 @@
  *   under OAuth — the full surface. Never implied by a default.
  *
  * Regenerate by running the E2E tests and copying the sorted names from the
- * assertion diffs.
+ * assertion diffs. These lists pin WHICH tools a toolset exposes; the full
+ * wire payload of each (descriptions, annotations, visibility, schemas) is
+ * pinned per toolset by tools-list.golden.test.ts → `__golden__/tools-*.json`
+ * — a tool change updates both (`GOLDEN_UPDATE=1`, see golden.ts).
  */
 export const EXPECTED_TOOLS_READ_ONLY: readonly string[] = [
   "analytics_analyze_process_performance",
