@@ -7,7 +7,7 @@ export const HEALTHY_ENGINE = "stub"
 /** Answers every engine request with a 503 — turns any tool into a real `isError` result. */
 export const BROKEN_ENGINE = "down"
 /**
- * How long the stub engine takes to answer a search (`nameLike`) — long
- * enough for a scenario to look at the view while the search is in flight.
+ * Env var carrying the stub engine's origin to the workers (set by
+ * global-setup.ts) — its `/__control/*` routes let a scenario hold an answer.
  */
-export const SEARCH_DELAY_MS = 1_500
+export const ENGINE_CONTROL_ENV = "HOST_SIM_ENGINE_URL"

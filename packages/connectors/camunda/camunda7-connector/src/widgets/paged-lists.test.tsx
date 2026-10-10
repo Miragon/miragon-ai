@@ -3,11 +3,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
-import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
+import { WidgetFixtureHost, type HostActionLog } from "@miragon/mcp-toolkit-ui/app"
 import {
   CAMUNDA7_CLUSTER_DETAIL_DATA,
   CAMUNDA7_PROCESS_INSTANCES_DATA,
   CAMUNDA7_PROCESS_LIST_DATA,
+  CAMUNDA7_WIDGET_ACTIONS_DATA,
 } from "../tool-names.js"
 import type {
   ClusterDetailData,
@@ -18,6 +19,7 @@ import type {
 import { ClusterDetailWidget } from "./cluster-detail.js"
 import { ProcessInstancesWidget } from "./process-instances/list.js"
 import { ProcessListWidget } from "./process-list.js"
+import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
 
 /**
  * The three searchable paged lists against the REAL toolkit query stack
@@ -262,5 +264,132 @@ describe("a page-0 failure over rows on screen is not a load-more failure (N130)
     await screen.findByText("Payment Process")
     expect(screen.queryByRole("alert")).toBeNull()
     expect(calls.at(-1)).toMatchObject({ firstResult: 2 })
+  })
+})
+
+/**
+ * While a new chip or search has not answered (in flight, or failed) the
+ * instance list shows its PREVIOUS result — so its header count, the filters
+ * that count covers, the triage hand-off and the model context must all be
+ * that result's: never the new chip next to the old total (#341 review).
+ */
+describe("the instance list states what is ON SCREEN while a filter is pending or failed", () => {
+  const ALL = { ...instances(["pi-1", "pi-2"], 120), processDefinitionKey: null }
+
+  /** A feed whose `suspended` answers the test settles by hand; the rest answer at once. */
+  function heldSuspendedFeed() {
+    const held: Array<{ args: Record<string, unknown>; settle: Promise<ProcessInstancesData> }> = []
+    const control: Array<{
+      resolve: (value: ProcessInstancesData) => void
+      reject: (err: Error) => void
+    }> = []
+    const feed = (args: Record<string, unknown>) => {
+      if (!args.suspended) return Promise.resolve(ALL)
+      const settle = new Promise<ProcessInstancesData>((resolve, reject) => {
+        control.push({ resolve, reject })
+      })
+      held.push({ args, settle })
+      return settle
+    }
+    return { held, control, feed }
+  }
+
+  /** The engine-wide cockpit list, settled on the unfiltered 120. */
+  async function engineWideList() {
+    const { held, control, feed } = heldSuspendedFeed()
+    const modelContexts: string[] = []
+    const actions: HostActionLog[] = []
+    const Widget = () => <ProcessInstancesWidget data={null} engine="prod-a" />
+    render(
+      <WidgetFixtureHost
+        widget={Widget}
+        data={{}}
+        tools={{
+          [CAMUNDA7_PROCESS_INSTANCES_DATA]: feed,
+          [CAMUNDA7_WIDGET_ACTIONS_DATA]: await widgetActionsFeedFor("read-only"),
+        }}
+        onModelContext={(text) => modelContexts.push(text)}
+        onHostAction={(action) => actions.push(action)}
+      />,
+    )
+    await screen.findByText("BK-pi-1")
+    await waitFor(() => expect(modelContexts.at(-1)).toContain("matchingInstances=120"))
+    /** The prompt the header's triage button posts right now. */
+    const triage = () => {
+      fireEvent.click(screen.getByRole("button", { name: /Analyze/ }))
+      const prompts = actions.flatMap((a) => (a.type === "sendFollowUpMessage" ? [a.prompt] : []))
+      return prompts.at(-1)!
+    }
+    return { held, control, modelContexts, triage }
+  }
+
+  it("a pending chip: the previous count with the previous filters, said to be previous", async () => {
+    const { held, control, modelContexts, triage } = await engineWideList()
+
+    fireEvent.click(screen.getByRole("button", { name: "Suspended" }))
+    await waitFor(() => expect(held).toHaveLength(1))
+    expect(held[0].args).toMatchObject({ suspended: true })
+
+    // The rows on screen are the unfiltered 120 — so is everything said about them.
+    await waitFor(() => expect(modelContexts.at(-1)).toContain("PREVIOUS result"))
+    const context = modelContexts.at(-1)!
+    expect(context).toContain("On screen: loaded=2, matchingInstances=120\n")
+    expect(context).not.toContain("suspended=true")
+    expect(screen.getByText("120 running")).toBeTruthy()
+    const prompt = triage()
+    expect(prompt).toContain("On screen: matchingInstances=120\n")
+    expect(prompt).not.toContain("suspended=true")
+
+    // The filtered page lands: count, filters and context move together.
+    control[0].resolve({
+      ...instances(["pi-9"], 7),
+      processDefinitionKey: null,
+      filters: { suspended: true },
+    })
+    await waitFor(() => expect(screen.queryByText("BK-pi-1")).toBeNull())
+    await waitFor(() =>
+      expect(modelContexts.at(-1)).toContain(
+        "On screen: loaded=1, matchingInstances=7, suspended=true\n",
+      ),
+    )
+    expect(modelContexts.at(-1)).not.toContain("PREVIOUS result")
+    expect(screen.getByText("7 running")).toBeTruthy()
+    expect(triage()).toContain("On screen: matchingInstances=7, suspended=true\n")
+  })
+
+  it("a failed chip keeps saying so — to the operator and to the model", async () => {
+    const { held, control, modelContexts, triage } = await engineWideList()
+
+    fireEvent.click(screen.getByRole("button", { name: "Suspended" }))
+    await waitFor(() => expect(held).toHaveLength(1))
+    control[0].reject(new Error("engine timeout"))
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.textContent).toContain("showing the previous result: engine timeout")
+    const context = modelContexts.at(-1)!
+    expect(context).toContain("PREVIOUS result")
+    expect(context).toContain("matchingInstances=120")
+    expect(context).not.toContain("suspended=true")
+    expect(triage()).not.toContain("suspended=true")
+  })
+
+  it("a pending search over an empty list does not claim 'no match' before it answered", async () => {
+    const EMPTY = { ...instances([], 0), processDefinitionKey: null }
+    const held = deferredFeed<ProcessInstancesData>()
+    const feed = (args: Record<string, unknown>) =>
+      args.businessKeyLike ? held.handler(args) : Promise.resolve(EMPTY)
+    const Widget = () => <ProcessInstancesWidget data={null} engine="prod-a" />
+    host(Widget, { [CAMUNDA7_PROCESS_INSTANCES_DATA]: feed })
+    await screen.findByText("No running instances for this process definition.")
+
+    fireEvent.change(screen.getByPlaceholderText("Search by business key…"), {
+      target: { value: "ORD" },
+    })
+    await waitFor(() => expect(held.calls).toHaveLength(1), { timeout: 2_000 })
+    expect(screen.getByText("No running instances for this process definition.")).toBeTruthy()
+    expect(screen.queryByText("No instances match the current filter.")).toBeNull()
+
+    held.calls[0].resolve({ ...EMPTY, filters: { businessKeyLike: "ORD" } })
+    await screen.findByText("No instances match the current filter.")
   })
 })

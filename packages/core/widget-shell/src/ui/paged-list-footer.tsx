@@ -32,7 +32,8 @@ function RetryAlert({
  * screen belongs to the caller's loading guard; with rows on screen (a failed
  * search or refetch keeps the previous result) it lands here as its own line,
  * whose retry re-runs page 0 — never as "Failed to load more", whose retry
- * fetches the next offset and could not clear it.
+ * fetches the next offset and could not clear it. Wrap the rows in
+ * {@link PagedRows} so the stale state is visible above the footer too.
  */
 export function PagedListFooter<TItem, TData>({
   paged,
@@ -59,14 +60,18 @@ export function PagedListFooter<TItem, TData>({
   const staleError = paged.firstPage ? paged.error : null
   return (
     <>
-      {/* Screen-reader progress announcement: the visual "Showing X of Y"
-          lives inside ListFooter without a live region, so a keyboard user
-          gets no feedback when Load more appends rows (the button is even
-          disabled under their focus while loading) — or while a search
-          updates the rows that stay on screen meanwhile. */}
-      <span role="status" className="sr-only">
-        {paged.refreshing ? refreshingText : `${paged.items.length} / ${paged.total} ${noun ?? ""}`}
-      </span>
+      {/* ONE live region, two jobs. While a page 0 is in flight over the rows
+          on screen (a search, a filter, a refetch) it is a VISIBLE "Updating…"
+          line — the sighted operator's cue that the rows are not the answer
+          yet (PagedRows dims them). Otherwise it is screen-reader only: the
+          visual "Showing X of Y" lives inside ListFooter without a live
+          region, so a keyboard user would get no feedback when Load more
+          appends rows (the button is even disabled under their focus). */}
+      <div role="status" className={paged.refreshing ? "text-muted-foreground text-xs" : "sr-only"}>
+        {paged.refreshing
+          ? refreshingText
+          : !paged.stale && `${paged.items.length} / ${paged.total} ${noun ?? ""}`}
+      </div>
       {staleError && (
         <RetryAlert
           text={refreshErrorText(staleError.message)}
@@ -81,14 +86,19 @@ export function PagedListFooter<TItem, TData>({
           onRetry={paged.loadMore}
         />
       )}
-      <ListFooter
-        shown={paged.items.length}
-        total={paged.total}
-        hasMore={paged.hasMore}
-        loadingMore={paged.loadingMore}
-        onLoadMore={paged.loadMore}
-        noun={noun}
-      />
+      {/* "Showing X of Y" counts the current filter's rows: while the previous
+          result stands in (stale), its count beside the new search would read
+          as the search's answer. */}
+      {!paged.stale && (
+        <ListFooter
+          shown={paged.items.length}
+          total={paged.total}
+          hasMore={paged.hasMore}
+          loadingMore={paged.loadingMore}
+          onLoadMore={paged.loadMore}
+          noun={noun}
+        />
+      )}
     </>
   )
 }

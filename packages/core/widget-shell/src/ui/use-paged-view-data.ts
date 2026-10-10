@@ -28,11 +28,25 @@ export interface PagedViewData<TItem, TData = unknown> {
   /**
    * The page-0 payload (handed-in or self-fetched) for reading list metadata.
    * While a NEW page 0 is in flight (or has failed), the previous result of
-   * the same list stays here — never null mid-search.
+   * the same list stays here — never null mid-search; {@link stale} says so.
    */
   firstPage: TData | null
-  /** Server-reported total for the current filter (drives "X of Y" + hasMore). */
+  /**
+   * Server-reported total of {@link firstPage} (drives "X of Y" + hasMore) —
+   * while {@link stale}, the PREVIOUS result's, not the current filter's.
+   */
   total: number
+  /**
+   * {@link firstPage} — and with it `items` and `total` — is the PREVIOUS
+   * result of this list, not the current args' page 0: a changed search or
+   * filter is still in flight, or has failed. Whatever the list says about
+   * its rows (a header count, the filters it covers, a model context, an
+   * empty-state text) must then describe that previous result — read it from
+   * the payload on screen, never from the request that has not answered.
+   * (A same-filter refetch is not stale: its last good page is still the
+   * current filter's.)
+   */
+  stale: boolean
   hasMore: boolean
   loadMore: () => void
   /** First page is still loading (self-fetch, nothing to show yet). */
@@ -113,9 +127,11 @@ export function usePagedViewData<TItem, TData>(opts: {
     { seed: initialData, enabled: ready },
   )
   // `fetched` is THIS filter's page 0 (the seed until the feed answered);
-  // `first` keeps the previous one on screen while it is in flight or has failed.
+  // `first` keeps the previous one on screen while it is in flight or has
+  // failed (`stale`).
   const fetched = page0.data
   const first = useKeptPage(fetched, JSON.stringify(key))
+  const stale = !fetched && !!first
 
   const [pages, setPages] = useState<PagedState<TItem>>({
     gen: 0,
@@ -144,7 +160,7 @@ export function usePagedViewData<TItem, TData>(opts: {
   const items = useMemo(() => [...baseItems, ...pages.items], [baseItems, pages.items])
   const total = first ? selectTotal(first) : 0
   // The previous result belongs to another filter: no next page of it.
-  const hasMore = !!fetched && !pages.exhausted && items.length < total
+  const hasMore = !stale && !pages.exhausted && items.length < total
 
   const gen = pages.gen
   const loadMore = useCallback(() => {
@@ -179,6 +195,7 @@ export function usePagedViewData<TItem, TData>(opts: {
     items,
     firstPage: first,
     total,
+    stale,
     hasMore,
     loadMore,
     loading: !first && ready && !page0.isError,

@@ -1,7 +1,7 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
 import { createApp } from "../src/app.js"
-import { BROKEN_ENGINE, HEALTHY_ENGINE } from "./engines.js"
+import { BROKEN_ENGINE, ENGINE_CONTROL_ENV, HEALTHY_ENGINE } from "./engines.js"
 import { startHostBackend, type HostBackend } from "./host-backend.js"
 import { startStubEngine } from "./stub-engine.js"
 
@@ -47,8 +47,9 @@ async function deploy(env: Record<string, string>): Promise<Deployment> {
  * `build:ui`), against a stub engine, plus the host's server side in front of
  * it. Everything listens on ephemeral loopback ports — parallel runs in other
  * checkouts can never collide or be reused by accident. The workers find the
- * host page via `HOST_SIM_URL` (inherited from this process) — and the
- * write-capable deployment via `HOST_SIM_OPERATIONS_URL`.
+ * host page via `HOST_SIM_URL`, the write-capable deployment via
+ * `HOST_SIM_OPERATIONS_URL` and the stub engine's scenario control via
+ * `HOST_SIM_ENGINE_URL` (all inherited from this process).
  */
 export default async function globalSetup(): Promise<() => Promise<void>> {
   const engine = await startStubEngine()
@@ -68,6 +69,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const operations = await deploy({ ...engines, MCP_ACTIVE_MODULES: "camunda7:operations" })
   process.env.HOST_SIM_URL = readOnly.host.url
   process.env.HOST_SIM_OPERATIONS_URL = operations.host.url
+  process.env[ENGINE_CONTROL_ENV] = engine.controlUrl
 
   return async () => {
     await readOnly.close()

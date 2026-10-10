@@ -5,6 +5,7 @@ import {
   DrillButton,
   FilterBar,
   ListTable,
+  PagedRows,
   QueryFallback,
   StatusBadge,
   TONE_DOT,
@@ -24,12 +25,7 @@ import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { InstancesHeader } from "./list-header.js"
 import { useHandOff } from "../lib/hand-off.js"
-import {
-  describeInstancesView,
-  listFiltersOf,
-  rootCauseHandOff,
-  type InstanceChip,
-} from "./hand-offs.js"
+import { describeInstancesView, rootCauseHandOff, type InstanceChip } from "./hand-offs.js"
 import { useT } from "../../messages/use-t.js"
 
 const PAGE_SIZE = 50
@@ -264,7 +260,7 @@ export function ProcessInstancesView({
     }),
   )
 
-  const { paged, search, setSearch, debouncedSearch, interacted } = usePagedListView<
+  const { paged, search, setSearch, interacted } = usePagedListView<
     ProcessInstanceRow,
     ProcessInstancesData
   >({
@@ -295,7 +291,10 @@ export function ProcessInstancesView({
 
   const scopedKey = data.processDefinitionKey
   const title = data.processDefinitionName ?? scopedKey ?? t("processInstances.allTitle")
-  const listFilters = listFiltersOf(filterArgs, debouncedSearch)
+  // The filters `paged.total` covers: the echo of the page ON SCREEN, never
+  // the request — while a new chip or search is in flight or has failed, the
+  // rows, the total and these filters are all the previous result's.
+  const listFilters = data.filters
 
   const chips: FilterChip[] = [
     { id: CHIP_ALL, label: t("processInstances.chipAll"), active: activeChip === CHIP_ALL },
@@ -324,6 +323,7 @@ export function ProcessInstancesView({
             processName: data.processDefinitionName ?? null,
             engine: feedEngine,
             filters: listFilters,
+            previousResult: paged.stale,
           }),
         )}
       >
@@ -346,35 +346,37 @@ export function ProcessInstancesView({
         onChipToggle={(id) => setActiveChip(id === activeChip ? CHIP_ALL : (id as InstanceChip))}
       />
 
-      {paged.items.length === 0 ? (
-        <TableEmptyState>
-          {interacted ? t("processInstances.noMatch") : t("processInstances.noRunningInstances")}
-        </TableEmptyState>
-      ) : (
-        <ListTable
-          ariaLabel={t("processInstances.tableAriaLabel", { name: title })}
-          columns={[
-            { label: t("processInstances.colBusinessKey") },
-            ...(scopedKey ? [] : [{ label: t("processInstances.colProcess") }]),
-            { label: t("processInstances.colVersion") },
-            { label: t("processInstances.colState") },
-            { label: t("processInstances.colIncident"), align: "right" as const },
-            { plain: true },
-          ]}
-        >
-          {paged.items.map((row) => (
-            <InstanceRow
-              key={row.id}
-              row={row}
-              processDefinitionKey={scopedKey}
-              engine={feedEngine}
-              showProcessColumn={!scopedKey}
-              onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
-              onOpenProcess={(key) => go({ type: "process-detail", processDefinitionKey: key })}
-            />
-          ))}
-        </ListTable>
-      )}
+      <PagedRows paged={paged}>
+        {paged.items.length === 0 ? (
+          <TableEmptyState>
+            {interacted ? t("processInstances.noMatch") : t("processInstances.noRunningInstances")}
+          </TableEmptyState>
+        ) : (
+          <ListTable
+            ariaLabel={t("processInstances.tableAriaLabel", { name: title })}
+            columns={[
+              { label: t("processInstances.colBusinessKey") },
+              ...(scopedKey ? [] : [{ label: t("processInstances.colProcess") }]),
+              { label: t("processInstances.colVersion") },
+              { label: t("processInstances.colState") },
+              { label: t("processInstances.colIncident"), align: "right" as const },
+              { plain: true },
+            ]}
+          >
+            {paged.items.map((row) => (
+              <InstanceRow
+                key={row.id}
+                row={row}
+                processDefinitionKey={scopedKey}
+                engine={feedEngine}
+                showProcessColumn={!scopedKey}
+                onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
+                onOpenProcess={(key) => go({ type: "process-detail", processDefinitionKey: key })}
+              />
+            ))}
+          </ListTable>
+        )}
+      </PagedRows>
       {/* Also under an empty result: a failed search keeps the previous
           (empty) rows on screen, and its error + retry live in the footer. */}
       <CockpitListFooter paged={paged} noun={t("processInstances.footerNoun")} />

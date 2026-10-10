@@ -203,14 +203,18 @@ never re-inline these primitives:
    `/count` endpoint) so the footer is honest.
 2. Widget: `usePagedListView` (owns search state, 300 ms debounce, the server-side
    `searchArg`, and the drop-initialData-on-interaction rule; chips go into
-   `filtersActive` + the `args`) → `FilterBar` → `ListTable` (frame + `Th` header row;
+   `filtersActive` + the `args`) → `FilterBar` → `PagedRows` (dims the rows while they
+   are the previous result) around `ListTable` (frame + `Th` header row;
    rows stay hand-composed `<tr>` + `Td`) or a `RowCard` stack → `TableEmptyState`
    (distinguish "no match" when `interacted`) → `CockpitListFooter`
    (`src/widgets/list-footer.tsx` — the stale page-0 error and the load-more error,
    each with its own retry, + "Showing X of Y" + Load more; deliberately not infinite
    scroll; rendered under an empty result too). Guard the whole view on
    `!paged.firstPage` only: a search keeps the previous rows (and the search box)
-   mounted while its page 0 is in flight.
+   mounted while its page 0 is in flight. While it does, `paged.stale` is true and
+   `firstPage`/`total` are the PREVIOUS result's — a header count, the filters it
+   covers and the model context read the payload's echo (`data.filters`), never the
+   request's args (reference: the instance list's `listFilters`).
 
 The registration chain has **four links — miss one and the widget is silently absent
 somewhere**:

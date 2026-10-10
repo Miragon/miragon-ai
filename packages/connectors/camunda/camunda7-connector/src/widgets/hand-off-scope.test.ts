@@ -3,7 +3,7 @@ import type { IncidentDetailData, JobPanelData } from "../view-models.js"
 import { diagnoseIncidentHandOff } from "./incident-detail/header.js"
 import { describeIncident } from "./incident-detail.js"
 import { describeJobPanel, triageJobsHandOff } from "./job-panel.js"
-import { describeInstancesView, listFiltersOf } from "./process-instances/hand-offs.js"
+import { describeInstancesView } from "./process-instances/hand-offs.js"
 import { triageInstancesHandOff } from "./process-instances/list-header.js"
 import { scopingDefinitionKey } from "./lib/hand-off.js"
 import { handOffFor } from "./lib/hand-off.test-support.js"
@@ -119,12 +119,6 @@ describe("the job panel's hand-offs carry the echoed scope of its counts", () =>
 })
 
 describe("the instances list states its count as the filtered set's", () => {
-  it("folds the operator's search over a handed-in prefilter, as the feed does", () => {
-    const args = { active: false, withIncidents: true, businessKeyLike: "ORD-%" }
-    expect(listFiltersOf(args, "")).toEqual(args)
-    expect(listFiltersOf(args, "INV-%")).toEqual({ ...args, businessKeyLike: "INV-%" })
-  })
-
   it("the triage names the filters its matching count covers", async () => {
     const h = await handOffFor("read-only")
     const prompt = h.ask(
@@ -165,9 +159,28 @@ describe("the instances list states its count as the filtered set's", () => {
         processName: null,
         engine: "prod-a",
         filters: { active: false, businessKeyLike: "ORD" },
+        previousResult: false,
       }),
     )
     expect(context).toContain("On screen: loaded=12, matchingInstances=12, active=false\n")
     expect(context).toContain("businessKeyLike:\n```text\nORD\n```")
+    expect(context).not.toContain("PREVIOUS result")
+  })
+
+  it("says so when the count on screen is the previous result's", async () => {
+    const h = await handOffFor("operations")
+    const context = h.context(
+      describeInstancesView({
+        loadedCount: 50,
+        total: 120,
+        scopedKey: null,
+        processName: null,
+        engine: "prod-a",
+        filters: {},
+        previousResult: true,
+      }),
+    )
+    expect(context).toContain("the list still shows its PREVIOUS result")
+    expect(context).toContain("On screen: loaded=50, matchingInstances=120\n")
   })
 })

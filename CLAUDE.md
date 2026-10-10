@@ -160,8 +160,9 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total; a new page 0 keeps the
-   previous rows mounted until it lands) + `ListTable` (the table
-   frame; rows stay hand-composed `<tr>` + `Td`) + `PagedListFooter` (a page-0
+   previous rows mounted until it lands — `paged.stale`, so counts, filters and
+   model contexts read the payload ON SCREEN, never the request) + `ListTable` (the table
+   frame; rows stay hand-composed `<tr>` + `Td`) inside `PagedRows` (dims stale rows) + `PagedListFooter` (a page-0
    failure over rows on screen and a load-more failure, each with its own retry; in
    camunda7 via the i18n-bound `CockpitListFooter`, `src/widgets/list-footer.tsx`,
    rendered under an empty result too). Optimistic

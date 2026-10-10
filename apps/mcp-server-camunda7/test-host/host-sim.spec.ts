@@ -1,5 +1,5 @@
 import { expect, test, type FrameLocator, type Locator, type Page } from "@playwright/test"
-import { BROKEN_ENGINE, HEALTHY_ENGINE, SEARCH_DELAY_MS } from "./engines.js"
+import { BROKEN_ENGINE, ENGINE_CONTROL_ENV, HEALTHY_ENGINE } from "./engines.js"
 
 /**
  * Host-simulation gate for the built widget bundle (see test-host/README.md).
@@ -86,6 +86,19 @@ async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocat
   if (scenario.failTools) query.set("failTools", scenario.failTools.join(","))
   await page.goto(`${base}/?${query.toString()}`)
   return page.frameLocator("#app")
+}
+
+/**
+ * The stub engine's scenario control (stub-engine.ts): `hold` makes its
+ * answers to the search `term` wait, `release` sends them.
+ */
+async function engineControl(action: "hold" | "release", term: string): Promise<void> {
+  const base = process.env[ENGINE_CONTROL_ENV]
+  if (!base)
+    throw new Error(`${ENGINE_CONTROL_ENV} is unset — run via \`playwright test -c test-host\``)
+  const query = new URLSearchParams({ nameLike: term })
+  const res = await fetch(`${base}/__control/${action}?${query.toString()}`, { method: "POST" })
+  expect(res.ok, `stub engine ${action} "${term}"`).toBe(true)
 }
 
 async function hostLog(page: Page): Promise<HostLog> {
@@ -258,23 +271,38 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     await expectProcessList(app)
 
     const search = app.getByPlaceholder("Filter by name…")
-    await search.fill("invoice")
-
-    // While the search is in flight (the stub answers it SEARCH_DELAY_MS
-    // late) the list stays mounted with the previous rows, and the operator
-    // keeps typing into the same, still focused box (#341 N123).
-    const searched = async () =>
-      (await hostLog(page)).toolCalls.some(
-        (c) => c.name === "camunda7_process_list_data" && c.arguments.nameLike === "invoice",
-      )
-    await expect.poll(searched, { timeout: SEARCH_DELAY_MS }).toBe(true)
-    await expect(search).toBeFocused()
-    await expect(search).toHaveValue("invoice")
     const table = definitionsTable(app)
-    await expect(table.getByRole("row")).toHaveCount(4)
+    // The stub engine holds its answer to this search until the in-flight
+    // state has been looked at — no timing window to race.
+    await engineControl("hold", "invoice")
+    try {
+      await search.fill("invoice")
+
+      // While the search is in flight the list stays mounted with the
+      // previous rows, and the operator keeps typing into the same, still
+      // focused box (#341 N123) …
+      const searched = async () =>
+        (await hostLog(page)).toolCalls.some(
+          (c) => c.name === "camunda7_process_list_data" && c.arguments.nameLike === "invoice",
+        )
+      await expect.poll(searched, { timeout: 15_000 }).toBe(true)
+      await expect(search).toBeFocused()
+      await expect(search).toHaveValue("invoice")
+      await expect(table.getByRole("row")).toHaveCount(4)
+      // … and SHOWS that they are not its answer yet: the rows are dimmed and
+      // busy, "Updating…" is visible, and no "Showing 3 of 3" sits beside the
+      // new search.
+      await expect(app.locator("[data-stale]")).toHaveAttribute("aria-busy", "true")
+      await expect(app.getByText("Updating…")).toBeVisible()
+      await expect(app.getByText(/Showing \d+ of/)).toHaveCount(0)
+    } finally {
+      await engineControl("release", "invoice")
+    }
 
     await expect(table.getByRole("row")).toHaveCount(2)
     await expect(table.getByRole("row").nth(1)).toContainText("Invoice Receipt")
+    await expect(app.locator("[data-stale]")).toHaveCount(0)
+    await expect(app.getByText("Showing 1 of 1 definitions")).toBeVisible()
     const feedCalls = (await hostLog(page)).toolCalls.filter(
       (c) => c.name === "camunda7_process_list_data",
     )

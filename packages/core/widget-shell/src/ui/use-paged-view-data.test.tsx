@@ -74,6 +74,7 @@ describe("usePagedViewData", () => {
     expect(result.current.total).toBe(5)
     expect(result.current.hasMore).toBe(true)
     expect(result.current.loading).toBe(false)
+    expect(result.current.stale).toBe(false)
     // Never switched off: a write's invalidation refetches a standalone list.
     const opts = mocks.useToolQuery.mock.calls[0][3] as { enabled: boolean }
     expect(opts.enabled).toBe(true)
@@ -225,6 +226,7 @@ describe("usePagedViewData — page-0 fetch states", () => {
   it("keeps the previous result while a changed filter's page 0 is in flight", () => {
     const { result, rerender } = settledOnA()
     expect(result.current.firstPage).toBe(A)
+    expect(result.current.stale).toBe(false)
 
     mocks.useToolQuery.mockReturnValue({
       data: undefined,
@@ -237,6 +239,8 @@ describe("usePagedViewData — page-0 fetch states", () => {
     expect(result.current.firstPage).toBe(A)
     expect(result.current.items).toEqual(["a", "b"])
     expect(result.current.total).toBe(3)
+    // … and says so: the page and its total are the previous filter's.
+    expect(result.current.stale).toBe(true)
     expect(result.current.loading).toBe(false)
     expect(result.current.refreshing).toBe(true)
     expect(result.current.error).toBeNull()
@@ -252,6 +256,7 @@ describe("usePagedViewData — page-0 fetch states", () => {
     expect(result.current.firstPage).toBe(B)
     expect(result.current.items).toEqual(["x1"])
     expect(result.current.refreshing).toBe(false)
+    expect(result.current.stale).toBe(false)
   })
 
   it("keeps a handed-in page while the first filtered page 0 is in flight", () => {
@@ -265,6 +270,7 @@ describe("usePagedViewData — page-0 fetch states", () => {
     // Standalone: the search drops the handed-in page, the feed answers it.
     rerender({ initialData: null, args: { q: "x" } })
     expect(result.current.firstPage).toBe(A)
+    expect(result.current.stale).toBe(true)
     expect(result.current.loading).toBe(false)
   })
 
@@ -309,6 +315,7 @@ describe("usePagedViewData — page-0 fetch states", () => {
     expect(result.current.items).toEqual([])
     expect(result.current.loading).toBe(true)
     expect(result.current.refreshing).toBe(false)
+    expect(result.current.stale).toBe(false)
   })
 
   it("a failed filtered page 0 keeps the previous rows, reports a page-0 error and retries page 0", () => {
@@ -324,6 +331,7 @@ describe("usePagedViewData — page-0 fetch states", () => {
     rerender({ initialData: null, args: { q: "x" } })
 
     expect(result.current.firstPage).toBe(A)
+    expect(result.current.stale).toBe(true)
     expect(result.current.error?.message).toBe("engine down")
     expect(result.current.loadMoreError).toBeNull()
     act(() => result.current.retry())
@@ -345,6 +353,8 @@ describe("usePagedViewData — page-0 fetch states", () => {
     rerender({ initialData: null, args: {} })
 
     expect(result.current.items).toEqual(["a", "b"])
+    // The last good page is still THIS filter's: rows on screen, not stale.
+    expect(result.current.stale).toBe(false)
     expect(result.current.error?.message).toBe("timeout")
     expect(result.current.loadMoreError).toBeNull()
     act(() => result.current.retry())
@@ -360,6 +370,7 @@ describe("usePagedViewData — page-0 fetch states", () => {
     })
     const { result } = setup({ initialData: null, args: {} })
     expect(result.current.firstPage).toBeNull()
+    expect(result.current.stale).toBe(false)
     expect(result.current.loading).toBe(false)
     expect(result.current.error?.message).toBe("engine down")
   })
