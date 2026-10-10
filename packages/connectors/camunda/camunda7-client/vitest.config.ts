@@ -13,8 +13,10 @@ export default mergeConfig(
         // statements 46.02 / branches 34.17 / functions 47.31 / lines 46.14).
         // Raised 2026-10-09 with the engine contract under test (#328;
         // measured statements 54.1 / branches 47.7 / functions 61.71 / lines
-        // 53.16).
-        thresholds: { statements: 52, branches: 45, functions: 59, lines: 51 },
+        // 53.16). Raised 2026-10-10 with the engine-date read side under test
+        // (#335; measured statements 56.32 / branches 50.13 / functions 65.73
+        // / lines 55.12).
+        thresholds: { statements: 54, branches: 48, functions: 63, lines: 53 },
       },
     },
   }),

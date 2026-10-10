@@ -21,6 +21,7 @@ import { CockpitListFooter } from "./list-footer.js"
 import { useNav } from "./navigation.js"
 import { CAMUNDA7_CLUSTER_DETAIL_DATA } from "../tool-names.js"
 import { remediatePrompt } from "./remediation.js"
+import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { useT } from "../messages/use-t.js"
 
 /** Page size — mirrors the server default (`CLUSTER_DETAIL_ROWS`). */
@@ -33,8 +34,8 @@ const PAGE_SIZE = 50
 function describeCluster(data: ClusterDetailData): string {
   return (
     `The operator is inspecting ONE failure cluster on engine "${data.engineId}": activity ` +
-    `"${data.activityId}" failing as ${data.incidentType} — ${data.incidentCount} incidents ` +
-    `(${data.lastHourCount} in the last hour, ${data.last24hCount} in 24h), first seen ` +
+    `"${data.activityId}" failing as ${data.incidentType} — ${data.incidentCount ?? `at least ${data.scannedIncidentCount}`} incidents ` +
+    `(${data.lastHourCount ?? "unknown"} in the last hour, ${data.last24hCount ?? "unknown"} in 24h), first seen ` +
     `${data.firstSeen ?? "unknown"}, latest ${data.latestIncident ?? "unknown"}, across process ` +
     `definition(s) ${data.processDefinitionKeys.join(", ") || "unknown"}. Sample message: ` +
     `${data.representativeMessage ?? "(none)"}. The list shows the affected instances with their ` +
@@ -89,7 +90,7 @@ function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: 
           <StatusBadge tone="critical">{data.incidentType}</StatusBadge>
           <span className="ml-2">
             {t("clusterDetail.affectedAcross", {
-              count: data.incidentCount,
+              count: formatCountAtLeast(data.incidentCount, data.scannedIncidentCount),
               keys: data.processDefinitionKeys.join(", ") || t("clusterDetail.unknownKeys"),
             })}
           </span>
@@ -104,6 +105,7 @@ function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: 
               activityId: data.activityId,
               incidentType: data.incidentType,
               incidentCount: data.incidentCount,
+              scannedIncidentCount: data.scannedIncidentCount,
               last24hCount: data.last24hCount,
               processDefinitionKeys: data.processDefinitionKeys,
               representativeMessage: data.representativeMessage,
@@ -116,28 +118,44 @@ function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: 
   )
 }
 
-/** KPI row: affected total plus the last-hour / 24h freshness profile. */
+/**
+ * KPI row: affected total plus the last-hour / 24h freshness profile. A count
+ * a capped scan cannot vouch for renders as a lower bound ("≥2,000") or "—".
+ */
 function ClusterKpis({ data }: { data: ClusterDetailData }) {
   const t = useT()
   return (
     <KpiGrid
       boxed
       cells={[
-        { label: t("clusterDetail.kpiAffected"), value: data.incidentCount, tone: "critical" },
+        {
+          label: t("clusterDetail.kpiAffected"),
+          value: formatCountAtLeast(data.incidentCount, data.scannedIncidentCount),
+          tone: "critical",
+        },
         {
           label: t("clusterDetail.kpiNewLastHour"),
-          value: data.lastHourCount,
-          tone: data.lastHourCount > 0 ? "critical" : undefined,
+          value: formatCount(data.lastHourCount),
+          tone: data.lastHourCount ? "critical" : undefined,
         },
         {
           label: t("clusterDetail.kpiNew24h"),
-          value: data.last24hCount,
-          tone: data.last24hCount > 0 ? "warning" : undefined,
+          value: formatCount(data.last24hCount),
+          tone: data.last24hCount ? "warning" : undefined,
         },
         { label: t("clusterDetail.kpiFirstSeen"), value: formatTimestamp(data.firstSeen) },
       ]}
     />
   )
+}
+
+/**
+ * The list pages over the scanned incidents: when the cluster outruns the
+ * scan (its total is unknown, or larger), the footer's total is the scan's
+ * share — said so beneath it instead of passing for the cluster's size.
+ */
+function listCapped(data: ClusterDetailData): boolean {
+  return data.incidentCount === null || data.incidentCount > data.scannedIncidentCount
 }
 
 /** One affected instance row with its instance/incident drill actions. */
@@ -295,6 +313,13 @@ export function ClusterDetailView({
               </TableEmptyState>
             )}
             <CockpitListFooter paged={paged} noun={t("clusterDetail.footerNoun")} />
+            {listCapped(data) && (
+              <p className="text-muted-foreground text-xs">
+                {t("clusterDetail.listCapped", {
+                  count: data.scannedIncidentCount.toLocaleString(),
+                })}
+              </p>
+            )}
           </section>
         </>
       }

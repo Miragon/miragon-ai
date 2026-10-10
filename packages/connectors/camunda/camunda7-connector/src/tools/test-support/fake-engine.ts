@@ -13,6 +13,7 @@ import { createServer, type IncomingHttpHeaders, type Server, type ServerRespons
 import type { AddressInfo } from "node:net"
 import { z } from "zod"
 import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
+import type { Client } from "@miragon-ai/camunda7-client"
 import { createEngineRegistry, type EngineRegistry } from "../../lib/resolve-engine.js"
 import { providerForEntry } from "../../providers/index.js"
 
@@ -33,11 +34,14 @@ export interface FakeReply {
   contentType?: string
 }
 
+/** A fixed reply, or one computed from the recorded request (e.g. by its query). */
+export type FakeRoute = FakeReply | ((request: RecordedRequest) => FakeReply)
+
 /**
  * Replies keyed `"<METHOD> <path>"`. Unknown routes get the engine's
  * `fallback` (default: 204 without a body — a write's usual reply).
  */
-export type FakeRoutes = Record<string, FakeReply>
+export type FakeRoutes = Record<string, FakeRoute>
 
 export interface FakeEngine {
   baseUrl: string
@@ -64,7 +68,7 @@ function answer(res: ServerResponse, reply: FakeReply | undefined) {
 
 export async function startFakeEngine(
   routes: FakeRoutes = {},
-  fallback?: FakeReply,
+  fallback?: FakeRoute,
 ): Promise<FakeEngine> {
   const requests: RecordedRequest[] = []
   const server: Server = createServer((req, res) => {
@@ -72,15 +76,18 @@ export async function startFakeEngine(
     req.on("data", (chunk: Buffer) => chunks.push(chunk))
     req.on("end", () => {
       const url = new URL(req.url ?? "/", "http://engine")
-      const path = url.pathname.replace(/^\/engine-rest/, "")
-      requests.push({
+      // Decoded, so a definition id (`key:1:dep`) reads as written.
+      const path = decodeURIComponent(url.pathname).replace(/^\/engine-rest/, "")
+      const request: RecordedRequest = {
         method: req.method ?? "",
         path,
         query: Object.fromEntries(url.searchParams),
         headers: req.headers,
         body: parseBody(Buffer.concat(chunks).toString("utf8"), req.headers["content-type"]),
-      })
-      answer(res, routes[`${req.method} ${path}`] ?? fallback)
+      }
+      requests.push(request)
+      const route = routes[`${req.method} ${path}`] ?? fallback
+      answer(res, typeof route === "function" ? route(request) : route)
     })
   })
   server.listen(0, "127.0.0.1")
@@ -89,7 +96,14 @@ export async function startFakeEngine(
   return {
     baseUrl: `http://127.0.0.1:${port}/engine-rest`,
     requests,
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+    // Drops the client's keep-alive sockets too: a builder that failed fast
+    // leaves its parallel reads' connections open, and a plain close() would
+    // wait out the client's keep-alive timeout (seconds per test).
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.close(() => resolve())
+        server.closeAllConnections()
+      }),
   }
 }
 
@@ -111,6 +125,11 @@ export function registryFor(engine: FakeEngine): EngineRegistry {
   return createEngineRegistry([{ id: "fake", baseUrl: engine.baseUrl }], (e) =>
     providerForEntry(e).createClient(e, { type: "none" }),
   )
+}
+
+/** The provider-built client of {@link registryFor} — what a data builder receives. */
+export function clientFor(engine: FakeEngine): Client {
+  return registryFor(engine).backends.resolve("fake").client
 }
 
 type Handler = (registry: EngineRegistry, args: Record<string, unknown>) => Promise<unknown>

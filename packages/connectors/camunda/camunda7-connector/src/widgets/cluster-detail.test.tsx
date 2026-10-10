@@ -13,6 +13,7 @@ const CLUSTER: ClusterDetailData = {
   incidentType: "failedExternalTask",
   messageSignature: "connection timeout to wms after <n>ms",
   incidentCount: 40,
+  scannedIncidentCount: 40,
   lastHourCount: 9,
   last24hCount: 12,
   firstSeen: "2026-06-11T08:00:00.000Z",
@@ -66,5 +67,33 @@ describe("ClusterDetailWidget (fixture render)", () => {
     // Each row drills deterministically to instance + incident detail.
     expect(screen.getAllByText("Instance")).toHaveLength(2)
     expect(screen.getAllByText("Incident")).toHaveLength(2)
+    // The scan holds the whole cluster: no capped-list note.
+    expect(screen.queryByText(/The list covers the newest/)).toBeNull()
+  })
+
+  it("renders a cluster larger than the scan as a lower bound, its unknowns as —", () => {
+    const capped: ClusterDetailData = {
+      ...CLUSTER,
+      incidentCount: null,
+      scannedIncidentCount: 1000,
+      lastHourCount: null,
+      last24hCount: null,
+      firstSeen: null,
+      totalMatching: 1000,
+    }
+    render(
+      <WidgetFixtureHost widget={Widget} data={capped as unknown as Record<string, unknown>} />,
+    )
+
+    // Never the scanned 1,000 passed off as the cluster's size (counts render
+    // in the runtime's locale).
+    const scanned = (1000).toLocaleString()
+    expect(screen.getByText(`≥${scanned}`)).toBeTruthy()
+    expect(screen.getByText(`≥${scanned} affected · across shipping`)).toBeTruthy()
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(3)
+    expect(screen.queryByText("0")).toBeNull()
+    expect(
+      screen.getByText(`The list covers the newest ${scanned} incidents of this cluster.`),
+    ).toBeTruthy()
   })
 })

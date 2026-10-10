@@ -16,15 +16,16 @@ import {
   getHistoricActivityInstancesCount,
   getIncident,
   getJobs,
+  getProcessDefinition,
   getProcessDefinitionBpmn20Xml,
-  getProcessDefinitions,
   getProcessInstance,
 } from "@miragon-ai/camunda7-client/sdk"
 
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { extractActivityNames } from "../lib/bpmn-parse.js"
-import { processDefinitionKeyFromId } from "./incident-panel-data.js"
+import { processDefinitionKeyFromId } from "./definition-info.js"
+import { optional, rowsOf } from "./engine-reads.js"
 
 interface BuildOptions {
   baseUrl: string
@@ -134,29 +135,29 @@ interface RawDefinition {
   version?: number | null
 }
 
-async function fetchDefinitionMeta(
+/** Name + version of the incident's OWN definition — one id lookup; enrichment (null on failure). */
+function fetchDefinitionMeta(
   client: Client,
   processDefinitionId: string,
 ): Promise<RawDefinition | null> {
-  if (!processDefinitionId) return null
-  const key = processDefinitionKeyFromId(processDefinitionId)
-  const defs = (await getProcessDefinitions({
-    client,
-    query: { keysIn: key, latestVersion: false },
-  }).catch(() => [])) as unknown as RawDefinition[]
-  if (!Array.isArray(defs)) return null
-  // Prefer the exact-id match; fall back to first row for the key.
-  return defs.find((d) => d.id === processDefinitionId) ?? defs[0] ?? null
+  if (!processDefinitionId) return Promise.resolve(null)
+  return optional(
+    getProcessDefinition({ client, path: { id: processDefinitionId } }) as Promise<RawDefinition>,
+  )
 }
 
+/**
+ * The failing job of a job-backed incident — PRIMARY: a failed read is a tool
+ * error, never "this incident has no job". `null` only when the job is gone
+ * (the incident was retried meanwhile).
+ */
 async function fetchJob(client: Client, jobId: string): Promise<IncidentDetailJob | null> {
-  const [jobsResponse, rawStacktrace] = await Promise.all([
-    getJobs({ client, query: { jobId, maxResults: 1 } }).catch(() => []) as Promise<unknown>,
+  const [jobs, rawStacktrace] = await Promise.all([
+    getJobs({ client, query: { jobId, maxResults: 1 } }).then((rows) => rowsOf<RawJob>(rows)),
     // Optional enrichment: the failure tab renders without a stacktrace.
     fetchJobStacktrace(client, jobId).catch(() => null),
   ])
 
-  const jobs = (Array.isArray(jobsResponse) ? jobsResponse : []) as RawJob[]
   const job = jobs[0]
   if (!job) return null
 
@@ -172,7 +173,9 @@ async function fetchJob(client: Client, jobId: string): Promise<IncidentDetailJo
 /**
  * Delegated incidents (sub-process failure propagated to the parent) have
  * null `configuration`/`incidentMessage`. The real failure data lives on
- * the root cause — fetch it and use it as the failure source.
+ * the root cause — fetch it and use it as the failure source. PRIMARY: it
+ * decides which job (and message) the view shows, so a failed read is a tool
+ * error, never "this incident has no job".
  */
 async function fetchRootCauseIncident(
   client: Client,
@@ -180,7 +183,7 @@ async function fetchRootCauseIncident(
 ): Promise<RawIncident | null> {
   const rootId = rawIncident.rootCauseIncidentId
   return rootId && rootId !== rawIncident.id
-    ? await getIncident({ client, path: { id: rootId } }).catch(() => null)
+    ? await getIncident({ client, path: { id: rootId } })
     : null
 }
 
@@ -194,28 +197,33 @@ type IncidentContext = [
   job: IncidentDetailJob | null,
 ]
 
+/**
+ * The incident's context. The instance it belongs to (state, tokens,
+ * variables) and its job are PRIMARY — the tabs present them as facts, so a
+ * failed read is a tool error, never "not suspended" or "no variables". The
+ * diagram, the definition's name and the history total are enrichment (null).
+ */
 function fetchIncidentContext(client: Client, incident: IncidentRecord): Promise<IncidentContext> {
   const { processInstanceId, processDefinitionId, jobId } = incident
   return Promise.all([
     processInstanceId
-      ? (getProcessInstance({ client, path: { id: processInstanceId } }).catch(
-          () => null,
-        ) as Promise<RawProcessInstance | null>)
+      ? (getProcessInstance({
+          client,
+          path: { id: processInstanceId },
+        }) as Promise<RawProcessInstance>)
       : Promise.resolve(null),
     processInstanceId
-      ? (getActivityInstanceTree({ client, path: { id: processInstanceId } }).catch(
-          () => null,
-        ) as Promise<unknown>)
+      ? (getActivityInstanceTree({ client, path: { id: processInstanceId } }) as Promise<unknown>)
       : Promise.resolve(null),
     processInstanceId
-      ? (readProcessInstanceVariables(client, processInstanceId).catch(
-          () => ({}),
-        ) as Promise<unknown>)
+      ? (readProcessInstanceVariables(client, processInstanceId) as Promise<unknown>)
       : Promise.resolve({}),
     processDefinitionId
-      ? (getProcessDefinitionBpmn20Xml({ client, path: { id: processDefinitionId } }).catch(
-          () => null,
-        ) as Promise<{ bpmn20Xml?: string } | null>)
+      ? (optional(
+          getProcessDefinitionBpmn20Xml({ client, path: { id: processDefinitionId } }),
+        ) as Promise<{
+          bpmn20Xml?: string
+        } | null>)
       : Promise.resolve(null),
     // The History tab pages the rows itself (registrar history query); the
     // payload only carries the honest total for the KPI. Degrades to null

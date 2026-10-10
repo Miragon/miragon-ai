@@ -111,5 +111,10 @@ the dashboard picker says "Saved dashboards are unavailable".
   open or 25 in one cluster), the analytics health by Prometheus alert rules
   (critical only while a critical alert fires). "Has this activity failed
   before?" is answered from incident history, resolved incidents included.
+- A process view counts every deployed version of its key — old versions keep
+  running after a redeploy; only the diagram is one version, and it says
+  which. A number the engine could not confirm shows as "—" (or "≥N" when
+  only part of it was read), never as 0, and an engine that does not answer
+  is an error, not an empty view.
 - If a tool isn't doing what you expect, ask the assistant to show you the raw
   arguments — it'll print them and you can spot mismatches quickly.

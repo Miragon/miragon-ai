@@ -116,15 +116,15 @@ export const de: MessageCatalog = {
   "c7sum.instanceDetail":
     "Prozessinstanz {instanceId}{businessKey}: {state}, {activeActivities} aktive Aktivitäten, {openIncidents} offene Vorfälle, {openTasks} offene Benutzeraufgaben.",
   "c7sum.processInstances":
-    '{totalCount} laufende Instanz(en) von "{processDefinitionKey}" ({withIncidentCount} mit Vorfällen, {suspendedCount} ausgesetzt); {returnedCount} in der Tabelle angezeigt.',
+    '{totalCount} laufende Instanz(en) von "{processDefinitionKey}", davon {withIncidentCount} mit Vorfällen und {suspendedCount} ausgesetzt; {returnedCount} in der Tabelle angezeigt.',
   "c7sum.incidentsDashboard":
     "Vorfall-Dashboard: {totalCount} offene(r) Vorfall/Vorfälle über {processCount} Prozessdefinition(en), {last24hCount} in den letzten 24 Stunden.",
   "c7sum.processIncidents":
-    'Prozessvorfälle für "{processDefinitionKey}"{version}: {incidentCount} offene(r) Vorfall/Vorfälle über {activities} Aktivitäten, {last24hCount} in den letzten 24 Stunden.',
+    'Prozessvorfälle für "{processDefinitionKey}" (alle Versionen; Diagramm v{diagramVersion}): {incidentCount} offene(r) Vorfall/Vorfälle über {activities} Aktivitäten, {last24hCount} in den letzten 24 Stunden.',
   "c7sum.incidentDetail":
     'Vorfall {incidentId} ({incidentType}) bei Aktivität "{activity}" in "{processDefinitionKey}", Instanz {processInstanceId}{message}.',
   "c7sum.processDetail":
-    'Prozess "{processDefinitionKey}"{version}: {runningInstances} laufende Instanz(en), {openIncidents} offene(r) Vorfall/Vorfälle, {failedJobs} fehlgeschlagene(r) Job(s).',
+    'Prozess "{processDefinitionKey}" (alle Versionen; Diagramm v{diagramVersion}): {runningInstances} laufende Instanz(en), {openIncidents} offene(r) Vorfall/Vorfälle, {failedJobs} fehlgeschlagene(r) Job(s).',
   "c7sum.historyTimeline":
     "Verlaufs-Zeitleiste für Prozessinstanz {processInstanceId}: {totalActivities} historische Aktivitäten{notFound}.",
   "c7sum.historyTimeline.notFound": " (keine historische Prozessinstanz gefunden)",
@@ -133,6 +133,9 @@ export const de: MessageCatalog = {
   "c7sum.engineHealth.topCluster":
     ' Größter Cluster: Aktivität "{activityId}" / {incidentType}, {incidentCount} Vorfälle.',
   "c7sum.engineHealth.noIncidents": " Keine offenen Vorfälle.",
+  "c7sum.unknownNumberOf": "unbekannt viele",
+  "c7sum.atLeast": "mindestens {count}",
+  "c7sum.unknown": "unbekannt",
   "c7sum.clusterDetail":
     'Fehler-Cluster auf Engine "{engineId}": Aktivität "{activityId}" / {incidentType} — {incidentCount} Vorfälle ({lastHourCount} in der letzten Stunde) über {processes}.{sample}',
   "c7sum.clusterDetail.unknownProcesses": "unbekannte Prozesse",
@@ -144,8 +147,9 @@ export const de: MessageCatalog = {
   "c7sum.bpmnViewer.targetInstance": "Prozessinstanz {processInstanceId}",
   "c7sum.bpmnViewer.targetDefinition": "Prozessdefinition {definitionId}",
   "c7sum.bpmnViewer.overlays":
-    ": {activeActivities} aktive Aktivitäten, {incidentActivities} Aktivitäten mit Vorfällen, {failedJobs} fehlgeschlagene Jobs",
-  "c7sum.bpmnViewer.noOverlays": " (statisches Diagramm, keine Instanz-Overlays)",
+    ": {activeActivities} aktive Aktivitäten, {incidentActivities} Aktivitäten mit Vorfällen, {failedJobs} fehlgeschlagene Jobs dieser Instanz",
+  "c7sum.bpmnViewer.noOverlays":
+    " (keine Instanz-Overlays; die Badges zählen alle laufenden Instanzen dieser Version)",
   "c7sum.bpmnViewer.xmlUnavailable": " — Diagramm-XML nicht verfügbar",
   "c7sum.jobPanel":
     "Job-Panel: {totalCount} Job(s), {failedCount} fehlgeschlagen{forProcess}{failedOnly}.",

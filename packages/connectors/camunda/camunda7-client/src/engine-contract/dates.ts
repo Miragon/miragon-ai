@@ -90,3 +90,52 @@ export function toEngineDate(input: string | Date): string {
 export function toOptionalEngineDate(input: string | undefined): string | undefined {
   return input === undefined ? undefined : toEngineDate(input)
 }
+
+/**
+ * The read direction: a timestamp the engine EMITS (`…SSS±HHMM`, its local
+ * offset) → epoch millis; null when absent or unparseable. Engine timestamps
+ * order by instant, never as text: across a DST change the engine stamps
+ * `…+0200` and `…+0100`, and the string order is then off by up to an hour.
+ */
+export function engineDateMillis(value: string | null | undefined): number | null {
+  const parts = value ? parse(value) : null
+  if (!parts) return null
+  const sign = parts.offset.startsWith("-") ? -1 : 1
+  const offsetMinutes =
+    sign * (Number(parts.offset.slice(1, 3)) * 60 + Number(parts.offset.slice(3, 5)))
+  const local = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+    Number(parts.millis),
+  )
+  return local - offsetMinutes * 60_000
+}
+
+/** The engine timestamp `pick` prefers by instant — returned as given; null when none parses. */
+function pickEngineDate(
+  values: Iterable<string | null | undefined>,
+  pick: (candidate: number, best: number) => boolean,
+): string | null {
+  let best: { value: string; millis: number } | null = null
+  for (const value of values) {
+    const millis = engineDateMillis(value)
+    if (millis !== null && (best === null || pick(millis, best.millis))) {
+      best = { value: value as string, millis }
+    }
+  }
+  return best?.value ?? null
+}
+
+/** The newest of the given engine timestamps by instant (as given); null when none parses. */
+export function latestEngineDate(values: Iterable<string | null | undefined>): string | null {
+  return pickEngineDate(values, (candidate, best) => candidate > best)
+}
+
+/** The oldest of the given engine timestamps by instant (as given); null when none parses. */
+export function earliestEngineDate(values: Iterable<string | null | undefined>): string | null {
+  return pickEngineDate(values, (candidate, best) => candidate < best)
+}

@@ -9,7 +9,10 @@
  */
 export {
   ENGINE_DATE_INPUT_FORMS,
+  earliestEngineDate,
+  engineDateMillis,
   isEngineDateInput,
+  latestEngineDate,
   toEngineDate,
   toOptionalEngineDate,
 } from "./dates.js"

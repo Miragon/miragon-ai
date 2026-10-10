@@ -19,6 +19,7 @@ import { CAMUNDA7_ENGINE_HEALTH_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
 import { remediatePrompt, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
 import { fenceUntrusted } from "./lib/untrusted.js"
+import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { useT } from "../messages/use-t.js"
 
 const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; glyph: string; labelKey: string }> = {
@@ -38,14 +39,14 @@ function describeHealth(data: EngineHealthData, engine?: string): string {
   const top = clusters[0]
   const topLine = top
     ? ` Dominant cluster: activity "${top.activityId}" failing as ${top.incidentType} ` +
-      `(${top.incidentCount} incidents across ${top.processDefinitionKeys.length} definition(s)).`
+      `(${top.incidentCount ?? `at least ${top.scannedIncidentCount}`} incidents across ${top.processDefinitionKeys.length} definition(s)).`
     : ""
   return (
     `The operator is viewing the engine health overview for engine ` +
     `"${engine ?? data.engineId}". Verdict: ${status}. ${summary.totalIncidents} open ` +
     `incidents (${summary.lastHourIncidents} in the last hour, ` +
     `${summary.last24hIncidents} in the last 24h) across ` +
-    `${summary.affectedActivities} activities and ${summary.affectedDefinitions} process ` +
+    `${summary.affectedActivities ?? "an unknown number of"} activities and ${summary.affectedDefinitions} process ` +
     `definitions; ${summary.runningInstances} running instances` +
     (summary.started24h !== null
       ? `, throughput 24h: ${summary.started24h} started / ${summary.completed24h ?? "?"} completed`
@@ -63,7 +64,7 @@ function triagePrompt(data: EngineHealthData, engine?: string): string {
   const clusterLines = clusters
     .map(
       (c) =>
-        `- activity "${c.activityId}" / ${c.incidentType}: ${c.incidentCount} incidents` +
+        `- activity "${c.activityId}" / ${c.incidentType}: ${c.incidentCount ?? `at least ${c.scannedIncidentCount}`} incidents` +
         (c.processDefinitionKeys[0] && c.processDefinitionKeys[0] !== UNKNOWN
           ? ` (process ${c.processDefinitionKeys.join(", ")})`
           : ""),
@@ -74,7 +75,7 @@ function triagePrompt(data: EngineHealthData, engine?: string): string {
     `to do first, in plain language for a distribution-center support operator (no Camunda ` +
     `jargon). Current state: ${summary.totalIncidents} open incidents ` +
     `(${summary.lastHourIncidents} new in the last hour, ${summary.last24hIncidents} in 24h) ` +
-    `across ${summary.affectedActivities} activities ` +
+    `across ${summary.affectedActivities ?? "an unknown number of"} activities ` +
     `and ${summary.affectedDefinitions} process definitions, ${summary.runningInstances} ` +
     `running instances. Top incident clusters:\n${clusterLines || "- none"}\n\n` +
     `Call analytics_engine_health (engine: ${e}) and analytics_show_failure_dashboard ` +
@@ -141,8 +142,10 @@ function ClusterRow({
       }
       subtitle={
         <>
-          {t("engineHealth.clusterAffected", { count: cluster.incidentCount })}
-          {cluster.last24hCount > 0
+          {t("engineHealth.clusterAffected", {
+            count: formatCountAtLeast(cluster.incidentCount, cluster.scannedIncidentCount),
+          })}
+          {cluster.last24hCount !== null && cluster.last24hCount > 0
             ? ` · ${t("engineHealth.clusterNew24h", { count: cluster.last24hCount })}`
             : ""}{" "}
           · {scope}
@@ -235,8 +238,9 @@ function HealthKpis({
         },
         {
           label: t("engineHealth.kpiAffectedActivities"),
-          value: summary.affectedActivities,
-          tone: summary.affectedActivities > 0 ? "warning" : undefined,
+          // null: the incident scan was capped — "—", never a guessed count.
+          value: formatCount(summary.affectedActivities),
+          tone: (summary.affectedActivities ?? 0) > 0 ? "warning" : undefined,
         },
         {
           label: t("engineHealth.kpiAffectedProcesses"),

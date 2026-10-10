@@ -9,15 +9,10 @@ import {
   withToolErrors,
   strictToolInput,
 } from "@miragon-ai/widget-shell/server"
-import {
-  buildClusterDetailData,
-  buildEngineHealthData,
-  healthVerdictRule,
-} from "../data/health-data.js"
-import {
-  buildIncidentsDashboardData,
-  buildProcessIncidentsData,
-} from "../data/incident-panel-data.js"
+import { buildClusterDetailData } from "../data/cluster-detail-data.js"
+import { buildEngineHealthData, healthVerdictRule } from "../data/health-data.js"
+import { buildIncidentsDashboardData } from "../data/incidents-dashboard-data.js"
+import { buildProcessIncidentsData } from "../data/process-incidents-data.js"
 import { buildIncidentDetailData } from "../data/incident-detail-data.js"
 import {
   CAMUNDA7_SHOW_CLUSTER_DETAIL,
@@ -115,7 +110,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
         entries: [{ dataType: "camunda7:processIncidents", data: { ...data, engineId } }],
         summary: t("c7sum.processIncidents", {
           processDefinitionKey: data.processDefinitionKey,
-          version: data.version != null ? ` v${data.version}` : "",
+          diagramVersion: data.diagramVersion,
           incidentCount: data.incidentCount,
           activities: data.activities.length,
           last24hCount: data.last24hCount,
@@ -197,13 +192,16 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
           status: data.status,
           rule: data.statusRule,
           totalIncidents: data.summary.totalIncidents,
-          affectedActivities: data.summary.affectedActivities,
+          // null = the capped scan cannot vouch for it — never a guessed count.
+          affectedActivities: data.summary.affectedActivities ?? t("c7sum.unknownNumberOf"),
           runningInstances: data.summary.runningInstances,
           topCluster: top
             ? t("c7sum.engineHealth.topCluster", {
                 activityId: top.activityId,
                 incidentType: top.incidentType,
-                incidentCount: top.incidentCount,
+                // null = the capped scan holds only part of it — a lower bound, said as one.
+                incidentCount:
+                  top.incidentCount ?? t("c7sum.atLeast", { count: top.scannedIncidentCount }),
               })
             : t("c7sum.engineHealth.noIncidents"),
         }),
@@ -242,8 +240,9 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
           engineId,
           activityId: data.activityId,
           incidentType: data.incidentType,
-          incidentCount: data.incidentCount,
-          lastHourCount: data.lastHourCount,
+          incidentCount:
+            data.incidentCount ?? t("c7sum.atLeast", { count: data.scannedIncidentCount }),
+          lastHourCount: data.lastHourCount ?? t("c7sum.unknown"),
           processes:
             data.processDefinitionKeys.join(", ") || t("c7sum.clusterDetail.unknownProcesses"),
           sample: data.representativeMessage

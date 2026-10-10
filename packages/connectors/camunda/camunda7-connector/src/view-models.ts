@@ -10,11 +10,16 @@ export interface IncidentStat {
   incidentCount: number
 }
 
+/**
+ * One process definition KEY of the cockpit landscape: every count spans all
+ * deployed versions (old versions keep running after a redeploy).
+ */
 export interface DefinitionStat {
+  /** Id of the latest version — the row's link target. */
   id: string
   key: string
   name: string | null
-  version: number
+  latestVersion: number
   instances: number
   failedJobs: number
   incidents: IncidentStat[]
@@ -22,6 +27,7 @@ export interface DefinitionStat {
 
 export interface CockpitDashboardData {
   summary: {
+    /** Deployed definition KEYS (not versions). */
     totalDefinitions: number
     totalRunningInstances: number
     totalFailedJobs: number
@@ -119,12 +125,20 @@ export interface ActivityStat {
 }
 
 export interface BpmnViewerData {
-  bpmnXml: string
+  /** The rendered version's diagram — null when it could not be read (enrichment). */
+  bpmnXml: string | null
   processInstanceId: string | null
   processDefinitionId: string | null
   activeActivityIds: string[]
   incidentActivityIds: string[]
+  /** Per-activity token and failed-job counts, scoped by {@link statsScope}. */
   activityStats: ActivityStat[]
+  /**
+   * Whose counts `activityStats` are: `"instance"` — this instance's own
+   * tokens and failed jobs; `"definition"` — every running instance of the
+   * rendered definition version.
+   */
+  statsScope: "instance" | "definition"
   engineId?: string
 }
 
@@ -195,7 +209,9 @@ export interface ProcessInstancesData {
   totalCount: number
   /** Instances actually returned (capped at the tool's maxResults). */
   returnedCount: number
+  /** Of `totalCount` (the whole filtered set, not the page): instances with an open incident. */
   withIncidentCount: number
+  /** Of `totalCount` (the whole filtered set, not the page): suspended instances. */
   suspendedCount: number
   instances: ProcessInstanceRow[]
   filters: {
@@ -261,11 +277,15 @@ export interface InstanceDetailData {
   }
   activityTree: ActivityTree | null
   variables: Record<string, VariableValue>
-  incidents?: IncidentInstance[]
+  /** The instance's open incidents (capped list; the total is `incidentCount`). */
+  incidents: IncidentInstance[]
+  incidentCount: number
   bpmnXml: string | null
   activeActivityIds: string[]
   incidentActivityIds: string[]
+  /** The instance's open user tasks (capped list; the total is `openTaskCount`). */
   openTasks: OpenUserTask[]
+  openTaskCount: number
   engineId?: string
 }
 
@@ -320,27 +340,49 @@ export interface HistoryTimelineData {
 
 // === Overview (camunda7_show_incidents_dashboard)
 
-export interface IncidentsDashboardActivity {
+/**
+ * One activity with open incidents, as the incident views group them. The
+ * timestamps and the message come from the newest-first recency scan — facts
+ * it cannot vouch for are null (rendered "—"), never a guess.
+ */
+export interface IncidentActivityFacts {
   activityId: string
+  /** Display name from the diagram — null without one (or for an activity only older versions have). */
   activityName: string | null
+  /** Newest scanned failure message — null when the activity's incidents lie beyond the scan. */
   representativeMessage: string | null
-  incidentCount: number
-  /** Subset of incidents with `incidentTimestamp >= now - 24h`. Used to keep the
-   *  "Last 24h" filter chip honest when it recomputes the card-level total. */
-  last24hCount: number
+  /** Null unless the scan holds ALL of the activity's incidents. */
   firstSeen: string | null
+  /** Null when the activity's incidents lie beyond the scan. */
   latestIncident: string | null
 }
 
+/**
+ * One activity of a dashboard card's breakdown — drawn from the recency scan,
+ * so it covers the card's `scannedIncidentCount` incidents.
+ */
+export interface IncidentsDashboardActivity extends IncidentActivityFacts {
+  /** This activity's incidents within the scan (exact when the card is fully scanned). */
+  scannedIncidentCount: number
+  /** Incidents since now − 24h; null when the scan does not reach back that far. */
+  last24hCount: number | null
+}
+
+/** One process definition KEY with open incidents — every count spans all versions. */
 export interface IncidentsDashboardProcess {
   processDefinitionKey: string
   processDefinitionName: string | null
-  version: number | null
-  runningInstances: number | null
-  totalActivityCount: number | null
-  affectedActivityCount: number
+  latestVersion: number
+  runningInstances: number
+  /** Exact open incidents of the key (definition statistics). */
   incidentCount: number
-  last24hCount: number
+  /** How many of `incidentCount` the per-activity breakdown covers (the recency scan's share). */
+  scannedIncidentCount: number
+  /** Null unless the breakdown covers every incident of the key. */
+  affectedActivityCount: number | null
+  /** Null when the scan does not reach back 24h. */
+  last24hCount: number | null
+  /** Null when none of the key's incidents is within the scan. */
   latestIncident: string | null
   cockpitUrl: string | null
   activities: IncidentsDashboardActivity[]
@@ -349,7 +391,8 @@ export interface IncidentsDashboardProcess {
 export interface IncidentsDashboardData {
   totalCount: number
   processCount: number
-  affectedActivityCount: number
+  /** Null unless every card's breakdown is complete. */
+  affectedActivityCount: number | null
   last24hCount: number
   latestIncident: string | null
   processes: IncidentsDashboardProcess[]
@@ -364,16 +407,10 @@ export interface IncidentsByProcess {
 
 // === Unified definition view (camunda7_show_process_detail / camunda7_show_process_incidents)
 
-export interface ProcessIncidentsActivity {
-  activityId: string
-  activityName: string | null
-  /** Newest scanned failure message — null when the activity only surfaced
-   *  via statistics (its incidents lie beyond the recency scan). */
-  representativeMessage: string | null
-  /** Exact count from activity statistics when available, else the scan count. */
+/** One activity group of the definition view. */
+export interface ProcessIncidentsActivity extends IncidentActivityFacts {
+  /** Exact open incidents of this activity over every version of the key. */
   incidentCount: number
-  firstSeen: string | null
-  latestIncident: string | null
 }
 
 /** One page of an activity's incident rows (camunda7_activity_incidents_data). */
@@ -387,24 +424,38 @@ export interface ActivityIncidentsData {
   engineId: string
 }
 
+/**
+ * The unified definition view of ONE process definition KEY. Every count
+ * spans all deployed versions; only the diagram is one version
+ * (`diagramVersion`, the latest over every tenant).
+ */
 export interface ProcessIncidentsData {
   processDefinitionKey: string
   processDefinitionName: string | null
-  version: number | null
+  /** Version of `bpmnXml` — the latest deployed; the counts cover every version. */
+  diagramVersion: number
   bpmnXml: string | null
   cockpitUrl: string | null
-  runningInstances: number | null
+  runningInstances: number
   incidentCount: number
   last24hCount: number
-  /** Jobs with no retries left across the definition — null when the activity
-   *  statistics are unavailable (e.g. the definition id could not be resolved). */
-  failedJobs: number | null
+  /** Jobs with no retries left, over every version of the key. */
+  failedJobs: number
+  /** Activities in the diagram — null when the diagram is unavailable. */
   totalActivityCount: number | null
+  /**
+   * Activities OF THE DIAGRAM with open incidents — the numerator of
+   * `totalActivityCount`; `activities` may hold more (activities only older
+   * versions have). Null when the diagram is unavailable.
+   */
+  affectedDiagramActivityCount: number | null
   latestIncident: string | null
   activities: ProcessIncidentsActivity[]
   /** Other process definitions with open incidents — surfaced in the empty
-   *  state so the operator can jump to where the incidents actually are. */
-  siblingsWithIncidents: IncidentsByProcess[]
+   *  state so the operator can jump to where the incidents actually are.
+   *  Read only for that empty state (the key has no open incidents); null
+   *  when not read or unreadable. */
+  siblingsWithIncidents: IncidentsByProcess[] | null
   engineId?: string
 }
 
@@ -474,23 +525,37 @@ export interface IncidentDetailData {
 export type EngineHealthStatus = "ok" | "degraded" | "critical"
 
 /**
+ * A failure cluster's size as far as the health views' newest-first incident
+ * scan (`CLUSTER_SCAN_LIMIT`) can vouch for it. A cluster larger than the
+ * scan is known only as a lower bound — never the scan's length as its size.
+ */
+export interface ClusterCounts {
+  /** The cluster's open incidents — null when unknown (only `scannedIncidentCount` of it is). */
+  incidentCount: number | null
+  /** The cluster's incidents among the newest scanned ones — a lower bound of `incidentCount`. */
+  scannedIncidentCount: number
+  /** Incidents since now − 24h — null when neither the scan nor a count can vouch for them. */
+  last24hCount: number | null
+}
+
+/**
  * A cross-process incident cluster: the same activity failing the same way
  * (`activityId` + `incidentType` + normalized failure-message signature) across
  * one or more process definitions. This is the root-cause unit a support
  * operator triages — surfaced instead of a flat per-instance incident list. The
  * plain-language interpretation and the recommended fix are the host agent's
  * job (the "ask the AI" handoff), not the server's: the cluster carries only
- * deterministic, grounded facts.
+ * deterministic, grounded facts. Its counts are exact only when the scan read
+ * every open incident (24h: when it reaches back that far); the clusters rank
+ * by `scannedIncidentCount`.
  */
-export interface EngineHealthCluster {
+export interface EngineHealthCluster extends ClusterCounts {
   /** Stable key `${activityId}::${incidentType}::${messageSignature}` — used for React keys. */
   id: string
   activityId: string
   incidentType: string
   /** Normalized failure-message signature — the third clustering dimension; drill filter. */
   messageSignature: string
-  incidentCount: number
-  last24hCount: number
   /** Distinct process definition keys this cluster spans, most-affected first. */
   processDefinitionKeys: string[]
   /** A sample message + its incident id, for the drill-in and the AI prompt. */
@@ -511,9 +576,12 @@ export interface EngineHealthData {
     /** New incidents in the last hour — the "is it burning right now?" signal. */
     lastHourIncidents: number
     last24hIncidents: number
-    affectedActivities: number
+    /** Activities with open incidents — null unless the incident scan read every incident. */
+    affectedActivities: number | null
+    /** Definition keys with open incidents. */
     affectedDefinitions: number
     runningInstances: number
+    /** Deployed definition keys. */
     totalDefinitions: number
     /** Instances started in the last 24h — null when the history API is unavailable. */
     started24h: number | null
@@ -542,23 +610,26 @@ export interface ClusterIncidentRow {
  * Drill-in for ONE failure cluster: the affected instances (business keys
  * first), the full sample message, and the time profile — the middle layer
  * between the engine overview's cluster list and the single-incident detail.
+ * Without a message filter the counts are `/incident/count` totals; with one,
+ * a count the scan cannot vouch for is null. The list pages over the
+ * `scannedIncidentCount` scanned incidents.
  */
-export interface ClusterDetailData {
+export interface ClusterDetailData extends ClusterCounts {
   activityId: string
   incidentType: string
   /** Signature the result was filtered by; null = no message filter (activity+type only). */
   messageSignature: string | null
-  incidentCount: number
-  lastHourCount: number
-  last24hCount: number
+  /** Incidents in the last hour — null when neither the scan nor a count can vouch for it. */
+  lastHourCount: number | null
+  /** Null unless the scan holds the whole cluster. */
   firstSeen: string | null
   latestIncident: string | null
-  /** Distinct process definition keys, most-affected first. */
+  /** Distinct process definition keys of the scanned incidents, most-affected first. */
   processDefinitionKeys: string[]
   representativeMessage: string | null
   /** First page of affected incidents (most recent first). */
   incidents: ClusterIncidentRow[]
-  /** Total matching incidents (may exceed `incidents.length`). */
+  /** The list's total: the scanned incidents after the business-key search (may exceed `incidents.length`). */
   totalMatching: number
   fetchedAt: string
   engineId: string

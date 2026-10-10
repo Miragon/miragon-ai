@@ -1,174 +1,127 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
-
-// The dashboard and list half of `cockpit-data.ts`; the instance-detail and
-// job-panel builders live in `cockpit-data-detail.test.ts` (split to stay inside
-// the per-file line budget). `cockpit-data.ts` imports the whole SDK surface, so
-// the factory has to name every export even though this file drives only a subset.
-vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
-  getActivityInstanceTree: vi.fn(),
-  getIncidents: vi.fn(),
-  getJobs: vi.fn(),
-  getJobsCount: vi.fn(),
-  getProcessDefinitionBpmn20Xml: vi.fn(),
-  getProcessDefinitionStatistics: vi.fn(),
-  getProcessDefinitions: vi.fn(),
-  getProcessDefinitionsCount: vi.fn(),
-  getProcessInstance: vi.fn(),
-  getProcessInstanceVariables: vi.fn(),
-  getProcessInstances: vi.fn(),
-  getProcessInstancesCount: vi.fn(),
-  getTasks: vi.fn(),
-}))
-
-vi.mock("../tools/task-form.js", () => ({ buildTaskFormSchema: vi.fn() }))
-
+import { afterEach, describe, expect, it } from "vitest"
 import {
-  getIncidents,
-  getProcessDefinitionStatistics,
-  getProcessDefinitions,
-  getProcessDefinitionsCount,
-  getProcessInstances,
-  getProcessInstancesCount,
-} from "@miragon-ai/camunda7-client/sdk"
-
+  clientFor,
+  startFakeEngine,
+  type FakeEngine,
+  type FakeRoutes,
+  type RecordedRequest,
+} from "../tools/test-support/fake-engine.js"
 import {
   buildCockpitDashboardData,
+  buildJobPanelData,
   buildProcessInstancesData,
   buildProcessListData,
 } from "./cockpit-data.js"
 
-const mockedIncidents = vi.mocked(getIncidents)
-const mockedStats = vi.mocked(getProcessDefinitionStatistics)
-const mockedDefs = vi.mocked(getProcessDefinitions)
-const mockedDefsCount = vi.mocked(getProcessDefinitionsCount)
-const mockedInstances = vi.mocked(getProcessInstances)
-const mockedInstancesCount = vi.mocked(getProcessInstancesCount)
+/**
+ * The cockpit builders against a recording engine: the REST calls they make
+ * (filters, paging, key-scoped endpoints) and the numbers they report. The
+ * failure half — every primary read propagates — is the rejection table in
+ * `honest-numbers.test.ts`.
+ */
 
-const fakeClient = {} as Parameters<typeof buildCockpitDashboardData>[0]
-
-/** Last `query` a mocked SDK call was invoked with — the filter mapping is half
- *  the contract of these builders, so the tests assert on it directly. */
-function lastQuery(fn: { mock: { calls: unknown[][] } }): Record<string, unknown> {
-  const call = fn.mock.calls.at(-1)?.[0] as { query?: Record<string, unknown> }
-  return call.query ?? {}
-}
-
-beforeEach(() => {
-  vi.clearAllMocks()
+const engines: FakeEngine[] = []
+afterEach(async () => {
+  await Promise.all(engines.splice(0).map((engine) => engine.close()))
 })
 
-describe("buildCockpitDashboardData", () => {
-  it("aggregates the statistics rows and sorts by issue count, then instances", async () => {
-    mockedStats.mockResolvedValueOnce([
+async function engineWith(routes: FakeRoutes) {
+  const engine = await startFakeEngine(routes, { body: [] })
+  engines.push(engine)
+  return { engine, client: clientFor(engine) }
+}
+
+const calls = (engine: FakeEngine, path: string) => engine.requests.filter((r) => r.path === path)
+
+const statsRow = (key: string, version: number, over: Record<string, unknown> = {}) => ({
+  id: `${key}:${version}:d`,
+  definition: { id: `${key}:${version}:d`, key, name: key.toUpperCase(), version },
+  ...over,
+})
+
+describe("buildCockpitDashboardData — one row per KEY (#335 N60)", () => {
+  it("sums instances, failed jobs and incidents over every version of a key", async () => {
+    const { engine, client } = await engineWith({
+      "GET /process-definition/statistics": {
+        body: [
+          statsRow("leasing", 1, {
+            instances: 38,
+            failedJobs: 1,
+            incidents: [{ incidentType: "failedJob", incidentCount: 30 }],
+          }),
+          statsRow("leasing", 2, {
+            instances: 61,
+            failedJobs: 5,
+            incidents: [
+              { incidentType: "failedJob", incidentCount: 27 },
+              { incidentType: "custom", incidentCount: 1 },
+            ],
+          }),
+          statsRow("quiet", 1, { instances: 200, failedJobs: 0, incidents: [] }),
+        ],
+      },
+    })
+
+    const data = await buildCockpitDashboardData(client, "engine-a")
+
+    // The latest-version-only figures were 61 / 5 / 28 — the old bug.
+    expect(data.definitions[0]).toEqual({
+      id: "leasing:2:d",
+      key: "leasing",
+      name: "LEASING",
+      latestVersion: 2,
+      instances: 99,
+      failedJobs: 6,
+      incidents: [
+        { incidentType: "failedJob", incidentCount: 57 },
+        { incidentType: "custom", incidentCount: 1 },
+      ],
+    })
+    expect(data.summary).toEqual({
+      totalDefinitions: 2,
+      totalRunningInstances: 299,
+      totalFailedJobs: 6,
+      totalIncidents: 58,
+    })
+    // Issues first, then the busier key.
+    expect(data.definitions.map((d) => d.key)).toEqual(["leasing", "quiet"])
+    expect(data.engineId).toBe("engine-a")
+    // ONE engine-wide statistics call with failed jobs and incidents.
+    expect(engine.requests).toHaveLength(1)
+    expect(engine.requests[0].query).toEqual({ failedJobs: "true", incidents: "true" })
+  })
+
+  it("defaults missing counters and names, and skips rows without a key", async () => {
+    const { client } = await engineWith({
+      "GET /process-definition/statistics": {
+        body: [{ id: "K1:1:a", definition: { id: "K1:1:a", key: "K1", version: 1 } }, { id: "x" }],
+      },
+    })
+
+    const data = await buildCockpitDashboardData(client, "engine-a")
+
+    expect(data.definitions).toEqual([
       {
         id: "K1:1:a",
-        instances: 10,
+        key: "K1",
+        name: null,
+        latestVersion: 1,
+        instances: 0,
         failedJobs: 0,
         incidents: [],
-        definition: { id: "K1:1:a", key: "K1", name: "Quiet", version: 1 },
       },
-      {
-        id: "K2:1:b",
-        instances: 3,
-        failedJobs: 2,
-        incidents: [{ incidentType: "failedJob", incidentCount: 4 }],
-        definition: { id: "K2:1:b", key: "K2", name: "Noisy", version: 2 },
-      },
-      {
-        id: "K3:1:c",
-        instances: 7,
-        failedJobs: 0,
-        incidents: [],
-        definition: { id: "K3:1:c", key: "K3", name: "Quiet but busier", version: 1 },
-      },
-    ] as never)
-
-    const data = await buildCockpitDashboardData(fakeClient, "engine-a")
-
-    expect(data.summary).toEqual({
-      totalDefinitions: 3,
-      totalRunningInstances: 20,
-      totalFailedJobs: 2,
-      totalIncidents: 4,
-    })
-    // K2 has 6 issues → first; K1 and K3 tie at 0 issues, so the busier one wins.
-    expect(data.definitions.map((d) => d.key)).toEqual(["K2", "K1", "K3"])
-    expect(data.definitions[0].incidents).toEqual([{ incidentType: "failedJob", incidentCount: 4 }])
-    expect(data.definitions[0].name).toBe("Noisy")
-    expect(data.definitions[0].version).toBe(2)
-    expect(data.engineId).toBe("engine-a")
-  })
-
-  it("defaults missing counters and names instead of emitting undefined", async () => {
-    mockedStats.mockResolvedValueOnce([
-      { id: "K1:1:a", definition: { id: "K1:1:a", key: "K1", version: 1 } },
-    ] as never)
-
-    const data = await buildCockpitDashboardData(fakeClient, "engine-a")
-
-    expect(data.definitions[0]).toEqual({
-      id: "K1:1:a",
-      key: "K1",
-      name: null,
-      version: 1,
-      instances: 0,
-      failedJobs: 0,
-      incidents: [],
-    })
-    expect(data.summary.totalRunningInstances).toBe(0)
-  })
-
-  it("falls back to definitions + incidents when the statistics endpoint fails", async () => {
-    mockedStats.mockRejectedValueOnce(new Error("403"))
-    mockedDefs.mockResolvedValueOnce([
-      { id: "K1:1:a", key: "K1", name: "One", version: 1 },
-      { id: "K2:1:b", key: "K2", name: "Two", version: 1 },
-    ] as never)
-    mockedIncidents.mockResolvedValueOnce([
-      { processDefinitionId: "K1:1:a" },
-      { processDefinitionId: "K1:1:a" },
-    ] as never)
-
-    const data = await buildCockpitDashboardData(fakeClient, "engine-b")
-
-    expect(data.summary.totalDefinitions).toBe(2)
-    // The fallback cannot know running instances or failed jobs.
-    expect(data.summary.totalRunningInstances).toBe(0)
-    expect(data.summary.totalFailedJobs).toBe(0)
-    expect(data.summary.totalIncidents).toBe(2)
-    expect(data.definitions[0].key).toBe("K1")
-    expect(data.definitions[0].incidents).toEqual([{ incidentType: "failedJob", incidentCount: 2 }])
-    // A definition without incidents gets an empty list, not a synthetic row.
-    expect(data.definitions[1].incidents).toEqual([])
-  })
-
-  it("survives an incident outage inside the fallback path", async () => {
-    mockedStats.mockRejectedValueOnce(new Error("403"))
-    mockedDefs.mockResolvedValueOnce([{ id: "K1:1:a", key: "K1", version: 1 }] as never)
-    mockedIncidents.mockRejectedValueOnce(new Error("boom"))
-
-    const data = await buildCockpitDashboardData(fakeClient, "engine-b")
-
-    expect(data.summary.totalIncidents).toBe(0)
-    expect(data.definitions).toHaveLength(1)
-  })
-
-  it("treats a non-array statistics response as empty", async () => {
-    mockedStats.mockResolvedValueOnce({ message: "nope" } as never)
-
-    const data = await buildCockpitDashboardData(fakeClient, "engine-a")
-
-    expect(data.definitions).toEqual([])
-    expect(data.summary.totalDefinitions).toBe(0)
+    ])
   })
 })
 
 describe("buildProcessListData", () => {
   it("forwards the filters and reports the engine-side total", async () => {
-    mockedDefs.mockResolvedValueOnce([{ id: "K1:1:a", key: "K1" }] as never)
-    mockedDefsCount.mockResolvedValueOnce({ count: 42 })
+    const { engine, client } = await engineWith({
+      "GET /process-definition": { body: [{ id: "K1:1:a", key: "K1" }] },
+      "GET /process-definition/count": { body: { count: 42 } },
+    })
 
-    const data = await buildProcessListData(fakeClient, "engine-a", {
+    const data = await buildProcessListData(client, "engine-a", {
       processDefinitionKey: "K1",
       nameLike: "Ord",
       latestVersion: false,
@@ -176,198 +129,259 @@ describe("buildProcessListData", () => {
       maxResults: 10,
     })
 
-    const query = lastQuery(mockedDefs)
-    expect(query).toMatchObject({
+    const [list] = calls(engine, "/process-definition")
+    // A LIKE value without % would match the name exactly; latestVersion=false
+    // is ignored by the engine — "all versions" means: not sent.
+    expect(list.query).toEqual({
       key: "K1",
-      // A LIKE value without % would match the name exactly.
       nameLike: "%Ord%",
-      firstResult: 20,
-      maxResults: 10,
+      firstResult: "20",
+      maxResults: "10",
       sortBy: "name",
       sortOrder: "asc",
     })
-    // The engine ignores latestVersion=false — all versions means: not sent.
-    expect(query.latestVersion).toBeUndefined()
-    expect(lastQuery(mockedDefsCount).latestVersion).toBeUndefined()
+    expect(calls(engine, "/process-definition/count")[0].query).toEqual({
+      key: "K1",
+      nameLike: "%Ord%",
+    })
     expect(data.totalCount).toBe(42)
     expect(data.filters).toEqual({
       processDefinitionKey: "K1",
       nameLike: "Ord",
       latestVersion: false,
     })
-    expect(data.engineId).toBe("engine-a")
   })
 
-  it("defaults latestVersion to true and paging to the first page of 50", async () => {
-    mockedDefs.mockResolvedValueOnce([] as never)
-    mockedDefsCount.mockResolvedValueOnce({ count: 0 })
+  it("defaults latestVersion to true and paging to the first page of 50 (negative offset → 0)", async () => {
+    const { engine, client } = await engineWith({
+      "GET /process-definition/count": { body: { count: 0 } },
+    })
 
-    const data = await buildProcessListData(fakeClient, "engine-a", {})
+    const data = await buildProcessListData(client, "engine-a", { firstResult: -5 })
 
-    expect(lastQuery(mockedDefs)).toMatchObject({
-      latestVersion: true,
-      firstResult: 0,
-      maxResults: 50,
+    expect(calls(engine, "/process-definition")[0].query).toMatchObject({
+      latestVersion: "true",
+      firstResult: "0",
+      maxResults: "50",
     })
     expect(data.filters.latestVersion).toBe(true)
   })
-
-  it("clamps a negative firstResult to zero", async () => {
-    mockedDefs.mockResolvedValueOnce([] as never)
-    mockedDefsCount.mockResolvedValueOnce({ count: 0 })
-
-    await buildProcessListData(fakeClient, "engine-a", { firstResult: -5 })
-
-    expect(lastQuery(mockedDefs).firstResult).toBe(0)
-  })
-
-  it("degrades to the page length when the count call fails", async () => {
-    mockedDefs.mockResolvedValueOnce([{ id: "a" }, { id: "b" }] as never)
-    mockedDefsCount.mockRejectedValueOnce(new Error("boom"))
-
-    const data = await buildProcessListData(fakeClient, "engine-a", {})
-
-    expect(data.totalCount).toBe(2)
-  })
-
-  it("degrades to the page length when the count response carries no number", async () => {
-    mockedDefs.mockResolvedValueOnce([{ id: "a" }] as never)
-    mockedDefsCount.mockResolvedValueOnce({ count: "many" } as never)
-
-    const data = await buildProcessListData(fakeClient, "engine-a", {})
-
-    expect(data.totalCount).toBe(1)
-  })
 })
 
-describe("buildProcessInstancesData", () => {
-  beforeEach(() => {
-    mockedInstances.mockResolvedValue([] as never)
-    mockedInstancesCount.mockResolvedValue({ count: 0 })
-    mockedDefs.mockResolvedValue([] as never)
-    mockedIncidents.mockResolvedValue([] as never)
+/** The process-instance endpoints, answered by query: the page, the page-scoped flags, the counts. */
+function instanceRoutes(counts: { all: number; withIncident: number; suspended: number }) {
+  return {
+    "GET /process-instance": (r: RecordedRequest) =>
+      r.query.processInstanceIds
+        ? { body: [{ id: "p2" }] }
+        : {
+            body: [
+              { id: "p1", definitionId: "K1:7:dep", businessKey: "BK-1", suspended: false },
+              { id: "p2", definitionId: "K1:7:dep", businessKey: null, suspended: true },
+              { id: "", definitionId: "K1:1:a" },
+              { id: "p3", definitionId: "legacy-id" },
+            ],
+          },
+    "GET /process-instance/count": (r: RecordedRequest) => ({
+      body: {
+        count: r.query.withIncident
+          ? counts.withIncident
+          : r.query.suspended
+            ? counts.suspended
+            : counts.all,
+      },
+    }),
+    // The key's latest version over every tenant (a tenant deployment has no
+    // tenant-less /process-definition/key/{key}).
+    "GET /process-definition": {
+      body: [{ id: "K1:7:dep", key: "K1", name: "Order", version: 7, tenantId: "acme" }],
+    },
+  }
+}
+
+describe("buildProcessInstancesData — totals and page-scoped incident flags (#335 N65)", () => {
+  it("flags incidents with ONE query over the page's ids and reports filtered-set totals", async () => {
+    const { engine, client } = await engineWith(
+      instanceRoutes({ all: 152, withIncident: 57, suspended: 9 }),
+    )
+
+    const data = await buildProcessInstancesData(client, "engine-a", { processDefinitionKey: "K1" })
+
+    expect(data.instances).toEqual([
+      {
+        id: "p1",
+        businessKey: "BK-1",
+        processDefinitionKey: "K1",
+        version: 7,
+        suspended: false,
+        hasIncident: false,
+      },
+      {
+        id: "p2",
+        businessKey: null,
+        processDefinitionKey: "K1",
+        version: 7,
+        suspended: true,
+        hasIncident: true,
+      },
+      {
+        id: "p3",
+        businessKey: null,
+        processDefinitionKey: "legacy-id",
+        version: null,
+        suspended: false,
+        hasIncident: false,
+      },
+    ])
+    // Whole-set totals from /count — never the page's 1 incident / 1 suspended.
+    expect(data).toMatchObject({
+      processDefinitionName: "Order",
+      totalCount: 152,
+      returnedCount: 3,
+      withIncidentCount: 57,
+      suspendedCount: 9,
+    })
+    const flagQuery = calls(engine, "/process-instance").find((r) => r.query.processInstanceIds)
+    expect(flagQuery?.query).toEqual({
+      processInstanceIds: "p1,p2,p3",
+      withIncident: "true",
+      maxResults: "3",
+    })
+    // No engine-wide incident scan decorates the page any more.
+    expect(calls(engine, "/incident")).toEqual([])
+    expect(calls(engine, "/process-instance/count").map((r) => r.query)).toEqual([
+      { processDefinitionKey: "K1" },
+      { processDefinitionKey: "K1", withIncident: "true" },
+      { processDefinitionKey: "K1", suspended: "true" },
+    ])
   })
 
-  it("maps instances, derives key + version and flags incidents", async () => {
-    mockedInstances.mockResolvedValueOnce([
-      { id: "p1", definitionId: "K1:7:dep", businessKey: "BK-1", suspended: false },
-      { id: "p2", definitionId: "K1:7:dep", businessKey: null, suspended: true },
-    ] as never)
-    mockedIncidents.mockResolvedValueOnce([{ processInstanceId: "p2" }] as never)
-    mockedInstancesCount.mockResolvedValueOnce({ count: 9 })
-    mockedDefs.mockResolvedValueOnce([{ name: "Order Process" }] as never)
+  it("answers the totals a filter already decides without asking", async () => {
+    const { engine, client } = await engineWith(
+      instanceRoutes({ all: 4, withIncident: 4, suspended: 0 }),
+    )
 
-    const data = await buildProcessInstancesData(fakeClient, "engine-a", {
-      processDefinitionKey: "K1",
+    const data = await buildProcessInstancesData(client, "engine-a", {
+      withIncidents: true,
+      active: true,
     })
 
-    expect(data.instances[0]).toEqual({
-      id: "p1",
-      businessKey: "BK-1",
-      processDefinitionKey: "K1",
-      version: 7,
-      suspended: false,
-      hasIncident: false,
-    })
-    expect(data.instances[1]).toMatchObject({
-      businessKey: null,
-      suspended: true,
-      hasIncident: true,
-    })
-    expect(data.processDefinitionName).toBe("Order Process")
-    expect(data.totalCount).toBe(9)
-    expect(data.returnedCount).toBe(2)
-    expect(data.withIncidentCount).toBe(1)
-    expect(data.suspendedCount).toBe(1)
+    expect(data).toMatchObject({ totalCount: 4, withIncidentCount: 4, suspendedCount: 0 })
+    expect(calls(engine, "/process-instance/count")).toHaveLength(1)
+    // Every row of a withIncident page has one — no flag query either.
+    expect(calls(engine, "/process-instance")).toHaveLength(1)
+    expect(data.instances.every((i) => i.hasIncident)).toBe(true)
   })
 
-  it("never forwards a false flag — the engine would ignore it", async () => {
-    await buildProcessInstancesData(fakeClient, "engine-a", {
+  it("never forwards a false flag, and sends a false active/suspended as the complement", async () => {
+    const { engine, client } = await engineWith(
+      instanceRoutes({ all: 0, withIncident: 0, suspended: 0 }),
+    )
+
+    await buildProcessInstancesData(client, "engine-a", {
       withIncidents: false,
       businessKeyLike: "",
     })
+    await buildProcessInstancesData(client, "engine-a", { suspended: false })
+    await buildProcessInstancesData(client, "engine-a", { active: false, businessKeyLike: "BK" })
 
-    const query = lastQuery(mockedInstances)
-    expect(query.active).toBeUndefined()
-    expect(query.suspended).toBeUndefined()
-    expect(query.withIncident).toBeUndefined()
-    expect(query.businessKeyLike).toBeUndefined()
-  })
-
-  it("sends a false active/suspended as the complementary flag", async () => {
-    await buildProcessInstancesData(fakeClient, "engine-a", { suspended: false })
-    expect(lastQuery(mockedInstances)).toMatchObject({ active: true })
-    expect(lastQuery(mockedInstances).suspended).toBeUndefined()
-    expect(lastQuery(mockedInstancesCount)).toMatchObject({ active: true })
-
-    await buildProcessInstancesData(fakeClient, "engine-a", { active: false })
-    expect(lastQuery(mockedInstances)).toMatchObject({ suspended: true })
-    expect(lastQuery(mockedInstances).active).toBeUndefined()
-  })
-
-  it("forwards the set filters as `true` and the business key as a substring", async () => {
-    await buildProcessInstancesData(fakeClient, "engine-a", {
-      suspended: true,
-      withIncidents: true,
-      businessKeyLike: "BK",
-    })
-
-    expect(lastQuery(mockedInstances)).toMatchObject({
-      suspended: true,
-      withIncident: true,
-      businessKeyLike: "%BK%",
-    })
-    expect(lastQuery(mockedInstances).active).toBeUndefined()
+    const pages = calls(engine, "/process-instance").filter((r) => !r.query.processInstanceIds)
+    const base = { firstResult: "0", maxResults: "50", sortBy: "businessKey", sortOrder: "asc" }
+    expect(pages.map((r) => r.query)).toEqual([
+      base,
+      { ...base, active: "true" },
+      { ...base, suspended: "true", businessKeyLike: "%BK%" },
+    ])
   })
 
   it("refuses active and suspended together instead of listing one state", async () => {
-    mockedInstances.mockClear()
+    const { engine, client } = await engineWith({})
     await expect(
-      buildProcessInstancesData(fakeClient, "engine-a", { active: true, suspended: true }),
+      buildProcessInstancesData(client, "engine-a", { active: true, suspended: true }),
     ).rejects.toThrow(/contradict each other/)
-    await expect(
-      buildProcessInstancesData(fakeClient, "engine-a", { active: false, suspended: false }),
-    ).rejects.toThrow(/contradict each other/)
-    expect(mockedInstances).not.toHaveBeenCalled()
+    expect(engine.requests).toEqual([])
   })
 
-  it("skips the name lookup when unscoped and reports a null key", async () => {
-    const data = await buildProcessInstancesData(fakeClient, "engine-a", {})
+  it("skips the definition lookup when unscoped and reports a null key", async () => {
+    const { engine, client } = await engineWith(
+      instanceRoutes({ all: 0, withIncident: 0, suspended: 0 }),
+    )
 
-    expect(mockedDefs).not.toHaveBeenCalled()
+    const data = await buildProcessInstancesData(client, "engine-a", {})
+
+    expect(engine.requests.some((r) => r.path.startsWith("/process-definition"))).toBe(false)
     expect(data.processDefinitionKey).toBeNull()
     expect(data.processDefinitionName).toBeNull()
   })
+})
 
-  it("degrades to the returned count when the count call fails", async () => {
-    mockedInstances.mockResolvedValueOnce([{ id: "p1" }] as never)
-    mockedInstancesCount.mockRejectedValueOnce(new Error("boom"))
+describe("buildJobPanelData — exact totals from /job/count", () => {
+  const jobRoutes = {
+    "GET /job": {
+      body: [
+        {
+          id: "j1",
+          processInstanceId: "p1",
+          retries: 0,
+          suspended: false,
+          priority: 0,
+          failedActivityId: "charge",
+        },
+      ],
+    },
+    "GET /job/count": (r: RecordedRequest) => ({
+      body: { count: r.query.noRetriesLeft ? 3 : 120 },
+    }),
+    "GET /process-definition": { body: [{ id: "K1:1:a", key: "K1", version: 1 }] },
+  }
 
-    const data = await buildProcessInstancesData(fakeClient, "engine-a", {})
+  it("reports both global totals; the page follows failedOnly", async () => {
+    const { engine, client } = await engineWith(jobRoutes)
 
-    expect(data.totalCount).toBe(1)
+    const all = await buildJobPanelData(client, "engine-a", { processDefinitionKey: "K1" })
+    const failed = await buildJobPanelData(client, "engine-a", { failedOnly: true })
+
+    expect([all.totalCount, all.failedCount]).toEqual([120, 3])
+    expect([failed.totalCount, failed.failedCount]).toEqual([3, 3])
+    expect(calls(engine, "/job").map((r) => r.query)).toEqual([
+      {
+        processDefinitionKey: "K1",
+        firstResult: "0",
+        maxResults: "50",
+        sortBy: "jobId",
+        sortOrder: "desc",
+      },
+      {
+        noRetriesLeft: "true",
+        firstResult: "0",
+        maxResults: "50",
+        sortBy: "jobId",
+        sortOrder: "desc",
+      },
+    ])
+    // A scoped panel checks its key exists (an unknown key is not-found, not "0 jobs").
+    expect(calls(engine, "/process-definition").map((r) => r.query)).toEqual([
+      { key: "K1", latestVersion: "true", sortBy: "version", sortOrder: "desc", maxResults: "1" },
+    ])
   })
 
-  it("drops rows without an id and nulls an unparseable version", async () => {
-    mockedInstances.mockResolvedValueOnce([
-      { id: "", definitionId: "K1:1:a" },
-      { id: "p1", definitionId: "legacy-id" },
-    ] as never)
+  it("nulls the optional job fields instead of shipping undefined", async () => {
+    const { client } = await engineWith(jobRoutes)
 
-    const data = await buildProcessInstancesData(fakeClient, "engine-a", {})
+    const data = await buildJobPanelData(client, "engine-a", {})
 
-    expect(data.instances).toHaveLength(1)
-    expect(data.instances[0]).toMatchObject({ id: "p1", version: null })
-  })
-
-  it("defaults paging to the first page of 50", async () => {
-    await buildProcessInstancesData(fakeClient, "engine-a", {})
-
-    expect(lastQuery(mockedInstances)).toMatchObject({
-      firstResult: 0,
-      maxResults: 50,
-      sortBy: "businessKey",
-      sortOrder: "asc",
+    expect(data.jobs[0]).toEqual({
+      id: "j1",
+      processInstanceId: "p1",
+      processDefinitionKey: null,
+      processDefinitionId: null,
+      activityId: "charge",
+      retries: 0,
+      exceptionMessage: null,
+      dueDate: null,
+      suspended: false,
+      priority: 0,
+      createTime: null,
     })
   })
 })

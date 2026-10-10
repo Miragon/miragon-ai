@@ -76,7 +76,7 @@ export function ProcessDefinitionsSection({
     id: row.id,
     key: row.key,
     name: row.name,
-    version: row.version,
+    version: row.latestVersion,
     tone: row.tone,
     counts: {
       instances: row.instances,

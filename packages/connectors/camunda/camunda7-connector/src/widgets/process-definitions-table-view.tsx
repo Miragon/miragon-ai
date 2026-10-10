@@ -65,7 +65,9 @@ export function ProcessDefinitionsTableView({
 
   const columns: ListTableColumn[] = [
     { label: t("cockpitDefs.colProcess") },
-    { label: t("cockpitDefs.colVersion") },
+    // Count rows are one per KEY (every version summed): their chip is the
+    // key's latest version, not the version the counts belong to.
+    { label: showCounts ? t("cockpitDefs.colLatestVersion") : t("cockpitDefs.colVersion") },
     ...(status ? [{ label: status.header }] : []),
     ...(showCounts
       ? ([

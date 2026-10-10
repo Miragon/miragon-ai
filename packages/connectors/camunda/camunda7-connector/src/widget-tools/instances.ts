@@ -9,7 +9,8 @@ import {
   withToolErrors,
   strictToolInput,
 } from "@miragon-ai/widget-shell/server"
-import { buildInstanceDetailData, buildJobPanelData } from "../data/cockpit-data.js"
+import { buildJobPanelData } from "../data/cockpit-data.js"
+import { buildInstanceDetailData } from "../data/instance-detail-data.js"
 import { buildBpmnViewerData } from "../data/bpmn-viewer-data.js"
 import {
   CAMUNDA7_SHOW_BPMN_VIEWER,
@@ -69,8 +70,8 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
             : "",
           state,
           activeActivities: data.activeActivityIds.length,
-          openIncidents: data.incidents?.length ?? 0,
-          openTasks: data.openTasks.length,
+          openIncidents: data.incidentCount,
+          openTasks: data.openTaskCount,
         }),
       })
     }),
@@ -81,7 +82,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       name: CAMUNDA7_SHOW_BPMN_VIEWER,
       title: "BPMN Diagram Viewer",
       description:
-        "Show an interactive BPMN diagram. Pass `processInstanceId` to overlay active activities, incidents, and failed-job counts for a running instance, or pass `processDefinitionKey` (with optional `version`) to view the diagram of a process definition without instance overlays.",
+        "Show an interactive BPMN diagram: `processInstanceId` overlays one running instance's active activities, incidents and failed jobs; `processDefinitionKey` (optional `version`) shows a definition version, its badges counting every running instance of that version.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processInstanceId: z
@@ -91,7 +92,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
         processDefinitionKey: z
           .string()
           .optional()
-          .describe("Process definition key. Renders the static diagram (no overlays)."),
+          .describe("Process definition key. Badges count every running instance of the version."),
         version: z
           .number()
           .int()
@@ -136,7 +137,9 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       }
 
       // Model summary only — the (often tens-of-KB) bpmnXml must never reach
-      // the text channel; the widget renders it from structuredContent.
+      // the text channel; the widget renders it from structuredContent. An
+      // instance target reports only that instance's facts (statsScope
+      // "instance": its own failed jobs, never the definition's).
       const totalFailedJobs = data.activityStats.reduce((sum, s) => sum + s.failedJobs, 0)
       const target = data.processInstanceId
         ? t("c7sum.bpmnViewer.targetInstance", { processInstanceId: data.processInstanceId })

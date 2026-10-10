@@ -120,15 +120,15 @@ export const en: MessageCatalog = {
   "c7sum.instanceDetail":
     "Process instance {instanceId}{businessKey}: {state}, {activeActivities} active activities, {openIncidents} open incidents, {openTasks} open user tasks.",
   "c7sum.processInstances":
-    '{totalCount} running instance(s) of "{processDefinitionKey}" ({withIncidentCount} with incidents, {suspendedCount} suspended); showing {returnedCount} in the table.',
+    '{totalCount} running instance(s) of "{processDefinitionKey}", of them {withIncidentCount} with incidents and {suspendedCount} suspended; showing {returnedCount} in the table.',
   "c7sum.incidentsDashboard":
     "Incidents dashboard: {totalCount} open incident(s) across {processCount} process definition(s), {last24hCount} in the last 24h.",
   "c7sum.processIncidents":
-    'Process incidents for "{processDefinitionKey}"{version}: {incidentCount} open incident(s) across {activities} activities, {last24hCount} in the last 24h.',
+    'Process incidents for "{processDefinitionKey}" (all versions; diagram v{diagramVersion}): {incidentCount} open incident(s) across {activities} activities, {last24hCount} in the last 24h.',
   "c7sum.incidentDetail":
     'Incident {incidentId} ({incidentType}) at activity "{activity}" in "{processDefinitionKey}", instance {processInstanceId}{message}.',
   "c7sum.processDetail":
-    'Process "{processDefinitionKey}"{version}: {runningInstances} running instance(s), {openIncidents} open incident(s), {failedJobs} failed job(s).',
+    'Process "{processDefinitionKey}" (all versions; diagram v{diagramVersion}): {runningInstances} running instance(s), {openIncidents} open incident(s), {failedJobs} failed job(s).',
   "c7sum.historyTimeline":
     "History timeline for process instance {processInstanceId}: {totalActivities} historic activities{notFound}.",
   "c7sum.historyTimeline.notFound": " (no historic process instance found)",
@@ -137,6 +137,9 @@ export const en: MessageCatalog = {
   "c7sum.engineHealth.topCluster":
     ' Top cluster: activity "{activityId}" / {incidentType}, {incidentCount} incidents.',
   "c7sum.engineHealth.noIncidents": " No open incidents.",
+  "c7sum.unknownNumberOf": "an unknown number of",
+  "c7sum.atLeast": "at least {count}",
+  "c7sum.unknown": "unknown",
   "c7sum.clusterDetail":
     'Failure cluster on engine "{engineId}": activity "{activityId}" / {incidentType} — {incidentCount} incidents ({lastHourCount} in the last hour) across {processes}.{sample}',
   "c7sum.clusterDetail.unknownProcesses": "unknown processes",
@@ -147,8 +150,9 @@ export const en: MessageCatalog = {
   "c7sum.bpmnViewer.targetInstance": "process instance {processInstanceId}",
   "c7sum.bpmnViewer.targetDefinition": "process definition {definitionId}",
   "c7sum.bpmnViewer.overlays":
-    ": {activeActivities} active activities, {incidentActivities} activities with incidents, {failedJobs} failed jobs",
-  "c7sum.bpmnViewer.noOverlays": " (static diagram, no instance overlays)",
+    ": {activeActivities} active activities, {incidentActivities} activities with incidents, {failedJobs} failed jobs of this instance",
+  "c7sum.bpmnViewer.noOverlays":
+    " (no instance overlays; the badges count all running instances of this version)",
   "c7sum.bpmnViewer.xmlUnavailable": " — diagram XML unavailable",
   "c7sum.jobPanel": "Job panel: {totalCount} job(s), {failedCount} failed{forProcess}{failedOnly}.",
   "c7sum.jobPanel.forProcess": ' for "{processDefinitionKey}"',

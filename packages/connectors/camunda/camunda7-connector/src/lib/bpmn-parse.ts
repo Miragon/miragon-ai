@@ -39,12 +39,18 @@ export function extractActivityNames(bpmnXml: string): Record<string, string> {
 }
 
 /**
- * Counts BPMN activity-like elements (tasks, gateways, events, sub-processes,
- * call activities). Used for "X / Y activities affected" hints.
+ * The ids of the diagram's BPMN activity-like elements (tasks, gateways,
+ * events, sub-processes, call activities), in document order. The "X / Y
+ * activities affected" hint counts both sides over THIS set, so an activity
+ * only an older version has never inflates X.
  */
-export function countBpmnActivities(bpmnXml: string): number {
-  const re = /<(?:[a-zA-Z]+:)?(?:\w+Task|\w+Gateway|\w+Event|subProcess|callActivity)\b/g
-  let count = 0
-  while (re.exec(bpmnXml) !== null) count++
-  return count
+export function bpmnActivityIds(bpmnXml: string): string[] {
+  const re = /<(?:[a-zA-Z]+:)?(?:\w+Task|\w+Gateway|\w+Event|subProcess|callActivity)\b[^>]*>/g
+  const ids: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = re.exec(bpmnXml)) !== null) {
+    const id = /\bid="([^"]+)"/.exec(m[0])
+    if (id) ids.push(id[1])
+  }
+  return ids
 }

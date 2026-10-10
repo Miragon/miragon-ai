@@ -7,7 +7,8 @@ export function EmptyStateWithSiblings({
   onJumpTo,
 }: {
   processName: string
-  siblings: IncidentsByProcess[]
+  /** Other processes with open incidents — null when they could not be read. */
+  siblings: IncidentsByProcess[] | null
   onJumpTo: (key: string) => void
 }) {
   const t = useT()
@@ -16,7 +17,9 @@ export function EmptyStateWithSiblings({
       <div className="text-foreground font-medium">
         {t("procIncEmpty.noOpenIncidentsOnProcess", { processName })}
       </div>
-      {siblings.length === 0 ? (
+      {siblings === null ? (
+        <div className="text-muted-foreground text-xs">{t("procIncEmpty.siblingsUnavailable")}</div>
+      ) : siblings.length === 0 ? (
         <div className="text-muted-foreground text-xs">
           {t("procIncEmpty.noOpenIncidentsInEngine")}
         </div>

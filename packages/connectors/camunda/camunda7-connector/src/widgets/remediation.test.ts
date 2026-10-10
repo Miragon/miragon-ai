@@ -5,6 +5,7 @@ const CLUSTER: RemediationCluster = {
   activityId: "ServiceTask_1",
   incidentType: "failedJob",
   incidentCount: 12,
+  scannedIncidentCount: 12,
   last24hCount: 3,
   processDefinitionKeys: ["invoice"],
   representativeMessage: "Connection refused",

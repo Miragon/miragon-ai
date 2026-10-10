@@ -4,6 +4,7 @@ import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useNav } from "../navigation.js"
 import { useViewData } from "../use-view-data.js"
 import { useT } from "../../messages/use-t.js"
+import { diagramActivityFraction } from "./activity-scope.js"
 
 /** The unified definition KPI strip: execution health + incident load in one row. */
 export function ProcessDefinitionKpi({
@@ -39,17 +40,26 @@ export function ProcessDefinitionKpi({
   }
 
   const title = data.processDefinitionName ?? data.processDefinitionKey
-  const affectedActivityCount = data.activities.length
-  const totalActivityFraction =
-    data.totalActivityCount !== null
-      ? `${affectedActivityCount}/${data.totalActivityCount}`
-      : `${affectedActivityCount}`
+  const fraction = diagramActivityFraction(data)
+  // Both sides of the fraction count the diagram's activities; those only
+  // older versions have are named beside it, never folded into it.
+  const activitiesCell: KpiCell = fraction
+    ? {
+        label: t("procIncKpi.activitiesAffected"),
+        value: fraction.affected,
+        fraction: `/${fraction.total}`,
+        trend:
+          fraction.olderVersionsOnly > 0
+            ? t("procIncKpi.olderVersionsOnly", { count: fraction.olderVersionsOnly })
+            : undefined,
+      }
+    : { label: t("procIncKpi.activitiesAffected"), value: data.activities.length }
 
   const cells: KpiCell[] = [
     {
       label: t("procIncKpi.running"),
-      value: data.runningInstances !== null ? data.runningInstances.toLocaleString() : "—",
-      tone: data.runningInstances !== null && data.runningInstances > 0 ? "success" : undefined,
+      value: data.runningInstances.toLocaleString(),
+      tone: data.runningInstances > 0 ? "success" : undefined,
       onClick: () =>
         go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey }),
       ariaLabel: t("procIncKpi.runningAria", { name: title }),
@@ -66,10 +76,10 @@ export function ProcessDefinitionKpi({
     },
     {
       label: t("procIncKpi.failedJobs"),
-      value: data.failedJobs !== null ? data.failedJobs : "—",
-      tone: data.failedJobs !== null && data.failedJobs > 0 ? "warning" : undefined,
+      value: data.failedJobs,
+      tone: data.failedJobs > 0 ? "warning" : undefined,
     },
-    { label: t("procIncKpi.activitiesAffected"), value: totalActivityFraction },
+    activitiesCell,
   ]
 
   return (

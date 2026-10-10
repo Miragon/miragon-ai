@@ -1,19 +1,26 @@
 import type { Client } from "@miragon-ai/camunda7-client"
-import type { BpmnViewerData } from "../view-models.js"
+import type { ActivityStat, BpmnViewerData } from "../view-models.js"
 import {
   getActivityInstanceTree,
   getActivityStatistics,
   getIncidents,
+  getJobs,
   getProcessDefinitionBpmn20Xml,
   getProcessDefinitions,
   getProcessInstance,
 } from "@miragon-ai/camunda7-client/sdk"
-import { collectActiveActivityIds, collectIncidentActivityIds } from "../lib/activity-tree.js"
+import {
+  collectActiveActivityIds,
+  collectIncidentActivityIds,
+  countActivityInstances,
+} from "../lib/activity-tree.js"
+import { findLatestDefinition } from "./definition-info.js"
+import { optional, rowsOf } from "./engine-reads.js"
 
 export interface BpmnViewerTarget {
   /** Renders the diagram with live overlays (active activities, incidents). */
   processInstanceId?: string
-  /** Renders the static diagram of a definition (no instance overlays). */
+  /** Renders a definition version's diagram; its badges count every running instance of it. */
   processDefinitionKey?: string
   /** Specific definition version; latest when omitted. Needs `processDefinitionKey`. */
   version?: number
@@ -25,9 +32,15 @@ export interface BpmnViewerTarget {
  * the `camunda7_show_bpmn_viewer` widget tool and the `camunda7:load-bpmn-viewer`
  * pipeline step — so overlay behavior cannot drift between them.
  *
- * When the target cannot be resolved to a definition, the empty shape
- * (`processDefinitionId: null`, no XML) is returned; callers detect that via
- * `processDefinitionId === null`.
+ * The overlay numbers are scoped to the TARGET (#335 N66): for an instance,
+ * token counts come from its activity-instance tree and failed jobs from its
+ * own jobs — never from the definition's statistics, which span every running
+ * instance of the version. `statsScope` names the scope for the widget.
+ *
+ * The overlays are primary: an unknown instance is the engine's 404 and a
+ * failed overlay read is a tool error, never an instance without tokens. The
+ * diagram XML is enrichment (null when unreadable). A definition key with no
+ * matching version returns the empty shape (`processDefinitionId: null`).
  */
 export async function buildBpmnViewerData(
   client: Client,
@@ -41,22 +54,73 @@ export async function buildBpmnViewerData(
     return emptyViewerData(processInstanceId, engineId)
   }
 
-  const [xmlResponse, activityTree, incidents, stats] = await fetchViewerSources(
-    client,
-    definitionId,
-    processInstanceId,
-  )
-
-  const bpmnXml = (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? ""
+  const [xmlResponse, overlays] = await Promise.all([
+    // Enrichment: the overlays still answer "where is this instance stuck?".
+    optional(getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } })),
+    processInstanceId
+      ? instanceOverlays(client, processInstanceId)
+      : definitionOverlays(client, definitionId),
+  ])
 
   return {
-    bpmnXml,
+    bpmnXml: (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? null,
     processInstanceId,
     processDefinitionId: definitionId,
-    activeActivityIds: processInstanceId ? collectActiveActivityIds(activityTree) : [],
-    incidentActivityIds: processInstanceId ? collectIncidentActivityIds(incidents) : [],
-    activityStats: mapActivityStats(stats),
+    ...overlays,
     engineId,
+  }
+}
+
+type Overlays = Pick<
+  BpmnViewerData,
+  "activeActivityIds" | "incidentActivityIds" | "activityStats" | "statsScope"
+>
+
+/** The instance's own state: its tokens, its incidents, its failed jobs. */
+async function instanceOverlays(client: Client, processInstanceId: string): Promise<Overlays> {
+  const [tree, incidents, failedJobs] = await Promise.all([
+    getActivityInstanceTree({ client, path: { id: processInstanceId } }),
+    getIncidents({ client, query: { processInstanceId } }).then((rows) => rowsOf(rows)),
+    getJobs({ client, query: { processInstanceId, noRetriesLeft: true } }).then((rows) =>
+      rowsOf<{ failedActivityId?: string | null }>(rows),
+    ),
+  ])
+  const stats = new Map<string, ActivityStat>()
+  const statOf = (id: string) => {
+    const stat = stats.get(id) ?? { id, instances: 0, failedJobs: 0 }
+    stats.set(id, stat)
+    return stat
+  }
+  for (const [id, count] of countActivityInstances(tree)) statOf(id).instances = count
+  for (const job of failedJobs) {
+    if (job.failedActivityId) statOf(job.failedActivityId).failedJobs += 1
+  }
+  return {
+    activeActivityIds: collectActiveActivityIds(tree),
+    incidentActivityIds: collectIncidentActivityIds(incidents),
+    activityStats: [...stats.values()],
+    statsScope: "instance",
+  }
+}
+
+/** A bare definition: the version's activity statistics (every running instance of it). */
+async function definitionOverlays(client: Client, definitionId: string): Promise<Overlays> {
+  const stats = rowsOf<{ id?: string | null; instances?: number; failedJobs?: number }>(
+    await getActivityStatistics({
+      client,
+      path: { id: definitionId },
+      query: { failedJobs: true },
+    }),
+  )
+  return {
+    activeActivityIds: [],
+    incidentActivityIds: [],
+    activityStats: stats.map((s) => ({
+      id: s.id ?? "",
+      instances: s.instances ?? 0,
+      failedJobs: s.failedJobs ?? 0,
+    })),
+    statsScope: "definition",
   }
 }
 
@@ -72,67 +136,30 @@ async function resolveDefinitionId(
     })) as { definitionId?: string } | null
     return instance?.definitionId ?? null
   }
-  if (target.processDefinitionKey) {
-    const matches = await getProcessDefinitions({
-      client,
-      query: {
-        key: target.processDefinitionKey,
-        version: target.version,
-        latestVersion: target.version === undefined ? true : undefined,
-        maxResults: 1,
-      },
-    })
-    const first = Array.isArray(matches) ? (matches[0] as { id?: string } | undefined) : null
-    return first?.id ?? null
+  if (target.processDefinitionKey === undefined) return null
+  if (target.version === undefined) {
+    // The highest version over every tenant — the definition view's lookup.
+    return (await findLatestDefinition(client, target.processDefinitionKey))?.id || null
   }
-  return null
+  const matches = rowsOf<{ id?: string }>(
+    await getProcessDefinitions({
+      client,
+      query: { key: target.processDefinitionKey, version: target.version, maxResults: 1 },
+    }),
+  )
+  return matches[0]?.id ?? null
 }
 
 /** The empty shape callers detect via `processDefinitionId === null`. */
 function emptyViewerData(processInstanceId: string | null, engineId: string): BpmnViewerData {
   return {
-    bpmnXml: "",
+    bpmnXml: null,
     processInstanceId,
     processDefinitionId: null,
     activeActivityIds: [],
     incidentActivityIds: [],
     activityStats: [],
+    statsScope: processInstanceId ? "instance" : "definition",
     engineId,
   }
-}
-
-/** Fetches XML + overlay sources in parallel; each source degrades to empty on failure. */
-function fetchViewerSources(
-  client: Client,
-  definitionId: string,
-  processInstanceId: string | null,
-) {
-  return Promise.all([
-    getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } }).catch(() => null),
-    processInstanceId
-      ? getActivityInstanceTree({ client, path: { id: processInstanceId } }).catch(() => null)
-      : Promise.resolve(null),
-    processInstanceId
-      ? getIncidents({ client, query: { processInstanceId, maxResults: 200 } }).catch(() => [])
-      : Promise.resolve([]),
-    // `incidents: true` is deliberately NOT requested: incident overlays come
-    // from the /incident rows above, the statistics only feed token counts and
-    // failed-job badges.
-    getActivityStatistics({
-      client,
-      path: { id: definitionId },
-      query: { failedJobs: true },
-    }).catch(() => []),
-  ])
-}
-
-function mapActivityStats(stats: unknown): BpmnViewerData["activityStats"] {
-  const statRows = Array.isArray(stats)
-    ? (stats as Array<{ id?: string | null; instances?: number; failedJobs?: number }>)
-    : []
-  return statRows.map((s) => ({
-    id: s.id ?? "",
-    instances: s.instances ?? 0,
-    failedJobs: s.failedJobs ?? 0,
-  }))
 }
