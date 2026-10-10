@@ -202,9 +202,14 @@ One self-fetching card, composed from `@miragon-ai/widget-shell/widgets` —
   refetch after save, another session's write).
 - Write via `useToolMutation(SAVE_TOOL, { invalidateKeys: [[…]] })` so a remount seeds
   from the saved truth, not a stale cache entry.
-- Render `<ModelContext content={describe…(view)} />` **inline**, not through
-  `adaptDataWidget`'s `describeForModel`: the settings tab mounts the widget without
-  pipeline data, so only the mounted component knows the self-fetched view.
+- Render `<HostModelContext content={modelContextText(describe…(view))}>` **inline**, not
+  through `adaptDataWidget`'s `describeForModel`: the settings tab mounts the widget
+  without pipeline data, so only the mounted component knows the self-fetched view.
+  `describe…` returns a `ModelContextSpec` (static `summary`, `facts`, `tools`) whose
+  `surface` names the save tool only while `canSave` — reference:
+  `describeAnalyticsSettings` in `analytics-connector/src/widgets/model-descriptions.ts`
+  (CLAUDE.md invariant 6; `apps/mcp-server-camunda7/test/hand-off-surface.test.ts`
+  rejects a hand-written text).
 - Everything user-visible goes through the module's `useT()` catalogs (`de` + `en`).
 
 ## Step 6 — registration (four links; the page assembles itself)

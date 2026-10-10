@@ -21,7 +21,9 @@ export default mergeConfig(
         // 92.66 / 93.26 / 97.22 / 93.45. Raised again with the pre-production
         // compat removal (#322: the supportsToolsets pass-through, mergeRawSlice
         // and the v1→v3 migration steps gone): measured 93.02 / 93.51 / 97.34 / 93.79.
-        thresholds: { statements: 91, branches: 91, functions: 95, lines: 91 },
+        // Raised again with #338 (the askAiPrompt primitive and its fence
+        // fully covered): measured 93.4 / 92.96 / 97.59 / 94.04.
+        thresholds: { statements: 91, branches: 91, functions: 95, lines: 92 },
       },
     },
   }),

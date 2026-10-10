@@ -7,7 +7,6 @@ import {
   useToolMutation,
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
-import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
   LOCALES,
   NativeSelect,
@@ -28,6 +27,7 @@ import { groupEnginesByEnvironment } from "../lib/environments.js"
 import type { UserProfile, UserProfileView } from "../lib/profile-schema.js"
 import { useT } from "../messages/use-t.js"
 import { refreshCockpitData } from "./refresh.js"
+import { ProfileModelContext } from "./user-profile-context.js"
 
 /** Subset of a dashboard summary the picker needs (from `list-dashboards`). */
 interface DashboardSummary {
@@ -316,11 +316,12 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
 
   return (
     <>
-      <HostModelContext
-        content={`Support is on the MiragonAI profile & settings panel. Current preferences — language ${form.language}, theme ${form.theme}, ${allEnginesAllowed ? "all engines available" : `${form.allowedEngineIds.length} engine(s) available`}${form.defaultDashboardId ? `, default dashboard "${form.defaultDashboardId}" (open it via load-dashboard when the user asks for their dashboard)` : ""}. ${canSave ? "Preferences can be changed here or via camunda7_save_user_profile." : "Preferences are read-only in this deployment and cannot be changed."}`}
-      >
-        {null}
-      </HostModelContext>
+      <ProfileModelContext
+        form={form}
+        canSave={canSave}
+        allEnginesAllowed={allEnginesAllowed}
+        dashboardsAnswered={dashboardsQuery.isSuccess}
+      />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

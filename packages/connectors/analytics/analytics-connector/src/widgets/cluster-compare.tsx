@@ -6,13 +6,42 @@ import {
   ComparisonCard,
   ComparisonEmptyState,
   buildComparisonMetrics,
-  describeDeltas,
+  deltaFacts,
 } from "./comparison-shared.js"
+import { engineIdsOf, useHandOff, type HandOff } from "./hand-off.js"
 
 export type ClusterCompareData = ClusterCompareResult | null
 
+/**
+ * Interpret a before/after-deployment comparison — confirm it, then find the
+ * driving element. The ids re-run the comparison as asked (the requested
+ * whole-day windows, the echoed engines); the windows actually measured — cut
+ * short at now or the retention — are facts (#336).
+ */
+export function clusterCompareHandOff(data: ClusterCompareResult): HandOff {
+  return {
+    intent: "askAi.clusterCompare",
+    ids: {
+      engine: engineIdsOf(data.engines),
+      deploymentTimestamp: data.deploymentTimestamp,
+      windowBeforeDays: data.requestedWindowDays.before,
+      windowAfterDays: data.requestedWindowDays.after,
+      processDefinitionKey: data.processDefinitionKey,
+      activityId: data.activityId,
+    },
+    facts: {
+      measuredBeforeDays: data.windowDays.before,
+      measuredAfterDays: data.windowDays.after,
+      partial: data.partial || undefined,
+      ...deltaFacts(data.delta, data.suppressed),
+    },
+    tools: ["analytics_cluster_compare", "analytics_element_bottleneck"],
+  }
+}
+
 export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
   const t = useT()
+  const { ask } = useHandOff()
   if (!data) return <ComparisonEmptyState>{t("aClusterCompare.noData")}</ComparisonEmptyState>
 
   const before = data.kpis.find((k) => k.period === "before")
@@ -23,15 +52,6 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
 
   const metrics = buildComparisonMetrics(t, before, after, data.delta)
 
-  const processScope = data.processDefinitionKey
-    ? `, scoped to process ${data.processDefinitionKey}`
-    : ""
-  const elementScope = data.activityId ? `, scoped to BPMN element ${data.activityId}` : ""
-  const partialNote = data.partial
-    ? " A window was cut short at now or at the retention (partial), so starts are compared per day."
-    : ""
-  const interpretPrompt = `Interpret the pre/post deployment comparison around ${data.deploymentTimestamp} (measured -${data.windowDays.before}d baseline vs +${data.windowDays.after}d after)${processScope}${elementScope}. The on-screen deltas are: ${describeDeltas(data.delta)}.${partialNote} First call analytics_cluster_compare(deploymentTimestamp="${data.deploymentTimestamp}", windowBeforeDays=${data.requestedWindowDays.before}, windowAfterDays=${data.requestedWindowDays.after}${data.processDefinitionKey ? `, processDefinitionKey="${data.processDefinitionKey}"` : ""}) to confirm the numbers and the 'suppressed' flag, then call analytics_element_bottleneck to find which activity drives any regression. Tell me in 3-4 sentences: did the deployment cause a genuine regression or is it noise / low sample size, which metric (and element, if any) is responsible, and the single recommended next action (roll back the deployment, hold further rollouts, or accept).`
-
   return (
     <ComparisonCard
       title={t("aClusterCompare.title")}
@@ -39,7 +59,7 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
       beforeLabel={t("aClusterCompare.beforeLabel")}
       afterLabel={t("aClusterCompare.afterLabel")}
       metrics={metrics}
-      actions={<AskAiButton prompt={interpretPrompt} variant="primary" />}
+      actions={<AskAiButton prompt={ask(clusterCompareHandOff(data))} variant="primary" />}
       badges={
         <>
           <Badge variant="secondary">

@@ -1,12 +1,24 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, render, screen } from "@testing-library/react"
-import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { queryClient } from "@miragon/mcp-toolkit-ui"
+import { WidgetFixtureHost, type HostActionLog } from "@miragon/mcp-toolkit-ui/app"
 import { EngineHealthVerdict } from "./engine-health.js"
 import type { EngineHealthData } from "../view-models.js"
+import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
+import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  queryClient.clear()
+})
+
+/** The hand-offs follow the deployment's surface — these fixtures run as `operations`. */
+let tools: Record<string, unknown>
+beforeAll(async () => {
+  tools = { [CAMUNDA7_WIDGET_ACTIONS_DATA]: await widgetActionsFeedFor("operations") }
+})
 
 const RULE =
   "From the engine's open incidents, read live: critical at >=50 open or >=25 in one cluster, degraded with any, else ok."
@@ -81,15 +93,19 @@ const HEALTHY: EngineHealthData = {
 const Widget = EngineHealthVerdict as unknown as ComponentType<Record<string, unknown>>
 
 describe("EngineHealthVerdict (fixture render)", () => {
-  it("renders the verdict header, KPIs and the incident clusters with drill + ask handoffs", () => {
+  it("renders the verdict header, KPIs and the incident clusters with drill + ask handoffs", async () => {
     render(
-      <WidgetFixtureHost widget={Widget} data={DEGRADED as unknown as Record<string, unknown>} />,
+      <WidgetFixtureHost
+        widget={Widget}
+        data={DEGRADED as unknown as Record<string, unknown>}
+        tools={tools}
+      />,
     )
 
     // Verdict header (title + deterministic headline) and the top-level AI handoff.
     expect(screen.getByText("Engine Overview")).toBeTruthy()
     expect(screen.getByText("Degraded — 51 open incidents across 3 activities")).toBeTruthy()
-    expect(screen.getByText("Analyze")).toBeTruthy()
+    expect(await screen.findByText("Analyze")).toBeTruthy()
 
     // KPI row.
     expect(screen.getByText("Running instances")).toBeTruthy()
@@ -107,7 +123,32 @@ describe("EngineHealthVerdict (fixture render)", () => {
     // Each cluster carries both launchpads: a deterministic drill + the guarded
     // remediation handoff to the agent.
     expect(screen.getAllByText("Open")).toHaveLength(2)
-    expect(screen.getAllByText("Fix")).toHaveLength(2)
+    expect(await screen.findAllByText("Fix")).toHaveLength(2)
+  })
+
+  // A surface feed that cannot answer (failed call; a host without in-widget
+  // tools/call) must not take every Ask-AI button with it: the hand-offs are
+  // still offered, naming no tool they cannot confirm.
+  it("keeps its hand-offs when the surface feed fails — naming no tool", async () => {
+    // The shared client retries a failed query with backoff — fail at once.
+    queryClient.setQueryDefaults(["camunda7-widget-actions"], { retry: false })
+    const actions: HostActionLog[] = []
+    render(
+      <WidgetFixtureHost
+        widget={Widget}
+        data={DEGRADED as unknown as Record<string, unknown>}
+        tools={{}}
+        onHostAction={(action) => actions.push(action)}
+      />,
+    )
+    fireEvent.click(await screen.findByRole("button", { name: /Analyze/ }))
+    // Without a confirmed retry tool the clusters offer the diagnosis.
+    expect(await screen.findAllByRole("button", { name: /Diagnose/ })).toHaveLength(2)
+    const prompts = actions.flatMap((a) => (a.type === "sendFollowUpMessage" ? [a.prompt] : []))
+    expect(prompts).toHaveLength(1)
+    expect(prompts[0]).toContain('Ids: engine="default"')
+    expect(prompts[0]).not.toContain("Tools:")
+    queryClient.setQueryDefaults(["camunda7-widget-actions"], {})
   })
 
   it("renders the stable verdict with no cluster list when there are no incidents", () => {

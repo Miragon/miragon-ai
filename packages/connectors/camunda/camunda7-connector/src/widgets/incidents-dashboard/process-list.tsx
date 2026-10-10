@@ -10,6 +10,7 @@ import { useNav } from "../navigation.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { GroupSummaryRow, IncidentGroupIcon } from "../group-summary-row.js"
 import { useViewData } from "../use-view-data.js"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
 
@@ -44,6 +45,38 @@ function incidentVolumeTone(unfilteredIncidentCount: number): ToneVariant {
   return unfilteredIncidentCount >= CRITICAL_INCIDENT_THRESHOLD ? "critical" : "warning"
 }
 
+/**
+ * Root cause of ONE process's open incidents — do the failing activities share
+ * a cause, and which fix. The process name is the deployer's text — quoted.
+ */
+export function processRootCauseHandOff(
+  process: IncidentsDashboardProcess,
+  engine: string | undefined,
+): HandOff {
+  return {
+    intent: "askAi.incidents.processRootCause",
+    ids: { engine, processDefinitionKey: process.processDefinitionKey },
+    // Every count spans all versions of the key (#335 N61); null facts (a
+    // scan that does not cover the card) are left out, never a 0.
+    facts: {
+      countScope: "allVersions",
+      latestVersion: process.latestVersion,
+      openIncidents: process.incidentCount,
+      affectedActivities: process.affectedActivityCount,
+      last24h: process.last24hCount,
+      latestIncident: process.latestIncident,
+      runningInstances: process.runningInstances,
+    },
+    untrusted: [{ label: "processName", text: process.processDefinitionName }],
+    tools: [
+      "camunda7_list_incidents",
+      "camunda7_get_job_stacktrace",
+      "camunda7_query_historic_incidents",
+      "camunda7_query_historic_activity_instances",
+    ],
+  }
+}
+
 interface DisplayProcess extends IncidentsDashboardProcess {
   tone: ToneVariant
   /** The card's count pill: every open incident, or (Last 24h chip) the new ones — null = unknown. */
@@ -58,10 +91,12 @@ function ProcessSummary({
 }: {
   process: DisplayProcess
   expanded: boolean
-  engineId: string
+  /** The engine the dashboard was fetched from — undefined when the default routed it. */
+  engineId: string | undefined
   onOpenDetail: () => void
 }) {
   const t = useT()
+  const { ask } = useHandOff()
   const tone = process.tone
   const cockpitUrl = process.cockpitUrl
 
@@ -99,7 +134,7 @@ function ProcessSummary({
           <AskAiButton
             variant="subtle"
             label={t("incidentsList.analyze")}
-            prompt={`Analyze the root cause of the ${process.incidentCount} open incident(s) on process ${process.processDefinitionName ?? process.processDefinitionKey} (key ${process.processDefinitionKey}, all versions; latest version v${process.latestVersion}) on engine ${engineId}. ${process.affectedActivityCount ?? "An unknown number of"} activity/activities are affected, ${process.last24hCount ?? "an unknown number"} new in the last 24h, latest incident ${formatTimestamp(process.latestIncident)}, across roughly ${process.runningInstances} running instances. Use camunda7_list_incidents({ processDefinitionKey: "${process.processDefinitionKey}" }) and camunda7_query_historic_activity_instances to determine whether the failing activities share one root cause, classify the failure (transient/retryable vs. data/config vs. broken model), and recommend a fix — batch retry via camunda7_set_job_retries_batch, a variable correction, an instance modification via camunda7_modify_process_instance, or a model fix requiring redeploy/migration. Report findings and the recommended action; do not execute mutating changes without confirmation.`}
+            prompt={ask(processRootCauseHandOff(process, engineId))}
           />
           <DrillButton
             onDrill={onOpenDetail}
@@ -307,7 +342,7 @@ export function IncidentProcessListView({
                 <ProcessSummary
                   process={p}
                   expanded={expanded.has(p.processDefinitionKey)}
-                  engineId={engine ?? data.engineId ?? "default"}
+                  engineId={engine ?? data.engineId}
                   onOpenDetail={() => openDetail(p.processDefinitionKey)}
                 />
               }

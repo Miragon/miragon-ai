@@ -9,7 +9,7 @@ import {
 
 import type { InstanceDetailData } from "../../view-models.js"
 import { type T, useT } from "../../messages/use-t.js"
-import { engineArg, engineCallRule } from "../lib/engine-scope.js"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 
 export interface InstanceStatus {
   label: string
@@ -32,12 +32,49 @@ export function instanceStatus(
   return { label, tone }
 }
 
+/**
+ * Diagnose ONE instance: why the token is stuck, each incident's cause and
+ * the single best fix — a plan, never an execution. The business key is the
+ * starter's text — quoted.
+ */
+export function diagnoseInstanceHandOff({
+  instance,
+  engineId,
+  activeActivityIds,
+  incidentActivityIds,
+}: {
+  instance: InstanceDetailData["instance"]
+  engineId: string | undefined
+  activeActivityIds: string[]
+  incidentActivityIds: string[]
+}): HandOff {
+  return {
+    intent: "askAi.instance.diagnose",
+    ids: {
+      engine: engineId,
+      processInstanceId: instance.id,
+      processDefinitionId: instance.definitionId,
+    },
+    facts: { activeActivities: activeActivityIds, incidentActivities: incidentActivityIds },
+    untrusted: [{ label: "businessKey", text: instance.businessKey }],
+    tools: [
+      "camunda7_get_process_instance",
+      "camunda7_get_activity_instance_tree",
+      "camunda7_get_process_instance_variables",
+      "camunda7_list_incidents",
+      "camunda7_get_job_stacktrace",
+      "camunda7_set_job_retries",
+      "camunda7_set_process_instance_variable",
+      "camunda7_modify_process_instance",
+    ],
+  }
+}
+
 /** Header — identity, status badge, and the action home (AI diagnose, suspend, cancel). */
 export function InstanceHeader({
   instance,
   status,
   engineId,
-  engineClause,
   activeActivityIds,
   incidentActivityIds,
   isSuspended,
@@ -49,7 +86,6 @@ export function InstanceHeader({
   instance: InstanceDetailData["instance"]
   status: InstanceStatus
   engineId?: string
-  engineClause: string
   activeActivityIds: string[]
   incidentActivityIds: string[]
   isSuspended: boolean
@@ -61,8 +97,7 @@ export function InstanceHeader({
   onRequestCancel?: () => void
 }) {
   const t = useT()
-  const activeIds = (activeActivityIds ?? []).join(", ") || "none"
-  const incidentIds = (incidentActivityIds ?? []).join(", ") || "none"
+  const { ask } = useHandOff()
   return (
     <WidgetHeader
       size="detail"
@@ -88,9 +123,14 @@ export function InstanceHeader({
         <>
           <AskAiButton
             variant="primary"
-            prompt={`Diagnose CIB Seven process instance ${instance.id}${
-              instance.businessKey ? ` (business key ${instance.businessKey})` : ""
-            } of definition ${instance.definitionId}${engineClause}. It is currently at activities ${activeIds} with incidents at ${incidentIds}. Use camunda7_get_process_instance, camunda7_list_incidents({${engineArg(engineId)}processInstanceId: "${instance.id}"}), camunda7_get_activity_instance_tree and camunda7_get_process_instance_variables to establish: (1) why the token is stuck where it is, (2) the root cause of each open incident, (3) whether the same failure is hitting other live instances of ${instance.definitionId} (cross-check via camunda7_list_incidents at the definition level). Then recommend the single best remediation — resolve incident, camunda7_set_job_retries, camunda7_set_process_instance_variable, or camunda7_modify_process_instance — and state the exact arguments you would call it with. Do not execute mutations; present the plan for my approval.${engineCallRule(engineId)}`}
+            prompt={ask(
+              diagnoseInstanceHandOff({
+                instance,
+                engineId,
+                activeActivityIds: activeActivityIds ?? [],
+                incidentActivityIds: incidentActivityIds ?? [],
+              }),
+            )}
           />
           {isActionable && onRequestSuspendToggle && (
             <Button

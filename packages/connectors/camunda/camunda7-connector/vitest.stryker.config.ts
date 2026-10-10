@@ -16,6 +16,7 @@ config.test!.include = [
   "src/data/**/*.test.ts",
   "src/lib/**/*.test.ts",
   "src/tools/**/*.test.ts",
+  "src/widget-tools/**/*.test.ts",
 ]
 
 export default config

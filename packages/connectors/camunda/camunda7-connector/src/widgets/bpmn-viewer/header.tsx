@@ -1,26 +1,46 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
 import { AskAiButton, StatusBadge } from "@miragon-ai/widget-shell/widgets"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
+
+/**
+ * The instance's state on the diagram: what blocks it, what each incident
+ * means and whether the failed-job hotspots point to a systemic fault. The
+ * highlighted elements travel as their BPMN ids.
+ */
+export function explainDiagramHandOff(data: BpmnViewerData): HandOff {
+  return {
+    intent: "askAi.bpmn.explainState",
+    ids: {
+      engine: data.engineId,
+      processInstanceId: data.processInstanceId,
+      processDefinitionId: data.processDefinitionId,
+    },
+    facts: {
+      activeActivities: data.activeActivityIds,
+      incidentActivities: data.incidentActivityIds,
+      failedJobActivities: data.activityStats.filter((s) => s.failedJobs > 0).map((s) => s.id),
+      // Whose counts the hotspots are (#335 N66): this instance's own tokens
+      // and failed jobs, or every running instance of the rendered version.
+      statsScope: data.statsScope,
+    },
+    tools: [
+      "camunda7_get_process_instance",
+      "camunda7_list_incidents",
+      "camunda7_get_job_stacktrace",
+      "camunda7_get_process_instance_variables",
+      "camunda7_get_process_definition_xml",
+    ],
+  }
+}
 
 export function BpmnViewerHeader({ data }: { data: BpmnViewerData | null }) {
   const t = useT()
+  const { ask } = useHandOff()
   if (!data) return null
   const totalActive = data.activeActivityIds.length
   const totalIncidents = data.incidentActivityIds.length
-
-  const engine = data.engineId ?? "default"
-  const activeActivityIds = data.activeActivityIds.join(", ")
-  const incidentActivityIds = data.incidentActivityIds.join(", ")
-  // Whose counts the stats are (#335 N66): this instance's tokens, or every
-  // running instance of the rendered version.
-  const countNoun =
-    data.statsScope === "instance" ? "tokens of this instance" : "running instances of this version"
-  const activityStats = data.activityStats
-    .map((s) => `${s.id} (${s.instances} ${countNoun}, ${s.failedJobs} failed jobs)`)
-    .join("; ")
-
-  const analyzePrompt = `I'm viewing the BPMN diagram for CIB Seven process instance ${data.processInstanceId ?? "(none)"} (definition ${data.processDefinitionId ?? "(unknown)"}, engine ${engine}). Active tokens sit at activities [${activeActivityIds}]; incidents are flagged at activities [${incidentActivityIds}]; per-activity statistics (id / ${countNoun} / failed jobs) are: ${activityStats}. Explain what state this instance is in: which highlighted elements are blocking forward progress, what each incident activity most likely means, and whether the failed-job hotspots point to a systemic fault. Use camunda7_get_process_instance and camunda7_list_incidents (processInstanceId ${data.processInstanceId ?? "(none)"}) to read the incident messages/causes, camunda7_get_process_instance_variables for relevant input data, and camunda7_get_process_definition_xml (processDefinitionId ${data.processDefinitionId ?? "(unknown)"}) if you need the element semantics. Finish with a prioritized list of concrete next actions (retry, resolve, modify token, fix variable, or escalate) and name the exact tool for each.`
 
   return (
     <div className="flex items-center justify-between gap-2">
@@ -42,7 +62,7 @@ export function BpmnViewerHeader({ data }: { data: BpmnViewerData | null }) {
           </Badge>
         )}
       </div>
-      <AskAiButton prompt={analyzePrompt} variant="primary" />
+      <AskAiButton prompt={ask(explainDiagramHandOff(data))} variant="primary" />
     </div>
   )
 }

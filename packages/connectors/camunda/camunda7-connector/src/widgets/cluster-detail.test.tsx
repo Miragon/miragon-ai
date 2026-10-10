@@ -1,12 +1,24 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, render, screen } from "@testing-library/react"
+import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
-import { ClusterDetailWidget } from "./cluster-detail.js"
+import { ClusterDetailWidget, describeCluster } from "./cluster-detail.js"
 import type { ClusterDetailData } from "../view-models.js"
+import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
+import { handOffFor, widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  queryClient.clear()
+})
+
+/** The hand-offs follow the deployment's surface — this fixture runs as `operations`. */
+let tools: Record<string, unknown>
+beforeAll(async () => {
+  tools = { [CAMUNDA7_WIDGET_ACTIONS_DATA]: await widgetActionsFeedFor("operations") }
+})
 
 const CLUSTER: ClusterDetailData = {
   activityId: "callWMS",
@@ -44,15 +56,19 @@ const CLUSTER: ClusterDetailData = {
 const Widget = ClusterDetailWidget as unknown as ComponentType<Record<string, unknown>>
 
 describe("ClusterDetailWidget (fixture render)", () => {
-  it("renders the cluster header, message, and business-key-first instance rows", () => {
+  it("renders the cluster header, message, and business-key-first instance rows", async () => {
     render(
-      <WidgetFixtureHost widget={Widget} data={CLUSTER as unknown as Record<string, unknown>} />,
+      <WidgetFixtureHost
+        widget={Widget}
+        data={CLUSTER as unknown as Record<string, unknown>}
+        tools={tools}
+      />,
     )
 
     // Cluster identity + the guarded remediation handoff.
     expect(screen.getByText("callWMS")).toBeTruthy()
     expect(screen.getByText("failedExternalTask")).toBeTruthy()
-    expect(screen.getByText("Fix")).toBeTruthy()
+    expect(await screen.findByText("Fix")).toBeTruthy()
 
     // Full sample failure message.
     expect(screen.getByText("Connection timeout to WMS after 30000ms")).toBeTruthy()
@@ -95,5 +111,36 @@ describe("ClusterDetailWidget (fixture render)", () => {
     expect(
       screen.getByText(`The list covers the newest ${scanned} incidents of this cluster.`),
     ).toBeTruthy()
+  })
+})
+
+// #335 facts in #338's model context: a capped scan's count is a lower bound,
+// counts it cannot vouch for are left out (never 0), the list's coverage said.
+describe("describeCluster", () => {
+  it("states an exact cluster as exact, with its whole list", async () => {
+    const text = (await handOffFor("operations")).context(describeCluster(CLUSTER))
+    expect(text).toContain('processDefinitionKey="shipping"')
+    expect(text).toContain("On screen: incidentCount=40, lastHour=9, last24h=12")
+    expect(text).not.toMatch(/AtLeast|listCoversNewest|scannedProcessDefinitionKeys/)
+  })
+
+  it("states a capped cluster as at least its scanned share", async () => {
+    const text = (await handOffFor("operations")).context(
+      describeCluster({
+        ...CLUSTER,
+        incidentCount: null,
+        scannedIncidentCount: 1000,
+        lastHourCount: null,
+        last24hCount: null,
+        firstSeen: null,
+      }),
+    )
+    // The keys are the scanned share's: a fact, never the scope (the rest of
+    // the cluster may run on other processes).
+    expect(text).toContain(
+      'On screen: incidentCountAtLeast=1000, scannedProcessDefinitionKeys=["shipping"], latestIncident=',
+    )
+    expect(text).toContain("listCoversNewest=1000")
+    expect(text).not.toMatch(/incidentCount=|lastHour|last24h|firstSeen|processDefinitionKey(In)?=/)
   })
 })

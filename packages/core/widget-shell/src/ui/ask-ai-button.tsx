@@ -1,4 +1,5 @@
 import { Button, useLocale } from "@miragon/mcp-toolkit-ui"
+import type { AskAiPrompt } from "./ask-ai-prompt.js"
 import { useHostActions } from "./use-host-actions.js"
 
 /** Visual emphasis tiers — all render the SAME ✦ AI signature, only size/weight differ. */
@@ -6,12 +7,13 @@ export type AskAiVariant = "primary" | "subtle" | "icon"
 
 export interface AskAiButtonProps {
   /**
-   * The self-contained natural-language task handed to the agent via the host
-   * follow-up (`askAi` → `sendFollowUpMessage`). MUST inline every id/key it
-   * needs (engine, processDefinitionKey, incidentId, …) — never rely on ambient
-   * ModelContext alone.
+   * The hand-off posted to the agent as the user's chat message (`askAi` →
+   * `sendFollowup`). Only {@link askAiPrompt} builds one: a short localized
+   * intent + ids, engine text fenced as untrusted data, and only the tools
+   * the deployment registers for the model. `null` — nothing in the task is
+   * available here (or not yet known) — renders no button at all.
    */
-  prompt: string
+  prompt: AskAiPrompt | null
   /**
    * Button text. Defaults to a locale-aware "Analyze"/"Analysieren" — the ✦
    * glyph already signals the AI handoff, so the primary entry needs no
@@ -38,12 +40,13 @@ export interface AskAiButtonProps {
 const AI_GLYPH = "✦"
 
 /**
- * The single "cross into chat" affordance for the whole cockpit. Renders
- * identically everywhere (✦ + label, shadcn ghost/outline) and is the only
- * owner of the {@link useHostActions} `askAi` call site for analyze / explain /
- * compare / draft / prepare-action handoffs. Deterministic navigation
- * (`useNav`/`showWidget`) and mutations must NOT use this — they keep their own
- * neutral controls, and never the ✦ glyph or the word "Analyze".
+ * The single "cross into chat" affordance for the whole cockpit and the ONLY
+ * owner of the {@link useHostActions} `askAi` call site (a structural test
+ * fails on any other) for analyze / explain / compare / draft / prepare-action
+ * handoffs. Renders identically everywhere (✦ + label, shadcn outline).
+ * Deterministic navigation (`useNav`/`showWidget`) and mutations must NOT use
+ * this — they keep their own neutral controls, and never the ✦ glyph or the
+ * word "Analyze".
  */
 export function AskAiButton({
   prompt,
@@ -55,6 +58,7 @@ export function AskAiButton({
 }: AskAiButtonProps) {
   const host = useHostActions()
   const locale = useLocale()
+  if (prompt === null) return null
   // The kit has no message catalog of its own, so the default verb follows the
   // ambient locale — otherwise every label-less call site leaks English into a
   // localized cockpit.

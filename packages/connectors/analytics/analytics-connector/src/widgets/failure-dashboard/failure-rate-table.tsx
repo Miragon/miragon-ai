@@ -18,16 +18,35 @@ import type { FailureDashboardData, ProcessFailureItem } from "@miragon-ai/analy
 import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
+import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 
 /**
- * The per-process Ask-AI prompt. The regression check goes to the tools that
- * measure incident rates over time — analytics_version_compare cannot split
- * incidents by version, so its incident rates are null (#327).
+ * What drives ONE process's open incidents right now (live gauges: open
+ * incidents per 100 running instances, dead jobs — #336). The regression
+ * check goes to the tools that measure incident rates over time —
+ * analytics_version_compare cannot split incidents by version, so its
+ * incident rates are null (#327).
  */
-export function failureRateAskAiPrompt(proc: ProcessFailureItem): string {
-  const key = proc.processDefinitionKey
-  const rate = proc.incidentRatePct === null ? "n/a" : `${proc.incidentRatePct}`
-  return `Explain in plain language why process definition "${key}" on the current engine has ${proc.openIncidents} open incident(s) right now (${rate} per 100 of its ${proc.runningNow} running instances, ${proc.deadJobs} dead job(s)). Determine whether this is a regression by comparing recent time periods with analytics_compare_execution_periods (processDefinitionKey "${key}") or, around a deployment, the windows before and after it with analytics_cluster_compare (processDefinitionKey "${key}"), and identify the dominant failing activity with analytics_element_bottleneck (processDefinitionKey "${key}"). Summarize what is driving these incidents. Explanation only — do not change anything.`
+export function failureRateHandOff(
+  proc: ProcessFailureItem,
+  data: Pick<FailureDashboardData, "engines">,
+): HandOff {
+  return {
+    intent: "askAi.failureRate",
+    ids: { engine: engineIdsOf(data.engines), processDefinitionKey: proc.processDefinitionKey },
+    // A rate over no running instance is null — left out, never a 0.
+    facts: {
+      openIncidentsNow: proc.openIncidents,
+      runningNow: proc.runningNow,
+      incidentRatePct: proc.incidentRatePct,
+      deadJobs: proc.deadJobs,
+    },
+    tools: [
+      "analytics_compare_execution_periods",
+      "analytics_cluster_compare",
+      "analytics_element_bottleneck",
+    ],
+  }
 }
 
 export function FailureRateTable({
@@ -36,6 +55,7 @@ export function FailureRateTable({
 }: { data: FailureDashboardData | null } & FailureScopeProps) {
   const fallbackQuery = useFailureDashboardSelfFetch(initialData, { engine })
   const t = useT()
+  const { ask } = useHandOff()
   return (
     <QueryGate initialData={initialData} query={fallbackQuery} skeleton={<TableSkeleton />}>
       {(data) =>
@@ -103,7 +123,7 @@ export function FailureRateTable({
                             variant="icon"
                             title={t("aFailureRate.analyzeLabel")}
                             label={t("aFailureRate.analyzeLabel")}
-                            prompt={failureRateAskAiPrompt(proc)}
+                            prompt={ask(failureRateHandOff(proc, data))}
                           />
                         </TableCell>
                       </TableRow>

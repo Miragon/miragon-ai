@@ -10,9 +10,33 @@ import {
 import type { IncidentsDashboardData } from "../../view-models.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
-import { engineCallRule } from "../lib/engine-scope.js"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
+
+/** Triage of every open incident on the engine — a plan, nothing changed yet. */
+export function triageIncidentsHandOff(
+  data: IncidentsDashboardData,
+  engine: string | undefined,
+): HandOff {
+  return {
+    intent: "askAi.incidents.triage",
+    ids: { engine },
+    facts: {
+      openIncidents: data.totalCount,
+      processes: data.processCount,
+      affectedActivities: data.affectedActivityCount,
+      last24h: data.last24hCount,
+      latestIncident: data.latestIncident,
+    },
+    tools: [
+      "camunda7_list_incidents",
+      "camunda7_query_historic_incidents",
+      "camunda7_query_historic_activity_instances",
+      "camunda7_show_cluster_detail",
+    ],
+  }
+}
 
 /** Shell-less incidents KPI header. Reused standalone and in the cockpit app. */
 export function IncidentOverviewKpiView({
@@ -32,6 +56,7 @@ export function IncidentOverviewKpiView({
     !!engine,
   )
   const t = useT()
+  const { ask } = useHandOff()
 
   if (!data) {
     return (
@@ -43,8 +68,6 @@ export function IncidentOverviewKpiView({
       />
     )
   }
-
-  const engineId = engine ?? data.engineId ?? "default"
 
   return (
     <>
@@ -78,7 +101,7 @@ export function IncidentOverviewKpiView({
         actions={
           <AskAiButton
             variant="primary"
-            prompt={`Triage all open incidents in the CIB Seven cockpit for engine ${engineId}. There are currently ${data.totalCount} open incidents across ${data.processCount} process(es) affecting ${data.affectedActivityCount ?? "an unknown number of"} activities, with ${data.last24hCount} new in the last 24h${data.latestIncident ? ` (last event ${formatTimestamp(data.latestIncident)})` : ""}. Use camunda7_list_incidents and camunda7_query_historic_activity_instances to cluster the incidents by exception/error message and failing activity, rank the clusters by impact (incident count and 24h growth), identify the single most likely systemic root cause, and tell me which process(es) and activities to address first. For each top cluster recommend a concrete next step (batch job retry via camunda7_set_job_retries_batch, a variable fix, an instance modification, or escalation). Do not change anything yet — return a prioritized triage plan.${engineCallRule(engine ?? data.engineId)}`}
+            prompt={ask(triageIncidentsHandOff(data, engine ?? data.engineId))}
           />
         }
       />

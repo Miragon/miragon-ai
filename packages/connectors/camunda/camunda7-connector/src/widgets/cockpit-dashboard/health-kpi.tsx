@@ -10,7 +10,37 @@ import { buildRows } from "./lib.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
+
+/**
+ * Triage of the engine's process landscape: the most urgent definition, its
+ * likely cause and the first step. The live snapshot comes from analytics when
+ * it is active — the engine's own health view otherwise.
+ */
+export function triageLandscapeHandOff(
+  data: CockpitDashboardData,
+  engine: string | undefined,
+): HandOff {
+  const { summary } = data
+  return {
+    intent: "askAi.landscape.triage",
+    ids: { engine },
+    // Deployed definition KEYS, every count over all their versions (#335).
+    facts: {
+      definitionKeys: summary.totalDefinitions,
+      runningInstances: summary.totalRunningInstances,
+      failedJobs: summary.totalFailedJobs,
+      openIncidents: summary.totalIncidents,
+    },
+    tools: [
+      "analytics_engine_health",
+      "analytics_show_failure_dashboard",
+      "camunda7_show_engine_health",
+      "camunda7_list_incidents",
+    ],
+  }
+}
 
 /**
  * Shell-less health overview. One component, two modes: standalone the agent's
@@ -35,6 +65,7 @@ export function ProcessHealthKpiView({
     !!engine,
   )
   const t = useT()
+  const { ask } = useHandOff()
 
   if (!data) {
     return (
@@ -72,7 +103,7 @@ export function ProcessHealthKpiView({
         actions={
           <AskAiButton
             variant="primary"
-            prompt={`Triage the CIB Seven process landscape on engine ${engine ?? "the current engine"}. Right now ${summary.totalDefinitions} definitions are deployed with ${summary.totalRunningInstances} running instances, ${summary.totalFailedJobs} failed jobs and ${summary.totalIncidents} open incidents. Use analytics_engine_health (engine: ${engine ?? "the current engine"}) for the live ops snapshot and analytics_show_failure_dashboard (engine: ${engine ?? "the current engine"}) to group current failures by incident type, activity and process definition. Then rank the affected process definitions by operational severity (blast radius = running instances x incident concentration), name the single most urgent one, give the most likely root cause, and recommend the first concrete remediation step (batch retry, variable fix, migration, or escalation).`}
+            prompt={ask(triageLandscapeHandOff(data, engine ?? data.engineId))}
           />
         }
       />

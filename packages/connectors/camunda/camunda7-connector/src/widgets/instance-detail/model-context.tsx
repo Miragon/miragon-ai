@@ -1,6 +1,42 @@
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 
 import type { InstanceDetailData } from "../../view-models.js"
+import { useHandOff, type ViewContext } from "../lib/hand-off.js"
+
+type InstanceState = "cancelled" | "ended" | "suspended" | "running"
+
+/** The instance the operator is looking at; its writes only as far as the deployment has them. */
+export function describeInstance({
+  instance,
+  engineId,
+  state,
+  openIncidentCount,
+}: {
+  instance: InstanceDetailData["instance"]
+  engineId: string | undefined
+  state: InstanceState
+  openIncidentCount: number
+}): ViewContext {
+  return {
+    summary: "The operator is viewing one process instance.",
+    ids: {
+      engine: engineId,
+      processInstanceId: instance.id,
+      processDefinitionId: instance.definitionId,
+    },
+    facts: { state, openIncidents: openIncidentCount },
+    untrusted: [{ label: "businessKey", text: instance.businessKey }],
+    tools: [
+      "camunda7_list_incidents",
+      "camunda7_query_historic_activity_instances",
+      "camunda7_resolve_incident",
+      "camunda7_set_job_retries",
+      "camunda7_set_process_instance_suspension",
+      "camunda7_delete_process_instance",
+      "camunda7_modify_process_instance",
+    ],
+  }
+}
 
 /**
  * Keep the agent aware of what the operator is looking at, so "Analyze"
@@ -8,26 +44,28 @@ import type { InstanceDetailData } from "../../view-models.js"
  */
 export function InstanceModelContext({
   instance,
+  engineId,
   cancelled,
   isSuspended,
   openIncidentCount,
 }: {
   instance: InstanceDetailData["instance"]
+  engineId: string | undefined
   cancelled: boolean
   isSuspended: boolean
   openIncidentCount: number
 }) {
+  const { context } = useHandOff()
+  const state: InstanceState = cancelled
+    ? "cancelled"
+    : instance.ended
+      ? "ended"
+      : isSuspended
+        ? "suspended"
+        : "running"
   return (
     <HostModelContext
-      content={[
-        `Support is viewing CIB Seven process instance ${instance.id}${
-          instance.businessKey ? ` (business key ${instance.businessKey})` : ""
-        }, definition ${instance.definitionId}.`,
-        `Status: ${
-          cancelled ? "cancelled" : instance.ended ? "ended" : isSuspended ? "suspended" : "running"
-        }; ${openIncidentCount} open incident${openIncidentCount === 1 ? "" : "s"}.`,
-        `Act via camunda7_resolve_incident / camunda7_set_job_retries / camunda7_set_process_instance_suspension / camunda7_delete_process_instance / camunda7_modify_process_instance. For root cause, compare with other instances via camunda7_list_incidents + camunda7_query_historic_activity_instances.`,
-      ].join(" ")}
+      content={context(describeInstance({ instance, engineId, state, openIncidentCount }))}
     >
       {null}
     </HostModelContext>

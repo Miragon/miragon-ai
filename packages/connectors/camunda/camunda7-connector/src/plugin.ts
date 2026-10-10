@@ -15,6 +15,7 @@ import { profileDefaultEngineId } from "./lib/engine-preferences.js"
 import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
 import { allowsProfileSave, resolveCamunda7Toolset, withToolsetFilter } from "./lib/toolsets.js"
 import { resolveProfileKey } from "./lib/resolve-profile-key.js"
+import { createModelSurface } from "./widget-tools/model-surface.js"
 import { withEngineParam } from "./lib/with-engine.js"
 
 export interface Camunda7PluginConfig {
@@ -53,11 +54,13 @@ export interface Camunda7PluginConfig {
    */
   requestTimeoutMs?: number
   /**
-   * Optional `owner/repo` of a GitHub repository — purely a convenience for
-   * GitHub customers (enables the prefilled new-issue URL and a default target
-   * when the user asks to file there). The `camunda7_format_incident_issue`
-   * tool and the `draft_incident_ticket` prompt produce a tracker-agnostic
-   * draft either way and never file anything themselves.
+   * Optional `owner/repo` of the ONE GitHub repository incident-ticket drafts
+   * target (env: `CAMUNDA_INCIDENT_ISSUE_REPO`). Fixed by the operator — no
+   * tool or prompt argument can redirect it — it enables the draft's
+   * prefilled new-issue URL; without it there is no URL. The
+   * `camunda7_format_incident_issue` tool and the `draft_incident_ticket`
+   * prompt produce a tracker-agnostic draft either way and never file anything
+   * themselves.
    */
   incidentIssueRepository?: string
   /**
@@ -125,6 +128,9 @@ export function createPlugin(
     // No cockpit URL here: issue links render with the per-engine cockpit URL
     // of the engine the call resolves to.
   }
+  // What the module registers for the model, recorded across both hooks —
+  // the widgets filter every tool their hand-offs name by it (#338).
+  const surface = createModelSurface()
 
   return {
     definition,
@@ -145,7 +151,10 @@ export function createPlugin(
       // the valid keys, never a silently stripped filter that widens the
       // result to the whole engine (#329).
       const register = withEngineParam(
-        withToolsetFilter(createToolRegistrar(server, registry, { strictInput: true }), toolset),
+        withToolsetFilter(
+          createToolRegistrar(surface.record(server), registry, { strictInput: true }),
+          toolset,
+        ),
         config.engines,
       )
       registerEngineTools(register, profileStore)
@@ -156,17 +165,20 @@ export function createPlugin(
     },
     registerWidgetTools: (server) => {
       // The toolset decides which in-widget write buttons render
-      // (`camunda7_widget_actions_data`), mirroring the registrar filter.
-      registerWidgetTools(server, registry, {
+      // (`camunda7_widget_actions_data`), mirroring the registrar filter; the
+      // same feed reports the recorded model surface for the hand-offs.
+      const recorded = surface.record(server)
+      registerWidgetTools(recorded, registry, {
         healthThresholds: config.healthThresholds,
         profileStore,
         toolset,
+        modelTools: surface.tools,
       })
       // Profile tools render/own the settings widget; the engine registry is
       // read only for the configured engine list the settings UI offers as
       // availability checkboxes. The toolset is threaded through so the
       // durable save tool stays out of `read-only`.
-      registerUserProfileTools(server, profileStore, registry, toolset)
+      registerUserProfileTools(recorded, profileStore, registry, toolset)
     },
   }
 }

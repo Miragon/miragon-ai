@@ -9,6 +9,7 @@ import {
   usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
 import { useNav } from "./navigation.js"
+import { useHandOff, type HandOff } from "./lib/hand-off.js"
 import { useT } from "../messages/use-t.js"
 import type { ProcessDefinition, ProcessListData } from "../view-models.js"
 import { CAMUNDA7_PROCESS_LIST_DATA } from "../tool-names.js"
@@ -19,6 +20,32 @@ import {
 } from "./process-definitions-table-view.js"
 
 export type { ProcessListData }
+
+/**
+ * Health check of ONE definition version: its metrics over 7 days (analytics,
+ * when active) plus this version's live incidents. The version tag is
+ * deployer text — quoted, never inlined. The metrics window goes with the
+ * analytics tool only: camunda7_list_incidents refuses it.
+ */
+export function healthCheckHandOff(
+  row: ProcessDefinitionsTableRow,
+  engine: string | undefined,
+): HandOff {
+  return {
+    intent: "askAi.process.healthCheck",
+    ids: {
+      engine,
+      processDefinitionKey: row.key,
+      processDefinitionId: row.id,
+    },
+    toolIds: {
+      analytics_analyze_process_performance: { period: "7d", includeActivityBreakdown: true },
+    },
+    facts: { version: row.version },
+    untrusted: [{ label: "versionTag", text: row.versionTag }],
+    tools: ["analytics_analyze_process_performance", "camunda7_list_incidents"],
+  }
+}
 
 const PAGE_SIZE = 50
 
@@ -71,6 +98,7 @@ export function ProcessListWidget({
 }) {
   const t = useT()
   const go = useNav()
+  const { ask } = useHandOff()
   const scope = deriveProcessListScope(initialData, {
     engine,
     processDefinitionKey,
@@ -180,7 +208,7 @@ export function ProcessListWidget({
               variant="icon"
               label={t("processList.healthCheckLabel")}
               title={t("processList.healthCheckLabel")}
-              prompt={`Assess the operational health of process definition \`${row.key}\` (version v${row.version}${row.versionTag ? ", tag " + row.versionTag : ""}) on engine ${data.engineId}. First call analytics_analyze_process_performance with processDefinitionKey="${row.key}", period="7d", includeActivityBreakdown=true to get throughput, P50/P95 duration and the incident-based failure rate with a per-activity breakdown. Then call camunda7_list_incidents({ processDefinitionId: "${row.id}" }) to see this version's live open incidents. Summarise: is this definition healthy or degraded, which activities are the worst offenders, the dominant incident message(s), and the single most likely root cause. End with one concrete recommended next step (e.g. retry jobs, fix variable, redeploy). Do not mutate anything.`}
+              prompt={ask(healthCheckHandOff(row, feedEngine ?? data.engineId))}
             />
           </>
         )}

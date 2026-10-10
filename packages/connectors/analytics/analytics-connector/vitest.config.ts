@@ -21,7 +21,10 @@ export default mergeConfig(
         // Prometheus-reading tool and the model-description/summary guards
         // (#336; measured 61.89 / 36.97 / 60.48 / 62.76), and again with the
         // pipeline-step key guard and the heatmap scope echo (#336 review;
-        // measured 66.3 / 40.96 / 63.28 / 67.35).
+        // measured 66.3 / 40.96 / 63.28 / 67.35). The #338 hand-off builders,
+        // every model description and the failure dashboard's cell scope
+        // under test (measured standalone 56.65 / 39.72 / 54.63 / 58.48) stay
+        // under the stacked floor.
         thresholds: { statements: 64, branches: 38, functions: 61, lines: 65 },
       },
     },

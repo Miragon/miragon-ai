@@ -43,7 +43,12 @@ async function bootSurface(config: Partial<Camunda7PluginConfig>) {
   plugin.registerWidgetTools?.(server)
   const calls = tool.mock.calls as Array<
     [
-      { name: string; annotations?: Record<string, unknown>; inputSchema?: z.ZodObject },
+      {
+        name: string
+        annotations?: Record<string, unknown>
+        inputSchema?: z.ZodObject
+        visibility?: string
+      },
       (p: unknown) => Promise<unknown>,
     ]
   >
@@ -51,12 +56,13 @@ async function bootSurface(config: Partial<Camunda7PluginConfig>) {
     calls.map(([definition, handler]) => [definition.name, { definition, handler }]),
   )
   const feed = (await byName.get(CAMUNDA7_WIDGET_ACTIONS_DATA)!.handler({})) as {
-    structuredContent: { allowedActions: string[] }
+    structuredContent: { allowedActions: string[]; modelTools: string[] }
   }
   return {
     names: [...byName.keys()],
     byName,
     allowedActions: feed.structuredContent.allowedActions,
+    modelTools: feed.structuredContent.modelTools,
   }
 }
 
@@ -95,6 +101,31 @@ describe("createPlugin toolset wiring (fail-closed)", () => {
     for (const admin of CAMUNDA7_ADMIN_ONLY_TOOLS) expect(names).not.toContain(admin)
     expect(allowedActions).toContain("camunda7_resolve_incident")
   })
+
+  // #338: the hand-off surface is what EVERY registration path put on the
+  // server for the model — registrar, widget and profile tools alike — and
+  // never an app-only feed.
+  it.each(["read-only", "operations", "admin"])(
+    "%s: the feed's modelTools are exactly the registered model-visible tools",
+    async (toolset) => {
+      const { byName, modelTools } = await bootSurface({ toolset, allowDeployments: true })
+      const visible = [...byName.values()]
+        .filter(({ definition }) => definition.visibility !== "app")
+        .map(({ definition }) => definition.name)
+        .sort()
+      expect(modelTools).toEqual(visible)
+      expect(modelTools).toEqual(
+        expect.arrayContaining([
+          "camunda7_list_incidents",
+          "camunda7_show_engine_health",
+          "camunda7_show_user_profile",
+        ]),
+      )
+      expect(modelTools).not.toContain(CAMUNDA7_WIDGET_ACTIONS_DATA)
+      expect(modelTools.includes("camunda7_set_job_retries")).toBe(toolset !== "read-only")
+      expect(modelTools.includes("camunda7_set_job_retries_batch")).toBe(toolset === "admin")
+    },
+  )
 
   it("threads allowDeployments to the registrar: create_deployment needs it on top of admin", async () => {
     expect((await bootSurface({ toolset: "admin" })).names).not.toContain(

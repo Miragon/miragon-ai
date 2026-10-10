@@ -1,29 +1,41 @@
 import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
 
 import { PagedHistoryView } from "../history-timeline.js"
-import { engineArg, engineCallRule } from "../lib/engine-scope.js"
+import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
+
+/** Walk ONE instance's activity history: where the token spent its time. */
+export function explainTimelineHandOff(
+  instanceId: string,
+  definitionId: string,
+  engineId: string | undefined,
+): HandOff {
+  return {
+    intent: "askAi.instance.explainTimeline",
+    ids: { engine: engineId, processInstanceId: instanceId, processDefinitionId: definitionId },
+    tools: ["camunda7_query_historic_activity_instances"],
+  }
+}
 
 /** The "History" tab body — AI timeline handoff plus the paged activity history. */
 export function HistoryTab({
   instanceId,
   definitionId,
   engineId,
-  engineClause,
 }: {
   instanceId: string
   definitionId: string
   engineId?: string
-  engineClause: string
 }) {
   const t = useT()
+  const { ask } = useHandOff()
   return (
     <>
       <div className="mb-2">
         <AskAiButton
           variant="subtle"
           label={t("instanceDetail.explainTimeline")}
-          prompt={`Explain the execution timeline of CIB Seven process instance ${instanceId} (definition ${definitionId}${engineClause}). Use camunda7_query_historic_activity_instances(${engineArg(engineId)}processInstanceId: "${instanceId}") to walk the per-activity history in order: where did the token spend the most time, which step is it currently stuck at, and does the path taken match the expected happy path? Call out the single biggest delay and whether it indicates a problem. Explanation only — do not change anything.${engineCallRule(engineId)}`}
+          prompt={ask(explainTimelineHandOff(instanceId, definitionId, engineId))}
         />
       </div>
       {/* Mounted on first tab activation — the lazy-load point. */}

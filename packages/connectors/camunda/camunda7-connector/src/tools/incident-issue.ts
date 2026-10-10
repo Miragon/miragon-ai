@@ -26,9 +26,12 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
 export interface IncidentIssueConfig {
   /**
-   * Optional `owner/repo` of a GitHub repository. Purely a convenience for
-   * GitHub customers (enables `prefilledUrl` + a default target) — the ticket
-   * draft itself is tracker-agnostic and never filed by this server.
+   * The ONE GitHub repository (`owner/repo`) drafts target — operator config
+   * (`CAMUNDA_INCIDENT_ISSUE_REPO`), never a tool or prompt argument: the
+   * prefilled URL carries the whole draft, so a model-chosen target (steered
+   * by injected incident text) would publish diagnostics anywhere. Without it
+   * there is no prefilled URL; the draft itself is tracker-agnostic and never
+   * filed by this server.
    */
   repository?: string
 }
@@ -44,14 +47,15 @@ export interface IncidentIssuePayload {
   body: string
   labels: string[]
   /**
-   * GitHub convenience: repository in `owner/repo` form when one is
-   * configured/overridden, else `null`. Irrelevant for non-GitHub trackers.
+   * GitHub convenience: the configured repository (`owner/repo`), else
+   * `null`. Irrelevant for non-GitHub trackers.
    */
   suggestedRepository: string | null
   /**
-   * GitHub convenience: browser URL to GitHub's "new issue" page with
-   * title/body/labels prefilled via query params — one-click submission
-   * without any integration. `null` if no repository configured. URL length
+   * GitHub convenience: browser URL to the configured repository's "new
+   * issue" page with title/body/labels prefilled via query params — one-click
+   * submission without any integration. `null` without a configured
+   * repository. Its body leaves out the internal cockpit link, and its length
    * is capped at GitHub's ~8KB limit.
    */
   prefilledUrl: string | null
@@ -88,16 +92,23 @@ export function buildIncidentIssuePayload(input: BuildIssueInput): IncidentIssue
   const condensedStack = stacktrace ? boundFailureText(condenseStacktrace(stacktrace)) : null
   const cockpitLink = buildIssueCockpitLink(input)
 
-  const body = buildIssueBody(input, {
+  const context: IssueBodyContext = {
     incidentType,
     definitionKey,
     condensedStack,
     stacktraceError: stacktraceError ?? null,
     cockpitLink,
-  })
+  }
+  const body = buildIssueBody(input, context)
 
+  // The URL leaves the network: no internal host in it, whatever the repository.
   const prefilledUrl = repository
-    ? buildPrefilledIssueUrl(repository, title, body, ISSUE_LABELS)
+    ? buildPrefilledIssueUrl(
+        repository,
+        title,
+        buildIssueBody(input, { ...context, cockpitLink: null }),
+        ISSUE_LABELS,
+      )
     : null
 
   return {
@@ -149,8 +160,28 @@ function stacktraceSection({ condensedStack, stacktraceError }: IssueBodyContext
     return `Stacktrace (condensed — framework/JDK frames removed):\n\n${codeFence(condensedStack)}`
   }
   return stacktraceError
-    ? `_Stacktrace could not be loaded: ${stacktraceError}_`
+    ? `_Stacktrace could not be loaded:_ ${codeSpan(stacktraceError)}`
     : "_No stacktrace available._"
+}
+
+/** The engine-context table: one row per field, every value in a cell-safe span. */
+function engineContextTable(incident: IncidentDto, context: IssueBodyContext): string[] {
+  const rows: Array<[string, string]> = [
+    ["Incident ID", incident.id ?? "unknown"],
+    ["Incident type", context.incidentType],
+    ["Activity ID", incidentActivityId(incident)],
+    ["Process definition key", context.definitionKey],
+    ["Process definition ID", incident.processDefinitionId ?? "unknown"],
+    ["Process instance ID", incident.processInstanceId ?? "unknown"],
+    ["Tenant", incident.tenantId ?? "—"],
+    ["Timestamp", incident.incidentTimestamp ?? "unknown"],
+    ["Root cause incident ID", incident.rootCauseIncidentId ?? "—"],
+  ]
+  return [
+    "| Field | Value |",
+    "| --- | --- |",
+    ...rows.map(([field, value]) => `| ${field} | ${codeSpan(value, { inTable: true })} |`),
+  ]
 }
 
 /** Markdown body of the draft, section by section (see {@link buildIncidentIssuePayload}). */
@@ -160,9 +191,9 @@ function buildIssueBody(input: BuildIssueInput, context: IssueBodyContext): stri
   return [
     "### Description",
     "",
-    `Engine incident \`${incidentType}\` was raised on activity \`${incidentActivityId(
-      incident,
-    )}\` of process \`${definitionKey}\`.`,
+    `Engine incident ${codeSpan(incidentType)} was raised on activity ${codeSpan(
+      incidentActivityId(incident),
+    )} of process ${codeSpan(definitionKey)}.`,
     "",
     incident.incidentMessage
       ? `Engine message:\n\n${codeFence(incident.incidentMessage)}`
@@ -180,23 +211,13 @@ function buildIssueBody(input: BuildIssueInput, context: IssueBodyContext): stri
     "",
     "### Actual Behaviour",
     "",
-    `An incident of type \`${incidentType}\` is raised.`,
+    `An incident of type ${codeSpan(incidentType)} is raised.`,
     "",
     stacktraceSection(context),
     "",
     "### Engine context",
     "",
-    "| Field | Value |",
-    "| --- | --- |",
-    `| Incident ID | \`${incident.id ?? "unknown"}\` |`,
-    `| Incident type | \`${incidentType}\` |`,
-    `| Activity ID | \`${incidentActivityId(incident)}\` |`,
-    `| Process definition key | \`${definitionKey}\` |`,
-    `| Process definition ID | \`${incident.processDefinitionId ?? "unknown"}\` |`,
-    `| Process instance ID | \`${incident.processInstanceId ?? "unknown"}\` |`,
-    `| Tenant | \`${incident.tenantId ?? "—"}\` |`,
-    `| Timestamp | \`${incident.incidentTimestamp ?? "unknown"}\` |`,
-    `| Root cause incident ID | \`${incident.rootCauseIncidentId ?? "—"}\` |`,
+    ...engineContextTable(incident, context),
     "",
     "### Affected Module",
     "",
@@ -276,10 +297,37 @@ export function boundFailureText(text: string): string {
  * would render as markdown in the filed ticket (mentions, links, images).
  */
 function codeFence(text: string): string {
+  const fence = "`".repeat(Math.max(3, longestBacktickRun(text) + 1))
+  return `${fence}\n${text}\n${fence}`
+}
+
+function longestBacktickRun(text: string): number {
   let longest = 0
   for (const run of text.matchAll(/`+/g)) longest = Math.max(longest, run[0].length)
-  const fence = "`".repeat(Math.max(3, longest + 1))
-  return `${fence}\n${text}\n${fence}`
+  return longest
+}
+
+/**
+ * An inline code span the value cannot close. Engine values are arbitrary
+ * strings — a custom incident type, a tenant id — and a backtick inside a
+ * plain `…` span ends it, so the rest would render as live markdown (images,
+ * links, mentions) in the filed ticket. The delimiter is one backtick longer
+ * than any run inside; line breaks become spaces (a span is one line, and a
+ * table row must stay one); in a table cell a `|` is escaped, since GFM
+ * splits cells on it even inside a span. A renderer splits on a pipe behind
+ * an EVEN backslash run, so a run directly before a pipe is doubled before
+ * the pipe's own escape — the row stays whole, at the price of one extra
+ * backslash shown in that rare spot. A value that starts or ends with a
+ * backtick is padded with a space, which CommonMark strips again.
+ */
+function codeSpan(value: string, { inTable = false }: { inTable?: boolean } = {}): string {
+  const oneLine = value.replace(/\r\n?|\n/g, " ")
+  const text = inTable
+    ? oneLine.replace(/(\\*)\|/g, (_pipe, run: string) => `${run}${run}\\|`)
+    : oneLine
+  const delimiter = "`".repeat(longestBacktickRun(text) + 1)
+  const pad = text.startsWith("`") || text.endsWith("`") ? " " : ""
+  return `${delimiter}${pad}${text}${pad}${delimiter}`
 }
 
 /**
@@ -387,7 +435,7 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
     description:
       "Build a structured, tracker-agnostic ticket draft (title, markdown body, labels) from a Camunda 7 / CIB Seven incident. " +
       "Does NOT file anything — present the draft in the chat for review and reuse; the user decides where it goes " +
-      "(their issue tracker via whatever integration is available, the optional prefilled GitHub URL, or copy-paste).",
+      "(their issue tracker via whatever integration is available, the prefilled GitHub URL of the configured repository, or copy-paste).",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...formatIncidentIssueInput.shape, ...engineParamShape },
     handler: withEngine(async (client, args, { baseUrl, cockpitUrl, provider }) => {
@@ -416,7 +464,8 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
         fetchFailureText(client, incident),
       ])
 
-      const repository = args.repository ?? config.repository ?? null
+      // The operator's repository — never an argument (see IncidentIssueConfig).
+      const repository = config.repository ?? null
       return buildIncidentIssuePayload({
         incident,
         processInstance,
@@ -431,12 +480,6 @@ export function registerIncidentIssueTools(register: Register, config: IncidentI
 
 const incidentIssuePromptSchema = z.object({
   incidentId: z.string().describe("The Camunda 7 / CIB Seven incident ID to draft a ticket for"),
-  repository: z
-    .string()
-    .optional()
-    .describe(
-      "Optional `owner/repo` — only relevant if the user later chooses to file the draft on GitHub",
-    ),
 })
 
 /**
@@ -456,8 +499,8 @@ export function registerIncidentIssuePrompt(server: MCPServer, config: IncidentI
         "a prefilled GitHub link, or copy-paste) — filing only happens on explicit request.",
       schema: incidentIssuePromptSchema,
     },
-    async ({ incidentId, repository }) => {
-      const target = repository ?? config.repository
+    async ({ incidentId }) => {
+      const target = config.repository
       const githubClause = target
         ? `If they choose GitHub without naming a repository, default to \`${target}\`; without any GitHub integration, offer \`prefilledUrl\` as a one-click link (\`[Create issue on GitHub](<prefilledUrl>)\`).`
         : "If they choose GitHub, ask which `owner/repo` should receive it."
@@ -465,9 +508,7 @@ export function registerIncidentIssuePrompt(server: MCPServer, config: IncidentI
         `You will draft a ticket for Camunda 7 / CIB Seven incident \`${incidentId}\`.`,
         "",
         "Steps:",
-        `1. Call the \`camunda7_format_incident_issue\` tool with \`incidentId="${incidentId}"\`${
-          repository ? ` and \`repository="${repository}"\`` : ""
-        }.`,
+        `1. Call the \`camunda7_format_incident_issue\` tool with \`incidentId="${incidentId}"\`.`,
         "2. Present the draft to the user in the chat: the title, the full markdown body, and the labels. The draft is the deliverable — it must be reviewable and reusable as-is (copy-paste into any tracker).",
         "3. Ask the user whether and where it should be filed. Do NOT file it anywhere on your own.",
         `4. Only if the user names a destination, use whatever matching capability is exposed to you (a GitHub MCP server / connector, a Jira or other tracker integration, or a CLI tool) — do NOT insist on a specific tool name. ${githubClause}`,

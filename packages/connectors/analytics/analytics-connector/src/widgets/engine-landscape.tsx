@@ -24,6 +24,7 @@ import type { EngineLandscapeResult } from "@miragon-ai/analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
 import { QueryGate } from "./query-gate.js"
 import { useT, type T } from "../messages/use-t.js"
+import { useHandOff, type HandOff } from "./hand-off.js"
 
 export type EngineLandscapeData = EngineLandscapeResult | null
 
@@ -289,19 +290,28 @@ function ProcessMatrix({ data, t }: { data: EngineLandscapeResult; t: T }) {
   )
 }
 
-/** The one valid engine-vs-engine handoff: same process, two engines. */
+/**
+ * The one valid engine-vs-engine hand-off: same process, two engines (the
+ * further engines it runs on are named so the model can pair them next).
+ */
+export function landscapeCompareHandOff(processKey: string, on: readonly string[]): HandOff {
+  const [engineA, engineB, ...more] = on
+  return {
+    intent: "askAi.landscapeCompare",
+    ids: { processDefinitionKey: processKey, engineA, engineB, windowDays: 14 },
+    facts: { alsoRunsOn: more.length > 0 ? more : undefined },
+    tools: ["analytics_show_engine_compare"],
+  }
+}
+
 function CompareAction({ processKey, on, t }: { processKey: string; on: string[]; t: T }) {
-  const [a, b] = on
-  const more =
-    on.length > 2
-      ? ` It also runs on ${on.slice(2).join(", ")} — compare those pairs afterwards.`
-      : ""
+  const { ask } = useHandOff()
   return (
     <AskAiButton
       variant="icon"
       title={t("aLandscape.compareLabel", { key: processKey })}
       label={t("aLandscape.compareLabel", { key: processKey })}
-      prompt={`Compare process definition "${processKey}" between the engines ${a} and ${b} over the last 14 days. Call analytics_show_engine_compare({processDefinitionKey: "${processKey}", engineA: "${a}", engineB: "${b}", windowDays: 14}) to render the side-by-side KPIs, then interpret the deltas (failure rate, incident rate, avg/p95 duration). Because the process is held fixed, a difference here really is attributable to the engine or its environment rather than to a different workload — say which engine runs it better, whether the gap is significant (watch the 'suppressed' low-sample flag), and the single recommended action.${more} Recommend only — do not change anything.`}
+      prompt={ask(landscapeCompareHandOff(processKey, on))}
     />
   )
 }

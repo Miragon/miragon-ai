@@ -3,7 +3,8 @@ import type { VersionCompareKpi, VersionCompareResult } from "@miragon-ai/analyt
 import { translator } from "../messages/index.js"
 import type { T } from "../messages/use-t.js"
 import { versionCompareCaveats } from "../version-compare-caveats.js"
-import { versionCompareAskAiPrompt, versionCompareNote } from "./version-compare.js"
+import { versionCompareHandOff, versionCompareNote } from "./version-compare.js"
+import { ANALYTICS_ONLY_SURFACE, bindHandOff } from "./hand-off.js"
 
 const t: T = (key, params) => translator("en", key, params)
 
@@ -39,6 +40,11 @@ const result: VersionCompareResult = {
   notes: [],
 }
 
+const prompt = (data: VersionCompareResult) =>
+  bindHandOff("en", ANALYTICS_ONLY_SURFACE).ask(
+    versionCompareHandOff(data, versionCompareCaveats(data)),
+  )!
+
 describe("versionCompareNote", () => {
   it("explains the n/a incident rates", () => {
     expect(versionCompareNote(t, versionCompareCaveats(result))).toBe(
@@ -51,14 +57,41 @@ describe("versionCompareNote", () => {
   })
 })
 
-describe("versionCompareAskAiPrompt", () => {
-  it("carries the caveat: the incident rates are unknown, not zero (#327)", () => {
-    const text = versionCompareAskAiPrompt(result, versionCompareCaveats(result))
+describe("versionCompareHandOff", () => {
+  it("re-runs the process-wide comparison on the engines on screen — never an element scope", () => {
+    const text = prompt(result)
 
-    expect(text).toContain("over a 14-day window. The on-screen deltas are:")
-    expect(text).toContain("starts per day 0.0%, incident rate —, avg duration +25.0%")
-    expect(text).toContain("treat them as unknown, not as zero")
-    // The tool takes no element scope — the prompt must not suggest one.
+    expect(text).toContain(
+      'Ids: engine="prod-a", processDefinitionKey="order", versionA=1, versionB=2, windowDays=14\n',
+    )
+    // The tool takes no element scope (#336) — the hand-off must not suggest one.
     expect(text).not.toContain("activityId")
+  })
+
+  it("carries the caveat and leaves null deltas out instead of sending them as 0 (#327)", () => {
+    const text = prompt(result)
+    expect(text).toContain(
+      "On screen: startedPerDayDeltaPct=0, avgDurationDeltaPct=25, p95DurationDeltaPct=40, suppressed=false, incidentRatesMeasured=false",
+    )
+    expect(text).not.toContain("incidentRateDeltaPp")
+    expect(text).not.toContain("failureRate")
+  })
+
+  it("drops the caveat once the incident rates are measured", () => {
+    // Version KPIs once the incident metric carries a version label (#337).
+    const measured = {
+      ...result,
+      kpis: result.kpis.map((k) => ({ ...k, incident_count: 2, incident_rate_pct: 2 })),
+      delta: { ...result.delta, incident_rate_delta_pp: 0.5 },
+    } as unknown as VersionCompareResult
+    const text = prompt(measured)
+    expect(text).toContain("incidentRateDeltaPp=0.5")
+    expect(text).not.toContain("incidentRatesMeasured")
+  })
+
+  it("names the confirming comparison and the element ranking", () => {
+    expect(prompt(result)).toContain(
+      "Tools: analytics_version_compare, analytics_element_bottleneck",
+    )
   })
 })

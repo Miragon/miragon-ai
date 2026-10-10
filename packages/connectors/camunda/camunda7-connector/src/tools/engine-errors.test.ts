@@ -207,6 +207,7 @@ describe("widget-path feeds honor the MCP request's ctx.signal", () => {
       healthThresholds: DEFAULT_HEALTH_THRESHOLDS,
       profileStore: createInMemoryProfileStore(),
       toolset: "read-only",
+      modelTools: () => [],
       engineParam: engineParamShape,
     })
     const controller = new AbortController()

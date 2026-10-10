@@ -12,7 +12,6 @@ import { NavBreadcrumb } from "./cockpit-app/breadcrumb.js"
 import { cockpitViews, filterLayoutToWidgets } from "./cockpit-app/views.js"
 import {
   buildViewParams,
-  describeCurrentView,
   intentToView,
   popTo,
   pushView,
@@ -21,6 +20,8 @@ import {
 } from "./nav-core.js"
 import { navigateViaHost, NavProvider, type OnNavigate } from "./navigation.js"
 import { camunda7BaseWidgets } from "./registry.js"
+import { useHandOff } from "./lib/hand-off.js"
+import { drillContext } from "./cockpit-app/model-context.js"
 import { CAMUNDA7_LIST_ENGINES } from "../tool-names.js"
 
 interface EnginesResult {
@@ -124,6 +125,7 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
   const output = bridge.getWidgetData<unknown>()
   const host = useHostActions()
   const locale = useLocale()
+  const { context } = useHandOff()
   // Absent when the host wires no in-widget tools/call — drills then cannot
   // self-fetch and must fall back to the conversational transport.
   const queryCallTool = useCallTool()
@@ -213,9 +215,7 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
           />
           {!needsEngine || engineId ? (
             <>
-              <HostModelContext
-                content={`${describeCurrentView(current)} The user drilled here client-side from this turn's widget (no chat turn); the origin view is still reachable via the breadcrumb.`}
-              >
+              <HostModelContext content={context(drillContext(current, engineId))}>
                 {null}
               </HostModelContext>
               <WidgetRenderer

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
-  describeCurrentView,
   intentToView,
+  selectedEntity,
   popTo,
   pushView,
   viewToIntent,
@@ -127,17 +127,15 @@ describe("viewToIntent", () => {
   })
 })
 
-describe("describeCurrentView", () => {
-  it("names the view and its selected entity", () => {
-    expect(describeCurrentView({ section: "overview" })).toBe("Current view: overview.")
-    expect(describeCurrentView({ section: "incident-detail", incidentId: "inc-1" })).toBe(
-      "Current view: incident-detail. Selected incident: inc-1.",
-    )
+describe("selectedEntity", () => {
+  it("names the view's selected entity by kind", () => {
+    expect(selectedEntity({ section: "overview" })).toEqual({})
+    expect(selectedEntity({ section: "incident-detail", incidentId: "inc-1" })).toEqual({
+      incidentId: "inc-1",
+    })
   })
 
-  it("omits the entity line for the engine-wide instances view (no key)", () => {
-    expect(describeCurrentView({ section: "process-instances" })).toBe(
-      "Current view: process-instances.",
-    )
+  it("has none for the engine-wide instances view (no key)", () => {
+    expect(selectedEntity({ section: "process-instances" })).toEqual({})
   })
 })

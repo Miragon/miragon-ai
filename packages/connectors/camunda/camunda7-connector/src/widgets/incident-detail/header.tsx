@@ -8,12 +8,47 @@ import {
 
 import type { IncidentDetailData } from "../../view-models.js"
 
-import { engineCallRule } from "../lib/engine-scope.js"
-import { fenceUntrusted } from "../lib/untrusted.js"
+import { scopingDefinitionKey, useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 
-function diagnosePrompt(data: IncidentDetailData): string {
-  return `Diagnose CIB Seven incident \`${data.incidentId}\` (type \`${data.incidentType}\`) at activity ${data.activityName ?? data.activityId} (\`${data.activityId}\`) on process instance ${data.processInstanceId} of ${data.processDefinitionName ?? data.processDefinitionKey}${data.processDefinitionVersion !== null ? ` v${data.processDefinitionVersion}` : ""} (definition \`${data.processDefinitionId}\`${data.businessKey ? `, business key ${data.businessKey}` : ""}), engine \`${data.engineId ?? "default"}\`. Error: ${fenceUntrusted(data.incidentMessage ?? data.job?.exceptionMessage)}. Use camunda7_instance_detail_data and camunda7_get_process_instance_variables for context, read the stacktrace${data.job ? ` on job ${data.job.id}` : ""}, and use camunda7_list_incidents({ processDefinitionKey: "${data.processDefinitionKey}", activityId: "${data.activityId}" }) to check whether other instances fail the same way there. Then state: (1) the most likely root cause, (2) whether a plain retry will succeed or just re-fail, and (3) the concrete recommended fix (retry, variable correction, instance modification, or escalation).${engineCallRule(data.engineId)}`
+/**
+ * Diagnose THIS incident: cause, retry verdict, fix. Instance context comes
+ * from the model-visible instance tools (the cockpit's own instance feed is
+ * app-only); names, the business key and the error are engine text — quoted.
+ * The "same failure elsewhere" check scopes by the key, or by the exact
+ * definition id when the key is only a bare id's parse.
+ */
+export function diagnoseIncidentHandOff(data: IncidentDetailData): HandOff {
+  const key = scopingDefinitionKey(data.processDefinitionKey, data.processDefinitionId)
+  return {
+    intent: "askAi.incident.diagnose",
+    ids: {
+      engine: data.engineId,
+      processInstanceId: data.processInstanceId,
+      processDefinitionKey: key,
+      processDefinitionId: key ? undefined : data.processDefinitionId || undefined,
+      activityId: data.activityId,
+      jobId: data.job?.id,
+    },
+    facts: {
+      incidentId: data.incidentId,
+      incidentType: data.incidentType,
+      version: data.processDefinitionVersion,
+    },
+    untrusted: [
+      { label: "incidentMessage", text: data.incidentMessage ?? data.job?.exceptionMessage },
+      { label: "activityName", text: data.activityName },
+      { label: "processName", text: data.processDefinitionName },
+      { label: "businessKey", text: data.businessKey },
+    ],
+    tools: [
+      "camunda7_get_process_instance",
+      "camunda7_get_process_instance_variables",
+      "camunda7_get_job_stacktrace",
+      "camunda7_list_incidents",
+      "camunda7_query_historic_incidents",
+    ],
+  }
 }
 
 export function IncidentDetailHeader({
@@ -24,6 +59,7 @@ export function IncidentDetailHeader({
   resolved: boolean
 }) {
   const t = useT()
+  const { ask } = useHandOff()
   const title = data.activityName ?? data.activityId
   const cockpitInstanceUrl = data.cockpitInstanceUrl
   return (
@@ -66,7 +102,7 @@ export function IncidentDetailHeader({
           )}
         </>
       }
-      actions={<AskAiButton variant="primary" prompt={diagnosePrompt(data)} />}
+      actions={<AskAiButton variant="primary" prompt={ask(diagnoseIncidentHandOff(data))} />}
     />
   )
 }

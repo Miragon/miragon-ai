@@ -23,17 +23,22 @@ import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { InstancesHeader } from "./list-header.js"
+import { useHandOff } from "../lib/hand-off.js"
+import {
+  describeInstancesView,
+  listFiltersOf,
+  rootCauseHandOff,
+  type InstanceChip,
+} from "./hand-offs.js"
 import { useT } from "../../messages/use-t.js"
 
 const PAGE_SIZE = 50
 
 export type { ProcessInstancesData }
 
-const CHIP_ALL = "all"
-const CHIP_INCIDENTS = "incidents"
-const CHIP_SUSPENDED = "suspended"
-
-type InstanceChip = typeof CHIP_ALL | typeof CHIP_INCIDENTS | typeof CHIP_SUSPENDED
+const CHIP_ALL: InstanceChip = "all"
+const CHIP_INCIDENTS: InstanceChip = "incidents"
+const CHIP_SUSPENDED: InstanceChip = "suspended"
 
 /**
  * The `camunda7_process_instances_data` filter contract, derived from the
@@ -59,15 +64,16 @@ function InstanceRow({
   row: ProcessInstanceRow
   /** The list's definition scope — null in the engine-wide list. */
   processDefinitionKey: string | null
-  engine: string
+  /** The engine the list was fetched from — undefined when the default routed it. */
+  engine: string | undefined
   /** Engine-wide list: each row names (and drills into) its own definition. */
   showProcessColumn: boolean
   onOpen: (processInstanceId: string) => void
   onOpenProcess: (processDefinitionKey: string) => void
 }) {
   const t = useT()
+  const { ask } = useHandOff()
   const tone = rowTone(row)
-  const promptKey = processDefinitionKey ?? row.processDefinitionKey ?? "unknown"
   return (
     <tr className="hover:bg-muted transition-colors">
       <Td>
@@ -127,7 +133,7 @@ function InstanceRow({
               variant="icon"
               label={t("processInstances.analyzeLabel")}
               title={t("processInstances.analyzeLabel")}
-              prompt={`Root-cause the incident on CIB Seven process instance ${row.id}${row.businessKey ? ` (business key ${row.businessKey})` : ""}, version v${row.version} of process ${promptKey} (engine ${engine}). Use camunda7_get_process_instance, camunda7_list_incidents (processInstanceId ${row.id}) and the failed job's stacktrace to explain why it failed in plain language. Then check via camunda7_list_incidents (processDefinitionKey ${promptKey}) whether other running instances of this process fail the same way, and recommend a concrete fix: job retry, a variable change (name the variable), or a modification — including whether to apply it to just this instance or the whole cluster.`}
+              prompt={ask(rootCauseHandOff(row, processDefinitionKey, engine))}
             />
           )}
           <DrillButton
@@ -158,8 +164,7 @@ function deriveInstancesScope({
   // default and not an unfiltered view.
   const echoed = initialData?.filters
   const feedEngine = engine ?? initialData?.engineId
-  const resolvedEngine = feedEngine ?? "default"
-  return { pdk, echoed, feedEngine, resolvedEngine }
+  return { pdk, echoed, feedEngine }
 }
 
 type RunState = Pick<InstancesFilterArgs, "active" | "suspended">
@@ -222,33 +227,6 @@ function buildInstancesFilterArgs(
   return filterArgs
 }
 
-function describeInstancesView({
-  loadedCount,
-  total,
-  scopedKey,
-  title,
-  resolvedEngine,
-  activeChip,
-  debouncedSearch,
-}: {
-  loadedCount: number
-  total: number
-  scopedKey: string | null
-  title: string
-  resolvedEngine: string
-  activeChip: InstanceChip
-  debouncedSearch: string
-}) {
-  return [
-    `Viewing ${loadedCount} of ${total} running instances ${
-      scopedKey ? `of process "${title}" (${scopedKey})` : "across ALL process definitions"
-    } on engine ${resolvedEngine}${
-      activeChip !== CHIP_ALL ? ` — filtered to "${activeChip}"` : ""
-    }${debouncedSearch ? ` — business key matching "${debouncedSearch}"` : ""}.`,
-    `Drill into one with camunda7_show_instance_detail (processInstanceId); act with camunda7_set_process_instance_suspension (suspended true/false) / camunda7_delete_process_instance / camunda7_set_job_retries.`,
-  ].join(" ")
-}
-
 /** Shell-less running-instances list. Reused standalone and in the cockpit app. */
 export function ProcessInstancesView({
   data: initialData = null,
@@ -269,10 +247,11 @@ export function ProcessInstancesView({
 }) {
   const t = useT()
   const go = useNav()
+  const { context } = useHandOff()
   const [activeChip, setActiveChip] = useState<InstanceChip>(CHIP_ALL)
 
   const scope = deriveInstancesScope({ initialData, processDefinitionKey, engine })
-  const { pdk, feedEngine, resolvedEngine } = scope
+  const { pdk, feedEngine } = scope
   const filterArgs = buildInstancesFilterArgs(
     scope,
     deriveInstancesFilters({
@@ -316,6 +295,7 @@ export function ProcessInstancesView({
 
   const scopedKey = data.processDefinitionKey
   const title = data.processDefinitionName ?? scopedKey ?? t("processInstances.allTitle")
+  const listFilters = listFiltersOf(filterArgs, debouncedSearch)
 
   const chips: FilterChip[] = [
     { id: CHIP_ALL, label: t("processInstances.chipAll"), active: activeChip === CHIP_ALL },
@@ -336,23 +316,26 @@ export function ProcessInstancesView({
       {/* Keep the agent aware of what the operator is looking at so it can offer
           the obvious next steps (drill into an instance, retry/suspend, etc.). */}
       <HostModelContext
-        content={describeInstancesView({
-          loadedCount: paged.items.length,
-          total: paged.total,
-          scopedKey,
-          title,
-          resolvedEngine,
-          activeChip,
-          debouncedSearch,
-        })}
+        content={context(
+          describeInstancesView({
+            loadedCount: paged.items.length,
+            total: paged.total,
+            scopedKey,
+            processName: data.processDefinitionName ?? null,
+            engine: feedEngine,
+            filters: listFilters,
+          }),
+        )}
       >
         {null}
       </HostModelContext>
       <InstancesHeader
         title={title}
+        processName={data.processDefinitionName ?? null}
         scopedKey={scopedKey}
         total={paged.total}
-        resolvedEngine={resolvedEngine}
+        engine={feedEngine}
+        filters={listFilters}
       />
 
       <FilterBar
@@ -385,7 +368,7 @@ export function ProcessInstancesView({
                 key={row.id}
                 row={row}
                 processDefinitionKey={scopedKey}
-                engine={resolvedEngine}
+                engine={feedEngine}
                 showProcessColumn={!scopedKey}
                 onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
                 onOpenProcess={(key) => go({ type: "process-detail", processDefinitionKey: key })}
