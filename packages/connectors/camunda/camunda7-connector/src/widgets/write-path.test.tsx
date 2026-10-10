@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import { queryClient } from "@miragon/mcp-toolkit-ui"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import {
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
@@ -12,80 +11,34 @@ import {
   CAMUNDA7_LIST_ENGINES,
   CAMUNDA7_WIDGET_ACTIONS_DATA,
 } from "../tool-names.js"
-import type { InstanceDetailData, JobPanelData, OpenUserTask } from "../view-models.js"
+import type { JobPanelData } from "../view-models.js"
 import { CockpitApp } from "./cockpit-app/app.js"
-import { InstanceDetailWidget } from "./instance-detail.js"
 import { JobPanelWidget } from "./job-panel.js"
-import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
+import {
+  InCockpit,
+  Standalone,
+  adminActions,
+  completeTheOpenTask,
+  feedCalls,
+  installWritePathHarness,
+  instance,
+  recorder,
+  renderInstance,
+  task,
+  withProductionRetries,
+  type Calls,
+} from "./write-path.test-support.js"
 
 /**
  * #341 — the in-widget write path: a write refreshes the data it changed in
  * BOTH modes (a standalone show view seeds its query with the tool result
- * instead of freezing it), the instance view offers only the actions its
- * CURRENT state allows, and a confirmation names what it acts on with two
- * buttons that cannot be confused.
+ * instead of freezing it), the cockpit refreshes and retries instead of
+ * dead-ending, and a confirmation names what it acts on with two buttons
+ * that cannot be confused. The instance view's current-state gating lives in
+ * `write-state.test.tsx`, the refresh's completeness in `write-refresh.test.tsx`.
  */
 
-const toolkitDefaults = queryClient.getDefaultOptions()
-
-beforeEach(() => {
-  // The shared client retries a failed query with backoff — answer at once.
-  queryClient.setDefaultOptions({
-    ...toolkitDefaults,
-    queries: { ...toolkitDefaults.queries, retry: false },
-  })
-})
-
-afterEach(() => {
-  cleanup()
-  queryClient.clear()
-  queryClient.setDefaultOptions(toolkitDefaults)
-})
-
-/** What an admin deployment's feed answers — every in-widget write is offered. */
-let adminActions: { allowedActions: string[]; modelTools: string[] }
-beforeAll(async () => {
-  adminActions = await widgetActionsFeedFor("admin")
-})
-
-function task(id: string, name: string): OpenUserTask {
-  return {
-    id,
-    name,
-    assignee: null,
-    created: "2026-10-10T08:00:00.000+0000",
-    due: null,
-    priority: 50,
-    processDefinitionId: "invoice:1:abc",
-    processInstanceId: "pi-1",
-    taskDefinitionKey: id,
-    description: null,
-    formSchema: { taskId: id, fields: [] },
-  }
-}
-
-function instance(over: Partial<InstanceDetailData> = {}): InstanceDetailData {
-  return {
-    instance: {
-      id: "pi-1",
-      definitionId: "invoice:1:abc",
-      businessKey: "INV-7",
-      suspended: false,
-      ended: false,
-    },
-    activityTree: null,
-    variables: { amount: { value: 42, type: "Integer" } },
-    incidents: [],
-    incidentCount: 0,
-    bpmnXml: null,
-    activeActivityIds: ["review"],
-    incidentActivityIds: [],
-    openTasks: [task("review", "Review invoice")],
-    openTaskCount: 1,
-    engineId: "prod",
-    ...over,
-  }
-}
+installWritePathHarness()
 
 /** The instance after its review task completed: the next task is open. */
 const AFTER_REVIEW = instance({
@@ -93,43 +46,6 @@ const AFTER_REVIEW = instance({
   openTasks: [task("approve", "Approve invoice")],
   variables: { amount: { value: 42, type: "Integer" }, reviewed: { value: true, type: "Boolean" } },
 })
-
-type Calls = Array<[string, Record<string, unknown>]>
-
-function recorder(calls: Calls, name: string, answer: (args: Record<string, unknown>) => unknown) {
-  return {
-    [name]: (args: Record<string, unknown>) => {
-      calls.push([name, args])
-      return answer(args)
-    },
-  }
-}
-
-const Standalone = InstanceDetailWidget as unknown as ComponentType<Record<string, unknown>>
-const InCockpit: ComponentType<Record<string, unknown>> = () => (
-  <InstanceDetailWidget processInstanceId="pi-1" engine="prod" />
-)
-
-function renderInstance(
-  widget: ComponentType<Record<string, unknown>>,
-  data: InstanceDetailData | null,
-  tools: Record<string, unknown>,
-) {
-  render(
-    <WidgetFixtureHost
-      widget={widget}
-      data={(data ?? {}) as unknown as Record<string, unknown>}
-      tools={{ [CAMUNDA7_WIDGET_ACTIONS_DATA]: adminActions, ...tools }}
-    />,
-  )
-}
-
-async function completeTheOpenTask() {
-  fireEvent.click(await screen.findByRole("button", { name: "Complete" }))
-  fireEvent.click(await screen.findByRole("button", { name: "Complete task" }))
-}
-
-const feedCalls = (calls: Calls) => calls.filter(([name]) => name === CAMUNDA7_INSTANCE_DETAIL_DATA)
 
 describe("completing a user task refreshes the instance (N99)", () => {
   it("standalone: the tool result is a seed — the view refetches and shows the next task", async () => {
@@ -174,21 +90,35 @@ describe("completing a user task refreshes the instance (N99)", () => {
     expect(feedCalls(calls)).toHaveLength(2)
   })
 
-  it("offers no Suspend/Cancel once the refetch cannot confirm the instance is still running", async () => {
+  it("offers no Suspend/Cancel from the refetch's FIRST failure on — not after the client's retries", async () => {
     // Completing the LAST task ends the instance: the runtime read is a 404
-    // now, so the stale snapshot must not keep offering instance actions.
-    renderInstance(Standalone, instance(), {
-      camunda7_complete_task: () => ({ success: true, outcome: "completed" }),
-      [CAMUNDA7_INSTANCE_DETAIL_DATA]: () => {
-        throw new Error("Process instance with id pi-1 does not exist")
+    // now, so the stale snapshot must not keep offering instance actions —
+    // and not for the ~7 s the production client spends retrying either.
+    withProductionRetries()
+    const calls: Calls = []
+    const contexts: string[] = []
+    renderInstance(
+      Standalone,
+      instance(),
+      {
+        camunda7_complete_task: () => ({ success: true, outcome: "completed" }),
+        ...recorder(calls, CAMUNDA7_INSTANCE_DETAIL_DATA, () => {
+          throw new Error("Process instance with id pi-1 does not exist")
+        }),
       },
-    })
+      (text) => contexts.push(text),
+    )
     expect(await screen.findByRole("button", { name: "Suspend" })).toBeTruthy()
     expect(screen.getByRole("button", { name: "Cancel instance" })).toBeTruthy()
+    await waitFor(() => expect(contexts.at(-1)).toContain('state="running"'))
 
     await completeTheOpenTask()
 
     expect(await screen.findByText(/pi-1 does not exist/)).toBeTruthy()
+    // One attempt so far: the client is still retrying, the gate is closed already.
+    expect(feedCalls(calls)).toHaveLength(1)
+    // The model is not told the instance still runs.
+    await waitFor(() => expect(contexts.at(-1)).toContain('state="unconfirmed"'))
     expect(screen.queryByRole("button", { name: "Suspend" })).toBeNull()
     expect(screen.queryByRole("button", { name: "Cancel instance" })).toBeNull()
     // The way out of the stale state: retry the read.
@@ -357,7 +287,7 @@ describe("a standalone show view refreshes after a write (K46)", () => {
         widget={JobPanelWidget as unknown as ComponentType<Record<string, unknown>>}
         data={JOBS as unknown as Record<string, unknown>}
         tools={{
-          [CAMUNDA7_WIDGET_ACTIONS_DATA]: adminActions,
+          [CAMUNDA7_WIDGET_ACTIONS_DATA]: adminActions(),
           ...recorder(calls, "camunda7_set_job_retries", () => ({ success: true })),
           ...recorder(calls, CAMUNDA7_JOBS_DATA, () => AFTER_RETRY),
         }}

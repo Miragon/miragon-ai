@@ -24,7 +24,11 @@ export interface WritePolicy {
   confirm: boolean
 }
 
-/** What a recovered incident changes: every incident count and list, the instance and job views. */
+/**
+ * What a recovered incident changes: every incident count and list, the
+ * instance and job views, and the instance lists' per-row incident flag
+ * (`ProcessInstanceRow.hasIncident`, the list's "incidents" chip).
+ */
 const INCIDENT_VIEWS = [
   "camunda7:process-incidents",
   "camunda7:activity-incidents",
@@ -33,6 +37,7 @@ const INCIDENT_VIEWS = [
   "camunda7:engine-health",
   "camunda7:jobs",
   "camunda7:instance-detail",
+  "camunda7:process-instances",
   "camunda7:bpmn-viewer",
   "camunda7:cockpit-overview",
   "camunda7:process-list",
@@ -46,6 +51,11 @@ const INSTANCE_LISTS = [
   "camunda7:bpmn-viewer",
 ] as const
 
+/** The namespaces once each — a write invalidates every one of them a single time. */
+function views(...namespaces: string[]): readonly string[] {
+  return [...new Set(namespaces)]
+}
+
 /**
  * The single source of what each widget write changes and whether it asks
  * first — a property of the write, never of the button that triggers it, so
@@ -55,9 +65,20 @@ export const WRITE_POLICY: Record<WidgetWrite, WritePolicy> = {
   camunda7_set_job_retries: { invalidates: INCIDENT_VIEWS, confirm: false },
   camunda7_set_external_task_retries: { invalidates: INCIDENT_VIEWS, confirm: false },
   camunda7_resolve_incident: { invalidates: INCIDENT_VIEWS, confirm: true },
-  // The next task, the status, the tokens and the variables of the instance.
+  // The next task, the status, the tokens and the variables (the form's
+  // values) of the instance — both detail views list them; the jobs the next
+  // activities create (timers, async continuations); and, when the task was
+  // the last one, every running-instance count (definition view, engine health).
   camunda7_complete_task: {
-    invalidates: ["camunda7:instance-detail", "camunda7:instance-history", ...INSTANCE_LISTS],
+    invalidates: views(
+      "camunda7:instance-detail",
+      "camunda7:incident-detail",
+      "camunda7:instance-history",
+      "camunda7:jobs",
+      "camunda7:process-incidents",
+      "camunda7:engine-health",
+      ...INSTANCE_LISTS,
+    ),
     confirm: false,
   },
   // Both detail views list the instance's variables.
@@ -70,15 +91,15 @@ export const WRITE_POLICY: Record<WidgetWrite, WritePolicy> = {
     confirm: false,
   },
   camunda7_set_process_instance_suspension: {
-    invalidates: ["camunda7:instance-detail", "camunda7:jobs", ...INSTANCE_LISTS],
+    invalidates: views("camunda7:instance-detail", "camunda7:jobs", ...INSTANCE_LISTS),
     confirm: true,
   },
   // The instance itself is gone — its detail view keeps the cancelled state.
   camunda7_delete_process_instance: {
-    invalidates: [
+    invalidates: views(
       ...INSTANCE_LISTS,
       ...INCIDENT_VIEWS.filter((key) => key !== "camunda7:instance-detail"),
-    ],
+    ),
     confirm: true,
   },
   // The panel itself, the engine list it curates, and the app root's locale/theme gate.

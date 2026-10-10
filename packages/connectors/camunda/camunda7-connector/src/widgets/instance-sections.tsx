@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Button, Input } from "@miragon/mcp-toolkit-ui"
-import { ListTable, TableEmptyState, Td } from "@miragon-ai/widget-shell/widgets"
+import { ListTable, TableEmptyState, Td, useResetOnChange } from "@miragon-ai/widget-shell/widgets"
 
 import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
@@ -85,6 +85,10 @@ function VariableRow({
   // Whether this edit session saved — a prior session's failed save must not
   // reappear when the operator reopens the row.
   const [attempted, setAttempted] = useState(false)
+  // An open editor closes when the row stops being editable (the instance
+  // was cancelled, ended, or its state is unconfirmed) — its Save would
+  // write to an instance whose state no longer allows it.
+  useResetOnChange(editable, () => setEditing(false))
   const t = useT()
   const saving = action.pending(name)
   const serverError = attempted ? action.error(name) : null
@@ -208,10 +212,11 @@ export function VariablesTable({
     tool: "camunda7_set_process_instance_variable",
     target: (args) => args.variableName,
     resetOn: variables,
+    available: !readOnly,
   })
   // An ended instance and a toolset without the variable write both mean no
   // edit column at all — an empty trailing column would read as missing data.
-  const editable = !readOnly && setVariable.allowed
+  const editable = setVariable.allowed
   const entries = Object.entries(variables)
 
   function getVariable(name: string, original: VariableValue): VariableValue {

@@ -8,6 +8,12 @@ export interface SeededToolQuery<T> {
   isError: boolean
   /** The last fetch's failure — set next to `data` when a REFETCH failed. */
   error: Error | null
+  /**
+   * The current fetch's last failed ATTEMPT — set from the first failure on,
+   * while the client still retries (`error` waits for the last retry, ~7 s
+   * under TanStack's default 3 retries); cleared when a fetch starts or succeeds.
+   */
+  failureReason: Error | null
   /** A fetch is in flight (the first one or a refetch). */
   isFetching: boolean
   /** Re-read the feed now (a Retry of an error state, a manual refresh). */
@@ -86,6 +92,7 @@ export function useSeededToolQuery<T>(
     data: query.data ?? seed ?? null,
     isError: query.isError,
     error: query.error ?? null,
+    failureReason: query.failureReason,
     isFetching: query.isFetching,
     refetch: () => void query.refetch(),
   }

@@ -76,6 +76,25 @@ describe("useEngineAction — the gate", () => {
     )
     expect(result.current.allowed).toBe(true)
   })
+
+  it("is closed while the subject's state does not allow the write — the gate notwithstanding", async () => {
+    const { result, rerender } = renderHook(
+      ({ available }: { available: boolean }) =>
+        useEngineAction<RetryArgs>({
+          tool: "camunda7_set_job_retries",
+          target: (args) => args.jobId,
+          available,
+        }),
+      { wrapper, initialProps: { available: false } },
+    )
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0))
+    expect(result.current.allowed).toBe(false)
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    expect(write).not.toHaveBeenCalled()
+
+    rerender({ available: true })
+    expect(result.current.allowed).toBe(true)
+  })
 })
 
 describe("useEngineAction — the write", () => {
@@ -146,14 +165,47 @@ describe("useEngineAction — the write", () => {
 describe("useEngineAction — a write that asks first", () => {
   function resolveAction() {
     return renderHook(
-      () =>
+      ({ available }: { available: boolean }) =>
         useEngineAction<{ incidentId: string }>({
           tool: "camunda7_resolve_incident",
           target: (args) => args.incidentId,
+          available,
         }),
-      { wrapper },
+      { wrapper, initialProps: { available: true } },
     )
   }
+
+  it("withdraws an unanswered question when the state stops allowing the write", async () => {
+    const { result, rerender } = resolveAction()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    expect(result.current.confirmation).not.toBeNull()
+
+    // The instance ended while the dialog was open.
+    rerender({ available: false })
+    expect(result.current.confirmation).toBeNull()
+    act(() => result.current.confirm())
+    // The state coming back does not resurrect the old question.
+    rerender({ available: true })
+    expect(result.current.confirmation).toBeNull()
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it("keeps a question whose write is in flight — the dialog must show its outcome", async () => {
+    let finish!: (value: unknown) => void
+    write.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
+    const { result, rerender } = resolveAction()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    act(() => result.current.confirm())
+
+    rerender({ available: false })
+    expect(result.current.confirmation).not.toBeNull()
+    expect(result.current.pending("inc-1")).toBe(true)
+    act(() => finish({ success: true }))
+    await waitFor(() => expect(result.current.confirmation).toBeNull())
+    expect(write).toHaveBeenCalledTimes(1)
+  })
 
   it("refuses to run without a confirmation that names its target", async () => {
     const { result } = resolveAction()

@@ -8,7 +8,10 @@ export interface ViewDataResult<T> {
   /**
    * A REFETCH failed while `data` is still shown: the view can no longer
    * confirm it is current (e.g. the instance ended and its runtime read is a
-   * 404 now). Null while the data is the feed's latest answer.
+   * 404 now). Set from the refetch's FIRST failed attempt — not only once the
+   * client's retries ran out — so a view gating its writes on it never offers
+   * them on an unconfirmed state for the length of the backoff. Null while the
+   * data is the feed's latest answer.
    */
   refreshError: Error | null
   /** A refetch of shown data is in flight. */
@@ -36,12 +39,12 @@ export function useViewData<T>(
   ready: boolean,
 ): ViewDataResult<T> {
   const query = useSeededToolQuery<T>(key, tool, args, { seed: initialData, enabled: ready })
-  const { data, error } = query
+  const { data, error, failureReason } = query
   return {
     data,
     loading: !data && ready && !query.isError,
     error,
-    refreshError: data ? error : null,
+    refreshError: data ? (error ?? failureReason) : null,
     refreshing: !!data && query.isFetching,
     refetch: query.refetch,
   }

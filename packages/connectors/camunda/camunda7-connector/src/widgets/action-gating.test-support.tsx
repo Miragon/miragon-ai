@@ -122,7 +122,7 @@ function incidentRows(incidentType: string, recovery: IncidentRecovery) {
     },
   ]
   const Rows: ComponentType<Record<string, unknown>> = () => {
-    const recoveryState = useIncidentRecovery("prod", rows)
+    const recoveryState = useIncidentRecovery("prod", { resetOn: rows })
     return <IncidentTable incidents={rows} recovery={recoveryState} onAnalyze={() => {}} />
   }
   return Rows

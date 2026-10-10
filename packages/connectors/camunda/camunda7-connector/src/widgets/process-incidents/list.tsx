@@ -8,11 +8,9 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
-import { EngineActionDialog } from "../lib/engine-action-dialog.js"
 import { ActivitySummary } from "./activity-summary.js"
 import { useDefinitionData } from "./feed.js"
 import { PagedIncidentTable } from "./incident-table.js"
-import { useIncidentRecovery } from "./use-incident-recovery.js"
 import { EmptyStateWithSiblings } from "./empty-state.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -73,8 +71,6 @@ export function ActivityIncidentList({
   // in the cockpit, the server-resolved id standalone) — never fall back to the
   // caller's default engine, which can differ if the default-engine save raced or failed.
   const engineId = engine ?? data?.engineId
-  // The optimistic marks reset when the feed data changes (server truth).
-  const recovery = useIncidentRecovery(engineId, data)
 
   if (!data) {
     return (
@@ -135,24 +131,18 @@ export function ActivityIncidentList({
             >
               {/* Rows come from the paged per-activity feed (mounted on
                   expand), not the definition payload — the group reaches every
-                  incident, not just the 200-row recency scan. */}
+                  incident, not just the 200-row recency scan. The table owns
+                  the rows' remedies, keyed on that feed. */}
               <PagedIncidentTable
                 processDefinitionKey={data.processDefinitionKey}
                 activityId={activity.activityId}
                 engine={engineId}
-                recovery={recovery}
                 onAnalyze={analyzeIncident}
               />
             </GroupCard>
           ))
         )}
       </section>
-
-      {/* The per-row button only requests the resolve; the actual
-          camunda7_resolve_incident call runs after this confirmation. The
-          dialog stays open until success so a failure is shown right here
-          (and inline at the row once dismissed). */}
-      <EngineActionDialog action={recovery.resolve} />
     </WidgetShell>
   )
 }

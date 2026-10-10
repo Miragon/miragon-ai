@@ -57,25 +57,34 @@ export function resolveConfirmation(
  * it — but the built-in types refuse resolve with a 400, so a failedJob /
  * failedExternalTask offers Retry (retries = 1) instead. Each remedy is an
  * `EngineAction`: offered only where the deployment's toolset registers its
- * tool, refreshing the incident views after it succeeded, its success marks
- * dropped when `resetOn` (the feed data) changes — fresh server data wins.
+ * tool and the incident's surface is `available` (an instance view offers no
+ * remedy on a cancelled, ended or unconfirmed instance), refreshing the
+ * incident views after it succeeded, its success marks dropped when
+ * `resetOn` changes — the data the marked ROWS come from: fresh server data
+ * wins, and only that data can say the row is cleared.
  */
-export function useIncidentRecovery(engineId: string | undefined, resetOn: unknown) {
+export function useIncidentRecovery(
+  engineId: string | undefined,
+  { resetOn, available = true }: { resetOn: unknown; available?: boolean },
+) {
   const t = useT()
   const resolve = useEngineAction<ResolveArgs>({
     tool: "camunda7_resolve_incident",
     target: (args) => args.incidentId,
     resetOn,
+    available,
   })
   const jobRetry = useEngineAction<JobRetryArgs>({
     tool: "camunda7_set_job_retries",
     target: (args) => args.jobId,
     resetOn,
+    available,
   })
   const taskRetry = useEngineAction<ExternalTaskRetryArgs>({
     tool: "camunda7_set_external_task_retries",
     target: (args) => args.externalTaskId,
     resetOn,
+    available,
   })
 
   /** The action that clears `incident`, the target it runs on, and how to start it — null when none does. */
@@ -120,7 +129,7 @@ export function useIncidentRecovery(engineId: string | undefined, resetOn: unkno
   return {
     /** The resolve action — its confirmation is rendered by `EngineActionDialog`. */
     resolve,
-    /** The row's button — null when the incident type or the toolset offers none. */
+    /** The row's button — null when the incident type, the toolset or the state offers none. */
     actionFor(incident: RecoverableIncident, jobId?: string | null): RowAction | null {
       const remedy = remedyOf(incident, jobId)
       return remedy?.action.allowed ? remedy.kind : null

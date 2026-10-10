@@ -14,12 +14,15 @@ import { useT } from "../../messages/use-t.js"
  * expanded task form. A completed task disappears at once; the mark only
  * bridges the gap until the refetched `openTasks` arrive, then server truth
  * wins. A delegated task is RESOLVED back to its owner and stays listed.
+ * `available` is the instance's state: a task of an ended, cancelled,
+ * suspended or unconfirmed instance cannot be completed, so none is offered.
  */
-export function useOpenTasks(openTasks: OpenUserTask[] | undefined) {
+export function useOpenTasks(openTasks: OpenUserTask[] | undefined, available: boolean) {
   const complete = useEngineAction<CompleteTaskArgs, TaskCompletion>({
     tool: "camunda7_complete_task",
     target: (args) => args.taskId,
     resetOn: openTasks,
+    available,
   })
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const done = complete.done
@@ -51,7 +54,7 @@ function OpenTaskCard({
   task: OpenUserTask
   engine?: string
   complete: CompleteTaskAction
-  /** False when the toolset has no complete tool or the instance state is unconfirmed — no form toggle. */
+  /** False when the toolset has no complete tool or the instance's state allows none — no form toggle. */
   canComplete: boolean
   expanded: boolean
   onToggle: () => void
@@ -96,14 +99,13 @@ function OpenTaskCard({
 /**
  * The "Tasks" tab body — the open-task cards with their inline complete forms
  * (only where the deployment's toolset exposes `camunda7_complete_task` and
- * the view can confirm the instance still runs).
+ * the instance's current state allows a completion — `useOpenTasks`).
  */
 export function OpenTasksTab({
   openTasks,
   visibleTasks,
   engineId,
   complete,
-  actionable,
   activeTaskId,
   onToggleTask,
   onTaskCompleted,
@@ -112,13 +114,12 @@ export function OpenTasksTab({
   visibleTasks: OpenUserTask[]
   engineId?: string
   complete: CompleteTaskAction
-  actionable: boolean
   activeTaskId: string | null
   onToggleTask: (taskId: string) => void
   onTaskCompleted: () => void
 }) {
   const t = useT()
-  const canComplete = complete.allowed && actionable
+  const canComplete = complete.allowed
   if (visibleTasks.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">

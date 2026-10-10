@@ -161,7 +161,7 @@ export function IncidentDetailWidget({
   engine?: string
 }) {
   const t = useT()
-  const { data, guard, notice } = useDetailView<IncidentDetailData>({
+  const { data, guard, notice, refreshError } = useDetailView<IncidentDetailData>({
     initialData,
     ...incidentFeed(initialData, incidentId, engine),
     tool: CAMUNDA7_INCIDENT_DETAIL_DATA,
@@ -176,8 +176,12 @@ export function IncidentDetailWidget({
   const engineId = engine ?? data?.engineId
   // The remedy's success marks only bridge the gap until the feed refetches —
   // fresh server data must win again. A cleared incident's own view is not
-  // refetched (it would be a 404): the marks are what it shows.
-  const recovery = useIncidentRecovery(engineId, data)
+  // refetched (it would be a 404): the marks are what it shows. A refetch that
+  // failed leaves the incident unconfirmed (cleared elsewhere?) — no remedy then.
+  const recovery = useIncidentRecovery(engineId, {
+    resetOn: data,
+    available: refreshError === null,
+  })
 
   const highlights = useMemo<BpmnHighlight[]>(
     () => [{ kind: "incident", activityIds: data ? [data.activityId] : [] }],

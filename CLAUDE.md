@@ -366,13 +366,16 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    primitive: every widget write runs via `useEngineAction`
    (`camunda7-connector/src/widgets/lib/engine-action.ts`), which bundles the gate
    (`allowed`, from `camunda7_widget_actions_data` → `allowedWidgetActions` for the tools
-   in `CAMUNDA7_WIDGET_ACTIONS`; the profile save passes its view's `canSave`), the
+   in `CAMUNDA7_WIDGET_ACTIONS`; the profile save passes its view's `canSave`; AND the
+   subject's current state, `available` — no write on an ended, cancelled or
+   unconfirmed instance, i.e. one whose refetch failed even once), the
    confirmation that NAMES its target, the targeted invalidation and the optimistic
    marks (`WRITE_POLICY` in `widgets/lib/write-policy.ts` says what each write changes
    and whether it asks first) — controls are hidden, not disabled.
    `src/widget-actions.test.ts` scans the widget sources structurally (no raw
-   `useToolMutation`/`useCanRun` outside the primitive, no `callTool` of a write tool,
-   every write listed), and `widgets/action-gating.test.tsx` renders every call site
+   `useToolMutation`/`useCanRun` outside the primitive, no `callTool` of a write tool —
+   renamed or aliased callers included —, every write listed, every invalidated
+   namespace a real query key), and `widgets/action-gating.test.tsx` renders every call site
    against a feed that excludes its write. Standalone views refresh after a write
    because their tool result is the SEED of a live feed query (`useViewData`/
    `useDetailView`/`usePagedViewData` in widget-shell), scoped to the seed's own echoed

@@ -4,7 +4,11 @@ import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
-import { CAMUNDA7_WIDGET_ACTIONS, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
+import {
+  CAMUNDA7_INCIDENT_DETAIL_DATA,
+  CAMUNDA7_WIDGET_ACTIONS,
+  CAMUNDA7_WIDGET_ACTIONS_DATA,
+} from "../tool-names.js"
 import type { IncidentDetailData, IncidentInstance } from "../view-models.js"
 import { IncidentDetailWidget } from "./incident-detail.js"
 import { IncidentTable } from "./process-incidents/incident-table.js"
@@ -140,6 +144,20 @@ describe("the incident detail offers the remedy the engine accepts", () => {
     expect(screen.queryByText("Retry task")).toBeNull()
   })
 
+  it("offers no remedy once a refetch cannot confirm the incident is still open", async () => {
+    renderDetail(FAILED_JOB, {
+      [CAMUNDA7_WIDGET_ACTIONS_DATA]: ALL_ACTIONS,
+      [CAMUNDA7_INCIDENT_DETAIL_DATA]: () => {
+        throw new Error("Incident inc-1 does not exist")
+      },
+    })
+    expect(await screen.findByText("Retry job")).toBeTruthy()
+    // A write elsewhere (a variable edit) or a refresh re-reads the incident.
+    void queryClient.invalidateQueries({ queryKey: ["camunda7:incident-detail"] })
+    expect(await screen.findByText(/inc-1 does not exist/)).toBeTruthy()
+    expect(screen.queryByText("Retry job")).toBeNull()
+  })
+
   it("hides Retry when the toolset lacks the retries tool (and never falls back to Resolve)", async () => {
     renderDetail(FAILED_JOB, {
       [CAMUNDA7_WIDGET_ACTIONS_DATA]: { allowedActions: ["camunda7_resolve_incident"] },
@@ -186,7 +204,7 @@ describe("a result stored before `recovery` existed still renders", () => {
       cockpitInstanceUrl: null,
     }))
     const Rows: ComponentType<Record<string, unknown>> = () => {
-      const recovery = useIncidentRecovery("prod", rows)
+      const recovery = useIncidentRecovery("prod", { resetOn: rows })
       return <IncidentTable incidents={rows} recovery={recovery} onAnalyze={() => {}} />
     }
     render(

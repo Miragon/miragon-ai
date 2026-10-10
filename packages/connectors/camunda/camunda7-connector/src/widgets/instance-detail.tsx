@@ -54,20 +54,17 @@ export function InstanceDetailWidget({
     retryText: t("viewState.retry"),
     refreshErrorText: (message) => t("viewState.refreshError", { message }),
   })
-  const actions = useInstanceActions({ engine, data })
+  // Every write is offered for the CURRENT state only (`useInstanceActions`).
+  const actions = useInstanceActions({ engine, data, unconfirmed: refreshError !== null })
   const { complete, visibleTasks, activeTaskId, onToggleTask, onTaskCompleted } = useOpenTasks(
     data?.openTasks,
+    actions.canCompleteTasks,
   )
 
   if (!data) return guard
 
   const { instance, activityTree, variables, incidents, bpmnXml } = data
-  const { engineId, isSuspended, cancelled } = actions
-  // Actions are offered for the CURRENT state only: never on an ended or
-  // cancelled instance, and not while a failed refetch leaves the state
-  // unconfirmed (completing the last task ends the instance — its runtime
-  // read is a 404 then).
-  const isActionable = !instance.ended && !cancelled && !refreshError
+  const { engineId, isSuspended, cancelled, isActionable } = actions
 
   const variableEntries = Object.entries(variables)
   const activeIncidents = incidents.filter((i) => !actions.recovery.isDone(i))
@@ -90,7 +87,6 @@ export function InstanceDetailWidget({
           visibleTasks={visibleTasks}
           engineId={engineId}
           complete={complete}
-          actionable={isActionable}
           activeTaskId={activeTaskId}
           onToggleTask={onToggleTask}
           onTaskCompleted={onTaskCompleted}
@@ -178,6 +174,7 @@ export function InstanceDetailWidget({
         instance={instance}
         engineId={engineId}
         cancelled={cancelled}
+        unconfirmed={refreshError !== null}
         isSuspended={isSuspended}
         openIncidentCount={openIncidentCount}
       />

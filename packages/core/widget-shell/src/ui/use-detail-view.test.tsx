@@ -88,6 +88,22 @@ describe("useViewData", () => {
     expect(result.current.data).toEqual({ name: "seed" })
     expect(result.current.refreshing).toBe(false)
   })
+
+  it("reports a failed refetch from its FIRST attempt — not after the client's retries", async () => {
+    // The toolkit's production defaults: TanStack retries a failed query 3×
+    // with 1 s/2 s/4 s backoff, and `error` stays null all that time. A view
+    // that gates writes on `refreshError` would keep offering them on a state
+    // it cannot confirm for ~7 s (an instance that just ended).
+    queryClient.setDefaultOptions(toolkitDefaults)
+    callTool.mockRejectedValue(new Error("gone"))
+    const { result } = setup({ name: "seed" })
+    void queryClient.invalidateQueries({ queryKey: ["test:detail"] })
+    await waitFor(() => expect(result.current.refreshError?.message).toBe("gone"))
+    // Still retrying: one attempt so far, the refetch in flight.
+    expect(callTool).toHaveBeenCalledTimes(1)
+    expect(result.current.refreshing).toBe(true)
+    expect(result.current.data).toEqual({ name: "seed" })
+  })
 })
 
 function Detail({ seed }: { seed: Detail | null }) {

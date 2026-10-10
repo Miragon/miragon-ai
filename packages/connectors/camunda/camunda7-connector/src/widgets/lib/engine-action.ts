@@ -49,10 +49,21 @@ export type EngineActionOptions<TArgs> = ActionGate & {
   target?: (args: TArgs) => string
   /** Fresh server data: the optimistic success marks drop when its identity changes. */
   resetOn?: unknown
+  /**
+   * The subject's CURRENT state allows the write (default true) — false for
+   * an ended or cancelled instance, a state a failed refetch leaves
+   * unconfirmed, or a suspended instance where the engine refuses the write
+   * (a task completion). Closes the action like the gate does, and withdraws
+   * a question still waiting for an answer.
+   */
+  available?: boolean
 }
 
 export interface EngineAction<TArgs, TResult> {
-  /** The write is offered here — render its control only when true (hidden, never disabled). */
+  /**
+   * The write is offered here — the gate allows it and the subject's state
+   * is `available`. Render its control only when true (hidden, never disabled).
+   */
   readonly allowed: boolean
   /** Start the write — through its confirmation when the policy asks for one. */
   run: (args: TArgs, options?: RunOptions<TResult>) => void
@@ -119,8 +130,9 @@ function invalidateAfter(tool: WidgetWrite): void {
  * what each write site used to assemble (and sometimes forgot):
  *
  * - the gate: `allowed` from the deployment's toolset (or the view's own
- *   `canSave`); a write that is not allowed renders no control and `run` is
- *   a no-op — fail-closed until the feed answered;
+ *   `canSave`) AND the subject's current state (`available`); a write that is
+ *   not allowed renders no control, `run` and `confirm` are no-ops, and an
+ *   unanswered question is withdrawn — fail-closed until the feed answered;
  * - the mutation, per target: concurrent calls on different rows each keep
  *   their own pending/error state;
  * - the confirmation for the writes `WRITE_POLICY` marks — `run` refuses to
@@ -136,10 +148,11 @@ export function useEngineAction<TArgs extends Record<string, unknown>, TResult =
   allowed: viewAllows,
   target = SINGLE_TARGET,
   resetOn,
+  available = true,
 }: EngineActionOptions<TArgs>): EngineAction<TArgs, TResult> {
   const canRun = useCanRun()
   // Without a view decision the write is an engine write (`ActionGate`).
-  const allowed = viewAllows ?? canRun(tool)
+  const allowed = (viewAllows ?? canRun(tool)) && available
   const mutation = useToolMutation<TResult>(tool)
   const [state, setState] = useState<ActionState<TArgs, TResult>>({
     pending: new Set(),
@@ -148,6 +161,14 @@ export function useEngineAction<TArgs extends Record<string, unknown>, TResult =
     asked: null,
   })
   useResetOnChange(resetOn, () => setState((s) => ({ ...s, done: new Map() })))
+  // A question asked for a state that is gone (the instance ended while the
+  // dialog was open) is withdrawn — unless its write is already in flight,
+  // whose outcome the dialog must still show.
+  useResetOnChange(allowed, () =>
+    setState((s) =>
+      !allowed && s.asked && !s.pending.has(target(s.asked.args)) ? { ...s, asked: null } : s,
+    ),
+  )
 
   function execute(args: TArgs, runOptions: RunOptions<TResult>) {
     const key = target(args)
@@ -207,7 +228,7 @@ export function useEngineAction<TArgs extends Record<string, unknown>, TResult =
     error: (key = SINGLE) => state.errors.get(key) ?? null,
     confirmation: asked?.confirmation ?? null,
     confirm: () => {
-      if (asked && askedIdle) execute(asked.args, asked.options)
+      if (asked && askedIdle && allowed) execute(asked.args, asked.options)
     },
     // The failure stays (shown at the row once the dialog is gone) until the next run.
     dismiss: () => {

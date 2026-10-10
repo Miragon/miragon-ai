@@ -20,8 +20,9 @@ import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
+import { EngineActionDialog } from "../lib/engine-action-dialog.js"
 import { recoveryOf } from "../lib/incident-recovery.js"
-import type { IncidentRecoveryState } from "./use-incident-recovery.js"
+import { useIncidentRecovery, type IncidentRecoveryState } from "./use-incident-recovery.js"
 
 /** Page size — mirrors the feed's server default. */
 const INCIDENT_PAGE_SIZE = 10
@@ -205,19 +206,23 @@ export function IncidentTable({
  * (exact /incident/count total) with the house Load-more pattern, so a group
  * reaches every incident — not just the definition feed's 200-row scan window.
  * Mounts lazily: GroupCard renders children only while expanded.
+ *
+ * It owns its rows' remedies: their success marks reset on THIS feed's page 0
+ * (a refetch of it drops the appended pages too), never on the definition
+ * feed — which can answer the same write's invalidation first while these
+ * rows are still the pre-write page, and would bring a cleared row's button
+ * back.
  */
 export function PagedIncidentTable({
   processDefinitionKey,
   activityId,
   engine,
-  recovery,
   onAnalyze,
 }: {
   processDefinitionKey: string
   activityId: string
   /** Explicit engine routing; omitted → the caller's saved default engine. */
   engine?: string
-  recovery: IncidentRecoveryState
   onAnalyze: (incidentId: string) => void
 }) {
   const t = useT()
@@ -233,6 +238,7 @@ export function PagedIncidentTable({
     selectItems: (d) => d.incidents,
     selectTotal: (d) => d.totalCount,
   })
+  const recovery = useIncidentRecovery(engine, { resetOn: paged.firstPage })
 
   if (!paged.firstPage) {
     return (
@@ -264,6 +270,11 @@ export function PagedIncidentTable({
       <div className="bg-muted px-3 pb-1">
         <CockpitListFooter paged={paged} noun={t("procIncTable.footerNoun")} />
       </div>
+      {/* The per-row button only requests the resolve; the actual
+          camunda7_resolve_incident call runs after this confirmation. The
+          dialog stays open until success so a failure is shown right here
+          (and inline at the row once dismissed). */}
+      <EngineActionDialog action={recovery.resolve} />
     </>
   )
 }

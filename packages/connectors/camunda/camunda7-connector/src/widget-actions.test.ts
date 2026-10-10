@@ -1,7 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { fileURLToPath } from "node:url"
-import ts from "typescript"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
 import { createPlugin } from "./plugin.js"
@@ -12,159 +10,26 @@ import {
 } from "./tool-names.js"
 import { GATING_SITES } from "./widgets/action-gating.sites.js"
 import { WRITE_POLICY } from "./widgets/lib/write-policy.js"
-
-// Lives outside `src/widgets` on purpose: the widget tsconfig is browser-only
-// (no Node types), and this guard reads the widget sources from disk.
-const SRC_DIR = fileURLToPath(new URL("./", import.meta.url))
-const WIDGETS_DIR = join(SRC_DIR, "widgets")
+import {
+  WIDGETS_DIR,
+  scanText,
+  scanWidgets,
+  type ToolReference,
+  type WidgetScan,
+} from "./widget-scan.test-support.js"
 
 /** THE in-widget write primitive — the one file allowed to hold a raw mutation and the gate. */
 const PRIMITIVE = "lib/engine-action.ts"
 
-/** How widget code can name a tool it calls. */
-type Via = "action" | "mutation" | "callTool" | "read"
-
-interface ToolReference {
-  file: string
-  line: number
-  via: Via
-  /** The tool's name, or null when the expression is not a literal or a string constant. */
-  name: string | null
-}
-
-interface WidgetScan {
-  references: ToolReference[]
-  /** Files importing the toolkit's raw `useToolMutation`. */
-  mutationImports: string[]
-  /** Files calling the deployment gate directly. */
-  canRunCalls: string[]
-  /** String literals that open an array (the first segment of a query key). */
-  keyRoots: Set<string>
-}
-
-/** A file's top-level `const NAME = "value"` declarations. */
-function stringConstants(source: ts.SourceFile): Map<string, string> {
-  const constants = new Map<string, string>()
-  for (const statement of source.statements) {
-    if (!ts.isVariableStatement(statement)) continue
-    for (const decl of statement.declarationList.declarations) {
-      if (ts.isIdentifier(decl.name) && decl.initializer && ts.isStringLiteral(decl.initializer)) {
-        constants.set(decl.name.text, decl.initializer.text)
-      }
-    }
-  }
-  return constants
-}
-
-function parse(path: string): ts.SourceFile {
-  return ts.createSourceFile(path, readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true)
-}
-
-function widgetFiles(): string[] {
-  return readdirSync(WIDGETS_DIR, { recursive: true, encoding: "utf8" })
-    .filter((f) => /\.tsx?$/.test(f) && !/\.test(-support)?\.tsx?$/.test(f))
-    .map((f) => f.split("\\").join("/"))
-}
-
-/** Which positional argument of which call names the tool it calls. */
-const POSITIONAL_TOOL_ARG = new Map<string, { via: Via; index: number }>([
-  ["useToolMutation", { via: "mutation", index: 0 }],
-  ["callTool", { via: "callTool", index: 0 }],
-  ["useToolQuery", { via: "read", index: 1 }],
-  ["useViewToolQuery", { via: "read", index: 1 }],
-  ["useSeededToolQuery", { via: "read", index: 1 }],
-  ["useViewData", { via: "read", index: 2 }],
-])
-
-function calleeName(call: ts.CallExpression): string | null {
-  const callee = call.expression
-  if (ts.isIdentifier(callee)) return callee.text
-  if (ts.isPropertyAccessExpression(callee)) return callee.name.text
-  return null
-}
-
 /**
- * The call's positional tool argument. Any other `*CallTool(…)` (a held
- * `useCallTool()` result) counts as a raw call too.
+ * The files that may obtain a raw tool caller at all. Calls through one are
+ * tracked by name (aliases and renames included), but a caller handed on as a
+ * value — a parameter, a prop — leaves that reach, so every new holder is a
+ * reviewed decision. Neither of these calls a tool through it.
  */
-function positionalTool(call: ts.CallExpression): { via: Via; arg: ts.Expression } | null {
-  const name = calleeName(call)
-  if (name === null) return null
-  const known =
-    POSITIONAL_TOOL_ARG.get(name) ??
-    (/callTool$/i.test(name) && name !== "useCallTool"
-      ? { via: "callTool" as const, index: 0 }
-      : null)
-  const arg = known ? call.arguments[known.index] : undefined
-  return known && arg ? { via: known.via, arg } : null
-}
-
-/**
- * A `{ tool: … }` option — of `useEngineAction` (the write) or of a read
- * hook (`useDetailView`, `usePagedViewData`, …).
- */
-function toolOption(node: ts.Node): { via: Via; arg: ts.Expression } | null {
-  if (!ts.isPropertyAssignment(node) || !ts.isIdentifier(node.name)) return null
-  if (node.name.text !== "tool") return null
-  const call = node.parent.parent
-  const action = ts.isCallExpression(call) && calleeName(call) === "useEngineAction"
-  return { via: action ? "action" : "read", arg: node.initializer }
-}
-
-function importsRawMutation(node: ts.Node): boolean {
-  if (!ts.isImportDeclaration(node) || !ts.isStringLiteral(node.moduleSpecifier)) return false
-  if (!node.moduleSpecifier.text.startsWith("@miragon/mcp-toolkit-ui")) return false
-  const bindings = node.importClause?.namedBindings
-  return (
-    bindings !== undefined &&
-    ts.isNamedImports(bindings) &&
-    bindings.elements.some((e) => (e.propertyName ?? e.name).text === "useToolMutation")
-  )
-}
-
-function scanFile(file: string, toolNames: Map<string, string>, scan: WidgetScan): void {
-  const source = parse(join(WIDGETS_DIR, file))
-  // How widgets name tools: the tool-names.ts constants, or a constant of their own file.
-  const constants = new Map([...toolNames, ...stringConstants(source)])
-  const nameOf = (expr: ts.Expression): string | null => {
-    if (ts.isStringLiteral(expr) || ts.isNoSubstitutionTemplateLiteral(expr)) return expr.text
-    return ts.isIdentifier(expr) ? (constants.get(expr.text) ?? null) : null
-  }
-  const record = (at: ts.Node, ref: { via: Via; arg: ts.Expression }) => {
-    const { line } = source.getLineAndCharacterOfPosition(at.getStart(source))
-    scan.references.push({ file, line: line + 1, via: ref.via, name: nameOf(ref.arg) })
-  }
-  const visit = (node: ts.Node) => {
-    if (importsRawMutation(node)) scan.mutationImports.push(file)
-    if (ts.isCallExpression(node)) {
-      if (calleeName(node) === "useCanRun") scan.canRunCalls.push(file)
-      const ref = positionalTool(node)
-      if (ref) record(node, ref)
-    }
-    const option = toolOption(node)
-    if (option) record(node, option)
-    if (
-      ts.isArrayLiteralExpression(node) &&
-      node.elements[0] &&
-      ts.isStringLiteral(node.elements[0])
-    ) {
-      scan.keyRoots.add(node.elements[0].text)
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(source)
-}
-
-function scanWidgets(): WidgetScan {
-  const toolNames = stringConstants(parse(join(SRC_DIR, "tool-names.ts")))
-  const scan: WidgetScan = {
-    references: [],
-    mutationImports: [],
-    canRunCalls: [],
-    keyRoots: new Set(),
-  }
-  for (const file of widgetFiles()) scanFile(file, toolNames, scan)
-  return scan
+const RAW_CALLER_HOLDERS: Record<string, string> = {
+  "cockpit-app/app.tsx": "checks that the query transport is wired",
+  "standalone-shell.tsx": "reads the delivered widget data; checks the query transport",
 }
 
 /** Every tool the plugin registers on the widest toolset, with its read/write nature. */
@@ -270,5 +135,82 @@ describe("every in-widget write goes through useEngineAction", () => {
         )
       }
     }
+  })
+
+  it("obtains a raw tool caller only in the reviewed files", () => {
+    expect(
+      [...scan.callerHolders].sort(),
+      "a widget write goes through useEngineAction; a read through a query hook",
+    ).toEqual(Object.keys(RAW_CALLER_HOLDERS).sort())
+  })
+})
+
+/** The guard's own blind spots, pinned on sources written to hit them. */
+describe("the structural scan itself", () => {
+  it("takes no query-key root from the policy it checks — a namespace never certifies itself", () => {
+    const policy = scanText(
+      "lib/write-policy.ts",
+      readFileSync(join(WIDGETS_DIR, "lib/write-policy.ts"), "utf8"),
+    )
+    expect([...policy.keyRoots]).toEqual([])
+  })
+
+  it("takes a query-key root from every read-site shape, and from nothing else", () => {
+    const { keyRoots } = scanText(
+      "probe.tsx",
+      `
+      const NOT_A_KEY = ["test:list-of-namespaces", "test:other"]
+      function feedKey(id: string) {
+        return ["test:helper-key", id]
+      }
+      function feed(id: string) {
+        return { key: ["test:option-helper", id], args: { id }, ready: true }
+      }
+      export function Probe({ id }: { id: string }) {
+        useToolQuery(["test:tool-query"], "test_data", {})
+        useSeededToolQuery(["test:seeded"], "test_data", {}, { seed: null, enabled: true })
+        useViewData(null, ["test:view-data"], "test_data", {}, true)
+        useToolQuery(feedKey(id), "test_data", {})
+        useDetailView({ ...feed(id), tool: "test_data" })
+        usePagedViewData({ key: ["test:paged", id], tool: "test_data" })
+        return NOT_A_KEY.length
+      }
+      `,
+    )
+    expect([...keyRoots].sort()).toEqual([
+      "test:helper-key",
+      "test:option-helper",
+      "test:paged",
+      "test:seeded",
+      "test:tool-query",
+      "test:view-data",
+    ])
+  })
+
+  it("follows a raw tool caller through a rename, a destructuring and an alias", () => {
+    const { references, callerHolders } = scanText(
+      "probe.tsx",
+      `
+      export function Probe() {
+        const invoke = useCallTool()
+        invoke("camunda7_resolve_incident", { incidentId: "i" })
+        const { callTool: run } = useHostBridge()
+        run("camunda7_set_job_retries", { jobId: "j", retries: 1 })
+        const bridge = useHostBridgeOrNull()
+        const call = bridge?.callTool
+        call?.("camunda7_delete_process_instance", { processInstanceId: "p" })
+        const again = invoke
+        again("camunda7_complete_task", { taskId: "t" })
+      }
+      `,
+    )
+    expect(references.map((r) => `${r.via}(${r.name})`)).toEqual([
+      "callTool(camunda7_resolve_incident)",
+      "callTool(camunda7_set_job_retries)",
+      "callTool(camunda7_delete_process_instance)",
+      "callTool(camunda7_complete_task)",
+    ])
+    expect(references.every((r) => isWrite(r.name))).toBe(true)
+    expect([...callerHolders]).toEqual(["probe.tsx"])
   })
 })
