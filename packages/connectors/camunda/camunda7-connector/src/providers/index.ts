@@ -10,7 +10,7 @@ export const ENGINE_PROVIDERS: Record<EngineFlavor, EngineProvider> = {
   camunda7: camunda7Provider,
 }
 
-/** Backwards-compatible default: engines without a `flavor` are CIB Seven. */
+/** The default vendor: engines without a `flavor` are CIB Seven. */
 export const DEFAULT_ENGINE_FLAVOR: EngineFlavor = "cibseven"
 
 /**

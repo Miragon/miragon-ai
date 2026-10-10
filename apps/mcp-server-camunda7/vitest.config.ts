@@ -29,8 +29,11 @@ export default mergeConfig(
         // tools/list golden helper (test/golden.ts) is fully exercised by its
         // self-test, and test/ helpers sit inside this package's measured
         // scope (like boot-server.ts) — raised so that padding cannot become
-        // headroom for src/: measured 90.09 / 84.67 / 94.73 / 90.52.
-        thresholds: { statements: 88, branches: 82, functions: 92, lines: 88 },
+        // headroom for src/: measured 90.09 / 84.67 / 94.73 / 90.52. Raised
+        // 2026-10-09 (#322 compat cleanup — the failed-migration close in
+        // initRuntime has its recording-client suite): measured 96.62 / 92.46 /
+        // 97.29 / 97.9.
+        thresholds: { statements: 94, branches: 90, functions: 95, lines: 95 },
       },
     },
   }),

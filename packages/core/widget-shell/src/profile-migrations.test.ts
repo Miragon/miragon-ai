@@ -1,26 +1,73 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import {
+  PROFILE_MIGRATION_BASELINE,
   PROFILE_MIGRATIONS,
   migrateStoredProfile,
   parseStoredProfile,
 } from "./profile-migrations.js"
 import { PROFILE_SCHEMA_VERSION } from "./profile-constants.js"
 
-const V1_BASE = {
-  id: "sess-1",
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+const CURRENT = {
+  id: "user-1",
+  language: "de",
+  theme: "dark",
+  modules: { analytics: { defaultPeriod: "14d" }, camunda7: { defaultEngineId: "prod-a" } },
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-02T00:00:00.000Z",
+  schemaVersion: PROFILE_SCHEMA_VERSION,
+}
+
+/** Shapes the pre-production builds persisted before the baseline: flat module fields. */
+const V1_RECORD = {
+  id: "user-1",
   language: "de",
   theme: "dark",
   pinnedDashboardIds: ["d1"],
+  analyticsDefaultPeriod: "30d",
+  analyticsMinBucketSize: 25,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-02T00:00:00.000Z",
   schemaVersion: 1,
 }
+const V2_RECORD = {
+  id: "user-1",
+  language: "de",
+  theme: "dark",
+  defaultEngineId: "prod-a",
+  allowedEngineIds: ["prod-a"],
+  modules: { analytics: { defaultPeriod: "14d" } },
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-02T00:00:00.000Z",
+  schemaVersion: 2,
+}
+
+/**
+ * The baseline as shipped, pinned HERE rather than read from the export: the
+ * completeness range below starts at it, so a baseline raised in step with a
+ * `PROFILE_SCHEMA_VERSION` bump would empty that range and let the bump pass
+ * without its migration — every stored record of the old version would then
+ * be adopted at the new one without its reshape. Moving the baseline drops
+ * migration history, which is an owner decision of its own, never part of a
+ * schema bump.
+ */
+const SHIPPED_BASELINE = 3
 
 describe("PROFILE_MIGRATIONS completeness", () => {
-  it("carries an entry for every version below PROFILE_SCHEMA_VERSION", () => {
+  it("keeps the migration baseline where it shipped", () => {
+    expect(PROFILE_MIGRATION_BASELINE).toBe(SHIPPED_BASELINE)
+  })
+
+  it("carries an entry for every version from the baseline up to PROFILE_SCHEMA_VERSION", () => {
     // The failure mode this guards: a PROFILE_SCHEMA_VERSION bump without its
-    // migration entry ships, and every stored record silently resets on read.
-    const expected = Array.from({ length: PROFILE_SCHEMA_VERSION - 1 }, (_, i) => i + 1)
+    // migration entry ships, and every stored record reads un-migrated.
+    const expected = Array.from(
+      { length: PROFILE_SCHEMA_VERSION - SHIPPED_BASELINE },
+      (_, i) => SHIPPED_BASELINE + i,
+    )
     const actual = Object.keys(PROFILE_MIGRATIONS)
       .map(Number)
       .sort((a, b) => a - b)
@@ -30,138 +77,65 @@ describe("PROFILE_MIGRATIONS completeness", () => {
 
 describe("parseStoredProfile", () => {
   it("passes a current-version record through unchanged", () => {
-    const record = {
-      id: "sess-1",
-      language: "de",
-      theme: "dark",
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-02T00:00:00.000Z",
-      schemaVersion: 3,
-      modules: { analytics: { defaultPeriod: "14d" }, camunda7: { defaultEngineId: "prod-a" } },
-    }
-    expect(parseStoredProfile(record)).toMatchObject({
-      language: "de",
-      schemaVersion: 3,
-      modules: { analytics: { defaultPeriod: "14d" }, camunda7: { defaultEngineId: "prod-a" } },
-    })
+    expect(parseStoredProfile(CURRENT)).toEqual(CURRENT)
   })
 
-  it("migrates v1 flat analytics fields into modules.analytics with the slice's names", () => {
-    const parsed = parseStoredProfile({
-      ...V1_BASE,
-      analyticsDefaultPeriod: "30d",
-      analyticsMinBucketSize: 25,
-    })
-    expect(parsed).toMatchObject({
-      language: "de",
-      theme: "dark",
-      schemaVersion: 3,
-      modules: {
-        analytics: { defaultPeriod: "30d", minBucketSize: 25 },
-        camunda7: { pinnedDashboardIds: ["d1"] },
-      },
-    })
-    expect(parsed).not.toHaveProperty("analyticsDefaultPeriod")
-    expect(parsed).not.toHaveProperty("analyticsMinBucketSize")
-  })
+  // No migration history predates the baseline (#322): an older record is
+  // adopted, never upgraded — and must still read without an error.
+  it.each([
+    ["v1", V1_RECORD, {}],
+    ["v2", V2_RECORD, V2_RECORD.modules],
+  ])(
+    "reads a %s record from before the baseline fail-soft: its flat fields drop to the defaults",
+    (_, stored, modules) => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => {})
+      expect(parseStoredProfile(stored)).toEqual({
+        id: "user-1",
+        language: "de",
+        theme: "dark",
+        modules,
+        createdAt: stored.createdAt,
+        updatedAt: stored.updatedAt,
+        schemaVersion: PROFILE_SCHEMA_VERSION,
+      })
+      expect(error).not.toHaveBeenCalled()
+    },
+  )
 
-  it("migrates v2 flat camunda7 fields into modules.camunda7", () => {
-    const parsed = parseStoredProfile({
-      id: "sess-1",
-      language: "de",
-      theme: "dark",
-      defaultEngineId: "prod-a",
-      allowedEngineIds: ["prod-a"],
-      pinnedDashboardIds: ["d1"],
-      defaultDashboardId: "dash-1",
-      preferredRole: "admin",
-      modules: { analytics: { defaultPeriod: "14d" } },
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-02T00:00:00.000Z",
-      schemaVersion: 2,
-    })
-    expect(parsed).toMatchObject({
-      schemaVersion: 3,
-      modules: {
-        analytics: { defaultPeriod: "14d" },
-        camunda7: {
-          defaultEngineId: "prod-a",
-          allowedEngineIds: ["prod-a"],
-          pinnedDashboardIds: ["d1"],
-          defaultDashboardId: "dash-1",
-          preferredRole: "admin",
-        },
-      },
-    })
-    expect(parsed).not.toHaveProperty("defaultEngineId")
-    expect(parsed).not.toHaveProperty("preferredRole")
-  })
-
-  it("migrates a v1 record without module fields to just the moved dashboard pins", () => {
-    expect(parseStoredProfile(V1_BASE)).toMatchObject({
-      schemaVersion: 3,
-      modules: { camunda7: { pinnedDashboardIds: ["d1"] } },
-    })
-  })
-
-  it("never overwrites an already-present module slice", () => {
-    const parsed = parseStoredProfile({
-      ...V1_BASE,
-      analyticsDefaultPeriod: "30d",
-      modules: { analytics: { defaultPeriod: "1d" } },
-    })
-    expect(parsed?.modules.analytics).toEqual({ defaultPeriod: "1d" })
-  })
-
-  it("treats a missing schemaVersion as version 1", () => {
-    const versionless: Record<string, unknown> = { ...V1_BASE, analyticsDefaultPeriod: "3d" }
+  it("reads a missing or out-of-range schemaVersion as the baseline", () => {
+    const versionless: Record<string, unknown> = { ...CURRENT }
     delete versionless.schemaVersion
-    expect(parseStoredProfile(versionless)).toMatchObject({
-      schemaVersion: 3,
-      modules: { analytics: { defaultPeriod: "3d" } },
-    })
+    expect(parseStoredProfile(versionless)).toEqual(CURRENT)
+    expect(parseStoredProfile({ ...CURRENT, schemaVersion: 0 })).toEqual(CURRENT)
+    expect(parseStoredProfile({ ...CURRENT, schemaVersion: 2.5 })).toEqual(CURRENT)
   })
 
   it("reads a record from a NEWER build best-effort, without running any migration", () => {
     const parsed = parseStoredProfile({
-      ...V1_BASE,
-      analyticsDefaultPeriod: "30d",
-      modules: { camunda7: { defaultEngineId: "prod-a" } },
+      ...CURRENT,
+      newCoreField: true,
       schemaVersion: PROFILE_SCHEMA_VERSION + 1,
     })
-    expect(parsed).toEqual({
-      id: "sess-1",
-      language: "de",
-      theme: "dark",
-      // Untouched: a newer build's document is never reshaped by an older one.
-      modules: { camunda7: { defaultEngineId: "prod-a" } },
-      createdAt: V1_BASE.createdAt,
-      updatedAt: V1_BASE.updatedAt,
-      schemaVersion: PROFILE_SCHEMA_VERSION,
-    })
+    // Untouched: a newer build's document is never reshaped by an older one.
+    expect(parsed).toEqual(CURRENT)
   })
 
   it("degrades an invalid field to ITS default and keeps every other field", () => {
-    const current = {
-      ...V1_BASE,
-      schemaVersion: PROFILE_SCHEMA_VERSION,
-      modules: { analytics: { defaultPeriod: "14d" } },
-    }
-    expect(parseStoredProfile({ ...current, language: "fr" })).toMatchObject({
+    expect(parseStoredProfile({ ...CURRENT, language: "fr" })).toMatchObject({
       language: "en",
       theme: "dark",
-      modules: { analytics: { defaultPeriod: "14d" } },
+      modules: CURRENT.modules,
     })
-    expect(parseStoredProfile({ ...current, theme: 42, userId: 7 })).toMatchObject({
+    expect(parseStoredProfile({ ...CURRENT, theme: 42, userId: 7 })).toMatchObject({
       language: "de",
       theme: "system",
       userId: undefined,
     })
-    expect(parseStoredProfile({ ...current, modules: "garbage" })?.modules).toEqual({})
+    expect(parseStoredProfile({ ...CURRENT, modules: "garbage" })?.modules).toEqual({})
   })
 
   it("prefers the store key over the stored id and repairs missing timestamps", () => {
-    expect(parseStoredProfile({ ...V1_BASE, schemaVersion: 3 }, "other-key")?.id).toBe("other-key")
+    expect(parseStoredProfile(CURRENT, "other-key")?.id).toBe("other-key")
     const sparse = parseStoredProfile({ schemaVersion: 3 }, "k")
     expect(sparse).toMatchObject({ id: "k", language: "en", theme: "system", modules: {} })
     expect(sparse?.createdAt).toBe(sparse?.updatedAt)
@@ -173,32 +147,82 @@ describe("parseStoredProfile", () => {
     })
   })
 
-  it("treats an out-of-range schemaVersion like a missing one (version 1)", () => {
-    expect(
-      parseStoredProfile({ ...V1_BASE, schemaVersion: 0, analyticsDefaultPeriod: "3d" }),
-    ).toMatchObject({ schemaVersion: 3, modules: { analytics: { defaultPeriod: "3d" } } })
-  })
-
   it("reads garbage as absent", () => {
     expect(parseStoredProfile(null)).toBeUndefined()
     expect(parseStoredProfile("nope")).toBeUndefined()
     expect(parseStoredProfile(["an", "array"])).toBeUndefined()
-    // No id stored and no store key to fall back to.
+    // No id stored (or none that is a string) and no store key to fall back to.
     expect(parseStoredProfile({ schemaVersion: 0 })).toBeUndefined()
+    expect(parseStoredProfile({ ...CURRENT, id: 42 })).toBeUndefined()
   })
 })
 
 describe("migrateStoredProfile", () => {
+  it("adopts a pre-baseline document at the baseline, keeping its unknown keys raw", () => {
+    expect(migrateStoredProfile(V1_RECORD)).toEqual({
+      doc: { ...V1_RECORD, schemaVersion: PROFILE_MIGRATION_BASELINE },
+      version: PROFILE_MIGRATION_BASELINE,
+    })
+  })
+
   it("reports the version the document ends at", () => {
-    expect(migrateStoredProfile({ ...V1_BASE })?.version).toBe(PROFILE_SCHEMA_VERSION)
-    expect(migrateStoredProfile({ ...V1_BASE, schemaVersion: 42 })?.version).toBe(42)
+    expect(migrateStoredProfile(CURRENT)?.version).toBe(PROFILE_SCHEMA_VERSION)
+    expect(migrateStoredProfile({ ...CURRENT, schemaVersion: 42 })?.version).toBe(42)
+    // Anything but an integer number reads as the baseline — never NaN.
+    for (const schemaVersion of [undefined, "4", 4.5, null]) {
+      expect(migrateStoredProfile({ ...CURRENT, schemaVersion })?.version).toBe(
+        PROFILE_MIGRATION_BASELINE,
+      )
+    }
     expect(migrateStoredProfile(undefined)).toBeUndefined()
+    expect(migrateStoredProfile(null)).toBeUndefined()
+    expect(migrateStoredProfile([CURRENT])).toBeUndefined()
   })
 
   it("never mutates the stored JSON it was handed", () => {
-    const stored = { ...V1_BASE, analyticsDefaultPeriod: "30d" }
+    const stored = { ...V1_RECORD }
     const snapshot = structuredClone(stored)
     migrateStoredProfile(stored)
     expect(stored).toEqual(snapshot)
+  })
+
+  // The walk itself, against a synthetic history: the shipped one has no
+  // step yet (the baseline IS the current version), but the next
+  // PROFILE_SCHEMA_VERSION bump runs exactly this loop.
+  const history = {
+    baseline: 1,
+    current: 3,
+    migrations: {
+      1: (raw: Record<string, unknown>) => {
+        raw.steps = [...((raw.steps as number[] | undefined) ?? []), 1]
+      },
+      2: (raw: Record<string, unknown>) => {
+        raw.steps = [...((raw.steps as number[] | undefined) ?? []), 2]
+      },
+    },
+  }
+
+  it("upgrades step by step from the stored version, stamping each step", () => {
+    expect(migrateStoredProfile({ schemaVersion: 1 }, history)).toEqual({
+      doc: { schemaVersion: 3, steps: [1, 2] },
+      version: 3,
+    })
+    expect(migrateStoredProfile({ schemaVersion: 2 }, history)).toEqual({
+      doc: { schemaVersion: 3, steps: [2] },
+      version: 3,
+    })
+  })
+
+  it("stops at a version without its step (a build bug) and keeps the document there", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {})
+    const gap = { ...history, migrations: { 1: history.migrations[1] } }
+    expect(migrateStoredProfile({ schemaVersion: 1 }, gap)).toEqual({
+      doc: { schemaVersion: 2, steps: [1] },
+      version: 2,
+    })
+    expect(error).toHaveBeenCalledTimes(1)
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("No profile migration from schema v2"),
+    )
   })
 })

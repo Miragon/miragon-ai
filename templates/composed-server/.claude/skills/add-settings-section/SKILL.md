@@ -101,6 +101,10 @@ wire-contract e2e test asserts by name):
 | `<module>_settings_data` | `...appOnly`                      | `buildDataFeedResult(view)`                          |
 | `<module>_save_settings` | none (plain model-visible tool)   | text summary + `structuredContent` = effective slice |
 
+All three declare `inputSchema: strictToolInput(…)` (`@miragon-ai/widget-shell/server`;
+the save tool `strictToolInput(mySettingsSaveInput.shape)`), so an unknown key is refused
+instead of silently dropped.
+
 Rules the save tool must honor:
 
 - **Save the PATCH alone, never a slice you read first** — `requireProfileKey`

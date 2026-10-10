@@ -54,8 +54,11 @@ export type ModuleDefinition = ComposableModule<SharedResources>
  * the module's `definition` in `test/widget-registry.test.ts` — Tailwind
  * picks up workspace modules automatically via the `modules/` glob in
  * `src/ui/globals.css`.
+ *
+ * Exported for `test/strict-input.e2e.test.ts`, which boots every toolset
+ * each listed module declares — yours included, without a test edit.
  */
-const MODULES: readonly ModuleDefinition[] = [camunda7Module, analyticsModule, notesModule]
+export const MODULES: readonly ModuleDefinition[] = [camunda7Module, analyticsModule, notesModule]
 
 /**
  * App-owned env vars; each module contributes its own slice via

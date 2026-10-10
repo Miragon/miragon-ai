@@ -51,6 +51,12 @@ external infrastructure.
    (JSON for in-widget self-fetch). The `_show_`/`_data` **naming is
    load-bearing**: `server/test/widget-contract.e2e.test.ts` asserts the widget
    `_meta` contract by name across ALL composed modules, including yours.
+   All three take **strict input** — the registrar with `{ strictInput: true }`,
+   raw `server.tool()` with `strictToolInput(shape)` from
+   `@miragon-ai/widget-shell/server` — so an unknown key is a tool error naming
+   the valid keys, never a silently dropped filter
+   (`server/test/strict-input.e2e.test.ts` probes every tool of every module
+   on every toolset it declares).
 3. **Widgets hang off a four-link chain** (component map → module catalogue →
    server registry → `tool-names.ts`); a missed link is a SILENTLY absent
    widget. Guarded by each module's `catalogue-sync.test.ts` and the server's
@@ -80,8 +86,8 @@ external infrastructure.
    directions are guarded by `server/test/env-example.test.ts`; add your
    module's vars there.
 8. **Toolsets fail closed.** A module opts into the `module:toolset` suffix by
-   declaring `toolsets: createToolsetVocabulary(...)` on its definition (the
-   old `supportsToolsets` flag is deprecated); the composition resolves ONE
+   declaring `toolsets: createToolsetVocabulary(...)` on its definition (a
+   module without one has no toolsets); the composition resolves ONE
    concrete toolset per module per boot and logs it. Without `MCP_OAUTH`
    (`oauthFromEnv` in `server/src/app.ts`) a module without a suffix runs its
    read-only floor, an empty/unknown suffix falls back to it, and an

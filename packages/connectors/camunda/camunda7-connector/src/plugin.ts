@@ -122,9 +122,8 @@ export function createPlugin(
 
   const incidentIssueConfig = {
     repository: config.incidentIssueRepository,
-    // Cockpit URL for issue-link rendering: per-engine, so the helper falls back
-    // to the selected engine at call time. The legacy single-cockpit field is
-    // dropped; the resolver picks the right one.
+    // No cockpit URL here: issue links render with the per-engine cockpit URL
+    // of the engine the call resolves to.
   }
 
   return {

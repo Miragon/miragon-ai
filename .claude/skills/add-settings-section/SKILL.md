@@ -28,8 +28,7 @@ in `profileRecordSchema` (`packages/core/widget-shell/src/profile-record.ts`): a
 field there, bump `PROFILE_SCHEMA_VERSION` in `profile-constants.ts`, add the matching
 entry to `PROFILE_MIGRATIONS` in `profile-migrations.ts` (a bump without a migration
 silently resets stored preferences). Don't put module vocabulary into the core record —
-v2 moved the analytics fields and v3 the camunda7 engine/dashboard fields out of it for
-exactly that reason.
+it is connector-free by design.
 
 ## Step 1 — the slice schema (`src/settings.ts`)
 

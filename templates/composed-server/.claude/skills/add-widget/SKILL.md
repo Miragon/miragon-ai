@@ -90,7 +90,9 @@ Model both tools on `modules/mcp-notes/src/widget-tools.ts`:
 - Wrap every handler in `withToolErrors` (all from
   `@miragon-ai/widget-shell/server`).
 - Share the input shape between the pair (one `const <thing>InputShape`), so
-  the widget can re-issue the show tool's arguments against the feed.
+  the widget can re-issue the show tool's arguments against the feed, and
+  declare it as `inputSchema: strictToolInput(<thing>InputShape)` — never a bare
+  `z.object`, which silently drops an unknown key instead of refusing it.
 - A widget-path tool that performs a **durable write** must honor the module's
   toolset itself (the registrar's filter never sees it) — gate it on the
   module's `toolsets` vocabulary, where a missing toolset is the read-only

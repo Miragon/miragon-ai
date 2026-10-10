@@ -5,12 +5,17 @@ import {
   buildDataFeedResult,
   buildSingleWidgetView,
   showToolBinding,
+  strictToolInput,
   withToolErrors,
 } from "@miragon-ai/widget-shell/server"
 import { NOTES_LIST_DATA } from "./tool-names.js"
 import type { NotesStore } from "./notes-store.js"
 
-/** Inputs shared by `notes_show_notes` and its `notes_list_data` feed. */
+/**
+ * Inputs shared by `notes_show_notes` and its `notes_list_data` feed —
+ * declared through `strictToolInput`, the raw-path twin of the registrar's
+ * `strictInput`: an unknown key is refused, never stripped.
+ */
 const notesInputShape = {
   query: z
     .string()
@@ -29,7 +34,7 @@ export function registerWidgetTools(server: MCPServer, store: NotesStore, title:
       description:
         "Show the team's operations notes as an interactive list. Optional case-insensitive filter over title, text, and tags.",
       annotations: { readOnlyHint: true, idempotentHint: true },
-      inputSchema: z.object(notesInputShape),
+      inputSchema: strictToolInput(notesInputShape),
       ...showToolBinding("notes_show_notes", "Team Notes"),
     },
     withToolErrors(async (args) => {
@@ -58,7 +63,7 @@ export function registerWidgetTools(server: MCPServer, store: NotesStore, title:
       description:
         "Internal JSON feed (no UI) for the notes widget's self-fetch. Prefer notes_show_notes.",
       annotations: { readOnlyHint: true, idempotentHint: true },
-      inputSchema: z.object(notesInputShape),
+      inputSchema: strictToolInput(notesInputShape),
       ...appOnly,
     },
     withToolErrors(async (args) => buildDataFeedResult({ title, notes: store.list(args) })),

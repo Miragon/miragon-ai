@@ -16,17 +16,11 @@ export type ThemePref = (typeof THEMES)[number]
 /**
  * Bumped when the persisted profile shape changes in a migration-relevant way.
  * Every bump needs a matching entry in `PROFILE_MIGRATIONS`
- * (`profile-migrations.ts`) so older records upgrade on read instead of being
- * silently reset to defaults.
+ * (`profile-migrations.ts`) so stored records upgrade on read instead of
+ * losing their preferences.
  *
- * v2: the analytics preferences moved out of the flat camunda7-owned fields
- * (`analyticsDefaultPeriod`/`analyticsMinBucketSize`) into the per-module
- * `modules.analytics` slice (`defaultPeriod`/`minBucketSize`).
- *
- * v3: the camunda7 engine/dashboard preferences (`defaultEngineId`,
- * `allowedEngineIds`, `pinnedDashboardIds`, `defaultDashboardId`,
- * `preferredRole`) moved into the `modules.camunda7` slice — since then the
- * record itself is connector-free (language, theme, modules + metadata) and
- * owned by this core package.
+ * v3 is the migration baseline (`PROFILE_MIGRATION_BASELINE`): a
+ * connector-free record — language, theme, `modules.<module>` slices +
+ * metadata — owned by this core package.
  */
 export const PROFILE_SCHEMA_VERSION = 3

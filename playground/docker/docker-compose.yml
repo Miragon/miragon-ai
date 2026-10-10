@@ -237,7 +237,7 @@ services:
       # need CAMUNDA_ALLOW_DEPLOYMENTS=true). Safe here only because the port is
       # bound to 127.0.0.1 — never widen an unauthenticated server reachable
       # from a network.
-      # Pass either a single CAMUNDA_BASE_URL (back-compat, single engine) OR
+      # Pass either a single CAMUNDA_BASE_URL (single engine) OR
       # CAMUNDA_ENGINES_JSON with a list. Below: single-engine default; for
       # multi-engine override by exporting CAMUNDA_ENGINES_JSON in the host
       # shell before `docker compose up`, or by overriding via a compose

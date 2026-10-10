@@ -1,9 +1,10 @@
 /**
  * Server-side surface of the widget shell (`@miragon-ai/widget-shell/server`):
- * the eager view builders for `*_show_*` tools plus the shared error wrapper for
- * raw `server.tool()` registrations. Both were extracted into the toolkit core
- * in 0.4.0; this barrel keeps the stable `/server` import path so the
- * camunda7/analytics widget tools don't have to churn their imports.
+ * the one import path for module tools and composition roots — the eager view
+ * builders for `*_show_*` tools (the toolkit core's, re-typed below), the
+ * shared error wrapper for raw `server.tool()` registrations, module
+ * composition and the composed-server boot, caller identity, and the profile
+ * and dashboard persistence.
  */
 import {
   buildComposedView as buildComposedViewCore,
@@ -103,7 +104,6 @@ export { parseStoredProfile } from "./profile-migrations.js"
 export {
   createFileSystemProfileStore,
   createInMemoryProfileStore,
-  mergeProfile,
   mergeStoredProfile,
   type MergedProfile,
   type ProfileSaveOptions,
@@ -146,12 +146,7 @@ export {
   type ServerT,
   type Translator,
 } from "./server-locale.js"
-export {
-  mergeRawSlice,
-  parseModuleSlice,
-  requireProfileKey,
-  saveModuleSlice,
-} from "./profile-slice.js"
+export { parseModuleSlice, requireProfileKey, saveModuleSlice } from "./profile-slice.js"
 export { catalogueSyncIssues } from "./catalogue-sync.js"
 
 /**

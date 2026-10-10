@@ -57,8 +57,7 @@ The contract, field by field (see `notesModule`):
   `ACME_`) to the watched set — your module gets the same typo coverage as the
   built-in ones.
 - `toolsets` — leave it out unless you implement Step 5 (the notes module has
-  none). The older `supportsToolsets` flag is deprecated: never set it to
-  `true` — declare `toolsets` instead.
+  none); without it a `<name>:<toolset>` suffix is ignored with a warning.
 - `createPlugin(config, shared)` — validate `config` with your zod schema
   (**this** is where validation lives) and return the `AppPlugin`: construct
   your data source/client once and pass it to both `registerTools` and
@@ -78,8 +77,9 @@ The contract, field by field (see `notesModule`):
 - `src/definition.ts` — the module catalogue: `name`, `steps: []`, and one
   entry per widget (start with `widgets: []` if you have none yet).
 - `src/tools.ts` — plain tools **for the model**, registered through
-  `createToolRegistrar(server, store)` (from `@miragon/mcp-toolkit-core/tools`)
-  — the second argument is threaded into every handler as its first parameter.
+  `createToolRegistrar(server, store, { strictInput: true })` (from
+  `@miragon/mcp-toolkit-core/tools`) — the second argument is threaded into
+  every handler as its first parameter; `strictInput` refuses unknown keys.
   Raw `server.tool()` is reserved for the widget path (`widget-tools.ts`).
 
 Tool conventions (they carry the contract, so they are not cosmetic):

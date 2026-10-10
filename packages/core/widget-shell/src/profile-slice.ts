@@ -86,29 +86,3 @@ export async function saveModuleSlice(
 
 const isProfileSlice = (value: unknown): value is ProfileSlice =>
   typeof value === "object" && value !== null && "modules" in value
-
-/**
- * Merge a partial update over the RAW stored slice of `module`, not the
- * parsed one: unknown fields a newer build may have written survive, and
- * defaults are not materialized for fields the caller never set.
- *
- * @deprecated Not a save path. The pre-read runs OUTSIDE the store's per-key
- * serialization, so handing this complete slice to `store.save` writes every
- * pre-read value back, and a concurrent save of another field in the same
- * slice is silently reverted. Save with {@link saveModuleSlice} (the patch
- * alone).
- */
-export async function mergeRawSlice(
-  store: ProfileSource,
-  key: string,
-  module: string,
-  patch: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const rawSlice = (await store.get(key))?.modules?.[module]
-  return {
-    ...(typeof rawSlice === "object" && rawSlice !== null
-      ? (rawSlice as Record<string, unknown>)
-      : {}),
-    ...patch,
-  }
-}

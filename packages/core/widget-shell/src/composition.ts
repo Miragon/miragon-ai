@@ -27,15 +27,10 @@ export interface ComposableModule<TShared> {
    * opts the module into the `module:toolset` suffix: the composition resolves
    * ONE concrete toolset per boot — the suffix, or the auth-dependent default,
    * never "everything" — and threads it into `config.toolset`. Absent = the
-   * module has no toolsets.
+   * module has no toolsets: a suffix is ignored (with a warning) and its config
+   * never carries a `toolset`.
    */
   toolsets?: ToolsetVocabulary<string>
-  /**
-   * @deprecated Declare {@link ComposableModule.toolsets} instead. `true`
-   * without a vocabulary passes the raw suffix through unresolved and leaves an
-   * absent suffix to the module (with a boot warning).
-   */
-  supportsToolsets?: boolean
   /** Optional boot-time hints (returned, and logged by the root) for active deployments. */
   bootWarnings?(env: NodeJS.ProcessEnv): string[]
   /**
@@ -75,15 +70,13 @@ export interface EffectiveToolset {
   toolset?: string
   /**
    * Why: the suffix named it, the auth-dependent default applied, an empty or
-   * unknown suffix fell back to the floor — `legacy` for a deprecated
-   * `supportsToolsets` pass-through the module resolves itself, or `none` for
-   * a module without toolsets.
+   * unknown suffix fell back to the floor — or `none` for a module without
+   * toolsets.
    */
-  source: ToolsetSource | "legacy" | "none"
+  source: ToolsetSource | "none"
   /**
    * Whether the toolset permits durable writes. A module without toolsets
-   * declares no restriction (`true`); a `legacy` pass-through is unknowable
-   * here and counts as restricted (`false`).
+   * declares no restriction (`true`).
    */
   durableWrites: boolean
 }
@@ -227,21 +220,6 @@ export function composeModules<TShared>(options: {
         durableWrites: vocabulary.allowsDurableWrites(toolset),
       }
     }
-    if (module.supportsToolsets) {
-      console.warn(
-        `[${label}] Module "${module.name}" declares the deprecated supportsToolsets without a toolsets vocabulary — ` +
-          `its suffix is passed through unresolved; declare \`toolsets\` (createToolsetVocabulary) instead`,
-      )
-      // The composition cannot tell what the raw suffix (or the module's own
-      // reading of a missing one) permits, so it must not count as a
-      // write-capable module for framework writes: fail closed.
-      return {
-        module: module.name,
-        ...(suffix === undefined ? {} : { toolset: suffix }),
-        source: "legacy",
-        durableWrites: false,
-      }
-    }
     if (suffix !== undefined) {
       console.warn(`[${label}] Module "${module.name}" has no toolsets — ignoring ":${suffix}"`)
     }
@@ -321,10 +299,6 @@ export function composeModules<TShared>(options: {
       // console.info, deliberately not a boot WARNING: it states the surface
       // on every boot, the restrictive default included.
       const describe = ({ module, toolset, source }: EffectiveToolset): string => {
-        if (source === "legacy") {
-          const suffix = toolset === undefined ? "" : `:${toolset}`
-          return `${module}${suffix} (resolved by the module, deprecated)`
-        }
         if (toolset === undefined) return `${module} (no toolsets)`
         if (source === "default") {
           return `${module}:${toolset} (default ${boot.authenticated ? "with" : "without"} OAuth)`
@@ -351,9 +325,7 @@ export function composeModules<TShared>(options: {
  * builder's `save-dashboard`/`delete-dashboard`, which no module toolset
  * filters. Only with a caller identity (dashboards are keyed by user; without
  * OAuth every record is shared and ownerless) and only when no active module
- * sits on its read-only floor: the most restrictive module wins. A module on
- * the deprecated `supportsToolsets` pass-through counts as restricted too —
- * its surface is unknowable here — so it keeps the dashboard builder off.
+ * sits on its read-only floor: the most restrictive module wins.
  */
 export function frameworkWritesAllowed(boot: ResolvedBoot): boolean {
   return boot.authenticated && boot.toolsets.every(({ durableWrites }) => durableWrites)

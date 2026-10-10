@@ -1,11 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import {
-  mergeRawSlice,
-  parseModuleSlice,
-  requireProfileKey,
-  saveModuleSlice,
-} from "./profile-slice.js"
+import { parseModuleSlice, requireProfileKey, saveModuleSlice } from "./profile-slice.js"
 import { runWithMcpRequestInfo } from "./request-context.js"
 import type { ProfileSource } from "./profile.js"
 
@@ -30,32 +25,6 @@ describe("requireProfileKey", () => {
 
   it("refuses without any request context (a missing middleware install) — never 'anonymous'", () => {
     expect(() => requireProfileKey()).toThrow(/No caller identity/)
-  })
-})
-
-describe("mergeRawSlice", () => {
-  const storeWith = (modules?: Record<string, unknown>): ProfileSource => ({
-    get: () => Promise.resolve({ modules }),
-  })
-
-  it("merges the patch over the RAW stored slice, preserving unknown fields", async () => {
-    const store = storeWith({ notes: { sortOrder: "asc", futureField: 42 } })
-    expect(await mergeRawSlice(store, "k", "notes", { sortOrder: "desc" })).toEqual({
-      sortOrder: "desc",
-      futureField: 42,
-    })
-  })
-
-  it("treats an absent or non-object slice as empty", async () => {
-    expect(await mergeRawSlice(storeWith(undefined), "k", "notes", { a: 1 })).toEqual({ a: 1 })
-    expect(await mergeRawSlice(storeWith({ notes: "garbage" }), "k", "notes", { a: 1 })).toEqual({
-      a: 1,
-    })
-  })
-
-  it("never reads a foreign module's slice", async () => {
-    const store = storeWith({ other: { x: 1 } })
-    expect(await mergeRawSlice(store, "k", "notes", {})).toEqual({})
   })
 })
 
@@ -127,7 +96,7 @@ describe("parseModuleSlice", () => {
     ).toEqual({ sortOrder: "asc", pageSize: 25, tags: ["a"] })
   })
 
-  it("keeps unknown fields out of the view (storage preservation is mergeRawSlice's job)", () => {
+  it("keeps unknown fields out of the view (the store's raw merge preserves them)", () => {
     expect(parseModuleSlice(schema, { pageSize: 5, futureField: 42 })).toEqual({
       sortOrder: "asc",
       pageSize: 5,
