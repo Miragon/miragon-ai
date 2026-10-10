@@ -66,7 +66,11 @@ export interface PagedViewData<TItem, TData = unknown> {
    * for the length of the backoff. {@link retry} re-runs page 0.
    */
   error: Error | null
-  /** Re-runs the page-0 fetch: the retry for {@link error}. */
+  /**
+   * Re-runs the page-0 fetch: the retry for {@link error}. A new read at
+   * once — also while the client still waits on that fetch's retry backoff
+   * (which `error` already reports), never a wait for the running chain.
+   */
   retry: () => void
   /** The last load-more failure — `loadMore` retries it; the rows above are current. */
   loadMoreError: Error | null

@@ -318,7 +318,7 @@ describe("usePagedViewData — page-0 fetch states", () => {
     expect(result.current.stale).toBe(false)
   })
 
-  it("a failed filtered page 0 keeps the previous rows, reports a page-0 error and retries page 0", () => {
+  it("a failed filtered page 0 keeps the previous rows, reports a page-0 error and retries page 0", async () => {
     const { result, rerender } = settledOnA()
     const refetch = vi.fn()
     mocks.useToolQuery.mockReturnValue({
@@ -334,12 +334,14 @@ describe("usePagedViewData — page-0 fetch states", () => {
     expect(result.current.stale).toBe(true)
     expect(result.current.error?.message).toBe("engine down")
     expect(result.current.loadMoreError).toBeNull()
+    // Without data under the new key the retry first cancels the running
+    // chain (see useSeededToolQuery), so the refetch lands a tick later.
     act(() => result.current.retry())
-    expect(refetch).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1))
     expect(mocks.callTool).not.toHaveBeenCalled()
   })
 
-  it("a failed background refetch is a page-0 error over the stale rows — never a load-more error", () => {
+  it("a failed background refetch is a page-0 error over the stale rows — never a load-more error", async () => {
     const { result, rerender } = settledOnA()
     const refetch = vi.fn()
     // React Query keeps the last data and sets the error.
@@ -358,7 +360,9 @@ describe("usePagedViewData — page-0 fetch states", () => {
     expect(result.current.error?.message).toBe("timeout")
     expect(result.current.loadMoreError).toBeNull()
     act(() => result.current.retry())
-    expect(refetch).toHaveBeenCalledTimes(1)
+    // The stubbed query keeps no cache entry: the retry takes the cancel-first path.
+    await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1))
+    expect(mocks.callTool).not.toHaveBeenCalled()
   })
 
   it("an initial page-0 failure has nothing to keep: no rows, the error for the caller's guard", () => {

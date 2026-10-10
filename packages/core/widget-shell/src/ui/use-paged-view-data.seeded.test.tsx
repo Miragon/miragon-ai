@@ -1,8 +1,18 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { AppQueryProvider, queryClient } from "@miragon/mcp-toolkit-ui"
+import { PagedListFooter } from "./paged-list-footer.js"
 import { usePagedViewData } from "./use-paged-view-data.js"
 
 /**
@@ -12,7 +22,8 @@ import { usePagedViewData } from "./use-paged-view-data.js"
  * query a write's invalidation refetches), and a new page 0 KEEPS the previous
  * rows of the same list on screen until it lands. A failed page 0 over those
  * rows is reported the same way whatever re-read it — an invalidation or a
- * changed filter — from its first failed attempt.
+ * changed filter — from its first failed attempt, and its Retry is a new read
+ * at once, also while the client still waits on its retry backoff.
  */
 
 interface Page {
@@ -38,21 +49,26 @@ interface Props {
   args: Record<string, unknown>
 }
 
+function useList({ initialData, args }: Props) {
+  return usePagedViewData<string, Page>({
+    initialData,
+    key: KEY,
+    tool: "test_list_data",
+    args,
+    pageSize: 2,
+    ready: true,
+    selectItems: (d) => d.items,
+    selectTotal: (d) => d.total,
+  })
+}
+
 function setup(props: Props) {
-  return renderHook(
-    ({ initialData, args }: Props) =>
-      usePagedViewData<string, Page>({
-        initialData,
-        key: KEY,
-        tool: "test_list_data",
-        args,
-        pageSize: 2,
-        ready: true,
-        selectItems: (d) => d.items,
-        selectTotal: (d) => d.total,
-      }),
-    { wrapper, initialProps: props },
-  )
+  return renderHook(useList, { wrapper, initialProps: props })
+}
+
+/** The list's footer over the hook — the failure line and the Retry an operator clicks. */
+function ListFooter(props: Props) {
+  return <PagedListFooter paged={useList(props)} noun="items" />
 }
 
 /** The page-0 reads the hook sent for `args`. */
@@ -169,5 +185,24 @@ describe("usePagedViewData — a failed page 0 over the rows on screen, from its
     expect(result.current.firstPage).toBeNull()
     expect(result.current.error).toBeNull()
     expect(result.current.loading).toBe(true)
+  })
+
+  it("its Retry during the client's backoff is a new read at once — not a wait for the running chain", async () => {
+    callTool.mockRejectedValueOnce(new Error("engine down"))
+    const { rerender } = render(<ListFooter initialData={SEED} args={{}} />, { wrapper })
+    rerender(<ListFooter initialData={null} args={SEARCH} />)
+
+    // The search's first attempt failed; the client's own next one is ~1 s away.
+    const alert = await screen.findByRole("alert")
+    expect(alert.textContent).toContain("engine down")
+    expect(screen.getByRole("status").textContent).toBe("Updating…")
+    expect(page0Calls(SEARCH)).toHaveLength(1)
+
+    callTool.mockResolvedValueOnce(answer({ items: ["x1"], total: 1 }))
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }))
+    // Well inside the backoff: a Retry that joined the running chain sends nothing yet.
+    await waitFor(() => expect(page0Calls(SEARCH)).toHaveLength(2), { timeout: 400 })
+    expect(await screen.findByText("Showing 1 of 1 items")).toBeTruthy()
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 })
