@@ -5,9 +5,11 @@ export {
   type PrometheusQueryOptions,
   escapeLabelValue,
   engineMatcher,
+  engineIdsOf,
   selector,
   PERIOD_RANGE,
   PERIODS,
+  RETENTION_DAYS,
   type PrometheusConfig,
   type PrometheusClient,
   type PromSample,
@@ -15,9 +17,9 @@ export {
   type Period,
 } from "./prometheus.js"
 export { METRIC_NAMES, type MetricName } from "./metric-names.js"
-// A constant, not a query: kept out of the `queries` namespace, whose every
-// member the metrics-contract scenarios enumerate.
-export { ENGINE_HEALTH_STATUS_RULE } from "./queries/health.js"
+// Constants, not queries: kept out of the `queries` namespace, whose every
+// member the query scenarios enumerate.
+export { ENGINE_ALERT_NAME_PATTERN, ENGINE_HEALTH_STATUS_RULE } from "./queries/health.js"
 export * as schemas from "./schemas/index.js"
 export * as queries from "./queries/index.js"
 export * as widgets from "./widgets.js"
@@ -26,6 +28,8 @@ export type {
   CompareKpis,
   CompareKpiDelta,
   ErrorPatternRow,
+  FailedInstancesResult,
+  PerformanceResult,
   PerformanceKPI,
   ActivityBreakdownRow,
   PeriodComparisonKpi,

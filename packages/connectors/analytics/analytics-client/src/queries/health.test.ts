@@ -5,6 +5,8 @@ import type { PrometheusClient, PromSample } from "../prometheus.js"
 const sample = (metric: Record<string, string>, value: number): PromSample => ({ metric, value })
 
 interface Fixture {
+  /** Engines whose engine-only gauges exist (default: one reporting engine). */
+  reporting?: string[]
   running?: PromSample[]
   incidents?: PromSample[]
   dead?: number
@@ -15,6 +17,8 @@ interface Fixture {
 /** Answers each gauge by its metric name; ALERTS by its alertstate. */
 function mockClient(fixture: Fixture = {}) {
   const scalar = (value: number | undefined) => (value === undefined ? [] : [sample({}, value)])
+  const perEngine = (value: number) =>
+    (fixture.reporting ?? ["prod-a"]).map((engine_id) => sample({ engine_id }, value))
   const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
     if (q.startsWith("ALERTS")) {
       return (q.includes('"firing"') ? fixture.firing : fixture.pending) ?? []
@@ -22,11 +26,11 @@ function mockClient(fixture: Fixture = {}) {
     if (q.includes("process_instances_running")) return fixture.running ?? []
     if (q.includes("incidents_open")) return fixture.incidents ?? []
     if (q.includes("jobs_failed")) return scalar(fixture.dead)
-    if (q.includes("jobs_executable")) return scalar(12.4)
+    if (q.includes("jobs_executable")) return perEngine(6.2)
     if (q.includes("jobs_suspended")) return scalar(2)
     if (q.includes('status="total"')) return scalar(9)
     if (q.includes('status="unassigned"')) return scalar(4)
-    if (q.includes("external_tasks_open")) return scalar(6.6)
+    if (q.includes("external_tasks_open")) return perEngine(3.3)
     if (q.includes("process_definitions_deployed")) return scalar(3)
     return []
   })
@@ -40,6 +44,7 @@ const alert = (alertname: string, severity: string, scope: Record<string, string
 describe("engineHealth snapshot", () => {
   it("reports every gauge, rounded, with breakdowns sorted and zero rows dropped", async () => {
     const { ch } = mockClient({
+      reporting: ["prod-a", "prod-b"],
       running: [
         sample({ process_definition_key: "invoice" }, 2),
         sample({ process_definition_key: "order" }, 7.4),
@@ -51,6 +56,9 @@ describe("engineHealth snapshot", () => {
     })
     const result = await engineHealth(ch, {})
     expect(result).toMatchObject({
+      engines: null,
+      reportingEngines: ["prod-a", "prod-b"],
+      silentEngines: [],
       runningInstances: 10,
       runningByDefinition: [
         { label: "order", count: 7 },
@@ -60,6 +68,7 @@ describe("engineHealth snapshot", () => {
       openIncidents: 3,
       openIncidentsByType: [{ label: "failedJob", count: 3 }],
       deadJobs: 2,
+      // Summed across the reporting engines.
       executableJobs: 12,
       suspendedJobs: 2,
       openUserTasks: 9,
@@ -88,28 +97,16 @@ describe("engineHealth snapshot", () => {
     ])
     expect(result.pendingAlerts).toEqual([{ name: "D", severity: "info", scope: "" }])
   })
-
-  it("reads zero for a gauge without samples", async () => {
-    const instant = vi.fn(async (): Promise<PromSample[]> => [])
-    const result = await engineHealth({ instant }, {})
-    expect(result).toMatchObject({
-      runningInstances: 0,
-      openIncidents: 0,
-      deadJobs: 0,
-      executableJobs: 0,
-      firingAlerts: [],
-    })
-  })
 })
 
 /**
  * #340: the verdict is alert-based and says so — the same engine may be
  * "critical" in camunda7_show_engine_health (incident counts) and only
- * "degraded" here.
+ * "degraded" here. #336: silence is not health.
  */
 describe("engineHealth verdict", () => {
   it.each<[string, Fixture, string]>([
-    ["no signal at all", {}, "healthy"],
+    ["a reporting engine without any signal", {}, "healthy"],
     ["one open incident", { incidents: [sample({ incident_type: "failedJob" }, 1)] }, "degraded"],
     ["one dead job", { dead: 1 }, "degraded"],
     ["a firing warning", { firing: [alert("Slow", "warning")] }, "degraded"],
@@ -120,15 +117,42 @@ describe("engineHealth verdict", () => {
       { incidents: [sample({ incident_type: "failedJob" }, 500)] },
       "degraded",
     ],
+    ["no engine reporting any metric", { reporting: [] }, "unknown"],
+    [
+      "no engine reporting, even with a critical alert firing",
+      { reporting: [], firing: [alert("CibSevenEngineNoMetrics", "critical")] },
+      "unknown",
+    ],
   ])("%s → %s", async (_label, fixture, status) => {
     const result = await engineHealth(mockClient(fixture).ch, {})
     expect(result.status).toBe(status)
     expect(result.statusRule).toBe(ENGINE_HEALTH_STATUS_RULE)
   })
 
+  it("reads an engine that sends nothing — or a mistyped id — as unknown, never healthy (N76)", async () => {
+    const { ch } = mockClient({ reporting: [] })
+    const result = await engineHealth(ch, { engine: "prod-b" })
+    expect(result).toMatchObject({
+      status: "unknown",
+      engines: ["prod-b"],
+      reportingEngines: [],
+      silentEngines: ["prod-b"],
+    })
+  })
+
+  it("degrades a scope in which one engine is silent", async () => {
+    const { ch } = mockClient({ reporting: ["prod-a"] })
+    const result = await engineHealth(ch, { engine: ["prod-a", "prod-b"] })
+    expect(result).toMatchObject({
+      status: "degraded",
+      reportingEngines: ["prod-a"],
+      silentEngines: ["prod-b"],
+    })
+  })
+
   it("states its rule in words", () => {
     expect(ENGINE_HEALTH_STATUS_RULE).toBe(
-      "From Prometheus: critical only while an alert rule with severity=critical fires; degraded with any firing alert, dead job or open incident; else healthy.",
+      "From Prometheus, over the engines in scope: unknown when none of them reports metrics; critical only while a severity=critical alert fires for them (fleet-wide also an engine-less CibSeven* alert); degraded with any such firing alert, dead job, open incident or an engine in scope that reports nothing; else healthy.",
     )
   })
 })
@@ -139,17 +163,39 @@ describe("engineHealth PromQL", () => {
     await engineHealth(ch, { engine: "prod-a" })
     const sel = '{engine_id="prod-a"}'
     expect(instant.mock.calls.map(([q]) => q)).toEqual([
-      `camunda_process_instances_running${sel}`,
+      `sum by (process_definition_key)(camunda_process_instances_running${sel})`,
       `sum by (incident_type)(camunda_incidents_open${sel})`,
       `sum(camunda_jobs_failed${sel})`,
-      `sum(camunda_jobs_executable${sel})`,
+      `sum by (engine_id)(camunda_jobs_executable${sel})`,
       `sum(camunda_jobs_suspended${sel})`,
       `sum(camunda_usertasks_open{status="total",engine_id="prod-a"})`,
       `sum(camunda_usertasks_open{status="unassigned",engine_id="prod-a"})`,
-      `sum(camunda_external_tasks_open${sel})`,
-      `count(camunda_process_definitions_deployed${sel})`,
+      `sum by (engine_id)(camunda_external_tasks_open${sel})`,
+      `count(count by (process_definition_key)(camunda_process_definitions_deployed${sel}))`,
+      // One engine named: only alerts carrying its engine_id — an unrelated
+      // alert in a shared Prometheus cannot turn its verdict critical.
       `ALERTS{alertstate="firing",engine_id="prod-a"}`,
       `ALERTS{alertstate="pending",engine_id="prod-a"}`,
+    ])
+  })
+
+  it("adds the module's engine-less alerts only for the whole fleet", async () => {
+    const { ch, instant } = mockClient()
+    await engineHealth(ch, { engine: ["prod-a", "prod-b"], includeFleetAlerts: true })
+    const alertQueries = instant.mock.calls.map(([q]) => q).filter((q) => q.startsWith("ALERTS"))
+    expect(alertQueries).toEqual([
+      'ALERTS{alertstate="firing",engine_id=~"prod-a|prod-b"} or ALERTS{alertstate="firing",alertname=~"CibSeven.+",engine_id=""}',
+      'ALERTS{alertstate="pending",engine_id=~"prod-a|prod-b"} or ALERTS{alertstate="pending",alertname=~"CibSeven.+",engine_id=""}',
+    ])
+  })
+
+  it("reads only the module's own rules when unscoped — never a shared Prometheus' foreign alerts", async () => {
+    const { ch, instant } = mockClient()
+    await engineHealth(ch, {})
+    const alertQueries = instant.mock.calls.map(([q]) => q).filter((q) => q.startsWith("ALERTS"))
+    expect(alertQueries).toEqual([
+      'ALERTS{alertstate="firing",alertname=~"CibSeven.+"}',
+      'ALERTS{alertstate="pending",alertname=~"CibSeven.+"}',
     ])
   })
 })

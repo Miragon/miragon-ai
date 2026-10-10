@@ -5,7 +5,7 @@ import {
   formatDuration,
 } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
-import { useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
+import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -13,13 +13,10 @@ export function ExecutionPerformanceKpi({
   data: initialData,
   processDefinitionKey,
   period,
-}: {
-  data: AnalyticsDashboardData | null
-  processDefinitionKey?: string
-  period?: AnalyticsDashboardPeriod
-}) {
+  engine,
+}: { data: AnalyticsDashboardData | null } & DashboardScopeProps) {
   const t = useT()
-  const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period })
+  const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period, engine })
 
   return (
     <QueryGate
@@ -37,9 +34,9 @@ export function ExecutionPerformanceKpi({
               { label: t("aExecPerf.median"), value: formatDuration(data.medianDurationMs) },
               { label: t("aExecPerf.p95"), value: formatDuration(data.p95DurationMs) },
               {
-                label: t("aExecPerf.failureRate"),
-                value: `${data.failureRatePct}%`,
-                tone: data.failureRatePct > 0 ? "critical" : undefined,
+                label: t("aExecPerf.incidentRate"),
+                value: data.incidentRatePct === null ? "—" : `${data.incidentRatePct}%`,
+                tone: (data.incidentRatePct ?? 0) > 0 ? "critical" : undefined,
               },
             ]}
           />

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import type { PrometheusClient, PromSample } from "@miragon-ai/analytics-client"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
+import { createEngineScope } from "../engine-ids.js"
 import { registerEngineLandscapeTools } from "./engine-landscape.js"
+
+/** The engines this server is configured for — prod-c reports nothing. */
+const scope = createEngineScope(["prod-a", "prod-b", "prod-c"])
+const register = (r: never) => registerEngineLandscapeTools(r, scope)
 
 type Config = ToolConfig<PrometheusClient>
 
@@ -50,7 +55,7 @@ function recordingClient(): { client: PrometheusClient; queries: string[] } {
 
 describe("analytics_engine_landscape", () => {
   it("builds the inventory matrix and issues one flat query per metric", async () => {
-    const handlers = captureHandlers(registerEngineLandscapeTools)
+    const handlers = captureHandlers(register)
     const { client, queries } = recordingClient()
 
     const result = (await handlers.get("analytics_engine_landscape")!(client, {})) as {
@@ -58,37 +63,49 @@ describe("analytics_engine_landscape", () => {
       sharedProcessKeys: string[]
     }
 
-    expect(result.engines.map((e) => e.engineId)).toEqual(["prod-a", "prod-b"])
+    // Engine omitted = the configured fleet: the silent prod-c stays visible.
+    expect(result.engines.map((e) => e.engineId)).toEqual(["prod-a", "prod-b", "prod-c"])
     expect(result.engines[0].runningInstances).toBe(5)
     // Each engine runs its own definition — nothing to compare like-for-like.
     expect(result.sharedProcessKeys).toEqual([])
+    const sel = '{engine_id=~"prod-a|prod-b|prod-c"}'
     expect(queries).toEqual([
-      "sum by (engine_id, process_definition_key)(camunda_process_definitions_deployed)",
-      "sum by (engine_id, process_definition_key)(camunda_process_instances_running)",
-      "sum by (engine_id, process_definition_key)(camunda_incidents_open)",
-      "sum by (engine_id, process_definition_key)(camunda_jobs_failed)",
-      "sum by (engine_id)(camunda_jobs_executable)",
-      "sum by (engine_id)(camunda_jobs_suspended)",
-      "sum by (engine_id)(camunda_jobs_due_future)",
-      "sum by (engine_id)(camunda_external_tasks_open)",
+      `sum by (engine_id, process_definition_key)(camunda_process_definitions_deployed${sel})`,
+      `sum by (engine_id, process_definition_key)(camunda_process_instances_running${sel})`,
+      `sum by (engine_id, process_definition_key)(camunda_incidents_open${sel})`,
+      `sum by (engine_id, process_definition_key)(camunda_jobs_failed${sel})`,
+      `sum by (engine_id)(camunda_jobs_executable${sel})`,
+      `sum by (engine_id)(camunda_jobs_suspended${sel})`,
+      `sum by (engine_id)(camunda_jobs_due_future${sel})`,
+      `sum by (engine_id)(camunda_external_tasks_open${sel})`,
     ])
   })
 
   it("applies the engine filter and keeps a non-reporting engine visible", async () => {
-    const handlers = captureHandlers(registerEngineLandscapeTools)
+    const handlers = captureHandlers(register)
     const { client, queries } = recordingClient()
 
     const result = (await handlers.get("analytics_engine_landscape")!(client, {
-      engine: ["prod-a", "prod-b", "prod-c"],
+      engine: ["prod-a", "prod-c"],
     })) as { engines: Array<{ engineId: string; reporting: boolean }> }
 
-    expect(queries.every((q) => q.includes('{engine_id=~"prod-a|prod-b|prod-c"}'))).toBe(true)
+    expect(queries.every((q) => q.includes('{engine_id=~"prod-a|prod-c"}'))).toBe(true)
     expect(result.engines.find((e) => e.engineId === "prod-c")).toMatchObject({ reporting: false })
+  })
+
+  it("never lists another tenant's engine from a shared Prometheus (N138)", async () => {
+    const handlers = captureHandlers(register)
+    const { client, queries } = recordingClient()
+
+    await expect(
+      handlers.get("analytics_engine_landscape")!(client, { engine: ["prod-a", "tenant-x"] }),
+    ).rejects.toThrow(/Unknown engine "tenant-x"/)
+    expect(queries).toEqual([])
   })
 })
 
 describe("analytics_engine_landscape registration", () => {
-  const config = captureConfigs(registerEngineLandscapeTools).get("analytics_engine_landscape")!
+  const config = captureConfigs(register).get("analytics_engine_landscape")!
 
   it("registers under the analytics category as a read-only external read", () => {
     expect(config.category).toBe("analytics")

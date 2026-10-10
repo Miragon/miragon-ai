@@ -34,13 +34,15 @@ export function fmtPp(n: number | null): string {
  * treatment as the on-screen table, so a zero-baseline never reads "null%".
  */
 export function describeDeltas(delta: CompareKpiDelta): string {
-  return (
-    `instances ${fmtPct(delta.instance_count_delta_pct)}, ` +
-    `failure rate ${fmtPp(delta.failure_rate_delta_pp)}, ` +
-    `incident rate ${fmtPp(delta.incident_rate_delta_pp)}, ` +
-    `avg duration ${fmtPct(delta.avg_duration_delta_pct)}, ` +
-    `p95 duration ${fmtPct(delta.p95_duration_delta_pct)}`
-  )
+  return [
+    `starts per day ${fmtPct(delta.started_per_day_delta_pct)}`,
+    `incident rate ${fmtPp(delta.incident_rate_delta_pp)}`,
+    ...(delta.element_incident_rate_delta_pp === null
+      ? []
+      : [`element incident rate ${fmtPp(delta.element_incident_rate_delta_pp)}`]),
+    `avg duration ${fmtPct(delta.avg_duration_delta_pct)}`,
+    `p95 duration ${fmtPct(delta.p95_duration_delta_pct)}`,
+  ].join(", ")
 }
 
 /** Deltas inside this band read as unchanged (rounding jitter) — no tone. */
@@ -79,20 +81,23 @@ export function toneFor(value: number | null, worseIfUp: boolean): string | unde
 type DeltaUnit = "pct" | "pp"
 
 /**
- * The compare KPIs the table reads. The rates are nullable because the version
- * compare cannot measure them per version (the incident metric carries no
- * version label) — a null renders "n/a", never "0.0%". The cluster and engine
- * compares always fill them.
+ * The compare KPIs the table reads. Every rate and duration is nullable — the
+ * version compare cannot measure incidents per version (no version label on
+ * the incident metric), a window in which nothing ended has no duration, one
+ * in which nothing started no rate — and a null renders "n/a", never "0.0%"
+ * or "0ms".
  */
-type ComparableKpis = Pick<
-  CompareKpis,
-  "instance_count" | "avg_duration_sec" | "p95_duration_sec"
-> & {
-  failure_rate_pct: number | null
+type ComparableKpis = Pick<CompareKpis, "instance_count"> & {
   incident_rate_pct: number | null
+  /** Non-null exactly when the comparison was scoped to an element. */
+  element_incident_count: number | null
+  element_incident_rate_pct: number | null
+  avg_duration_sec: number | null
+  p95_duration_sec: number | null
 }
 
 const pctValue = (n: number | null) => (n === null ? null : `${n.toFixed(1)}%`)
+const durationValue = (sec: number | null) => (sec === null ? null : formatDuration(sec * 1000))
 
 /** A single metric row: label, the two compared values, and the RAW delta. */
 export type ComparisonMetric = {
@@ -115,20 +120,17 @@ const COMPARE_METRICS: Array<{
   delta: (d: CompareKpiDelta) => number | null
   unit: DeltaUnit
   worseIfUp: boolean
+  /** Shown only when the comparison was scoped to an element. */
+  elementOnly?: boolean
 }> = [
   {
-    labelKey: "aComparison.metricInstances",
+    // The count per window; the delta compares starts PER DAY, so a clamped
+    // (shorter) window still compares fairly.
+    labelKey: "aComparison.metricStarted",
     value: (k) => String(k.instance_count),
-    delta: (d) => d.instance_count_delta_pct,
+    delta: (d) => d.started_per_day_delta_pct,
     unit: "pct",
     worseIfUp: false,
-  },
-  {
-    labelKey: "aComparison.metricFailureRate",
-    value: (k) => pctValue(k.failure_rate_pct),
-    delta: (d) => d.failure_rate_delta_pp,
-    unit: "pp",
-    worseIfUp: true,
   },
   {
     labelKey: "aComparison.metricIncidentRate",
@@ -138,15 +140,23 @@ const COMPARE_METRICS: Array<{
     worseIfUp: true,
   },
   {
+    labelKey: "aComparison.metricElementIncidentRate",
+    value: (k) => pctValue(k.element_incident_rate_pct),
+    delta: (d) => d.element_incident_rate_delta_pp,
+    unit: "pp",
+    worseIfUp: true,
+    elementOnly: true,
+  },
+  {
     labelKey: "aComparison.metricAvgDuration",
-    value: (k) => formatDuration(k.avg_duration_sec * 1000),
+    value: (k) => durationValue(k.avg_duration_sec),
     delta: (d) => d.avg_duration_delta_pct,
     unit: "pct",
     worseIfUp: true,
   },
   {
     labelKey: "aComparison.metricP95Duration",
-    value: (k) => formatDuration(k.p95_duration_sec * 1000),
+    value: (k) => durationValue(k.p95_duration_sec),
     delta: (d) => d.p95_duration_delta_pct,
     unit: "pct",
     worseIfUp: true,
@@ -161,7 +171,9 @@ export function buildComparisonMetrics(
   delta: CompareKpiDelta,
 ): ComparisonMetric[] {
   const unavailable = t("aComparison.valueUnavailable")
-  return COMPARE_METRICS.map((m) => ({
+  const elementScoped =
+    before.element_incident_count !== null || after.element_incident_count !== null
+  return COMPARE_METRICS.filter((m) => !m.elementOnly || elementScoped).map((m) => ({
     label: t(m.labelKey),
     before: m.value(before) ?? unavailable,
     after: m.value(after) ?? unavailable,

@@ -5,6 +5,6 @@ export const engineLandscapeInput = z.object({
     .union([z.string(), z.array(z.string())])
     .optional()
     .describe(
-      "Engine ids to include. Pass the FULL list of configured engines to also surface engines that report no metrics at all (they come back with `reporting: false`); when omitted, only engines Prometheus holds series for appear.",
+      "Engine ids to include; omitted = every configured engine. An engine that reports no metrics at all comes back with `reporting: false`.",
     ),
 })

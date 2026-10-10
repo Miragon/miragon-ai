@@ -12,6 +12,7 @@ import {
   queries,
   schemas,
   withCallerSignal,
+  type AnalyticsDashboardData,
   type PrometheusClient,
 } from "@miragon-ai/analytics-client"
 import {
@@ -19,9 +20,11 @@ import {
   ANALYTICS_DASHBOARD_DATA,
   ANALYTICS_FAILURE_DASHBOARD_DATA,
 } from "./tool-names.js"
-import { localizeFor, type ProfileSource } from "./server-locale.js"
+import { localizeFor, type ProfileSource, type ServerT } from "./server-locale.js"
 import { optionalPeriod, settingsFor } from "./settings.js"
 import { registerComparisonWidgetTools } from "./widget-tools/comparisons.js"
+import { engineScopeSummary } from "./widget-tools/shared.js"
+import { isFleetRequest, withEngineScope, type AnalyticsEngineScope } from "./engine-ids.js"
 
 /**
  * Engine-agnostic BPMN-XML lookup injected by the host app (which owns the
@@ -32,6 +35,8 @@ import { registerComparisonWidgetTools } from "./widget-tools/comparisons.js"
 export type FetchBpmnXml = (processDefinitionKey: string) => Promise<string | null>
 
 export interface AnalyticsWidgetToolsOptions {
+  /** The server's configured engine ids — every query resolves `engine` through it. */
+  engineScope: AnalyticsEngineScope
   /** Used by the BPMN heatmap to fetch the diagram XML. Absent → non-diagram fallback. */
   fetchBpmnXml?: FetchBpmnXml
   /**
@@ -53,15 +58,42 @@ const heatmapInputShape = {
   ...schemas.engineFilterShape,
 }
 
+/** Dashboard + its feed: one input shape, so the self-fetch can carry every scope the show tool takes. */
+const dashboardInputShape = {
+  processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
+  period: optionalPeriod,
+  ...schemas.engineFilterShape,
+}
+
+/** "n/a" for a figure that was not measured — never a plausible 0. */
+const orNa = (value: number | null) => value ?? "n/a"
+
+/** The model-facing dashboard summary: window flows and the live state, never mixed. */
+function dashboardSummary(t: ServerT, data: AnalyticsDashboardData, fleet: boolean): string {
+  return t("aSum.dashboard", {
+    scope: data.processDefinitionKey
+      ? t("aSum.scopeForProcess", { key: data.processDefinitionKey })
+      : "",
+    period: data.period,
+    engines: engineScopeSummary(t, data.engines, fleet),
+    totalCount: data.totalCount,
+    completedCount: data.completedCount,
+    incidentsCreated: data.incidentsCreated,
+    incidentRatePct: orNa(data.incidentRatePct),
+    runningNow: orNa(data.runningNow),
+    openIncidentsNow: orNa(data.openIncidentsNow),
+  })
+}
+
 export function registerWidgetTools(
   server: MCPServer,
   ch: PrometheusClient,
-  options: AnalyticsWidgetToolsOptions = {},
+  options: AnalyticsWidgetToolsOptions,
 ) {
   // Resolve the request locale via `await localizeFor(profileStore, ctx)` inside
   // each handler to localize its model-facing `summary` (→ "en" without a store
   // or a caller identity).
-  const profileStore = options.profileStore
+  const { profileStore, engineScope } = options
 
   /**
    * Fetches the latest deployed version's BPMN XML for the heatmap overlay via
@@ -79,30 +111,25 @@ export function registerWidgetTools(
       name: "analytics_show_dashboard",
       title: "Process Analytics Dashboard",
       description:
-        "Show aggregated process metrics and KPIs from Prometheus with per-activity bottleneck breakdown.",
+        "Show process metrics from Prometheus: flows within the period (starts, completions, incidents created/resolved, durations of the instances that ended) and the live state right now (instances running, incidents open), per process definition and per (process, activity).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({
-        processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
-        period: optionalPeriod,
-        ...schemas.engineFilterShape,
-      }),
+      inputSchema: strictToolInput(dashboardInputShape),
       ...showToolBinding("analytics_show_dashboard", "Process Analytics Dashboard"),
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
       const data = await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
-        processDefinitionKey: args.processDefinitionKey,
+        ...withEngineScope(engineScope, args),
         period,
-        engine: args.engine,
       })
-      // The RESOLVED scope travels as cell props so the widgets' model
-      // descriptions report the period actually queried (profile default
-      // included), not a guessed fallback.
+      // The RESOLVED period and the requested scope travel as cell props, so a
+      // widget that self-fetches (structuredContent stripped, a saved view)
+      // reads the same scope instead of the fleet default.
       const cellProps = {
         period,
         ...(args.processDefinitionKey ? { processDefinitionKey: args.processDefinitionKey } : {}),
-        ...(args.engine ? { engine: args.engine } : {}),
+        ...(isFleetRequest(args.engine) ? {} : { engine: args.engine }),
       }
       return buildComposedView({
         app: "analytics",
@@ -114,18 +141,7 @@ export function registerWidgetTools(
           { row: [{ widget: "analytics:activity-bottleneck-table", props: cellProps }] },
         ],
         entries: [{ dataType: "analytics:dashboard", data }],
-        summary: t("aSum.dashboard", {
-          scope: args.processDefinitionKey
-            ? t("aSum.scopeForProcess", { key: args.processDefinitionKey })
-            : "",
-          period,
-          totalCount: data.totalCount,
-          completedCount: data.completedCount,
-          runningCount: data.runningCount,
-          failedCount: data.failedCount,
-          failureRatePct: data.failureRatePct,
-          incidentCount: data.incidentCount,
-        }),
+        summary: dashboardSummary(t, data, isFleetRequest(args.engine)),
       })
     }),
   )
@@ -136,7 +152,7 @@ export function registerWidgetTools(
       name: "analytics_show_failure_dashboard",
       title: "Failure Analysis Dashboard",
       description:
-        "Show current incident/failure state from Prometheus, grouped by incident type, activity, and process definition (point-in-time — what is failing right now). Use to show the metric view to the user; for one engine's live incident clusters use camunda7_show_engine_health.",
+        "Show the incidents open right now from Prometheus, grouped by incident type and process definition (no activity, message or timestamps), with each affected process's running instances and dead jobs. Use to show the metric view to the user; for one engine's live incident clusters use camunda7_show_engine_health.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         ...schemas.engineFilterShape,
@@ -145,19 +161,23 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      const data = await queries.failureDashboardData(withCallerSignal(ch, ctx.signal), {
-        engine: args.engine,
-      })
+      const data = await queries.failureDashboardData(
+        withCallerSignal(ch, ctx.signal),
+        withEngineScope(engineScope, args),
+      )
+      // The requested scope travels as cell props so a self-fetch keeps it.
+      const cellProps = isFleetRequest(args.engine) ? undefined : { engine: args.engine }
       return buildComposedView({
         app: "analytics",
         title: "Failure Dashboard",
         layout: [
-          { row: [{ widget: "analytics:failure-summary-kpi" }] },
-          { row: [{ widget: "analytics:error-patterns-table" }] },
-          { row: [{ widget: "analytics:failure-rate-table" }] },
+          { row: [{ widget: "analytics:failure-summary-kpi", props: cellProps }] },
+          { row: [{ widget: "analytics:error-patterns-table", props: cellProps }] },
+          { row: [{ widget: "analytics:failure-rate-table", props: cellProps }] },
         ],
         entries: [{ dataType: "analytics:failureDashboard", data }],
         summary: t("aSum.failureDashboard", {
+          engines: engineScopeSummary(t, data.engines, isFleetRequest(args.engine)),
           totalIncidents: data.totalIncidents,
           uniqueErrorPatterns: data.uniqueErrorPatterns,
           mostAffected: data.mostAffectedProcess
@@ -168,7 +188,7 @@ export function registerWidgetTools(
     }),
   )
 
-  registerComparisonWidgetTools({ server, ch, profileStore })
+  registerComparisonWidgetTools({ server, ch, engineScope, profileStore })
 
   // --- BPMN Heatmap (per-element frequency + duration on the diagram) ---
   server.tool(
@@ -184,7 +204,11 @@ export function registerWidgetTools(
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
-      const heat = await queries.elementHeat(withCallerSignal(ch, ctx.signal), { ...args, period })
+      const scoped = withEngineScope(engineScope, args)
+      const heat = await queries.elementHeat(withCallerSignal(ch, ctx.signal), {
+        ...scoped,
+        period,
+      })
       const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
       // Model summary only — the bpmnXml must never reach the text channel;
       // the widget renders the diagram from structuredContent.
@@ -192,9 +216,12 @@ export function registerWidgetTools(
         widget: "analytics:bpmn-heatmap",
         app: "analytics",
         dataType: "analytics:bpmnHeatmap",
+        // `AnalyticsBpmnHeatmapData` (widgets/bpmn-heatmap.tsx): the engines
+        // travel with the heat, so the model description names them.
         data: {
           processDefinitionKey: args.processDefinitionKey,
           period,
+          engines: scoped.engine,
           bpmnXml,
           frequency: heat.frequency,
           durationSec: heat.durationSec,
@@ -203,6 +230,7 @@ export function registerWidgetTools(
         summary: t("aSum.bpmnHeatmap", {
           key: args.processDefinitionKey,
           period,
+          engines: engineScopeSummary(t, scoped.engine, isFleetRequest(args.engine)),
           elementCount: Object.keys(heat.frequency).length,
           fallbackNote: bpmnXml ? "" : t("aSum.bpmnHeatmapNoXml"),
         }),
@@ -222,11 +250,16 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args, ctx) => {
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
-      const heat = await queries.elementHeat(withCallerSignal(ch, ctx.signal), { ...args, period })
+      const scoped = withEngineScope(engineScope, args)
+      const heat = await queries.elementHeat(withCallerSignal(ch, ctx.signal), {
+        ...scoped,
+        period,
+      })
       const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
       const data = {
         processDefinitionKey: args.processDefinitionKey,
         period,
+        engines: scoped.engine,
         bpmnXml,
         frequency: heat.frequency,
         durationSec: heat.durationSec,
@@ -249,19 +282,14 @@ export function registerWidgetTools(
       description:
         "Internal JSON feed (no UI) for the analytics dashboard widgets' self-fetch. Prefer analytics_show_dashboard.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      inputSchema: strictToolInput({
-        processDefinitionKey: schemas.clusterCompareInput.shape.processDefinitionKey,
-        period: optionalPeriod,
-        ...schemas.engineFilterShape,
-      }),
+      inputSchema: strictToolInput(dashboardInputShape),
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
       const data = await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
-        processDefinitionKey: args.processDefinitionKey,
+        ...withEngineScope(engineScope, args),
         period,
-        engine: args.engine,
       })
       return buildDataFeedResult({ ...data })
     }),
@@ -280,9 +308,10 @@ export function registerWidgetTools(
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
-      const data = await queries.failureDashboardData(withCallerSignal(ch, ctx.signal), {
-        engine: args.engine,
-      })
+      const data = await queries.failureDashboardData(
+        withCallerSignal(ch, ctx.signal),
+        withEngineScope(engineScope, args),
+      )
       return buildDataFeedResult({ ...data })
     }),
   )

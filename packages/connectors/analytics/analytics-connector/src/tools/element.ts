@@ -3,10 +3,15 @@ import { schemas, queries } from "@miragon-ai/analytics-client"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { ProfileSource } from "../server-locale.js"
 import { optionalMinBucketSize, optionalPeriod, settingsFor } from "../settings.js"
+import { withEngineScope, type AnalyticsEngineScope } from "../engine-ids.js"
 
 type Register = ReturnType<typeof createToolRegistrar<PrometheusClient>>
 
-export function registerElementTools(register: Register, profileStore?: ProfileSource) {
+export function registerElementTools(
+  register: Register,
+  engineScope: AnalyticsEngineScope,
+  profileStore?: ProfileSource,
+) {
   register({
     name: "analytics_element_bottleneck",
     category: "analytics",
@@ -21,7 +26,7 @@ export function registerElementTools(register: Register, profileStore?: ProfileS
     handler: async (ch, args, ctx) => {
       const settings = await settingsFor(profileStore, ctx)
       return queries.elementBottleneck(ch, {
-        ...args,
+        ...withEngineScope(engineScope, args),
         period: args.period ?? settings.defaultPeriod,
         minBucketSize: args.minBucketSize ?? settings.minBucketSize,
       })

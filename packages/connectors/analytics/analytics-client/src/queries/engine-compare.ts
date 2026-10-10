@@ -1,5 +1,6 @@
 import { escapeLabelValue, selector, type PrometheusClient } from "../prometheus.js"
 import {
+  belowMinBucket,
   compareKpiDelta,
   queryCompareKpis,
   type CompareKpiDelta,
@@ -42,9 +43,8 @@ export interface EngineCompareResult {
  * backlog) and names the keys deployed on several engines — the valid inputs
  * here.
  *
- * `failed_count` / `failure_rate_pct` are incident-based (consistent across the
- * analytics tools); `incident_count` is the same signal optionally scoped to
- * `activityId`.
+ * `incident_count`/`incident_rate_pct` cover every activity; with `activityId`
+ * the `element_incident_*` fields add the count at that element.
  */
 export async function engineCompare(
   ch: PrometheusClient,
@@ -66,7 +66,6 @@ export async function engineCompare(
     engineKpi(ch, params, "engineB", params.engineB, range),
   ])
 
-  const suppressed = a.instance_count < minBucket || b.instance_count < minBucket
   return {
     engineA: params.engineA,
     engineB: params.engineB,
@@ -74,9 +73,9 @@ export async function engineCompare(
     windowDays,
     activityId: params.activityId ?? null,
     minBucketSize: minBucket,
-    suppressed,
+    suppressed: belowMinBucket([a, b], minBucket),
     kpis: [a, b],
-    delta: compareKpiDelta(a, b),
+    delta: compareKpiDelta(a, b, { baseline: windowDays, other: windowDays }),
   }
 }
 
@@ -89,14 +88,16 @@ async function engineKpi(
 ): Promise<EngineCompareKpi> {
   const engine = `engine_id="${escapeLabelValue(engineId)}"`
   const keyMatcher = `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`
-  const sel = selector(keyMatcher, engine)
-  const completedSel = selector(keyMatcher, `state="COMPLETED"`, engine)
-  const incidentSel = selector(
-    keyMatcher,
-    params.activityId ? `activity_id="${escapeLabelValue(params.activityId)}"` : undefined,
-    engine,
+  const kpis = await queryCompareKpis(
+    ch,
+    {
+      sel: selector(keyMatcher, engine),
+      completedSel: selector(keyMatcher, `state="COMPLETED"`, engine),
+      elementIncidentSel: params.activityId
+        ? selector(keyMatcher, `activity_id="${escapeLabelValue(params.activityId)}"`, engine)
+        : undefined,
+    },
+    `[${range}]`,
   )
-
-  const kpis = await queryCompareKpis(ch, { sel, completedSel, incidentSel }, `[${range}]`)
   return { engineId, bucket, ...kpis }
 }

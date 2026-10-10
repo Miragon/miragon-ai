@@ -17,7 +17,11 @@ export default mergeConfig(
         // behavioural contract test over every query function (measured
         // without test support: 93.4 / 68.91 / 96.19 / 93.61) and with the
         // Prometheus HTTP client under test (95.69 / 80.64 / 98.01 / 96.06).
-        thresholds: { statements: 93, branches: 78, functions: 96, lines: 94 },
+        // Raised 2026-10-10 with the query-honesty guard (#336: windows,
+        // no-data shapes, scope echo) over every query function
+        // (99.03 / 88.53 / 98.62 / 99.78); branches again with the engine
+        // presence probe on the dashboard's live gauges (99.04 / 89.33 / 98.63 / 99.78).
+        thresholds: { statements: 97, branches: 87, functions: 97, lines: 98 },
       },
     },
   }),

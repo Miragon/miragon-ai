@@ -1,6 +1,7 @@
 export type { CompareKpis, CompareKpiDelta } from "./helpers.js"
 export { analyzePerformance, comparePeriods } from "./performance.js"
 export type {
+  PerformanceResult,
   PerformanceKPI,
   ActivityBreakdownRow,
   PeriodComparisonKpi,
@@ -8,7 +9,7 @@ export type {
   PeriodComparisonResult,
 } from "./performance.js"
 export { findFailedInstances } from "./failures.js"
-export type { ErrorPatternRow } from "./failures.js"
+export type { ErrorPatternRow, FailedInstancesResult } from "./failures.js"
 export { elementBottleneck, elementHeat } from "./element.js"
 export type { ElementBottleneckRow, ElementBottleneckResult, ElementHeatResult } from "./element.js"
 export { clusterCompare } from "./cluster-compare.js"

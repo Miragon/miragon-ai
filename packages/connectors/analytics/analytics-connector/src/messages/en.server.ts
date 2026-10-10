@@ -3,18 +3,23 @@ import type { MessageCatalog } from "@miragon/mcp-toolkit-core"
 /** English model-facing analytics tool summaries (aSum.*). Generated, hand-editable. */
 export const enServer: MessageCatalog = {
   "aSum.bpmnHeatmap":
-    'BPMN heatmap for "{key}" over {period}: heat values for {elementCount} element(s){fallbackNote}.',
+    'BPMN heatmap for "{key}" over {period}{engines}: heat values for {elementCount} element(s){fallbackNote}.',
   "aSum.bpmnHeatmapNoXml": " — no BPMN XML available, widget shows the non-diagram fallback",
   "aSum.clusterCompare":
-    "Pre/post deployment comparison{scope} around {deploymentTimestamp}: {delta}{suppressed}.",
+    "Pre/post deployment comparison{scope}{engines} around {deploymentTimestamp} (measured -{before}d / +{after}d{partial}): {delta}{suppressed}.",
+  "aSum.clusterComparePartial":
+    ", partial — a window was cut short at now or at the retention; starts compare per day",
   "aSum.dashboard":
-    "Analytics dashboard{scope} over {period}: {totalCount} instances — {completedCount} completed, {runningCount} running, {failedCount} failed ({failureRatePct}% failure rate, {incidentCount} incidents).",
+    "Analytics dashboard{scope} over {period}{engines}: within the period {totalCount} instance(s) started, {completedCount} completed, {incidentsCreated} incident(s) created ({incidentRatePct} per 100 started); right now {runningNow} running, {openIncidentsNow} incident(s) open.",
   "aSum.engineCompare":
     'Engine comparison of process "{key}" on "{engineA}" vs "{engineB}" over {windowDays}d: {delta}{suppressed}.',
   "aSum.engineLandscape":
     "Cross-engine landscape: {engineCount} engine(s) ({reportingEngineCount} reporting metrics), {processKeyCount} process definition(s), {runningInstances} running instance(s), {openIncidents} open incident(s).{shared}",
+  "aSum.engineScopeFleet": " across all {count} configured engines ({ids}), aggregated",
+  "aSum.engineScopeOne": ' on engine "{id}"',
+  "aSum.engineScopeSubset": " across engines {ids}, aggregated",
   "aSum.failureDashboard":
-    "Failure dashboard: {totalIncidents} open incident(s) across {uniqueErrorPatterns} error pattern(s){mostAffected}.",
+    "Failure dashboard{engines}: {totalIncidents} incident(s) open right now in {uniqueErrorPatterns} group(s) by incident type and process{mostAffected}.",
   "aSum.mostAffectedProcess": '; most affected process: "{key}"',
   "aSum.scopeForProcess": ' for "{key}"',
   "aSum.sharedKeys":
@@ -25,9 +30,7 @@ export const enServer: MessageCatalog = {
   "aSum.settingsSaved":
     "Analytics settings saved: default period {period}, min bucket size {minBucketSize}.",
   "aSum.versionCompare":
-    'Version comparison for "{key}" v{versionA} vs v{versionB} over {windowDays}d: {delta}{incidents}{element}{suppressed}.',
-  "aSum.versionElementIgnored":
-    " — activityId {element} has no effect (it only scopes the incident rates), so every figure covers the whole process",
+    'Version comparison for "{key}" v{versionA} vs v{versionB} over {windowDays}d{engines}: {delta}{incidents}{suppressed}.',
   "aSum.versionIncidentsUnavailable":
-    " — failure and incident rates unavailable per version (the incident metric carries no version label), not zero",
+    " — incident rates unavailable per version (the incident metric carries no version label), not zero",
 }

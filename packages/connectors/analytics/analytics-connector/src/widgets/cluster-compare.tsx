@@ -27,7 +27,10 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
     ? `, scoped to process ${data.processDefinitionKey}`
     : ""
   const elementScope = data.activityId ? `, scoped to BPMN element ${data.activityId}` : ""
-  const interpretPrompt = `Interpret the pre/post deployment comparison around ${data.deploymentTimestamp} (-${data.windowDays.before}d baseline vs +${data.windowDays.after}d after)${processScope}${elementScope}. The on-screen deltas are: ${describeDeltas(data.delta)}. First call analytics_cluster_compare(deploymentTimestamp="${data.deploymentTimestamp}", windowBeforeDays=${data.windowDays.before}, windowAfterDays=${data.windowDays.after}${data.processDefinitionKey ? `, processDefinitionKey="${data.processDefinitionKey}"` : ""}) to confirm the numbers and the 'suppressed' flag, then call analytics_element_bottleneck to find which activity drives any regression. Tell me in 3-4 sentences: did the deployment cause a genuine regression or is it noise / low sample size, which metric (and element, if any) is responsible, and the single recommended next action (roll back the deployment, hold further rollouts, or accept).`
+  const partialNote = data.partial
+    ? " A window was cut short at now or at the retention (partial), so starts are compared per day."
+    : ""
+  const interpretPrompt = `Interpret the pre/post deployment comparison around ${data.deploymentTimestamp} (measured -${data.windowDays.before}d baseline vs +${data.windowDays.after}d after)${processScope}${elementScope}. The on-screen deltas are: ${describeDeltas(data.delta)}.${partialNote} First call analytics_cluster_compare(deploymentTimestamp="${data.deploymentTimestamp}", windowBeforeDays=${data.requestedWindowDays.before}, windowAfterDays=${data.requestedWindowDays.after}${data.processDefinitionKey ? `, processDefinitionKey="${data.processDefinitionKey}"` : ""}) to confirm the numbers and the 'suppressed' flag, then call analytics_element_bottleneck to find which activity drives any regression. Tell me in 3-4 sentences: did the deployment cause a genuine regression or is it noise / low sample size, which metric (and element, if any) is responsible, and the single recommended next action (roll back the deployment, hold further rollouts, or accept).`
 
   return (
     <ComparisonCard
@@ -50,6 +53,7 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
               after: data.windowDays.after,
             })}
           </Badge>
+          {data.partial && <Badge variant="outline">{t("aClusterCompare.partialBadge")}</Badge>}
           {data.processDefinitionKey && <Badge>{data.processDefinitionKey}</Badge>}
           {data.activityId && (
             <Badge variant="outline">

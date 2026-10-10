@@ -320,14 +320,28 @@ function escapeRegexValue(value: string): string {
 export type EngineFilterInput = string | string[] | undefined
 
 /**
+ * The engine ids a filter names, or `null` for no filter (every engine
+ * Prometheus holds). Results echo this so a reader always knows which engines
+ * an aggregate covers.
+ */
+export function engineIdsOf(engine: EngineFilterInput): string[] | null {
+  if (engine === undefined || engine === null) return null
+  const ids = (Array.isArray(engine) ? engine : [engine]).filter((id) => id.length > 0)
+  return ids.length > 0 ? ids : null
+}
+
+/**
  * Builds a PromQL label matcher fragment for the optional `engine_id` filter,
- * e.g. `engine_id="prod-a"` or `engine_id=~"prod-a|prod-b"`. Returns `undefined`
+ * e.g. `engine_id="prod-a"` or `engine_id=~"prod-a|prod-b"` — one id is an
+ * exact matcher whether it comes as a string or a one-element list (the
+ * analytics tools always resolve `engine` to a list). Returns `undefined`
  * when no filter is set so the caller can aggregate across all engines.
  */
 export function engineMatcher(engine: EngineFilterInput): string | undefined {
   if (engine === undefined || engine === null) return undefined
   if (Array.isArray(engine)) {
     if (engine.length === 0) return undefined
+    if (engine.length === 1) return engineMatcher(engine[0])
     return `engine_id=~"${engine.map((e) => escapeLabelValue(escapeRegexValue(e))).join("|")}"`
   }
   if (engine.length === 0) return undefined
@@ -344,9 +358,18 @@ export function selector(...matchers: Array<string | undefined>): string {
 }
 
 /**
- * PromQL range windows for the analytics `period` inputs. Capped at `30d` to
- * match the Prometheus retention (`--storage.tsdb.retention.time`); longer
- * look-backs would silently read partial/zero data, so they are not offered.
+ * The look-back the analytics module assumes Prometheus retains
+ * (`--storage.tsdb.retention.time`, 30 days in the repo's stack). Every
+ * window — the rolling periods, the compare windows, explicit date ranges —
+ * is held inside `[now − RETENTION_DAYS, now]`: data older than that is gone,
+ * so a longer window would silently read partial or zero data.
+ */
+export const RETENTION_DAYS = 30
+
+/**
+ * PromQL range windows for the analytics `period` inputs, capped at
+ * {@link RETENTION_DAYS}; longer look-backs would silently read partial/zero
+ * data, so they are not offered.
  */
 export const PERIOD_RANGE = {
   "1d": "1d",

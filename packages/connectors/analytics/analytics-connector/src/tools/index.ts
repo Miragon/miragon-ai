@@ -2,6 +2,7 @@ import type { MCPServer } from "mcp-use"
 import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { PrometheusClient } from "@miragon-ai/analytics-client"
 import type { ProfileSource } from "../server-locale.js"
+import type { AnalyticsEngineScope } from "../engine-ids.js"
 import { registerPerformanceTools } from "./performance.js"
 import { registerFailureTools } from "./failures.js"
 import { registerElementTools } from "./element.js"
@@ -18,21 +19,26 @@ import { registerHealthTools } from "./health.js"
  * settings contract holds across the whole tool surface. The handlers pass the
  * ctx the registrar hands them to `settingsFor`, so the caller resolves
  * exactly like the settings tools' own (`resolveProfileKey`).
+ *
+ * `engineScope` holds the server's configured engine ids: every tool resolves
+ * its `engine` argument through it (omitted = all of them), so no query ever
+ * reads an engine this server is not configured for (`engine-ids.ts`).
  */
 export function registerTools(
   server: MCPServer,
   client: PrometheusClient,
+  engineScope: AnalyticsEngineScope,
   profileStore?: ProfileSource,
 ): void {
   // Strict input: an unknown (e.g. misnamed) key is a tool error naming the
   // valid keys instead of a silently dropped filter (#329).
   const register = createToolRegistrar(server, client, { strictInput: true })
-  registerPerformanceTools(register, profileStore)
-  registerFailureTools(register)
-  registerElementTools(register, profileStore)
-  registerClusterCompareTools(register, profileStore)
-  registerVersionCompareTools(register, profileStore)
-  registerEngineCompareTools(register, profileStore)
-  registerEngineLandscapeTools(register)
-  registerHealthTools(register)
+  registerPerformanceTools(register, engineScope, profileStore)
+  registerFailureTools(register, engineScope)
+  registerElementTools(register, engineScope, profileStore)
+  registerClusterCompareTools(register, engineScope, profileStore)
+  registerVersionCompareTools(register, engineScope, profileStore)
+  registerEngineCompareTools(register, engineScope, profileStore)
+  registerEngineLandscapeTools(register, engineScope)
+  registerHealthTools(register, engineScope)
 }

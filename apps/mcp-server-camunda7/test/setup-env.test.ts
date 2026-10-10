@@ -258,6 +258,57 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
   })
 })
 
+/**
+ * #336 / N138: analytics reads only the server's configured engines — a
+ * Prometheus is often shared across teams. The composition root hands it
+ * camunda7's engine ids (analytics has no engine-SDK dependency).
+ */
+describe("setup.ts scopes analytics to the configured engines", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    vi.stubEnv("MCP_ACTIVE_MODULES", undefined)
+    vi.stubEnv("CAMUNDA_ENGINES_FILE", undefined)
+    vi.stubEnv("CAMUNDA_ENGINES_JSON", undefined)
+    vi.stubEnv("CAMUNDA_BASE_URL", undefined)
+    vi.stubEnv("ANALYTICS_ENGINE_IDS", undefined)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  /** The engine ids the booted analytics plugin covers. */
+  function analyticsEngines(): readonly string[] {
+    const plugin = getPlugins().find((p) => p.definition.name === "analytics")
+    expect(plugin, "analytics module should be active").toBeDefined()
+    return (plugin!.appConfig as { engineScope: { ids: readonly string[] } }).engineScope.ids
+  }
+
+  it("injects camunda7's configured engine ids", () => {
+    vi.stubEnv(
+      "CAMUNDA_ENGINES_JSON",
+      JSON.stringify([
+        { id: "prod-a", baseUrl: "http://a.example/engine-rest" },
+        { id: "prod-b", baseUrl: "http://b.example/engine-rest" },
+      ]),
+    )
+    expect(analyticsEngines()).toEqual(["prod-a", "prod-b"])
+  })
+
+  it("falls back to ANALYTICS_ENGINE_IDS when camunda7 is inactive", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", "analytics")
+    vi.stubEnv("ANALYTICS_ENGINE_IDS", "prod-a,prod-c")
+    expect(analyticsEngines()).toEqual(["prod-a", "prod-c"])
+  })
+
+  it("boots analytics fail-closed — no engine readable — when neither names one", () => {
+    vi.stubEnv("MCP_ACTIVE_MODULES", "analytics")
+    expect(analyticsEngines()).toEqual([])
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Analytics covers no engine"))
+  })
+})
+
 describe("setup.ts engine credential enforcement (fail fast, no silent anonymous requests)", () => {
   beforeEach(() => {
     vi.spyOn(console, "warn").mockImplementation(() => {})

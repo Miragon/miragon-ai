@@ -109,7 +109,8 @@ the dashboard picker says "Saved dashboards are unavailable".
 - The two health checks judge different things and say how: the engine
   overview rates one engine by its open incidents (by default critical at 50
   open or 25 in one cluster), the analytics health by Prometheus alert rules
-  (critical only while a critical alert fires). "Has this activity failed
+  (critical only while a critical alert fires; unknown when an engine sends no
+  metrics). "Has this activity failed
   before?" is answered from incident history, resolved incidents included.
 - A process view counts every deployed version of its key — old versions keep
   running after a redeploy; only the diagram is one version, and it says

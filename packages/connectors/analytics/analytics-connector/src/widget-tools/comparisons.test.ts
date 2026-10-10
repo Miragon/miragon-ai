@@ -1,13 +1,21 @@
-import { describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
-import type { PrometheusClient, VersionCompareResult } from "@miragon-ai/analytics-client"
+import type {
+  ClusterCompareResult,
+  PrometheusClient,
+  VersionCompareResult,
+} from "@miragon-ai/analytics-client"
+import { createEngineScope } from "../engine-ids.js"
 import { registerComparisonWidgetTools } from "./comparisons.js"
 
 type ToolResult = {
+  isError?: boolean
   content: Array<{ type: string; text: string }>
   structuredContent: { context: { stepData: { result: { data: unknown } } } }
 }
 type Handler = (args: Record<string, unknown>, ctx: unknown) => Promise<ToolResult>
+
+const engineScope = createEngineScope(["prod-a", "prod-b"])
 
 /** Registers the comparison widget tools on a stand-in server and returns their handlers. */
 function handlers(ch: PrometheusClient): Map<string, Handler> {
@@ -17,15 +25,17 @@ function handlers(ch: PrometheusClient): Map<string, Handler> {
       byName.set(definition.name, handler)
     },
   } as unknown as MCPServer
-  registerComparisonWidgetTools({ server, ch })
+  registerComparisonWidgetTools({ server, ch, engineScope })
   return byName
 }
+
+const dataOf = <T>(result: ToolResult) => result.structuredContent.context.stepData.result.data as T
 
 /** Every query answers 20, so instance counts and durations are equal across versions. */
 const ch: PrometheusClient = { instant: () => Promise.resolve([{ metric: {}, value: 20 }]) }
 
 describe("analytics_show_version_compare", () => {
-  it("never summarises the unmeasured failure rate as 0pp (#327)", async () => {
+  it("never summarises the unmeasured incident rate as 0pp (#327)", async () => {
     const show = handlers(ch).get("analytics_show_version_compare")!
     const result = await show(
       { processDefinitionKey: "order", versionA: 1, versionB: 2, windowDays: 14 },
@@ -33,31 +43,82 @@ describe("analytics_show_version_compare", () => {
     )
 
     const summary = result.content[0].text
-    expect(summary).toContain("failure rate n/a")
+    expect(summary).toContain("incident rate n/a")
     expect(summary).toContain("unavailable per version")
     expect(summary).not.toMatch(/0pp/)
 
-    const data = result.structuredContent.context.stepData.result.data as VersionCompareResult
-    expect(data.kpis.map((k) => k.failure_rate_pct)).toEqual([null, null])
+    const data = dataOf<VersionCompareResult>(result)
+    expect(data.kpis.map((k) => k.incident_rate_pct)).toEqual([null, null])
     expect(data.notes.length).toBeGreaterThan(0)
-    expect(summary).not.toContain("activityId")
   })
 
-  it("says an activityId scoped nothing instead of implying an element scope (#327)", async () => {
+  it("names the engines a fleet comparison aggregates (K33)", async () => {
     const show = handlers(ch).get("analytics_show_version_compare")!
     const result = await show(
-      {
-        processDefinitionKey: "order",
-        versionA: 1,
-        versionB: 2,
-        windowDays: 14,
-        activityId: "Task_check",
+      { processDefinitionKey: "order", versionA: 1, versionB: 2, windowDays: 14 },
+      {},
+    )
+    expect(result.content[0].text).toContain(
+      'across all 2 configured engines ("prod-a", "prod-b"), aggregated',
+    )
+    expect(dataOf<VersionCompareResult>(result).engines).toEqual(["prod-a", "prod-b"])
+  })
+})
+
+describe("analytics_show_cluster_compare — clamped windows (N79)", () => {
+  const NOW = Date.parse("2026-10-09T12:00:00Z")
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW })
+  })
+  afterAll(() => {
+    vi.useRealTimers()
+  })
+
+  it("measures a recent deployment's post window up to now and says so", async () => {
+    const sent: string[] = []
+    const recording: PrometheusClient = {
+      instant: (q) => {
+        sent.push(q)
+        return Promise.resolve([{ metric: {}, value: 20 }])
       },
+    }
+    const deployedTwoHoursAgo = new Date(NOW - 2 * 3_600_000).toISOString()
+    const result = await handlers(recording).get("analytics_show_cluster_compare")!(
+      { deploymentTimestamp: deployedTwoHoursAgo, windowBeforeDays: 7, windowAfterDays: 7 },
       {},
     )
 
-    const summary = result.content[0].text
-    expect(summary).toContain("activityId Task_check has no effect")
-    expect(summary).toContain("every figure covers the whole process")
+    // No `@` anchor beyond now — the post window is 2 h, not 7 d.
+    const anchors = sent.flatMap((q) => [...q.matchAll(/@ (\d+)/g)].map((m) => Number(m[1])))
+    expect(Math.max(...anchors)).toBe(NOW / 1000)
+    const data = dataOf<ClusterCompareResult>(result)
+    expect(data).toMatchObject({
+      partial: true,
+      requestedWindowDays: { before: 7, after: 7 },
+      windowDays: { before: 7, after: 0.08 },
+    })
+    expect(result.content[0].text).toContain("measured -7d / +0.08d, partial")
+    // 20 starts in 2 h vs 20 in 7 d is a huge rise PER DAY — never a flat 0 %.
+    expect(data.delta.started_per_day_delta_pct).toBe(8300)
+  })
+
+  it("refuses a deployment in the future instead of comparing an empty window", async () => {
+    const result = await handlers(ch).get("analytics_show_cluster_compare")!(
+      { deploymentTimestamp: new Date(NOW + 3_600_000).toISOString() },
+      {},
+    )
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain("deploymentTimestamp lies in the future")
+  })
+})
+
+describe("analytics_show_engine_compare — engine scope (N138)", () => {
+  it("refuses an engine outside the configured ones", async () => {
+    const result = await handlers(ch).get("analytics_show_engine_compare")!(
+      { processDefinitionKey: "order", engineA: "prod-a", engineB: "tenant-x" },
+      {},
+    )
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('Unknown engine "tenant-x" in engineB')
   })
 })

@@ -43,10 +43,11 @@ function surfaceFor(config: Record<string, unknown>): RecordedTool[] {
     tool: (definition: RecordedTool) => {
       tools.push(definition)
     },
+    use: () => {},
   } as unknown as MCPServer
   const plugin = analyticsModule.createPlugin(
     { url: "http://prometheus.invalid", ...config },
-    { profileStore: writableStore },
+    { profileStore: writableStore, engineIds: ["prod-a"] },
   )
   plugin.registerTools?.(server)
   plugin.registerWidgetTools?.(server)
@@ -106,11 +107,13 @@ describe("analyticsModule.instructions", () => {
   it("states once that `engine` is a metric filter the camunda7 default does not touch", () => {
     const text = analyticsModule.instructions()
     expect(text).toContain(
-      "`engine` is a metric filter, not routing: omitted = the aggregate over every engine " +
-        "(camunda7's saved default engine does not apply)",
+      "`engine` is a metric filter over this server's configured engines, not routing: omitted = " +
+        "the aggregate over all of them, named in each result's `engines` (camunda7's saved " +
+        "default engine does not apply)",
     )
     expect(text).toContain("period is one of 1d, 3d, 7d, 14d, 30d")
-    expect(text).toMatch(/analytics_engine_health judges from metrics and alert rules/)
+    expect(text).toContain("null means not measured")
+    expect(text).toMatch(/analytics_engine_health judges from metrics and alert rules \(unknown/)
   })
 
   // Both failure tools run instant queries over the open-incident gauge and
@@ -140,6 +143,7 @@ describe("analyticsModule env surface", () => {
       "PROMETHEUS_PASSWORD",
       "PROMETHEUS_HEADERS",
       "PROMETHEUS_TIMEOUT_MS",
+      "ANALYTICS_ENGINE_IDS",
     ])
   })
 
@@ -162,7 +166,10 @@ describe("analyticsModule env surface", () => {
 
 describe("analyticsModule Prometheus config validation", () => {
   const boot = (config: Record<string, unknown>) =>
-    analyticsModule.createPlugin({ url: "http://prometheus.invalid", ...config }, {})
+    analyticsModule.createPlugin(
+      { url: "http://prometheus.invalid", ...config },
+      { engineIds: ["prod-a"] },
+    )
 
   it("accepts the auth variants and a strict timeout", () => {
     expect(() => boot({ bearerToken: "tok", timeoutMs: "5000" })).not.toThrow()

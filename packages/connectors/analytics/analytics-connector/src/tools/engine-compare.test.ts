@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import type { PrometheusClient } from "@miragon-ai/analytics-client"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
+import { createEngineScope } from "../engine-ids.js"
 import { registerEngineCompareTools } from "./engine-compare.js"
+
+const scope = createEngineScope(["prod-a", "prod-b"])
+const register = (r: never, store?: never) => registerEngineCompareTools(r, scope, store)
 
 type Config = ToolConfig<PrometheusClient>
 
@@ -38,12 +42,12 @@ function recordingClient(): { client: PrometheusClient; queries: string[] } {
   }
 }
 
-function kpiQueries(sel: string, completedSel: string, incidentSel: string, range: string) {
+/** The five KPI queries per engine — no duplicate incident query without an element (N85). */
+function kpiQueries(sel: string, completedSel: string, range: string) {
   return [
     `sum(increase(camunda_process_instance_started_total${sel}[${range}]))`,
     `sum(increase(camunda_process_instance_ended_total${completedSel}[${range}]))`,
     `sum(increase(camunda_incident_created_total${sel}[${range}]))`,
-    `sum(increase(camunda_incident_created_total${incidentSel}[${range}]))`,
     `sum(increase(camunda_process_instance_duration_seconds_sum${sel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${sel}[${range}]))`,
     `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
   ]
@@ -51,7 +55,7 @@ function kpiQueries(sel: string, completedSel: string, incidentSel: string, rang
 
 describe("analytics_engine_compare PromQL", () => {
   it("partitions every query by engine_id and applies the shared window", async () => {
-    const handlers = captureHandlers(registerEngineCompareTools)
+    const handlers = captureHandlers(register)
     const { client, queries } = recordingClient()
     const key = 'process_definition_key="order"'
 
@@ -67,20 +71,18 @@ describe("analytics_engine_compare PromQL", () => {
       ...kpiQueries(
         `{${key},engine_id="prod-a"}`,
         `{${key},state="COMPLETED",engine_id="prod-a"}`,
-        `{${key},engine_id="prod-a"}`,
         "14d",
       ),
       ...kpiQueries(
         `{${key},engine_id="prod-b"}`,
         `{${key},state="COMPLETED",engine_id="prod-b"}`,
-        `{${key},engine_id="prod-b"}`,
         "14d",
       ),
     ])
   })
 
   it("scopes to processDefinitionKey everywhere and activityId only on the incident query", async () => {
-    const handlers = captureHandlers(registerEngineCompareTools)
+    const handlers = captureHandlers(register)
     const { client, queries } = recordingClient()
 
     await handlers.get("analytics_engine_compare")!(client, {
@@ -93,6 +95,7 @@ describe("analytics_engine_compare PromQL", () => {
     })
 
     const key = 'process_definition_key="order"'
+    // Five KPI queries per engine plus the element-scoped incident count.
     expect(queries).toHaveLength(12)
     expect(queries.every((q) => q.includes(key))).toBe(true)
     const elementScoped = queries.filter((q) => q.includes('activity_id="Task_check"'))
@@ -102,8 +105,54 @@ describe("analytics_engine_compare PromQL", () => {
     ])
   })
 
+  it("refuses an engine this server is not configured for, before any query (N138)", async () => {
+    const handlers = captureHandlers(register)
+    const { client, queries } = recordingClient()
+
+    await expect(
+      handlers.get("analytics_engine_compare")!(client, {
+        processDefinitionKey: "order",
+        engineA: "prod-a",
+        engineB: "tenant-x",
+        windowDays: 7,
+      }),
+    ).rejects.toThrow(/Unknown engine "tenant-x" in engineB/)
+    expect(queries).toEqual([])
+  })
+
+  it("reads 'nothing ended' as an unmeasured duration and suppresses its delta (N78)", async () => {
+    const handlers = captureHandlers(register)
+    // Both engines started 40 instances; only prod-a has completed any — prod-b
+    // has no duration sample at all.
+    const client: PrometheusClient = {
+      instant: (q) =>
+        Promise.resolve(
+          q.includes("duration_seconds") && q.includes("prod-b")
+            ? []
+            : [{ metric: {}, value: q.includes("duration_seconds") ? 30 : 40 }],
+        ),
+    }
+    const result = (await handlers.get("analytics_engine_compare")!(client, {
+      processDefinitionKey: "order",
+      engineA: "prod-a",
+      engineB: "prod-b",
+      windowDays: 7,
+      minBucketSize: 1,
+    })) as {
+      kpis: Array<{ avg_duration_sec: number | null; p95_duration_sec: number | null }>
+      delta: { avg_duration_delta_pct: number | null; p95_duration_delta_pct: number | null }
+    }
+
+    expect(result.kpis[1]).toMatchObject({ avg_duration_sec: null, p95_duration_sec: null })
+    // Never a −100 % from a missing value.
+    expect(result.delta).toMatchObject({
+      avg_duration_delta_pct: null,
+      p95_duration_delta_pct: null,
+    })
+  })
+
   it("prefers an explicit minBucketSize over the resolved setting", async () => {
-    const handlers = captureHandlers(registerEngineCompareTools)
+    const handlers = captureHandlers(register)
     const { client } = recordingClient()
 
     const explicit = (await handlers.get("analytics_engine_compare")!(client, {
@@ -128,7 +177,7 @@ describe("analytics_engine_compare PromQL", () => {
 })
 
 describe("analytics_engine_compare registration", () => {
-  const config = captureConfigs(registerEngineCompareTools).get("analytics_engine_compare")!
+  const config = captureConfigs(register).get("analytics_engine_compare")!
 
   it("registers under the analytics category as a read-only external read", () => {
     expect(config.category).toBe("analytics")

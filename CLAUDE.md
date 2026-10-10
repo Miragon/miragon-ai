@@ -259,8 +259,10 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    read-only floor; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
    app's `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
    only declares the module list and wires `SharedResources` (profile store +
-   `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap;
-   analytics has NO engine-SDK dependency). Apps own no domain UI: widget catalogues and
+   `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap — and
+   `engineIds`, camunda7's configured engines: the ONLY engines analytics reads, else
+   `ANALYTICS_ENGINE_IDS`, else every analytics tool refuses; analytics has NO
+   engine-SDK dependency). Apps own no domain UI: widget catalogues and
    components live in packages — and no boot plumbing either. The bundle root's provider
    stack (`AppShellProviders`: theme → host bridge → display mode → `ProfileGate` →
    host widget registry; order is load-bearing) plus `LocalizedAppView` live in

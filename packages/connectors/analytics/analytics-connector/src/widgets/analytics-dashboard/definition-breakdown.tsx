@@ -8,7 +8,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 import { Section, TONE_TEXT, WidgetShell, formatDuration } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
-import { useDashboardSelfFetch, type AnalyticsDashboardPeriod } from "./lib.js"
+import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -16,13 +16,10 @@ export function ProcessDefinitionBreakdown({
   data: initialData,
   processDefinitionKey,
   period,
-}: {
-  data: AnalyticsDashboardData | null
-  processDefinitionKey?: string
-  period?: AnalyticsDashboardPeriod
-}) {
+  engine,
+}: { data: AnalyticsDashboardData | null } & DashboardScopeProps) {
   const t = useT()
-  const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period })
+  const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period, engine })
 
   return (
     <QueryGate
@@ -64,12 +61,16 @@ export function ProcessDefinitionBreakdown({
                         <span className={TONE_TEXT.success}>
                           {t("aDefBreakdown.completedCount", { count: def.completed })}
                         </span>
-                        <span className={TONE_TEXT.info}>
-                          {t("aDefBreakdown.runningCount", { count: def.running })}
-                        </span>
-                        {def.failed > 0 && (
+                        {def.runningNow !== null && (
+                          <span className={TONE_TEXT.info}>
+                            {t("aDefBreakdown.runningNowCount", { count: def.runningNow })}
+                          </span>
+                        )}
+                        {def.incidentsCreated > 0 && (
                           <Badge variant="destructive">
-                            {t("aDefBreakdown.failedCount", { count: def.failed })}
+                            {t("aDefBreakdown.incidentsCreatedCount", {
+                              count: def.incidentsCreated,
+                            })}
                           </Badge>
                         )}
                         <span>

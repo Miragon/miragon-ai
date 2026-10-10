@@ -80,6 +80,26 @@ describe("elementBottleneck", () => {
     expect(res.suppressedActivities).toBe(1)
   })
 
+  it("reports a missing histogram sample as an unmeasured p95, never 0 s", async () => {
+    const instant = vi.fn(async (q: string): Promise<PromSample[]> =>
+      q.includes("histogram_quantile") ||
+      q.includes("duration_seconds_sum") ||
+      q.includes("incident")
+        ? []
+        : [{ metric: { activity_id: "A", activity_type: "serviceTask" }, value: 4 }],
+    )
+    const res = await elementBottleneck(
+      { instant },
+      { processDefinitionKey: "k", period: "7d", minBucketSize: 1, maxResults: 5 },
+    )
+    expect(res.activities[0]).toMatchObject({
+      execution_count: 4,
+      avg_duration_sec: null,
+      p95_duration_sec: null,
+      incident_rate_pct: 0,
+    })
+  })
+
   it("scopes every query to the process definition key and period", async () => {
     const { ch, instant } = mockClient()
     await elementBottleneck(ch, {

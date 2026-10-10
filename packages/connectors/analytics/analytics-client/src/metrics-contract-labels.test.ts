@@ -2,8 +2,6 @@ import { readFileSync, readdirSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import type { PrometheusClient, PromSample } from "./prometheus.js"
-import * as queries from "./queries/index.js"
 import {
   checkQueryLabels,
   contractCatalog,
@@ -11,6 +9,12 @@ import {
   type SeriesCatalog,
 } from "./promql-labels.test-support.js"
 import { alertExpressions, dashboardQueries } from "./promql-sources.test-support.js"
+import { ENGINE_ALERT_NAME_PATTERN } from "./queries/health.js"
+import {
+  SCENARIOS,
+  exportedQueryFunctions,
+  recordingClient,
+} from "./query-scenarios.test-support.js"
 
 /**
  * Behavioural half of the metrics contract: instead of scanning source text,
@@ -59,147 +63,6 @@ const catalog: SeriesCatalog = contractCatalog(contract.metrics, {
   ALERTS: { labels: [...alertLabels] },
 })
 
-/**
- * PrometheusClient that records every instant PromQL string. It answers each
- * one with a single representative sample, so the result mapping runs too — a
- * function that only queries further after non-empty data still gets there.
- */
-function recordingClient(): { ch: PrometheusClient; sent: string[] } {
-  const sent: string[] = []
-  const sample: PromSample = {
-    metric: {
-      engine_id: "prod-a",
-      process_definition_key: "invoice",
-      activity_id: "Task_check",
-      activity_type: "serviceTask",
-      incident_type: "failedJob",
-      alertname: "CibSevenDeadJobs",
-      severity: "warning",
-    },
-    value: 1,
-  }
-  return {
-    ch: {
-      instant: (query: string) => {
-        sent.push(query)
-        return Promise.resolve([sample])
-      },
-    },
-    sent,
-  }
-}
-
-type Scenario = (ch: PrometheusClient) => Promise<unknown>
-
-/**
- * Representative argument sets for EVERY exported query function — typed as a
- * total map over the `queries` namespace, so a new export without a scenario
- * fails `pnpm typecheck` (and the runtime check below). Between them the sets
- * switch on every optional matcher: engine filter (single and multi), element
- * scope, incident type, process scope present and absent, the breakdowns.
- */
-const SCENARIOS: { [K in keyof typeof queries]: Scenario[] } = {
-  analyzePerformance: [
-    (ch) =>
-      queries.analyzePerformance(ch, {
-        processDefinitionKey: "invoice",
-        period: "7d",
-        includeActivityBreakdown: true,
-        engine: "prod-a",
-      }),
-  ],
-  comparePeriods: [
-    (ch) =>
-      queries.comparePeriods(ch, {
-        processDefinitionKey: "invoice",
-        periodAFrom: "2026-09-01T00:00:00Z",
-        periodATo: "2026-09-08T00:00:00Z",
-        periodBFrom: "2026-09-08T00:00:00Z",
-        periodBTo: "2026-09-15T00:00:00Z",
-        includeActivityBreakdown: true,
-        engine: ["prod-a", "prod-b"],
-      }),
-  ],
-  findFailedInstances: [
-    (ch) =>
-      queries.findFailedInstances(ch, {
-        processDefinitionKey: "invoice",
-        incidentType: "failedJob",
-        maxResults: 10,
-        engine: "prod-a",
-      }),
-    (ch) => queries.findFailedInstances(ch, { maxResults: 10 }),
-  ],
-  elementBottleneck: [
-    (ch) =>
-      queries.elementBottleneck(ch, {
-        processDefinitionKey: "invoice",
-        period: "7d",
-        minBucketSize: 1,
-        maxResults: 10,
-        engine: "prod-a",
-      }),
-  ],
-  elementHeat: [
-    (ch) => queries.elementHeat(ch, { processDefinitionKey: "invoice", period: "7d", engine: "a" }),
-  ],
-  clusterCompare: [
-    (ch) =>
-      queries.clusterCompare(ch, {
-        processDefinitionKey: "invoice",
-        activityId: "Task_check",
-        deploymentTimestamp: "2026-09-08T00:00:00Z",
-        windowBeforeDays: 7,
-        windowAfterDays: 7,
-        minBucketSize: 1,
-        engine: "prod-a",
-      }),
-    (ch) =>
-      queries.clusterCompare(ch, {
-        deploymentTimestamp: "2026-09-08T00:00:00Z",
-        windowBeforeDays: 7,
-        windowAfterDays: 7,
-        minBucketSize: 1,
-      }),
-  ],
-  versionCompare: [
-    (ch) =>
-      queries.versionCompare(ch, {
-        processDefinitionKey: "invoice",
-        versionA: 1,
-        versionB: 2,
-        windowDays: 14,
-        activityId: "Task_check",
-        minBucketSize: 1,
-        engine: ["prod-a", "prod-b"],
-      }),
-  ],
-  engineCompare: [
-    (ch) =>
-      queries.engineCompare(ch, {
-        processDefinitionKey: "invoice",
-        engineA: "prod-a",
-        engineB: "prod-b",
-        windowDays: 14,
-        activityId: "Task_check",
-        minBucketSize: 1,
-      }),
-  ],
-  engineLandscape: [
-    (ch) => queries.engineLandscape(ch),
-    (ch) => queries.engineLandscape(ch, { engine: ["prod-a", "prod-b"] }),
-  ],
-  dashboardData: [
-    (ch) => queries.dashboardData(ch, { processDefinitionKey: "invoice", period: "7d" }),
-    (ch) => queries.dashboardData(ch, { period: "1d", engine: "prod-a" }),
-  ],
-  failureDashboardData: [(ch) => queries.failureDashboardData(ch, { engine: "prod-a" })],
-  engineHealth: [
-    (ch) => queries.engineHealth(ch, {}),
-    (ch) => queries.engineHealth(ch, { engine: "prod-a" }),
-  ],
-}
-
 /** Violations of one PromQL source, each prefixed with where it came from. */
 function violationsOf(origin: string, promql: string): string[] {
   return checkQueryLabels(promql, catalog).violations.map((v) => `${origin}: ${v}\n    ${promql}`)
@@ -207,10 +70,7 @@ function violationsOf(origin: string, promql: string): string[] {
 
 describe("metrics contract — labels each query actually sends", () => {
   it("has a scenario for every exported query function", () => {
-    const exported = Object.keys(queries).filter(
-      (k) => typeof (queries as Record<string, unknown>)[k] === "function",
-    )
-    expect(Object.keys(SCENARIOS).sort()).toEqual(exported.sort())
+    expect(Object.keys(SCENARIOS).sort()).toEqual(exportedQueryFunctions().sort())
   })
 
   it.each(Object.entries(SCENARIOS))(
@@ -251,6 +111,16 @@ describe("metrics contract — labels in alert rules and dashboards", () => {
     }
     // The rules aggregate by engine_id — `engineHealth` filters ALERTS on it.
     expect(alertLabels.has("engine_id")).toBe(true)
+  })
+
+  it("every shipped alert rule is named so engineHealth recognises it as the module's own", () => {
+    // Engine-less alerts (CibSevenEngineNoMetrics) only count when their name
+    // matches — a rule outside the pattern would silently drop out of the
+    // fleet-wide verdict, and a shared Prometheus' foreign alerts must not count.
+    const names = [...alertsYaml.matchAll(/^\s*-\s*alert:\s*(\S+)\s*$/gm)].map((m) => m[1])
+    expect(names).toHaveLength(alertRules.length)
+    const own = new RegExp(`^(?:${ENGINE_ALERT_NAME_PATTERN})$`)
+    expect(names.filter((name) => !own.test(name))).toEqual([])
   })
 
   it("Grafana dashboard queries name only declared labels", () => {

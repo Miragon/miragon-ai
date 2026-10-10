@@ -1,4 +1,5 @@
 import {
+  engineIdsOf,
   engineMatcher,
   escapeLabelValue,
   selector,
@@ -6,16 +7,19 @@ import {
   type PrometheusClient,
 } from "../prometheus.js"
 import {
+  belowMinBucket,
+  compareKpiDelta,
   first,
+  firstOrNull,
   kpiQueries,
-  pctChange,
-  round1,
+  round1OrNull,
   type CompareKpiDelta,
   type CompareKpis,
 } from "./helpers.js"
 
 /** The incident-derived members of {@link CompareKpis}. */
-type IncidentKpi = "failed_count" | "failure_rate_pct" | "incident_count" | "incident_rate_pct"
+type IncidentKpi =
+  "incident_count" | "incident_rate_pct" | "element_incident_count" | "element_incident_rate_pct"
 
 /**
  * One version's KPIs. The incident family is `null`, never 0: the incident
@@ -25,21 +29,22 @@ type IncidentKpi = "failed_count" | "failure_rate_pct" | "incident_count" | "inc
 export interface VersionCompareKpi extends Omit<CompareKpis, IncidentKpi> {
   version: number
   bucket: "versionA" | "versionB"
-  failed_count: number | null
-  failure_rate_pct: number | null
-  incident_count: number | null
-  incident_rate_pct: number | null
+  incident_count: null
+  incident_rate_pct: null
+  element_incident_count: null
+  element_incident_rate_pct: null
 }
 
-/** `failure_rate_delta_pp` / `incident_rate_delta_pp` are null with the incident KPIs. */
+/** The incident-rate deltas are always null with the incident KPIs. */
 export type VersionCompareDelta = CompareKpiDelta
 
 export interface VersionCompareResult {
+  /** The engine ids covered; `null` = every engine Prometheus holds (unscoped library call). */
+  engines: string[] | null
   processDefinitionKey: string
   versionA: number
   versionB: number
   windowDays: number
-  activityId: string | null
   minBucketSize: number
   suppressed: boolean
   kpis: VersionCompareKpi[]
@@ -54,14 +59,10 @@ export interface VersionCompareResult {
  * carries it, the incident KPIs return and this note goes.
  */
 export const VERSION_INCIDENT_KPIS_NOTE =
-  "failed_count, failure_rate_pct, incident_count, incident_rate_pct and their deltas are null " +
+  "incident_count, incident_rate_pct and the incident-rate deltas are null " +
   "(not measured, NOT zero): the incident metric carries no process_definition_version label, " +
   "so incidents cannot be attributed to a version. Incident figures exist per process " +
   "definition key only."
-
-/** Added when the caller passed `activityId`: it only ever scoped the incident count. */
-export const VERSION_ACTIVITY_SCOPE_NOTE =
-  "activityId has no effect: it only scopes the incident KPIs, which are unavailable per version."
 
 /**
  * Side-by-side comparison of two deployed process definition versions, from
@@ -71,7 +72,8 @@ export const VERSION_ACTIVITY_SCOPE_NOTE =
  *
  * The incident KPIs are NOT: the incident counter has no version label, and
  * filtering it on one matched nothing, which used to read as a trustworthy
- * "0 % failure rate". They are reported as null plus a note instead.
+ * "0 % failure rate". They are reported as null plus a note instead — and
+ * there is no element scope, since an element only ever narrowed incidents.
  */
 export async function versionCompare(
   ch: PrometheusClient,
@@ -80,7 +82,6 @@ export async function versionCompare(
     versionA: number
     versionB: number
     windowDays: number
-    activityId?: string
     minBucketSize: number
     engine?: EngineFilterInput
   },
@@ -96,26 +97,17 @@ export async function versionCompare(
     versionKpi(ch, params, "versionB", versionB, range),
   ])
 
-  const suppressed = a.instance_count < minBucket || b.instance_count < minBucket
   return {
+    engines: engineIdsOf(params.engine),
     processDefinitionKey: params.processDefinitionKey,
     versionA,
     versionB,
     windowDays,
-    activityId: params.activityId ?? null,
     minBucketSize: minBucket,
-    suppressed,
+    suppressed: belowMinBucket([a, b], minBucket),
     kpis: [a, b],
-    delta: {
-      instance_count_delta_pct: pctChange(a.instance_count, b.instance_count),
-      failure_rate_delta_pp: null,
-      incident_rate_delta_pp: null,
-      avg_duration_delta_pct: pctChange(a.avg_duration_sec, b.avg_duration_sec),
-      p95_duration_delta_pct: pctChange(a.p95_duration_sec, b.p95_duration_sec),
-    },
-    notes: params.activityId
-      ? [VERSION_INCIDENT_KPIS_NOTE, VERSION_ACTIVITY_SCOPE_NOTE]
-      : [VERSION_INCIDENT_KPIS_NOTE],
+    delta: compareKpiDelta(a, b, { baseline: windowDays, other: windowDays }),
+    notes: [VERSION_INCIDENT_KPIS_NOTE],
   }
 }
 
@@ -149,11 +141,11 @@ async function versionKpi(
     bucket,
     instance_count: Math.round(first(total)),
     completed_count: Math.round(first(completed)),
-    failed_count: null,
-    failure_rate_pct: null,
     incident_count: null,
     incident_rate_pct: null,
-    avg_duration_sec: round1(first(avg)),
-    p95_duration_sec: round1(first(p95)),
+    element_incident_count: null,
+    element_incident_rate_pct: null,
+    avg_duration_sec: round1OrNull(firstOrNull(avg)),
+    p95_duration_sec: round1OrNull(firstOrNull(p95)),
   }
 }

@@ -1,27 +1,25 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import { queries, type PrometheusClient } from "@miragon-ai/analytics-client"
-
-interface AnalyticsAppConfig {
-  client: PrometheusClient
-}
+import { queries } from "@miragon-ai/analytics-client"
+import { ENGINE_KEY_DECLARATION, stepEngines, type AnalyticsAppConfig } from "./app-config.js"
 
 /**
  * Loads current failure / incident state from Prometheus for the
- * `analytics:failure-dashboard` widget. Point-in-time (live state gauges), so
- * there is no time-window input.
+ * failure-dashboard widgets. Point-in-time (live state gauges), so there is no
+ * time-window input. Reads the optional `analytics:engine` key (configured
+ * engine id(s); omitted = all of them).
  */
 export const loadFailureDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
   id: "analytics:load-failure-dashboard",
   description:
-    "Current failure / incident state grouped by incident type and process definition. Powers the failure widgets (failure-summary-kpi, failure-rate-table, error-patterns-table).",
+    "The incidents open right now, grouped by incident type and process definition, plus each affected process's running instances and dead jobs. Powers the failure widgets (failure-summary-kpi, failure-rate-table, error-patterns-table).",
   dataType: "analytics:failureDashboard",
   requires: [],
-  optionalKeys: [],
+  optionalKeys: [ENGINE_KEY_DECLARATION],
   produces: ["analytics:failureDashboardData"],
-  execute: async (_context, appConfig) => {
-    const ch = appConfig.client
-
-    const data = await queries.failureDashboardData(ch, {})
+  execute: async (context, appConfig) => {
+    const data = await queries.failureDashboardData(appConfig.client, {
+      engine: stepEngines(context.keys, appConfig.engineScope),
+    })
 
     return {
       data,

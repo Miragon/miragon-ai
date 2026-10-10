@@ -6,9 +6,11 @@
     "configFile": "vitest.stryker.config.ts"
   },
   "mutate": [
+    "src/engine-ids.ts",
     "src/server-locale.ts",
     "src/settings-tools.ts",
     "src/settings.ts",
+    "src/steps/app-config.ts",
     "src/toolsets.ts",
     "src/tools/engine-compare.ts",
     "src/tools/engine-landscape.ts",

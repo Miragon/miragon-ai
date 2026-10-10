@@ -19,7 +19,7 @@ export const engineCompareInput = z.object({
   activityId: z
     .string()
     .optional()
-    .describe("Restrict incident count to a single BPMN element (optional)."),
+    .describe("Also count the incidents at this BPMN element (element_incident_*; optional)."),
   minBucketSize: z
     .number()
     .int()
