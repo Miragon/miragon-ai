@@ -63,6 +63,8 @@ export const enAskAi = {
     "Find the root cause of this process's open incidents: do the failing activities share one cause, is it transient, a data or configuration problem or a broken model, and which fix do you recommend. Change nothing without my confirmation.",
   "askAi.incidents.triage":
     "Triage all open incidents on this engine: cluster them by error and failing activity, rank the clusters by impact, name the most likely systemic root cause and the next step per top cluster. Change nothing yet.",
+  "askAi.incidents.triageFiltered":
+    "Triage the open incidents this view is filtered to: cluster them by error and failing activity, rank the clusters by impact, name the most likely root cause and the next step per top cluster. Change nothing yet.",
 } satisfies Record<string, string>
 
 export type Camunda7AskAiKey = keyof typeof enAskAi

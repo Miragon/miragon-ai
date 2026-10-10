@@ -6,6 +6,7 @@ import type {
   IncidentsDashboardProcess,
 } from "../view-models.js"
 import type { EngineProvider } from "../engine-provider.js"
+import type { IncidentsDashboardFilters } from "../feed-contracts.js"
 import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
 import {
   definitionKeyResolver,
@@ -22,12 +23,11 @@ import {
   type IncidentScan,
 } from "./incident-scan.js"
 
-export interface IncidentsDashboardOptions {
+/** The engine's URLs + the feed contract's filters (echoed as `filters`). */
+export interface IncidentsDashboardOptions extends IncidentsDashboardFilters {
   baseUrl: string
   cockpitUrl?: string
   provider: EngineProvider
-  processDefinitionKey?: string
-  incidentType?: string
 }
 
 /**
@@ -66,7 +66,8 @@ export async function buildIncidentsDashboardData(
   }
 
   const keyOf = definitionKeyResolver(statsByKey)
-  const scannedByKey = groupBy(scan.rows, (r) => keyOf(r.processDefinitionId))
+  // A row whose key resolves to nothing ("") joins no card.
+  const scannedByKey = groupBy(scan.rows, (r) => keyOf(r.processDefinitionId) ?? "")
   const processes = [...statsByKey.entries()]
     .filter(([key, stats]) => stats.incidentCount > 0 && matchesKey(key, options))
     .sort((a, b) => b[1].incidentCount - a[1].incidentCount)
@@ -83,6 +84,10 @@ export async function buildIncidentsDashboardData(
     last24hCount,
     latestIncident: latestEngineDate(scan.rows.map((r) => r.incidentTimestamp)),
     processes,
+    filters: {
+      processDefinitionKey: options.processDefinitionKey,
+      incidentType: options.incidentType,
+    },
   }
 }
 

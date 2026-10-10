@@ -13,6 +13,7 @@ import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
+import { dashboardScope, incidentsFeed } from "./scope.js"
 
 import {
   AskAiButton,
@@ -48,20 +49,26 @@ function incidentVolumeTone(unfilteredIncidentCount: number): ToneVariant {
 /**
  * Root cause of ONE process's open incidents — do the failing activities share
  * a cause, and which fix. The process name is the deployer's text — quoted.
+ * On a dashboard filtered by incident type the card counts only that type:
+ * the filter travels as an id and the count as the matching incidents.
  */
 export function processRootCauseHandOff(
   process: IncidentsDashboardProcess,
   engine: string | undefined,
+  filters: IncidentsDashboardData["filters"],
 ): HandOff {
+  // The card IS its key — only the incident-type filter narrows its counts.
+  const { incidentType } = dashboardScope(filters)
   return {
     intent: "askAi.incidents.processRootCause",
-    ids: { engine, processDefinitionKey: process.processDefinitionKey },
+    ids: { engine, processDefinitionKey: process.processDefinitionKey, incidentType },
     // Every count spans all versions of the key (#335 N61); null facts (a
     // scan that does not cover the card) are left out, never a 0.
     facts: {
       countScope: "allVersions",
       latestVersion: process.latestVersion,
-      openIncidents: process.incidentCount,
+      openIncidents: incidentType ? undefined : process.incidentCount,
+      matchingIncidents: incidentType ? process.incidentCount : undefined,
       affectedActivities: process.affectedActivityCount,
       last24h: process.last24hCount,
       latestIncident: process.latestIncident,
@@ -87,12 +94,15 @@ function ProcessSummary({
   process,
   expanded,
   engineId,
+  filters,
   onOpenDetail,
 }: {
   process: DisplayProcess
   expanded: boolean
   /** The engine the dashboard was fetched from — undefined when the default routed it. */
   engineId: string | undefined
+  /** The dashboard's echoed filters — the scope of the card's counts. */
+  filters: IncidentsDashboardData["filters"]
   onOpenDetail: () => void
 }) {
   const t = useT()
@@ -134,7 +144,7 @@ function ProcessSummary({
           <AskAiButton
             variant="subtle"
             label={t("incidentsList.analyze")}
-            prompt={ask(processRootCauseHandOff(process, engineId))}
+            prompt={ask(processRootCauseHandOff(process, engineId, filters))}
           />
           <DrillButton
             onDrill={onOpenDetail}
@@ -252,14 +262,15 @@ export function IncidentProcessListView({
 }) {
   const go = useNav()
   const t = useT()
-  // Shares the overview-kpi query key → both incidents panels dedupe to one
-  // fetch in the cockpit; standalone the data comes in via props.
+  // Shares the overview-kpi feed (key + args) → both incidents panels dedupe
+  // to one fetch in the cockpit; standalone the data comes in via props.
+  const feed = incidentsFeed(initialData, engine)
   const { data, loading, error } = useViewData<IncidentsDashboardData>(
     initialData,
-    ["camunda7:incidents", engine ?? null],
+    feed.key,
     CAMUNDA7_INCIDENTS_DATA,
-    { engine },
-    !!engine,
+    feed.args,
+    feed.ready,
   )
 
   const [search, setSearch] = useState("")
@@ -343,6 +354,7 @@ export function IncidentProcessListView({
                   process={p}
                   expanded={expanded.has(p.processDefinitionKey)}
                   engineId={engine ?? data.engineId}
+                  filters={data.filters}
                   onOpenDetail={() => openDetail(p.processDefinitionKey)}
                 />
               }

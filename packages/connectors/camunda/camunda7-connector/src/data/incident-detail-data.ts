@@ -238,6 +238,13 @@ function fetchIncidentContext(client: Client, incident: IncidentRecord): Promise
   ])
 }
 
+/**
+ * The incident's definition as the header and the hand-offs name it. The key
+ * is the fetched definition's own: a bare generated definition id (long keys)
+ * names none, and a key parsed from it would be that id. Only when the
+ * lookup failed does the parse stand in — the hand-offs then scope by the
+ * exact id instead (`scopingDefinitionKey`).
+ */
 function deriveDefinitionInfo(
   definitionMeta: RawDefinition | null,
   processDefinitionId: string,
@@ -246,9 +253,9 @@ function deriveDefinitionInfo(
   processDefinitionVersion: number | null
   processDefinitionName: string | null
 } {
-  const processDefinitionKey = processDefinitionId
-    ? processDefinitionKeyFromId(processDefinitionId)
-    : ""
+  const processDefinitionKey =
+    definitionMeta?.key ??
+    (processDefinitionId ? processDefinitionKeyFromId(processDefinitionId) : "")
   const processDefinitionVersion =
     typeof definitionMeta?.version === "number" ? definitionMeta.version : null
   return {

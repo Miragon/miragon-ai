@@ -22,7 +22,7 @@ import {
   type IncidentLike,
   type ScanCoverage,
 } from "./cluster-scan.js"
-import { processDefinitionKeyFromId } from "./definition-info.js"
+import { resolveDefinitionKeys } from "./definition-info.js"
 import { countOf, DAY_MS, rowsOf } from "./engine-reads.js"
 import { isOnOrAfter } from "./incident-scan.js"
 
@@ -43,6 +43,11 @@ export type ClusterDetailArgs = ClusterDetailFilters & PagingArgs
  * type, client-side by the same message signature the overview clustered with,
  * then enrich the affected instances with their business keys — the operator's
  * "order number", not an engine UUID.
+ *
+ * The cluster's process keys scope its guarded remediation, so they resolve
+ * exactly — a bare generated definition id (long keys) through the
+ * statistics, like the engine-health clusters (`resolveDefinitionKeys`). That
+ * read is primary: a key the view cannot vouch for is no scope to hand on.
  *
  * The newest-first scan holds at most {@link CLUSTER_SCAN_LIMIT} incidents.
  * Once it hits that limit — a mass failure, exactly when a cluster gets
@@ -92,7 +97,6 @@ export async function buildClusterDetailData(
   const listed = filterToSearchHits(matching, searchHitsRaw)
 
   const nowMs = Date.now()
-  const kpis = aggregateClusterKpis(matching)
 
   // Paging slices the in-memory listed set (not an engine-side offset): the
   // messageSignature/business-key filters are resolved here, so an offset
@@ -102,18 +106,23 @@ export async function buildClusterDetailData(
   const pageSize = args.maxResults ?? CLUSTER_DETAIL_ROWS
   const page = listed.slice(first, first + pageSize)
 
-  const [counts, businessKeyById] = await Promise.all([
+  const [counts, businessKeyById, keyOf] = await Promise.all([
     clusterCounts(client, args, { coverage, matching, nowMs }),
     resolveBusinessKeys(client, page),
+    resolveDefinitionKeys(
+      client,
+      matching.map((i) => i.processDefinitionId),
+    ),
   ])
+  const defKey = (i: IncidentLike) =>
+    (i.processDefinitionId ? keyOf(i.processDefinitionId) : null) ?? UNKNOWN
+  const kpis = aggregateClusterKpis(matching, defKey)
 
   const incidents: ClusterIncidentRow[] = page.map((i) => ({
     incidentId: i.id ?? "",
     processInstanceId: i.processInstanceId ?? "",
     businessKey: i.processInstanceId ? (businessKeyById.get(i.processInstanceId) ?? null) : null,
-    processDefinitionKey: i.processDefinitionId
-      ? processDefinitionKeyFromId(i.processDefinitionId)
-      : UNKNOWN,
+    processDefinitionKey: defKey(i),
     incidentTimestamp: i.incidentTimestamp ?? "",
   }))
 
@@ -149,15 +158,16 @@ function filterToSearchHits(
 }
 
 /** The scanned cluster's timestamps and its process keys by scanned incidents. */
-function aggregateClusterKpis(matching: IncidentLike[]): {
+function aggregateClusterKpis(
+  matching: IncidentLike[],
+  keyOf: (incident: IncidentLike) => string,
+): {
   timestamps: Array<string | null | undefined>
   defCounts: Map<string, number>
 } {
   const defCounts = new Map<string, number>()
   for (const inc of matching) {
-    const defKey = inc.processDefinitionId
-      ? processDefinitionKeyFromId(inc.processDefinitionId)
-      : UNKNOWN
+    const defKey = keyOf(inc)
     defCounts.set(defKey, (defCounts.get(defKey) ?? 0) + 1)
   }
   return { timestamps: matching.map((inc) => inc.incidentTimestamp), defCounts }

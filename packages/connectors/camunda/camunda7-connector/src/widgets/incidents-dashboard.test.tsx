@@ -1,13 +1,20 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
-import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
+import { queryClient } from "@miragon/mcp-toolkit-ui"
+import { WidgetFixtureHost, type HostActionLog } from "@miragon/mcp-toolkit-ui/app"
 import { IncidentOverviewKpi } from "./incidents-dashboard/overview-kpi.js"
 import { IncidentProcessList } from "./incidents-dashboard/process-list.js"
+import { incidentsFeed } from "./incidents-dashboard/scope.js"
 import type { IncidentsDashboardData } from "../view-models.js"
+import { CAMUNDA7_INCIDENTS_DATA, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
+import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  queryClient.clear()
+})
 
 /**
  * The incidents overview renders what the server can vouch for (#335 N61):
@@ -20,6 +27,7 @@ const DATA: IncidentsDashboardData = {
   affectedActivityCount: null,
   last24hCount: 251,
   latestIncident: "2026-10-10T12:00:00.000+0000",
+  filters: {},
   engineId: "prod-a",
   processes: [
     {
@@ -98,5 +106,113 @@ describe("incidents dashboard widgets — honest numbers", () => {
     expect(screen.getByText("Burst")).toBeTruthy()
     expect(screen.queryByText("Quiet")).toBeNull()
     expect(screen.queryByText("250")).toBeNull()
+  })
+})
+
+/**
+ * A filtered dashboard (`camunda7_show_incidents_dashboard` with a key and an
+ * incident type) counts only the filtered set: its hand-offs pass the filters
+ * as ids and state the count as the set's, and a refetch keeps them — read
+ * from the data's own echo, since a standalone render gets no props.
+ */
+describe("incidents dashboard — a filtered view keeps its scope", () => {
+  const FILTERED: IncidentsDashboardData = {
+    ...DATA,
+    totalCount: 7,
+    processCount: 1,
+    last24hCount: 0,
+    latestIncident: null,
+    processes: [DATA.processes[1]],
+    filters: { processDefinitionKey: "quiet", incidentType: "failedJob" },
+  }
+
+  let tools: Record<string, unknown>
+  beforeAll(async () => {
+    tools = { [CAMUNDA7_WIDGET_ACTIONS_DATA]: await widgetActionsFeedFor("read-only") }
+  })
+
+  /** Renders `widget` and returns the hand-off its Analyze button posts. */
+  async function promptOf(
+    widget: unknown,
+    props: { data?: IncidentsDashboardData; tools?: Record<string, unknown> },
+  ) {
+    const actions: HostActionLog[] = []
+    render(
+      <WidgetFixtureHost
+        widget={asWidget(widget)}
+        data={(props.data ?? {}) as unknown as Record<string, unknown>}
+        tools={{ ...tools, ...props.tools }}
+        onHostAction={(action) => actions.push(action)}
+      />,
+    )
+    // A card's toggle wraps its Analyze button — click the button itself.
+    const [analyze] = (await screen.findAllByRole("button", { name: /Analyze/ })).sort(
+      (a, b) => (a.textContent ?? "").length - (b.textContent ?? "").length,
+    )
+    fireEvent.click(analyze)
+    const prompts = actions.flatMap((a) => (a.type === "sendFollowUpMessage" ? [a.prompt] : []))
+    expect(prompts).toHaveLength(1)
+    return prompts[0]
+  }
+
+  it("the triage passes the filters as ids and states the filtered count", async () => {
+    const prompt = await promptOf(IncidentOverviewKpi, { data: FILTERED })
+
+    expect(prompt).toContain(
+      'Ids: engine="prod-a", processDefinitionKey="quiet", incidentType="failedJob"\n',
+    )
+    expect(prompt).toContain("On screen: matchingIncidents=7, processes=1")
+    expect(prompt).not.toContain("openIncidents")
+    expect(prompt).not.toMatch(/all open incidents on this engine/)
+  })
+
+  it("an unfiltered triage states the engine's open incidents and no filter", async () => {
+    const prompt = await promptOf(IncidentOverviewKpi, { data: DATA })
+
+    expect(prompt).toContain('Ids: engine="prod-a"\n')
+    expect(prompt).toContain("On screen: openIncidents=257, processes=2")
+    expect(prompt).not.toMatch(/matchingIncidents|incidentType=/)
+  })
+
+  it("a card's root-cause hand-off carries the incident-type filter of its count", async () => {
+    const prompt = await promptOf(IncidentProcessList, { data: FILTERED })
+
+    expect(prompt).toContain(
+      'Ids: engine="prod-a", processDefinitionKey="quiet", incidentType="failedJob"\n',
+    )
+    expect(prompt).toContain('countScope="allVersions", latestVersion=1, matchingIncidents=7')
+    expect(prompt).not.toContain("openIncidents")
+  })
+
+  it("the self-fetch carries the echoed filters, so a refetch keeps the scope", () => {
+    const feed = incidentsFeed(FILTERED, undefined)
+    expect(feed.args).toEqual({
+      engine: "prod-a",
+      processDefinitionKey: "quiet",
+      incidentType: "failedJob",
+    })
+    // Its own cache entry: never the unfiltered dashboard's.
+    expect(feed.key).not.toEqual(incidentsFeed(DATA, undefined).key)
+    // A cockpit render (props only) fetches the engine's unfiltered dashboard.
+    expect(incidentsFeed(null, "prod-b").args).toEqual({ engine: "prod-b" })
+  })
+
+  it("a self-fetched view hands off the scope its fetched data echoes", async () => {
+    const calls: Array<Record<string, unknown>> = []
+    const View = (props: Record<string, unknown>) => (
+      <IncidentOverviewKpi {...props} data={null} engine="prod-a" />
+    )
+    const prompt = await promptOf(View, {
+      tools: {
+        [CAMUNDA7_INCIDENTS_DATA]: (args: Record<string, unknown>) => {
+          calls.push(args)
+          return FILTERED
+        },
+      },
+    })
+
+    await waitFor(() => expect(calls).toEqual([{ engine: "prod-a" }]))
+    expect(prompt).toContain('incidentType="failedJob"')
+    expect(prompt).toContain("matchingIncidents=7")
   })
 })

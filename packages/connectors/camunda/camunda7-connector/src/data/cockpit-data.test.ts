@@ -227,7 +227,8 @@ describe("buildProcessInstancesData — totals and page-scoped incident flags (#
       {
         id: "p3",
         businessKey: null,
-        processDefinitionKey: "legacy-id",
+        // A bare generated id names no key — a scoped list's rows run on its key.
+        processDefinitionKey: "K1",
         version: null,
         suspended: false,
         hasIncident: false,
@@ -309,9 +310,82 @@ describe("buildProcessInstancesData — totals and page-scoped incident flags (#
 
     const data = await buildProcessInstancesData(client, "engine-a", {})
 
-    expect(engine.requests.some((r) => r.path.startsWith("/process-definition"))).toBe(false)
+    expect(calls(engine, "/process-definition")).toEqual([])
+    // Only p3's bare id needs the statistics; they do not list it — null, not "legacy-id".
+    expect(calls(engine, "/process-definition/statistics")).toHaveLength(1)
+    expect(data.instances.map((i) => i.processDefinitionKey)).toEqual(["K1", "K1", null])
     expect(data.processDefinitionKey).toBeNull()
     expect(data.processDefinitionName).toBeNull()
+  })
+})
+
+describe("buildProcessInstancesData — each row's real definition key", () => {
+  // A key over ~25 characters with UUID ids: the engine stores a bare id, and
+  // a key parsed from it is that UUID — the process column would drill into a
+  // definition view no key matches.
+  const LONG_KEY = "customerOnboardingApprovalProcess"
+  const UUID = "6f1c2a9e-0b7d-4c33-9a51-3d2e8f40b7aa"
+  const STATS = {
+    body: [
+      {
+        id: UUID,
+        instances: 1,
+        incidents: [],
+        definition: { id: UUID, key: LONG_KEY, version: 3 },
+      },
+    ],
+  }
+  const routes = (statistics: FakeRoutes[string]) => ({
+    "GET /process-instance": (r: RecordedRequest) => {
+      if (r.query.processInstanceIds) return { body: [] }
+      const onLongKey = { id: "p1", definitionId: UUID, businessKey: "BK-1", suspended: false }
+      const onOrder = {
+        id: "p2",
+        definitionId: "order:2:d2",
+        businessKey: "BK-2",
+        suspended: false,
+      }
+      return { body: r.query.processDefinitionKey ? [onLongKey] : [onLongKey, onOrder] }
+    },
+    "GET /process-instance/count": { body: { count: 2 } },
+    "GET /process-definition": {
+      body: [{ id: UUID, key: LONG_KEY, name: "Onboarding", version: 3 }],
+    },
+    "GET /process-definition/statistics": statistics,
+  })
+  const keysOf = (data: { instances: Array<{ processDefinitionKey: string | null }> }) =>
+    data.instances.map((i) => i.processDefinitionKey)
+
+  it("resolves a bare UUID definition id through ONE statistics read in the engine-wide list", async () => {
+    const { engine, client } = await engineWith(routes(STATS))
+
+    const data = await buildProcessInstancesData(client, "engine-a", {})
+
+    expect(keysOf(data)).toEqual([LONG_KEY, "order"])
+    expect(calls(engine, "/process-definition/statistics")).toHaveLength(1)
+  })
+
+  it("leaves an unresolvable key null when the statistics fail — never the UUID (enrichment)", async () => {
+    const { client } = await engineWith(
+      routes({ status: 500, body: { type: "ProcessEngineException", message: "boom" } }),
+    )
+
+    const data = await buildProcessInstancesData(client, "engine-a", {})
+
+    // The row renders "—" and offers no drill; the id that names its key keeps it.
+    expect(keysOf(data)).toEqual([null, "order"])
+    expect(data.totalCount).toBe(2)
+  })
+
+  it("gives a scoped list's rows its key without reading the statistics", async () => {
+    const { engine, client } = await engineWith(routes(STATS))
+
+    const data = await buildProcessInstancesData(client, "engine-a", {
+      processDefinitionKey: LONG_KEY,
+    })
+
+    expect(keysOf(data)).toEqual([LONG_KEY])
+    expect(calls(engine, "/process-definition/statistics")).toEqual([])
   })
 })
 

@@ -1,21 +1,10 @@
 import type { MCPServer } from "mcp-use"
-import { listIncidentsInput, listProcessInstancesInput } from "@miragon-ai/camunda7-client/schemas"
 import type { EngineHealthThresholds } from "../data/health-data.js"
 import { clusterDetailFilterShape, pagingShape } from "../feed-contracts.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import type { Camunda7Toolset } from "../lib/toolsets.js"
 import type { EngineParamShape } from "../lib/with-engine.js"
 import type { ProfileStore } from "@miragon-ai/widget-shell/server"
-
-/**
- * Filters shared by `camunda7_show_incidents_dashboard` and its
- * `camunda7_incidents_data` feed, composed from the exported client schemas
- * (like the registrar tools) so the describe() texts stay in one place.
- */
-export const incidentsDashboardFilterShape = {
-  processDefinitionKey: listProcessInstancesInput.shape.processDefinitionKey,
-  incidentType: listIncidentsInput.shape.incidentType,
-}
 
 // showToolBinding / appOnly live in @miragon-ai/widget-shell/server — the one
 // implementation of the invariant-5 wire-contract spreads for all modules.

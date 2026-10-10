@@ -122,3 +122,48 @@ describe("buildIncidentDetailData through the engine contract", () => {
     expect(data.job).toBeNull()
   })
 })
+
+describe("buildIncidentDetailData — the definition's real key", () => {
+  // A key over ~25 characters with UUID ids: the engine stores a bare id, and
+  // a key parsed from it is that UUID — no key filter matches it.
+  const LONG_KEY = "customerOnboardingApprovalProcess"
+  const UUID = "6f1c2a9e-0b7d-4c33-9a51-3d2e8f40b7aa"
+
+  it("takes the key from the fetched definition, not from its bare UUID id", async () => {
+    const { data } = await build({
+      "GET /incident/inc-1": { body: incident({ processDefinitionId: UUID }) },
+      "GET /job": { body: [] },
+      [`GET /process-definition/${UUID}`]: {
+        body: { id: UUID, key: LONG_KEY, name: "Onboarding", version: 4 },
+      },
+    })
+
+    // The header and the hand-offs' scopingDefinitionKey read this key.
+    expect(data).toMatchObject({
+      processDefinitionKey: LONG_KEY,
+      processDefinitionId: UUID,
+      processDefinitionName: "Onboarding",
+      processDefinitionVersion: 4,
+    })
+  })
+
+  it("falls back to the parsed key when the definition lookup fails", async () => {
+    const { data } = await build({
+      "GET /incident/inc-1": { body: incident({ processDefinitionId: "order:2:d2" }) },
+      "GET /job": { body: [] },
+    })
+
+    expect(data.processDefinitionKey).toBe("order")
+    expect(data.processDefinitionName).toBeNull()
+  })
+
+  it("names no key for an incident without a definition — and looks none up", async () => {
+    const { data, engine } = await build({
+      "GET /incident/inc-1": { body: incident({ processDefinitionId: null }) },
+      "GET /job": { body: [] },
+    })
+
+    expect(data.processDefinitionKey).toBe("")
+    expect(engine.requests.some((r) => r.path.startsWith("/process-definition"))).toBe(false)
+  })
+})

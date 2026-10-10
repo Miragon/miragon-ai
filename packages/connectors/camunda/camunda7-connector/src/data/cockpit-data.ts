@@ -22,12 +22,13 @@ import type {
   ProcessListFilters,
 } from "../feed-contracts.js"
 import {
+  definitionKeyInId,
   definitionVersionFromId,
   fetchLatestDefinition,
   fetchStatsByKey,
-  processDefinitionKeyFromId,
+  resolveDefinitionKeys,
 } from "./definition-info.js"
-import { countOf, rowsOf } from "./engine-reads.js"
+import { countOf, optional, rowsOf } from "./engine-reads.js"
 
 /**
  * Pure data builders shared by the `camunda7_show_*` widget tools, their
@@ -194,6 +195,27 @@ async function instancesWithIncident(
   return new Set(flagged.map((i) => i.id).filter((id): id is string => !!id))
 }
 
+/**
+ * The definition key each row runs on — what the engine-wide list's process
+ * column drills into and the root-cause hand-off scopes by. A scoped list's
+ * rows all run on its key. Elsewhere a bare generated definition id (long
+ * keys) resolves through the statistics — at most ONE read per page, and
+ * ENRICHMENT: a failed read leaves those keys null ("—", no drill), never a
+ * UUID passed off as a key.
+ */
+async function rowKeyResolver(
+  client: Client,
+  page: RawInstance[],
+  scopedKey: string | undefined,
+): Promise<(definitionId: string) => string | null> {
+  if (scopedKey) return () => scopedKey
+  const keys = resolveDefinitionKeys(
+    client,
+    page.map((i) => i.definitionId),
+  )
+  return (await optional(keys)) ?? definitionKeyInId
+}
+
 export async function buildProcessInstancesData(
   client: Client,
   engineId: string,
@@ -221,15 +243,18 @@ export async function buildProcessInstancesData(
   ])
 
   const page = raw.filter((i): i is RawInstance & { id: string } => !!i.id)
-  const flagged = await instancesWithIncident(
-    client,
-    page.map((i) => i.id),
-    filter,
-  )
+  const [flagged, keyOf] = await Promise.all([
+    instancesWithIncident(
+      client,
+      page.map((i) => i.id),
+      filter,
+    ),
+    rowKeyResolver(client, page, args.processDefinitionKey),
+  ])
   const instances: ProcessInstanceRow[] = page.map((i) => ({
     id: i.id,
     businessKey: i.businessKey ?? null,
-    processDefinitionKey: i.definitionId ? processDefinitionKeyFromId(i.definitionId) : null,
+    processDefinitionKey: i.definitionId ? keyOf(i.definitionId) : null,
     version: definitionVersionFromId(i.definitionId),
     suspended: i.suspended ?? false,
     hasIncident: flagged.has(i.id),

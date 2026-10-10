@@ -198,6 +198,66 @@ describe("buildClusterDetailData — first/latest by instant (#335 N71)", () => 
   })
 })
 
+describe("buildClusterDetailData — the real definition keys", () => {
+  // A key over ~25 characters with UUID ids: the engine stores a bare id,
+  // and a key parsed from it is that UUID — no key filter matches it.
+  const LONG_KEY = "customerOnboardingApprovalProcess"
+  const UUID = "6f1c2a9e-0b7d-4c33-9a51-3d2e8f40b7aa"
+  const onLongKey = (id: string, ageMs: number) => ({
+    ...incident(id, ago(ageMs)),
+    processDefinitionId: UUID,
+  })
+
+  it("resolves a bare UUID definition id through the statistics — rows and cluster keys", async () => {
+    const { engine, client } = await engineWith({
+      "GET /incident": {
+        body: [onLongKey("c", MINUTE), onLongKey("b", 2 * MINUTE), incident("a", ago(HOUR))],
+      },
+      "GET /process-definition/statistics": {
+        body: [
+          {
+            id: UUID,
+            instances: 2,
+            incidents: [{ incidentCount: 2 }],
+            definition: { id: UUID, key: LONG_KEY, version: 1 },
+          },
+        ],
+      },
+    })
+
+    const data = await buildClusterDetailData(client, "fake", {
+      activityId: "charge",
+      incidentType: "failedJob",
+    })
+
+    // The guarded Fix scopes camunda7_list_jobs by these keys.
+    expect(data.processDefinitionKeys).toEqual([LONG_KEY, "order"])
+    expect(data.incidents.map((row) => row.processDefinitionKey)).toEqual([
+      LONG_KEY,
+      LONG_KEY,
+      "order",
+    ])
+    // ONE statistics read for the whole scan.
+    expect(engine.requests.filter((r) => r.path === "/process-definition/statistics")).toHaveLength(
+      1,
+    )
+  })
+
+  it("reads no statistics while every definition id names its key", async () => {
+    const { engine, client } = await engineWith({
+      "GET /incident": { body: [incident("a", ago(MINUTE))] },
+    })
+
+    const data = await buildClusterDetailData(client, "fake", {
+      activityId: "charge",
+      incidentType: "failedJob",
+    })
+
+    expect(data.processDefinitionKeys).toEqual(["order"])
+    expect(engine.requests.some((r) => r.path.startsWith("/process-definition"))).toBe(false)
+  })
+})
+
 describe("buildClusterDetailData — a cluster larger than the scan", () => {
   /** The newest 2000 of a mass failure, all from the last half hour; every other one signature B. */
   const massFailure = () =>

@@ -80,6 +80,36 @@ function incidentScan(count: number): unknown[] {
   }))
 }
 
+/**
+ * A long key's definition id: `key:version:uuid` would exceed 64 characters,
+ * so the engine stored a bare generated id — only the statistics name its key.
+ */
+const BARE_DEFINITION_ID = "6f1c2a9e-0b7d-4c33-9a51-3d2e8f40b7aa"
+const BARE_ID_STATS: FakeReply = {
+  body: [
+    {
+      id: BARE_DEFINITION_ID,
+      instances: 1,
+      incidents: [{ incidentType: "failedJob", incidentCount: 1 }],
+      definition: {
+        id: BARE_DEFINITION_ID,
+        key: "customerOnboardingApprovalProcess",
+        version: 1,
+      },
+    },
+  ],
+}
+
+/** The world with `rows` on `path` and the statistics that resolve the bare id. */
+function onBareDefinitionId(path: string, rows: unknown[]): Case["world"] {
+  return (r) =>
+    r.path === path
+      ? { body: rows }
+      : r.path === "/process-definition/statistics"
+        ? BARE_ID_STATS
+        : undefined
+}
+
 const processIncidents: Case["run"] = (client, baseUrl) =>
   buildProcessIncidentsData(client, { ...urls(baseUrl), processDefinitionKey: WORLD.key })
 const processIncidentsXml = {
@@ -120,6 +150,19 @@ const CASES: Record<string, Case> = {
     run: (client) => buildProcessInstancesData(client, "fake", { processDefinitionKey: WORLD.key }),
     unknown: { read: KEY_LOOKUP, reply: NO_ROWS },
   },
+  // Engine-wide rows on a bare definition id: their keys (the process
+  // column's drill) resolve through the statistics — enrichment.
+  "buildProcessInstancesData (engine-wide, bare definition ids)": {
+    run: (client) => buildProcessInstancesData(client, "fake", {}),
+    world: onBareDefinitionId("/process-instance", [
+      { id: WORLD.instanceId, definitionId: BARE_DEFINITION_ID, suspended: false },
+    ]),
+    enrichment: {
+      "GET /process-definition/statistics?incidents": (data: {
+        instances: Array<{ processDefinitionKey: unknown }>
+      }) => data.instances[0]?.processDefinitionKey,
+    },
+  },
   buildJobPanelData: {
     run: (client) => buildJobPanelData(client, "fake", { processDefinitionKey: WORLD.key }),
     unknown: { read: KEY_LOOKUP, reply: NO_ROWS },
@@ -157,6 +200,19 @@ const CASES: Record<string, Case> = {
     },
   },
   buildClusterDetailData: { run: clusterDetail, enrichment: clusterBusinessKeys },
+  // The cluster's keys scope its remediation: a bare definition id resolves
+  // through the statistics, and that read is primary — never a guessed key.
+  "buildClusterDetailData (bare definition ids)": {
+    run: clusterDetail,
+    world: onBareDefinitionId(
+      "/incident",
+      incidentScan(1).map((i) => ({
+        ...(i as Record<string, unknown>),
+        processDefinitionId: BARE_DEFINITION_ID,
+      })),
+    ),
+    enrichment: clusterBusinessKeys,
+  },
   // A mass failure: the scan hits its limit, so the counts come from /count.
   "buildClusterDetailData (scan capped)": {
     run: clusterDetail,

@@ -13,17 +13,28 @@ import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
+import { dashboardScope, incidentsFeed } from "./scope.js"
 
-/** Triage of every open incident on the engine — a plan, nothing changed yet. */
+/**
+ * Triage of the open incidents the dashboard counts — every one on the
+ * engine, or the filtered set (its filters passed as ids, its total as the
+ * matching incidents) — a plan, nothing changed yet.
+ */
 export function triageIncidentsHandOff(
   data: IncidentsDashboardData,
   engine: string | undefined,
 ): HandOff {
+  const scope = dashboardScope(data.filters)
   return {
-    intent: "askAi.incidents.triage",
-    ids: { engine },
+    intent: scope.filtered ? "askAi.incidents.triageFiltered" : "askAi.incidents.triage",
+    ids: {
+      engine,
+      processDefinitionKey: scope.processDefinitionKey,
+      incidentType: scope.incidentType,
+    },
     facts: {
-      openIncidents: data.totalCount,
+      openIncidents: scope.filtered ? undefined : data.totalCount,
+      matchingIncidents: scope.filtered ? data.totalCount : undefined,
       processes: data.processCount,
       affectedActivities: data.affectedActivityCount,
       last24h: data.last24hCount,
@@ -46,14 +57,15 @@ export function IncidentOverviewKpiView({
   data?: IncidentsDashboardData | null
   engine?: string
 }) {
-  // Shares the process-list query key → both incidents panels dedupe to one
-  // fetch in the cockpit; standalone the data comes in via props.
+  // Shares the process-list feed (key + args) → both incidents panels dedupe
+  // to one fetch in the cockpit; standalone the data comes in via props.
+  const feed = incidentsFeed(initialData, engine)
   const { data, loading, error } = useViewData<IncidentsDashboardData>(
     initialData,
-    ["camunda7:incidents", engine ?? null],
+    feed.key,
     CAMUNDA7_INCIDENTS_DATA,
-    { engine },
-    !!engine,
+    feed.args,
+    feed.ready,
   )
   const t = useT()
   const { ask } = useHandOff()

@@ -109,12 +109,12 @@ interface IncidentFacts {
 function deriveIncidentFacts(
   inc: IncidentLike,
   cutoffMs: number,
-  keyOf: (definitionId: string) => string,
+  keyOf: (definitionId: string) => string | null,
 ): IncidentFacts {
   const activityId = inc.activityId ?? UNKNOWN
   const incidentType = inc.incidentType ?? "unknown"
   const signature = messageSignature(inc.incidentMessage ?? null)
-  const defKey = inc.processDefinitionId ? keyOf(inc.processDefinitionId) : UNKNOWN
+  const defKey = (inc.processDefinitionId ? keyOf(inc.processDefinitionId) : null) ?? UNKNOWN
   const ts = inc.incidentTimestamp ?? ""
   const tsMs = engineDateMillis(ts)
   return {
@@ -132,7 +132,7 @@ function deriveIncidentFacts(
 function clusterIncidents(
   incidents: IncidentLike[],
   cutoffMs: number,
-  keyOf: (definitionId: string) => string,
+  keyOf: (definitionId: string) => string | null,
 ): IncidentScanAgg {
   const byCluster = new Map<string, ClusterAcc>()
   const activitySet = new Set<string>()
