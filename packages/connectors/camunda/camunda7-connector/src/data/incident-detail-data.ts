@@ -24,7 +24,7 @@ import {
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { extractActivityNames } from "../lib/bpmn-parse.js"
-import { processDefinitionKeyFromId } from "./definition-info.js"
+import { definitionKeyInId, processDefinitionKeyFromId } from "./definition-info.js"
 import { optional, rowsOf } from "./engine-reads.js"
 
 interface BuildOptions {
@@ -238,38 +238,51 @@ function fetchIncidentContext(client: Client, incident: IncidentRecord): Promise
   ])
 }
 
+/**
+ * The incident's definition as the header and the hand-offs name it. The key
+ * is the fetched definition's own: a bare generated definition id (long keys)
+ * names none, and a key parsed from it would be that id. Only when the
+ * lookup failed does the parse stand in for DISPLAY — the hand-offs then
+ * scope by the exact id instead (`scopingDefinitionKey`), and the cockpit
+ * link, which addresses a key, is built only from `knownKey`.
+ */
 function deriveDefinitionInfo(
   definitionMeta: RawDefinition | null,
   processDefinitionId: string,
 ): {
   processDefinitionKey: string
+  /** The key the definition or its id vouches for — null for a bare id whose lookup failed. */
+  knownKey: string | null
   processDefinitionVersion: number | null
   processDefinitionName: string | null
 } {
-  const processDefinitionKey = processDefinitionId
-    ? processDefinitionKeyFromId(processDefinitionId)
-    : ""
+  const knownKey =
+    definitionMeta?.key ?? (processDefinitionId ? definitionKeyInId(processDefinitionId) : null)
+  const processDefinitionKey =
+    knownKey ?? (processDefinitionId ? processDefinitionKeyFromId(processDefinitionId) : "")
   const processDefinitionVersion =
     typeof definitionMeta?.version === "number" ? definitionMeta.version : null
   return {
     processDefinitionKey,
+    knownKey,
     processDefinitionVersion,
     processDefinitionName: definitionMeta?.name ?? null,
   }
 }
 
+/** Enrichment: null without an instance or a key it can vouch for — never a UUID as the key. */
 function deriveCockpitInstanceUrl(
   options: BuildOptions,
   incident: IncidentRecord,
-  processDefinitionKey: string,
+  knownKey: string | null,
   processDefinitionVersion: number | null,
 ): string | null {
   const { processInstanceId, processDefinitionId } = incident
-  return processInstanceId && processDefinitionKey
+  return processInstanceId && knownKey
     ? buildInstanceCockpitUrl(
         { baseUrl: options.baseUrl, cockpitUrl: options.cockpitUrl, provider: options.provider },
         {
-          key: processDefinitionKey,
+          key: knownKey,
           version: processDefinitionVersion,
           definitionId: processDefinitionId,
           instanceId: processInstanceId,
@@ -312,13 +325,13 @@ export async function buildIncidentDetailData(
   const bpmnXml = xmlResponse?.bpmn20Xml ?? null
   const activityNames = bpmnXml ? extractActivityNames(bpmnXml) : {}
 
-  const { processDefinitionKey, processDefinitionVersion, processDefinitionName } =
+  const { processDefinitionKey, knownKey, processDefinitionVersion, processDefinitionName } =
     deriveDefinitionInfo(definitionMeta, processDefinitionId)
 
   const cockpitInstanceUrl = deriveCockpitInstanceUrl(
     options,
     incident,
-    processDefinitionKey,
+    knownKey,
     processDefinitionVersion,
   )
 

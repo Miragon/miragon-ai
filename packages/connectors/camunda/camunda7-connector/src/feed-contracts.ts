@@ -1,8 +1,12 @@
 import { z } from "zod"
-import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
+import {
+  listIncidentsInput,
+  listProcessInstancesInput,
+  MAX_PAGE_SIZE,
+} from "@miragon-ai/camunda7-client/schemas"
 
 /**
- * SINGLE SOURCE for the paged feeds' filter contracts. Each filter set used to
+ * SINGLE SOURCE for the feeds' filter contracts. Each filter set used to
  * exist as 3-4 hand-maintained copies with no compile-time link: the feed's
  * zod schema, the show tool's zod schema, the data builder's arg interface,
  * and a widget-side mirror type. The zod shapes here feed both tool schemas
@@ -58,6 +62,15 @@ export const jobsFilterShape = {
   failedOnly: z.boolean().optional().describe("Show only failed jobs (no retries left)"),
 }
 export type JobsFilters = z.infer<z.ZodObject<typeof jobsFilterShape>>
+
+// ── incidents dashboard ───────────────────────────────────────────────────
+// Composed from the exported client schemas (like the registrar tools) so the
+// describe() texts stay in one place; the payload echoes them (`filters`).
+export const incidentsDashboardFilterShape = {
+  processDefinitionKey: listProcessInstancesInput.shape.processDefinitionKey,
+  incidentType: listIncidentsInput.shape.incidentType,
+}
+export type IncidentsDashboardFilters = z.infer<z.ZodObject<typeof incidentsDashboardFilterShape>>
 
 // ── failure cluster detail ────────────────────────────────────────────────
 export const clusterDetailFilterShape = {

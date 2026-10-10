@@ -9,7 +9,7 @@ import { getIncidents } from "@miragon-ai/camunda7-client/sdk"
 import type { IncidentInstance } from "../view-models.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
-import { definitionVersionFromId, processDefinitionKeyFromId } from "./definition-info.js"
+import { definitionVersionFromId } from "./definition-info.js"
 import { INCIDENT_SCAN_LIMIT, rowsOf } from "./engine-reads.js"
 
 /**
@@ -21,8 +21,9 @@ import { INCIDENT_SCAN_LIMIT, rowsOf } from "./engine-reads.js"
  */
 
 /**
- * An `/incident` row. It carries the definition id, not the key: a view that
- * groups by key resolves the id (`definitionKeyResolver`, definition-info.ts).
+ * An `/incident` row. It carries the definition id, not the key: a view
+ * queried by key uses that key; any other resolves the id
+ * (`resolveDefinitionKeys`/`definitionKeyResolver`, definition-info.ts).
  */
 export interface IncidentRow {
   id: string
@@ -132,12 +133,16 @@ export interface IncidentLinkContext {
   baseUrl: string
   cockpitUrl?: string
   provider: EngineProvider
+  /** The key the rows were queried by — every row runs on it. */
+  processDefinitionKey: string
 }
 
 /**
- * An incident row as the widgets list it. The cockpit instance link uses the
- * row's OWN definition (the version that instance runs on), not the key's
- * latest — no definition lookup per page.
+ * An incident row of a KEY-scoped query as the widgets list it. The cockpit
+ * instance link addresses the view's key — the row's definition id may be a
+ * bare generated one (long keys) that names none — and the row's OWN version
+ * (the one that instance runs on; unknown for a bare id), not the key's
+ * latest: no definition lookup per page.
  */
 export function toIncidentInstance(r: IncidentRow, ctx: IncidentLinkContext): IncidentInstance {
   return {
@@ -150,7 +155,7 @@ export function toIncidentInstance(r: IncidentRow, ctx: IncidentLinkContext): In
     cockpitInstanceUrl: buildInstanceCockpitUrl(
       ctx,
       {
-        key: processDefinitionKeyFromId(r.processDefinitionId),
+        key: ctx.processDefinitionKey,
         version: definitionVersionFromId(r.processDefinitionId),
         definitionId: r.processDefinitionId,
         instanceId: r.processInstanceId,

@@ -35,8 +35,8 @@ const INCIDENT = {
   engineId: "prod-a",
 } as unknown as IncidentDetailData
 
-// What the incident builder holds for such a definition: the "key" parsed
-// from the id is the id itself.
+// What the incident builder holds for such a definition when the definition
+// lookup failed: the "key" parsed from the id is the id itself.
 const ON_BARE_ID: IncidentDetailData = {
   ...INCIDENT,
   processDefinitionKey: BARE_ID,

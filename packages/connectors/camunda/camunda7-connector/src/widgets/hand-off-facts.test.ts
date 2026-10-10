@@ -89,7 +89,7 @@ const CARD: IncidentsDashboardProcess = {
 
 describe("processRootCauseHandOff", () => {
   it("states the card's exact key-wide count and leaves unscanned facts out", async () => {
-    const prompt = (await handOffFor("read-only")).ask(processRootCauseHandOff(CARD, "prod-a"))!
+    const prompt = (await handOffFor("read-only")).ask(processRootCauseHandOff(CARD, "prod-a", {}))!
     expect(prompt).toContain(
       'On screen: countScope="allVersions", latestVersion=3, openIncidents=7, runningInstances=40',
     )

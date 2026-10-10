@@ -4,6 +4,7 @@
  * widgets render — they are not engine API types (those live in
  * `@miragon-ai/camunda7-client/types`).
  */
+import type { IncidentsDashboardFilters, JobsFilters } from "./feed-contracts.js"
 
 export interface IncidentStat {
   incidentType: string
@@ -111,10 +112,7 @@ export interface JobPanelData {
   jobs: Job[]
   /** Filters this page was built with — standalone renders get only `data`,
    *  so loadMore/search must rebuild the feed args from this echo. */
-  filters: {
-    processDefinitionKey?: string
-    failedOnly?: boolean
-  }
+  filters: JobsFilters
   engineId?: string
 }
 
@@ -171,8 +169,9 @@ export interface ProcessListData {
 export interface ProcessInstanceRow {
   id: string
   businessKey: string | null
-  /** Definition key this instance runs on (parsed from definitionId) — the
-   *  engine-wide list renders it as its own drillable column. */
+  /** Definition key this instance runs on — the engine-wide list renders it
+   *  as its own drillable column. Resolved, never a bare generated definition
+   *  id (long keys) parsed as a key: null when it cannot be resolved. */
   processDefinitionKey: string | null
   /** Definition version this instance runs on (parsed from definitionId). */
   version: number | null
@@ -396,6 +395,10 @@ export interface IncidentsDashboardData {
   last24hCount: number
   latestIncident: string | null
   processes: IncidentsDashboardProcess[]
+  /** Filters every count above was built with — standalone renders get only
+   *  `data` (and never refetch it), so the hand-offs read the scope from this
+   *  echo (a filtered total is never the engine's open incidents). */
+  filters: IncidentsDashboardFilters
   engineId?: string
 }
 

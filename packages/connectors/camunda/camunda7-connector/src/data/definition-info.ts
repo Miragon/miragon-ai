@@ -22,17 +22,26 @@ export interface DefinitionInfo {
 }
 
 /**
- * Camunda 7 / CIB Seven definition ids are `<key>:<version>:<deploymentId>`.
- * `/incident` and `/process-instance` rows carry the id but not the key, so
- * the key is parsed from it — the whole id when it has no `:`. The engine
- * falls back to a bare generated id when `<key>:<version>:<id>` would exceed
- * 64 characters (any key longer than ~25 characters with UUID ids), so a
- * parsed key is a display fallback only: a view that groups rows BY key
- * resolves the id through the statistics ({@link definitionKeyResolver}).
+ * The key a definition id names. Camunda 7 / CIB Seven definition ids are
+ * `<key>:<version>:<deploymentId>` — but the engine falls back to a bare
+ * generated id when that would exceed 64 characters (any key longer than ~25
+ * characters with UUID ids), and a bare id names no key: null. A key never
+ * contains `:` (BPMN ids are NCNames), so an id with one names its key exactly.
+ */
+export function definitionKeyInId(id: string): string | null {
+  const idx = id.indexOf(":")
+  return idx > 0 ? id.slice(0, idx) : null
+}
+
+/**
+ * `/incident` and `/process-instance` rows carry the definition id but not
+ * the key, so the key is parsed from it — the whole id when it is a bare one
+ * ({@link definitionKeyInId}). A display fallback only: a key that scopes a
+ * query, a drill, a hand-off or a cockpit link resolves the id
+ * ({@link resolveDefinitionKeys}).
  */
 export function processDefinitionKeyFromId(id: string): string {
-  const idx = id.indexOf(":")
-  return idx > 0 ? id.slice(0, idx) : id
+  return definitionKeyInId(id) ?? id
 }
 
 /** The version segment of a definition id; null when it is no number. */
@@ -170,17 +179,18 @@ export function foldStatsByKey(rows: unknown): Map<string, KeyStats> {
 
 /**
  * Maps a row's definition id to its key through the statistics — exact even
- * for a bare generated id — and falls back to the parsed key for an id the
- * statistics do not list (a version deployed after they were read).
+ * for a bare generated id. An id the statistics do not list (a version
+ * deployed after they were read) falls back to the key it names; a bare one
+ * names none and is null — never its UUID passed off as a key.
  */
 export function definitionKeyResolver(
   statsByKey: Map<string, KeyStats>,
-): (definitionId: string) => string {
+): (definitionId: string) => string | null {
   const keyById = new Map<string, string>()
   for (const [key, stats] of statsByKey) {
     for (const id of stats.versionIds) keyById.set(id, key)
   }
-  return (definitionId) => keyById.get(definitionId) ?? processDefinitionKeyFromId(definitionId)
+  return (definitionId) => keyById.get(definitionId) ?? definitionKeyInId(definitionId)
 }
 
 /**
@@ -204,4 +214,25 @@ export async function fetchStatsByKey(
     },
   })
   return foldStatsByKey(stats)
+}
+
+/**
+ * The keys of rows that carry a definition id but no key — the one
+ * resolution every builder uses for them. An id names its key unless it is a
+ * bare generated one; only then are the definition statistics read
+ * ({@link definitionKeyResolver}): ONE engine-wide call, and none at all for a
+ * set of short keys. The read propagates — a builder that treats the keys as
+ * enrichment wraps the call in `optional(...)` and falls back to
+ * {@link definitionKeyInId}, which leaves the bare ids' keys null.
+ */
+export async function resolveDefinitionKeys(
+  client: Client,
+  definitionIds: Iterable<string | null | undefined>,
+): Promise<(definitionId: string) => string | null> {
+  for (const id of definitionIds) {
+    if (id && definitionKeyInId(id) === null) {
+      return definitionKeyResolver(await fetchStatsByKey(client, {}))
+    }
+  }
+  return definitionKeyInId
 }

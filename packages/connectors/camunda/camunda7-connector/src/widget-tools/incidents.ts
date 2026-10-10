@@ -21,12 +21,12 @@ import {
   CAMUNDA7_SHOW_INCIDENTS_DASHBOARD,
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
 } from "../tool-names.js"
+import { incidentsDashboardFilterShape } from "../feed-contracts.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
 import { localizeFor } from "../lib/server-locale.js"
 import {
   type WidgetToolsContext,
   clusterDetailShape,
-  incidentsDashboardFilterShape,
   truncate,
   definitionViewLayout,
 } from "./shared.js"

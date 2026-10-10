@@ -41,16 +41,13 @@ import {
 import { resolveEngine } from "../lib/resolve-engine.js"
 import {
   activityIncidentsFilterShape,
+  incidentsDashboardFilterShape,
   jobsFilterShape,
   pagingShape,
   processInstancesFilterShape,
   processListFilterShape,
 } from "../feed-contracts.js"
-import {
-  type WidgetToolsContext,
-  clusterDetailShape,
-  incidentsDashboardFilterShape,
-} from "./shared.js"
+import { type WidgetToolsContext, clusterDetailShape } from "./shared.js"
 
 /** The app-only `*_data` JSON feeds (SEP-1865) behind every widget above. */
 export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {

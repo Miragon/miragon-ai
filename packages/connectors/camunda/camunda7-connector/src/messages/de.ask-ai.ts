@@ -57,4 +57,6 @@ export const deAskAi: Record<Camunda7AskAiKey, string> = {
     "Finde die Ursache der offenen Incidents dieses Prozesses: haben die fehlschlagenden Aktivitäten eine gemeinsame Ursache, ist sie vorübergehend, ein Daten- oder Konfigurationsproblem oder ein fehlerhaftes Modell, und welche Behebung empfiehlst du. Nichts ohne meine Bestätigung ändern.",
   "askAi.incidents.triage":
     "Triagiere alle offenen Incidents dieser Engine: nach Fehler und fehlschlagender Aktivität clustern, die Cluster nach Auswirkung ordnen, die wahrscheinlichste systemische Ursache und den nächsten Schritt je Top-Cluster nennen. Noch nichts ändern.",
+  "askAi.incidents.triageFiltered":
+    "Triagiere die offenen Incidents, auf die diese Ansicht gefiltert ist: nach Fehler und fehlschlagender Aktivität clustern, die Cluster nach Auswirkung ordnen, die wahrscheinlichste Ursache und den nächsten Schritt je Top-Cluster nennen. Noch nichts ändern.",
 }
