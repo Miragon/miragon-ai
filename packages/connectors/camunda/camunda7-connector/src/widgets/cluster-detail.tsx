@@ -20,7 +20,12 @@ import { DetailPage } from "./detail-page.js"
 import { CockpitListFooter } from "./list-footer.js"
 import { useNav } from "./navigation.js"
 import { CAMUNDA7_CLUSTER_DETAIL_DATA } from "../tool-names.js"
-import { clusterCountFacts, remediationHandOff } from "./remediation.js"
+import {
+  clusterCountFacts,
+  clusterKeyParts,
+  clusterScanComplete,
+  remediationHandOff,
+} from "./remediation.js"
 import { useHandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { useT } from "../messages/use-t.js"
@@ -34,6 +39,9 @@ const PAGE_SIZE = 50
  * The sample message is engine text — quoted, never inlined.
  */
 export function describeCluster(data: ClusterDetailData): ViewContext {
+  // The scanned incidents' keys ("(unknown)" dropped) scope only while the
+  // scan held the whole cluster.
+  const keys = clusterKeyParts(data, data.processDefinitionKeys)
   return {
     summary:
       "The operator is inspecting ONE failure cluster and its affected instances (with their business keys). Propose remediation only scoped to this cluster.",
@@ -41,12 +49,14 @@ export function describeCluster(data: ClusterDetailData): ViewContext {
       engine: data.engineId,
       activityId: data.activityId,
       incidentType: data.incidentType,
-      processDefinitionKeyIn: data.processDefinitionKeys,
+      processDefinitionKey: keys.processDefinitionKey,
+      processDefinitionKeyIn: keys.processDefinitionKeyIn,
     },
     // Counts a capped scan cannot vouch for are a lower bound or left out —
     // never a 0 (#335); the list then covers only the newest scanned ones.
     facts: {
       ...clusterCountFacts(data),
+      scannedProcessDefinitionKeys: keys.scannedProcessDefinitionKeys,
       lastHour: data.lastHourCount,
       last24h: data.last24hCount,
       firstSeen: data.firstSeen,
@@ -172,7 +182,7 @@ function ClusterKpis({ data }: { data: ClusterDetailData }) {
  * share — said so beneath it instead of passing for the cluster's size.
  */
 function listCapped(data: ClusterDetailData): boolean {
-  return data.incidentCount === null || data.incidentCount > data.scannedIncidentCount
+  return !clusterScanComplete(data)
 }
 
 /** One affected instance row with its instance/incident drill actions. */

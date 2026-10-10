@@ -16,7 +16,7 @@ import { InstanceTab } from "./incident-detail/instance-tab.js"
 import { IncidentKpis } from "./incident-detail/kpis.js"
 import { refreshCockpitData } from "./refresh.js"
 import { useCanRun } from "./widget-actions.js"
-import { useHandOff, type ViewContext } from "./lib/hand-off.js"
+import { scopingDefinitionKey, useHandOff, type ViewContext } from "./lib/hand-off.js"
 import { PagedHistoryView } from "./history-timeline.js"
 import { useT } from "../messages/use-t.js"
 
@@ -91,6 +91,8 @@ export function describeIncident(data: IncidentDetailData, resolved: boolean): V
     : detailRecovery(data).action === "resolve"
       ? "camunda7_resolve_incident"
       : retryToolFor(data)
+  // A key parsed from a bare definition id is that id — stated as what it is.
+  const key = scopingDefinitionKey(data.processDefinitionKey, data.processDefinitionId)
   return {
     summary: "The operator is viewing one incident.",
     ids: {
@@ -101,7 +103,8 @@ export function describeIncident(data: IncidentDetailData, resolved: boolean): V
     },
     facts: {
       incidentType: data.incidentType,
-      processDefinitionKey: data.processDefinitionKey,
+      processDefinitionKey: key,
+      processDefinitionId: key ? undefined : data.processDefinitionId || undefined,
       activityId: data.activityId,
       version: data.processDefinitionVersion,
       retriesLeft: data.job?.retries,

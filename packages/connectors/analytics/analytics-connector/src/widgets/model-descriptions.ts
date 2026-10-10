@@ -170,18 +170,23 @@ export const describeFailureSummary: DescribeForModel<FailureDashboardData> = (d
 /**
  * The open-incident groups. The gauge carries only incident type, process and
  * count — no message, activity or timestamps. A custom incident type is any
- * string: unless id-shaped it is quoted as untrusted data (#338).
+ * string: unless id-shaped it is quoted as untrusted data (#338). The view
+ * spans every process, so the largest group's key is a fact, never a scope;
+ * the group count is the exact one, and a capped list says how much it shows.
  */
 export const describeErrorPatterns: DescribeForModel<FailureDashboardData> = (data) => {
   const top = [...data.errorPatterns].sort((a, b) => b.incidentCount - a.incidentCount)[0]
+  const listed = data.errorPatterns.length
   return modelContextText({
     summary:
       "The operator is viewing the incidents open right now (point-in-time), grouped by incident type and process; the metric carries no message, activity or timestamps." +
       (isAggregate(data.engines) ? AGGREGATED : ""),
-    ids: { engine: engineIdsOf(data.engines), processDefinitionKey: top?.processDefinitionKey },
+    ids: { engine: engineIdsOf(data.engines) },
     // A value that is not id-shaped moves into the untrusted fence by itself.
     facts: {
-      groups: data.errorPatterns.length,
+      groups: data.uniqueErrorPatterns,
+      listedGroups: listed < data.uniqueErrorPatterns ? listed : undefined,
+      largestGroupProcessDefinitionKey: top?.processDefinitionKey,
       largestGroupIncidentType: top?.incidentType,
       largestGroupIncidents: top?.incidentCount,
     },

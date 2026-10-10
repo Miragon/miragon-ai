@@ -36,6 +36,36 @@ export function clusterCountFacts(counts: ClusterCounts): {
     : { incidentCount: counts.incidentCount }
 }
 
+/**
+ * Whether the scan held EVERY incident of the cluster. The cluster's process
+ * keys come from the scanned incidents only, so they are the cluster's keys
+ * only then — a capped scan (#335) knows the keys of its newest share, and
+ * scoping a fix by them would hide the rest of the cluster from it.
+ */
+export function clusterScanComplete(counts: ClusterCounts): boolean {
+  return counts.incidentCount !== null && counts.incidentCount <= counts.scannedIncidentCount
+}
+
+/**
+ * The cluster's process keys (the unresolvable placeholder dropped) as
+ * hand-off parts: a scope (one key scopes every call; several the incident
+ * list only) while the scan held the whole cluster, else a fact naming whose
+ * keys they are.
+ */
+export function clusterKeyParts(
+  counts: ClusterCounts,
+  processDefinitionKeys: readonly string[],
+): {
+  processDefinitionKey?: string
+  processDefinitionKeyIn?: readonly string[]
+  scannedProcessDefinitionKeys?: readonly string[]
+} {
+  const keys = processDefinitionKeys.filter((k) => k !== UNKNOWN_KEY)
+  if (keys.length === 0) return {}
+  if (!clusterScanComplete(counts)) return { scannedProcessDefinitionKeys: keys }
+  return keys.length === 1 ? { processDefinitionKey: keys[0] } : { processDefinitionKeyIn: keys }
+}
+
 export interface RemediationHandOff {
   handOff: HandOff
   /**
@@ -56,7 +86,7 @@ export function remediationHandOff(
   engine: string | undefined,
   surface: ToolSurface,
 ): RemediationHandOff {
-  const keys = cluster.processDefinitionKeys.filter((k) => k !== UNKNOWN_KEY)
+  const keys = clusterKeyParts(cluster, cluster.processDefinitionKeys)
   // Confirmed only: a surface that cannot know offers the diagnosis.
   const canFix =
     surface.has("camunda7_set_job_retries") === true ||
@@ -69,12 +99,12 @@ export function remediationHandOff(
         engine,
         activityId: cluster.activityId,
         incidentType: cluster.incidentType,
-        // One key scopes every call; several scope the incident list only.
-        processDefinitionKey: keys.length === 1 ? keys[0] : undefined,
-        processDefinitionKeyIn: keys.length > 1 ? keys : undefined,
+        processDefinitionKey: keys.processDefinitionKey,
+        processDefinitionKeyIn: keys.processDefinitionKeyIn,
       },
       facts: {
         ...clusterCountFacts(cluster),
+        scannedProcessDefinitionKeys: keys.scannedProcessDefinitionKeys,
         // An unknown 24h count is left out, never a 0 (#335).
         last24h: cluster.last24hCount ? cluster.last24hCount : undefined,
       },

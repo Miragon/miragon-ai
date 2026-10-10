@@ -24,7 +24,12 @@ import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { InstancesHeader } from "./list-header.js"
 import { useHandOff } from "../lib/hand-off.js"
-import { describeInstancesView, rootCauseHandOff, type InstanceChip } from "./hand-offs.js"
+import {
+  describeInstancesView,
+  listFiltersOf,
+  rootCauseHandOff,
+  type InstanceChip,
+} from "./hand-offs.js"
 import { useT } from "../../messages/use-t.js"
 
 const PAGE_SIZE = 50
@@ -290,6 +295,7 @@ export function ProcessInstancesView({
 
   const scopedKey = data.processDefinitionKey
   const title = data.processDefinitionName ?? scopedKey ?? t("processInstances.allTitle")
+  const listFilters = listFiltersOf(filterArgs, debouncedSearch)
 
   const chips: FilterChip[] = [
     { id: CHIP_ALL, label: t("processInstances.chipAll"), active: activeChip === CHIP_ALL },
@@ -317,8 +323,7 @@ export function ProcessInstancesView({
             scopedKey,
             processName: data.processDefinitionName ?? null,
             engine: feedEngine,
-            activeChip,
-            debouncedSearch,
+            filters: listFilters,
           }),
         )}
       >
@@ -330,6 +335,7 @@ export function ProcessInstancesView({
         scopedKey={scopedKey}
         total={paged.total}
         engine={feedEngine}
+        filters={listFilters}
       />
 
       <FilterBar

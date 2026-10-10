@@ -42,21 +42,37 @@ function buildJobsFeed(initialData: JobPanelData | null, engine?: string, failed
 
 type Job = JobPanelData["jobs"][number]
 
+/**
+ * The scope the panel's numbers cover, read from the data's own echo (every
+ * builder path stamps it; a standalone render has no props): both counts are
+ * scoped to the echoed process key, and a failed-only panel's `totalCount` IS
+ * its failed count — so the total is stated only for an unfiltered panel,
+ * never as "N jobs, all of them failed".
+ */
+function jobPanelScope(data: JobPanelData) {
+  const failedOnly = data.filters.failedOnly === true
+  return {
+    processDefinitionKey: data.filters.processDefinitionKey,
+    failedOnly: failedOnly || undefined,
+    totalJobs: failedOnly ? undefined : data.totalCount,
+  }
+}
+
 /** What the operator sees in the job panel — the model's grounding for follow-ups. */
 export function describeJobPanel(
   data: JobPanelData,
   engineId: string | undefined,
   loaded: number,
-  failedOnly: boolean | undefined,
 ): ViewContext {
+  const scope = jobPanelScope(data)
   return {
     summary: "The operator is viewing the job management panel.",
-    ids: { engine: engineId },
+    ids: { engine: engineId, processDefinitionKey: scope.processDefinitionKey },
     facts: {
-      totalJobs: data.totalCount,
+      totalJobs: scope.totalJobs,
       failedJobs: data.failedCount,
       loaded,
-      failedOnly: failedOnly === true ? true : undefined,
+      failedOnly: scope.failedOnly,
     },
     tools: [
       "camunda7_list_jobs",
@@ -68,16 +84,23 @@ export function describeJobPanel(
 }
 
 /**
- * Triage of every failed job on the engine. The batch retry is one of the
+ * Triage of the panel's failed jobs — on the whole engine, or of the process
+ * the panel is scoped to (the echoed key scopes the model's job list too, so
+ * it triages the jobs the counts describe). The batch retry is one of the
  * tools only where the deployment registers it (admin) — elsewhere the
  * surface drops it and per-job retries (operations) or nothing (read-only)
  * remain for the recommendation.
  */
 export function triageJobsHandOff(data: JobPanelData, engineId: string | undefined): HandOff {
+  const scope = jobPanelScope(data)
   return {
     intent: "askAi.jobs.triage",
-    ids: { engine: engineId, noRetriesLeft: true },
-    facts: { totalJobs: data.totalCount, failedJobs: data.failedCount },
+    ids: {
+      engine: engineId,
+      processDefinitionKey: scope.processDefinitionKey,
+      noRetriesLeft: true,
+    },
+    facts: { totalJobs: scope.totalJobs, failedJobs: data.failedCount },
     tools: [
       "camunda7_list_jobs",
       "camunda7_get_job_stacktrace",
@@ -209,9 +232,7 @@ export function JobPanelWidget({
     <WidgetShell>
       {/* Rendered in-component (not via the adapter's describeForModel) because
           this widget self-fetches in the cockpit, where the adapter has no data. */}
-      <HostModelContext
-        content={context(describeJobPanel(data, engineId, jobs.length, failedOnly))}
-      >
+      <HostModelContext content={context(describeJobPanel(data, engineId, jobs.length))}>
         {null}
       </HostModelContext>
       <div className="flex items-center justify-between gap-2">

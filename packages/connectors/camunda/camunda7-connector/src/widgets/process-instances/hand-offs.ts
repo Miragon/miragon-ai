@@ -1,8 +1,49 @@
 import type { ProcessInstanceRow } from "../../view-models.js"
 import type { HandOff, ViewContext } from "../lib/hand-off.js"
 
-/** The list's filter chips, as the model context names them. */
+/** The list's filter chips. */
 export type InstanceChip = "all" | "incidents" | "suspended"
+
+/**
+ * The filters the list's count covers, as the feed applies them: the chip
+ * folded into the handed-in or echoed filters, and the operator's search
+ * over a handed-in business-key prefilter. The list's total is the size of
+ * THIS set — the hand-offs state it as `matchingInstances` next to these
+ * flags, never as the running instances of the engine or the process.
+ */
+export interface InstancesListFilters {
+  active?: boolean
+  suspended?: boolean
+  withIncidents?: boolean
+  /** Operator / caller text — quoted, never inlined. */
+  businessKeyLike?: string
+}
+
+/**
+ * The filters the list's total covers, as the feed receives them: its filter
+ * args, with the operator's search replacing a handed-in business-key
+ * prefilter (the paged scaffold's `searchArg`).
+ */
+export function listFiltersOf(
+  feedArgs: InstancesListFilters,
+  debouncedSearch: string,
+): InstancesListFilters {
+  return {
+    active: feedArgs.active,
+    suspended: feedArgs.suspended,
+    withIncidents: feedArgs.withIncidents,
+    businessKeyLike: debouncedSearch !== "" ? debouncedSearch : feedArgs.businessKeyLike,
+  }
+}
+
+/** The run-state and incident flags of {@link InstancesListFilters}, as on-screen facts. */
+export function instancesFilterFacts(filters: InstancesListFilters) {
+  return {
+    active: filters.active,
+    suspended: filters.suspended,
+    withIncidents: filters.withIncidents,
+  }
+}
 
 /**
  * Root cause of ONE incident-affected instance, then whether its process fails
@@ -33,8 +74,9 @@ export function rootCauseHandOff(
 }
 
 /**
- * What the operator sees in the instances list. The process name is the
- * deployer's text and the search the operator's — both quoted, never inlined.
+ * What the operator sees in the instances list: the count of the filtered
+ * set with the filters it covers. The process name is the deployer's text
+ * and the business-key filter the operator's — both quoted, never inlined.
  */
 export function describeInstancesView({
   loadedCount,
@@ -42,16 +84,14 @@ export function describeInstancesView({
   scopedKey,
   processName,
   engine,
-  activeChip,
-  debouncedSearch,
+  filters,
 }: {
   loadedCount: number
   total: number
   scopedKey: string | null
   processName: string | null
   engine: string | undefined
-  activeChip: InstanceChip
-  debouncedSearch: string
+  filters: InstancesListFilters
 }): ViewContext {
   return {
     summary: scopedKey
@@ -60,12 +100,12 @@ export function describeInstancesView({
     ids: { engine, processDefinitionKey: scopedKey },
     facts: {
       loaded: loadedCount,
-      total,
-      filter: activeChip !== "all" ? activeChip : undefined,
+      matchingInstances: total,
+      ...instancesFilterFacts(filters),
     },
     untrusted: [
       { label: "processName", text: processName },
-      { label: "businessKeySearch", text: debouncedSearch },
+      { label: "businessKeyLike", text: filters.businessKeyLike },
     ],
     tools: [
       "camunda7_show_instance_detail",

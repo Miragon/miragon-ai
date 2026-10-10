@@ -25,6 +25,22 @@ export interface HandOff extends Omit<HandOffParts, "surface"> {
 export type ViewContext = Omit<ModelContextSpec, "surface">
 
 /**
+ * A process definition key a hand-off may pass as a SCOPE, given the
+ * definition id it was parsed from. The engine stores a bare generated id
+ * when `<key>:<version>:<id>` would exceed 64 characters (any key over ~25
+ * characters with UUID ids — `data/definition-info.ts`), and the parsed "key"
+ * is then that id itself: no key filter matches it, so a scoped call would
+ * report the incident as isolated. Such a key is undefined — the caller
+ * scopes by the exact definition id instead.
+ */
+export function scopingDefinitionKey(
+  key: string | null | undefined,
+  definitionId: string | null | undefined,
+): string | undefined {
+  return key && key !== definitionId ? key : undefined
+}
+
+/**
  * The tools a camunda7 widget may name for the model:
  *
  * - `camunda7_*` — exactly the module's model-visible tools in THIS

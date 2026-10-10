@@ -240,9 +240,30 @@ describe("failure-dashboard scope (N83/N116)", () => {
   it("presents only fields the open-incident metric fills (N117)", () => {
     const text = describeErrorPatterns(failures(["prod-a"]), {})
     expect(text).toContain(
-      'On screen: groups=1, largestGroupIncidentType="failedJob", largestGroupIncidents=6',
+      'On screen: groups=1, largestGroupProcessDefinitionKey="order", largestGroupIncidentType="failedJob", largestGroupIncidents=6',
     )
-    expect(text).toContain('processDefinitionKey="order"')
     expect(text).toContain("no message, activity or timestamps")
+  })
+
+  // The view spans every process: the largest group's key is a fact, never
+  // the scope the model passes on; the list is capped at 50, the totals not.
+  it("scopes the view by engine only and states the exact group count of a capped list", () => {
+    const capped: FailureDashboardData = {
+      ...failures(["prod-a", "prod-b"]),
+      uniqueErrorPatterns: 73,
+      errorPatterns: Array.from({ length: 50 }, (_, i) => ({
+        incidentType: "failedJob",
+        processDefinitionKey: i === 0 ? "order" : `process_${i}`,
+        incidentCount: 100 - i,
+      })),
+    }
+    const text = describeErrorPatterns(capped, {})
+    expect(text).toContain('Ids: engine=["prod-a","prod-b"]\n')
+    expect(text).not.toMatch(/[,\s]processDefinitionKey=/)
+    expect(text).toContain(
+      'On screen: groups=73, listedGroups=50, largestGroupProcessDefinitionKey="order", largestGroupIncidentType="failedJob", largestGroupIncidents=100',
+    )
+    // An uncapped list is the whole set — no listed count beside it.
+    expect(describeErrorPatterns(failures(["prod-a"]), {})).not.toContain("listedGroups")
   })
 })

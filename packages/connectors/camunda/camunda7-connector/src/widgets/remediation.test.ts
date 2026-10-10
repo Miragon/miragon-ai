@@ -72,8 +72,36 @@ describe("remediationHandOff scopes the model to the cluster", () => {
         h.surface,
       ).handOff,
     )!
-    expect(prompt).toContain("On screen: incidentCountAtLeast=200\n")
+    expect(prompt).toContain("On screen: incidentCountAtLeast=200, ")
     expect(prompt).not.toMatch(/incidentCount=|last24h/)
+  })
+
+  // The keys come from the scanned incidents only: over a capped scan they
+  // are the newest share's keys, and scoping the fix by them would hide the
+  // rest of the cluster — they are stated as what they are instead.
+  it("scopes by the scanned keys only while the scan held the whole cluster", async () => {
+    const h = await handOffFor("operations")
+    for (const counts of [
+      { incidentCount: null, scannedIncidentCount: 2000 },
+      // An exact count the scan holds only part of (cluster detail, no message filter).
+      { incidentCount: 2600, scannedIncidentCount: 2000 },
+    ]) {
+      const prompt = h.ask(
+        remediationHandOff(
+          { ...CLUSTER, ...counts, processDefinitionKeys: ["order", UNKNOWN_KEY] },
+          "prod-a",
+          h.surface,
+        ).handOff,
+      )!
+      expect(prompt).toContain(
+        'Ids: engine="prod-a", activityId="ServiceTask_1", incidentType="failedJob"\n',
+      )
+      expect(prompt).toContain('scannedProcessDefinitionKeys=["order"]')
+      expect(prompt).not.toMatch(/processDefinitionKey(In)?=/)
+    }
+    // A complete scan keeps scoping (see "carries … process as ids").
+    const complete = h.ask(remediationHandOff(CLUSTER, "prod-a", h.surface).handOff)!
+    expect(complete).not.toContain("scannedProcessDefinitionKeys")
   })
 
   it("scopes several processes as a key list", async () => {

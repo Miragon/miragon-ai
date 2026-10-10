@@ -119,8 +119,9 @@ describe("ClusterDetailWidget (fixture render)", () => {
 describe("describeCluster", () => {
   it("states an exact cluster as exact, with its whole list", async () => {
     const text = (await handOffFor("operations")).context(describeCluster(CLUSTER))
+    expect(text).toContain('processDefinitionKey="shipping"')
     expect(text).toContain("On screen: incidentCount=40, lastHour=9, last24h=12")
-    expect(text).not.toMatch(/AtLeast|listCoversNewest/)
+    expect(text).not.toMatch(/AtLeast|listCoversNewest|scannedProcessDefinitionKeys/)
   })
 
   it("states a capped cluster as at least its scanned share", async () => {
@@ -134,8 +135,12 @@ describe("describeCluster", () => {
         firstSeen: null,
       }),
     )
-    expect(text).toContain("On screen: incidentCountAtLeast=1000, latestIncident=")
+    // The keys are the scanned share's: a fact, never the scope (the rest of
+    // the cluster may run on other processes).
+    expect(text).toContain(
+      'On screen: incidentCountAtLeast=1000, scannedProcessDefinitionKeys=["shipping"], latestIncident=',
+    )
     expect(text).toContain("listCoversNewest=1000")
-    expect(text).not.toMatch(/incidentCount=|lastHour|last24h|firstSeen/)
+    expect(text).not.toMatch(/incidentCount=|lastHour|last24h|firstSeen|processDefinitionKey(In)?=/)
   })
 })

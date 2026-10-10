@@ -8,21 +8,25 @@ import {
 
 import type { IncidentDetailData } from "../../view-models.js"
 
-import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { scopingDefinitionKey, useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
  * Diagnose THIS incident: cause, retry verdict, fix. Instance context comes
  * from the model-visible instance tools (the cockpit's own instance feed is
  * app-only); names, the business key and the error are engine text — quoted.
+ * The "same failure elsewhere" check scopes by the key, or by the exact
+ * definition id when the key is only a bare id's parse.
  */
 export function diagnoseIncidentHandOff(data: IncidentDetailData): HandOff {
+  const key = scopingDefinitionKey(data.processDefinitionKey, data.processDefinitionId)
   return {
     intent: "askAi.incident.diagnose",
     ids: {
       engine: data.engineId,
       processInstanceId: data.processInstanceId,
-      processDefinitionKey: data.processDefinitionKey,
+      processDefinitionKey: key,
+      processDefinitionId: key ? undefined : data.processDefinitionId || undefined,
       activityId: data.activityId,
       jobId: data.job?.id,
     },
