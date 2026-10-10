@@ -15,6 +15,8 @@ export interface KitLabels {
   filter: string
   retry: string
   loadMoreFailed: (message: string) => string
+  /** A refetch failed over data still shown (`useDetailView`'s stale notice). */
+  refreshFailed: (message: string) => string
 }
 
 const LABELS: Record<Locale, KitLabels> = {
@@ -26,6 +28,7 @@ const LABELS: Record<Locale, KitLabels> = {
     filter: "Filter…",
     retry: "Try again",
     loadMoreFailed: (message) => `Failed to load more: ${message}`,
+    refreshFailed: (message) => `Could not refresh this view: ${message}`,
   },
   de: {
     loading: "Wird geladen…",
@@ -35,6 +38,7 @@ const LABELS: Record<Locale, KitLabels> = {
     filter: "Filtern…",
     retry: "Erneut versuchen",
     loadMoreFailed: (message) => `Weitere Einträge konnten nicht geladen werden: ${message}`,
+    refreshFailed: (message) => `Die Ansicht konnte nicht aktualisiert werden: ${message}`,
   },
 }
 

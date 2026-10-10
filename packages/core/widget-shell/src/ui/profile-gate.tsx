@@ -49,11 +49,12 @@ export interface ProfileGateProps {
   profileTool: string
   /**
    * Query key for the profile fetch. Defaults to `<module>:profile-gate`
-   * (module = the tool name up to the first `_`) ON PURPOSE: module-prefix
-   * cache invalidation (e.g. camunda7's refreshCockpitData, which invalidates
-   * `camunda7:*` keys) MUST refetch the gate after a profile save — otherwise
-   * a saved language/theme change only shows up on the next widget render
-   * instead of flipping live.
+   * (module = the tool name up to the first `_`) ON PURPOSE: the module's
+   * cache invalidation MUST reach the gate after a profile save — camunda7's
+   * save invalidates `camunda7:profile-gate` by name (`WRITE_POLICY`), its
+   * cockpit Refresh every `camunda7:*` key — otherwise a saved
+   * language/theme change only shows up on the next widget render instead of
+   * flipping live. The refetch never re-shows the first-paint skeleton.
    */
   queryKey?: readonly string[]
   /**

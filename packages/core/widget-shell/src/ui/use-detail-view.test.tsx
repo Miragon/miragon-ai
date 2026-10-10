@@ -10,7 +10,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
-import { AppQueryProvider, queryClient } from "@miragon/mcp-toolkit-ui"
+import { AppQueryProvider, LocaleProvider, queryClient } from "@miragon/mcp-toolkit-ui"
 import { useDetailView } from "./use-detail-view.js"
 import { useViewData } from "./use-view-data.js"
 import { ViewDataState } from "./view-data-state.js"
@@ -157,24 +157,40 @@ describe("useDetailView", () => {
     expect(screen.getByRole("button", { name: "Act" })).toBeTruthy()
   })
 
-  it("defaults its texts to English", async () => {
+  function Bare() {
+    const { data, guard, notice } = useDetailView<Detail>({
+      initialData: { name: "seed" },
+      key: ["test:detail", "bare"],
+      tool: "test_detail_data",
+      args: {},
+      ready: true,
+      loadingText: "Loading…",
+      emptyText: "Nothing",
+    })
+    return data ? notice : guard
+  }
+
+  it("defaults its texts to English outside a locale", async () => {
     callTool.mockRejectedValueOnce(new Error("gone"))
-    function Bare() {
-      const { data, guard, notice } = useDetailView<Detail>({
-        initialData: { name: "seed" },
-        key: ["test:detail", "bare"],
-        tool: "test_detail_data",
-        args: {},
-        ready: true,
-        loadingText: "Loading…",
-        emptyText: "Nothing",
-      })
-      return data ? notice : guard
-    }
     render(<Bare />, { wrapper })
     await invalidate()
     expect(await screen.findByText("Could not refresh this view: gone")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy()
+  })
+
+  it("defaults its texts to the active locale's kit labels (#339)", async () => {
+    callTool.mockRejectedValueOnce(new Error("weg"))
+    render(
+      <LocaleProvider locale="de">
+        <Bare />
+      </LocaleProvider>,
+      { wrapper },
+    )
+    await invalidate()
+    expect(
+      await screen.findByText("Die Ansicht konnte nicht aktualisiert werden: weg"),
+    ).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Erneut versuchen" })).toBeTruthy()
   })
 })
 
@@ -196,6 +212,22 @@ describe("ViewDataState", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: "Try again" }))
     expect(onRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it("labels its Retry in the active locale unless the caller names it", () => {
+    const props = { loading: false, error: new Error("x"), loadingText: "l", emptyText: "e" }
+    const { rerender } = render(
+      <LocaleProvider locale="de">
+        <ViewDataState {...props} onRetry={vi.fn()} />
+      </LocaleProvider>,
+    )
+    expect(screen.getByRole("button", { name: "Erneut versuchen" })).toBeTruthy()
+    rerender(
+      <LocaleProvider locale="de">
+        <ViewDataState {...props} onRetry={vi.fn()} retryLabel="Nochmal" />
+      </LocaleProvider>,
+    )
+    expect(screen.getByRole("button", { name: "Nochmal" })).toBeTruthy()
   })
 
   it("shows the loading or the empty text without an error", () => {

@@ -280,7 +280,7 @@ describe("ProfileGate", () => {
     renderGate(callTool)
     await waitFor(() => expect(probe()).toBe(probeFor("en")))
 
-    // What camunda7's refreshCockpitData does after a profile save.
+    // What camunda7's cockpit Refresh does (refreshCockpitData).
     await act(async () => {
       await queryClient.invalidateQueries({
         predicate: (query) => String(query.queryKey[0]).startsWith("camunda7:"),
@@ -290,6 +290,27 @@ describe("ProfileGate", () => {
     // Strings and dates flip together — the tree stays mounted.
     await waitFor(() => expect(probe()).toBe(probeFor("de")))
     expect(document.documentElement.lang).toBe("de")
+  })
+
+  it("flips live on a profile save's targeted invalidation — no skeleton in between", async () => {
+    const callTool = vi
+      .fn()
+      .mockResolvedValueOnce(feedResult({ language: "en" }))
+      .mockResolvedValue(feedResult({ language: "de" }))
+    renderGate(callTool)
+    await waitFor(() => expect(probe()).toBe(probeFor("en")))
+    const shown = screen.getByTestId("locale")
+
+    // camunda7's profile save invalidates exactly this namespace (WRITE_POLICY).
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: ["camunda7:profile-gate"] })
+    })
+
+    await waitFor(() => expect(probe()).toBe(probeFor("de")))
+    expect(callTool).toHaveBeenCalledTimes(2)
+    // The same node: the tree was never swapped for the first-paint skeleton.
+    expect(screen.getByTestId("locale")).toBe(shown)
+    expect(screen.queryByRole("status")).toBeNull()
   })
 
   it("uses an explicit query key instead of the module default", async () => {

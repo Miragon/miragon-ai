@@ -1,5 +1,6 @@
 import type { ReactElement } from "react"
-import { Alert, AlertDescription, Button } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, Button, useLocale } from "@miragon/mcp-toolkit-ui"
+import { kitLabels } from "./kit-labels.js"
 import { useViewData } from "./use-view-data.js"
 import { ViewDataState } from "./view-data-state.js"
 import { WidgetShell } from "./widget-shell.js"
@@ -32,8 +33,12 @@ export function useDetailView<TData>(opts: {
   /** Caller-localized texts for the guard states. */
   loadingText: string
   emptyText: string
+  /** The Retry label (default: the active locale's). */
   retryText?: string
-  /** The stale-data notice line; receives the failed refetch's message. */
+  /**
+   * The stale-data notice line; receives the failed refetch's message
+   * (default: the active locale's).
+   */
   refreshErrorText?: (message: string) => string
 }): {
   data: TData | null
@@ -41,6 +46,7 @@ export function useDetailView<TData>(opts: {
   notice: ReactElement | null
   refreshError: Error | null
 } {
+  const defaults = kitLabels(useLocale())
   const {
     initialData,
     key,
@@ -49,8 +55,8 @@ export function useDetailView<TData>(opts: {
     ready,
     loadingText,
     emptyText,
-    retryText = "Try again",
-    refreshErrorText = (message) => `Could not refresh this view: ${message}`,
+    retryText = defaults.retry,
+    refreshErrorText = defaults.refreshFailed,
   } = opts
   const { data, loading, error, refreshError, refetch } = useViewData<TData>(
     initialData,

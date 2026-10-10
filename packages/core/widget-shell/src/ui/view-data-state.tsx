@@ -1,5 +1,6 @@
-import { Alert, AlertDescription, Button } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, Button, useLocale } from "@miragon/mcp-toolkit-ui"
 import { cn } from "./cn.js"
+import { kitLabels } from "./kit-labels.js"
 
 /**
  * The canonical loading / error / no-data boundary for widgets driven by
@@ -25,7 +26,7 @@ export function ViewDataState({
   emptyText,
   className,
   onRetry,
-  retryLabel = "Try again",
+  retryLabel,
 }: {
   loading: boolean
   error: Error | null | undefined
@@ -35,9 +36,10 @@ export function ViewDataState({
   className?: string
   /** Re-run the failed load (the query's refetch) — renders a Retry button. */
   onRetry?: () => void
-  /** Caller-localized Retry label. */
+  /** Caller-localized Retry label (default: the active locale's). */
   retryLabel?: string
 }) {
+  const defaults = kitLabels(useLocale())
   if (error) {
     return (
       <Alert variant="destructive">
@@ -45,7 +47,7 @@ export function ViewDataState({
           <span>{error.message}</span>
           {onRetry && (
             <Button variant="outline" size="sm" className="mt-2 w-fit" onClick={onRetry}>
-              {retryLabel}
+              {retryLabel ?? defaults.retry}
             </Button>
           )}
         </AlertDescription>
