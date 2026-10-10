@@ -228,6 +228,30 @@ describe("every engine-reading tool is scoped to the configured engines (N138)",
   )
 })
 
+describe("the BPMN heatmap names the engines its heat adds up (K33)", () => {
+  const scope = createEngineScope(["prod-a", "prod-b"])
+  type Payload = { engines?: unknown }
+  /** The heatmap payload of a show-tool view or a data feed. */
+  const payloadOf = (result: unknown): Payload => {
+    const r = result as {
+      structuredContent: Payload & { context?: { stepData: { result: { data: Payload } } } }
+    }
+    return r.structuredContent.context?.stepData.result.data ?? r.structuredContent
+  }
+
+  it.each(["analytics_show_bpmn_heatmap", "analytics_bpmn_heatmap_data"])(
+    "%s echoes the resolved engines in its payload",
+    async (name) => {
+      const tool = toolsOver(recordingClient().ch, scope).get(name)!
+      const fleet = await tool({ processDefinitionKey: "order" }, {})
+      const one = await tool({ processDefinitionKey: "order", engine: "prod-b" }, {})
+
+      expect(payloadOf(fleet).engines).toEqual(["prod-a", "prod-b"])
+      expect(payloadOf(one).engines).toEqual(["prod-b"])
+    },
+  )
+})
+
 describe("analyticsModule engine scope wiring", () => {
   /** The engine ids the booted plugin covers. */
   function fleetOf(config: Record<string, unknown>, shared: { engineIds?: string[] }) {

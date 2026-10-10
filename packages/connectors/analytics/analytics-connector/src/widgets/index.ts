@@ -13,7 +13,7 @@ import { VersionCompareWidget, type VersionCompareData } from "./version-compare
 import { EngineCompareWidget, type EngineCompareData } from "./engine-compare.js"
 import { EngineLandscapeWidget, type EngineLandscapeData } from "./engine-landscape.js"
 import { type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
-import { AnalyticsBpmnHeatmap } from "./bpmn-heatmap.js"
+import { AnalyticsBpmnHeatmap, type AnalyticsBpmnHeatmapData } from "./bpmn-heatmap.js"
 import { AnalyticsSettingsWidget, type AnalyticsSettingsViewData } from "./settings-section.js"
 import {
   describeActivityBottlenecks,
@@ -38,6 +38,7 @@ export type {
   EngineCompareData,
   EngineLandscapeData,
   BpmnHeatmapData,
+  AnalyticsBpmnHeatmapData,
   AnalyticsSettingsViewData,
 }
 

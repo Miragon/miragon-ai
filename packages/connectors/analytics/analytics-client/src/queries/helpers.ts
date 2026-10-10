@@ -35,9 +35,24 @@ export const first = (s: PromSample[]) => (s.length ? s[0].value : 0)
  * durations and live gauges. A duration over an empty window is NaN
  * (`0 / 0`, `histogram_quantile` over all-zero buckets), which the client
  * drops, so "nothing ended in the window" lands here as `null`, never as a
- * plausible 0 s. A gauge without a series is "not reported", not 0.
+ * plausible 0 s. A per-key gauge without a series is 0 while the engines
+ * report and "not reported" only while they do not — decide that with
+ * {@link reportingEnginesQuery}, never from the gauge's own series.
  */
 export const firstOrNull = (s: PromSample[]) => (s.length ? s[0].value : null)
+
+/**
+ * The engine-state presence probe — one series per engine in scope that
+ * reports its state gauges. `camunda_jobs_executable` carries `engine_id`
+ * only and is registered on every tick, 0 included; the per-key gauges are
+ * not: the metrics plugin registers a row only for what exists (no incident
+ * open → no `camunda_incidents_open` series at all). So a per-key gauge
+ * without a series is a measured 0 while this probe answers, and "not
+ * reported" only while it does not. `engineSel` must hold the engine matcher
+ * alone — the gauge has no other label to match.
+ */
+export const reportingEnginesQuery = (engineSel: string) =>
+  `sum by (engine_id)(${M.jobsExecutable}${engineSel})`
 
 /**
  * Index sample values by one label, dropping samples that miss the label.

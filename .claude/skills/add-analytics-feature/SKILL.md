@@ -57,12 +57,29 @@ instance ids, business keys, variable values).
 **Label contract:** `src/metrics-contract-labels.test.ts` runs every exported query
 function against a recording client and checks each label the sent PromQL names — matchers,
 `by`/`without`, `on`/`ignoring`/`group_*` — against the labels the contract declares for
-that series; alert rules and Grafana dashboards go through the same checker. Its
-`SCENARIOS` map is total over the `queries` namespace, so a new export without an entry
+that series; alert rules and Grafana dashboards go through the same checker. The calls it
+runs come from the `SCENARIOS` map in `src/query-scenarios.test-support.ts` (shared with the
+honesty guard below), total over the `queries` namespace, so a new export without an entry
 fails `pnpm typecheck`. Give the entry argument sets that switch on every optional matcher
 (engine filter single and multi, element/incident scope, process scope present and
 absent). A PromQL shape the checker (`src/promql-{parse,labels,sources}.test-support.ts`)
 rejects means extending the checker, never bypassing it.
+
+**Honesty rules** — `src/query-honesty.test.ts` runs the same scenarios and holds two more
+total maps a new export must fill (`pnpm typecheck` fails otherwise): `NO_DATA` (what the
+function returns against an empty Prometheus) and `SCOPE_ECHO` (how its result names the
+engines it covers — `engines: engineIdsOf(params.engine)`, or a stated exemption). Build the
+result so those entries can hold:
+
+- `first()` (missing series → 0) only for COUNTS; durations and gauges use `firstOrNull()` —
+  "nothing ended" is `null`, never 0 s. A per-key gauge (running, open incidents) has no row
+  for what does not exist, so decide 0 vs `null` with the presence probe
+  `reportingEnginesQuery` (`queries/helpers.ts`), never from the gauge's own series.
+- Rates and deltas through `ratePct`/`pctChange`/`ppDelta` — `null` on a zero or unmeasured
+  base, never 0 % or −100 %.
+- Explicit time windows through `clampWindow` + `rangeAt` (`queries/windows.ts`): clamped to
+  `[now − retention, now]`, reported as measured (`partial`), refused when unrepairable; per-day
+  rates from the exact `seconds`, never the rounded `daysOf`.
 
 ## Step 2 — PromQL snapshot test
 
@@ -85,7 +102,8 @@ expect(queries.every((q) => q.includes("[30d]"))).toBe(true)
 ```
 
 Also cover the mapping logic (ranking, thresholds, rounding, null fields), and add the
-function's `SCENARIOS` entry to the label-contract test (Step 1).
+function's `SCENARIOS` entry (`src/query-scenarios.test-support.ts`) plus its `NO_DATA` and
+`SCOPE_ECHO` entries in `src/query-honesty.test.ts` (Step 1).
 
 ## Step 3 — input schema
 
@@ -104,27 +122,50 @@ Register the tool in `packages/connectors/analytics/analytics-connector/src/tool
 ```ts
 type Register = ReturnType<typeof createToolRegistrar<PrometheusClient>>
 
-export function registerElementTools(register: Register) {
+export function registerElementTools(
+  register: Register,
+  engineScope: AnalyticsEngineScope,
+  profileStore?: ProfileSource,
+) {
   register({
     name: "analytics_element_bottleneck",
     category: "analytics",
     description: "Rank activities by execution-time contribution and incident rate …",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-    inputSchema: schemas.elementBottleneckInput.shape,
-    handler: async (ch, args) =>
-      queries.elementBottleneck(ch, args as z.infer<typeof schemas.elementBottleneckInput>),
+    inputSchema: {
+      ...schemas.elementBottleneckInput.shape,
+      period: optionalPeriod,
+      minBucketSize: optionalMinBucketSize,
+    },
+    handler: async (ch, args, ctx) => {
+      const settings = await settingsFor(profileStore, ctx)
+      return queries.elementBottleneck(ch, {
+        ...withEngineScope(engineScope, args),
+        period: args.period ?? settings.defaultPeriod,
+        minBucketSize: args.minBucketSize ?? settings.minBucketSize,
+      })
+    },
   })
 }
 ```
+
+**Engine scope:** analytics reads only the server's configured engine ids
+(`src/engine-ids.ts`) — a shared Prometheus holds other teams' engines too. Every handler
+passes its args through `withEngineScope(engineScope, args)` (omitted `engine` = all configured
+engines, any other id refused; with none configured it refuses fail-closed); a tool that takes
+engine ids by another name resolves each with `engineScope.require(id, "<field>")` (see
+`analytics_engine_compare`). Never hand `args` to a query unscoped.
+`src/engine-scope.test.ts` sweeps every registered Prometheus-reading tool: add the new tool
+to its `ARGS` map (total over the registered surface) with valid arguments minus `engine`.
 
 Analytics tools are read-only by nature and talk to an external Prometheus:
 `{ readOnlyHint: true, idempotentHint: true, openWorldHint: true }`. The analytics registrar
 is not toolset-filtered — `analytics:read-only`, the default without OAuth, stays honest only
 while every registrar tool is a read. Anything that writes durably gates itself like
 `analytics_save_settings` (`allowsDurableWrites` in `src/toolsets.ts`).
-New domain file → add the `registerXyzTools(register)` call to `registerTools` in
-`src/tools/index.ts`. Name the description honestly about metric limitations (e.g.
-"queue/wait time is not available from metrics").
+New domain file → add the `registerXyzTools(register, engineScope, profileStore)` call to
+`registerTools` in `src/tools/index.ts`. Name the description honestly about metric
+limitations (e.g. "queue/wait time is not available from metrics").
 
 ## Step 5 — dashboard widget (only for UI features)
 
@@ -148,7 +189,12 @@ The widget chain mirrors the camunda7 module:
    `buildSingleWidgetView(...)` from `@miragon-ai/widget-shell/server` (see
    `analytics_show_dashboard`). An app-only `*_data` feed spreads `...appOnly`
    (`visibility: "app"` + `openai/widgetAccessible`, **no** view binding) and returns
-   `buildDataFeedResult(data)`.
+   `buildDataFeedResult(data)`. Both resolve `engine` through `withEngineScope` like the
+   registrar tools, and the payload echoes the resolved `engines` so the widget's
+   `describeForModel` names the scope from the DATA (`src/widgets/model-descriptions.ts`).
+   A pipeline step (`src/steps/`) reads its keys through the strict readers in
+   `steps/app-config.ts` (`stepEngines`, `stepPeriod`, …) — step keys arrive unchecked, and a
+   malformed one is refused, never read as "omitted".
 
 Rules while building:
 

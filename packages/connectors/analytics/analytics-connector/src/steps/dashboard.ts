@@ -1,22 +1,23 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import { PERIODS, queries, type Period } from "@miragon-ai/analytics-client"
+import { PERIODS, queries } from "@miragon-ai/analytics-client"
 import { analyticsSettingsSchema } from "../settings.js"
-import { ENGINE_KEY_DECLARATION, stepEngines, type AnalyticsAppConfig } from "./app-config.js"
+import {
+  ENGINE_KEY_DECLARATION,
+  stepEngines,
+  stepPeriod,
+  stepProcessKey,
+  type AnalyticsAppConfig,
+} from "./app-config.js"
 
-/**
- * The module default period. A pipeline step runs without the caller's
- * identity (the toolkit hands it only the pipeline keys), so the caller's
- * SAVED period cannot apply here — the schema default the settings fall back
- * to does, stated in the key's description.
- */
-const MODULE_DEFAULT_PERIOD: Period = analyticsSettingsSchema.shape.defaultPeriod.parse(undefined)
+/** The period a caller without a saved default gets — the settings schema's default. */
+const MODULE_DEFAULT_PERIOD = analyticsSettingsSchema.shape.defaultPeriod.parse(undefined)
 
 /**
  * Loads the dashboard figures from Prometheus — window flows plus the live
  * state, the same `dashboardData` as `analytics_show_dashboard`. Consumed by
  * `analytics:dashboard`. Reads optional filter keys:
  * - `analytics:processDefinitionKey`
- * - `analytics:period` (1d | 3d | 7d | 14d | 30d)
+ * - `analytics:period` (1d | 3d | 7d | 14d | 30d; omitted = the caller's saved default)
  * - `analytics:engine` (configured engine id(s); omitted = all of them)
  */
 export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
@@ -33,24 +34,22 @@ export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
     },
     {
       key: "analytics:period",
-      description: `Time window. Defaults to '${MODULE_DEFAULT_PERIOD}' (the module default — a step carries no caller, so a saved per-user default does not apply).`,
+      description: `Time window. When omitted, the caller's saved analytics default (else '${MODULE_DEFAULT_PERIOD}').`,
       enum: [...PERIODS],
     },
     ENGINE_KEY_DECLARATION,
   ],
   produces: ["analytics:dashboardData"],
   execute: async (context, appConfig) => {
-    const processDefinitionKey = context.keys["analytics:processDefinitionKey"] as
-      string | undefined
-    const periodRaw = context.keys["analytics:period"]
-    const period: Period = PERIODS.includes(periodRaw as Period)
-      ? (periodRaw as Period)
-      : MODULE_DEFAULT_PERIOD
+    // Every key is checked before the first query is sent.
+    const processDefinitionKey = stepProcessKey(context.keys)
+    const engine = stepEngines(context.keys, appConfig.engineScope)
+    const period = await stepPeriod(context.keys, appConfig.profileStore)
 
     const data = await queries.dashboardData(appConfig.client, {
       processDefinitionKey,
       period,
-      engine: stepEngines(context.keys, appConfig.engineScope),
+      engine,
     })
 
     return {

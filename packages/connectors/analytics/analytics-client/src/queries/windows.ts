@@ -9,7 +9,7 @@ export const nowSeconds = () => Math.floor(Date.now() / 1000)
 export interface ClampedWindow {
   from: number
   to: number
-  /** Actual length after clamping. */
+  /** Actual length after clamping — always > 0 ({@link clampWindow} refuses an empty window). */
   seconds: number
   /** True when clamping cut the requested window short (it reached past now or retention). */
   partial: boolean

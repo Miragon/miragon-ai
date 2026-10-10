@@ -9,7 +9,14 @@ import {
   type PromSample,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
-import { byLabel, first, firstOrNull, kpiQueries, ratePct } from "./helpers.js"
+import {
+  byLabel,
+  first,
+  firstOrNull,
+  kpiQueries,
+  ratePct,
+  reportingEnginesQuery,
+} from "./helpers.js"
 import type {
   ActivityBreakdownItem,
   AnalyticsDashboardData,
@@ -37,6 +44,9 @@ const msOrNull = (sec: number | null) => (sec === null ? null : ms(sec))
  *   the same numbers the failure dashboard, engine health and the landscape
  *   read, independent of the window. A counter difference within the window
  *   is no substitute: it misses every instance started before the window.
+ *   The gauges have rows only for what exists, so whether a missing series is
+ *   0 or "not reported" (null) is decided by the engine presence probe
+ *   ({@link reportingEnginesQuery}): null only while no engine in scope reports.
  *
  * The activity breakdown groups by (process, activity): BPMN ids are only
  * unique within one model, so `StartEvent_1` of two processes are two rows.
@@ -76,6 +86,7 @@ export async function dashboardData(
     defDurSum,
     defDurCount,
     defRunning,
+    reporting,
   ] = await Promise.all([
     ch.instant(q.started),
     ch.instant(q.completed),
@@ -107,12 +118,18 @@ export async function dashboardData(
       `sum by (process_definition_key)(increase(${M.processInstanceDuration}_count${sel}${r}))`,
     ),
     ch.instant(`sum by (process_definition_key)(${M.processInstancesRunning}${sel})`),
+    ch.instant(reportingEnginesQuery(selector(engine))),
   ])
 
   const totalCount = Math.round(first(started))
   const incidentsCreated = Math.round(first(incCreated))
-  const runningGauge = firstOrNull(runningNow)
-  const openIncidentsGauge = firstOrNull(openIncidentsNow)
+  const engineReports = reporting.length > 0
+  /** A live gauge: its value; else 0 while an engine in scope reports (no row = none); else unknown. */
+  const live = (samples: PromSample[]): number | null => {
+    const value = firstOrNull(samples)
+    if (value !== null) return Math.round(value)
+    return engineReports ? 0 : null
+  }
 
   return {
     processDefinitionKey: params.processDefinitionKey ?? null,
@@ -126,17 +143,20 @@ export async function dashboardData(
     avgDurationMs: msOrNull(firstOrNull(avg)),
     medianDurationMs: msOrNull(firstOrNull(median)),
     p95DurationMs: msOrNull(firstOrNull(p95)),
-    runningNow: runningGauge === null ? null : Math.round(runningGauge),
-    openIncidentsNow: openIncidentsGauge === null ? null : Math.round(openIncidentsGauge),
+    runningNow: live(runningNow),
+    openIncidentsNow: live(openIncidentsNow),
     activityBreakdown: buildActivityBreakdown(actCount, actSum, actP95),
-    definitionBreakdown: buildDefinitionBreakdown({
-      started: defStarted,
-      completed: defCompleted,
-      incidents: defIncidents,
-      durSum: defDurSum,
-      durCount: defDurCount,
-      running: defRunning,
-    }),
+    definitionBreakdown: buildDefinitionBreakdown(
+      {
+        started: defStarted,
+        completed: defCompleted,
+        incidents: defIncidents,
+        durSum: defDurSum,
+        durCount: defDurCount,
+        running: defRunning,
+      },
+      engineReports || defRunning.length > 0,
+    ),
   }
 }
 
@@ -190,22 +210,28 @@ function buildActivityBreakdown(
     .slice(0, 20)
 }
 
-function buildDefinitionBreakdown(s: {
-  started: PromSample[]
-  completed: PromSample[]
-  incidents: PromSample[]
-  durSum: PromSample[]
-  durCount: PromSample[]
-  running: PromSample[]
-}): DefinitionBreakdownItem[] {
+/**
+ * `runningReported`: an engine in scope reports its state gauges — a key
+ * without a running row then runs nothing (0); otherwise its count is
+ * unknown (null), not 0.
+ */
+function buildDefinitionBreakdown(
+  s: {
+    started: PromSample[]
+    completed: PromSample[]
+    incidents: PromSample[]
+    durSum: PromSample[]
+    durCount: PromSample[]
+    running: PromSample[]
+  },
+  runningReported: boolean,
+): DefinitionBreakdownItem[] {
   const startedBy = byLabel(s.started, "process_definition_key")
   const completedBy = byLabel(s.completed, "process_definition_key")
   const incidentsBy = byLabel(s.incidents, "process_definition_key")
   const sumBy = byLabel(s.durSum, "process_definition_key")
   const countBy = byLabel(s.durCount, "process_definition_key")
   const runningBy = byLabel(s.running, "process_definition_key")
-  // No running gauge at all = the engines report no state gauges: unknown, not 0.
-  const runningReported = s.running.length > 0
   // A definition belongs in the breakdown when it started work in the window
   // OR has work running now — a long-running process must not vanish.
   const keys = new Set([...Object.keys(startedBy), ...Object.keys(runningBy)])

@@ -3,13 +3,14 @@ import type {
   CompareKpiDelta,
   FailureDashboardData,
 } from "@miragon-ai/analytics-client"
-import { formatDuration, type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
+import { formatDuration } from "@miragon-ai/widget-shell/widgets"
 import type { DescribeForModel } from "@miragon-ai/widget-shell/ui"
 import type { ClusterCompareData } from "./cluster-compare.js"
 import type { VersionCompareData } from "./version-compare.js"
 import type { EngineCompareData } from "./engine-compare.js"
 import type { EngineLandscapeData } from "./engine-landscape.js"
 import type { AnalyticsSettingsViewData } from "./settings-section.js"
+import type { AnalyticsBpmnHeatmapData } from "./bpmn-heatmap.js"
 import { versionCompareCaveats } from "../version-compare-caveats.js"
 
 /**
@@ -233,11 +234,12 @@ export const describeAnalyticsSettings: DescribeForModel<AnalyticsSettingsViewDa
   `omits period/minBucketSize` +
   `${data.canSave ? "; change them here or via analytics_save_settings" : " (read-only in this deployment)"}.`
 
-export const describeBpmnHeatmap: DescribeForModel<BpmnHeatmapData> = (data) => {
+export const describeBpmnHeatmap: DescribeForModel<AnalyticsBpmnHeatmapData> = (data) => {
   const hottest = maxEntry(data.frequency)
   const slowest = maxEntry(data.durationSec)
   return (
-    `Viewing the BPMN heatmap for process "${data.processDefinitionKey}" over ${data.period}: ` +
+    `Viewing the BPMN heatmap for process "${data.processDefinitionKey}" over ${data.period}` +
+    `${engineScope(data.engines)}: ` +
     `heat on ${Object.keys(data.frequency).length} element(s)` +
     `${hottest ? `; hottest "${hottest[0]}" (${hottest[1]} executions)` : ""}` +
     `${slowest ? `, slowest "${slowest[0]}" (avg ${Math.round(slowest[1] * 10) / 10}s)` : ""}. ` +

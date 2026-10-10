@@ -7,6 +7,7 @@ import {
   type PromSample,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
+import { reportingEnginesQuery } from "./helpers.js"
 
 export interface HealthCount {
   label: string
@@ -143,7 +144,7 @@ export async function engineHealth(
     ch.instant(`sum by (process_definition_key)(${M.processInstancesRunning}${sel})`),
     ch.instant(`sum by (incident_type)(${M.incidentsOpen}${sel})`),
     ch.instant(`sum(${M.jobsFailed}${sel})`),
-    ch.instant(`sum by (engine_id)(${M.jobsExecutable}${sel})`),
+    ch.instant(reportingEnginesQuery(sel)),
     ch.instant(`sum(${M.jobsSuspended}${sel})`),
     ch.instant(
       `sum(${M.userTasksOpen}${selector(`status="total"`, engineMatcher(params.engine))})`,

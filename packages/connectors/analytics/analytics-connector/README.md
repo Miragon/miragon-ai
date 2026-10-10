@@ -24,8 +24,13 @@ the React context and hangs every in-widget query on "Loading…".
   [`@miragon-ai/analytics-client`](../analytics-client).
 - **Widgets** (`src/widgets/`) — `show_dashboard`, `show_failure_dashboard`, `show_cluster_compare`,
   `show_version_compare`, `show_engine_landscape`, `show_engine_compare`, `show_bpmn_heatmap`.
-- **Engine-aware** — every tool accepts an optional `engine` filter (single id or list) so a single
-  dashboard can aggregate across CIB Seven instances; analytics are session-independent.
+- **Configured engines only** — analytics reads exactly the server's configured engine ids:
+  `createPlugin({ engineIds })` (a composed server injects camunda7's engines through
+  `analyticsModule`'s shared `engineIds`), else `ANALYTICS_ENGINE_IDS` for a standalone boot.
+  Without either, every analytics tool refuses (fail-closed) instead of reading every `engine_id`
+  a shared Prometheus holds. Every tool takes an optional `engine` filter (one configured id or a
+  list); omitted, it covers all configured engines and the result's `engines` names them; any
+  other id is refused. Analytics are session-independent.
 - **Toolsets** (`src/toolsets.ts`, declared as the module's `toolsets` vocabulary) — `read-only`
   (every analytics tool and widget, no settings save) and `standard` (adds
   `analytics_save_settings`). With no `analytics:<toolset>` suffix the module runs `read-only` on an
@@ -41,8 +46,8 @@ invert the per-process truth. Two consequences run through the module:
 - `engine_landscape` is the cross-engine view. It reports the process × engine inventory, absolute
   counts (running instances, open incidents, failed jobs) and the engine-owned job backlog
   (`jobs_executable`, `jobs_suspended`, `jobs_due_future`, `external_tasks_open`) — the one metric
-  family whose contract labels are `engine_id` only, so no process mix can confound it. Pass the
-  full configured engine list to surface engines that report nothing (`reporting: false`).
+  family whose contract labels are `engine_id` only, so no process mix can confound it. It covers
+  every configured engine, so one that reports nothing still gets a row (`reporting: false`).
 - `engine_compare` **requires** a `processDefinitionKey`. Holding the process fixed on both sides is
   what makes a delta attributable to the engine; `engine_landscape.sharedProcessKeys` lists the
   definitions that qualify.

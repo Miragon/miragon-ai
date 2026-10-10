@@ -198,6 +198,23 @@ describe("comparePeriods", () => {
     ])
   })
 
+  it.each([
+    // [label, window, starts, true starts per day]
+    ["10 minutes", ["2026-02-01T00:00:00Z", "2026-02-01T00:10:00Z"], 4, 576],
+    ["1 hour", ["2026-02-01T00:00:00Z", "2026-02-01T01:00:00Z"], 24, 576],
+    // Rounded to 0.00 days this window used to read as "not measured".
+    ["5 minutes", ["2026-02-01T00:00:00Z", "2026-02-01T00:05:00Z"], 3, 864],
+  ])(
+    "rates a %s window's starts per day from its exact length, not the rounded window_days",
+    async (_label, [from, to], starts, perDay) => {
+      const instant = vi.fn(async (q: string): Promise<PromSample[]> =>
+        q.includes("started_total") && !q.includes(AT_A) ? [v(starts)] : [],
+      )
+      const res = await comparePeriods({ instant }, { ...base, periodBFrom: from, periodBTo: to })
+      expect(res.kpiComparison[1].started_per_day).toBe(perDay)
+    },
+  )
+
   it("clamps a window reaching past now and flags it partial (N79)", async () => {
     const sent: string[] = []
     const instant = (q: string): Promise<PromSample[]> => {

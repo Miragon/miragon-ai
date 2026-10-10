@@ -1,5 +1,6 @@
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
+import { installMcpRequestContext } from "@miragon-ai/widget-shell/server"
 import { createPrometheusClient, type PrometheusConfig } from "@miragon-ai/analytics-client"
 import { registerTools } from "./tools/index.js"
 import { registerSettingsTools } from "./settings-tools.js"
@@ -8,6 +9,7 @@ import { definition } from "./definition.js"
 import type { ProfileSource } from "./server-locale.js"
 import { analyticsToolsets } from "./toolsets.js"
 import { createEngineScope } from "./engine-ids.js"
+import type { AnalyticsAppConfig } from "./steps/app-config.js"
 
 /**
  * `PrometheusConfig` carries the connection: the base URL (e.g.
@@ -56,12 +58,24 @@ export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer
     timeoutMs: config.timeoutMs,
   })
   const engineScope = createEngineScope(config.engineIds)
+  // The steps get the profile store too: a step's omitted period resolves to
+  // the caller's saved default, like every tool's.
+  const appConfig = {
+    client,
+    engineScope,
+    profileStore: config.profileStore,
+  } satisfies AnalyticsAppConfig
   return {
     definition,
-    appConfig: { client, engineScope },
-    // Every caller-dependent read (saved defaults, summary locale) resolves
-    // from the handler ctx — this module needs no ambient request context.
-    registerTools: (server) => registerTools(server, client, engineScope, config.profileStore),
+    appConfig,
+    // Tools and feeds resolve the caller (saved defaults, summary locale) from
+    // the handler ctx. The pipeline steps get none, so their saved-period
+    // lookup reads the ambient request info — installed here like camunda7
+    // does (idempotent; the host installs it too).
+    registerTools: (server) => {
+      installMcpRequestContext(server)
+      registerTools(server, client, engineScope, config.profileStore)
+    },
     registerWidgetTools: (server) => {
       registerWidgetTools(server, client, {
         fetchBpmnXml: config.fetchBpmnXml,

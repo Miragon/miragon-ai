@@ -216,9 +216,12 @@ export function registerWidgetTools(
         widget: "analytics:bpmn-heatmap",
         app: "analytics",
         dataType: "analytics:bpmnHeatmap",
+        // `AnalyticsBpmnHeatmapData` (widgets/bpmn-heatmap.tsx): the engines
+        // travel with the heat, so the model description names them.
         data: {
           processDefinitionKey: args.processDefinitionKey,
           period,
+          engines: scoped.engine,
           bpmnXml,
           frequency: heat.frequency,
           durationSec: heat.durationSec,
@@ -247,14 +250,16 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args, ctx) => {
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
+      const scoped = withEngineScope(engineScope, args)
       const heat = await queries.elementHeat(withCallerSignal(ch, ctx.signal), {
-        ...withEngineScope(engineScope, args),
+        ...scoped,
         period,
       })
       const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
       const data = {
         processDefinitionKey: args.processDefinitionKey,
         period,
+        engines: scoped.engine,
         bpmnXml,
         frequency: heat.frequency,
         durationSec: heat.durationSec,

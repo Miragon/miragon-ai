@@ -40,8 +40,9 @@ Edit `.env` (every field is documented inline in `.env.example`):
 
 - `CAMUNDA_BASE_URL` — the engine REST endpoint.
 - `CAMUNDA_ENGINE_ID` — **must match the `ENGINE_ID` the engine stamps onto its
-  metrics.** The mismatch is silent: engine-scoped analytics (BPMN heatmap,
-  engine compare) simply return nothing.
+  metrics.** Analytics reads only the configured engine ids, so the mismatch
+  is silent: every analytics tool returns nothing for that engine and its
+  health reads `unknown`.
 - `CAMUNDA_AUTH_TYPE` — `none | basic | bearer | passthrough`; `basic` needs
   `CAMUNDA_USERNAME`/`CAMUNDA_PASSWORD`, `bearer` needs `CAMUNDA_TOKEN` (both
   enforced at boot); `passthrough` forwards each MCP caller's own bearer token.

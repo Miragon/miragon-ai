@@ -65,6 +65,8 @@ const CANNED_SAMPLES: Array<[(q: string) => boolean, PromSample[]]> = [
   // Live gauges, independent of the window
   [(q) => q.includes("process_instances_running"), [v(156)]],
   [(q) => q.includes("incidents_open"), [v(12)]],
+  // The engine-state presence probe: the engine in scope reports.
+  [(q) => q.includes("camunda_jobs_executable"), [{ metric: { engine_id: "prod-a" }, value: 3 }]],
   // Global KPIs
   [(q) => q.includes("histogram_quantile(0.5"), [v(8)]],
   [(q) => q.includes("histogram_quantile(0.95"), [v(30)]],
@@ -204,6 +206,48 @@ describe("dashboardData", () => {
     })
   })
 
+  it("reads a reporting engine's missing gauge series as a measured 0, not as unreported", async () => {
+    // The metrics plugin registers an open-incident row only per (key, type)
+    // that HAS incidents, and a running row only per deployed key — so a
+    // healthy engine with nothing open sends no camunda_incidents_open series
+    // at all. Its presence probe still answers: that is a 0, the same 0 the
+    // failure dashboard and engine health report.
+    const instant = vi.fn(async (q: string): Promise<PromSample[]> =>
+      q.includes("camunda_jobs_executable")
+        ? [{ metric: { engine_id: "prod-a" }, value: 0 }]
+        : q === 'sum(camunda_process_instances_running{engine_id="prod-a"})'
+          ? [v(156)]
+          : [],
+    )
+    const res = await dashboardData({ instant }, { period: "1d", engine: "prod-a" })
+
+    expect(res).toMatchObject({ runningNow: 156, openIncidentsNow: 0 })
+
+    // A process the engine does not run: nothing running, nothing open — both 0.
+    const scoped = await dashboardData(
+      { instant },
+      { processDefinitionKey: "gone", period: "1d", engine: "prod-a" },
+    )
+    expect(scoped).toMatchObject({ runningNow: 0, openIncidentsNow: 0 })
+  })
+
+  it("keeps a definition's running count measured when only its gauge row is missing", async () => {
+    // A key that started work in the window but has no running row: 0
+    // running while the engine reports, never "not reported".
+    const instant = vi.fn(async (q: string): Promise<PromSample[]> =>
+      q.includes("camunda_jobs_executable")
+        ? [{ metric: { engine_id: "prod-a" }, value: 0 }]
+        : q.includes(BY_KEY) && q.includes("started_total")
+          ? [def("order", 5)]
+          : [],
+    )
+    const res = await dashboardData({ instant }, { period: "1d", engine: "prod-a" })
+
+    expect(res.definitionBreakdown).toMatchObject([
+      { processDefinitionKey: "order", runningNow: 0 },
+    ])
+  })
+
   it("lets an incident rate exceed 100 % rather than capping it — incidents are not instances", async () => {
     const instant = vi.fn(async (q: string): Promise<PromSample[]> =>
       q.includes("incident_created") ? [v(30)] : q.includes("started_total") ? [v(10)] : [],
@@ -222,14 +266,21 @@ describe("dashboardData", () => {
 
     const queries = instant.mock.calls.map((c) => c[0])
     expect(queries.length).toBeGreaterThan(0)
-    expect(queries.every((q) => q.includes('process_definition_key="myKey"'))).toBe(true)
     expect(queries.every((q) => q.includes('engine_id="prod-a"'))).toBe(true)
+    // The presence probe asks whether the ENGINE reports — its gauge carries
+    // engine_id only; every other query is scoped to the process.
+    const probe = 'sum by (engine_id)(camunda_jobs_executable{engine_id="prod-a"})'
+    expect(queries.filter((q) => q === probe)).toHaveLength(1)
+    expect(
+      queries.filter((q) => q !== probe).every((q) => q.includes('process_definition_key="myKey"')),
+    ).toBe(true)
     // The live gauges are point-in-time: no range at all.
     const gauges = queries.filter((q) => !q.includes("increase("))
     expect(gauges).toEqual([
       'sum(camunda_process_instances_running{process_definition_key="myKey",engine_id="prod-a"})',
       'sum(camunda_incidents_open{process_definition_key="myKey",engine_id="prod-a"})',
       'sum by (process_definition_key)(camunda_process_instances_running{process_definition_key="myKey",engine_id="prod-a"})',
+      probe,
     ])
     const flows = queries.filter((q) => q.includes("increase("))
     expect(flows.every((q) => q.includes("[30d]"))).toBe(true)

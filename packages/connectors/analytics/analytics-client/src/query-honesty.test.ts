@@ -118,7 +118,7 @@ const NO_DATA: { [K in keyof typeof queries]: (result: Result<K>) => void } = {
       avgDurationMs: null,
       medianDurationMs: null,
       p95DurationMs: null,
-      // Live gauges without a series are "not reported", never 0 running.
+      // No engine in scope reports: the live gauges are "not reported", never 0 running.
       runningNow: null,
       openIncidentsNow: null,
       activityBreakdown: [],
@@ -171,6 +171,42 @@ describe("query honesty — a Prometheus without data", () => {
   )
 })
 
+/**
+ * The commonest live state — an engine that reports, with nothing open. The
+ * metrics plugin registers per-key gauge rows only for what exists, so with
+ * no incident open `camunda_incidents_open` has NO series at all while the
+ * engine's own presence gauges still answer. Every surface reading that state
+ * must say the same measured 0, never "not measured".
+ */
+describe("query honesty — a reporting engine with nothing open", () => {
+  it("dashboard, failure dashboard, engine health and landscape agree on 0", async () => {
+    const { ch } = recordingClient((q) =>
+      q.includes("camunda_jobs_executable") || q.includes("camunda_external_tasks_open")
+        ? [{ metric: { engine_id: "prod-a" }, value: 0 }]
+        : [],
+    )
+    const engine = "prod-a"
+    const [dashboard, failures, health, landscape] = await Promise.all([
+      queries.dashboardData(ch, { period: "7d", engine }),
+      queries.failureDashboardData(ch, { engine }),
+      queries.engineHealth(ch, { engine }),
+      queries.engineLandscape(ch, { engine }),
+    ])
+
+    expect(health.status).toBe("healthy")
+    expect({
+      dashboard: dashboard.openIncidentsNow,
+      failureDashboard: failures.totalIncidents,
+      engineHealth: health.openIncidents,
+      landscape: landscape.engines.find((e) => e.engineId === engine)?.openIncidents,
+    }).toEqual({ dashboard: 0, failureDashboard: 0, engineHealth: 0, landscape: 0 })
+    expect({ dashboard: dashboard.runningNow, engineHealth: health.runningInstances }).toEqual({
+      dashboard: 0,
+      engineHealth: 0,
+    })
+  })
+})
+
 const FLEET = ["prod-a", "prod-b"]
 
 /**
@@ -219,7 +255,8 @@ const SCOPE_ECHO: {
       }),
   },
   elementHeat: {
-    exempt: "heatmap values only — its show tool and feed carry the scope in their own payload",
+    exempt:
+      "heatmap values only — its show tool and feed carry the scope in their own payload (analytics-connector engine-scope.test.ts)",
   },
   clusterCompare: {
     echo: (ch, engine) =>

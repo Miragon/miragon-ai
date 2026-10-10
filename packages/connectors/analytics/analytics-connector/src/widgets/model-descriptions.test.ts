@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
+import type { AnalyticsBpmnHeatmapData } from "./bpmn-heatmap.js"
 import {
   describeActivityBottlenecks,
+  describeBpmnHeatmap,
   describeEngineLandscape,
   describeErrorPatterns,
   describeExecutionPerformance,
@@ -285,5 +287,25 @@ describe("dashboard model descriptions", () => {
       {},
     )
     expect(text).toContain('top bottleneck activity StartEvent_1 of process "invoice"')
+  })
+})
+
+describe("describeBpmnHeatmap", () => {
+  const heatmap = (engines: string[]): AnalyticsBpmnHeatmapData => ({
+    processDefinitionKey: "order",
+    period: "7d",
+    engines,
+    bpmnXml: null,
+    frequency: { Task_A: 12 },
+    durationSec: { Task_A: 3.25 },
+  })
+
+  it("names the engines whose heat it adds up (K33)", () => {
+    expect(describeBpmnHeatmap(heatmap(["prod-a", "prod-b"]), {})).toContain(
+      'for process "order" over 7d across engines "prod-a", "prod-b" (aggregated):',
+    )
+    expect(describeBpmnHeatmap(heatmap(["prod-b"]), {})).toContain(
+      'for process "order" over 7d on engine "prod-b":',
+    )
   })
 })

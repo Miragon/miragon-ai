@@ -60,7 +60,7 @@ export interface DefinitionBreakdownItem {
   totalInstances: number
   /** Instances completed in the window. */
   completed: number
-  /** Instances running right now (live gauge); null when the engines report no state gauges. */
+  /** Instances running right now (live gauge); null when no engine in scope reports its state gauges. */
   runningNow: number | null
   /** Incidents created in the window — incidents, not failed instances. */
   incidentsCreated: number
@@ -89,9 +89,15 @@ export interface AnalyticsDashboardData {
   medianDurationMs: number | null
   p95DurationMs: number | null
   // ── Live state, right now ────────────────────────────────────────────────
-  /** Instances running now (live gauge, independent of the window); null when not reported. */
+  /**
+   * Instances running now (live gauge, independent of the window); 0 when an
+   * engine in scope reports but runs none, null only when none reports.
+   */
   runningNow: number | null
-  /** Incidents open now (live gauge — the failure dashboard's number); null when not reported. */
+  /**
+   * Incidents open now (live gauge — the failure dashboard's number); 0 when
+   * an engine in scope reports but has none open, null only when none reports.
+   */
   openIncidentsNow: number | null
   activityBreakdown: ActivityBreakdownItem[]
   definitionBreakdown: DefinitionBreakdownItem[]

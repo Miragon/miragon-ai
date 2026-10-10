@@ -18,7 +18,15 @@ import {
   round1,
   round1OrNull,
 } from "./helpers.js"
-import { clampWindow, daysOf, isoOf, nowSeconds, rangeAt, type ClampedWindow } from "./windows.js"
+import {
+  clampWindow,
+  DAY_SECONDS,
+  daysOf,
+  isoOf,
+  nowSeconds,
+  rangeAt,
+  type ClampedWindow,
+} from "./windows.js"
 
 export interface PerformanceKPI {
   process_definition_key: string
@@ -57,8 +65,12 @@ export interface PeriodComparisonKpi {
   /** True when clamping cut the requested window short. */
   partial: boolean
   total_instances: number
-  /** `total_instances` per day — the figure to compare across windows of different length. */
-  started_per_day: number | null
+  /**
+   * `total_instances` per day of the window's exact length — the figure to
+   * compare across windows of different length. Always measured: a clamped
+   * window is never empty (`clampWindow` refuses one).
+   */
+  started_per_day: number
   completed: number
   incident_count: number
   incident_rate_pct: number | null
@@ -295,15 +307,16 @@ async function periodKpi(
   ])
   const totalInstances = Math.round(first(total))
   const incidentCount = Math.round(first(incidents))
-  const days = daysOf(w.seconds)
   return {
     period: label,
     window_from: isoOf(w.from),
     window_to: isoOf(w.to),
-    window_days: days,
+    window_days: daysOf(w.seconds),
     partial: w.partial,
     total_instances: totalInstances,
-    started_per_day: days > 0 ? round1(totalInstances / days) : null,
+    // From the exact length — the rounded window_days is for display: a
+    // 10-minute window is 0.01 d there (−30 %), a 5-minute one 0.00 d.
+    started_per_day: round1((totalInstances * DAY_SECONDS) / w.seconds),
     completed: Math.round(first(completed)),
     incident_count: incidentCount,
     incident_rate_pct: ratePct(incidentCount, totalInstances),

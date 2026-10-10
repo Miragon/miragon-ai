@@ -19,8 +19,10 @@ export default mergeConfig(
         // ctx.signal sweep over every widget tool (43.32 / 16.15 / 32.35 / 45.12).
         // Raised 2026-10-10 with the engine-scope sweep over every
         // Prometheus-reading tool and the model-description/summary guards
-        // (#336; measured 61.89 / 36.97 / 60.48 / 62.76).
-        thresholds: { statements: 59, branches: 34, functions: 58, lines: 60 },
+        // (#336; measured 61.89 / 36.97 / 60.48 / 62.76), and again with the
+        // pipeline-step key guard and the heatmap scope echo (#336 review;
+        // measured 66.3 / 40.96 / 63.28 / 67.35).
+        thresholds: { statements: 64, branches: 38, functions: 61, lines: 65 },
       },
     },
   }),
