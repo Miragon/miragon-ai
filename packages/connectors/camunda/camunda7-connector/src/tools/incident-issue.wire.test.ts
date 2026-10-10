@@ -127,7 +127,7 @@ describe("camunda7_format_incident_issue targets the configured repository only"
  */
 describe("camunda7_format_incident_issue keeps engine values inside their spans", () => {
   const HOSTILE_TYPE = "x` ![p](https://evil.example/t.png) `"
-  const HOSTILE_TENANT = "acme | injected | cells\n| row |"
+  const HOSTILE_TENANT = "acme | injected | cells\n| row \\| x \\\\|"
 
   /** The text CommonMark renders as literal code: every span of the body, by its delimiter. */
   function spans(markdown: string): string[] {
@@ -163,7 +163,14 @@ describe("camunda7_format_incident_issue keeps engine values inside their spans"
       expect(spans(body).filter((span) => span === HOSTILE_TYPE)).toHaveLength(3)
       // The table keeps its two columns: the tenant's pipes are escaped, its line break gone.
       const tenantRow = body.split("\n").find((line) => line.startsWith("| Tenant |"))!
-      expect(tenantRow).toBe("| Tenant | `acme \\| injected \\| cells \\| row \\|` |")
+      // A backslash run before a pipe is doubled first, so every pipe sits behind an
+      // ODD run — escaped for a renderer that counts backslashes (marked, GFM).
+      expect(tenantRow).toBe(
+        "| Tenant | `acme \\| injected \\| cells \\| row \\\\\\| x \\\\\\\\\\|` |",
+      )
+      for (const pipe of tenantRow.slice("| Tenant | ".length, -2).matchAll(/(\\*)\|/g)) {
+        expect(pipe[1].length % 2).toBe(1)
+      }
     }
   })
 })

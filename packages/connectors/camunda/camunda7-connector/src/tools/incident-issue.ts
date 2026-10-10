@@ -314,12 +314,17 @@ function longestBacktickRun(text: string): number {
  * links, mentions) in the filed ticket. The delimiter is one backtick longer
  * than any run inside; line breaks become spaces (a span is one line, and a
  * table row must stay one); in a table cell a `|` is escaped, since GFM
- * splits cells on it even inside a span. A value that starts or ends with a
+ * splits cells on it even inside a span. A renderer splits on a pipe behind
+ * an EVEN backslash run, so a run directly before a pipe is doubled before
+ * the pipe's own escape — the row stays whole, at the price of one extra
+ * backslash shown in that rare spot. A value that starts or ends with a
  * backtick is padded with a space, which CommonMark strips again.
  */
 function codeSpan(value: string, { inTable = false }: { inTable?: boolean } = {}): string {
   const oneLine = value.replace(/\r\n?|\n/g, " ")
-  const text = inTable ? oneLine.replace(/\|/g, "\\|") : oneLine
+  const text = inTable
+    ? oneLine.replace(/(\\*)\|/g, (_pipe, run: string) => `${run}${run}\\|`)
+    : oneLine
   const delimiter = "`".repeat(longestBacktickRun(text) + 1)
   const pad = text.startsWith("`") || text.endsWith("`") ? " " : ""
   return `${delimiter}${pad}${text}${pad}${delimiter}`

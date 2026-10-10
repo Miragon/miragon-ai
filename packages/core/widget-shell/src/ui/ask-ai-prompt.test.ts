@@ -149,7 +149,7 @@ describe("askAiPrompt — ids are inlined only when id-shaped", () => {
     const prompt = askAiPrompt(spec({ ids: { businessKey: value } }))!
     expect(prompt).not.toContain("Ids:")
     expect(prompt).toContain("businessKey:\n")
-    expect(fencedBodies(prompt)[0].body).toBe(value.replace(/\n/g, "\n"))
+    expect(fencedBodies(prompt)[0].body).toBe(value)
   })
 
   it("moves a list with one free-text element into the fence as a whole", () => {
