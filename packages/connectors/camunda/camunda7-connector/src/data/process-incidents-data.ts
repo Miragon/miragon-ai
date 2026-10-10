@@ -4,7 +4,7 @@ import {
   getIncidents,
   getIncidentsCount,
   getJobsCount,
-  getProcessDefinitionBpmn20XmlByKey,
+  getProcessDefinitionBpmn20Xml,
   getProcessInstancesCount,
 } from "@miragon-ai/camunda7-client/sdk"
 import type {
@@ -16,7 +16,7 @@ import type {
 import type { ActivityIncidentsFilters, PagingArgs } from "../feed-contracts.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
-import { countBpmnActivities, extractActivityNames } from "../lib/bpmn-parse.js"
+import { bpmnActivityIds, extractActivityNames } from "../lib/bpmn-parse.js"
 import { fetchLatestDefinition, fetchStatsByKey } from "./definition-info.js"
 import { countOf, DAY_MS, optional, rowsOf } from "./engine-reads.js"
 import {
@@ -40,10 +40,12 @@ export interface ProcessIncidentsOptions {
  * running after a redeploy, so every number covers every version of the key:
  * running instances, failed jobs and incidents come from key-scoped `/count`
  * endpoints, the per-activity incident counts are summed over all versions.
- * Only the diagram is one version (the latest, `diagramVersion`). Independent
- * reads run in one parallel stage (N67); the engine-wide definition
- * statistics are read only when the key's incidents outrun the recency scan
- * or the empty state looks for other processes.
+ * Only the diagram is one version (the latest over every tenant,
+ * `diagramVersion`), read by the resolved id. Two parallel stages (N67): the
+ * key lookup with every count and the scan, then what needs their answers —
+ * the diagram, the per-activity counts (the engine-wide definition
+ * statistics only when the key's incidents outrun the recency scan) and, for
+ * the empty state alone, the other processes with incidents.
  */
 export async function buildProcessIncidentsData(
   client: Client,
@@ -52,11 +54,10 @@ export async function buildProcessIncidentsData(
   const key = options.processDefinitionKey
   const cutoffMs = Date.now() - DAY_MS
   const byKey = { processDefinitionKeyIn: key }
-  const [definition, xml, runningInstances, failedJobs, incidentCount, last24hCount, scan] =
+  const [definition, runningInstances, failedJobs, incidentCount, last24hCount, scan] =
     await Promise.all([
-      // Primary: an unknown key is the engine's 404 — a not-found error, never zeros.
+      // Primary: an unknown key is a not-found error, never a view of zeros.
       fetchLatestDefinition(client, key),
-      optional(getProcessDefinitionBpmn20XmlByKey({ client, path: { key } })),
       getProcessInstancesCount({ client, query: { processDefinitionKey: key } }).then(countOf),
       getJobsCount({ client, query: { processDefinitionKey: key, noRetriesLeft: true } }).then(
         countOf,
@@ -69,13 +70,22 @@ export async function buildProcessIncidentsData(
       scanIncidents(client, byKey),
     ])
 
-  const [activityCounts, siblingsWithIncidents] = await Promise.all([
+  const [xml, activityCounts, siblingsWithIncidents] = await Promise.all([
+    definition.id
+      ? optional(getProcessDefinitionBpmn20Xml({ client, path: { id: definition.id } }))
+      : Promise.resolve(null),
     activityIncidentCounts(client, key, scan),
-    // The empty state offers processes that DO have incidents — enrichment.
-    incidentCount === 0 ? optional(fetchSiblingsWithIncidents(client, key)) : Promise.resolve([]),
+    // Only the empty state shows the processes that DO have incidents — read
+    // for it alone (enrichment); null otherwise, never an unread `[]`.
+    incidentCount === 0 ? optional(fetchSiblingsWithIncidents(client, key)) : Promise.resolve(null),
   ])
 
   const bpmnXml = (xml as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? null
+  const diagramIds = bpmnXml ? new Set(bpmnActivityIds(bpmnXml)) : null
+  const activities = toActivities(activityCounts, scan, {
+    names: bpmnXml ? extractActivityNames(bpmnXml) : {},
+    cutoffMs,
+  })
   return {
     processDefinitionKey: key,
     processDefinitionName: definition.name,
@@ -90,12 +100,14 @@ export async function buildProcessIncidentsData(
     incidentCount,
     last24hCount,
     failedJobs,
-    totalActivityCount: bpmnXml ? countBpmnActivities(bpmnXml) : null,
+    totalActivityCount: diagramIds ? diagramIds.size : null,
+    // Same scope as the denominator: an activity only an older version has
+    // stays in `activities`, never in "X of the diagram's Y".
+    affectedDiagramActivityCount: diagramIds
+      ? activities.filter((a) => diagramIds.has(a.activityId)).length
+      : null,
     latestIncident: latestEngineDate(scan.rows.map((r) => r.incidentTimestamp)),
-    activities: toActivities(activityCounts, scan, {
-      names: bpmnXml ? extractActivityNames(bpmnXml) : {},
-      cutoffMs,
-    }),
+    activities,
     siblingsWithIncidents,
   }
 }
@@ -213,7 +225,7 @@ export async function buildActivityIncidentsData(
         firstResult: Math.max(0, options.firstResult ?? 0),
         maxResults: options.maxResults ?? ACTIVITY_INCIDENTS_PAGE,
       },
-    }).then((rows) => rowsOf<Omit<IncidentRow, "processDefinitionKey">>(rows)),
+    }).then((rows) => rowsOf<IncidentRow>(rows)),
     getIncidentsCount({ client, query }).then(countOf),
   ])
   return {

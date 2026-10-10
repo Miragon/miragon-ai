@@ -191,8 +191,10 @@ function instanceRoutes(counts: { all: number; withIncident: number; suspended: 
             : counts.all,
       },
     }),
-    "GET /process-definition/key/K1": {
-      body: { id: "K1:7:dep", key: "K1", name: "Order", version: 7 },
+    // The key's latest version over every tenant (a tenant deployment has no
+    // tenant-less /process-definition/key/{key}).
+    "GET /process-definition": {
+      body: [{ id: "K1:7:dep", key: "K1", name: "Order", version: 7, tenantId: "acme" }],
     },
   }
 }
@@ -330,7 +332,7 @@ describe("buildJobPanelData — exact totals from /job/count", () => {
     "GET /job/count": (r: RecordedRequest) => ({
       body: { count: r.query.noRetriesLeft ? 3 : 120 },
     }),
-    "GET /process-definition/key/K1": { body: { id: "K1:1:a", key: "K1", version: 1 } },
+    "GET /process-definition": { body: [{ id: "K1:1:a", key: "K1", version: 1 }] },
   }
 
   it("reports both global totals; the page follows failedOnly", async () => {
@@ -357,8 +359,10 @@ describe("buildJobPanelData — exact totals from /job/count", () => {
         sortOrder: "desc",
       },
     ])
-    // A scoped panel checks its key exists (an unknown key is a 404, not "0 jobs").
-    expect(calls(engine, "/process-definition/key/K1")).toHaveLength(1)
+    // A scoped panel checks its key exists (an unknown key is not-found, not "0 jobs").
+    expect(calls(engine, "/process-definition").map((r) => r.query)).toEqual([
+      { key: "K1", latestVersion: "true", sortBy: "version", sortOrder: "desc", maxResults: "1" },
+    ])
   })
 
   it("nulls the optional job fields instead of shipping undefined", async () => {

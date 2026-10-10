@@ -7,7 +7,12 @@ import type {
 } from "../view-models.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
-import { fetchStatsByKey, type KeyStats } from "./definition-info.js"
+import {
+  definitionKeyResolver,
+  fetchStatsByKey,
+  unknownKeyError,
+  type KeyStats,
+} from "./definition-info.js"
 import { countOf, DAY_MS } from "./engine-reads.js"
 import {
   groupBy,
@@ -32,7 +37,10 @@ export interface IncidentsDashboardOptions {
  * definition statistics. The newest-first recency scan only adds the
  * per-activity breakdown and timestamps — and says how much of each process
  * it covers (`scannedIncidentCount`), so a process whose incidents all lie
- * beyond the scan still appears with its exact count (#335 N61).
+ * beyond the scan still appears with its exact count (#335 N61). Scanned rows
+ * join their card through the statistics' version ids — a bare generated
+ * definition id (long keys) carries no parseable key. A scope key no version
+ * is deployed for is a not-found error, never "0 open incidents".
  */
 export async function buildIncidentsDashboardData(
   client: Client,
@@ -53,7 +61,12 @@ export async function buildIncidentsDashboardData(
     fetchStatsByKey(client, { incidentsForType: options.incidentType }),
   ])
 
-  const scannedByKey = groupBy(scan.rows, (r) => r.processDefinitionKey)
+  if (options.processDefinitionKey !== undefined && !statsByKey.has(options.processDefinitionKey)) {
+    throw unknownKeyError(options.processDefinitionKey)
+  }
+
+  const keyOf = definitionKeyResolver(statsByKey)
+  const scannedByKey = groupBy(scan.rows, (r) => keyOf(r.processDefinitionId))
   const processes = [...statsByKey.entries()]
     .filter(([key, stats]) => stats.incidentCount > 0 && matchesKey(key, options))
     .sort((a, b) => b[1].incidentCount - a[1].incidentCount)
@@ -83,8 +96,10 @@ function toProcess(
   scanned: IncidentRow[],
   ctx: { scan: IncidentScan; cutoffMs: number; options: IncidentsDashboardOptions },
 ): IncidentsDashboardProcess {
-  // The breakdown is complete only when the scan holds every incident of the key.
-  const fullyScanned = ctx.scan.complete || scanned.length >= stats.incidentCount
+  // The breakdown is complete only when the scan holds every incident of the
+  // key — measured against the exact count, so a card the scan holds none of
+  // never reports confident zeros next to its N incidents.
+  const fullyScanned = scanned.length >= stats.incidentCount
   const facts = scanFacts(scanned, { fullyScanned, scan: ctx.scan, cutoffMs: ctx.cutoffMs })
   const activities: IncidentsDashboardActivity[] = [
     ...groupBy(scanned, (r) => r.activityId).entries(),

@@ -14,6 +14,7 @@ import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useNav } from "../navigation.js"
 import { useViewData } from "../use-view-data.js"
 import { useT } from "../../messages/use-t.js"
+import { diagramActivityFraction } from "./activity-scope.js"
 
 // AI handoff prompt — fully self-contained (engine + concrete ids inlined) so
 // the chat follow-up needs no ambient context. The problem-activity list is
@@ -27,10 +28,12 @@ function buildAnalyzePrompt(data: ProcessIncidentsData, title: string, engineId:
       )
       .join(", ") || "(none reported)"
 
-  const affectedActivities =
-    data.totalActivityCount != null
-      ? `${data.activities.length} of ${data.totalActivityCount}`
-      : `${data.activities.length}`
+  // Both sides over the diagram; activities only older versions have stay
+  // in the problem list above, never in the fraction.
+  const fraction = diagramActivityFraction(data)
+  const affectedActivities = fraction
+    ? `${fraction.affected} of ${fraction.total}`
+    : `${data.activities.length}`
   return `Triage the health of process definition \`${title}\` (key \`${data.processDefinitionKey}\`, all versions; diagram version ${data.diagramVersion}, engine \`${engineId}\`). Current state: ${data.incidentCount} open incident(s), ${data.failedJobs ?? "unknown"} failed job(s), ${affectedActivities} activities affected, ${data.runningInstances ?? "unknown"} running instances. Problem activities: ${problemActivityList}. Use camunda7_list_incidents({ processDefinitionKey: "${data.processDefinitionKey}" }) and camunda7_list_jobs({ processDefinitionKey: "${data.processDefinitionKey}", noRetriesLeft: true }) to pull the real incident/exception messages, cluster them by root cause, and use camunda7_query_historic_activity_instances to see whether the same failures recur. Tell me: the single most likely root cause per cluster, which activities are symptoms vs. sources, and a concrete recommended fix (batch retry, variable change, modification, or migration). Do NOT mutate anything — diagnosis only.`
 }
 

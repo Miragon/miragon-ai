@@ -138,6 +138,8 @@ export const en: MessageCatalog = {
     ' Top cluster: activity "{activityId}" / {incidentType}, {incidentCount} incidents.',
   "c7sum.engineHealth.noIncidents": " No open incidents.",
   "c7sum.unknownNumberOf": "an unknown number of",
+  "c7sum.atLeast": "at least {count}",
+  "c7sum.unknown": "unknown",
   "c7sum.clusterDetail":
     'Failure cluster on engine "{engineId}": activity "{activityId}" / {incidentType} — {incidentCount} incidents ({lastHourCount} in the last hour) across {processes}.{sample}',
   "c7sum.clusterDetail.unknownProcesses": "unknown processes",

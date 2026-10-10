@@ -97,9 +97,13 @@ describe("buildBpmnViewerData — instance-scoped overlays (#335 N66)", () => {
       incidentActivityIds: [],
       activityStats: [{ id: "charge", instances: 55, failedJobs: 55 }],
     })
+    // The highest version over every tenant — sorted, so one of several
+    // per-tenant latest versions is never picked at random.
     expect(requests.find((r) => r.path === "/process-definition")?.query).toEqual({
       key: "order",
       latestVersion: "true",
+      sortBy: "version",
+      sortOrder: "desc",
       maxResults: "1",
     })
     expect(requests.find((r) => r.path.endsWith("/statistics"))?.query).toEqual({

@@ -19,7 +19,7 @@ import { CAMUNDA7_ENGINE_HEALTH_DATA } from "../tool-names.js"
 import { useViewData } from "./use-view-data.js"
 import { remediatePrompt, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
 import { fenceUntrusted } from "./lib/untrusted.js"
-import { formatCount } from "./lib/format-count.js"
+import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { useT } from "../messages/use-t.js"
 
 const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; glyph: string; labelKey: string }> = {
@@ -39,7 +39,7 @@ function describeHealth(data: EngineHealthData, engine?: string): string {
   const top = clusters[0]
   const topLine = top
     ? ` Dominant cluster: activity "${top.activityId}" failing as ${top.incidentType} ` +
-      `(${top.incidentCount} incidents across ${top.processDefinitionKeys.length} definition(s)).`
+      `(${top.incidentCount ?? `at least ${top.scannedIncidentCount}`} incidents across ${top.processDefinitionKeys.length} definition(s)).`
     : ""
   return (
     `The operator is viewing the engine health overview for engine ` +
@@ -64,7 +64,7 @@ function triagePrompt(data: EngineHealthData, engine?: string): string {
   const clusterLines = clusters
     .map(
       (c) =>
-        `- activity "${c.activityId}" / ${c.incidentType}: ${c.incidentCount} incidents` +
+        `- activity "${c.activityId}" / ${c.incidentType}: ${c.incidentCount ?? `at least ${c.scannedIncidentCount}`} incidents` +
         (c.processDefinitionKeys[0] && c.processDefinitionKeys[0] !== UNKNOWN
           ? ` (process ${c.processDefinitionKeys.join(", ")})`
           : ""),
@@ -142,8 +142,10 @@ function ClusterRow({
       }
       subtitle={
         <>
-          {t("engineHealth.clusterAffected", { count: cluster.incidentCount })}
-          {cluster.last24hCount > 0
+          {t("engineHealth.clusterAffected", {
+            count: formatCountAtLeast(cluster.incidentCount, cluster.scannedIncidentCount),
+          })}
+          {cluster.last24hCount !== null && cluster.last24hCount > 0
             ? ` · ${t("engineHealth.clusterNew24h", { count: cluster.last24hCount })}`
             : ""}{" "}
           · {scope}

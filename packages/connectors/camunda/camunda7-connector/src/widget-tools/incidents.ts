@@ -9,11 +9,8 @@ import {
   withToolErrors,
   strictToolInput,
 } from "@miragon-ai/widget-shell/server"
-import {
-  buildClusterDetailData,
-  buildEngineHealthData,
-  healthVerdictRule,
-} from "../data/health-data.js"
+import { buildClusterDetailData } from "../data/cluster-detail-data.js"
+import { buildEngineHealthData, healthVerdictRule } from "../data/health-data.js"
 import { buildIncidentsDashboardData } from "../data/incidents-dashboard-data.js"
 import { buildProcessIncidentsData } from "../data/process-incidents-data.js"
 import { buildIncidentDetailData } from "../data/incident-detail-data.js"
@@ -202,7 +199,9 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
             ? t("c7sum.engineHealth.topCluster", {
                 activityId: top.activityId,
                 incidentType: top.incidentType,
-                incidentCount: top.incidentCount,
+                // null = the capped scan holds only part of it — a lower bound, said as one.
+                incidentCount:
+                  top.incidentCount ?? t("c7sum.atLeast", { count: top.scannedIncidentCount }),
               })
             : t("c7sum.engineHealth.noIncidents"),
         }),
@@ -241,8 +240,9 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
           engineId,
           activityId: data.activityId,
           incidentType: data.incidentType,
-          incidentCount: data.incidentCount,
-          lastHourCount: data.lastHourCount,
+          incidentCount:
+            data.incidentCount ?? t("c7sum.atLeast", { count: data.scannedIncidentCount }),
+          lastHourCount: data.lastHourCount ?? t("c7sum.unknown"),
           processes:
             data.processDefinitionKeys.join(", ") || t("c7sum.clusterDetail.unknownProcesses"),
           sample: data.representativeMessage

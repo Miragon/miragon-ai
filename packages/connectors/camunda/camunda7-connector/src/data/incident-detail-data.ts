@@ -173,7 +173,9 @@ async function fetchJob(client: Client, jobId: string): Promise<IncidentDetailJo
 /**
  * Delegated incidents (sub-process failure propagated to the parent) have
  * null `configuration`/`incidentMessage`. The real failure data lives on
- * the root cause — fetch it and use it as the failure source.
+ * the root cause — fetch it and use it as the failure source. PRIMARY: it
+ * decides which job (and message) the view shows, so a failed read is a tool
+ * error, never "this incident has no job".
  */
 async function fetchRootCauseIncident(
   client: Client,
@@ -181,7 +183,7 @@ async function fetchRootCauseIncident(
 ): Promise<RawIncident | null> {
   const rootId = rawIncident.rootCauseIncidentId
   return rootId && rootId !== rawIncident.id
-    ? await getIncident({ client, path: { id: rootId } }).catch(() => null)
+    ? await getIncident({ client, path: { id: rootId } })
     : null
 }
 

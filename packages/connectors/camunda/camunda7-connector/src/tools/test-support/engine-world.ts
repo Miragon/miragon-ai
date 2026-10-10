@@ -1,9 +1,10 @@
 /**
  * A small, deterministic engine for the fake engine (`fake-engine.ts`): one
  * process key (`order`, versions 1 and 2), one running instance (`pi-1` on
- * v1, a token at `charge`), one open incident with its failed job. Every
- * builder renders successfully against it, so a test can break exactly ONE
- * route (`withFailure`) and watch what the builder does with it.
+ * v1, a token at `charge`), one open incident with its failed job — and a
+ * delegated incident (`inc-2`) whose root cause it is. Every builder renders
+ * successfully against it, so a test can break exactly ONE read (`readOf`)
+ * and watch what the builder does with it.
  */
 import type { FakeReply, RecordedRequest } from "./fake-engine.js"
 
@@ -13,6 +14,7 @@ export const WORLD = {
   instanceDefinitionId: "order:1:d1",
   instanceId: "pi-1",
   incidentId: "inc-1",
+  delegatedIncidentId: "inc-2",
   jobId: "job-1",
   activityId: "charge",
 } as const
@@ -40,10 +42,17 @@ const incident = {
   configuration: WORLD.jobId,
 }
 
+/** A delegated incident (a call activity's failure, propagated): its failure lives on `inc-1`. */
+const delegated = {
+  ...incident,
+  id: WORLD.delegatedIncidentId,
+  configuration: null,
+  incidentMessage: null,
+  rootCauseIncidentId: WORLD.incidentId,
+}
+
 const ROUTES: Record<string, unknown> = {
   "/process-definition": [definition(2)],
-  [`/process-definition/key/${WORLD.key}`]: definition(2),
-  [`/process-definition/key/${WORLD.key}/xml`]: { id: definition(2).id, bpmn20Xml: WORLD_XML },
   "/process-definition/statistics": [1, 2].map((v) => ({
     id: definition(v as 1 | 2).id,
     instances: v,
@@ -84,6 +93,7 @@ const ROUTES: Record<string, unknown> = {
   ],
   "/incident": [incident],
   [`/incident/${WORLD.incidentId}`]: incident,
+  [`/incident/${WORLD.delegatedIncidentId}`]: delegated,
   "/job": [
     {
       id: WORLD.jobId,
@@ -137,10 +147,19 @@ export function worldReply(request: RecordedRequest): FakeReply {
   return { body: [] }
 }
 
-/** The healthy engine, except `route` (`"<METHOD> <path>"`) answers `reply`. */
-export function withFailure(
-  route: string,
-  reply: FakeReply = { status: 500, body: { type: "ProcessEngineException", message: "boom" } },
-): (request: RecordedRequest) => FakeReply {
-  return (request) => (`${request.method} ${request.path}` === route ? reply : worldReply(request))
+/**
+ * A request's READ identity: method, path and the sorted names of its query
+ * parameters (values vary — timestamps, page offsets), e.g.
+ * `GET /incident/count?incidentTimestampAfter&processDefinitionKeyIn`. Two
+ * reads of one endpoint with different filters are different reads.
+ */
+export function readOf(request: Pick<RecordedRequest, "method" | "path" | "query">): string {
+  const params = Object.keys(request.query).sort()
+  return `${request.method} ${request.path}${params.length > 0 ? `?${params.join("&")}` : ""}`
+}
+
+/** An engine failure (500) — what a broken read answers. */
+export const ENGINE_FAILURE: FakeReply = {
+  status: 500,
+  body: { type: "ProcessEngineException", message: "boom" },
 }

@@ -96,7 +96,14 @@ export async function startFakeEngine(
   return {
     baseUrl: `http://127.0.0.1:${port}/engine-rest`,
     requests,
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+    // Drops the client's keep-alive sockets too: a builder that failed fast
+    // leaves its parallel reads' connections open, and a plain close() would
+    // wait out the client's keep-alive timeout (seconds per test).
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.close(() => resolve())
+        server.closeAllConnections()
+      }),
   }
 }
 

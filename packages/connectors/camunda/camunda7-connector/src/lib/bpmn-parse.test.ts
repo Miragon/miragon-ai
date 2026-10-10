@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { countBpmnActivities, extractActivityNames } from "./bpmn-parse.js"
+import { bpmnActivityIds, extractActivityNames } from "./bpmn-parse.js"
 
 describe("extractActivityNames", () => {
   it("collects id+name pairs from common BPMN element tags", () => {
@@ -43,22 +43,25 @@ describe("extractActivityNames", () => {
   })
 })
 
-describe("countBpmnActivities", () => {
-  it("counts tasks, gateways, events, sub-processes, and call activities", () => {
+describe("bpmnActivityIds", () => {
+  it("lists tasks, gateways, events, sub-processes, and call activities", () => {
     const xml = `
       <bpmn:startEvent id="S" />
-      <bpmn:userTask id="U1" />
+      <bpmn:userTask id="U1" name="Review" />
       <bpmn:serviceTask id="S1" />
       <bpmn:exclusiveGateway id="G1" />
       <bpmn:subProcess id="SP" />
       <bpmn:callActivity id="CA" />
       <bpmn:endEvent id="E" />
+      <bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="U1" />
+      <bpmn:timerEventDefinition id="T1" />
+      <bpmndi:BPMNShape id="U1_di" bpmnElement="U1" />
     `
-    expect(countBpmnActivities(xml)).toBe(7)
+    expect(bpmnActivityIds(xml)).toEqual(["S", "U1", "S1", "G1", "SP", "CA", "E"])
   })
 
-  it("returns zero on input without recognised elements", () => {
-    expect(countBpmnActivities("<bpmn:definitions />")).toBe(0)
-    expect(countBpmnActivities("")).toBe(0)
+  it("returns no ids on input without recognised elements", () => {
+    expect(bpmnActivityIds("<bpmn:definitions />")).toEqual([])
+    expect(bpmnActivityIds("")).toEqual([])
   })
 })

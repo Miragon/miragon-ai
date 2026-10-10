@@ -27,6 +27,14 @@ const V2 = "leasing:2:d2"
 const XML =
   '<definitions><process id="leasing"><serviceTask id="assess" name="Assess creditworthiness"/><serviceTask id="sendPolicy" name="Send policy"/></process></definitions>'
 
+const TENANT_LESS_404 = {
+  status: 404,
+  body: {
+    type: "InvalidRequestException",
+    message: `No matching process definition with key: ${KEY} and no tenant-id`,
+  },
+}
+
 const row = (n: number, activityId: string, definitionId: string) => ({
   id: `inc-${activityId}-${n}`,
   processDefinitionId: definitionId,
@@ -42,10 +50,14 @@ const row = (n: number, activityId: string, definitionId: string) => ({
 /** The key's counts and a scan; `incidentTotal` is what /incident/count reports. */
 function definitionRoutes(scan: unknown[], incidentTotal: number): FakeRoutes {
   return {
-    [`GET /process-definition/key/${KEY}`]: {
-      body: { id: V2, key: KEY, name: "Leasing", version: 2 },
+    // The key's latest version over every tenant — the list endpoint.
+    "GET /process-definition": {
+      body: [{ id: V2, key: KEY, name: "Leasing", version: 2, tenantId: "acme" }],
     },
-    [`GET /process-definition/key/${KEY}/xml`]: { body: { id: V2, bpmn20Xml: XML } },
+    // What the engine answers a tenant deployment on the tenant-less endpoints.
+    [`GET /process-definition/key/${KEY}`]: TENANT_LESS_404,
+    [`GET /process-definition/key/${KEY}/xml`]: TENANT_LESS_404,
+    [`GET /process-definition/${V2}/xml`]: { body: { id: V2, bpmn20Xml: XML } },
     "GET /process-instance/count": { body: { count: 99 } },
     "GET /job/count": { body: { count: 6 } },
     "GET /incident/count": (r: RecordedRequest) => ({
@@ -70,7 +82,7 @@ const queriesOf = (requests: RecordedRequest[], path: string) =>
   requests.filter((r) => r.path === path).map((r) => r.query)
 
 describe("buildProcessIncidentsData — key-wide (#335 N60)", () => {
-  it("counts every version through key-scoped /count endpoints in one parallel stage (N67)", async () => {
+  it("counts every version through key-scoped /count endpoints in two parallel stages (N67)", async () => {
     // A complete scan: three incidents, on v1 AND v2.
     const scan = [row(0, "assess", V2), row(1, "assess", V1), row(2, "oldTask", V1)]
     const { data, requests } = await build(definitionRoutes(scan, 3))
@@ -83,9 +95,14 @@ describe("buildProcessIncidentsData — key-wide (#335 N60)", () => {
       failedJobs: 6,
       incidentCount: 3,
       last24hCount: 4,
+      // "1 of the diagram's 2": oldTask (v1 only) has incidents but is no
+      // activity of the v2 diagram — it stays in `activities`, outside the
+      // fraction, which would otherwise read "2 of 2".
       totalActivityCount: 2,
+      affectedDiagramActivityCount: 1,
       latestIncident: scan[0].incidentTimestamp,
-      siblingsWithIncidents: [],
+      // Only the empty state reads other processes — unread is null, never [].
+      siblingsWithIncidents: null,
     })
     // Per activity, across versions; an activity only v1 has keeps its id.
     expect(data.activities).toEqual([
@@ -115,18 +132,36 @@ describe("buildProcessIncidentsData — key-wide (#335 N60)", () => {
       { processDefinitionKeyIn: KEY, incidentTimestampAfter: expect.any(String) as string },
     ])
     // The complete scan already holds every incident: no engine-wide
-    // statistics, no per-version reads — 7 calls, one stage.
+    // statistics, no per-version reads — 7 calls. The diagram is read by the
+    // resolved version's id, never through the tenant-less /key/{key}.
     expect(requests.map((r) => r.path).sort()).toEqual(
       [
         "/incident",
         "/incident/count",
         "/incident/count",
         "/job/count",
-        `/process-definition/key/${KEY}`,
-        `/process-definition/key/${KEY}/xml`,
+        "/process-definition",
+        `/process-definition/${V2}/xml`,
         "/process-instance/count",
       ].sort(),
     )
+    expect(queriesOf(requests, "/process-definition")).toEqual([
+      { key: KEY, latestVersion: "true", sortBy: "version", sortOrder: "desc", maxResults: "1" },
+    ])
+  })
+
+  it("resolves a key deployed for a tenant — /process-definition/key/{key} only knows tenant-less ones", async () => {
+    // definitionRoutes answers the tenant-less endpoints with the engine's 404.
+    const { data } = await build(definitionRoutes([row(0, "assess", V2)], 1))
+
+    expect(data).toMatchObject({ processDefinitionName: "Leasing", diagramVersion: 2 })
+    expect(data.bpmnXml).toBe(XML)
+  })
+
+  it("fails on a key no version is deployed for — never a view of zeros", async () => {
+    await expect(
+      build({ ...definitionRoutes([], 0), "GET /process-definition": { body: [] } }),
+    ).rejects.toThrow(`No process definition with key "${KEY}" is deployed on this engine.`)
   })
 
   it("sums the activity statistics of every version with incidents when the scan is capped", async () => {

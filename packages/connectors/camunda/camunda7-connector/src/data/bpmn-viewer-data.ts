@@ -14,12 +14,13 @@ import {
   collectIncidentActivityIds,
   countActivityInstances,
 } from "../lib/activity-tree.js"
+import { findLatestDefinition } from "./definition-info.js"
 import { optional, rowsOf } from "./engine-reads.js"
 
 export interface BpmnViewerTarget {
   /** Renders the diagram with live overlays (active activities, incidents). */
   processInstanceId?: string
-  /** Renders the static diagram of a definition (no instance overlays). */
+  /** Renders a definition version's diagram; its badges count every running instance of it. */
   processDefinitionKey?: string
   /** Specific definition version; latest when omitted. Needs `processDefinitionKey`. */
   version?: number
@@ -135,21 +136,18 @@ async function resolveDefinitionId(
     })) as { definitionId?: string } | null
     return instance?.definitionId ?? null
   }
-  if (target.processDefinitionKey) {
-    const matches = rowsOf<{ id?: string }>(
-      await getProcessDefinitions({
-        client,
-        query: {
-          key: target.processDefinitionKey,
-          version: target.version,
-          latestVersion: target.version === undefined ? true : undefined,
-          maxResults: 1,
-        },
-      }),
-    )
-    return matches[0]?.id ?? null
+  if (target.processDefinitionKey === undefined) return null
+  if (target.version === undefined) {
+    // The highest version over every tenant — the definition view's lookup.
+    return (await findLatestDefinition(client, target.processDefinitionKey))?.id || null
   }
-  return null
+  const matches = rowsOf<{ id?: string }>(
+    await getProcessDefinitions({
+      client,
+      query: { key: target.processDefinitionKey, version: target.version, maxResults: 1 },
+    }),
+  )
+  return matches[0]?.id ?? null
 }
 
 /** The empty shape callers detect via `processDefinitionId === null`. */

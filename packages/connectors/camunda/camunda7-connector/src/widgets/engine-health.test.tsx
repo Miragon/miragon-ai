@@ -33,6 +33,7 @@ const DEGRADED: EngineHealthData = {
       incidentType: "failedExternalTask",
       messageSignature: "connection timeout to wms",
       incidentCount: 40,
+      scannedIncidentCount: 40,
       last24hCount: 10,
       processDefinitionKeys: ["shipping"],
       representativeMessage: "Connection timeout to WMS",
@@ -45,6 +46,7 @@ const DEGRADED: EngineHealthData = {
       incidentType: "failedJob",
       messageSignature: "customerid is null",
       incidentCount: 8,
+      scannedIncidentCount: 8,
       last24hCount: 2,
       processDefinitionKeys: ["onboarding", "shipping"],
       representativeMessage: "customerId is null",
@@ -119,5 +121,26 @@ describe("EngineHealthVerdict (fixture render)", () => {
     // The healthy state still earns the screen: throughput is visible.
     expect(screen.getByText(/Throughput \(24h\)/)).toBeTruthy()
     expect(screen.getByText(/started/)).toBeTruthy()
+  })
+
+  it("shows a capped scan's cluster as the lower bound it is, never as its size", () => {
+    const capped: EngineHealthData = {
+      ...DEGRADED,
+      clusters: [
+        {
+          ...DEGRADED.clusters[0],
+          incidentCount: null,
+          scannedIncidentCount: 1400,
+          last24hCount: null,
+        },
+      ],
+    }
+    render(
+      <WidgetFixtureHost widget={Widget} data={capped as unknown as Record<string, unknown>} />,
+    )
+
+    expect(screen.getByText(`≥${(1400).toLocaleString()} affected`, { exact: false })).toBeTruthy()
+    // An unknown 24h count is left out, not rendered as "0 new in 24h".
+    expect(screen.queryByText(/new in 24h/)).toBeNull()
   })
 })

@@ -255,28 +255,35 @@ exception that uses `server.tool()` directly):
   that its show tool, its `*_data` feed AND its pipeline step call — never fork one.
   Definition lookups (id parsers, the key lookup, the per-KEY fold of the per-version
   statistics) come from `src/data/definition-info.ts`; the BPMN viewer payload from
-  `src/data/bpmn-viewer-data.ts`.
+  `src/data/bpmn-viewer-data.ts`. A key's latest version is `fetchLatestDefinition`
+  (every tenant) — never `/process-definition/key/{key}`, which only knows tenant-less
+  definitions; rows grouped BY key resolve their definition id through
+  `definitionKeyResolver` — a long key's id is a bare UUID with no key to parse.
 - **Honest numbers** (`src/data/engine-reads.ts`): PRIMARY rows and counts — what the
   view exists to show, and every number its `summary` reports — propagate engine
   failures (read them through `countOf`/`rowsOf`; `withToolErrors` turns the throw into
-  a tool error), and an unknown id is the engine's 404 — never a view of zeros. Only
+  a tool error), and an unknown id or key is a not-found error — never a view of zeros. Only
   ENRICHMENT (display names, diagram XML, cockpit links, optional history) degrades, via
   `optional(...)`, and to `null` — never to a `0`, `[]` or `{}` that reads as a fact.
   Widgets render that null as "—" (`formatCount`, `src/widgets/lib/format-count.ts`),
   summaries as "unknown". Totals come from `/count` endpoints or statistics, never from
-  the length of a capped page or scan: a recency scan (`INCIDENT_SCAN_LIMIT`) only
-  enriches and says how far it reaches (`scannedIncidentCount`, null facts). A view about
+  the length of a capped page or scan: a recency scan (`INCIDENT_SCAN_LIMIT`, the health
+  views' `CLUSTER_SCAN_LIMIT`) only enriches and says how far it reaches
+  (`scannedIncidentCount`, null facts, "≥N" via `formatCountAtLeast`). A view about
   a process definition KEY spans every deployed version (key-scoped `/count`, statistics
   summed per key); only a diagram is one version, and it is labelled. Engine timestamps
   compare by instant (`engineDateMillis`/`latestEngineDate`/`earliestEngineDate` from
   `@miragon-ai/camunda7-client`), never as strings. A new builder adds its case to the
-  rejection table in `src/data/honest-numbers.test.ts` — the table fails without it.
+  rejection table in `src/data/honest-numbers.test.ts` — the table fails without it. The
+  table breaks EVERY read the healthy build makes (method + path + query names), so a
+  case declares only its enrichment reads; any other read whose failure is swallowed fails.
 - Pipeline steps (`src/steps/`) are thin adapters over their show tool's builder
   (`stepEngine`/`requiredKey`/`stringKey` from `src/steps/shared.ts`), stamp `engineId`,
   and declare a `description` plus `optionalKeys` (always `ENGINE_KEY`, and every scoping
   key the step reads) so `get-framework-manifest` shows them. A failure throws — never a
   success-shaped empty payload. Add the step to the twin table in
-  `src/steps/steps.test.ts`, which holds its output EQUAL to the show tool's.
+  `src/steps/steps.test.ts`, which holds its output AND its engine requests EQUAL to the
+  show tool's — a dropped or misnamed scoping key changes the requests.
 - The `show_*`/`*_data` naming is load-bearing:
   `apps/mcp-server-camunda7/test/widget-contract.e2e.test.ts` enforces the widget `_meta` on
   every `*_show_*` tool and app-only visibility on every `*_data` feed **by name**.

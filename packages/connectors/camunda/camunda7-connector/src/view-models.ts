@@ -427,7 +427,7 @@ export interface ActivityIncidentsData {
 /**
  * The unified definition view of ONE process definition KEY. Every count
  * spans all deployed versions; only the diagram is one version
- * (`diagramVersion`, the latest).
+ * (`diagramVersion`, the latest over every tenant).
  */
 export interface ProcessIncidentsData {
   processDefinitionKey: string
@@ -443,11 +443,18 @@ export interface ProcessIncidentsData {
   failedJobs: number
   /** Activities in the diagram — null when the diagram is unavailable. */
   totalActivityCount: number | null
+  /**
+   * Activities OF THE DIAGRAM with open incidents — the numerator of
+   * `totalActivityCount`; `activities` may hold more (activities only older
+   * versions have). Null when the diagram is unavailable.
+   */
+  affectedDiagramActivityCount: number | null
   latestIncident: string | null
   activities: ProcessIncidentsActivity[]
   /** Other process definitions with open incidents — surfaced in the empty
    *  state so the operator can jump to where the incidents actually are.
-   *  Null when they could not be read. */
+   *  Read only for that empty state (the key has no open incidents); null
+   *  when not read or unreadable. */
   siblingsWithIncidents: IncidentsByProcess[] | null
   engineId?: string
 }
@@ -518,23 +525,37 @@ export interface IncidentDetailData {
 export type EngineHealthStatus = "ok" | "degraded" | "critical"
 
 /**
+ * A failure cluster's size as far as the health views' newest-first incident
+ * scan (`CLUSTER_SCAN_LIMIT`) can vouch for it. A cluster larger than the
+ * scan is known only as a lower bound — never the scan's length as its size.
+ */
+export interface ClusterCounts {
+  /** The cluster's open incidents — null when unknown (only `scannedIncidentCount` of it is). */
+  incidentCount: number | null
+  /** The cluster's incidents among the newest scanned ones — a lower bound of `incidentCount`. */
+  scannedIncidentCount: number
+  /** Incidents since now − 24h — null when neither the scan nor a count can vouch for them. */
+  last24hCount: number | null
+}
+
+/**
  * A cross-process incident cluster: the same activity failing the same way
  * (`activityId` + `incidentType` + normalized failure-message signature) across
  * one or more process definitions. This is the root-cause unit a support
  * operator triages — surfaced instead of a flat per-instance incident list. The
  * plain-language interpretation and the recommended fix are the host agent's
  * job (the "ask the AI" handoff), not the server's: the cluster carries only
- * deterministic, grounded facts.
+ * deterministic, grounded facts. Its counts are exact only when the scan read
+ * every open incident (24h: when it reaches back that far); the clusters rank
+ * by `scannedIncidentCount`.
  */
-export interface EngineHealthCluster {
+export interface EngineHealthCluster extends ClusterCounts {
   /** Stable key `${activityId}::${incidentType}::${messageSignature}` — used for React keys. */
   id: string
   activityId: string
   incidentType: string
   /** Normalized failure-message signature — the third clustering dimension; drill filter. */
   messageSignature: string
-  incidentCount: number
-  last24hCount: number
   /** Distinct process definition keys this cluster spans, most-affected first. */
   processDefinitionKeys: string[]
   /** A sample message + its incident id, for the drill-in and the AI prompt. */
@@ -589,23 +610,26 @@ export interface ClusterIncidentRow {
  * Drill-in for ONE failure cluster: the affected instances (business keys
  * first), the full sample message, and the time profile — the middle layer
  * between the engine overview's cluster list and the single-incident detail.
+ * Without a message filter the counts are `/incident/count` totals; with one,
+ * a count the scan cannot vouch for is null. The list pages over the
+ * `scannedIncidentCount` scanned incidents.
  */
-export interface ClusterDetailData {
+export interface ClusterDetailData extends ClusterCounts {
   activityId: string
   incidentType: string
   /** Signature the result was filtered by; null = no message filter (activity+type only). */
   messageSignature: string | null
-  incidentCount: number
-  lastHourCount: number
-  last24hCount: number
+  /** Incidents in the last hour — null when neither the scan nor a count can vouch for it. */
+  lastHourCount: number | null
+  /** Null unless the scan holds the whole cluster. */
   firstSeen: string | null
   latestIncident: string | null
-  /** Distinct process definition keys, most-affected first. */
+  /** Distinct process definition keys of the scanned incidents, most-affected first. */
   processDefinitionKeys: string[]
   representativeMessage: string | null
   /** First page of affected incidents (most recent first). */
   incidents: ClusterIncidentRow[]
-  /** Total matching incidents (may exceed `incidents.length`). */
+  /** The list's total: the scanned incidents after the business-key search (may exceed `incidents.length`). */
   totalMatching: number
   fetchedAt: string
   engineId: string

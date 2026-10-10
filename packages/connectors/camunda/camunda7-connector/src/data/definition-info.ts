@@ -1,7 +1,7 @@
 import type { Client } from "@miragon-ai/camunda7-client"
 import {
-  getProcessDefinitionByKey,
   getProcessDefinitionStatistics,
+  getProcessDefinitions,
 } from "@miragon-ai/camunda7-client/sdk"
 import { rowsOf } from "./engine-reads.js"
 
@@ -24,7 +24,11 @@ export interface DefinitionInfo {
 /**
  * Camunda 7 / CIB Seven definition ids are `<key>:<version>:<deploymentId>`.
  * `/incident` and `/process-instance` rows carry the id but not the key, so
- * the key is parsed from it — the whole id when it has no `:`.
+ * the key is parsed from it — the whole id when it has no `:`. The engine
+ * falls back to a bare generated id when `<key>:<version>:<id>` would exceed
+ * 64 characters (any key longer than ~25 characters with UUID ids), so a
+ * parsed key is a display fallback only: a view that groups rows BY key
+ * resolves the id through the statistics ({@link definitionKeyResolver}).
  */
 export function processDefinitionKeyFromId(id: string): string {
   const idx = id.indexOf(":")
@@ -54,13 +58,38 @@ function toDefinitionInfo(raw: RawDefinition, key: string): DefinitionInfo {
 }
 
 /**
- * The latest deployed version of `key` — `GET /process-definition/key/{key}`,
- * one indexed lookup. An unknown key is the engine's 404, and it propagates:
- * a mistyped key is a not-found error, never a view of zeros.
+ * The highest deployed version of `key` over EVERY tenant — the list
+ * endpoint, one indexed lookup; null when no version is deployed.
+ * `GET /process-definition/key/{key}` is no substitute: it only finds the
+ * definitions that belong to NO tenant, so a tenant deployment (which
+ * `camunda7_create_deployment` makes) would read as unknown.
+ */
+export async function findLatestDefinition(
+  client: Client,
+  key: string,
+): Promise<DefinitionInfo | null> {
+  const [latest] = rowsOf<RawDefinition>(
+    await getProcessDefinitions({
+      client,
+      query: { key, latestVersion: true, sortBy: "version", sortOrder: "desc", maxResults: 1 },
+    }),
+  )
+  return latest ? toDefinitionInfo(latest, key) : null
+}
+
+/**
+ * {@link findLatestDefinition} for a view ABOUT the key: an unknown key
+ * propagates as a not-found error — a mistyped key is never a view of zeros.
  */
 export async function fetchLatestDefinition(client: Client, key: string): Promise<DefinitionInfo> {
-  const raw = (await getProcessDefinitionByKey({ client, path: { key } })) as RawDefinition
-  return toDefinitionInfo(raw ?? {}, key)
+  const latest = await findLatestDefinition(client, key)
+  if (!latest) throw unknownKeyError(key)
+  return latest
+}
+
+/** The not-found error of a view scoped to a key no version is deployed for. */
+export function unknownKeyError(key: string): Error {
+  return new Error(`No process definition with key "${key}" is deployed on this engine.`)
 }
 
 interface IncidentStatRow {
@@ -87,6 +116,8 @@ export interface KeyStats {
   incidentCount: number
   /** Ids of the versions that carry open incidents — where activity statistics are read. */
   incidentVersionIds: string[]
+  /** Ids of every deployed version — what a row's definition id resolves through. */
+  versionIds: string[]
 }
 
 function incidentSum(row: DefinitionStatsRow): number {
@@ -106,6 +137,7 @@ function addVersion(stats: KeyStats, row: DefinitionStatsRow, version: Definitio
   const incidents = incidentSum(row)
   stats.incidentCount += incidents
   if (incidents > 0 && version.id) stats.incidentVersionIds.push(version.id)
+  if (version.id) stats.versionIds.push(version.id)
   if (version.version > stats.latest.version) stats.latest = version
 }
 
@@ -128,11 +160,27 @@ export function foldStatsByKey(rows: unknown): Map<string, KeyStats> {
       incidentsByType: new Map<string, number>(),
       incidentCount: 0,
       incidentVersionIds: [],
+      versionIds: [],
     }
     addVersion(stats, row, version)
     byKey.set(key, stats)
   }
   return byKey
+}
+
+/**
+ * Maps a row's definition id to its key through the statistics — exact even
+ * for a bare generated id — and falls back to the parsed key for an id the
+ * statistics do not list (a version deployed after they were read).
+ */
+export function definitionKeyResolver(
+  statsByKey: Map<string, KeyStats>,
+): (definitionId: string) => string {
+  const keyById = new Map<string, string>()
+  for (const [key, stats] of statsByKey) {
+    for (const id of stats.versionIds) keyById.set(id, key)
+  }
+  return (definitionId) => keyById.get(definitionId) ?? processDefinitionKeyFromId(definitionId)
 }
 
 /**

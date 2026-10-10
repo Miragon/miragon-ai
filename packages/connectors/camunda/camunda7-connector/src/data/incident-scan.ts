@@ -20,9 +20,12 @@ import { INCIDENT_SCAN_LIMIT, rowsOf } from "./engine-reads.js"
  * never a count over a capped page.
  */
 
+/**
+ * An `/incident` row. It carries the definition id, not the key: a view that
+ * groups by key resolves the id (`definitionKeyResolver`, definition-info.ts).
+ */
 export interface IncidentRow {
   id: string
-  processDefinitionKey: string
   processDefinitionId: string
   processInstanceId: string
   incidentType: string
@@ -37,15 +40,18 @@ export interface IncidentScan {
   rows: IncidentRow[]
   /** The scan read every matching incident (the engine returned fewer than the limit). */
   complete: boolean
-  /** Whether every incident at or after `sinceMs` is in `rows`. */
-  covers: (sinceMs: number) => boolean
+  /**
+   * Whether the scan provably reaches back past `sinceMs` — its oldest row
+   * predates it, so every incident at or after `sinceMs` is in `rows`.
+   */
+  reachesBefore: (sinceMs: number) => boolean
 }
 
 export async function scanIncidents(
   client: Client,
   filter: { processDefinitionKeyIn?: string; incidentType?: string },
 ): Promise<IncidentScan> {
-  const raw = rowsOf<Omit<IncidentRow, "processDefinitionKey">>(
+  const rows = rowsOf<IncidentRow>(
     await getIncidents({
       client,
       query: {
@@ -56,10 +62,6 @@ export async function scanIncidents(
       },
     }),
   )
-  const rows = raw.map((r) => ({
-    ...r,
-    processDefinitionKey: processDefinitionKeyFromId(r.processDefinitionId),
-  }))
   const complete = rows.length < INCIDENT_SCAN_LIMIT
   // Newest first: once the oldest scanned incident predates `sinceMs`, nothing
   // newer than it can be missing.
@@ -67,7 +69,7 @@ export async function scanIncidents(
   return {
     rows,
     complete,
-    covers: (sinceMs) => complete || (oldest !== null && oldest < sinceMs),
+    reachesBefore: (sinceMs) => oldest !== null && oldest < sinceMs,
   }
 }
 
@@ -84,7 +86,7 @@ export function groupBy<T>(rows: T[], by: (r: T) => string): Map<string, T[]> {
 }
 
 /** Engine timestamps carry the engine's UTC offset — compare instants, never strings. */
-export function isOnOrAfter(timestamp: string, cutoffMs: number): boolean {
+export function isOnOrAfter(timestamp: string | null | undefined, cutoffMs: number): boolean {
   const ms = engineDateMillis(timestamp)
   return ms !== null && ms >= cutoffMs
 }
@@ -96,10 +98,19 @@ export interface ScanFacts {
   latestIncident: string | null
   /** Exact only when the scan holds ALL of the group's incidents; null otherwise. */
   firstSeen: string | null
-  /** Exact only when the scan reaches back past the cutoff; null otherwise. */
+  /**
+   * Exact when the scan holds ALL of the group's incidents, or reaches back
+   * past the cutoff; null otherwise.
+   */
   last24hCount: number | null
 }
 
+/**
+ * `fullyScanned` is the caller's claim that `groupRows` hold every incident
+ * of the group — decided against an exact count (statistics, `/count`),
+ * never from the scan's completeness alone: a complete scan whose rows a
+ * view cannot attribute to the group must not vouch for it.
+ */
 export function scanFacts(
   groupRows: IncidentRow[],
   options: { fullyScanned: boolean; scan: IncidentScan; cutoffMs: number },
@@ -109,9 +120,10 @@ export function scanFacts(
     representativeMessage: groupRows[0]?.incidentMessage ?? null,
     latestIncident: latestEngineDate(timestamps),
     firstSeen: options.fullyScanned ? earliestEngineDate(timestamps) : null,
-    last24hCount: options.scan.covers(options.cutoffMs)
-      ? timestamps.filter((ts) => isOnOrAfter(ts, options.cutoffMs)).length
-      : null,
+    last24hCount:
+      options.fullyScanned || options.scan.reachesBefore(options.cutoffMs)
+        ? timestamps.filter((ts) => isOnOrAfter(ts, options.cutoffMs)).length
+        : null,
   }
 }
 
@@ -127,10 +139,7 @@ export interface IncidentLinkContext {
  * row's OWN definition (the version that instance runs on), not the key's
  * latest — no definition lookup per page.
  */
-export function toIncidentInstance(
-  r: Omit<IncidentRow, "processDefinitionKey">,
-  ctx: IncidentLinkContext,
-): IncidentInstance {
+export function toIncidentInstance(r: IncidentRow, ctx: IncidentLinkContext): IncidentInstance {
   return {
     id: r.id,
     processInstanceId: r.processInstanceId,

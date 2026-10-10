@@ -153,6 +153,66 @@ describe("buildIncidentsDashboardData — exact cards beyond the scan (#335 N61)
     })
   })
 
+  it("joins scanned rows to their card through the statistics — a long key's id is a bare UUID", async () => {
+    // `key:version:uuid` would exceed 64 characters, so the engine stored the
+    // bare generated id: nothing in it names the key.
+    const key = "customerOnboardingApprovalProcess"
+    const uuid = "6f1c2a9e-0b7d-4c33-9a51-3d2e8f40b7aa"
+    const scan = [0, 1, 2].map((n) => ({
+      ...row(n, key, n === 2 ? "review" : "verify", (n + 1) * HOUR),
+      processDefinitionId: uuid,
+    }))
+    const { data } = await build({
+      ...routes(scan, { total: 3, last24h: 3 }),
+      "GET /process-definition/statistics": {
+        body: [
+          {
+            id: uuid,
+            instances: 12,
+            incidents: [{ incidentType: "failedJob", incidentCount: 3 }],
+            definition: { id: uuid, key, name: "Onboarding", version: 1 },
+          },
+        ],
+      },
+    })
+
+    // The scan holds all 3 — the card says so, instead of "0 activities ·
+    // +0 last 24h" next to its 3 incidents.
+    expect(data.processes).toHaveLength(1)
+    expect(data.processes[0]).toMatchObject({
+      processDefinitionKey: key,
+      incidentCount: 3,
+      scannedIncidentCount: 3,
+      affectedActivityCount: 2,
+      last24hCount: 3,
+      latestIncident: scan[0].incidentTimestamp,
+    })
+    expect(data.affectedActivityCount).toBe(2)
+  })
+
+  it("never vouches for a card the complete scan holds none of (attribution gap)", async () => {
+    // The statistics list a version the scan rows cannot be joined to: the
+    // card keeps its exact count, its scan facts are unknown — not zeros.
+    const { data } = await build({
+      ...routes([], { total: 0, last24h: 0 }),
+      "GET /process-definition/statistics": { body: [stats("late", 1, 2, 4)] },
+    })
+
+    expect(data.processes[0]).toMatchObject({
+      processDefinitionKey: "late",
+      incidentCount: 4,
+      scannedIncidentCount: 0,
+      affectedActivityCount: null,
+      last24hCount: null,
+    })
+  })
+
+  it("fails on a scope key no version is deployed for — never '0 open incidents'", async () => {
+    await expect(
+      build(routes([], { total: 0, last24h: 0 }), { processDefinitionKey: "invoce" }),
+    ).rejects.toThrow('No process definition with key "invoce" is deployed on this engine.')
+  })
+
   it("narrows every read to the requested key and incident type", async () => {
     const { data, requests } = await build(
       routes([row(0, "quiet", "ship", HOUR)], { total: 7, last24h: 1 }),

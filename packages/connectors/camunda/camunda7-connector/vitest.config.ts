@@ -31,8 +31,12 @@ export default mergeConfig(
         // Raised 2026-10-10 with the #335 honest-numbers guards — the per-
         // builder rejection table, the recording-engine builder suites and the
         // step-twin test (measured statements 76.75 / branches 62.91 /
-        // functions 73.30 / lines 78.03).
-        thresholds: { statements: 74, branches: 60, functions: 71, lines: 76 },
+        // functions 73.30 / lines 78.03). Raised 2026-10-10 with the #335
+        // review guards — every read of every builder broken in turn, the
+        // capped-scan health suites and the step-twin request equality
+        // (measured statements 77.26 / branches 63.80 / functions 74.06 /
+        // lines 78.57).
+        thresholds: { statements: 75, branches: 61, functions: 72, lines: 76 },
       },
     },
   }),

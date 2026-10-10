@@ -23,7 +23,10 @@ import { registerWidgetTools } from "../widget-tools.js"
  * Every camunda7 pipeline step is a THIN ADAPTER over the builder its show
  * tool uses (#335 N63/N149, CLAUDE.md invariant 7): for the same inputs —
  * view keys on one side, tool arguments on the other — against the same
- * engine, the step's data EQUALS its twin's, `engineId` included. A step
+ * engine, the step's data EQUALS its twin's, `engineId` included, AND it
+ * sends the engine exactly the twin's requests (paths and query values). The
+ * small world answers most filters alike, so equal payloads alone would let
+ * a step drop or misname a scoping key; equal requests would not. A step
  * that forks its own reads (other endpoints, other defaults, a missing
  * stamp) fails here. The table must name every registered step.
  */
@@ -98,7 +101,24 @@ async function world(reply = worldReply) {
   } as unknown as MCPServer
   registerWidgetTools(server, registry, { toolset: "read-only" })
   const appConfig: Camunda7StepAppConfig = { registry, engines: registry.engines }
-  return { tools, appConfig }
+  return { tools, appConfig, engine }
+}
+
+/** An instant in a query (a recency cutoff) — the two runs compute it moments apart. */
+const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+
+/** The requests one run sent, order-free (reads run in parallel), instants masked. */
+function requestsOf(engine: FakeEngine, from: number): string[] {
+  return engine.requests
+    .slice(from)
+    .map((r) => {
+      const query = Object.entries(r.query)
+        .map(([name, value]) => `${name}=${INSTANT.test(value) ? "<instant>" : value}`)
+        .sort()
+        .join("&")
+      return `${r.method} ${r.path}?${query}`
+    })
+    .sort()
 }
 
 /** The data a show tool renders (its first view entry), or a feed's payload. */
@@ -123,8 +143,8 @@ describe("camunda7 pipeline steps are thin adapters over their show tools' build
   describe.each(steps.map((s) => [s.id, s] as const))("%s", (id, step) => {
     const twin = TWINS[id]
 
-    it("renders exactly its twin's data, engineId stamped", async () => {
-      const { tools, appConfig } = await world()
+    it("renders exactly its twin's data from exactly its twin's requests, engineId stamped", async () => {
+      const { tools, appConfig, engine } = await world()
       const tool = tools.get(twin.twinTool)!
       const viaTool = twinData(
         (await tool.callback(
@@ -132,11 +152,14 @@ describe("camunda7 pipeline steps are thin adapters over their show tools' build
           {},
         )) as ToolResult,
       )
+      const toolRequests = requestsOf(engine, 0)
 
+      const stepStart = engine.requests.length
       const output = await run(step, twin, appConfig)
 
       expect(output.data).toEqual(viaTool)
       expect(output.data).toMatchObject({ engineId: "prod-a" })
+      expect(requestsOf(engine, stepStart)).toEqual(toolRequests)
     })
 
     it("fails — never a success-shaped empty payload — when the engine fails", async () => {

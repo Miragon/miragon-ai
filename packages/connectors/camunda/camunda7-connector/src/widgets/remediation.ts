@@ -6,14 +6,14 @@
  * confirmation) the execution; a widget never one-clicks a destructive batch.
  */
 
+import type { ClusterCounts } from "../view-models.js"
+
 /** Placeholder for an unresolvable process definition key. */
 export const UNKNOWN_KEY = "(unknown)"
 
-export interface RemediationCluster {
+export interface RemediationCluster extends ClusterCounts {
   activityId: string
   incidentType: string
-  incidentCount: number
-  last24hCount: number
   processDefinitionKeys: string[]
   representativeMessage: string | null
 }
@@ -26,8 +26,8 @@ export function remediatePrompt(cluster: RemediationCluster, engine?: string): s
   return (
     `Help me fix this incident cluster on engine "${e}", step by step and in plain language for a ` +
     `distribution-center support operator (no Camunda jargon). The cluster: activity ` +
-    `"${cluster.activityId}" failing as ${cluster.incidentType} — ${cluster.incidentCount} incidents` +
-    (cluster.last24hCount > 0 ? ` (${cluster.last24hCount} in the last 24h)` : "") +
+    `"${cluster.activityId}" failing as ${cluster.incidentType} — ${cluster.incidentCount ?? `at least ${cluster.scannedIncidentCount}`} incidents` +
+    (cluster.last24hCount ? ` (${cluster.last24hCount} in the last 24h)` : "") +
     (procs.length ? ` across ${procs.join(", ")}` : "") +
     `. Sample message: ${cluster.representativeMessage ?? "(none)"}.\n\n` +
     `1) Confirm the root cause with camunda7_list_incidents({ engine: "${e}", activityId: "${cluster.activityId}", ` +

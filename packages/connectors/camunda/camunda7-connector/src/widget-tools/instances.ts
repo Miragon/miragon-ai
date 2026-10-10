@@ -82,7 +82,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       name: CAMUNDA7_SHOW_BPMN_VIEWER,
       title: "BPMN Diagram Viewer",
       description:
-        "Show an interactive BPMN diagram. Pass `processInstanceId` to overlay active activities, incidents, and failed-job counts for a running instance, or pass `processDefinitionKey` (with optional `version`) to view the diagram of a process definition without instance overlays.",
+        "Show an interactive BPMN diagram: `processInstanceId` overlays one running instance's active activities, incidents and failed jobs; `processDefinitionKey` (optional `version`) shows a definition version, its badges counting every running instance of that version.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processInstanceId: z
@@ -92,7 +92,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
         processDefinitionKey: z
           .string()
           .optional()
-          .describe("Process definition key. Renders the static diagram (no overlays)."),
+          .describe("Process definition key. Badges count every running instance of the version."),
         version: z
           .number()
           .int()

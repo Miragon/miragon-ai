@@ -15,7 +15,8 @@ import {
   buildProcessListData,
 } from "../data/cockpit-data.js"
 import { buildInstanceDetailData } from "../data/instance-detail-data.js"
-import { buildClusterDetailData, buildEngineHealthData } from "../data/health-data.js"
+import { buildClusterDetailData } from "../data/cluster-detail-data.js"
+import { buildEngineHealthData } from "../data/health-data.js"
 import { buildIncidentsDashboardData } from "../data/incidents-dashboard-data.js"
 import {
   buildActivityIncidentsData,
@@ -156,7 +157,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         processInstanceId: z.string().optional().describe("Instance to overlay live state for."),
-        processDefinitionKey: z.string().optional().describe("Definition for a static diagram."),
+        processDefinitionKey: z.string().optional().describe("Definition for a version's diagram."),
         version: z.number().int().positive().optional(),
         ...engineParam,
       }),

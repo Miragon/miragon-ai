@@ -16,8 +16,8 @@ import {
   getProcessInstances,
 } from "@miragon-ai/camunda7-client/sdk"
 import type { Client } from "@miragon-ai/camunda7-client"
+import { buildClusterDetailData } from "./cluster-detail-data.js"
 import {
-  buildClusterDetailData,
   buildEngineHealthData,
   healthVerdictRule,
   type EngineHealthThresholds,

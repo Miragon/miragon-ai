@@ -176,7 +176,8 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    builder follows the honest-numbers rule (`data/engine-reads.ts`): **primary rows/counts
    propagate errors; enrichment degrades to `null` (rendered "—"), never 0**; totals come
    from `/count` or statistics, never a capped page or scan; a definition view spans every
-   version of its key (`data/honest-numbers.test.ts` — one rejection case per builder).
+   version of its key (`data/honest-numbers.test.ts` breaks every read a builder makes;
+   only its declared enrichment may survive).
    Every engine REST rule the client defaults miss — engine dates
    (`toEngineDate`), paired sorting (`engineSorting`), serialized variable writes
    (`toEngineVariable(s)`), text/plain endpoints, raw variable reads, incident recovery,
