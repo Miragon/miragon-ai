@@ -1,7 +1,14 @@
 export { cn } from "./cn.js"
 // Zod-free profile option sets (select/checkbox option lists in settings
 // widgets) — safe for the UI bundle; the zod record schema stays on /server.
-export { LOCALES, THEMES, type Locale, type ThemePref } from "../profile-constants.js"
+export {
+  LANGUAGES,
+  LOCALES,
+  THEMES,
+  type LanguagePref,
+  type Locale,
+  type ThemePref,
+} from "../profile-constants.js"
 export { createUseT, type T } from "./create-use-t.js"
 export { DisplayModeProvider, WidgetShell, useHostDisplayMode } from "./widget-shell.js"
 export { WidgetHeader } from "./widget-header.js"
@@ -21,11 +28,9 @@ export { SettingsCard, SettingsField, SettingsInput } from "./settings.js"
 export { HostWidgetsProvider, useHostWidgets } from "./host-widgets.js"
 export { ProfileGate, type ProfileGateProps } from "./profile-gate.js"
 export { LocalizedAppView } from "./localized-app-view.js"
-export {
-  AppShellProviders,
-  ViewDisplayModeBridge,
-  type AppShellProvidersProps,
-} from "./app-shell-providers.js"
+export { AppShellProviders, type AppShellProvidersProps } from "./app-shell-providers.js"
+export { ShellHostProvider, ViewHostBridge, useShellHost, type ShellHost } from "./shell-host.js"
+export { HostDocument } from "./host-document.js"
 export { SegmentedControl, type SegmentedControlOption } from "./segmented-control.js"
 export { useDetailView } from "./use-detail-view.js"
 export { SectionHeading } from "@miragon/mcp-toolkit-ui"
@@ -69,6 +74,7 @@ export {
 } from "./bpmn-heatmap.js"
 export {
   useBpmnViewer,
+  BPMN_CANVAS_CLASS,
   type UseBpmnViewerOptions,
   type UseBpmnViewerResult,
   type BpmnCanvas,
@@ -77,4 +83,8 @@ export {
   type BpmnEventBus,
   type BpmnViewerWithGet,
 } from "./use-bpmn-viewer.js"
-export { BpmnZoomControls, type BpmnZoomControlsProps } from "./bpmn-zoom-controls.js"
+export {
+  BpmnZoomControls,
+  type BpmnZoomControlsLabels,
+  type BpmnZoomControlsProps,
+} from "./bpmn-zoom-controls.js"

@@ -41,7 +41,7 @@ describe("mergeStoredProfile", () => {
     })
     expect(record).toEqual({
       id: "k",
-      language: "en",
+      language: "system",
       theme: "dark",
       modules: {},
       createdAt: "c",
@@ -112,7 +112,7 @@ function rawDocumentContract(makeHarness: () => Promise<RawHarness>) {
     expect(await store.get("user-1")).toEqual({
       id: "user-1",
       userId: "user-1",
-      language: "en",
+      language: "system",
       theme: "dark",
       modules: STORED.modules,
       createdAt: STORED.createdAt,

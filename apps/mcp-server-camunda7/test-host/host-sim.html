@@ -40,6 +40,9 @@
       //                             (a slow tool on a compliant host)
       //   cancel                    cancel the call instead of delivering it
       //   theme=light|dark          hostContext.theme
+      //   locale=<bcp47>            hostContext.locale (default en-US)
+      //   fontSans=<css>            hostContext.styles.variables["--font-sans"]
+      //   maxHeight=<px>            hostContext.containerDimensions.maxHeight
       //   displayModes=a,b          hostContext.availableDisplayModes (absent:
       //                             not advertised)
       //
@@ -53,9 +56,15 @@
         resultDelayMs: Number(q.get("resultDelayMs") ?? 0),
         cancel: q.has("cancel"),
         theme: q.get("theme") ?? "light",
+        locale: q.get("locale") ?? "en-US",
+        fontSans: q.get("fontSans"),
+        maxHeight: q.has("maxHeight") ? Number(q.get("maxHeight")) : undefined,
         availableDisplayModes: q.has("displayModes") ? q.get("displayModes").split(",") : undefined,
       }
       document.body.dataset.hostTheme = scenario.theme
+      // A themed page declares its color-scheme; an iframe whose scheme differs
+      // from its embedder's gets an opaque UA canvas instead of the host's.
+      document.documentElement.style.colorScheme = scenario.theme
 
       const log = (window.__hostLog = {
         initialized: false,
@@ -192,7 +201,13 @@
             ...(scenario.availableDisplayModes && {
               availableDisplayModes: scenario.availableDisplayModes,
             }),
-            locale: "en-US",
+            ...(scenario.fontSans && {
+              styles: { variables: { "--font-sans": scenario.fontSans } },
+            }),
+            ...(scenario.maxHeight !== undefined && {
+              containerDimensions: { maxHeight: scenario.maxHeight },
+            }),
+            locale: scenario.locale,
             platform: "web",
           },
         }

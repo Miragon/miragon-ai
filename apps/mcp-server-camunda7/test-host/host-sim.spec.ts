@@ -5,11 +5,12 @@ import { BROKEN_ENGINE, HEALTHY_ENGINE } from "./engines.js"
  * Host-simulation gate for the built widget bundle (see test-host/README.md).
  *
  * Every scenario renders the view document the server ACTUALLY serves
- * (`resources/read` of `ui://views/camunda7_show_process_list.html` from the
- * real `createApp`, embedding `dist/mcp-app.{js,css}`) in a sandboxed srcdoc
- * iframe, behind a minimal SEP-1865 host whose tool calls go to that same
- * server. The rendering tool is a real camunda7 show tool against a stub
- * engine, so the view receives the real envelope and data shape.
+ * (`resources/read` of `ui://views/<tool>.html` from the real `createApp`,
+ * embedding `dist/mcp-app.{js,css}`) in a sandboxed srcdoc iframe, behind a
+ * minimal SEP-1865 host whose tool calls go to that same server. The
+ * rendering tool is a real camunda7 show tool against a stub engine (or the
+ * framework's `render-view`), so the view receives the real envelope and
+ * data shape.
  *
  * Scenarios titled "pinned …" assert the CURRENT behaviour of a known defect
  * that lives outside this repo's fix scope; each names its issue. When the
@@ -43,11 +44,19 @@ interface HostLog {
 }
 
 interface Scenario {
+  /** The view-bound tool the "model" invoked (default: the process list). */
+  tool?: string
   args?: Record<string, unknown>
   structuredContent?: "keep" | "strip"
   resultDelayMs?: number
   cancel?: boolean
   theme?: "light" | "dark"
+  /** hostContext.locale (the host sim's default: en-US). */
+  locale?: string
+  /** The host's SEP-1865 `--font-sans` style variable. */
+  fontSans?: string
+  /** hostContext.containerDimensions.maxHeight. */
+  maxHeight?: number
   displayModes?: string[]
 }
 
@@ -55,13 +64,16 @@ async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocat
   const base = process.env.HOST_SIM_URL
   if (!base) throw new Error("HOST_SIM_URL is unset — run via `playwright test -c test-host`")
   const query = new URLSearchParams({
-    tool: RENDER_TOOL,
+    tool: scenario.tool ?? RENDER_TOOL,
     args: JSON.stringify(scenario.args ?? { engine: HEALTHY_ENGINE }),
     structuredContent: scenario.structuredContent ?? "keep",
     resultDelayMs: String(scenario.resultDelayMs ?? 0),
     theme: scenario.theme ?? "light",
   })
   if (scenario.cancel) query.set("cancel", "1")
+  if (scenario.locale) query.set("locale", scenario.locale)
+  if (scenario.fontSans) query.set("fontSans", scenario.fontSans)
+  if (scenario.maxHeight !== undefined) query.set("maxHeight", String(scenario.maxHeight))
   if (scenario.displayModes) query.set("displayModes", scenario.displayModes.join(","))
   await page.goto(`${base}/?${query.toString()}`)
   return page.frameLocator("#app")
@@ -108,16 +120,35 @@ async function expectProcessList(app: FrameLocator): Promise<void> {
   await expect(app.getByText("3 deployed")).toBeVisible()
 }
 
-/** Relative luminance (0 = black, 1 = white) of an element's computed text color. */
-async function textLuminance(locator: Locator): Promise<number> {
-  return await locator.evaluate((el) => {
+/** Relative luminance (0 = black, 1 = white) of an element's computed color property. */
+async function luminance(
+  locator: Locator,
+  property: "color" | "backgroundColor" | "stroke" | "fill" = "color",
+): Promise<number> {
+  return await locator.evaluate((el, prop) => {
     // A canvas normalizes any CSS color syntax (oklch, color-mix …) to sRGB.
     const ctx = document.createElement("canvas").getContext("2d")!
-    ctx.fillStyle = getComputedStyle(el).color
+    ctx.fillStyle = getComputedStyle(el)[prop]
     ctx.fillRect(0, 0, 1, 1)
     const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-  })
+  }, property)
+}
+
+const textLuminance = (locator: Locator) => luminance(locator)
+
+/** The document theme on every channel the CSS, the host and native controls read. */
+async function documentTheme(app: FrameLocator) {
+  return await app.locator("html").evaluate((html) => ({
+    dark: html.classList.contains("dark"),
+    dataTheme: html.getAttribute("data-theme"),
+    colorScheme: getComputedStyle(html).colorScheme,
+  }))
+}
+
+/** The last height the view reported to the host (bootstrapView's auto-resize). */
+async function reportedHeight(page: Page): Promise<number> {
+  return (await hostLog(page)).sizeChanges.at(-1)?.height ?? Number.NaN
 }
 
 test.describe("real camunda7 view (camunda7_show_process_list)", () => {
@@ -278,49 +309,132 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
   })
 
   test(
-    "pinned #339 (K41): a dark host on a light OS renders light theme tokens",
+    "dark host on a light OS: the host theme wins on every channel (#339, K41)",
     { annotation: { type: "issue", description: HOST_THEME_ISSUE } },
     async ({ page }, testInfo) => {
       const app = await openView(page, { theme: "dark" })
 
       await expectProcessList(app)
-      // mcp-use's ThemeProvider honors the host theme on the document …
-      await expect(app.locator("html")).toHaveAttribute("data-theme", "dark")
       await testInfo.attach("dark-host-light-os", {
         body: await page.screenshot(),
         contentType: "image/png",
       })
-      // … but every token keys on `.dark`, which follows the OS (light): dark
-      // text on the host's dark canvas.
+      // One effective theme drives the tokens (`.dark`), what the host reads
+      // (`data-theme`) and native controls (`color-scheme`) …
+      expect(await documentTheme(app)).toEqual({
+        dark: true,
+        dataTheme: "dark",
+        colorScheme: "dark",
+      })
+      // … so the text is light on the host's dark canvas, the toolbar included.
+      expect(await textLuminance(definitionsTable(app).getByRole("row").nth(2))).toBeGreaterThan(
+        0.5,
+      )
       expect(
-        await textLuminance(definitionsTable(app).getByRole("row").nth(2)),
-        "#339 fixed? The host theme must win — expect light text (luminance > 0.5)",
-      ).toBeLessThan(0.5)
+        await textLuminance(app.getByRole("heading", { name: "Process Definitions" }).first()),
+      ).toBeGreaterThan(0.5)
     },
   )
+
+  test("light host on a dark OS: the host theme wins the other way too", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" })
+    const app = await openView(page, { theme: "light" })
+
+    await expectProcessList(app)
+    expect(await documentTheme(app)).toEqual({
+      dark: false,
+      dataTheme: "light",
+      colorScheme: "light",
+    })
+    expect(await textLuminance(definitionsTable(app).getByRole("row").nth(2))).toBeLessThan(0.5)
+  })
 
   test(
-    "pinned toolkit#178 (K22): a host without fullscreen still gets a Fullscreen button, whose click stays local",
+    "host without fullscreen: no Fullscreen button (shell override until toolkit#178, K22)",
     { annotation: { type: "issue", description: TOOLKIT_HOST_CONTEXT_ISSUE } },
     async ({ page }) => {
-      const app = await openView(page, { displayModes: ["inline"] })
+      for (const displayModes of [["inline"], undefined]) {
+        const app = await openView(page, { displayModes })
 
-      await expectProcessList(app)
-      const fullscreen = app.getByRole("button", { name: "Fullscreen" })
-      await expect(
-        fullscreen,
-        "toolkit#178 fixed? The affordance must be hidden when the host offers no fullscreen",
-      ).toBeVisible()
-      await fullscreen.click()
-      await page.waitForTimeout(500)
-
-      // mcp-use refuses the un-negotiated mode before it reaches the host;
-      // the view stays inline and intact.
-      expect((await hostLog(page)).displayModeRequests).toEqual([])
-      await expect(fullscreen).toBeVisible()
-      await expectProcessList(app)
+        await expectProcessList(app)
+        // The rest of the toolbar stays.
+        await expect(
+          app.getByRole("heading", { name: "Process Definitions" }).first(),
+        ).toBeVisible()
+        await expect(app.getByRole("button", { name: "Fullscreen" })).toBeHidden()
+        expect((await hostLog(page)).displayModeRequests).toEqual([])
+      }
     },
   )
+
+  test("host locale de-DE without a saved profile: a German view (#339)", async ({ page }) => {
+    // The default deployment has no OAuth, so the profile is the default
+    // `language: "system"` — the host's locale decides.
+    const app = await openView(page, { locale: "de-DE", displayModes: ["inline", "fullscreen"] })
+
+    const table = app.getByRole("table", {
+      name: "Bereitgestellte Prozessdefinitionen mit Version und Status",
+    })
+    await expect(table).toBeVisible({ timeout: 15_000 })
+    await expect(table.getByRole("row")).toHaveCount(4)
+    await expect(app.getByText("3 bereitgestellt")).toBeVisible()
+    // The view chrome (toolkit McpAppView) follows the same locale.
+    await expect(app.getByRole("button", { name: "Vollbild" })).toBeVisible()
+    expect(await app.locator("html").getAttribute("lang")).toBe("de")
+  })
+
+  test("host font: text renders in the host's --font-sans, font-mono stays monospace", async ({
+    page,
+  }) => {
+    const app = await openView(page, { fontSans: '"Host Sim Sans", serif' })
+
+    await expectProcessList(app)
+    const fonts = await app.locator("body").evaluate((body) => {
+      const mono = document.createElement("code")
+      mono.className = "font-mono"
+      mono.textContent = "a1b2c3"
+      body.appendChild(mono)
+      const result = {
+        body: getComputedStyle(body).fontFamily,
+        mono: getComputedStyle(mono).fontFamily,
+      }
+      mono.remove()
+      return result
+    })
+    expect(fonts.body).toContain("Host Sim Sans")
+    expect(fonts.body).not.toContain("Geist")
+    expect(fonts.mono).toMatch(/monospace/)
+  })
+
+  test("the served stylesheet forces no font and sets no height floor (#339)", async ({ page }) => {
+    const app = await openView(page)
+    await expectProcessList(app)
+
+    const css = await app
+      .locator("html")
+      .evaluate(() => [...document.querySelectorAll("style")].map((s) => s.textContent).join("\n"))
+    expect(css).not.toMatch(/font-family:[^;}]*!important/)
+    expect(css).not.toMatch(/Geist|data:font\/woff2/)
+    expect(css).not.toMatch(/min-height:\s*600px/)
+  })
+
+  test("a host height budget: the view scrolls inside it instead of reporting more", async ({
+    page,
+  }) => {
+    const app = await openView(page, { maxHeight: 220 })
+
+    await expectProcessList(app)
+    await expect.poll(() => reportedHeight(page)).toBeLessThanOrEqual(220)
+    // The shell's document layer is the scroll container, capped at the budget.
+    const container = await app.locator("#root").evaluate((root) => {
+      const el = root.firstElementChild as HTMLElement
+      return {
+        maxHeight: getComputedStyle(el).maxHeight,
+        scrolls: el.scrollHeight > el.clientHeight,
+      }
+    })
+    expect(container).toEqual({ maxHeight: "220px", scrolls: true })
+  })
 
   test("host with fullscreen: the toggle requests it and follows the host's switch", async ({
     page,
@@ -333,5 +447,72 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     await expect.poll(async () => (await hostLog(page)).displayModeRequests).toEqual(["fullscreen"])
     await expect(app.getByRole("button", { name: "Collapse" })).toBeVisible()
     await expectProcessList(app)
+  })
+})
+
+test.describe("real BPMN view (camunda7_show_bpmn_viewer)", () => {
+  test("dark host: a light canvas keeps flows and labels readable, the logo clear of the zoom controls (#339, N122/N129)", async ({
+    page,
+  }, testInfo) => {
+    const app = await openView(page, {
+      tool: "camunda7_show_bpmn_viewer",
+      args: { engine: HEALTHY_ENGINE, processDefinitionKey: "invoice" },
+      theme: "dark",
+    })
+
+    const canvas = app.getByRole("img", { name: "BPMN process diagram" })
+    // Four sequence flows of the fixture diagram rendered.
+    await expect(canvas.locator(".djs-connection")).toHaveCount(4, { timeout: 15_000 })
+    await testInfo.attach("bpmn-dark-host", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    })
+    expect((await documentTheme(app)).dark).toBe(true)
+
+    // The canvas is light in a dark theme; bpmn-js's near-black strokes and
+    // labels sit on it, not on the dark card.
+    expect(await luminance(canvas, "backgroundColor")).toBeGreaterThan(0.95)
+    expect(await luminance(canvas.locator(".djs-connection path").first(), "stroke")).toBeLessThan(
+      0.25,
+    )
+    expect(
+      await luminance(canvas.locator("text.djs-label").first(), "fill"),
+      "external labels (events, gateway, flow names) must stay dark on the light canvas",
+    ).toBeLessThan(0.25)
+
+    // The bpmn.io logo stays (a bpmn-js licence term) but no longer covers a
+    // zoom button: a click on each button's centre reaches the button.
+    const logo = app.locator(".bjs-powered-by")
+    await expect(logo).toBeVisible()
+    for (const name of ["Zoom in", "Fit to viewport", "Zoom out"]) {
+      const button = app.getByRole("button", { name })
+      const hit = await button.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+        return top !== null && el.contains(top)
+      })
+      expect(hit, `${name} is covered`).toBe(true)
+    }
+  })
+})
+
+test.describe("framework view (render-view)", () => {
+  test("an inline KPI view sizes to its content — far below the old 600 px floor (#339, K40)", async ({
+    page,
+  }) => {
+    const app = await openView(page, {
+      tool: "render-view",
+      args: {
+        title: "Throughput",
+        keys: { "sim:kpis": { Running: 12, Incidents: 0, "Jobs due": 3 } },
+        layout: [{ row: [{ widget: "shell:kpi-grid", props: { dataKey: "sim:kpis" } }] }],
+      },
+    })
+
+    await expect(app.getByText("Jobs due")).toBeVisible({ timeout: 15_000 })
+    // Toolbar + one KPI strip: ~130 px. The old html/body/#root floor
+    // reported 600 for every view.
+    await expect.poll(() => reportedHeight(page)).toBeLessThan(300)
+    expect(await reportedHeight(page)).toBeGreaterThan(60)
   })
 })

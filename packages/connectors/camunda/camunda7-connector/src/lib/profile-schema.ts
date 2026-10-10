@@ -1,10 +1,10 @@
 import { z } from "zod"
 import {
-  LOCALES,
+  LANGUAGES,
   parseModuleSlice,
   THEMES,
   withoutDefaults,
-  type Locale,
+  type LanguagePref,
   type ProfileRecord,
   type ThemePref,
 } from "@miragon-ai/widget-shell/server"
@@ -74,7 +74,7 @@ export function parseCamunda7Settings(
  * `ProfileRecord` with the engine/dashboard fields inside `modules.camunda7`.
  */
 export interface UserProfile extends Camunda7Settings {
-  language: Locale
+  language: LanguagePref
   theme: ThemePref
   /** Record stamp — the widget's baseline-resync key after a save. */
   updatedAt: string
@@ -92,7 +92,7 @@ export function toUserProfile(record: ProfileRecord): UserProfile {
 /** A fully-defaulted profile view for a key that has never been saved. */
 export function defaultUserProfile(): UserProfile {
   return {
-    language: "en",
+    language: "system",
     theme: "system",
     updatedAt: new Date().toISOString(),
     ...camunda7SettingsSchema.parse({}),
@@ -111,11 +111,9 @@ export function defaultUserProfile(): UserProfile {
 export const userProfileToolSaveInput = z
   .object({
     language: z
-      .enum(LOCALES)
-      .describe(
-        "UI + summary language. Also steers the language of tool summaries returned to the model.",
-      ),
-    theme: z.enum(THEMES).describe('Theme preference: "light", "dark" or "system".'),
+      .enum(LANGUAGES)
+      .describe('UI + summary language; "system" follows the chat host (summaries in English).'),
+    theme: z.enum(THEMES).describe('"system" follows the chat host, then the OS.'),
     ...withoutDefaults(camunda7SettingsSchema.shape),
   })
   .partial()

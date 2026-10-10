@@ -61,7 +61,7 @@ describe("caller identity on the wire (createApp)", () => {
 
     it("reads fall back to the defaults and hide Save", async () => {
       const profile = payload(await call(client, "camunda7_user_profile_data"))
-      expect(profile).toMatchObject({ canSave: false, profile: { language: "en" } })
+      expect(profile).toMatchObject({ canSave: false, profile: { language: "system" } })
       expect(profile.profile).not.toHaveProperty("defaultDashboardId")
 
       const analytics = payload(await call(client, "analytics_settings_data"))
@@ -118,7 +118,7 @@ describe("caller identity on the wire (createApp)", () => {
       // Bob starts from the defaults — Alice's saves are not his.
       expect(payload(await call(bob, "camunda7_user_profile_data"))).toMatchObject({
         canSave: true,
-        profile: { language: "en", theme: "system" },
+        profile: { language: "system", theme: "system" },
       })
       expect(payload(await call(bob, "analytics_settings_data"))).toMatchObject({
         canSave: true,
@@ -140,7 +140,7 @@ describe("caller identity on the wire (createApp)", () => {
       const bobRecord = await runtime.profileStore.get("bob")
       expect(aliceRecord).toMatchObject({ language: "de", theme: "system", userId: "alice" })
       expect(aliceRecord?.modules).toMatchObject({ analytics: { defaultPeriod: "30d" } })
-      expect(bobRecord).toMatchObject({ language: "en", theme: "dark", userId: "bob" })
+      expect(bobRecord).toMatchObject({ language: "system", theme: "dark", userId: "bob" })
       expect(bobRecord?.modules).not.toHaveProperty("analytics")
     })
 

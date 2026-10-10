@@ -4233,8 +4233,9 @@
           "type": "string"
         },
         "language": {
-          "description": "UI + summary language. Also steers the language of tool summaries returned to the model.",
+          "description": "UI + summary language; \"system\" follows the chat host (summaries in English).",
           "enum": [
+            "system",
             "en",
             "de"
           ],
@@ -4257,7 +4258,7 @@
           "type": "string"
         },
         "theme": {
-          "description": "Theme preference: \"light\", \"dark\" or \"system\".",
+          "description": "\"system\" follows the chat host, then the OS.",
           "enum": [
             "light",
             "dark",

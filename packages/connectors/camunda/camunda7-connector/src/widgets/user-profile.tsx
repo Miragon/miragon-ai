@@ -8,7 +8,7 @@ import {
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import {
-  LOCALES,
+  LANGUAGES,
   NativeSelect,
   SettingsCard,
   SettingsField,
@@ -17,6 +17,7 @@ import {
   formatTime,
   useDetailView,
   useResetOnChange,
+  type LanguagePref,
   type Locale,
   type ThemePref,
 } from "@miragon-ai/widget-shell/widgets"
@@ -59,7 +60,7 @@ const LANGUAGE_LABELS: Record<Locale, string> = { en: "English", de: "Deutsch" }
 
 /** The editable preference state mirrored by the form controls. */
 interface FormState {
-  language: Locale
+  language: LanguagePref
   theme: ThemePref
   allowedEngineIds: string[]
   defaultEngineId: string
@@ -357,11 +358,13 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
             <NativeSelect
               value={form.language}
               disabled={!canSave}
-              onChange={(e) => set("language", parseEnum(e.target.value, LOCALES) ?? form.language)}
+              onChange={(e) =>
+                set("language", parseEnum(e.target.value, LANGUAGES) ?? form.language)
+              }
             >
-              {LOCALES.map((l) => (
+              {LANGUAGES.map((l) => (
                 <option key={l} value={l}>
-                  {LANGUAGE_LABELS[l]}
+                  {l === "system" ? t("language.system") : LANGUAGE_LABELS[l]}
                 </option>
               ))}
             </NativeSelect>

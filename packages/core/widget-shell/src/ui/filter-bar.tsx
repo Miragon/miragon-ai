@@ -1,5 +1,6 @@
-import { Input } from "@miragon/mcp-toolkit-ui"
+import { Input, useLocale } from "@miragon/mcp-toolkit-ui"
 import { cn } from "./cn.js"
+import { kitLabels } from "./kit-labels.js"
 
 export interface FilterChip {
   id: string
@@ -14,7 +15,7 @@ export interface FilterChip {
  */
 export function FilterBar({
   search,
-  searchPlaceholder = "Filter…",
+  searchPlaceholder,
   searchAriaLabel,
   onSearchChange,
   chips,
@@ -22,6 +23,7 @@ export function FilterBar({
   className,
 }: {
   search: string
+  /** Defaults to the active locale's "Filter…". */
   searchPlaceholder?: string
   /** Accessible name for the search input; defaults to the placeholder. */
   searchAriaLabel?: string
@@ -30,14 +32,16 @@ export function FilterBar({
   onChipToggle: (id: string) => void
   className?: string
 }) {
+  const locale = useLocale()
+  const placeholder = searchPlaceholder ?? kitLabels(locale).filter
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
       <Input
         type="search"
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
-        placeholder={searchPlaceholder}
-        aria-label={searchAriaLabel ?? searchPlaceholder}
+        placeholder={placeholder}
+        aria-label={searchAriaLabel ?? placeholder}
         className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-m-blue/30 focus-visible:border-m-blue h-9 min-w-[220px] flex-1 rounded-md text-sm"
       />
       <div className="flex flex-wrap gap-1.5">

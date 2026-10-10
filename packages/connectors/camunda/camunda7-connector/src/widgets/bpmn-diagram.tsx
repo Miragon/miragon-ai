@@ -1,7 +1,9 @@
 import { useEffect } from "react"
 import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import {
+  BPMN_CANVAS_CLASS,
   BpmnZoomControls,
+  cn,
   useBpmnViewer,
   useHostDisplayMode,
 } from "@miragon-ai/widget-shell/widgets"
@@ -67,7 +69,7 @@ export function BpmnDiagram({
         ref={containerRef}
         role="img"
         aria-label={t("bpmnDiagram.ariaLabel")}
-        className="border-border rounded-lg border"
+        className={cn(BPMN_CANVAS_CLASS, "border-border rounded-lg border")}
         style={{ height: `${height}px`, width: "100%" }}
       />
       {importError !== null && (

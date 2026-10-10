@@ -37,6 +37,16 @@ export interface BpmnViewerWithGet {
     ((service: "eventBus") => BpmnEventBus)
 }
 
+/**
+ * The canvas every BPMN widget renders on: a fixed LIGHT surface in both
+ * themes, like Camunda Cockpit. bpmn-js paints near-black strokes and labels
+ * and white fills straight into the SVG; on the dark card those sequence
+ * flows and external labels were unreadable, and a light canvas also keeps
+ * the highlight fills (`HIGHLIGHT_COLORS`) and the heatmap's multiply blend
+ * exactly as designed. Put it on the element `containerRef` attaches to.
+ */
+export const BPMN_CANVAS_CLASS = "bg-white [color-scheme:light]"
+
 const FALLBACK_IMPORT_ERROR = "Failed to render the BPMN diagram."
 
 /** Zoom clamp — matches bpmn-js's own navigation limits, keeps ± buttons sane. */

@@ -27,9 +27,6 @@
         "test-host/**/*.{ts,mjs}",
       ],
       "ignoreDependencies": [
-        // Referenced from src/ui/geist-latin.css (@font-face src url), which
-        // the module graph does not traverse.
-        "@fontsource-variable/geist",
         // Deliberate resolution pin, never imported: mcp-use 2's graph peers
         // on lucide-react (built-in inspector); without one version pinned
         // next to the toolkit, pnpm splits mcp-use into two peer instances

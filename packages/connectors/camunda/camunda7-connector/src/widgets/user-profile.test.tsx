@@ -123,6 +123,13 @@ describe("UserProfileWidget save — only what the user changed", () => {
     expect(await save()).toEqual({ language: "de" })
   })
 
+  it("offers following the chat app's language as a choice of its own (#339)", async () => {
+    const { save } = renderPanel()
+    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "system" } })
+    expect(screen.getByRole("option", { name: "Automatic (follows the chat app)" })).toBeTruthy()
+    expect(await save()).toEqual({ language: "system" })
+  })
+
   it("never sends an unset role (the stored role stays)", async () => {
     const { save } = renderPanel()
     fireEvent.change(screen.getByLabelText("Preferred role"), { target: { value: "" } })

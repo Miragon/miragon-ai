@@ -178,7 +178,8 @@ describe("caller round-trip", () => {
       {},
       { auth: { user: { id: "u-2" } } },
     )
-    expect((other.structuredContent?.profile as { language: string }).language).toBe("en")
+    // Another caller sees the default: follow the host's language.
+    expect((other.structuredContent?.profile as { language: string }).language).toBe("system")
   })
 
   it("an explicitly declared local caller round-trips through the anonymous record", async () => {
@@ -189,6 +190,17 @@ describe("caller round-trip", () => {
     const result = await local(() => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}))
     expect(result.structuredContent?.canSave).toBe(true)
     expect((await store.get("anonymous"))?.language).toBe("de")
+  })
+
+  it("stores following the host's language, and summarizes it in English (#339)", async () => {
+    const { handlerFor } = register()
+    await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }, CTX)
+    await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "system" }, CTX)
+
+    const result = await handlerFor(CAMUNDA7_SHOW_USER_PROFILE)({}, CTX)
+    expect(JSON.stringify(result.structuredContent)).toContain('"language":"system"')
+    // The host locale `system` follows never reaches the server: English summary.
+    expect(result.content?.[0]?.text).toContain("User profile: language system")
   })
 })
 

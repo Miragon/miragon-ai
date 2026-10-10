@@ -12,11 +12,20 @@
  * its implicit one only to plain directory paths, so a bare directory glob
  * would silently match nothing).
  */
+@source "../../node_modules/@miragon/mcp-toolkit-ui/src";
 @source "../../node_modules/@miragon-ai/widget-shell/dist";
 @source "../../node_modules/@miragon-ai/camunda7-connector/src";
 @source "../../node_modules/@miragon-ai/analytics-connector/src";
 @source "../../../modules/*/src/**/*.{ts,tsx}";
-@import "@miragon/mcp-toolkit-ui/globals.css";
+/*
+ * The shell's tokens (the toolkit's shadcn ramp + dark variant) WITHOUT a
+ * forced font: the host's font (SEP-1865 `--font-sans`) or the system stack
+ * renders text, and `font-mono` stays monospace. Do not import
+ * `@miragon/mcp-toolkit-ui/globals.css` next to it — it re-adds a
+ * `font-family … !important` rule and ~61 KB of base64 font per view. For a
+ * brand font, load it yourself and set `--font-sans` in an `@theme` block.
+ */
+@import "@miragon-ai/widget-shell/theme.css";
 
 /*
  * Brand "tone" tokens layered on top of the toolkit's shadcn base. The toolkit
@@ -89,11 +98,4 @@
   --info: #7aa7e0;
   --info-soft: #16243a;
   --info-foreground: #7aa7e0;
-}
-
-html,
-body,
-#root {
-  min-height: 600px;
-  height: 100%;
 }
