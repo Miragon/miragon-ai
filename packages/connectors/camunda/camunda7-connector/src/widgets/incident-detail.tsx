@@ -1,21 +1,24 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
-import { Alert, AlertDescription, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import { SectionHeading, useDetailView, useResetOnChange } from "@miragon-ai/widget-shell/widgets"
+import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { SectionHeading, useDetailView } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData, IncidentRecovery } from "../view-models.js"
 
 import { CAMUNDA7_INCIDENT_DETAIL_DATA } from "../tool-names.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
-import { ConfirmDialog } from "./confirm-dialog.js"
 import { DetailPage } from "./detail-page.js"
 import { FailureTab } from "./incident-detail/failure-tab.js"
 import { recoveryOf } from "./lib/incident-recovery.js"
 import { IncidentDetailHeader } from "./incident-detail/header.js"
 import { InstanceTab } from "./incident-detail/instance-tab.js"
 import { IncidentKpis } from "./incident-detail/kpis.js"
-import { refreshCockpitData } from "./refresh.js"
-import { useCanRun } from "./widget-actions.js"
+import { EngineActionDialog } from "./lib/engine-action-dialog.js"
+import {
+  useIncidentRecovery,
+  type IncidentRecoveryState,
+  type RecoverableIncident,
+} from "./process-incidents/use-incident-recovery.js"
 import { scopingDefinitionKey, useHandOff, type ViewContext } from "./lib/hand-off.js"
 import { PagedHistoryView } from "./history-timeline.js"
 import { useT } from "../messages/use-t.js"
@@ -38,35 +41,50 @@ function retryToolFor(data: IncidentDetailData) {
   return null
 }
 
-/** The retries call that clears a built-in incident; null when it is resolved instead. */
-function retryArgs(recovery: IncidentRecovery): Record<string, unknown> | null {
-  if (recovery.action === "retry-job") return { jobId: recovery.jobId, retries: 1 }
-  if (recovery.action === "retry-external-task") {
-    return { externalTaskId: recovery.externalTaskId, retries: 1 }
+/** The incident as the shared recovery reads it — with the feed's (or the old payload's) remedy. */
+function recoverable(data: IncidentDetailData): RecoverableIncident {
+  return {
+    id: data.incidentId,
+    incidentType: data.incidentType,
+    processInstanceId: data.processInstanceId,
+    recovery: detailRecovery(data),
   }
-  return null
 }
 
 /**
- * Which remedy this deployment may offer for the incident: the engine refuses
- * to resolve its built-in types (failedJob, failedExternalTask), so those get
- * Retry through their retries tool and only custom incidents get Resolve.
+ * The incident feed's scope — in the cockpit from the props; standalone from
+ * the handed-in data's echo, so a refetch reads the incident and engine the
+ * show tool answered for (never the caller's default engine).
  */
-function useRemedies(data: IncidentDetailData | null) {
-  const canRun = useCanRun()
-  const jobRetryMutation = useToolMutation("camunda7_set_job_retries")
-  const externalTaskRetryMutation = useToolMutation("camunda7_set_external_task_retries")
-  const retryTool = data ? retryToolFor(data) : null
+function incidentFeed(
+  initialData: IncidentDetailData | null,
+  incidentId: string | undefined,
+  engine: string | undefined,
+) {
+  const id = incidentId ?? initialData?.incidentId
+  const feedEngine = engine ?? initialData?.engineId
   return {
-    canResolve:
-      data !== null &&
-      detailRecovery(data).action === "resolve" &&
-      canRun("camunda7_resolve_incident"),
-    canRetry: retryTool !== null && canRun(retryTool),
-    retryMutation:
-      retryTool === "camunda7_set_external_task_retries"
-        ? externalTaskRetryMutation
-        : jobRetryMutation,
+    key: ["camunda7:incident-detail", feedEngine ?? null, id ?? null],
+    args: { incidentId: id, engine: feedEngine },
+    ready: !!id,
+  }
+}
+
+/** The failure tab's remedy controls: the one write that clears THIS incident, and its state. */
+function remedyProps(recovery: IncidentRecoveryState, incident: RecoverableIncident) {
+  const remedy = recovery.actionFor(incident)
+  const act = () => recovery.act(incident)
+  const pending = recovery.isPending(incident)
+  const cleared = recovery.isDone(incident)
+  const resolves = incident.recovery?.action === "resolve"
+  return {
+    resolved: cleared && resolves,
+    retried: cleared && !resolves,
+    onResolve: remedy === "resolve" ? act : undefined,
+    resolving: remedy === "resolve" && pending,
+    onRetry: remedy === "retry" ? act : undefined,
+    retrying: remedy === "retry" && pending,
+    retryError: remedy === "retry" ? recovery.errorOf(incident) : null,
   }
 }
 
@@ -142,28 +160,28 @@ export function IncidentDetailWidget({
   incidentId?: string
   engine?: string
 }) {
-  const resolveMutation = useToolMutation("camunda7_resolve_incident")
-  const [resolved, setResolved] = useState(false)
-  const [retried, setRetried] = useState(false)
-  const [confirmResolve, setConfirmResolve] = useState(false)
   const t = useT()
-  const { data, guard } = useDetailView<IncidentDetailData>({
+  const { data, guard, notice, refreshError } = useDetailView<IncidentDetailData>({
     initialData,
-    key: ["camunda7:incident-detail", engine ?? null, incidentId ?? null],
+    ...incidentFeed(initialData, incidentId, engine),
     tool: CAMUNDA7_INCIDENT_DETAIL_DATA,
-    args: { incidentId, engine },
-    ready: !!incidentId,
     loadingText: t("incidentDetail.loading"),
     emptyText: t("incidentDetail.noData"),
+    retryText: t("viewState.retry"),
+    refreshErrorText: (message) => t("viewState.refreshError", { message }),
   })
-  // The optimistic resolved/retried flags only bridge the gap until the feed
-  // refetches — fresh server data must win again.
-  useResetOnChange(data, () => {
-    setResolved(false)
-    setRetried(false)
+  // Mutations must target the exact engine this incident was fetched from (the
+  // prop in the cockpit, the server-resolved id standalone) — never the caller's
+  // default engine, which can differ if the default-engine save raced or failed.
+  const engineId = engine ?? data?.engineId
+  // The remedy's success marks only bridge the gap until the feed refetches —
+  // fresh server data must win again. A cleared incident's own view is not
+  // refetched (it would be a 404): the marks are what it shows. A refetch that
+  // failed leaves the incident unconfirmed (cleared elsewhere?) — no remedy then.
+  const recovery = useIncidentRecovery(engineId, {
+    resetOn: data,
+    available: refreshError === null,
   })
-
-  const { canResolve, canRetry, retryMutation } = useRemedies(data)
 
   const highlights = useMemo<BpmnHighlight[]>(
     () => [{ kind: "incident", activityIds: data ? [data.activityId] : [] }],
@@ -172,44 +190,17 @@ export function IncidentDetailWidget({
 
   if (!data) return guard
 
-  // Mutations must target the exact engine this incident was fetched from (the
-  // prop in the cockpit, the server-resolved id standalone) — never the caller's
-  // default engine, which can differ if the default-engine save raced or failed.
-  const engineId = engine ?? data.engineId
-
-  function handleResolve() {
-    if (!data) return
-    resolveMutation.mutate(
-      { incidentId: data.incidentId, engine: engineId },
-      {
-        onSuccess: () => {
-          setResolved(true)
-          setConfirmResolve(false)
-          // Refetch the feed so the widget (and cockpit siblings) show the
-          // post-resolve server state instead of only the optimistic flag.
-          refreshCockpitData()
-        },
-      },
-    )
-  }
-
-  function handleRetry() {
-    const args = data ? retryArgs(detailRecovery(data)) : null
-    if (!args) return
-    retryMutation.mutate(
-      { ...args, engine: engineId },
-      {
-        onSuccess: () => {
-          setRetried(true)
-          refreshCockpitData()
-        },
-      },
-    )
-  }
+  const remedy = remedyProps(recovery, recoverable(data))
+  const { resolved, retried } = remedy
 
   return (
     <DetailPage
-      header={<IncidentDetailHeader data={data} resolved={resolved} />}
+      header={
+        <>
+          {notice}
+          <IncidentDetailHeader data={data} resolved={resolved} />
+        </>
+      }
       kpi={<IncidentKpis data={data} resolved={resolved} />}
       diagram={
         <section>
@@ -230,25 +221,7 @@ export function IncidentDetailWidget({
         {
           id: "failure",
           label: t("incidentDetail.tabFailure"),
-          content: (
-            <FailureTab
-              data={data}
-              resolved={resolved}
-              onResolve={
-                canResolve
-                  ? () => {
-                      resolveMutation.reset()
-                      setConfirmResolve(true)
-                    }
-                  : undefined
-              }
-              resolving={resolveMutation.isPending}
-              onRetry={canRetry ? handleRetry : undefined}
-              retrying={retryMutation.isPending}
-              retried={retried}
-              retryError={retryMutation.error?.message ?? null}
-            />
-          ),
+          content: <FailureTab data={data} {...remedy} />,
         },
         {
           id: "instance",
@@ -275,18 +248,7 @@ export function IncidentDetailWidget({
           this widget self-fetches in the cockpit, where the adapter has no data. */}
       <IncidentModelContext data={data} resolved={resolved || retried} />
 
-      <ConfirmDialog
-        open={confirmResolve}
-        onOpenChange={setConfirmResolve}
-        title={t("incidentDetail.confirmResolveTitle")}
-        description={t("incidentDetail.confirmResolveDescription")}
-        confirmLabel={t("incidentFailure.resolveButton")}
-        cancelLabel={t("confirmDialog.cancel")}
-        pendingLabel={t("confirmDialog.working")}
-        pending={resolveMutation.isPending}
-        error={resolveMutation.error?.message ?? null}
-        onConfirm={handleResolve}
-      />
+      <EngineActionDialog action={recovery.resolve} />
     </DetailPage>
   )
 }

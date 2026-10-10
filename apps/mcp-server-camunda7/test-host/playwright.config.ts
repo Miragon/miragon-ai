@@ -11,7 +11,8 @@ export default defineConfig({
   globalSetup: "./global-setup.ts",
   timeout: 45_000,
   // Every scenario owns its page and host log; the server is shared and only
-  // ever read. Two workers in CI keep the timing scenarios (the 2.5 s
+  // ever read — the write scenario owns the stub's one failed job (no other
+  // scenario reads it). Two workers in CI keep the timing scenarios (the 2.5 s
   // recovery grace) clear of CPU starvation on the runner.
   fullyParallel: true,
   workers: CI ? 2 : undefined,

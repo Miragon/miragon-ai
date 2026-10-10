@@ -8,12 +8,9 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
-import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
-import { useViewData } from "../use-view-data.js"
-import { ConfirmDialog } from "../confirm-dialog.js"
 import { ActivitySummary } from "./activity-summary.js"
+import { useDefinitionData } from "./feed.js"
 import { PagedIncidentTable } from "./incident-table.js"
-import { useIncidentRecovery } from "./use-incident-recovery.js"
 import { EmptyStateWithSiblings } from "./empty-state.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -64,20 +61,16 @@ export function ActivityIncidentList({
 }) {
   const t = useT()
   const go = useNav()
-  const { data, loading, error } = useViewData<ProcessIncidentsData>(
+  const { data, loading, error, refetch } = useDefinitionData(
     initialData,
-    ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
-    CAMUNDA7_PROCESS_INCIDENTS_DATA,
-    { processDefinitionKey, engine },
-    !!processDefinitionKey,
+    processDefinitionKey,
+    engine,
   )
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   // Mutations must target the exact engine this data was fetched from (the prop
   // in the cockpit, the server-resolved id standalone) — never fall back to the
   // caller's default engine, which can differ if the default-engine save raced or failed.
   const engineId = engine ?? data?.engineId
-  // The optimistic marks reset when the feed data changes (server truth).
-  const recovery = useIncidentRecovery(engineId, data)
 
   if (!data) {
     return (
@@ -87,6 +80,8 @@ export function ActivityIncidentList({
           error={error}
           loadingText={t("procIncList.loading")}
           emptyText={t("procIncList.noData")}
+          onRetry={refetch}
+          retryLabel={t("viewState.retry")}
         />
       </WidgetShell>
     )
@@ -136,44 +131,18 @@ export function ActivityIncidentList({
             >
               {/* Rows come from the paged per-activity feed (mounted on
                   expand), not the definition payload — the group reaches every
-                  incident, not just the 200-row recency scan. */}
+                  incident, not just the 200-row recency scan. The table owns
+                  the rows' remedies, keyed on that feed. */}
               <PagedIncidentTable
                 processDefinitionKey={data.processDefinitionKey}
                 activityId={activity.activityId}
                 engine={engineId}
-                recovery={recovery}
                 onAnalyze={analyzeIncident}
               />
             </GroupCard>
           ))
         )}
       </section>
-
-      {/* The per-row button only requests the resolve; the actual
-          camunda7_resolve_incident call runs after this confirmation. The
-          dialog stays open until success so a failure is shown right here
-          (and inline at the row once dismissed). */}
-      <ConfirmDialog
-        open={recovery.confirmResolveId !== null}
-        onOpenChange={(open) => {
-          if (!open) recovery.setConfirmResolveId(null)
-        }}
-        title={t("procIncTable.confirmResolveTitle")}
-        description={t("procIncTable.confirmResolveDescription")}
-        confirmLabel={t("procIncTable.resolve")}
-        cancelLabel={t("confirmDialog.cancel")}
-        pendingLabel={t("confirmDialog.working")}
-        pending={
-          recovery.confirmResolveId !== null && recovery.pendingIds.has(recovery.confirmResolveId)
-        }
-        error={
-          recovery.confirmResolveId !== null &&
-          recovery.error?.incidentId === recovery.confirmResolveId
-            ? recovery.error.message
-            : null
-        }
-        onConfirm={recovery.confirmResolve}
-      />
     </WidgetShell>
   )
 }

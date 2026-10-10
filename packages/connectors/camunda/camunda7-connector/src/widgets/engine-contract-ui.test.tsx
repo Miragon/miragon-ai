@@ -57,7 +57,7 @@ const INCIDENTS = [
 ]
 
 const Incidents: ComponentType<Record<string, unknown>> = () => {
-  const recovery = useIncidentRecovery("prod", INCIDENTS)
+  const recovery = useIncidentRecovery("prod", { resetOn: INCIDENTS })
   return <IncidentTable incidents={INCIDENTS} recovery={recovery} onAnalyze={() => {}} />
 }
 
@@ -119,7 +119,7 @@ describe("incident rows offer the action the engine accepts", () => {
     // swapped the rows' resolve props for `recovery`. The instance tab carries both.
     const actions: HostActionLog[] = []
     const OnProdB: ComponentType<Record<string, unknown>> = () => {
-      const recovery = useIncidentRecovery("prod-b", INCIDENTS)
+      const recovery = useIncidentRecovery("prod-b", { resetOn: INCIDENTS })
       return <IncidentsTab incidents={INCIDENTS} recovery={recovery} engine="prod-b" />
     }
     render(

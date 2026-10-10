@@ -27,6 +27,8 @@ export const en: MessageCatalog = {
   "cockpit.aria.breadcrumb": "Breadcrumb",
   "cockpit.aria.sections": "Cockpit sections",
   "cockpit.aria.activeEngine": "Active engine",
+  "cockpit.refresh": "↻ Refresh",
+  "cockpit.refreshing": "Refreshing…",
   "cockpit.landing.title": "CIB Seven Cockpit",
   "cockpit.landing.subtitle": ({ count }) =>
     `${String(count)} engines configured — operate one engine, or analyze across the whole fleet.`,

@@ -16,6 +16,25 @@ import { useT } from "../messages/use-t.js"
 
 export type { InstanceDetailData }
 
+/**
+ * The instance feed's scope — in the cockpit from the props; standalone from
+ * the handed-in data's echo, so a refetch reads the instance and engine the
+ * show tool answered for (never the caller's default engine).
+ */
+function instanceFeed(
+  initialData: InstanceDetailData | null,
+  processInstanceId: string | undefined,
+  engine: string | undefined,
+) {
+  const instanceId = processInstanceId ?? initialData?.instance.id
+  const feedEngine = engine ?? initialData?.engineId
+  return {
+    key: ["camunda7:instance-detail", feedEngine ?? null, instanceId ?? null],
+    args: { processInstanceId: instanceId, engine: feedEngine },
+    ready: !!instanceId,
+  }
+}
+
 export function InstanceDetailWidget({
   data: initialData = null,
   processInstanceId,
@@ -26,28 +45,29 @@ export function InstanceDetailWidget({
   engine?: string
 }) {
   const t = useT()
-  const { data, guard } = useDetailView<InstanceDetailData>({
+  const { data, guard, notice, refreshError } = useDetailView<InstanceDetailData>({
     initialData,
-    key: ["camunda7:instance-detail", engine ?? null, processInstanceId ?? null],
+    ...instanceFeed(initialData, processInstanceId, engine),
     tool: CAMUNDA7_INSTANCE_DETAIL_DATA,
-    args: { processInstanceId, engine },
-    ready: !!processInstanceId,
     loadingText: t("instanceDetail.loading"),
     emptyText: t("instanceDetail.noData"),
+    retryText: t("viewState.retry"),
+    refreshErrorText: (message) => t("viewState.refreshError", { message }),
   })
-  const actions = useInstanceActions({ engine, data })
-  const { visibleTasks, activeTaskId, onToggleTask, onTaskCompleted } = useOpenTasks(
+  // Every write is offered for the CURRENT state only (`useInstanceActions`).
+  const actions = useInstanceActions({ engine, data, unconfirmed: refreshError !== null })
+  const { complete, visibleTasks, activeTaskId, onToggleTask, onTaskCompleted } = useOpenTasks(
     data?.openTasks,
+    actions.canCompleteTasks,
   )
 
   if (!data) return guard
 
   const { instance, activityTree, variables, incidents, bpmnXml } = data
-  const { engineId, isSuspended, cancelled } = actions
-  const isActionable = !instance.ended && !cancelled
+  const { engineId, isSuspended, cancelled, isActionable } = actions
 
   const variableEntries = Object.entries(variables)
-  const activeIncidents = incidents.filter((i) => !actions.recovery.doneIds.has(i.id))
+  const activeIncidents = incidents.filter((i) => !actions.recovery.isDone(i))
   // The lists are capped; the counts are the engine's exact totals minus what
   // this view already resolved/completed — never the length of a capped list.
   const openIncidentCount = data.incidentCount - (incidents.length - activeIncidents.length)
@@ -66,6 +86,7 @@ export function InstanceDetailWidget({
           openTasks={data.openTasks}
           visibleTasks={visibleTasks}
           engineId={engineId}
+          complete={complete}
           activeTaskId={activeTaskId}
           onToggleTask={onToggleTask}
           onTaskCompleted={onTaskCompleted}
@@ -90,7 +111,7 @@ export function InstanceDetailWidget({
           instanceId={instance.id}
           definitionId={instance.definitionId}
           engineId={engineId}
-          readOnly={instance.ended || cancelled}
+          readOnly={!isActionable}
         />
       ),
     },
@@ -113,18 +134,21 @@ export function InstanceDetailWidget({
   return (
     <DetailPage
       header={
-        <InstanceHeader
-          instance={instance}
-          status={status}
-          engineId={engineId}
-          activeActivityIds={data.activeActivityIds}
-          incidentActivityIds={data.incidentActivityIds}
-          isSuspended={isSuspended}
-          isActionable={isActionable}
-          isMutatingInstance={actions.isMutatingInstance}
-          onRequestSuspendToggle={actions.canSuspend ? actions.requestSuspendToggle : undefined}
-          onRequestCancel={actions.canCancel ? actions.requestCancel : undefined}
-        />
+        <>
+          {notice}
+          <InstanceHeader
+            instance={instance}
+            status={status}
+            engineId={engineId}
+            activeActivityIds={data.activeActivityIds}
+            incidentActivityIds={data.incidentActivityIds}
+            isSuspended={isSuspended}
+            isActionable={isActionable}
+            isMutatingInstance={actions.isMutatingInstance}
+            onRequestSuspendToggle={actions.canSuspend ? actions.requestSuspendToggle : undefined}
+            onRequestCancel={actions.canCancel ? actions.requestCancel : undefined}
+          />
+        </>
       }
       kpi={
         <InstanceKpis
@@ -150,6 +174,7 @@ export function InstanceDetailWidget({
         instance={instance}
         engineId={engineId}
         cancelled={cancelled}
+        unconfirmed={refreshError !== null}
         isSuspended={isSuspended}
         openIncidentCount={openIncidentCount}
       />

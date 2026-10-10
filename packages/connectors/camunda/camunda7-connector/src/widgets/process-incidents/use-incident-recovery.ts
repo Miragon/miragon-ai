@@ -1,117 +1,157 @@
-import { useState } from "react"
-import { useToolMutation } from "@miragon/mcp-toolkit-ui"
-import { useResetOnChange } from "@miragon-ai/widget-shell/widgets"
-
 import type { IncidentInstance } from "../../view-models.js"
+import { useT, type T } from "../../messages/use-t.js"
 import { recoveryOf } from "../lib/incident-recovery.js"
-import { refreshCockpitData } from "../refresh.js"
-import { useCanRun } from "../widget-actions.js"
-
-/** A failed row action, surfaced inline under the affected incident row. */
-export interface RecoveryError {
-  incidentId: string
-  message: string
-}
+import { useEngineAction, type ActionConfirmation, type TargetLine } from "../lib/engine-action.js"
 
 /** The button an incident row offers. */
 export type RowAction = "resolve" | "retry"
 
-type Callbacks = Parameters<ReturnType<typeof useToolMutation>["mutate"]>[1]
+/** What a recovery acts on: the incident — and, for a retry, its job or external task. */
+export type RecoverableIncident = Pick<
+  IncidentInstance,
+  "id" | "incidentType" | "processInstanceId" | "recovery"
+>
 
-function addTo(set: Set<string>, id: string): Set<string> {
-  return new Set(set).add(id)
+interface ResolveArgs extends Record<string, unknown> {
+  incidentId: string
+  engine?: string
 }
 
-function removeFrom(set: Set<string>, id: string): Set<string> {
-  const next = new Set(set)
-  next.delete(id)
-  return next
+interface JobRetryArgs extends Record<string, unknown> {
+  jobId: string
+  retries: number
+  engine?: string
+}
+
+interface ExternalTaskRetryArgs extends Record<string, unknown> {
+  externalTaskId: string
+  retries: number
+  engine?: string
+}
+
+/** The resolve question, naming the incident, its type, its instance and engine. */
+export function resolveConfirmation(
+  t: T,
+  incident: RecoverableIncident,
+  engineId: string | undefined,
+): ActionConfirmation {
+  const lines: TargetLine[] = [
+    [t("confirmDialog.incidentType"), incident.incidentType],
+    [t("confirmDialog.instance"), incident.processInstanceId],
+  ]
+  if (engineId) lines.push([t("confirmDialog.engine"), engineId])
+  return {
+    title: t("confirmDialog.resolveTitle"),
+    description: t("confirmDialog.resolveDescription"),
+    target: [[t("confirmDialog.incident"), incident.id], ...lines],
+    confirmLabel: t("confirmDialog.resolveConfirm"),
+    keepLabel: t("confirmDialog.resolveKeep"),
+  }
 }
 
 /**
- * The incident row actions of the list views (definition view and instance
- * detail). The ENGINE decides which action clears an incident (the feed's
- * `recovery`, from the engine contract): a custom incident is resolved —
- * after a confirmation — but the built-in types refuse resolve with a 400, so
- * a failedJob / failedExternalTask row offers Retry (retries = 1) instead.
- * Each button renders only when the deployment's toolset registers its tool.
- *
- * `doneIds` are the optimistic marks of this session; they only bridge the
- * gap until `resetOn` (the feed data) changes — fresh server data wins.
+ * The incident remedies of every incident surface (definition view rows,
+ * instance detail rows, the incident detail). The ENGINE decides which
+ * write clears an incident (the feed's `recovery`, from the engine
+ * contract): a custom incident is resolved — after a confirmation that names
+ * it — but the built-in types refuse resolve with a 400, so a failedJob /
+ * failedExternalTask offers Retry (retries = 1) instead. Each remedy is an
+ * `EngineAction`: offered only where the deployment's toolset registers its
+ * tool and the incident's surface is `available` (an instance view offers no
+ * remedy on a cancelled, ended or unconfirmed instance), refreshing the
+ * incident views after it succeeded, its success marks dropped when
+ * `resetOn` changes — the data the marked ROWS come from: fresh server data
+ * wins, and only that data can say the row is cleared.
  */
-export function useIncidentRecovery(engineId: string | undefined, resetOn: unknown) {
-  const canRun = useCanRun()
-  const resolveMutation = useToolMutation("camunda7_resolve_incident")
-  const jobRetryMutation = useToolMutation("camunda7_set_job_retries")
-  const externalTaskRetryMutation = useToolMutation("camunda7_set_external_task_retries")
-  const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
-  const [error, setError] = useState<RecoveryError | null>(null)
-  const [confirmResolveId, setConfirmResolveId] = useState<string | null>(null)
-  useResetOnChange(resetOn, () => setDoneIds(new Set()))
+export function useIncidentRecovery(
+  engineId: string | undefined,
+  { resetOn, available = true }: { resetOn: unknown; available?: boolean },
+) {
+  const t = useT()
+  const resolve = useEngineAction<ResolveArgs>({
+    tool: "camunda7_resolve_incident",
+    target: (args) => args.incidentId,
+    resetOn,
+    available,
+  })
+  const jobRetry = useEngineAction<JobRetryArgs>({
+    tool: "camunda7_set_job_retries",
+    target: (args) => args.jobId,
+    resetOn,
+    available,
+  })
+  const taskRetry = useEngineAction<ExternalTaskRetryArgs>({
+    tool: "camunda7_set_external_task_retries",
+    target: (args) => args.externalTaskId,
+    resetOn,
+    available,
+  })
 
-  function actionFor(incident: IncidentInstance): RowAction | null {
-    switch (recoveryOf(incident).action) {
+  /** The action that clears `incident`, the target it runs on, and how to start it — null when none does. */
+  function remedyOf(incident: RecoverableIncident, jobId?: string | null) {
+    const recovery = recoveryOf(incident, jobId)
+    switch (recovery.action) {
       case "resolve":
-        return canRun("camunda7_resolve_incident") ? "resolve" : null
+        return {
+          kind: "resolve" as const,
+          action: resolve,
+          target: incident.id,
+          start: () =>
+            resolve.run(
+              { incidentId: incident.id, engine: engineId },
+              { confirm: resolveConfirmation(t, incident, engineId) },
+            ),
+        }
       case "retry-job":
-        return canRun("camunda7_set_job_retries") ? "retry" : null
+        return {
+          kind: "retry" as const,
+          action: jobRetry,
+          target: recovery.jobId,
+          start: () => jobRetry.run({ jobId: recovery.jobId, retries: 1, engine: engineId }),
+        }
       case "retry-external-task":
-        return canRun("camunda7_set_external_task_retries") ? "retry" : null
+        return {
+          kind: "retry" as const,
+          action: taskRetry,
+          target: recovery.externalTaskId,
+          start: () =>
+            taskRetry.run({
+              externalTaskId: recovery.externalTaskId,
+              retries: 1,
+              engine: engineId,
+            }),
+        }
       default:
         return null
     }
   }
 
-  function run(incidentId: string, mutate: (callbacks: Callbacks) => void) {
-    setError(null)
-    setPendingIds((prev) => addTo(prev, incidentId))
-    mutate({
-      onSuccess: () => {
-        setDoneIds((prev) => addTo(prev, incidentId))
-        setConfirmResolveId(null)
-        // Sibling widgets (KPI, header, BPMN flow) share the feed key —
-        // refetch so their counts reflect the change.
-        refreshCockpitData()
-      },
-      onError: (err) => setError({ incidentId, message: err.message }),
-      onSettled: () => setPendingIds((prev) => removeFrom(prev, incidentId)),
-    })
-  }
-
-  /** The row button: Resolve asks for confirmation first, Retry runs at once. */
-  function act(incident: IncidentInstance) {
-    const { id } = incident
-    const recovery = recoveryOf(incident)
-    if (recovery.action === "resolve") {
-      resolveMutation.reset()
-      setConfirmResolveId(id)
-    } else if (recovery.action === "retry-job") {
-      const args = { jobId: recovery.jobId, retries: 1, engine: engineId }
-      run(id, (callbacks) => jobRetryMutation.mutate(args, callbacks))
-    } else if (recovery.action === "retry-external-task") {
-      const args = { externalTaskId: recovery.externalTaskId, retries: 1, engine: engineId }
-      run(id, (callbacks) => externalTaskRetryMutation.mutate(args, callbacks))
-    }
-  }
-
-  function confirmResolve() {
-    const incidentId = confirmResolveId
-    if (!incidentId) return
-    run(incidentId, (callbacks) =>
-      resolveMutation.mutate({ incidentId, engine: engineId }, callbacks),
-    )
-  }
-
   return {
-    doneIds,
-    pendingIds,
-    error,
-    confirmResolveId,
-    setConfirmResolveId,
-    actionFor,
-    act,
-    confirmResolve,
+    /** The resolve action — its confirmation is rendered by `EngineActionDialog`. */
+    resolve,
+    /** The row's button — null when the incident type, the toolset or the state offers none. */
+    actionFor(incident: RecoverableIncident, jobId?: string | null): RowAction | null {
+      const remedy = remedyOf(incident, jobId)
+      return remedy?.action.allowed ? remedy.kind : null
+    },
+    /** Cleared in this session (until the feed refetches). */
+    isDone(incident: RecoverableIncident, jobId?: string | null): boolean {
+      const remedy = remedyOf(incident, jobId)
+      return remedy !== null && remedy.action.done.has(remedy.target)
+    },
+    isPending(incident: RecoverableIncident, jobId?: string | null): boolean {
+      const remedy = remedyOf(incident, jobId)
+      return remedy !== null && remedy.action.pending(remedy.target)
+    },
+    /** The remedy's last failure, shown at the incident. */
+    errorOf(incident: RecoverableIncident, jobId?: string | null): string | null {
+      const remedy = remedyOf(incident, jobId)
+      return remedy ? remedy.action.error(remedy.target) : null
+    },
+    /** The row button: Resolve asks first, Retry runs at once. */
+    act(incident: RecoverableIncident, jobId?: string | null) {
+      remedyOf(incident, jobId)?.start()
+    },
   }
 }
 

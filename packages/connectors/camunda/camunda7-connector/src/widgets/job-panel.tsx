@@ -1,6 +1,5 @@
-import { useState } from "react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
-import { Badge, Button, useToolMutation } from "@miragon/mcp-toolkit-ui"
+import { Badge, Button } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "../view-models.js"
 import {
@@ -14,16 +13,20 @@ import {
   WidgetShell,
   formatTimestamp,
   usePagedViewData,
-  useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { CockpitListFooter } from "./list-footer.js"
-import { refreshCockpitData } from "./refresh.js"
-import { useCanRun } from "./widget-actions.js"
+import { useEngineAction } from "./lib/engine-action.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { useT } from "../messages/use-t.js"
 
 export type { JobPanelData }
+
+interface RetryArgs extends Record<string, unknown> {
+  jobId: string
+  retries: number
+  engine?: string
+}
 
 // Standalone renders hand in only `data`, so the show tool's scope comes
 // from the payload's echo — loadMore must page the same engine and filter
@@ -159,11 +162,6 @@ export function JobPanelWidget({
   /** Restrict the self-fetched job set to failed jobs (no retries left). */
   failedOnly?: boolean
 }) {
-  const [retriedIds, setRetriedIds] = useState<Set<string>>(new Set())
-  const [retryError, setRetryError] = useState<{ jobId: string; message: string } | null>(null)
-  const retryMutation = useToolMutation("camunda7_set_job_retries")
-  const canRun = useCanRun()
-  const canRetry = canRun("camunda7_set_job_retries")
   const { ask, context } = useHandOff()
   const { feedEngine, effectiveFailedOnly, args } = buildJobsFeed(initialData, engine, failedOnly)
   const paged = usePagedViewData<JobPanelData["jobs"][number], JobPanelData>({
@@ -182,11 +180,12 @@ export function JobPanelWidget({
   })
   const t = useT()
   const data = paged.firstPage
-  // The optimistic retried-shadows only bridge the gap until the feed
-  // refetches — fresh server data (new page-0 identity) must win again.
-  useResetOnChange(data, () => {
-    setRetriedIds(new Set())
-    setRetryError(null)
+  // The retried marks only bridge the gap until the jobs refetch — fresh
+  // server data (new page-0 identity) must win again.
+  const retry = useEngineAction<RetryArgs>({
+    tool: "camunda7_set_job_retries",
+    target: (args) => args.jobId,
+    resetOn: data,
   })
 
   if (!data) {
@@ -204,29 +203,11 @@ export function JobPanelWidget({
 
   const { totalCount, failedCount } = data
   const jobs = paged.items
-  const failedJobs = jobs.filter((j) => j.retries === 0 && !retriedIds.has(j.id))
+  const failedJobs = jobs.filter((j) => j.retries === 0 && !retry.done.has(j.id))
   // Standalone (camunda7_show_job_panel) the `engine` prop is undefined; fall back
   // to the engine the data was fetched against (the builder always sets it) so the
   // AI prompts never inline "undefined" into their tool-call arguments.
   const engineId = engine ?? data.engineId
-
-  function handleRetry(jobId: string) {
-    setRetryError(null)
-    retryMutation.mutate(
-      { jobId, retries: 1, engine: engineId },
-      {
-        onSuccess: () => {
-          setRetriedIds((prev) => new Set(prev).add(jobId))
-          refreshCockpitData()
-        },
-        onError: (error) =>
-          setRetryError({
-            jobId,
-            message: error instanceof Error ? error.message : String(error),
-          }),
-      },
-    )
-  }
 
   return (
     <WidgetShell>
@@ -274,7 +255,8 @@ export function JobPanelWidget({
             ]}
           >
             {jobs.map((job) => {
-              const retried = retriedIds.has(job.id)
+              const retried = retry.done.has(job.id)
+              const retryError = retry.error(job.id)
               return (
                 <tr
                   key={job.id}
@@ -319,12 +301,14 @@ export function JobPanelWidget({
                           title={t("jobPanel.draftTicket")}
                           prompt={ask(draftJobTicketHandOff(job, engineId))}
                         />
-                        {canRetry && (
+                        {retry.allowed && (
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={retryMutation.isPending}
-                            onClick={() => handleRetry(job.id)}
+                            disabled={retry.pending(job.id)}
+                            onClick={() =>
+                              retry.run({ jobId: job.id, retries: 1, engine: engineId })
+                            }
                           >
                             {t("jobPanel.retry")}
                           </Button>
@@ -332,9 +316,9 @@ export function JobPanelWidget({
                       </div>
                     )}
                     {retried && <Badge variant="secondary">{t("jobPanel.retried")}</Badge>}
-                    {retryError?.jobId === job.id && (
+                    {retryError && (
                       <p role="alert" className="text-critical mt-1 text-xs">
-                        {t("jobPanel.retryError", { message: retryError.message })}
+                        {t("jobPanel.retryError", { message: retryError })}
                       </p>
                     )}
                   </Td>

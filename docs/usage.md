@@ -68,6 +68,10 @@ action buttons. Starting instances, completing tasks, retries and resolving
 incidents need `operations` (the default with login); deletions,
 modifications, migrations and signals need `admin`, which an operator has to
 enable explicitly. Every write prompts for explicit confirmation before running.
+A widget button that cancels, suspends or resolves asks first and names what
+it acts on (instance, business key, engine); after any action the view reloads
+what it changed — completing a task shows the next one. The cockpit's
+**↻ Refresh** re-reads the open view, e.g. after the assistant changed something.
 
 ## Your settings
 

@@ -103,10 +103,11 @@ describe("UserProfileWidget save — only what the user changed", () => {
     expect(await save()).toEqual({ pinnedDashboardIds: ["d1"] })
   })
 
-  // Standalone (camunda7_show_user_profile) the panel renders from fixed
-  // props and never refetches, so the baseline must advance with each save:
-  // otherwise reverting a saved change compares equal to the ORIGINAL view
-  // and silently saves nothing.
+  // Standalone (camunda7_show_user_profile) the panel's view is the seed of
+  // the profile feed and stays the ORIGINAL profile until the save's refetch
+  // lands (here never — the fixture serves no feed), so the baseline must
+  // advance with each save: otherwise reverting a saved change compares equal
+  // to the original view and silently saves nothing.
   it("a saved change can be reverted in the same standalone panel", async () => {
     const { save } = renderPanel()
     fireEvent.change(screen.getByLabelText("Default engine"), { target: { value: "prod-b" } })

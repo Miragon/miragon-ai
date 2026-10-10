@@ -27,11 +27,11 @@ export function dashboardScope(filters: IncidentsDashboardData["filters"]): {
  * with — one key, so the cockpit's two panels dedupe to one call. The cockpit
  * is the ONLY place the panels fetch: its incidents view is the engine's
  * whole dashboard (`props: { engine }`), so the feed takes the engine alone.
- * A standalone render (show tool, pipeline step) never fetches at all —
- * `useViewData` disables the query whenever `initialData` is set — so a
- * filtered dashboard's scope lives only in its data echo, which the hand-offs
- * read; a fresh view of it re-runs the show tool (or `refresh-view`) with its
- * own args.
+ * A standalone render (show tool, pipeline step) never fetches at all — it
+ * passes no `engine`, so the query is never ready — because the engine-only
+ * feed cannot re-read a FILTERED dashboard: its scope lives only in the data
+ * echo, which the hand-offs read; a fresh view of it re-runs the show tool
+ * (or `refresh-view`) with its own args.
  */
 export function incidentsFeed(engine: string | undefined) {
   return {

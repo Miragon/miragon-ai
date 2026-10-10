@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
+import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { usePagedViewData } from "./use-paged-view-data.js"
 
 // The toolkit hooks need the host bridge + query provider; the pagination
@@ -57,17 +58,25 @@ beforeEach(() => {
   mocks.callTool.mockReset()
 })
 
-afterEach(() => cleanup())
+afterEach(() => {
+  cleanup()
+  // The seed lands in the toolkit's singleton client — never across tests.
+  queryClient.clear()
+})
 
 describe("usePagedViewData", () => {
-  it("serves page 0 from handed-in initialData without self-fetching", () => {
-    const { result } = setup({ initialData: page(["a", "b"], 5), args: {} })
+  it("serves page 0 from handed-in initialData — as the SEED of a live page-0 query", () => {
+    const initialData = page(["a", "b"], 5)
+    const { result } = setup({ initialData, args: {} })
     expect(result.current.items).toEqual(["a", "b"])
     expect(result.current.total).toBe(5)
     expect(result.current.hasMore).toBe(true)
     expect(result.current.loading).toBe(false)
+    // Never switched off: a write's invalidation refetches a standalone list.
     const opts = mocks.useToolQuery.mock.calls[0][3] as { enabled: boolean }
-    expect(opts.enabled).toBe(false)
+    expect(opts.enabled).toBe(true)
+    const page0Key = ["test:list", "{}", "page0", { firstResult: 0, maxResults: 2 }]
+    expect(queryClient.getQueryData(page0Key)).toBe(initialData)
   })
 
   it("self-fetches page 0 when no initialData is handed in", () => {

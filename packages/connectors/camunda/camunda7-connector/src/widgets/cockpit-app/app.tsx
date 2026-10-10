@@ -16,6 +16,7 @@ import { cockpitViews, filterLayoutToWidgets } from "./views.js"
 import { useAnalyticsActive } from "./analytics-probe.js"
 import { FleetView } from "./fleet-view.js"
 import { LandingChooser } from "./landing.js"
+import { CockpitRefreshButton } from "./refresh-button.js"
 
 export type { CockpitAppData }
 
@@ -156,7 +157,7 @@ function EnginesEmptyState({
   enginesQuery,
 }: {
   hasTransport: boolean
-  enginesQuery: { isError: boolean; error: Error | null; data: unknown }
+  enginesQuery: { isError: boolean; error: Error | null; data: unknown; refetch: () => unknown }
 }) {
   const locale = useLocale()
   return (
@@ -167,6 +168,8 @@ function EnginesEmptyState({
         loadingText={translator(locale, "cockpit.loading.engines")}
         emptyText={translator(locale, "cockpit.empty.engines")}
         className="text-muted-foreground p-6 text-sm"
+        onRetry={() => void enginesQuery.refetch()}
+        retryLabel={translator(locale, "viewState.retry")}
       />
     </WidgetShell>
   )
@@ -313,6 +316,8 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               )
             })}
           </nav>
+
+          <CockpitRefreshButton />
 
           {engines.length > 1 && (
             <EngineSwitcher

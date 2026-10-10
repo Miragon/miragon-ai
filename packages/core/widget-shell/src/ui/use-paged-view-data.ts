@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
-import { useToolQuery, useCallTool } from "@miragon/mcp-toolkit-ui"
+import { useCallTool } from "@miragon/mcp-toolkit-ui"
 import { parseToolResult } from "./parse-tool-result.js"
+import { useSeededToolQuery } from "./use-seeded-tool-query.js"
 
 /**
  * The pages appended after page 0, tagged with the reset generation they belong
@@ -39,8 +40,8 @@ export interface PagedViewData<TItem, TData = unknown> {
 
 /**
  * Offset-paginated sibling of `useViewData`: one component, both modes, plus
- * "Load more". Page 0 comes from `initialData` (standalone, handed in) or a
- * self-fetch of `tool` (cockpit); `loadMore()` fetches the next offset and
+ * "Load more". Page 0 is the feed query, seeded with `initialData` (standalone,
+ * handed in) or self-fetched (cockpit); `loadMore()` fetches the next offset and
  * appends. Changing `args` (e.g. a server-side search/filter) resets pagination
  * to page 0. The feed must accept `firstResult`/`maxResults` and return the full
  * filtered `total` so the footer is honest and `hasMore` is correct.
@@ -64,13 +65,15 @@ export function usePagedViewData<TItem, TData>(opts: {
   const callTool = useCallTool()
   const argsKey = JSON.stringify(args)
 
-  const page0 = useToolQuery<TData>(
+  // A handed-in page 0 SEEDS the query (it is never switched off), so a
+  // write's invalidation refetches a standalone list too.
+  const page0 = useSeededToolQuery<TData>(
     [...key, argsKey, "page0"],
     tool,
     { ...args, firstResult: 0, maxResults: pageSize },
-    { enabled: !initialData && ready },
+    { seed: initialData, enabled: ready },
   )
-  const first = initialData ?? page0.data ?? null
+  const first = page0.data
 
   const [pages, setPages] = useState<PagedState<TItem>>({
     gen: 0,

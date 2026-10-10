@@ -1,12 +1,11 @@
 import { useState } from "react"
-import { Button, Input, useToolMutation } from "@miragon/mcp-toolkit-ui"
+import { Button, Input } from "@miragon/mcp-toolkit-ui"
 import { ListTable, TableEmptyState, Td, useResetOnChange } from "@miragon-ai/widget-shell/widgets"
 
 import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
 import { coerceValue, isEditableVariable } from "./lib/coerce-value.js"
-import { refreshCockpitData } from "./refresh.js"
-import { useCanRun } from "./widget-actions.js"
+import { useEngineAction, type EngineAction } from "./lib/engine-action.js"
 
 /** A serialized Json/Object value, pretty-printed when it is valid JSON. */
 function prettyJson(serialized: string): string {
@@ -56,33 +55,48 @@ export function ActivityNode({ node, depth = 0 }: { node: ActivityTree; depth?: 
   )
 }
 
+interface SetVariableArgs extends Record<string, unknown> {
+  processInstanceId: string
+  variableName: string
+  value: unknown
+  type?: string
+  valueInfo?: Record<string, unknown>
+  engine?: string
+}
+
 function VariableRow({
   name,
   variable,
   instanceId,
   engine,
   editable,
-  onSaved,
+  action,
 }: {
   name: string
   variable: VariableValue
   instanceId: string
   engine?: string
   editable: boolean
-  onSaved: (name: string, value: unknown) => void
+  action: EngineAction<SetVariableArgs, unknown>
 }) {
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState("")
   const [editError, setEditError] = useState<string | null>(null)
-  const setVarMutation = useToolMutation("camunda7_set_process_instance_variable")
+  // Whether this edit session saved — a prior session's failed save must not
+  // reappear when the operator reopens the row.
+  const [attempted, setAttempted] = useState(false)
+  // An open editor closes when the row stops being editable (the instance
+  // was cancelled, ended, or its state is unconfirmed) — its Save would
+  // write to an instance whose state no longer allows it.
+  useResetOnChange(editable, () => setEditing(false))
   const t = useT()
+  const saving = action.pending(name)
+  const serverError = attempted ? action.error(name) : null
 
   function startEdit() {
     setEditValue(editText(variable.value, variable.type))
     setEditError(null)
-    // Clear a prior failed save so the stale server error doesn't reappear when
-    // the operator reopens the row.
-    setVarMutation.reset()
+    setAttempted(false)
     setEditing(true)
   }
 
@@ -97,8 +111,9 @@ function VariableRow({
       return
     }
     setEditError(null)
+    setAttempted(true)
 
-    setVarMutation.mutate(
+    action.run(
       {
         processInstanceId: instanceId,
         variableName: name,
@@ -108,13 +123,7 @@ function VariableRow({
         valueInfo: variable.valueInfo,
         engine,
       },
-      {
-        onSuccess: () => {
-          onSaved(name, parsed)
-          setEditing(false)
-          refreshCockpitData()
-        },
-      },
+      { onSuccess: () => setEditing(false) },
     )
   }
 
@@ -142,7 +151,7 @@ function VariableRow({
                 aria-invalid={editError !== null}
                 autoFocus
               />
-              <Button variant="outline" size="sm" type="submit" disabled={setVarMutation.isPending}>
+              <Button variant="outline" size="sm" type="submit" disabled={saving}>
                 {t("instanceSections.save")}
               </Button>
               <Button
@@ -162,9 +171,9 @@ function VariableRow({
             )}
             {/* Server-side rejection of a validly-parsed write — without this the
                 Save button just re-enables and the row stays silently in edit. */}
-            {!editError && setVarMutation.error && (
+            {!editError && serverError && (
               <p role="alert" className="text-destructive font-sans text-xs">
-                {t("instanceSections.saveError", { message: setVarMutation.error.message })}
+                {t("instanceSections.saveError", { message: serverError })}
               </p>
             )}
           </form>
@@ -196,26 +205,23 @@ export function VariablesTable({
   engine?: string
   readOnly?: boolean
 }) {
-  const [localVars, setLocalVars] = useState<Map<string, unknown>>(new Map())
   const t = useT()
+  // The saved values shadow the shown ones only until the feed refetches —
+  // fresh server data (new `variables` identity) must win again.
+  const setVariable = useEngineAction<SetVariableArgs>({
+    tool: "camunda7_set_process_instance_variable",
+    target: (args) => args.variableName,
+    resetOn: variables,
+    available: !readOnly,
+  })
   // An ended instance and a toolset without the variable write both mean no
   // edit column at all — an empty trailing column would read as missing data.
-  const canRun = useCanRun()
-  const editable = !readOnly && canRun("camunda7_set_process_instance_variable")
-  // The optimistic shadows only bridge the gap until the feed refetches —
-  // fresh server data (new `variables` identity) must win again.
-  useResetOnChange(variables, () => setLocalVars(new Map()))
+  const editable = setVariable.allowed
   const entries = Object.entries(variables)
 
   function getVariable(name: string, original: VariableValue): VariableValue {
-    if (localVars.has(name)) {
-      return { ...original, value: localVars.get(name) }
-    }
-    return original
-  }
-
-  function handleSaved(name: string, value: unknown) {
-    setLocalVars((prev) => new Map(prev).set(name, value))
+    const saved = setVariable.done.get(name)
+    return saved ? { ...original, value: saved.args.value } : original
   }
 
   if (entries.length === 0) {
@@ -240,7 +246,7 @@ export function VariablesTable({
           instanceId={instanceId}
           engine={engine}
           editable={editable}
-          onSaved={handleSaved}
+          action={setVariable}
         />
       ))}
     </ListTable>

@@ -22,6 +22,8 @@ export const de: MessageCatalog = {
   "cockpit.aria.breadcrumb": "Breadcrumb-Navigation",
   "cockpit.aria.sections": "Cockpit-Bereiche",
   "cockpit.aria.activeEngine": "Aktive Engine",
+  "cockpit.refresh": "↻ Aktualisieren",
+  "cockpit.refreshing": "Wird aktualisiert…",
   "cockpit.landing.title": "CIB Seven Cockpit",
   "cockpit.landing.subtitle": ({ count }) =>
     `${String(count)} Engines konfiguriert — eine Engine bedienen oder über die gesamte Flotte analysieren.`,

@@ -20,8 +20,9 @@ import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
+import { EngineActionDialog } from "../lib/engine-action-dialog.js"
 import { recoveryOf } from "../lib/incident-recovery.js"
-import type { IncidentRecoveryState } from "./use-incident-recovery.js"
+import { useIncidentRecovery, type IncidentRecoveryState } from "./use-incident-recovery.js"
 
 /** Page size — mirrors the feed's server default. */
 const INCIDENT_PAGE_SIZE = 10
@@ -55,7 +56,7 @@ function RecoveryButton({
     <Button
       variant="outline"
       size="sm"
-      disabled={recovery.pendingIds.has(incident.id)}
+      disabled={recovery.isPending(incident)}
       title={action === "retry" ? t("procIncTable.retryHint") : undefined}
       onClick={() => recovery.act(incident)}
     >
@@ -114,7 +115,8 @@ export function IncidentTable({
     <div className="bg-muted">
       <ListTable ariaLabel={t("procIncTable.tableLabel")} columns={columns}>
         {visible.map((incident) => {
-          const done = recovery.doneIds.has(incident.id)
+          const done = recovery.isDone(incident)
+          const error = recovery.errorOf(incident)
           const retried = recoveryOf(incident).action !== "resolve"
           const instanceUrl = incident.cockpitInstanceUrl
           return (
@@ -164,7 +166,7 @@ export function IncidentTable({
                   )}
                 </Td>
               </tr>
-              {recovery.error?.incidentId === incident.id && (
+              {error && (
                 <tr>
                   <td
                     colSpan={columnCount}
@@ -172,8 +174,8 @@ export function IncidentTable({
                   >
                     <span className="text-critical text-xs">
                       {retried
-                        ? t("procIncTable.retryError", { message: recovery.error.message })
-                        : t("procIncTable.resolveError", { message: recovery.error.message })}
+                        ? t("procIncTable.retryError", { message: error })
+                        : t("procIncTable.resolveError", { message: error })}
                     </span>
                   </td>
                 </tr>
@@ -204,19 +206,23 @@ export function IncidentTable({
  * (exact /incident/count total) with the house Load-more pattern, so a group
  * reaches every incident — not just the definition feed's 200-row scan window.
  * Mounts lazily: GroupCard renders children only while expanded.
+ *
+ * It owns its rows' remedies: their success marks reset on THIS feed's page 0
+ * (a refetch of it drops the appended pages too), never on the definition
+ * feed — which can answer the same write's invalidation first while these
+ * rows are still the pre-write page, and would bring a cleared row's button
+ * back.
  */
 export function PagedIncidentTable({
   processDefinitionKey,
   activityId,
   engine,
-  recovery,
   onAnalyze,
 }: {
   processDefinitionKey: string
   activityId: string
   /** Explicit engine routing; omitted → the caller's saved default engine. */
   engine?: string
-  recovery: IncidentRecoveryState
   onAnalyze: (incidentId: string) => void
 }) {
   const t = useT()
@@ -232,6 +238,7 @@ export function PagedIncidentTable({
     selectItems: (d) => d.incidents,
     selectTotal: (d) => d.totalCount,
   })
+  const recovery = useIncidentRecovery(engine, { resetOn: paged.firstPage })
 
   if (!paged.firstPage) {
     return (
@@ -263,6 +270,11 @@ export function PagedIncidentTable({
       <div className="bg-muted px-3 pb-1">
         <CockpitListFooter paged={paged} noun={t("procIncTable.footerNoun")} />
       </div>
+      {/* The per-row button only requests the resolve; the actual
+          camunda7_resolve_incident call runs after this confirmation. The
+          dialog stays open until success so a failure is shown right here
+          (and inline at the row once dismissed). */}
+      <EngineActionDialog action={recovery.resolve} />
     </>
   )
 }
