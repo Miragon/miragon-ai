@@ -1,12 +1,11 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeAll, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost, type HostActionLog } from "@miragon/mcp-toolkit-ui/app"
 import { IncidentOverviewKpi } from "./incidents-dashboard/overview-kpi.js"
 import { IncidentProcessList } from "./incidents-dashboard/process-list.js"
-import { incidentsFeed } from "./incidents-dashboard/scope.js"
 import type { IncidentsDashboardData } from "../view-models.js"
 import { CAMUNDA7_INCIDENTS_DATA, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
 import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
@@ -112,8 +111,10 @@ describe("incidents dashboard widgets — honest numbers", () => {
 /**
  * A filtered dashboard (`camunda7_show_incidents_dashboard` with a key and an
  * incident type) counts only the filtered set: its hand-offs pass the filters
- * as ids and state the count as the set's, and a refetch keeps them — read
- * from the data's own echo, since a standalone render gets no props.
+ * as ids and state the count as the set's — read from the data's own echo,
+ * since a standalone render gets no props. It never refetches either
+ * (`useViewData` disables the query whenever data is handed in), so no request
+ * can widen it; the only self-fetch is the cockpit's unfiltered dashboard.
  */
 describe("incidents dashboard — a filtered view keeps its scope", () => {
   const FILTERED: IncidentsDashboardData = {
@@ -131,17 +132,27 @@ describe("incidents dashboard — a filtered view keeps its scope", () => {
     tools = { [CAMUNDA7_WIDGET_ACTIONS_DATA]: await widgetActionsFeedFor("read-only") }
   })
 
-  /** Renders `widget` and returns the hand-off its Analyze button posts. */
-  async function promptOf(
-    widget: unknown,
-    props: { data?: IncidentsDashboardData; tools?: Record<string, unknown> },
-  ) {
+  /** Every `camunda7_incidents_data` request a render sends, args as sent. */
+  let feedCalls: Array<Record<string, unknown>>
+  beforeEach(() => {
+    feedCalls = []
+  })
+
+  /**
+   * Renders `widget` and returns the hand-off its Analyze button posts. The
+   * feed answers the engine's unfiltered dashboard and records each request.
+   */
+  async function promptOf(widget: unknown, props: { data?: IncidentsDashboardData }) {
     const actions: HostActionLog[] = []
+    const feed = (args: Record<string, unknown>) => {
+      feedCalls.push(args)
+      return DATA
+    }
     render(
       <WidgetFixtureHost
         widget={asWidget(widget)}
         data={(props.data ?? {}) as unknown as Record<string, unknown>}
-        tools={{ ...tools, ...props.tools }}
+        tools={{ ...tools, [CAMUNDA7_INCIDENTS_DATA]: feed }}
         onHostAction={(action) => actions.push(action)}
       />,
     )
@@ -164,6 +175,8 @@ describe("incidents dashboard — a filtered view keeps its scope", () => {
     expect(prompt).toContain("On screen: matchingIncidents=7, processes=1")
     expect(prompt).not.toContain("openIncidents")
     expect(prompt).not.toMatch(/all open incidents on this engine/)
+    // Standalone, the scope lives in the data alone — never in a request.
+    expect(feedCalls).toEqual([])
   })
 
   it("an unfiltered triage states the engine's open incidents and no filter", async () => {
@@ -182,37 +195,18 @@ describe("incidents dashboard — a filtered view keeps its scope", () => {
     )
     expect(prompt).toContain('countScope="allVersions", latestVersion=1, matchingIncidents=7')
     expect(prompt).not.toContain("openIncidents")
+    expect(feedCalls).toEqual([])
   })
 
-  it("the self-fetch carries the echoed filters, so a refetch keeps the scope", () => {
-    const feed = incidentsFeed(FILTERED, undefined)
-    expect(feed.args).toEqual({
-      engine: "prod-a",
-      processDefinitionKey: "quiet",
-      incidentType: "failedJob",
-    })
-    // Its own cache entry: never the unfiltered dashboard's.
-    expect(feed.key).not.toEqual(incidentsFeed(DATA, undefined).key)
-    // A cockpit render (props only) fetches the engine's unfiltered dashboard.
-    expect(incidentsFeed(null, "prod-b").args).toEqual({ engine: "prod-b" })
-  })
-
-  it("a self-fetched view hands off the scope its fetched data echoes", async () => {
-    const calls: Array<Record<string, unknown>> = []
+  it("the cockpit self-fetches the engine's whole dashboard and hands off its answer", async () => {
+    // The cockpit's incidents view passes the engine alone — no data, no filter.
     const View = (props: Record<string, unknown>) => (
       <IncidentOverviewKpi {...props} data={null} engine="prod-a" />
     )
-    const prompt = await promptOf(View, {
-      tools: {
-        [CAMUNDA7_INCIDENTS_DATA]: (args: Record<string, unknown>) => {
-          calls.push(args)
-          return FILTERED
-        },
-      },
-    })
+    const prompt = await promptOf(View, {})
 
-    await waitFor(() => expect(calls).toEqual([{ engine: "prod-a" }]))
-    expect(prompt).toContain('incidentType="failedJob"')
-    expect(prompt).toContain("matchingIncidents=7")
+    await waitFor(() => expect(feedCalls).toEqual([{ engine: "prod-a" }]))
+    expect(prompt).toContain('Ids: engine="prod-a"\n')
+    expect(prompt).toContain("On screen: openIncidents=257, processes=2")
   })
 })

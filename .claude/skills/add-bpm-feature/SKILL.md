@@ -258,8 +258,15 @@ exception that uses `server.tool()` directly):
   statistics) come from `src/data/definition-info.ts`; the BPMN viewer payload from
   `src/data/bpmn-viewer-data.ts`. A key's latest version is `fetchLatestDefinition`
   (every tenant) — never `/process-definition/key/{key}`, which only knows tenant-less
-  definitions; rows grouped BY key resolve their definition id through
-  `definitionKeyResolver` — a long key's id is a bare UUID with no key to parse.
+  definitions. A long key's (over ~25 characters) definition id is a bare generated
+  UUID that names no key, so ANY key that scopes a query, a drill, a hand-off or a
+  cockpit link is resolved, never parsed: a view queried by key uses that key; rows
+  that carry only a definition id go through `resolveDefinitionKeys` (at most ONE
+  definition-statistics read, none when every id names its key) — a primary read where
+  the key is what the view hands on, else wrapped in `optional(...)` as enrichment, so
+  a bare id's key is `null` (no drill, no link), never its UUID. A view that already
+  reads the statistics resolves through `definitionKeyResolver` over them.
+  `processDefinitionKeyFromId` is a display fallback only.
 - **Honest numbers** (`src/data/engine-reads.ts`): PRIMARY rows and counts — what the
   view exists to show, and every number its `summary` reports — propagate engine
   failures (read them through `countOf`/`rowsOf`; `withToolErrors` turns the throw into

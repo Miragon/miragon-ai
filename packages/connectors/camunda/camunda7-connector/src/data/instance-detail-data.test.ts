@@ -24,6 +24,7 @@ import {
   getIncidents,
   getIncidentsCount,
   getProcessDefinitionBpmn20Xml,
+  getProcessDefinitionStatistics,
   getProcessInstance,
   getProcessInstanceVariables,
   getTasks,
@@ -37,6 +38,7 @@ const mockedActivityTree = vi.mocked(getActivityInstanceTree)
 const mockedIncidents = vi.mocked(getIncidents)
 const mockedIncidentsCount = vi.mocked(getIncidentsCount)
 const mockedBpmn = vi.mocked(getProcessDefinitionBpmn20Xml)
+const mockedStatistics = vi.mocked(getProcessDefinitionStatistics)
 const mockedInstance = vi.mocked(getProcessInstance)
 const mockedVariables = vi.mocked(getProcessInstanceVariables)
 const mockedTasks = vi.mocked(getTasks)
@@ -93,7 +95,80 @@ describe("buildInstanceDetailData", () => {
     )
 
     const [incident] = data.incidents
-    expect(incident?.cockpitInstanceUrl).toContain("p1")
+    expect(incident?.cockpitInstanceUrl).toContain("/process/K1/3/p1?tab=incidents")
+    // An id that names its key needs no statistics.
+    expect(mockedStatistics).not.toHaveBeenCalled()
+  })
+
+  describe("the cockpit links of a bare generated definition id", () => {
+    // A key over ~25 characters with UUID ids: the engine stores a bare id,
+    // and a key parsed from it is that UUID — a cockpit route no key matches.
+    const LONG_KEY = "customerOnboardingApprovalProcess"
+    const UUID = "6f1c2a9e-0b7d-4c33-9a51-3d2e8f40b7aa"
+    const URLS = { baseUrl: "http://localhost:8080/engine-rest", provider: cibsevenProvider }
+
+    beforeEach(() => {
+      mockedInstance.mockResolvedValue({ id: "p1", definitionId: UUID })
+    })
+    const withOneIncident = () =>
+      mockedIncidents.mockResolvedValueOnce([
+        { id: "i1", processInstanceId: "p1", incidentType: "failedJob" },
+      ] as never)
+
+    it("address the key the statistics resolve — ONE read", async () => {
+      withOneIncident()
+      mockedStatistics.mockResolvedValueOnce([
+        { id: UUID, instances: 1, incidents: [], definition: { id: UUID, key: LONG_KEY } },
+      ] as never)
+
+      const data = await buildInstanceDetailData(
+        fakeClient,
+        "engine-a",
+        { processInstanceId: "p1" },
+        URLS,
+      )
+
+      const url = data.incidents[0]?.cockpitInstanceUrl
+      expect(url).toContain(`/process/${LONG_KEY}/p1?tab=incidents`)
+      expect(url).not.toContain(UUID)
+      expect(mockedStatistics).toHaveBeenCalledTimes(1)
+    })
+
+    it("are null when the statistics fail (enrichment) — never the UUID as a key", async () => {
+      withOneIncident()
+      mockedStatistics.mockRejectedValueOnce(new Error("boom"))
+
+      const data = await buildInstanceDetailData(
+        fakeClient,
+        "engine-a",
+        { processInstanceId: "p1" },
+        URLS,
+      )
+
+      expect(data.incidents).toEqual([
+        expect.objectContaining({ id: "i1", cockpitInstanceUrl: null }),
+      ])
+    })
+
+    it("read no statistics without engine urls to build them from", async () => {
+      withOneIncident()
+
+      await buildInstanceDetailData(fakeClient, "engine-a", { processInstanceId: "p1" })
+
+      expect(mockedStatistics).not.toHaveBeenCalled()
+    })
+
+    it("read no statistics for an instance without incidents — no link to build", async () => {
+      const data = await buildInstanceDetailData(
+        fakeClient,
+        "engine-a",
+        { processInstanceId: "p1" },
+        URLS,
+      )
+
+      expect(data.incidents).toEqual([])
+      expect(mockedStatistics).not.toHaveBeenCalled()
+    })
   })
 
   it("leaves the cockpit link null without engine urls", async () => {

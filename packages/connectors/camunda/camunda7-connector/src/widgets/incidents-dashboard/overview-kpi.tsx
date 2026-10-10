@@ -58,8 +58,9 @@ export function IncidentOverviewKpiView({
   engine?: string
 }) {
   // Shares the process-list feed (key + args) → both incidents panels dedupe
-  // to one fetch in the cockpit; standalone the data comes in via props.
-  const feed = incidentsFeed(initialData, engine)
+  // to one fetch in the cockpit; standalone the data comes in via props and
+  // is never refetched (its filters live in the echo, see incidentsFeed).
+  const feed = incidentsFeed(engine)
   const { data, loading, error } = useViewData<IncidentsDashboardData>(
     initialData,
     feed.key,

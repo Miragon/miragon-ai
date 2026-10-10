@@ -284,4 +284,29 @@ describe("buildActivityIncidentsData — one page of an activity's incidents (N6
     // No statistics or definition lookup per expanded group.
     expect(engine.requests).toHaveLength(2)
   })
+
+  it("links a row on a bare generated definition id by the view's key, never its UUID", async () => {
+    // A key over ~25 characters with UUID ids: the engine stores a bare id
+    // that names no key (and no version) — the rows still run on the queried key.
+    const longKey = "customerOnboardingApprovalProcess"
+    const uuid = "6f1c2a9e-0b7d-4c33-9a51-3d2e8f40b7aa"
+    const engine = await startFakeEngine({
+      "GET /incident": { body: [row(0, "assess", uuid)] },
+      "GET /incident/count": { body: { count: 1 } },
+    })
+    engines.push(engine)
+
+    const data = await buildActivityIncidentsData(clientFor(engine), {
+      baseUrl: engine.baseUrl,
+      provider: cibsevenProvider,
+      processDefinitionKey: longKey,
+      activityId: "assess",
+    })
+
+    const url = data.incidents[0].cockpitInstanceUrl
+    // The CIB Seven route by key; an unknown version is left out (latest).
+    expect(url).toContain(`/process/${longKey}/pi-assess-0?tab=incidents`)
+    expect(url).not.toContain(uuid)
+    expect(engine.requests).toHaveLength(2)
+  })
 })

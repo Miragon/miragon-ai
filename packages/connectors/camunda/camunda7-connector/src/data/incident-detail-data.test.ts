@@ -145,6 +145,8 @@ describe("buildIncidentDetailData — the definition's real key", () => {
       processDefinitionName: "Onboarding",
       processDefinitionVersion: 4,
     })
+    // So does the CIB Seven cockpit link, which addresses the key.
+    expect(data.cockpitInstanceUrl).toContain(`/process/${LONG_KEY}/4/pi-1?tab=variables`)
   })
 
   it("falls back to the parsed key when the definition lookup fails", async () => {
@@ -155,6 +157,19 @@ describe("buildIncidentDetailData — the definition's real key", () => {
 
     expect(data.processDefinitionKey).toBe("order")
     expect(data.processDefinitionName).toBeNull()
+    expect(data.cockpitInstanceUrl).toContain("/process/order/pi-1?tab=variables")
+  })
+
+  it("builds no cockpit link from a bare id whose lookup failed — never the UUID as a key", async () => {
+    const { data } = await build({
+      "GET /incident/inc-1": { body: incident({ processDefinitionId: UUID }) },
+      "GET /job": { body: [] },
+    })
+
+    // The header shows the id it has (the hand-offs scope by it exactly) …
+    expect(data.processDefinitionKey).toBe(UUID)
+    // … but a link that addresses a key is unbuildable: null, not a guess.
+    expect(data.cockpitInstanceUrl).toBeNull()
   })
 
   it("names no key for an incident without a definition — and looks none up", async () => {

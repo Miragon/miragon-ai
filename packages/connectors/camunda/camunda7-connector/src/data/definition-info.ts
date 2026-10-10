@@ -37,7 +37,8 @@ export function definitionKeyInId(id: string): string | null {
  * `/incident` and `/process-instance` rows carry the definition id but not
  * the key, so the key is parsed from it — the whole id when it is a bare one
  * ({@link definitionKeyInId}). A display fallback only: a key that scopes a
- * query, a drill or a hand-off resolves the id ({@link resolveDefinitionKeys}).
+ * query, a drill, a hand-off or a cockpit link resolves the id
+ * ({@link resolveDefinitionKeys}).
  */
 export function processDefinitionKeyFromId(id: string): string {
   return definitionKeyInId(id) ?? id

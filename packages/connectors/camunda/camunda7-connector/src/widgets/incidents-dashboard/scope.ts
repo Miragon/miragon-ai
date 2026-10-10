@@ -24,29 +24,19 @@ export function dashboardScope(filters: IncidentsDashboardData["filters"]): {
 
 /**
  * The key + args both incidents panels self-fetch `camunda7_incidents_data`
- * with — one key, so the cockpit's two panels dedupe to one call. The engine
- * comes from the prop (cockpit) or the data's echo; the filters from the echo
- * — a refetch of a filtered render must never widen it to the engine's whole
- * dashboard.
+ * with — one key, so the cockpit's two panels dedupe to one call. The cockpit
+ * is the ONLY place the panels fetch: its incidents view is the engine's
+ * whole dashboard (`props: { engine }`), so the feed takes the engine alone.
+ * A standalone render (show tool, pipeline step) never fetches at all —
+ * `useViewData` disables the query whenever `initialData` is set — so a
+ * filtered dashboard's scope lives only in its data echo, which the hand-offs
+ * read; a fresh view of it re-runs the show tool (or `refresh-view`) with its
+ * own args.
  */
-export function incidentsFeed(
-  initialData: IncidentsDashboardData | null,
-  engine: string | undefined,
-) {
-  const feedEngine = engine ?? initialData?.engineId
-  const scope = dashboardScope(initialData?.filters ?? {})
-  const args: Record<string, unknown> = {}
-  if (feedEngine) args.engine = feedEngine
-  if (scope.processDefinitionKey) args.processDefinitionKey = scope.processDefinitionKey
-  if (scope.incidentType) args.incidentType = scope.incidentType
+export function incidentsFeed(engine: string | undefined) {
   return {
-    key: [
-      "camunda7:incidents",
-      feedEngine ?? null,
-      scope.processDefinitionKey ?? null,
-      scope.incidentType ?? null,
-    ],
-    args,
-    ready: !!feedEngine,
+    key: ["camunda7:incidents", engine ?? null],
+    args: { engine },
+    ready: !!engine,
   }
 }

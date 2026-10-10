@@ -17,8 +17,12 @@ import { buildTaskFormSchema } from "../tools/task-form.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "../lib/activity-tree.js"
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
-import { definitionVersionFromId, processDefinitionKeyFromId } from "./definition-info.js"
-import { countOf, rowsOf } from "./engine-reads.js"
+import {
+  definitionKeyInId,
+  definitionVersionFromId,
+  resolveDefinitionKeys,
+} from "./definition-info.js"
+import { countOf, optional, rowsOf } from "./engine-reads.js"
 
 /** Rows the payload carries per list; the exact totals come from `/count`. */
 const INCIDENT_ROWS = 100
@@ -49,11 +53,27 @@ async function readBpmnXml(
 }
 
 /**
+ * The key the per-incident cockpit links address — read only when there are
+ * links to build. The id names it, unless it is a bare generated one (long
+ * keys): then the definition statistics resolve it (`resolveDefinitionKeys`)
+ * as ENRICHMENT — a failed read is no link, never the UUID as a key.
+ */
+async function linkDefinitionKey(
+  client: Client,
+  definitionId: string | undefined,
+  needed: boolean,
+): Promise<string | null> {
+  if (!needed || !definitionId) return null
+  const keyOf = (await optional(resolveDefinitionKeys(client, [definitionId]))) ?? definitionKeyInId
+  return keyOf(definitionId)
+}
+
+/**
  * One running instance: its state, tokens, variables, open incidents and open
  * user tasks are PRIMARY — the summary reports them as facts, so a failed
  * read is a tool error, never "0 open incidents". The lists are capped, their
- * totals come from `/count`. The diagram and the task forms are enrichment
- * (null when unreadable).
+ * totals come from `/count`. The diagram, the task forms and the incidents'
+ * cockpit links are enrichment (null when unreadable).
  */
 export async function buildInstanceDetailData(
   client: Client,
@@ -81,7 +101,10 @@ export async function buildInstanceDetailData(
     ])
 
   const definitionId = (instance as { definitionId?: string } | null)?.definitionId
-  const { bpmnXml, unreadable } = await readBpmnXml(client, definitionId)
+  const [{ bpmnXml, unreadable }, defKey] = await Promise.all([
+    readBpmnXml(client, definitionId),
+    linkDefinitionKey(client, definitionId, !!urls && incidents.length > 0),
+  ])
 
   const openTasks: InstanceDetailData["openTasks"] = await Promise.all(
     openTasksRaw.map(async (task) => ({
@@ -95,7 +118,6 @@ export async function buildInstanceDetailData(
     })),
   )
 
-  const defKey = definitionId ? processDefinitionKeyFromId(definitionId) : null
   const incidentRows: InstanceDetailData["incidents"] = incidents.map((i) => ({
     id: i.id ?? "",
     processInstanceId: i.processInstanceId ?? id,

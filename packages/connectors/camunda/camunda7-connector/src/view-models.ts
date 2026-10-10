@@ -396,7 +396,7 @@ export interface IncidentsDashboardData {
   latestIncident: string | null
   processes: IncidentsDashboardProcess[]
   /** Filters every count above was built with — standalone renders get only
-   *  `data`, so the self-fetch and the hand-offs read the scope from this
+   *  `data` (and never refetch it), so the hand-offs read the scope from this
    *  echo (a filtered total is never the engine's open incidents). */
   filters: IncidentsDashboardFilters
   engineId?: string
