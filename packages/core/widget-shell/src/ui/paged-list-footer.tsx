@@ -39,20 +39,22 @@ export function PagedListFooter<TItem, TData>({
   paged,
   noun,
   loadMoreErrorText,
-  refreshErrorText = (message) =>
-    `Could not update the list — showing the previous result: ${message}`,
+  refreshErrorText,
   retryLabel,
-  refreshingText = "Updating…",
+  refreshingText,
 }: {
   paged: PagedViewData<TItem, TData>
   /** Localized plural noun for "Showing X of Y {noun}". */
   noun?: string
   /** Localized error line for a failed load-more (default: the active locale's). */
   loadMoreErrorText?: (message: string) => string
-  /** Localized error line for a failed page 0 over stale rows; receives the error message. */
+  /** Localized error line for a failed page 0 over stale rows (default: the active locale's). */
   refreshErrorText?: (message: string) => string
   retryLabel?: string
-  /** Localized status while a new page 0 is in flight over the rows on screen. */
+  /**
+   * Localized status while a new page 0 is in flight over the rows on screen
+   * (default: the active locale's).
+   */
   refreshingText?: string
 }) {
   const defaults = kitLabels(useLocale())
@@ -69,12 +71,12 @@ export function PagedListFooter<TItem, TData>({
           appends rows (the button is even disabled under their focus). */}
       <div role="status" className={paged.refreshing ? "text-muted-foreground text-xs" : "sr-only"}>
         {paged.refreshing
-          ? refreshingText
+          ? (refreshingText ?? defaults.updating)
           : !paged.stale && `${paged.items.length} / ${paged.total} ${noun ?? ""}`}
       </div>
       {staleError && (
         <RetryAlert
-          text={refreshErrorText(staleError.message)}
+          text={(refreshErrorText ?? defaults.listRefreshFailed)(staleError.message)}
           retryLabel={retryText}
           onRetry={paged.retry}
         />

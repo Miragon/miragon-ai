@@ -1,0 +1,173 @@
+// @vitest-environment happy-dom
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { ReactNode } from "react"
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
+import { AppQueryProvider, queryClient } from "@miragon/mcp-toolkit-ui"
+import { usePagedViewData } from "./use-paged-view-data.js"
+
+/**
+ * usePagedViewData on the REAL toolkit query stack (TanStack under
+ * `useToolQuery`, the toolkit's production retry defaults), where the two
+ * halves of #341 meet: page 0 is SEEDED from the handed-in payload (a live
+ * query a write's invalidation refetches), and a new page 0 KEEPS the previous
+ * rows of the same list on screen until it lands. A failed page 0 over those
+ * rows is reported the same way whatever re-read it — an invalidation or a
+ * changed filter — from its first failed attempt.
+ */
+
+interface Page {
+  items: string[]
+  total: number
+}
+
+const KEY = ["test:paged", "prod"]
+const SEED: Page = { items: ["a", "b"], total: 4 }
+
+const callTool = vi.fn()
+
+function wrapper({ children }: { children: ReactNode }) {
+  return <AppQueryProvider callTool={callTool}>{children}</AppQueryProvider>
+}
+
+/** Wire-shaped tool result; the toolkit's structured-first parser unwraps it. */
+const answer = (page: Page) => ({ structuredContent: page })
+
+interface Props {
+  /** The handed-in page 0 — dropped by `usePagedListView` once a filter is set. */
+  initialData: Page | null
+  args: Record<string, unknown>
+}
+
+function setup(props: Props) {
+  return renderHook(
+    ({ initialData, args }: Props) =>
+      usePagedViewData<string, Page>({
+        initialData,
+        key: KEY,
+        tool: "test_list_data",
+        args,
+        pageSize: 2,
+        ready: true,
+        selectItems: (d) => d.items,
+        selectTotal: (d) => d.total,
+      }),
+    { wrapper, initialProps: props },
+  )
+}
+
+/** The page-0 reads the hook sent for `args`. */
+const page0Calls = (args: Record<string, unknown>) =>
+  callTool.mock.calls.filter(
+    ([, sent]) =>
+      JSON.stringify(sent) === JSON.stringify({ ...args, firstResult: 0, maxResults: 2 }),
+  )
+
+const SEARCH = { q: "x" }
+
+beforeEach(() => {
+  // A block, not an expression: a hook that returns a function (the mock)
+  // has it called as its teardown.
+  callTool.mockReset()
+})
+
+afterEach(() => {
+  cleanup()
+  // Also cancels a retry still waiting on its backoff.
+  queryClient.clear()
+})
+
+describe("usePagedViewData — a seeded page 0 that keeps its rows (real query stack)", () => {
+  it("serves the seed without a fetch; a write's invalidation replaces it and collapses the pages", async () => {
+    const { result } = setup({ initialData: SEED, args: {} })
+    await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
+    expect(callTool).not.toHaveBeenCalled()
+    expect(result.current.firstPage).toBe(SEED)
+
+    callTool.mockResolvedValueOnce(answer({ items: ["c", "d"], total: 4 }))
+    act(() => result.current.loadMore())
+    await waitFor(() => expect(result.current.items).toEqual(["a", "b", "c", "d"]))
+
+    callTool.mockResolvedValue(answer({ items: ["b", "c"], total: 3 }))
+    await act(() => queryClient.invalidateQueries({ queryKey: ["test:paged"] }))
+    await waitFor(() => expect(result.current.items).toEqual(["b", "c"]))
+    expect(result.current.total).toBe(3)
+    expect(result.current.stale).toBe(false)
+  })
+
+  it("keeps the seeded rows while a search's page 0 is in flight — stale, no next page of them", async () => {
+    let land!: (value: unknown) => void
+    callTool.mockReturnValue(new Promise((resolve) => (land = resolve)))
+    const { result, rerender } = setup({ initialData: SEED, args: {} })
+
+    rerender({ initialData: null, args: SEARCH })
+    await waitFor(() => expect(page0Calls(SEARCH)).toHaveLength(1))
+    expect(result.current.firstPage).toBe(SEED)
+    expect(result.current.stale).toBe(true)
+    expect(result.current.refreshing).toBe(true)
+    expect(result.current.loading).toBe(false)
+    expect(result.current.hasMore).toBe(false)
+    expect(result.current.error).toBeNull()
+
+    act(() => land(answer({ items: ["x1"], total: 1 })))
+    await waitFor(() => expect(result.current.items).toEqual(["x1"]))
+    expect(result.current.total).toBe(1)
+    expect(result.current.stale).toBe(false)
+    expect(result.current.refreshing).toBe(false)
+  })
+
+  it("a cleared search shows the refetched page 0 again — the old seed never rolls it back", async () => {
+    const { result, rerender } = setup({ initialData: SEED, args: {} })
+    callTool.mockResolvedValue(answer({ items: ["a2", "b2"], total: 4 }))
+    await act(() => queryClient.invalidateQueries({ queryKey: ["test:paged"] }))
+    await waitFor(() => expect(result.current.items).toEqual(["a2", "b2"]))
+
+    callTool.mockResolvedValue(answer({ items: ["x1"], total: 1 }))
+    rerender({ initialData: null, args: SEARCH })
+    await waitFor(() => expect(result.current.items).toEqual(["x1"]))
+
+    // The search is cleared: the scaffold hands the payload in again.
+    rerender({ initialData: { ...SEED }, args: {} })
+    expect(result.current.items).toEqual(["a2", "b2"])
+    expect(result.current.stale).toBe(false)
+  })
+})
+
+describe("usePagedViewData — a failed page 0 over the rows on screen, from its first attempt", () => {
+  it("an invalidation's refetch: the error is up while the client still retries", async () => {
+    const { result } = setup({ initialData: SEED, args: {} })
+    callTool.mockRejectedValue(new Error("engine down"))
+    // Not awaited: the invalidation settles only once the retries ran out.
+    act(() => void queryClient.invalidateQueries({ queryKey: ["test:paged"] }))
+
+    await waitFor(() => expect(result.current.error?.message).toBe("engine down"))
+    expect(callTool).toHaveBeenCalledTimes(1)
+    // The rows are this filter's last good answer — unconfirmed, not stale.
+    expect(result.current.firstPage).toBe(SEED)
+    expect(result.current.stale).toBe(false)
+    expect(result.current.refreshing).toBe(true)
+  })
+
+  it("a changed filter: the same report over the kept rows, which are the previous result", async () => {
+    const { result, rerender } = setup({ initialData: SEED, args: {} })
+    callTool.mockRejectedValue(new Error("engine down"))
+    rerender({ initialData: null, args: SEARCH })
+
+    await waitFor(() => expect(result.current.error?.message).toBe("engine down"))
+    expect(page0Calls(SEARCH)).toHaveLength(1)
+    expect(result.current.firstPage).toBe(SEED)
+    expect(result.current.stale).toBe(true)
+    expect(result.current.refreshing).toBe(true)
+    expect(result.current.loading).toBe(false)
+  })
+
+  it("no rows on screen: the guard keeps loading through the retries — no error yet", async () => {
+    callTool.mockRejectedValue(new Error("engine down"))
+    const { result } = setup({ initialData: null, args: {} })
+
+    await waitFor(() => expect(callTool).toHaveBeenCalledTimes(1))
+    await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
+    expect(result.current.firstPage).toBeNull()
+    expect(result.current.error).toBeNull()
+    expect(result.current.loading).toBe(true)
+  })
+})

@@ -57,8 +57,13 @@ export interface PagedViewData<TItem, TData = unknown> {
   loadingMore: boolean
   /**
    * The PAGE-0 failure. Without a `firstPage` it is the load error the
-   * caller's guard renders; with one, the rows on screen are stale (the
-   * previous filter's, or the last good refetch) — {@link retry} re-runs page 0.
+   * caller's guard renders (once the client's retries ran out). With one, the
+   * rows on screen are unconfirmed — the previous filter's ({@link stale}), or
+   * the last good answer of a failed refetch — and it is set from the fetch's
+   * FIRST failed attempt, like `useViewData`'s `refreshError`: the same for a
+   * refetch of this filter's page (a write's invalidation, a Retry) and for a
+   * changed search or filter, so the list never presents the rows as current
+   * for the length of the backoff. {@link retry} re-runs page 0.
    */
   error: Error | null
   /** Re-runs the page-0 fetch: the retry for {@link error}. */
@@ -79,9 +84,8 @@ interface SettledPage<TData> {
  * only ever the unfiltered page 0), and the toolkit's useToolQuery forwards
  * no `placeholderData`. Without this the caller's loading guard would unmount
  * the list — and the search box the operator is typing into — for every
- * round-trip. Only within ONE list
- * (`scope`, the cache-key prefix): another engine or definition never shows
- * the previous list's rows.
+ * round-trip. Only within ONE list (`scope`, the cache-key prefix): another
+ * engine or definition never shows the previous list's rows.
  */
 function useKeptPage<TData>(fetched: TData | null, scope: string): TData | null {
   const [settled, setSettled] = useState<SettledPage<TData> | null>(null)
@@ -201,7 +205,9 @@ export function usePagedViewData<TItem, TData>(opts: {
     loading: !first && ready && !page0.isError,
     refreshing: !!first && page0.isFetching,
     loadingMore,
-    error: page0.error,
+    // Over rows on screen, a fetch's first failed attempt already unconfirms
+    // them; without rows, the guard keeps loading through the retries.
+    error: page0.error ?? (first ? (page0.failureReason ?? null) : null),
     retry: page0.refetch,
     loadMoreError: pages.error,
   }

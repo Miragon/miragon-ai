@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { LocaleProvider } from "@miragon/mcp-toolkit-ui"
 import { PagedListFooter } from "./paged-list-footer.js"
 import { PagedRows } from "./paged-rows.js"
 import type { PagedViewData } from "./use-paged-view-data.js"
@@ -89,5 +90,43 @@ describe("PagedListFooter + PagedRows — the stale and in-flight states", () =>
     expect(rows.getAttribute("aria-busy")).toBe("true")
     expect(rows.hasAttribute("data-stale")).toBe(false)
     expect(screen.getByText("Showing 2 of 3 items")).toBeTruthy()
+  })
+})
+
+/**
+ * The footer's own strings are kit defaults: without a caller's texts (a
+ * composed-server list) they follow the active locale like the rest of the
+ * kit (#339) — the two lines the stale states added included.
+ */
+describe("PagedListFooter — kit defaults follow the active locale", () => {
+  function renderGerman(state: PagedViewData<string, object>) {
+    render(
+      <LocaleProvider locale="de">
+        <PagedListFooter paged={state} noun="Einträge" />
+      </LocaleProvider>,
+    )
+  }
+
+  it("in flight: Wird aktualisiert…", () => {
+    renderGerman(paged({ stale: true, refreshing: true, hasMore: false }))
+    expect(screen.getByRole("status").textContent).toBe("Wird aktualisiert…")
+  })
+
+  it("a failed page 0 and a failed load-more, each with the German retry", () => {
+    renderGerman(
+      paged({
+        stale: true,
+        error: new Error("weg"),
+        loadMoreError: new Error("Zeitüberschreitung"),
+      }),
+    )
+    const [refresh, more] = screen.getAllByRole("alert")
+    expect(refresh.textContent).toContain(
+      "Liste konnte nicht aktualisiert werden — das vorherige Ergebnis bleibt sichtbar: weg",
+    )
+    expect(more.textContent).toContain(
+      "Weitere Einträge konnten nicht geladen werden: Zeitüberschreitung",
+    )
+    expect(screen.getAllByRole("button", { name: "Erneut versuchen" })).toHaveLength(2)
   })
 })
