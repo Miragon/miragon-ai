@@ -33,12 +33,15 @@ const TOOLKIT_HOST_CONTEXT_ISSUE = "https://github.com/Miragon/mcp-toolkit/issue
 const HOST_THEME_ISSUE = "https://github.com/Miragon/miragon-ai/issues/339"
 
 interface HostLog {
+  initializeRequested: boolean
   initialized: boolean
   delivered: "result" | "cancelled" | null
   originalResult: { isError?: boolean; content?: { type: string; text?: string }[] } | null
   toolCalls: { name: string; arguments: Record<string, unknown> }[]
+  /** Calls the host answered with an error per `failTools`; `at` = host Date.now(). */
+  failedToolCalls: { name: string; at: number }[]
   displayModeRequests: string[]
-  sizeChanges: { width?: number; height?: number }[]
+  sizeChanges: { width?: number; height?: number; at: number }[]
   methods: string[]
   errors: string[]
 }
@@ -58,6 +61,10 @@ interface Scenario {
   /** hostContext.containerDimensions.maxHeight. */
   maxHeight?: number
   displayModes?: string[]
+  /** Answer `ui/initialize` this many ms late (a slow handshake). */
+  initDelayMs?: number
+  /** Answer the view's calls to these tools with an error (a server without them). */
+  failTools?: string[]
 }
 
 async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocator> {
@@ -75,6 +82,8 @@ async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocat
   if (scenario.fontSans) query.set("fontSans", scenario.fontSans)
   if (scenario.maxHeight !== undefined) query.set("maxHeight", String(scenario.maxHeight))
   if (scenario.displayModes) query.set("displayModes", scenario.displayModes.join(","))
+  if (scenario.initDelayMs) query.set("initDelayMs", String(scenario.initDelayMs))
+  if (scenario.failTools) query.set("failTools", scenario.failTools.join(","))
   await page.goto(`${base}/?${query.toString()}`)
   return page.frameLocator("#app")
 }
@@ -104,6 +113,12 @@ function collectErrors(page: Page): string[] {
 
 function definitionsTable(app: FrameLocator): Locator {
   return app.getByRole("table", { name: "Deployed process definitions with version and status" })
+}
+
+function germanDefinitionsTable(app: FrameLocator): Locator {
+  return app.getByRole("table", {
+    name: "Bereitgestellte Prozessdefinitionen mit Version und Status",
+  })
 }
 
 /** The process-list widget rendered the stub engine's three definitions. */
@@ -151,6 +166,34 @@ async function reportedHeight(page: Page): Promise<number> {
   return (await hostLog(page)).sizeChanges.at(-1)?.height ?? Number.NaN
 }
 
+/**
+ * The height the view reported for what it renders NOW. bootstrapView's
+ * auto-resize reports one frame after a resize (ResizeObserver → rAF →
+ * postMessage), so right after the content became visible the last report can
+ * still be an earlier state's — the ProfileGate skeleton's ~208 px, which
+ * would satisfy any "small enough" bound by itself. Measure the document
+ * exactly as the auto-resize does (`<html>` at max-content, rounded up) and
+ * wait until the last report equals it.
+ */
+async function settledHeight(page: Page, app: FrameLocator): Promise<number> {
+  const measured = () =>
+    app.locator("html").evaluate((html) => {
+      const saved = html.style.height
+      html.style.height = "max-content"
+      const height = Math.ceil(html.getBoundingClientRect().height)
+      html.style.height = saved
+      return height
+    })
+  let settled = Number.NaN
+  await expect
+    .poll(async () => {
+      settled = await reportedHeight(page)
+      return settled === (await measured())
+    })
+    .toBe(true)
+  return settled
+}
+
 test.describe("real camunda7 view (camunda7_show_process_list)", () => {
   test("compliant host (structuredContent kept): renders from the notification, never re-executes", async ({
     page,
@@ -182,7 +225,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     // profile through the host bridge (AppShellProviders order) …
     expect(log.toolCalls.map((c) => c.name)).toContain(PROFILE_FEED)
     // … and bootstrapView's auto-resize reports the rendered height to the host.
-    expect(log.sizeChanges.at(-1)?.height ?? 0).toBeGreaterThan(200)
+    expect(await settledHeight(page, app)).toBeGreaterThan(200)
     expect(log.errors).toEqual([])
     // Nothing the served document needs is blocked by its own declared CSP,
     // and nothing throws …
@@ -372,15 +415,54 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     // `language: "system"` — the host's locale decides.
     const app = await openView(page, { locale: "de-DE", displayModes: ["inline", "fullscreen"] })
 
-    const table = app.getByRole("table", {
-      name: "Bereitgestellte Prozessdefinitionen mit Version und Status",
-    })
+    const table = germanDefinitionsTable(app)
     await expect(table).toBeVisible({ timeout: 15_000 })
     await expect(table.getByRole("row")).toHaveCount(4)
     await expect(app.getByText("3 bereitgestellt")).toBeVisible()
     // The view chrome (toolkit McpAppView) follows the same locale.
     await expect(app.getByRole("button", { name: "Vollbild" })).toBeVisible()
     expect(await app.locator("html").getAttribute("lang")).toBe("de")
+  })
+
+  test("a profile feed the server lacks (e.g. an analytics-only boot): the view paints at its first failure, from the host context (#339)", async ({
+    page,
+  }) => {
+    const app = await openView(page, { failTools: [PROFILE_FEED], theme: "dark", locale: "de-DE" })
+
+    // The host's locale and theme — the gate fell back to the host context …
+    await expect(germanDefinitionsTable(app).getByRole("row")).toHaveCount(4, { timeout: 15_000 })
+    expect(await documentTheme(app)).toEqual({ dark: true, dataTheme: "dark", colorScheme: "dark" })
+    // … at the failure itself: the content's size report precedes react-query's
+    // first retry (1 s after it). Waiting out the gate's 1.5 s bound, or the
+    // ~7 s of retries, would report it only after that retry.
+    const painted = await settledHeight(page, app)
+    await expect.poll(async () => (await hostLog(page)).failedToolCalls.length).toBeGreaterThan(1)
+    const log = await hostLog(page)
+    const [failure, retry] = log.failedToolCalls
+    expect(failure.name).toBe(PROFILE_FEED)
+    const contentAt = log.sizeChanges.find((s) => s.height === painted)?.at ?? Infinity
+    expect(contentAt, "the view waited for the profile's retries").toBeLessThan(retry.at)
+  })
+
+  test("a slow handshake: nothing paints before the host context arrives — no English or OS-theme flash (#339)", async ({
+    page,
+  }) => {
+    const app = await openView(page, { initDelayMs: 3_000, theme: "dark", locale: "de-DE" })
+
+    await expect.poll(async () => (await hostLog(page)).initializeRequested).toBe(true)
+    // Past the profile's 1.5 s wait, the host has not answered yet: the gate
+    // times the profile from the CONNECTION, so the shell's document layer is
+    // still empty instead of painting English on the OS theme, to flip a
+    // moment later.
+    await page.waitForTimeout(2_000)
+    const documentLayer = await app.locator("#root").evaluate((root) => ({
+      children: root.firstElementChild?.childElementCount,
+      text: root.textContent,
+    }))
+    expect(documentLayer).toEqual({ children: 0, text: "" })
+    // Once the host answers: the German view on the host's dark theme.
+    await expect(germanDefinitionsTable(app).getByRole("row")).toHaveCount(4, { timeout: 15_000 })
+    expect(await documentTheme(app)).toEqual({ dark: true, dataTheme: "dark", colorScheme: "dark" })
   })
 
   test("host font: text renders in the host's --font-sans, font-mono stays monospace", async ({
@@ -424,16 +506,21 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page, { maxHeight: 220 })
 
     await expectProcessList(app)
-    await expect.poll(() => reportedHeight(page)).toBeLessThanOrEqual(220)
     // The shell's document layer is the scroll container, capped at the budget.
     const container = await app.locator("#root").evaluate((root) => {
       const el = root.firstElementChild as HTMLElement
       return {
         maxHeight: getComputedStyle(el).maxHeight,
         scrolls: el.scrollHeight > el.clientHeight,
+        height: el.getBoundingClientRect().height,
       }
     })
-    expect(container).toEqual({ maxHeight: "220px", scrolls: true })
+    expect(container).toMatchObject({ maxHeight: "220px", scrolls: true })
+    // The report belongs to the capped list — at least the container — and
+    // stays inside the budget.
+    const reported = await settledHeight(page, app)
+    expect(reported).toBeGreaterThanOrEqual(Math.floor(container.height))
+    expect(reported).toBeLessThanOrEqual(220)
   })
 
   test("host with fullscreen: the toggle requests it and follows the host's switch", async ({
@@ -510,9 +597,11 @@ test.describe("framework view (render-view)", () => {
     })
 
     await expect(app.getByText("Jobs due")).toBeVisible({ timeout: 15_000 })
-    // Toolbar + one KPI strip: ~130 px. The old html/body/#root floor
-    // reported 600 for every view.
-    await expect.poll(() => reportedHeight(page)).toBeLessThan(300)
-    expect(await reportedHeight(page)).toBeGreaterThan(60)
+    // Toolbar + one KPI strip: ~130 px — below even the gate skeleton's
+    // ~208 px, so the settled report is the view's own. The old
+    // html/body/#root floor reported 600 for every view.
+    const reported = await settledHeight(page, app)
+    expect(reported).toBeLessThan(200)
+    expect(reported).toBeGreaterThan(60)
   })
 })

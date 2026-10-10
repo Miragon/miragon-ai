@@ -45,6 +45,11 @@
       //   maxHeight=<px>            hostContext.containerDimensions.maxHeight
       //   displayModes=a,b          hostContext.availableDisplayModes (absent:
       //                             not advertised)
+      //   initDelayMs=<n>           answer ui/initialize n ms late (a slow
+      //                             handshake)
+      //   failTools=a,b             answer the view's tools/call for these
+      //                             names with an error, as a server without
+      //                             them would (e.g. an analytics-only boot)
       //
       // Every tools/call the VIEW makes is proxied to the real server through
       // the host backend; the spec reads `window.__hostLog`.
@@ -60,6 +65,8 @@
         fontSans: q.get("fontSans"),
         maxHeight: q.has("maxHeight") ? Number(q.get("maxHeight")) : undefined,
         availableDisplayModes: q.has("displayModes") ? q.get("displayModes").split(",") : undefined,
+        initDelayMs: Number(q.get("initDelayMs") ?? 0),
+        failTools: (q.get("failTools") ?? "").split(",").filter(Boolean),
       }
       document.body.dataset.hostTheme = scenario.theme
       // A themed page declares its color-scheme; an iframe whose scheme differs
@@ -67,6 +74,8 @@
       document.documentElement.style.colorScheme = scenario.theme
 
       const log = (window.__hostLog = {
+        // The view sent ui/initialize (answered `initDelayMs` later).
+        initializeRequested: false,
         initialized: false,
         // "result" | "cancelled" once the host finished the rendering call.
         delivered: null,
@@ -74,7 +83,10 @@
         originalResult: null,
         // Every tools/call the view made ({ name, arguments }).
         toolCalls: [],
+        // The calls answered with an error per `failTools` ({ name, at }).
+        failedToolCalls: [],
         displayModeRequests: [],
+        // Every size report ({ width, height, at }; `at` = Date.now()).
         sizeChanges: [],
         // Every other method the view sent, in order.
         methods: [],
@@ -162,6 +174,15 @@
 
       async function answerToolCall(m) {
         log.toolCalls.push({ name: m.params?.name, arguments: m.params?.arguments ?? {} })
+        if (scenario.failTools.includes(m.params?.name)) {
+          log.failedToolCalls.push({ name: m.params?.name, at: Date.now() })
+          post({
+            jsonrpc: "2.0",
+            id: m.id,
+            error: { code: -32602, message: `Tool ${m.params?.name} not found` },
+          })
+          return
+        }
         const outcome = await backendCall(m.params?.name, m.params?.arguments ?? {})
         post(
           outcome.error
@@ -218,7 +239,10 @@
         if (event.source !== iframe.contentWindow || !m || m.jsonrpc !== "2.0" || !m.method) return
         switch (m.method) {
           case "ui/initialize":
-            post({ jsonrpc: "2.0", id: m.id, result: initializeResult(m) })
+            log.initializeRequested = true
+            void sleep(scenario.initDelayMs).then(() =>
+              post({ jsonrpc: "2.0", id: m.id, result: initializeResult(m) }),
+            )
             return
           case "ui/notifications/initialized":
             log.initialized = true
@@ -231,7 +255,7 @@
             answerDisplayMode(m)
             return
           case "ui/notifications/size-changed":
-            log.sizeChanges.push(m.params)
+            log.sizeChanges.push({ ...m.params, at: Date.now() })
             return
           default:
             log.methods.push(m.method)

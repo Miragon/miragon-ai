@@ -16,8 +16,7 @@ import {
   type HeatPoint,
 } from "./bpmn-heatmap/heat-utils.js"
 import { BpmnZoomControls } from "./bpmn-zoom-controls.js"
-import { cn } from "./cn.js"
-import { BPMN_CANVAS_CLASS, useBpmnViewer } from "./use-bpmn-viewer.js"
+import { useBpmnViewer } from "./use-bpmn-viewer.js"
 
 // Stable default for the omitted-edges case: a `= {}` parameter default would
 // be a fresh identity per render and re-trigger the repaint effect every time.
@@ -196,10 +195,7 @@ export function BpmnHeatmap({
         ref={containerRef}
         role="img"
         aria-label={diagramAriaLabel}
-        className={cn(
-          BPMN_CANVAS_CLASS,
-          "border-border absolute inset-0 size-full rounded-lg border",
-        )}
+        className="border-border absolute inset-0 size-full rounded-lg border"
       />
       <canvas
         ref={heatCanvasRef}

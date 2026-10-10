@@ -74,7 +74,6 @@ export {
 } from "./bpmn-heatmap.js"
 export {
   useBpmnViewer,
-  BPMN_CANVAS_CLASS,
   type UseBpmnViewerOptions,
   type UseBpmnViewerResult,
   type BpmnCanvas,

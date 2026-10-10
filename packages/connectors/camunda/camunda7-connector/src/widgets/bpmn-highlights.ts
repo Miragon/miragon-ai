@@ -7,7 +7,7 @@ import { type BpmnCanvas, type BpmnOverlays } from "@miragon-ai/widget-shell/wid
  * must paint SVG strokes/fills, so they stay as concrete values rather than
  * Tailwind tokens — but they live here once instead of being copy-pasted
  * across the rule blocks below and the diagram legends. They paint onto the
- * fixed light BPMN canvas (`BPMN_CANVAS_CLASS`, both themes), so the legends
+ * fixed light BPMN canvas (`useBpmnViewer` paints it, both themes), so the legends
  * on the themed card use mid-ramp hues legible in light and dark alike.
  */
 export const HIGHLIGHT_COLORS = {

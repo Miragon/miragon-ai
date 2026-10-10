@@ -155,8 +155,8 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    in widget code — `Number#toLocaleString` for counts stays allowed);
    `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
    `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
-   settings sections; `useBpmnViewer` + `BpmnZoomControls` for BPMN, with
-   highlight/legend colors from `HIGHLIGHT_COLORS`
+   settings sections; `useBpmnViewer` (it owns the fixed light canvas, both themes) +
+   `BpmnZoomControls` for BPMN, with highlight/legend colors from `HIGHLIGHT_COLORS`
    (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total) + `ListTable` (the table

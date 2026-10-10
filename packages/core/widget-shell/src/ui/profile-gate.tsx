@@ -24,8 +24,20 @@ interface ProfileFeed {
   profile?: { language?: string; theme?: string }
 }
 
-/** How long the first paint waits for the profile before it renders from the host context alone. */
+/**
+ * How long the first paint waits for the profile, counted from the host
+ * connection, before it renders from the host context alone.
+ */
 const PROFILE_WAIT_MS = 1_500
+
+/**
+ * How long the first paint waits for the host handshake itself, counted from
+ * mount. Deliberately longer than the profile wait: painting before the host
+ * context arrived is exactly the OS-theme/English flash the gate exists to
+ * prevent, so only a host that never answers `ui/initialize` gets a view
+ * without it.
+ */
+const HOST_WAIT_MS = 5_000
 
 export interface ProfileGateProps {
   /**
@@ -46,9 +58,10 @@ export interface ProfileGateProps {
   queryKey?: readonly string[]
   /**
    * The first paint's bound wait for the profile (ms, default
-   * {@link PROFILE_WAIT_MS}): a feed that neither answers nor fails in time
-   * (a slow store, react-query's retries on a disabled module) renders from
-   * the host context instead of holding the view.
+   * {@link PROFILE_WAIT_MS}), counted from the host connection — a slow
+   * handshake never eats into it: a feed that neither answers nor fails in
+   * time (a slow store) renders from the host context instead of holding the
+   * view.
    */
   profileWaitMs?: number
   children: ReactNode
@@ -63,10 +76,14 @@ export interface ProfileGateProps {
  *  - theme: explicit profile choice > `hostContext.theme` > the OS (applied
  *    document-wide by {@link useApplyTheme});
  *  - the shared date formatters follow the same locale and the host's time zone.
- * The first paint waits for the profile (bounded by `profileWaitMs`) behind a
- * neutral skeleton, so a German or dark profile never flashes English or the
- * OS theme first; a feed that fails (e.g. the owning module is disabled)
- * releases the gate at once with the host-derived values.
+ * The first paint waits for the host handshake (bounded by {@link HOST_WAIT_MS}),
+ * then for the profile (bounded by `profileWaitMs` from the connection) behind
+ * a neutral skeleton, so a German or dark profile never flashes English or the
+ * OS theme first. A feed that FAILS (e.g. the owning module is disabled, or
+ * the host cannot call server tools) releases the gate at its first failure
+ * with the host-derived values — react-query keeps the query pending through
+ * its retries, which run on in the background; a retry that answers later
+ * still applies live.
  */
 export function ProfileGate({ profileTool, queryKey, profileWaitMs, children }: ProfileGateProps) {
   const { callTool } = useHostBridge()
@@ -85,14 +102,39 @@ export function ProfileGate({ profileTool, queryKey, profileWaitMs, children }: 
   )
 }
 
-/** True once `ms` elapsed since mount. */
-function useElapsed(ms: number): boolean {
+/**
+ * True once `ms` elapsed since `start` first held. The clock starts once and
+ * never restarts, and the result never flips back.
+ */
+function useElapsedSince(start: boolean, ms: number): boolean {
+  const [started, setStarted] = useState(start)
+  if (start && !started) setStarted(true)
   const [elapsed, setElapsed] = useState(false)
   useEffect(() => {
+    if (!started) return
     const id = setTimeout(() => setElapsed(true), ms)
     return () => clearTimeout(id)
-  }, [ms])
+  }, [started, ms])
   return elapsed
+}
+
+/**
+ * Whether the first paint may go ahead. It waits for the host (its theme and
+ * locale), then for the profile's answer: data, an error, or a FIRST failure
+ * (the query stays pending through react-query's retries, ~7 s of backoff on
+ * the toolkit's client) — or for the profile's bound, counted from the
+ * connection. Only a host that never connects paints without its context,
+ * after the longer host bound.
+ */
+function useFirstPaintSettled(
+  connected: boolean,
+  profile: { isPending: boolean; failureCount: number },
+  profileWaitMs: number,
+): boolean {
+  const hostWaitedOut = useElapsedSince(true, HOST_WAIT_MS)
+  const profileWaitedOut = useElapsedSince(connected, profileWaitMs)
+  const profileAnswered = !profile.isPending || profile.failureCount > 0 || profileWaitedOut
+  return (connected && profileAnswered) || hostWaitedOut
 }
 
 function ProfileGateInner({
@@ -103,9 +145,9 @@ function ProfileGateInner({
 }: Omit<ProfileGateProps, "children"> & { children: ReactNode }) {
   const host = useShellHost()
   const key = queryKey ?? [`${profileTool.split("_")[0]}:profile-gate`]
-  const { data, isPending } = useToolQuery<ProfileFeed>([...key], profileTool, {})
-  const profile = data?.profile
-  const waitedOut = useElapsed(profileWaitMs)
+  const query = useToolQuery<ProfileFeed>([...key], profileTool, {})
+  const profile = query.data?.profile
+  const settled = useFirstPaintSettled(host.connected, query, profileWaitMs)
 
   useApplyTheme(profile?.theme)
   const language = resolveLanguage(profile?.language, host.locale)
@@ -127,10 +169,8 @@ function ProfileGateInner({
   }, [target])
   const published = useSyncExternalStore(subscribeFormatLocale, getFormatLocale, getFormatLocale)
 
-  // The first paint waits for the host (its theme and locale) and the
-  // profile, or for the bound; afterwards the tree stays mounted for good and
-  // only follows changes (a saved language flips live).
-  const settled = (host.connected && !isPending) || waitedOut
+  // Once settled and published, the tree stays mounted for good and only
+  // follows changes (a saved language flips live).
   const [ready, setReady] = useState(false)
   if (!ready && settled && isPublished(published, target)) setReady(true)
 
