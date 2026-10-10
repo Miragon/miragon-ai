@@ -206,8 +206,11 @@ never re-inline these primitives:
    `filtersActive` + the `args`) → `FilterBar` → `ListTable` (frame + `Th` header row;
    rows stay hand-composed `<tr>` + `Td`) or a `RowCard` stack → `TableEmptyState`
    (distinguish "no match" when `interacted`) → `CockpitListFooter`
-   (`src/widgets/list-footer.tsx` — retryable load-more error + "Showing X of Y" +
-   Load more; deliberately not infinite scroll).
+   (`src/widgets/list-footer.tsx` — the stale page-0 error and the load-more error,
+   each with its own retry, + "Showing X of Y" + Load more; deliberately not infinite
+   scroll; rendered under an empty result too). Guard the whole view on
+   `!paged.firstPage` only: a search keeps the previous rows (and the search box)
+   mounted while its page 0 is in flight.
 
 The registration chain has **four links — miss one and the widget is silently absent
 somewhere**:

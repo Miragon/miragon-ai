@@ -90,9 +90,13 @@ describe("usePagedListView", () => {
 
     act(() => result.current.setSearch("x"))
     act(() => void vi.advanceTimersByTime(300))
-    // The filtered view must come from the feed, not the unfiltered page.
+    // The filtered view must come from the feed, not the unfiltered page …
     expect(mocks.useToolQuery.mock.lastCall?.[3]).toMatchObject({ enabled: true })
-    expect(result.current.paged.items).toEqual([])
+    // … but until it answers, the handed-in rows stay on screen (#341 N123):
+    // the list — and the search box above it — never unmounts mid-search.
+    expect(result.current.paged.firstPage).toBe(PAGE)
+    expect(result.current.paged.items).toEqual(["a", "b"])
+    expect(result.current.paged.loading).toBe(false)
 
     // Chips (filtersActive) drop the handed-in page the same way.
     act(() => result.current.setSearch(""))

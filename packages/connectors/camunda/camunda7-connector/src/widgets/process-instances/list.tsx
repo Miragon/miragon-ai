@@ -351,33 +351,33 @@ export function ProcessInstancesView({
           {interacted ? t("processInstances.noMatch") : t("processInstances.noRunningInstances")}
         </TableEmptyState>
       ) : (
-        <>
-          <ListTable
-            ariaLabel={t("processInstances.tableAriaLabel", { name: title })}
-            columns={[
-              { label: t("processInstances.colBusinessKey") },
-              ...(scopedKey ? [] : [{ label: t("processInstances.colProcess") }]),
-              { label: t("processInstances.colVersion") },
-              { label: t("processInstances.colState") },
-              { label: t("processInstances.colIncident"), align: "right" as const },
-              { plain: true },
-            ]}
-          >
-            {paged.items.map((row) => (
-              <InstanceRow
-                key={row.id}
-                row={row}
-                processDefinitionKey={scopedKey}
-                engine={feedEngine}
-                showProcessColumn={!scopedKey}
-                onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
-                onOpenProcess={(key) => go({ type: "process-detail", processDefinitionKey: key })}
-              />
-            ))}
-          </ListTable>
-          <CockpitListFooter paged={paged} noun={t("processInstances.footerNoun")} />
-        </>
+        <ListTable
+          ariaLabel={t("processInstances.tableAriaLabel", { name: title })}
+          columns={[
+            { label: t("processInstances.colBusinessKey") },
+            ...(scopedKey ? [] : [{ label: t("processInstances.colProcess") }]),
+            { label: t("processInstances.colVersion") },
+            { label: t("processInstances.colState") },
+            { label: t("processInstances.colIncident"), align: "right" as const },
+            { plain: true },
+          ]}
+        >
+          {paged.items.map((row) => (
+            <InstanceRow
+              key={row.id}
+              row={row}
+              processDefinitionKey={scopedKey}
+              engine={feedEngine}
+              showProcessColumn={!scopedKey}
+              onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
+              onOpenProcess={(key) => go({ type: "process-detail", processDefinitionKey: key })}
+            />
+          ))}
+        </ListTable>
       )}
+      {/* Also under an empty result: a failed search keeps the previous
+          (empty) rows on screen, and its error + retry live in the footer. */}
+      <CockpitListFooter paged={paged} noun={t("processInstances.footerNoun")} />
     </>
   )
 }

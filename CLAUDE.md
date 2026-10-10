@@ -159,9 +159,12 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    `BpmnZoomControls` for BPMN, with highlight/legend colors from `HIGHLIGHT_COLORS`
    (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
-   `firstResult`/`maxResults` and return an honest total) + `ListTable` (the table
-   frame; rows stay hand-composed `<tr>` + `Td`) + `PagedListFooter` (in camunda7 via
-   the i18n-bound `CockpitListFooter`, `src/widgets/list-footer.tsx`). Optimistic
+   `firstResult`/`maxResults` and return an honest total; a new page 0 keeps the
+   previous rows mounted until it lands) + `ListTable` (the table
+   frame; rows stay hand-composed `<tr>` + `Td`) + `PagedListFooter` (a page-0
+   failure over rows on screen and a load-more failure, each with its own retry; in
+   camunda7 via the i18n-bound `CockpitListFooter`, `src/widgets/list-footer.tsx`,
+   rendered under an empty result too). Optimistic
    local state (resolved marks, variable shadows, form baselines) is dropped with
    `useResetOnChange(data, reset)` — React's render-phase "adjust state when a prop
    changes"; `useEffect(reset, [data])` is the shape `react-hooks/set-state-in-effect`

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs"
 import http from "node:http"
 import type { AddressInfo } from "node:net"
 import path from "node:path"
+import { SEARCH_DELAY_MS } from "./engines.js"
 
 export interface StubEngine {
   /** `baseUrl` of the healthy engine (`…/engine-rest`). */
@@ -168,8 +169,12 @@ export async function startStubEngine(): Promise<StubEngine> {
     void readJson(req).then((requestBody) => {
       const url = new URL(req.url ?? "/", "http://stub")
       const { status, body } = jobRoute(req.method ?? "GET", url, requestBody, jobs) ?? route(url)
-      res.writeHead(status, { "content-type": "application/json" })
-      res.end(body === undefined ? undefined : JSON.stringify(body))
+      // A search answers late, so the view's in-flight state is observable.
+      const delayMs = url.searchParams.has("nameLike") ? SEARCH_DELAY_MS : 0
+      setTimeout(() => {
+        res.writeHead(status, { "content-type": "application/json" })
+        res.end(body === undefined ? undefined : JSON.stringify(body))
+      }, delayMs)
     })
   })
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))

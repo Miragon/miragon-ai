@@ -24,7 +24,7 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | Scenario                   | Host behaviour                                    | Pass criterion                                                                 |
 | -------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
 | keep                       | result WITH `structuredContent`                   | real table renders, **zero** re-executions, no console error, size reported    |
-| in-widget query            | user types into the search                        | the widget's own feed call refetches and filters (guards the vite `dedupe`)    |
+| in-widget query            | user types into the search (stub answers late)    | feed refetches + filters; rows and focused search stay in flight (`dedupe`)    |
 | strip                      | result WITHOUT `structuredContent` (claude.ai)    | **exactly one** re-execution with the invocation's arguments, then renders     |
 | slow tool (pinned)         | result 4 s after `initialized`                    | renders once; today **one** redundant re-execution (toolkit#176, K13)          |
 | `isError` (pinned)         | real engine 503 through the server                | today one re-execution + endless skeleton (toolkit#176, K14)                   |
@@ -43,6 +43,8 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | fullscreen                 | `availableDisplayModes: ["inline", "fullscreen"]` | the toggle requests fullscreen and follows the host's switch                   |
 | BPMN on a dark host        | `camunda7_show_bpmn_viewer`, `theme: "dark"`      | light canvas, dark flows/labels, every zoom button clickable past the logo     |
 | write refresh (operations) | `camunda7_show_job_panel`, user clicks Retry      | the retry refetches the seeded feed and re-renders, **zero** re-executions     |
+| cockpit on an engine       | `camunda7_open_cockpit` with `engine`             | opens on that engine (sidebar switcher), not on the engine picker              |
+| cockpit picker             | `camunda7_open_cockpit` without `engine`          | the engine picker (two engines, no saved default)                              |
 
 Height checks read the **settled** report — the one equal to the document's current
 max-content height — since the ProfileGate skeleton's earlier report (~208 px) can

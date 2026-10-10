@@ -13,6 +13,7 @@ import {
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { BpmnDiagram, type BpmnHighlight } from "../bpmn-diagram.js"
 import { useT } from "../../messages/use-t.js"
+import { useAnalyticsActive } from "../cockpit-app/analytics-probe.js"
 import { diagramActivityFraction } from "./activity-scope.js"
 import { useDefinitionData } from "./feed.js"
 
@@ -23,13 +24,14 @@ const DIAGRAM_HEIGHT = 460
 /**
  * Lazily loads the execution heatmap (Prometheus metrics via the analytics
  * module's plain data feed) and paints it on the definition diagram. Mounted
- * only when the operator switches the mode toggle off "Incidents", so the
+ * only when the operator switches the mode toggle off "Incidents" — a mode
+ * offered only once the analytics probe confirmed the module — so the
  * metrics query never runs on first paint. `mode` swaps frequency↔duration
  * without refetching (both come in one payload).
  *
- * Graceful degradation (architecture invariant 8): the tool name is a raw
- * string, not an import — when the analytics module is absent the call fails
- * and `onUnavailable` tells the parent to hide the heatmap modes with a hint
+ * Tier-2 cross-module reference (architecture invariant 8): the tool name is
+ * a raw string, not an import. When the feed fails anyway (Prometheus down)
+ * `onUnavailable` tells the parent to hide the heatmap modes with a hint
  * instead of rendering an error.
  */
 function ProcessHeatmap({
@@ -139,30 +141,35 @@ function FlowModeToolbar({
 }
 
 /**
- * The one BPMN widget of the unified definition view. Three modes behind a
- * kit SegmentedControl: "incidents" (live incident overlays from the shared
- * feed) plus the "frequency"/"duration" execution heatmap (analytics metrics,
- * fetched lazily). `initialMode` is the entry point's focus lever.
+ * The one BPMN widget of the unified definition view. It always leads with
+ * "incidents" (live incident overlays from the shared feed — this module's
+ * own data, on screen at once); the "frequency"/"duration" execution heatmap
+ * (analytics metrics, fetched lazily) joins the kit SegmentedControl only
+ * once the analytics module is confirmed active — without it no heatmap call
+ * is ever made.
  */
 export function ProcessDefinitionFlow({
   data: initialData = null,
   processDefinitionKey,
   engine,
-  initialMode = "incidents",
 }: {
   data?: ProcessIncidentsData | null
   processDefinitionKey?: string
   engine?: string
-  initialMode?: "incidents" | "frequency"
 }) {
   const t = useT()
   const { data, loading, error } = useDefinitionData(initialData, processDefinitionKey, engine)
-  const [mode, setMode] = useState<FlowMode>(initialMode)
+  const [chosenMode, setMode] = useState<FlowMode>("incidents")
   const [heatmapUnavailable, setHeatmapUnavailable] = useState(false)
-  // Analytics absent → fall back to the incident overlays; the two heatmap
-  // mode buttons disappear (with a hint), never an error surface. Both halves
-  // belong to the same transition, so they happen together in the handler —
-  // deriving the fallback in an effect would commit an empty heatmap first.
+  // The heatmap is an analytics feature: offered only once the probe confirmed
+  // the module (false until it answers, and for good without it).
+  const heatmapOffered = useAnalyticsActive() && !heatmapUnavailable
+  const mode: FlowMode = heatmapOffered ? chosenMode : "incidents"
+  // The feed failed anyway (Prometheus down) → fall back to the incident
+  // overlays; the two heatmap mode buttons disappear (with a hint), never an
+  // error surface. Both halves belong to the same transition, so they happen
+  // together in the handler — deriving the fallback in an effect would commit
+  // an empty heatmap first.
   const markHeatmapUnavailable = useCallback(() => {
     setHeatmapUnavailable(true)
     setMode("incidents")
@@ -192,13 +199,13 @@ export function ProcessDefinitionFlow({
     )
   }
 
-  const modeOptions: SegmentedControlOption<FlowMode>[] = heatmapUnavailable
-    ? [{ value: "incidents", label: t("procIncFlow.modeIncidents") }]
-    : [
+  const modeOptions: SegmentedControlOption<FlowMode>[] = heatmapOffered
+    ? [
         { value: "incidents", label: t("procIncFlow.modeIncidents") },
         { value: "frequency", label: t("procIncFlow.modeFrequency") },
         { value: "duration", label: t("procIncFlow.modeDuration") },
       ]
+    : [{ value: "incidents", label: t("procIncFlow.modeIncidents") }]
 
   return (
     <WidgetShell>

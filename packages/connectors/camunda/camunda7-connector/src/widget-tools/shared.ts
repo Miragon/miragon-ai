@@ -19,20 +19,14 @@ export function truncate(s: string, max: number): string {
  * The ONE definition view (mirrors the cockpit's "process-detail" route in
  * `widgets/cockpit-app/views.ts`): both show tools render this same composed
  * layout — the entry point only decides the FOCUS, threaded through the layout
- * cells as widget props (flow initial mode + no-incidents rendering).
+ * cells as a widget prop (the list's no-incidents rendering). The flow always
+ * leads with the incident overlay.
  */
 export function definitionViewLayout(focus?: "incidents") {
   return [
     { row: [{ widget: "camunda7:process-detail-header" }] },
     { row: [{ widget: "camunda7:process-definition-kpi" }] },
-    {
-      row: [
-        {
-          widget: "camunda7:process-definition-flow",
-          props: { initialMode: focus === "incidents" ? "incidents" : "frequency" },
-        },
-      ],
-    },
+    { row: [{ widget: "camunda7:process-definition-flow" }] },
     {
       row: [
         {

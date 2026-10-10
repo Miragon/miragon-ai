@@ -2,11 +2,11 @@ import fs from "node:fs"
 import { z } from "zod"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
-import { getProcessDefinitionBpmn20XmlByKey } from "@miragon-ai/camunda7-client/sdk"
 import { createPlugin, type Camunda7SharedResources } from "./plugin.js"
 import { providerForEntry } from "./providers/index.js"
 import { allowsProfileSave, camunda7Toolsets } from "./lib/toolsets.js"
 import { camunda7Instructions } from "./instructions.js"
+import { fetchLatestDefinitionXml } from "./data/definition-info.js"
 
 /**
  * Self-contained module definition for host apps: config schema, env mapping,
@@ -399,7 +399,9 @@ export const camunda7Module = {
  * of depending on the engine SDK. Uses the FIRST configured engine with the
  * same per-engine-auth-wins precedence as the plugin's registry clients; when
  * a process definition exists on more than one engine the XML is assumed to
- * match across engines. Fetch errors resolve to `null` (consumer degrades).
+ * match across engines. The diagram is the definition view's: the key's
+ * latest version over every tenant, read by id (`fetchLatestDefinitionXml`).
+ * Fetch errors resolve to `null` (consumer degrades).
  */
 export function createBpmnXmlFetcher(
   config: Record<string, unknown>,
@@ -417,11 +419,6 @@ export function createBpmnXmlFetcher(
   const client = providerForEntry(primary).createClient(primary, auth, {
     timeoutMs: parsed.requestTimeoutMs,
   })
-  return async (processDefinitionKey) => {
-    const xmlResp = (await getProcessDefinitionBpmn20XmlByKey({
-      client,
-      path: { key: processDefinitionKey },
-    }).catch(() => null)) as { bpmn20Xml?: string } | null
-    return xmlResp?.bpmn20Xml ?? null
-  }
+  return (processDefinitionKey) =>
+    fetchLatestDefinitionXml(client, processDefinitionKey).catch(() => null)
 }

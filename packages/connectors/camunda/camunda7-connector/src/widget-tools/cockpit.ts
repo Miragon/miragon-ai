@@ -22,6 +22,7 @@ import {
   CAMUNDA7_SHOW_PROCESS_LIST,
 } from "../tool-names.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
+import { cockpitEngineScope } from "../lib/engine-preferences.js"
 import { environmentOf } from "../lib/environments.js"
 import {
   pagingShape,
@@ -47,24 +48,25 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
     },
     withToolErrors(async (args, ctx) => {
       const t = await localizeFor(profileStore, ctx)
-      // Thin bootstrap: resolve the engine (the caller's saved default or the
-      // only engine) and hand the app the engine list — this is what makes the
-      // cockpit LAND on the profile's default engine. The app threads the
-      // chosen engineId into every nested tool call via the `engine` override,
-      // so client-side navigation never depends on the saved default.
-      let engineId: string | null
-      try {
-        engineId = (await resolveEngine(args.engine, registry, ctx)).engineId
-      } catch {
-        // Multiple engines, no default saved → the app renders an engine picker.
-        engineId = null
-      }
+      // Thin bootstrap: the engine the cockpit OPENS on (per-call `engine` >
+      // the caller's saved default > the only engine in their list; null →
+      // the picker) over the caller's engine list — the app seeds its scope
+      // from it. A bad `engine` is a tool error, never a silent picker. The
+      // app threads the chosen engineId into every nested tool call via the
+      // `engine` override, so client-side navigation never depends on the
+      // saved default.
+      const { engines, engineId } = await cockpitEngineScope(
+        profileStore,
+        registry,
+        args.engine,
+        ctx,
+      )
       const data: CockpitAppData = {
         engineId,
         // No REST baseUrl: the app navigates by engine id (internal topology stays server-side).
         // The explicit return type makes an extra field an excess-property error —
         // a contextually typed map callback would accept it silently.
-        engines: registry.engines.map((e): CockpitEngineInfo => ({
+        engines: engines.map((e): CockpitEngineInfo => ({
           id: e.id,
           environment: environmentOf(e),
         })),

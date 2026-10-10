@@ -1,7 +1,13 @@
 import { readProfileAdvisory, type ProfileSource } from "@miragon-ai/widget-shell/server"
 import { resolveProfileKey } from "./resolve-profile-key.js"
 import { parseCamunda7Settings, type Camunda7Settings } from "./profile-schema.js"
-import type { EngineEntry } from "./resolve-engine.js"
+import {
+  EngineNotSelectedError,
+  resolveEngine,
+  type EngineCallContext,
+  type EngineEntry,
+  type EngineRegistry,
+} from "./resolve-engine.js"
 
 /**
  * The profile-driven engine preferences, single-sourced so the tool surface
@@ -56,4 +62,59 @@ export async function profileDefaultEngineId(
   const settings = await advisoryCamunda7Settings(store, ctx)
   const id = settings.defaultEngineId
   return id && allowedEngines(settings, engines).some((e) => e.id === id) ? id : undefined
+}
+
+/**
+ * An engine the caller named that their own engine list (`allowedEngineIds`)
+ * leaves out — refused where a VIEW scopes to that list: the cockpit's picker
+ * and switcher cannot show it, so opening on it would strand the user.
+ */
+export class EngineNotAvailableError extends Error {
+  readonly code = "ENGINE_NOT_AVAILABLE" as const
+  constructor(requestedEngine: string, available: EngineEntry[]) {
+    super(
+      `Engine "${requestedEngine}" is not in this user's engine list (allowedEngineIds) — ` +
+        `the cockpit offers: ${available.map((e) => e.id).join(", ")}. ` +
+        "Open it on one of those, or pass `engine` to the camunda7 tools directly.",
+    )
+    this.name = "EngineNotAvailableError"
+  }
+}
+
+/** Where the cockpit opens: the caller's engine list and the engine it lands on (null = the picker). */
+export interface CockpitEngineScope {
+  engines: EngineEntry[]
+  engineId: string | null
+}
+
+/**
+ * The cockpit's engine scope at open — the SAME precedence as every engine
+ * call ({@link resolveEngine}: per-call `override` > the caller's saved
+ * default > the only engine), over the SAME list `camunda7_list_engines`
+ * returns ({@link allowedEngines}), so the bootstrap never names an engine
+ * the in-app picker then cannot show:
+ *
+ * - an `override` must be configured (UNKNOWN_ENGINE otherwise) AND in the
+ *   caller's list ({@link EngineNotAvailableError});
+ * - without one, only "no engine selected" falls back — to the only engine
+ *   left in the caller's list, else the picker (`engineId: null`). Any other
+ *   failure propagates: a tool error, never a silent picker.
+ */
+export async function cockpitEngineScope(
+  store: ProfileSource,
+  registry: EngineRegistry,
+  override: string | undefined,
+  call?: EngineCallContext,
+): Promise<CockpitEngineScope> {
+  const engines = allowedEngines(await advisoryCamunda7Settings(store, call), registry.engines)
+  let engineId: string
+  try {
+    engineId = (await resolveEngine(override, registry, call)).engineId
+  } catch (e) {
+    // Only reachable without an override: several engines, no saved default.
+    if (!(e instanceof EngineNotSelectedError)) throw e
+    return { engines, engineId: engines.length === 1 ? engines[0].id : null }
+  }
+  if (!engines.some((e) => e.id === engineId)) throw new EngineNotAvailableError(engineId, engines)
+  return { engines, engineId }
 }

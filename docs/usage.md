@@ -83,7 +83,7 @@ shows only those sections.
 | ------------------- | --------- | -------------------------------------------------------------------------------------------------------- |
 | Language            | Profile   | UI language (Automatic: the chat app's); a chosen one also sets the language tool summaries come back in |
 | Theme               | Profile   | Light, dark, or System: follow the chat app, then the OS                                                 |
-| Engine availability | Profile   | Which engines appear in pickers, and which one is the default                                            |
+| Engine availability | Profile   | Which engines appear in pickers, and the default the cockpit opens on                                    |
 | Pinned dashboards   | Profile   | Which saved dashboards come first in pickers (needs login)                                               |
 | Look-back period    | Analytics | Applied whenever you ask an analytics question without naming a window                                   |
 | Comparison bucket   | Analytics | How many instances a window needs before a comparison is trusted                                         |

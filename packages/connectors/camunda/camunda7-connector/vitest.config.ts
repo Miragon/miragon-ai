@@ -41,6 +41,9 @@ export default mergeConfig(
         // write-path suites — the engine-action primitive, the render-level
         // gating of every write site, the seeded standalone refresh (measured
         // 83.38 / 71.81 / 81.22 / 84.39; main was 78.66 / 66.81 / 75.72 / 79.89).
+        // #341's cockpit-scope, paged-list and definition-view render suites
+        // (measured standalone 79.88 / 68.24 / 76.93 / 81.2) keep the higher
+        // write-path floor.
         thresholds: { statements: 81, branches: 69, functions: 79, lines: 82 },
       },
     },

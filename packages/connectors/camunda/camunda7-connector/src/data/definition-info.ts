@@ -1,5 +1,6 @@
 import type { Client } from "@miragon-ai/camunda7-client"
 import {
+  getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
   getProcessDefinitions,
 } from "@miragon-ai/camunda7-client/sdk"
@@ -99,6 +100,35 @@ export async function fetchLatestDefinition(client: Client, key: string): Promis
 /** The not-found error of a view scoped to a key no version is deployed for. */
 export function unknownKeyError(key: string): Error {
   return new Error(`No process definition with key "${key}" is deployed on this engine.`)
+}
+
+/**
+ * The BPMN 2.0 XML of ONE deployed version, read by its id — the only XML
+ * read that finds every definition, tenant deployments included. Null when
+ * the reply carries no XML; a failed read propagates (the caller decides
+ * whether the diagram is enrichment).
+ */
+export async function fetchDefinitionXml(
+  client: Client,
+  definitionId: string,
+): Promise<string | null> {
+  const reply = await getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } })
+  return (reply as { bpmn20Xml?: string | null } | null)?.bpmn20Xml ?? null
+}
+
+/**
+ * The diagram of a KEY: its latest version over every tenant
+ * ({@link findLatestDefinition}), read by id ({@link fetchDefinitionXml}) —
+ * the definition view's diagram. Never `GET /process-definition/key/{key}/xml`,
+ * which only finds definitions that belong to no tenant. Null when no version
+ * is deployed.
+ */
+export async function fetchLatestDefinitionXml(
+  client: Client,
+  key: string,
+): Promise<string | null> {
+  const latest = await findLatestDefinition(client, key)
+  return latest?.id ? fetchDefinitionXml(client, latest.id) : null
 }
 
 interface IncidentStatRow {
