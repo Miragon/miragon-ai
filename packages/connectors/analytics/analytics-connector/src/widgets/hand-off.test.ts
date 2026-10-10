@@ -67,6 +67,24 @@ describe("analytics hand-offs", () => {
     expect(unscoped).not.toContain("engine")
   })
 
+  // The gauge carries no activity (#336): every id the hand-off passes is one
+  // analytics_find_failed_instances takes too, so an analytics-only
+  // deployment is never invited to a refused call.
+  it("pass only ids the analytics tool takes, with or without camunda7", () => {
+    const clean = { ...PATTERN, incidentType: "failedJob" }
+    const expected =
+      'Ids: engine="prod-a", processDefinitionKey="shipping", incidentType="failedJob"\n'
+    const alone = bindHandOff("en", ANALYTICS_ONLY_SURFACE).ask(
+      errorPatternHandOff(clean, FAILURES),
+    )!
+    expect(alone).toContain(expected)
+    expect(alone).not.toContain("activityId")
+    const withCamunda7 = bindHandOff("en", analyticsSurface(["camunda7_list_incidents"])).ask(
+      errorPatternHandOff(clean, FAILURES),
+    )!
+    expect(withCamunda7).toContain(expected)
+  })
+
   it("quote a free-text incident type in a fence it cannot close", () => {
     const prompt = bindHandOff("en", ANALYTICS_ONLY_SURFACE).ask(
       errorPatternHandOff(PATTERN, FAILURES),

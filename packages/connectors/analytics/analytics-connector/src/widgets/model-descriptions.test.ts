@@ -1,24 +1,20 @@
 import { describe, expect, it } from "vitest"
-import type { AnalyticsBpmnHeatmapData } from "./bpmn-heatmap.js"
 import {
-  describeActivityBottlenecks,
-  describeBpmnHeatmap,
   describeEngineLandscape,
   describeErrorPatterns,
-  describeExecutionPerformance,
-  describeExecutionSummary,
   describeFailureRates,
   describeFailureSummary,
   describeVersionCompare,
 } from "./model-descriptions.js"
 import type {
-  AnalyticsDashboardData,
   EngineLandscapeEngine,
   EngineLandscapeResult,
   FailureDashboardData,
   VersionCompareKpi,
   VersionCompareResult,
 } from "@miragon-ai/analytics-client"
+
+// The dashboard, comparison and heatmap descriptions: model-descriptions.dashboard.test.ts.
 
 const engine = (
   engineId: string,
@@ -61,10 +57,10 @@ describe("describeEngineLandscape", () => {
   it("names the busiest engine, the largest backlog and the comparable process", () => {
     const text = describeEngineLandscape(landscape(), {})
 
-    expect(text).toContain('most running work on "prod-a" (12)')
-    expect(text).toContain('largest job backlog on "prod-b" (90 executable)')
-    expect(text).toContain("order")
-    expect(text).toContain("analytics_engine_compare")
+    expect(text).toContain('busiestEngine="prod-a", busiestRunningInstances=12')
+    expect(text).toContain('largestBacklogEngine="prod-b", largestBacklogExecutableJobs=90')
+    expect(text).toContain('sharedProcessKeys=["order"]')
+    expect(text).toContain("Tools: analytics_engine_compare, analytics_engine_health")
   })
 
   it("tells the model why per-engine rates are absent", () => {
@@ -77,7 +73,9 @@ describe("describeEngineLandscape", () => {
     const text = describeEngineLandscape(landscape({ sharedProcessKeys: [] }), {})
 
     expect(text).toContain("No definition runs on more than one engine")
-    expect(text).not.toContain("analytics_engine_compare with that")
+    // Without a shared definition there is nothing to compare: no compare tool.
+    expect(text).not.toContain("analytics_engine_compare")
+    expect(text).toContain("Tools: analytics_engine_health")
   })
 
   it("calls out engines that report no metrics at all", () => {
@@ -91,7 +89,7 @@ describe("describeEngineLandscape", () => {
       {},
     )
 
-    expect(text).toContain("reporting NO metrics: prod-c")
+    expect(text).toContain('enginesReportingNoMetrics=["prod-c"]')
   })
 })
 
@@ -141,11 +139,25 @@ describe("describeVersionCompare", () => {
   it("names the measured delta and flags the incident rates as unknown, not zero (#327)", () => {
     const text = describeVersionCompare(versionCompare([versionKpi(1), versionKpi(2)]), {})
 
-    expect(text).toContain(
-      'over a 14d window on engine "prod-a": most notable delta: avg duration +25%',
-    )
+    expect(text).toContain("avgDurationDeltaPct=25")
+    expect(text).toContain('largestDelta="avgDurationDeltaPct"')
+    expect(text).toContain("incidentRatesMeasured=false")
     expect(text).toContain("not measured per version")
     expect(text).toContain("unknown, not zero")
+    // An unmeasured rate is left out — never sent as 0.
+    expect(text).not.toContain("incidentRateDeltaPp")
+    expect(text).not.toMatch(/failure/i)
+  })
+
+  // The tool takes no element scope (#336): the comparison is process-wide,
+  // on the engines it read.
+  it("re-runs the process-wide comparison on the engines on screen", () => {
+    const text = describeVersionCompare(versionCompare([versionKpi(1), versionKpi(2)]), {})
+    expect(text).toContain(
+      'Ids: engine="prod-a", processDefinitionKey="order", versionA=1, versionB=2, windowDays=14\n',
+    )
+    expect(text).toContain("every figure covers the whole process")
+    expect(text).not.toContain("activityId")
   })
 
   it("names every engine of a fleet comparison (K33)", () => {
@@ -153,7 +165,8 @@ describe("describeVersionCompare", () => {
       versionCompare([versionKpi(1), versionKpi(2)], ["prod-a", "prod-b"]),
       {},
     )
-    expect(text).toContain('across engines "prod-a", "prod-b" (aggregated)')
+    expect(text).toContain('Ids: engine=["prod-a","prod-b"]')
+    expect(text).toContain("(aggregated)")
   })
 
   it("drops the caveat once the incident rates are measured", () => {
@@ -162,6 +175,7 @@ describe("describeVersionCompare", () => {
       {},
     )
     expect(text).not.toContain("not measured per version")
+    expect(text).not.toContain("incidentRatesMeasured")
   })
 })
 
@@ -186,26 +200,41 @@ describe("describeFailureRates", () => {
   it("states live open incidents per running instance and routes the regression check (#327)", () => {
     const text = describeFailureRates(failures(["prod-a"]), {})
 
-    expect(text).toContain('(incidents open right now on engine "prod-a")')
+    expect(text).toContain('Ids: engine="prod-a"\n')
     expect(text).toContain(
-      'highest rate "order" with 6 open incident(s) on 50 running instance(s) (12%)',
+      'highestRateProcessDefinitionKey="order", highestOpenIncidentsNow=6, highestRunningNow=50, highestIncidentRatePct=12, highestDeadJobs=3',
     )
-    expect(text).toContain("analytics_compare_execution_periods")
-    expect(text).toContain("analytics_cluster_compare")
+    expect(text).toContain("Tools: analytics_compare_execution_periods, analytics_cluster_compare")
     // Its incident rates are null per version — a wasted call for this question.
     expect(text).not.toContain("analytics_version_compare")
+    // Incidents, not failed instances (N85).
+    expect(text).not.toMatch(/failed|failure/i)
+  })
+
+  it("leaves an unmeasured rate out instead of sending it as 0", () => {
+    const idle = failures(["prod-a"])
+    idle.processBreakdown = [{ ...idle.processBreakdown[0], runningNow: 0, incidentRatePct: null }]
+    expect(describeFailureRates(idle, {})).not.toContain("highestIncidentRatePct")
   })
 })
 
 describe("failure-dashboard scope (N83/N116)", () => {
   it("names the engines from the data, not from cell props — a self-fetch keeps its label", () => {
-    const fleet = describeFailureSummary(failures(["prod-a", "prod-b"]), {})
-    expect(fleet).toContain('Ids: engine=["prod-a","prod-b"]')
-    expect(fleet).toContain("(aggregated)")
-    // Props claiming another engine never override what the data covers.
-    expect(describeFailureSummary(failures(["prod-a"]), { engine: "prod-b" })).toContain(
-      'Ids: engine="prod-a"\n',
-    )
+    for (const describeCell of [
+      describeFailureSummary,
+      describeErrorPatterns,
+      describeFailureRates,
+    ]) {
+      const fleet = describeCell(failures(["prod-a", "prod-b"]), {})
+      expect(fleet).toContain('Ids: engine=["prod-a","prod-b"]')
+      expect(fleet).toContain("(aggregated)")
+      // Props claiming another engine never override what the data covers.
+      const scoped = describeCell(failures(["prod-a"]), { engine: "prod-b" })
+      expect(scoped).toContain('Ids: engine="prod-a"')
+      expect(scoped).not.toContain("prod-b")
+      // An unscoped library result names no engine — never a placeholder.
+      expect(describeCell(failures(null), {})).not.toContain("engine=")
+    }
   })
 
   it("presents only fields the open-incident metric fills (N117)", () => {
@@ -215,101 +244,5 @@ describe("failure-dashboard scope (N83/N116)", () => {
     )
     expect(text).toContain('processDefinitionKey="order"')
     expect(text).toContain("no message, activity or timestamps")
-  })
-})
-
-const dashboard = (over: Partial<AnalyticsDashboardData> = {}): AnalyticsDashboardData => ({
-  processDefinitionKey: null,
-  period: "7d",
-  engines: ["prod-a", "prod-b"],
-  totalCount: 40,
-  completedCount: 30,
-  incidentsCreated: 5,
-  incidentsResolved: 2,
-  incidentRatePct: 12.5,
-  avgDurationMs: 60_000,
-  medianDurationMs: 45_000,
-  p95DurationMs: 187_000,
-  runningNow: 156,
-  openIncidentsNow: 12,
-  activityBreakdown: [],
-  definitionBreakdown: [],
-  ...over,
-})
-
-describe("dashboard model descriptions", () => {
-  it("labels the fleet aggregate with its engines and the period it covers (K33)", () => {
-    expect(describeExecutionSummary(dashboard(), {})).toContain(
-      'for 0 process definition(s) over 7d across engines "prod-a", "prod-b" (aggregated)',
-    )
-  })
-
-  it("keeps window flows and the live gauges apart (N77)", () => {
-    const text = describeExecutionSummary(dashboard(), {})
-    expect(text).toContain(
-      "within the period 40 instance(s) started, 30 completed, 5 incident(s) created",
-    )
-    expect(text).toContain("right now 156 running and 12 incident(s) open")
-  })
-
-  it("never reads an unreported gauge or an empty duration window as 0 (N78)", () => {
-    const text = describeExecutionSummary(
-      dashboard({ runningNow: null, openIncidentsNow: null }),
-      {},
-    )
-    expect(text).toContain("not measured running and not measured incident(s) open")
-    const perf = describeExecutionPerformance(
-      dashboard({
-        avgDurationMs: null,
-        medianDurationMs: null,
-        p95DurationMs: null,
-        incidentRatePct: null,
-      }),
-      {},
-    )
-    expect(perf).toContain("(none ended)")
-    expect(perf).toContain("not measured incidents per 100 started instances")
-    expect(perf).not.toMatch(/\b0(ms|s)\b/)
-  })
-
-  it("names the process of the top activity — ids repeat across models (N84)", () => {
-    const text = describeActivityBottlenecks(
-      dashboard({
-        activityBreakdown: [
-          {
-            processDefinitionKey: "invoice",
-            activityId: "StartEvent_1",
-            activityType: "startEvent",
-            executionCount: 9,
-            avgDurationMs: 10,
-            p95DurationMs: 20,
-            totalTimeMs: 90,
-          },
-        ],
-      }),
-      {},
-    )
-    expect(text).toContain('topProcessDefinitionKey="invoice", topActivityId="StartEvent_1"')
-    expect(text).toContain('Ids: engine=["prod-a","prod-b"], period="7d"')
-  })
-})
-
-describe("describeBpmnHeatmap", () => {
-  const heatmap = (engines: string[]): AnalyticsBpmnHeatmapData => ({
-    processDefinitionKey: "order",
-    period: "7d",
-    engines,
-    bpmnXml: null,
-    frequency: { Task_A: 12 },
-    durationSec: { Task_A: 3.25 },
-  })
-
-  it("names the engines whose heat it adds up (K33)", () => {
-    expect(describeBpmnHeatmap(heatmap(["prod-a", "prod-b"]), {})).toContain(
-      'for process "order" over 7d across engines "prod-a", "prod-b" (aggregated):',
-    )
-    expect(describeBpmnHeatmap(heatmap(["prod-b"]), {})).toContain(
-      'for process "order" over 7d on engine "prod-b":',
-    )
   })
 })

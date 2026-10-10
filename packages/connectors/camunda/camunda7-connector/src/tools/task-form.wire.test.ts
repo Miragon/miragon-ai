@@ -187,7 +187,8 @@ describe("camunda7_format_incident_issue reads the failure text through the cont
     })) as {
       body: string
     }
-    expect(draft.body).toContain("_Stacktrace could not be loaded: [403] not authorized")
+    // The reason is engine/network text — in a span it cannot close (#338).
+    expect(draft.body).toContain("_Stacktrace could not be loaded:_ `[403] not authorized")
     expect(draft.body).not.toContain("_No stacktrace available._")
   })
 

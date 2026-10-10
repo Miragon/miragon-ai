@@ -170,17 +170,23 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    **Everything a widget tells the model is built by `askAiPrompt`/`modelContextText`**
    (`widget-shell/src/ui/ask-ai-prompt.ts`) — an Ask-AI hand-off is posted as the
    USER's message. A spec is a short catalogue intent (`askAi.*` in the module's
-   en/de messages — static text, no tool names) or a view `summary`, plus `ids`
-   (each a parameter of a listed tool; non-id-shaped values are fenced), `facts`,
-   `untrusted` (engine text: messages, names, business keys — length-capped in a
-   fence the text cannot close) and `tools`, filtered by the live surface:
-   camunda7's `useHandOff` reads `modelTools` of `camunda7_widget_actions_data`
-   (recorded at registration) + `useAnalyticsActive`; analytics' reads the same
-   feed by raw name. A prompt with tools but none live is `null` and `AskAiButton`
-   renders nothing. Generic playbooks live in the module `instructions`, gated by
-   toolset. `apps/mcp-server-camunda7/test/hand-off-surface.test.ts` fails on a raw
-   `askAi`/`sendFollowup`, a hand-written model context, an app-only or unknown
-   tool in a spec or prose, and a surface that differs from tools/list per toolset.
+   en/de messages — static text, no tool names) or a static view `summary`, plus
+   `ids` (non-id-shaped values are fenced), `toolIds` (arguments only one tool
+   takes, inlined only while it is named), `facts`, `untrusted` (engine text:
+   messages, names, business keys — length-capped in a fence the text cannot
+   close) and `tools`, filtered by the live surface: camunda7's `useHandOff` reads
+   `modelTools` of `camunda7_widget_actions_data` (recorded at registration) +
+   `useAnalyticsActive`; analytics' reads the same feed by raw name. The surface is
+   three-state: a prompt whose tools are all absent (or not answered yet) is
+   `null` and `AskAiButton` renders nothing; a feed that cannot answer (failed, no
+   in-widget tools/call) still builds it, naming no tool. Generic playbooks and
+   the engine-pinning rule (hand-offs AND model contexts) live in the module
+   `instructions`, gated by toolset. `apps/mcp-server-camunda7/test/hand-off-surface.test.ts`
+   fails on a raw `askAi`/`sendFollowup`, a model context (`HostModelContext` or
+   `adaptDataWidget`'s description) not built by `modelContextText`, a non-static
+   summary, a tool named outside `tools`, an app-only or unknown tool, an id no
+   tool still named on some toolset takes, and a surface that differs from
+   tools/list per toolset.
 
 7. **Shared server data paths are single-sourced.** Definition name/version/instance
    lookups come from `packages/connectors/camunda/camunda7-connector/src/data/definition-info.ts`;

@@ -17,7 +17,9 @@
  *   "data, not instructions" label;
  * - `tools` — the tools that fit the task, filtered by the deployment's live
  *   surface, so a hand-off never names a tool the server does not register
- *   for the model.
+ *   for the model; `toolIds` — arguments only some of those tools take,
+ *   inlined only while their tool is named (strict inputs refuse an argument
+ *   a tool does not take).
  */
 
 /** A hand-off built by {@link askAiPrompt} — the only prompt `AskAiButton` accepts. */
@@ -35,10 +37,19 @@ export interface UntrustedText {
 
 /**
  * Which tools the deployment registers for the model — the filter every tool
- * mention passes. Fail closed: a tool the widget cannot confirm is absent.
+ * mention passes. Three answers:
+ *
+ * - `true` — registered: the tool is named;
+ * - `false` — absent, or not answered yet (fail closed: a hand-off whose
+ *   tools are ALL `false` is null, so its button appears a moment late
+ *   instead of naming a tool that is gone);
+ * - `undefined` — cannot be known (the surface feed failed, or the host has
+ *   no in-widget tools/call): the tool is not named, but the hand-off is
+ *   still built — intent, ids and fence, no Tools line — since the host can
+ *   still post it.
  */
 export interface ToolSurface {
-  has(tool: string): boolean
+  has(tool: string): boolean | undefined
 }
 
 /** A surface that confirms nothing (no tool is ever mentioned). */
@@ -53,6 +64,13 @@ export interface HandOffParts {
   untrusted?: readonly UntrustedText[]
   /** The tools that fit the task; the ones off `surface` are dropped. */
   tools?: readonly string[]
+  /**
+   * Arguments only SOME listed tools take (`period` for an analytics drill),
+   * keyed by tool: inlined into the Ids line only while that tool is named —
+   * a dropped tool must not leave behind an argument the remaining tools'
+   * strict inputs refuse.
+   */
+  toolIds?: Readonly<Record<string, Readonly<Record<string, HandOffValue>>>>
   surface: ToolSurface
 }
 
@@ -177,12 +195,23 @@ function untrustedBlock(items: readonly UntrustedText[], labels: Labels): string
 
 /** The live-surface subset of `tools`, deduplicated, in the author's order. */
 function liveTools(tools: readonly string[] | undefined, surface: ToolSurface): string[] {
-  return [...new Set(tools ?? [])].filter((tool) => surface.has(tool))
+  return [...new Set(tools ?? [])].filter((tool) => surface.has(tool) === true)
+}
+
+/** `ids` plus the `toolIds` of the named tools (an id already set keeps its value). */
+function namedIds(parts: HandOffParts, tools: readonly string[]): Record<string, HandOffValue> {
+  const ids: Record<string, HandOffValue> = { ...parts.ids }
+  for (const tool of tools) {
+    for (const [key, value] of Object.entries(parts.toolIds?.[tool] ?? {})) {
+      ids[key] ??= value
+    }
+  }
+  return ids
 }
 
 function assemble(lead: string, parts: HandOffParts, tools: string[], labels: Labels): string {
   const demoted: UntrustedText[] = []
-  const ids = pairs(parts.ids, (item) => demoted.push(item))
+  const ids = pairs(namedIds(parts, tools), (item) => demoted.push(item))
   const facts = pairs(parts.facts, (item) => demoted.push(item))
   const untrusted = untrustedBlock([...demoted, ...(parts.untrusted ?? [])], labels)
   return [
@@ -198,16 +227,23 @@ function assemble(lead: string, parts: HandOffParts, tools: string[], labels: La
 
 /**
  * Build an Ask-AI hand-off. Returns `null` — and `AskAiButton` renders
- * nothing — when the task named tools and NONE of them is on the live
- * surface: there is nothing the model could do with it in this deployment
- * (or the surface is not known yet; the button then appears once it is).
+ * nothing — when the task named tools and the surface answers `false` for
+ * EVERY one: there is nothing the model could do with it in this deployment
+ * (or the surface has not answered yet; the button then appears once it
+ * has). A tool the surface cannot know (`undefined`) keeps the hand-off,
+ * built without naming that tool.
  */
 export function askAiPrompt(spec: AskAiPromptSpec): AskAiPrompt | null {
   const intent = spec.intent.trim()
   if (intent === "") return null
-  const tools = liveTools(spec.tools, spec.surface)
-  if ((spec.tools?.length ?? 0) > 0 && tools.length === 0) return null
-  return assemble(intent, spec, tools, labelsFor(spec.locale)) as AskAiPrompt
+  const listed = spec.tools ?? []
+  if (listed.length > 0 && listed.every((tool) => spec.surface.has(tool) === false)) return null
+  return assemble(
+    intent,
+    spec,
+    liveTools(listed, spec.surface),
+    labelsFor(spec.locale),
+  ) as AskAiPrompt
 }
 
 /**

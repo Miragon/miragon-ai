@@ -119,6 +119,55 @@ describe("camunda7_format_incident_issue targets the configured repository only"
   })
 })
 
+/**
+ * A custom incident type is any string (`POST /execution/{id}/create-incident`),
+ * and so is a tenant id. Inside a plain `…` span a backtick closes it, so
+ * the rest — an image beacon, a link, a `|` that splits the table — would
+ * render as live markdown in the filed ticket (and in its prefilled URL).
+ */
+describe("camunda7_format_incident_issue keeps engine values inside their spans", () => {
+  const HOSTILE_TYPE = "x` ![p](https://evil.example/t.png) `"
+  const HOSTILE_TENANT = "acme | injected | cells\n| row |"
+
+  /** The text CommonMark renders as literal code: every span of the body, by its delimiter. */
+  function spans(markdown: string): string[] {
+    const out: string[] = []
+    const shape = /(`+)( ?)([\s\S]*?)\2\1(?!`)/g
+    for (const match of markdown.matchAll(shape)) out.push(match[3])
+    return out
+  }
+
+  it("quotes a hostile incident type and tenant as code, nothing of them live", async () => {
+    const engine = await startFakeEngine({
+      "GET /incident/inc-1": {
+        body: { ...INCIDENT, incidentType: HOSTILE_TYPE, tenantId: HOSTILE_TENANT },
+      },
+      "GET /process-instance/pi-42": { body: { id: "pi-42", definitionId: "def-7" } },
+      "GET /process-definition/def-7": { body: { id: "def-7", key: "invoice", version: 7 } },
+    })
+    engines.push(engine)
+    const draft = (await callTool(draftTool("acme/ops"), registryFor(engine), {
+      incidentId: "inc-1",
+    })) as Draft
+    const prefilled = new URL(draft.prefilledUrl!).searchParams.get("body")!
+
+    for (const body of [draft.body, prefilled]) {
+      // Outside the code spans and fences nothing of the payload remains.
+      const live = body
+        .replace(/(`{3,})[\s\S]*?\n\1/g, "")
+        .replace(/(`+)( ?)[\s\S]*?\2\1(?!`)/g, "")
+      expect(live).not.toContain("![p]")
+      expect(live).not.toContain("evil.example")
+      expect(live).not.toContain("injected")
+      // The type is quoted whole in the description, the actual behaviour and the table.
+      expect(spans(body).filter((span) => span === HOSTILE_TYPE)).toHaveLength(3)
+      // The table keeps its two columns: the tenant's pipes are escaped, its line break gone.
+      const tenantRow = body.split("\n").find((line) => line.startsWith("| Tenant |"))!
+      expect(tenantRow).toBe("| Tenant | `acme \\| injected \\| cells \\| row \\|` |")
+    }
+  })
+})
+
 describe("the draft_incident_ticket prompt", () => {
   function promptFor(repository?: string) {
     const prompt = vi.fn()

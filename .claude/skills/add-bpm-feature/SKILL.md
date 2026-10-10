@@ -68,11 +68,12 @@ The engine's own query names may differ (`taskAssignee`, `processInstanceBusines
 `withIncident`): the handler maps them, the schema keeps the guide's name. Every
 filter a tool advertises is pinned on the wire in `src/tools/filters.wire.test.ts`
 (page query AND `/count`); a retired spelling (`key`, `id`, `limit`, `elementId`, …) on
-any module tool fails `apps/mcp-server-camunda7/test/strict-input.e2e.test.ts`; a prompt
-that quotes a tool's parameter is checked against its schema by
-`apps/mcp-server-camunda7/test/tool-name-refs.test.ts` — write quoted arguments in call
-notation with literal names, `tool({ param: value })` (an interpolated name is reported
-as `${…}`).
+any module tool fails `apps/mcp-server-camunda7/test/strict-input.e2e.test.ts`; a tool
+description, server-instructions text or server prompt that quotes a tool's parameter is
+checked against its schema by `apps/mcp-server-camunda7/test/tool-name-refs.test.ts` —
+write quoted arguments in call notation with literal names, `tool({ param: value })` (an
+interpolated name is reported as `${…}`). Widget Ask-AI hand-offs and model contexts
+never quote parameters: they pass typed `ids` (see Step 4).
 
 ## Step 2 — register the tool
 
@@ -296,6 +297,15 @@ exception that uses `server.tool()` directly):
   listed in `CAMUNDA7_WIDGET_ACTIONS` (`src/tool-names.ts`) — `src/widget-actions.test.ts`
   enforces the list. Hide the control (and a table column it would leave empty), never
   just disable it: the toolset is deployment-wide, the user cannot change it.
+- Everything the widget tells the model goes through `useHandOff()`
+  (`src/widgets/lib/hand-off.ts`): `<AskAiButton prompt={ask(handOff)} />` and
+  `<HostModelContext content={context(view)}>`. A hand-off is a typed spec — an `intent`
+  key from `messages/{en,de}.ask-ai.ts` (static, no tool names) or a static view
+  `summary`, plus `ids` (arguments every named tool may take), `toolIds` (arguments only
+  one tool takes, inlined only while it is named), `facts`, `untrusted` (engine text —
+  fenced) and `tools` (filtered by the live surface). Reference:
+  `src/widgets/remediation.ts`; the rules are CLAUDE.md invariant 6, enforced by
+  `apps/mcp-server-camunda7/test/hand-off-surface.test.ts`.
 
 ## Step 5 — verify
 

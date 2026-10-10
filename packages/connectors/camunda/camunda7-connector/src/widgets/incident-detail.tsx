@@ -81,7 +81,9 @@ const REMEDY_TOOLS = new Set<string>([
  * The incident the operator is looking at. Only the remedy that clears THIS
  * incident is named (the engine refuses to resolve the built-in types), none
  * once it was cleared in this session — and the surface keeps it only where
- * the deployment registers it. Engine text is quoted, never inlined.
+ * the deployment registers it. The ticket draft takes the `incidentId` on
+ * every toolset, the read-only floor included. Engine text is quoted, never
+ * inlined.
  */
 export function describeIncident(data: IncidentDetailData, resolved: boolean): ViewContext {
   const remedy = resolved
@@ -113,6 +115,7 @@ export function describeIncident(data: IncidentDetailData, resolved: boolean): V
     tools: [
       "camunda7_show_instance_detail",
       "camunda7_get_job_stacktrace",
+      "camunda7_format_incident_issue",
       "camunda7_resolve_incident",
       "camunda7_set_job_retries",
       "camunda7_set_external_task_retries",

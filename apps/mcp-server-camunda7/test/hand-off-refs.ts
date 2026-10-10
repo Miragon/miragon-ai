@@ -17,11 +17,90 @@ export interface HandOffSpec {
   tools: string[] | null
   /** The `ids` keys, or null when the object is not written literally. */
   ids: string[] | null
+  /** `toolIds`: each tool's own id keys, or null when not written literally. */
+  toolIds: Record<string, string[]> | null
+  /** Whether the `intent`/`summary` is static text (literals, `+`, `?:`, same-file consts). */
+  staticText: boolean
+  /** Tool names written anywhere in the spec but its `tools`/`toolIds` (summary, facts, …). */
+  namedOutsideTools: string[]
 }
 
 function lineOf(source: ts.SourceFile, node: ts.Node): number {
   return source.getLineAndCharacterOfPosition(node.getStart()).line + 1
 }
+
+/** `const NAME = <initializer>` declarations of a file, by name. */
+function constInitializers(source: ts.SourceFile): Map<string, ts.Expression> {
+  const consts = new Map<string, ts.Expression>()
+  const visit = (node: ts.Node) => {
+    if (ts.isVariableDeclarationList(node) && (node.flags & ts.NodeFlags.Const) !== 0) {
+      for (const decl of node.declarations) {
+        if (ts.isIdentifier(decl.name) && decl.initializer) {
+          consts.set(decl.name.text, decl.initializer)
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  return consts
+}
+
+/**
+ * The text of a STATIC expression — string literals joined by `+`, both arms
+ * of a `?:` (the condition may be anything), a same-file `const` of such
+ * text — or null when any part is data (an interpolation, a call, a prop).
+ */
+function staticTextOf(expr: ts.Expression, consts: Map<string, ts.Expression>): string | null {
+  if (ts.isStringLiteral(expr) || ts.isNoSubstitutionTemplateLiteral(expr)) return expr.text
+  if (ts.isParenthesizedExpression(expr)) return staticTextOf(expr.expression, consts)
+  if (ts.isBinaryExpression(expr) && expr.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    const [left, right] = [staticTextOf(expr.left, consts), staticTextOf(expr.right, consts)]
+    return left !== null && right !== null ? left + right : null
+  }
+  if (ts.isConditionalExpression(expr)) {
+    const [yes, no] = [staticTextOf(expr.whenTrue, consts), staticTextOf(expr.whenFalse, consts)]
+    return yes !== null && no !== null ? `${yes} ${no}` : null
+  }
+  if (ts.isIdentifier(expr)) {
+    const initializer = consts.get(expr.text)
+    return initializer ? staticTextOf(initializer, consts) : null
+  }
+  return null
+}
+
+/** `{ tool: { id: … } }` → tool → id keys; null for anything not literal. */
+function literalToolIds(expr: ts.Expression): Record<string, string[]> | null {
+  if (!ts.isObjectLiteralExpression(expr)) return null
+  const out: Record<string, string[]> = {}
+  for (const prop of expr.properties) {
+    const tool = propertyName(prop)
+    if (tool === null || !ts.isPropertyAssignment(prop)) return null
+    const keys = literalKeys(prop.initializer)
+    if (keys === null) return null
+    out[tool] = keys
+  }
+  return out
+}
+
+/** Every `<module>_…` tool name in the string literals and templates under `node`. */
+function toolNamesUnder(node: ts.Node, prefixes: readonly string[]): string[] {
+  const names: string[] = []
+  const visit = (n: ts.Node) => {
+    if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) {
+      names.push(...toolNamesIn(n.text, prefixes))
+    } else if (ts.isTemplateExpression(n)) {
+      for (const part of [n.head, ...n.templateSpans.map((span) => span.literal)]) {
+        names.push(...toolNamesIn(part.text, prefixes))
+      }
+    }
+    ts.forEachChild(n, visit)
+  }
+  visit(node)
+  return names
+}
+
+const TOOL_PREFIXES = ["camunda7", "analytics"]
 
 function propertyName(node: ts.ObjectLiteralElementLike): string | null {
   if (!node.name) return null
@@ -55,9 +134,15 @@ function literalKeys(expr: ts.Expression): string[] | null {
   return keys.every((key) => key !== null) ? keys : null
 }
 
-/** Every hand-off / view-context spec (an object literal with `tools` and `intent`/`summary`). */
+/**
+ * Every hand-off / view-context spec (an object literal with `tools` and
+ * `intent`/`summary`). Its `intent`/`summary` must be static text and no
+ * part of it but `tools`/`toolIds` may name a tool: a tool travels through
+ * `tools` only, where the live surface filters it.
+ */
 export function findHandOffSpecs(file: string, text: string): HandOffSpec[] {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true)
+  const consts = constInitializers(source)
   const specs: HandOffSpec[] = []
   const visit = (node: ts.Node) => {
     if (ts.isObjectLiteralExpression(node)) {
@@ -72,11 +157,26 @@ export function findHandOffSpecs(file: string, text: string): HandOffSpec[] {
       const tools = props.get("tools")
       if (kind && names.has("tools")) {
         const ids = props.get("ids")
+        const toolIds = props.get("toolIds")
+        const lead = props.get(kind === "hand-off" ? "intent" : "summary")
+        const leadText = lead ? staticTextOf(lead, consts) : null
         specs.push({
           kind,
           at: `${file}:${lineOf(source, node)}`,
           tools: tools ? literalToolList(tools) : null,
           ids: ids ? literalKeys(ids) : names.has("ids") ? null : [],
+          toolIds: toolIds ? literalToolIds(toolIds) : names.has("toolIds") ? null : {},
+          staticText: leadText !== null,
+          // The lead's resolved text covers a summary held in a const.
+          namedOutsideTools: [
+            ...new Set([
+              ...(leadText ? toolNamesIn(leadText, TOOL_PREFIXES) : []),
+              ...node.properties
+                // `surface` only narrows the listed tools; it names nothing new.
+                .filter((p) => !["tools", "toolIds", "surface"].includes(propertyName(p) ?? ""))
+                .flatMap((p) => toolNamesUnder(p, TOOL_PREFIXES)),
+            ]),
+          ],
         })
       }
     }
@@ -84,6 +184,101 @@ export function findHandOffSpecs(file: string, text: string): HandOffSpec[] {
   }
   visit(source)
   return specs
+}
+
+/** A top-level function's verdict: does every return hand back `modelContextText(…)`? */
+export interface ContextFunction {
+  name: string
+  /** Repo-relative `file:line`. */
+  at: string
+  returnsModelContext: boolean
+}
+
+/** The values a function returns: an arrow's expression body, else its own `return`s. */
+function returnedExpressions(fn: ts.SignatureDeclaration): ts.Expression[] {
+  if (ts.isArrowFunction(fn) && !ts.isBlock(fn.body)) return [fn.body]
+  const out: ts.Expression[] = []
+  const visit = (node: ts.Node) => {
+    if (ts.isFunctionLike(node)) return // a nested function's returns are not ours
+    if (ts.isReturnStatement(node) && node.expression) out.push(node.expression)
+    ts.forEachChild(node, visit)
+  }
+  const body = (fn as ts.FunctionLikeDeclarationBase).body
+  if (body) ts.forEachChild(body, visit)
+  return out
+}
+
+const isModelContextCall = (expr: ts.Expression): boolean => {
+  const inner = ts.isParenthesizedExpression(expr) ? expr.expression : expr
+  return (
+    ts.isCallExpression(inner) &&
+    ts.isIdentifier(inner.expression) &&
+    inner.expression.text === "modelContextText"
+  )
+}
+
+function verdictOf(fn: ts.SignatureDeclaration): boolean {
+  const returned = returnedExpressions(fn)
+  return returned.length > 0 && returned.every(isModelContextCall)
+}
+
+/** Every top-level `const f = (…) => …` / `function f(…)` with its {@link ContextFunction} verdict. */
+export function findContextFunctions(file: string, text: string): ContextFunction[] {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true)
+  const found: ContextFunction[] = []
+  for (const statement of source.statements) {
+    if (ts.isFunctionDeclaration(statement) && statement.name) {
+      found.push({
+        name: statement.name.text,
+        at: `${file}:${lineOf(source, statement)}`,
+        returnsModelContext: verdictOf(statement),
+      })
+    } else if (ts.isVariableStatement(statement)) {
+      for (const decl of statement.declarationList.declarations) {
+        const init = decl.initializer
+        if (!ts.isIdentifier(decl.name) || !init) continue
+        if (!ts.isArrowFunction(init) && !ts.isFunctionExpression(init)) continue
+        found.push({
+          name: decl.name.text,
+          at: `${file}:${lineOf(source, decl)}`,
+          returnsModelContext: verdictOf(init),
+        })
+      }
+    }
+  }
+  return found
+}
+
+/**
+ * Every `adaptDataWidget(Widget, dataType, describe)` — the toolkit renders
+ * `describe`'s text as the widget's model context, so it is one too: `ref`
+ * names the function (resolved against {@link findContextFunctions}), an
+ * inline function carries its own verdict, anything else is `opaque`.
+ */
+export function findDescribeForModelArgs(
+  file: string,
+  text: string,
+): Array<{ at: string; ref: string | null; inline: boolean | null }> {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true)
+  const found: Array<{ at: string; ref: string | null; inline: boolean | null }> = []
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "adaptDataWidget" &&
+      node.arguments.length >= 3
+    ) {
+      const describe = node.arguments[2]
+      const at = `${file}:${lineOf(source, describe)}`
+      if (ts.isIdentifier(describe)) found.push({ at, ref: describe.text, inline: null })
+      else if (ts.isArrowFunction(describe) || ts.isFunctionExpression(describe)) {
+        found.push({ at, ref: null, inline: verdictOf(describe) })
+      } else found.push({ at, ref: null, inline: null })
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  return found
 }
 
 export interface SourceRef {

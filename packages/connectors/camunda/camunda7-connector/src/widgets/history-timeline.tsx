@@ -62,7 +62,9 @@ type TimelineInstance = NonNullable<HistoryTimelineData["processInstance"]>
 
 /**
  * Where did this historic instance spend its time — the whole run, against
- * its definition's metrics baseline (analytics, when active).
+ * its definition's metrics baseline (analytics, when active). The baseline is
+ * read by key — an argument the history query refuses — so the key goes with
+ * the analytics tools (here and below).
  */
 export function explainInstanceHandOff(
   instance: TimelineInstance,
@@ -74,7 +76,12 @@ export function explainInstanceHandOff(
     ids: {
       engine: engineId,
       processInstanceId: instance.id,
-      processDefinitionKey: instance.processDefinitionKey,
+    },
+    toolIds: {
+      analytics_element_bottleneck: { processDefinitionKey: instance.processDefinitionKey },
+      analytics_analyze_process_performance: {
+        processDefinitionKey: instance.processDefinitionKey,
+      },
     },
     facts: { durationMs: instance.durationInMillis, state: instance.state, activityCount },
     untrusted: [{ label: "processName", text: instance.processDefinitionName }],
@@ -97,8 +104,13 @@ export function explainActivityHandOff(
     ids: {
       engine: engineId,
       processInstanceId: instance?.id,
-      processDefinitionKey: instance?.processDefinitionKey,
       activityId: activity.activityId,
+    },
+    toolIds: {
+      analytics_element_bottleneck: { processDefinitionKey: instance?.processDefinitionKey },
+      analytics_analyze_process_performance: {
+        processDefinitionKey: instance?.processDefinitionKey,
+      },
     },
     facts: { durationMs: activity.durationInMillis, activityType: activity.activityType },
     untrusted: [{ label: "activityName", text: activity.activityName }],
@@ -408,8 +420,8 @@ export function describeHistoryTimeline(data: HistoryTimelineData): ViewContext 
     ids: {
       engine: data.engineId,
       processInstanceId: pi?.id,
-      processDefinitionKey: pi?.processDefinitionKey,
     },
+    toolIds: { analytics_element_bottleneck: { processDefinitionKey: pi?.processDefinitionKey } },
     facts: {
       state: pi?.state,
       activities: data.totalActivities,

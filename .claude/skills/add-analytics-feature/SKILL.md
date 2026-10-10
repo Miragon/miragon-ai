@@ -205,6 +205,15 @@ Rules while building:
   never re-inline these primitives or write local format helpers.
 - Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`)
   — a missing `isError` branch means an eternal skeleton.
+- The model description (`adaptDataWidget`'s third argument, in
+  `src/widgets/model-descriptions.ts`) returns `modelContextText(…)` with
+  `surface: ANALYTICS_ONLY_SURFACE` — a static `summary`, data only in
+  `ids`/`facts`/`untrusted`, tools only in `tools`; Ask-AI hand-offs go through
+  `useHandOff()` (`src/widgets/hand-off.ts`). Both state the scope of the data on
+  screen: `engine: engineIdsOf(data.engines)` (the resolved, configured ids — never
+  the cell's `engine` prop, which only feeds the self-fetch), `period`/key from the
+  echo; a null figure is left out, never sent as 0. CLAUDE.md invariant 6;
+  `apps/mcp-server-camunda7/test/hand-off-surface.test.ts` rejects a hand-written text.
 - Naming is load-bearing: `apps/mcp-server-camunda7/test/widget-contract.e2e.test.ts` enforces
   the widget `_meta` on every `*_show_*` tool and app-only visibility on every `*_data`
   feed **by name**; `src/widgets/catalogue-sync.test.ts` keeps `definition.ts` ↔

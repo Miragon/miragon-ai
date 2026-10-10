@@ -57,8 +57,10 @@ export function remediationHandOff(
   surface: ToolSurface,
 ): RemediationHandOff {
   const keys = cluster.processDefinitionKeys.filter((k) => k !== UNKNOWN_KEY)
+  // Confirmed only: a surface that cannot know offers the diagnosis.
   const canFix =
-    surface.has("camunda7_set_job_retries") || surface.has("camunda7_set_job_retries_batch")
+    surface.has("camunda7_set_job_retries") === true ||
+    surface.has("camunda7_set_job_retries_batch") === true
   return {
     canFix,
     handOff: {

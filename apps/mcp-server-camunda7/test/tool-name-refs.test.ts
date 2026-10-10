@@ -143,16 +143,16 @@ describe("raw tool-name literals name real tools (full surface)", () => {
     ).toEqual([])
   })
 
-  // The Ask-AI hand-offs no longer quote parameters as prose — their ids are
-  // typed (`hand-off-surface.test.ts` checks them); what is left here are the
-  // descriptions and the server instructions.
+  // The Ask-AI hand-offs and the widget model contexts (analytics' model
+  // descriptions included) no longer quote parameters as prose — their ids
+  // are typed (`hand-off-surface.test.ts` checks them per surface); what is
+  // left here are the tool descriptions and the server instructions.
   it("sees the parameters the instructions and descriptions quote (the scanner is not blind)", () => {
     const quoted = new Set(paramRefs.map((ref) => `${ref.tool}.${ref.param}`))
     expect([...quoted]).toEqual(
       expect.arrayContaining([
         // instructions.ts: the cluster scope of the guarded retry
         "camunda7_list_jobs.activityId",
-        "analytics_element_bottleneck.processDefinitionKey",
       ]),
     )
   })

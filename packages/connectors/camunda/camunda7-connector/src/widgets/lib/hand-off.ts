@@ -10,7 +10,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { Camunda7AskAiKey } from "../../messages/en.ask-ai.js"
 import { translator } from "../../messages/index.js"
-import { useWidgetActionsFeed } from "../widget-actions.js"
+import { useModelToolsAnswer, type ModelToolsAnswer } from "../widget-actions.js"
 import { useAnalyticsActive } from "../cockpit-app/analytics-probe.js"
 
 /** An Ask-AI intent: a static catalogue text (labels excluded). */
@@ -36,22 +36,29 @@ export type ViewContext = Omit<ModelContextSpec, "surface">
  *   registers — pinned by the app's hand-off surface test);
  * - anything else — never.
  *
- * Fails closed: until the feeds answer nothing is confirmed, so a hand-off
- * that needs a tool appears a moment late instead of naming one that is gone.
+ * Fails closed while the feeds are in flight: a hand-off that needs a tool
+ * appears a moment late instead of naming one that is gone. When the
+ * camunda7 feed cannot answer (`"unknown"`: the call failed, or the host has
+ * no in-widget tools/call) its tools are `undefined` — the hand-off is still
+ * built, without naming them, since the host can still post it. A failed
+ * analytics probe means the module is absent (the probe's whole job).
  */
 export function camunda7Surface(
-  modelTools: readonly string[] | undefined,
+  modelTools: ModelToolsAnswer,
   analyticsActive: boolean,
 ): ToolSurface {
   return {
-    has: (tool) =>
-      tool.startsWith("analytics_") ? analyticsActive : (modelTools?.includes(tool) ?? false),
+    has: (tool) => {
+      if (tool.startsWith("analytics_")) return analyticsActive
+      if (modelTools === "unknown") return tool.startsWith("camunda7_") ? undefined : false
+      return modelTools !== "pending" && modelTools.includes(tool)
+    },
   }
 }
 
 /** {@link camunda7Surface} over the live feeds. */
 export function useCamunda7Surface(): ToolSurface {
-  const modelTools = useWidgetActionsFeed()?.modelTools
+  const modelTools = useModelToolsAnswer()
   const analytics = useAnalyticsActive()
   return useMemo(() => camunda7Surface(modelTools, analytics), [modelTools, analytics])
 }

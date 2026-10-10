@@ -24,7 +24,8 @@ export type { ProcessListData }
 /**
  * Health check of ONE definition version: its metrics over 7 days (analytics,
  * when active) plus this version's live incidents. The version tag is
- * deployer text — quoted, never inlined.
+ * deployer text — quoted, never inlined. The metrics window goes with the
+ * analytics tool only: camunda7_list_incidents refuses it.
  */
 export function healthCheckHandOff(
   row: ProcessDefinitionsTableRow,
@@ -36,8 +37,9 @@ export function healthCheckHandOff(
       engine,
       processDefinitionKey: row.key,
       processDefinitionId: row.id,
-      period: "7d",
-      includeActivityBreakdown: true,
+    },
+    toolIds: {
+      analytics_analyze_process_performance: { period: "7d", includeActivityBreakdown: true },
     },
     facts: { version: row.version },
     untrusted: [{ label: "versionTag", text: row.versionTag }],

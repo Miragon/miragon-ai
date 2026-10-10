@@ -188,6 +188,57 @@ describe("askAiPrompt — tools follow the live surface", () => {
     ).toBeNull()
   })
 
+  // A surface that cannot answer (its feed failed, or the host wires no
+  // in-widget tools/call) must not take every button with it: the hand-off
+  // is still posted — it just names no tool it cannot confirm.
+  it("is built without a Tools line while the surface cannot know its tools", () => {
+    const unknown: ToolSurface = { has: () => undefined }
+    const prompt = askAiPrompt(
+      spec({
+        ids: { incidentId: "i1" },
+        untrusted: [{ label: "incidentMessage", text: "boom" }],
+        tools: ["camunda7_list_incidents"],
+        surface: unknown,
+      }),
+    )!
+    expect(prompt).toContain('Ids: incidentId="i1"')
+    expect(prompt).toContain("```text\nboom\n```")
+    expect(prompt).not.toContain("Tools:")
+    // One confirmed-absent tool next to an unknown one: still built.
+    const mixed: ToolSurface = {
+      has: (tool) => (tool.startsWith("analytics_") ? false : undefined),
+    }
+    expect(
+      askAiPrompt(
+        spec({ tools: ["analytics_engine_health", "camunda7_list_incidents"], surface: mixed }),
+      ),
+    ).toBe("Diagnose this incident.")
+    expect(modelContextText({ summary: "S", tools: ["x"], surface: unknown })).toBe("S")
+  })
+
+  it("inlines a tool's own ids only while that tool is named", () => {
+    const handOff = spec({
+      ids: { processDefinitionKey: "order" },
+      toolIds: {
+        analytics_analyze_process_performance: { period: "7d", processDefinitionKey: "ignored" },
+      },
+      tools: ["analytics_analyze_process_performance", "camunda7_list_incidents"],
+    })
+    // Without analytics only camunda7_list_incidents is named — `period` goes with it.
+    expect(askAiPrompt(handOff)).toBe(
+      'Diagnose this incident.\nIds: processDefinitionKey="order"\nTools: camunda7_list_incidents',
+    )
+    const withAnalytics = surfaceOf(
+      "analytics_analyze_process_performance",
+      "camunda7_list_incidents",
+    )
+    expect(askAiPrompt({ ...handOff, surface: withAnalytics })).toContain(
+      'Ids: processDefinitionKey="order", period="7d"',
+    )
+    // Unknown surface: no tool named, so no tool's own ids either.
+    expect(askAiPrompt({ ...handOff, surface: { has: () => undefined } })).not.toContain("period")
+  })
+
   it("stays available for a task that needs no tool", () => {
     expect(askAiPrompt(spec({ tools: [] }))).toBe("Diagnose this incident.")
     expect(askAiPrompt(spec())).toBe("Diagnose this incident.")
@@ -253,5 +304,9 @@ describe("modelContextText", () => {
       ].join("\n"),
     )
     expect(modelContextText({ summary: "S", tools: ["x"], surface: EMPTY_TOOL_SURFACE })).toBe("S")
+    // A view with nothing to call still states its ids.
+    expect(modelContextText({ summary: "S", ids: { a: "b" }, surface: READ_ONLY })).toBe(
+      'S\nIds: a="b"',
+    )
   })
 })

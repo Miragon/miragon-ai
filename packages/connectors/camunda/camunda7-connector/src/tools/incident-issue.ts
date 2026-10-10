@@ -160,8 +160,28 @@ function stacktraceSection({ condensedStack, stacktraceError }: IssueBodyContext
     return `Stacktrace (condensed — framework/JDK frames removed):\n\n${codeFence(condensedStack)}`
   }
   return stacktraceError
-    ? `_Stacktrace could not be loaded: ${stacktraceError}_`
+    ? `_Stacktrace could not be loaded:_ ${codeSpan(stacktraceError)}`
     : "_No stacktrace available._"
+}
+
+/** The engine-context table: one row per field, every value in a cell-safe span. */
+function engineContextTable(incident: IncidentDto, context: IssueBodyContext): string[] {
+  const rows: Array<[string, string]> = [
+    ["Incident ID", incident.id ?? "unknown"],
+    ["Incident type", context.incidentType],
+    ["Activity ID", incidentActivityId(incident)],
+    ["Process definition key", context.definitionKey],
+    ["Process definition ID", incident.processDefinitionId ?? "unknown"],
+    ["Process instance ID", incident.processInstanceId ?? "unknown"],
+    ["Tenant", incident.tenantId ?? "—"],
+    ["Timestamp", incident.incidentTimestamp ?? "unknown"],
+    ["Root cause incident ID", incident.rootCauseIncidentId ?? "—"],
+  ]
+  return [
+    "| Field | Value |",
+    "| --- | --- |",
+    ...rows.map(([field, value]) => `| ${field} | ${codeSpan(value, { inTable: true })} |`),
+  ]
 }
 
 /** Markdown body of the draft, section by section (see {@link buildIncidentIssuePayload}). */
@@ -171,9 +191,9 @@ function buildIssueBody(input: BuildIssueInput, context: IssueBodyContext): stri
   return [
     "### Description",
     "",
-    `Engine incident \`${incidentType}\` was raised on activity \`${incidentActivityId(
-      incident,
-    )}\` of process \`${definitionKey}\`.`,
+    `Engine incident ${codeSpan(incidentType)} was raised on activity ${codeSpan(
+      incidentActivityId(incident),
+    )} of process ${codeSpan(definitionKey)}.`,
     "",
     incident.incidentMessage
       ? `Engine message:\n\n${codeFence(incident.incidentMessage)}`
@@ -191,23 +211,13 @@ function buildIssueBody(input: BuildIssueInput, context: IssueBodyContext): stri
     "",
     "### Actual Behaviour",
     "",
-    `An incident of type \`${incidentType}\` is raised.`,
+    `An incident of type ${codeSpan(incidentType)} is raised.`,
     "",
     stacktraceSection(context),
     "",
     "### Engine context",
     "",
-    "| Field | Value |",
-    "| --- | --- |",
-    `| Incident ID | \`${incident.id ?? "unknown"}\` |`,
-    `| Incident type | \`${incidentType}\` |`,
-    `| Activity ID | \`${incidentActivityId(incident)}\` |`,
-    `| Process definition key | \`${definitionKey}\` |`,
-    `| Process definition ID | \`${incident.processDefinitionId ?? "unknown"}\` |`,
-    `| Process instance ID | \`${incident.processInstanceId ?? "unknown"}\` |`,
-    `| Tenant | \`${incident.tenantId ?? "—"}\` |`,
-    `| Timestamp | \`${incident.incidentTimestamp ?? "unknown"}\` |`,
-    `| Root cause incident ID | \`${incident.rootCauseIncidentId ?? "—"}\` |`,
+    ...engineContextTable(incident, context),
     "",
     "### Affected Module",
     "",
@@ -287,10 +297,32 @@ export function boundFailureText(text: string): string {
  * would render as markdown in the filed ticket (mentions, links, images).
  */
 function codeFence(text: string): string {
+  const fence = "`".repeat(Math.max(3, longestBacktickRun(text) + 1))
+  return `${fence}\n${text}\n${fence}`
+}
+
+function longestBacktickRun(text: string): number {
   let longest = 0
   for (const run of text.matchAll(/`+/g)) longest = Math.max(longest, run[0].length)
-  const fence = "`".repeat(Math.max(3, longest + 1))
-  return `${fence}\n${text}\n${fence}`
+  return longest
+}
+
+/**
+ * An inline code span the value cannot close. Engine values are arbitrary
+ * strings — a custom incident type, a tenant id — and a backtick inside a
+ * plain `…` span ends it, so the rest would render as live markdown (images,
+ * links, mentions) in the filed ticket. The delimiter is one backtick longer
+ * than any run inside; line breaks become spaces (a span is one line, and a
+ * table row must stay one); in a table cell a `|` is escaped, since GFM
+ * splits cells on it even inside a span. A value that starts or ends with a
+ * backtick is padded with a space, which CommonMark strips again.
+ */
+function codeSpan(value: string, { inTable = false }: { inTable?: boolean } = {}): string {
+  const oneLine = value.replace(/\r\n?|\n/g, " ")
+  const text = inTable ? oneLine.replace(/\|/g, "\\|") : oneLine
+  const delimiter = "`".repeat(longestBacktickRun(text) + 1)
+  const pad = text.startsWith("`") || text.endsWith("`") ? " " : ""
+  return `${delimiter}${pad}${text}${pad}${delimiter}`
 }
 
 /**

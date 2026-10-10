@@ -9,6 +9,7 @@ import {
   CAMUNDA7_LIST_ENGINES,
   CAMUNDA7_SELECT_ENGINE,
 } from "../../tool-names.js"
+import { camunda7Instructions } from "../../instructions.js"
 import { CockpitApp } from "./app.js"
 
 const toolkitDefaults = queryClient.getDefaultOptions()
@@ -93,11 +94,20 @@ describe("CockpitApp navigation is side-effect free", () => {
 
   // Navigation no longer moves the saved default (prod-b in this fixture), so
   // the model must learn the VIEWED engine — an engine-less call would answer
-  // from the default engine instead. The context carries it as an id; the
-  // module's server instructions say to pass it on.
-  it("tells the model which engine the operator is viewing", async () => {
+  // from the default engine instead. The context carries it as an id, and the
+  // module's server instructions tell the model to pass a model context's
+  // `engine` on (pinned in instructions.test.ts).
+  it("tells the model which engine the operator is viewing — and to pin it", async () => {
     const { modelContexts } = renderCockpit()
     fireEvent.click(await screen.findByRole("button", { name: /prod-a/ }))
     await waitFor(() => expect(modelContexts.at(-1)).toContain('Ids: engine="prod-a"'))
+    const instructions = camunda7Instructions({
+      engineIds: ["prod-a", "prod-b"],
+      canSaveDefault: true,
+      toolset: "operations",
+    })
+    expect(instructions).toContain(
+      "widget model contexts (the view the operator is on) carry Ids/Tools lines: while one names a single `engine`, pass it on every camunda7 call",
+    )
   })
 })
