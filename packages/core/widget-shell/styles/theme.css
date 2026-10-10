@@ -1,0 +1,197 @@
+/*
+ * @miragon-ai/widget-shell/theme.css — the shell's design tokens WITHOUT a
+ * forced font. A consumer's globals.css imports it after Tailwind (and the
+ * @source lines for the toolkit and widget sources):
+ *
+ *   @import "tailwindcss";
+ *   @source "../../node_modules/@miragon/mcp-toolkit-ui/src";
+ *   @import "@miragon-ai/widget-shell/theme.css";
+ *
+ * It is @miragon/mcp-toolkit-ui/globals.css minus exactly three things
+ * (mcp-toolkit#178 tracks the upstream split):
+ *  - `@import "@fontsource-variable/geist"` — ~61 KB of base64 font inlined
+ *    into every view document;
+ *  - the unlayered `* { font-family: "Geist Variable", … !important }`, which
+ *    beat the host's font and every `font-mono` (stack traces, ids);
+ *  - the inline Geist `--font-sans`: utilities now read Tailwind's own
+ *    `var(--font-sans)` / `var(--font-mono)`, which the host's SEP-1865 style
+ *    variables (set inline on <html>) override — the host font wins inside a
+ *    host, the system stack elsewhere. A brand font is opt-in: load it and set
+ *    `--font-sans` in your own `@theme`.
+ * Its own `@source` and `@import "tailwindcss"` stay with the consumer, whose
+ * paths it cannot know. Everything else is the toolkit's verbatim — held
+ * identical by `src/theme-css.test.ts`; re-copy on a toolkit bump that
+ * changes the tokens.
+ */
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  /* Semantic status tones — the token surface behind ToneVariant/TONE_* maps.
+     Each tone exposes a readable foreground (`text-danger`) and a tinted
+     surface (`bg-danger-soft`); both carry light + dark values so tone-based
+     components (Pills, KpiGrid, WidgetHeader, FilterBar) re-theme automatically. */
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  /* Semantic status tones (light). Foreground = readable on a card; *-soft =
+     a tinted surface for badges/dots/icon tiles. Neutral tone reuses the
+     muted ramp and needs no dedicated token. */
+  --danger: oklch(0.55 0.21 27.3);
+  --danger-soft: oklch(0.95 0.04 27.3);
+  --warning: oklch(0.62 0.16 70);
+  --warning-soft: oklch(0.95 0.05 80);
+  --success: oklch(0.58 0.15 152);
+  --success-soft: oklch(0.95 0.05 152);
+  --info: oklch(0.55 0.2 255);
+  --info-soft: oklch(0.95 0.04 255);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+  /* Semantic status tones (dark). Brighter foregrounds for contrast on the
+     dark surface; *-soft is a low-alpha tint of the same hue. */
+  --danger: oklch(0.7 0.19 22.2);
+  --danger-soft: oklch(0.7 0.19 22.2 / 18%);
+  --warning: oklch(0.78 0.15 75);
+  --warning-soft: oklch(0.78 0.15 75 / 18%);
+  --success: oklch(0.72 0.17 152);
+  --success-soft: oklch(0.72 0.17 152 / 18%);
+  --info: oklch(0.7 0.16 255);
+  --info-soft: oklch(0.7 0.16 255 / 18%);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ── Shell additions (everything above is the toolkit's) ─────────────────── */
+
+/*
+ * McpAppView (toolkit) renders its Fullscreen toggle unconditionally; a host
+ * that offers no fullscreen rejects the request, so the button would be dead.
+ * LocalizedAppView marks its wrapper when the host does not offer the mode,
+ * and the toolbar's Maximize button is hidden there (the Collapse button of a
+ * view already in fullscreen stays). Upstream fix: mcp-toolkit#178.
+ */
+[data-shell-fullscreen="unavailable"] > main > :first-child button:has(> svg.lucide-maximize-2) {
+  display: none;
+}

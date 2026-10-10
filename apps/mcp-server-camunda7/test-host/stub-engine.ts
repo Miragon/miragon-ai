@@ -12,6 +12,7 @@ export interface StubEngine {
 }
 
 interface ProcessDefinition {
+  id: string
   name: string | null
   key: string
 }
@@ -19,6 +20,24 @@ interface ProcessDefinition {
 const DEFINITIONS = JSON.parse(
   readFileSync(path.join(import.meta.dirname, "fixtures", "process-definitions.json"), "utf8"),
 ) as ProcessDefinition[]
+
+/** The one diagram the stub serves (key `invoice`) — for the BPMN canvas scenario. */
+const INVOICE_BPMN = readFileSync(
+  path.join(import.meta.dirname, "fixtures", "invoice.bpmn"),
+  "utf8",
+)
+
+/** `/process-definition/{id}/{xml|statistics}` of a fixture definition, or null. */
+function definitionResource(pathname: string): { status: number; body: unknown } | null {
+  const match = /^\/engine-rest\/process-definition\/([^/]+)\/(xml|statistics)$/.exec(pathname)
+  if (!match) return null
+  const id = decodeURIComponent(match[1])
+  const definition = DEFINITIONS.find((d) => d.id === id)
+  if (!definition) return { status: 404, body: { type: "RestException", message: `No ${id}` } }
+  if (match[2] === "statistics") return { status: 200, body: [] }
+  if (definition.key !== "invoice") return null
+  return { status: 200, body: { id, bpmn20Xml: INVOICE_BPMN } }
+}
 
 /**
  * `nameLike` follows the engine's SQL LIKE (case-insensitive here): `%` is the
@@ -53,6 +72,8 @@ function route(url: URL): { status: number; body: unknown } {
     const max = Number(searchParams.get("maxResults") ?? DEFINITIONS.length)
     return { status: 200, body: filterDefinitions(searchParams).slice(first, first + max) }
   }
+  const resource = definitionResource(pathname)
+  if (resource) return resource
   // Unmapped on purpose (and logged): a widget that starts needing another
   // endpoint shows its error state instead of rendering made-up data.
   console.warn(`[host-sim] stub engine: no fixture for ${pathname}`)
@@ -69,7 +90,8 @@ function route(url: URL): { status: number; body: unknown } {
  * A CIB Seven REST stand-in for the host simulation: the real show tools run
  * against it through the real server, so the view renders the payload the
  * server ACTUALLY builds (view envelope, data shape, engine id) from a fixed
- * engine response (`fixtures/process-definitions.json`). The broken base URL
+ * engine response (`fixtures/process-definitions.json`, plus the `invoice`
+ * diagram `fixtures/invoice.bpmn` with empty statistics). The broken base URL
  * turns any tool into a genuine `isError` result — an engine 503 through the
  * server's own error mapping.
  */

@@ -88,9 +88,12 @@ export {
   type RunningServer,
 } from "./composed-server.js"
 export {
+  explicitLocale,
+  LANGUAGES,
   LOCALES,
   PROFILE_SCHEMA_VERSION,
   THEMES,
+  type LanguagePref,
   type Locale,
   type ThemePref,
 } from "./profile-constants.js"

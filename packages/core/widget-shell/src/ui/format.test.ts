@@ -1,7 +1,60 @@
-import { describe, expect, it } from "vitest"
-import { formatDate, formatDuration, formatTime, formatTimestamp, truncate } from "./format.js"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import {
+  formatDate,
+  formatDuration,
+  formatTime,
+  formatTimestamp,
+  getFormatLocale,
+  setFormatLocale,
+  subscribeFormatLocale,
+  truncate,
+} from "./format.js"
 
 const EMPTY = "—"
+
+afterEach(() => setFormatLocale(undefined))
+
+describe("the published format locale (set by the shell's ProfileGate)", () => {
+  const iso = "2026-07-22T22:15:30.000Z"
+
+  it("renders every date helper in the published locale and time zone, not the browser's", () => {
+    setFormatLocale({ language: "de", locale: "de-AT", timeZone: "Asia/Tokyo" })
+    const date = new Date(iso)
+    expect(formatTimestamp(iso)).toBe(date.toLocaleString("de-AT", { timeZone: "Asia/Tokyo" }))
+    expect(formatDate(iso)).toBe(date.toLocaleDateString("de-AT", { timeZone: "Asia/Tokyo" }))
+    expect(formatTime(iso)).toBe(date.toLocaleTimeString("de-AT", { timeZone: "Asia/Tokyo" }))
+    expect(formatTime(iso, { seconds: false })).toBe(
+      date.toLocaleTimeString("de-AT", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Tokyo",
+      }),
+    )
+    // The zone moves the calendar day: 22:15 UTC is already the 23rd in Tokyo.
+    expect(formatDate(iso)).toContain("23")
+  })
+
+  it("keeps the browser's zone when none is published", () => {
+    setFormatLocale({ language: "en", locale: "en-GB" })
+    expect(formatTimestamp(iso)).toBe(new Date(iso).toLocaleString("en-GB"))
+  })
+
+  it("notifies subscribers on a real change only, and stops after unsubscribe", () => {
+    const listener = vi.fn()
+    const unsubscribe = subscribeFormatLocale(listener)
+    setFormatLocale({ language: "de", locale: "de" })
+    setFormatLocale({ language: "de", locale: "de" })
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(getFormatLocale()).toEqual({ language: "de", locale: "de" })
+
+    setFormatLocale({ language: "de", locale: "de", timeZone: "Europe/Berlin" })
+    expect(listener).toHaveBeenCalledTimes(2)
+    unsubscribe()
+    setFormatLocale(undefined)
+    expect(listener).toHaveBeenCalledTimes(2)
+    expect(getFormatLocale()).toBeUndefined()
+  })
+})
 
 describe("formatTimestamp / formatDate / formatTime", () => {
   it("renders a valid ISO timestamp", () => {

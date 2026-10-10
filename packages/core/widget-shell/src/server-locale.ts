@@ -1,6 +1,7 @@
 import { resolveProfileKey } from "./profile.js"
 import type { ProfileSource } from "./profile.js"
 import { readProfileAdvisory } from "./profile-advisory.js"
+import { explicitLocale } from "./profile-constants.js"
 
 /** A locale-bound translate for server summaries: `t(key, params?) => string`. */
 export type ServerT = (key: string, params?: Record<string, unknown>) => string
@@ -10,7 +11,9 @@ export type Translator = (locale: string, key: string, params?: Record<string, u
 
 /**
  * Resolve the active locale for the in-flight request from the user profile
- * (`resolveProfileKey` → `language`), falling back to English. Pass the
+ * (`resolveProfileKey` → `language`), falling back to English — also for the
+ * `system` preference: the host locale it follows is a widget-side signal
+ * (`hostContext.locale`) the server never sees. Pass the
  * tool-handler `ctx` so the lookup resolves the caller exactly like the save
  * path (`resolveProfileKey`: the OAuth caller from `ctx`) — without it, only
  * the ambient request info can name the caller.
@@ -25,7 +28,9 @@ export async function resolveProfileLocale(
   ctx?: unknown,
 ): Promise<string> {
   if (!store) return "en"
-  return (await readProfileAdvisory(store, resolveProfileKey(ctx)))?.language ?? "en"
+  return (
+    explicitLocale((await readProfileAdvisory(store, resolveProfileKey(ctx)))?.language) ?? "en"
+  )
 }
 
 /**

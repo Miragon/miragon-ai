@@ -191,8 +191,9 @@ never re-inline these primitives:
   (`badge`/`titleSuffix`/`size="detail"`) + `VersionChip` (hero/detail headers);
   `KpiGrid` (KPI strips, incl. `variant="soft"`); `WidgetShell` (page container — split
   into View + Shell only when the body is embedded elsewhere)
-- BPMN: viewer lifecycle via `useBpmnViewer` + `BpmnZoomControls`; highlight/legend
-  colors via `HIGHLIGHT_COLORS` from `src/widgets/bpmn-highlights.ts`
+- BPMN: viewer lifecycle and the fixed light canvas via `useBpmnViewer` +
+  `BpmnZoomControls`; highlight/legend colors via `HIGHLIGHT_COLORS` from
+  `src/widgets/bpmn-highlights.ts`
 
 **Paged list recipe** (every list that can exceed one page follows it — reference:
 `src/widgets/process-instances/list.tsx`):

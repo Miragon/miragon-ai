@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react"
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
 import { type BpmnElement } from "./bpmn-heatmap/heat-utils.js"
 
@@ -37,6 +37,21 @@ export interface BpmnViewerWithGet {
     ((service: "eventBus") => BpmnEventBus)
 }
 
+/**
+ * Paint the canvas every BPMN widget renders on: a fixed LIGHT surface in both
+ * themes, like Camunda Cockpit. bpmn-js paints near-black strokes and labels
+ * and white fills straight into the SVG; on the dark card those sequence
+ * flows and external labels were unreadable, and a light canvas also keeps
+ * the highlight fills (`HIGHLIGHT_COLORS`) and the heatmap's multiply blend
+ * exactly as designed. Inline, so it beats any themed background class a
+ * widget puts on the container — the hook owns the canvas, no call site
+ * opts in.
+ */
+function paintLightCanvas(container: HTMLElement): void {
+  container.style.setProperty("background-color", "#fff")
+  container.style.setProperty("color-scheme", "light")
+}
+
 const FALLBACK_IMPORT_ERROR = "Failed to render the BPMN diagram."
 
 /** Zoom clamp — matches bpmn-js's own navigation limits, keeps ± buttons sane. */
@@ -69,7 +84,10 @@ export interface UseBpmnViewerOptions {
 }
 
 export interface UseBpmnViewerResult {
-  /** Attach to the div the viewer should render into. */
+  /**
+   * Attach to the div the viewer should render into. The hook paints that div
+   * as the fixed light BPMN canvas, in every theme.
+   */
   containerRef: RefObject<HTMLDivElement | null>
   /** Import failure message, or `null` while the diagram renders fine. */
   importError: string | null
@@ -81,8 +99,9 @@ export interface UseBpmnViewerResult {
 
 /**
  * Owns the bpmn-js NavigatedViewer lifecycle shared by every BPMN widget:
- * mount into `containerRef`, `importXML`, initial fit-to-viewport (×0.95),
- * import-error state, zoom handlers, and teardown (`viewer.destroy()`).
+ * the light canvas on `containerRef`, mount, `importXML`, initial
+ * fit-to-viewport (×0.95), import-error state, zoom handlers, and teardown
+ * (`viewer.destroy()`).
  * Callers layer their distinctive behavior on top via {@link UseBpmnViewerOptions.onImported}.
  */
 export function useBpmnViewer({
@@ -101,6 +120,12 @@ export function useBpmnViewer({
   const onImportedRef = useRef(onImported)
   useEffect(() => {
     onImportedRef.current = onImported
+  })
+
+  // Before paint, so the canvas never shows the themed card for a frame; on
+  // every commit, since the ref may now point at a different element.
+  useLayoutEffect(() => {
+    if (containerRef.current) paintLightCanvas(containerRef.current)
   })
 
   const getCanvas = useCallback((): BpmnCanvas | null => {

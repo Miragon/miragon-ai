@@ -150,12 +150,13 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    `QueryFallback` + `TableSkeleton` for self-fetching widgets (a missing `isError`
    branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime`/
    `formatDuration`/`truncate` for all formatting (canonical duration style "3m 7s";
-   an ESLint gate bans `Intl.DateTimeFormat`/`toLocaleDateString`/`toLocaleTimeString`
+   dates render in the shell's effective locale + the host's time zone, published by
+   `ProfileGate`; an ESLint gate bans `Intl.DateTimeFormat`/`toLocaleDateString`/`toLocaleTimeString`
    in widget code — `Number#toLocaleString` for counts stays allowed);
    `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
    `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
-   settings sections; `useBpmnViewer` + `BpmnZoomControls` for BPMN, with
-   highlight/legend colors from `HIGHLIGHT_COLORS`
+   settings sections; `useBpmnViewer` (it owns the fixed light canvas, both themes) +
+   `BpmnZoomControls` for BPMN, with highlight/legend colors from `HIGHLIGHT_COLORS`
    (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total) + `ListTable` (the table
@@ -284,9 +285,14 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    `ANALYTICS_ENGINE_IDS`, else every analytics tool refuses; analytics has NO
    engine-SDK dependency). Apps own no domain UI: widget catalogues and
    components live in packages — and no boot plumbing either. The bundle root's provider
-   stack (`AppShellProviders`: theme → host bridge → display mode → `ProfileGate` →
-   host widget registry; order is load-bearing) plus `LocalizedAppView` live in
-   `@miragon-ai/widget-shell/widgets`, and the whole server boot lives in `/server`:
+   stack (`AppShellProviders`: host context + display mode → host document → host
+   bridge → `ProfileGate` → host widget registry; order is load-bearing; locale and
+   theme resolve explicit profile > host context > OS/English, applied to `.dark`,
+   `data-theme` and `color-scheme` alike) plus `LocalizedAppView` live in
+   `@miragon-ai/widget-shell/widgets`, its font-free token stylesheet in
+   `@miragon-ai/widget-shell/theme.css` (never import the toolkit's `globals.css`: it
+   forces a font with `!important`; no height floor on html/body/#root —
+   `test/ui-stylesheet.test.ts`), and the whole server boot lives in `/server`:
    `createComposedServer` owns the ORDER (env-typo warnings + HTTP edge policy + the
    OAuth/`MCP_URL` check → ONE `resolveBoot`, authenticated exactly when the root hands
    in an OAuth provider → boot log → the root's `setup(boot)` (plugins, persistence) →

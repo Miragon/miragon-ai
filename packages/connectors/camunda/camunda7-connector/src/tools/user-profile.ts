@@ -3,6 +3,7 @@ import {
   appOnly,
   buildDataFeedResult as rawData,
   buildSingleWidgetView,
+  explicitLocale,
   requireProfileKey,
   showToolBinding,
   withToolErrors,
@@ -31,17 +32,19 @@ import { translator } from "../messages/index.js"
 /**
  * One-line, model-facing summary of a profile — localized to the profile's own
  * language (steers the model toward responding in that language; the MCP server
- * cannot force the model's output language).
+ * cannot force the model's output language). `system` follows the host's
+ * locale, a widget-side signal the server never sees — English here.
  */
 function summarize(p: UserProfile): string {
+  const locale = explicitLocale(p.language) ?? "en"
   const engines =
     p.allowedEngineIds && p.allowedEngineIds.length > 0
-      ? translator(p.language, "profile.summary.someEngines", { count: p.allowedEngineIds.length })
-      : translator(p.language, "profile.summary.allEngines")
+      ? translator(locale, "profile.summary.someEngines", { count: p.allowedEngineIds.length })
+      : translator(locale, "profile.summary.allEngines")
   const defaultDashboard = p.defaultDashboardId
-    ? translator(p.language, "profile.summary.defaultDashboard", { id: p.defaultDashboardId })
+    ? translator(locale, "profile.summary.defaultDashboard", { id: p.defaultDashboardId })
     : ""
-  return translator(p.language, "profile.summary", {
+  return translator(locale, "profile.summary", {
     language: p.language,
     theme: p.theme,
     engines,

@@ -6,9 +6,61 @@
  * THE single source for timestamp/duration/truncate rendering — the modules'
  * former local copies drifted into three different duration styles ("3m 7s" /
  * "3.1m" / "3.1min"); the canonical style is the compact "3m 7s" family below.
+ *
+ * Dates render in the view's EFFECTIVE locale and the host's time zone, not
+ * the iframe browser's: the shell's ProfileGate resolves them (explicit
+ * profile language > host locale > English) and publishes them here with
+ * {@link setFormatLocale} before its children render. Outside the shell (unit
+ * renders, fixtures) the browser defaults apply.
  */
 
 const EMPTY = "—"
+
+/** The locale + time zone the date helpers render in. */
+export interface FormatLocale {
+  /** The effective UI language — what the shell's `LocaleProvider` carries. */
+  language: string
+  /** The BCP 47 tag dates format in (the host's full tag when it speaks `language`). */
+  locale: string
+  /** IANA time zone; `undefined` = the browser's. */
+  timeZone?: string
+}
+
+let current: FormatLocale | undefined
+const listeners = new Set<() => void>()
+
+function sameFormatLocale(a: FormatLocale | undefined, b: FormatLocale | undefined): boolean {
+  return a?.language === b?.language && a?.locale === b?.locale && a?.timeZone === b?.timeZone
+}
+
+/**
+ * Publish the locale the date helpers render in (the shell's ProfileGate;
+ * `undefined` restores the browser defaults). A no-op for an unchanged value,
+ * so subscribers only re-render on a real change.
+ */
+export function setFormatLocale(next: FormatLocale | undefined): void {
+  if (sameFormatLocale(current, next)) return
+  current = next
+  for (const listener of listeners) listener()
+}
+
+/** The published format locale — `useSyncExternalStore` snapshot. */
+export function getFormatLocale(): FormatLocale | undefined {
+  return current
+}
+
+/** Subscribe to {@link setFormatLocale} changes — `useSyncExternalStore` subscribe. */
+export function subscribeFormatLocale(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+/** Options for a date helper: the published time zone folded in. */
+function zoned(options: Intl.DateTimeFormatOptions = {}): Intl.DateTimeFormatOptions {
+  return current?.timeZone ? { ...options, timeZone: current.timeZone } : options
+}
 
 /** Parse an ISO string; null for unparsable input so callers render {@link EMPTY}. */
 function parseDate(iso: string): Date | null {
@@ -18,12 +70,12 @@ function parseDate(iso: string): Date | null {
 
 export function formatTimestamp(iso: string | null | undefined): string {
   if (!iso) return EMPTY
-  return parseDate(iso)?.toLocaleString() ?? EMPTY
+  return parseDate(iso)?.toLocaleString(current?.locale, zoned()) ?? EMPTY
 }
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return EMPTY
-  return parseDate(iso)?.toLocaleDateString() ?? EMPTY
+  return parseDate(iso)?.toLocaleDateString(current?.locale, zoned()) ?? EMPTY
 }
 
 export function formatTime(
@@ -34,8 +86,8 @@ export function formatTime(
   const date = parseDate(iso)
   if (!date) return EMPTY
   return opts.seconds === false
-    ? date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : date.toLocaleTimeString()
+    ? date.toLocaleTimeString(current?.locale, zoned({ hour: "2-digit", minute: "2-digit" }))
+    : date.toLocaleTimeString(current?.locale, zoned())
 }
 
 /**

@@ -5,29 +5,44 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 
 - `global-setup.ts` boots the real composition root (`createApp` from
   `src/app.ts`, default read-only deployment) serving `dist/mcp-app.{js,css}`,
-  a CIB Seven REST stub (`stub-engine.ts`, `fixtures/process-definitions.json`)
-  and the host's server side (`host-backend.ts`, a real MCP client) — all on
-  ephemeral loopback ports.
+  a CIB Seven REST stub (`stub-engine.ts`, `fixtures/process-definitions.json`
+  plus the `invoice` diagram `fixtures/invoice.bpmn`) and the host's server
+  side (`host-backend.ts`, a real MCP client) — all on ephemeral loopback ports.
 - `host-sim.html` is a minimal SEP-1865 host. It reads the view resource
   (`resources/read` of `ui://views/<tool>.html` — mcp-use's synthesized inline
   document), renders it as `srcdoc` in a `sandbox="allow-scripts"` iframe
   under the CSP built from the resource's `_meta.ui.csp`, answers
   `ui/initialize`, and proxies every `tools/call` the view makes to the server.
 - The rendering tool is the real `camunda7_show_process_list` against the
-  stub, so the view gets the server's real envelope and data shape.
+  stub (the BPMN scenario: `camunda7_show_bpmn_viewer`; the KPI one: the
+  framework's `render-view` with a `shell:kpi-grid`), so the view gets the
+  server's real envelope and data shape.
 
-| Scenario                      | Host behaviour                                    | Pass criterion                                                                |
-| ----------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
-| keep                          | result WITH `structuredContent`                   | real table renders, **zero** re-executions, no console error, size reported   |
-| in-widget query               | user types into the search                        | the widget's own feed call refetches and filters (guards the vite `dedupe`)   |
-| strip                         | result WITHOUT `structuredContent` (claude.ai)    | **exactly one** re-execution with the invocation's arguments, then renders    |
-| slow tool (pinned)            | result 4 s after `initialized`                    | renders once; today **one** redundant re-execution (toolkit#176, K13)         |
-| `isError` (pinned)            | real engine 503 through the server                | today one re-execution + endless skeleton (toolkit#176, K14)                  |
-| cancel                        | `ui/notifications/tool-cancelled`                 | cancellation text, **zero** re-executions                                     |
-| dark host + dark OS           | `theme: "dark"`, OS dark                          | dark tokens (control for the pin below)                                       |
-| dark host + light OS (pinned) | `theme: "dark"`, OS light                         | today light tokens on the dark canvas (#339, K41) — the host theme should win |
-| no fullscreen (pinned)        | `availableDisplayModes: ["inline"]`               | button still shown (toolkit#178, K22); the click never reaches the host       |
-| fullscreen                    | `availableDisplayModes: ["inline", "fullscreen"]` | the toggle requests fullscreen and follows the host's switch                  |
+| Scenario             | Host behaviour                                    | Pass criterion                                                                 |
+| -------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| keep                 | result WITH `structuredContent`                   | real table renders, **zero** re-executions, no console error, size reported    |
+| in-widget query      | user types into the search                        | the widget's own feed call refetches and filters (guards the vite `dedupe`)    |
+| strip                | result WITHOUT `structuredContent` (claude.ai)    | **exactly one** re-execution with the invocation's arguments, then renders     |
+| slow tool (pinned)   | result 4 s after `initialized`                    | renders once; today **one** redundant re-execution (toolkit#176, K13)          |
+| `isError` (pinned)   | real engine 503 through the server                | today one re-execution + endless skeleton (toolkit#176, K14)                   |
+| cancel               | `ui/notifications/tool-cancelled`                 | cancellation text, **zero** re-executions                                      |
+| dark host + dark OS  | `theme: "dark"`, OS dark                          | dark tokens (control for the scenario below)                                   |
+| dark host + light OS | `theme: "dark"`, OS light                         | the host wins: `.dark`, `data-theme`, `color-scheme` dark, light text (#339)   |
+| light host + dark OS | `theme: "light"`, OS dark                         | the host wins the other way: all three light, dark text                        |
+| no fullscreen        | `availableDisplayModes` `["inline"]` / absent     | no Fullscreen button (shell override until toolkit#178, K22), no request       |
+| host locale `de-DE`  | `locale: "de-DE"`, no saved profile               | German widget and chrome strings, `<html lang="de">` (#339)                    |
+| profile feed missing | `failTools`: the profile feed answers an error    | German, dark view from the host context, painted before the feed's first retry |
+| slow handshake       | `initDelayMs: 3000`                               | nothing painted before `ui/initialize` is answered, then the German, dark view |
+| host font            | `styles.variables["--font-sans"]`                 | body text in the host's font, `font-mono` stays monospace                      |
+| served stylesheet    | —                                                 | no `font-family … !important`, no inlined font, no 600 px floor                |
+| height budget        | `containerDimensions.maxHeight: 220`              | settled report ≤ 220 and ≥ the capped container, the shell scrolls inside it   |
+| inline KPI view      | `render-view` with `shell:kpi-grid`               | settled report < 200 px — sized to content (K40), not the gate skeleton's      |
+| fullscreen           | `availableDisplayModes: ["inline", "fullscreen"]` | the toggle requests fullscreen and follows the host's switch                   |
+| BPMN on a dark host  | `camunda7_show_bpmn_viewer`, `theme: "dark"`      | light canvas, dark flows/labels, every zoom button clickable past the logo     |
+
+Height checks read the **settled** report — the one equal to the document's current
+max-content height — since the ProfileGate skeleton's earlier report (~208 px) can
+still be the last one when the content is already visible.
 
 **Pinned scenarios** assert the CURRENT behaviour of a known defect outside
 this repo's fix scope. They fail on purpose once the fix lands — flip them to

@@ -1,4 +1,5 @@
-import { ListFooter } from "@miragon/mcp-toolkit-ui"
+import { ListFooter, useLocale } from "@miragon/mcp-toolkit-ui"
+import { kitLabels } from "./kit-labels.js"
 import type { PagedViewData } from "./use-paged-view-data.js"
 
 /**
@@ -11,16 +12,17 @@ import type { PagedViewData } from "./use-paged-view-data.js"
 export function PagedListFooter<TItem, TData>({
   paged,
   noun,
-  loadMoreErrorText = (message) => `Failed to load more: ${message}`,
-  retryLabel = "Try again",
+  loadMoreErrorText,
+  retryLabel,
 }: {
   paged: PagedViewData<TItem, TData>
   /** Localized plural noun for "Showing X of Y {noun}". */
   noun?: string
-  /** Localized error line for a failed load-more; receives the error message. */
+  /** Localized error line for a failed load-more (default: the active locale's). */
   loadMoreErrorText?: (message: string) => string
   retryLabel?: string
 }) {
+  const defaults = kitLabels(useLocale())
   return (
     <>
       {/* Screen-reader progress announcement: the visual "Showing X of Y"
@@ -32,13 +34,13 @@ export function PagedListFooter<TItem, TData>({
       </span>
       {paged.error && (
         <div role="alert" className="text-critical flex items-center gap-2 text-xs">
-          <span>{loadMoreErrorText(paged.error.message)}</span>
+          <span>{(loadMoreErrorText ?? defaults.loadMoreFailed)(paged.error.message)}</span>
           <button
             type="button"
             onClick={paged.loadMore}
             className="border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
           >
-            {retryLabel}
+            {retryLabel ?? defaults.retry}
           </button>
         </div>
       )}

@@ -1,9 +1,9 @@
 import { z } from "zod"
 import {
-  LOCALES,
+  LANGUAGES,
   PROFILE_SCHEMA_VERSION,
   THEMES,
-  type Locale,
+  type LanguagePref,
   type ThemePref,
 } from "./profile-constants.js"
 
@@ -20,15 +20,15 @@ import {
  */
 export const profileRecordSchema = z.object({
   language: z
-    .enum(LOCALES)
-    .default("en")
+    .enum(LANGUAGES)
+    .default("system")
     .describe(
-      "UI + summary language. Also steers the language of tool summaries returned to the model.",
+      'UI + summary language; "system" follows the host locale (summaries then stay English).',
     ),
   theme: z
     .enum(THEMES)
     .default("system")
-    .describe('Theme preference: "light", "dark" or "system".'),
+    .describe('Theme preference: "light", "dark" or "system" (the host theme, then the OS).'),
   modules: z
     .record(z.string(), z.unknown())
     .default({})
@@ -58,7 +58,7 @@ export type ProfileRecord = z.infer<typeof profileRecordSchema>
  * `profile.ts`), not in the store.
  */
 export interface ProfileRecordSaveInput {
-  language?: Locale
+  language?: LanguagePref
   theme?: ThemePref
   modules?: Record<string, unknown>
 }

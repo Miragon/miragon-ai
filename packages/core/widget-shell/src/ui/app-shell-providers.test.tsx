@@ -115,15 +115,14 @@ function mount(host: ReturnType<typeof createFakeHost>) {
 const probe = () => document.querySelector("[data-testid=probe]")?.textContent
 const root = document.documentElement
 
-const CLIENT_DEFAULTS = queryClient.getDefaultOptions()
-
 afterEach(async () => {
   await disposeView()
   document.getElementById("root")?.remove()
-  // The toolkit's query client is a module singleton shared by every mount.
+  // The toolkit's query client is a module singleton shared by every mount —
+  // the suite runs on its PRODUCTION defaults (react-query's retries
+  // included); cancelling stops any retry still waiting.
   await queryClient.cancelQueries()
   queryClient.clear()
-  queryClient.setDefaultOptions(CLIENT_DEFAULTS)
   root.className = ""
   root.lang = ""
   root.removeAttribute("data-theme")
@@ -148,11 +147,57 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     // registry is provided below the gate.
     await vi.waitFor(() => expect(probe()).toBe("de|fullscreen|demo:widget"))
     expect(host.toolCalls()).toEqual([{ name: PROFILE_FEED, arguments: {} }])
-    // Profile language and theme are applied document-wide …
+    // Profile language and theme are applied document-wide — one theme on
+    // every channel the CSS, the host and native controls read.
     expect(root.lang).toBe("de")
     expect(root.classList.contains("dark")).toBe(true)
-    // … and the host theme reaches the document through mcp-use's ThemeProvider.
     expect(root.getAttribute("data-theme")).toBe("dark")
+    expect(root.style.getPropertyValue("color-scheme")).toBe("dark")
+  })
+
+  it("follows the HOST's theme and locale for a system profile — over a light OS and English defaults (#339)", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    )
+    const host = createFakeHost({
+      hostContext: { theme: "dark", locale: "de-DE" },
+      tools: { [PROFILE_FEED]: profileResult({ language: "system", theme: "system" }) },
+    })
+    mount(host)
+
+    await vi.waitFor(() => expect(probe()).toBe("de|inline|demo:widget"))
+    expect(root.lang).toBe("de")
+    expect(root.classList.contains("dark")).toBe(true)
+    expect(root.getAttribute("data-theme")).toBe("dark")
+  })
+
+  it("puts the host's style variables and font on the document, and fills it in fullscreen", async () => {
+    const host = createFakeHost({
+      hostContext: {
+        theme: "light",
+        displayMode: "fullscreen",
+        availableDisplayModes: ["inline", "fullscreen"],
+        styles: {
+          variables: { "--font-sans": "HostSans, sans-serif", "--font-mono": "HostMono" },
+          css: { fonts: "@font-face { font-family: HostSans; src: local(Arial); }" },
+        },
+      },
+      tools: { [PROFILE_FEED]: profileResult({ language: "en" }) },
+    })
+    mount(host)
+
+    await vi.waitFor(() => expect(probe()).toBe("en|fullscreen|demo:widget"))
+    // Tailwind's font utilities read these variables: the host's font wins.
+    expect(root.style.getPropertyValue("--font-sans")).toBe("HostSans, sans-serif")
+    expect(root.style.getPropertyValue("--font-mono")).toBe("HostMono")
+    expect(document.getElementById("__mcp-host-fonts")?.textContent).toContain("HostSans")
+    expect(root.style.height).toBe("100%")
+    document.getElementById("__mcp-host-fonts")?.remove()
   })
 
   it("follows a host display-mode change live", async () => {
@@ -170,14 +215,9 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
 
   it("still renders, in English and the OS theme, on a host that cannot call server tools", async () => {
     // No `serverTools` capability: every tool call (the profile feed
-    // included) rejects inside the guest — the gate must degrade, not crash.
-    // The toolkit's client keeps react-query's default retries (~7 s of
-    // backoff), during which the gate is merely LOADING — indistinguishable
-    // from the fallback. Fail at once, and assert only after the failure.
-    queryClient.setDefaultOptions({
-      ...CLIENT_DEFAULTS,
-      queries: { ...CLIENT_DEFAULTS.queries, retry: false },
-    })
+    // included) rejects inside the guest — the gate must degrade, not crash,
+    // and not wait out react-query's retries (the toolkit's client keeps the
+    // default 3, ~7 s of backoff): the first failure releases it.
     // A dark OS, so the theme fallback is observable (light is the default).
     vi.stubGlobal(
       "matchMedia",
@@ -190,10 +230,14 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     const host = createFakeHost({ hostContext: {}, hostCapabilities: {} })
     mount(host)
 
-    await vi.waitFor(() =>
-      expect(queryClient.getQueryState(["camunda7:profile-gate", {}])?.status).toBe("error"),
-    )
-    await vi.waitFor(() => expect(probe()).toBe("en|inline|demo:widget"))
+    // Within 1 s — inside the gate's 1.5 s profile bound, so the bound cannot
+    // be what released it …
+    await vi.waitFor(() => expect(probe()).toBe("en|inline|demo:widget"), { timeout: 1_000 })
+    // … while the retries still run: the query is pending after one failure.
+    expect(queryClient.getQueryState(["camunda7:profile-gate", {}])).toMatchObject({
+      status: "pending",
+      fetchFailureCount: 1,
+    })
     expect(host.toolCalls()).toEqual([])
     expect(root.lang).toBe("en")
     expect(root.classList.contains("dark")).toBe(true)

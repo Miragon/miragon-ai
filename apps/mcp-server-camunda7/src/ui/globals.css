@@ -1,8 +1,17 @@
 @import "tailwindcss";
+@source "../../node_modules/@miragon/mcp-toolkit-ui/src";
 @source "../../../../packages/core/widget-shell/src/ui";
 @source "../../../../packages/connectors/camunda/camunda7-connector/src";
 @source "../../../../packages/connectors/analytics/analytics-connector/src";
-@import "@miragon/mcp-toolkit-ui/globals.css";
+/*
+ * The shell's tokens (the toolkit's shadcn ramp + dark variant) WITHOUT a
+ * forced font — the host's font (SEP-1865 `--font-sans`) or the system stack
+ * renders text, and `font-mono` stays monospace. Never import
+ * `@miragon/mcp-toolkit-ui/globals.css` next to it: it re-adds the
+ * `font-family … !important` rule and ~61 KB of base64 Geist per view
+ * (guarded by test/ui-stylesheet.test.ts).
+ */
+@import "@miragon-ai/widget-shell/theme.css";
 
 /*
  * Brand "tone" tokens layered on top of the toolkit's shadcn base. The toolkit
@@ -75,11 +84,4 @@
   --info: #7aa7e0;
   --info-soft: #16243a;
   --info-foreground: #7aa7e0;
-}
-
-html,
-body,
-#root {
-  min-height: 600px;
-  height: 100%;
 }

@@ -17,7 +17,7 @@ describe("defaultProfileRecord", () => {
     const p = defaultProfileRecord("sess-1")
     expect(p).toMatchObject({
       id: "sess-1",
-      language: "en",
+      language: "system",
       theme: "system",
       modules: {},
       schemaVersion: 3,
@@ -317,7 +317,7 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
     `
     expect(await store.get("sess-sparse")).toMatchObject({
       id: "sess-sparse",
-      language: "en",
+      language: "system",
       theme: "system",
       modules: {},
     })

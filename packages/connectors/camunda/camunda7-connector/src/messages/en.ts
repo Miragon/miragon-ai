@@ -68,7 +68,7 @@ export const en: MessageCatalog = {
 
   "profile.field.language": "Language",
   "profile.field.language.help":
-    "UI language. Also steers the language of tool summaries returned to the model.",
+    "UI language; Automatic follows the chat app. A chosen language also steers the tool summaries returned to the model.",
   "profile.field.theme": "Theme",
   "profile.field.role": "Preferred role",
   "profile.field.role.help": "Hint only — tool access is set by the connection.",
@@ -103,6 +103,7 @@ export const en: MessageCatalog = {
   "theme.light": "Light",
   "theme.dark": "Dark",
   "theme.system": "System",
+  "language.system": "Automatic (follows the chat app)",
   "role.read-only": "Read-only",
   "role.operations": "Operations",
   "role.admin": "Admin",

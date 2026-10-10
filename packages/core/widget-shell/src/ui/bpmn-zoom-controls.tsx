@@ -1,28 +1,47 @@
+import { useLocale } from "@miragon/mcp-toolkit-ui"
 import { cn } from "./cn.js"
+import { kitLabels } from "./kit-labels.js"
+
+export interface BpmnZoomControlsLabels {
+  zoomIn?: string
+  zoomOut?: string
+  fit?: string
+}
 
 export interface BpmnZoomControlsProps {
   onZoomIn: () => void
   onZoomOut: () => void
   onFit: () => void
-  /** Merged over the default placement — e.g. `bottom-6 right-6` repositions. */
+  /** Accessible names; default to the active locale's (en/de). */
+  labels?: BpmnZoomControlsLabels
+  /** Merged over the default placement — e.g. `top-6 right-6` repositions. */
   className?: string
 }
 
 /**
- * The shared floating zoom button bar rendered bottom-right over a BPMN
- * canvas. One class set for every BPMN widget so the controls cannot drift
- * between the plain diagram and the heatmap.
+ * The shared floating zoom button bar rendered top-right over a BPMN canvas.
+ * Top, not bottom: bpmn-js pins its bpmn.io logo — a licence requirement,
+ * never hidden — at the canvas's bottom-right with `z-index: 100`, where it
+ * covered the zoom-out button. One class set for every BPMN widget so the
+ * controls cannot drift between the plain diagram and the heatmap.
  */
-export function BpmnZoomControls({ onZoomIn, onZoomOut, onFit, className }: BpmnZoomControlsProps) {
+export function BpmnZoomControls({
+  onZoomIn,
+  onZoomOut,
+  onFit,
+  labels,
+  className,
+}: BpmnZoomControlsProps) {
+  const defaults = kitLabels(useLocale())
   const buttons = [
-    { label: "+", onClick: onZoomIn, title: "Zoom in" },
-    { label: "⊡", onClick: onFit, title: "Fit to viewport" },
-    { label: "−", onClick: onZoomOut, title: "Zoom out" },
+    { label: "+", onClick: onZoomIn, title: labels?.zoomIn ?? defaults.zoomIn },
+    { label: "⊡", onClick: onFit, title: labels?.fit ?? defaults.fitViewport },
+    { label: "−", onClick: onZoomOut, title: labels?.zoomOut ?? defaults.zoomOut },
   ]
   return (
     <div
       className={cn(
-        "border-border bg-card absolute right-3 bottom-3 flex flex-col overflow-hidden rounded border shadow-sm",
+        "border-border bg-card absolute top-3 right-3 flex flex-col overflow-hidden rounded border shadow-sm",
         className,
       )}
     >

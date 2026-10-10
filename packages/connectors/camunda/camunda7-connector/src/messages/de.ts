@@ -64,7 +64,7 @@ export const de: MessageCatalog = {
 
   "profile.field.language": "Sprache",
   "profile.field.language.help":
-    "UI-Sprache. Steuert auch die Sprache der an das Modell zurückgegebenen Tool-Zusammenfassungen.",
+    "UI-Sprache; „Automatisch“ folgt der Chat-App. Eine gewählte Sprache steuert auch die Tool-Zusammenfassungen an das Modell.",
   "profile.field.theme": "Theme",
   "profile.field.role": "Bevorzugte Rolle",
   "profile.field.role.help": "Nur ein Hinweis — der Tool-Zugriff wird über die Verbindung gesetzt.",
@@ -99,6 +99,7 @@ export const de: MessageCatalog = {
   "theme.light": "Hell",
   "theme.dark": "Dunkel",
   "theme.system": "System",
+  "language.system": "Automatisch (wie die Chat-App)",
   "role.read-only": "Nur Lesen",
   "role.operations": "Betrieb",
   "role.admin": "Administrator",

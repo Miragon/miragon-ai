@@ -120,9 +120,14 @@ describe("parseStoredProfile", () => {
     expect(parsed).toEqual(CURRENT)
   })
 
+  it("keeps the system language preference — following the host is a stored choice", () => {
+    expect(parseStoredProfile({ ...CURRENT, language: "system" })?.language).toBe("system")
+  })
+
   it("degrades an invalid field to ITS default and keeps every other field", () => {
+    // The language default is `system` (follow the host), never a forced locale.
     expect(parseStoredProfile({ ...CURRENT, language: "fr" })).toMatchObject({
-      language: "en",
+      language: "system",
       theme: "dark",
       modules: CURRENT.modules,
     })
@@ -137,7 +142,7 @@ describe("parseStoredProfile", () => {
   it("prefers the store key over the stored id and repairs missing timestamps", () => {
     expect(parseStoredProfile(CURRENT, "other-key")?.id).toBe("other-key")
     const sparse = parseStoredProfile({ schemaVersion: 3 }, "k")
-    expect(sparse).toMatchObject({ id: "k", language: "en", theme: "system", modules: {} })
+    expect(sparse).toMatchObject({ id: "k", language: "system", theme: "system", modules: {} })
     expect(sparse?.createdAt).toBe(sparse?.updatedAt)
     expect(
       parseStoredProfile({ schemaVersion: 3, updatedAt: "2026-02-02T00:00:00.000Z" }, "k"),

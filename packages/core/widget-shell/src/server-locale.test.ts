@@ -23,6 +23,12 @@ describe("resolveProfileLocale", () => {
     expect(await runWithMcpRequestInfo({}, () => resolveProfileLocale(storeWith("de")))).toBe("en")
   })
 
+  it("reads the system preference — and a locale this build ships no catalog for — as English", async () => {
+    // The host locale `system` follows is a widget-side signal the server never sees.
+    expect(await resolveProfileLocale(storeWith("system"), CTX)).toBe("en")
+    expect(await resolveProfileLocale(storeWith("fr"), CTX)).toBe("en")
+  })
+
   it("degrades to English on a store OUTAGE instead of failing the tool", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     const broken: ProfileSource = { get: () => Promise.reject(new Error("pg down")) }

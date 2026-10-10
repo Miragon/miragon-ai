@@ -9,9 +9,30 @@
 export const LOCALES = ["en", "de"] as const
 export type Locale = (typeof LOCALES)[number]
 
-/** Theme preference; `system` follows the OS `prefers-color-scheme`. */
+/**
+ * Language preference: an explicit locale, or `system` — follow the host's
+ * locale (`hostContext.locale`, normalized to a supported language), then
+ * English. Server-side summaries have no host locale, so `system` reads as
+ * English there (`explicitLocale(...) ?? "en"`).
+ */
+export const LANGUAGES = ["system", ...LOCALES] as const
+export type LanguagePref = (typeof LANGUAGES)[number]
+
+/**
+ * Theme preference; `system` follows the host's theme (`hostContext.theme`),
+ * then the OS `prefers-color-scheme`.
+ */
 export const THEMES = ["light", "dark", "system"] as const
 export type ThemePref = (typeof THEMES)[number]
+
+/**
+ * The supported locale a language preference names explicitly — `undefined`
+ * for `system`, a missing value, or anything this build ships no catalog for.
+ * Loose input on purpose: profile feeds arrive untyped.
+ */
+export function explicitLocale(language: string | undefined): Locale | undefined {
+  return LOCALES.find((locale) => locale === language)
+}
 
 /**
  * Bumped when the persisted profile shape changes in a migration-relevant way.

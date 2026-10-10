@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_invoice" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="invoice" name="Invoice Receipt" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_received" name="Invoice received">
+      <bpmn:outgoing>Flow_toApprove</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="approveInvoice" name="Approve Invoice">
+      <bpmn:incoming>Flow_toApprove</bpmn:incoming>
+      <bpmn:outgoing>Flow_toGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_approved" name="Approved?">
+      <bpmn:incoming>Flow_toGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_paid" name="Invoice paid">
+      <bpmn:incoming>Flow_yes</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_rejected" name="Invoice rejected">
+      <bpmn:incoming>Flow_no</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_toApprove" sourceRef="StartEvent_received" targetRef="approveInvoice" />
+    <bpmn:sequenceFlow id="Flow_toGateway" sourceRef="approveInvoice" targetRef="Gateway_approved" />
+    <bpmn:sequenceFlow id="Flow_yes" name="yes" sourceRef="Gateway_approved" targetRef="EndEvent_paid" />
+    <bpmn:sequenceFlow id="Flow_no" name="no" sourceRef="Gateway_approved" targetRef="EndEvent_rejected" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_invoice">
+    <bpmndi:BPMNPlane id="BPMNPlane_invoice" bpmnElement="invoice">
+      <bpmndi:BPMNShape id="StartEvent_received_di" bpmnElement="StartEvent_received">
+        <dc:Bounds x="152" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="129" y="225" width="83" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="approveInvoice_di" bpmnElement="approveInvoice">
+        <dc:Bounds x="250" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_approved_di" bpmnElement="Gateway_approved" isMarkerVisible="true">
+        <dc:Bounds x="415" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="414" y="151" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_paid_di" bpmnElement="EndEvent_paid">
+        <dc:Bounds x="532" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="519" y="145" width="62" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_rejected_di" bpmnElement="EndEvent_rejected">
+        <dc:Bounds x="532" y="262" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="510" y="305" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_toApprove_di" bpmnElement="Flow_toApprove">
+        <di:waypoint x="188" y="200" />
+        <di:waypoint x="250" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_toGateway_di" bpmnElement="Flow_toGateway">
+        <di:waypoint x="350" y="200" />
+        <di:waypoint x="415" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_yes_di" bpmnElement="Flow_yes">
+        <di:waypoint x="440" y="175" />
+        <di:waypoint x="440" y="120" />
+        <di:waypoint x="532" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="447" y="133" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_no_di" bpmnElement="Flow_no">
+        <di:waypoint x="440" y="225" />
+        <di:waypoint x="440" y="280" />
+        <di:waypoint x="532" y="280" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="449" y="250" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

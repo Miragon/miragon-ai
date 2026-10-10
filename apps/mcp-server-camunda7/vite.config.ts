@@ -6,18 +6,6 @@ import tailwindcss from "@tailwindcss/vite"
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    // Bundle-weight guard (assets are inlined via `assetsInlineLimit`, so
-    // unused weight is pure wire cost): the full fontsource geist entry ships
-    // 5 subsets (incl. cyrillic + vietnamese); the latin/latin-ext-only CSS
-    // saves ~100 KB of incompressible base64 for an en/de product. Anchored
-    // regex so the stub CSS's own `…/geist/files/*.woff2` urls keep resolving
-    // upstream.
-    alias: [
-      {
-        find: /^@fontsource-variable\/geist$/,
-        replacement: fileURLToPath(new URL("./src/ui/geist-latin.css", import.meta.url)),
-      },
-    ],
     // The widget packages (camunda7-connector, widget-shell, analytics-connector) and this
     // app each resolve their own pnpm instance of the toolkit/React/Query libs
     // (differing peer-dep hashes). Bundling multiple copies of @miragon/mcp-
