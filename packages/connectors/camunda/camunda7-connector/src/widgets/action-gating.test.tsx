@@ -4,8 +4,14 @@ import type { ComponentType } from "react"
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
-import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
+import {
+  CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_WIDGET_ACTIONS,
+  CAMUNDA7_WIDGET_ACTIONS_DATA,
+} from "../tool-names.js"
 import type { JobPanelData } from "../view-models.js"
+import { GATING_SITES } from "./action-gating.sites.js"
+import { GATING_RENDERERS } from "./action-gating.test-support.js"
 import { VariablesTable } from "./instance-sections.js"
 import { JobPanelWidget } from "./job-panel.js"
 import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
@@ -15,6 +21,38 @@ afterEach(() => {
   // The toolkit query client is a singleton — one test's feed answer must not
   // leak into the next test's gate.
   queryClient.clear()
+})
+
+/** Wait until the gate's feed query has answered, so an absent control is a decision. */
+async function feedSettled() {
+  await waitFor(() =>
+    expect(
+      queryClient.getQueryCache().find({ queryKey: ["camunda7-widget-actions"], exact: false })
+        ?.state.status,
+    ).toBe("success"),
+  )
+}
+
+/** Every widget write offered — the profile save is the view's own `canSave`. */
+const EVERY_WRITE = [...CAMUNDA7_WIDGET_ACTIONS, CAMUNDA7_SAVE_USER_PROFILE]
+
+describe("every in-widget write renders its control only where it is allowed", () => {
+  it.each(GATING_SITES)(
+    "$site — shown when the deployment offers it",
+    async ({ site, control }) => {
+      render(GATING_RENDERERS[site](EVERY_WRITE))
+      expect(await screen.findByRole("button", { name: control })).toBeTruthy()
+    },
+  )
+
+  it.each(GATING_SITES)(
+    "$site — hidden (not disabled) when everything but it is offered",
+    async ({ site, control, write }) => {
+      render(GATING_RENDERERS[site](EVERY_WRITE.filter((offered) => offered !== write)))
+      await feedSettled()
+      expect(screen.queryByRole("button", { name: control })).toBeNull()
+    },
+  )
 })
 
 const JOBS: JobPanelData = {
@@ -66,22 +104,7 @@ function renderWith(widget: ComponentType<Record<string, unknown>>, feed: unknow
   )
 }
 
-/** Wait until the gate's feed query has answered, so an absent button is a decision. */
-async function feedSettled() {
-  await waitFor(() =>
-    expect(
-      queryClient.getQueryCache().find({ queryKey: ["camunda7-widget-actions"], exact: false })
-        ?.state.status,
-    ).toBe("success"),
-  )
-}
-
-describe("write buttons follow the deployment's toolset", () => {
-  it("renders the job retry button when the toolset allows it", async () => {
-    renderWith(JobPanel, { allowedActions: ["camunda7_set_job_retries"] })
-    expect(await screen.findByText("Retry job")).toBeTruthy()
-  })
-
+describe("the gate fails closed and hides only the write", () => {
   it("hides the job retry button in read-only but keeps the AI handoffs", async () => {
     renderWith(JobPanel, { allowedActions: [], modelTools: readOnlyModelTools })
     await feedSettled()
@@ -95,13 +118,13 @@ describe("write buttons follow the deployment's toolset", () => {
     expect(screen.queryByText("Retry job")).toBeNull()
   })
 
-  it("shows the variable edit column only when the write is allowed", async () => {
+  it("drops the variable edit column (not just the button) in read-only", async () => {
     renderWith(Variables, { allowedActions: ["camunda7_set_process_instance_variable"] })
     expect(await screen.findByText("Edit")).toBeTruthy()
     expect(screen.getAllByRole("columnheader")).toHaveLength(4)
-  })
+    cleanup()
+    queryClient.clear()
 
-  it("drops the variable edit column (not just the button) in read-only", async () => {
     renderWith(Variables, { allowedActions: [] })
     await feedSettled()
     expect(screen.queryByText("Edit")).toBeNull()

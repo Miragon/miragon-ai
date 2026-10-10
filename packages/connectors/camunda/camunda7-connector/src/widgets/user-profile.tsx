@@ -1,12 +1,5 @@
 import { useState } from "react"
-import {
-  Alert,
-  AlertDescription,
-  Badge,
-  Button,
-  useToolMutation,
-  useToolQuery,
-} from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, Badge, Button, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import {
   LANGUAGES,
   NativeSelect,
@@ -27,7 +20,7 @@ import { ROLES, type Role } from "../lib/profile-constants.js"
 import { groupEnginesByEnvironment } from "../lib/environments.js"
 import type { UserProfile, UserProfileView } from "../lib/profile-schema.js"
 import { useT } from "../messages/use-t.js"
-import { refreshCockpitData } from "./refresh.js"
+import { useEngineAction } from "./lib/engine-action.js"
 import { ProfileModelContext } from "./user-profile-context.js"
 
 /** Subset of a dashboard summary the picker needs (from `list-dashboards`). */
@@ -152,6 +145,7 @@ export function UserProfileWidget({ data: initialData = null }: { data?: UserPro
     ready: true,
     loadingText: t("profile.loading"),
     emptyText: t("profile.none"),
+    retryText: t("viewState.retry"),
   })
 
   if (!view) return guard
@@ -243,23 +237,30 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
     view.profile.pinnedDashboardIds ?? [],
   )
 
-  const save = useToolMutation(CAMUNDA7_SAVE_USER_PROFILE)
+  // A read-only deployment never registered camunda7_save_user_profile — the
+  // fields stay visible but disabled, and the model must not be told about a
+  // write tool it cannot call. The view decides (it also knows the caller),
+  // so the save is gated by `canSave`, not by the engine-write feed.
+  const canSave = view.canSave
+  const save = useEngineAction<Record<string, unknown>>({
+    tool: CAMUNDA7_SAVE_USER_PROFILE,
+    allowed: canSave,
+  })
+  const saveError = save.error()
   const viewForm = () =>
     fromProfile(
       view.profile,
       view.availableEngines.map((e) => e.id),
     )
   // The baseline is what the user last saw persisted: the view's profile,
-  // advanced to the submitted form after each successful save. A standalone
-  // render (`camunda7_show_user_profile`) gets its view as fixed props and
-  // never refetches, so diffing against `view.profile` would make reverting a
-  // saved change compare equal to the ORIGINAL view and save nothing.
+  // advanced to the submitted form after each successful save — so reverting
+  // a saved change is a change again even before the profile refetched.
   const [baseline, setBaseline] = useState<FormState>(viewForm)
   const [form, setForm] = useState<FormState>(baseline)
   const [savedAt, setSavedAt] = useState<string | null>(null)
 
   // Re-sync form and baseline from server truth whenever the view's profile
-  // changes (the cockpit feed refetches via refreshCockpitData after a save).
+  // changes (the save invalidates the profile feed, which refetches).
   useResetOnChange(view.profile.updatedAt, () => {
     const next = viewForm()
     setBaseline(next)
@@ -293,7 +294,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
 
   function handleSave() {
     const submitted = form
-    save.mutate(
+    save.run(
       changedPreferences(
         submitted,
         baseline,
@@ -303,17 +304,12 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
         onSuccess: () => {
           setBaseline(submitted)
           setSavedAt(formatTime(new Date().toISOString()))
-          refreshCockpitData()
         },
       },
     )
   }
 
   const allEnginesAllowed = form.allowedEngineIds.length >= engines.length
-  // A read-only deployment never registered camunda7_save_user_profile — the
-  // fields stay visible but disabled, and the model must not be told about a
-  // write tool it cannot call.
-  const canSave = view.canSave
 
   return (
     <>
@@ -329,13 +325,13 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           <h2 className="text-xl font-semibold">{t("profile.heading")}</h2>
           <p className="text-muted-foreground mt-1 text-sm">{t("profile.subtitle")}</p>
         </div>
-        {canSave ? (
+        {save.allowed ? (
           <div className="flex items-center gap-2">
-            {savedAt && !save.isPending && (
+            {savedAt && !save.pending() && (
               <Badge variant="secondary">{t("profile.saved", { time: savedAt })}</Badge>
             )}
-            <Button size="sm" onClick={handleSave} disabled={save.isPending}>
-              {save.isPending ? t("profile.saving") : t("profile.save")}
+            <Button size="sm" onClick={handleSave} disabled={save.pending()}>
+              {save.pending() ? t("profile.saving") : t("profile.save")}
             </Button>
           </div>
         ) : (
@@ -343,9 +339,9 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
         )}
       </div>
 
-      {save.isError && (
+      {saveError !== null && (
         <Alert variant="destructive">
-          <AlertDescription>{save.error?.message ?? t("profile.saveError")}</AlertDescription>
+          <AlertDescription>{saveError || t("profile.saveError")}</AlertDescription>
         </Alert>
       )}
 

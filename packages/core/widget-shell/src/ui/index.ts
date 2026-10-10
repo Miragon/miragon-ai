@@ -33,6 +33,7 @@ export { ShellHostProvider, ViewHostBridge, useShellHost, type ShellHost } from 
 export { HostDocument } from "./host-document.js"
 export { SegmentedControl, type SegmentedControlOption } from "./segmented-control.js"
 export { useDetailView } from "./use-detail-view.js"
+export { useViewData, type ViewDataResult } from "./use-view-data.js"
 export { SectionHeading } from "@miragon/mcp-toolkit-ui"
 export { GroupCard } from "@miragon/mcp-toolkit-ui"
 export { LivePill, StatusBadge, CountPill } from "./pills.js"

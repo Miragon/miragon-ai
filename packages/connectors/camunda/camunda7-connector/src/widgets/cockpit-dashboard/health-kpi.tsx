@@ -57,12 +57,14 @@ export function ProcessHealthKpiView({
   engine?: string
 }) {
   const go = useNav()
+  // Standalone the handed-in overview seeds the query, scoped to its own engine.
+  const feedEngine = engine ?? initialData?.engineId
   const { data, loading, error } = useViewData<CockpitDashboardData>(
     initialData,
-    ["camunda7:cockpit-overview", engine ?? null],
+    ["camunda7:cockpit-overview", feedEngine ?? null],
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
-    { engine },
-    !!engine,
+    { engine: feedEngine },
+    !!feedEngine,
   )
   const t = useT()
   const { ask } = useHandOff()

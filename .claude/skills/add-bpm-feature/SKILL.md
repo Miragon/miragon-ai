@@ -300,11 +300,18 @@ exception that uses `server.tool()` directly):
   follow `camunda7_save_user_profile` in `src/tools/user-profile.ts`
   (`resolveCamunda7Toolset` + `isToolInToolset`): a missing toolset resolves to
   `read-only` exactly like an unknown name — never treat `undefined` as "everything".
-- A widget button that calls a write tool (`useToolMutation`) renders only when
-  `useCanRun()` (`src/widgets/widget-actions.ts`) allows that tool, and the tool is
-  listed in `CAMUNDA7_WIDGET_ACTIONS` (`src/tool-names.ts`) — `src/widget-actions.test.ts`
-  enforces the list. Hide the control (and a table column it would leave empty), never
-  just disable it: the toolset is deployment-wide, the user cannot change it.
+- Every in-widget write runs through `useEngineAction({ tool, target, resetOn })`
+  (`src/widgets/lib/engine-action.ts`) — never a raw `useToolMutation`/`callTool`. Its
+  `allowed` is the gate: render the control only when true (hide it and a table column
+  it would leave empty, never just disable it — the toolset is deployment-wide). List
+  the tool in `CAMUNDA7_WIDGET_ACTIONS` (`src/tool-names.ts`) and give it a
+  `WRITE_POLICY` entry (`src/widgets/lib/write-policy.ts`: the query namespaces it
+  changes, and `confirm: true` for irreversible/state-changing writes — then `run`
+  needs a confirmation naming its target, rendered by `EngineActionDialog`, with
+  verb + object on both buttons). Optimistic state reads `action.done` (dropped when
+  `resetOn` changes). `src/widget-actions.test.ts` enforces all of it structurally; add
+  the new call site to `src/widgets/action-gating.sites.ts` + its renderer in
+  `action-gating.test-support.tsx`.
 - Everything the widget tells the model goes through `useHandOff()`
   (`src/widgets/lib/hand-off.ts`): `<AskAiButton prompt={ask(handOff)} />` and
   `<HostModelContext content={context(view)}>`. A hand-off is a typed spec — an `intent`

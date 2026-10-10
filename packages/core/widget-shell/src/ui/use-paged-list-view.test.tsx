@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, renderHook } from "@testing-library/react"
+import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { usePagedListView } from "./use-paged-list-view.js"
 
 // Same stubbing approach as use-paged-view-data.test.tsx: only the toolkit
@@ -52,6 +53,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
+  queryClient.clear()
 })
 
 describe("usePagedListView", () => {
@@ -73,9 +75,18 @@ describe("usePagedListView", () => {
 
   it("drops the handed-in page 0 once a search or filter is active", () => {
     const { result, rerender } = setup({ initialData: PAGE })
-    // Unfiltered: the handed-in page renders, no self-fetch.
+    // Unfiltered: the handed-in page renders — as the seed of the unfiltered
+    // page-0 query, which stays live for a write's refetch.
     expect(result.current.paged.items).toEqual(["a", "b"])
-    expect(mocks.useToolQuery.mock.lastCall?.[3]).toMatchObject({ enabled: false })
+    expect(mocks.useToolQuery.mock.lastCall?.[3]).toMatchObject({ enabled: true })
+    expect(
+      queryClient.getQueryData([
+        "test:list",
+        JSON.stringify({ scope: "s1" }),
+        "page0",
+        { scope: "s1", firstResult: 0, maxResults: 2 },
+      ]),
+    ).toBe(PAGE)
 
     act(() => result.current.setSearch("x"))
     act(() => void vi.advanceTimersByTime(300))

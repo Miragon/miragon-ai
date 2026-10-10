@@ -10,8 +10,8 @@ export interface WidgetActionsFeed {
 
 /**
  * The `camunda7_widget_actions_data` query. The key sits outside the
- * `camunda7:` prefix on purpose — the answer is deployment config, and
- * `refreshCockpitData` refetches that namespace after every mutation.
+ * `camunda7:` prefix on purpose — the answer is deployment config, and the
+ * cockpit's Refresh (`refreshCockpitData`) re-reads that namespace.
  */
 function useWidgetActionsQuery() {
   return useToolQuery<WidgetActionsFeed>(
@@ -58,6 +58,8 @@ export function useModelToolsAnswer(): ModelToolsAnswer {
  *
  * Fails closed: until the feed answers (or when it errors) nothing is allowed,
  * so a button may appear a moment late but never vanishes under the cursor.
+ * Widgets read the gate through `useEngineAction` (its `allowed`), never
+ * directly — the write and its gate travel together.
  */
 export function useCanRun(): (action: Camunda7WidgetAction) => boolean {
   const allowed = useWidgetActionsFeed()?.allowedActions

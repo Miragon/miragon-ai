@@ -55,7 +55,7 @@ function RecoveryButton({
     <Button
       variant="outline"
       size="sm"
-      disabled={recovery.pendingIds.has(incident.id)}
+      disabled={recovery.isPending(incident)}
       title={action === "retry" ? t("procIncTable.retryHint") : undefined}
       onClick={() => recovery.act(incident)}
     >
@@ -114,7 +114,8 @@ export function IncidentTable({
     <div className="bg-muted">
       <ListTable ariaLabel={t("procIncTable.tableLabel")} columns={columns}>
         {visible.map((incident) => {
-          const done = recovery.doneIds.has(incident.id)
+          const done = recovery.isDone(incident)
+          const error = recovery.errorOf(incident)
           const retried = recoveryOf(incident).action !== "resolve"
           const instanceUrl = incident.cockpitInstanceUrl
           return (
@@ -164,7 +165,7 @@ export function IncidentTable({
                   )}
                 </Td>
               </tr>
-              {recovery.error?.incidentId === incident.id && (
+              {error && (
                 <tr>
                   <td
                     colSpan={columnCount}
@@ -172,8 +173,8 @@ export function IncidentTable({
                   >
                     <span className="text-critical text-xs">
                       {retried
-                        ? t("procIncTable.retryError", { message: recovery.error.message })
-                        : t("procIncTable.resolveError", { message: recovery.error.message })}
+                        ? t("procIncTable.retryError", { message: error })
+                        : t("procIncTable.resolveError", { message: error })}
                     </span>
                   </td>
                 </tr>

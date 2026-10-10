@@ -4,7 +4,10 @@ import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
+import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
 import type { TaskFormSchema } from "../view-models.js"
+import type { CompleteTaskArgs, TaskCompletion } from "./lib/complete-task.js"
+import { useEngineAction } from "./lib/engine-action.js"
 import { TaskCompleteForm } from "./task-complete-form.js"
 
 /**
@@ -19,20 +22,36 @@ afterEach(() => {
   queryClient.clear()
 })
 
+/** The deployment offers the completion — the form's submit is gated by it. */
+const COMPLETE_ALLOWED = { allowedActions: ["camunda7_complete_task"] }
+
 function renderForm(
   formSchema: TaskFormSchema | null,
   tools: Record<string, unknown>,
   onCompleted: () => void = () => {},
 ) {
-  const Form: ComponentType<Record<string, unknown>> = () => (
-    <TaskCompleteForm
-      taskId="t-1"
-      engine="prod"
-      formSchema={formSchema}
-      onCompleted={onCompleted}
-    />
+  const Form: ComponentType<Record<string, unknown>> = () => {
+    const complete = useEngineAction<CompleteTaskArgs, TaskCompletion>({
+      tool: "camunda7_complete_task",
+      target: (args) => args.taskId,
+    })
+    return (
+      <TaskCompleteForm
+        taskId="t-1"
+        engine="prod"
+        formSchema={formSchema}
+        action={complete}
+        onCompleted={onCompleted}
+      />
+    )
+  }
+  render(
+    <WidgetFixtureHost
+      widget={Form}
+      data={{}}
+      tools={{ [CAMUNDA7_WIDGET_ACTIONS_DATA]: COMPLETE_ALLOWED, ...tools }}
+    />,
   )
-  render(<WidgetFixtureHost widget={Form} data={{}} tools={tools} />)
 }
 
 const NO_FIELDS: TaskFormSchema = { taskId: "t-1", fields: [] }

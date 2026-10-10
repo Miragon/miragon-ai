@@ -1,18 +1,11 @@
 import { useMemo, useState } from "react"
-import {
-  Alert,
-  AlertDescription,
-  Button,
-  Input,
-  useToolMutation,
-  useToolQuery,
-} from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, Button, Input, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { NativeSelect } from "@miragon-ai/widget-shell/widgets"
 
 import { useT } from "../messages/use-t.js"
 import type { TaskFormField, TaskFormSchema } from "../view-models.js"
 import { coerceValue } from "./lib/coerce-value.js"
-import { refreshCockpitData } from "./refresh.js"
+import type { CompleteTaskAction } from "./lib/complete-task.js"
 
 interface TaskCompleteFormProps {
   taskId: string
@@ -21,6 +14,7 @@ interface TaskCompleteFormProps {
   engine?: string
   /** Pre-fetched form schema, if the server already provided one. */
   formSchema?: TaskFormSchema | null
+  action: CompleteTaskAction
   onCompleted?: () => void
   onCancel?: () => void
 }
@@ -34,17 +28,11 @@ interface ManualEntry {
 
 const TYPE_OPTIONS = ["String", "Boolean", "Long", "Double", "Date", "Json"]
 
-/** What `camunda7_complete_task` reports: a delegated task is resolved, not completed. */
-interface TaskCompletion {
-  outcome?: "completed" | "resolved"
-  /** For a resolved task: its owner, now its assignee again. */
-  assignee?: string | null
-}
-
 export function TaskCompleteForm({
   taskId,
   engine,
   formSchema,
+  action,
   onCompleted,
   onCancel,
 }: TaskCompleteFormProps) {
@@ -76,6 +64,7 @@ export function TaskCompleteForm({
       taskId={taskId}
       engine={engine}
       schema={schema}
+      action={action}
       onCompleted={onCompleted}
       onCancel={onCancel}
     />
@@ -86,13 +75,20 @@ interface BodyProps {
   taskId: string
   engine?: string
   schema: TaskFormSchema
+  action: CompleteTaskAction
   onCompleted?: () => void
   onCancel?: () => void
 }
 
-function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }: BodyProps) {
+function TaskCompleteFormBody({
+  taskId,
+  engine,
+  schema,
+  action,
+  onCompleted,
+  onCancel,
+}: BodyProps) {
   const t = useT()
-  const completeMutation = useToolMutation<TaskCompletion>("camunda7_complete_task")
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() =>
     initialFieldValues(schema),
   )
@@ -141,19 +137,19 @@ function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }:
       variables[name] = { value: coerced, type: entry.type }
     }
 
-    completeMutation.mutate(
+    // The action refreshes the instance either way: a completion opens the
+    // next task, a resolve shows the owner as the assignee again.
+    action.run(
       { taskId, variables, engine },
       {
         onSuccess: (result) => {
           if (result?.outcome === "resolved") {
             setResolvedTo({ owner: result.assignee ?? null })
-            // The task card shows the owner as its assignee again.
-            refreshCockpitData()
             return
           }
           onCompleted?.()
         },
-        onError: (error) => setSubmitError(error instanceof Error ? error.message : String(error)),
+        onError: (error) => setSubmitError(error.message),
       },
     )
   }
@@ -221,9 +217,7 @@ function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }:
               {t("taskForm.cancel")}
             </Button>
           )}
-          <Button type="submit" size="sm" disabled={completeMutation.isPending}>
-            {completeMutation.isPending ? t("taskForm.completing") : t("taskForm.complete")}
-          </Button>
+          <CompleteButton action={action} taskId={taskId} />
         </div>
       </div>
       {resolvedTo && (
@@ -239,6 +233,18 @@ function TaskCompleteFormBody({ taskId, engine, schema, onCompleted, onCancel }:
         </Alert>
       )}
     </form>
+  )
+}
+
+/** The submit — only where the deployment offers the completion. */
+function CompleteButton({ action, taskId }: { action: CompleteTaskAction; taskId: string }) {
+  const t = useT()
+  if (!action.allowed) return null
+  const pending = action.pending(taskId)
+  return (
+    <Button type="submit" size="sm" disabled={pending}>
+      {pending ? t("taskForm.completing") : t("taskForm.complete")}
+    </Button>
   )
 }
 

@@ -86,20 +86,91 @@ function route(url: URL): { status: number; body: unknown } {
   }
 }
 
+interface StubJob {
+  id: string
+  processInstanceId: string
+  processDefinitionKey: string
+  processDefinitionId: string
+  failedActivityId: string
+  retries: number
+  exceptionMessage: string
+  dueDate: null
+  suspended: boolean
+  priority: number
+  createTime: string
+}
+
+/**
+ * The write scenario's job (`write-refresh.spec.ts`): failed — no retries
+ * left — until a retry lands. The one stateful corner of the stub, owned by
+ * that one scenario.
+ */
+function failedJob(): StubJob {
+  return {
+    id: "job-1",
+    processInstanceId: "pi-1",
+    processDefinitionKey: "invoice",
+    processDefinitionId: "invoice:3:7f1c2a9e-2f4b-11f1-9c7e-0242ac120004",
+    failedActivityId: "chargeCard",
+    retries: 0,
+    exceptionMessage: "Card declined",
+    dueDate: null,
+    suspended: false,
+    priority: 0,
+    createTime: "2026-10-10T08:00:00.000+0000",
+  }
+}
+
+/** `/job` reads and the retries write; null for every other request. */
+function jobRoute(
+  method: string,
+  url: URL,
+  body: unknown,
+  jobs: Map<string, StubJob>,
+): { status: number; body: unknown } | null {
+  const { pathname, searchParams } = url
+  const listed = () =>
+    [...jobs.values()].filter(
+      (j) => searchParams.get("noRetriesLeft") !== "true" || j.retries === 0,
+    )
+  if (method === "GET" && pathname === "/engine-rest/job/count") {
+    return { status: 200, body: { count: listed().length } }
+  }
+  if (method === "GET" && pathname === "/engine-rest/job") return { status: 200, body: listed() }
+  const retries = /^\/engine-rest\/job\/([^/]+)\/retries$/.exec(pathname)
+  const job = retries ? jobs.get(decodeURIComponent(retries[1])) : undefined
+  if (method === "PUT" && job) {
+    job.retries = Number((body as { retries?: unknown } | undefined)?.retries ?? 0)
+    return { status: 204, body: undefined }
+  }
+  return null
+}
+
+async function readJson(req: http.IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = []
+  for await (const chunk of req) chunks.push(chunk as Buffer)
+  const text = Buffer.concat(chunks).toString("utf8")
+  return text ? (JSON.parse(text) as unknown) : undefined
+}
+
 /**
  * A CIB Seven REST stand-in for the host simulation: the real show tools run
  * against it through the real server, so the view renders the payload the
  * server ACTUALLY builds (view envelope, data shape, engine id) from a fixed
  * engine response (`fixtures/process-definitions.json`, plus the `invoice`
- * diagram `fixtures/invoice.bpmn` with empty statistics). The broken base URL
- * turns any tool into a genuine `isError` result — an engine 503 through the
- * server's own error mapping.
+ * diagram `fixtures/invoice.bpmn` with empty statistics and one failed job).
+ * The broken base URL turns any tool into a genuine `isError` result — an
+ * engine 503 through the server's own error mapping.
  */
 export async function startStubEngine(): Promise<StubEngine> {
+  const jobs = new Map([["job-1", failedJob()]])
   const server = http.createServer((req, res) => {
-    const { status, body } = route(new URL(req.url ?? "/", "http://stub"))
-    res.writeHead(status, { "content-type": "application/json" })
-    res.end(JSON.stringify(body))
+    void readJson(req).then((requestBody) => {
+      const url = new URL(req.url ?? "/", "http://stub")
+      const { status, body } = jobRoute(req.method ?? "GET", url, requestBody, jobs) ?? route(url)
+      res.writeHead(status, { "content-type": "application/json" })
+      res.end(body === undefined ? undefined : JSON.stringify(body))
+    })
   })
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
   const { port } = server.address() as AddressInfo

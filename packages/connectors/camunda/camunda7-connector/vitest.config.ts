@@ -37,8 +37,11 @@ export default mergeConfig(
         // (measured statements 77.26 / branches 63.80 / functions 74.06 /
         // lines 78.57). The #338 hand-offs rendered against each toolset's
         // live surface (measured standalone 74.1 / 60.39 / 69.05 / 75.57)
-        // stay under the stacked floor.
-        thresholds: { statements: 75, branches: 61, functions: 72, lines: 76 },
+        // stay under the stacked floor. Raised 2026-10-10 with the #341
+        // write-path suites — the engine-action primitive, the render-level
+        // gating of every write site, the seeded standalone refresh (measured
+        // 83.38 / 71.81 / 81.22 / 84.39; main was 78.66 / 66.81 / 75.72 / 79.89).
+        thresholds: { statements: 81, branches: 69, functions: 79, lines: 82 },
       },
     },
   }),

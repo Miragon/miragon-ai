@@ -1,0 +1,215 @@
+// @vitest-environment happy-dom
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { ReactNode } from "react"
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
+import { AppQueryProvider, queryClient } from "@miragon/mcp-toolkit-ui"
+import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../../tool-names.js"
+import { useEngineAction, type ActionConfirmation } from "./engine-action.js"
+import { WRITE_POLICY } from "./write-policy.js"
+
+/** The fake host: the widget-actions feed answers `allowed`, writes go to `write`. */
+let allowed: string[]
+const write = vi.fn<(name: string, args: object) => unknown>()
+
+function callTool(name: string, args: object) {
+  if (name === CAMUNDA7_WIDGET_ACTIONS_DATA) {
+    return Promise.resolve({ structuredContent: { allowedActions: allowed, modelTools: [] } })
+  }
+  return Promise.resolve(write(name, args)).then((result) => ({ structuredContent: result }))
+}
+
+function wrapper({ children }: { children: ReactNode }) {
+  return <AppQueryProvider callTool={callTool}>{children}</AppQueryProvider>
+}
+
+interface RetryArgs extends Record<string, unknown> {
+  jobId: string
+  retries: number
+}
+
+function retryAction(resetOn?: unknown) {
+  return renderHook(
+    ({ reset }: { reset: unknown }) =>
+      useEngineAction<RetryArgs>({
+        tool: "camunda7_set_job_retries",
+        target: (args) => args.jobId,
+        resetOn: reset,
+      }),
+    { wrapper, initialProps: { reset: resetOn } },
+  )
+}
+
+const CONFIRM: ActionConfirmation = {
+  title: "Resolve this incident?",
+  description: "Marks it resolved.",
+  target: [["Incident", "inc-1"]],
+  confirmLabel: "Resolve incident",
+  keepLabel: "Keep open",
+}
+
+beforeEach(() => {
+  allowed = ["camunda7_set_job_retries", "camunda7_resolve_incident"]
+  write.mockReset()
+  write.mockReturnValue({ success: true })
+})
+
+afterEach(() => {
+  cleanup()
+  queryClient.clear()
+  vi.restoreAllMocks()
+})
+
+describe("useEngineAction — the gate", () => {
+  it("is not allowed (and runs nothing) until the deployment's feed allows it", async () => {
+    allowed = []
+    const { result } = retryAction()
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0))
+    expect(result.current.allowed).toBe(false)
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it("takes a self-gated write's decision from the view", () => {
+    const { result } = renderHook(
+      () => useEngineAction({ tool: CAMUNDA7_SAVE_USER_PROFILE, allowed: true }),
+      { wrapper },
+    )
+    expect(result.current.allowed).toBe(true)
+  })
+})
+
+describe("useEngineAction — the write", () => {
+  it("runs per target: pending, then done with the result, then the targeted refresh", async () => {
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+    write.mockReturnValue({ success: true, retries: 1 })
+    const { result } = retryAction()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    expect(result.current.pending("job-1")).toBe(true)
+    expect(result.current.pending("job-2")).toBe(false)
+    expect(result.current.pending()).toBe(true)
+    await waitFor(() => expect(result.current.done.has("job-1")).toBe(true))
+
+    expect(write).toHaveBeenCalledWith("camunda7_set_job_retries", { jobId: "job-1", retries: 1 })
+    expect(result.current.done.get("job-1")).toEqual({
+      args: { jobId: "job-1", retries: 1 },
+      result: { success: true, retries: 1 },
+    })
+    expect(result.current.pending()).toBe(false)
+    const refreshed = invalidate.mock.calls.map(([filters]) => filters?.queryKey?.[0])
+    expect(refreshed).toEqual(WRITE_POLICY.camunda7_set_job_retries.invalidates)
+  })
+
+  it("keeps a failure at its target until that target runs again — and refreshes nothing", async () => {
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+    write.mockImplementationOnce(() => {
+      throw new Error("job gone")
+    })
+    const onError = vi.fn()
+    const { result } = retryAction()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { onError }))
+    await waitFor(() => expect(result.current.error("job-1")).toBe("job gone"))
+    expect(result.current.error("job-2")).toBeNull()
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: "job gone" }))
+    expect(invalidate).not.toHaveBeenCalled()
+
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    expect(result.current.error("job-1")).toBeNull()
+    await waitFor(() => expect(result.current.done.has("job-1")).toBe(true))
+  })
+
+  it("ignores a second run of a target that is still in flight", async () => {
+    let finish!: (value: unknown) => void
+    write.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
+    const { result } = retryAction()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    act(() => finish({ success: true }))
+    await waitFor(() => expect(result.current.pending()).toBe(false))
+    expect(write).toHaveBeenCalledTimes(1)
+  })
+
+  it("drops the success marks when fresh server data arrives", async () => {
+    const { result, rerender } = retryAction({ rows: 1 })
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { onSuccess: () => {} }))
+    await waitFor(() => expect(result.current.done.size).toBe(1))
+    rerender({ reset: { rows: 0 } })
+    expect(result.current.done.size).toBe(0)
+  })
+})
+
+describe("useEngineAction — a write that asks first", () => {
+  function resolveAction() {
+    return renderHook(
+      () =>
+        useEngineAction<{ incidentId: string }>({
+          tool: "camunda7_resolve_incident",
+          target: (args) => args.incidentId,
+        }),
+      { wrapper },
+    )
+  }
+
+  it("refuses to run without a confirmation that names its target", async () => {
+    const { result } = resolveAction()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    expect(() => result.current.run({ incidentId: "inc-1" })).toThrow(/asks first/)
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it("asks, runs on confirm, and closes the question once the write succeeded", async () => {
+    const onSuccess = vi.fn()
+    const { result } = resolveAction()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM, onSuccess }))
+    expect(result.current.confirmation).toEqual({ target: "inc-1", spec: CONFIRM })
+    expect(write).not.toHaveBeenCalled()
+
+    act(() => result.current.confirm())
+    expect(result.current.pending("inc-1")).toBe(true)
+    await waitFor(() => expect(result.current.confirmation).toBeNull())
+    expect(write).toHaveBeenCalledWith("camunda7_resolve_incident", { incidentId: "inc-1" })
+    expect(onSuccess).toHaveBeenCalledWith({ success: true })
+  })
+
+  it("keeps the question open with its failure; dismissing keeps the failure for the row", async () => {
+    write.mockImplementation(() => {
+      throw new Error("not resolvable")
+    })
+    const { result } = resolveAction()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    act(() => result.current.confirm())
+    await waitFor(() => expect(result.current.error("inc-1")).toBe("not resolvable"))
+    expect(result.current.confirmation).not.toBeNull()
+
+    act(() => result.current.dismiss())
+    expect(result.current.confirmation).toBeNull()
+    expect(result.current.error("inc-1")).toBe("not resolvable")
+
+    // Asking again starts a fresh question — the old failure does not greet it.
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    expect(result.current.error("inc-1")).toBeNull()
+  })
+
+  it("cannot be dismissed or confirmed again while the write is in flight", async () => {
+    let finish!: (value: unknown) => void
+    write.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
+    const { result } = resolveAction()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    act(() => result.current.confirm())
+    act(() => result.current.dismiss())
+    act(() => result.current.confirm())
+    expect(result.current.confirmation).not.toBeNull()
+    act(() => finish({ success: true }))
+    await waitFor(() => expect(result.current.confirmation).toBeNull())
+    expect(write).toHaveBeenCalledTimes(1)
+  })
+})

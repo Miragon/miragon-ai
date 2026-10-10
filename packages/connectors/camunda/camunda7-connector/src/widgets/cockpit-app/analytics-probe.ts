@@ -16,8 +16,8 @@ const ANALYTICS_PROBE_TOOL = "analytics_settings_data"
  * False until the probe answers: the cross-engine view it gates appears once
  * confirmed and never vanishes under the cursor. A Prometheus outage does not
  * flip it — that stays visible as the landscape widget's own error. The key
- * sits outside the `camunda7:`/`analytics:` prefixes, which
- * `refreshCockpitData` refetches after every mutation.
+ * sits outside the `camunda7:`/`analytics:` prefixes, which the cockpit's
+ * Refresh (`refreshCockpitData`) re-reads.
  */
 export function useAnalyticsActive(): boolean {
   return useToolQuery(["analytics-probe"], ANALYTICS_PROBE_TOOL, {}).isSuccess

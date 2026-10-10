@@ -362,11 +362,21 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    toolset no longer means "everything", the vocabulary resolves it to the read-only
    floor — and carries that same decision into its view as `canSave`, so the
    section renders disabled fields instead of a Save button whose click would resolve to
-   an unknown tool. In-widget engine writes follow the same rule: every tool a widget
-   mutates is listed in `CAMUNDA7_WIDGET_ACTIONS` (`tool-names.ts`) and its button renders
-   only when `useCanRun()` allows it (fed by `camunda7_widget_actions_data` →
-   `allowedWidgetActions`) — hidden, not disabled; `src/widget-actions.test.ts` fails on
-   an unlisted in-widget write. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
+   an unknown tool. In-widget engine writes follow the same rule, through ONE
+   primitive: every widget write runs via `useEngineAction`
+   (`camunda7-connector/src/widgets/lib/engine-action.ts`), which bundles the gate
+   (`allowed`, from `camunda7_widget_actions_data` → `allowedWidgetActions` for the tools
+   in `CAMUNDA7_WIDGET_ACTIONS`; the profile save passes its view's `canSave`), the
+   confirmation that NAMES its target, the targeted invalidation and the optimistic
+   marks (`WRITE_POLICY` in `widgets/lib/write-policy.ts` says what each write changes
+   and whether it asks first) — controls are hidden, not disabled.
+   `src/widget-actions.test.ts` scans the widget sources structurally (no raw
+   `useToolMutation`/`useCanRun` outside the primitive, no `callTool` of a write tool,
+   every write listed), and `widgets/action-gating.test.tsx` renders every call site
+   against a feed that excludes its write. Standalone views refresh after a write
+   because their tool result is the SEED of a live feed query (`useViewData`/
+   `useDetailView`/`usePagedViewData` in widget-shell), scoped to the seed's own echoed
+   engine and target. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in
    `packages/connectors/camunda/camunda7-connector/src/providers/` — the port holds ONLY real differences:
    cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)

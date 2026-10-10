@@ -10,12 +10,11 @@ import {
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
-import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
 import { useNav } from "../navigation.js"
-import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 import { diagramActivityFraction } from "./activity-scope.js"
+import { useDefinitionData } from "./feed.js"
 
 /**
  * Triage of ONE definition's health: cluster its incidents by root cause and
@@ -136,12 +135,10 @@ export function ProcessDetailHeader({
   const t = useT()
   const go = useNav()
   const { ask } = useHandOff()
-  const { data, loading, error } = useViewData<ProcessIncidentsData>(
+  const { data, loading, error, refetch } = useDefinitionData(
     initialData,
-    ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
-    CAMUNDA7_PROCESS_INCIDENTS_DATA,
-    { processDefinitionKey, engine },
-    !!processDefinitionKey,
+    processDefinitionKey,
+    engine,
   )
 
   if (!data) {
@@ -152,6 +149,8 @@ export function ProcessDetailHeader({
           error={error}
           loadingText={t("procIncHeader.loading")}
           emptyText={t("procIncHeader.noData")}
+          onRetry={refetch}
+          retryLabel={t("viewState.retry")}
         />
       </WidgetShell>
     )

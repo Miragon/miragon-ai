@@ -12,10 +12,9 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { BpmnDiagram, type BpmnHighlight } from "../bpmn-diagram.js"
-import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../../tool-names.js"
-import { useViewData } from "../use-view-data.js"
 import { useT } from "../../messages/use-t.js"
 import { diagramActivityFraction } from "./activity-scope.js"
+import { useDefinitionData } from "./feed.js"
 
 type FlowMode = "incidents" | "frequency" | "duration"
 
@@ -157,13 +156,7 @@ export function ProcessDefinitionFlow({
   initialMode?: "incidents" | "frequency"
 }) {
   const t = useT()
-  const { data, loading, error } = useViewData<ProcessIncidentsData>(
-    initialData,
-    ["camunda7:process-incidents", engine ?? null, processDefinitionKey ?? null],
-    CAMUNDA7_PROCESS_INCIDENTS_DATA,
-    { processDefinitionKey, engine },
-    !!processDefinitionKey,
-  )
+  const { data, loading, error } = useDefinitionData(initialData, processDefinitionKey, engine)
   const [mode, setMode] = useState<FlowMode>(initialMode)
   const [heatmapUnavailable, setHeatmapUnavailable] = useState(false)
   // Analytics absent → fall back to the incident overlays; the two heatmap

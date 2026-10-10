@@ -1,5 +1,4 @@
-import { useState } from "react"
-import { Alert, AlertDescription, parseToolResult, useCallTool } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, Button } from "@miragon/mcp-toolkit-ui"
 import {
   AskAiButton,
   DrillButton,
@@ -9,7 +8,6 @@ import {
   WidgetHeader,
   WidgetShell,
   formatTime,
-  useResetOnChange,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
@@ -183,10 +181,12 @@ function HealthUnavailable({
   engine,
   loading,
   error,
+  onRetry,
 }: {
   engine?: string
   loading: boolean
   error: Error | null
+  onRetry: () => void
 }) {
   const t = useT()
   const { ask } = useHandOff()
@@ -196,7 +196,12 @@ function HealthUnavailable({
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>
         </Alert>
-        <AskAiButton variant="primary" prompt={ask(diagnoseHandOff(engine, error.message))} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            {t("viewState.retry")}
+          </Button>
+          <AskAiButton variant="primary" prompt={ask(diagnoseHandOff(engine, error.message))} />
+        </div>
       </div>
     )
   }
@@ -310,13 +315,6 @@ function ClustersSection({
   )
 }
 
-/** Locally refreshed snapshot, tagged with the engine generation it belongs to. */
-interface RefreshState {
-  gen: number
-  live: EngineHealthData | null
-  refreshing: boolean
-}
-
 /**
  * Shell-less AI-first engine overview. One component, two modes (like the cockpit
  * widgets): standalone the agent's data arrives via `data`; inside the cockpit
@@ -334,67 +332,26 @@ export function EngineHealthView({
 }) {
   const t = useT()
   const go = useNav()
-  const callTool = useCallTool()
   const { ask, context } = useHandOff()
+  // Standalone the handed-in verdict SEEDS the feed query, scoped to the
+  // engine it was read from — so the manual refresh (and a write's refetch)
+  // re-reads the same engine in both modes, never the caller's default.
   // Always ready: unlike the per-process widgets (whose feeds require an id),
   // the health feed's `engine` is optional — resolveEngine falls back to the
   // caller's saved default engine or the single configured engine. Gating on
   // `!!engine` would leave a composed render without props stuck on
   // "No data available" forever.
-  const {
-    data: fetched,
-    loading,
-    error,
-  } = useViewData<EngineHealthData>(
+  const feedEngine = engine ?? initialData?.engineId
+  const { data, loading, error, refreshError, refreshing, refetch } = useViewData<EngineHealthData>(
     initialData,
-    ["camunda7:engine-health", engine ?? null],
+    ["camunda7:engine-health", feedEngine ?? null],
     CAMUNDA7_ENGINE_HEALTH_DATA,
-    { engine },
+    { engine: feedEngine },
     true,
   )
 
-  // Manual refresh that works in BOTH modes: standalone the initial data is a
-  // conversation snapshot (the self-fetch query is disabled), so a direct
-  // re-pull of the feed replaces it locally. Reset when the engine changes.
-  //
-  // Request generation: an engine switch invalidates every in-flight refresh, so
-  // a slow response for engine A can never show A's snapshot while the view
-  // already displays engine B. It lives in state (not a ref) so the reset can
-  // run in the render phase — a discarded render then leaves no trace, and the
-  // cleared snapshot lands in the same commit as the new engine. Overlapping
-  // refreshes for one engine need no generation of their own: the button is
-  // disabled while one is in flight.
-  const [refreshState, setRefreshState] = useState<RefreshState>({
-    gen: 0,
-    live: null,
-    refreshing: false,
-  })
-  useResetOnChange(engine, () =>
-    setRefreshState((prev) => ({ gen: prev.gen + 1, live: null, refreshing: false })),
-  )
-  const { live, refreshing } = refreshState
-  const data = live ?? fetched
-
-  async function refresh() {
-    if (!callTool) return
-    const gen = refreshState.gen
-    const current = (prev: RefreshState) => prev.gen === gen
-    setRefreshState((prev) => (current(prev) ? { ...prev, refreshing: true } : prev))
-    try {
-      const result = await callTool(CAMUNDA7_ENGINE_HEALTH_DATA, {
-        engine: engine ?? data?.engineId,
-      })
-      const snapshot = parseToolResult<EngineHealthData>(result)
-      setRefreshState((prev) => (current(prev) ? { ...prev, live: snapshot } : prev))
-    } catch {
-      // Keep the last snapshot on a failed refresh; the next attempt can retry.
-    } finally {
-      setRefreshState((prev) => (current(prev) ? { ...prev, refreshing: false } : prev))
-    }
-  }
-
   if (!data) {
-    return <HealthUnavailable engine={engine} loading={loading} error={error} />
+    return <HealthUnavailable engine={engine} loading={loading} error={error} onRetry={refetch} />
   }
 
   const status = STATUS[data.status]
@@ -425,12 +382,18 @@ export function EngineHealthView({
         <span aria-hidden="true">·</span>
         <button
           type="button"
-          onClick={() => void refresh()}
+          onClick={refetch}
           disabled={refreshing}
           className="hover:text-foreground focus-visible:ring-ring rounded font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
         >
           {refreshing ? t("engineHealth.refreshing") : t("engineHealth.refresh")}
         </button>
+        {/* A failed re-pull keeps the last verdict — and says it is not current. */}
+        {refreshError && !refreshing && (
+          <span role="alert" className="text-critical">
+            {t("engineHealth.refreshFailed", { message: refreshError.message })}
+          </span>
+        )}
       </div>
 
       <HealthKpis summary={data.summary} status={status} go={go} />

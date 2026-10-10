@@ -52,13 +52,15 @@ export function ProcessDefinitionsSection({
     setLimit(PAGE_SIZE)
   }
   // Shares the health KPI's query key → deduped to a single fetch (see
-  // health-kpi.tsx). Self-fetches in the cockpit; uses props standalone.
+  // health-kpi.tsx). Self-fetches in the cockpit; standalone the handed-in
+  // overview seeds the query, scoped to its own engine.
+  const feedEngine = engine ?? initialData?.engineId
   const { data, loading, error } = useViewData<CockpitDashboardData>(
     initialData,
-    ["camunda7:cockpit-overview", engine ?? null],
+    ["camunda7:cockpit-overview", feedEngine ?? null],
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
-    { engine },
-    !!engine,
+    { engine: feedEngine },
+    !!feedEngine,
   )
 
   if (!data) {

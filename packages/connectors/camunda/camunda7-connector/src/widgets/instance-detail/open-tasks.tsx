@@ -2,35 +2,47 @@ import { useMemo, useState } from "react"
 import { Button, Card, CardContent } from "@miragon/mcp-toolkit-ui"
 
 import type { OpenUserTask } from "../../view-models.js"
+import type { CompleteTaskAction, CompleteTaskArgs, TaskCompletion } from "../lib/complete-task.js"
+import { useEngineAction } from "../lib/engine-action.js"
 import { TaskCompleteForm } from "../task-complete-form.js"
-import { useCanRun } from "../widget-actions.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
- * Local open-task state: optimistic completed marks (a completed task
- * disappears until the feed refetches) plus the single expanded task form.
+ * The open-task state of the instance view: the completion write (one
+ * `EngineAction` for every task card — it refetches the instance, so the
+ * next task, the status, the tokens and the variables follow) plus the single
+ * expanded task form. A completed task disappears at once; the mark only
+ * bridges the gap until the refetched `openTasks` arrive, then server truth
+ * wins. A delegated task is RESOLVED back to its owner and stays listed.
  */
 export function useOpenTasks(openTasks: OpenUserTask[] | undefined) {
-  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set())
+  const complete = useEngineAction<CompleteTaskArgs, TaskCompletion>({
+    tool: "camunda7_complete_task",
+    target: (args) => args.taskId,
+    resetOn: openTasks,
+  })
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  const done = complete.done
 
   const visibleTasks = useMemo<OpenUserTask[]>(
-    () => (openTasks ?? []).filter((task) => !completedTaskIds.has(task.id)),
-    [openTasks, completedTaskIds],
+    () =>
+      (openTasks ?? []).filter((task) => {
+        const completion = done.get(task.id)
+        return completion === undefined || completion.result?.outcome === "resolved"
+      }),
+    [openTasks, done],
   )
 
   const onToggleTask = (taskId: string) => setActiveTaskId(activeTaskId === taskId ? null : taskId)
-  const onTaskCompleted = (taskId: string) => {
-    setCompletedTaskIds((prev) => new Set(prev).add(taskId))
-    setActiveTaskId(null)
-  }
+  const onTaskCompleted = () => setActiveTaskId(null)
 
-  return { visibleTasks, activeTaskId, onToggleTask, onTaskCompleted }
+  return { complete, visibleTasks, activeTaskId, onToggleTask, onTaskCompleted }
 }
 
 function OpenTaskCard({
   task,
   engine,
+  complete,
   canComplete,
   expanded,
   onToggle,
@@ -38,7 +50,8 @@ function OpenTaskCard({
 }: {
   task: OpenUserTask
   engine?: string
-  /** False when the deployment's toolset has no complete tool — no form toggle. */
+  complete: CompleteTaskAction
+  /** False when the toolset has no complete tool or the instance state is unconfirmed — no form toggle. */
   canComplete: boolean
   expanded: boolean
   onToggle: () => void
@@ -69,6 +82,7 @@ function OpenTaskCard({
               taskId={task.id}
               engine={engine}
               formSchema={task.formSchema}
+              action={complete}
               onCompleted={onCompleted}
               onCancel={onToggle}
             />
@@ -81,12 +95,15 @@ function OpenTaskCard({
 
 /**
  * The "Tasks" tab body — the open-task cards with their inline complete forms
- * (only where the deployment's toolset exposes `camunda7_complete_task`).
+ * (only where the deployment's toolset exposes `camunda7_complete_task` and
+ * the view can confirm the instance still runs).
  */
 export function OpenTasksTab({
   openTasks,
   visibleTasks,
   engineId,
+  complete,
+  actionable,
   activeTaskId,
   onToggleTask,
   onTaskCompleted,
@@ -94,13 +111,14 @@ export function OpenTasksTab({
   openTasks: OpenUserTask[]
   visibleTasks: OpenUserTask[]
   engineId?: string
+  complete: CompleteTaskAction
+  actionable: boolean
   activeTaskId: string | null
   onToggleTask: (taskId: string) => void
-  onTaskCompleted: (taskId: string) => void
+  onTaskCompleted: () => void
 }) {
   const t = useT()
-  const canRun = useCanRun()
-  const canComplete = canRun("camunda7_complete_task")
+  const canComplete = complete.allowed && actionable
   if (visibleTasks.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
@@ -117,10 +135,11 @@ export function OpenTasksTab({
           key={task.id}
           task={task}
           engine={engineId}
+          complete={complete}
           canComplete={canComplete}
           expanded={activeTaskId === task.id}
           onToggle={() => onToggleTask(task.id)}
-          onCompleted={() => onTaskCompleted(task.id)}
+          onCompleted={onTaskCompleted}
         />
       ))}
     </div>
