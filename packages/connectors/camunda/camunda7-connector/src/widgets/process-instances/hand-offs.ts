@@ -5,11 +5,15 @@ import type { HandOff, ViewContext } from "../lib/hand-off.js"
 export type InstanceChip = "all" | "incidents" | "suspended"
 
 /**
- * The filters the list's count covers, as the feed applies them: the chip
- * folded into the handed-in or echoed filters, and the operator's search
- * over a handed-in business-key prefilter. The list's total is the size of
- * THIS set — the hand-offs state it as `matchingInstances` next to these
- * flags, never as the running instances of the engine or the process.
+ * The filters the list's count covers: the feed's echo (`filters`) of the
+ * page ON SCREEN — the chip folded into the handed-in filters, the
+ * operator's search over a handed-in business-key prefilter. The list's
+ * total is the size of THIS set — the hand-offs state it as
+ * `matchingInstances` next to these flags, never as the running instances
+ * of the engine or the process. Read from the payload, never from the
+ * request: while a new search or chip is in flight or has failed the list
+ * shows the previous result, and the new filters next to its count would be
+ * a pair nobody fetched.
  */
 export interface InstancesListFilters {
   active?: boolean
@@ -17,23 +21,6 @@ export interface InstancesListFilters {
   withIncidents?: boolean
   /** Operator / caller text — quoted, never inlined. */
   businessKeyLike?: string
-}
-
-/**
- * The filters the list's total covers, as the feed receives them: its filter
- * args, with the operator's search replacing a handed-in business-key
- * prefilter (the paged scaffold's `searchArg`).
- */
-export function listFiltersOf(
-  feedArgs: InstancesListFilters,
-  debouncedSearch: string,
-): InstancesListFilters {
-  return {
-    active: feedArgs.active,
-    suspended: feedArgs.suspended,
-    withIncidents: feedArgs.withIncidents,
-    businessKeyLike: debouncedSearch !== "" ? debouncedSearch : feedArgs.businessKeyLike,
-  }
 }
 
 /** The run-state and incident flags of {@link InstancesListFilters}, as on-screen facts. */
@@ -74,8 +61,17 @@ export function rootCauseHandOff(
 }
 
 /**
+ * While the operator's newer search or chip has not answered (in flight, or
+ * failed) the list keeps its previous result — the model hears that the
+ * counts and filters it gets are that result's, not the new request's.
+ */
+const PREVIOUS_RESULT_NOTE =
+  " The operator has changed the search or filter, but the new result has not loaded (still loading, or failed): the list still shows its PREVIOUS result, which the numbers and filters below describe."
+
+/**
  * What the operator sees in the instances list: the count of the filtered
- * set with the filters it covers. The process name is the deployer's text
+ * set with the filters it covers (both from the page on screen — see
+ * {@link InstancesListFilters}). The process name is the deployer's text
  * and the business-key filter the operator's — both quoted, never inlined.
  */
 export function describeInstancesView({
@@ -85,6 +81,7 @@ export function describeInstancesView({
   processName,
   engine,
   filters,
+  previousResult,
 }: {
   loadedCount: number
   total: number
@@ -92,11 +89,14 @@ export function describeInstancesView({
   processName: string | null
   engine: string | undefined
   filters: InstancesListFilters
+  /** The rows on screen are the previous result (`paged.stale`). */
+  previousResult: boolean
 }): ViewContext {
+  const view = scopedKey
+    ? "The operator is viewing the running instances of one process definition."
+    : "The operator is viewing the running instances across ALL process definitions."
   return {
-    summary: scopedKey
-      ? "The operator is viewing the running instances of one process definition."
-      : "The operator is viewing the running instances across ALL process definitions.",
+    summary: previousResult ? view + PREVIOUS_RESULT_NOTE : view,
     ids: { engine, processDefinitionKey: scopedKey },
     facts: {
       loaded: loadedCount,

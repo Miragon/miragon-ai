@@ -5,7 +5,6 @@ import {
   getActivityStatistics,
   getIncidents,
   getJobs,
-  getProcessDefinitionBpmn20Xml,
   getProcessDefinitions,
   getProcessInstance,
 } from "@miragon-ai/camunda7-client/sdk"
@@ -14,7 +13,7 @@ import {
   collectIncidentActivityIds,
   countActivityInstances,
 } from "../lib/activity-tree.js"
-import { findLatestDefinition } from "./definition-info.js"
+import { fetchDefinitionXml, findLatestDefinition } from "./definition-info.js"
 import { optional, rowsOf } from "./engine-reads.js"
 
 export interface BpmnViewerTarget {
@@ -54,16 +53,16 @@ export async function buildBpmnViewerData(
     return emptyViewerData(processInstanceId, engineId)
   }
 
-  const [xmlResponse, overlays] = await Promise.all([
+  const [bpmnXml, overlays] = await Promise.all([
     // Enrichment: the overlays still answer "where is this instance stuck?".
-    optional(getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } })),
+    optional(fetchDefinitionXml(client, definitionId)),
     processInstanceId
       ? instanceOverlays(client, processInstanceId)
       : definitionOverlays(client, definitionId),
   ])
 
   return {
-    bpmnXml: (xmlResponse as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? null,
+    bpmnXml,
     processInstanceId,
     processDefinitionId: definitionId,
     ...overlays,

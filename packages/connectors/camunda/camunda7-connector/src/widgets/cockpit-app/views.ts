@@ -14,8 +14,9 @@ export interface ViewParams {
   activityId?: string
   incidentType?: string
   messageSignature?: string
-  /** Entry-point focus of the definition view: "incidents" opens the flow in
-   *  incident mode and keeps the explorative no-incidents empty state. */
+  /** Entry-point focus of the definition view: "incidents" keeps the
+   *  explorative no-incidents empty state (the flow leads with incidents on
+   *  every entry). */
   focus?: "incidents"
 }
 
@@ -126,8 +127,9 @@ const views = {
       ],
     },
   ],
-  // The ONE definition view — every entry point lands here; `focus` only
-  // steers the flow's initial mode and the list's no-incidents rendering.
+  // The ONE definition view — every entry point lands here and leads with the
+  // incident overlay (the heatmap modes join once analytics is confirmed);
+  // `focus` only steers the list's no-incidents rendering.
   // All four widgets self-fetch the shared ["camunda7:process-incidents", …]
   // feed, deduped to a single call.
   "process-detail": ({ engine, processDefinitionKey, focus }: ViewParams): LayoutConfig => [
@@ -139,16 +141,7 @@ const views = {
     },
     {
       row: [
-        {
-          widget: "camunda7:process-definition-flow",
-          props: {
-            processDefinitionKey,
-            engine,
-            // Overview entry leads with the heatmap (the old detail view's
-            // identity); the incidents entry leads with the incident overlay.
-            initialMode: focus === "incidents" ? "incidents" : "frequency",
-          },
-        },
+        { widget: "camunda7:process-definition-flow", props: { processDefinitionKey, engine } },
       ],
     },
     {

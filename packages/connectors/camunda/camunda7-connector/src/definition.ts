@@ -55,17 +55,6 @@ const bpmnViewerPropsSchema = z.toJSONSchema(
   }),
 )
 
-const processDefinitionFlowPropsSchema = z.toJSONSchema(
-  z.object({
-    initialMode: z
-      .enum(["incidents", "frequency"])
-      .optional()
-      .describe(
-        'Initial diagram mode: "incidents" overlays (default) or the "frequency" execution heatmap.',
-      ),
-  }),
-)
-
 const activityIncidentListPropsSchema = z.toJSONSchema(
   z.object({
     emptyVariant: z
@@ -186,11 +175,10 @@ export const definition: AppDefinition = {
     {
       id: "camunda7:process-definition-flow",
       description:
-        "The key's latest diagram with incident overlays summed over all versions, or the execution heatmap (needs analytics).",
+        "The key's latest diagram, leading with incident overlays summed over all versions; the execution heatmap modes join once analytics is active.",
       consumes: ["camunda7:processIncidents"],
       requires: ["camunda7:processIncidentsData"],
       size: "full",
-      propsSchema: processDefinitionFlowPropsSchema,
     },
     {
       id: "camunda7:activity-incident-list",

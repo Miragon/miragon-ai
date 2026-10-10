@@ -318,6 +318,9 @@ export const deSweep: MessageCatalog = {
   "jobPanel.title": "Job-Verwaltung",
   "jobPanel.totalJobs": "Jobs gesamt",
   "listFooter.loadMoreError": "Nachladen fehlgeschlagen: {message}",
+  "listFooter.refreshError":
+    "Liste konnte nicht aktualisiert werden — das vorherige Ergebnis bleibt sichtbar: {message}",
+  "listFooter.refreshing": "Wird aktualisiert…",
   "listFooter.retryLoadMore": "Erneut versuchen",
   "procIncTable.footerNoun": "Incidents",
   "procIncTable.loading": "Incidents werden geladen…",

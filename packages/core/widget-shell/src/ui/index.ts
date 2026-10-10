@@ -63,6 +63,7 @@ export { useApplyTheme } from "./use-apply-theme.js"
 export { usePagedViewData, type PagedViewData } from "./use-paged-view-data.js"
 export { usePagedListView, type PagedListView } from "./use-paged-list-view.js"
 export { PagedListFooter } from "./paged-list-footer.js"
+export { PagedRows } from "./paged-rows.js"
 export { parseToolResult, parseViewToolResult } from "./parse-tool-result.js"
 export { useViewToolQuery, type UseViewToolQueryOptions } from "./use-view-tool-query.js"
 export {

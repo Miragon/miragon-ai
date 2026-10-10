@@ -9,6 +9,7 @@ describe("kitLabels — the kit's own strings follow the active locale", () => {
         ...de,
         loadMoreFailed: de.loadMoreFailed("timeout"),
         refreshFailed: de.refreshFailed("gone"),
+        listRefreshFailed: de.listRefreshFailed("down"),
       }).toEqual({
         loading: "Wird geladen…",
         zoomIn: "Vergrößern",
@@ -18,6 +19,9 @@ describe("kitLabels — the kit's own strings follow the active locale", () => {
         retry: "Erneut versuchen",
         loadMoreFailed: "Weitere Einträge konnten nicht geladen werden: timeout",
         refreshFailed: "Die Ansicht konnte nicht aktualisiert werden: gone",
+        listRefreshFailed:
+          "Liste konnte nicht aktualisiert werden — das vorherige Ergebnis bleibt sichtbar: down",
+        updating: "Wird aktualisiert…",
       })
     }
   })
@@ -29,6 +33,7 @@ describe("kitLabels — the kit's own strings follow the active locale", () => {
         ...en,
         loadMoreFailed: en.loadMoreFailed("timeout"),
         refreshFailed: en.refreshFailed("gone"),
+        listRefreshFailed: en.listRefreshFailed("down"),
       }).toEqual({
         loading: "Loading…",
         zoomIn: "Zoom in",
@@ -38,6 +43,8 @@ describe("kitLabels — the kit's own strings follow the active locale", () => {
         retry: "Try again",
         loadMoreFailed: "Failed to load more: timeout",
         refreshFailed: "Could not refresh this view: gone",
+        listRefreshFailed: "Could not update the list — showing the previous result: down",
+        updating: "Updating…",
       })
     }
   })

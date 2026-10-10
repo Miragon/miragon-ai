@@ -16,7 +16,10 @@ export interface SeededToolQuery<T> {
   failureReason: Error | null
   /** A fetch is in flight (the first one or a refetch). */
   isFetching: boolean
-  /** Re-read the feed now (a Retry of an error state, a manual refresh). */
+  /**
+   * Re-read the feed NOW (a Retry of an error state, a manual refresh) — a
+   * new fetch even while one is still waiting on its retry backoff.
+   */
   refetch: () => void
 }
 
@@ -94,6 +97,17 @@ export function useSeededToolQuery<T>(
     error: query.error ?? null,
     failureReason: query.failureReason,
     isFetching: query.isFetching,
-    refetch: () => void query.refetch(),
+    refetch: () => {
+      // TanStack restarts an in-flight fetch only over DATA (`cancelRefetch`);
+      // a key without data JOINS the running fetch instead, so a Retry of a
+      // failure reported from its first attempt (a new search's page 0 over
+      // the kept rows) would send nothing until the backoff (1/2/4 s) ran
+      // out. Cancel that chain first — the key reverts to its pre-fetch
+      // state, the backoff's next attempt never runs — then read anew.
+      if (queryClient.getQueryData(cacheKey) !== undefined) return void query.refetch()
+      void queryClient
+        .cancelQueries({ queryKey: cacheKey, exact: true })
+        .then(() => query.refetch())
+    },
   }
 }

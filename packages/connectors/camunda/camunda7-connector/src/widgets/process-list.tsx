@@ -3,6 +3,7 @@ import {
   AskAiButton,
   DrillButton,
   FilterBar,
+  PagedRows,
   QueryFallback,
   TableSkeleton,
   WidgetShell,
@@ -173,46 +174,48 @@ export function ProcessListWidget({
         onChipToggle={() => undefined}
       />
 
-      <ProcessDefinitionsTableView
-        rows={rows}
-        ariaLabel={t("processList.tableAria")}
-        emptyText={interacted ? t("processList.noMatch") : t("processList.emptyState")}
-        status={{
-          header: t("processList.colStatus"),
-          render: (row) =>
-            row.suspended ? (
-              <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
-                {t("processList.statusSuspended")}
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="bg-success/10 text-success-foreground">
-                {t("processList.statusActive")}
-              </Badge>
-            ),
-        }}
-        renderActions={(row) => (
-          <>
-            <DrillButton
-              onDrill={() => go({ type: "process-instances", processDefinitionKey: row.key })}
-              ariaLabel={t("cockpitDefs.viewInstancesAria", { name: row.name ?? row.key })}
-            >
-              {t("cockpitDefs.instancesAction")}
-            </DrillButton>
-            <DrillButton
-              onDrill={() => go({ type: "process-detail", processDefinitionKey: row.key })}
-              ariaLabel={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
-            >
-              {t("cockpitDefs.openAction")}
-            </DrillButton>
-            <AskAiButton
-              variant="icon"
-              label={t("processList.healthCheckLabel")}
-              title={t("processList.healthCheckLabel")}
-              prompt={ask(healthCheckHandOff(row, feedEngine ?? data.engineId))}
-            />
-          </>
-        )}
-      />
+      <PagedRows paged={paged}>
+        <ProcessDefinitionsTableView
+          rows={rows}
+          ariaLabel={t("processList.tableAria")}
+          emptyText={interacted ? t("processList.noMatch") : t("processList.emptyState")}
+          status={{
+            header: t("processList.colStatus"),
+            render: (row) =>
+              row.suspended ? (
+                <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
+                  {t("processList.statusSuspended")}
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-success/10 text-success-foreground">
+                  {t("processList.statusActive")}
+                </Badge>
+              ),
+          }}
+          renderActions={(row) => (
+            <>
+              <DrillButton
+                onDrill={() => go({ type: "process-instances", processDefinitionKey: row.key })}
+                ariaLabel={t("cockpitDefs.viewInstancesAria", { name: row.name ?? row.key })}
+              >
+                {t("cockpitDefs.instancesAction")}
+              </DrillButton>
+              <DrillButton
+                onDrill={() => go({ type: "process-detail", processDefinitionKey: row.key })}
+                ariaLabel={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
+              >
+                {t("cockpitDefs.openAction")}
+              </DrillButton>
+              <AskAiButton
+                variant="icon"
+                label={t("processList.healthCheckLabel")}
+                title={t("processList.healthCheckLabel")}
+                prompt={ask(healthCheckHandOff(row, feedEngine ?? data.engineId))}
+              />
+            </>
+          )}
+        />
+      </PagedRows>
       <CockpitListFooter paged={paged} noun={t("processList.footerNoun")} />
     </WidgetShell>
   )

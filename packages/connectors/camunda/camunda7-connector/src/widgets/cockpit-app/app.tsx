@@ -1,14 +1,19 @@
-import { useEffect, useReducer } from "react"
+import { useReducer } from "react"
 import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext, WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
-import { ViewDataState, WidgetShell, useHostWidgets } from "@miragon-ai/widget-shell/widgets"
+import {
+  ViewDataState,
+  WidgetShell,
+  useHostWidgets,
+  useResetOnChange,
+} from "@miragon-ai/widget-shell/widgets"
 import type { CockpitAppData } from "../../view-models.js"
 import { groupEnginesByEnvironment } from "../../lib/environments.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
 import { buildViewParams, intentToView, popTo, pushView, type CockpitView } from "../nav-core.js"
 import { camunda7BaseWidgets } from "../registry.js"
 import { useHandOff } from "../lib/hand-off.js"
-import { cockpitContext, fleetContext } from "./model-context.js"
+import { cockpitContext, fleetContext, landingContext } from "./model-context.js"
 import { translator } from "../../messages/index.js"
 import { CAMUNDA7_LIST_ENGINES } from "../../tool-names.js"
 import { NavBreadcrumb } from "./breadcrumb.js"
@@ -41,7 +46,7 @@ function isTopSection(section: CockpitView["section"]): section is TopSection {
 /**
  * Top-level cockpit scope. Open Cockpit offers two ways in: operate a single
  * engine, or run cross-engine ("fleet") analyses. `landing` is the chooser shown
- * when more than one engine is configured.
+ * when more than one engine is in the list and none was resolved.
  */
 type CockpitScope = { kind: "landing" } | { kind: "fleet" } | { kind: "engine"; engineId: string }
 
@@ -55,6 +60,11 @@ type CockpitScope = { kind: "landing" } | { kind: "fleet" } | { kind: "engine"; 
 interface CockpitState {
   scope: CockpitScope
   stack: CockpitView[]
+  /**
+   * The engine the scope fell back from because it left the engine list —
+   * said on screen until the next scope change.
+   */
+  goneEngineId: string | null
 }
 
 type CockpitAction =
@@ -64,9 +74,47 @@ type CockpitAction =
   | { type: "to-fleet" }
   | { type: "to-landing" }
   | { type: "pop"; to?: number }
+  | ({ type: "reconcile" } & ScopeFix)
 
 const ROOT_STACK: CockpitView[] = [{ section: "overview" }]
-const INITIAL_STATE: CockpitState = { scope: { kind: "landing" }, stack: ROOT_STACK }
+
+/**
+ * The scope the cockpit OPENS on: the bootstrap's resolved engine
+ * (`camunda7_open_cockpit` — per-call `engine` > saved default > the only
+ * engine in the caller's list), else the chooser.
+ */
+function initialState(bootEngineId: string | null): CockpitState {
+  return {
+    scope: bootEngineId ? { kind: "engine", engineId: bootEngineId } : { kind: "landing" },
+    stack: ROOT_STACK,
+    goneEngineId: null,
+  }
+}
+
+interface ScopeFix {
+  scope: CockpitScope
+  /** The engine that left the list, when that is why the scope changes. */
+  gone: string | null
+}
+
+/**
+ * The scope the CURRENT engine list allows, or null when `scope` stands. The
+ * list reloads (an engine curated away in Settings, a bootstrap that raced
+ * the filtered list): an engine scope whose engine is gone falls back
+ * explicitly — to the only engine left, else the chooser — instead of
+ * querying a stale id under a switcher that cannot show it. The chooser and
+ * the cross-engine view need more than one engine: with one left the cockpit
+ * opens on it. An empty list renders the empty state; nothing to fix.
+ */
+function reconcileScope(scope: CockpitScope, engineIds: readonly string[]): ScopeFix | null {
+  if (engineIds.length === 0) return null
+  const sole = engineIds.length === 1 ? engineIds[0] : null
+  const fallback: CockpitScope = sole ? { kind: "engine", engineId: sole } : { kind: "landing" }
+  if (scope.kind === "engine") {
+    return engineIds.includes(scope.engineId) ? null : { scope: fallback, gone: scope.engineId }
+  }
+  return sole ? { scope: fallback, gone: null } : null
+}
 
 function cockpitReducer(state: CockpitState, action: CockpitAction): CockpitState {
   switch (action.type) {
@@ -75,11 +123,13 @@ function cockpitReducer(state: CockpitState, action: CockpitAction): CockpitStat
       // Same transition from two origins (chooser/fleet vs. in-app switcher):
       // an engine change always restarts at the overview — drill state carried
       // over would resolve ids that belong to another engine.
-      return { scope: { kind: "engine", engineId: action.id }, stack: ROOT_STACK }
+      return initialState(action.id)
     case "to-fleet":
-      return { scope: { kind: "fleet" }, stack: ROOT_STACK }
+      return { scope: { kind: "fleet" }, stack: ROOT_STACK, goneEngineId: null }
     case "to-landing":
-      return { scope: { kind: "landing" }, stack: ROOT_STACK }
+      return initialState(null)
+    case "reconcile":
+      return { scope: action.scope, stack: ROOT_STACK, goneEngineId: action.gone }
     case "pop":
       return { ...state, stack: popTo(state.stack, action.to) }
     default: {
@@ -152,6 +202,17 @@ function EngineSwitcher({
   )
 }
 
+/** Why the cockpit left the engine it was on: that engine left the engine list. Nothing without one. */
+function EngineGoneNotice({ engineId }: { engineId: string | null }) {
+  const locale = useLocale()
+  if (!engineId) return null
+  return (
+    <p role="status" className="text-muted-foreground mb-3 text-sm">
+      {translator(locale, "cockpit.engineGone", { engineId })}
+    </p>
+  )
+}
+
 function EnginesEmptyState({
   hasTransport,
   enginesQuery,
@@ -173,6 +234,28 @@ function EnginesEmptyState({
       />
     </WidgetShell>
   )
+}
+
+/**
+ * The cockpit's navigation state, opened on the bootstrap's engine and kept
+ * consistent with the engine list — both in the RENDER phase, so the chooser
+ * never flashes before the bootstrap's engine and a stale engine id never
+ * reaches a commit, let alone a query.
+ */
+function useCockpitState(data: CockpitAppData | null, engines: ReadonlyArray<{ id: string }>) {
+  const bootEngineId = data?.engineId ?? null
+  const [state, dispatch] = useReducer(cockpitReducer, bootEngineId, initialState)
+  // A bootstrap delivered into this mount later (or a new one) opens on its
+  // engine too.
+  useResetOnChange(bootEngineId, () => {
+    if (bootEngineId) dispatch({ type: "enter-engine", id: bootEngineId })
+  })
+  const scopeFix = reconcileScope(
+    state.scope,
+    engines.map((e) => e.id),
+  )
+  if (scopeFix) dispatch({ type: "reconcile", ...scopeFix })
+  return [state, dispatch] as const
 }
 
 export function CockpitApp({ data }: { data: CockpitAppData | null }) {
@@ -204,22 +287,13 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const hostWidgets = useHostWidgets()
   const cockpitWidgets = { ...hostWidgets, ...camunda7BaseWidgets }
 
-  const [{ scope, stack }, dispatch] = useReducer(cockpitReducer, INITIAL_STATE)
+  const [{ scope, stack, goneEngineId }, dispatch] = useCockpitState(data, engines)
 
   // The cross-engine view is an analytics feature (landscape + fleet analyses
   // need Prometheus) — offered only once the module is confirmed active, both
   // on the landing and in the sidebar. Per-engine health stays on the picker.
   const offerFleet = useAnalyticsActive() && engines.length > 1
   const openFleet = offerFleet ? () => dispatch({ type: "to-fleet" }) : undefined
-
-  // A single configured engine skips the landing chooser — one-shot auto-enter
-  // once the engine list resolves.
-  const soleEngineId = engines.length === 1 ? engines[0].id : null
-  useEffect(() => {
-    if (scope.kind === "landing" && soleEngineId) {
-      dispatch({ type: "enter-engine", id: soleEngineId })
-    }
-  }, [scope.kind, soleEngineId])
 
   // Pick (or switch) the active engine — navigation only, side-effect free.
   // The cockpit threads `engine` into every view, and its model context and
@@ -245,7 +319,18 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   }
 
   if (scope.kind === "landing") {
-    return <LandingChooser engines={engines} onEnterEngine={enterEngine} onOpenFleet={openFleet} />
+    return (
+      <>
+        {/* The model hears the picker as the picker — no engine is in scope. */}
+        <HostModelContext content={context(landingContext(engineGroups))}>{null}</HostModelContext>
+        <LandingChooser
+          engines={engines}
+          onEnterEngine={enterEngine}
+          onOpenFleet={openFleet}
+          notice={<EngineGoneNotice engineId={goneEngineId} />}
+        />
+      </>
+    )
   }
 
   // ── Cross-engine (fleet) mode ─────────────────────────────────────────────
@@ -330,6 +415,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         </aside>
 
         <main className="min-w-0 flex-1">
+          <EngineGoneNotice engineId={goneEngineId} />
           {/* Roots (stack of one) render no trail — NavBreadcrumb handles that. */}
           <NavBreadcrumb
             stack={stack}

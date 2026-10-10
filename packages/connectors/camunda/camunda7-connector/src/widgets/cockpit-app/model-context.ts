@@ -30,6 +30,28 @@ export function cockpitContext(engineId: string, current: CockpitView): ViewCont
 }
 
 /**
+ * The engine picker: no engine is open, so nothing on screen is scoped to
+ * one — the model must not assume an engine (the engine ids are facts, not
+ * an `engine` to pin). Each engine's environment is named when more than one
+ * exists, the way the picker asks for it first.
+ */
+export function landingContext(
+  engineGroups: Array<{ id: string; engines: Array<{ id: string }> }>,
+): ViewContext {
+  return {
+    summary:
+      "The operator is on the camunda7 cockpit's engine picker: no engine is open yet, so nothing " +
+      "on screen is scoped to one engine. Before an engine-specific answer, ask which engine they " +
+      "mean, or pass `engine` explicitly.",
+    facts: {
+      engines: engineGroups.flatMap((g) => g.engines.map((e) => e.id)),
+      environments: enginesByEnvironment(engineGroups),
+    },
+    tools: ["camunda7_list_engines", "camunda7_show_engine_health"],
+  }
+}
+
+/**
  * The cross-engine (fleet) mode: an overview across engines, never a ranking
  * between them — they run different processes. Each engine's environment is
  * named when more than one exists, the way the widget groups its tiles.

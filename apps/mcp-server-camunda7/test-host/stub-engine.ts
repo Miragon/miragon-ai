@@ -8,6 +8,8 @@ export interface StubEngine {
   baseUrl: string
   /** `baseUrl` of an engine that answers every request with a 503. */
   brokenBaseUrl: string
+  /** Origin of the scenario control routes — see {@link startStubEngine}. */
+  controlUrl: string
   close(): Promise<void>
 }
 
@@ -102,8 +104,8 @@ interface StubJob {
 
 /**
  * The write scenario's job (`write-refresh.spec.ts`): failed — no retries
- * left — until a retry lands. The one stateful corner of the stub, owned by
- * that one scenario.
+ * left — until a retry lands. The one stateful corner of the stub's engine
+ * data (the search holds are scenario control), owned by that one scenario.
  */
 function failedJob(): StubJob {
   return {
@@ -153,6 +155,44 @@ async function readJson(req: http.IncomingMessage): Promise<unknown> {
   return text ? (JSON.parse(text) as unknown) : undefined
 }
 
+/** What a request searches for: its `nameLike` without the `%` wildcards, lower-cased ("" = none). */
+function searchTerm(url: URL): string {
+  return (url.searchParams.get("nameLike") ?? "").replaceAll("%", "").toLowerCase()
+}
+
+/**
+ * Per-term holds on the engine's answers to a search (see
+ * {@link startStubEngine}). Counted: a term stays held until EVERY scenario
+ * that held it has released it, so two runs of one scenario in parallel
+ * (`--repeat-each`) never release each other's in-flight state early.
+ */
+function createSearchHolds() {
+  const held = new Map<string, { holders: number; waiting: Array<() => void> }>()
+  return {
+    hold(term: string): void {
+      const entry = held.get(term) ?? { holders: 0, waiting: [] }
+      entry.holders += 1
+      held.set(term, entry)
+    },
+    /** Drops one hold; the last one answers the waiting requests. Returns how many it answered. */
+    release(term: string): number {
+      const entry = held.get(term)
+      if (!entry) return 0
+      entry.holders -= 1
+      if (entry.holders > 0) return 0
+      held.delete(term)
+      for (const answer of entry.waiting) answer()
+      return entry.waiting.length
+    },
+    /** Answers now — or, while `term` is held, once it is released. */
+    answer(term: string, send: () => void): void {
+      const entry = term === "" ? undefined : held.get(term)
+      if (entry) entry.waiting.push(send)
+      else send()
+    },
+  }
+}
+
 /**
  * A CIB Seven REST stand-in for the host simulation: the real show tools run
  * against it through the real server, so the view renders the payload the
@@ -161,15 +201,35 @@ async function readJson(req: http.IncomingMessage): Promise<unknown> {
  * diagram `fixtures/invoice.bpmn` with empty statistics and one failed job).
  * The broken base URL turns any tool into a genuine `isError` result — an
  * engine 503 through the server's own error mapping.
+ *
+ * Scenario control, so an in-flight state is observable without a timing
+ * window: `POST /__control/hold?nameLike=<term>` makes every request that
+ * searches for `<term>` (its `nameLike` without the `%` wildcards, case
+ * insensitive) wait; `POST /__control/release?nameLike=<term>` drops that
+ * hold, and the last release answers the waiting ones and lets later ones
+ * through. Holds are per term, so scenarios searching for other terms never
+ * wait on each other.
  */
 export async function startStubEngine(): Promise<StubEngine> {
   const jobs = new Map([["job-1", failedJob()]])
+  const holds = createSearchHolds()
   const server = http.createServer((req, res) => {
     void readJson(req).then((requestBody) => {
       const url = new URL(req.url ?? "/", "http://stub")
-      const { status, body } = jobRoute(req.method ?? "GET", url, requestBody, jobs) ?? route(url)
-      res.writeHead(status, { "content-type": "application/json" })
-      res.end(body === undefined ? undefined : JSON.stringify(body))
+      const send = (status: number, body: unknown) => {
+        res.writeHead(status, { "content-type": "application/json" })
+        res.end(body === undefined ? undefined : JSON.stringify(body))
+      }
+      const term = searchTerm(url)
+      if (req.method === "POST" && url.pathname === "/__control/hold") {
+        holds.hold(term)
+        send(200, { held: term })
+      } else if (req.method === "POST" && url.pathname === "/__control/release") {
+        send(200, { released: holds.release(term) })
+      } else {
+        const { status, body } = jobRoute(req.method ?? "GET", url, requestBody, jobs) ?? route(url)
+        holds.answer(term, () => send(status, body))
+      }
     })
   })
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
@@ -178,6 +238,7 @@ export async function startStubEngine(): Promise<StubEngine> {
   return {
     baseUrl: `${origin}/engine-rest`,
     brokenBaseUrl: `${origin}/broken/engine-rest`,
+    controlUrl: origin,
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.closeAllConnections()

@@ -17,6 +17,10 @@ export interface KitLabels {
   loadMoreFailed: (message: string) => string
   /** A refetch failed over data still shown (`useDetailView`'s stale notice). */
   refreshFailed: (message: string) => string
+  /** A list's page 0 failed over the rows still shown (`PagedListFooter`). */
+  listRefreshFailed: (message: string) => string
+  /** A list's page 0 is in flight over the rows on screen (`PagedListFooter`). */
+  updating: string
 }
 
 const LABELS: Record<Locale, KitLabels> = {
@@ -29,6 +33,9 @@ const LABELS: Record<Locale, KitLabels> = {
     retry: "Try again",
     loadMoreFailed: (message) => `Failed to load more: ${message}`,
     refreshFailed: (message) => `Could not refresh this view: ${message}`,
+    listRefreshFailed: (message) =>
+      `Could not update the list — showing the previous result: ${message}`,
+    updating: "Updating…",
   },
   de: {
     loading: "Wird geladen…",
@@ -39,6 +46,9 @@ const LABELS: Record<Locale, KitLabels> = {
     retry: "Erneut versuchen",
     loadMoreFailed: (message) => `Weitere Einträge konnten nicht geladen werden: ${message}`,
     refreshFailed: (message) => `Die Ansicht konnte nicht aktualisiert werden: ${message}`,
+    listRefreshFailed: (message) =>
+      `Liste konnte nicht aktualisiert werden — das vorherige Ergebnis bleibt sichtbar: ${message}`,
+    updating: "Wird aktualisiert…",
   },
 }
 

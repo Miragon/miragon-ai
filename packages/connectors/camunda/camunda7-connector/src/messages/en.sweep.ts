@@ -317,6 +317,8 @@ export const enSweep: MessageCatalog = {
   "jobPanel.title": "Job Management",
   "jobPanel.totalJobs": "Total Jobs",
   "listFooter.loadMoreError": "Failed to load more: {message}",
+  "listFooter.refreshError": "Could not update the list — showing the previous result: {message}",
+  "listFooter.refreshing": "Updating…",
   "listFooter.retryLoadMore": "Try again",
   "procIncTable.footerNoun": "incidents",
   "procIncTable.loading": "Loading incidents…",

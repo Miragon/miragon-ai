@@ -9,7 +9,10 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
   REST stub (`stub-engine.ts`, `fixtures/process-definitions.json` plus the
   `invoice` diagram `fixtures/invoice.bpmn`, one failed job) and the host's
   server side (`host-backend.ts`, a real MCP client) — all on ephemeral
-  loopback ports.
+  loopback ports. A scenario can hold the stub's answers to one search term
+  and release them later (`POST /__control/hold|release?nameLike=<term>` at
+  `HOST_SIM_ENGINE_URL`), so an in-flight state is asserted without a timing
+  window.
 - `host-sim.html` is a minimal SEP-1865 host. It reads the view resource
   (`resources/read` of `ui://views/<tool>.html` — mcp-use's synthesized inline
   document), renders it as `srcdoc` in a `sandbox="allow-scripts"` iframe
@@ -24,7 +27,7 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | Scenario                   | Host behaviour                                    | Pass criterion                                                                 |
 | -------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
 | keep                       | result WITH `structuredContent`                   | real table renders, **zero** re-executions, no console error, size reported    |
-| in-widget query            | user types into the search                        | the widget's own feed call refetches and filters (guards the vite `dedupe`)    |
+| in-widget query            | user types; the stub holds the search's answer    | feed refetches + filters (`dedupe`); in flight: focus kept, rows dimmed        |
 | strip                      | result WITHOUT `structuredContent` (claude.ai)    | **exactly one** re-execution with the invocation's arguments, then renders     |
 | slow tool (pinned)         | result 4 s after `initialized`                    | renders once; today **one** redundant re-execution (toolkit#176, K13)          |
 | `isError` (pinned)         | real engine 503 through the server                | today one re-execution + endless skeleton (toolkit#176, K14)                   |
@@ -43,6 +46,8 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | fullscreen                 | `availableDisplayModes: ["inline", "fullscreen"]` | the toggle requests fullscreen and follows the host's switch                   |
 | BPMN on a dark host        | `camunda7_show_bpmn_viewer`, `theme: "dark"`      | light canvas, dark flows/labels, every zoom button clickable past the logo     |
 | write refresh (operations) | `camunda7_show_job_panel`, user clicks Retry      | the retry refetches the seeded feed and re-renders, **zero** re-executions     |
+| cockpit on an engine       | `camunda7_open_cockpit` with `engine`             | opens on that engine (sidebar switcher), not on the engine picker              |
+| cockpit picker             | `camunda7_open_cockpit` without `engine`          | the engine picker (two engines, no saved default)                              |
 
 Height checks read the **settled** report — the one equal to the document's current
 max-content height — since the ProfileGate skeleton's earlier report (~208 px) can

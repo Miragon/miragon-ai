@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useLocale } from "@miragon/mcp-toolkit-ui"
 import { TONE_DOT, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import { DEFAULT_ENVIRONMENT_ID, groupEnginesByEnvironment } from "../../lib/environments.js"
@@ -145,6 +145,7 @@ export function LandingChooser({
   engines,
   onEnterEngine,
   onOpenFleet,
+  notice,
 }: {
   engines: Array<{ id: string; environment?: string }>
   onEnterEngine: (id: string) => void
@@ -154,20 +155,11 @@ export function LandingChooser({
    * would add already sits on the picker's engine buttons.
    */
   onOpenFleet?: () => void
+  /** Shown above the chooser — e.g. why the cockpit left the engine it was on. */
+  notice?: ReactNode
 }) {
   const locale = useLocale()
   const environmentCount = groupEnginesByEnvironment(engines).length
-  // A single engine auto-enters via the effect in CockpitApp — bridge the one
-  // render before it lands.
-  if (engines.length === 1) {
-    return (
-      <WidgetShell>
-        <div className="text-muted-foreground p-6 text-sm">
-          {translator(locale, "cockpit.loading.engines")}
-        </div>
-      </WidgetShell>
-    )
-  }
   // The landing chooser: with more than one engine, Open Cockpit offers two
   // ways in — operate a single engine (picking its environment first when more
   // than one is configured), or run cross-engine analyses (analytics only).
@@ -177,6 +169,7 @@ export function LandingChooser({
   return (
     <WidgetShell>
       <div className="mx-auto flex max-w-2xl flex-col gap-6 py-10">
+        {notice}
         <div className="text-center">
           <h1 className="text-foreground text-2xl font-bold">
             {translator(locale, "cockpit.landing.title")}

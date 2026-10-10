@@ -25,17 +25,78 @@ interface PagedState<TItem> {
 export interface PagedViewData<TItem, TData = unknown> {
   /** Accumulated items across all loaded pages. */
   items: TItem[]
-  /** The page-0 payload (handed-in or self-fetched) for reading list metadata. */
+  /**
+   * The page-0 payload (handed-in or self-fetched) for reading list metadata.
+   * While a NEW page 0 is in flight (or has failed), the previous result of
+   * the same list stays here — never null mid-search; {@link stale} says so.
+   */
   firstPage: TData | null
-  /** Server-reported total for the current filter (drives "X of Y" + hasMore). */
+  /**
+   * Server-reported total of {@link firstPage} (drives "X of Y" + hasMore) —
+   * while {@link stale}, the PREVIOUS result's, not the current filter's.
+   */
   total: number
+  /**
+   * {@link firstPage} — and with it `items` and `total` — is the PREVIOUS
+   * result of this list, not the current args' page 0: a changed search or
+   * filter is still in flight, or has failed. Whatever the list says about
+   * its rows (a header count, the filters it covers, a model context, an
+   * empty-state text) must then describe that previous result — read it from
+   * the payload on screen, never from the request that has not answered.
+   * (A same-filter refetch is not stale: its last good page is still the
+   * current filter's.)
+   */
+  stale: boolean
   hasMore: boolean
   loadMore: () => void
   /** First page is still loading (self-fetch, nothing to show yet). */
   loading: boolean
+  /** A page 0 is in flight while rows are on screen (a changed filter, a refetch). */
+  refreshing: boolean
   /** A subsequent page is in flight. */
   loadingMore: boolean
+  /**
+   * The PAGE-0 failure. Without a `firstPage` it is the load error the
+   * caller's guard renders (once the client's retries ran out). With one, the
+   * rows on screen are unconfirmed — the previous filter's ({@link stale}), or
+   * the last good answer of a failed refetch — and it is set from the fetch's
+   * FIRST failed attempt, like `useViewData`'s `refreshError`: the same for a
+   * refetch of this filter's page (a write's invalidation, a Retry) and for a
+   * changed search or filter, so the list never presents the rows as current
+   * for the length of the backoff. {@link retry} re-runs page 0.
+   */
   error: Error | null
+  /**
+   * Re-runs the page-0 fetch: the retry for {@link error}. A new read at
+   * once — also while the client still waits on that fetch's retry backoff
+   * (which `error` already reports), never a wait for the running chain.
+   */
+  retry: () => void
+  /** The last load-more failure — `loadMore` retries it; the rows above are current. */
+  loadMoreError: Error | null
+}
+
+/** The last page 0 that landed, tagged with the list (cache-key scope) it belongs to. */
+interface SettledPage<TData> {
+  scope: string
+  data: TData
+}
+
+/**
+ * Keep-previous-data (render phase, state — never a ref): a changed search or
+ * filter keys a new page 0 whose data is undefined until it lands (a seed is
+ * only ever the unfiltered page 0), and the toolkit's useToolQuery forwards
+ * no `placeholderData`. Without this the caller's loading guard would unmount
+ * the list — and the search box the operator is typing into — for every
+ * round-trip. Only within ONE list (`scope`, the cache-key prefix): another
+ * engine or definition never shows the previous list's rows.
+ */
+function useKeptPage<TData>(fetched: TData | null, scope: string): TData | null {
+  const [settled, setSettled] = useState<SettledPage<TData> | null>(null)
+  if (fetched && (settled?.data !== fetched || settled.scope !== scope)) {
+    setSettled({ scope, data: fetched })
+  }
+  return fetched ?? (settled?.scope === scope ? settled.data : null)
 }
 
 /**
@@ -73,7 +134,12 @@ export function usePagedViewData<TItem, TData>(opts: {
     { ...args, firstResult: 0, maxResults: pageSize },
     { seed: initialData, enabled: ready },
   )
-  const first = page0.data
+  // `fetched` is THIS filter's page 0 (the seed until the feed answered);
+  // `first` keeps the previous one on screen while it is in flight or has
+  // failed (`stale`).
+  const fetched = page0.data
+  const first = useKeptPage(fetched, JSON.stringify(key))
+  const stale = !fetched && !!first
 
   const [pages, setPages] = useState<PagedState<TItem>>({
     gen: 0,
@@ -101,11 +167,12 @@ export function usePagedViewData<TItem, TData>(opts: {
   const baseItems = useMemo(() => (first ? selectItems(first) : []), [first, selectItems])
   const items = useMemo(() => [...baseItems, ...pages.items], [baseItems, pages.items])
   const total = first ? selectTotal(first) : 0
-  const hasMore = !!first && !pages.exhausted && items.length < total
+  // The previous result belongs to another filter: no next page of it.
+  const hasMore = !stale && !pages.exhausted && items.length < total
 
   const gen = pages.gen
   const loadMore = useCallback(() => {
-    if (!first || loadingMore || !callTool) return
+    if (!fetched || loadingMore || !callTool) return
     setLoadingMore(true)
     setPages((prev) => (prev.gen === gen ? { ...prev, error: null } : prev))
     void callTool(tool, { ...args, firstResult: items.length, maxResults: pageSize })
@@ -130,16 +197,22 @@ export function usePagedViewData<TItem, TData>(opts: {
         )
       })
       .finally(() => setLoadingMore(false))
-  }, [first, loadingMore, callTool, tool, args, items.length, pageSize, selectItems, gen])
+  }, [fetched, loadingMore, callTool, tool, args, items.length, pageSize, selectItems, gen])
 
   return {
     items,
     firstPage: first,
     total,
+    stale,
     hasMore,
     loadMore,
     loading: !first && ready && !page0.isError,
+    refreshing: !!first && page0.isFetching,
     loadingMore,
-    error: page0.error ?? pages.error,
+    // Over rows on screen, a fetch's first failed attempt already unconfirms
+    // them; without rows, the guard keeps loading through the retries.
+    error: page0.error ?? (first ? (page0.failureReason ?? null) : null),
+    retry: page0.refetch,
+    loadMoreError: pages.error,
   }
 }

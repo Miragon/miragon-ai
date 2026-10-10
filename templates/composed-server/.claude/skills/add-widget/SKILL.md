@@ -39,8 +39,11 @@ re-inline its primitives:
 - Formatting: `formatTimestamp`/`formatDate`/`formatTime`/`formatDuration`/
   `truncate` — no local date/duration helpers, no `Intl.DateTimeFormat`/
   `toLocaleDateString` in widget code
-- Long paged lists: `usePagedListView` + `ListTable` + `PagedListFooter` (the
-  feed must accept `firstResult`/`maxResults` and return an honest total)
+- Long paged lists: `usePagedListView` + `ListTable` inside `PagedRows` +
+  `PagedListFooter` (the feed must accept `firstResult`/`maxResults` and return
+  an honest total). A new search keeps the previous rows on screen
+  (`paged.stale`): read counts and filters from the payload shown, not from
+  the request
 
 Self-fetch rule (see `NotesListWidget`): fetch via `useToolQuery` against the
 **`*_data` feed, never the `show_*` tool** (the host would render its result as

@@ -4,6 +4,7 @@ import {
   FilterBar,
   KpiGrid,
   LogText,
+  PagedRows,
   RowCard,
   StatusBadge,
   TableEmptyState,
@@ -326,19 +327,21 @@ export function ClusterDetailView({
               chips={[]}
               onChipToggle={() => undefined}
             />
-            {paged.items.map((row) => (
-              <IncidentRow
-                // The engine can report rows without an incident id — fall back to
-                // instance+timestamp so React keys stay unique per incident row.
-                key={row.incidentId || `${row.processInstanceId}-${row.incidentTimestamp}`}
-                row={row}
-              />
-            ))}
-            {paged.items.length === 0 && (
-              <TableEmptyState>
-                {interacted ? t("clusterDetail.noMatch") : t("clusterDetail.noMatchingIncidents")}
-              </TableEmptyState>
-            )}
+            <PagedRows paged={paged} className="flex flex-col gap-2">
+              {paged.items.map((row) => (
+                <IncidentRow
+                  // The engine can report rows without an incident id — fall back to
+                  // instance+timestamp so React keys stay unique per incident row.
+                  key={row.incidentId || `${row.processInstanceId}-${row.incidentTimestamp}`}
+                  row={row}
+                />
+              ))}
+              {paged.items.length === 0 && (
+                <TableEmptyState>
+                  {interacted ? t("clusterDetail.noMatch") : t("clusterDetail.noMatchingIncidents")}
+                </TableEmptyState>
+              )}
+            </PagedRows>
             <CockpitListFooter paged={paged} noun={t("clusterDetail.footerNoun")} />
             {listCapped(data) && (
               <p className="text-muted-foreground text-xs">

@@ -4,7 +4,6 @@ import {
   getIncidents,
   getIncidentsCount,
   getJobsCount,
-  getProcessDefinitionBpmn20Xml,
   getProcessInstancesCount,
 } from "@miragon-ai/camunda7-client/sdk"
 import type {
@@ -17,7 +16,7 @@ import type { ActivityIncidentsFilters, PagingArgs } from "../feed-contracts.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
 import { bpmnActivityIds, extractActivityNames } from "../lib/bpmn-parse.js"
-import { fetchLatestDefinition, fetchStatsByKey } from "./definition-info.js"
+import { fetchDefinitionXml, fetchLatestDefinition, fetchStatsByKey } from "./definition-info.js"
 import { countOf, DAY_MS, optional, rowsOf } from "./engine-reads.js"
 import {
   groupBy,
@@ -70,17 +69,14 @@ export async function buildProcessIncidentsData(
       scanIncidents(client, byKey),
     ])
 
-  const [xml, activityCounts, siblingsWithIncidents] = await Promise.all([
-    definition.id
-      ? optional(getProcessDefinitionBpmn20Xml({ client, path: { id: definition.id } }))
-      : Promise.resolve(null),
+  const [bpmnXml, activityCounts, siblingsWithIncidents] = await Promise.all([
+    definition.id ? optional(fetchDefinitionXml(client, definition.id)) : Promise.resolve(null),
     activityIncidentCounts(client, key, scan),
     // Only the empty state shows the processes that DO have incidents — read
     // for it alone (enrichment); null otherwise, never an unread `[]`.
     incidentCount === 0 ? optional(fetchSiblingsWithIncidents(client, key)) : Promise.resolve(null),
   ])
 
-  const bpmnXml = (xml as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? null
   const diagramIds = bpmnXml ? new Set(bpmnActivityIds(bpmnXml)) : null
   const activities = toActivities(activityCounts, scan, {
     names: bpmnXml ? extractActivityNames(bpmnXml) : {},

@@ -9,8 +9,14 @@ export interface PagedListView<TItem, TData> {
   setSearch: (next: string) => void
   /** The debounced, trimmed value the feed was actually queried with. */
   debouncedSearch: string
-  /** True once a search or filter is active — the handed-in page 0 is dropped
-   *  and the list is server-filtered. Drives "no match" empty states. */
+  /**
+   * True when the rows on screen are a searched or filtered result (the
+   * handed-in page 0 is dropped, the list is server-filtered). Drives "no
+   * match" empty states, so it describes the rows SHOWN: while a new page 0
+   * is in flight or has failed (`paged.stale`) it stays the previous
+   * result's — an empty unfiltered list never reads "no match" for a search
+   * that has not answered.
+   */
   interacted: boolean
 }
 
@@ -58,14 +64,14 @@ export function usePagedListView<TItem, TData>(opts: {
   const [search, setSearch] = useState("")
   const debouncedSearch = useDebouncedValue(search.trim(), 300)
 
-  const interacted = debouncedSearch !== "" || filtersActive
+  const requested = debouncedSearch !== "" || filtersActive
   const effectiveArgs =
     searchArg && debouncedSearch !== "" ? { ...args, [searchArg]: debouncedSearch } : args
 
   const paged = usePagedViewData<TItem, TData>({
     // Standalone data is only the unfiltered first page — a filtered view must
     // come from the feed.
-    initialData: interacted ? null : initialData,
+    initialData: requested ? null : initialData,
     key,
     tool,
     args: effectiveArgs,
@@ -74,6 +80,13 @@ export function usePagedListView<TItem, TData>(opts: {
     selectItems,
     selectTotal,
   })
+
+  // The rows on screen answer the last SETTLED request: its value is recorded
+  // whenever the shown page is the current one (render-phase state, replay
+  // safe) and kept while the previous result stays on screen.
+  const [shownRequested, setShownRequested] = useState(requested)
+  if (!paged.stale && shownRequested !== requested) setShownRequested(requested)
+  const interacted = paged.stale ? shownRequested : requested
 
   return { paged, search, setSearch, debouncedSearch, interacted }
 }

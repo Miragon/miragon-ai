@@ -47,6 +47,8 @@ export const de: MessageCatalog = {
   "cockpit.landing.fleet.open": "Flottenansicht öffnen",
   "cockpit.crumb.cockpit": "Cockpit",
   "cockpit.crumb.fleet": "Flotte",
+  "cockpit.engineGone": ({ engineId }) =>
+    `Engine ${String(engineId)} ist nicht mehr in deiner Engine-Liste.`,
 
   // ── Profil-/Einstellungs-Panel ──────────────────────────────────────────────
   "profile.heading": "Profil & Einstellungen",
@@ -108,9 +110,9 @@ export const de: MessageCatalog = {
 
   // ── Modellseitige Widget-Tool-Zusammenfassungen (c7sum.*) ────────────────────
   "c7sum.cockpitOpened":
-    'Das CIB-Seven-Cockpit wurde auf Engine "{engineId}" geöffnet ({engineCount} Engine(s) konfiguriert). Der Benutzer kann die Prozesslandschaft von hier aus clientseitig navigieren.',
+    'Das CIB-Seven-Cockpit wurde auf Engine "{engineId}" geöffnet ({engineCount} Engine(s) in der Engine-Liste des Benutzers). Der Benutzer kann die Prozesslandschaft von hier aus clientseitig navigieren.',
   "c7sum.cockpitOpenedPicker":
-    "Das CIB-Seven-Cockpit wurde mit einer Engine-Auswahl geöffnet ({engineCount} Engines konfiguriert, keine ausgewählt).",
+    "Das CIB-Seven-Cockpit wurde auf seiner Engine-Auswahl geöffnet: {engineCount} Engines in der Engine-Liste des Benutzers, keine vorausgewählt (kein `engine` übergeben, kein gespeicherter Standard). Der Benutzer wählt eine; mit `engine` öffnet es direkt auf einer bestimmten Engine.",
   "c7sum.processList":
     'Prozessliste: {totalCount} bereitgestellte Definition(en){filters} auf Engine "{engineId}".',
   "c7sum.state.active": "aktiv",

@@ -179,4 +179,53 @@ describe("useSeededToolQuery", () => {
     await waitFor(() => expect(result.current.data).toEqual({ value: "recovered" }))
     expect(result.current.error).toBeNull()
   })
+
+  it("refetch() without data is a new read at once — never a wait for the retry backoff", async () => {
+    // Production retries: a failed first attempt leaves the fetch in its
+    // backoff, the next attempt ~1 s away. TanStack restarts an in-flight
+    // fetch only over data; without, a plain refetch joins that chain.
+    queryClient.setDefaultOptions(toolkitDefaults)
+    callTool.mockRejectedValueOnce(new Error("engine down"))
+    const { result } = setup(null)
+    await waitFor(() => expect(result.current.failureReason?.message).toBe("engine down"))
+    expect(result.current.isFetching).toBe(true)
+
+    callTool.mockResolvedValueOnce(answer("recovered"))
+    act(() => result.current.refetch())
+    await waitFor(() => expect(result.current.data).toEqual({ value: "recovered" }), {
+      timeout: 400,
+    })
+    expect(result.current.failureReason).toBeNull()
+    // The cancelled chain sends nothing once its backoff ends.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 1200)))
+    expect(callTool).toHaveBeenCalledTimes(2)
+  })
+
+  it("refetch() cancels only its OWN chain — a sibling's read in flight still lands", async () => {
+    queryClient.setDefaultOptions(toolkitDefaults)
+    // Same key prefix, a superset of the args: what a prefix match would also hit.
+    const SIBLING_ARGS = { ...ARGS, firstResult: 0 }
+    let landSibling!: (value: unknown) => void
+    callTool.mockImplementation((_tool: string, sent: unknown) =>
+      JSON.stringify(sent) === JSON.stringify(SIBLING_ARGS)
+        ? new Promise((resolve) => (landSibling = resolve))
+        : Promise.reject(new Error("engine down")),
+    )
+    const sibling = renderHook(
+      () =>
+        useSeededToolQuery<Answer>(KEY, "test_view_data", SIBLING_ARGS, {
+          seed: null,
+          enabled: true,
+        }),
+      { wrapper },
+    )
+    const { result } = setup(null)
+    await waitFor(() => expect(result.current.failureReason?.message).toBe("engine down"))
+
+    act(() => result.current.refetch())
+    // The sibling's one read, then this key's first attempt and its new read.
+    await waitFor(() => expect(callTool).toHaveBeenCalledTimes(3), { timeout: 400 })
+    act(() => landSibling(answer("sibling")))
+    await waitFor(() => expect(sibling.result.current.data).toEqual({ value: "sibling" }))
+  })
 })
