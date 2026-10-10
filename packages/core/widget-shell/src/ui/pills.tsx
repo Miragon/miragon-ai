@@ -1,10 +1,10 @@
 import type { ReactNode } from "react"
 import { cn } from "./cn.js"
-import { TONE_DOT, TONE_SOFT, type ToneVariant } from "./tone-utils.js"
+import { TONE_BORDER, TONE_DOT, TONE_SOFT, type ToneVariant } from "./tone-utils.js"
 
 /**
- * Live pill with a pulsing dot — used in headers to signal real-time data.
- * Matches `.live-pill` in the Miragon mockup.
+ * Live pill with a pulsing dot: signals real-time data in a header. The
+ * pulse respects reduced motion (CI §7).
  */
 export function LivePill({
   tone = "info",
@@ -18,24 +18,25 @@ export function LivePill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold",
+        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold",
         TONE_SOFT[tone],
+        TONE_BORDER[tone],
         className,
       )}
     >
-      <span className={`size-1.5 animate-pulse rounded-full ${TONE_DOT[tone]}`} />
+      <span className={`size-1.5 rounded-full motion-safe:animate-pulse ${TONE_DOT[tone]}`} />
       {children ?? "Live"}
     </span>
   )
 }
 
 /**
- * Status badge — solid pill with a colored dot, used in detail-page headers.
- * Matches `.status-badge` in the Miragon mockup. Static dot — the pulse is
- * {@link LivePill}'s live-data semantic.
+ * Status badge for detail-page headers: the tone's tint, edge and dot next to
+ * readable text (CI §3.3: the colour marks the state, the words say it).
+ * Static dot; the pulse is {@link LivePill}'s live-data semantic.
  */
 export function StatusBadge({
-  tone = "critical",
+  tone = "danger",
   className,
   children,
 }: {
@@ -46,20 +47,22 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold",
+        "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold",
         TONE_SOFT[tone],
+        TONE_BORDER[tone],
         className,
       )}
     >
-      <span className={`size-1.5 rounded-full ${TONE_DOT[tone]}`} />
+      <span aria-hidden="true" className={`size-1.5 rounded-full ${TONE_DOT[tone]}`} />
       {children}
     </span>
   )
 }
 
 /**
- * Compact count badge — tabular numbers on a tinted background.
- * Used as the right-aligned indicator on group cards.
+ * Compact count badge: tabular numbers on the tone's tint, edged in the tone.
+ * Used as the right-aligned indicator on group cards. A count without a state
+ * stays `neutral`.
  */
 export function CountPill({
   tone = "neutral",
@@ -70,7 +73,11 @@ export function CountPill({
 }) {
   return (
     <span
-      className={`inline-flex min-w-10 items-center justify-center rounded-md px-2.5 py-0.5 text-sm font-semibold tabular-nums ${TONE_SOFT[tone]}`}
+      className={cn(
+        "inline-flex min-w-10 items-center justify-center rounded-md border px-2.5 py-0.5 text-sm font-semibold tabular-nums",
+        TONE_SOFT[tone],
+        TONE_BORDER[tone],
+      )}
     >
       {children}
     </span>

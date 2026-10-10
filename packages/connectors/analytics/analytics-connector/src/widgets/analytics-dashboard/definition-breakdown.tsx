@@ -6,7 +6,7 @@ import {
   AlertDescription,
   Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { Section, TONE_TEXT, WidgetShell, formatDuration } from "@miragon-ai/widget-shell/widgets"
+import { Section, TONE_INK, WidgetShell, formatDuration } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
 import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
@@ -58,11 +58,11 @@ export function ProcessDefinitionBreakdown({
                         <span>
                           {t("aDefBreakdown.totalInstances", { count: def.totalInstances })}
                         </span>
-                        <span className={TONE_TEXT.success}>
+                        <span className={TONE_INK.success}>
                           {t("aDefBreakdown.completedCount", { count: def.completed })}
                         </span>
                         {def.runningNow !== null && (
-                          <span className={TONE_TEXT.info}>
+                          <span className={TONE_INK.info}>
                             {t("aDefBreakdown.runningNowCount", { count: def.runningNow })}
                           </span>
                         )}

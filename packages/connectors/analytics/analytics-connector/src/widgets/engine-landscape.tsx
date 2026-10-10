@@ -85,7 +85,7 @@ function LandscapeSummary({ data, t }: { data: EngineLandscapeResult; t: T }) {
       label: t("aLandscape.kpiEngines"),
       value: totals.engineCount,
       trend: silent > 0 ? t("aLandscape.kpiEnginesSilent", { count: silent }) : undefined,
-      trendTone: silent > 0 ? "critical" : undefined,
+      trendTone: silent > 0 ? "danger" : undefined,
     },
     {
       label: t("aLandscape.kpiProcesses"),
@@ -96,7 +96,7 @@ function LandscapeSummary({ data, t }: { data: EngineLandscapeResult; t: T }) {
     {
       label: t("aLandscape.kpiIncidents"),
       value: totals.openIncidents,
-      tone: totals.openIncidents > 0 ? "critical" : undefined,
+      tone: totals.openIncidents > 0 ? "danger" : undefined,
     },
   ]
   return (
@@ -169,7 +169,7 @@ function EngineTable({ data, t }: { data: EngineLandscapeResult; t: T }) {
                 </TableCell>
                 <TableCell className="text-right">
                   {e.openIncidents > 0 ? (
-                    <CountPill tone="critical">{e.openIncidents}</CountPill>
+                    <CountPill tone="danger">{e.openIncidents}</CountPill>
                   ) : (
                     <span className="text-muted-foreground tabular-nums">0</span>
                   )}
@@ -271,7 +271,7 @@ function ProcessMatrix({ data, t }: { data: EngineLandscapeResult; t: T }) {
                 })}
                 <TableCell className="text-right">
                   {p.openIncidentsTotal > 0 ? (
-                    <CountPill tone="critical">{p.openIncidentsTotal}</CountPill>
+                    <CountPill tone="danger">{p.openIncidentsTotal}</CountPill>
                   ) : (
                     <span className="text-muted-foreground tabular-nums">0</span>
                   )}

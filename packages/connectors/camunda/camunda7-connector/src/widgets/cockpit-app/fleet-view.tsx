@@ -32,7 +32,7 @@ function FleetEngineKpis({
       <div>
         <div className="text-muted-foreground text-[11px]">{t("fleet.incidents")}</div>
         <div>
-          <CountPill tone={incidents > 0 ? "critical" : "success"}>{incidents}</CountPill>
+          <CountPill tone={incidents > 0 ? "danger" : "success"}>{incidents}</CountPill>
         </div>
       </div>
       <div>
@@ -77,7 +77,9 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
       </div>
 
       {q.isError ? (
-        <span className="text-critical text-xs">{q.error?.message ?? t("fleet.failedToLoad")}</span>
+        <span className="text-danger-ink text-xs">
+          {q.error?.message ?? t("fleet.failedToLoad")}
+        </span>
       ) : !s ? (
         <span className="text-muted-foreground text-xs">{t("fleet.loading")}</span>
       ) : (

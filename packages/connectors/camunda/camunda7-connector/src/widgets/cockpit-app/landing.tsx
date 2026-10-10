@@ -35,7 +35,7 @@ function EngineChoice({ engineId, onEnter }: { engineId: string; onEnter: () => 
         </span>
       ) : (
         incidents > 0 && (
-          <span className="text-critical text-xs tabular-nums">
+          <span className="text-danger-ink text-xs tabular-nums">
             {translator(locale, "cockpit.landing.engine.incidents", { count: incidents })}
           </span>
         )

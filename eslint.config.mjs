@@ -78,6 +78,23 @@ const widgetDateGate = [
   },
 ]
 
+// Invariant 6: numbers in widget code render through the kit formatters
+// (formatNumber/formatPercent/formatPercentPoints/formatPeriod/formatDuration),
+// which read the view's locale. Number#toFixed and an argument-less
+// toLocaleString() format in no locale or the browser's, never the view's.
+const widgetNumberGate = [
+  {
+    selector: "CallExpression[callee.property.name='toFixed']",
+    message:
+      "Use formatNumber/formatPercent/formatPercentPoints from the widget-shell kit instead of Number#toFixed: it ignores the view's locale (CLAUDE.md invariant 6).",
+  },
+  {
+    selector: "CallExpression[callee.property.name='toLocaleString'][arguments.length=0]",
+    message:
+      "Use formatNumber from the widget-shell kit instead of an argument-less toLocaleString(): it formats in the browser's locale, not the view's (CLAUDE.md invariant 6).",
+  },
+]
+
 export default tseslint.config(
   {
     ignores: [
@@ -227,6 +244,13 @@ export default tseslint.config(
       "packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}",
     ],
     rules: { "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate] },
+  },
+  // Invariant 6, numbers: the kit's own widget code first. The connector
+  // widgets join this gate (in their union block above) once their raw
+  // toFixed/toLocaleString() calls moved to the kit formatters.
+  {
+    files: ["packages/core/widget-shell/src/ui/**/*.{ts,tsx}"],
+    rules: { "no-restricted-syntax": ["error", ...widgetNumberGate] },
   },
 
   // ── Ratchet metrics: complexity + file-length budgets ───────────────────

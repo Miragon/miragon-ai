@@ -20,10 +20,10 @@ import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { useT } from "../messages/use-t.js"
 
-const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; glyph: string; labelKey: string }> = {
-  ok: { tone: "success", glyph: "✓", labelKey: "engineHealth.statusStable" },
-  degraded: { tone: "warning", glyph: "!", labelKey: "engineHealth.statusDegraded" },
-  critical: { tone: "critical", glyph: "✕", labelKey: "engineHealth.statusCritical" },
+const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; labelKey: string }> = {
+  ok: { tone: "success", labelKey: "engineHealth.statusStable" },
+  degraded: { tone: "warning", labelKey: "engineHealth.statusDegraded" },
+  critical: { tone: "danger", labelKey: "engineHealth.statusCritical" },
 }
 
 /** The activity ids of the incident clusters, most affected first. */
@@ -143,7 +143,7 @@ function ClusterRow({
       title={
         <>
           <span className="truncate font-mono">{cluster.activityId}</span>
-          <StatusBadge tone="critical">{cluster.incidentType}</StatusBadge>
+          <StatusBadge tone="danger">{cluster.incidentType}</StatusBadge>
         </>
       }
       subtitle={
@@ -260,7 +260,7 @@ function HealthKpis({
           label: t("engineHealth.kpiAffectedProcesses"),
           value: summary.affectedDefinitions,
           fraction: ` /${summary.totalDefinitions}`,
-          tone: summary.affectedDefinitions > 0 ? "critical" : undefined,
+          tone: summary.affectedDefinitions > 0 ? "danger" : undefined,
         },
       ]}
     />
@@ -360,8 +360,6 @@ export function EngineHealthView({
     <>
       <HostModelContext content={context(describeHealth(data, engine))}>{null}</HostModelContext>
       <WidgetHeader
-        icon={status.glyph}
-        iconTone={status.tone}
         title={t("engineHealth.title")}
         sub={<span>{data.headline}</span>}
         actions={
@@ -390,7 +388,7 @@ export function EngineHealthView({
         </button>
         {/* A failed re-pull keeps the last verdict — and says it is not current. */}
         {refreshError && !refreshing && (
-          <span role="alert" className="text-critical">
+          <span role="alert" className="text-danger-ink">
             {t("engineHealth.refreshFailed", { message: refreshError.message })}
           </span>
         )}

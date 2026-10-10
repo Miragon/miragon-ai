@@ -114,7 +114,7 @@ export function ProcessDefinitionsTableView({
                 )}
               </Td>
               <Td align="right">
-                <CountPill tone={(row.counts?.totalIncidents ?? 0) > 0 ? "critical" : "success"}>
+                <CountPill tone={(row.counts?.totalIncidents ?? 0) > 0 ? "danger" : "success"}>
                   {row.counts?.totalIncidents ?? 0}
                 </CountPill>
               </Td>

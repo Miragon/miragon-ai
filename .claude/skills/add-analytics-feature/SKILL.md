@@ -200,9 +200,20 @@ Rules while building:
 
 - Compose the component from `@miragon-ai/widget-shell/widgets` — `ViewDataState` for
   the loading/error/no-data guard, `Section`, `Th`/`Td`/`TableEmptyState`,
-  `WidgetHeader`, `KpiGrid` (incl. `variant="soft"`), `WidgetShell`; formatting via
-  `formatTimestamp`/`formatDuration`/`truncate`/… (canonical duration style "3m 7s") —
-  never re-inline these primitives or write local format helpers.
+  `WidgetHeader` (no icon tile), `KpiGrid` (incl. `variant="soft"`), `WidgetShell`;
+  formatting via `formatTimestamp`/`formatNumber`/`formatPercent`/`formatPercentPoints`/
+  `formatPeriod`/`formatDuration`/`truncate` (canonical duration style "3m 7s", German
+  "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage"). Never re-inline these primitives, write
+  local format helpers, or call `toFixed`/an argument-less `toLocaleString()`.
+- Status and comparison colour come from the tone model (`ToneVariant`, `TONE_*` maps,
+  CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, text in a tone via
+  `TONE_INK`; volume (starts) and suppressed comparisons stay `neutral`, red is `danger`
+  and only for incidents/failures. No palette classes or raw colours.
+- Icons are Lucide via `Icon` (devDependency `lucide-react` `0.562.0`, see invariant 6), never
+  glyphs or emoji; `AskAiButton` takes the `icon` of the concrete function and a verb that
+  names the chat. Copy follows the brand voice in en + de; the package's brand-gate test
+  runs `catalogTextFindings` over both catalogs and `scanGlyphs` over `src/widgets` +
+  `src/messages` (`@miragon-ai/widget-shell/testing`).
 - Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`)
   — a missing `isError` branch means an eternal skeleton.
 - The model description (`adaptDataWidget`'s third argument, in

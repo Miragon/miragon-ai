@@ -98,7 +98,7 @@ export function FailureRateTable({
                         </TableCell>
                         <TableCell className="text-right">{proc.runningNow}</TableCell>
                         <TableCell className="text-right">
-                          <CountPill tone="critical">{proc.openIncidents}</CountPill>
+                          <CountPill tone="danger">{proc.openIncidents}</CountPill>
                         </TableCell>
                         <TableCell className="text-right">{proc.deadJobs}</TableCell>
                         <TableCell>
@@ -108,7 +108,7 @@ export function FailureRateTable({
                             <div className="flex items-center gap-2">
                               <div className="bg-muted h-2 w-24 overflow-hidden rounded-full">
                                 <div
-                                  className="bg-critical h-full rounded-full"
+                                  className="bg-danger h-full rounded-full"
                                   style={{ width: `${Math.min(100, proc.incidentRatePct)}%` }}
                                 />
                               </div>

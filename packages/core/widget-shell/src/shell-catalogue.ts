@@ -23,7 +23,7 @@ const kpiGridPropsSchema = z.toJSONSchema(
     dataKey: z
       .string()
       .describe(
-        'Context key holding the KPI cells — either an array of { label, value, tone?, fraction? } (tone: critical|warning|success|info|neutral) or a plain { "label": value } object.',
+        'Context key holding the KPI cells — either an array of { label, value, tone?, fraction? } (tone: danger|warning|success|info|neutral) or a plain { "label": value } object.',
       ),
     boxed: z.boolean().optional().describe("Wrap the strip in a rounded bordered card."),
     variant: z

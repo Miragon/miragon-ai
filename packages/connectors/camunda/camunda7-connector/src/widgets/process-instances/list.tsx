@@ -44,7 +44,7 @@ const CHIP_SUSPENDED: InstanceChip = "suspended"
 type InstancesFilterArgs = Partial<ProcessInstancesFilters> & { engine?: string }
 
 function rowTone(row: ProcessInstanceRow): ToneVariant {
-  if (row.hasIncident) return "critical"
+  if (row.hasIncident) return "danger"
   if (row.suspended) return "warning"
   return "neutral"
 }
@@ -117,7 +117,7 @@ function InstanceRow({
       </Td>
       <Td align="right">
         {row.hasIncident ? (
-          <CountPill tone="critical">!</CountPill>
+          <CountPill tone="danger">!</CountPill>
         ) : (
           <span className="text-muted-foreground font-mono text-xs">—</span>
         )}

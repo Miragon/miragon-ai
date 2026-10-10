@@ -1,5 +1,10 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import {
+  contrastFindings,
+  parseThemeVariables,
+  toneContrastPairs,
+} from "@miragon-ai/widget-shell/testing"
 
 /**
  * #339 guard over the stylesheets every view document inlines: the app's
@@ -53,5 +58,26 @@ describe("view stylesheets (#339)", () => {
     // The theme cannot know where the toolkit is installed — the consumer
     // scans its components (Card, Skeleton, the view toolbar …) itself.
     expect(rules).toMatch(/@source "[^"]*node_modules\/@miragon\/mcp-toolkit-ui\/src"/)
+  })
+})
+
+/**
+ * The tone model across the stylesheet stack a consumer ships: the shell
+ * theme defines every role once, the app and the customer template may only
+ * override role names on top. Whatever they override has to keep the tone
+ * pairs at WCAG AA in light AND dark (text 4.5:1, dots/edges/icons 3:1); the
+ * retired `critical` tone must not come back.
+ */
+describe("view stylesheets: tone roles", () => {
+  it.each([
+    ["app", STYLESHEETS.app],
+    ["template", STYLESHEETS.template],
+  ])("%s: every TONE_* pair reaches AA over the shell theme", (_, css) => {
+    const theme = parseThemeVariables(STYLESHEETS.shellTheme, css)
+    expect(contrastFindings(theme, toneContrastPairs())).toEqual([])
+  })
+
+  it.each(Object.entries(STYLESHEETS))("%s: no retired critical tone", (_, css) => {
+    expect(rulesOf(css)).not.toMatch(/--(color-)?critical/)
   })
 })

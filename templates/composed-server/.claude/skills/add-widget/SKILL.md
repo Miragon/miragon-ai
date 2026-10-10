@@ -31,14 +31,23 @@ Widgets live in `src/widgets/` and receive their payload as a `data` prop.
 Compose them from the shared kit `@miragon-ai/widget-shell/widgets` — never
 re-inline its primitives:
 
-- `WidgetShell` (container), `WidgetHeader` (icon/title/sub), `Section`
+- `WidgetShell` (container), `WidgetHeader` (title/sub/badge, no icon tile), `Section`
 - Tables: `Th`/`Td`/`TableEmptyState` (rows stay hand-composed `<tr>` + `Td`);
   KPI strips: `KpiGrid`
 - Self-fetch fallback: `QueryFallback` + `TableSkeleton` — a missing `isError`
   branch means an eternal skeleton
-- Formatting: `formatTimestamp`/`formatDate`/`formatTime`/`formatDuration`/
-  `truncate` — no local date/duration helpers, no `Intl.DateTimeFormat`/
-  `toLocaleDateString` in widget code
+- Formatting: `formatTimestamp`/`formatDate`/`formatTime` for dates,
+  `formatNumber`/`formatPercent`/`formatPercentPoints`/`formatPeriod`/
+  `formatDuration`/`truncate` for the rest, all in the view's locale; no
+  local helpers, no `Intl.DateTimeFormat`/`toLocaleDateString`/`toFixed` in
+  widget code
+- Status: a tone (`danger`/`warning`/`success`/`info`/`neutral`) via
+  `StatusBadge`/`CountPill`/`KpiCell.tone` or the `TONE_*` maps, next to
+  readable words; colours come from the role variables (override them in
+  `src/ui/globals.css` to brand), never palette classes in widgets
+- Icons: Lucide through the kit's `Icon` (add `lucide-react` to the module's
+  dependencies at the exact version `server/package.json` pins), never Unicode
+  glyphs or emoji
 - Long paged lists: `usePagedListView` + `ListTable` inside `PagedRows` +
   `PagedListFooter` (the feed must accept `firstResult`/`maxResults` and return
   an honest total). A new search keeps the previous rows on screen

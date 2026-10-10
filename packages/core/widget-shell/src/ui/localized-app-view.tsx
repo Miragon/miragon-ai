@@ -1,24 +1,35 @@
 import { useLocale } from "@miragon/mcp-toolkit-ui"
 import { McpAppView, type McpAppViewLabels } from "@miragon/mcp-toolkit-ui/app"
 import type { ComponentProps } from "react"
+import type { Locale } from "../profile-constants.js"
 import { supportedLanguage } from "./host-context.js"
 import { useShellHost } from "./shell-host.js"
 
 /**
  * Host-chrome strings per locale. The widgets localize via their module
  * catalogs, but the McpAppView chrome (refresh button, loading/fullscreen
- * labels) renders the toolkit's English defaults unless the `labels` prop is
- * set — this binds it to the locale the ProfileGate provides.
+ * labels) renders the toolkit's developer defaults ("Waiting for pipeline
+ * result...") unless the `labels` prop is set — this binds it to the locale
+ * the ProfileGate provides, in the product's voice for both languages.
  */
-const LABELS: Record<string, McpAppViewLabels> = {
+export const APP_VIEW_LABELS: Readonly<Record<Locale, Required<McpAppViewLabels>>> = {
+  en: {
+    loading: "Loading view…",
+    cancelled: "Tool call cancelled. Ask in the chat to show this view again.",
+    refresh: "Refresh",
+    refreshing: "Updating…",
+    enterFullscreen: "Full screen",
+    exitFullscreen: "Exit full screen",
+    build: "Edit view",
+  },
   de: {
-    loading: "Wird geladen…",
-    cancelled: "Der Tool-Aufruf wurde abgebrochen.",
+    loading: "Ansicht wird geladen…",
+    cancelled: "Tool-Aufruf abgebrochen. Frag im Chat erneut nach dieser Ansicht.",
     refresh: "Aktualisieren",
-    refreshing: "Aktualisiert…",
+    refreshing: "Wird aktualisiert…",
     enterFullscreen: "Vollbild",
     exitFullscreen: "Vollbild beenden",
-    build: "Build",
+    build: "Ansicht bearbeiten",
   },
 }
 
@@ -49,7 +60,7 @@ export function LocalizedAppView(props: Omit<ComponentProps<typeof McpAppView>, 
       style={{ display: "contents" }}
       data-shell-fullscreen={fullscreenAvailable(host) ? "available" : "unavailable"}
     >
-      <McpAppView {...props} labels={LABELS[supportedLanguage(locale) ?? "en"]} />
+      <McpAppView {...props} labels={APP_VIEW_LABELS[supportedLanguage(locale) ?? "en"]} />
     </div>
   )
 }

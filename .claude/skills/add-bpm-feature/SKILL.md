@@ -185,12 +185,28 @@ never re-inline these primitives:
 - `ViewDataState` — the loading/error/no-data guard (no inline Alert/loading ternary)
 - Self-fetching widgets: skeleton + error via `QueryFallback` (+ `TableSkeleton`) — a
   missing `isError` branch means an eternal skeleton
-- `formatTimestamp`/`formatDate`/`formatTime`/`formatDuration`/`truncate` — no local
-  format helpers (canonical duration style "3m 7s")
+- `formatTimestamp`/`formatDate`/`formatTime` (dates) and `formatNumber`/`formatPercent`/
+  `formatPercentPoints`/`formatPeriod`/`formatDuration`/`truncate`: no local format
+  helpers, no `toFixed`, no argument-less `toLocaleString()` (canonical duration style
+  "3m 7s" / German "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage")
 - `Section` (collapsibles); `Th`/`Td`/`TableEmptyState` (tables); `WidgetHeader`
-  (`badge`/`titleSuffix`/`size="detail"`) + `VersionChip` (hero/detail headers);
-  `KpiGrid` (KPI strips, incl. `variant="soft"`); `WidgetShell` (page container — split
-  into View + Shell only when the body is embedded elsewhere)
+  (`badge`/`titleSuffix`/`size="detail"`, no icon tile) + `VersionChip` (hero/detail
+  headers); `KpiGrid` (KPI strips, incl. `variant="soft"`); `WidgetShell` (page
+  container, split into View + Shell only when the body is embedded elsewhere)
+- Status: a `ToneVariant` (`danger`/`warning`/`success`/`info`/`neutral`; open incident or
+  failed job without retries = `danger`, retries left or degraded = `warning`) shown via
+  `StatusBadge`/`CountPill`/`KpiCell.tone` or the `TONE_DOT`/`TONE_BORDER`/`TONE_ICON`/
+  `TONE_TINT`/`TONE_SOFT`/`TONE_INK` maps, next to readable words; never a coloured
+  number, never a palette class or raw colour; text in a tone uses the `-ink` role
+- Icons: Lucide via `Icon` (`import { FileSearch } from "lucide-react"`; the package pins
+  devDependency `lucide-react` `0.562.0`, see CLAUDE.md invariant 6), never a Unicode glyph
+  or emoji; `AskAiButton` gets the `icon` of the concrete function and a verb that names
+  the chat ("Im Chat erklären" / "Explain in chat"); `OpenInCockpitLink` gets
+  `vendor={provider.branding.displayName}`
+- Copy: en + de catalogs in the brand voice (du, AI, "CIB seven", no dash connector,
+  errors say what happened and what you can do); the package's brand-gate test runs
+  `catalogTextFindings` over both catalogs and `scanGlyphs` over `src/widgets` +
+  `src/messages` (`@miragon-ai/widget-shell/testing`)
 - BPMN: viewer lifecycle and the fixed light canvas via `useBpmnViewer` +
   `BpmnZoomControls`; highlight/legend colors via `HIGHLIGHT_COLORS` from
   `src/widgets/bpmn-highlights.ts`
@@ -203,7 +219,7 @@ never re-inline these primitives:
    `/count` endpoint) so the footer is honest.
 2. Widget: `usePagedListView` (owns search state, 300 ms debounce, the server-side
    `searchArg`, and the drop-initialData-on-interaction rule; chips go into
-   `filtersActive` + the `args`) → `FilterBar` → `PagedRows` (dims the rows while they
+   `filtersActive` + the `args`) → `FilterBar` → `PagedRows` (marks the rows while they
    are the previous result) around `ListTable` (frame + `Th` header row;
    rows stay hand-composed `<tr>` + `Td`) or a `RowCard` stack → `TableEmptyState`
    (distinguish "no match" when `interacted`) → `CockpitListFooter`

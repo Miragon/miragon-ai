@@ -35,7 +35,7 @@ const TYPE_LAST24H = "last24h"
 
 type IncidentChip = typeof TYPE_ALL | typeof TYPE_LAST24H
 
-/** Threshold above which a process is rendered with a "critical" tone in the
+/** Threshold above which a process is rendered with a "danger" tone in the
  *  process group cards. Computed from the unfiltered incident count so the
  *  visual severity stays stable when the user toggles a filter chip. */
 const CRITICAL_INCIDENT_THRESHOLD = 50
@@ -43,7 +43,7 @@ const CRITICAL_INCIDENT_THRESHOLD = 50
 // Named for its semantics (sheer incident volume) — distinct from the
 // failed-jobs/incidents/instances severity ladder in cockpit-dashboard/lib.ts.
 function incidentVolumeTone(unfilteredIncidentCount: number): ToneVariant {
-  return unfilteredIncidentCount >= CRITICAL_INCIDENT_THRESHOLD ? "critical" : "warning"
+  return unfilteredIncidentCount >= CRITICAL_INCIDENT_THRESHOLD ? "danger" : "warning"
 }
 
 /**

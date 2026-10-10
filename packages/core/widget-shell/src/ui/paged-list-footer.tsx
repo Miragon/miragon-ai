@@ -1,11 +1,14 @@
 import { ListFooter, useLocale } from "@miragon/mcp-toolkit-ui"
+import { CircleAlert, RefreshCw } from "lucide-react"
+import { Icon } from "./icon.js"
 import { kitLabels } from "./kit-labels.js"
+import { TONE_ICON, TONE_INK } from "./tone-utils.js"
 import type { PagedViewData } from "./use-paged-view-data.js"
 
 const retryButtonCls =
-  "border-border bg-card hover:bg-muted focus-visible:ring-ring rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
+  "border-border bg-card hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1 rounded-md border px-2 py-1 font-medium outline-none focus-visible:ring-2"
 
-/** One inline failure line with its own retry. */
+/** One inline failure line with its own retry: danger icon + ink, never colour alone. */
 function RetryAlert({
   text,
   retryLabel,
@@ -16,9 +19,11 @@ function RetryAlert({
   onRetry: () => void
 }) {
   return (
-    <div role="alert" className="text-critical flex items-center gap-2 text-xs">
+    <div role="alert" className={`flex items-center gap-2 text-xs ${TONE_INK.danger}`}>
+      <Icon icon={CircleAlert} className={TONE_ICON.danger} />
       <span>{text}</span>
-      <button type="button" onClick={onRetry} className={retryButtonCls}>
+      <button type="button" onClick={onRetry} className={`text-foreground ${retryButtonCls}`}>
+        <Icon icon={RefreshCw} dense />
         {retryLabel}
       </button>
     </div>

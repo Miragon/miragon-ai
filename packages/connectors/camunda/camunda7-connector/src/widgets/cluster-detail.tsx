@@ -121,12 +121,10 @@ function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: 
   )
   return (
     <WidgetHeader
-      icon="⚠"
-      iconTone="critical"
       title={data.activityId}
       sub={
         <span>
-          <StatusBadge tone="critical">{data.incidentType}</StatusBadge>
+          <StatusBadge tone="danger">{data.incidentType}</StatusBadge>
           <span className="ml-2">
             {t("clusterDetail.affectedAcross", {
               count: formatCountAtLeast(data.incidentCount, data.scannedIncidentCount),
@@ -159,12 +157,12 @@ function ClusterKpis({ data }: { data: ClusterDetailData }) {
         {
           label: t("clusterDetail.kpiAffected"),
           value: formatCountAtLeast(data.incidentCount, data.scannedIncidentCount),
-          tone: "critical",
+          tone: "danger",
         },
         {
           label: t("clusterDetail.kpiNewLastHour"),
           value: formatCount(data.lastHourCount),
-          tone: data.lastHourCount ? "critical" : undefined,
+          tone: data.lastHourCount ? "danger" : undefined,
         },
         {
           label: t("clusterDetail.kpiNew24h"),

@@ -23,6 +23,11 @@ export default defineConfig({
       "mcp-use",
       "@miragon/mcp-toolkit-ui",
       "@miragon/mcp-toolkit-core",
+      // The kit's Lucide icons and the toolkit's: one copy in the bundle, the
+      // version this app pins. That devDependency is load-bearing twice: it
+      // also keeps mcp-use's lucide peer on ONE pnpm instance (mcp-use 2
+      // migration guide §1; without it the view runtime exists twice).
+      "lucide-react",
     ],
   },
   build: {

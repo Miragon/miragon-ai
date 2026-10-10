@@ -52,6 +52,29 @@ async function gateMessages(rel, code) {
 
 const isRegistrarHit = (m) => m.includes("createToolRegistrar")
 const isDateHit = (m) => m.includes("widget-shell/widgets")
+const isNumberHit = (m) => m.includes("view's locale") || m.includes("browser's locale")
+
+const WS = "packages/core/widget-shell/src/ui"
+
+describe("number gate (invariant 6) in the kit's widget code", () => {
+  it("catches toFixed and an argument-less toLocaleString in .ts and .tsx", async () => {
+    for (const rel of [`${WS}/__probe__.ts`, `${WS}/__probe__.tsx`]) {
+      const messages = await gateMessages(
+        rel,
+        "const a = n.toFixed(1)\nconst b = n.toLocaleString()\nconst c = (x as number).toFixed()",
+      )
+      assert.equal(messages.filter(isNumberHit).length, 3, rel)
+    }
+  })
+
+  it("leaves a locale-bound toLocaleString (the kit's own date helpers) alone", async () => {
+    const messages = await gateMessages(
+      `${WS}/__probe__.ts`,
+      'const a = d.toLocaleString(locale, opts)\nconst b = n.toLocaleString("de")',
+    )
+    assert.deepEqual(messages, [])
+  })
+})
 
 const REGISTRAR_ESCAPES = {
   "direct call": 'server.tool("x", {}, handler)',
@@ -118,6 +141,12 @@ describe("gates sharing a glob are merged, not overridden", () => {
     for (const messages of [widgetTs, widgetTsx]) {
       assert.ok(messages.some(isRegistrarHit), "registrar gate dropped for widgets")
       assert.equal(messages.filter(isDateHit).length, 2, "date gate dropped for widgets")
+    }
+  })
+
+  it("connector widgets do not carry the number gate yet (they join it after migrating)", () => {
+    for (const messages of [widgetTs, widgetTsx]) {
+      assert.equal(messages.filter(isNumberHit).length, 0)
     }
   })
 

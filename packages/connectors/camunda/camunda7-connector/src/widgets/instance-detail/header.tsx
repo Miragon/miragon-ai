@@ -188,7 +188,7 @@ export function InstanceKpis({
         {
           label: t("instanceDetail.kpiOpenIncidents"),
           value: openIncidentCount,
-          tone: openIncidentCount > 0 ? "critical" : undefined,
+          tone: openIncidentCount > 0 ? "danger" : undefined,
         },
         {
           label: t("instanceDetail.kpiVariables"),

@@ -1,22 +1,18 @@
 import type { ReactNode } from "react"
 import { cn } from "./cn.js"
-import { TONE_SOFT, type ToneVariant } from "./tone-utils.js"
-
-export type { ToneVariant }
 
 /**
- * Page-level header used at the top of a dashboard widget. Mirrors the
- * `.header` block in the Miragon mockups: tinted icon tile, title, subtitle
- * with live pill / meta info, and an optional right-aligned actions slot.
+ * Page-level header at the top of a dashboard widget: title, subtitle with
+ * live pill / meta info, and an optional right-aligned actions slot. No icon
+ * tile above the title: a glyph in a tinted square over every heading is the
+ * icon-tile pattern the CI rules out (anti-slop U2); a state belongs in a
+ * `badge` (a `StatusBadge`) that says it in words.
  *
- * `size="detail"` renders the compact detail-page variant (smaller h1, no
- * icon tile expected) used by the process/incident hero headers; `badge`
- * (e.g. a `StatusBadge`) sits above the title, `titleSuffix` (e.g. a
- * `VersionChip`) inline after it.
+ * `size="detail"` renders the compact detail-page variant (smaller h1) used
+ * by the process/incident hero headers; `badge` sits above the title,
+ * `titleSuffix` (e.g. a `VersionChip`) inline after it.
  */
 export function WidgetHeader({
-  icon,
-  iconTone = "critical",
   title,
   titleSuffix,
   badge,
@@ -25,8 +21,6 @@ export function WidgetHeader({
   size = "default",
   className,
 }: {
-  icon?: ReactNode
-  iconTone?: ToneVariant
   title: ReactNode
   /** Inline suffix inside the h1, e.g. `<VersionChip version={3} />`. */
   titleSuffix?: ReactNode
@@ -44,13 +38,6 @@ export function WidgetHeader({
   return (
     <header className={cn("flex flex-wrap items-start justify-between gap-4", className)}>
       <div className="min-w-0">
-        {icon && (
-          <div
-            className={`mb-3.5 grid size-11 place-items-center rounded-xl text-xl ${TONE_SOFT[iconTone]}`}
-          >
-            {icon}
-          </div>
-        )}
         {badge && <div className="mb-3">{badge}</div>}
         <h1 className={h1Class}>
           {title}

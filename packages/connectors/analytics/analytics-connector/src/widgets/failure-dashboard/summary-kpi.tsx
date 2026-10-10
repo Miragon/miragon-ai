@@ -46,14 +46,12 @@ export function FailureSummaryKpi({
     <QueryGate
       initialData={initialData}
       query={fallbackQuery}
-      header={<WidgetHeader icon="⚠" iconTone="critical" title={t("aFailureSummary.title")} />}
+      header={<WidgetHeader title={t("aFailureSummary.title")} />}
       skeleton={<KpiGridSkeleton cells={3} variant="soft" />}
     >
       {(data) => (
         <WidgetShell>
           <WidgetHeader
-            icon="⚠"
-            iconTone="critical"
             title={t("aFailureSummary.title")}
             actions={<AskAiButton variant="primary" prompt={ask(failureSummaryHandOff(data))} />}
           />
@@ -64,7 +62,7 @@ export function FailureSummaryKpi({
               {
                 label: t("aFailureSummary.totalIncidents"),
                 value: data.totalIncidents,
-                tone: "critical",
+                tone: "danger",
               },
               {
                 label: t("aFailureSummary.uniqueErrorPatterns"),

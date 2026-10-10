@@ -27,7 +27,7 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | Scenario                   | Host behaviour                                    | Pass criterion                                                                 |
 | -------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
 | keep                       | result WITH `structuredContent`                   | real table renders, **zero** re-executions, no console error, size reported    |
-| in-widget query            | user types; the stub holds the search's answer    | feed refetches + filters (`dedupe`); in flight: focus kept, rows dimmed        |
+| in-widget query            | user types; the stub holds the search's answer    | feed refetches + filters (`dedupe`); in flight: focus kept, rows marked        |
 | strip                      | result WITHOUT `structuredContent` (claude.ai)    | **exactly one** re-execution with the invocation's arguments, then renders     |
 | slow tool (pinned)         | result 4 s after `initialized`                    | renders once; today **one** redundant re-execution (toolkit#176, K13)          |
 | `isError` (pinned)         | real engine 503 through the server                | today one re-execution + endless skeleton (toolkit#176, K14)                   |

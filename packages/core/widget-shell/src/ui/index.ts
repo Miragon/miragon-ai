@@ -18,8 +18,30 @@ export { Th, Td, TableEmptyState, VersionChip } from "./table.js"
 export { ListTable, type ListTableColumn } from "./list-table.js"
 export { GenericKpiGridWidget, GenericDataTableWidget } from "./generic-widgets.js"
 export { QueryFallback, TableSkeleton } from "./query-fallback.js"
-export { formatDate, formatDuration, formatTime, formatTimestamp, truncate } from "./format.js"
-export { TONE_SOFT, TONE_DOT, TONE_TEXT, MICRO_LABEL, type ToneVariant } from "./tone-utils.js"
+export {
+  formatDate,
+  formatDuration,
+  formatNumber,
+  formatPercent,
+  formatPercentPoints,
+  formatPeriod,
+  formatTime,
+  formatTimestamp,
+  truncate,
+  type PercentFormatOptions,
+} from "./format.js"
+export {
+  TONE_VARIANTS,
+  TONE_SOFT,
+  TONE_TINT,
+  TONE_DOT,
+  TONE_BORDER,
+  TONE_ICON,
+  TONE_INK,
+  MICRO_LABEL,
+  type ToneVariant,
+} from "./tone-utils.js"
+export { Icon, type LucideIcon } from "./icon.js"
 export { KpiGrid, KpiGridSkeleton, type KpiCell, type KpiGridHeader } from "./kpi-grid.js"
 export { FilterBar, type FilterChip } from "./filter-bar.js"
 export { RowCard } from "./row-card.js"

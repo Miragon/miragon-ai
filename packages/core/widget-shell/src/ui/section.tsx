@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 import { Badge } from "@miragon/mcp-toolkit-ui"
+import { ChevronRight } from "lucide-react"
+import { Icon } from "./icon.js"
 
 /**
  * Collapsible disclosure section — `<details>`/`<summary>` with the chevron,
@@ -27,14 +29,10 @@ export function Section({
   return (
     <details open={defaultOpen || undefined} onToggle={(e) => onToggle?.(e.currentTarget.open)}>
       <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
-        <svg
-          aria-hidden="true"
-          className="text-muted-foreground size-4 shrink-0 transition-transform [[open]>&]:rotate-90"
-          viewBox="0 0 16 16"
-          fill="currentColor"
-        >
-          <path d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" />
-        </svg>
+        <Icon
+          icon={ChevronRight}
+          className="text-muted-foreground transition-transform [[open]>summary>&]:rotate-90"
+        />
         <h3 className="text-lg font-medium">{title}</h3>
         {count !== undefined && <Badge variant={badgeVariant}>{count}</Badge>}
       </summary>

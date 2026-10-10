@@ -18,7 +18,7 @@
         journey to process intelligence.
       </h3>
       <p class="desc">
-        Pick a slot that works for you — 30 minutes, no agenda required. We'll talk through your
+        Pick a slot that works for you: 30 minutes, no agenda required. We'll talk through your
         current setup and where AI-native tooling can make a real difference.
       </p>
 
@@ -30,7 +30,7 @@
       </button>
 
       <div v-show="mailOpen" class="mailForm">
-        <div v-if="sent" class="sentMsg">✓ Thanks — we'll get back to you shortly.</div>
+        <div v-if="sent" class="sentMsg">Thanks, we'll get back to you shortly.</div>
         <form
           v-show="!sent"
           ref="formRef"
@@ -432,8 +432,10 @@ onBeforeUnmount(() => {
   color: var(--vp-c-brand-1);
 }
 
-/* Status messages: readable text on the CI's functional soft tints, the
-   positive one edged in the green accent. */
+/* Status messages. The contact section sits on the always-dark landing, so
+   they follow the CI's dark-ground rule: no tinted fill (the -soft tints are
+   opaque light surfaces since tokens 1.8.0), white text, the edge in the
+   status colour's -hell value. */
 .sentMsg {
   display: flex;
   align-items: center;
@@ -441,9 +443,9 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: var(--vp-c-text-1);
   padding: 12px 16px;
-  border: 1px solid var(--cd-gruen);
+  border: 1px solid var(--cd-success-hell);
   border-radius: var(--cd-radius-md);
-  background: var(--cd-success-soft);
+  background: transparent;
 }
 
 .errorMsg {
@@ -451,9 +453,9 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--vp-c-text-1);
   padding: 12px 16px;
-  border: 1px solid var(--cd-danger);
+  border: 1px solid var(--cd-danger-hell);
   border-radius: var(--cd-radius-md);
-  background: var(--cd-danger-soft);
+  background: transparent;
 }
 
 .honeypot {

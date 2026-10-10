@@ -36,7 +36,7 @@ export function ExecutionPerformanceKpi({
               {
                 label: t("aExecPerf.incidentRate"),
                 value: data.incidentRatePct === null ? "—" : `${data.incidentRatePct}%`,
-                tone: (data.incidentRatePct ?? 0) > 0 ? "critical" : undefined,
+                tone: (data.incidentRatePct ?? 0) > 0 ? "danger" : undefined,
               },
             ]}
           />

@@ -21,6 +21,8 @@ export default defineConfig({
       "@miragon/mcp-toolkit-ui",
       "@miragon/mcp-toolkit-core",
       "@miragon-ai/widget-shell",
+      // The kit's Lucide icons and the toolkit's: one instance.
+      "lucide-react",
     ],
   },
   build: {

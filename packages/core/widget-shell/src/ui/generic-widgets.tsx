@@ -1,7 +1,7 @@
 import type { WidgetProps } from "@miragon/mcp-toolkit-core"
 import { KpiGrid, type KpiCell } from "./kpi-grid.js"
 import { TableEmptyState, Td, Th } from "./table.js"
-import type { ToneVariant } from "./tone-utils.js"
+import { TONE_VARIANTS, type ToneVariant } from "./tone-utils.js"
 
 /**
  * Module-agnostic widgets — the standard composition targets for
@@ -15,7 +15,7 @@ import type { ToneVariant } from "./tone-utils.js"
  * the shell carries no module i18n.
  */
 
-const TONES: ReadonlySet<string> = new Set(["critical", "warning", "success", "info", "neutral"])
+const TONES: ReadonlySet<string> = new Set(TONE_VARIANTS)
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)

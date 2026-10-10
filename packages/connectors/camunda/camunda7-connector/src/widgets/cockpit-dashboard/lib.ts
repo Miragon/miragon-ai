@@ -11,7 +11,7 @@ export function severityTone(
   totalIncidents: number,
   instances: number,
 ): ToneVariant {
-  if (totalIncidents > 0) return "critical"
+  if (totalIncidents > 0) return "danger"
   if (failedJobs > 0) return "warning"
   // Deployed but unused — show neutrally instead of green-flagging as healthy.
   if (instances === 0) return "neutral"

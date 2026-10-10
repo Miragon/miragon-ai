@@ -1,5 +1,7 @@
 import { useLocale } from "@miragon/mcp-toolkit-ui"
+import { Scan, ZoomIn, ZoomOut } from "lucide-react"
 import { cn } from "./cn.js"
+import { Icon } from "./icon.js"
 import { kitLabels } from "./kit-labels.js"
 
 export interface BpmnZoomControlsLabels {
@@ -23,7 +25,8 @@ export interface BpmnZoomControlsProps {
  * Top, not bottom: bpmn-js pins its bpmn.io logo — a licence requirement,
  * never hidden — at the canvas's bottom-right with `z-index: 100`, where it
  * covered the zoom-out button. One class set for every BPMN widget so the
- * controls cannot drift between the plain diagram and the heatmap.
+ * controls cannot drift between the plain diagram and the heatmap. A dense
+ * bar: Lucide icons at stroke 2, the name in `aria-label` and `title`.
  */
 export function BpmnZoomControls({
   onZoomIn,
@@ -34,9 +37,9 @@ export function BpmnZoomControls({
 }: BpmnZoomControlsProps) {
   const defaults = kitLabels(useLocale())
   const buttons = [
-    { label: "+", onClick: onZoomIn, title: labels?.zoomIn ?? defaults.zoomIn },
-    { label: "⊡", onClick: onFit, title: labels?.fit ?? defaults.fitViewport },
-    { label: "−", onClick: onZoomOut, title: labels?.zoomOut ?? defaults.zoomOut },
+    { key: "in", icon: ZoomIn, onClick: onZoomIn, title: labels?.zoomIn ?? defaults.zoomIn },
+    { key: "fit", icon: Scan, onClick: onFit, title: labels?.fit ?? defaults.fitViewport },
+    { key: "out", icon: ZoomOut, onClick: onZoomOut, title: labels?.zoomOut ?? defaults.zoomOut },
   ]
   return (
     <div
@@ -45,16 +48,16 @@ export function BpmnZoomControls({
         className,
       )}
     >
-      {buttons.map(({ label, onClick, title }) => (
+      {buttons.map(({ key, icon, onClick, title }) => (
         <button
-          key={label}
+          key={key}
           type="button"
           onClick={onClick}
           title={title}
           aria-label={title}
           className="bg-card text-card-foreground hover:bg-muted active:bg-muted focus-visible:ring-ring [&:not(:last-child)]:border-border flex h-7 w-7 items-center justify-center text-sm outline-none focus-visible:ring-2 [&:not(:last-child)]:border-b"
         >
-          <span aria-hidden="true">{label}</span>
+          <Icon icon={icon} dense />
         </button>
       ))}
     </div>

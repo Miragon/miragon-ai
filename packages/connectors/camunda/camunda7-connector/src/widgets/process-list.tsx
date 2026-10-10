@@ -183,11 +183,11 @@ export function ProcessListWidget({
             header: t("processList.colStatus"),
             render: (row) =>
               row.suspended ? (
-                <Badge variant="secondary" className="bg-warning/10 text-warning-foreground">
+                <Badge variant="secondary" className="bg-warning-soft text-warning-ink">
                   {t("processList.statusSuspended")}
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="bg-success/10 text-success-foreground">
+                <Badge variant="secondary" className="bg-success-soft text-success-ink">
                   {t("processList.statusActive")}
                 </Badge>
               ),
