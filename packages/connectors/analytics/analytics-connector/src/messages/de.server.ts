@@ -28,7 +28,7 @@ export const deServer: MessageCatalog = {
   "aSum.mostAffectedProcess": '; am stärksten betroffener Prozess: "{key}"',
   "aSum.scopeForProcess": ' für "{key}"',
   "aSum.sharedKeys":
-    " Auf mehreren Engines deployt (die einzigen belastbaren Engine-Vergleiche): {keys}.",
+    " Auf mehreren Engines bereitgestellt (die einzigen belastbaren Engine-Vergleiche): {keys}.",
   "aSum.settings":
     "Analyse-Einstellungen: Standard-Zeitraum {period}, Mindestgröße für Vergleiche (minBucketSize) {minBucketSize}.{changeHint}",
   "aSum.settingsChangeHint": " Änderbar über analytics_save_settings.",

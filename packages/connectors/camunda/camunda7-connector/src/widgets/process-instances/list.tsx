@@ -1,5 +1,6 @@
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
+  HandOffButton,
   CountPill,
   DrillButton,
   FilterBar,
@@ -26,7 +27,6 @@ import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { InstancesHeader } from "./list-header.js"
 import { useHandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 import { describeInstancesView, rootCauseHandOff, type InstanceChip } from "./hand-offs.js"
 import { useT } from "../../messages/use-t.js"
 

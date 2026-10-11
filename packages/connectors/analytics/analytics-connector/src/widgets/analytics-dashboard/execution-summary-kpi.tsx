@@ -1,6 +1,5 @@
-import { Stethoscope } from "lucide-react"
 import {
-  AskAiButton,
+  HandOffButton,
   KpiGrid,
   KpiGridSkeleton,
   ViewMeta,
@@ -76,10 +75,9 @@ export function ExecutionSummaryKpi({
               />
             }
             actions={
-              <AskAiButton
+              <HandOffButton
+                action="assess"
                 variant="primary"
-                icon={Stethoscope}
-                label={t("aExecSummary.askLabel")}
                 prompt={ask(executionSummaryHandOff(data))}
               />
             }

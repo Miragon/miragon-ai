@@ -12,6 +12,7 @@ import {
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
 import {
   localizeFor,
+  localizeViewFor,
   resolveSettingsAuthUserId,
   resolveSettingsKey,
   type ProfileSource,
@@ -84,14 +85,15 @@ export function registerSettingsTools(
     },
     withToolErrors(async (_params, ctx) => {
       const view = await loadView(ctx)
-      const t = await localizeFor(store, ctx)
+      const { t, title } = await localizeViewFor(store, ctx)
       return buildSingleWidgetView({
         widget: "analytics:settings",
         app: "analytics",
         dataType: "analytics:settings",
         data: { ...view },
-        // The view title in the caller's language (the section heading's own key).
-        title: t("aSettings.heading"),
+        // The view title in the language the profile names (the section
+        // heading's own key); none with "system", where the heading names it.
+        title: title("aSettings.heading"),
         summary: summarize(t, view),
       })
     }),

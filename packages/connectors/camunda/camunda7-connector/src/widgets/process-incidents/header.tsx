@@ -1,4 +1,5 @@
 import {
+  HandOffButton,
   DrillButton,
   OpenInCockpitLink,
   StatusBadge,
@@ -11,7 +12,6 @@ import {
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 import { diagramActivityFraction } from "./activity-scope.js"
 import { useDefinitionData } from "./feed.js"

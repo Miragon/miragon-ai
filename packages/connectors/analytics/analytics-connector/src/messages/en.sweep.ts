@@ -10,7 +10,6 @@ import { plural } from "./plural.js"
  * Merged into the catalogs in index.ts.
  */
 export const enSweep: MessageCatalog = {
-  "aBottleneck.analyzeLabel": "Explain the bottleneck in chat",
   "aBottleneck.colActivity": "Activity",
   "aBottleneck.colAvg": "Avg",
   "aBottleneck.colExecutions": "Executions",
@@ -45,7 +44,6 @@ export const enSweep: MessageCatalog = {
   "aCommon.loadErrorHint": "Refresh the view or ask in the chat again.",
   "aCommon.minutes": plural("count", "1 minute", "{count} minutes"),
   "aCommon.underOneMinute": "under 1 minute",
-  "aComparison.askLabel": "Assess in chat",
   "aComparison.deltaBetter": "better",
   "aComparison.deltaColumnHeader": "Change",
   "aComparison.deltaNotReliable": "not reliable",
@@ -78,7 +76,6 @@ export const enSweep: MessageCatalog = {
   ),
   "aEngineCompare.tableLabel": "Metrics of one process on two engines",
   "aEngineCompare.title": "Engine comparison",
-  "aErrorPatterns.analyzeLabel": "Find the cause in chat",
   "aErrorPatterns.columnAi": "Chat hand-off",
   "aErrorPatterns.columnCount": "Open",
   "aErrorPatterns.columnIncidentType": "Incident type",
@@ -93,7 +90,6 @@ export const enSweep: MessageCatalog = {
   "aExecPerf.incidentRate": "Incidents per 100 starts",
   "aExecPerf.median": "Median",
   "aExecPerf.p95": "P95",
-  "aExecSummary.askLabel": "Assess in chat",
   "aExecSummary.cellCompleted": "Completed",
   "aExecSummary.cellIncidentsCreated": "New incidents",
   "aExecSummary.cellOpenIncidentsNow": "Open incidents now",
@@ -101,7 +97,6 @@ export const enSweep: MessageCatalog = {
   "aExecSummary.cellStarted": "Started",
   "aExecSummary.headerExecutionSummary": "Execution summary",
   "aExecSummary.title": "Process analytics",
-  "aFailureRate.analyzeLabel": "Find the cause in chat",
   "aFailureRate.colAi": "Chat hand-off",
   "aFailureRate.colDeadJobs": "Jobs without retries",
   "aFailureRate.colIncidentRate": "Incidents per 100 running instances",
@@ -111,7 +106,6 @@ export const enSweep: MessageCatalog = {
   "aFailureRate.emptyState": "No process has open incidents right now.",
   "aFailureRate.heading": "Open incidents by process",
   "aFailureRate.tableLabel": "Open incidents per 100 running instances by process definition",
-  "aFailureSummary.askLabel": "Prioritize in chat",
   "aFailureSummary.mostAffected": "Most affected",
   "aFailureSummary.summaryAriaLabel": "Failure analysis summary",
   "aFailureSummary.title": "Failure analysis",

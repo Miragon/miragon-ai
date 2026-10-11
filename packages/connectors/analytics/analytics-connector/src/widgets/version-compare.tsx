@@ -1,8 +1,7 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
-import { Scale } from "lucide-react"
 import type { VersionCompareResult } from "@miragon-ai/analytics-client"
 import {
-  AskAiButton,
+  HandOffButton,
   ViewMeta,
   formatLookback,
   formatNumber,
@@ -80,10 +79,9 @@ export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
       suppressed={data.suppressed}
       note={versionCompareNote(t, caveats)}
       actions={
-        <AskAiButton
+        <HandOffButton
+          action="assess"
           prompt={ask(versionCompareHandOff(data, caveats))}
-          icon={Scale}
-          label={t("aComparison.askLabel")}
           variant="primary"
         />
       }

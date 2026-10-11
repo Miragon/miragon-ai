@@ -48,3 +48,51 @@ export function createLocalizeFor(
     return (key, params) => translator(locale, key, params)
   }
 }
+
+/** What a show tool needs to word its result: the model summary and the view title. */
+export interface ViewLocale {
+  /** Model summaries: the profile language, English for "system" ({@link createLocalizeFor}). */
+  t: ServerT
+  /**
+   * The view's title (the host toolbar) in the profile language, or
+   * undefined when the profile says "system": the server never sees the
+   * host's locale, so it sets no title rather than an English one over a
+   * German view, and the widget's own heading names the view in the host's
+   * language (#322 U3).
+   */
+  title: (key: string, params?: Record<string, unknown>) => string | undefined
+}
+
+/**
+ * Bind a module's translator to the ONE view-title rule every show tool of
+ * every module follows: `export const viewLocaleOf = createViewLocaleOf(translator)`,
+ * for a handler that already holds the caller's profile language (a settings
+ * view reads the whole record anyway).
+ */
+export function createViewLocaleOf(
+  translator: Translator,
+): (language: string | undefined) => ViewLocale {
+  return (language) => {
+    const named = explicitLocale(language)
+    const t: ServerT = (key, params) => translator(named ?? "en", key, params)
+    return { t, title: (key, params) => (named ? t(key, params) : undefined) }
+  }
+}
+
+/**
+ * `createLocalizeFor` plus the view title, from ONE profile read: a show tool
+ * words its result with
+ * `const { t, title } = await localizeViewFor(store, ctx)`, then
+ * `title: title("key"), summary: t("key", { … })`.
+ * Fail-soft like it: no store, no caller or a store outage reads as "system"
+ * (no title, an English summary).
+ */
+export function createLocalizeViewFor(
+  translator: Translator,
+): (store?: ProfileSource, ctx?: unknown) => Promise<ViewLocale> {
+  const viewLocaleOf = createViewLocaleOf(translator)
+  return async (store, ctx) => {
+    const record = store ? await readProfileAdvisory(store, resolveProfileKey(ctx)) : undefined
+    return viewLocaleOf(record?.language)
+  }
+}

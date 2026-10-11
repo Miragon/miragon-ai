@@ -1,7 +1,7 @@
+import { HandOffButton } from "@miragon-ai/widget-shell/widgets"
 import type { VariableValue } from "../../view-models.js"
 import { VariablesTable } from "../instance-sections.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 
 /**
  * Sanity-check ONE instance's variables. The values stay in the engine: the

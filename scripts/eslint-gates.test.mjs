@@ -138,39 +138,31 @@ describe("sparkle gate (invariant 6, CI U4) in every widget tree", () => {
 })
 
 describe("hand-off gate (invariant 6, CI U4) in both connectors' widgets", () => {
-  const isHandOffHit = (attribute) => (m) => m.startsWith(`AskAiButton needs \`${attribute}\``)
+  const isHandOffHit = (m) => m.includes("HandOffButton") && m.includes("not AskAiButton")
   const HAND_OFF_PATHS = [`${C7}/widgets/__probe__.tsx`, `${AN}/widgets/__probe__.tsx`]
+  const KIT = '"@miragon-ai/widget-shell/widgets"'
 
-  it("requires icon and label on every AskAiButton, self-closing or not", async () => {
+  it("bans AskAiButton in every spelling: import, renamed import, element, namespace", async () => {
     const cases = [
-      ["<AskAiButton prompt={p} />", ["icon", "label"]],
-      ['<AskAiButton prompt={p} label={t("x")} />', ["icon"]],
-      ["<AskAiButton prompt={p} icon={Scale} />", ["label"]],
-      ["<AskAiButton prompt={p} {...rest} />", ["icon", "label"]],
-      ["<AskAiButton prompt={p}>Ask</AskAiButton>", ["icon", "label"]],
-      // An attribute of a nested element does not count for the button.
-      ["<AskAiButton prompt={<X icon={Scale} label={l} />} />", ["icon", "label"]],
+      [`import { AskAiButton } from ${KIT}`, 1],
+      [`import { AskAiButton as Ask } from ${KIT}`, 1],
+      ['const el = <AskAiButton prompt={p} icon={Scale} label={t("x")} />', 1],
+      ["const el = <AskAiButton prompt={p}>Ask</AskAiButton>", 1],
+      ["const el = <W.AskAiButton prompt={p} />", 1],
     ]
     for (const rel of HAND_OFF_PATHS) {
-      for (const [jsx, missing] of cases) {
-        const messages = await gateMessages(rel, `const el = ${jsx}`)
-        for (const attribute of ["icon", "label"]) {
-          assert.equal(
-            messages.filter(isHandOffHit(attribute)).length,
-            missing.includes(attribute) ? 1 : 0,
-            `${rel}: ${jsx}: ${attribute}`,
-          )
-        }
+      for (const [code, hits] of cases) {
+        const messages = await gateMessages(rel, code)
+        assert.equal(messages.filter(isHandOffHit).length, hits, `${rel}: ${code}`)
       }
     }
   })
 
-  it("passes a call site that names both, and leaves other components alone", async () => {
+  it("passes the kit's HandOffButton and leaves other components alone", async () => {
     const code = [
-      'const a = <AskAiButton prompt={p} icon={Scale} label={t("aComparison.askLabel")} />',
-      // camunda7's HandOffButton: icon and label from its action table.
-      "const b = <AskAiButton icon={HAND_OFF_ACTIONS[action]} label={t(`handOff.${action}`)} prompt={p} />",
-      "const c = <Button prompt={p} />",
+      `import { HandOffButton, type AskAiPrompt, type AskAiVariant } from ${KIT}`,
+      'const a = <HandOffButton action="findCause" prompt={p} variant="icon" />',
+      "const b = <Button prompt={p} />",
     ].join("\n")
     for (const rel of HAND_OFF_PATHS) {
       assert.deepEqual(await gateMessages(rel, code), [], rel)

@@ -11,9 +11,8 @@ import {
   AlertTitle,
   AlertDescription,
 } from "@miragon/mcp-toolkit-ui"
-import { FileSearch } from "lucide-react"
 import {
-  AskAiButton,
+  HandOffButton,
   CountPill,
   Section,
   TableEmptyState,
@@ -119,10 +118,9 @@ export function ErrorPatternsTable({
                           <CountPill tone="danger">{formatNumber(pattern.incidentCount)}</CountPill>
                         </TableCell>
                         <TableCell className="text-right">
-                          <AskAiButton
+                          <HandOffButton
+                            action="findCause"
                             variant="icon"
-                            icon={FileSearch}
-                            label={t("aErrorPatterns.analyzeLabel")}
                             prompt={ask(errorPatternHandOff(pattern, data))}
                           />
                         </TableCell>

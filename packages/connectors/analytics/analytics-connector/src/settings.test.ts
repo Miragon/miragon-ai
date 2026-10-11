@@ -198,9 +198,11 @@ describe("registerSettingsTools", () => {
     expect(standard.content[0].text).toBe(
       "Analytics settings: default period 7d, min bucket size 10. Change via analytics_save_settings.",
     )
+    // A caller whose profile names no language follows the host: the server
+    // sets no view title (an English one would sit over a German view), and
+    // the section's own heading names the view (#322 U3).
+    expect(standard.structuredContent.title).toBeUndefined()
     expect(standard.structuredContent).toMatchObject({
-      // The view title follows the caller's language (English without a profile).
-      title: "Analytics settings",
       layout: [{ row: [{ widget: "analytics:settings" }] }],
       context: {
         stepData: {

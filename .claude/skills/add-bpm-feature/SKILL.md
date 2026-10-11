@@ -202,11 +202,12 @@ never re-inline these primitives:
   `-ink` role is only for text in a tone directly on the card or page (an inline error)
 - Icons: Lucide via `Icon` (`import { FileSearch } from "lucide-react"`; the package pins
   devDependency `lucide-react` `0.562.0`, see CLAUDE.md invariant 6), never a Unicode glyph
-  or emoji; a chat hand-off is `<HandOffButton action="explainError" prompt={ask(…)} />`
-  (`src/widgets/lib/hand-off-button.tsx`: the Lucide icon of the concrete function and a
-  `handOff.*` label that names the chat, "Fehler im Chat erklären" / "Explain error in
-  chat"; a new function gets an entry there and its label in both catalogs), placed after
-  the deterministic action; `OpenInCockpitLink` gets `vendor={data.engineVendor}` (the
+  or emoji, at 16 px (`dense` in rows; `scanIconSizes` allows 16 and 24 only); a chat
+  hand-off is the kit's `<HandOffButton action="explainError" prompt={ask(…)} />`
+  (`@miragon-ai/widget-shell/widgets`: the product's one table of functions, each with its
+  Lucide icon and a label that names the chat, "Fehler im Chat erklären" / "Explain error in
+  chat", the same in every module; `AskAiButton` is banned in connector widgets, so a new
+  function gets its entry and both labels in the kit), placed after the deterministic action; `OpenInCockpitLink` gets `vendor={data.engineVendor}` (the
   builder sets it from `provider.branding.displayName`)
 - Copy: en + de catalogs in the brand voice (du, AI, "CIB seven", no dash connector,
   errors say what happened and what you can do, `Ja`/`Nein` for Booleans) and the terms of

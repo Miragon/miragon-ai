@@ -1,6 +1,10 @@
-import { LivePill, WidgetHeader, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import {
+  HandOffButton,
+  LivePill,
+  WidgetHeader,
+  formatNumber,
+} from "@miragon-ai/widget-shell/widgets"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 import { instancesFilterFacts, type InstancesListFilters } from "./hand-offs.js"
 

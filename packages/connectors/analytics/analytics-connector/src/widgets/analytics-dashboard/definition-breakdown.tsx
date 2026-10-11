@@ -8,7 +8,6 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 import {
   Section,
-  TONE_INK,
   WidgetShell,
   formatDuration,
   formatNumber,
@@ -66,13 +65,14 @@ export function ProcessDefinitionBreakdown({
                             count: formatNumber(def.totalInstances),
                           })}
                         </span>
-                        <span className={TONE_INK.success}>
+                        {/* Counts stay neutral (CI §3.3): the words say what they count. */}
+                        <span>
                           {t("aDefBreakdown.completedCount", {
                             count: formatNumber(def.completed),
                           })}
                         </span>
                         {def.runningNow !== null && (
-                          <span className={TONE_INK.info}>
+                          <span>
                             {t("aDefBreakdown.runningNowCount", {
                               count: formatNumber(def.runningNow),
                             })}

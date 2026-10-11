@@ -9,7 +9,6 @@ import { plural } from "./plural.js"
  * `glossary.test.ts` check it. Merged into the catalogs in index.ts.
  */
 export const deSweep: MessageCatalog = {
-  "aBottleneck.analyzeLabel": "Engpass im Chat erklären",
   "aBottleneck.colActivity": "Aktivität",
   "aBottleneck.colAvg": "Durchschn.",
   "aBottleneck.colExecutions": "Ausführungen",
@@ -44,7 +43,6 @@ export const deSweep: MessageCatalog = {
   "aCommon.loadErrorHint": "Aktualisier die Ansicht oder frag im Chat noch mal danach.",
   "aCommon.minutes": plural("count", "1 Minute", "{count} Minuten"),
   "aCommon.underOneMinute": "unter 1 Minute",
-  "aComparison.askLabel": "Im Chat bewerten",
   "aComparison.deltaBetter": "besser",
   "aComparison.deltaColumnHeader": "Änderung",
   "aComparison.deltaNotReliable": "nicht belastbar",
@@ -77,7 +75,6 @@ export const deSweep: MessageCatalog = {
   ),
   "aEngineCompare.tableLabel": "Kennzahlen eines Prozesses auf zwei Engines",
   "aEngineCompare.title": "Engine-Vergleich",
-  "aErrorPatterns.analyzeLabel": "Ursache im Chat suchen",
   "aErrorPatterns.columnAi": "Übergabe an den Chat",
   "aErrorPatterns.columnCount": "Offen",
   "aErrorPatterns.columnIncidentType": "Incident-Typ",
@@ -92,7 +89,6 @@ export const deSweep: MessageCatalog = {
   "aExecPerf.incidentRate": "Incidents je 100 Starts",
   "aExecPerf.median": "Median",
   "aExecPerf.p95": "P95",
-  "aExecSummary.askLabel": "Im Chat bewerten",
   "aExecSummary.cellCompleted": "Abgeschlossen",
   "aExecSummary.cellIncidentsCreated": "Neue Incidents",
   "aExecSummary.cellOpenIncidentsNow": "Offene Incidents jetzt",
@@ -100,7 +96,6 @@ export const deSweep: MessageCatalog = {
   "aExecSummary.cellStarted": "Gestartet",
   "aExecSummary.headerExecutionSummary": "Ausführungsübersicht",
   "aExecSummary.title": "Prozessanalyse",
-  "aFailureRate.analyzeLabel": "Ursache im Chat suchen",
   "aFailureRate.colAi": "Übergabe an den Chat",
   "aFailureRate.colDeadJobs": "Jobs ohne Versuche",
   "aFailureRate.colIncidentRate": "Incidents je 100 laufende Instanzen",
@@ -110,7 +105,6 @@ export const deSweep: MessageCatalog = {
   "aFailureRate.emptyState": "Gerade hat kein Prozess offene Incidents.",
   "aFailureRate.heading": "Offene Incidents nach Prozess",
   "aFailureRate.tableLabel": "Offene Incidents je 100 laufende Instanzen nach Prozessdefinition",
-  "aFailureSummary.askLabel": "Im Chat priorisieren",
   "aFailureSummary.mostAffected": "Am stärksten betroffen",
   "aFailureSummary.summaryAriaLabel": "Zusammenfassung der Fehleranalyse",
   "aFailureSummary.title": "Fehleranalyse",
@@ -119,7 +113,7 @@ export const deSweep: MessageCatalog = {
   "aHeatmap.bpmnNoCamunda7":
     "Das Diagramm ist hier nicht verfügbar: Ohne das camunda7-Modul kann Analytics keine BPMN-Dateien laden. Frag im Chat stattdessen nach den Kennzahlen je Aktivität.",
   "aHeatmap.bpmnNotLoaded":
-    "Das Diagramm konnte nicht geladen werden: Die erste konfigurierte Engine war nicht erreichbar, oder der Prozess ist dort nicht deployt. Prüf die Engine oder frag im Chat nach den Kennzahlen je Aktivität.",
+    "Das Diagramm konnte nicht geladen werden: Die erste konfigurierte Engine war nicht erreichbar, oder der Prozess ist dort nicht bereitgestellt. Prüf die Engine oder frag im Chat nach den Kennzahlen je Aktivität.",
   "aHeatmap.bpmnUnavailable":
     "Das Diagramm konnte nicht geladen werden. Frag im Chat stattdessen nach den Kennzahlen je Aktivität.",
   "aHeatmap.diagramAria": "BPMN-Diagramm mit der Ausführungshäufigkeit je Element als Heatmap",
@@ -170,7 +164,7 @@ export const deSweep: MessageCatalog = {
   "aLandscape.mixNote":
     "Auf den Engines laufen unterschiedliche Prozesse. Fehlerquoten und Laufzeiten einer Engine beschreiben deshalb ihren Prozess-Mix und nicht die Engine selbst, also zeigt diese Ansicht absolute Zahlen. Kennzahlen vergleichen kannst du nur für Definitionen, die auf mehr als einer Engine laufen.",
   "aLandscape.noMetrics": "keine Metriken",
-  "aLandscape.notDeployed": "auf dieser Engine nicht deployt",
+  "aLandscape.notDeployed": "auf dieser Engine nicht bereitgestellt",
   "aLandscape.sharedBadge": plural("count", "auf 1 Engine", "auf {count} Engines"),
   "aSettings.heading": "Analyse-Einstellungen",
   "aSettings.loadError": "Die Einstellungen konnten nicht geladen werden.",

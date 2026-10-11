@@ -1,4 +1,5 @@
 import {
+  HandOffButton,
   KpiGrid,
   ViewDataState,
   WidgetHeader,
@@ -11,7 +12,6 @@ import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 
 /**

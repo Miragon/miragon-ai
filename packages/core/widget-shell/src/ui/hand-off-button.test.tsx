@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render as rtlRender, screen } from "@testing-library/react"
 import { LocaleProvider } from "@miragon/mcp-toolkit-ui"
 import { HostBridgeProvider, type HostBridge } from "@miragon/mcp-toolkit-ui/app"
-import { askAiPrompt } from "@miragon-ai/widget-shell/widgets"
-import { translator } from "../../messages/index.js"
+import { askAiPrompt } from "./ask-ai-prompt.js"
 import { HAND_OFF_ACTIONS, HandOffButton, type HandOffAction } from "./hand-off-button.js"
+import { KIT_LABELS } from "./kit-labels.js"
 
 afterEach(cleanup)
 
@@ -34,14 +34,13 @@ const lucideClass = (name: string) =>
 
 const ACTIONS = Object.keys(HAND_OFF_ACTIONS) as HandOffAction[]
 
-describe("HandOffButton: the icon of the function and a verb that names the chat", () => {
+describe("HandOffButton: one icon and one verb per function, in every module", () => {
   it.each(ACTIONS.flatMap((action) => [[action, "en"] as const, [action, "de"] as const]))(
     "%s (%s)",
     (action, locale) => {
-      const label = translator(locale, `handOff.${action}`)
-      // Every label is translated and says where the work happens.
-      expect(label).not.toBe(`handOff.${action}`)
-      expect(label).toMatch(locale === "de" ? /im Chat/i : /in chat/)
+      const label = KIT_LABELS[locale].handOff[action]
+      // Every label says where the work happens.
+      expect(label).toMatch(locale === "de" ? /im Chat/i : / in chat$/)
       const { container } = render(
         <LocaleProvider locale={locale}>
           <HandOffButton action={action} prompt={prompt} />
@@ -56,6 +55,31 @@ describe("HandOffButton: the icon of the function and a verb that names the chat
     },
   )
 
+  it("labels every function in both languages, and no two functions alike", () => {
+    for (const labels of [KIT_LABELS.de.handOff, KIT_LABELS.en.handOff]) {
+      expect(Object.keys(labels).sort()).toEqual([...ACTIONS].sort())
+      expect(new Set(Object.values(labels)).size).toBe(ACTIONS.length)
+    }
+  })
+
+  it("no two functions share an icon (two hand-offs in one row stay distinguishable)", () => {
+    const icons = Object.values(HAND_OFF_ACTIONS)
+    expect(new Set(icons).size).toBe(icons.length)
+  })
+
+  // The wording the owner decided (#322 U5): a chat hand-off never looks like
+  // an engine action, and the shared functions read the same in every module.
+  it.each([
+    ["assess", "Im Chat bewerten", "Assess in chat"],
+    ["findCause", "Ursache im Chat klären", "Find cause in chat"],
+    ["planFix", "Behebung im Chat planen", "Plan a fix in chat"],
+    ["explainError", "Fehler im Chat erklären", "Explain error in chat"],
+    ["draftTicket", "Ticket im Chat entwerfen", "Draft ticket in chat"],
+  ] as const)("the decided wording: %s", (action, german, english) => {
+    expect(KIT_LABELS.de.handOff[action]).toBe(german)
+    expect(KIT_LABELS.en.handOff[action]).toBe(english)
+  })
+
   it("an icon-only row keeps the label as the accessible name and tooltip", () => {
     render(
       <LocaleProvider locale="de">
@@ -67,13 +91,25 @@ describe("HandOffButton: the icon of the function and a verb that names the chat
     expect(button.textContent).toBe("")
   })
 
+  it("a row title names its subject in the accessible name and tooltip", () => {
+    render(
+      <LocaleProvider locale="en">
+        <HandOffButton
+          action="compareEngines"
+          variant="icon"
+          title="Compare “order” across its engines in chat"
+          prompt={prompt}
+        />
+      </LocaleProvider>,
+    )
+    const button = screen.getByRole("button", {
+      name: "Compare “order” across its engines in chat",
+    })
+    expect(button.getAttribute("title")).toBe("Compare “order” across its engines in chat")
+  })
+
   it("renders nothing for a hand-off this deployment cannot offer", () => {
     const { container } = render(<HandOffButton action="planFix" prompt={null} />)
     expect(container.querySelector("button")).toBeNull()
-  })
-
-  it("no two functions share an icon (two hand-offs in one row stay distinguishable)", () => {
-    const icons = Object.values(HAND_OFF_ACTIONS)
-    expect(new Set(icons).size).toBe(icons.length)
   })
 })

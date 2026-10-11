@@ -1,4 +1,5 @@
 import {
+  HandOffButton,
   OpenInCockpitLink,
   StatusBadge,
   VersionChip,
@@ -8,7 +9,6 @@ import {
 import type { IncidentDetailData } from "../../view-models.js"
 
 import { scopingDefinitionKey, useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 
 /**

@@ -1,6 +1,5 @@
-import { ListOrdered } from "lucide-react"
 import {
-  AskAiButton,
+  HandOffButton,
   KpiGrid,
   KpiGridSkeleton,
   ViewMeta,
@@ -60,10 +59,9 @@ export function FailureSummaryKpi({
             // A live snapshot: no period, the engines and when it was read.
             sub={<ViewMeta engines={enginesMeta(data.engines)} asOf={data.asOf} />}
             actions={
-              <AskAiButton
+              <HandOffButton
+                action="prioritize"
                 variant="primary"
-                icon={ListOrdered}
-                label={t("aFailureSummary.askLabel")}
                 prompt={ask(failureSummaryHandOff(data))}
               />
             }

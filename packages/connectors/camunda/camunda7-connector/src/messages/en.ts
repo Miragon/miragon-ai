@@ -150,7 +150,7 @@ export const en: MessageCatalog = {
   "c7sum.incidentDetail":
     'Incident {incidentId} ({incidentType}) at activity "{activity}" in "{processDefinitionKey}", instance {processInstanceId}{message}.',
   "c7sum.processDetail":
-    'Process "{processDefinitionKey}" (all versions; diagram v{diagramVersion}): {runningInstances} running instance(s), {openIncidents} open incident(s), {failedJobs} failed job(s).',
+    'Process "{processDefinitionKey}" (all versions; diagram v{diagramVersion}): {runningInstances} running instance(s), {openIncidents} open incident(s), {failedJobs} job(s) without retries.',
   "c7sum.historyTimeline":
     "History timeline for process instance {processInstanceId}: historic activities: {totalActivities}{notFound}.",
   "c7sum.historyTimeline.notFound": " (no historic process instance found)",
@@ -172,11 +172,12 @@ export const en: MessageCatalog = {
   "c7sum.bpmnViewer.targetInstance": "process instance {processInstanceId}",
   "c7sum.bpmnViewer.targetDefinition": "process definition {definitionId}",
   "c7sum.bpmnViewer.overlays":
-    "; running activities: {activeActivities}, activities with incidents: {incidentActivities}, failed jobs of this instance: {failedJobs}",
+    "; running activities: {activeActivities}, activities with incidents: {incidentActivities}, jobs without retries in this instance: {failedJobs}",
   "c7sum.bpmnViewer.noOverlays":
     " (no instance overlays; the badges count all running instances of this version)",
   "c7sum.bpmnViewer.xmlUnavailable": "; diagram XML unavailable",
-  "c7sum.jobPanel": "Job panel: {totalCount} job(s), {failedCount} failed{forProcess}{failedOnly}.",
+  "c7sum.jobPanel":
+    "Job panel: {totalCount} job(s), {failedCount} without retries{forProcess}{failedOnly}.",
   "c7sum.jobPanel.forProcess": ' for "{processDefinitionKey}"',
-  "c7sum.jobPanel.failedOnly": " (failed only)",
+  "c7sum.jobPanel.failedOnly": " (only jobs without retries)",
 }

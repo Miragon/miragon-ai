@@ -109,7 +109,7 @@ describe("the analytics dashboard in German", () => {
     // A live gauge nobody reports is unknown, never a plausible 0.
     expect(screen.getByText("—")).toBeTruthy()
     const ask = screen.getByRole("button", { name: /Im Chat bewerten/ })
-    expect(iconOf(ask)).toContain("lucide-stethoscope")
+    expect(iconOf(ask)).toContain("lucide-list-checks")
   })
 
   it("names the process a scoped dashboard is about first", () => {
@@ -133,6 +133,17 @@ describe("the analytics dashboard in German", () => {
     expect(screen.getByText("1.288 gestartet")).toBeTruthy()
     expect(screen.getByText("1 läuft gerade")).toBeTruthy()
     expect(screen.getByText("1 Incident")).toBeTruthy()
+  })
+
+  // CI §3.3, decision f: a number is never coloured; the words say what it counts.
+  it("renders the breakdown's counts neutral, never as coloured digits", () => {
+    const { container } = renderIn("de", ProcessDefinitionBreakdown, DASHBOARD)
+    for (const text of ["1.288 gestartet", "1.262 abgeschlossen", "1 läuft gerade"]) {
+      expect(screen.getByText(text).className, text).not.toMatch(
+        /text-(success|warning|danger|info)/,
+      )
+    }
+    expect(container.querySelector("[class*='-ink']")).toBeNull()
   })
 
   it("explains a bottleneck in the chat from a labelled icon button", () => {
@@ -196,9 +207,9 @@ describe("the failure dashboard", () => {
   it("finds the cause of an incident group in the chat (en)", () => {
     renderIn("en", ErrorPatternsTable, FAILURES)
     expect(screen.getByText("1,200")).toBeTruthy()
-    const asks = screen.getAllByRole("button", { name: "Find the cause in chat" })
+    const asks = screen.getAllByRole("button", { name: "Find cause in chat" })
     expect(asks).toHaveLength(2)
-    expect(iconOf(asks[0])).toContain("lucide-file-search")
+    expect(iconOf(asks[0])).toContain("lucide-scan-search")
   })
 
   it("names the jobs without retries and a rate over 100 as a number (de)", () => {
@@ -207,9 +218,9 @@ describe("the failure dashboard", () => {
     expect(screen.getByText("Incidents je 100 laufende Instanzen")).toBeTruthy()
     expect(screen.getByText("425")).toBeTruthy()
     expect(screen.getByText("3.000")).toBeTruthy()
-    const asks = screen.getAllByRole("button", { name: "Ursache im Chat suchen" })
+    const asks = screen.getAllByRole("button", { name: "Ursache im Chat klären" })
     expect(asks).toHaveLength(2)
-    expect(iconOf(asks[0])).toContain("lucide-file-search")
+    expect(iconOf(asks[0])).toContain("lucide-scan-search")
   })
 })
 
@@ -320,7 +331,7 @@ describe("the BPMN heatmap", () => {
     })
     expect(
       screen.getByText(
-        "Das Diagramm konnte nicht geladen werden: Die erste konfigurierte Engine war nicht erreichbar, oder der Prozess ist dort nicht deployt. Prüf die Engine oder frag im Chat nach den Kennzahlen je Aktivität.",
+        "Das Diagramm konnte nicht geladen werden: Die erste konfigurierte Engine war nicht erreichbar, oder der Prozess ist dort nicht bereitgestellt. Prüf die Engine oder frag im Chat nach den Kennzahlen je Aktivität.",
       ),
     ).toBeTruthy()
     expect(screen.queryByText(/camunda7-Modul/)).toBeNull()

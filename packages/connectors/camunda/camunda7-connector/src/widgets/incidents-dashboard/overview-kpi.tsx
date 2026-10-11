@@ -1,4 +1,5 @@
 import {
+  HandOffButton,
   KpiGrid,
   LivePill,
   ViewDataState,
@@ -11,7 +12,6 @@ import type { IncidentsDashboardData } from "../../view-models.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
 import { dashboardScope, incidentsFeed } from "./scope.js"

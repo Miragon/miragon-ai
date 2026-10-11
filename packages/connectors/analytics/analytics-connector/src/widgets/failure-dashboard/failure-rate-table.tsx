@@ -6,9 +6,8 @@ import {
   TableHead,
   TableCell,
 } from "@miragon/mcp-toolkit-ui"
-import { FileSearch } from "lucide-react"
 import {
-  AskAiButton,
+  HandOffButton,
   CountPill,
   Section,
   TableEmptyState,
@@ -125,10 +124,9 @@ export function FailureRateTable({
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <AskAiButton
+                          <HandOffButton
+                            action="findCause"
                             variant="icon"
-                            icon={FileSearch}
-                            label={t("aFailureRate.analyzeLabel")}
                             prompt={ask(failureRateHandOff(proc, data))}
                           />
                         </TableCell>

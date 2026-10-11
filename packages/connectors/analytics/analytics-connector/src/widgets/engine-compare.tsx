@@ -1,8 +1,7 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
-import { Scale } from "lucide-react"
 import type { EngineCompareResult } from "@miragon-ai/analytics-client"
 import {
-  AskAiButton,
+  HandOffButton,
   ViewMeta,
   formatLookback,
   formatNumber,
@@ -61,12 +60,7 @@ export function EngineCompareWidget({ data }: { data: EngineCompareData }) {
       metrics={metrics}
       suppressed={data.suppressed}
       actions={
-        <AskAiButton
-          prompt={ask(engineCompareHandOff(data))}
-          icon={Scale}
-          label={t("aComparison.askLabel")}
-          variant="primary"
-        />
+        <HandOffButton action="assess" prompt={ask(engineCompareHandOff(data))} variant="primary" />
       }
       // The two engines head the columns; the line names the period and when.
       meta={<ViewMeta period={formatLookback(`${data.windowDays}d`)} asOf={data.asOf} />}

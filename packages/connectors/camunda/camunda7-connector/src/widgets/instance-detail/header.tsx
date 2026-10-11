@@ -1,5 +1,6 @@
 import { Button } from "@miragon/mcp-toolkit-ui"
 import {
+  HandOffButton,
   KpiGrid,
   StatusBadge,
   WidgetHeader,
@@ -10,7 +11,6 @@ import {
 import type { InstanceDetailData } from "../../view-models.js"
 import { type T, useT } from "../../messages/use-t.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 
 export interface InstanceStatus {
   label: string

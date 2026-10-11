@@ -2,7 +2,6 @@ import type { ReactNode } from "react"
 import {
   Alert,
   AlertDescription,
-  Badge,
   Card,
   CardContent,
   Table,
@@ -258,7 +257,6 @@ function DeltaCell({
         {judged && (
           <Icon
             icon={(delta.value ?? 0) > 0 ? TrendingUp : TrendingDown}
-            size={14}
             dense
             className={TONE_ICON[verdict === "worse" ? "danger" : "success"]}
           />
@@ -282,14 +280,19 @@ export function ComparisonEmptyState({ children }: { children: ReactNode }) {
 /**
  * The "too little data" chip of a suppressed comparison: a data-quality note,
  * not an error, so it stays neutral (outline + icon) like the deltas it
- * explains.
+ * explains. A plain outline chip, not the toolkit `Badge`: that one forces
+ * its icons to 12 px, and the icon keeps the kit's 16 px like every other
+ * icon in the view (CI §11, `scanIconSizes`).
  */
 export function SuppressedBadge({ children }: { children: ReactNode }) {
   return (
-    <Badge variant="outline" className="gap-1" data-suppressed="">
-      <Icon icon={CircleAlert} size={12} dense />
+    <span
+      className="text-foreground inline-flex w-fit shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+      data-suppressed=""
+    >
+      <Icon icon={CircleAlert} dense />
       {children}
-    </Badge>
+    </span>
   )
 }
 

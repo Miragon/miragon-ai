@@ -10,9 +10,8 @@ import {
   AlertDescription,
   Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { Hourglass } from "lucide-react"
 import {
-  AskAiButton,
+  HandOffButton,
   Section,
   WidgetShell,
   formatDuration,
@@ -140,10 +139,9 @@ export function ActivityBottleneckTable({
                           {formatDuration(act.totalTimeMs)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <AskAiButton
+                          <HandOffButton
+                            action="explainBottleneck"
                             variant="icon"
-                            icon={Hourglass}
-                            label={t("aBottleneck.analyzeLabel")}
                             prompt={ask(activityBottleneckHandOff(act, data))}
                           />
                         </TableCell>

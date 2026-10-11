@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
+  HandOffButton,
   TONE_DOT,
   ListTable,
   TableEmptyState,
@@ -14,7 +15,6 @@ import {
 import type { HistoryTimelineData } from "../view-models.js"
 import { CockpitListFooter } from "./list-footer.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
-import { HandOffButton } from "./lib/hand-off-button.js"
 import { useT } from "../messages/use-t.js"
 
 export type { HistoryTimelineData }

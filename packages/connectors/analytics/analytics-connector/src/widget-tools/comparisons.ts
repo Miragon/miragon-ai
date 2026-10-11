@@ -8,7 +8,7 @@ import {
 } from "@miragon-ai/widget-shell/server"
 import { queries, schemas, withCallerSignal } from "@miragon-ai/analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
-import { localizeFor } from "../server-locale.js"
+import { localizeViewFor } from "../server-locale.js"
 import { optionalMinBucketSize, settingsFor } from "../settings.js"
 import { versionCompareCaveats } from "../version-compare-caveats.js"
 import { isFleetRequest, withEngineScope } from "../engine-ids.js"
@@ -47,7 +47,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       ...showToolBinding("analytics_show_cluster_compare", "Pre/Post Deployment Comparison"),
     },
     withToolErrors(async (args, toolCtx) => {
-      const t = await localizeFor(profileStore, toolCtx)
+      const { t, title } = await localizeViewFor(profileStore, toolCtx)
       const minBucketSize =
         args.minBucketSize ?? (await settingsFor(profileStore, toolCtx)).minBucketSize
       const data = await queries.clusterCompare(withCallerSignal(ch, toolCtx.signal), {
@@ -59,8 +59,9 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         app: "analytics",
         dataType: "analytics:clusterCompare",
         data,
-        // The view title in the caller's language (the widget heading's own key).
-        title: t("aClusterCompare.title"),
+        // The view title in the language the profile names (the widget heading's
+        // own key); none with "system", where the heading names the view.
+        title: title("aClusterCompare.title"),
         summary: t("aSum.clusterCompare", {
           scope: data.processDefinitionKey
             ? t("aSum.scopeForProcess", { key: data.processDefinitionKey })
@@ -92,7 +93,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       ...showToolBinding("analytics_show_version_compare", "Process Version Comparison"),
     },
     withToolErrors(async (args, toolCtx) => {
-      const t = await localizeFor(profileStore, toolCtx)
+      const { t, title } = await localizeViewFor(profileStore, toolCtx)
       const minBucketSize =
         args.minBucketSize ?? (await settingsFor(profileStore, toolCtx)).minBucketSize
       const data = await queries.versionCompare(withCallerSignal(ch, toolCtx.signal), {
@@ -107,7 +108,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         app: "analytics",
         dataType: "analytics:versionCompare",
         data,
-        title: t("aVersionCompare.title"),
+        title: title("aVersionCompare.title"),
         summary: t("aSum.versionCompare", {
           key: data.processDefinitionKey,
           versionA: data.versionA,
@@ -137,7 +138,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       ...showToolBinding("analytics_show_engine_compare", "Engine Comparison"),
     },
     withToolErrors(async (args, toolCtx) => {
-      const t = await localizeFor(profileStore, toolCtx)
+      const { t, title } = await localizeViewFor(profileStore, toolCtx)
       const minBucketSize =
         args.minBucketSize ?? (await settingsFor(profileStore, toolCtx)).minBucketSize
       const data = await queries.engineCompare(withCallerSignal(ch, toolCtx.signal), {
@@ -151,7 +152,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         app: "analytics",
         dataType: "analytics:engineCompare",
         data,
-        title: t("aEngineCompare.title"),
+        title: title("aEngineCompare.title"),
         summary: t("aSum.engineCompare", {
           engineA: data.engineA,
           engineB: data.engineB,
@@ -176,7 +177,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       ...showToolBinding("analytics_show_engine_landscape", "Cross-Engine Landscape"),
     },
     withToolErrors(async (args, toolCtx) => {
-      const t = await localizeFor(profileStore, toolCtx)
+      const { t, title } = await localizeViewFor(profileStore, toolCtx)
       const data = await queries.engineLandscape(
         withCallerSignal(ch, toolCtx.signal),
         withEngineScope(engineScope, args),
@@ -186,7 +187,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         app: "analytics",
         dataType: "analytics:engineLandscape",
         data,
-        title: t("aLandscape.heading"),
+        title: title("aLandscape.heading"),
         summary: t("aSum.engineLandscape", {
           engineCount: data.totals.engineCount,
           reportingEngineCount: data.totals.reportingEngineCount,

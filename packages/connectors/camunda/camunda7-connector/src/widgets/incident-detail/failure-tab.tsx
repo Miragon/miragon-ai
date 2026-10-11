@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, Badge, Button, Card, CardContent } from "@miragon/mcp-toolkit-ui"
 import {
+  HandOffButton,
   LogText,
   SectionHeading,
   formatNumber,
@@ -10,7 +11,6 @@ import type { IncidentDetailData, IncidentDetailJob } from "../../view-models.js
 
 import { recoveryOf } from "../lib/incident-recovery.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 
 /** The engine's error text for the incident — the incident message, else the job's exception. */

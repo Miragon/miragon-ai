@@ -1,8 +1,7 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
-import { Scale } from "lucide-react"
 import type { ClusterCompareKpi, ClusterCompareResult } from "@miragon-ai/analytics-client"
 import {
-  AskAiButton,
+  HandOffButton,
   ViewMeta,
   formatNumber,
   formatTimestamp,
@@ -105,10 +104,9 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
       metrics={metrics}
       suppressed={data.suppressed}
       actions={
-        <AskAiButton
+        <HandOffButton
+          action="assess"
           prompt={ask(clusterCompareHandOff(data))}
-          icon={Scale}
-          label={t("aComparison.askLabel")}
           variant="primary"
         />
       }

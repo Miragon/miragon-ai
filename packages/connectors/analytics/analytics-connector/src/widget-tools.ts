@@ -20,7 +20,7 @@ import {
   ANALYTICS_DASHBOARD_DATA,
   ANALYTICS_FAILURE_DASHBOARD_DATA,
 } from "./tool-names.js"
-import { localizeFor, type ProfileSource, type ServerT } from "./server-locale.js"
+import { localizeViewFor, type ProfileSource, type ServerT } from "./server-locale.js"
 import { optionalPeriod, settingsFor } from "./settings.js"
 import { registerComparisonWidgetTools } from "./widget-tools/comparisons.js"
 import { engineScopeSummary } from "./widget-tools/shared.js"
@@ -91,9 +91,10 @@ export function registerWidgetTools(
   ch: PrometheusClient,
   options: AnalyticsWidgetToolsOptions,
 ) {
-  // Resolve the request locale via `await localizeFor(profileStore, ctx)` inside
-  // each handler to localize its model-facing `summary` (→ "en" without a store
-  // or a caller identity).
+  // Each show tool words its result via `await localizeViewFor(profileStore, ctx)`:
+  // `t` for the model-facing `summary` (→ "en" without a store or a caller
+  // identity), `title` for the view title, set only in a language the profile
+  // names (the kit's one rule for every module, #322 U3).
   const { profileStore, engineScope } = options
 
   /**
@@ -122,7 +123,7 @@ export function registerWidgetTools(
       ...showToolBinding("analytics_show_dashboard", "Process Analytics Dashboard"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
       const data = await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
         ...withEngineScope(engineScope, args),
@@ -138,8 +139,9 @@ export function registerWidgetTools(
       }
       return buildComposedView({
         app: "analytics",
-        // The view title in the caller's language (the widget heading's own key).
-        title: t("aExecSummary.title"),
+        // The view title in the language the profile names (the widget heading's
+        // own key); none with "system", where the heading names the view.
+        title: title("aExecSummary.title"),
         layout: [
           { row: [{ widget: "analytics:execution-summary-kpi", props: cellProps }] },
           { row: [{ widget: "analytics:execution-performance-kpi", props: cellProps }] },
@@ -166,7 +168,7 @@ export function registerWidgetTools(
       ...showToolBinding("analytics_show_failure_dashboard", "Failure Analysis Dashboard"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const data = await queries.failureDashboardData(
         withCallerSignal(ch, ctx.signal),
         withEngineScope(engineScope, args),
@@ -175,7 +177,7 @@ export function registerWidgetTools(
       const cellProps = isFleetRequest(args.engine) ? undefined : { engine: args.engine }
       return buildComposedView({
         app: "analytics",
-        title: t("aFailureSummary.title"),
+        title: title("aFailureSummary.title"),
         layout: [
           { row: [{ widget: "analytics:failure-summary-kpi", props: cellProps }] },
           { row: [{ widget: "analytics:error-patterns-table", props: cellProps }] },
@@ -208,7 +210,7 @@ export function registerWidgetTools(
       ...showToolBinding("analytics_show_bpmn_heatmap", "BPMN Heatmap"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
       const scoped = withEngineScope(engineScope, args)
       const heat = await queries.elementHeat(withCallerSignal(ch, ctx.signal), {
@@ -233,7 +235,7 @@ export function registerWidgetTools(
           durationSec: heat.durationSec,
           asOf: heat.asOf,
         },
-        title: t("aHeatmap.title"),
+        title: title("aHeatmap.title"),
         summary: t("aSum.bpmnHeatmap", {
           key: args.processDefinitionKey,
           period,

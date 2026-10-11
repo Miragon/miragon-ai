@@ -1,5 +1,6 @@
 import {
   createLocalizeFor,
+  createLocalizeViewFor,
   resolveAuthUserId,
   resolveProfileKey,
 } from "@miragon-ai/widget-shell/server"
@@ -35,8 +36,8 @@ export const resolveSettingsKey = resolveProfileKey
  */
 export const resolveSettingsAuthUserId = resolveAuthUserId
 
-/** A locale-bound translate for analytics server summaries. */
-export type { ServerT } from "@miragon-ai/widget-shell/server"
+/** A locale-bound translate for summaries; a show tool's summary translate + view title. */
+export type { ServerT, ViewLocale } from "@miragon-ai/widget-shell/server"
 
 /**
  * Resolve the request locale and return a translate bound to it + the analytics
@@ -46,3 +47,13 @@ export type { ServerT } from "@miragon-ai/widget-shell/server"
  * store OUTAGE → English) come from the shared `createLocalizeFor`.
  */
 export const localizeFor = createLocalizeFor(translator)
+
+/**
+ * {@link localizeFor} plus the view title, from ONE profile read — the kit's
+ * one title rule for every module's show tools: a view is titled only in a
+ * language the profile names; with "system" (the default), no caller or a
+ * store outage it carries no title, and the widget's own heading names it in
+ * the host's language (#322 U3). Summaries stay `t`:
+ * `const { t, title } = await localizeViewFor(store, ctx); … title: title("key")`.
+ */
+export const localizeViewFor = createLocalizeViewFor(translator)

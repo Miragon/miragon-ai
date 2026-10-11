@@ -132,7 +132,7 @@ describe("VersionCompareWidget in German", () => {
     renderIn("de", VersionCompareWidget, VERSION)
     expect(metaLine()).toBe("Letzte 14 Tage · 1 Engine · Stand 14:32")
     const ask = screen.getByRole("button", { name: /Im Chat bewerten/ })
-    expect(ask.querySelector("svg")?.getAttribute("class")).toContain("lucide-scale")
+    expect(ask.querySelector("svg")?.getAttribute("class")).toContain("lucide-list-checks")
   })
 
   it("calls every quality change of a suppressed comparison not reliable", () => {
@@ -205,7 +205,7 @@ describe("EngineCompareWidget in English", () => {
     expect(screen.getByText("6.6")).toBeTruthy()
     expect(metaLine()).toBe("Last 14 days · As of 14:32")
     const ask = screen.getByRole("button", { name: /Assess in chat/ })
-    expect(ask.querySelector("svg")?.getAttribute("class")).toContain("lucide-scale")
+    expect(ask.querySelector("svg")?.getAttribute("class")).toContain("lucide-list-checks")
   })
 
   it("shows the suppressed chip as a neutral note, not an error", () => {
@@ -299,6 +299,6 @@ describe("ClusterCompareWidget", () => {
   it("hands off to assess the comparison with the Scale icon", () => {
     renderIn("de", ClusterCompareWidget, CLUSTER)
     const ask = screen.getByRole("button", { name: /Im Chat bewerten/ })
-    expect(ask.querySelector("svg")?.getAttribute("class")).toContain("lucide-scale")
+    expect(ask.querySelector("svg")?.getAttribute("class")).toContain("lucide-list-checks")
   })
 })

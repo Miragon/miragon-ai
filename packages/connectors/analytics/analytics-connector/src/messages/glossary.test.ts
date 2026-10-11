@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import type { MessageCatalog } from "@miragon/mcp-toolkit-core"
+import {
+  blindGlossaryRules,
+  glossaryFindings,
+  PRODUCT_GLOSSARY,
+  unnamedGlossaryTerms,
+} from "@miragon-ai/widget-shell/testing"
 import { deAskAi } from "./de.ask-ai.js"
 import { deServer } from "./de.server.js"
 import { deSweep } from "./de.sweep.js"
@@ -11,9 +17,13 @@ import { GLOSSARY } from "./glossary.js"
 
 /**
  * One term, one word (GLOSSARY.md): no catalog uses a synonym the glossary
- * rules out — "Incident", never "Vorfall"; "Jobs ohne Versuche", never "tote
- * Jobs"; "nicht belastbar", never "unzureichendes Signal". A counted entry is
- * rendered with 1 and 2, so both forms are checked.
+ * rules out — "nicht belastbar", never "unzureichendes Signal"; "Zeitraum",
+ * never "Fenster". The terms analytics' views share with camunda7's (its
+ * landscape sits inside camunda7's cross-engine cockpit) are the kit's
+ * `PRODUCT_GLOSSARY`: "Incident", never "Vorfall"; "Jobs ohne Versuche",
+ * never "Fehlgeschlagene Jobs" or "tote Jobs"; "bereitgestellt", never
+ * "deployt". camunda7 runs the same list over its catalogs. A counted entry
+ * is rendered with 1 and 2, so both forms are checked.
  */
 
 /** Every entry as text: strings as they are, counted entries for 1 and for 2. */
@@ -59,33 +69,46 @@ describe("the catalogs use the glossary's words", () => {
     expect(offenders(language)).toEqual([])
   })
 
+  // Widget texts, hand-off intents and model summaries alike.
+  it.each(["de", "en"] as const)("%s: the product-wide terms shared with camunda7", (language) => {
+    const { ui, model } = CATALOGS[language]
+    for (const catalog of [...ui, ...model]) {
+      expect(glossaryFindings(catalog, PRODUCT_GLOSSARY[language])).toEqual([])
+    }
+    expect(blindGlossaryRules(PRODUCT_GLOSSARY[language])).toEqual([])
+  })
+
   it("names every term in GLOSSARY.md, so the document and the check cannot drift", () => {
     const doc = readFileSync(new URL("./GLOSSARY.md", import.meta.url), "utf8")
     for (const term of GLOSSARY) {
       expect(doc, term.de).toContain(term.de)
       expect(doc, term.en).toContain(term.en)
     }
+    expect(unnamedGlossaryTerms(doc, [...PRODUCT_GLOSSARY.de, ...PRODUCT_GLOSSARY.en])).toEqual([])
   })
 
   it("catches a ruled-out synonym (the check is not decoration)", () => {
-    const incident = GLOSSARY.find((term) => term.de === "Incident")!
-    expect(incident.avoidDe.some((p) => p.test("Offene Vorfälle"))).toBe(true)
-    expect(incident.avoidDe.some((p) => p.test("Vorfallsrate"))).toBe(true)
     const running = GLOSSARY.find((term) => term.de === "laufend")!
     expect(running.avoidDe.some((p) => p.test("Aktiv"))).toBe(true)
     expect(running.avoidDe.some((p) => p.test("Aktivität"))).toBe(false)
+    const period = GLOSSARY.find((term) => term.de === "Zeitraum")!
+    expect(period.avoidDe.some((p) => p.test("Zeitfenster"))).toBe(true)
   })
 })
 
-describe("every hand-off label says it goes to the chat", () => {
-  const HAND_OFF_LABEL = /\.(analyzeLabel|askLabel|compareLabel)$/
+/**
+ * The hand-off buttons' labels and icons are the kit's `HandOffButton`
+ * vocabulary (one per function, the same as camunda7's). The landscape's
+ * per-row title names its process and must say where the work happens too.
+ */
+describe("every hand-off title says it goes to the chat", () => {
   it.each([
     ["de", deSweep],
     ["en", enSweep],
   ] as const)("%s", (_language, catalog) => {
-    const labels = texts(catalog).filter(([key]) => HAND_OFF_LABEL.test(key))
-    expect(labels.length).toBeGreaterThanOrEqual(6)
-    for (const [key, text] of labels) expect(text, key).toMatch(/chat/i)
+    const titles = texts(catalog).filter(([key]) => key === "aLandscape.compareLabel")
+    expect(titles.length).toBeGreaterThan(0)
+    for (const [key, text] of titles) expect(text, key).toMatch(/chat/i)
   })
 })
 

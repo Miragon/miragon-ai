@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest"
 import { kitLabels } from "./kit-labels.js"
 
-/** Render the function entries so the whole set compares as plain strings. */
+/**
+ * Render the function entries so the whole set compares as plain strings.
+ * The hand-off labels have their own test (`hand-off-button.test.tsx`).
+ */
 function rendered(tag: string | undefined) {
-  const labels = kitLabels(tag)
+  const { handOff, ...labels } = kitLabels(tag)
+  expect(Object.keys(handOff).length).toBeGreaterThan(0)
   return {
     ...labels,
     loadMoreFailed: labels.loadMoreFailed("timeout"),

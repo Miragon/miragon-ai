@@ -10,9 +10,8 @@ import {
   TableRow,
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
-import { ArrowLeftRight } from "lucide-react"
 import {
-  AskAiButton,
+  HandOffButton,
   CountPill,
   KpiGrid,
   SectionHeading,
@@ -321,10 +320,10 @@ export function landscapeCompareHandOff(processKey: string, on: readonly string[
 function CompareAction({ processKey, on, t }: { processKey: string; on: string[]; t: T }) {
   const { ask } = useHandOff()
   return (
-    <AskAiButton
+    <HandOffButton
+      action="compareEngines"
       variant="icon"
-      icon={ArrowLeftRight}
-      label={t("aLandscape.compareLabel", { key: processKey })}
+      title={t("aLandscape.compareLabel", { key: processKey })}
       prompt={ask(landscapeCompareHandOff(processKey, on))}
     />
   )

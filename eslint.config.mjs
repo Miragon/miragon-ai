@@ -138,16 +138,22 @@ const widgetSparkleGate = {
   ],
 }
 
-// Invariant 6 / CI U4, the other half: every AskAiButton names its function.
-// Without `icon` and `label` the kit falls back to the generic MessageSquare
-// and "Im Chat analysieren", which no DOM suite notices at every call site.
-// Both attributes are required as written attributes (a spread does not
-// count). Both connectors' widgets carry it (camunda7's one call site is
-// HandOffButton, which passes both from its action table).
-const widgetHandOffGate = ["icon", "label"].map((attribute) => ({
-  selector: `JSXOpeningElement[name.name='AskAiButton']:not(:has(> JSXAttribute[name.name='${attribute}']))`,
-  message: `AskAiButton needs \`${attribute}\`: the Lucide icon of the concrete function and a verb that names the chat (CI U4, CLAUDE.md invariant 6).`,
-}))
+// Invariant 6 / CI U4, the other half: ONE hand-off vocabulary across the
+// product. A connector widget renders a chat hand-off only through the kit's
+// HandOffButton, whose function table (HAND_OFF_ACTIONS + kitLabels().handOff)
+// gives every function one Lucide icon and one label in every module; an
+// AskAiButton with a hand-picked icon and verb let the same function drift
+// apart between camunda7 and analytics ("Ursache im Chat klären" next to
+// "Ursache im Chat suchen", FileSearch for two functions). The import (also
+// renamed) and the element (also through a namespace) are both banned in both
+// connectors' widgets.
+const HAND_OFF_MESSAGE =
+  "Render a chat hand-off with the kit's HandOffButton (`action` from HAND_OFF_ACTIONS: one Lucide icon and one verb that names the chat per function, in every module), not AskAiButton (CI U4, CLAUDE.md invariant 6)."
+const widgetHandOffGate = [
+  "ImportSpecifier[imported.name='AskAiButton']",
+  "JSXOpeningElement[name.name='AskAiButton']",
+  "JSXOpeningElement[name.property.name='AskAiButton']",
+].map((selector) => ({ selector, message: HAND_OFF_MESSAGE }))
 
 export default tseslint.config(
   {
@@ -291,8 +297,8 @@ export default tseslint.config(
     rules: { "no-restricted-syntax": ["error", ...widgetDateGate] },
   },
   // Connector widgets sit under the registrar AND date gates, render every
-  // number through the kit formatters (number gate) and name every hand-off's
-  // function (hand-off gate) — one block per connector, each with the union,
+  // number through the kit formatters (number gate) and every hand-off through
+  // the kit's HandOffButton (hand-off gate) — one block per connector, each with the union,
   // after the registrar block (whose options it replaces for these files).
   {
     files: ["packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}"],
