@@ -18,7 +18,6 @@ describe("defaultProfileRecord", () => {
     expect(p).toMatchObject({
       id: "sess-1",
       language: "system",
-      theme: "system",
       modules: {},
       schemaVersion: 3,
     })
@@ -44,11 +43,11 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
     const created = await store.save("sess-1", { language: "de" })
     expect(created.language).toBe("de")
     // Untouched fields keep their defaults.
-    expect(created.theme).toBe("system")
+    expect(created.modules).toEqual({})
 
     // A single-field update must not reset language.
-    const updated = await store.save("sess-1", { theme: "dark" })
-    expect(updated.theme).toBe("dark")
+    const updated = await store.save("sess-1", { modules: { analytics: { defaultPeriod: "7d" } } })
+    expect(updated.modules).toEqual({ analytics: { defaultPeriod: "7d" } })
     expect(updated.language).toBe("de")
     // createdAt is preserved across saves; updatedAt advances (or is unchanged).
     expect(updated.createdAt).toBe(created.createdAt)
@@ -64,7 +63,7 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
       other: { flag: true },
     })
     // A save without `modules` leaves all slices untouched.
-    const untouched = await store.save("sess-1", { theme: "dark" })
+    const untouched = await store.save("sess-1", { language: "de" })
     expect(untouched.modules).toEqual(updated.modules)
   })
 
@@ -98,7 +97,7 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
 
   it("deletes a stored profile", async () => {
     const store = await makeStore()
-    await store.save("sess-1", { theme: "dark" })
+    await store.save("sess-1", { language: "de" })
     expect(await store.delete("sess-1")).toBe(true)
     expect(await store.get("sess-1")).toBeUndefined()
     expect(await store.delete("sess-1")).toBe(false)
@@ -109,11 +108,11 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
     // The settings page has two independent save buttons — overlapping saves
     // must both land: every store merges INSIDE its per-key serialization.
     await Promise.all([
-      store.save("sess-1", { theme: "dark" }),
+      store.save("sess-1", { modules: { analytics: { defaultPeriod: "30d" } } }),
       store.save("sess-1", { language: "de" }),
     ])
     const profile = await store.get("sess-1")
-    expect(profile?.theme).toBe("dark")
+    expect(profile?.modules).toEqual({ analytics: { defaultPeriod: "30d" } })
     expect(profile?.language).toBe("de")
   })
 
@@ -130,14 +129,14 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
       await Promise.all([
         saveModuleSlice(store, key, "camunda7", { defaultEngineId: "prod-a" }),
         saveModuleSlice(store, key, "analytics", { defaultPeriod: "30d" }),
-        store.save(key, { theme: "dark" }),
+        store.save(key, { language: "de" }),
       ])
       const profile = await store.get(key)
       expect(profile?.modules).toEqual({
         camunda7: { pinnedDashboardIds: ["d1"], defaultEngineId: "prod-a" },
         analytics: { defaultPeriod: "30d" },
       })
-      expect(profile?.theme).toBe("dark")
+      expect(profile?.language).toBe("de")
     }
   })
 
@@ -175,7 +174,7 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
     const store = await makeStore()
     const created = await store.save("user-1", { language: "de" }, { userId: "user-1" })
     expect(created.userId).toBe("user-1")
-    const updated = await store.save("user-1", { theme: "dark" })
+    const updated = await store.save("user-1", { language: "en" })
     expect(updated.userId).toBe("user-1")
   })
 }
@@ -209,8 +208,8 @@ describe("createFileSystemProfileStore", () => {
     const blocked = path.join(dir, "blocked")
     await writeFile(blocked, "", "utf-8")
     const store = createFileSystemProfileStore({ dir: blocked })
-    await expect(store.save("sess-1", { theme: "dark" })).rejects.toThrow()
-    await expect(store.save("sess-1", { theme: "dark" })).rejects.toThrow()
+    await expect(store.save("sess-1", { language: "de" })).rejects.toThrow()
+    await expect(store.save("sess-1", { language: "de" })).rejects.toThrow()
   })
 
   it("reads a record from before the migration baseline fail-soft and adopts it on save", async () => {
@@ -224,7 +223,6 @@ describe("createFileSystemProfileStore", () => {
     expect(await store.get("early")).toEqual({
       id: "early",
       language: "de",
-      theme: "dark",
       modules: {},
       createdAt: V1_RECORD.createdAt,
       updatedAt: V1_RECORD.updatedAt,
@@ -233,9 +231,11 @@ describe("createFileSystemProfileStore", () => {
 
     const saved = await store.save("early", { modules: { analytics: { defaultPeriod: "7d" } } })
     expect(saved).toMatchObject({ language: "de", modules: { analytics: { defaultPeriod: "7d" } } })
-    // Stamped at the baseline; the keys it does not know stay inert, raw.
+    // Stamped at the baseline; the keys it does not know stay inert, raw —
+    // the retired theme preference included.
     expect(JSON.parse(await readFile(file, "utf-8"))).toMatchObject({
       schemaVersion: 3,
+      theme: "dark",
       analyticsDefaultPeriod: "30d",
       modules: { analytics: { defaultPeriod: "7d" } },
     })
@@ -246,7 +246,7 @@ describe("createFileSystemProfileStore", () => {
     const store = createFileSystemProfileStore({ dir })
     await writeFile(path.join(dir, "undated.json"), JSON.stringify({ schemaVersion: 3 }), "utf-8")
     expect(await store.get("undated")).toMatchObject({ id: "undated", updatedAt: "" })
-    const saved = await store.save("undated", { theme: "dark" })
+    const saved = await store.save("undated", { language: "de" })
     expect(saved.updatedAt).not.toBe("")
     expect(saved.createdAt).toBe(saved.updatedAt)
   })
@@ -256,10 +256,41 @@ describe("createFileSystemProfileStore", () => {
     const store = createFileSystemProfileStore({ dir })
     await writeFile(path.join(dir, "broken.json"), "{ not json", "utf-8")
     expect(await store.get("broken")).toBeUndefined()
-    expect((await store.save("broken", { theme: "dark" })).theme).toBe("dark")
-    expect((await store.get("broken"))?.theme).toBe("dark")
+    expect((await store.save("broken", { language: "de" })).language).toBe("de")
+    expect((await store.get("broken"))?.language).toBe("de")
+  })
+
+  it("reads a record with the retired theme preference fail-soft and keeps the key inert", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "profile-store-"))
+    const store = createFileSystemProfileStore({ dir })
+    const file = path.join(dir, "themed.json")
+    await writeFile(file, JSON.stringify(THEMED_RECORD), "utf-8")
+
+    // The view never carries it (widgets follow the host's theme) …
+    const read = await store.get("themed")
+    expect(read).toMatchObject({ id: "themed", language: "de", modules: {} })
+    expect(read).not.toHaveProperty("theme")
+
+    // … and a save merges over the raw document, so it stays there, unread.
+    const saved = await store.save("themed", { language: "en" })
+    expect(saved).not.toHaveProperty("theme")
+    expect(JSON.parse(await readFile(file, "utf-8"))).toMatchObject({
+      language: "en",
+      theme: "dark",
+    })
   })
 })
+
+/** A current-shape record an earlier build saved with its theme preference. */
+const THEMED_RECORD = {
+  id: "themed",
+  language: "de",
+  theme: "dark",
+  modules: {},
+  createdAt: "2026-09-01T00:00:00.000Z",
+  updatedAt: "2026-09-01T00:00:00.000Z",
+  schemaVersion: 3,
+}
 
 /** A record as a pre-baseline (v1) build persisted it: flat module fields. */
 const V1_RECORD = {
@@ -318,12 +349,11 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
     expect(await store.get("sess-sparse")).toMatchObject({
       id: "sess-sparse",
       language: "system",
-      theme: "system",
       modules: {},
     })
 
-    const saved = await store.save("sess-sparse", { theme: "dark" })
-    expect(saved.theme).toBe("dark")
+    const saved = await store.save("sess-sparse", { language: "de" })
+    expect(saved.language).toBe("de")
     expect(await store.get("sess-sparse")).toEqual(saved)
   })
 
@@ -333,19 +363,23 @@ describe.skipIf(!TEST_DATABASE_URL)("createPostgresProfileStore", () => {
       INSERT INTO user_profiles (key, profile)
       VALUES ('early', ${sql.json(V1_RECORD)})
     `
-    expect(await store.get("early")).toMatchObject({
-      language: "de",
-      theme: "dark",
-      modules: {},
-      schemaVersion: 3,
-    })
+    const early = await store.get("early")
+    expect(early).toMatchObject({ language: "de", modules: {}, schemaVersion: 3 })
+    expect(early).not.toHaveProperty("theme")
 
-    const saved = await store.save("early", { theme: "light" })
-    expect(saved).toMatchObject({ language: "de", theme: "light", modules: {} })
+    const saved = await store.save("early", { language: "en" })
+    expect(saved).toMatchObject({ language: "en", modules: {} })
+    expect(saved).not.toHaveProperty("theme")
     const rows = await sql<{ profile: Record<string, unknown> }[]>`
       SELECT profile FROM user_profiles WHERE key = 'early'
     `
-    expect(rows[0]?.profile).toMatchObject({ schemaVersion: 3, analyticsDefaultPeriod: "30d" })
+    // The keys this build does not know stay inert in the row, the retired
+    // theme preference included.
+    expect(rows[0]?.profile).toMatchObject({
+      schemaVersion: 3,
+      theme: "dark",
+      analyticsDefaultPeriod: "30d",
+    })
   })
 
   it("merges concurrent saves of disjoint fields in the SAME module slice", async () => {

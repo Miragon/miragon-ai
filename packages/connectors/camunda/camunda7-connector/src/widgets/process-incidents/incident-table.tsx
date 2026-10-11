@@ -128,7 +128,7 @@ export function IncidentTable({
               <tr className={done ? "opacity-50" : undefined}>
                 {!hideInstanceColumn && (
                   <Td className={leadPad}>
-                    <span className="text-m-blue font-mono text-xs font-medium">
+                    <span className="text-foreground font-mono text-xs font-medium">
                       {truncate(incident.processInstanceId, 12)}
                     </span>
                   </Td>
@@ -192,7 +192,7 @@ export function IncidentTable({
           variant="ghost"
           size="sm"
           onClick={() => setShowAll(true)}
-          className={`text-m-blue w-full justify-start ${leadPad ?? "pl-4"}`}
+          className={`text-link w-full justify-start ${leadPad ?? "pl-4"}`}
         >
           {t("procIncTable.showMore", { count: formatNumber(hidden) })}
         </Button>

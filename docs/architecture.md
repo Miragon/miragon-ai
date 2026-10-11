@@ -85,10 +85,10 @@ memory — in that order of precedence. The record is keyed by the signed-in use
 `MCP_OAUTH` is the only caller identity, so without it settings show their
 defaults and cannot be saved.
 
-| Part                     | Owner        | Contents                                                          |
-| ------------------------ | ------------ | ----------------------------------------------------------------- |
-| Core record + store      | widget-shell | Language, theme, record metadata, the slice transport, the stores |
-| `modules.<module>` slice | that module  | Whatever only it understands — e.g. camunda7's engine picks       |
+| Part                     | Owner        | Contents                                                    |
+| ------------------------ | ------------ | ----------------------------------------------------------- |
+| Core record + store      | widget-shell | Language, record metadata, the slice transport, the stores  |
+| `modules.<module>` slice | that module  | Whatever only it understands — e.g. camunda7's engine picks |
 
 Each module owns its slice end to end: its own schema, its own save tool, and
 its own section on the settings page. Nothing central knows what a slice

@@ -14,7 +14,6 @@ afterEach(() => {
 const CURRENT = {
   id: "user-1",
   language: "de",
-  theme: "dark",
   modules: { analytics: { defaultPeriod: "14d" }, camunda7: { defaultEngineId: "prod-a" } },
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-02T00:00:00.000Z",
@@ -92,7 +91,6 @@ describe("parseStoredProfile", () => {
       expect(parseStoredProfile(stored)).toEqual({
         id: "user-1",
         language: "de",
-        theme: "dark",
         modules,
         createdAt: stored.createdAt,
         updatedAt: stored.updatedAt,
@@ -120,6 +118,13 @@ describe("parseStoredProfile", () => {
     expect(parsed).toEqual(CURRENT)
   })
 
+  it("reads a record with the retired theme preference: the key never reaches the view", () => {
+    // Widgets follow the host's theme; a `theme` an earlier build saved is
+    // an unknown key now — no migration, no error, no reset of the rest.
+    expect(parseStoredProfile({ ...CURRENT, theme: "dark" })).toEqual(CURRENT)
+    expect(parseStoredProfile({ ...CURRENT, theme: 42 })).toEqual(CURRENT)
+  })
+
   it("keeps the system language preference — following the host is a stored choice", () => {
     expect(parseStoredProfile({ ...CURRENT, language: "system" })?.language).toBe("system")
   })
@@ -128,12 +133,11 @@ describe("parseStoredProfile", () => {
     // The language default is `system` (follow the host), never a forced locale.
     expect(parseStoredProfile({ ...CURRENT, language: "fr" })).toMatchObject({
       language: "system",
-      theme: "dark",
       modules: CURRENT.modules,
     })
-    expect(parseStoredProfile({ ...CURRENT, theme: 42, userId: 7 })).toMatchObject({
+    expect(parseStoredProfile({ ...CURRENT, userId: 7 })).toMatchObject({
       language: "de",
-      theme: "system",
+      modules: CURRENT.modules,
       userId: undefined,
     })
     expect(parseStoredProfile({ ...CURRENT, modules: "garbage" })?.modules).toEqual({})
@@ -142,7 +146,7 @@ describe("parseStoredProfile", () => {
   it("prefers the store key over the stored id and repairs missing timestamps", () => {
     expect(parseStoredProfile(CURRENT, "other-key")?.id).toBe("other-key")
     const sparse = parseStoredProfile({ schemaVersion: 3 }, "k")
-    expect(sparse).toMatchObject({ id: "k", language: "system", theme: "system", modules: {} })
+    expect(sparse).toMatchObject({ id: "k", language: "system", modules: {} })
     expect(sparse?.createdAt).toBe(sparse?.updatedAt)
     expect(
       parseStoredProfile({ schemaVersion: 3, updatedAt: "2026-02-02T00:00:00.000Z" }, "k"),

@@ -81,12 +81,13 @@ describe("AskAiButton", () => {
     const button = screen.getByRole("button", { name: "Draft a ticket in chat" })
     expect(button.getAttribute("title")).toBe("Draft a ticket in chat")
     expect(button.textContent).toBe("")
-    expect(container.querySelector("svg")!.getAttribute("data-icon-density")).toBe("dense")
+    // A dense icon bar: the CI's narrower stroke, set on the icon itself.
+    expect(container.querySelector("svg")!.getAttribute("stroke-width")).toBe("2")
   })
 
   it("every variant is the same secondary outline, never a brand accent", () => {
     renderButton(prompt(), "en", { variant: "primary" })
     const button = screen.getByRole("button", { name: "Analyze in chat" })
-    expect(button.className).not.toMatch(/m-blue|text-info|bg-primary/)
+    expect(button.className).not.toMatch(/text-info|text-link|bg-primary/)
   })
 })

@@ -19,13 +19,6 @@ export const LANGUAGES = ["system", ...LOCALES] as const
 export type LanguagePref = (typeof LANGUAGES)[number]
 
 /**
- * Theme preference; `system` follows the host's theme (`hostContext.theme`),
- * then the OS `prefers-color-scheme`.
- */
-export const THEMES = ["light", "dark", "system"] as const
-export type ThemePref = (typeof THEMES)[number]
-
-/**
  * The supported locale a language preference names explicitly — `undefined`
  * for `system`, a missing value, or anything this build ships no catalog for.
  * Loose input on purpose: profile feeds arrive untyped.
@@ -41,7 +34,9 @@ export function explicitLocale(language: string | undefined): Locale | undefined
  * losing their preferences.
  *
  * v3 is the migration baseline (`PROFILE_MIGRATION_BASELINE`): a
- * connector-free record — language, theme, `modules.<module>` slices +
- * metadata — owned by this core package.
+ * connector-free record — language, `modules.<module>` slices + metadata —
+ * owned by this core package. The theme preference it once carried is gone
+ * (widgets follow the host's theme); a stored `theme` key stays inert in the
+ * raw document, so it needed no migration.
  */
 export const PROFILE_SCHEMA_VERSION = 3

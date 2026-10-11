@@ -107,8 +107,10 @@ silent (a widget rendering empty, unstyled, or not at all).
    `modules/mcp-notes/package.json`, and the imports (the Dockerfile selects
    packages by path — no edit there); then re-run `pnpm install` to refresh
    `pnpm-lock.yaml`.
-2. Swap the brand tokens (colors, radius, fonts) in
-   `server/src/ui/globals.css`.
+2. Set your brand in `server/src/ui/brand.css`: it starts from the Miragon
+   theme the toolkit ships, and you override role variables only (`--primary`,
+   `--link`, `--focus`, the status tones, radii, fonts) for light and dark.
+   `server/test/brand.test.ts` checks that the result stays readable.
 
 ## Layout
 

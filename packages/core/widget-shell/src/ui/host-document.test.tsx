@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"
 import { LocaleProvider } from "@miragon/mcp-toolkit-ui"
 import { HostDocument } from "./host-document.js"
-import { fullscreenAvailable } from "./localized-app-view.js"
+import { viewTitleMode } from "./localized-app-view.js"
 import { BpmnZoomControls } from "./bpmn-zoom-controls.js"
 import { ShellHostProvider, type ShellHost } from "./shell-host.js"
 
@@ -56,30 +56,43 @@ describe("HostDocument", () => {
 
   it("applies the host's style variables to <html> and injects its font CSS once", () => {
     renderDocument({
-      styleVariables: { "--font-sans": "HostSans", "--font-mono": undefined },
+      styleVariables: {
+        "--color-text-primary": "#f5f4ef",
+        "--font-sans": "HostSans",
+        "--font-mono": undefined,
+      },
       fontCss: "@font-face { font-family: HostSans; src: local(Arial); }",
     })
-    expect(document.documentElement.style.getPropertyValue("--font-sans")).toBe("HostSans")
-    expect(document.documentElement.style.getPropertyValue("--font-mono")).toBe("")
+    const style = document.documentElement.style
+    expect(style.getPropertyValue("--color-text-primary")).toBe("#f5f4ef")
+    // The host's font moves into the fallback slot of the theme's font roles
+    // (the toolkit's adoptHostFontVariables): Geist stays first in the stack
+    // when the consumer loads it, then the host's font, then the system.
+    expect(style.getPropertyValue("--host-font-sans")).toBe("HostSans")
+    expect(style.getPropertyValue("--font-sans")).toBe("")
+    expect(style.getPropertyValue("--host-font-mono")).toBe("")
+    expect(style.getPropertyValue("--font-mono")).toBe("")
     cleanup()
     renderDocument({ fontCss: "@font-face { font-family: Other; src: local(Arial); }" })
     expect(document.querySelectorAll("#__mcp-host-fonts")).toHaveLength(1)
   })
 })
 
-describe("fullscreenAvailable", () => {
-  it("offers the toggle only where the host offers fullscreen — or the view is already there", () => {
-    expect(fullscreenAvailable({ displayMode: "inline", availableDisplayModes: ["inline"] })).toBe(
-      false,
-    )
-    expect(fullscreenAvailable({ displayMode: "inline", availableDisplayModes: [] })).toBe(false)
-    expect(
-      fullscreenAvailable({
-        displayMode: "inline",
-        availableDisplayModes: ["inline", "fullscreen"],
-      }),
-    ).toBe(true)
-    expect(fullscreenAvailable({ displayMode: "fullscreen", availableDisplayModes: [] })).toBe(true)
+describe("viewTitleMode (one title per view)", () => {
+  it("hides the toolbar title over a module's view, whose widget renders its own heading", () => {
+    for (const tool of [
+      "camunda7_show_process_list",
+      "camunda7_open_cockpit",
+      "analytics_show_dashboard",
+      "notes_show_list",
+    ]) {
+      expect(viewTitleMode(tool)).toBe("hide")
+    }
+  })
+
+  it("keeps it over a composed render-view and where the host does not name the tool", () => {
+    expect(viewTitleMode("render-view")).toBe("show")
+    expect(viewTitleMode(undefined)).toBe("show")
   })
 })
 

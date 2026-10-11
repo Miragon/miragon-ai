@@ -74,7 +74,7 @@ describe("caller identity on the wire (createApp)", () => {
     it("every profile write refuses and no record changes", async () => {
       const before = await runtime.profileStore.get(SESSION)
 
-      expect(refusal(await call(client, "camunda7_save_user_profile", { theme: "dark" }))).toMatch(
+      expect(refusal(await call(client, "camunda7_save_user_profile", { language: "de" }))).toMatch(
         /No caller identity/,
       )
       expect(refusal(await call(client, "analytics_save_settings", { minBucketSize: 3 }))).toMatch(
@@ -118,18 +118,20 @@ describe("caller identity on the wire (createApp)", () => {
       // Bob starts from the defaults — Alice's saves are not his.
       expect(payload(await call(bob, "camunda7_user_profile_data"))).toMatchObject({
         canSave: true,
-        profile: { language: "system", theme: "system" },
+        profile: { language: "system" },
       })
       expect(payload(await call(bob, "analytics_settings_data"))).toMatchObject({
         canSave: true,
         settings: { defaultPeriod: "7d" },
       })
 
-      expect((await call(bob, "camunda7_save_user_profile", { theme: "dark" })).isError).toBeFalsy()
+      expect(
+        (await call(bob, "camunda7_save_user_profile", { language: "en" })).isError,
+      ).toBeFalsy()
 
       // Alice's record is untouched by Bob's save, and vice versa.
       expect(payload(await call(alice, "camunda7_user_profile_data"))).toMatchObject({
-        profile: { language: "de", theme: "system" },
+        profile: { language: "de" },
       })
       expect(payload(await call(alice, "analytics_settings_data"))).toMatchObject({
         settings: { defaultPeriod: "30d" },
@@ -138,9 +140,9 @@ describe("caller identity on the wire (createApp)", () => {
       // Keyed by the token subject (the provider maps it as `user.id` only).
       const aliceRecord = await runtime.profileStore.get("alice")
       const bobRecord = await runtime.profileStore.get("bob")
-      expect(aliceRecord).toMatchObject({ language: "de", theme: "system", userId: "alice" })
+      expect(aliceRecord).toMatchObject({ language: "de", userId: "alice" })
       expect(aliceRecord?.modules).toMatchObject({ analytics: { defaultPeriod: "30d" } })
-      expect(bobRecord).toMatchObject({ language: "system", theme: "dark", userId: "bob" })
+      expect(bobRecord).toMatchObject({ language: "en", userId: "bob" })
       expect(bobRecord?.modules).not.toHaveProperty("analytics")
     })
 

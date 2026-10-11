@@ -68,15 +68,17 @@ https://raw.githubusercontent.com/Miragon/corporate-identity/main/plugins/mirago
 Für jedes Wort in der UI gilt zusätzlich `miragon-brand:brand-tone`.
 
 Die Marken-Tokens kommen aus der Skill (`cd-tokens.generated.css`). Keine HEX-Werte forken.
-Das Miragon-Theme ist das Default-Theme des Toolkits (`@miragon/mcp-toolkit-ui`): Es vendort
-`cd-tokens.generated.css` unverändert und bildet seine Rollen-Variablen in Hell und Dunkel
-darauf ab. Dieses Repo und das Starter-Template überschreiben nur Rollen- und
-Alias-Variablen (`--primary`, `--link`, `--focus`, `--<ton>`, `--<ton>-soft`, `--<ton>-ink`,
-Radien, Schatten), nie Palettenklassen oder rohe Farben in Komponenten. Bis das Toolkit-Release
-da ist, stehen die Rollen mit den bisherigen Werten in
-`packages/core/widget-shell/styles/theme.css`. Die Docs-Site vendort die Token-Datei unter
-`docs/.vitepress/theme/cd-tokens.generated.css`; bei jeder CI-Aktualisierung neu kopieren,
-nie von Hand ändern.
+Das Miragon-Theme ist das Default-Theme des Toolkits (`@miragon/mcp-toolkit-ui/theme.css`):
+Es vendort `cd-tokens.generated.css` unverändert und bildet seine Rollen-Variablen in Hell und
+Dunkel darauf ab. Die App (`apps/mcp-server-camunda7/src/ui/globals.css`) und das
+Starter-Template (`server/src/ui/brand.css`) importieren es nach `tailwindcss` und überschreiben
+nur Rollen- und Alias-Variablen (`--primary`, `--link`, `--focus`, `--<ton>`, `--<ton>-soft`,
+`--<ton>-ink`, Radien, Schatten), nie `--cd-*`, nie Palettenklassen oder rohe Farben in
+Komponenten; widget-shell hat kein eigenes Theme mehr. Die Docs-Site vendort dieselbe
+Token-Datei unter `docs/.vitepress/theme/cd-tokens.generated.css`; bei jeder CI-Aktualisierung
+neu kopieren, nie von Hand ändern. Der Drift-Test (`apps/mcp-server-camunda7/test/
+ui-stylesheet.test.ts`: kein `--cd-*` außerhalb der Toolkit-Kopie, Docs-Kopie gleich der
+Toolkit-Kopie; `test:host`: das gebaute Stylesheet trägt die vendorten Werte) hält das fest.
 
 UI-Texte gibt es auf Deutsch und Englisch, je nach Host-Locale. Deutsch folgt brand-tone
 vollständig: du-Ansprache, AI statt `KI`, „CIB seven“, kein Gedankenstrich als Verbinder,
@@ -92,11 +94,17 @@ Strings in `.ts`/`.tsx` sieht brand-lint nicht, die prüfen die Gates aus
 Die Widgets laufen als MCP Apps im Rahmen eines Chat-Hosts. Dafür gelten diese bewussten
 Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 
-- Theme: Die Widgets folgen dem Host-Theme (#339), ohne Umschalter in der App; ohne Host
-  hell. Dunkel entsteht streng aus den Dark-Ground-Regeln der CI: Basis `--cd-schwarz`, Flächen
-  als `color-mix`-Aufhellungen davon, Text Weiß, Links und Akzenttext `--cd-gruen`, Buttons
-  `--cd-blau` mit Weiß, Fokus `--cd-blau-hell`, Status in den `-hell`-Werten ohne getönte
-  Flächen, leiser Text `--cd-kontur`. BPMN-Papier und seine Zoom-Leiste bleiben immer hell.
+- Theme: Die Widgets folgen dem Host-Theme (#339), ohne Umschalter in der App und ohne
+  Theme-Feld im Profil; ohne Host das OS. Dunkel entsteht streng aus den Dark-Ground-Regeln der
+  CI: Basis `--cd-schwarz`, Flächen als `color-mix`-Aufhellungen davon, Text Weiß, Links und
+  Akzenttext `--cd-gruen`, Buttons `--cd-blau` mit Weiß, Fokus `--cd-blau-hell`, Status in den
+  `-hell`-Werten ohne getönte Flächen, leiser Text `--cd-kontur`. Der Host darf nur die
+  neutralen Rollen setzen (`HOST_TOKEN_MAP`: Flächen, Text, `--border`), nie `--primary`,
+  `--link`, `--focus`, `--ring`, `--input`, `--accent` oder einen Status. BPMN-Papier und seine
+  Zoom-Leiste bleiben immer hell.
+- Schrift: Geist zuerst, dann die Schrift des Hosts (`adoptHostFontVariables` in
+  `HostDocument`), dann System. Geist liefert die App noch nicht aus (ein späterer Schritt über
+  `resourceDomains`), also rendert heute die Host-Schrift.
 - Sprache: Deutsch und Englisch nach Host-Locale (Fallback Englisch) statt nur Deutsch.
 - Chrome: im Rahmen des Hosts (Kopf mit Titel und Aktionen) statt randlosem Canvas mit
   schwebendem Chrome in den Ecken.
@@ -236,8 +244,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    "Design-System"): `ToneVariant` is `danger | warning | success | info | neutral`. There is
    no `critical`: an open incident or a failed job without retries is `danger`, a failed job
    with retries left or a degraded engine is `warning`, a count without a state is `neutral`.
-   Each tone has three roles, theme variables defined once in
-   `widget-shell/styles/theme.css` (light + dark): `--<tone>` is the fill, dot, edge or icon
+   Each tone has three roles, theme variables of the toolkit's Miragon theme
+   (`@miragon/mcp-toolkit-ui/theme.css`, light + dark): `--<tone>` is the fill, dot, edge or icon
    (`TONE_DOT`, `TONE_BORDER`, `TONE_ICON`), `--<tone>-soft` the tint (`TONE_TINT`, or
    `TONE_SOFT` = tint + black text, paired with `TONE_BORDER`) and `--<tone>-ink` the text of
    a tone directly on the card or page (`TONE_INK`, an inline error line; never on a tint,
@@ -248,21 +256,34 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    with a bar instead of dimming them. A selection (`FilterBar` chip, `SegmentedControl`) is
    the info tint and contour around black text. Components use role names only
    (`text-danger-ink`, `bg-info-soft`, `text-link`, `ring-focus` …), never Tailwind palette
-   classes or raw colours (`scanColors`, below); the legacy `--m-*` accents in the
-   app/template retire with the theme swap. `src/ui/tone-contrast.test.ts` holds every
-   `TONE_*` pair to WCAG AA in light and dark (role gaps of today's interim neutrals are a
-   shrink-only list there), the app's `test/ui-stylesheet.test.ts` does the same over the
-   app's and the template's overrides. `parseThemeVariables` reads a stylesheet stack the way
-   `<html class="dark">` sees it: `:root` and `.dark` in source order, later wins, so a
-   brand override goes under BOTH (a light-only `:root` value shows in dark); a theme rule it
-   cannot model (`html.dark`, `[data-theme]`, a media query or layer around `:root`) throws.
+   classes, raw colours or the retired `--m-*`/`critical` accents (`scanColors`, below; a
+   selected nav item is `bg-accent text-accent-foreground`, a link `text-link`).
+   `src/ui/tone-contrast.test.ts` holds every
+   `TONE_*` and role pair to WCAG AA in light and dark over the shipped theme
+   (`toolkitThemeStylesheets()` from `/testing`); the one exemption is the CI's own (§3.3:
+   success green and amber as a dot, edge or icon on light reach 1.67:1 / 1.83:1, so a status
+   never stands alone), a shrink-only list. The app's `test/ui-stylesheet.test.ts` does the
+   same over the app's and the template's stack (`globals.css`, the template's `brand.css`),
+   pins that no consumer stylesheet names a raw colour (`stylesheetColorFindings`) or a
+   `--cd-*`/`--m-*`/`--critical` variable, and is the token DRIFT test (the docs' vendored
+   copy equals the toolkit's; `test:host` checks the built stylesheet's `--cd-*` values); the
+   template runs `server/test/brand.test.ts` over its own `brand.css`, the override example
+   included. `parseThemeVariables` reads a stylesheet stack the way
+   `<html class="dark" data-theme="dark">` sees it: `:root` and the dark scopes (`.dark`,
+   `[data-theme="dark"]`, `[data-theme-mode="dark"]`) in source order, later wins, so a brand
+   override goes under BOTH (a light-only `:root` value shows in dark); a theme rule it cannot
+   model (`html.dark`, `[data-theme="light"]`, a media query or layer around `:root`) throws.
    **Function icons are Lucide, never glyphs or emoji:** `Icon` (`currentColor`, 16 px, stroke
-   2.5 set once in `theme.css`, `dense` → 2 for tight bars and rows; 16 px in chrome and 24 px
+   2.5 set on the icon, `dense` → 2 for tight bars and rows — lucide-react's own `strokeWidth`,
+   the mechanism the toolkit's `LucideProvider` uses for its chrome (2.5, its toolbar 2), never
+   a CSS `stroke-width` rule, which would beat the provider; 16 px in chrome and 24 px
    previews are the only sizes, `scanIconSizes` below). `lucide-react` is a
    widget-shell peer, deduped in the bundle (invariant 4); a workspace package that imports it
    pins devDependency `0.562.0`, the version mcp-use's graph peers on: any other version
    resolves a second mcp-use/toolkit instance for that package and splits the React contexts
-   between it and widget-shell in tests. A chat hand-off is the kit's `HandOffButton`
+   between it and widget-shell in tests. A host BUNDLE (the app, the template's server) pins a
+   1.x `lucide-react` instead: it dedupes the toolkit's icons onto its copy, and toolkit 2.7
+   imports `LucideProvider`, which 0.x lacks. A chat hand-off is the kit's `HandOffButton`
    (`action` from `HAND_OFF_ACTIONS`, `widget-shell/src/ui/hand-off-button.tsx`): ONE
    vocabulary for the product, each function with one Lucide icon and one verb that names the
    chat (`kitLabels().handOff`, de + en: "Ursache im Chat klären" / "Find cause in chat",
@@ -356,7 +377,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    filesystem/postgres implementations, migrations) is core:
    `packages/core/widget-shell/src/profile-{record,store,store-postgres,migrations}.ts`
    (`@miragon-ai/widget-shell/server`) — the record is connector-free (language,
-   theme, `modules.<module>` slices + metadata; camunda7's engine/dashboard
+   `modules.<module>` slices + metadata; no theme — a `theme` an earlier build stored stays an
+   inert raw key; camunda7's engine/dashboard
    preferences live in ITS slice, `modules.camunda7`, projected to a flat
    `UserProfile` view in `camunda7-connector/src/lib/profile-schema.ts`).
    Records migrate on read through `parseStoredProfile` (shared by every store;
@@ -432,13 +454,17 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    engine-SDK dependency). Apps own no domain UI: widget catalogues and
    components live in packages — and no boot plumbing either. The bundle root's provider
    stack (`AppShellProviders`: host context + display mode → host document → host
-   bridge → `ProfileGate` → host widget registry; order is load-bearing; locale and
-   theme resolve explicit profile > host context > OS/English, applied to `.dark`,
-   `data-theme` and `color-scheme` alike) plus `LocalizedAppView` live in
-   `@miragon-ai/widget-shell/widgets`, its font-free token stylesheet in
-   `@miragon-ai/widget-shell/theme.css` (never import the toolkit's `globals.css`: it
-   forces a font with `!important`; no height floor on html/body/#root —
-   `test/ui-stylesheet.test.ts`), and the whole server boot lives in `/server`:
+   bridge → `ProfileGate` → host widget registry; order is load-bearing; the language
+   resolves explicit profile > host context > English, the theme host context > OS (no
+   in-app switch), applied to `.dark`, `data-theme` and `color-scheme` alike; `HostDocument`
+   applies the host's style variables, then the toolkit's `adoptHostFontVariables`) plus
+   `LocalizedAppView` (the toolkit's `McpAppView` with its own en/de chrome catalog and
+   fullscreen gate; `titleMode` "hide" over a module view, whose widget heading is the one
+   title, "show" over a composed `render-view`) live in `@miragon-ai/widget-shell/widgets`;
+   the stylesheet is the toolkit's `@miragon/mcp-toolkit-ui/theme.css` after `tailwindcss`
+   (never its `globals.css`, a second Tailwind entry, nor `fonts.css`, base64 Geist per view;
+   no height floor on html/body/#root — `test/ui-stylesheet.test.ts`), and the whole server
+   boot lives in `/server`:
    `createComposedServer` owns the ORDER (env-typo warnings + HTTP edge policy + the
    OAuth/`MCP_URL` check → ONE `resolveBoot`, authenticated exactly when the root hands
    in an OAuth provider → boot log → the root's `setup(boot)` (plugins, persistence) →
@@ -577,14 +603,14 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   consumer-shared libraries are published as RANGED `peerDependencies` so a downstream
   React + zod app dedupes them against its own copy instead of getting a second
   instance: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*`
-  `~2.6.0` (2.6.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
+  `~2.7.0` (2.7.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
   appears as an EXACT `devDependency` so the in-repo build/tests resolve a concrete
   version. **`mcp-use` is the exception: exactly pinned even as a peer** (`2.7.3`) — a
   duplicate `mcp-use` instance breaks the React context and hangs every in-widget query
   on "Loading…" (invariant #4), so its exact pin is load-bearing. Name the required
   `mcp-use` version in each package README and the release changelog. Toolkit updates are
   still deliberate version bumps across all packages — never bump a single package in
-  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.6.0` → `mcp-use@2.7.3`;
+  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.7.0` → `mcp-use@2.7.3`;
   `zod`/`react` it peers as ranges), so a toolkit MAJOR/MINOR bump is a joint toolkit + `mcp-use` bump across
   every package incl. `templates/composed-server` — `scripts/test-template.sh` fails if
   the template is left behind.
@@ -659,8 +685,8 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository.** In `devDependencies` it is
-  exactly pinned (`save-exact`, currently `2.6.0`); in the published surface it is a
-  ranged `peerDependency` (`~2.6.0`) so consumers dedupe it. Toolkit changes arrive here
+  exactly pinned (`save-exact`, currently `2.7.0`); in the published surface it is a
+  ranged `peerDependency` (`~2.7.0`) so consumers dedupe it. Toolkit changes arrive here
   as a deliberate, repo-wide version bump — since 1.0 the toolkit follows semver
   (breaking changes arrive as major bumps).
 - **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,

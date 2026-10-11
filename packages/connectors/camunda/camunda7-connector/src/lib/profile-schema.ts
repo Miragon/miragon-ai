@@ -2,11 +2,9 @@ import { z } from "zod"
 import {
   LANGUAGES,
   parseModuleSlice,
-  THEMES,
   withoutDefaults,
   type LanguagePref,
   type ProfileRecord,
-  type ThemePref,
 } from "@miragon-ai/widget-shell/server"
 import { ROLES } from "./profile-constants.js"
 
@@ -16,7 +14,7 @@ export const CAMUNDA7_MODULE_KEY = "camunda7"
 /**
  * The camunda7-owned slice of the shared profile record
  * (`profile.modules.camunda7`) — everything this connector persists per user.
- * The cross-module preferences (`language`, `theme`) live on the record itself
+ * The cross-module preference (`language`) lives on the record itself
  * (`profileRecordSchema` in `@miragon-ai/widget-shell/server`); this module
  * validates its slice fail-soft on read and writes it through its own save
  * tool, mirroring analytics' settings slice.
@@ -75,7 +73,6 @@ export function parseCamunda7Settings(
  */
 export interface UserProfile extends Camunda7Settings {
   language: LanguagePref
-  theme: ThemePref
   /** Record stamp — the widget's baseline-resync key after a save. */
   updatedAt: string
 }
@@ -83,7 +80,6 @@ export interface UserProfile extends Camunda7Settings {
 export function toUserProfile(record: ProfileRecord): UserProfile {
   return {
     language: record.language,
-    theme: record.theme,
     updatedAt: record.updatedAt,
     ...parseCamunda7Settings(record),
   }
@@ -93,7 +89,6 @@ export function toUserProfile(record: ProfileRecord): UserProfile {
 export function defaultUserProfile(): UserProfile {
   return {
     language: "system",
-    theme: "system",
     updatedAt: new Date().toISOString(),
     ...camunda7SettingsSchema.parse({}),
   }
@@ -101,7 +96,8 @@ export function defaultUserProfile(): UserProfile {
 
 /**
  * The `camunda7_save_user_profile` tool's input: any subset of the flat
- * preferences (cross-module `language`/`theme` + this module's slice fields).
+ * preferences (the cross-module `language` + this module's slice fields).
+ * There is no theme: the widgets follow the host's theme.
  * Default-FREE on purpose — zod 4 re-applies `.default()`s through
  * `.partial()`, materializing omitted fields into silent resets (see
  * `withoutDefaults` in `@miragon-ai/widget-shell/server`). Deliberately
@@ -113,7 +109,6 @@ export const userProfileToolSaveInput = z
     language: z
       .enum(LANGUAGES)
       .describe('UI + summary language; "system" follows the chat host (summaries in English).'),
-    theme: z.enum(THEMES).describe('"system" follows the chat host, then the OS.'),
     ...withoutDefaults(camunda7SettingsSchema.shape),
   })
   .partial()

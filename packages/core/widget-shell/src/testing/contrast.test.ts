@@ -6,6 +6,7 @@ import {
   measureContrast,
   parseThemeVariables,
   resolveColor,
+  toolkitThemeStylesheets,
 } from "./contrast.js"
 
 // Colour parser fixtures: CI token values and synthetic colours are the
@@ -187,10 +188,45 @@ describe("parseThemeVariables", () => {
     expect(scoped.dark.get("--x")).toBe("#000001")
   })
 
+  it("models the toolkit's dark scopes on <html> and skips its light islands", () => {
+    // The toolkit's theme.css: light roles on :root plus a light island
+    // nested in a dark scope (a selector list with a :where() group), dark
+    // roles on .dark, [data-theme="dark"] and [data-theme-mode="dark"].
+    const toolkitShaped = parseThemeVariables(
+      ':root, :where(.dark, [data-theme="dark"], [data-theme-mode="dark"]) [data-theme-mode="light"] { --x: #000001; }',
+      '.dark, [data-theme="dark"], [data-theme-mode="dark"] { --x: #000002; }',
+    )
+    expect(toolkitShaped.light.get("--x")).toBe("#000001")
+    expect(toolkitShaped.dark.get("--x")).toBe("#000002")
+    // Each dark scope alone reaches only dark, like .dark.
+    for (const scope of ["[data-theme='dark']", '[data-theme-mode="dark"]']) {
+      const single = parseThemeVariables(":root { --x: #000001; }", `${scope} { --x: #000002; }`)
+      expect(single.light.get("--x")).toBe("#000001")
+      expect(single.dark.get("--x")).toBe("#000002")
+    }
+  })
+
+  it("reads the toolkit's Miragon theme as shipped: vendored tokens, then the role layer", () => {
+    const shipped = toolkitThemeStylesheets()
+    expect(shipped).toHaveLength(2)
+    expect(shipped[0]).toMatch(/--cd-blau:/)
+    expect(shipped[1]).toMatch(/@import "\.\/theme\/cd-tokens\.generated\.css"/)
+    const miragon = parseThemeVariables(...shipped)
+    const rgb = (name: string, mode: "light" | "dark") => {
+      const { r, g, b } = resolveColor(`var(${name})`, miragon[mode])
+      return [r, g, b].map((c) => Math.round(c * 255)).join(",")
+    }
+    // --primary is --cd-blau (#335DE5) in both modes; the ground flips.
+    expect(rgb("--primary", "light")).toBe("51,93,229")
+    expect(rgb("--primary", "dark")).toBe("51,93,229")
+    expect(rgb("--background", "light")).toBe("255,255,255")
+    expect(rgb("--background", "dark")).toBe("29,29,29")
+  })
+
   it.each([
     ["html.dark { --x: #000000; }"],
     [":root.dark { --x: #000000; }"],
-    ['[data-theme="dark"] { --x: #000000; }'],
+    ['[data-theme="light"] { --x: #000000; }'],
     [":root:not(.light) { --x: #000000; }"],
     ["html { --x: #000000; }"],
     ["@media (prefers-color-scheme: dark) { :root { --x: #000000; } }"],

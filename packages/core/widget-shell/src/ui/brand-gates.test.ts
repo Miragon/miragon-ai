@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+import { TOOLKIT_MESSAGES } from "@miragon/mcp-toolkit-ui"
 import {
   catalogTextFindings,
   glossaryFindings,
@@ -11,7 +12,6 @@ import {
 import { ASK_AI_PROMPT_LABELS } from "./ask-ai-prompt.js"
 import { DEFAULT_HEATMAP_LABELS } from "./bpmn-heatmap-labels.js"
 import { KIT_LABELS } from "./kit-labels.js"
-import { APP_VIEW_LABELS } from "./localized-app-view.js"
 
 /**
  * The kit's own copy and icons under the brand gates every widget package
@@ -24,8 +24,9 @@ describe("kit copy follows the voice rules", () => {
   it.each([
     ["kit labels (de)", KIT_LABELS.de, "de"],
     ["kit labels (en)", KIT_LABELS.en, "en"],
-    ["view chrome (de)", APP_VIEW_LABELS.de, "de"],
-    ["view chrome (en)", APP_VIEW_LABELS.en, "en"],
+    // The view chrome every view shows is the toolkit's own catalog now.
+    ["view chrome (toolkit, de)", TOOLKIT_MESSAGES.de.view, "de"],
+    ["view chrome (toolkit, en)", TOOLKIT_MESSAGES.en.view, "en"],
     ["hand-off fence (de)", ASK_AI_PROMPT_LABELS.de, "de"],
     ["hand-off fence (en)", ASK_AI_PROMPT_LABELS.en, "en"],
     ["heatmap defaults (en)", DEFAULT_HEATMAP_LABELS, "en"],

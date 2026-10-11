@@ -296,7 +296,7 @@ export const definition: AppDefinition = {
       // (no pipeline step), eager-rendered by camunda7_show_user_profile.
       id: "camunda7:user-profile",
       description:
-        "The signed-in user's settings (language, theme, default engine) — opened by camunda7_show_user_profile.",
+        "The signed-in user's settings (language, default engine, dashboards) — opened by camunda7_show_user_profile.",
       requires: [],
       size: "full",
     },

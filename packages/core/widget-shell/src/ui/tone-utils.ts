@@ -2,16 +2,21 @@
  * The status tone model: the single source of the class strings every kit
  * component (and every widget) uses to show a state. CI rule (modeler-tool-
  * design §3.3): a status colour is a FILL, DOT, BORDER or ICON, never the colour
- * of the words next to it. Each tone therefore has three roles, all theme
- * variables defined once in `styles/theme.css` (light + dark):
+ * of the words next to it. Each tone therefore has three roles, theme
+ * variables the toolkit's Miragon theme defines (`@miragon/mcp-toolkit-ui/
+ * theme.css` over the vendored `--cd-*` tokens, light + dark; the shell keeps
+ * no copy):
  *
  *  - `--<tone>`       fill / dot / border / icon — non-text, ≥ 3:1 on a card
+ *                     (CI exemption: success green and amber on a light ground,
+ *                     which therefore never stand alone)
  *  - `--<tone>-soft`  the tint of a badge, chip or soft card; the text on it
- *                     is `--foreground` (black), the edge `--<tone>`
+ *                     is `--foreground` (black), the edge `--<tone>`; no tint
+ *                     on dark (transparent, the edge carries the tone)
  *  - `--<tone>-ink`   the TEXT colour of a tone directly on the card or page
- *                     (an inline error line, ≥ 4.5:1); after the theme swap
- *                     success/warning ink is plain black, so never rely on it
- *                     to carry the meaning
+ *                     (an inline error line, ≥ 4.5:1); success/warning ink is
+ *                     plain black on light, so never rely on it to carry the
+ *                     meaning
  *
  * Open incidents and failed jobs without retries are `danger`; a failed job
  * that still has retries and a degraded engine are `warning`. There is no

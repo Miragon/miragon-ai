@@ -4,10 +4,24 @@ import { cn } from "./cn.js"
 export type { LucideIcon }
 
 /**
+ * Lucide stroke widths of the CI (modeler-tool-design §11, on the 24 grid),
+ * the same values the toolkit's `McpAppView` sets through `LucideProvider`
+ * (2.5 for everything it renders, 2 in its dense toolbar). One mechanism for
+ * the whole view: lucide-react's own `strokeWidth`, never a CSS rule (a
+ * `stroke-width` declaration beats the SVG attribute and would override the
+ * toolkit's dense bars).
+ */
+export const ICON_STROKE = 2.5
+/** Stroke in dense bars and table rows (`Icon dense`). */
+export const DENSE_ICON_STROKE = 2
+
+/**
  * A Lucide function icon the way the CI draws it (modeler-tool-design §11):
- * `currentColor`, 16 px in chrome, stroke 2.5 in the 24 grid (2 with
- * `dense`, for tight bars and table rows). The stroke is set once in
- * `theme.css`, so it also holds for Lucide icons a toolkit component renders.
+ * `currentColor`, 16 px in chrome, stroke {@link ICON_STROKE} in the 24 grid
+ * ({@link DENSE_ICON_STROKE} with `dense`, for tight bars and table rows).
+ * The stroke is set on the icon itself, so it holds wherever the widget
+ * renders — inside the toolkit's view (whose `LucideProvider` sets the same
+ * default for raw Lucide icons) or outside it.
  *
  * Decorative by default (`aria-hidden`): the button or text next to it names
  * the action. Pass `label` only for a standalone icon that carries meaning on
@@ -33,11 +47,11 @@ export function Icon({
   return (
     <Glyph
       size={size}
+      strokeWidth={dense ? DENSE_ICON_STROKE : ICON_STROKE}
       aria-hidden={label ? undefined : true}
       aria-label={label}
       role={label ? "img" : undefined}
       focusable="false"
-      data-icon-density={dense ? "dense" : undefined}
       className={cn("shrink-0", className)}
     />
   )

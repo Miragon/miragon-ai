@@ -1,11 +1,33 @@
+import { readFileSync } from "node:fs"
+import { createRequire } from "node:module"
+
 /**
  * WCAG contrast over the THEME as written: reads the custom properties a
- * stylesheet declares for light (`:root`) and dark (`.dark`), resolves
- * `var()` chains, hex, `oklch()` and `color-mix()` the way the browser
- * would, and measures text/background and non-text pairs in both modes.
- * Built for tests (`@miragon-ai/widget-shell/testing`): a brand override that
- * drops a role below AA fails the suite that runs it, not a screenshot review.
+ * stylesheet declares for light (`:root`) and dark (`.dark` and the toolkit's
+ * other dark scopes), resolves `var()` chains, hex, `oklch()` and
+ * `color-mix()` the way the browser would, and measures text/background and
+ * non-text pairs in both modes. Built for tests
+ * (`@miragon-ai/widget-shell/testing`): a brand override that drops a role
+ * below AA fails the suite that runs it, not a screenshot review.
  */
+
+/**
+ * The theme every view ships, as the installed `@miragon/mcp-toolkit-ui`
+ * provides it: the vendored Miragon tokens (`cd-tokens.generated.css`,
+ * which `theme.css` imports first) and `theme.css` with its light and dark
+ * role layer. Pass it to {@link parseThemeVariables} first and a consumer's
+ * brand stylesheet after it:
+ *
+ *   parseThemeVariables(...toolkitThemeStylesheets(), brandCss)
+ */
+export function toolkitThemeStylesheets(): string[] {
+  const require = createRequire(import.meta.url)
+  const read = (entry: string) => readFileSync(require.resolve(entry), "utf8")
+  return [
+    read("@miragon/mcp-toolkit-ui/cd-tokens.generated.css"),
+    read("@miragon/mcp-toolkit-ui/theme.css"),
+  ]
+}
 
 export type ThemeMode = "light" | "dark"
 
@@ -60,6 +82,24 @@ function customProperties(body: string): [string, string][] {
   return declarations
 }
 
+/** Split a selector list on its top-level commas (`:where(.a, .b) .c` stays whole). */
+function selectorList(prelude: string): string[] {
+  const out: string[] = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < prelude.length; i++) {
+    const ch = prelude[i]
+    if (ch === "(" || ch === "[") depth++
+    else if (ch === ")" || ch === "]") depth--
+    else if (ch === "," && depth === 0) {
+      out.push(prelude.slice(start, i).trim())
+      start = i + 1
+    }
+  }
+  out.push(prelude.slice(start).trim())
+  return out
+}
+
 /**
  * Every block of a stylesheet, in source order (by its opening brace),
  * nesting tracked: a block's declarations are the text directly inside it,
@@ -100,15 +140,28 @@ function ruleBlocks(css: string): RuleBlock[] {
 const ROOT_THEME = /:root|^html(?![\w-])|\.dark(?![\w-])|\[data-(?:theme|mode)|:host/
 
 /**
+ * The dark scopes of the toolkit's theme that sit on `<html>` itself:
+ * useApplyTheme puts `.dark` AND `data-theme="dark"` there (one dark mode on
+ * every channel), and `data-theme-mode="dark"` is the toolkit's own scope
+ * attribute. All three carry the same specificity as `.dark`.
+ */
+const DARK_ROOT_SCOPES: ReadonlySet<string> = new Set([
+  ".dark",
+  '[data-theme="dark"]',
+  '[data-theme-mode="dark"]',
+])
+
+/**
  * Which modes a rule's custom properties reach on `<html>`: `:root` both,
- * `.dark` dark only (useApplyTheme puts `.dark` on `<html>`, where `:root`
- * matches too, with the same specificity). Descendant scopes (`.dark .card`)
+ * the dark scopes ({@link DARK_ROOT_SCOPES}) dark only (`<html>` carries
+ * them, where `:root` matches too, with the same specificity). Descendant
+ * scopes (`.dark .card`, the toolkit's light islands inside a dark scope)
  * reach no root variable and are skipped; any other root-theme rule (higher
  * specificity, a media query, a cascade layer) would need a model this
  * helper does not have, so it throws instead of measuring the wrong colour.
  */
 function rootScope(block: RuleBlock): { light: boolean; dark: boolean } {
-  const selectors = block.prelude.split(",").map((s) => s.trim())
+  const selectors = selectorList(block.prelude)
   const unsupported = () =>
     new Error(
       `Unsupported theme rule "${[...block.parents, block.prelude].join(" { ")}": declare theme variables in plain :root and .dark blocks`,
@@ -122,7 +175,7 @@ function rootScope(block: RuleBlock): { light: boolean; dark: boolean } {
   let dark = false
   for (const selector of selectors) {
     if (selector === ":root") light = dark = true
-    else if (selector === ".dark") dark = true
+    else if (DARK_ROOT_SCOPES.has(selector.replaceAll("'", '"'))) dark = true
     else if (ROOT_THEME.test(selector) && !/[\s>+~]/.test(selector) && selector !== ":host") {
       throw unsupported()
     }

@@ -8,7 +8,7 @@ import { ViewHostBridge } from "./shell-host.js"
 export interface AppShellProvidersProps {
   /** The host bundle map — also provided to composed views via HostWidgetsProvider. */
   widgets: Record<string, WidgetComponent>
-  /** Name of the user-profile data feed for the ProfileGate (locale + theme). */
+  /** Name of the user-profile data feed for the ProfileGate (the profile language). */
   profileTool: string
   children: ReactNode
 }
@@ -16,8 +16,8 @@ export interface AppShellProvidersProps {
 /**
  * The provider stack every composed-server host mounts under `bootstrapView`:
  * host context (+ display mode) → host document (style variables, fonts,
- * layout) → host bridge → profile gate (the effective locale/theme from
- * profile > host > OS/en) → host widget registry. Order is load-bearing (the
+ * layout) → host bridge → profile gate (the effective language from
+ * profile > host > en, the theme from host > OS) → host widget registry. Order is load-bearing (the
  * bridge reads mcp-use's view-scoped hooks, the document layer and the gate
  * read the host context it provides, the gate needs the host bridge) — hosts
  * compose their app-specific layers (e.g. a standalone drill-in shell) inside.

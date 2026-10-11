@@ -9,7 +9,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 Settings live in ONE profile record per signed-in user, shared by all modules —
 that is the `profileStore` the server threads into every module via
 `SharedResources`. The record itself is platform-owned and connector-free
-(`language`, `theme`, metadata); your module owns a **slice** under
+(`language`, metadata); your module owns a **slice** under
 `profile.modules.<module>`: the record only transports it, your module owns its
 schema, validates it fail-soft on read, and writes it through its own save
 tool. The store merges per module key, so your save never touches another

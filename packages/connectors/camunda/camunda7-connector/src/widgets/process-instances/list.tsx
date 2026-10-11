@@ -87,7 +87,7 @@ function InstanceRow({
             <button
               type="button"
               onClick={() => onOpenProcess(row.processDefinitionKey ?? "")}
-              className="text-m-blue font-mono text-xs hover:underline"
+              className="text-link font-mono text-xs hover:underline"
               aria-label={t("processInstances.openProcessAria", {
                 key: row.processDefinitionKey,
               })}

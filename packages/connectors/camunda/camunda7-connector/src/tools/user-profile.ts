@@ -47,7 +47,6 @@ function summarize(p: UserProfile): string {
     : ""
   return translator(locale, "profile.summary", {
     language: p.language,
-    theme: p.theme,
     engines,
     defaultDashboard,
   })
@@ -110,7 +109,7 @@ export function registerUserProfileTools(
       name: CAMUNDA7_SHOW_USER_PROFILE,
       title: "Profile & Settings",
       description:
-        "Open the user profile & settings panel: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
+        "Open the user profile & settings panel: language, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({}),
       ...showToolBinding(CAMUNDA7_SHOW_USER_PROFILE, "Profile & Settings"),
@@ -170,12 +169,12 @@ export function registerUserProfileTools(
       // Keyless refusal + a patch-only slice save are the shared slice-write
       // contract (`requireProfileKey` + `saveModuleSlice` in
       // `@miragon-ai/widget-shell/server`). This tool also carries the
-      // record-level language/theme, so it hands the store the same patch
+      // record-level language, so it hands the store the same patch
       // itself: ONLY the given fields, merged by the store over the RAW
       // stored slice under its per-key lock, so a concurrent
       // `camunda7_select_engine` is never reverted by a stale pre-read.
       const key = requireProfileKey(ctx)
-      const { language, theme, ...sliceInput } = params
+      const { language, ...sliceInput } = params
       const slicePatch: Record<string, unknown> = { ...sliceInput }
       // The settings UI sends an empty string for the "(auto)"/"(none)" option
       // of an optional id field. That CLEARS the stored value: an explicit
@@ -187,7 +186,7 @@ export function registerUserProfileTools(
       // The OAuth caller is stamped as the record's owner.
       const saved = await store.save(
         key,
-        { language, theme, modules: { [CAMUNDA7_MODULE_KEY]: slicePatch } },
+        { language, modules: { [CAMUNDA7_MODULE_KEY]: slicePatch } },
         { userId: resolveAuthUserId(ctx) },
       )
       const profile = toUserProfile(saved)

@@ -19,7 +19,6 @@ afterEach(() => {
 const VIEW: UserProfileView = {
   profile: {
     language: "en",
-    theme: "system",
     updatedAt: "2026-10-01T00:00:00.000Z",
     defaultEngineId: "prod-a",
     allowedEngineIds: [],
@@ -65,10 +64,16 @@ function renderPanel(view: UserProfileView = VIEW, dashboards: unknown[] = []) {
 }
 
 describe("UserProfileWidget save — only what the user changed", () => {
-  it("a theme change sends the theme alone, never the (possibly stale) default engine", async () => {
+  it("a language change sends the language alone, never the (possibly stale) default engine", async () => {
     const { save } = renderPanel()
-    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "dark" } })
-    expect(await save()).toEqual({ theme: "dark" })
+    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
+    expect(await save()).toEqual({ language: "de" })
+  })
+
+  it("offers no theme setting: the widgets follow the host's theme", () => {
+    renderPanel()
+    expect(screen.queryByLabelText("Theme")).toBeNull()
+    expect(screen.queryByRole("option", { name: "Dark" })).toBeNull()
   })
 
   it("making an engine the default is the explicit write", async () => {
@@ -118,8 +123,8 @@ describe("UserProfileWidget save — only what the user changed", () => {
 
   it("a second save sends only what changed since the first", async () => {
     const { save } = renderPanel()
-    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "dark" } })
-    expect(await save()).toEqual({ theme: "dark" })
+    fireEvent.change(screen.getByLabelText("Preferred role"), { target: { value: "operations" } })
+    expect(await save()).toEqual({ preferredRole: "operations" })
     fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
     expect(await save()).toEqual({ language: "de" })
   })

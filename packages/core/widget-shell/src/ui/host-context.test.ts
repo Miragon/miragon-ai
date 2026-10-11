@@ -12,22 +12,15 @@ import {
   validTimeZone,
 } from "./host-context.js"
 
-describe("resolveTheme — explicit profile > host > OS", () => {
-  it("an explicit profile theme wins over the host and the OS", () => {
-    expect(resolveTheme("dark", "light", false)).toBe("dark")
-    expect(resolveTheme("light", "dark", true)).toBe("light")
-  })
-
-  it("system, a missing profile and garbage defer to the host theme", () => {
-    for (const profile of ["system", undefined, "sepia"]) {
-      expect(resolveTheme(profile, "dark", false)).toBe("dark")
-      expect(resolveTheme(profile, "light", true)).toBe("light")
-    }
+describe("resolveTheme — host > OS, no in-app switch", () => {
+  it("the host's theme wins over the OS, both ways", () => {
+    expect(resolveTheme("dark", false)).toBe("dark")
+    expect(resolveTheme("light", true)).toBe("light")
   })
 
   it("without a host theme the OS preference decides", () => {
-    expect(resolveTheme("system", undefined, true)).toBe("dark")
-    expect(resolveTheme(undefined, undefined, false)).toBe("light")
+    expect(resolveTheme(undefined, true)).toBe("dark")
+    expect(resolveTheme(undefined, false)).toBe("light")
   })
 
   it("reads only a well-formed host theme", () => {
@@ -102,24 +95,47 @@ describe("hostTokenOverrides", () => {
     "--font-sans": "Inter",
   }
 
-  it("maps the host's neutral ramp onto the shell tokens while the view follows the host", () => {
+  it("maps the host's neutral ramp onto the neutral roles while the view follows the host", () => {
     expect(hostTokenOverrides(variables, true)).toEqual({
       "--background": "#1f1e1d",
       "--card": "#1f1e1d",
       "--popover": "#1f1e1d",
       "--muted": "#2a2927",
       "--secondary": "#2a2927",
-      "--accent": "#2a2927",
       "--foreground": "#f5f4ef",
       "--card-foreground": "#f5f4ef",
       "--popover-foreground": "#f5f4ef",
       "--secondary-foreground": "#f5f4ef",
-      "--accent-foreground": "#f5f4ef",
       "--muted-foreground": "#b8b5a9",
       "--border": "#3d3c39",
-      "--input": "#3d3c39",
-      "--ring": "#c96442",
     })
+  })
+
+  it("never lets the host set a brand, interaction or status role", () => {
+    // The host's ring/border/danger colours stay unmapped: the focus ring,
+    // the 3:1 field edge, the selection tint and the tones are the theme's.
+    const brandRoles = [
+      "--primary",
+      "--primary-foreground",
+      "--primary-hover",
+      "--link",
+      "--focus",
+      "--ring",
+      "--input",
+      "--accent",
+      "--accent-foreground",
+      "--destructive",
+      "--scrim",
+    ]
+    const tones = ["danger", "warning", "success", "info"].flatMap((tone) => [
+      `--${tone}`,
+      `--${tone}-soft`,
+      `--${tone}-ink`,
+    ])
+    for (const role of [...brandRoles, ...tones]) expect(HOST_MAPPED_TOKENS).not.toContain(role)
+    expect(Object.keys(hostTokenOverrides(variables, true))).toEqual(
+      expect.not.arrayContaining([...brandRoles, ...tones]),
+    )
   })
 
   it("maps nothing when the view renders in another theme than the host's, or the host sent nothing", () => {
@@ -138,7 +154,7 @@ describe("applyDocumentTheme", () => {
     background: el.style.getPropertyValue("background-color"),
   })
 
-  it("drives .dark, data-theme and color-scheme from ONE theme, both ways", () => {
+  it("drives .dark, data-theme and color-scheme from ONE theme, both ways, on the host's canvas", () => {
     const el = root()
     applyDocumentTheme(el, { theme: "dark", hostTheme: "dark" })
     expect(state(el)).toEqual({
@@ -154,24 +170,19 @@ describe("applyDocumentTheme", () => {
       colorScheme: "light",
       background: "",
     })
-  })
-
-  it("paints an opaque canvas only when the theme differs from a REPORTED host theme", () => {
-    const el = root()
-    applyDocumentTheme(el, { theme: "dark", hostTheme: "light" })
-    expect(state(el).background).toBe("var(--background)")
+    // Outside a host (the OS decides) the canvas stays transparent too.
     applyDocumentTheme(el, { theme: "dark", hostTheme: undefined })
-    expect(state(el).background).toBe("")
+    expect(state(el)).toMatchObject({ dark: true, background: "" })
   })
 
-  it("sets the mapped tokens while following the host and clears every one of them otherwise", () => {
+  it("sets the mapped roles while following the host and clears every one of them otherwise", () => {
     const el = root()
     const hostVariables = { "--color-background-primary": "#111111" }
     applyDocumentTheme(el, { theme: "dark", hostTheme: "dark", hostVariables })
     expect(el.style.getPropertyValue("--background")).toBe("#111111")
 
-    el.style.setProperty("--ring", "stale")
-    applyDocumentTheme(el, { theme: "light", hostTheme: "dark", hostVariables })
+    el.style.setProperty("--muted", "stale")
+    applyDocumentTheme(el, { theme: "light", hostTheme: undefined, hostVariables })
     for (const token of HOST_MAPPED_TOKENS) expect(el.style.getPropertyValue(token)).toBe("")
   })
 })

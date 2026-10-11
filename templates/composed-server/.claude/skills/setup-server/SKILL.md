@@ -132,7 +132,7 @@ Both stores default to **in-memory** — everything is lost on restart. For real
 deployments point them at directories (mounted volumes in Docker):
 
 ```bash
-MCP_PROFILE_DIR=./.data/profiles       # per-user settings (language, theme, module slices) — filled under MCP_OAUTH
+MCP_PROFILE_DIR=./.data/profiles       # per-user settings (language, module slices) — filled under MCP_OAUTH
 MCP_DASHBOARD_DIR=./.data/dashboards   # saved builder dashboards — only under MCP_OAUTH (builder is off without it)
 ```
 
@@ -156,10 +156,15 @@ then reinstall so the lockfile matches:
 4. `pnpm install` to refresh `pnpm-lock.yaml` (the Docker build uses
    `--frozen-lockfile`)
 
-Branding: swap the color tokens in `server/src/ui/globals.css` (the `:root` and
-`.dark` blocks — light AND dark, they re-theme automatically). Neutrals come
-from the toolkit's shadcn base; only the semantic severity ramp and accent
-colors live here.
+Branding: `server/src/ui/brand.css` imports the toolkit's Miragon theme (the
+default) and has one override block for light and one for dark. Set ROLE
+variables there only — `--primary`, `--primary-hover`, `--link`, `--focus`,
+`--ring`, `--accent`, the neutrals, `--<tone>`/`-soft`/`-ink`, radii, shadows,
+`--font-sans` — in BOTH blocks (the host's dark mode matches `:root` too).
+Never set the `--cd-*` tokens, never colour a widget with palette classes.
+`server/test/brand.test.ts` measures every pair (text 4.5:1, edges, dots and
+the focus ring 3:1) in light and dark. The widgets follow the host's theme;
+there is no theme switch in the app.
 
 ## Step 6 — Docker and production
 

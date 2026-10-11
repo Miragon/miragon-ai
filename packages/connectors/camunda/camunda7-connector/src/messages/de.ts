@@ -57,7 +57,7 @@ export const de: MessageCatalog = {
 
   // ── Profil-/Einstellungs-Panel ──────────────────────────────────────────────
   "profile.heading": "Profil & Einstellungen",
-  "profile.subtitle": "Deine Engines, Sprache, Darstellung und Dashboards.",
+  "profile.subtitle": "Deine Engines, Sprache, Rolle und Dashboards.",
   "profile.save": "Speichern",
   "profile.saving": "Wird gespeichert…",
   "profile.saved": ({ time }) => `Gespeichert um ${String(time)}`,
@@ -68,14 +68,13 @@ export const de: MessageCatalog = {
   "profile.loading": "Wird geladen…",
   "profile.none": "Kein Profil verfügbar",
 
-  "profile.section.appearance": "Sprache & Darstellung",
+  "profile.section.general": "Sprache und Rolle",
   "profile.section.engines": "Engines",
   "profile.section.dashboards": "Dashboards",
 
   "profile.field.language": "Sprache",
   "profile.field.language.help":
     "„Automatisch“ übernimmt die Sprache deiner Chat-App. Eine feste Sprache gilt auch für das, was die Tools der AI zurückmelden.",
-  "profile.field.theme": "Darstellung",
   "profile.field.role": "Bevorzugte Rolle",
   "profile.field.role.help": "Nur ein Hinweis. Was du darfst, legt deine Verbindung fest.",
   "profile.role.unset": "(nicht gesetzt)",
@@ -100,8 +99,8 @@ export const de: MessageCatalog = {
   "profile.field.pinnedDashboards": "Angepinnte Dashboards",
   "profile.field.pinnedDashboards.help": "Stehen in Dashboard-Auswahlen oben.",
 
-  "profile.summary": ({ language, theme, engines, defaultDashboard }) =>
-    `Benutzerprofil: Sprache ${String(language)}, Theme ${String(theme)}, ${String(engines)}${String(defaultDashboard)}.`,
+  "profile.summary": ({ language, engines, defaultDashboard }) =>
+    `Benutzerprofil: Sprache ${String(language)}, ${String(engines)}${String(defaultDashboard)}.`,
   "profile.summary.allEngines": "alle Engines",
   "profile.summary.someEngines": ({ count }) =>
     countOf(count, "erlaubte Engine", "erlaubte Engines"),
@@ -109,9 +108,6 @@ export const de: MessageCatalog = {
     `, Standard-Dashboard „${String(id)}" (öffnen mit load-dashboard)`,
 
   // ── Aufzählungs-Optionen ────────────────────────────────────────────────────
-  "theme.light": "Hell",
-  "theme.dark": "Dunkel",
-  "theme.system": "System",
   "language.system": "Automatisch (wie die Chat-App)",
   "role.read-only": "Nur lesen",
   "role.operations": "Betrieb",

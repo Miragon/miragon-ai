@@ -3,7 +3,7 @@ import { modelContextText } from "@miragon-ai/widget-shell/widgets"
 import { liveSurface } from "./lib/hand-off.test-support.js"
 import { describeProfile, profileSurface } from "./user-profile-context.js"
 
-const FORM = { language: "en", theme: "dark", defaultDashboardId: "ops-board" }
+const FORM = { language: "en", defaultDashboardId: "ops-board" }
 
 /** The panel's model context on `operations` (the save tool IS registered there). */
 async function contextText(canSave: boolean, dashboardsAnswered = true): Promise<string> {

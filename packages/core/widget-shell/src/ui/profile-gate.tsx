@@ -21,7 +21,7 @@ import { useShellHost } from "./shell-host.js"
 import { useApplyTheme } from "./use-apply-theme.js"
 
 interface ProfileFeed {
-  profile?: { language?: string; theme?: string }
+  profile?: { language?: string }
 }
 
 /**
@@ -52,9 +52,8 @@ export interface ProfileGateProps {
    * (module = the tool name up to the first `_`) ON PURPOSE: the module's
    * cache invalidation MUST reach the gate after a profile save — camunda7's
    * save invalidates `camunda7:profile-gate` by name (`WRITE_POLICY`), its
-   * cockpit Refresh every `camunda7:*` key — otherwise a saved
-   * language/theme change only shows up on the next widget render instead of
-   * flipping live. The refetch never re-shows the first-paint skeleton.
+   * cockpit Refresh every `camunda7:*` key — otherwise a saved language
+   * change only shows up on the next widget render instead of flipping live. The refetch never re-shows the first-paint skeleton.
    */
   queryKey?: readonly string[]
   /**
@@ -74,13 +73,13 @@ export interface ProfileGateProps {
  * locale and theme — so every widget is localized and themed with zero
  * per-widget wiring:
  *  - language: explicit profile choice > `hostContext.locale` > English;
- *  - theme: explicit profile choice > `hostContext.theme` > the OS (applied
- *    document-wide by {@link useApplyTheme});
+ *  - theme: `hostContext.theme` > the OS (applied document-wide by
+ *    {@link useApplyTheme}; there is no in-app theme switch);
  *  - the shared date formatters follow the same locale and the host's time zone.
  * The first paint waits for the host handshake (bounded by {@link HOST_WAIT_MS}),
  * then for the profile (bounded by `profileWaitMs` from the connection) behind
- * a neutral skeleton, so a German or dark profile never flashes English or the
- * OS theme first. A feed that FAILS (e.g. the owning module is disabled, or
+ * a neutral skeleton, so a German profile or a dark host never flashes English
+ * or the OS theme first. A feed that FAILS (e.g. the owning module is disabled, or
  * the host cannot call server tools) releases the gate at its first failure
  * with the host-derived values — react-query keeps the query pending through
  * its retries, which run on in the background; a retry that answers later
@@ -150,7 +149,7 @@ function ProfileGateInner({
   const profile = query.data?.profile
   const settled = useFirstPaintSettled(host.connected, query, profileWaitMs)
 
-  useApplyTheme(profile?.theme)
+  useApplyTheme()
   const language = resolveLanguage(profile?.language, host.locale)
   const target = useMemo<FormatLocale>(
     () => ({

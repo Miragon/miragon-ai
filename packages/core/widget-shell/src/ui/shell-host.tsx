@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react"
 import { useDisplayMode, useHostContext } from "mcp-use/react"
+import { resolveRecoveryToolName } from "@miragon/mcp-toolkit-ui/hooks"
 import { hostThemeOf, type EffectiveTheme, type HostStyleVariables } from "./host-context.js"
 import { DisplayModeProvider } from "./widget-shell.js"
 
@@ -28,6 +29,8 @@ export interface ShellHost {
   availableDisplayModes: readonly string[]
   /** Vertical budget in px from `containerDimensions`; `undefined` = unbounded. */
   maxHeight?: number
+  /** The tool that rendered this view (SEP-1865 `toolInfo`), when the host names it. */
+  toolName?: string
 }
 
 const NO_HOST: ShellHost = { connected: true, displayMode: "inline", availableDisplayModes: [] }
@@ -63,6 +66,7 @@ export function ViewHostBridge({ children }: { children: ReactNode }) {
       displayMode,
       availableDisplayModes,
       maxHeight,
+      toolName: resolveRecoveryToolName(hostContext),
     }),
     [hostContext, isAvailable, maxHeight, displayMode, availableDisplayModes],
   )

@@ -23,7 +23,7 @@ interface Message {
 
 const PROFILE_FEED = "camunda7_user_profile_data"
 
-function profileResult(profile: { language?: string; theme?: string }) {
+function profileResult(profile: { language?: string }) {
   return {
     content: [{ type: "text", text: JSON.stringify({ profile }) }],
     structuredContent: { profile },
@@ -138,7 +138,7 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
         displayMode: "fullscreen",
         availableDisplayModes: ["inline", "fullscreen"],
       },
-      tools: { [PROFILE_FEED]: profileResult({ language: "de", theme: "dark" }) },
+      tools: { [PROFILE_FEED]: profileResult({ language: "de" }) },
     })
     mount(host)
 
@@ -147,15 +147,15 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     // registry is provided below the gate.
     await vi.waitFor(() => expect(probe()).toBe("de|fullscreen|demo:widget"))
     expect(host.toolCalls()).toEqual([{ name: PROFILE_FEED, arguments: {} }])
-    // Profile language and theme are applied document-wide — one theme on
-    // every channel the CSS, the host and native controls read.
+    // The profile language and the host's theme are applied document-wide —
+    // one theme on every channel the CSS, the host and native controls read.
     expect(root.lang).toBe("de")
     expect(root.classList.contains("dark")).toBe(true)
     expect(root.getAttribute("data-theme")).toBe("dark")
     expect(root.style.getPropertyValue("color-scheme")).toBe("dark")
   })
 
-  it("follows the HOST's theme and locale for a system profile — over a light OS and English defaults (#339)", async () => {
+  it("follows the HOST's theme and, for a system profile, its locale — over a light OS and English defaults (#339)", async () => {
     vi.stubGlobal(
       "matchMedia",
       vi.fn().mockReturnValue({
@@ -166,7 +166,7 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     )
     const host = createFakeHost({
       hostContext: { theme: "dark", locale: "de-DE" },
-      tools: { [PROFILE_FEED]: profileResult({ language: "system", theme: "system" }) },
+      tools: { [PROFILE_FEED]: profileResult({ language: "system" }) },
     })
     mount(host)
 
@@ -192,9 +192,13 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     mount(host)
 
     await vi.waitFor(() => expect(probe()).toBe("en|fullscreen|demo:widget"))
-    // Tailwind's font utilities read these variables: the host's font wins.
-    expect(root.style.getPropertyValue("--font-sans")).toBe("HostSans, sans-serif")
-    expect(root.style.getPropertyValue("--font-mono")).toBe("HostMono")
+    // The host's font fills the fallback slot of the theme's font roles
+    // (adoptHostFontVariables), so the stack stays Geist first when the
+    // consumer loads it; the role names themselves are not overwritten.
+    expect(root.style.getPropertyValue("--host-font-sans")).toBe("HostSans, sans-serif")
+    expect(root.style.getPropertyValue("--host-font-mono")).toBe("HostMono")
+    expect(root.style.getPropertyValue("--font-sans")).toBe("")
+    expect(root.style.getPropertyValue("--font-mono")).toBe("")
     expect(document.getElementById("__mcp-host-fonts")?.textContent).toContain("HostSans")
     expect(root.style.height).toBe("100%")
     document.getElementById("__mcp-host-fonts")?.remove()

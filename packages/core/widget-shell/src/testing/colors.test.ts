@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterAll, describe, expect, it } from "vitest"
-import { colorFindings, scanColors } from "./colors.js"
+import { colorFindings, scanColors, stylesheetColorFindings } from "./colors.js"
 
 // Raw colours and palette classes are the test data here (closed at the end).
 /* brand-lint-disable */
@@ -56,6 +56,26 @@ describe("colorFindings — role names only, never palette classes or raw colour
     ])
   })
 
+  it("finds the accent classes the Miragon theme retired (they would style nothing)", () => {
+    const source = [
+      'export const a = "bg-m-blue-soft text-m-blue font-semibold"',
+      'export const b = "hover:text-m-blue-light border-m-green bg-m-green-soft"',
+      'export const c = "text-critical bg-critical-soft"',
+    ].join("\n")
+    expect(found(source)).toEqual([
+      "1:bg-m-blue-soft",
+      "1:text-m-blue",
+      "2:text-m-blue-light",
+      "2:border-m-green",
+      "2:bg-m-green-soft",
+      "3:text-critical",
+      "3:bg-critical-soft",
+    ])
+    expect(
+      found('export const ok = "bg-accent text-accent-foreground text-link text-danger-ink"'),
+    ).toEqual([])
+  })
+
   it("leaves role classes, role variables, comments and visible text alone", () => {
     const source = [
       "// text-red-600 and #fff in a comment",
@@ -68,6 +88,35 @@ describe("colorFindings — role names only, never palette classes or raw colour
       'export const g = "text-xs text-2xl border-2 ring-1 to-transparent from-50%"',
     ].join("\n")
     expect(found(source)).toEqual([])
+  })
+})
+
+describe("stylesheetColorFindings — a consumer stylesheet names no raw colour", () => {
+  it("finds hex and colour functions in rules, with their line", () => {
+    const css = [
+      '@import "@miragon/mcp-toolkit-ui/theme.css";',
+      ":root {",
+      "  --primary: #0055aa;",
+      "  --scrim: rgba(0, 0, 0, 0.4);",
+      "}",
+      ".dark { --link: oklch(0.7 0.1 250); }",
+    ].join("\n")
+    expect(stylesheetColorFindings(css, "brand.css").map((f) => `${f.line}:${f.match}`)).toEqual([
+      "3:#0055aa",
+      "4:rgba(",
+      "6:oklch(",
+    ])
+  })
+
+  it("skips comments (an example block) and role references", () => {
+    const css = [
+      "/*",
+      " * :root { --primary: #0055aa; }",
+      " */",
+      ":root { --link: var(--primary); --scrim: color-mix(in srgb, var(--cd-schwarz) 42%, transparent); }",
+      "#root { display: contents; }",
+    ].join("\n")
+    expect(stylesheetColorFindings(css, "brand.css")).toEqual([])
   })
 })
 

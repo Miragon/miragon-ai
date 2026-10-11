@@ -1,0 +1,66 @@
+/*
+ * Your brand — the one place this server's look is decided.
+ *
+ * It starts from the Miragon theme, the toolkit's default: the vendored
+ * corporate-design tokens (--cd-*) and the ROLE variables every widget
+ * colours through, in light and dark. Keep it as it is, or override role
+ * variables in the block below. Never set the --cd-* tokens themselves, and
+ * never add palette classes or raw colours in a widget.
+ *
+ * The roles you can set:
+ *   --primary, --primary-foreground, --primary-hover   buttons
+ *   --link                                             links, interactive text
+ *   --focus, --ring                                    the focus ring (3:1)
+ *   --accent, --accent-foreground                      hover and selection
+ *   --background, --card, --popover, --muted,          surfaces
+ *   --secondary
+ *   --foreground, --muted-foreground                   text (4.5:1)
+ *   --border, --input                                  divider, field edge (3:1)
+ *   --danger, --warning, --success, --info             a status: dot, edge, icon
+ *     each with -soft (its tint) and -ink (its text)
+ *   --radius-sm/-md/-lg, --shadow-1/-2/-3, --scrim     shape and depth
+ *   --font-sans, --font-mono                           type
+ *
+ * Set a role in BOTH blocks: the host's dark mode puts .dark and
+ * data-theme="dark" on <html>, where :root matches too, so a value set only
+ * for light shows in dark as well. The selectors are the theme's own, so a
+ * surface forced light inside a dark view (an element marked
+ * data-theme-mode="light") keeps your light values.
+ *
+ * Keep every pair readable: text 4.5:1, edges, dots and the focus ring 3:1.
+ * server/test/brand.test.ts measures your roles in light and dark over the
+ * Miragon theme, the example at the end of this file included.
+ */
+@import "@miragon/mcp-toolkit-ui/theme.css";
+
+/* ── Brand overrides: role variables only ─────────────────────────────────── */
+
+:root,
+:where(.dark, [data-theme="dark"], [data-theme-mode="dark"]) [data-theme-mode="light"] {
+  /* Light roles, e.g. --primary, --primary-hover, --link, --focus, --ring. */
+}
+
+.dark,
+[data-theme="dark"],
+[data-theme-mode="dark"] {
+  /* The same roles for dark. */
+}
+
+/* ── Example: a blue brand ─────────────────────────────────────────────────
+ * Copy the declarations into the blocks above and put in your own values.
+ * brand.test.ts checks this example too, so it stays a valid starting point.
+ *
+ * brand-example:light
+ *   --primary: #0b5cad;
+ *   --primary-hover: #094a8c;
+ *   --link: #0b5cad;
+ *   --focus: #0b5cad;
+ *   --ring: #0b5cad;
+ * brand-example:dark
+ *   --primary: #0b5cad;
+ *   --primary-hover: #094a8c;
+ *   --link: #7fb2ec;
+ *   --focus: #7fb2ec;
+ *   --ring: #7fb2ec;
+ * brand-example:end
+ */

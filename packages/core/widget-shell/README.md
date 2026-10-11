@@ -30,10 +30,18 @@ package customers build their own connectors and composed servers on (see the
 - **Brand gates** (`./testing`): the checks every widget package runs in its own tests:
   `catalogTextFindings` (the voice rules over a message catalog), `scanGlyphs` (no Unicode glyphs,
   emoji, lone symbols or sparkle imports as icons), `scanColors` (role names only: no palette
-  classes or raw colours, with a reasoned allow list) and `contrastFindings` with
-  `toneContrastPairs()` (WCAG AA of every tone pair over your stylesheet stack, light and dark;
-  `:root` and `.dark` cascade in source order as on `<html class="dark">`, so override a role
-  under both). Node only; `scanGlyphs` and `scanColors` need `typescript`.
+  classes, retired accents or raw colours, with a reasoned allow list), `stylesheetColorFindings`
+  (no raw colour in a stylesheet's rules) and `contrastFindings` with `toneContrastPairs()` /
+  `ROLE_CONTRAST_PAIRS` (WCAG AA of every tone and role pair over
+  `toolkitThemeStylesheets()` — the toolkit's Miragon theme as installed — plus your overrides,
+  light and dark; `:root` and the dark scopes cascade in source order as on
+  `<html class="dark" data-theme="dark">`, so override a role under both). Node only;
+  `scanGlyphs` and `scanColors` need `typescript`.
+- **Theme** — none of its own. The widgets colour through the role variables of the toolkit's
+  Miragon theme (`@miragon/mcp-toolkit-ui/theme.css`: the vendored `--cd-*` corporate-design
+  tokens and the roles on top, light and dark). Your stylesheet imports it after `tailwindcss`,
+  `@source`s the toolkit's `src` (and this package's `dist`), and overrides ROLE variables only.
+  The widgets follow the host's theme (then the OS); there is no theme preference.
 - **Module composition** (`./server`) — `composeModules` is the composition-root machinery every
   server shares: `MCP_ACTIVE_MODULES` selection with `module:toolset` suffixes, the env-typo warner
   and boot warnings. `resolveBoot(env, { authenticated })` resolves ONE concrete toolset per module
@@ -75,19 +83,18 @@ oauth? })` is the one boot sequence every composed server shares: env-typo warni
 
 ## Exports
 
-| Subpath       | Contents                                                                                                                                                                                                                                                                                                                                                          |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `./server`    | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, `composeModules` / `frameworkWritesAllowed` / `createToolsetVocabulary`, `createComposedServer` and its edge pieces, `oauthFromEnv`, caller identity (`resolveProfileKey`), the profile + dashboard stores and the Postgres client/migration runner |
-| `./ui`        | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                                                                                                                                                                                                 |
-| `./widgets`   | Shared widget UI primitives incl. the generic `shell:*` components and the host app shell (`AppShellProviders`: locale and theme resolved as explicit profile > host context > OS/English)                                                                                                                                                                        |
-| `./testing`   | The brand gates for your widget package's tests: `catalogTextFindings`, `scanGlyphs`, `scanColors`, `parseThemeVariables` + `contrastFindings` with `toneContrastPairs()` / `ROLE_CONTRAST_PAIRS`                                                                                                                                                                 |
-| `./theme.css` | The design tokens (the toolkit's shadcn ramp + dark variant, plus the kit's role variables: the tone triple, `--link`, `--focus`) WITHOUT a forced font: import it after `tailwindcss` instead of `@miragon/mcp-toolkit-ui/globals.css`, and `@source` the toolkit's `src` yourself; brand by overriding the role names after it                                  |
+| Subpath     | Contents                                                                                                                                                                                                                                                                                                                                                          |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./server`  | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, `composeModules` / `frameworkWritesAllowed` / `createToolsetVocabulary`, `createComposedServer` and its edge pieces, `oauthFromEnv`, caller identity (`resolveProfileKey`), the profile + dashboard stores and the Postgres client/migration runner |
+| `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                                                                                                                                                                                                 |
+| `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and the host app shell (`AppShellProviders`: the language as explicit profile > host context > English, the theme as host context > OS)                                                                                                                                                        |
+| `./testing` | The brand gates for your widget package's tests: `catalogTextFindings`, `scanGlyphs`, `scanColors`, `stylesheetColorFindings`, `parseThemeVariables` + `contrastFindings` with `toneContrastPairs()` / `ROLE_CONTRAST_PAIRS` over `toolkitThemeStylesheets()`                                                                                                     |
 
 The `@miragon/mcp-toolkit-*`, `react`/`react-dom`, `zod` and `@tanstack/react-query` deps are
 **peer dependencies** — they must resolve to a single instance across the host bundle (see the
 `dedupe` array in the server app's `vite.config.ts`), otherwise the React contexts diverge and
 in-widget queries hang. They are published as ranges (`react`/`react-dom` `^19.2.0`, `zod`
-`^4.4.0`, `@miragon/mcp-toolkit-*` `~2.6.0`, `lucide-react` `^0.562.0 || ^1.0.0`) so they dedupe
+`^4.4.0`, `@miragon/mcp-toolkit-*` `~2.7.0`, `lucide-react` `^0.562.0 || ^1.0.0`) so they dedupe
 against your app's copy; add `lucide-react` to your `dedupe` list too.
 
 `mcp-use` is the exception: it is an **exactly pinned** peer dependency — pin it to `mcp-use@2.7.3`
