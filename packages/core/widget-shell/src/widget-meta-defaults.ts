@@ -7,7 +7,8 @@
  * here register their `*_show_*` tools through `showToolBinding`, which knows
  * nothing about the app. Instead of threading the defaults through every
  * module and call site, `createComposedServer` wraps each plugin once
- * ({@link honorWidgetMetaDefaults}): the server its hook receives merges the
+ * ({@link honorWidgetMetaDefaults}, a Proxy that keeps the plugin as each
+ * hook's `this`): the server its hook receives merges the
  * view CSP into each `view` binding (`_meta.ui.csp` on the view resource,
  * `resources/list` included) and the Apps SDK CSP into each widget tool's
  * `openai/widgetCSP` — so a custom module in a composed server advertises
@@ -95,13 +96,27 @@ export function withWidgetMetaDefaults(
 /**
  * `plugin`, its `registerWidgetTools` handed a server that applies the
  * defaults the toolkit passes it ({@link withWidgetMetaDefaults}).
+ *
+ * A Proxy, not a copy: a spread keeps only own enumerable properties, so a
+ * class-based module would lose its prototype hooks (`registerTools`) without
+ * a warning. Every hook, the wrapped one included, runs with the plugin
+ * itself as `this` — as when the toolkit calls it on the original object —
+ * so `this` reads and writes, private fields and method shorthand keep
+ * working. The Proxy's target is a child of the plugin, not the plugin, so
+ * a frozen plugin can still be wrapped (a Proxy over it could not report a
+ * different `registerWidgetTools`).
  */
 export function honorWidgetMetaDefaults(plugin: AppPlugin<MCPServer>): AppPlugin<MCPServer> {
   const register = plugin.registerWidgetTools
   if (!register) return plugin
-  return {
-    ...plugin,
-    registerWidgetTools: (server, defaults) =>
-      register(withWidgetMetaDefaults(server, defaults), defaults),
+  const registerWidgetTools: typeof register = (server, defaults) => {
+    register.call(plugin, withWidgetMetaDefaults(server, defaults), defaults)
   }
+  return new Proxy(Object.create(plugin) as AppPlugin<MCPServer>, {
+    get(_child, property) {
+      if (property === "registerWidgetTools") return registerWidgetTools
+      const value: unknown = Reflect.get(plugin, property, plugin)
+      return typeof value === "function" ? (value as () => unknown).bind(plugin) : value
+    },
+  })
 }

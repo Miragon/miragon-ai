@@ -23,7 +23,8 @@ import {
  *    the document, so every inline view was at least 600 px tall in the chat;
  *  - no forced font — no `font-family … !important` (it beats the host's font
  *    and every `font-mono`), no inlined Geist (`fonts.css` / `@fontsource`:
- *    base64 in every view document; Geist is served by URL in a later step);
+ *    base64 in every view document; Geist arrives by URL from the server's
+ *    font route, `declareServedFonts` in `HostDocument`, never inlined);
  *  - no raw colour and no `--cd-*` or retired `--m-*`/`--critical` variable in
  *    a consumer stylesheet: the tokens are the toolkit's, vendored once;
  *  - the tone and role pairs at WCAG AA in light AND dark over what ships.

@@ -12,7 +12,8 @@
  *
  * Never import `@miragon/mcp-toolkit-ui/globals.css` next to it (a second
  * Tailwind entry with its own @source) or `fonts.css` (Geist as base64 in
- * every view document; Geist is served by URL in a later step). Guarded by
+ * every view document; Geist arrives by URL from the server's font route,
+ * `declareServedFonts` in `HostDocument`). Guarded by
  * test/ui-stylesheet.test.ts.
  */
 @import "@miragon/mcp-toolkit-ui/theme.css";

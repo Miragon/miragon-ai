@@ -159,6 +159,57 @@ describe("honorWidgetMetaDefaults", () => {
     expect(definitions[0].view?.csp).toEqual({ resourceDomains: [FONT_ORIGIN] })
   })
 
+  it("keeps a class-based plugin whole: prototype hooks, one shared `this`, private fields", () => {
+    const { server, definitions } = recordingServer()
+    class BillingPlugin implements AppPlugin<MCPServer> {
+      definition = { name: "billing", steps: [], widgets: [] }
+      appConfig = { region: "eu" }
+      readonly #client = "billing-client"
+      registeredWith: string | undefined
+      registerTools(target: MCPServer) {
+        this.registeredWith = this.#client
+        register(target, { name: "billing_list_invoices" })
+      }
+      registerWidgetTools(target: MCPServer) {
+        register(target, {
+          name: "billing_show_invoice",
+          description: `${this.#client} after ${this.registeredWith}`,
+          ...showToolBinding("billing_show_invoice", "Invoice"),
+        })
+      }
+    }
+    const plugin = new BillingPlugin()
+    const wrapped = honorWidgetMetaDefaults(plugin)
+    // The toolkit reads both hooks off the plugin and calls them as methods.
+    wrapped.registerTools?.(server)
+    wrapped.registerWidgetTools?.(server, DEFAULTS)
+    expect(definitions.map((definition) => definition.name)).toEqual([
+      "billing_list_invoices",
+      "billing_show_invoice",
+    ])
+    // registerTools wrote to the plugin itself; registerWidgetTools read it back there.
+    expect(plugin.registeredWith).toBe("billing-client")
+    expect(definitions[1].description).toBe("billing-client after billing-client")
+    expect(definitions[1].view?.csp).toEqual({ resourceDomains: [FONT_ORIGIN] })
+    expect(wrapped.definition).toBe(plugin.definition)
+    expect(wrapped.appConfig).toBe(plugin.appConfig)
+    expect(wrapped).toBeInstanceOf(BillingPlugin)
+  })
+
+  it("calls a method-shorthand hook on the plugin itself, even on a frozen plugin", () => {
+    const { server, definitions } = recordingServer()
+    const plugin = Object.freeze({
+      definition: { name: "z", steps: [], widgets: [] },
+      toolName: "z_show_thing",
+      registerWidgetTools(target: MCPServer) {
+        register(target, { name: this.toolName, ...showToolBinding(this.toolName, "Thing") })
+      },
+    })
+    honorWidgetMetaDefaults(plugin).registerWidgetTools?.(server, DEFAULTS)
+    expect(definitions[0].name).toBe("z_show_thing")
+    expect(definitions[0].view?.csp).toEqual({ resourceDomains: [FONT_ORIGIN] })
+  })
+
   it("passes a plugin without widget tools through unchanged", () => {
     const registerTools = vi.fn()
     const plugin: AppPlugin<MCPServer> = {
