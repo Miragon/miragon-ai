@@ -1,8 +1,9 @@
 // The kit's OWN pieces: what widget-shell adds on top of
 // `@miragon/mcp-toolkit-ui`. The toolkit's components, tone maps, `cn` and
 // hooks (KpiGrid, StatusBadge, FilterBar, WidgetHeader, PagedListFooter,
-// TONE_*, useDebouncedValue, …) are imported from the toolkit itself, never
-// re-exported or forked here.
+// TONE_*, useDebouncedValue, useViewData, …) are imported from the toolkit
+// itself, never re-exported or forked here — `toolkit-overlap.test.ts` fails
+// on any export (value or type) that shares a name with one of the toolkit's.
 // Zod-free profile option sets (select/checkbox option lists in settings
 // widgets) — safe for the UI bundle; the zod record schema stays on /server.
 export { LANGUAGES, LOCALES, type LanguagePref, type Locale } from "../profile-constants.js"
@@ -47,7 +48,7 @@ export { ShellHostProvider, ViewHostBridge, useShellHost, type ShellHost } from 
 export { HostDocument } from "./host-document.js"
 export { SegmentedControl, type SegmentedControlOption } from "./segmented-control.js"
 export { useDetailView } from "./use-detail-view.js"
-export { useViewData, type ViewDataResult } from "./use-view-data.js"
+export { viewRefreshState, type ViewRefreshState } from "./view-refresh-state.js"
 export { LogText, LOG_TEXT_PREVIEW } from "./log-text.js"
 export { AskAiButton, type AskAiButtonProps, type AskAiVariant } from "./ask-ai-button.js"
 export { HAND_OFF_ACTIONS, HandOffButton, type HandOffAction } from "./hand-off-button.js"

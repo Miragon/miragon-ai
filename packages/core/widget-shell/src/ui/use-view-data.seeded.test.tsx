@@ -3,7 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
 import { AppQueryProvider, queryClient } from "@miragon/mcp-toolkit-ui"
-import { useSeededToolQuery } from "./use-seeded-tool-query.js"
+import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
+
+/**
+ * The seeded view feed every standalone widget relies on (#341): the
+ * toolkit's `useViewData` in `initialDataMode: "seed"` (2.8), which replaced
+ * widget-shell's own `useSeededToolQuery`. The view's tool result is the
+ * feed query's cached answer, the query stays live, an old payload never
+ * rolls a refetched answer back, and a Retry is a new read at once. These
+ * are the behaviours the kit's views (`useDetailView`, `usePagedViewData`)
+ * and camunda7's write refresh build on, so they stay pinned here.
+ */
 
 interface Answer {
   value: string
@@ -22,10 +32,12 @@ function wrapper({ children }: { children: ReactNode }) {
 /** Wire-shaped tool result; the toolkit's structured-first parser unwraps it. */
 const answer = (value: string) => ({ structuredContent: { value } })
 
+const SEED = { initialDataMode: "seed" } as const
+
 function setup(seed: Answer | null, enabled = true) {
   return renderHook(
     ({ seed: current, enabled: on }: { seed: Answer | null; enabled: boolean }) =>
-      useSeededToolQuery<Answer>(KEY, "test_view_data", ARGS, { seed: current, enabled: on }),
+      useViewData<Answer>(current, KEY, "test_view_data", ARGS, on, SEED),
     { wrapper, initialProps: { seed, enabled } },
   )
 }
@@ -46,7 +58,7 @@ afterEach(() => {
   queryClient.setDefaultOptions(toolkitDefaults)
 })
 
-describe("useSeededToolQuery", () => {
+describe("useViewData in seed mode", () => {
   it("serves the seed from the cache without refetching it on mount", async () => {
     const seed = { value: "seed" }
     const { result } = setup(seed)
@@ -129,15 +141,7 @@ describe("useSeededToolQuery", () => {
     const seed = { value: "same object" }
     const { rerender } = renderHook(
       ({ id }: { id: string }) =>
-        useSeededToolQuery<Answer>(
-          KEY,
-          "test_view_data",
-          { id, engine: "prod" },
-          {
-            seed,
-            enabled: true,
-          },
-        ),
+        useViewData<Answer>(seed, KEY, "test_view_data", { id, engine: "prod" }, true, SEED),
       { wrapper, initialProps: { id: "x-1" } },
     )
     rerender({ id: "x-2" })
@@ -148,11 +152,7 @@ describe("useSeededToolQuery", () => {
 
   it("takes an equal seed object per render without looping", () => {
     const { result } = renderHook(
-      () =>
-        useSeededToolQuery<Answer>(KEY, "test_view_data", ARGS, {
-          seed: { value: "literal" },
-          enabled: true,
-        }),
+      () => useViewData<Answer>({ value: "literal" }, KEY, "test_view_data", ARGS, true, SEED),
       { wrapper },
     )
     expect(result.current.data).toEqual({ value: "literal" })
@@ -171,7 +171,6 @@ describe("useSeededToolQuery", () => {
     const { result } = setup({ value: "seed" })
     await act(() => queryClient.invalidateQueries({ queryKey: ["test:view"] }))
     await waitFor(() => expect(result.current.error?.message).toBe("engine down"))
-    expect(result.current.isError).toBe(true)
     expect(result.current.data).toEqual({ value: "seed" })
 
     callTool.mockResolvedValueOnce(answer("recovered"))
@@ -212,11 +211,7 @@ describe("useSeededToolQuery", () => {
         : Promise.reject(new Error("engine down")),
     )
     const sibling = renderHook(
-      () =>
-        useSeededToolQuery<Answer>(KEY, "test_view_data", SIBLING_ARGS, {
-          seed: null,
-          enabled: true,
-        }),
+      () => useViewData<Answer>(null, KEY, "test_view_data", SIBLING_ARGS, true, SEED),
       { wrapper },
     )
     const { result } = setup(null)

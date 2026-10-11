@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react"
 import { parseToolResult, useCallTool } from "@miragon/mcp-toolkit-ui"
-import { useSeededToolQuery } from "./use-seeded-tool-query.js"
+import { useViewData, type UseViewDataOptions } from "@miragon/mcp-toolkit-ui/hooks"
 
 /**
  * The pages appended after page 0, tagged with the reset generation they belong
@@ -59,54 +59,80 @@ export interface PagedViewData<TItem, TData = unknown> {
    * caller's guard renders (once the client's retries ran out). With one, the
    * rows on screen are unconfirmed — the previous filter's ({@link stale}), or
    * the last good answer of a failed refetch — and it is set from the fetch's
-   * FIRST failed attempt, like `useViewData`'s `refreshError`: the same for a
-   * refetch of this filter's page (a write's invalidation, a Retry) and for a
-   * changed search or filter, so the list never presents the rows as current
-   * for the length of the backoff. {@link retry} re-runs page 0.
+   * FIRST failed attempt (the toolkit's `failureReason`), like
+   * `viewRefreshState`'s `refreshError`: the same for a refetch of this
+   * filter's page (a write's invalidation, a Retry) and for a changed search
+   * or filter, so the list never presents the rows as current for the length
+   * of the backoff. {@link retry} re-runs page 0.
    */
   error: Error | null
   /**
    * Re-runs the page-0 fetch: the retry for {@link error}. A new read at
    * once — also while the client still waits on that fetch's retry backoff
-   * (which `error` already reports), never a wait for the running chain.
+   * (which `error` already reports), never a wait for the running chain (the
+   * toolkit's `useViewData` refetch cancels it first).
    */
   retry: () => void
   /** The last load-more failure — `loadMore` retries it; the rows above are current. */
   loadMoreError: Error | null
 }
 
-/** The last page 0 that landed, tagged with the list (cache-key scope) it belongs to. */
-interface SettledPage<TData> {
-  scope: string
-  data: TData
-}
+type PlaceholderOf<TData> = UseViewDataOptions<TData>["placeholderData"]
 
 /**
- * Keep-previous-data (render phase, state — never a ref): a changed search or
- * filter keys a new page 0 whose data is undefined until it lands (a seed is
- * only ever the unfiltered page 0), and the toolkit's useToolQuery forwards
- * no `placeholderData`. Without this the caller's loading guard would unmount
- * the list — and the search box the operator is typing into — for every
- * round-trip. Only within ONE list (`scope`, the cache-key prefix): another
- * engine or definition never shows the previous list's rows.
+ * Keep-previous-data for page 0, TanStack's own: a changed search or filter
+ * keys a new page 0 whose data is undefined until it lands (a seed is only
+ * ever the unfiltered page 0), so without a placeholder the caller's loading
+ * guard would unmount the list — and the search box the operator is typing
+ * into — for every round-trip. The placeholder is the previous answer of the
+ * SAME list only (`scope`, the cache-key prefix): another engine or definition
+ * never shows the previous list's rows. `isPlaceholderData` is then `stale`.
  */
-function useKeptPage<TData>(fetched: TData | null, scope: string): TData | null {
-  const [settled, setSettled] = useState<SettledPage<TData> | null>(null)
-  if (fetched && (settled?.data !== fetched || settled.scope !== scope)) {
-    setSettled({ scope, data: fetched })
-  }
-  return fetched ?? (settled?.scope === scope ? settled.data : null)
+function useSameListPlaceholder<TData>(key: ReadonlyArray<unknown>): {
+  scope: string
+  placeholderData: PlaceholderOf<TData>
+} {
+  const scope = JSON.stringify(key)
+  const depth = key.length
+  const placeholderData = useCallback(
+    (previous: TData | undefined, previousQuery?: { queryKey: readonly unknown[] }) =>
+      previousQuery && JSON.stringify(previousQuery.queryKey.slice(0, depth)) === scope
+        ? previous
+        : undefined,
+    [scope, depth],
+  )
+  return { scope, placeholderData: placeholderData as PlaceholderOf<TData> }
 }
 
 /**
- * Offset-paginated sibling of `useViewData`: one component, both modes, plus
- * "Load more". Page 0 is the feed query, seeded with `initialData` (standalone,
- * handed in) or self-fetched (cockpit); `loadMore()` fetches the next offset and
- * appends. Changing `args` (e.g. a server-side search/filter) resets pagination
- * to page 0. The feed must accept `firstResult`/`maxResults` and return the full
- * filtered `total` so the footer is honest and `hasMore` is correct.
+ * The page on screen once a changed search's page 0 FAILED for good. TanStack
+ * shows a placeholder only while the query is pending and drops it when the
+ * retries ran out, but the failure line over the list says "you're seeing the
+ * previous result" (the toolkit's `PagedListFooter`), so those rows must stay:
+ * the page last shown for this list (render-phase state, replay-safe) bridges
+ * that failure until the list's next answer. In flight it is TanStack's
+ * placeholder, never this.
+ */
+function useShownPage<TData>(data: TData | null, scope: string, failed: boolean): TData | null {
+  const [shown, setShown] = useState<{ scope: string; data: TData } | null>(null)
+  if (data && (shown?.data !== data || shown.scope !== scope)) setShown({ scope, data })
+  if (data) return data
+  return failed && shown?.scope === scope ? shown.data : null
+}
+
+/**
+ * Offset-paginated sibling of the toolkit's `useViewData`: one component, both
+ * modes, plus "Load more". Page 0 is the feed query in the toolkit's
+ * `initialDataMode: "seed"`, seeded with `initialData` (standalone, handed in)
+ * or self-fetched (cockpit), so a write's invalidation refetches a standalone
+ * list too; `loadMore()` fetches the next offset and appends. Changing `args`
+ * (e.g. a server-side search/filter) resets pagination to page 0 while the
+ * previous rows of the same list stay on screen (`stale`). The feed must
+ * accept `firstResult`/`maxResults` and return the full filtered `total` so
+ * the footer is honest and `hasMore` is correct.
  *
- * Deliberately explicit (button-driven), not infinite scroll — see {@link ListFooter}.
+ * Deliberately explicit (button-driven), not infinite scroll — see the
+ * toolkit's `ListFooter`.
  */
 export function usePagedViewData<TItem, TData>(opts: {
   initialData: TData | null | undefined
@@ -124,20 +150,21 @@ export function usePagedViewData<TItem, TData>(opts: {
   const { initialData, key, tool, args, pageSize, ready, selectItems, selectTotal } = opts
   const callTool = useCallTool()
   const argsKey = JSON.stringify(args)
+  const { scope, placeholderData } = useSameListPlaceholder<TData>(key)
 
-  // A handed-in page 0 SEEDS the query (it is never switched off), so a
-  // write's invalidation refetches a standalone list too.
-  const page0 = useSeededToolQuery<TData>(
+  const page0 = useViewData<TData>(
+    initialData,
     [...key, argsKey, "page0"],
     tool,
     { ...args, firstResult: 0, maxResults: pageSize },
-    { seed: initialData, enabled: ready },
+    ready,
+    { initialDataMode: "seed", placeholderData },
   )
   // `fetched` is THIS filter's page 0 (the seed until the feed answered);
-  // `first` keeps the previous one on screen while it is in flight or has
-  // failed (`stale`).
-  const fetched = page0.data
-  const first = useKeptPage(fetched, JSON.stringify(key))
+  // `first` is the page on screen — the previous one of this list while the
+  // new one is in flight (the placeholder) or has failed (the bridge).
+  const fetched = page0.isPlaceholderData ? null : page0.data
+  const first = useShownPage(page0.data, scope, page0.error !== null)
   const stale = !fetched && !!first
 
   const [pages, setPages] = useState<PagedState<TItem>>({
@@ -205,12 +232,12 @@ export function usePagedViewData<TItem, TData>(opts: {
     stale,
     hasMore,
     loadMore,
-    loading: !first && ready && !page0.isError,
+    loading: !first && ready && page0.error === null,
     refreshing: !!first && page0.isFetching,
     loadingMore,
     // Over rows on screen, a fetch's first failed attempt already unconfirms
     // them; without rows, the guard keeps loading through the retries.
-    error: page0.error ?? (first ? (page0.failureReason ?? null) : null),
+    error: page0.error ?? (first ? page0.failureReason : null),
     retry: page0.refetch,
     loadMoreError: pages.error,
   }

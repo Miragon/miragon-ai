@@ -115,9 +115,10 @@ describe("incidents dashboard widgets — honest numbers", () => {
  * A filtered dashboard (`camunda7_show_incidents_dashboard` with a key and an
  * incident type) counts only the filtered set: its hand-offs pass the filters
  * as ids and state the count as the set's — read from the data's own echo,
- * since a standalone render gets no props. It never refetches either
- * (`useViewData` disables the query whenever data is handed in), so no request
- * can widen it; the only self-fetch is the cockpit's unfiltered dashboard.
+ * since a standalone render gets no props. It never refetches either (a
+ * standalone render has no `engine` prop, so `incidentsFeed` is never ready),
+ * so no request can widen it; the only self-fetch is the cockpit's unfiltered
+ * dashboard.
  */
 describe("incidents dashboard — a filtered view keeps its scope", () => {
   const FILTERED: IncidentsDashboardData = {

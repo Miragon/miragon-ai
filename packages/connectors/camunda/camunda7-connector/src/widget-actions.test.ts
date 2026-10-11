@@ -168,8 +168,7 @@ describe("the structural scan itself", () => {
       }
       export function Probe({ id }: { id: string }) {
         useToolQuery(["test:tool-query"], "test_data", {})
-        useSeededToolQuery(["test:seeded"], "test_data", {}, { seed: null, enabled: true })
-        useViewData(null, ["test:view-data"], "test_data", {}, true)
+        useViewData(null, ["test:view-data"], "test_data", {}, true, { initialDataMode: "seed" })
         useToolQuery(feedKey(id), "test_data", {})
         useDetailView({ ...feed(id), tool: "test_data" })
         usePagedViewData({ key: ["test:paged", id], tool: "test_data" })
@@ -181,7 +180,6 @@ describe("the structural scan itself", () => {
       "test:helper-key",
       "test:option-helper",
       "test:paged",
-      "test:seeded",
       "test:tool-query",
       "test:view-data",
     ])

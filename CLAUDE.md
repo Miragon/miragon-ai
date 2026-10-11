@@ -207,7 +207,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `FilterBar`, `WidgetHeader` with `as`, `SectionHeading`, `GroupCard`, `DrillButton`,
    `ListFooter`, `PagedListFooter`), its tone model (`TONE_*`, `resolveTone`, `MICRO_LABEL`)
    and its `cn` (tailwind-merge that knows the type scale) are imported from the toolkit;
-   widget-shell exports only what it adds, never a fork or a re-export of the toolkit's.
+   widget-shell exports only what it adds, never a fork or a re-export of the toolkit's
+   (`src/ui/toolkit-overlap.test.ts`: no `/widgets` export, value or type, shares a toolkit
+   name; `/ui`'s `adaptDataWidget` is the one listed pass-through).
    `ViewDataState` for the loading/error/no-data guard;
    `QueryFallback` + `TableSkeleton` for self-fetching widgets (a missing `isError`
    branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime` for dates
@@ -234,7 +236,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total; a new page 0 keeps the
-   previous rows mounted until it lands — `paged.stale`, so counts, filters and
+   previous rows of the same list mounted until it lands — TanStack's `placeholderData` on
+   the toolkit's seeded `useViewData`, bridged past a search that failed for good —
+   `paged.stale`, so counts, filters and
    model contexts read the payload ON SCREEN, never the request) + `ListTable` (the table
    frame; rows stay hand-composed `<tr>` + `Td`) inside `PagedRows` (marks stale rows) + the toolkit's
    `PagedListFooter` (a page-0 failure over rows on screen and a load-more failure, each an
@@ -560,8 +564,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    renamed or aliased callers included —, every write listed, every invalidated
    namespace a real query key), and `widgets/action-gating.test.tsx` renders every call site
    against a feed that excludes its write. Standalone views refresh after a write
-   because their tool result is the SEED of a live feed query (`useViewData`/
-   `useDetailView`/`usePagedViewData` in widget-shell), scoped to the seed's own echoed
+   because their tool result is the SEED of a live feed query (the toolkit's `useViewData`
+   in `initialDataMode: "seed"`, also under widget-shell's `useDetailView`/`usePagedViewData`;
+   `viewRefreshState` says when shown data is unconfirmed), scoped to the seed's own echoed
    engine and target. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in
    `packages/connectors/camunda/camunda7-connector/src/providers/` — the port holds ONLY real differences:

@@ -11,9 +11,10 @@ import {
   waitFor,
 } from "@testing-library/react"
 import { AppQueryProvider, LocaleProvider, queryClient } from "@miragon/mcp-toolkit-ui"
+import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import { useDetailView } from "./use-detail-view.js"
-import { useViewData } from "./use-view-data.js"
 import { ViewDataState } from "./view-data-state.js"
+import { viewRefreshState } from "./view-refresh-state.js"
 
 interface Detail {
   name: string
@@ -44,10 +45,25 @@ afterEach(() => {
 
 const invalidate = () => act(() => queryClient.invalidateQueries({ queryKey: ["test:detail"] }))
 
-describe("useViewData", () => {
+/**
+ * A seeded view (the toolkit's `useViewData` in seed mode, which replaced the
+ * kit's own hook in 2.8) and the kit's rule over its refresh state
+ * (`viewRefreshState`): what `useDetailView` and the engine overview read.
+ */
+describe("useViewData in seed mode + viewRefreshState", () => {
   function setup(seed: Detail | null, ready = true) {
     return renderHook(
-      () => useViewData<Detail>(seed, ["test:detail", "x"], "test_detail_data", { id: "x" }, ready),
+      () => {
+        const view = useViewData<Detail>(
+          seed,
+          ["test:detail", "x"],
+          "test_detail_data",
+          { id: "x" },
+          ready,
+          { initialDataMode: "seed" },
+        )
+        return { ...view, ...viewRefreshState(view) }
+      },
       { wrapper },
     )
   }

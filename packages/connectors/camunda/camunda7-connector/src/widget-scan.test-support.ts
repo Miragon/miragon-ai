@@ -79,7 +79,6 @@ const POSITIONAL_TOOL_ARG = new Map<string, { via: Via; index: number }>([
   ["callTool", { via: "callTool", index: 0 }],
   ["useToolQuery", { via: "read", index: 1 }],
   ["useViewToolQuery", { via: "read", index: 1 }],
-  ["useSeededToolQuery", { via: "read", index: 1 }],
   ["useViewData", { via: "read", index: 2 }],
 ])
 
@@ -87,7 +86,6 @@ const POSITIONAL_TOOL_ARG = new Map<string, { via: Via; index: number }>([
 const KEY_ARG = new Map<string, number>([
   ["useToolQuery", 0],
   ["useViewToolQuery", 0],
-  ["useSeededToolQuery", 0],
   ["useViewData", 1],
 ])
 

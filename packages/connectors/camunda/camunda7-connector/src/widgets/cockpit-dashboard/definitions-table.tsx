@@ -7,11 +7,11 @@ import {
   SectionHeading,
   useDebouncedValue,
 } from "@miragon/mcp-toolkit-ui"
+import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
-import { useViewData } from "../use-view-data.js"
 import { useT } from "../../messages/use-t.js"
 import {
   ProcessDefinitionsTableView,
@@ -60,6 +60,7 @@ export function ProcessDefinitionsSection({
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
     { engine: feedEngine },
     !!feedEngine,
+    { initialDataMode: "seed" },
   )
 
   if (!data) {

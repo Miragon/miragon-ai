@@ -15,13 +15,14 @@ import {
   WidgetShell,
   formatNumber,
   formatTime,
+  viewRefreshState,
 } from "@miragon-ai/widget-shell/widgets"
 import { RefreshCw } from "lucide-react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
+import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { EngineHealthCluster, EngineHealthData, EngineHealthStatus } from "../view-models.js"
 import { useNav, type OnNavigate } from "./navigation.js"
 import { CAMUNDA7_ENGINE_HEALTH_DATA } from "../tool-names.js"
-import { useViewData } from "./use-view-data.js"
 import { remediationHandOff, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
@@ -350,13 +351,16 @@ export function EngineHealthView({
   // `!!engine` would leave a composed render without props stuck on
   // "No data available" forever.
   const feedEngine = engine ?? initialData?.engineId
-  const { data, loading, error, refreshError, refreshing, refetch } = useViewData<EngineHealthData>(
+  const view = useViewData<EngineHealthData>(
     initialData,
     ["camunda7:engine-health", feedEngine ?? null],
     CAMUNDA7_ENGINE_HEALTH_DATA,
     { engine: feedEngine },
     true,
+    { initialDataMode: "seed" },
   )
+  const { data, loading, error, refetch } = view
+  const { refreshError, refreshing } = viewRefreshState(view)
 
   if (!data) {
     return <HealthUnavailable engine={engine} loading={loading} error={error} onRetry={refetch} />
