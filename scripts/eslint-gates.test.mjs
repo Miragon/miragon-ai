@@ -137,9 +137,9 @@ describe("sparkle gate (invariant 6, CI U4) in every widget tree", () => {
   })
 })
 
-describe("hand-off gate (invariant 6, CI U4) in analytics' widgets", () => {
+describe("hand-off gate (invariant 6, CI U4) in both connectors' widgets", () => {
   const isHandOffHit = (attribute) => (m) => m.startsWith(`AskAiButton needs \`${attribute}\``)
-  const REL = `${AN}/widgets/__probe__.tsx`
+  const HAND_OFF_PATHS = [`${C7}/widgets/__probe__.tsx`, `${AN}/widgets/__probe__.tsx`]
 
   it("requires icon and label on every AskAiButton, self-closing or not", async () => {
     const cases = [
@@ -151,14 +151,16 @@ describe("hand-off gate (invariant 6, CI U4) in analytics' widgets", () => {
       // An attribute of a nested element does not count for the button.
       ["<AskAiButton prompt={<X icon={Scale} label={l} />} />", ["icon", "label"]],
     ]
-    for (const [jsx, missing] of cases) {
-      const messages = await gateMessages(REL, `const el = ${jsx}`)
-      for (const attribute of ["icon", "label"]) {
-        assert.equal(
-          messages.filter(isHandOffHit(attribute)).length,
-          missing.includes(attribute) ? 1 : 0,
-          `${jsx}: ${attribute}`,
-        )
+    for (const rel of HAND_OFF_PATHS) {
+      for (const [jsx, missing] of cases) {
+        const messages = await gateMessages(rel, `const el = ${jsx}`)
+        for (const attribute of ["icon", "label"]) {
+          assert.equal(
+            messages.filter(isHandOffHit(attribute)).length,
+            missing.includes(attribute) ? 1 : 0,
+            `${rel}: ${jsx}: ${attribute}`,
+          )
+        }
       }
     }
   })
@@ -166,17 +168,13 @@ describe("hand-off gate (invariant 6, CI U4) in analytics' widgets", () => {
   it("passes a call site that names both, and leaves other components alone", async () => {
     const code = [
       'const a = <AskAiButton prompt={p} icon={Scale} label={t("aComparison.askLabel")} />',
-      "const b = <Button prompt={p} />",
+      // camunda7's HandOffButton: icon and label from its action table.
+      "const b = <AskAiButton icon={HAND_OFF_ACTIONS[action]} label={t(`handOff.${action}`)} prompt={p} />",
+      "const c = <Button prompt={p} />",
     ].join("\n")
-    assert.deepEqual(await gateMessages(REL, code), [])
-  })
-
-  it("is not on for camunda7's widgets yet (they join once their call sites pass both)", async () => {
-    const messages = await gateMessages(
-      `${C7}/widgets/__probe__.tsx`,
-      "const el = <AskAiButton prompt={p} />",
-    )
-    assert.equal(messages.filter((m) => m.startsWith("AskAiButton needs")).length, 0)
+    for (const rel of HAND_OFF_PATHS) {
+      assert.deepEqual(await gateMessages(rel, code), [], rel)
+    }
   })
 })
 

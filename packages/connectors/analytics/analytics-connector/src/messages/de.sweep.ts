@@ -40,8 +40,8 @@ export const deSweep: MessageCatalog = {
   "aClusterCompare.title": "Vor und nach dem Deployment",
   "aCommon.days": plural("count", "1 Tag", "{count} Tage"),
   "aCommon.hours": plural("count", "1 Stunde", "{count} Stunden"),
-  "aCommon.loadError":
-    "Die Kennzahlen konnten nicht geladen werden. Aktualisier die Ansicht oder frag im Chat noch mal danach.",
+  "aCommon.loadError": "Die Kennzahlen konnten nicht geladen werden.",
+  "aCommon.loadErrorHint": "Aktualisier die Ansicht oder frag im Chat noch mal danach.",
   "aCommon.minutes": plural("count", "1 Minute", "{count} Minuten"),
   "aCommon.underOneMinute": "unter 1 Minute",
   "aComparison.askLabel": "Im Chat bewerten",
@@ -125,8 +125,8 @@ export const deSweep: MessageCatalog = {
   "aHeatmap.diagramAria": "BPMN-Diagramm mit der Ausführungshäufigkeit je Element als Heatmap",
   "aHeatmap.duration": "Dauer",
   "aHeatmap.durationLegend": "Durchschnittliche Dauer je Element",
-  "aHeatmap.errorTitle":
-    "Das Diagramm konnte nicht gezeichnet werden. Frag im Chat noch mal nach der Heatmap.",
+  "aHeatmap.errorHint": "Frag im Chat noch mal nach der Heatmap.",
+  "aHeatmap.errorTitle": "Das Diagramm konnte nicht gezeichnet werden.",
   "aHeatmap.frequency": "Häufigkeit",
   "aHeatmap.frequencyLegend": "Ausführungen je Element",
   "aHeatmap.less": "Weniger",
@@ -173,7 +173,8 @@ export const deSweep: MessageCatalog = {
   "aLandscape.notDeployed": "auf dieser Engine nicht deployt",
   "aLandscape.sharedBadge": plural("count", "auf 1 Engine", "auf {count} Engines"),
   "aSettings.heading": "Analyse-Einstellungen",
-  "aSettings.loadError": "Die Einstellungen konnten nicht geladen werden. Aktualisier die Ansicht.",
+  "aSettings.loadError": "Die Einstellungen konnten nicht geladen werden.",
+  "aSettings.loadErrorHint": "Aktualisier die Ansicht.",
   "aSettings.minBucket": "Mindestgröße für Vergleiche",
   "aSettings.minBucket.help":
     "So viele Instanzen braucht jede Seite eines Vergleichs, bevor er eine Bewertung zeigt.",

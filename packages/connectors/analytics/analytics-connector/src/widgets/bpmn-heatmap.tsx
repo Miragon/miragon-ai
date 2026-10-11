@@ -78,6 +78,7 @@ export function AnalyticsBpmnHeatmap({ data }: { data: AnalyticsBpmnHeatmapData 
         more: t("aHeatmap.more"),
         diagramAriaLabel: t("aHeatmap.diagramAria"),
         errorTitle: t("aHeatmap.errorTitle"),
+        errorHint: t("aHeatmap.errorHint"),
       }}
     />
   )

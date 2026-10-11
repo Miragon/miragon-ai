@@ -69,6 +69,7 @@ export function AnalyticsSettingsWidget({
           isError={query.isError}
           error={query.error}
           errorTitle={t("aSettings.loadError")}
+          errorHint={t("aSettings.loadErrorHint")}
           skeleton={<div className="bg-muted/50 h-24 animate-pulse rounded-md" aria-hidden />}
         />
       </WidgetShell>

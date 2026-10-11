@@ -225,8 +225,11 @@ Rules while building:
   result carries it). A comparison judges only quality metrics, from their threshold on
   (`deltaVerdict` in `src/widgets/comparison-shared.tsx`); volume stays neutral and a
   suppressed comparison reads "nicht belastbar".
-- Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`)
-  — a missing `isError` branch means an eternal skeleton.
+- Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`):
+  a missing `isError` branch means an eternal skeleton. The error is two-part: what
+  happened in `errorTitle` (one line, the toolkit's `AlertTitle` clamps it) and what you
+  can do in `errorHint` (`aCommon.loadError` + `aCommon.loadErrorHint` in `QueryGate`);
+  the heatmap's import error takes the same split through its `errorHint` label.
 - The model description (`adaptDataWidget`'s third argument, in
   `src/widgets/model-descriptions.ts`) returns `modelContextText(…)` with
   `surface: ANALYTICS_ONLY_SURFACE` — a static `summary`, data only in

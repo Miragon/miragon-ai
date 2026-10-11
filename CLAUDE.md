@@ -267,8 +267,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    analysieren"; every variant is a secondary outline (the deterministic next step is the
    view's primary action), never ✦ or Sparkles (an ESLint `no-restricted-imports` gate bans
    lucide-react's sparkle icons in every widget tree; a `no-restricted-syntax` gate requires
-   `icon` and `label` on every `AskAiButton` in analytics' widgets, camunda7's join it once
-   their call sites pass both). `OpenInCockpitLink` takes `vendor`
+   `icon` and `label` on every `AskAiButton` in both connectors' widgets, written attributes,
+   not spreads). `OpenInCockpitLink` takes `vendor`
    (`provider.branding.displayName`) and reads "In CIB seven öffnen" / "Open in CIB seven",
    with "öffnet in neuem Tab" in its accessible name. `WidgetHeader` has no icon tile; a state
    goes into `badge` (a `StatusBadge`).

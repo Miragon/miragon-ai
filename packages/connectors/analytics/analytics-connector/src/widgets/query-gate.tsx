@@ -38,6 +38,7 @@ export function QueryGate<T>({
           isError={query.isError}
           error={query.error}
           errorTitle={t("aCommon.loadError")}
+          errorHint={t("aCommon.loadErrorHint")}
           skeleton={skeleton}
         />
       </WidgetShell>

@@ -142,8 +142,8 @@ const widgetSparkleGate = {
 // Without `icon` and `label` the kit falls back to the generic MessageSquare
 // and "Im Chat analysieren", which no DOM suite notices at every call site.
 // Both attributes are required as written attributes (a spread does not
-// count). Analytics' widgets carry it; camunda7's join once their call sites
-// pass both.
+// count). Both connectors' widgets carry it (camunda7's one call site is
+// HandOffButton, which passes both from its action table).
 const widgetHandOffGate = ["icon", "label"].map((attribute) => ({
   selector: `JSXOpeningElement[name.name='AskAiButton']:not(:has(> JSXAttribute[name.name='${attribute}']))`,
   message: `AskAiButton needs \`${attribute}\`: the Lucide icon of the concrete function and a verb that names the chat (CI U4, CLAUDE.md invariant 6).`,
@@ -290,18 +290,22 @@ export default tseslint.config(
     files: ["apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}"],
     rules: { "no-restricted-syntax": ["error", ...widgetDateGate] },
   },
-  // Connector widgets sit under the registrar AND date gates, and render
-  // every number through the kit formatters, so they carry the number gate
-  // too — one block per connector, each with the union, after the registrar
-  // block (whose options it replaces for these files).
+  // Connector widgets sit under the registrar AND date gates, render every
+  // number through the kit formatters (number gate) and name every hand-off's
+  // function (hand-off gate) — one block per connector, each with the union,
+  // after the registrar block (whose options it replaces for these files).
   {
     files: ["packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate, ...widgetNumberGate],
+      "no-restricted-syntax": [
+        "error",
+        ...registrarGate,
+        ...widgetDateGate,
+        ...widgetNumberGate,
+        ...widgetHandOffGate,
+      ],
     },
   },
-  // analytics' widgets also carry the hand-off gate: every AskAiButton
-  // passes its icon and label.
   {
     files: ["packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}"],
     rules: {

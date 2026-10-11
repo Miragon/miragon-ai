@@ -39,19 +39,19 @@ function renderIn(language: "de" | "en") {
 }
 
 describe("the analytics settings section when its feed fails", () => {
-  it("says the settings could not be loaded (de)", async () => {
+  // Two-part: the toolkit's AlertTitle clamps to one line, so what you can do
+  // sits under the cause, never in the title.
+  it("says the settings could not be loaded, and what you can do (de)", async () => {
     renderIn("de")
-    expect(
-      await screen.findByText(
-        "Die Einstellungen konnten nicht geladen werden. Aktualisier die Ansicht.",
-      ),
-    ).toBeTruthy()
+    expect(await screen.findByText("Die Einstellungen konnten nicht geladen werden.")).toBeTruthy()
+    expect(screen.getByText("Aktualisier die Ansicht.")).toBeTruthy()
     expect(screen.queryByText(/Kennzahlen/)).toBeNull()
   })
 
   it("says the same in English", async () => {
     renderIn("en")
-    expect(await screen.findByText("Could not load the settings. Refresh the view.")).toBeTruthy()
+    expect(await screen.findByText("Could not load the settings.")).toBeTruthy()
+    expect(screen.getByText("Refresh the view.")).toBeTruthy()
     expect(screen.queryByText(/figures/)).toBeNull()
   })
 })

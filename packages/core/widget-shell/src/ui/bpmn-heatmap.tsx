@@ -307,6 +307,7 @@ export function BpmnHeatmapWidget({
           nodeFrequencies={values}
           diagramAriaLabel={l.diagramAriaLabel}
           errorTitle={l.errorTitle}
+          errorHint={l.errorHint}
           noHeatLabel={l.noHeat}
         />
 
