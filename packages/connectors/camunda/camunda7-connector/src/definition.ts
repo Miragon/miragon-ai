@@ -272,7 +272,7 @@ export const definition: AppDefinition = {
       id: "camunda7:process-health-kpi",
       ...builderText("widget.process-health-kpi"),
       description:
-        "Landscape KPIs over all definition keys: definitions, running instances, failed jobs, open incidents.",
+        "Landscape KPIs over all definition keys: definitions in total, healthy, affected (open incidents or failed jobs), open incidents.",
       consumes: ["camunda7:cockpitDashboard"],
       requires: ["camunda7:cockpitDashboardData"],
       size: "full",

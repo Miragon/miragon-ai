@@ -23,8 +23,8 @@ import type { MCPServer } from "mcp-use"
  * (no tools, no steps — nothing to filter per toolset).
  *
  * `description`s are the model's text; the view builder shows people the
- * `title`/`summary` (and each field's `x-display`) in English or German
- * (toolkit 2.8), never sent to the model.
+ * `title`/`summary` (and each top-level field's `x-display`) in English or
+ * German (toolkit 2.8), never sent to the model.
  */
 
 /** A text in both languages the builder speaks. */
@@ -110,43 +110,20 @@ const dataTablePropsSchema = z.toJSONSchema(
           ),
         ),
       ),
+    // The props sheet edits top-level fields only (an array is JSON there),
+    // and the toolkit strips `x-display` at that level only: the column
+    // fields carry no builder text, or it would reach the model.
     columns: z
       .array(
         z.object({
-          key: z
-            .string()
-            .describe("Record field to render.")
-            .meta(
-              field(
-                both("Field", "Feld"),
-                both("The record field of the column.", "Das Feld des Datensatzes für die Spalte."),
-              ),
-            ),
+          key: z.string().describe("Record field to render."),
           label: z
             .string()
             .optional()
-            .describe("Column header (defaults to the key).")
-            .meta(
-              field(
-                both("Header", "Spaltenkopf"),
-                both(
-                  "The column's header. Without it, the field name.",
-                  "Der Kopf der Spalte. Ohne Angabe der Feldname.",
-                ),
-              ),
+            .describe(
+              "Column header (defaults to the key in words: totalIncidents → Total incidents).",
             ),
-          align: z
-            .enum(["left", "right"])
-            .optional()
-            .meta(
-              field(
-                both("Alignment", "Ausrichtung"),
-                both(
-                  "Left or right. Numbers read best right.",
-                  "Links oder rechts. Zahlen stehen am besten rechts.",
-                ),
-              ),
-            ),
+          align: z.enum(["left", "right"]).optional(),
         }),
       )
       .optional()

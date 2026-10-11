@@ -105,6 +105,7 @@ export function ProcessDefinitionsSection({
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={t("cockpitDefs.searchPlaceholder")}
+        searchAriaLabel={t("cockpitDefs.searchLabel")}
         chips={[]}
         onChipToggle={() => undefined}
         className="mb-2"

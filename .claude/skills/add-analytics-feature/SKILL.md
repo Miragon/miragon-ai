@@ -179,9 +179,10 @@ The widget chain mirrors the camunda7 module:
    `propsSchema`) to `src/definition.ts`, with `...builderText("widget.<slug>")` — the view
    builder's title and one-line summary for people, `builder.widget.<slug>.title|summary`
    in `messages/{en,de}.builder.ts` — and `.meta(fieldText("<schema>.<field>"))` on every
-   `propsSchema` field (`builder.field.*`, the props sheet's label and help line);
+   top-level `propsSchema` field (`builder.field.*`, the props sheet's label and help
+   line; never a nested one, whose text the toolkit would hand to the model);
    `description` stays the model's text. `src/builder-texts.test.ts` fails on anything
-   the builder would still show by its id.
+   the builder would still show by its id and on any builder text the model would read.
 4. The host map `apps/mcp-server-camunda7/src/ui/widget-registry.ts` spreads
    `analyticsWidgets` — verify your widget arrives there.
 5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with

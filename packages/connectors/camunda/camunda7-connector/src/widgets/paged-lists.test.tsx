@@ -144,7 +144,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
     const Widget = () => <ProcessListWidget data={DEFINITIONS} />
     host(Widget, { [CAMUNDA7_PROCESS_LIST_DATA]: feed.handler })
 
-    const search = screen.getByPlaceholderText("Filter by name…")
+    const search = screen.getByRole("searchbox", { name: "Filter by name" })
     search.focus()
     fireEvent.change(search, { target: { value: "inv" } })
     // The debounced, server-side search reaches the feed …
@@ -160,7 +160,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
     feed.calls[0].resolve({ ...DEFINITIONS, definitions: [DEFINITIONS.definitions[0]] })
     await waitFor(() => expect(screen.queryByText("Order Process")).toBeNull())
     expect(screen.getByText("Invoice Process")).toBeTruthy()
-    expect(screen.getByPlaceholderText("Filter by name…")).toBe(search)
+    expect(screen.getByRole("searchbox", { name: "Filter by name" })).toBe(search)
   })
 
   it("process instances (search and chip)", async () => {
@@ -168,7 +168,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
     const Widget = () => <ProcessInstancesWidget data={instances(["pi-1", "pi-2"], 2)} />
     host(Widget, { [CAMUNDA7_PROCESS_INSTANCES_DATA]: feed.handler })
 
-    const search = screen.getByPlaceholderText("Search by business key…")
+    const search = screen.getByRole("searchbox", { name: "Search by business key" })
     fireEvent.click(screen.getByRole("button", { name: "With incidents" }))
     await waitFor(() => expect(feed.calls).toHaveLength(1))
     expect(feed.calls[0].args).toMatchObject({ withIncidents: true })
@@ -190,7 +190,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
     const Widget = () => <ClusterDetailWidget data={CLUSTER} />
     host(Widget, { [CAMUNDA7_CLUSTER_DETAIL_DATA]: feed.handler })
 
-    const search = screen.getByPlaceholderText("Filter by business key…")
+    const search = screen.getByRole("searchbox", { name: "Filter by business key" })
     fireEvent.change(search, { target: { value: "4711" } })
     await waitFor(() => expect(feed.calls).toHaveLength(1), { timeout: 2_000 })
     expect(feed.calls[0].args).toMatchObject({ businessKeyLike: "4711" })
@@ -389,7 +389,7 @@ describe("the instance list states what is ON SCREEN while a filter is pending o
     host(Widget, { [CAMUNDA7_PROCESS_INSTANCES_DATA]: feed })
     await screen.findByText("No running instances for this process definition.")
 
-    fireEvent.change(screen.getByPlaceholderText("Search by business key…"), {
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search by business key" }), {
       target: { value: "ORD" },
     })
     await waitFor(() => expect(held.calls).toHaveLength(1), { timeout: 2_000 })

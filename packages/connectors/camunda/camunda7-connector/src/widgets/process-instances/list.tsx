@@ -348,7 +348,9 @@ export function ProcessInstancesView({
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={t("processInstances.searchPlaceholder")}
+        searchAriaLabel={t("processInstances.searchLabel")}
         chips={chips}
+        chipsAriaLabel={t("processInstances.chipsLabel")}
         onChipToggle={(id) => setActiveChip(id === activeChip ? CHIP_ALL : (id as InstanceChip))}
       />
 

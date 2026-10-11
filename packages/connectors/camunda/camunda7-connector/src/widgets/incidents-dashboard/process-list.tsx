@@ -335,7 +335,9 @@ export function IncidentProcessListView({
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={t("incidentsList.searchPlaceholder")}
+        searchAriaLabel={t("incidentsList.searchLabel")}
         chips={chips}
+        chipsAriaLabel={t("incidentsList.chipsLabel")}
         onChipToggle={(id) => setActiveChip(id === activeChip ? TYPE_ALL : (id as IncidentChip))}
       />
 

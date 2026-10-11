@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { displayTextCatalog, missingDisplayTexts } from "@miragon-ai/widget-shell/testing"
+import {
+  displayTextCatalog,
+  displayTextsSentToModel,
+  missingDisplayTexts,
+} from "@miragon-ai/widget-shell/testing"
 import { definition } from "./definition.js"
 import { catalogs } from "./messages/index.js"
 
@@ -13,6 +17,10 @@ import { catalogs } from "./messages/index.js"
 describe("analytics names every builder piece for people", () => {
   it("every widget, step and props field has an en and a de title and summary", () => {
     expect(missingDisplayTexts(definition)).toEqual([])
+  })
+
+  it("none of those texts reaches the model through get-framework-manifest", () => {
+    expect(displayTextsSentToModel(definition)).toEqual([])
   })
 
   it.each(["en", "de"] as const)("%s: no builder entry in the catalog goes unused", (language) => {

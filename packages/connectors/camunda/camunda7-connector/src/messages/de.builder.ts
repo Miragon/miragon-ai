@@ -50,7 +50,7 @@ export const deBuilder: MessageCatalog = {
     "Ein Fehlercluster mit seinen Kennzahlen und den betroffenen Instanzen.",
   "builder.widget.process-health-kpi.title": "Kennzahlen der Prozesslandschaft",
   "builder.widget.process-health-kpi.summary":
-    "Prozessdefinitionen, laufende Instanzen, Jobs ohne Versuche und offene Incidents der Engine.",
+    "Wie viele Prozessdefinitionen gesund oder betroffen sind, dazu die offenen Incidents der Engine.",
   "builder.widget.process-definitions-table.title": "Prozessdefinitionen mit Incidents",
   "builder.widget.process-definitions-table.summary":
     "Eine Zeile je Prozessdefinition mit laufenden Instanzen, Jobs ohne Versuche und Incidents.",

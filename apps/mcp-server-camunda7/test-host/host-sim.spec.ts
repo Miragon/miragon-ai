@@ -65,6 +65,8 @@ function vendoredColourTokens(): [string, string][] {
 interface HostLog {
   initializeRequested: boolean
   initialized: boolean
+  /** Host Date.now() when the view sent `initialized`; the result is held `resultDelayMs` from here. */
+  initializedAt: number | null
   delivered: "result" | "cancelled" | null
   originalResult: { isError?: boolean; content?: { type: string; text?: string }[] } | null
   toolCalls: { name: string; arguments: Record<string, unknown> }[]
@@ -306,7 +308,8 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page)
     await expectProcessList(app)
 
-    const search = app.getByPlaceholder("Filter by name…")
+    // Named by the placeholder's words, never the kit's generic "Filter".
+    const search = app.getByRole("searchbox", { name: "Filter by name" })
     const table = definitionsTable(app)
     // The stub engine holds its answer to this search until the in-flight
     // state has been looked at — no timing window to race.
@@ -371,13 +374,20 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     "a slow tool on a compliant host is never re-executed: the view waits for the host's result (toolkit#176 K13, fixed in 2.8)",
     { annotation: { type: "issue", description: TOOLKIT_LIFECYCLE_ISSUE } },
     async ({ page }) => {
-      const app = await openView(page, { resultDelayMs: RECOVERY_GRACE_MS + 1_500 })
+      // The host holds the result well past the old grace timer: the check
+      // below runs at a fixed point on the HOST's clock, so neither the
+      // profile round trip before the skeleton nor Playwright's poll lag
+      // can push it past the delivery.
+      const checkAfterMs = RECOVERY_GRACE_MS + 500
+      const app = await openView(page, { resultDelayMs: checkAfterMs + 3_500 })
 
       // Past the old grace timer, the host is still running the tool: the
       // view keeps waiting (the toolkit's observer saw no stripped result)
       // instead of loading the view itself.
       await expect(app.getByText(CHROME.loading)).toBeVisible({ timeout: 15_000 })
-      await page.waitForTimeout(RECOVERY_GRACE_MS + 500)
+      const { initializedAt } = await hostLog(page)
+      expect(initializedAt).not.toBeNull()
+      await page.waitForFunction((at) => Date.now() >= at, (initializedAt ?? 0) + checkAfterMs)
       expect((await hostLog(page)).delivered).toBeNull()
       expect(await reExecutions(page)).toHaveLength(0)
       await expect(definitionsTable(app)).toHaveCount(0)

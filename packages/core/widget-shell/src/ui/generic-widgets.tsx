@@ -1,5 +1,6 @@
 import type { WidgetProps } from "@miragon/mcp-toolkit-core"
 import { KpiGrid, resolveTone, type KpiCell } from "@miragon/mcp-toolkit-ui"
+import { humanizeKey } from "./humanize-key.js"
 import { TableEmptyState, Td, Th } from "./table.js"
 
 /**
@@ -87,6 +88,11 @@ interface ColumnSpec {
   align: "left" | "right"
 }
 
+/**
+ * The table's columns: the `columns` prop as given, else the first row's
+ * primitive fields. A header nobody wrote is the key in words ("Total
+ * incidents" for `totalIncidents`); a written `label` stays as it is.
+ */
 function coerceColumns(raw: unknown, rows: Record<string, unknown>[]): ColumnSpec[] {
   if (Array.isArray(raw)) {
     const cols = raw
@@ -94,7 +100,7 @@ function coerceColumns(raw: unknown, rows: Record<string, unknown>[]): ColumnSpe
       .filter((c) => typeof c.key === "string" && c.key.length > 0)
       .map((c) => ({
         key: c.key as string,
-        label: typeof c.label === "string" ? c.label : (c.key as string),
+        label: typeof c.label === "string" ? c.label : humanizeKey(c.key as string),
         align: c.align === "right" ? ("right" as const) : ("left" as const),
       }))
     if (cols.length > 0) return cols
@@ -107,7 +113,7 @@ function coerceColumns(raw: unknown, rows: Record<string, unknown>[]): ColumnSpe
     .slice(0, 8)
     .map((key) => ({
       key,
-      label: key,
+      label: humanizeKey(key),
       align: typeof first[key] === "number" ? ("right" as const) : ("left" as const),
     }))
 }
@@ -116,7 +122,7 @@ function coerceColumns(raw: unknown, rows: Record<string, unknown>[]): ColumnSpe
  * `shell:data-table` — renders `keys[props.dataKey]` (an array of records, or
  * `{ rows: [...] }`) as a cockpit-style table. widgetProps: `dataKey`
  * (required), `columns?` (`[{ key, label?, align? }]`, derived from the first
- * row when omitted), `emptyText?`.
+ * row when omitted; a missing `label` is the key in words), `emptyText?`.
  */
 export function GenericDataTableWidget({ keys, widgetProps }: WidgetProps) {
   const dataKey = typeof widgetProps?.dataKey === "string" ? widgetProps.dataKey : undefined

@@ -186,6 +186,11 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
 - `ViewDataState` — the loading/error/no-data guard (no inline Alert/loading ternary)
 - Self-fetching widgets: skeleton + error via `QueryFallback` (+ `TableSkeleton`) — a
   missing `isError` branch means an eternal skeleton
+- A view that reads its feed directly calls the toolkit's `useViewData` with
+  `{ initialDataMode: "seed" }` as its last argument: the handed-in tool result seeds a
+  live query, so Refresh and a write's invalidation re-read it. Without the option the
+  toolkit returns the handed-in data forever (#341); `src/widget-actions.test.ts` fails
+  on a `useViewData` call that does not seed by a literal option
 - `formatTimestamp`/`formatDate`/`formatTime` (dates) and `formatNumber`/`formatPercent`/
   `formatPercentPoints`/`formatPeriod`/`formatDuration`/`truncate`: no local format
   helpers, no `toFixed`, no `toLocaleString()` without a locale, no hand-built
@@ -233,7 +238,10 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
    `/count` endpoint) so the footer is honest.
 2. Widget: `usePagedListView` (owns search state, 300 ms debounce, the server-side
    `searchArg`, and the drop-initialData-on-interaction rule; chips go into
-   `filtersActive` + the `args`) → `FilterBar` → `PagedRows` (marks the rows while they
+   `filtersActive` + the `args`) → `FilterBar` (with `searchAriaLabel`, the placeholder's
+   words without the ellipsis, and `chipsAriaLabel` for a chip row: the toolkit's default
+   name is a generic "Filter"; `src/widgets/search-labels.test.tsx` pins every search box
+   by its name) → `PagedRows` (marks the rows while they
    are the previous result) around `ListTable` (frame + `Th` header row;
    rows stay hand-composed `<tr>` + `Td`) or a `RowCard` stack → `TableEmptyState`
    (distinguish "no match" when `interacted`) → the toolkit's `PagedListFooter`
@@ -257,9 +265,12 @@ somewhere**:
    `propsSchema`) to the `widgets` array, with `...builderText("widget.<slug>")` (the view
    builder's title and summary for people: `builder.widget.<slug>.title|summary` in
    `messages/{en,de}.builder.ts`) and `.meta(fieldText("<schema>.<field>"))` on every
-   `propsSchema` field; a new pipeline step takes `...builderText("step.<slug>")`.
-   `description` stays the model's text; `src/builder-texts.test.ts` fails on anything the
-   builder would still show by its id.
+   top-level `propsSchema` field (never a nested one: the props sheet edits nested
+   objects and arrays as JSON, and the toolkit strips `x-display` from the top level
+   only, so a nested text would reach the model); a new pipeline step takes
+   `...builderText("step.<slug>")`. `description` stays the model's text;
+   `src/builder-texts.test.ts` fails on anything the builder would still show by its id
+   and on any builder text the model would read.
 3. `apps/mcp-server-camunda7/src/ui/widget-registry.ts` — the host bundle map. It spreads
    `camunda7Widgets` from `src/widgets/index.ts`, which spreads the registry — verify
    your widget actually arrives in the host map.

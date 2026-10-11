@@ -78,8 +78,10 @@ somewhere** (no build error):
    `widgets/catalogue-sync.test.ts`. `description` is the model's text; the
    view builder shows people a `title` and `summary` (`{ en, de }`, or from
    your catalogs via `createBuilderTexts` from `@miragon-ai/widget-shell/server`)
-   and each `propsSchema` field's `x-display`, else the id; `missingDisplayTexts`
-   from `@miragon-ai/widget-shell/testing` lists what is still unnamed.
+   and each top-level `propsSchema` field's `x-display`, else the id;
+   `missingDisplayTexts` from `@miragon-ai/widget-shell/testing` lists what is
+   still unnamed, `displayTextsSentToModel` any text the model would read (a
+   nested field's `x-display` is never stripped, so leave nested fields bare).
 3. `server/src/ui/widget-registry.ts` — your module's spread must reach the
    host bundle map; guarded by `server/test/widget-registry.test.ts`.
 4. `src/tool-names.ts` — a constant for every `show_*`/`*_data` tool referenced

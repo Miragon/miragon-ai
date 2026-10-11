@@ -171,6 +171,7 @@ export function ProcessListWidget({
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={t("processList.searchPlaceholder")}
+        searchAriaLabel={t("processList.searchLabel")}
         chips={[]}
         onChipToggle={() => undefined}
       />

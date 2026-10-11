@@ -137,6 +137,16 @@ describe("every in-widget write goes through useEngineAction", () => {
     }
   })
 
+  it("seeds every direct useViewData read, so Refresh and a write's invalidation reach it", () => {
+    // The toolkit's default ("static") switches the query off under handed-in
+    // data: a standalone view would show its tool result forever (#341).
+    expect(scan.viewDataReads.length).toBeGreaterThanOrEqual(6)
+    expect(
+      scan.viewDataReads.filter((read) => !read.seeded).map((read) => `${read.file}:${read.line}`),
+      'pass { initialDataMode: "seed" } as a literal option',
+    ).toEqual([])
+  })
+
   it("obtains a raw tool caller only in the reviewed files", () => {
     expect(
       [...scan.callerHolders].sort(),
@@ -183,6 +193,37 @@ describe("the structural scan itself", () => {
       "test:tool-query",
       "test:view-data",
     ])
+  })
+
+  it("counts a useViewData read as seeded only for a literal seed option", () => {
+    const { viewDataReads } = scanText(
+      "probe.tsx",
+      `
+      const OPTIONS = { initialDataMode: "seed" } as const
+      export function Probe({ data, mode }: { data: unknown; mode: "seed" }) {
+        useViewData(data, ["test:a"], "test_data", {}, true, { initialDataMode: "seed" })
+        useViewData(data, ["test:b"], "test_data", {}, true, ({ retry: false, initialDataMode: "seed" }))
+        useViewData(data, ["test:c"], "test_data", {}, true)
+        useViewData(data, ["test:d"], "test_data", {}, true, { initialDataMode: "static" })
+        useViewData(data, ["test:e"], "test_data", {}, true, OPTIONS)
+        useViewData(data, ["test:f"], "test_data", {}, true, { ...OPTIONS })
+        useViewData(data, ["test:g"], "test_data", {}, true, { initialDataMode: mode })
+        useViewData(data, ["test:h"], "test_data", {}, true, { seed: "initialDataMode" })
+        useToolQuery(["test:i"], "test_data", {})
+      }
+      `,
+    )
+    expect(viewDataReads.map((read) => read.seeded)).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ])
+    expect(viewDataReads.map((read) => read.line)).toEqual([4, 5, 6, 7, 8, 9, 10, 11])
   })
 
   it("follows a raw tool caller through a rename, a destructuring and an alias", () => {

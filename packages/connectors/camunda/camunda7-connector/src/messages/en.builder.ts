@@ -50,7 +50,7 @@ export const enBuilder: MessageCatalog = {
     "One failure cluster with its metrics and the affected instances.",
   "builder.widget.process-health-kpi.title": "Process landscape metrics",
   "builder.widget.process-health-kpi.summary":
-    "Process definitions, running instances, jobs without retries and open incidents of the engine.",
+    "How many process definitions are healthy or affected, and the engine's open incidents.",
   "builder.widget.process-definitions-table.title": "Process definitions with incidents",
   "builder.widget.process-definitions-table.summary":
     "One row per process definition with running instances, jobs without retries and incidents.",

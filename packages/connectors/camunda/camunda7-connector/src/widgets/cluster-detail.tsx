@@ -325,6 +325,7 @@ export function ClusterDetailView({
               search={search}
               onSearchChange={setSearch}
               searchPlaceholder={t("clusterDetail.searchPlaceholder")}
+              searchAriaLabel={t("clusterDetail.searchLabel")}
               chips={[]}
               onChipToggle={() => undefined}
             />
