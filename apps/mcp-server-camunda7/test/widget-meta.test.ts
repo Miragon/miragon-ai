@@ -24,7 +24,8 @@ describe("appsSdkMeta widget contract (installed toolkit)", () => {
     const meta = appsSdkMeta({ resourceUri, title: "Cockpit" })
 
     expect(meta["openai/outputTemplate"]).toBe(resourceUri)
-    expect(meta["openai/toolInvocation/invoking"]).toBe("Loading Cockpit...")
+    // One "…" character since toolkit 2.8 (its catalog rule), never three dots.
+    expect(meta["openai/toolInvocation/invoking"]).toBe("Loading Cockpit…")
     expect(meta["openai/toolInvocation/invoked"]).toBe("Cockpit ready")
     expect(meta["openai/widgetAccessible"]).toBe(true)
     expect(meta["openai/resultCanProduceWidget"]).toBe(true)

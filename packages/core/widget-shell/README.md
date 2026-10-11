@@ -94,9 +94,9 @@ The `@miragon/mcp-toolkit-*`, `react`/`react-dom`, `zod` and `@tanstack/react-qu
 **peer dependencies** — they must resolve to a single instance across the host bundle (see the
 `dedupe` array in the server app's `vite.config.ts`), otherwise the React contexts diverge and
 in-widget queries hang. They are published as ranges (`react`/`react-dom` `^19.2.0`, `zod`
-`^4.4.0`, `@miragon/mcp-toolkit-*` `~2.7.0`, `lucide-react` `^0.562.0 || ^1.0.0`) so they dedupe
+`^4.4.0`, `@miragon/mcp-toolkit-*` `~2.8.0`, `lucide-react` `^0.562.0 || ^1.0.0`) so they dedupe
 against your app's copy; add `lucide-react` to your `dedupe` list too. **A host bundle that dedupes
-`lucide-react` needs 1.47.0 or newer** (the version `@miragon/mcp-toolkit-ui` 2.7 depends on): the
+`lucide-react` needs 1.47.0 or newer** (the version `@miragon/mcp-toolkit-ui` 2.8 depends on): the
 toolkit's chrome imports `LucideProvider`, which 0.x does not export, so a deduped 0.x copy fails
 the bundle build with a missing export. The peer range still admits 0.562 only for this repo's own
 test graph; no package manager warns you about it.

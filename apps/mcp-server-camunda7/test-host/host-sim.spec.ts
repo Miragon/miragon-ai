@@ -33,13 +33,16 @@ const OUTLAST_GRACE_MS = RECOVERY_GRACE_MS + 1_000
 const TOOLKIT_LIFECYCLE_ISSUE = "https://github.com/Miragon/mcp-toolkit/issues/176"
 const TOOLKIT_HOST_CONTEXT_ISSUE = "https://github.com/Miragon/mcp-toolkit/issues/178"
 const HOST_THEME_ISSUE = "https://github.com/Miragon/miragon-ai/issues/339"
-/** The toolkit's English view chrome (its en catalog, toolkit 2.7). */
+/** The toolkit's English view chrome (its en catalog, toolkit 2.8). */
 const CHROME = {
+  loading: "Loading view…",
   cancelled: "Cancelled. Ask in the chat to open this view again.",
   errorTitle: "This view couldn't be loaded",
   retry: "Try again",
   enterFullscreen: "Fullscreen",
   exitFullscreen: "Exit fullscreen",
+  /** The quiet line over a payload the view loaded itself ("Reloaded at 2:32 PM"). */
+  reloadedAt: /^Reloaded at \d{1,2}:\d{2}/,
 }
 
 /**
@@ -265,6 +268,8 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
 
     const log = await hostLog(page)
     expect(await reExecutions(page)).toHaveLength(0)
+    // The chat's own answer carries no "Reloaded at" line.
+    await expect(app.getByText(CHROME.reloadedAt)).toHaveCount(0)
     // The provider stack works in the real bundle: ProfileGate fetched the
     // profile through the host bridge (AppShellProviders order) …
     expect(log.toolCalls.map((c) => c.name)).toContain(PROFILE_FEED)
@@ -350,6 +355,10 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page, { structuredContent: "strip" })
 
     await expectProcessList(app)
+    // The view loaded these figures itself, so they can differ from the
+    // chat's answer: the toolkit's "Reloaded at" line says so (2.8), also with
+    // the toolbar title hidden.
+    await expect(app.getByText(CHROME.reloadedAt)).toBeVisible()
     // The recovered render is the last event: a grace timer re-armed by the
     // recovered payload would fire a second call inside this window.
     await page.waitForTimeout(OUTLAST_GRACE_MS)
@@ -359,23 +368,30 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
   })
 
   test(
-    "pinned toolkit#176 (K13): a slow tool on a compliant host is re-executed once before its result arrives",
+    "a slow tool on a compliant host is never re-executed: the view waits for the host's result (toolkit#176 K13, fixed in 2.8)",
     { annotation: { type: "issue", description: TOOLKIT_LIFECYCLE_ISSUE } },
     async ({ page }) => {
       const app = await openView(page, { resultDelayMs: RECOVERY_GRACE_MS + 1_500 })
 
-      // Rendered from the premature recovery, before the host delivered.
-      await expectProcessList(app)
-      await waitForDelivery(page, "result")
-      // The host's late delivery is the last event; outlast a timer it re-arms.
-      await page.waitForTimeout(OUTLAST_GRACE_MS)
+      // Past the old grace timer, the host is still running the tool: the
+      // view keeps waiting (the toolkit's observer saw no stripped result)
+      // instead of loading the view itself.
+      await expect(app.getByText(CHROME.loading)).toBeVisible({ timeout: 15_000 })
+      await page.waitForTimeout(RECOVERY_GRACE_MS + 500)
+      expect((await hostLog(page)).delivered).toBeNull()
+      expect(await reExecutions(page)).toHaveLength(0)
+      await expect(definitionsTable(app)).toHaveCount(0)
 
-      // Never a duplicate render: the host payload replaces the recovered one.
+      // Rendered from the host's late delivery, once.
+      await waitForDelivery(page, "result")
+      await expectProcessList(app)
+      // The delivery is the last event; outlast a timer it could re-arm.
+      await page.waitForTimeout(OUTLAST_GRACE_MS)
       await expect(definitionsTable(app)).toHaveCount(1)
-      expect(
-        await reExecutions(page),
-        "toolkit#176 fixed? A compliant host's slow result must not trigger a re-execution — expect 0 and drop the pin",
-      ).toHaveLength(1)
+      expect(await reExecutions(page)).toHaveLength(0)
+      // The host's own answer: no "Reloaded at" line, which marks a payload
+      // the view loaded itself.
+      await expect(app.getByText(CHROME.reloadedAt)).toHaveCount(0)
     },
   )
 

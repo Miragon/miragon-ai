@@ -633,7 +633,7 @@
       "openai/outputTemplate": "ui://views/analytics_show_bpmn_heatmap.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "BPMN Heatmap ready",
-      "openai/toolInvocation/invoking": "Loading BPMN Heatmap...",
+      "openai/toolInvocation/invoking": "Loading BPMN Heatmap…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/analytics_show_bpmn_heatmap.html"
@@ -698,7 +698,7 @@
       "openai/outputTemplate": "ui://views/analytics_show_cluster_compare.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Pre/Post Deployment Comparison ready",
-      "openai/toolInvocation/invoking": "Loading Pre/Post Deployment Comparison...",
+      "openai/toolInvocation/invoking": "Loading Pre/Post Deployment Comparison…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/analytics_show_cluster_compare.html"
@@ -779,7 +779,7 @@
       "openai/outputTemplate": "ui://views/analytics_show_dashboard.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Process Analytics Dashboard ready",
-      "openai/toolInvocation/invoking": "Loading Process Analytics Dashboard...",
+      "openai/toolInvocation/invoking": "Loading Process Analytics Dashboard…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/analytics_show_dashboard.html"
@@ -841,7 +841,7 @@
       "openai/outputTemplate": "ui://views/analytics_show_engine_compare.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Engine Comparison ready",
-      "openai/toolInvocation/invoking": "Loading Engine Comparison...",
+      "openai/toolInvocation/invoking": "Loading Engine Comparison…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/analytics_show_engine_compare.html"
@@ -910,7 +910,7 @@
       "openai/outputTemplate": "ui://views/analytics_show_engine_landscape.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Cross-Engine Landscape ready",
-      "openai/toolInvocation/invoking": "Loading Cross-Engine Landscape...",
+      "openai/toolInvocation/invoking": "Loading Cross-Engine Landscape…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/analytics_show_engine_landscape.html"
@@ -957,7 +957,7 @@
       "openai/outputTemplate": "ui://views/analytics_show_failure_dashboard.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Failure Analysis Dashboard ready",
-      "openai/toolInvocation/invoking": "Loading Failure Analysis Dashboard...",
+      "openai/toolInvocation/invoking": "Loading Failure Analysis Dashboard…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/analytics_show_failure_dashboard.html"
@@ -1004,7 +1004,7 @@
       "openai/outputTemplate": "ui://views/analytics_show_settings.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Analytics Settings ready",
-      "openai/toolInvocation/invoking": "Loading Analytics Settings...",
+      "openai/toolInvocation/invoking": "Loading Analytics Settings…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/analytics_show_settings.html"
@@ -1036,7 +1036,7 @@
       "openai/outputTemplate": "ui://views/analytics_show_version_compare.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Process Version Comparison ready",
-      "openai/toolInvocation/invoking": "Loading Process Version Comparison...",
+      "openai/toolInvocation/invoking": "Loading Process Version Comparison…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/analytics_show_version_compare.html"
@@ -3379,7 +3379,7 @@
       "openai/outputTemplate": "ui://views/camunda7_open_cockpit.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Open Cockpit ready",
-      "openai/toolInvocation/invoking": "Loading Open Cockpit...",
+      "openai/toolInvocation/invoking": "Loading Open Cockpit…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_open_cockpit.html"
@@ -4521,7 +4521,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_bpmn_viewer.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "BPMN Diagram Viewer ready",
-      "openai/toolInvocation/invoking": "Loading BPMN Diagram Viewer...",
+      "openai/toolInvocation/invoking": "Loading BPMN Diagram Viewer…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_bpmn_viewer.html"
@@ -4574,7 +4574,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_cluster_detail.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Failure Cluster Detail ready",
-      "openai/toolInvocation/invoking": "Loading Failure Cluster Detail...",
+      "openai/toolInvocation/invoking": "Loading Failure Cluster Detail…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_cluster_detail.html"
@@ -4645,7 +4645,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_engine_health.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Engine Health Overview ready",
-      "openai/toolInvocation/invoking": "Loading Engine Health Overview...",
+      "openai/toolInvocation/invoking": "Loading Engine Health Overview…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_engine_health.html"
@@ -4685,7 +4685,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_history_timeline.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "History Timeline ready",
-      "openai/toolInvocation/invoking": "Loading History Timeline...",
+      "openai/toolInvocation/invoking": "Loading History Timeline…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_history_timeline.html"
@@ -4744,7 +4744,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_incident_detail.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Incident Detail ready",
-      "openai/toolInvocation/invoking": "Loading Incident Detail...",
+      "openai/toolInvocation/invoking": "Loading Incident Detail…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_incident_detail.html"
@@ -4791,7 +4791,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_incidents_dashboard.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Incidents Dashboard ready",
-      "openai/toolInvocation/invoking": "Loading Incidents Dashboard...",
+      "openai/toolInvocation/invoking": "Loading Incidents Dashboard…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_incidents_dashboard.html"
@@ -4839,7 +4839,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_instance_detail.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Process Instance Detail ready",
-      "openai/toolInvocation/invoking": "Loading Process Instance Detail...",
+      "openai/toolInvocation/invoking": "Loading Process Instance Detail…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_instance_detail.html"
@@ -4886,7 +4886,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_job_panel.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Job Management Panel ready",
-      "openai/toolInvocation/invoking": "Loading Job Management Panel...",
+      "openai/toolInvocation/invoking": "Loading Job Management Panel…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_job_panel.html"
@@ -4946,7 +4946,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_process_detail.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Process Definition Detail ready",
-      "openai/toolInvocation/invoking": "Loading Process Definition Detail...",
+      "openai/toolInvocation/invoking": "Loading Process Definition Detail…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_process_detail.html"
@@ -4993,7 +4993,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_process_incidents.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Process Incidents ready",
-      "openai/toolInvocation/invoking": "Loading Process Incidents...",
+      "openai/toolInvocation/invoking": "Loading Process Incidents…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_process_incidents.html"
@@ -5040,7 +5040,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_process_instances.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Process Instances ready",
-      "openai/toolInvocation/invoking": "Loading Process Instances...",
+      "openai/toolInvocation/invoking": "Loading Process Instances…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_process_instances.html"
@@ -5112,7 +5112,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_process_list.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Process Definitions ready",
-      "openai/toolInvocation/invoking": "Loading Process Definitions...",
+      "openai/toolInvocation/invoking": "Loading Process Definitions…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_process_list.html"
@@ -5176,7 +5176,7 @@
       "openai/outputTemplate": "ui://views/camunda7_show_user_profile.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "Profile & Settings ready",
-      "openai/toolInvocation/invoking": "Loading Profile & Settings...",
+      "openai/toolInvocation/invoking": "Loading Profile & Settings…",
       "openai/widgetAccessible": true,
       "ui": {
         "resourceUri": "ui://views/camunda7_show_user_profile.html"
@@ -5413,7 +5413,7 @@
       "type": "object"
     },
     "name": "delete-dashboard",
-    "title": "Delete Dashboard"
+    "title": "Delete dashboard"
   },
   {
     "_meta": {
@@ -5463,7 +5463,7 @@
       "type": "object"
     },
     "name": "get-builder-catalogue",
-    "title": "Get Builder Catalogue"
+    "title": "Get builder catalogue"
   },
   {
     "annotations": {
@@ -5474,7 +5474,8 @@
       "properties": {},
       "type": "object"
     },
-    "name": "get-framework-manifest"
+    "name": "get-framework-manifest",
+    "title": "Get framework manifest"
   },
   {
     "annotations": {
@@ -5486,7 +5487,7 @@
       "type": "object"
     },
     "name": "list-dashboards",
-    "title": "List Dashboards"
+    "title": "List dashboards"
   },
   {
     "annotations": {
@@ -5506,7 +5507,7 @@
       "type": "object"
     },
     "name": "load-dashboard",
-    "title": "Load Dashboard"
+    "title": "Load dashboard"
   },
   {
     "_meta": {
@@ -5721,14 +5722,14 @@
       "type": "object"
     },
     "name": "refresh-view",
-    "title": "Refresh View"
+    "title": "Refresh view"
   },
   {
     "_meta": {
       "openai/outputTemplate": "ui://views/render-view.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "View rendered",
-      "openai/toolInvocation/invoking": "Rendering view...",
+      "openai/toolInvocation/invoking": "Rendering view…",
       "openai/widgetAccessible": true,
       "openai/widgetDescription": "Interactive view composed of pipeline-driven widgets",
       "ui": {
@@ -5947,7 +5948,7 @@
       "properties": {},
       "type": "object"
     },
-    "title": "Render View"
+    "title": "Render view"
   },
   {
     "description": "Persists a dashboard (render-view input bundle + name). Pass an existing `id` to update, omit to create. The builder UI's Save button invokes this tool.",
@@ -6164,6 +6165,6 @@
       "type": "object"
     },
     "name": "save-dashboard",
-    "title": "Save Dashboard"
+    "title": "Save dashboard"
   }
 ]

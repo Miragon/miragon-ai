@@ -104,6 +104,9 @@ export function PagedListFooter<TItem, TData>({
           loadingMore={paged.loadingMore}
           onLoadMore={paged.loadMore}
           noun={noun}
+          // The status line above is this list's one live region; the
+          // toolkit 2.8 count line would announce the count a second time.
+          announce={false}
         />
       )}
     </>

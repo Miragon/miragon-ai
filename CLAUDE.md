@@ -284,8 +284,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    pins devDependency `0.562.0`, the version mcp-use's graph peers on: any other version
    resolves a second mcp-use/toolkit instance for that package and splits the React contexts
    between it and widget-shell in tests. A host BUNDLE (the app, the template's server) pins a
-   1.x `lucide-react` instead: it dedupes the toolkit's icons onto its copy, and toolkit 2.7
-   imports `LucideProvider`, which 0.x lacks. A chat hand-off is the kit's `HandOffButton`
+   1.x `lucide-react` instead: it dedupes the toolkit's icons onto its copy, and the toolkit (2.7
+   and later) imports `LucideProvider`, which 0.x lacks. A chat hand-off is the kit's `HandOffButton`
    (`action` from `HAND_OFF_ACTIONS`, `widget-shell/src/ui/hand-off-button.tsx`): ONE
    vocabulary for the product, each function with one Lucide icon and one verb that names the
    chat (`kitLabels().handOff`, de + en: "Ursache im Chat klären" / "Find cause in chat",
@@ -605,14 +605,14 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   consumer-shared libraries are published as RANGED `peerDependencies` so a downstream
   React + zod app dedupes them against its own copy instead of getting a second
   instance: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*`
-  `~2.7.0` (2.7.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
+  `~2.8.0` (2.8.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
   appears as an EXACT `devDependency` so the in-repo build/tests resolve a concrete
   version. **`mcp-use` is the exception: exactly pinned even as a peer** (`2.7.3`) — a
   duplicate `mcp-use` instance breaks the React context and hangs every in-widget query
   on "Loading…" (invariant #4), so its exact pin is load-bearing. Name the required
   `mcp-use` version in each package README and the release changelog. Toolkit updates are
   still deliberate version bumps across all packages — never bump a single package in
-  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.7.0` → `mcp-use@2.7.3`;
+  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.8.0` → `mcp-use@2.7.3`;
   `zod`/`react` it peers as ranges), so a toolkit MAJOR/MINOR bump is a joint toolkit + `mcp-use` bump across
   every package incl. `templates/composed-server` — `scripts/test-template.sh` fails if
   the template is left behind.
@@ -687,8 +687,8 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository.** In `devDependencies` it is
-  exactly pinned (`save-exact`, currently `2.7.0`); in the published surface it is a
-  ranged `peerDependency` (`~2.7.0`) so consumers dedupe it. Toolkit changes arrive here
+  exactly pinned (`save-exact`, currently `2.8.0`); in the published surface it is a
+  ranged `peerDependency` (`~2.8.0`) so consumers dedupe it. Toolkit changes arrive here
   as a deliberate, repo-wide version bump — since 1.0 the toolkit follows semver
   (breaking changes arrive as major bumps).
 - **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,
