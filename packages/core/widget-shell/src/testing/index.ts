@@ -5,7 +5,8 @@
  *  - `scanGlyphs` — no Unicode glyphs, emoji or sparkle icons in widget code;
  *  - `scanColors` — role names only, no palette classes or raw colours;
  *  - `parseThemeVariables` + `contrastFindings` with `toneContrastPairs()` /
- *    `ROLE_CONTRAST_PAIRS` — WCAG contrast of the theme, light and dark.
+ *    `ROLE_CONTRAST_PAIRS` — WCAG contrast of the theme, light and dark;
+ *  - `setFormatLocale` — render numbers and dates in a language in a test.
  * `scanGlyphs` and `scanColors` parse sources with `typescript` (an optional
  * peer).
  */
@@ -33,3 +34,9 @@ export {
   type ThemeVariables,
 } from "./contrast.js"
 export { ROLE_CONTRAST_PAIRS, toneContrastPairs } from "./tone-pairs.js"
+/**
+ * The format locale the shell's ProfileGate publishes, for tests that render
+ * a widget's numbers and dates in a given language without booting the gate
+ * (`afterEach(() => setFormatLocale(undefined))` restores the defaults).
+ */
+export { setFormatLocale, type FormatLocale } from "../ui/format.js"

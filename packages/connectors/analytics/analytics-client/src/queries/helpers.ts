@@ -54,6 +54,13 @@ export const firstOrNull = (s: PromSample[]) => (s.length ? s[0].value : null)
 export const reportingEnginesQuery = (engineSel: string) =>
   `sum by (engine_id)(${M.jobsExecutable}${engineSel})`
 
+/** The engine ids the {@link reportingEnginesQuery} probe answered for, ascending. */
+export const reportingEngineIds = (samples: PromSample[]): string[] =>
+  [...new Set(samples.flatMap((s) => (s.metric.engine_id ? [s.metric.engine_id] : [])))].sort()
+
+/** The as-of stamp of a result: now, as an ISO timestamp (the instant queries evaluate at now). */
+export const asOfNow = (): string => new Date().toISOString()
+
 /**
  * Index sample values by one label, dropping samples that miss the label.
  * The last sample wins on duplicate label values.

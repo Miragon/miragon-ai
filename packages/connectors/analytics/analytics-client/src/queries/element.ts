@@ -8,7 +8,7 @@ import {
   type PrometheusClient,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
-import { byLabel, ratePct, round1, round1OrNull } from "./helpers.js"
+import { asOfNow, byLabel, ratePct, round1, round1OrNull } from "./helpers.js"
 
 export interface ElementBottleneckRow {
   activity_id: string
@@ -123,6 +123,11 @@ export interface ElementHeatResult {
   frequency: Record<string, number>
   /** Per-element average duration in seconds over the window, keyed by activity id. */
   durationSec: Record<string, number>
+  /**
+   * When the figures were read from Prometheus (ISO timestamp): the "Stand"
+   * a view shows. Optional only for payloads recorded before it existed.
+   */
+  asOf?: string
 }
 
 /**
@@ -138,6 +143,7 @@ export async function elementHeat(
   ch: PrometheusClient,
   params: { processDefinitionKey: string; period: Period; engine?: EngineFilterInput },
 ): Promise<ElementHeatResult> {
+  const asOf = asOfNow()
   const range = params.period
   const sel = selector(
     `process_definition_key="${escapeLabelValue(params.processDefinitionKey)}"`,
@@ -161,5 +167,5 @@ export async function elementHeat(
     const totalSec = sumBy[id] ?? 0
     durationSec[id] = round1(totalSec / c)
   }
-  return { frequency, durationSec }
+  return { frequency, durationSec, asOf }
 }

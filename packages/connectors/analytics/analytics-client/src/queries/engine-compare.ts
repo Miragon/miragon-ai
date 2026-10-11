@@ -1,5 +1,6 @@
 import { escapeLabelValue, selector, type PrometheusClient } from "../prometheus.js"
 import {
+  asOfNow,
   belowMinBucket,
   compareKpiDelta,
   queryCompareKpis,
@@ -24,6 +25,11 @@ export interface EngineCompareResult {
   suppressed: boolean
   kpis: EngineCompareKpi[]
   delta: EngineCompareDelta
+  /**
+   * When the figures were read from Prometheus (ISO timestamp): the "Stand"
+   * a view shows. Optional only for payloads recorded before it existed.
+   */
+  asOf?: string
 }
 
 /**
@@ -60,6 +66,7 @@ export async function engineCompare(
   const minBucket = Math.max(1, Math.floor(params.minBucketSize))
   const windowDays = Math.max(1, Math.floor(params.windowDays))
   const range = `${windowDays}d`
+  const asOf = asOfNow()
 
   const [a, b] = await Promise.all([
     engineKpi(ch, params, "engineA", params.engineA, range),
@@ -67,6 +74,7 @@ export async function engineCompare(
   ])
 
   return {
+    asOf,
     engineA: params.engineA,
     engineB: params.engineB,
     processDefinitionKey: params.processDefinitionKey,

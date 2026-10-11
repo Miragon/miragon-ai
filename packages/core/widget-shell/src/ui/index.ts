@@ -31,6 +31,15 @@ export {
   type PercentFormatOptions,
 } from "./format.js"
 export {
+  ViewMeta,
+  formatLookback,
+  formatViewMeta,
+  VIEW_META_LABELS,
+  type ViewMetaEngines,
+  type ViewMetaLabels,
+  type ViewMetaParts,
+} from "./view-meta.js"
+export {
   TONE_VARIANTS,
   TONE_SOFT,
   TONE_TINT,

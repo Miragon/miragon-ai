@@ -94,7 +94,11 @@ const NO_DATA: { [K in keyof typeof queries]: (result: Result<K>) => void } = {
   },
   findFailedInstances: (r) => expect(r.patterns).toEqual([]),
   elementBottleneck: (r) => expect(r.activities).toEqual([]),
-  elementHeat: (r) => expect(r).toEqual({ frequency: {}, durationSec: {} }),
+  elementHeat: (r) =>
+    expect({ frequency: r.frequency, durationSec: r.durationSec }).toEqual({
+      frequency: {},
+      durationSec: {},
+    }),
   clusterCompare: (r) => {
     expect(r.suppressed).toBe(true)
     expectUnmeasuredCompare(r.kpis, r.delta)
