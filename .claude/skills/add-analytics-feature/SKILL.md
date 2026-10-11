@@ -204,16 +204,18 @@ Rules while building:
   formatting via `formatTimestamp`/`formatNumber`/`formatPercent`/`formatPercentPoints`/
   `formatPeriod`/`formatDuration`/`truncate` (canonical duration style "3m 7s", German
   "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage"). Never re-inline these primitives, write
-  local format helpers, or call `toFixed`/an argument-less `toLocaleString()`.
+  local format helpers, or call `toFixed`, a `toLocaleString()` without a locale or a
+  hand-built `Intl.NumberFormat`.
 - Status and comparison colour come from the tone model (`ToneVariant`, `TONE_*` maps,
-  CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, text in a tone via
-  `TONE_INK`; volume (starts) and suppressed comparisons stay `neutral`, red is `danger`
-  and only for incidents/failures. No palette classes or raw colours.
+  CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
+  (`TONE_SOFT`), `TONE_INK` only for words in a tone directly on the card (an inline error);
+  volume (starts) and suppressed comparisons stay `neutral`, red is `danger` and only for
+  incidents/failures. No palette classes or raw colours.
 - Icons are Lucide via `Icon` (devDependency `lucide-react` `0.562.0`, see invariant 6), never
   glyphs or emoji; `AskAiButton` takes the `icon` of the concrete function and a verb that
   names the chat. Copy follows the brand voice in en + de; the package's brand-gate test
-  runs `catalogTextFindings` over both catalogs and `scanGlyphs` over `src/widgets` +
-  `src/messages` (`@miragon-ai/widget-shell/testing`).
+  runs `catalogTextFindings` over both catalogs, `scanGlyphs` over `src/widgets` +
+  `src/messages` and `scanColors` over `src/widgets` (`@miragon-ai/widget-shell/testing`).
 - Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`)
   — a missing `isError` branch means an eternal skeleton.
 - The model description (`adaptDataWidget`'s third argument, in

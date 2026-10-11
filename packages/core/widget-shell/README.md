@@ -23,13 +23,17 @@ package customers build their own connectors and composed servers on (see the
 - **Shared UI primitives** (`./widgets`) — common components (`WidgetShell`, tables, formatters,
   `useApplyTheme`, …) and `with-tool-errors` handling reused across both widget packages. Status
   is a tone (`TONE_*` maps over the `--<tone>`, `--<tone>-soft` and `--<tone>-ink` roles: a dot,
-  edge or icon next to readable text, never a coloured number), function icons are Lucide via
-  `Icon`, and numbers, percentages, periods and durations render in the view's locale
-  (`formatNumber`, `formatPercent`, `formatPercentPoints`, `formatPeriod`, `formatDuration`).
+  edge or icon next to black text, black text on a tint, never a coloured number), function
+  icons are Lucide via `Icon`, and numbers, percentages, periods and durations render in the
+  view's locale (`formatNumber`, `formatPercent`, `formatPercentPoints`, `formatPeriod`,
+  `formatDuration`).
 - **Brand gates** (`./testing`): the checks every widget package runs in its own tests:
-  `catalogTextFindings` (the voice rules over a message catalog), `scanGlyphs` (no Unicode glyphs
-  or emoji as icons) and `contrastFindings` with `toneContrastPairs()` (WCAG AA of every tone
-  pair over your stylesheet stack, light and dark). Node only; `scanGlyphs` needs `typescript`.
+  `catalogTextFindings` (the voice rules over a message catalog), `scanGlyphs` (no Unicode glyphs,
+  emoji, lone symbols or sparkle imports as icons), `scanColors` (role names only: no palette
+  classes or raw colours, with a reasoned allow list) and `contrastFindings` with
+  `toneContrastPairs()` (WCAG AA of every tone pair over your stylesheet stack, light and dark;
+  `:root` and `.dark` cascade in source order as on `<html class="dark">`, so override a role
+  under both). Node only; `scanGlyphs` and `scanColors` need `typescript`.
 - **Module composition** (`./server`) — `composeModules` is the composition-root machinery every
   server shares: `MCP_ACTIVE_MODULES` selection with `module:toolset` suffixes, the env-typo warner
   and boot warnings. `resolveBoot(env, { authenticated })` resolves ONE concrete toolset per module
@@ -76,7 +80,7 @@ oauth? })` is the one boot sequence every composed server shares: env-typo warni
 | `./server`    | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, `composeModules` / `frameworkWritesAllowed` / `createToolsetVocabulary`, `createComposedServer` and its edge pieces, `oauthFromEnv`, caller identity (`resolveProfileKey`), the profile + dashboard stores and the Postgres client/migration runner |
 | `./ui`        | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                                                                                                                                                                                                 |
 | `./widgets`   | Shared widget UI primitives incl. the generic `shell:*` components and the host app shell (`AppShellProviders`: locale and theme resolved as explicit profile > host context > OS/English)                                                                                                                                                                        |
-| `./testing`   | The brand gates for your widget package's tests: `catalogTextFindings`, `scanGlyphs`, `parseThemeVariables` + `contrastFindings` with `toneContrastPairs()` / `ROLE_CONTRAST_PAIRS`                                                                                                                                                                               |
+| `./testing`   | The brand gates for your widget package's tests: `catalogTextFindings`, `scanGlyphs`, `scanColors`, `parseThemeVariables` + `contrastFindings` with `toneContrastPairs()` / `ROLE_CONTRAST_PAIRS`                                                                                                                                                                 |
 | `./theme.css` | The design tokens (the toolkit's shadcn ramp + dark variant, plus the kit's role variables: the tone triple, `--link`, `--focus`) WITHOUT a forced font: import it after `tailwindcss` instead of `@miragon/mcp-toolkit-ui/globals.css`, and `@source` the toolkit's `src` yourself; brand by overriding the role names after it                                  |
 
 The `@miragon/mcp-toolkit-*`, `react`/`react-dom`, `zod` and `@tanstack/react-query` deps are

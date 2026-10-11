@@ -28,41 +28,118 @@ function stripComments(css: string): string {
   return css.replace(/\/\*[\s\S]*?\*\//g, "")
 }
 
-/** Declarations of every rule block whose selector list contains `selector`. */
-function declarationsOf(css: string, matches: (selector: string) => boolean): [string, string][] {
-  const out: [string, string][] = []
-  for (const [, prelude, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    // The prelude runs from the previous block; at-rule statements
-    // (`@import …;`, `@custom-variant …;`) before the selector end in ";".
-    const selectorList = prelude.slice(prelude.lastIndexOf(";") + 1)
-    if (!selectorList.split(",").some((s) => matches(s.trim()))) continue
-    for (const [, name, value] of body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);?/g)) {
-      out.push([name, value.trim()])
-    }
-  }
-  return out
+/** One `{ … }` block: its prelude, the preludes around it, its own custom properties. */
+interface RuleBlock {
+  prelude: string
+  parents: string[]
+  declarations: [string, string][]
+}
+
+function customProperties(body: string): [string, string][] {
+  return [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);?/g)].map(([, name, value]) => [
+    name,
+    value.trim(),
+  ])
 }
 
 /**
- * Collect the theme variables of one or more stylesheets in cascade order.
- * Light = `:root` blocks and `@theme` blocks (Tailwind's `--color-*`
- * registrations); dark = everything light declares, then the `.dark` blocks
- * on top, the way an `html.dark` element sees them.
+ * Every block of a stylesheet, in source order (by its opening brace),
+ * nesting tracked: a block's declarations are the text directly inside it,
+ * the preludes of the blocks around it are its `parents`.
  */
-export function parseThemeVariables(...stylesheets: string[]): ThemeVariables {
-  const css = stylesheets.map(stripComments).join("\n")
-  // `@theme inline { … }` holds no nested blocks, so lift its body out first.
-  const themeBlocks = [...css.matchAll(/@theme(?:\s+inline)?\s*\{([^{}]*)\}/g)].map((m) => m[1])
-  const rest = css.replace(/@theme(?:\s+inline)?\s*\{[^{}]*\}/g, "")
-  const light = new Map<string, string>()
-  for (const body of themeBlocks) {
-    for (const [, name, value] of body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);?/g)) {
-      light.set(name, value.trim())
+function ruleBlocks(css: string): RuleBlock[] {
+  const blocks: RuleBlock[] = []
+  const open: { block: RuleBlock; body: string }[] = []
+  let text = ""
+  for (const ch of css) {
+    if (ch === "{") {
+      // Statements before a prelude (`@import …;`, a declaration of the
+      // enclosing block) end in ";".
+      const cut = text.lastIndexOf(";") + 1
+      if (open.length > 0) open[open.length - 1].body += text.slice(0, cut)
+      const block = {
+        prelude: text.slice(cut).trim(),
+        parents: open.map((o) => o.block.prelude),
+        declarations: [],
+      }
+      blocks.push(block)
+      open.push({ block, body: "" })
+      text = ""
+    } else if (ch === "}") {
+      const closing = open.pop()
+      if (!closing) throw new Error("Unbalanced stylesheet: a } without its {")
+      closing.block.declarations = customProperties(closing.body + text)
+      text = ""
+    } else {
+      text += ch
     }
   }
-  for (const [name, value] of declarationsOf(rest, (s) => s === ":root")) light.set(name, value)
-  const dark = new Map(light)
-  for (const [name, value] of declarationsOf(rest, (s) => s === ".dark")) dark.set(name, value)
+  if (open.length > 0) throw new Error("Unbalanced stylesheet: a { is never closed")
+  return blocks
+}
+
+/** A selector that reaches the document root's theme: html, :root, .dark, a data-theme switch. */
+const ROOT_THEME = /:root|^html(?![\w-])|\.dark(?![\w-])|\[data-(?:theme|mode)|:host/
+
+/**
+ * Which modes a rule's custom properties reach on `<html>`: `:root` both,
+ * `.dark` dark only (useApplyTheme puts `.dark` on `<html>`, where `:root`
+ * matches too, with the same specificity). Descendant scopes (`.dark .card`)
+ * reach no root variable and are skipped; any other root-theme rule (higher
+ * specificity, a media query, a cascade layer) would need a model this
+ * helper does not have, so it throws instead of measuring the wrong colour.
+ */
+function rootScope(block: RuleBlock): { light: boolean; dark: boolean } {
+  const selectors = block.prelude.split(",").map((s) => s.trim())
+  const unsupported = () =>
+    new Error(
+      `Unsupported theme rule "${[...block.parents, block.prelude].join(" { ")}": declare theme variables in plain :root and .dark blocks`,
+    )
+  const reachesRoot = selectors.some((s) => ROOT_THEME.test(s) && !/[\s>+~]/.test(s))
+  if (block.parents.length > 0) {
+    if (reachesRoot) throw unsupported()
+    return { light: false, dark: false }
+  }
+  let light = false
+  let dark = false
+  for (const selector of selectors) {
+    if (selector === ":root") light = dark = true
+    else if (selector === ".dark") dark = true
+    else if (ROOT_THEME.test(selector) && !/[\s>+~]/.test(selector) && selector !== ":host") {
+      throw unsupported()
+    }
+  }
+  return { light, dark }
+}
+
+const isThemeBlock = (block: RuleBlock) => /^@theme\b/.test(block.prelude)
+
+/**
+ * Collect the theme variables of one or more stylesheets the way an `<html>`
+ * element sees them. `@theme` blocks (Tailwind's `--color-*` registrations)
+ * sit in Tailwind's theme layer, below every unlayered rule; then the `:root`
+ * and `.dark` blocks of all stylesheets apply in source order. Light reads
+ * the `:root` blocks; dark (`html.dark`) reads `:root` AND `.dark`, so a later
+ * light-only `:root` override reaches dark too, exactly as in the browser.
+ */
+export function parseThemeVariables(...stylesheets: string[]): ThemeVariables {
+  const blocks = stylesheets.flatMap((css) => ruleBlocks(stripComments(css)))
+  const light = new Map<string, string>()
+  const dark = new Map<string, string>()
+  for (const block of blocks.filter((b) => isThemeBlock(b) && b.parents.length === 0)) {
+    for (const [name, value] of block.declarations) {
+      light.set(name, value)
+      dark.set(name, value)
+    }
+  }
+  for (const block of blocks) {
+    if (block.declarations.length === 0 || isThemeBlock(block)) continue
+    const scope = rootScope(block)
+    for (const [name, value] of block.declarations) {
+      if (scope.light) light.set(name, value)
+      if (scope.dark) dark.set(name, value)
+    }
+  }
   return { light, dark }
 }
 

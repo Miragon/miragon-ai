@@ -125,7 +125,7 @@ export function formatNumber(
 
 /** Fraction digits and sign of {@link formatPercent} / {@link formatPercentPoints}. */
 export interface PercentFormatOptions {
-  /** Default 1. */
+  /** Default 1, raised to `minimumFractionDigits` when that is larger. */
   maximumFractionDigits?: number
   /** Default 0 — set it equal to the maximum for aligned table columns. */
   minimumFractionDigits?: number
@@ -137,9 +137,12 @@ function percentOptions(
   options: PercentFormatOptions | undefined,
   signedDefault: boolean,
 ): Intl.NumberFormatOptions {
+  const minimumFractionDigits = options?.minimumFractionDigits ?? 0
   return {
-    maximumFractionDigits: options?.maximumFractionDigits ?? 1,
-    minimumFractionDigits: options?.minimumFractionDigits ?? 0,
+    // Intl throws a RangeError for a maximum below the minimum; a formatter
+    // runs during render, so it never may.
+    maximumFractionDigits: Math.max(options?.maximumFractionDigits ?? 1, minimumFractionDigits),
+    minimumFractionDigits,
     signDisplay: (options?.signed ?? signedDefault) ? "exceptZero" : "auto",
   }
 }

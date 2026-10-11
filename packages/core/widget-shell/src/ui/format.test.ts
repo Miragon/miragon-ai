@@ -63,7 +63,10 @@ describe("the published format locale (set by the shell's ProfileGate)", () => {
 describe("formatTimestamp / formatDate / formatTime", () => {
   it("renders a valid ISO timestamp", () => {
     const iso = "2026-07-22T10:15:30.000Z"
-    expect(formatTimestamp(iso)).toBe(new Date(iso).toLocaleString(undefined))
+    // No published locale: the browser's own, spelled out (an argument-less or
+    // `undefined` toLocaleString is what the kit's number gate bans).
+    const browserLocale = new Intl.DateTimeFormat().resolvedOptions().locale
+    expect(formatTimestamp(iso)).toBe(new Date(iso).toLocaleString(browserLocale))
     expect(formatDate(iso)).toBe(new Date(iso).toLocaleDateString())
     expect(formatTime(iso)).toBe(new Date(iso).toLocaleTimeString())
   })
@@ -161,6 +164,19 @@ describe("formatPercent / formatPercentPoints", () => {
     setFormatLocale({ language: "en", locale: "en-GB" })
     expect(formatPercentPoints(0.2)).toBe(`+0.2${NBSP}pp`)
     expect(formatPercentPoints(0.2, { signed: false })).toBe(`0.2${NBSP}pp`)
+  })
+
+  it("raises the default maximum to a larger minimum instead of throwing during render", () => {
+    // `rate.toFixed(2) + "%"` migrated naturally: the default maximum of 1
+    // would sit below the minimum, which Intl rejects with a RangeError.
+    setFormatLocale({ language: "de", locale: "de-DE" })
+    expect(formatPercent(3.75, { minimumFractionDigits: 2 })).toBe(`3,75${NBSP}%`)
+    expect(formatPercentPoints(0.25, { minimumFractionDigits: 2 })).toBe(`+0,25${NBSP}Pp.`)
+    setFormatLocale({ language: "en", locale: "en-US" })
+    expect(formatPercent(3.7, { minimumFractionDigits: 3 })).toBe("3.700%")
+    expect(formatPercent(3.75, { minimumFractionDigits: 2, maximumFractionDigits: 1 })).toBe(
+      "3.75%",
+    )
   })
 
   it("returns the placeholder for a missing value", () => {

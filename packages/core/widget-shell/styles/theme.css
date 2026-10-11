@@ -194,16 +194,20 @@
  *
  * Every tone has three roles (src/ui/tone-utils.ts):
  *   --<tone>       fill / dot / border / icon (non-text, >= 3:1)
- *   --<tone>-soft  the tint of a badge, chip or soft card
- *   --<tone>-ink   the text colour of the tone (>= 4.5:1 on tint, card, page)
+ *   --<tone>-soft  the tint of a badge, chip or soft card (its text is
+ *                  --foreground, >= 4.5:1)
+ *   --<tone>-ink   the text colour of the tone on the card or page (>= 4.5:1)
  * src/ui/tone-contrast.test.ts holds every TONE_* entry to those ratios in
  * both modes.
  *
  * Interim values: today's look, carried behind the role names until the
  * Miragon theme (vendored cd-tokens + alias layer) replaces them. `danger`
  * keeps the toolkit's value above; the retired `critical` tone renders as it.
- * Aliases built with var() are repeated under `.dark`: a custom property
- * resolves where it is declared, so a light alias would leak into dark.
+ * `--focus` is the info navy (11:1 light, >= 7.1:1 dark), not the toolkit's
+ * grey ring (2.6:1 on white).
+ * Every value is repeated under `.dark`: `.dark` sits on <html>, where this
+ * `:root` (after the toolkit's `.dark`) matches too, so a value declared
+ * only here would show in dark (tone-contrast.test.ts checks the repeat).
  */
 @theme inline {
   --color-danger-ink: var(--danger-ink);
@@ -227,7 +231,7 @@
   --info-ink: var(--info);
   --danger-ink: var(--danger);
   --link: var(--info);
-  --focus: var(--ring);
+  --focus: var(--info);
   --primary-hover: color-mix(in oklab, var(--primary) 90%, transparent);
 }
 
@@ -243,7 +247,7 @@
   --info-ink: var(--info);
   --danger-ink: var(--danger);
   --link: var(--info);
-  --focus: var(--ring);
+  --focus: var(--info);
   --primary-hover: color-mix(in oklab, var(--primary) 90%, transparent);
 }
 

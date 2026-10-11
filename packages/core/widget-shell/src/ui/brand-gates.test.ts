@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
-import { catalogTextFindings, scanGlyphs } from "../testing/index.js"
+import { catalogTextFindings, scanColors, scanGlyphs } from "../testing/index.js"
 import { ASK_AI_PROMPT_LABELS } from "./ask-ai-prompt.js"
 import { DEFAULT_HEATMAP_LABELS } from "./bpmn-heatmap-labels.js"
 import { KIT_LABELS } from "./kit-labels.js"
@@ -27,8 +27,27 @@ describe("kit copy follows the voice rules", () => {
   })
 })
 
+const UI_DIR = fileURLToPath(new URL(".", import.meta.url))
+
 describe("kit widget code draws icons with Lucide, never glyphs or emoji", () => {
   it("src/ui has no forbidden glyph in JSX or strings", () => {
-    expect(scanGlyphs(fileURLToPath(new URL(".", import.meta.url)))).toEqual([])
+    expect(scanGlyphs(UI_DIR)).toEqual([])
+  })
+})
+
+describe("kit widget code colours through role names only", () => {
+  it("src/ui has no palette class or raw colour outside the reasoned allowances", () => {
+    // Shrink-only: a file that loses its raw colours fails here until its
+    // entry is deleted.
+    expect(
+      scanColors(UI_DIR, {
+        allow: {
+          "bpmn-heatmap/heat-utils.ts":
+            "the heat ramp's rgba stops; replaced by the one-hue data-viz ramp (M5, decision 2j)",
+          "use-bpmn-viewer.ts":
+            "the BPMN paper is always light in both modes (owner decision on issue 339)",
+        },
+      }),
+    ).toEqual([])
   })
 })

@@ -25,8 +25,10 @@ export default mergeConfig(
         // fully covered): measured 93.4 / 92.96 / 97.59 / 94.04.
         // Raised again with the brand-kit foundation (the testing gates, the
         // tone model and the locale formatters landed with their suites):
-        // measured 94.23 / 93.69 / 96.77 / 95.1.
-        thresholds: { statements: 92, branches: 91, functions: 95, lines: 93 },
+        // measured 94.23 / 93.69 / 96.77 / 95.1. Branches raised with its
+        // review fixes (colour gate, cascade model, lone-symbol rule, each
+        // with its negative cases): measured 94.64 / 94.06 / 97.01 / 95.48.
+        thresholds: { statements: 92, branches: 92, functions: 95, lines: 93 },
       },
     },
   }),

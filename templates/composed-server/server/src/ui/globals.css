@@ -32,12 +32,16 @@
  * the neutrals (background / card / muted / border …), the status tones
  * (danger / warning / success / info, each with -soft for a tint and -ink
  * for its text), the link and the focus ring, in light and dark. To brand
- * the UI, override those ROLE names here, under :root and .dark, e.g.
+ * the UI, override those ROLE names here, under :root AND .dark, e.g.
  *
  *   :root { --info: #0055aa; --info-soft: #e6f0fa; --info-ink: #0055aa; }
+ *   .dark { --info: #6b9ce0; --info-soft: #14233a; --info-ink: #6b9ce0; }
  *
- * and keep the pairs readable (text 4.5:1, edges and dots 3:1). Never add
- * palette classes in widgets.
+ * Repeat every override under .dark: the host's dark mode sets .dark on
+ * <html>, where :root matches too, so a light-only value shows in dark. Keep
+ * the pairs readable (text 4.5:1, edges and dots 3:1); `contrastFindings`
+ * from @miragon-ai/widget-shell/testing measures them in both modes. Never
+ * add palette classes in widgets.
  *
  * The `--m-*` accents below are the legacy brand ramp the bundled connector
  * widgets still read for links and selection; they retire with the next

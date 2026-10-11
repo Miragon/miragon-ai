@@ -1,22 +1,30 @@
 import type { ReactNode } from "react"
 import { Skeleton } from "@miragon/mcp-toolkit-ui"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Minus, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react"
 import { cn } from "./cn.js"
 import { Icon } from "./icon.js"
 import {
   MICRO_LABEL,
   TONE_BORDER,
   TONE_DOT,
-  TONE_INK,
+  TONE_ICON,
   TONE_TINT,
   type ToneVariant,
 } from "./tone-utils.js"
 
+type TrendDirection = "up" | "down" | "flat"
+
 /** Direction-derived fallback (incident-biased: up = worse); `trendTone` wins. */
-const TREND_TONE: Record<"up" | "down" | "flat", ToneVariant> = {
+const TREND_TONE: Record<TrendDirection, ToneVariant> = {
   up: "danger",
   down: "success",
   flat: "neutral",
+}
+
+const TREND_ICON: Record<TrendDirection, LucideIcon> = {
+  up: TrendingUp,
+  down: TrendingDown,
+  flat: Minus,
 }
 
 interface KpiCellBase {
@@ -24,9 +32,14 @@ interface KpiCellBase {
   value: ReactNode
   /** Small fraction shown next to the value, e.g. " /14" */
   fraction?: ReactNode
+  /** A short note under the value ("+2 seit gestern"); its words stay neutral. */
   trend?: ReactNode
-  trendDirection?: "up" | "down" | "flat"
-  /** Explicit trend tone: overrides the direction-derived fallback. */
+  /** Draws a Lucide trend icon before the note, in the trend's tone. */
+  trendDirection?: TrendDirection
+  /**
+   * Explicit trend tone: overrides the direction-derived fallback. Shown as
+   * the direction icon's colour, or as a dot when there is no direction.
+   */
   trendTone?: ToneVariant
   /**
    * The state the number stands for. Shown as a dot next to the label (strip)
@@ -69,9 +82,36 @@ export interface KpiGridHeader {
   badge?: ReactNode
 }
 
-function trendClass(cell: KpiCell): string {
-  if (cell.trendTone) return TONE_INK[cell.trendTone]
-  return cell.trendDirection ? TONE_INK[TREND_TONE[cell.trendDirection]] : "text-muted-foreground"
+/**
+ * The trend note: neutral words (black next to a state, muted without one)
+ * with the state beside them as a direction icon or a dot in the tone, never
+ * as coloured digits (CI §3.3).
+ */
+function TrendLine({ cell }: { cell: KpiCell }) {
+  const direction = cell.trendDirection
+  const tone = cell.trendTone ?? (direction ? TREND_TONE[direction] : undefined)
+  const marked = tone !== undefined && tone !== "neutral"
+  return (
+    <div className="mt-1.5 flex items-center gap-1 text-xs">
+      {direction ? (
+        <Icon
+          icon={TREND_ICON[direction]}
+          size={14}
+          dense
+          className={TONE_ICON[cell.trendTone ?? TREND_TONE[direction]]}
+        />
+      ) : (
+        marked && (
+          <span
+            aria-hidden="true"
+            data-trend-tone={tone}
+            className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[tone])}
+          />
+        )
+      )}
+      <span className={marked ? "text-foreground" : "text-muted-foreground"}>{cell.trend}</span>
+    </div>
+  )
 }
 
 /** Label + value + fraction + trend — shared by the strip and soft variants. */
@@ -116,7 +156,7 @@ function KpiCellBody({ cell, variant }: { cell: KpiCell; variant: "strip" | "sof
           </span>
         )}
       </div>
-      {cell.trend && <div className={cn("mt-1.5 text-xs", trendClass(cell))}>{cell.trend}</div>}
+      {cell.trend && <TrendLine cell={cell} />}
     </>
   )
 }

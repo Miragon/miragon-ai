@@ -51,18 +51,75 @@ describe("catalogTextFindings — the voice rules over a message catalog", () =>
     ).toEqual(["ki:ki", "cib:cib-seven", "caps:cib-seven"])
   })
 
-  it("flags Sie/Ihr/Ihnen as address in German, except at an ambiguous sentence start", () => {
+  it("flags Sie/Ihr/Ihnen as address in German, mid-sentence", () => {
     expect(
       rules({
         ihnen: "Wir zeigen Ihnen die Liste.",
         ihr: "Speichere Ihre Einstellungen.",
         sie: "Möchten Sie fortfahren?",
-        start: "Ihr Team sieht das.",
-        afterStop: "Fertig. Sie ist gespeichert.",
-        quoted: "„Sie“ steht in Anführungszeichen.",
       }),
     ).toEqual(["ihnen:formal-address", "ihr:formal-address", "sie:formal-address"])
     expect(rules({ en: "Sie Ihnen" }, "en")).toEqual([])
+  })
+
+  it("flags formal address at the start of an entry or a sentence too", () => {
+    // In a UI catalog the start of an entry is exactly where address sits.
+    expect(
+      rules({
+        expired: "Ihre Sitzung ist abgelaufen.",
+        noRight: "Sie haben keine Berechtigung für diese Aktion.",
+        missing: "Ihnen fehlt die Berechtigung.",
+        retry: "Die Liste konnte nicht geladen werden. Sie können es erneut versuchen.",
+        afterColon: "Hinweis: Sie sind abgemeldet.",
+        possessive: "Ihr Team sieht das.",
+        adjective: "Ihr neuer Bericht ist fertig.",
+        quotedVerb: "„Sie haben“ steht da.",
+      }),
+    ).toEqual([
+      "expired:formal-address",
+      "noRight:formal-address",
+      "missing:formal-address",
+      "retry:formal-address",
+      "afterColon:formal-address",
+      "possessive:formal-address",
+      "adjective:formal-address",
+      "quotedVerb:formal-address",
+    ])
+  })
+
+  it("leaves a sentence-initial she/it and the team's ihr alone", () => {
+    expect(
+      rules({
+        she: "Fertig. Sie ist gespeichert.",
+        modal: "Sie kann nicht geladen werden.",
+        past: "Sie wurde gelöscht.",
+        team: "Ihr könnt das gemeinsam ansehen.",
+        teamSeid: "Ihr seid fertig.",
+        quoted: "„Sie“ steht in Anführungszeichen.",
+      }),
+    ).toEqual([])
+  })
+
+  it("takes an allowance per key and rule, with a reason, and reports a stale one", () => {
+    const catalog = {
+      kept: "Die Instanz läuft weiter. Ihre Variablen bleiben erhalten.",
+      clean: "Die Liste ist leer.",
+    }
+    const its = { key: "kept", rule: "formal-address", reason: "Ihre = the instance's" } as const
+    expect(rules(catalog)).toEqual(["kept:formal-address"])
+    expect(catalogTextFindings(catalog, { language: "de", allow: [its] })).toEqual([])
+    expect(
+      catalogTextFindings(catalog, {
+        language: "de",
+        allow: [its, { key: "clean", rule: "formal-address", reason: "was formal once" }],
+      }),
+    ).toEqual([{ key: "clean", rule: "unused-allowance", text: "formal-address: was formal once" }])
+    expect(() =>
+      catalogTextFindings(catalog, {
+        language: "de",
+        allow: [{ key: "kept", rule: "formal-address", reason: " " }],
+      }),
+    ).toThrow(/reason/)
   })
 
   it("flags an impersonal man in German only", () => {

@@ -44,7 +44,8 @@ re-inline its primitives:
 - Status: a tone (`danger`/`warning`/`success`/`info`/`neutral`) via
   `StatusBadge`/`CountPill`/`KpiCell.tone` or the `TONE_*` maps, next to
   readable words; colours come from the role variables (override them in
-  `src/ui/globals.css` to brand), never palette classes in widgets
+  `src/ui/globals.css` under both `:root` and `.dark` to brand), never palette
+  classes or raw colours in widgets
 - Icons: Lucide through the kit's `Icon` (add `lucide-react` to the module's
   dependencies at the exact version `server/package.json` pins), never Unicode
   glyphs or emoji

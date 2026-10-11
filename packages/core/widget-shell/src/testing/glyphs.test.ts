@@ -30,9 +30,82 @@ describe("glyphFindings — no Unicode glyphs or emoji as icons", () => {
     const source = [
       'export const notes = "🗒 Notes"',
       'export const ok = "1–2 → 3 · ≥ 4 … — x"',
+      "export const versions = <p>{a} ↔ {b}</p>",
+      'export const prose = "compare v1 ↔ v2"',
     ].join("\n")
     const findings = glyphFindings(source, "catalog.ts")
     expect(findings).toEqual([{ file: "catalog.ts", line: 1, glyph: "🗒", text: "🗒 Notes" }])
+  })
+
+  it("finds a lone symbol as an element's whole content: the glyph-as-icon signature", () => {
+    const source = [
+      "export const a = <span aria-hidden>→</span>",
+      "export const b = <button onClick={remove}>×</button>",
+      "export const c = <button>−</button>",
+      "export const d = <span aria-hidden>‹</span>",
+      'export const e = <span>{"⌄"}</span>',
+      'export const f = <div className="x">',
+      "  !",
+      "</div>",
+      'export const g = <b>{open ? "▲" : ("▼")}</b>',
+      'export const h = <>{"+"}</>',
+      "export const i = <span aria-hidden>↔</span>",
+      "export const j = <span>{/* next */}→</span>",
+    ].join("\n")
+    expect(glyphFindings(source, "w.tsx").map((f) => [f.line, f.glyph])).toEqual([
+      [1, "→"],
+      [2, "×"],
+      [3, "−"],
+      [4, "‹"],
+      [5, "⌄"],
+      [7, "!"],
+      [9, "▲"],
+      [9, "▼"],
+      [10, "+"],
+      [11, "↔"],
+      [12, "→"],
+    ])
+  })
+
+  it("leaves symbols in running text, separators and placeholders alone", () => {
+    const source = [
+      "export const a = <p>{from} → {to}</p>",
+      "export const b = <p>Started 576 → 88</p>",
+      "export const c = <span aria-hidden>·</span>",
+      "export const d = <td>—</td>",
+      "export const e = <span>%</span>",
+      "export const f = <span>(</span>",
+      'export const g = "→"',
+      'export const h = <span title="→">x</span>',
+      'export const i = <b>{label ?? "—"}</b>',
+      "export const j = <p><b>1</b>→</p>",
+      'export const k = <b>{dir === "▲" ? up : down}</b>',
+      'export const l = <b>{"▲" ? up : down}</b>',
+    ].join("\n")
+    expect(glyphFindings(source, "w.tsx")).toEqual([])
+  })
+
+  it("finds × anywhere: the multiplication sign drawn as a close or remove icon", () => {
+    expect(glyphFindings('export const x = "× Entfernen"', "m.ts").map((f) => f.glyph)).toEqual([
+      "×",
+    ])
+  })
+
+  it("finds the AI sparkle as a Lucide import too (CI U4), named or deep", () => {
+    const source = [
+      'import { Sparkles, FileSearch } from "lucide-react"',
+      'import { WandSparkles as Magic, SparkleIcon } from "lucide-react"',
+      'import Wand from "lucide-react/icons/wand-sparkles"',
+      'import { Sparkles as Ok } from "./not-lucide"',
+      'import * as Lucide from "lucide-react"',
+      'import "lucide-react"',
+    ].join("\n")
+    expect(glyphFindings(source, "w.tsx").map((f) => [f.line, f.glyph])).toEqual([
+      [1, "Sparkles"],
+      [2, "WandSparkles"],
+      [2, "SparkleIcon"],
+      [3, "wand-sparkles"],
+    ])
   })
 
   it("covers exactly the glyphs the cockpit used as icons", () => {
@@ -80,6 +153,6 @@ describe("scanGlyphs — a source tree", () => {
       scanGlyphs(root)
         .map((f) => `${f.file}:${f.line}:${f.glyph}`)
         .sort(),
-    ).toEqual(["messages.ts:1:▶", join("widgets", "a.tsx") + ":1:⚙"])
+    ).toEqual(["messages.ts:1:▶", "widgets/a.tsx:1:⚙"])
   })
 })

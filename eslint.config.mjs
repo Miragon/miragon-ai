@@ -80,8 +80,12 @@ const widgetDateGate = [
 
 // Invariant 6: numbers in widget code render through the kit formatters
 // (formatNumber/formatPercent/formatPercentPoints/formatPeriod/formatDuration),
-// which read the view's locale. Number#toFixed and an argument-less
-// toLocaleString() format in no locale or the browser's, never the view's.
+// which read the view's locale. Number#toFixed formats in no locale; a
+// toLocaleString() without a locale (no argument, `undefined`, `null`, `[]`)
+// in the browser's; a hand-built Intl.NumberFormat bypasses the formatters
+// (only the kit's format.ts builds one — see its block below).
+const NUMBER_FORMAT_SELECTOR =
+  ":matches(NewExpression, CallExpression)[callee.object.name='Intl'][callee.property.name='NumberFormat']"
 const widgetNumberGate = [
   {
     selector: "CallExpression[callee.property.name='toFixed']",
@@ -89,11 +93,50 @@ const widgetNumberGate = [
       "Use formatNumber/formatPercent/formatPercentPoints from the widget-shell kit instead of Number#toFixed: it ignores the view's locale (CLAUDE.md invariant 6).",
   },
   {
-    selector: "CallExpression[callee.property.name='toLocaleString'][arguments.length=0]",
+    // Each alternative pins the node type: esquery compares String(value), so
+    // a bare [arguments.0.name='undefined'] also matches every argument that
+    // has no `name` (a string literal, `current?.locale`).
+    selector:
+      "CallExpression[callee.property.name='toLocaleString']:matches([arguments.length=0], [arguments.0.type='Identifier'][arguments.0.name='undefined'], [arguments.0.type='Literal'][arguments.0.raw='null'], [arguments.0.type='ArrayExpression'][arguments.0.elements.length=0])",
     message:
-      "Use formatNumber from the widget-shell kit instead of an argument-less toLocaleString(): it formats in the browser's locale, not the view's (CLAUDE.md invariant 6).",
+      "Use formatNumber from the widget-shell kit instead of toLocaleString() without a locale: it formats in the browser's locale, not the view's (CLAUDE.md invariant 6).",
+  },
+  {
+    selector: NUMBER_FORMAT_SELECTOR,
+    message:
+      "Use formatNumber/formatPercent/formatPercentPoints from the widget-shell kit instead of a hand-built Intl.NumberFormat: they read the view's locale (CLAUDE.md invariant 6).",
   },
 ]
+// The kit's formatters themselves: the same gate minus Intl.NumberFormat.
+const widgetNumberGateForFormatters = widgetNumberGate.filter(
+  (gate) => gate.selector !== NUMBER_FORMAT_SELECTOR,
+)
+
+// Invariant 6 / CI U4: the AI affordance is the Lucide icon of the concrete
+// function plus a verb that names the chat, never a sparkle. Every export
+// spelling of lucide-react's sparkle icons, and their deep imports. (The kit's
+// scanGlyphs checks the same imports for packages outside this config.)
+const SPARKLE_MESSAGE =
+  "No Sparkles/WandSparkles as the AI affordance (CI U4): use the Lucide icon of the concrete function (e.g. FileSearch) and a verb that names the chat (CLAUDE.md invariant 6)."
+const widgetSparkleGate = {
+  paths: [
+    {
+      name: "lucide-react",
+      importNames: ["Sparkle", "Sparkles", "WandSparkles", "Wand2"].flatMap((icon) => [
+        icon,
+        `${icon}Icon`,
+        `Lucide${icon}`,
+      ]),
+      message: SPARKLE_MESSAGE,
+    },
+  ],
+  patterns: [
+    {
+      regex: "^lucide-react/(?:.*/)?(?:sparkles?|wand-sparkles|wand-2)(?:\\.js)?$",
+      message: SPARKLE_MESSAGE,
+    },
+  ],
+}
 
 export default tseslint.config(
   {
@@ -251,6 +294,21 @@ export default tseslint.config(
   {
     files: ["packages/core/widget-shell/src/ui/**/*.{ts,tsx}"],
     rules: { "no-restricted-syntax": ["error", ...widgetNumberGate] },
+  },
+  {
+    files: ["packages/core/widget-shell/src/ui/format.ts"],
+    rules: { "no-restricted-syntax": ["error", ...widgetNumberGateForFormatters] },
+  },
+  // Invariant 6, AI affordance: no sparkle icon in any widget tree (its own
+  // rule, so it never collides with the no-restricted-syntax unions above).
+  {
+    files: [
+      "apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}",
+      "packages/core/widget-shell/src/ui/**/*.{ts,tsx}",
+      "packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}",
+      "packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}",
+    ],
+    rules: { "no-restricted-imports": ["error", widgetSparkleGate] },
   },
 
   // ── Ratchet metrics: complexity + file-length budgets ───────────────────

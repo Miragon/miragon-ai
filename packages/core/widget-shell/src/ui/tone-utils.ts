@@ -6,16 +6,18 @@
  * variables defined once in `styles/theme.css` (light + dark):
  *
  *  - `--<tone>`       fill / dot / border / icon — non-text, ≥ 3:1 on a card
- *  - `--<tone>-soft`  the tint of a badge, chip or soft card
- *  - `--<tone>-ink`   the TEXT colour of a tone (≥ 4.5:1 on its tint, the card
- *                     and the page); after the theme swap success/warning ink
- *                     is plain black, so never rely on it to carry the meaning
+ *  - `--<tone>-soft`  the tint of a badge, chip or soft card; the text on it
+ *                     is `--foreground` (black), the edge `--<tone>`
+ *  - `--<tone>-ink`   the TEXT colour of a tone directly on the card or page
+ *                     (an inline error line, ≥ 4.5:1); after the theme swap
+ *                     success/warning ink is plain black, so never rely on it
+ *                     to carry the meaning
  *
  * Open incidents and failed jobs without retries are `danger`; a failed job
  * that still has retries and a degraded engine are `warning`. There is no
  * `critical` tone: one red, one amber. Counts without a state stay `neutral`,
  * and a number is never coloured: put a dot, icon or border next to black
- * text instead (KpiGrid does that for you).
+ * text instead (KpiGrid, StatusBadge and CountPill do that for you).
  *
  * Use these maps instead of hand-rolled ternaries or palette classes, so a
  * tone only ever changes in one place. `tone-contrast.test.ts` checks every
@@ -32,12 +34,17 @@ export const TONE_VARIANTS: readonly ToneVariant[] = [
   "neutral",
 ]
 
-/** Tint + readable text: badges, chips, pills, soft cards. Pair with {@link TONE_BORDER}. */
+/**
+ * Tint + black text (CI §3.3: "-soft … Text darauf --cd-schwarz, Rand in der
+ * Statusfarbe"): badges, chips, pills, soft cards. Pair with
+ * {@link TONE_BORDER} (and a {@link TONE_DOT} or {@link TONE_ICON}), which
+ * carry the state; the words and digits on the tint never take its colour.
+ */
 export const TONE_SOFT: Record<ToneVariant, string> = {
-  danger: "bg-danger-soft text-danger-ink",
-  warning: "bg-warning-soft text-warning-ink",
-  success: "bg-success-soft text-success-ink",
-  info: "bg-info-soft text-info-ink",
+  danger: "bg-danger-soft text-foreground",
+  warning: "bg-warning-soft text-foreground",
+  success: "bg-success-soft text-foreground",
+  info: "bg-info-soft text-foreground",
   neutral: "bg-muted text-foreground",
 }
 
@@ -78,9 +85,10 @@ export const TONE_ICON: Record<ToneVariant, string> = {
 }
 
 /**
- * The readable text colour of a tone on a card or the page: an inline error
- * line, a trend note. Keep the words themselves meaningful; the ink only
- * reinforces them.
+ * The readable text colour of a tone directly on a card or the page: an
+ * inline error line under a field. Never on a tint (that text is black, see
+ * {@link TONE_SOFT}) and never for a number. Keep the words themselves
+ * meaningful; the ink only reinforces them.
  */
 export const TONE_INK: Record<ToneVariant, string> = {
   danger: "text-danger-ink",

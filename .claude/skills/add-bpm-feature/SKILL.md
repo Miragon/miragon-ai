@@ -187,7 +187,8 @@ never re-inline these primitives:
   missing `isError` branch means an eternal skeleton
 - `formatTimestamp`/`formatDate`/`formatTime` (dates) and `formatNumber`/`formatPercent`/
   `formatPercentPoints`/`formatPeriod`/`formatDuration`/`truncate`: no local format
-  helpers, no `toFixed`, no argument-less `toLocaleString()` (canonical duration style
+  helpers, no `toFixed`, no `toLocaleString()` without a locale, no hand-built
+  `Intl.NumberFormat` (canonical duration style
   "3m 7s" / German "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage")
 - `Section` (collapsibles); `Th`/`Td`/`TableEmptyState` (tables); `WidgetHeader`
   (`badge`/`titleSuffix`/`size="detail"`, no icon tile) + `VersionChip` (hero/detail
@@ -197,7 +198,8 @@ never re-inline these primitives:
   failed job without retries = `danger`, retries left or degraded = `warning`) shown via
   `StatusBadge`/`CountPill`/`KpiCell.tone` or the `TONE_DOT`/`TONE_BORDER`/`TONE_ICON`/
   `TONE_TINT`/`TONE_SOFT`/`TONE_INK` maps, next to readable words; never a coloured
-  number, never a palette class or raw colour; text in a tone uses the `-ink` role
+  number, never a palette class or raw colour; text on a tint is black (`TONE_SOFT`), the
+  `-ink` role is only for text in a tone directly on the card or page (an inline error)
 - Icons: Lucide via `Icon` (`import { FileSearch } from "lucide-react"`; the package pins
   devDependency `lucide-react` `0.562.0`, see CLAUDE.md invariant 6), never a Unicode glyph
   or emoji; `AskAiButton` gets the `icon` of the concrete function and a verb that names
@@ -205,8 +207,9 @@ never re-inline these primitives:
   `vendor={provider.branding.displayName}`
 - Copy: en + de catalogs in the brand voice (du, AI, "CIB seven", no dash connector,
   errors say what happened and what you can do); the package's brand-gate test runs
-  `catalogTextFindings` over both catalogs and `scanGlyphs` over `src/widgets` +
-  `src/messages` (`@miragon-ai/widget-shell/testing`)
+  `catalogTextFindings` over both catalogs, `scanGlyphs` over `src/widgets` +
+  `src/messages` and `scanColors` over `src/widgets` (`@miragon-ai/widget-shell/testing`;
+  `HIGHLIGHT_COLORS` in `bpmn-highlights.ts` is an `allow` entry with its reason)
 - BPMN: viewer lifecycle and the fixed light canvas via `useBpmnViewer` +
   `BpmnZoomControls`; highlight/legend colors via `HIGHLIGHT_COLORS` from
   `src/widgets/bpmn-highlights.ts`

@@ -32,7 +32,7 @@ export function LivePill({
 
 /**
  * Status badge for detail-page headers: the tone's tint, edge and dot next to
- * readable text (CI §3.3: the colour marks the state, the words say it).
+ * black text (CI §3.3: the colour marks the state, the words say it).
  * Static dot; the pulse is {@link LivePill}'s live-data semantic.
  */
 export function StatusBadge({
@@ -60,9 +60,10 @@ export function StatusBadge({
 }
 
 /**
- * Compact count badge: tabular numbers on the tone's tint, edged in the tone.
- * Used as the right-aligned indicator on group cards. A count without a state
- * stays `neutral`.
+ * Compact count badge: black tabular digits on the tone's tint, edged in the
+ * tone (the edge carries the state, never the digits). Used as the
+ * right-aligned indicator on group cards. A count without a state stays
+ * `neutral`.
  */
 export function CountPill({
   tone = "neutral",

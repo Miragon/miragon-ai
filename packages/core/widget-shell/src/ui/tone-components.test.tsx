@@ -6,13 +6,11 @@ import { HostBridgeProvider, type HostBridge } from "@miragon/mcp-toolkit-ui/app
 import { TriangleAlert } from "lucide-react"
 import { FilterBar } from "./filter-bar.js"
 import { Icon } from "./icon.js"
-import { KpiGrid } from "./kpi-grid.js"
 import { OpenInCockpitLink } from "./open-in-cockpit-link.js"
 import { CountPill, LivePill, StatusBadge } from "./pills.js"
 import { Section } from "./section.js"
 import { SegmentedControl } from "./segmented-control.js"
 import { DEFAULT_HEATMAP_LABELS } from "./bpmn-heatmap-labels.js"
-import { KpiGridSkeleton } from "./kpi-grid.js"
 import {
   MICRO_LABEL,
   TONE_BORDER,
@@ -41,10 +39,10 @@ describe("the tone model (tone-utils)", () => {
   it("pins every class string (one place to change a tone)", () => {
     expect({ TONE_SOFT, TONE_TINT, TONE_DOT, TONE_BORDER, TONE_ICON, TONE_INK }).toEqual({
       TONE_SOFT: {
-        danger: "bg-danger-soft text-danger-ink",
-        warning: "bg-warning-soft text-warning-ink",
-        success: "bg-success-soft text-success-ink",
-        info: "bg-info-soft text-info-ink",
+        danger: "bg-danger-soft text-foreground",
+        warning: "bg-warning-soft text-foreground",
+        success: "bg-success-soft text-foreground",
+        info: "bg-info-soft text-foreground",
         neutral: "bg-muted text-foreground",
       },
       TONE_TINT: {
@@ -86,131 +84,66 @@ describe("the tone model (tone-utils)", () => {
     expect(MICRO_LABEL).toBe("text-[11px] font-semibold uppercase tracking-wide")
   })
 
-  it("keeps words in ink and fills in the tone colour", () => {
+  it("puts black words on a tint and the tone on fills, edges and icons (CI §3.3)", () => {
     for (const tone of TONE_VARIANTS) {
-      expect(TONE_SOFT[tone]).toContain(TONE_TINT[tone])
+      expect(TONE_SOFT[tone]).toBe(`${TONE_TINT[tone]} text-foreground`)
       expect(TONE_DOT[tone]).toMatch(/^bg-/)
       expect(TONE_BORDER[tone]).toMatch(/^border-/)
       expect(TONE_ICON[tone]).toMatch(/^text-/)
     }
     for (const tone of ["danger", "warning", "success", "info"] as const) {
-      expect(TONE_SOFT[tone]).toBe(`bg-${tone}-soft text-${tone}-ink`)
       expect(TONE_INK[tone]).toBe(`text-${tone}-ink`)
     }
   })
 })
 
+/** Every class of an element and its descendants. */
+const allClasses = (el: Element) =>
+  [el, ...el.querySelectorAll("*")].flatMap((node) => classes(node)).join(" ")
+
 describe("pills", () => {
-  it("StatusBadge: tint, edge and a decorative dot next to readable text (default danger)", () => {
+  it("StatusBadge: tint, edge and a decorative dot next to black text (default danger)", () => {
     render(<StatusBadge>Offen</StatusBadge>)
     const badge = screen.getByText("Offen")
     expect(classes(badge)).toEqual(
-      expect.arrayContaining(["bg-danger-soft", "text-danger-ink", "border-danger"]),
+      expect.arrayContaining(["bg-danger-soft", "text-foreground", "border-danger"]),
     )
+    expect(allClasses(badge)).not.toMatch(/text-danger/)
     const dot = badge.querySelector("span")!
     expect(dot.getAttribute("aria-hidden")).toBe("true")
     expect(classes(dot)).toContain("bg-danger")
   })
 
-  it("CountPill is neutral unless a state is given; LivePill pulses only without reduced motion", () => {
+  it("CountPill: neutral unless a state is given, and its digits are never coloured", () => {
     render(
       <>
         <CountPill>7</CountPill>
         <CountPill tone="warning">3</CountPill>
-        <LivePill>Live</LivePill>
+        <CountPill tone="danger">12</CountPill>
       </>,
     )
     expect(classes(screen.getByText("7"))).toEqual(
       expect.arrayContaining(["bg-muted", "text-foreground"]),
     )
     expect(classes(screen.getByText("3"))).toEqual(
-      expect.arrayContaining(["bg-warning-soft", "text-warning-ink", "border-warning"]),
+      expect.arrayContaining(["bg-warning-soft", "text-foreground", "border-warning"]),
     )
-    const pulse = screen.getByText("Live").querySelector("span")!
+    const danger = screen.getByText("12")
+    expect(classes(danger)).toEqual(
+      expect.arrayContaining(["bg-danger-soft", "text-foreground", "border-danger"]),
+    )
+    expect(allClasses(danger)).not.toMatch(/text-(danger|warning|success|info)/)
+  })
+
+  it("LivePill: black text on the tint, the dot pulses only without reduced motion", () => {
+    render(<LivePill>Live</LivePill>)
+    const pill = screen.getByText("Live")
+    expect(classes(pill)).toEqual(
+      expect.arrayContaining(["bg-info-soft", "text-foreground", "border-info"]),
+    )
+    const pulse = pill.querySelector("span")!
     expect(classes(pulse)).toContain("motion-safe:animate-pulse")
     expect(classes(pulse)).not.toContain("animate-pulse")
-  })
-})
-
-describe("KpiGrid: neutral digits, the state beside them", () => {
-  it("strip: the number stays foreground, the tone is a dot next to the label", () => {
-    render(
-      <KpiGrid
-        cells={[
-          { label: "Open incidents", value: 18, tone: "danger" },
-          { label: "Running", value: 40, tone: "neutral" },
-          { label: "Jobs", value: 2, trend: "+2", trendTone: "warning" },
-          { label: "Starts", value: 9, trend: "+1", trendDirection: "up" },
-          { label: "Ends", value: 9, trend: "0", trendDirection: "flat" },
-          { label: "Plain", value: 1, trend: "same" },
-        ]}
-      />,
-    )
-    const value = screen.getByText("18")
-    expect(classes(value)).toContain("text-foreground")
-    expect(value.className).not.toMatch(/danger/)
-    const label = screen.getByText("Open incidents").parentElement!
-    expect(label.querySelector('[data-tone="danger"]')?.getAttribute("class")).toContain(
-      "bg-danger",
-    )
-    expect(screen.getByText("Running").parentElement!.querySelector("[data-tone]")).toBeNull()
-    expect(classes(screen.getByText("+2"))).toContain("text-warning-ink")
-    expect(classes(screen.getByText("+1"))).toContain("text-danger-ink")
-    expect(classes(screen.getByText("0"))).toContain("text-muted-foreground")
-    expect(classes(screen.getByText("same"))).toContain("text-muted-foreground")
-  })
-
-  it("soft: tint + edge around neutral text; a clickable cell shows a Lucide chevron", () => {
-    const onClick = vi.fn()
-    const { container } = render(
-      <KpiGrid
-        variant="soft"
-        cells={[
-          { label: "Failed", value: 4, tone: "danger", onClick, ariaLabel: "Open failures" },
-          { label: "Total", value: 12 },
-        ]}
-      />,
-    )
-    const failed = screen.getByRole("button", { name: "Open failures" })
-    expect(classes(failed)).toEqual(
-      expect.arrayContaining(["bg-danger-soft", "border-danger", "text-foreground"]),
-    )
-    expect(failed.querySelector("svg.lucide-chevron-right")).toBeTruthy()
-    fireEvent.click(failed)
-    expect(onClick).toHaveBeenCalledOnce()
-    const total =
-      container.querySelector('[data-tone=""]') ??
-      screen.getByText("Total").closest("div.rounded-xl")
-    expect(classes(total)).toEqual(expect.arrayContaining(["bg-muted", "border-border"]))
-    expect(container.textContent).not.toContain("›")
-  })
-})
-
-describe("KpiGrid geometry and header", () => {
-  it("the skeleton mirrors both variants, boxed or not", () => {
-    const { container, rerender } = render(<KpiGridSkeleton cells={4} />)
-    expect(container.firstElementChild!.getAttribute("aria-busy")).toBe("true")
-    expect(container.querySelectorAll(".bg-card")).toHaveLength(4)
-    rerender(<KpiGridSkeleton cells={3} variant="soft" />)
-    expect(container.querySelectorAll(".rounded-xl")).toHaveLength(3)
-    rerender(<KpiGridSkeleton cells={2} boxed />)
-    expect(classes(container.firstElementChild)).toContain("rounded-lg")
-  })
-
-  it("a boxed strip carries its group header and badge", () => {
-    render(
-      <KpiGrid
-        boxed
-        ariaLabel="Health"
-        header={{ label: "Health", badge: "live" }}
-        cells={[{ label: "Up", value: 1, onClick: () => {}, ariaLabel: "Open up" }]}
-      />,
-    )
-    expect(screen.getByRole("group", { name: "Health" })).toBeTruthy()
-    expect(screen.getByText("live")).toBeTruthy()
-    expect(
-      screen.getByRole("button", { name: "Open up" }).querySelector("svg.lucide-chevron-right"),
-    ).toBeTruthy()
   })
 })
 
@@ -235,8 +168,8 @@ describe("heatmap defaults", () => {
   })
 })
 
-describe("selection in the info tone", () => {
-  it("FilterBar: an active chip is the info tint, edge and ink with aria-pressed", () => {
+describe("selection in the info tone (CI: blue contour + tint, black text)", () => {
+  it("FilterBar: an active chip is the info tint and edge around black text, with aria-pressed", () => {
     const onSearchChange = vi.fn()
     const onChipToggle = vi.fn()
     render(
@@ -257,15 +190,20 @@ describe("selection in the info tone", () => {
     const active = screen.getByRole("button", { name: /Offen/ })
     expect(active.getAttribute("aria-pressed")).toBe("true")
     expect(classes(active)).toEqual(
-      expect.arrayContaining(["bg-info-soft", "text-info-ink", "border-info"]),
+      expect.arrayContaining(["bg-info-soft", "text-foreground", "border-info"]),
     )
+    expect(allClasses(active)).not.toMatch(/text-info/)
     expect(classes(screen.getByText("3"))).not.toContain("opacity-60")
     expect(classes(screen.getByRole("searchbox"))).toEqual(
-      expect.arrayContaining(["border-input", "focus-visible:ring-focus"]),
+      expect.arrayContaining([
+        "border-input",
+        "focus-visible:ring-focus",
+        "focus-visible:border-focus",
+      ]),
     )
   })
 
-  it("SegmentedControl: the pressed segment is the info tint and ink", () => {
+  it("SegmentedControl: the pressed segment is the info tint and an inset info contour", () => {
     render(
       <SegmentedControl
         options={[
@@ -276,9 +214,18 @@ describe("selection in the info tone", () => {
         onChange={() => {}}
       />,
     )
-    expect(classes(screen.getByRole("button", { name: "Dauer" }))).toEqual(
-      expect.arrayContaining(["bg-info-soft", "text-info-ink"]),
+    const pressed = screen.getByRole("button", { name: "Dauer" })
+    expect(classes(pressed)).toEqual(
+      expect.arrayContaining([
+        "bg-info-soft",
+        "text-foreground",
+        "ring-1",
+        "ring-inset",
+        "ring-info",
+      ]),
     )
+    expect(classes(pressed)).toContain("focus-visible:ring-focus")
+    expect(classes(screen.getByRole("button", { name: "Frequenz" }))).not.toContain("ring-info")
   })
 })
 

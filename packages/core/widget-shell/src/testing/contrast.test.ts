@@ -128,9 +128,58 @@ describe("parseThemeVariables", () => {
   })
 
   it("lets a later stylesheet override an earlier one (a consumer's brand layer)", () => {
-    const branded = parseThemeVariables(css, ":root { --ink: #222222; }")
+    const branded = parseThemeVariables(css, ":root { --ink: #222222; } .dark { --ink: #dddddd; }")
     expect(branded.light.get("--ink")).toBe("#222222")
-    expect(branded.dark.get("--ink")).toBe("#eeeeee")
+    expect(branded.dark.get("--ink")).toBe("#dddddd")
+  })
+
+  it("models html.dark as the browser does: :root and .dark in source order, later wins", () => {
+    // useApplyTheme puts .dark on <html>, so :root and .dark match the same
+    // element with the same specificity. A later light-only :root override
+    // reaches dark too; a later .dark still beats an earlier :root.
+    const lightOnly = parseThemeVariables(css, ":root { --ink: #222222; }")
+    expect(lightOnly.light.get("--ink")).toBe("#222222")
+    expect(lightOnly.dark.get("--ink")).toBe("#222222")
+    const inOneSheet = parseThemeVariables(
+      ".dark { --a: #000001; } :root { --a: #000002; --b: #000003; } .dark { --b: #000004; }",
+    )
+    expect(inOneSheet.dark.get("--a")).toBe("#000002")
+    expect(inOneSheet.dark.get("--b")).toBe("#000004")
+    expect(inOneSheet.light.get("--a")).toBe("#000002")
+    expect(inOneSheet.light.get("--b")).toBe("#000003")
+  })
+
+  it("keeps @theme registrations below every :root/.dark rule (Tailwind's theme layer)", () => {
+    const layered = parseThemeVariables(":root { --x: #000001; } @theme { --x: #000002; }")
+    expect(layered.light.get("--x")).toBe("#000001")
+    expect(layered.dark.get("--x")).toBe("#000001")
+  })
+
+  it("ignores descendant scopes and rules without custom properties", () => {
+    const scoped = parseThemeVariables(
+      ":root { --x: #000001; } .dark .card { --x: #000002; } .card { --x: #000003; } @layer base { html, body { color: red; } } @media (min-width: 1px) { .card { --x: #000004; } }",
+    )
+    expect(scoped.light.get("--x")).toBe("#000001")
+    expect(scoped.dark.get("--x")).toBe("#000001")
+  })
+
+  it.each([
+    ["html.dark { --x: #000000; }"],
+    [":root.dark { --x: #000000; }"],
+    ['[data-theme="dark"] { --x: #000000; }'],
+    [":root:not(.light) { --x: #000000; }"],
+    ["html { --x: #000000; }"],
+    ["@media (prefers-color-scheme: dark) { :root { --x: #000000; } }"],
+    ["@layer base { :root { --x: #000000; } }"],
+  ])("throws on a theme rule it cannot model: %s", (rule) => {
+    expect(() => parseThemeVariables(":root { --x: #ffffff; }", rule)).toThrow(
+      /Unsupported theme rule/,
+    )
+  })
+
+  it("throws on unbalanced braces instead of measuring garbage", () => {
+    expect(() => parseThemeVariables(":root { --x: #000000;")).toThrow(/Unbalanced/)
+    expect(() => parseThemeVariables(":root { --x: #000000; } }")).toThrow(/Unbalanced/)
   })
 
   it("measures pairs per mode and reports the misses", () => {

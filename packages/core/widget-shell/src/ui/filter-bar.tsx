@@ -12,8 +12,9 @@ export interface FilterChip {
 
 /**
  * Search input + chip row used to filter a list/table of widget items. An
- * active chip is a selection: the info tone's tint, edge and ink (CI:
- * selection = blue edge + tint), with `aria-pressed` carrying the state.
+ * active chip is a selection: the info tone's tint and edge around black
+ * text (CI: selection = blue contour + tint), with `aria-pressed` carrying
+ * the state. The search field's focus edge and ring are the `--focus` role.
  */
 export function FilterBar({
   search,
