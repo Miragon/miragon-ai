@@ -9,7 +9,11 @@ export default mergeConfig(
       // The E2E smoke test boots a full framework app (plugin registration,
       // HTTP listener, MCP handshake) — give it headroom over the unit default.
       testTimeout: 30_000,
-      hookTimeout: 30_000,
+      // Hooks get more: several suites boot the FULL surface in a beforeAll and
+      // then scan every widget source (tool-name-refs, hand-off-surface). Under
+      // CI load with the suites running in parallel that took over 30 s twice
+      // on main (after #370 and #380), against 4–15 s on a quiet runner.
+      hookTimeout: 120_000,
       coverage: {
         // Ratchet: frozen 2 points under the baseline. Raise when you push
         // coverage up; never lower. Documented re-baseline 2026-08-13: the
