@@ -100,6 +100,13 @@ describe("hostile input stays linear (CodeQL js/polynomial-redos)", () => {
     expect(performance.now() - started).toBeLessThan(500)
   })
 
+  it("reads a block full of dashes without backtracking", () => {
+    const started = performance.now()
+    const vars = parseThemeVariables(`:root { ${"--".repeat(100_000)} }\n:root { --ink: #111111; }`)
+    expect(vars.light.get("--ink")).toBe("#111111")
+    expect(performance.now() - started).toBeLessThan(500)
+  })
+
   it("strips many unterminated comment openers in linear time", () => {
     const started = performance.now()
     const vars = parseThemeVariables(`:root { --ink: #111111; }\n/*${"a/*".repeat(100_000)}`)

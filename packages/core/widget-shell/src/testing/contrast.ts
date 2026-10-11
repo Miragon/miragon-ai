@@ -47,11 +47,17 @@ interface RuleBlock {
   declarations: [string, string][]
 }
 
+/** The `--name: value` declarations of a block body, split linearly (no backtracking regex). */
 function customProperties(body: string): [string, string][] {
-  return [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);?/g)].map(([, name, value]) => [
-    name,
-    value.trim(),
-  ])
+  const declarations: [string, string][] = []
+  for (const declaration of body.split(";")) {
+    const colon = declaration.indexOf(":")
+    if (colon === -1) continue
+    const name = declaration.slice(0, colon).trim()
+    const value = declaration.slice(colon + 1).trim()
+    if (value && /^--[\w-]+$/.test(name)) declarations.push([name, value])
+  }
+  return declarations
 }
 
 /**
