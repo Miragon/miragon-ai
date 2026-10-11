@@ -138,6 +138,23 @@ const widgetSparkleGate = {
   ],
 }
 
+// Invariant 6 / CI U4, the other half: ONE hand-off vocabulary across the
+// product. A connector widget renders a chat hand-off only through the kit's
+// HandOffButton, whose function table (HAND_OFF_ACTIONS + kitLabels().handOff)
+// gives every function one Lucide icon and one label in every module; an
+// AskAiButton with a hand-picked icon and verb let the same function drift
+// apart between camunda7 and analytics ("Ursache im Chat klären" next to
+// "Ursache im Chat suchen", FileSearch for two functions). The import (also
+// renamed) and the element (also through a namespace) are both banned in both
+// connectors' widgets.
+const HAND_OFF_MESSAGE =
+  "Render a chat hand-off with the kit's HandOffButton (`action` from HAND_OFF_ACTIONS: one Lucide icon and one verb that names the chat per function, in every module), not AskAiButton (CI U4, CLAUDE.md invariant 6)."
+const widgetHandOffGate = [
+  "ImportSpecifier[imported.name='AskAiButton']",
+  "JSXOpeningElement[name.name='AskAiButton']",
+  "JSXOpeningElement[name.property.name='AskAiButton']",
+].map((selector) => ({ selector, message: HAND_OFF_MESSAGE }))
+
 export default tseslint.config(
   {
     ignores: [
@@ -279,23 +296,36 @@ export default tseslint.config(
     files: ["apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}"],
     rules: { "no-restricted-syntax": ["error", ...widgetDateGate] },
   },
-  // Connector widgets sit under BOTH gates — one block with the union, after
-  // the registrar block (whose options it replaces for these files).
-  {
-    files: ["packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}"],
-    rules: { "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate] },
-  },
-  // camunda7's widgets render every number through the kit formatters, so
-  // they carry the number gate too (its own block: one union per glob).
+  // Connector widgets sit under the registrar AND date gates, render every
+  // number through the kit formatters (number gate) and every hand-off through
+  // the kit's HandOffButton (hand-off gate) — one block per connector, each with the union,
+  // after the registrar block (whose options it replaces for these files).
   {
     files: ["packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate, ...widgetNumberGate],
+      "no-restricted-syntax": [
+        "error",
+        ...registrarGate,
+        ...widgetDateGate,
+        ...widgetNumberGate,
+        ...widgetHandOffGate,
+      ],
     },
   },
-  // Invariant 6, numbers: the kit's own widget code and camunda7's (above).
-  // The analytics widgets join once their raw toFixed/toLocaleString() calls
-  // moved to the kit formatters.
+  {
+    files: ["packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...registrarGate,
+        ...widgetDateGate,
+        ...widgetNumberGate,
+        ...widgetHandOffGate,
+      ],
+    },
+  },
+  // Invariant 6, numbers: the kit's own widget code, and both connectors'
+  // widgets in their union blocks above.
   {
     files: ["packages/core/widget-shell/src/ui/**/*.{ts,tsx}"],
     rules: { "no-restricted-syntax": ["error", ...widgetNumberGate] },

@@ -20,11 +20,12 @@ import {
   ANALYTICS_DASHBOARD_DATA,
   ANALYTICS_FAILURE_DASHBOARD_DATA,
 } from "./tool-names.js"
-import { localizeFor, type ProfileSource, type ServerT } from "./server-locale.js"
+import { localizeViewFor, type ProfileSource, type ServerT } from "./server-locale.js"
 import { optionalPeriod, settingsFor } from "./settings.js"
 import { registerComparisonWidgetTools } from "./widget-tools/comparisons.js"
 import { engineScopeSummary } from "./widget-tools/shared.js"
 import { isFleetRequest, withEngineScope, type AnalyticsEngineScope } from "./engine-ids.js"
+import type { BpmnMissingReason } from "./heatmap-data.js"
 
 /**
  * Engine-agnostic BPMN-XML lookup injected by the host app (which owns the
@@ -90,19 +91,24 @@ export function registerWidgetTools(
   ch: PrometheusClient,
   options: AnalyticsWidgetToolsOptions,
 ) {
-  // Resolve the request locale via `await localizeFor(profileStore, ctx)` inside
-  // each handler to localize its model-facing `summary` (→ "en" without a store
-  // or a caller identity).
+  // Each show tool words its result via `await localizeViewFor(profileStore, ctx)`:
+  // `t` for the model-facing `summary` (→ "en" without a store or a caller
+  // identity), `title` for the view title, set only in a language the profile
+  // names (the kit's one rule for every module, #322 U3).
   const { profileStore, engineScope } = options
 
   /**
    * Fetches the latest deployed version's BPMN XML for the heatmap overlay via
-   * the injected lookup. Returns `null` without an injected fetcher or on any
-   * fetch error — the widget renders its non-diagram fallback in that case.
+   * the injected lookup. Without a lookup, or when it fails or finds nothing,
+   * the XML is `null` and `bpmnMissing` says which of the two happened, so the
+   * widget's fallback names the known cause (`heatmap-data.ts`).
    */
-  async function fetchBpmnXml(processDefinitionKey: string): Promise<string | null> {
-    if (!options.fetchBpmnXml) return null
-    return (await options.fetchBpmnXml(processDefinitionKey).catch(() => null)) ?? null
+  async function loadBpmn(
+    processDefinitionKey: string,
+  ): Promise<{ bpmnXml: string | null; bpmnMissing?: BpmnMissingReason }> {
+    if (!options.fetchBpmnXml) return { bpmnXml: null, bpmnMissing: "no-camunda7" }
+    const bpmnXml = (await options.fetchBpmnXml(processDefinitionKey).catch(() => null)) ?? null
+    return bpmnXml ? { bpmnXml } : { bpmnXml: null, bpmnMissing: "not-loaded" }
   }
 
   // --- Process Analytics Dashboard ---
@@ -117,7 +123,7 @@ export function registerWidgetTools(
       ...showToolBinding("analytics_show_dashboard", "Process Analytics Dashboard"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
       const data = await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
         ...withEngineScope(engineScope, args),
@@ -133,7 +139,9 @@ export function registerWidgetTools(
       }
       return buildComposedView({
         app: "analytics",
-        title: "Analytics Dashboard",
+        // The view title in the language the profile names (the widget heading's
+        // own key); none with "system", where the heading names the view.
+        title: title("aExecSummary.title"),
         layout: [
           { row: [{ widget: "analytics:execution-summary-kpi", props: cellProps }] },
           { row: [{ widget: "analytics:execution-performance-kpi", props: cellProps }] },
@@ -160,7 +168,7 @@ export function registerWidgetTools(
       ...showToolBinding("analytics_show_failure_dashboard", "Failure Analysis Dashboard"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const data = await queries.failureDashboardData(
         withCallerSignal(ch, ctx.signal),
         withEngineScope(engineScope, args),
@@ -169,7 +177,7 @@ export function registerWidgetTools(
       const cellProps = isFleetRequest(args.engine) ? undefined : { engine: args.engine }
       return buildComposedView({
         app: "analytics",
-        title: "Failure Dashboard",
+        title: title("aFailureSummary.title"),
         layout: [
           { row: [{ widget: "analytics:failure-summary-kpi", props: cellProps }] },
           { row: [{ widget: "analytics:error-patterns-table", props: cellProps }] },
@@ -202,14 +210,14 @@ export function registerWidgetTools(
       ...showToolBinding("analytics_show_bpmn_heatmap", "BPMN Heatmap"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
       const scoped = withEngineScope(engineScope, args)
       const heat = await queries.elementHeat(withCallerSignal(ch, ctx.signal), {
         ...scoped,
         period,
       })
-      const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
+      const bpmn = await loadBpmn(args.processDefinitionKey)
       // Model summary only — the bpmnXml must never reach the text channel;
       // the widget renders the diagram from structuredContent.
       return buildSingleWidgetView({
@@ -222,17 +230,18 @@ export function registerWidgetTools(
           processDefinitionKey: args.processDefinitionKey,
           period,
           engines: scoped.engine,
-          bpmnXml,
+          ...bpmn,
           frequency: heat.frequency,
           durationSec: heat.durationSec,
+          asOf: heat.asOf,
         },
-        title: "BPMN Heatmap",
+        title: title("aHeatmap.title"),
         summary: t("aSum.bpmnHeatmap", {
           key: args.processDefinitionKey,
           period,
           engines: engineScopeSummary(t, scoped.engine, isFleetRequest(args.engine)),
           elementCount: Object.keys(heat.frequency).length,
-          fallbackNote: bpmnXml ? "" : t("aSum.bpmnHeatmapNoXml"),
+          fallbackNote: bpmn.bpmnXml ? "" : t("aSum.bpmnHeatmapNoXml"),
         }),
       })
     }),
@@ -255,14 +264,15 @@ export function registerWidgetTools(
         ...scoped,
         period,
       })
-      const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
+      const bpmn = await loadBpmn(args.processDefinitionKey)
       const data = {
         processDefinitionKey: args.processDefinitionKey,
         period,
         engines: scoped.engine,
-        bpmnXml,
+        ...bpmn,
         frequency: heat.frequency,
         durationSec: heat.durationSec,
+        asOf: heat.asOf,
       }
       return buildDataFeedResult(data)
     }),

@@ -96,7 +96,6 @@ function TrendLine({ cell }: { cell: KpiCell }) {
       {direction ? (
         <Icon
           icon={TREND_ICON[direction]}
-          size={14}
           dense
           className={TONE_ICON[cell.trendTone ?? TREND_TONE[direction]]}
         />

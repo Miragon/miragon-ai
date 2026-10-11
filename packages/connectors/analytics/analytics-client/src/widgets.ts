@@ -38,6 +38,11 @@ export interface FailureDashboardData {
   mostAffectedProcess: string | null
   errorPatterns: ErrorPatternItem[]
   processBreakdown: ProcessFailureItem[]
+  /**
+   * When the figures were read from Prometheus (ISO timestamp): the "Stand"
+   * a view shows. Optional only for payloads recorded before it existed.
+   */
+  asOf?: string
 }
 
 /**
@@ -73,6 +78,17 @@ export interface AnalyticsDashboardData {
   period: Period
   /** The engine ids aggregated; `null` = every engine Prometheus holds (unscoped library call). */
   engines: string[] | null
+  /**
+   * The engine ids in scope that report their state gauges (the presence
+   * probe), ascending — so a view can say how many of `engines` send no
+   * metrics. Optional only for payloads recorded before it existed.
+   */
+  reportingEngines?: string[]
+  /**
+   * When the figures were read from Prometheus (ISO timestamp): the "Stand"
+   * a view shows. Optional only for payloads recorded before it existed.
+   */
+  asOf?: string
   // ── Flows within the window ───────────────────────────────────────────────
   /** Instances started in the window. */
   totalCount: number

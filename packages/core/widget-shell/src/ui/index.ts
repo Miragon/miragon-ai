@@ -31,6 +31,15 @@ export {
   type PercentFormatOptions,
 } from "./format.js"
 export {
+  ViewMeta,
+  formatLookback,
+  formatViewMeta,
+  VIEW_META_LABELS,
+  type ViewMetaEngines,
+  type ViewMetaLabels,
+  type ViewMetaParts,
+} from "./view-meta.js"
+export {
   TONE_VARIANTS,
   TONE_SOFT,
   TONE_TINT,
@@ -62,6 +71,7 @@ export { LivePill, StatusBadge, CountPill } from "./pills.js"
 export { LogText, LOG_TEXT_PREVIEW } from "./log-text.js"
 export { useHostActions, buildShowWidgetIntent, type HostActions } from "./use-host-actions.js"
 export { AskAiButton, type AskAiButtonProps, type AskAiVariant } from "./ask-ai-button.js"
+export { HAND_OFF_ACTIONS, HandOffButton, type HandOffAction } from "./hand-off-button.js"
 export {
   askAiPrompt,
   modelContextText,

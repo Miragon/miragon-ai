@@ -1,5 +1,6 @@
 import { WidgetRenderer, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import {
+  HandOffButton,
   CountPill,
   Icon,
   SectionHeading,
@@ -15,7 +16,6 @@ import {
 } from "../../lib/environments.js"
 import { useT } from "../../messages/use-t.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 import { useEngineHealth } from "./engine-health.js"
 import { filterLayoutToWidgets } from "./views.js"
 

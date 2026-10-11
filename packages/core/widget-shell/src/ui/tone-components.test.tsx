@@ -159,7 +159,7 @@ describe("heatmap defaults", () => {
       noData: "No heatmap data.",
       noHeat: "No metric data in this window.",
       bpmnUnavailable:
-        "BPMN diagram unavailable: the analytics module has no camunda7 client configured to fetch it.",
+        "The BPMN diagram is not available. Ask in the chat for the figures per element instead.",
       less: "Less",
       more: "More",
       diagramAriaLabel: "BPMN process diagram with an execution heat overlay",

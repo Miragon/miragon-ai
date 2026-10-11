@@ -1,5 +1,6 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import {
+  HandOffButton,
   DrillButton,
   FilterBar,
   PagedRows,
@@ -11,7 +12,6 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import { useNav } from "./navigation.js"
 import { useHandOff, type HandOff } from "./lib/hand-off.js"
-import { HandOffButton } from "./lib/hand-off-button.js"
 import { useT } from "../messages/use-t.js"
 import type { ProcessDefinition, ProcessListData } from "../view-models.js"
 import { CAMUNDA7_PROCESS_LIST_DATA } from "../tool-names.js"

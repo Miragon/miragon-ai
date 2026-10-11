@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, Button } from "@miragon/mcp-toolkit-ui"
 import {
+  HandOffButton,
   DrillButton,
   Icon,
   KpiGrid,
@@ -20,7 +21,6 @@ import { useViewData } from "./use-view-data.js"
 import { remediationHandOff, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
-import { HandOffButton } from "./lib/hand-off-button.js"
 import { healthVerdictLine } from "./lib/health-verdict.js"
 import { useT } from "../messages/use-t.js"
 
@@ -323,7 +323,7 @@ function ClustersSection({
  * only `engine` is passed and the view self-fetches its deterministic verdict
  * feed. The verdict + KPIs + incident clusters are deterministic; every element
  * is a launchpad — `go()` drills (client-side in the cockpit, a host follow-up
- * standalone), `AskAiButton` hands the judgment to the agent.
+ * standalone), `HandOffButton` hands the judgment to the agent.
  */
 export function EngineHealthView({
   data: initialData = null,

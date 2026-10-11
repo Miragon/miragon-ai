@@ -1,6 +1,13 @@
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
-import { catalogTextFindings, scanColors, scanGlyphs } from "../testing/index.js"
+import {
+  catalogTextFindings,
+  glossaryFindings,
+  PRODUCT_GLOSSARY,
+  scanColors,
+  scanGlyphs,
+  scanIconSizes,
+} from "../testing/index.js"
 import { ASK_AI_PROMPT_LABELS } from "./ask-ai-prompt.js"
 import { DEFAULT_HEATMAP_LABELS } from "./bpmn-heatmap-labels.js"
 import { KIT_LABELS } from "./kit-labels.js"
@@ -32,6 +39,20 @@ const UI_DIR = fileURLToPath(new URL(".", import.meta.url))
 describe("kit widget code draws icons with Lucide, never glyphs or emoji", () => {
   it("src/ui has no forbidden glyph in JSX or strings", () => {
     expect(scanGlyphs(UI_DIR)).toEqual([])
+  })
+})
+
+describe("kit widget code draws icons at the CI sizes", () => {
+  // 16 px in chrome (the Icon default, `dense` for tight rows), 24 px previews.
+  it("src/ui has no icon at a size other than 16 or 24 px", () => {
+    expect(scanIconSizes(UI_DIR)).toEqual([])
+  })
+})
+
+describe("kit copy uses the product glossary", () => {
+  // The kit's labels sit in every module's views (hand-offs, list chrome).
+  it.each(["de", "en"] as const)("kit labels (%s)", (language) => {
+    expect(glossaryFindings(KIT_LABELS[language], PRODUCT_GLOSSARY[language])).toEqual([])
   })
 })
 

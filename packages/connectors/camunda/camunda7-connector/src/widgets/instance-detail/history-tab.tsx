@@ -1,6 +1,6 @@
+import { HandOffButton } from "@miragon-ai/widget-shell/widgets"
 import { PagedHistoryView } from "../history-timeline.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 
 /** Walk ONE instance's activity history: where the token spent its time. */
 export function explainTimelineHandOff(

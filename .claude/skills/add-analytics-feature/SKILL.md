@@ -212,12 +212,31 @@ Rules while building:
   volume (starts) and suppressed comparisons stay `neutral`, red is `danger` and only for
   incidents/failures. No palette classes or raw colours.
 - Icons are Lucide via `Icon` (devDependency `lucide-react` `0.562.0`, see invariant 6), never
-  glyphs or emoji; `AskAiButton` takes the `icon` of the concrete function and a verb that
-  names the chat. Copy follows the brand voice in en + de; the package's brand-gate test
+  glyphs or emoji, at 16 px (`dense` in rows and chips; no `size` other than 16 or 24). A chat
+  hand-off is the kit's `<HandOffButton action="findCause" prompt={ask(…)} />`: the product's
+  one table of functions with their Lucide icon and a label that names the chat, the same as
+  camunda7's (`AskAiButton` is banned in connector widgets; a new function goes into the
+  kit). Copy follows the brand voice in en + de; the package's brand-gate test
   runs `catalogTextFindings` over both catalogs, `scanGlyphs` over `src/widgets` +
-  `src/messages` and `scanColors` over `src/widgets` (`@miragon-ai/widget-shell/testing`).
-- Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`)
-  — a missing `isError` branch means an eternal skeleton.
+  `src/messages`, `scanIconSizes` and `scanColors` over `src/widgets`
+  (`@miragon-ai/widget-shell/testing`). The words come from `src/messages/GLOSSARY.md`
+  ("nicht belastbar", "Zeitraum" …, plus the kit's `PRODUCT_GLOSSARY` shared with camunda7:
+  "Incident", "Jobs ohne Versuche", "bereitgestellt" …; `glossary.test.ts` rejects the
+  synonyms both rule out), counted entries are `plural(…)` and take the count formatted.
+- A show tool words its result with `const { t, title } = await localizeViewFor(store, ctx)`:
+  `title("…")` for the view title (none while the profile follows the host),
+  `t("…")` for the model summary; `src/view-title.test.ts` sweeps every show tool.
+- Every data view states its reference frame under its title with the kit's `ViewMeta`:
+  `formatLookback(data.period)`, `enginesMeta(data.engines, reporting)`
+  (`src/widgets/view-meta.ts`) and the result's `asOf` (every analytics-client view
+  result carries it). A comparison judges only quality metrics, from their threshold on
+  (`deltaVerdict` in `src/widgets/comparison-shared.tsx`); volume stays neutral and a
+  suppressed comparison reads "nicht belastbar".
+- Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`):
+  a missing `isError` branch means an eternal skeleton. The error is two-part: what
+  happened in `errorTitle` (one line, the toolkit's `AlertTitle` clamps it) and what you
+  can do in `errorHint` (`aCommon.loadError` + `aCommon.loadErrorHint` in `QueryGate`);
+  the heatmap's import error takes the same split through its `errorHint` label.
 - The model description (`adaptDataWidget`'s third argument, in
   `src/widgets/model-descriptions.ts`) returns `modelContextText(…)` with
   `surface: ANALYTICS_ONLY_SURFACE` — a static `summary`, data only in

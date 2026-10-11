@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react"
 import { Button } from "@miragon/mcp-toolkit-ui"
 import {
+  HandOffButton,
   DrillButton,
   ListTable,
   LogText,
@@ -19,7 +20,6 @@ import type { ActivityIncidentsData, IncidentInstance } from "../../view-models.
 import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 import { EngineActionDialog } from "../lib/engine-action-dialog.js"
 import { recoveryOf } from "../lib/incident-recovery.js"

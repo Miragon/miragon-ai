@@ -106,7 +106,7 @@ describe("localizeFor", () => {
   it("falls back to English on a store OUTAGE, like settingsFor", async () => {
     const store: ProfileSource = { get: () => Promise.reject(new Error("connection refused")) }
     const t = await localizeFor(store, CTX)
-    expect(t("aSettings.heading")).toBe("Analytics Settings")
+    expect(t("aSettings.heading")).toBe("Analytics settings")
   })
 })
 
@@ -198,8 +198,11 @@ describe("registerSettingsTools", () => {
     expect(standard.content[0].text).toBe(
       "Analytics settings: default period 7d, min bucket size 10. Change via analytics_save_settings.",
     )
+    // A caller whose profile names no language follows the host: the server
+    // sets no view title (an English one would sit over a German view), and
+    // the section's own heading names the view (#322 U3).
+    expect(standard.structuredContent.title).toBeUndefined()
     expect(standard.structuredContent).toMatchObject({
-      title: "Analytics Settings",
       layout: [{ row: [{ widget: "analytics:settings" }] }],
       context: {
         stepData: {

@@ -15,6 +15,7 @@ import {
   SettingsField,
   SettingsInput,
   WidgetShell,
+  formatPeriod,
   formatTime,
   modelContextText,
   useResetOnChange,
@@ -67,7 +68,8 @@ export function AnalyticsSettingsWidget({
         <QueryFallback
           isError={query.isError}
           error={query.error}
-          errorTitle={t("aCommon.loadError")}
+          errorTitle={t("aSettings.loadError")}
+          errorHint={t("aSettings.loadErrorHint")}
           skeleton={<div className="bg-muted/50 h-24 animate-pulse rounded-md" aria-hidden />}
         />
       </WidgetShell>
@@ -146,7 +148,11 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
 
       {save.isError && (
         <Alert variant="destructive">
-          <AlertDescription>{save.error?.message ?? t("aSettings.saveError")}</AlertDescription>
+          <AlertDescription>
+            {save.error?.message
+              ? t("aSettings.saveFailed", { reason: save.error.message })
+              : t("aSettings.saveError")}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -167,7 +173,7 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
             >
               {PERIODS.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {formatPeriod(p)}
                 </option>
               ))}
             </NativeSelect>

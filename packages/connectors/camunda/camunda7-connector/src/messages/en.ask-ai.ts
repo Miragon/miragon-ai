@@ -9,11 +9,11 @@
  *
  * Plain English in the operator's voice (it posts as their message): no dash
  * connectors, no verdicts in capitals, the guardrail ending ("Change nothing.")
- * kept. The button labels live under `handOff.*` (GLOSSARY.md).
+ * kept. The button labels and icons live in the kit (`HandOffButton`, GLOSSARY.md).
  */
 export const enAskAi = {
   "askAi.jobs.triage":
-    "Sort the failed jobs by cause: group them, name the likely root cause of each group and recommend one action per group. Recommend only and change nothing.",
+    "Sort the jobs without retries by cause: group them, name the likely root cause of each group and recommend one action per group. Recommend only and change nothing.",
   "askAi.jobs.explainFailure":
     "Explain why this job failed: what broke, whether the failure is temporary or will repeat, and whether a retry is safe or will fail again. Change nothing.",
   "askAi.jobs.draftTicket":
@@ -59,7 +59,7 @@ export const enAskAi = {
   "askAi.process.healthCheck":
     "Check the health of this process definition: healthy or degraded, the worst activities, the most common incident message, the most likely root cause and one next step. Change nothing.",
   "askAi.bpmn.explainState":
-    "Explain this instance's state on the diagram: which elements block progress, what each incident means, whether the failed-job hotspots point to a systemic fault, and the next steps by priority.",
+    "Explain this instance's state on the diagram: which elements block progress, what each incident means, whether the hotspots of jobs without retries point to a systemic fault, and the next steps by priority.",
   "askAi.landscape.triage":
     "Rank the affected processes on this engine by severity: name the most urgent one, its likely root cause and the first step to fix it.",
   "askAi.incidents.processRootCause":

@@ -7,6 +7,7 @@ import {
   type PrometheusClient,
 } from "../prometheus.js"
 import {
+  asOfNow,
   belowMinBucket,
   compareKpiDelta,
   first,
@@ -51,6 +52,11 @@ export interface VersionCompareResult {
   delta: VersionCompareDelta
   /** Why KPIs are null — the caveats the numbers cannot carry themselves. */
   notes: string[]
+  /**
+   * When the figures were read from Prometheus (ISO timestamp): the "Stand"
+   * a view shows. Optional only for payloads recorded before it existed.
+   */
+  asOf?: string
 }
 
 /**
@@ -91,6 +97,7 @@ export async function versionCompare(
   const versionA = Math.max(1, Math.floor(params.versionA))
   const versionB = Math.max(1, Math.floor(params.versionB))
   const range = `${windowDays}d`
+  const asOf = asOfNow()
 
   const [a, b] = await Promise.all([
     versionKpi(ch, params, "versionA", versionA, range),
@@ -98,6 +105,7 @@ export async function versionCompare(
   ])
 
   return {
+    asOf,
     engines: engineIdsOf(params.engine),
     processDefinitionKey: params.processDefinitionKey,
     versionA,

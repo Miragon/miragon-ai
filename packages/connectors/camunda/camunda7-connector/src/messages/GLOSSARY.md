@@ -7,42 +7,65 @@ die sie fangen muss), `catalog-text.test.ts` die Regeln aus
 brand-tone (du, AI, „CIB seven“, kein Gedankenstrich als Verbinder, Plural nach
 der Zahl). Neue Begriffe kommen erst hier hinein, dann in den Test, dann in den Katalog.
 
-## Begriffe
+## Gemeinsame Begriffe aller Module
 
-| Sache                                           | Deutsch                                                              | Nicht                           | Englisch                                      | Nicht                 |
-| ----------------------------------------------- | -------------------------------------------------------------------- | ------------------------------- | --------------------------------------------- | --------------------- |
-| Fehler, den die Engine meldet                   | Incident, Incidents                                                  | Vorfall, Vorfälle               | incident                                      | –                     |
-| Instanz anhalten                                | aussetzen, ausgesetzt                                                | anhalten, angehalten, pausieren | suspend, suspended                            | pause, halt           |
-| Ausgesetzte Instanz fortsetzen                  | aktivieren                                                           | fortsetzen                      | activate                                      | resume                |
-| Zustand einer Instanz                           | läuft (Zustand), laufend (bei Zahlen)                                | aktiv                           | running                                       | active                |
-| Zustand einer Definition                        | aktiv, ausgesetzt                                                    | –                               | active, suspended                             | –                     |
-| BPMN-Modell auf die Engine bringen              | bereitstellen, bereitgestellt (das Ergebnis heißt Deployment)        | deployen, deployst, deployt     | deploy, deployed                              | –                     |
-| Business Key                                    | Geschäftsschlüssel                                                   | GK, Business Key                | business key                                  | BK                    |
-| Retries eines Jobs                              | Versuche („Noch 2 Versuche“, „Keine Versuche mehr“)                  | Wiederholungen                  | retries                                       | –                     |
-| Job neu ausführen lassen                        | neu versuchen, Ergebnis „Neu eingeplant“                             | wiederholen, „Wiederholt“       | retry, result „Retry scheduled“               | –                     |
-| Incident schließen, ohne die Ursache zu beheben | als gelöst markieren, Ergebnis „Als gelöst markiert“                 | auflösen, „Behoben“             | mark as resolved, result „Marked as resolved“ | resolve (as a label)  |
-| Alle Engines zusammen                           | alle Engines, Engine-übergreifend                                    | Flotte                          | all engines, cross-engine                     | fleet                 |
-| Bearbeiter einer Aufgabe                        | zugewiesen an                                                        | Bearbeiter                      | assigned to                                   | assignee (as a label) |
-| Ladezustand                                     | Wird geladen…                                                        | Laden…                          | Loading…                                      | –                     |
-| Herstellerprodukt                               | CIB seven, Camunda 7, Operaton (aus `provider.branding.displayName`) | CIB Seven                       | CIB seven                                     | CIB Seven             |
-| Künstliche Intelligenz                          | AI                                                                   | KI                              | AI                                            | –                     |
+Diese Begriffe stehen in den Ansichten mehrerer Module nebeneinander: Die Engine-übergreifende
+Übersicht von camunda7 bettet die Prozesslandschaft von analytics ein. Sie gelten deshalb in
+jedem Modul gleich. Die Regeln stehen einmal im Kit (`PRODUCT_GLOSSARY` in
+`@miragon-ai/widget-shell/testing`), und `glossary.test.ts` jedes Moduls prüft damit seine
+Kataloge. Das Glossar von analytics führt dieselbe Tabelle.
+
+| Sache                                                                        | Deutsch                                                            | Nicht                                | Englisch                  | Nicht                  |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------ | ------------------------- | ---------------------- |
+| Fehler, den die Engine meldet                                                | Incident, Incidents                                                | Vorfall, Vorfälle, Störung           | incident                  | occurrence             |
+| Jobs, deren Versuche aufgebraucht sind (`failedJobs`, `camunda_jobs_failed`) | Jobs ohne Versuche („3 ohne Versuche“)                             | Fehlgeschlagene Jobs, tote Jobs      | jobs without retries      | failed jobs, dead jobs |
+| BPMN-Modell auf die Engine bringen                                           | bereitstellen, bereitgestellt (das Ergebnis heißt Deployment)      | deployen, deployst, deployt          | deploy, deployed          | –                      |
+| Business Key                                                                 | Geschäftsschlüssel                                                 | GK, Business Key                     | business key              | BK                     |
+| Instanz anhalten                                                             | aussetzen, ausgesetzt                                              | anhalten, angehalten, pausieren      | suspend, suspended        | pause, halt            |
+| Retries eines Jobs                                                           | Versuche („Noch 2 Versuche“, „Keine Versuche mehr“), neu versuchen | Wiederholungen, wiederholen, Retries | retries, retry            | –                      |
+| Alle Engines zusammen                                                        | alle Engines, Engine-übergreifend                                  | Flotte                               | all engines, cross-engine | fleet                  |
+
+## Begriffe von camunda7
+
+| Sache                                           | Deutsch                                                              | Nicht                     | Englisch                                      | Nicht                 |
+| ----------------------------------------------- | -------------------------------------------------------------------- | ------------------------- | --------------------------------------------- | --------------------- |
+| Ausgesetzte Instanz fortsetzen                  | aktivieren                                                           | fortsetzen                | activate                                      | resume                |
+| Zustand einer Instanz                           | läuft (Zustand), laufend (bei Zahlen)                                | aktiv                     | running                                       | active                |
+| Zustand einer Definition                        | aktiv, ausgesetzt                                                    | –                         | active, suspended                             | –                     |
+| Job neu ausführen lassen                        | neu versuchen, Ergebnis „Neu eingeplant“                             | wiederholen, „Wiederholt“ | retry, result „Retry scheduled“               | –                     |
+| Incident schließen, ohne die Ursache zu beheben | als gelöst markieren, Ergebnis „Als gelöst markiert“                 | auflösen, „Behoben“       | mark as resolved, result „Marked as resolved“ | resolve (as a label)  |
+| Bearbeiter einer Aufgabe                        | zugewiesen an                                                        | Bearbeiter                | assigned to                                   | assignee (as a label) |
+| Ladezustand                                     | Wird geladen…                                                        | Laden…                    | Loading…                                      | –                     |
+| Herstellerprodukt                               | CIB seven, Camunda 7, Operaton (aus `provider.branding.displayName`) | CIB Seven                 | CIB seven                                     | CIB Seven             |
+| Künstliche Intelligenz                          | AI                                                                   | KI                        | AI                                            | –                     |
 
 ## Übergaben an den Chat
 
-Eine Übergabe (`AskAiButton`) zeigt das Lucide-Icon der konkreten Funktion und ein Verb, das
-sagt, dass die Arbeit im Chat passiert. Die Labels stehen unter `handOff.*`, das Icon in
-`widgets/lib/hand-off-button.tsx`.
+Eine Übergabe zeigt das Lucide-Icon der konkreten Funktion und ein Verb, das sagt, dass die
+Arbeit im Chat passiert. Beides steht einmal im Kit: `HandOffButton` mit seiner Tabelle
+`HAND_OFF_ACTIONS` (Icon) und `kitLabels().handOff` (Label, de und en) in
+`@miragon-ai/widget-shell/widgets`. Jede Funktion hat in jedem Modul dasselbe Icon und dasselbe
+Label, kein Icon steht für zwei Funktionen. Ein Widget eines Connectors rendert Übergaben nur
+über `HandOffButton` (ein ESLint-Gate verbietet `AskAiButton` dort); eine neue Funktion kommt
+mit ihrem Icon und beiden Labels ins Kit. Das Glossar von analytics führt dieselbe Tabelle.
 
-| Funktion         | Deutsch                  | Englisch              |
-| ---------------- | ------------------------ | --------------------- |
-| Lage einordnen   | Im Chat bewerten         | Assess in chat        |
-| Ursache finden   | Ursache im Chat klären   | Find cause in chat    |
-| Fehler erklären  | Fehler im Chat erklären  | Explain error in chat |
-| Behebung planen  | Behebung im Chat planen  | Plan a fix in chat    |
-| Ticket entwerfen | Ticket im Chat entwerfen | Draft ticket in chat  |
-
-Die übrigen Funktionen (Verlauf, Dauer, Variablen, Diagramm, Zustand, Fehler und Performance
-über alle Engines) folgen demselben Muster: Objekt, „im Chat“, Verb.
+| Funktion                         | Icon           | Deutsch                         | Englisch                    |
+| -------------------------------- | -------------- | ------------------------------- | --------------------------- |
+| Lage einordnen                   | ListChecks     | Im Chat bewerten                | Assess in chat              |
+| Ursache finden                   | ScanSearch     | Ursache im Chat klären          | Find cause in chat          |
+| Fehler erklären                  | FileSearch     | Fehler im Chat erklären         | Explain error in chat       |
+| Behebung planen                  | Wrench         | Behebung im Chat planen         | Plan a fix in chat          |
+| Ticket entwerfen                 | ClipboardList  | Ticket im Chat entwerfen        | Draft ticket in chat        |
+| Verlauf erklären                 | Route          | Verlauf im Chat erklären        | Explain timeline in chat    |
+| Dauer erklären                   | Timer          | Dauer im Chat erklären          | Explain duration in chat    |
+| Variablen prüfen                 | Braces         | Variablen im Chat prüfen        | Check variables in chat     |
+| Diagramm erklären                | Workflow       | Zustand im Chat erklären        | Explain state in chat       |
+| Zustand prüfen                   | Stethoscope    | Zustand im Chat prüfen          | Check health in chat        |
+| Fehler über Engines              | Bug            | Fehler im Chat analysieren      | Analyze failures in chat    |
+| Performance über Engines         | Gauge          | Performance im Chat analysieren | Analyze performance in chat |
+| Engpass erklären                 | Hourglass      | Engpass im Chat erklären        | Explain bottleneck in chat  |
+| Nach Dringlichkeit ordnen        | ListOrdered    | Im Chat priorisieren            | Prioritize in chat          |
+| Prozess über Engines vergleichen | ArrowLeftRight | Engines im Chat vergleichen     | Compare engines in chat     |
 
 ## Texte
 
@@ -54,3 +77,6 @@ Die übrigen Funktionen (Verlauf, Dauer, Variablen, Diagramm, Zustand, Fehler un
 - Zahlen kommen formatiert in den Katalog (`formatNumber` im Widget); der Plural hängt an der
   Zahl (`countOf` in `plural.ts`), nie an zwei Schlüsseln `…One`/`…Other`.
 - Englisch in Sentence case: „Open incidents“, nicht „Open Incidents“.
+- Ein Show-Tool setzt den Titel seiner Ansicht nur in einer Sprache, die das Profil nennt
+  (`localizeViewFor`); mit „system“ setzt es keinen, und die Überschrift des Widgets nennt die
+  Ansicht in der Sprache des Hosts. Das gilt für die Show-Tools jedes Moduls.

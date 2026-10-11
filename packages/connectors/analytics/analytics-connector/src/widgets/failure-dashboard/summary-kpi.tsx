@@ -1,15 +1,18 @@
 import {
-  AskAiButton,
+  HandOffButton,
   KpiGrid,
   KpiGridSkeleton,
+  ViewMeta,
   WidgetHeader,
   WidgetShell,
+  formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/analytics-client"
 import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
+import { enginesMeta } from "../view-meta.js"
 
 /**
  * Triage of the open-incident snapshot. Only the headline numbers travel —
@@ -53,7 +56,15 @@ export function FailureSummaryKpi({
         <WidgetShell>
           <WidgetHeader
             title={t("aFailureSummary.title")}
-            actions={<AskAiButton variant="primary" prompt={ask(failureSummaryHandOff(data))} />}
+            // A live snapshot: no period, the engines and when it was read.
+            sub={<ViewMeta engines={enginesMeta(data.engines)} asOf={data.asOf} />}
+            actions={
+              <HandOffButton
+                action="prioritize"
+                variant="primary"
+                prompt={ask(failureSummaryHandOff(data))}
+              />
+            }
           />
           <KpiGrid
             variant="soft"
@@ -61,12 +72,12 @@ export function FailureSummaryKpi({
             cells={[
               {
                 label: t("aFailureSummary.totalIncidents"),
-                value: data.totalIncidents,
+                value: formatNumber(data.totalIncidents),
                 tone: "danger",
               },
               {
                 label: t("aFailureSummary.uniqueErrorPatterns"),
-                value: data.uniqueErrorPatterns,
+                value: formatNumber(data.uniqueErrorPatterns),
                 tone: "warning",
               },
               {

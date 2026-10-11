@@ -83,7 +83,7 @@ export function useCamunda7Surface(): ToolSurface {
 export function bindHandOff(locale: string, surface: ToolSurface) {
   return {
     surface,
-    /** The Ask-AI prompt for `AskAiButton` — null when nothing in it is available here. */
+    /** The Ask-AI prompt for `HandOffButton` — null when nothing in it is available here. */
     ask: (handOff: HandOff): AskAiPrompt | null =>
       askAiPrompt({ ...handOff, intent: translator(locale, handOff.intent), locale, surface }),
     /** The `HostModelContext` text for a view. */

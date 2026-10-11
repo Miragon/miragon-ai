@@ -150,7 +150,7 @@ export const de: MessageCatalog = {
   "c7sum.incidentDetail":
     'Incident {incidentId} ({incidentType}) bei Aktivität "{activity}" in "{processDefinitionKey}", Instanz {processInstanceId}{message}.',
   "c7sum.processDetail":
-    'Prozess "{processDefinitionKey}" (alle Versionen; Diagramm v{diagramVersion}): {runningInstances} laufende Instanz(en), {openIncidents} offene Incident(s), {failedJobs} fehlgeschlagene(r) Job(s).',
+    'Prozess "{processDefinitionKey}" (alle Versionen; Diagramm v{diagramVersion}): {runningInstances} laufende Instanz(en), {openIncidents} offene Incident(s), {failedJobs} Job(s) ohne Versuche.',
   "c7sum.historyTimeline":
     "Verlaufs-Zeitleiste für Prozessinstanz {processInstanceId}: historische Aktivitäten: {totalActivities}{notFound}.",
   "c7sum.historyTimeline.notFound": " (keine historische Prozessinstanz gefunden)",
@@ -173,12 +173,12 @@ export const de: MessageCatalog = {
   "c7sum.bpmnViewer.targetInstance": "Prozessinstanz {processInstanceId}",
   "c7sum.bpmnViewer.targetDefinition": "Prozessdefinition {definitionId}",
   "c7sum.bpmnViewer.overlays":
-    "; laufende Aktivitäten: {activeActivities}, Aktivitäten mit Incidents: {incidentActivities}, fehlgeschlagene Jobs dieser Instanz: {failedJobs}",
+    "; laufende Aktivitäten: {activeActivities}, Aktivitäten mit Incidents: {incidentActivities}, Jobs ohne Versuche in dieser Instanz: {failedJobs}",
   "c7sum.bpmnViewer.noOverlays":
     " (keine Instanz-Overlays; die Badges zählen alle laufenden Instanzen dieser Version)",
   "c7sum.bpmnViewer.xmlUnavailable": "; Diagramm-XML nicht verfügbar",
   "c7sum.jobPanel":
-    "Job-Panel: {totalCount} Job(s), {failedCount} fehlgeschlagen{forProcess}{failedOnly}.",
+    "Job-Panel: {totalCount} Job(s), {failedCount} ohne Versuche{forProcess}{failedOnly}.",
   "c7sum.jobPanel.forProcess": ' für "{processDefinitionKey}"',
-  "c7sum.jobPanel.failedOnly": " (nur fehlgeschlagene)",
+  "c7sum.jobPanel.failedOnly": " (nur Jobs ohne Versuche)",
 }

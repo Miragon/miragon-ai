@@ -6,6 +6,7 @@ import type {
   VersionCompareResult,
 } from "@miragon-ai/analytics-client"
 import { createEngineScope } from "../engine-ids.js"
+import type { ProfileSource } from "../server-locale.js"
 import { registerComparisonWidgetTools } from "./comparisons.js"
 
 type ToolResult = {
@@ -120,5 +121,51 @@ describe("analytics_show_engine_compare — engine scope (N138)", () => {
     )
     expect(result.isError).toBe(true)
     expect(result.content[0].text).toContain('Unknown engine "tenant-x" in engineB')
+  })
+})
+
+describe("view titles (U3): the toolbar speaks the caller's language", () => {
+  const CTX = { auth: { user: { id: "user-1" } } }
+  const titledHandlers = (language: string) => {
+    const byName = new Map<string, Handler>()
+    const server = {
+      tool: (definition: { name: string }, handler: Handler) => {
+        byName.set(definition.name, handler)
+      },
+    } as unknown as MCPServer
+    const profileStore: ProfileSource = { get: () => Promise.resolve({ language }) }
+    registerComparisonWidgetTools({ server, ch, engineScope, profileStore })
+    return byName
+  }
+  const titleOf = (result: ToolResult) =>
+    (result.structuredContent as unknown as { title?: string }).title
+
+  const CALLS: Array<[string, Record<string, unknown>]> = [
+    ["analytics_show_version_compare", { processDefinitionKey: "o", versionA: 1, versionB: 2 }],
+    [
+      "analytics_show_engine_compare",
+      { processDefinitionKey: "o", engineA: "prod-a", engineB: "prod-b" },
+    ],
+    ["analytics_show_engine_landscape", {}],
+  ]
+  const titles = async (language: string) => {
+    const tools = titledHandlers(language)
+    return Promise.all(CALLS.map(([name, args]) => tools.get(name)!(args, CTX).then(titleOf)))
+  }
+
+  it("titles each comparison and the landscape in German", async () => {
+    expect(await titles("de")).toEqual([
+      "Versionsvergleich",
+      "Engine-Vergleich",
+      "Engine-übergreifende Übersicht",
+    ])
+  })
+
+  it("and in English, in sentence case", async () => {
+    expect(await titles("en")).toEqual([
+      "Version comparison",
+      "Engine comparison",
+      "Cross-engine landscape",
+    ])
   })
 })

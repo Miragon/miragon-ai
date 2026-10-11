@@ -1,15 +1,19 @@
 import {
-  AskAiButton,
+  HandOffButton,
   KpiGrid,
   KpiGridSkeleton,
+  ViewMeta,
   WidgetHeader,
   WidgetShell,
+  formatLookback,
+  formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
 import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
+import { enginesMeta } from "../view-meta.js"
 
 /**
  * Assess the dashboard on screen — its echoed scope (process, period,
@@ -41,9 +45,6 @@ export function executionSummaryHandOff(data: AnalyticsDashboardData): HandOff {
   }
 }
 
-/** A live gauge without a series is "not reported" — an em-dash, never a plausible 0. */
-const live = (value: number | null) => value ?? "—"
-
 export function ExecutionSummaryKpi({
   data: initialData,
   processDefinitionKey,
@@ -65,31 +66,47 @@ export function ExecutionSummaryKpi({
         <WidgetShell>
           <WidgetHeader
             title={t("aExecSummary.title")}
-            actions={<AskAiButton variant="primary" prompt={ask(executionSummaryHandOff(data))} />}
+            sub={
+              <ViewMeta
+                subject={data.processDefinitionKey}
+                period={formatLookback(data.period)}
+                engines={enginesMeta(data.engines, data.reportingEngines)}
+                asOf={data.asOf}
+              />
+            }
+            actions={
+              <HandOffButton
+                action="assess"
+                variant="primary"
+                prompt={ask(executionSummaryHandOff(data))}
+              />
+            }
           />
           <KpiGrid
             boxed
             header={{ label: t("aExecSummary.headerExecutionSummary") }}
             cells={[
-              { label: t("aExecSummary.cellStarted"), value: data.totalCount },
+              { label: t("aExecSummary.cellStarted"), value: formatNumber(data.totalCount) },
               {
                 label: t("aExecSummary.cellCompleted"),
-                value: data.completedCount,
+                value: formatNumber(data.completedCount),
                 tone: data.completedCount > 0 ? "success" : undefined,
               },
               {
                 label: t("aExecSummary.cellIncidentsCreated"),
-                value: data.incidentsCreated,
+                value: formatNumber(data.incidentsCreated),
                 tone: data.incidentsCreated > 0 ? "warning" : undefined,
               },
               {
+                // A live gauge without a series is "not reported": formatNumber
+                // renders it as an em-dash, never as a plausible 0.
                 label: t("aExecSummary.cellRunningNow"),
-                value: live(data.runningNow),
+                value: formatNumber(data.runningNow),
                 tone: (data.runningNow ?? 0) > 0 ? "info" : undefined,
               },
               {
                 label: t("aExecSummary.cellOpenIncidentsNow"),
-                value: live(data.openIncidentsNow),
+                value: formatNumber(data.openIncidentsNow),
                 tone: (data.openIncidentsNow ?? 0) > 0 ? "danger" : undefined,
               },
             ]}

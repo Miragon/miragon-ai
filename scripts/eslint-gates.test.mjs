@@ -137,6 +137,39 @@ describe("sparkle gate (invariant 6, CI U4) in every widget tree", () => {
   })
 })
 
+describe("hand-off gate (invariant 6, CI U4) in both connectors' widgets", () => {
+  const isHandOffHit = (m) => m.includes("HandOffButton") && m.includes("not AskAiButton")
+  const HAND_OFF_PATHS = [`${C7}/widgets/__probe__.tsx`, `${AN}/widgets/__probe__.tsx`]
+  const KIT = '"@miragon-ai/widget-shell/widgets"'
+
+  it("bans AskAiButton in every spelling: import, renamed import, element, namespace", async () => {
+    const cases = [
+      [`import { AskAiButton } from ${KIT}`, 1],
+      [`import { AskAiButton as Ask } from ${KIT}`, 1],
+      ['const el = <AskAiButton prompt={p} icon={Scale} label={t("x")} />', 1],
+      ["const el = <AskAiButton prompt={p}>Ask</AskAiButton>", 1],
+      ["const el = <W.AskAiButton prompt={p} />", 1],
+    ]
+    for (const rel of HAND_OFF_PATHS) {
+      for (const [code, hits] of cases) {
+        const messages = await gateMessages(rel, code)
+        assert.equal(messages.filter(isHandOffHit).length, hits, `${rel}: ${code}`)
+      }
+    }
+  })
+
+  it("passes the kit's HandOffButton and leaves other components alone", async () => {
+    const code = [
+      `import { HandOffButton, type AskAiPrompt, type AskAiVariant } from ${KIT}`,
+      'const a = <HandOffButton action="findCause" prompt={p} variant="icon" />',
+      "const b = <Button prompt={p} />",
+    ].join("\n")
+    for (const rel of HAND_OFF_PATHS) {
+      assert.deepEqual(await gateMessages(rel, code), [], rel)
+    }
+  })
+})
+
 const REGISTRAR_ESCAPES = {
   "direct call": 'server.tool("x", {}, handler)',
   "registerTool call": 'server.registerTool("x", {}, handler)',
@@ -205,20 +238,26 @@ describe("gates sharing a glob are merged, not overridden", () => {
     }
   })
 
-  it("camunda7 widgets carry the number gate on top of both (they render through the kit formatters)", async () => {
-    for (const rel of [`${C7}/widgets/__probe__.ts`, `${C7}/widgets/__probe__.tsx`]) {
-      const messages = await gateMessages(
-        rel,
-        'server.tool("x")\nd.toLocaleDateString()\nconst a = n.toFixed(1)\nconst b = n.toLocaleString()\nnew Intl.NumberFormat("de")',
-      )
+  it("both connectors' widgets carry the registrar, date AND number gates in one union per glob", async () => {
+    const code = [
+      'server.tool("x")',
+      "d.toLocaleDateString()",
+      "const a = n.toFixed(1)",
+      "const b = n.toLocaleString()",
+      "const c = n.toLocaleString(undefined)",
+      "const d = new Intl.NumberFormat('de').format(n)",
+    ].join("\n")
+    for (const rel of [
+      `${C7}/widgets/__probe__.ts`,
+      `${C7}/widgets/__probe__.tsx`,
+      `${AN}/widgets/__probe__.ts`,
+      `${AN}/widgets/__probe__.tsx`,
+    ]) {
+      const messages = await gateMessages(rel, code)
       assert.ok(messages.some(isRegistrarHit), `${rel}: registrar gate dropped`)
       assert.equal(messages.filter(isDateHit).length, 1, `${rel}: date gate dropped`)
-      assert.equal(messages.filter(isNumberHit).length, 3, `${rel}: number gate missing`)
+      assert.equal(messages.filter(isNumberHit).length, 4, `${rel}: number gate missing`)
     }
-  })
-
-  it("analytics widgets do not carry the number gate yet (they join it after migrating)", () => {
-    assert.equal(widgetTsx.filter(isNumberHit).length, 0)
   })
 
   it("the app's UI keeps the date gate", async () => {

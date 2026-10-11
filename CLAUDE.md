@@ -204,12 +204,15 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `ProfileGate`; an ESLint gate bans `Intl.DateTimeFormat`/`toLocaleDateString`/`toLocaleTimeString`
    in widget code, and a second one bans `toFixed`, a `toLocaleString()` without a locale (no
    argument, `undefined`, `null`, `[]`) and a hand-built `Intl.NumberFormat` (exempt: the
-   kit's own `format.ts`; on for widget-shell's `src/ui` and camunda7's `src/widgets`; a
-   connector's widgets join it in their own block in `eslint.config.mjs` once their raw calls
-   moved to the kit, flipping the pinned "not yet" probe in `scripts/eslint-gates.test.mjs`).
-   A count reaches a catalog entry already formatted (`formatNumber`), and the entry puts the
-   noun in the right number (camunda7: `countOf` in `messages/plural.ts`), never a
-   `…One`/`…Other` key pair;
+   kit's own `format.ts`; on for widget-shell's `src/ui` and both connectors' `src/widgets`,
+   each connector in its own union block in `eslint.config.mjs`, pinned by
+   `scripts/eslint-gates.test.mjs`; a new connector's widgets join it in a block of their own
+   once their raw calls moved to the kit). A count reaches a catalog entry already formatted
+   (`formatNumber`), and the entry puts the noun in the right number (`countOf` in camunda7's
+   `messages/plural.ts`, `plural(…)` in analytics'), never a `…One`/`…Other` key pair;
+   `ViewMeta` (`formatLookback`, `formatViewMeta`) for the quiet reference line under a data
+   view's title, "Letzte 7 Tage · 6 Engines (3 ohne Metriken) · Stand 14:32", every part left
+   out when unknown;
    `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
    `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
    settings sections; `useBpmnViewer` (it owns the fixed light canvas, both themes) +
@@ -254,16 +257,23 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    brand override goes under BOTH (a light-only `:root` value shows in dark); a theme rule it
    cannot model (`html.dark`, `[data-theme]`, a media query or layer around `:root`) throws.
    **Function icons are Lucide, never glyphs or emoji:** `Icon` (`currentColor`, 16 px, stroke
-   2.5 set once in `theme.css`, `dense` → 2 for tight bars and rows). `lucide-react` is a
+   2.5 set once in `theme.css`, `dense` → 2 for tight bars and rows; 16 px in chrome and 24 px
+   previews are the only sizes, `scanIconSizes` below). `lucide-react` is a
    widget-shell peer, deduped in the bundle (invariant 4); a workspace package that imports it
    pins devDependency `0.562.0`, the version mcp-use's graph peers on: any other version
    resolves a second mcp-use/toolkit instance for that package and splits the React contexts
-   between it and widget-shell in tests. `AskAiButton` takes `icon` (the Lucide icon of the
-   concrete function, e.g. `FileSearch` for "explain") and a verb that names the chat ("Im
-   Chat erklären" / "Explain in chat"); without them it shows `MessageSquare` + "Im Chat
-   analysieren"; every variant is a secondary outline (the deterministic next step is the
-   view's primary action), never ✦ or Sparkles (an ESLint `no-restricted-imports` gate bans
-   lucide-react's sparkle icons in every widget tree). `OpenInCockpitLink` takes `vendor`
+   between it and widget-shell in tests. A chat hand-off is the kit's `HandOffButton`
+   (`action` from `HAND_OFF_ACTIONS`, `widget-shell/src/ui/hand-off-button.tsx`): ONE
+   vocabulary for the product, each function with one Lucide icon and one verb that names the
+   chat (`kitLabels().handOff`, de + en: "Ursache im Chat klären" / "Find cause in chat",
+   "Fehler im Chat erklären", "Im Chat bewerten" …), the same in every module, no icon for two
+   functions; a row's icon button names its subject in `title`. It renders the kit's
+   `AskAiButton` (`icon` + `label`; without them `MessageSquare` + "Im Chat analysieren"),
+   every variant a secondary outline (the deterministic next step is the view's primary
+   action), never ✦ or Sparkles (an ESLint `no-restricted-imports` gate bans lucide-react's
+   sparkle icons in every widget tree; a `no-restricted-syntax` gate bans `AskAiButton` in
+   both connectors' widgets, import, renamed import and element alike, so a new function goes
+   into the kit's table with its icon and both labels). `OpenInCockpitLink` takes `vendor`
    (`provider.branding.displayName`) and reads "In CIB seven öffnen" / "Open in CIB seven",
    with "öffnet in neuem Tab" in its accessible name. `WidgetHeader` has no icon tile; a state
    goes into `badge` (a `StatusBadge`).
@@ -275,22 +285,35 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `allow` with a reason for a sentence-initial she/its that refers to an instance, not to
    the reader), `scanGlyphs(dir)` over widget code and catalogs (no ✦ ⊡ ▦ ↗ › ⚠ ⚙ ⏱ ⤧ ▶ ✓ ✕ ▤
    ⊞ ↻ × and no emoji in JSX or strings, no lone symbol such as → − ‹ as an element's whole
-   content, no Lucide sparkle import) and `scanColors(dir, { allow })` over widget code (no
+   content, no Lucide sparkle import), `scanIconSizes(dir)` over widget code (a literal icon
+   `size` only 16 or 24; the toolkit `Badge` forces its icons to 12 px, so an icon chip is a
+   plain outlined span) and `scanColors(dir, { allow })` over widget code (no
    palette class such as `text-red-600`/`bg-black/50`, no hex, `rgb()`/`oklch()` …; `allow`
-   names a file with its reason, shrink-only). widget-shell runs all three in
+   names a file with its reason, shrink-only). widget-shell runs all four in
    `src/ui/brand-gates.test.ts`; camunda7 in `src/brand-gates.test.ts` (glyphs over all of
-   `src`, colours over `src/widgets`) and `src/messages/catalog-text.test.ts` (every catalog,
-   plus en/de holding the same keys, so no English fallback leaks into a German view), with
-   its glossary (`src/messages/GLOSSARY.md`: Incident, aussetzen, läuft, Geschäftsschlüssel,
-   Versuche …) held by `src/messages/glossary.test.ts`; analytics adds its own as it
-   migrates. camunda7's hand-offs render through `HandOffButton`
-   (`src/widgets/lib/hand-off-button.tsx`): one entry per function with its Lucide icon and
-   its `handOff.*` label ("Behebung im Chat planen", "Fehler im Chat erklären", "Ticket im
-   Chat entwerfen" …), placed after the deterministic action it accompanies. A verdict
-   travels as data and the widget words it in the view's locale (the engine overview's line,
-   `widgets/lib/health-verdict.ts`); a show tool titles its view only in a language the
-   profile names (`localizeViewFor` in `lib/server-locale.ts`), with "system" it sets no
-   title and the widget's own heading names the view.
+   `src`, icon sizes and colours over `src/widgets`) and `src/messages/catalog-text.test.ts`
+   (every catalog, plus en/de holding the same keys, so no English fallback leaks into a German
+   view); analytics in `src/brand-gates.test.ts` (widget texts, Ask-AI intents and model
+   summaries in de and en, glyphs over `src/widgets` + `src/messages`, icon sizes and colours
+   over `src/widgets`). **One term per thing across the product:** the terms the modules' views
+   show side by side (camunda7's cross-engine cockpit embeds analytics' landscape) are the
+   kit's `PRODUCT_GLOSSARY` (`/testing`): "Incident" (never "Vorfall"), "Jobs ohne Versuche" /
+   "jobs without retries" for the engine's `failedJobs` and `camunda_jobs_failed` (never
+   "Fehlgeschlagene Jobs", "tote Jobs"), "bereitstellen, bereitgestellt" (never "deployt";
+   the noun stays "Deployment"), Geschäftsschlüssel, aussetzen, Versuche, alle Engines. Each
+   connector runs `glossaryFindings` with it plus its own rules over every catalog in
+   `src/messages/glossary.test.ts` and lists both in `src/messages/GLOSSARY.md` (the shared
+   table and the hand-off table identical in both; `unnamedGlossaryTerms` keeps the document
+   and the gate together): camunda7's own (aktivieren, läuft, als gelöst markieren …),
+   analytics' own ("nicht belastbar", "Zeitraum", "Kennzahl" …, en/de holding the same keys).
+   Hand-offs are placed after the deterministic action they accompany. A verdict travels as
+   data and the widget words it in the view's locale (the engine overview's line,
+   `widgets/lib/health-verdict.ts`); every show tool of every module titles its view only in a
+   language the profile names (the kit's `createLocalizeViewFor`, bound as `localizeViewFor`
+   in each module's `server-locale.ts`): with "system", no caller or a store outage it sets no
+   title, and the widget's own heading names the view in the host's language
+   (`view-title.test.ts` in each connector sweeps every show tool). `setFormatLocale` from
+   `/testing` renders a widget's numbers in a language in a test.
    **Everything a widget tells the model is built by `askAiPrompt`/`modelContextText`**
    (`widget-shell/src/ui/ask-ai-prompt.ts`) — an Ask-AI hand-off is posted as the
    USER's message. A spec is a short catalogue intent (`askAi.*` in the module's

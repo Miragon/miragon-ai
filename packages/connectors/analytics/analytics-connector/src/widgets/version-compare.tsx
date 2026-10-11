@@ -1,21 +1,29 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import type { VersionCompareResult } from "@miragon-ai/analytics-client"
-import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
+import {
+  HandOffButton,
+  ViewMeta,
+  formatLookback,
+  formatNumber,
+} from "@miragon-ai/widget-shell/widgets"
 import { useT, type T } from "../messages/use-t.js"
 import { versionCompareCaveats, type VersionCompareCaveats } from "../version-compare-caveats.js"
 import {
   ComparisonCard,
   ComparisonEmptyState,
+  SuppressedBadge,
   buildComparisonMetrics,
   deltaFacts,
 } from "./comparison-shared.js"
 import { engineIdsOf, useHandOff, type HandOff } from "./hand-off.js"
+import { enginesMeta } from "./view-meta.js"
 
 export type VersionCompareData = VersionCompareResult | null
 
 /**
- * The caveat under the table: why the incident rates read "n/a" (the incident
- * metric carries no version label, so they are unknown — never 0).
+ * The caveat under the table: why the incident rates read "not measured"
+ * (the incident metric carries no version label, so they are unknown —
+ * never 0).
  */
 export function versionCompareNote(t: T, caveats: VersionCompareCaveats): string | undefined {
   return caveats.incidentRatesUnavailable ? t("aVersionCompare.incidentKpisUnavailable") : undefined
@@ -68,21 +76,37 @@ export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
       beforeLabel={`v${data.versionA}`}
       afterLabel={`v${data.versionB}`}
       metrics={metrics}
+      suppressed={data.suppressed}
       note={versionCompareNote(t, caveats)}
-      actions={<AskAiButton prompt={ask(versionCompareHandOff(data, caveats))} variant="primary" />}
+      actions={
+        <HandOffButton
+          action="assess"
+          prompt={ask(versionCompareHandOff(data, caveats))}
+          variant="primary"
+        />
+      }
+      meta={
+        <ViewMeta
+          period={formatLookback(`${data.windowDays}d`)}
+          engines={enginesMeta(data.engines)}
+          asOf={data.asOf}
+        />
+      }
       badges={
         <>
           <Badge>{data.processDefinitionKey}</Badge>
           <Badge variant="secondary">
-            v{data.versionA} ↔ v{data.versionB}
-          </Badge>
-          <Badge variant="outline">
-            {t("aVersionCompare.badgeWindow", { days: data.windowDays })}
+            {t("aVersionCompare.versionsBadge", {
+              versionA: data.versionA,
+              versionB: data.versionB,
+            })}
           </Badge>
           {data.suppressed && (
-            <Badge variant="destructive">
-              {t("aVersionCompare.badgeInsufficientSignal", { min: data.minBucketSize })}
-            </Badge>
+            <SuppressedBadge>
+              {t("aVersionCompare.badgeInsufficientSignal", {
+                min: formatNumber(data.minBucketSize),
+              })}
+            </SuppressedBadge>
           )}
         </>
       }

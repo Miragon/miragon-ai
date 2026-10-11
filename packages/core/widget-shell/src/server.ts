@@ -145,9 +145,12 @@ export {
 } from "./toolsets.js"
 export {
   createLocalizeFor,
+  createLocalizeViewFor,
+  createViewLocaleOf,
   resolveProfileLocale,
   type ServerT,
   type Translator,
+  type ViewLocale,
 } from "./server-locale.js"
 export { parseModuleSlice, requireProfileKey, saveModuleSlice } from "./profile-slice.js"
 export { catalogueSyncIssues } from "./catalogue-sync.js"

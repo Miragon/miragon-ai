@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
   Alert,
   AlertDescription,
@@ -239,9 +239,15 @@ type Mode = "frequency" | "duration"
 export function BpmnHeatmapWidget({
   data,
   labels,
+  meta,
 }: {
   data: BpmnHeatmapData | null
   labels?: BpmnHeatmapLabels
+  /**
+   * The view's reference frame under the title (a `ViewMeta`: period,
+   * engines, as-of time). Replaces the period badge, whose period it carries.
+   */
+  meta?: ReactNode
 }) {
   const [mode, setMode] = useState<Mode>("frequency")
   const l = { ...DEFAULT_HEATMAP_LABELS, ...labels }
@@ -270,9 +276,11 @@ export function BpmnHeatmapWidget({
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <strong>{l.title}</strong>
           <Badge>{data.processDefinitionKey}</Badge>
-          <Badge variant="outline">
-            {l.window} {data.period}
-          </Badge>
+          {!meta && (
+            <Badge variant="outline">
+              {l.window} {data.period}
+            </Badge>
+          )}
           <div className="ml-auto flex gap-1">
             <Button
               size="sm"
@@ -292,12 +300,14 @@ export function BpmnHeatmapWidget({
             </Button>
           </div>
         </div>
+        {meta && <div className="-mt-1 mb-3">{meta}</div>}
 
         <BpmnHeatmap
           bpmnXml={data.bpmnXml}
           nodeFrequencies={values}
           diagramAriaLabel={l.diagramAriaLabel}
           errorTitle={l.errorTitle}
+          errorHint={l.errorHint}
           noHeatLabel={l.noHeat}
         />
 

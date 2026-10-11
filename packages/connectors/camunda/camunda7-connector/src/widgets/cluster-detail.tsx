@@ -1,4 +1,5 @@
 import {
+  HandOffButton,
   DrillButton,
   FilterBar,
   KpiGrid,
@@ -29,7 +30,6 @@ import {
 } from "./remediation.js"
 import { useHandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
-import { HandOffButton } from "./lib/hand-off-button.js"
 import { useT } from "../messages/use-t.js"
 
 /** Page size — mirrors the server default (`CLUSTER_DETAIL_ROWS`). */

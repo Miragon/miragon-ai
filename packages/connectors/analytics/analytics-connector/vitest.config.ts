@@ -5,7 +5,7 @@ export default mergeConfig(
   sharedConfig,
   defineConfig({
     test: {
-      include: ["src/**/*.test.ts"],
+      include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
       coverage: {
         // Ratchet: frozen ~2 points under the baseline. Raise when you push
         // coverage up; never lower. Documented re-baseline 2026-08-13: the
@@ -24,8 +24,14 @@ export default mergeConfig(
         // measured 66.3 / 40.96 / 63.28 / 67.35). The #338 hand-off builders,
         // every model description and the failure dashboard's cell scope
         // under test (measured standalone 56.65 / 39.72 / 54.63 / 58.48) stay
-        // under the stacked floor.
-        thresholds: { statements: 64, branches: 38, functions: 61, lines: 65 },
+        // under the stacked floor. Raised 2026-10-11 with the widget DOM
+        // suites (`*.test.tsx`: the comparison verdicts, meta lines and
+        // hand-offs in de and en) and the brand gates: measured
+        // 90.53 / 75.27 / 91.51 / 92.35. Raised again with the ma3 review
+        // fixes (the settings section's error state, the heatmap's
+        // missing-diagram cause, the measured window lengths under test):
+        // measured 92.8 / 79.36 / 92.95 / 94.67.
+        thresholds: { statements: 90, branches: 77, functions: 90, lines: 92 },
       },
     },
   }),

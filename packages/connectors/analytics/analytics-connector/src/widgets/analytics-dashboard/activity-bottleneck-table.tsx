@@ -10,7 +10,13 @@ import {
   AlertDescription,
   Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { AskAiButton, Section, WidgetShell, formatDuration } from "@miragon-ai/widget-shell/widgets"
+import {
+  HandOffButton,
+  Section,
+  WidgetShell,
+  formatDuration,
+  formatNumber,
+} from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
 import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
@@ -120,7 +126,9 @@ export function ActivityBottleneckTable({
                         <TableCell>
                           <Badge variant="secondary">{act.activityType}</Badge>
                         </TableCell>
-                        <TableCell className="text-right">{act.executionCount}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatNumber(act.executionCount)}
+                        </TableCell>
                         <TableCell className="text-right">
                           {formatDuration(act.avgDurationMs)}
                         </TableCell>
@@ -131,10 +139,9 @@ export function ActivityBottleneckTable({
                           {formatDuration(act.totalTimeMs)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <AskAiButton
+                          <HandOffButton
+                            action="explainBottleneck"
                             variant="icon"
-                            label={t("aBottleneck.analyzeLabel")}
-                            title={t("aBottleneck.analyzeLabel")}
                             prompt={ask(activityBottleneckHandOff(act, data))}
                           />
                         </TableCell>

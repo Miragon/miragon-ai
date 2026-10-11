@@ -6,6 +6,7 @@ import {
   type PromSample,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
+import { asOfNow } from "./helpers.js"
 
 /** Per-engine row of the landscape. Absolute counts only — see the module note. */
 export interface EngineLandscapeEngine {
@@ -66,6 +67,11 @@ export interface EngineLandscapeResult {
     openIncidents: number
     failedJobs: number
   }
+  /**
+   * When the figures were read from Prometheus (ISO timestamp): the "Stand"
+   * a view shows. Optional only for payloads recorded before it existed.
+   */
+  asOf?: string
 }
 
 /** A `(engine_id, process_definition_key)` cell of the matrix. */
@@ -105,6 +111,7 @@ export async function engineLandscape(
   ch: PrometheusClient,
   params: { engine?: EngineFilterInput } = {},
 ): Promise<EngineLandscapeResult> {
+  const asOf = asOfNow()
   const sel = selector(engineMatcher(params.engine))
 
   // Flat `sum by (…)` per metric — the joining happens in TS. Nesting the
@@ -209,6 +216,7 @@ export async function engineLandscape(
   const sharedProcessKeys = processes.filter((p) => p.shared).map((p) => p.processDefinitionKey)
 
   return {
+    asOf,
     engines,
     processes,
     sharedProcessKeys,

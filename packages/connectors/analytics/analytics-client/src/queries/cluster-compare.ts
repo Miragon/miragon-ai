@@ -53,6 +53,11 @@ export interface ClusterCompareResult {
   suppressed: boolean
   kpis: ClusterCompareKpi[]
   delta: ClusterCompareDelta
+  /**
+   * When the figures were read from Prometheus (ISO timestamp): the "Stand"
+   * a view shows. Optional only for payloads recorded before it existed.
+   */
+  asOf?: string
 }
 
 /**
@@ -118,6 +123,8 @@ export async function clusterCompare(
     minBucketSize: minBucket,
     suppressed: belowMinBucket([b, a], minBucket),
     kpis: [b, a],
+    // The windows were clamped to this `now`: the figures are as of it.
+    asOf: new Date(now * 1000).toISOString(),
     // Exact lengths, not the rounded `window_days`: a 2 h window is 0.083 d.
     delta: compareKpiDelta(b, a, {
       baseline: beforeWin.seconds / DAY_SECONDS,

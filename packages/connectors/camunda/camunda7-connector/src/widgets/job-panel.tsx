@@ -3,6 +3,7 @@ import { Badge, Button } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "../view-models.js"
 import {
+  HandOffButton,
   KpiGrid,
   ListTable,
   LogText,
@@ -18,7 +19,6 @@ import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { CockpitListFooter } from "./list-footer.js"
 import { useEngineAction } from "./lib/engine-action.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
-import { HandOffButton } from "./lib/hand-off-button.js"
 import { useT } from "../messages/use-t.js"
 
 export type { JobPanelData }

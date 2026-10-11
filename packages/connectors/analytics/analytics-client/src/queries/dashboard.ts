@@ -10,11 +10,13 @@ import {
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
 import {
+  asOfNow,
   byLabel,
   first,
   firstOrNull,
   kpiQueries,
   ratePct,
+  reportingEngineIds,
   reportingEnginesQuery,
 } from "./helpers.js"
 import type {
@@ -56,6 +58,7 @@ export async function dashboardData(
   ch: PrometheusClient,
   params: { processDefinitionKey?: string; period: Period; engine?: EngineFilterInput },
 ): Promise<AnalyticsDashboardData> {
+  const asOf = asOfNow()
   const range = params.period
   const engine = engineMatcher(params.engine)
   const keyMatcher = params.processDefinitionKey
@@ -135,6 +138,8 @@ export async function dashboardData(
     processDefinitionKey: params.processDefinitionKey ?? null,
     period: params.period,
     engines: engineIdsOf(params.engine),
+    reportingEngines: reportingEngineIds(reporting),
+    asOf,
     totalCount,
     completedCount: Math.round(first(completed)),
     incidentsCreated,
@@ -271,6 +276,7 @@ export async function failureDashboardData(
   ch: PrometheusClient,
   params: { engine?: EngineFilterInput },
 ): Promise<FailureDashboardData> {
+  const asOf = asOfNow()
   const sel = selector(engineMatcher(params.engine))
 
   const [patterns, runningByKey, incidentsByKey, deadJobsByKey] = await Promise.all([
@@ -320,5 +326,6 @@ export async function failureDashboardData(
       processBreakdown.length > 0 ? processBreakdown[0].processDefinitionKey : null,
     errorPatterns,
     processBreakdown,
+    asOf,
   }
 }

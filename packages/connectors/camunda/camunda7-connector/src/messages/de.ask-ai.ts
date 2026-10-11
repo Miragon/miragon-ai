@@ -8,7 +8,7 @@ import type { Camunda7AskAiKey } from "./en.ask-ai.js"
  */
 export const deAskAi: Record<Camunda7AskAiKey, string> = {
   "askAi.jobs.triage":
-    "Ordne die fehlgeschlagenen Jobs nach Ursache: Gruppier sie, nenn je Gruppe die wahrscheinliche Ursache und empfiehl je Gruppe eine Maßnahme. Nur empfehlen, ändere nichts.",
+    "Ordne die Jobs ohne Versuche nach Ursache: Gruppier sie, nenn je Gruppe die wahrscheinliche Ursache und empfiehl je Gruppe eine Maßnahme. Nur empfehlen, ändere nichts.",
   "askAi.jobs.explainFailure":
     "Erklär, warum dieser Job fehlgeschlagen ist: Was ist kaputt, ist der Fehler vorübergehend oder kommt er wieder, und hilft ein neuer Versuch oder schlägt er wieder fehl? Ändere nichts.",
   "askAi.jobs.draftTicket":
@@ -54,7 +54,7 @@ export const deAskAi: Record<Camunda7AskAiKey, string> = {
   "askAi.process.healthCheck":
     "Prüf den Zustand dieser Prozessdefinition: gesund oder beeinträchtigt, die schlechtesten Aktivitäten, die häufigste Incident-Meldung, die wahrscheinlichste Ursache und einen nächsten Schritt. Ändere nichts.",
   "askAi.bpmn.explainState":
-    "Erklär den Zustand dieser Instanz im Diagramm: welche Elemente den Fortschritt blockieren, was jeder Incident bedeutet, ob die Häufungen fehlgeschlagener Jobs auf einen systematischen Fehler deuten, und die nächsten Schritte nach Priorität.",
+    "Erklär den Zustand dieser Instanz im Diagramm: welche Elemente den Fortschritt blockieren, was jeder Incident bedeutet, ob die Häufungen von Jobs ohne Versuche auf einen systematischen Fehler deuten, und die nächsten Schritte nach Priorität.",
   "askAi.landscape.triage":
     "Ordne die betroffenen Prozesse dieser Engine nach Schwere: Nenn den dringendsten, seine wahrscheinliche Ursache und den ersten Schritt zur Behebung.",
   "askAi.incidents.processRootCause":

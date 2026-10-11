@@ -7,12 +7,13 @@ import {
   TableCell,
 } from "@miragon/mcp-toolkit-ui"
 import {
-  AskAiButton,
+  HandOffButton,
   CountPill,
   Section,
   TableEmptyState,
   TableSkeleton,
   WidgetShell,
+  formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData, ProcessFailureItem } from "@miragon-ai/analytics-client"
 import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
@@ -96,11 +97,15 @@ export function FailureRateTable({
                         <TableCell className="font-mono text-sm font-medium">
                           {proc.processDefinitionKey}
                         </TableCell>
-                        <TableCell className="text-right">{proc.runningNow}</TableCell>
-                        <TableCell className="text-right">
-                          <CountPill tone="danger">{proc.openIncidents}</CountPill>
+                        <TableCell className="text-right tabular-nums">
+                          {formatNumber(proc.runningNow)}
                         </TableCell>
-                        <TableCell className="text-right">{proc.deadJobs}</TableCell>
+                        <TableCell className="text-right">
+                          <CountPill tone="danger">{formatNumber(proc.openIncidents)}</CountPill>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatNumber(proc.deadJobs)}
+                        </TableCell>
                         <TableCell>
                           {proc.incidentRatePct === null ? (
                             <span className="text-muted-foreground text-xs">—</span>
@@ -113,16 +118,15 @@ export function FailureRateTable({
                                 />
                               </div>
                               <span className="text-muted-foreground text-xs tabular-nums">
-                                {proc.incidentRatePct}%
+                                {formatNumber(proc.incidentRatePct, { maximumFractionDigits: 1 })}
                               </span>
                             </div>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <AskAiButton
+                          <HandOffButton
+                            action="findCause"
                             variant="icon"
-                            title={t("aFailureRate.analyzeLabel")}
-                            label={t("aFailureRate.analyzeLabel")}
                             prompt={ask(failureRateHandOff(proc, data))}
                           />
                         </TableCell>

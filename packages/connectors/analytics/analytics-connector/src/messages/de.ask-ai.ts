@@ -1,23 +1,28 @@
 import type { AnalyticsAskAiKey } from "./en.ask-ai.js"
 
-/** German analytics Ask-AI intents — same keys as `en.ask-ai.ts` (the type enforces parity). */
+/**
+ * German analytics Ask-AI intents — same keys as `en.ask-ai.ts` (the type
+ * enforces parity). Posted in the user's name, so they ask the AI in plain
+ * du-German, with no dash as a connector and the guardrail ending
+ * ("Ändere nichts.") kept.
+ */
 export const deAskAi: Record<AnalyticsAskAiKey, string> = {
   "askAi.clusterCompare":
-    "Deute diesen Vorher/Nachher-Vergleich um ein Deployment in 3–4 Sätzen: echte Verschlechterung oder Rauschen, welche Kennzahl (und welches Element) sie treibt, und eine Maßnahme — zurückrollen, weitere Rollouts anhalten oder akzeptieren.",
+    "Deute diesen Vergleich vor und nach einem Deployment in drei bis vier Sätzen. Ist es eine echte Verschlechterung oder Rauschen? Welche Kennzahl und welches Element treiben sie? Empfiehl eine Maßnahme: zurückrollen, weitere Rollouts stoppen oder akzeptieren.",
   "askAi.engineCompare":
-    "Deute diesen Vergleich eines Prozesses auf zwei Engines in 3–4 Sätzen: läuft er auf der zweiten Engine wirklich schlechter oder ist es Rauschen, welche Kennzahl treibt den Abstand, und eine empfohlene Maßnahme.",
+    "Deute diesen Vergleich eines Prozesses auf zwei Engines in drei bis vier Sätzen. Läuft er auf der zweiten Engine wirklich schlechter, oder ist es Rauschen? Welche Kennzahl treibt den Abstand? Empfiehl eine Maßnahme.",
   "askAi.versionCompare":
-    "Deute diesen Versionsvergleich in 3–4 Sätzen: echte Verschlechterung der neuen Version oder Rauschen, welches Element sie treibt, und eine Maßnahme — laufende Instanzen zurückmigrieren, Rollout anhalten oder akzeptieren.",
+    "Deute diesen Versionsvergleich in drei bis vier Sätzen. Ist die neue Version wirklich schlechter, oder ist es Rauschen? Welches Element treibt den Unterschied? Empfiehl eine Maßnahme: laufende Instanzen zurückmigrieren, den Rollout stoppen oder akzeptieren.",
   "askAi.landscapeCompare":
-    "Vergleiche diesen Prozess zwischen den beiden Engines: zeig den Vergleich nebeneinander, sag, auf welcher Engine er besser läuft und ob der Abstand signifikant ist, und eine empfohlene Maßnahme. Nur empfehlen.",
+    "Vergleich diesen Prozess zwischen den beiden Engines. Zeig den Vergleich nebeneinander, sag, auf welcher Engine er besser läuft und ob der Abstand signifikant ist, und empfiehl eine Maßnahme. Nur empfehlen.",
   "askAi.executionSummary":
-    "Bewerte die angezeigte Prozessanalyse: gesund oder sich verschlechternd, die wahrscheinlichste Ursache von Incidents, und der wertvollste nächste Schritt. Fasse dich kurz.",
+    "Bewerte die Prozessanalyse auf dem Bildschirm. Ist alles gesund, oder wird es schlechter? Was verursacht die Incidents am wahrscheinlichsten, und welcher nächste Schritt bringt am meisten? Fass dich kurz.",
   "askAi.activityBottleneck":
-    "Erkläre, warum diese Aktivität ein Engpass ist: lange Ausführungen oder schiere Menge, Warten oder Arbeiten je nach Typ, und was als Nächstes am meisten bringt. Nichts ändern.",
+    "Erklär, warum diese Aktivität ein Engpass ist: lange Ausführungen oder schiere Menge, Warten oder Arbeiten je nach Typ. Sag mir, was ich mir als Nächstes ansehen sollte. Ändere nichts.",
   "askAi.failureSummary":
-    "Triagiere die offenen Incidents: Fehlermuster nach wahrscheinlicher gemeinsamer Ursache gruppieren, einen systemischen Ausfall von einzelnen Prozessfehlern unterscheiden und ordnen, was zuerst zu beheben ist. Gegen den Live-Zustand prüfen; nur Analyse.",
+    "Ordne die offenen Incidents nach Dringlichkeit. Gruppier sie nach ihrer wahrscheinlichen gemeinsamen Ursache, unterscheide einen systemischen Ausfall von einzelnen Fehlern in einzelnen Prozessen und sag mir, was ich zuerst beheben sollte. Prüf das gegen den Live-Zustand. Nur analysieren.",
   "askAi.failureRate":
-    "Erkläre, was die offenen Incidents dieses Prozesses treibt: ist es eine Verschlechterung (jüngste Zeiträume oder die Fenster um ein Deployment), und welche Aktivität am häufigsten fehlschlägt. Nichts ändern.",
+    "Erklär, was die offenen Incidents dieses Prozesses treibt. Ist es eine Verschlechterung (jüngste Zeiträume oder die Zeiträume um ein Deployment), und welche Aktivität schlägt am häufigsten fehl? Ändere nichts.",
   "askAi.errorPattern":
-    "Finde die Ursache dieser Gruppe offener Incidents: lies ihre Meldungen und die fehlschlagende Aktivität, dann nenne die wahrscheinliche Ursache, ob sie vorübergehend oder systemisch ist, und die empfohlene Behebung. Nichts ändern.",
+    "Finde die Ursache dieser Gruppe offener Incidents. Lies ihre Meldungen und die fehlschlagende Aktivität, dann nenn die wahrscheinliche Ursache, ob sie vorübergehend oder systemisch ist, und die Behebung, die du empfiehlst. Ändere nichts.",
 }

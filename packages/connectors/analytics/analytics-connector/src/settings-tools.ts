@@ -12,9 +12,11 @@ import {
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
 import {
   localizeFor,
+  localizeViewFor,
   resolveSettingsAuthUserId,
   resolveSettingsKey,
   type ProfileSource,
+  type ServerT,
 } from "./server-locale.js"
 import {
   ANALYTICS_MODULE_KEY,
@@ -64,14 +66,12 @@ export function registerSettingsTools(
     canSave: Boolean(save) && resolveSettingsKey(ctx) !== undefined,
   })
 
-  const summarize = async (ctx: unknown, view: AnalyticsSettingsView): Promise<string> => {
-    const t = await localizeFor(store, ctx)
-    return t("aSum.settings", {
+  const summarize = (t: ServerT, view: AnalyticsSettingsView): string =>
+    t("aSum.settings", {
       period: view.settings.defaultPeriod,
       minBucketSize: view.settings.minBucketSize,
       changeHint: view.canSave ? t("aSum.settingsChangeHint") : "",
     })
-  }
 
   server.tool(
     {
@@ -85,13 +85,16 @@ export function registerSettingsTools(
     },
     withToolErrors(async (_params, ctx) => {
       const view = await loadView(ctx)
+      const { t, title } = await localizeViewFor(store, ctx)
       return buildSingleWidgetView({
         widget: "analytics:settings",
         app: "analytics",
         dataType: "analytics:settings",
         data: { ...view },
-        title: "Analytics Settings",
-        summary: await summarize(ctx, view),
+        // The view title in the language the profile names (the section
+        // heading's own key); none with "system", where the heading names it.
+        title: title("aSettings.heading"),
+        summary: summarize(t, view),
       })
     }),
   )
