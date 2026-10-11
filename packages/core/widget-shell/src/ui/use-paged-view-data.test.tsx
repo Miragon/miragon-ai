@@ -395,4 +395,16 @@ describe("usePagedViewData — page-0 fetch states", () => {
     expect(result.current.firstPage).toBeNull()
     expect(result.current.stale).toBe(false)
   })
+
+  it("bridges a failed search over the page the list SHOWS, also one carried into a new scope", async () => {
+    const { result, rerender } = setup({ initialData: A, args: {}, scope: "list-1" })
+    // The same handed-in page, now this list's (scope list-2) …
+    rerender({ initialData: A, args: {}, scope: "list-2" })
+    callTool.mockRejectedValueOnce(new Error("engine down"))
+    // … so when its first search fails for good, the rows it keeps are this page.
+    rerender({ initialData: null, args: SEARCH, scope: "list-2" })
+    await waitFor(() => expect(result.current.error?.message).toBe("engine down"))
+    expect(result.current.firstPage).toBe(A)
+    expect(result.current.stale).toBe(true)
+  })
 })
