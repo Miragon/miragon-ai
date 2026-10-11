@@ -6,9 +6,13 @@
  *    every module's catalogs (plus a module's own rules);
  *  - `scanGlyphs` — no Unicode glyphs, emoji or sparkle icons in widget code;
  *  - `scanIconSizes` — icons at the CI sizes only (16 px chrome, 24 px previews);
- *  - `scanColors` — role names only, no palette classes or raw colours;
+ *  - `scanColors` — role names only, no palette classes, retired accents or
+ *    raw colours; `stylesheetColorFindings` — no raw colour in a stylesheet's
+ *    rules;
  *  - `parseThemeVariables` + `contrastFindings` with `toneContrastPairs()` /
- *    `ROLE_CONTRAST_PAIRS` — WCAG contrast of the theme, light and dark;
+ *    `ROLE_CONTRAST_PAIRS` — WCAG contrast of the theme, light and dark,
+ *    over the toolkit's Miragon theme (`toolkitThemeStylesheets()`) plus a
+ *    consumer's role overrides;
  *  - `setFormatLocale` — render numbers and dates in a language in a test.
  * `scanGlyphs`, `scanIconSizes` and `scanColors` parse sources with
  * `typescript` (an optional peer).
@@ -36,7 +40,13 @@ export {
   scanIconSizes,
   type IconSizeFinding,
 } from "./icon-sizes.js"
-export { colorFindings, scanColors, type ColorFinding, type ScanColorsOptions } from "./colors.js"
+export {
+  colorFindings,
+  scanColors,
+  stylesheetColorFindings,
+  type ColorFinding,
+  type ScanColorsOptions,
+} from "./colors.js"
 export {
   composite,
   contrastFindings,
@@ -44,6 +54,7 @@ export {
   measureContrast,
   parseThemeVariables,
   resolveColor,
+  toolkitThemeStylesheets,
   type ContrastPair,
   type ContrastResult,
   type Rgba,

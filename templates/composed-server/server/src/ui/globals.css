@@ -18,55 +18,9 @@
 @source "../../node_modules/@miragon-ai/analytics-connector/src";
 @source "../../../modules/*/src/**/*.{ts,tsx}";
 /*
- * The shell's tokens (the toolkit's shadcn ramp + dark variant) WITHOUT a
- * forced font: the host's font (SEP-1865 `--font-sans`) or the system stack
- * renders text, and `font-mono` stays monospace. Do not import
- * `@miragon/mcp-toolkit-ui/globals.css` next to it — it re-adds a
- * `font-family … !important` rule and ~61 KB of base64 font per view. For a
- * brand font, load it yourself and set `--font-sans` in an `@theme` block.
+ * The look: the toolkit's Miragon theme plus your brand overrides, both in
+ * brand.css. Do not import `@miragon/mcp-toolkit-ui/globals.css` here (a
+ * second Tailwind entry); `@miragon/mcp-toolkit-ui/fonts.css` is opt-in
+ * (Geist as base64 in every view document).
  */
-@import "@miragon-ai/widget-shell/theme.css";
-
-/*
- * Your brand. The shell theme above defines every role the widgets read:
- * the neutrals (background / card / muted / border …), the status tones
- * (danger / warning / success / info, each with -soft for a tint and -ink
- * for its text), the link and the focus ring, in light and dark. To brand
- * the UI, override those ROLE names here, under :root AND .dark, e.g.
- *
- *   :root { --info: #0055aa; --info-soft: #e6f0fa; --info-ink: #0055aa; }
- *   .dark { --info: #6b9ce0; --info-soft: #14233a; --info-ink: #6b9ce0; }
- *
- * Repeat every override under .dark: the host's dark mode sets .dark on
- * <html>, where :root matches too, so a light-only value shows in dark. Keep
- * the pairs readable (text 4.5:1, edges and dots 3:1); `contrastFindings`
- * from @miragon-ai/widget-shell/testing measures them in both modes. Never
- * add palette classes in widgets.
- *
- * The `--m-*` accents below are the legacy brand ramp the bundled connector
- * widgets still read for links and selection; they retire with the next
- * theme release. Swap their values for your own brand.
- */
-@theme inline {
-  --color-m-blue: var(--m-blue);
-  --color-m-blue-light: var(--m-blue-light);
-  --color-m-blue-soft: var(--m-blue-soft);
-  --color-m-green: var(--m-green);
-  --color-m-green-soft: var(--m-green-soft);
-}
-
-:root {
-  --m-blue: #1b3b6f;
-  --m-blue-light: #2e5ba8;
-  --m-blue-soft: #eef3fa;
-  --m-green: #2d8659;
-  --m-green-soft: #eff7f2;
-}
-
-.dark {
-  --m-blue: #7aa7e0;
-  --m-blue-light: #5b8ad0;
-  --m-blue-soft: #16243a;
-  --m-green: #5cc08a;
-  --m-green-soft: #11271c;
-}
+@import "./brand.css";

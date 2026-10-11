@@ -1,16 +1,13 @@
 import { z } from "zod"
-import {
-  LANGUAGES,
-  PROFILE_SCHEMA_VERSION,
-  THEMES,
-  type LanguagePref,
-  type ThemePref,
-} from "./profile-constants.js"
+import { LANGUAGES, PROFILE_SCHEMA_VERSION, type LanguagePref } from "./profile-constants.js"
 
 /**
- * The persisted profile record — deliberately connector-free: the two
- * cross-module preferences every module may read (`language`, `theme`), the
- * per-module `modules.<module>` slice transport, and server-managed metadata.
+ * The persisted profile record — deliberately connector-free: the
+ * cross-module preference every module may read (`language`), the per-module
+ * `modules.<module>` slice transport, and server-managed metadata. There is
+ * no theme preference: widgets follow the host's theme. A record an earlier
+ * build saved with a `theme` still reads — the key is unknown here, stays in
+ * the raw document and never reaches the typed view.
  * Everything a connector wants to persist lives in ITS slice (validated
  * fail-soft by the owning module), never as a new top-level field here.
  *
@@ -25,10 +22,6 @@ export const profileRecordSchema = z.object({
     .describe(
       'UI + summary language; "system" follows the host locale (summaries then stay English).',
     ),
-  theme: z
-    .enum(THEMES)
-    .default("system")
-    .describe('Theme preference: "light", "dark" or "system" (the host theme, then the OS).'),
   modules: z
     .record(z.string(), z.unknown())
     .default({})
@@ -59,7 +52,6 @@ export type ProfileRecord = z.infer<typeof profileRecordSchema>
  */
 export interface ProfileRecordSaveInput {
   language?: LanguagePref
-  theme?: ThemePref
   modules?: Record<string, unknown>
 }
 
@@ -102,7 +94,6 @@ export function projectProfileRecord(doc: Record<string, unknown>, id: string): 
   const updatedAt = nonEmptyString(doc.updatedAt) ?? nonEmptyString(doc.createdAt) ?? ""
   return {
     language: fieldOrDefault(shape.language, doc.language),
-    theme: fieldOrDefault(shape.theme, doc.theme),
     modules: fieldOrDefault(shape.modules, doc.modules),
     id,
     userId: fieldOrDefault(shape.userId, doc.userId),

@@ -5,6 +5,7 @@ import { queryClient, useLocale } from "@miragon/mcp-toolkit-ui"
 import { useHostBridge, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { AppShellProviders } from "./app-shell-providers.js"
 import { useHostWidgets } from "./host-widgets.js"
+import { LocalizedAppView } from "./localized-app-view.js"
 import { useHostDisplayMode } from "./widget-shell.js"
 
 // The REAL mcp-use view runtime (bootstrapView), connected to an in-memory
@@ -23,7 +24,7 @@ interface Message {
 
 const PROFILE_FEED = "camunda7_user_profile_data"
 
-function profileResult(profile: { language?: string; theme?: string }) {
+function profileResult(profile: { language?: string }) {
   return {
     content: [{ type: "text", text: JSON.stringify({ profile }) }],
     structuredContent: { profile },
@@ -80,6 +81,8 @@ function createFakeHost(options: {
 
   return {
     transport: transport as unknown as ViewTransport,
+    /** The methods the view sent, in order (requests and notifications). */
+    methods: () => sent.map((m) => m.method),
     toolCalls: () =>
       sent
         .filter((m) => m.method === "tools/call")
@@ -138,7 +141,7 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
         displayMode: "fullscreen",
         availableDisplayModes: ["inline", "fullscreen"],
       },
-      tools: { [PROFILE_FEED]: profileResult({ language: "de", theme: "dark" }) },
+      tools: { [PROFILE_FEED]: profileResult({ language: "de" }) },
     })
     mount(host)
 
@@ -147,15 +150,15 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     // registry is provided below the gate.
     await vi.waitFor(() => expect(probe()).toBe("de|fullscreen|demo:widget"))
     expect(host.toolCalls()).toEqual([{ name: PROFILE_FEED, arguments: {} }])
-    // Profile language and theme are applied document-wide — one theme on
-    // every channel the CSS, the host and native controls read.
+    // The profile language and the host's theme are applied document-wide —
+    // one theme on every channel the CSS, the host and native controls read.
     expect(root.lang).toBe("de")
     expect(root.classList.contains("dark")).toBe(true)
     expect(root.getAttribute("data-theme")).toBe("dark")
     expect(root.style.getPropertyValue("color-scheme")).toBe("dark")
   })
 
-  it("follows the HOST's theme and locale for a system profile — over a light OS and English defaults (#339)", async () => {
+  it("follows the HOST's theme and, for a system profile, its locale — over a light OS and English defaults (#339)", async () => {
     vi.stubGlobal(
       "matchMedia",
       vi.fn().mockReturnValue({
@@ -166,7 +169,7 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     )
     const host = createFakeHost({
       hostContext: { theme: "dark", locale: "de-DE" },
-      tools: { [PROFILE_FEED]: profileResult({ language: "system", theme: "system" }) },
+      tools: { [PROFILE_FEED]: profileResult({ language: "system" }) },
     })
     mount(host)
 
@@ -192,9 +195,13 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     mount(host)
 
     await vi.waitFor(() => expect(probe()).toBe("en|fullscreen|demo:widget"))
-    // Tailwind's font utilities read these variables: the host's font wins.
-    expect(root.style.getPropertyValue("--font-sans")).toBe("HostSans, sans-serif")
-    expect(root.style.getPropertyValue("--font-mono")).toBe("HostMono")
+    // The host's font fills the fallback slot of the theme's font roles
+    // (adoptHostFontVariables), so the stack stays Geist first when the
+    // consumer loads it; the role names themselves are not overwritten.
+    expect(root.style.getPropertyValue("--host-font-sans")).toBe("HostSans, sans-serif")
+    expect(root.style.getPropertyValue("--host-font-mono")).toBe("HostMono")
+    expect(root.style.getPropertyValue("--font-sans")).toBe("")
+    expect(root.style.getPropertyValue("--font-mono")).toBe("")
     expect(document.getElementById("__mcp-host-fonts")?.textContent).toContain("HostSans")
     expect(root.style.height).toBe("100%")
     document.getElementById("__mcp-host-fonts")?.remove()
@@ -241,5 +248,64 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     expect(host.toolCalls()).toEqual([])
     expect(root.lang).toBe("en")
     expect(root.classList.contains("dark")).toBe(true)
+  })
+})
+
+/** A module widget with its own heading, as `WidgetHeader` renders it. */
+const HeadedWidget: WidgetComponent = () => <h2>Widget heading</h2>
+const VIEW_WIDGETS = { "demo:headed": HeadedWidget }
+
+/** A `show_*` / `render-view` result: the server's view title over one widget. */
+const VIEW_RESULT = {
+  content: [{ type: "text", text: "Rendered the view." }],
+  structuredContent: {
+    title: "Server view title",
+    context: { keys: {}, stepIds: [], stepData: {}, errors: [] },
+    layout: { rows: [{ row: [{ widget: "demo:headed" }] }] },
+  },
+}
+
+/**
+ * Mount a view the way every composed-server bundle does (AppShellProviders +
+ * LocalizedAppView), deliver the tool's result over the real view runtime and
+ * return the headings it renders. `toolName` is what the host names in
+ * SEP-1865 `toolInfo`; the chain under test is toolInfo → ShellHost.toolName
+ * (ViewHostBridge) → viewTitleMode → the toolkit toolbar's title.
+ */
+async function viewHeadings(toolName: string | undefined): Promise<(string | null)[]> {
+  const host = createFakeHost({
+    hostContext: toolName
+      ? { toolInfo: { tool: { name: toolName, inputSchema: { type: "object" } } } }
+      : {},
+    tools: { [PROFILE_FEED]: profileResult({ language: "en" }) },
+  })
+  bootstrapView(
+    {
+      default: () => (
+        <AppShellProviders widgets={VIEW_WIDGETS} profileTool={PROFILE_FEED}>
+          <LocalizedAppView widgets={VIEW_WIDGETS} />
+        </AppShellProviders>
+      ),
+    },
+    { transport: host.transport },
+  )
+  await vi.waitFor(() => expect(host.methods()).toContain("ui/notifications/initialized"))
+  host.notify("ui/notifications/tool-input", { arguments: {} })
+  host.notify("ui/notifications/tool-result", VIEW_RESULT)
+  await vi.waitFor(() => expect(document.body.textContent).toContain("Widget heading"))
+  return [...document.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((h) => h.textContent)
+}
+
+describe("LocalizedAppView: one title per view (real mcp-use view runtime)", () => {
+  it("hides the toolbar title over a module view: the widget's heading is the one title", async () => {
+    expect(await viewHeadings("camunda7_show_process_list")).toEqual(["Widget heading"])
+  })
+
+  it("keeps the toolbar title over a composed render-view, whose widgets carry none", async () => {
+    expect(await viewHeadings("render-view")).toEqual(["Server view title", "Widget heading"])
+  })
+
+  it("keeps it where the host does not name the rendering tool", async () => {
+    expect(await viewHeadings(undefined)).toEqual(["Server view title", "Widget heading"])
   })
 })

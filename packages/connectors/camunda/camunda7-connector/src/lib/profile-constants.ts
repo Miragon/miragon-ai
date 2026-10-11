@@ -1,7 +1,7 @@
 /**
  * Camunda7-owned profile option sets, kept zod-free so widget code can import
  * the runtime arrays (for select option lists) without pulling zod into the UI
- * bundle. The cross-module sets (`LOCALES`, `THEMES`) live in
+ * bundle. The cross-module sets (`LOCALES`, `LANGUAGES`) live in
  * `@miragon-ai/widget-shell` (exported from `/server` AND `/widgets`);
  * `profile-schema.ts` builds its `z.enum(...)` from this one, so the two never
  * drift.

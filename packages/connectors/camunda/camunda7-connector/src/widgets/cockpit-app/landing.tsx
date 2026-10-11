@@ -189,7 +189,7 @@ export function LandingChooser({
         </div>
         <div className={`grid grid-cols-1 gap-4 ${onOpenFleet ? "sm:grid-cols-2" : ""}`}>
           <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
-            <div className="bg-m-blue-soft text-m-blue grid size-8 place-items-center rounded-lg">
+            <div className="bg-accent text-accent-foreground grid size-8 place-items-center rounded-lg">
               <Icon icon={LayoutDashboard} />
             </div>
             <div>
@@ -208,7 +208,7 @@ export function LandingChooser({
               onClick={onOpenFleet}
               className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-5 text-left outline-none focus-visible:ring-2"
             >
-              <div className="bg-m-blue-soft text-m-blue grid size-8 place-items-center rounded-lg">
+              <div className="bg-accent text-accent-foreground grid size-8 place-items-center rounded-lg">
                 <Icon icon={ArrowLeftRight} />
               </div>
               <div>
@@ -219,7 +219,7 @@ export function LandingChooser({
                   {translator(locale, "cockpit.landing.fleet.desc")}
                 </p>
               </div>
-              <span className="text-m-blue mt-1 inline-flex items-center gap-1 text-sm font-medium">
+              <span className="text-link mt-1 inline-flex items-center gap-1 text-sm font-medium">
                 {translator(locale, "cockpit.landing.fleet.open")}
                 <Icon icon={ArrowRight} dense />
               </span>

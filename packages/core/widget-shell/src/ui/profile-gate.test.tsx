@@ -216,27 +216,28 @@ describe("ProfileGate", () => {
     await waitFor(() => expect(probe()).toBe(probeFor("en")))
   })
 
-  it("applies an explicit profile theme over the host's and the OS's", async () => {
+  it("never takes the theme from the profile: a stored theme of an earlier build is ignored", async () => {
+    // No in-app theme switch: the host decides, then the OS.
     stubOsPreference(false)
     renderGate(vi.fn().mockResolvedValue(feedResult({ theme: "dark" })), {
       host: { theme: "light" },
     })
     await waitFor(() => expect(probe()).not.toBeNull())
-    expect(isDark()).toBe(true)
+    expect(isDark()).toBe(false)
 
     cleanup()
     queryClient.clear()
-    stubOsPreference(true)
+    stubOsPreference(false)
     renderGate(vi.fn().mockResolvedValue(feedResult({ theme: "light" })), {
       host: { theme: "dark" },
     })
     await waitFor(() => expect(probe()).not.toBeNull())
-    expect(isDark()).toBe(false)
+    expect(isDark()).toBe(true)
   })
 
-  it("follows the HOST theme for a system profile, even against the OS", async () => {
+  it("follows the HOST theme, even against the OS", async () => {
     stubOsPreference(false)
-    renderGate(vi.fn().mockResolvedValue(feedResult({ theme: "system" })), {
+    renderGate(vi.fn().mockResolvedValue(feedResult({ language: "system" })), {
       host: { theme: "dark" },
     })
 

@@ -4106,7 +4106,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Open the user profile & settings panel: language, theme, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
+    "description": "Open the user profile & settings panel: language, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},

@@ -24,16 +24,25 @@ describe("mergeStoredProfile", () => {
   it("returns the document to persist (raw keys kept) and its typed view", () => {
     const { document, record } = mergeStoredProfile(
       "k",
-      { id: "k", language: "fr", extra: 1, schemaVersion: 3, createdAt: "c", updatedAt: "u" },
-      { theme: "dark" },
+      {
+        id: "k",
+        language: "fr",
+        theme: "dark",
+        extra: 1,
+        schemaVersion: 3,
+        createdAt: "c",
+        updatedAt: "u",
+      },
+      { modules: { notes: { sortOrder: "asc" } } },
       NOW,
     )
+    // The retired theme preference is just another raw key: kept, never read.
     expect(document).toEqual({
       id: "k",
       language: "fr",
       theme: "dark",
       extra: 1,
-      modules: {},
+      modules: { notes: { sortOrder: "asc" } },
       userId: undefined,
       createdAt: "c",
       updatedAt: NOW,
@@ -42,8 +51,7 @@ describe("mergeStoredProfile", () => {
     expect(record).toEqual({
       id: "k",
       language: "system",
-      theme: "dark",
-      modules: {},
+      modules: { notes: { sortOrder: "asc" } },
       createdAt: "c",
       updatedAt: NOW,
       schemaVersion: 3,
@@ -71,7 +79,7 @@ describe("mergeStoredProfile", () => {
     const { record } = mergeStoredProfile("k", undefined, { language: "de" }, NOW, {
       userId: "u-1",
     })
-    expect(record).toMatchObject({ id: "k", language: "de", theme: "system", userId: "u-1" })
+    expect(record).toMatchObject({ id: "k", language: "de", modules: {}, userId: "u-1" })
   })
 })
 
@@ -94,7 +102,7 @@ function rawDocumentContract(makeHarness: () => Promise<RawHarness>) {
     id: "user-1",
     userId: "user-1",
     language: "fr", // a locale this build does not ship
-    theme: "dark",
+    theme: "dark", // the retired theme preference an earlier build saved
     futureTopLevel: { nested: true },
     modules: {
       camunda7: { defaultEngineId: "prod-a", futureSliceField: 7 },
@@ -113,7 +121,6 @@ function rawDocumentContract(makeHarness: () => Promise<RawHarness>) {
       id: "user-1",
       userId: "user-1",
       language: "system",
-      theme: "dark",
       modules: STORED.modules,
       createdAt: STORED.createdAt,
       updatedAt: STORED.updatedAt,
@@ -155,17 +162,16 @@ function rawDocumentContract(makeHarness: () => Promise<RawHarness>) {
     // Read best-effort: every field this build still understands survives.
     expect(await store.get("user-1")).toMatchObject({
       language: "de",
-      theme: "dark",
       modules: STORED.modules,
     })
 
-    const saved = await store.save("user-1", { theme: "light" })
-    expect(saved).toMatchObject({ language: "de", theme: "light", modules: STORED.modules })
+    const saved = await store.save("user-1", { language: "en" })
+    expect(saved).toMatchObject({ language: "en", modules: STORED.modules })
     // Never stamped down to this build's version: the newer build reads its
     // own document back without re-running migrations over it.
     expect(await readRaw("user-1")).toEqual({
       ...newer,
-      theme: "light",
+      language: "en",
       updatedAt: saved.updatedAt,
     })
   })

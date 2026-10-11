@@ -230,7 +230,7 @@ describe("selection in the info tone (CI: blue contour + tint, black text)", () 
 })
 
 describe("icons", () => {
-  it("Icon: decorative 16 px by default, named when it stands alone, stroke density opt-in", () => {
+  it("Icon: decorative 16 px at the CI stroke by default, named when it stands alone, dense opt-in", () => {
     const { container } = render(
       <>
         <Icon icon={TriangleAlert} />
@@ -240,10 +240,10 @@ describe("icons", () => {
     const [plain, named] = [...container.querySelectorAll("svg")]
     expect(plain.getAttribute("aria-hidden")).toBe("true")
     expect(plain.getAttribute("width")).toBe("16")
-    expect(plain.hasAttribute("data-icon-density")).toBe(false)
+    expect(plain.getAttribute("stroke-width")).toBe("2.5")
     expect(screen.getByRole("img", { name: "Warnung" })).toBe(named)
     expect(named.getAttribute("width")).toBe("24")
-    expect(named.getAttribute("data-icon-density")).toBe("dense")
+    expect(named.getAttribute("stroke-width")).toBe("2")
   })
 
   it("Section rotates a Lucide chevron when open and reports the toggle", () => {

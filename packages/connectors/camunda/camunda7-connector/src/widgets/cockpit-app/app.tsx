@@ -400,7 +400,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                   onClick={() => dispatch(s.intent)}
                   className={`focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 ${
                     isActive
-                      ? "bg-m-blue-soft text-m-blue font-semibold"
+                      ? "bg-accent text-accent-foreground font-semibold"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >

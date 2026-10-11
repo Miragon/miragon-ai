@@ -14,7 +14,7 @@ const PROFILE_DATA_TOOL = "camunda7_user_profile_data"
 
 /**
  * The document's MCP App view: the shared provider stack (theme, host bridge,
- * display mode, profile locale/theme, widget registry) plus this app's own
+ * display mode, profile language, widget registry) plus this app's own
  * layers.
  */
 function AppRoot() {

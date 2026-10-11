@@ -18,20 +18,17 @@ function subscribeOsTheme(onChange: () => void): () => void {
 const osPrefersDark = (): boolean => osDarkQuery()?.matches ?? false
 
 /**
- * Resolve and apply the view's ONE effective theme: an explicit profile
- * `"light"`/`"dark"` wins; `"system"`, `undefined` (profile still loading,
- * feed unavailable) and anything unknown follow the HOST's theme
- * (`hostContext.theme`, via {@link useShellHost}), then the OS
- * `prefers-color-scheme` (live). Applied before paint to `.dark`,
- * `data-theme` and `color-scheme` on `<html>` together, plus the host's
- * palette onto the neutral tokens while the view follows the host — see
- * `applyDocumentTheme`. Accepts a loose `string` so a profile field can be
- * passed straight from an untyped feed; returns the resolved theme.
+ * Resolve and apply the view's ONE effective theme: the HOST's theme
+ * (`hostContext.theme`, via {@link useShellHost}), else the OS
+ * `prefers-color-scheme` (live). There is no in-app theme switch. Applied
+ * before paint to `.dark`, `data-theme` and `color-scheme` on `<html>`
+ * together, plus the host's neutral palette onto the neutral roles — see
+ * `applyDocumentTheme`. Returns the resolved theme.
  */
-export function useApplyTheme(profileTheme: string | undefined): EffectiveTheme {
+export function useApplyTheme(): EffectiveTheme {
   const host = useShellHost()
   const osDark = useSyncExternalStore(subscribeOsTheme, osPrefersDark, () => false)
-  const theme = resolveTheme(profileTheme, host.theme, osDark)
+  const theme = resolveTheme(host.theme, osDark)
   useLayoutEffect(() => {
     applyDocumentTheme(document.documentElement, {
       theme,

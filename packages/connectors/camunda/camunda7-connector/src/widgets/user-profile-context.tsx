@@ -10,7 +10,7 @@ import { useHandOff, type ViewContext } from "./lib/hand-off.js"
  * lacks, nor about a write that would refuse.
  */
 export function describeProfile(
-  form: { language: string; theme: string; defaultDashboardId: string },
+  form: { language: string; defaultDashboardId: string },
   {
     canSave,
     allEnginesAllowed,
@@ -28,7 +28,6 @@ export function describeProfile(
     ids: { defaultDashboardId: form.defaultDashboardId || undefined },
     facts: {
       language: form.language,
-      theme: form.theme,
       availableEngines: allEnginesAllowed ? "all" : allowedEngineCount,
     },
     tools: ["camunda7_save_user_profile", "load-dashboard"],
@@ -62,7 +61,7 @@ export function ProfileModelContext({
   allEnginesAllowed,
   dashboardsAnswered,
 }: {
-  form: { language: string; theme: string; defaultDashboardId: string; allowedEngineIds: string[] }
+  form: { language: string; defaultDashboardId: string; allowedEngineIds: string[] }
   canSave: boolean
   allEnginesAllowed: boolean
   dashboardsAnswered: boolean

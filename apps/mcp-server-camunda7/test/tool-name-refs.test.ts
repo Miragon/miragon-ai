@@ -23,8 +23,8 @@ import { scanSources } from "./source-scan.js"
  * package's or app's non-test source must name a tool of the full surface.
  * The apps count too: the composition root hardcodes the profile feed
  * (`src/ui/main.tsx`) so the host bundle needs no build-time dependency on a
- * module's constants — and a stale name there silently falls back to English
- * and the system theme for every widget.
+ * module's constants — and a stale name there silently falls back to the
+ * host's language (or English) for every widget.
  */
 
 interface ToolNameRef {

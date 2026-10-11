@@ -9,7 +9,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 Settings live in ONE profile record per signed-in user, shared by all modules. The record
 and its store are CORE (`packages/core/widget-shell/src/profile-record.ts` +
 `profile-store*.ts`, exported from `@miragon-ai/widget-shell/server`) and connector-free:
-`language`, `theme`, metadata, and the `profile.modules.<module>` transport. Each module
+`language`, metadata, and the `profile.modules.<module>` transport. Each module
 owns a **slice** under `profile.modules.<module>`: the record only transports it, the
 module owns its schema, validates it fail-soft on read, and writes it through its own
 save tool. The store merges per module key, so a save of `modules.<yours>` never touches
@@ -19,11 +19,11 @@ Reference implementations — read one before writing anything:
 `packages/connectors/analytics/analytics-connector/src/settings.ts` + `settings-tools.ts` +
 `src/widgets/settings-section.tsx` (pure slice), or camunda7's
 `src/lib/profile-schema.ts` + `src/tools/user-profile.ts` (slice + the cross-module
-`language`/`theme` fields behind one flat tool input).
+`language` field behind one flat tool input).
 
 **Decide first: slice or core preference?** A setting only your module understands
 (analysis window, threshold, engine availability) is a slice — everything below applies.
-Only a setting EVERY module acts on (like `language`/`theme`) belongs on the core record
+Only a setting EVERY module acts on (like `language`) belongs on the core record
 in `profileRecordSchema` (`packages/core/widget-shell/src/profile-record.ts`): add the
 field there, bump `PROFILE_SCHEMA_VERSION` in `profile-constants.ts`, add the matching
 entry to `PROFILE_MIGRATIONS` in `profile-migrations.ts` (a bump without a migration

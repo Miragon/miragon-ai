@@ -5,14 +5,12 @@ import {
   NativeSelect,
   SettingsCard,
   SettingsField,
-  THEMES,
   WidgetShell,
   formatTime,
   useDetailView,
   useResetOnChange,
   type LanguagePref,
   type Locale,
-  type ThemePref,
 } from "@miragon-ai/widget-shell/widgets"
 
 import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_USER_PROFILE_DATA } from "../tool-names.js"
@@ -54,7 +52,6 @@ const LANGUAGE_LABELS: Record<Locale, string> = { en: "English", de: "Deutsch" }
 /** The editable preference state mirrored by the form controls. */
 interface FormState {
   language: LanguagePref
-  theme: ThemePref
   allowedEngineIds: string[]
   defaultEngineId: string
   defaultDashboardId: string
@@ -70,7 +67,6 @@ function parseEnum<T extends string>(value: string, allowed: readonly T[]): T | 
 function fromProfile(p: UserProfile, engineIds: string[]): FormState {
   return {
     language: p.language,
-    theme: p.theme,
     // Empty/absent allow-list means "all" — render every engine as checked.
     allowedEngineIds:
       p.allowedEngineIds && p.allowedEngineIds.length > 0 ? p.allowedEngineIds : engineIds,
@@ -87,7 +83,6 @@ const sameSet = (a: string[], b: string[]) =>
 /** The single-valued preferences, compared by value. */
 const SCALAR_FIELDS = [
   "language",
-  "theme",
   "defaultEngineId",
   "defaultDashboardId",
   "preferredRole",
@@ -131,9 +126,10 @@ const helpCls = "text-muted-foreground text-xs"
 /**
  * Profile & settings panel. Self-fetches the signed-in caller's profile +
  * configured engine list (or receives it via `initialData` from the
- * `camunda7_show_user_profile` tool), applies the profile theme, and provides
- * the profile language to its own subtree so the panel is localized in both the
- * cockpit settings tab and a standalone render.
+ * `camunda7_show_user_profile` tool) and provides the profile language to its
+ * own subtree so the panel is localized in both the cockpit settings tab and a
+ * standalone render. There is no theme field: the widgets follow the host's
+ * theme.
  */
 export function UserProfileWidget({ data: initialData = null }: { data?: UserProfileView | null }) {
   const t = useT()
@@ -346,7 +342,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SettingsCard title={t("profile.section.appearance")}>
+        <SettingsCard title={t("profile.section.general")}>
           <SettingsField
             label={t("profile.field.language")}
             help={t("profile.field.language.help")}
@@ -361,19 +357,6 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
               {LANGUAGES.map((l) => (
                 <option key={l} value={l}>
                   {l === "system" ? t("language.system") : LANGUAGE_LABELS[l]}
-                </option>
-              ))}
-            </NativeSelect>
-          </SettingsField>
-          <SettingsField label={t("profile.field.theme")}>
-            <NativeSelect
-              value={form.theme}
-              disabled={!canSave}
-              onChange={(e) => set("theme", parseEnum(e.target.value, THEMES) ?? form.theme)}
-            >
-              {THEMES.map((th) => (
-                <option key={th} value={th}>
-                  {t(`theme.${th}`)}
                 </option>
               ))}
             </NativeSelect>

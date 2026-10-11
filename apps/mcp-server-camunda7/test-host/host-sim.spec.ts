@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+import { createRequire } from "node:module"
 import { expect, test, type FrameLocator, type Locator, type Page } from "@playwright/test"
 import { BROKEN_ENGINE, ENGINE_CONTROL_ENV, HEALTHY_ENGINE } from "./engines.js"
 
@@ -31,6 +33,31 @@ const OUTLAST_GRACE_MS = RECOVERY_GRACE_MS + 1_000
 const TOOLKIT_LIFECYCLE_ISSUE = "https://github.com/Miragon/mcp-toolkit/issues/176"
 const TOOLKIT_HOST_CONTEXT_ISSUE = "https://github.com/Miragon/mcp-toolkit/issues/178"
 const HOST_THEME_ISSUE = "https://github.com/Miragon/miragon-ai/issues/339"
+/** The toolkit's English view chrome (its en catalog, toolkit 2.7). */
+const CHROME = {
+  cancelled: "Cancelled. Ask in the chat to open this view again.",
+  errorTitle: "This view couldn't be loaded",
+  retry: "Try again",
+  enterFullscreen: "Fullscreen",
+  exitFullscreen: "Exit fullscreen",
+}
+
+/**
+ * The Miragon corporate-design tokens as the toolkit vendors them
+ * (`--cd-blau: #335DE5` …), colour values only — the drift guard's
+ * reference for what the BUILT stylesheet must carry.
+ */
+function vendoredColourTokens(): [string, string][] {
+  const require = createRequire(import.meta.url)
+  const css = readFileSync(
+    require.resolve("@miragon/mcp-toolkit-ui/cd-tokens.generated.css"),
+    "utf8",
+  )
+  return [...css.matchAll(/(--cd-[\w-]+):\s*(#[0-9a-fA-F]{3,8});/g)].map(([, name, value]) => [
+    name,
+    value,
+  ])
+}
 
 interface HostLog {
   initializeRequested: boolean
@@ -353,7 +380,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
   )
 
   test(
-    "pinned toolkit#176 (K14): a tool error re-executes the tool once and leaves the loading skeleton",
+    "a tool error is never re-executed: the error state with a retry replaces the skeleton (toolkit#176 K14, fixed in 2.7)",
     { annotation: { type: "issue", description: TOOLKIT_LIFECYCLE_ISSUE } },
     async ({ page }) => {
       const app = await openView(page, { args: { engine: BROKEN_ENGINE } })
@@ -362,19 +389,24 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       const log = await hostLog(page)
       // A genuine isError result from the real server (engine 503).
       expect(log.originalResult?.isError).toBe(true)
-      // The recovery fires one grace period in; outlast a second one, so a
-      // timer re-armed by the recovered (error) result would show.
+      // Outlast the recovery grace twice over: a recovery that still fired on
+      // an error result (the 2.6 behaviour) would show as a re-execution.
       await page.waitForTimeout(RECOVERY_GRACE_MS + OUTLAST_GRACE_MS)
 
-      expect(
-        await reExecutions(page),
-        "toolkit#176 fixed? An isError result must never be re-executed — expect 0",
-      ).toHaveLength(1)
-      await expect(
-        app.getByText("Loading view…"),
-        "toolkit#176 fixed? The view must render the tool error instead of the loading skeleton",
-      ).toBeVisible()
+      expect(await reExecutions(page)).toHaveLength(0)
+      await expect(app.getByRole("heading", { name: CHROME.errorTitle })).toBeVisible()
+      await expect(app.getByText("Loading view…")).toHaveCount(0)
       await expect(definitionsTable(app)).toHaveCount(0)
+
+      // The retry is the user's: one call with the invocation's arguments, and
+      // the engine still down brings the error state back, not a skeleton.
+      await app.getByRole("button", { name: CHROME.retry }).click()
+      await expect
+        .poll(() => reExecutions(page))
+        .toEqual([{ name: RENDER_TOOL, arguments: { engine: BROKEN_ENGINE } }])
+      await expect(app.getByRole("heading", { name: CHROME.errorTitle })).toBeVisible()
+      await page.waitForTimeout(OUTLAST_GRACE_MS)
+      expect(await reExecutions(page)).toHaveLength(1)
     },
   )
 
@@ -382,14 +414,10 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page, { cancel: true })
 
     await waitForDelivery(page, "cancelled")
-    await expect(
-      app.getByText("Tool call cancelled. Ask in the chat to show this view again."),
-    ).toBeVisible()
+    await expect(app.getByText(CHROME.cancelled)).toBeVisible()
     await page.waitForTimeout(OUTLAST_GRACE_MS)
     expect(await reExecutions(page)).toHaveLength(0)
-    await expect(
-      app.getByText("Tool call cancelled. Ask in the chat to show this view again."),
-    ).toBeVisible()
+    await expect(app.getByText(CHROME.cancelled)).toBeVisible()
   })
 
   test("dark host on a dark OS: dark theme tokens (light text)", async ({ page }) => {
@@ -443,7 +471,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
   })
 
   test(
-    "host without fullscreen: no Fullscreen button (shell override until toolkit#178, K22)",
+    "host without fullscreen: no Fullscreen button (the toolkit gates it on availableDisplayModes, toolkit#178 K22)",
     { annotation: { type: "issue", description: TOOLKIT_HOST_CONTEXT_ISSUE } },
     async ({ page }) => {
       for (const displayModes of [["inline"], undefined]) {
@@ -454,7 +482,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
         await expect(
           app.getByRole("heading", { name: "Process definitions" }).first(),
         ).toBeVisible()
-        await expect(app.getByRole("button", { name: "Full screen" })).toBeHidden()
+        await expect(app.getByRole("button", { name: CHROME.enterFullscreen })).toHaveCount(0)
         expect((await hostLog(page)).displayModeRequests).toEqual([])
       }
     },
@@ -521,7 +549,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     expect(await documentTheme(app)).toEqual({ dark: true, dataTheme: "dark", colorScheme: "dark" })
   })
 
-  test("host font: text renders in the host's --font-sans, font-mono stays monospace", async ({
+  test("host font: Geist first, then the host's --font-sans; Geist is not loaded, so the host's font renders", async ({
     page,
   }) => {
     const app = await openView(page, { fontSans: '"Host Sim Sans", serif' })
@@ -535,16 +563,29 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       const result = {
         body: getComputedStyle(body).fontFamily,
         mono: getComputedStyle(mono).fontFamily,
+        // The host's value moved off the role name (adoptHostFontVariables).
+        roleInline: document.documentElement.style.getPropertyValue("--font-sans"),
+        hostSlot: document.documentElement.style.getPropertyValue("--host-font-sans"),
+        geistFaces: [...document.fonts].filter((f) => /Geist/i.test(f.family)).length,
       }
       mono.remove()
       return result
     })
-    expect(fonts.body).toContain("Host Sim Sans")
-    expect(fonts.body).not.toContain("Geist")
+    // The Miragon stack: Geist, then the host's font in the fallback slot,
+    // then the system — the host no longer replaces the whole stack …
+    expect(fonts.roleInline).toBe("")
+    expect(fonts.hostSlot).toBe('"Host Sim Sans", serif')
+    expect(fonts.body).toMatch(/^"?Geist"?,/)
+    expect(fonts.body.indexOf("Host Sim Sans")).toBeGreaterThan(fonts.body.indexOf("Geist"))
+    // … and no Geist face ships with the view (served by URL in a later
+    // step), so the host's font is what renders.
+    expect(fonts.geistFaces).toBe(0)
     expect(fonts.mono).toMatch(/monospace/)
   })
 
-  test("the served stylesheet forces no font and sets no height floor (#339)", async ({ page }) => {
+  test("the served stylesheet inlines no font, sets no height floor and carries the vendored tokens (#339)", async ({
+    page,
+  }) => {
     const app = await openView(page)
     await expectProcessList(app)
 
@@ -552,8 +593,27 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       .locator("html")
       .evaluate(() => [...document.querySelectorAll("style")].map((s) => s.textContent).join("\n"))
     expect(css).not.toMatch(/font-family:[^;}]*!important/)
-    expect(css).not.toMatch(/Geist|data:font\/woff2/)
+    expect(css).not.toMatch(/@font-face|data:font\/woff2/)
     expect(css).not.toMatch(/min-height:\s*600px/)
+
+    // Drift guard on the BUILT bundle: every Miragon colour token resolves to
+    // the value the toolkit vendors (normalized by a canvas, so a minified
+    // `#fff` equals `#FFFFFF`) — no fork, no stale copy.
+    const tokens = vendoredColourTokens()
+    expect(tokens.length).toBeGreaterThan(15)
+    const drift = await app.locator("html").evaluate((html, expected) => {
+      const ctx = document.createElement("canvas").getContext("2d")!
+      const normalize = (colour: string) => {
+        ctx.fillStyle = "#000000"
+        ctx.fillStyle = colour.trim()
+        return ctx.fillStyle
+      }
+      const style = getComputedStyle(html)
+      return expected
+        .filter(([name, value]) => normalize(style.getPropertyValue(name)) !== normalize(value))
+        .map(([name]) => name)
+    }, tokens)
+    expect(drift).toEqual([])
   })
 
   test("a host height budget: the view scrolls inside it instead of reporting more", async ({
@@ -585,10 +645,10 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page, { displayModes: ["inline", "fullscreen"] })
 
     await expectProcessList(app)
-    await app.getByRole("button", { name: "Full screen" }).click()
+    await app.getByRole("button", { name: CHROME.enterFullscreen }).click()
 
     await expect.poll(async () => (await hostLog(page)).displayModeRequests).toEqual(["fullscreen"])
-    await expect(app.getByRole("button", { name: "Exit full screen" })).toBeVisible()
+    await expect(app.getByRole("button", { name: CHROME.exitFullscreen })).toBeVisible()
     await expectProcessList(app)
   })
 })
@@ -640,11 +700,12 @@ test.describe("real BPMN view (camunda7_show_bpmn_viewer)", () => {
 })
 
 /**
- * The kit's design-system foundation in the BUILT bundle (#322): the role
- * variables reach the view (the shell theme survived Tailwind), Lucide icons
- * draw at the CI stroke set once in theme.css (2.5; 2 in dense bars and the
- * toolkit's toolbar), and a KPI's state is a tinted, edged card around neutral
- * digits — never a coloured number.
+ * The kit's design-system foundation in the BUILT bundle (#322): the Miragon
+ * role variables reach the view (the toolkit theme survived Tailwind), Lucide
+ * icons draw at the CI stroke through lucide-react's own strokeWidth — never a
+ * CSS rule — (2.5; 2 in dense rows and the toolkit's toolbar, whose
+ * LucideProvider sets it), and a KPI's state is a tinted, edged card around
+ * neutral digits — never a coloured number.
  */
 test.describe("kit foundation (camunda7_show_job_panel)", () => {
   test("role variables, Lucide strokes and the tone model reach the rendered view", async ({
@@ -666,9 +727,18 @@ test.describe("kit foundation (camunda7_show_job_panel)", () => {
         "--info-ink",
         "--link",
         "--focus",
+        "--primary-hover",
+        "--scrim",
       ].map((name) => style.getPropertyValue(name).trim())
     })
     for (const value of roles) expect(value).not.toBe("")
+    // The Miragon brand, not the shadcn neutrals: links in --cd-blau-link.
+    const link = await app.locator("html").evaluate((el) => {
+      const ctx = document.createElement("canvas").getContext("2d")!
+      ctx.fillStyle = getComputedStyle(el).getPropertyValue("--link").trim()
+      return ctx.fillStyle
+    })
+    expect(link).toBe("#2b50d4")
 
     const stroke = (locator: Locator) => locator.evaluate((el) => getComputedStyle(el).strokeWidth)
     expect(await stroke(handOff.locator("svg.lucide"))).toBe("2.5px")
@@ -714,6 +784,9 @@ test.describe("framework view (render-view)", () => {
     })
 
     await expect(app.getByText("Jobs due")).toBeVisible({ timeout: 15_000 })
+    // A composed view's one title is the toolbar's (titleMode "show"); a
+    // module view's is its widget heading (titleMode "hide", unit-tested).
+    await expect(app.getByRole("heading", { name: "Throughput" })).toHaveCount(1)
     // Toolbar + one KPI strip: ~130 px — below even the gate skeleton's
     // ~208 px, so the settled report is the view's own. The old
     // html/body/#root floor reported 600 for every view.

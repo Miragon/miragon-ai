@@ -4,7 +4,7 @@ import { countOf } from "./plural.js"
 /**
  * English message catalog — the fallback locale. Every key MUST exist here so
  * the translator's `requested → fallback(en) → key` chain always lands on a real
- * string. Keys are dotted by surface (`cockpit.*`, `profile.*`, `theme.*`,
+ * string. Keys are dotted by surface (`cockpit.*`, `profile.*`, `language.*`,
  * `role.*`, `viewTitle.*`). Sentence case, active voice, no dash connectors;
  * the terms follow GLOSSARY.md.
  */
@@ -58,7 +58,7 @@ export const en: MessageCatalog = {
 
   // ── Profile / settings panel ────────────────────────────────────────────────
   "profile.heading": "Profile & settings",
-  "profile.subtitle": "Your engines, language, appearance and dashboards.",
+  "profile.subtitle": "Your engines, language, role and dashboards.",
   "profile.save": "Save",
   "profile.saving": "Saving…",
   "profile.saved": ({ time }) => `Saved at ${String(time)}`,
@@ -68,14 +68,13 @@ export const en: MessageCatalog = {
   "profile.loading": "Loading…",
   "profile.none": "No profile available",
 
-  "profile.section.appearance": "Language & appearance",
+  "profile.section.general": "Language and role",
   "profile.section.engines": "Engines",
   "profile.section.dashboards": "Dashboards",
 
   "profile.field.language": "Language",
   "profile.field.language.help":
     "Automatic follows your chat app. A fixed language also applies to what the tools report back to the AI.",
-  "profile.field.theme": "Theme",
   "profile.field.role": "Preferred role",
   "profile.field.role.help": "A hint only. Your connection decides what you can do.",
   "profile.role.unset": "(unset)",
@@ -98,17 +97,14 @@ export const en: MessageCatalog = {
   "profile.field.pinnedDashboards": "Pinned dashboards",
   "profile.field.pinnedDashboards.help": "Listed first in dashboard pickers.",
 
-  "profile.summary": ({ language, theme, engines, defaultDashboard }) =>
-    `User profile: language ${String(language)}, theme ${String(theme)}, ${String(engines)}${String(defaultDashboard)}.`,
+  "profile.summary": ({ language, engines, defaultDashboard }) =>
+    `User profile: language ${String(language)}, ${String(engines)}${String(defaultDashboard)}.`,
   "profile.summary.allEngines": "all engines",
   "profile.summary.someEngines": ({ count }) => countOf(count, "allowed engine", "allowed engines"),
   "profile.summary.defaultDashboard": ({ id }) =>
     `, default dashboard "${String(id)}" (open via load-dashboard)`,
 
   // ── Enumerated option labels ────────────────────────────────────────────────
-  "theme.light": "Light",
-  "theme.dark": "Dark",
-  "theme.system": "System",
   "language.system": "Automatic (follows the chat app)",
   "role.read-only": "Read-only",
   "role.operations": "Operations",

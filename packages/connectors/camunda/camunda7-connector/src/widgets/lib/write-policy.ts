@@ -102,7 +102,7 @@ export const WRITE_POLICY: Record<WidgetWrite, WritePolicy> = {
     ),
     confirm: true,
   },
-  // The panel itself, the engine list it curates, and the app root's locale/theme gate.
+  // The panel itself, the engine list it curates, and the app root's language gate.
   camunda7_save_user_profile: {
     invalidates: ["camunda7:user-profile", "camunda7:engines", "camunda7:profile-gate"],
     confirm: false,

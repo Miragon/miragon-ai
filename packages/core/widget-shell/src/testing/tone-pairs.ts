@@ -94,8 +94,13 @@ export function toneContrastPairs(): ContrastPair[] {
 }
 
 /**
- * The neutral and interaction roles of the theme contract: text on every
- * surface, the link, the focus ring and the input edge (CI §3.2/§12).
+ * The neutral and interaction roles of the theme contract (CI §3.2/§12):
+ * text on every surface, every `<role>-foreground` on its fill (primary at
+ * rest and on hover, secondary, accent — the hover and selected surface —,
+ * destructive, popover), the link, both focus indicators (`--focus`, the
+ * outline; `--ring`, the `focus-visible:ring-ring` utilities) and the input
+ * edge. Text 4.5:1, the rest 3:1. A role a consumer may override belongs in
+ * this list, so a brand that breaks it fails the suite that measures it.
  */
 export const ROLE_CONTRAST_PAIRS: readonly ContrastPair[] = [
   {
@@ -106,6 +111,8 @@ export const ROLE_CONTRAST_PAIRS: readonly ContrastPair[] = [
     min: 4.5,
   },
   { label: "foreground on card", fg: "--foreground", bg: "--card", min: 4.5 },
+  { label: "card-foreground on card", fg: "--card-foreground", bg: "--card", min: 4.5 },
+  { label: "popover-foreground on popover", fg: "--popover-foreground", bg: "--popover", min: 4.5 },
   { label: "muted-foreground on card", fg: "--muted-foreground", bg: "--card", min: 4.5 },
   {
     label: "muted-foreground on background",
@@ -116,6 +123,25 @@ export const ROLE_CONTRAST_PAIRS: readonly ContrastPair[] = [
   },
   { label: "muted-foreground on muted", fg: "--muted-foreground", bg: "--muted", min: 4.5 },
   { label: "primary-foreground on primary", fg: "--primary-foreground", bg: "--primary", min: 4.5 },
+  {
+    label: "primary-foreground on primary-hover",
+    fg: "--primary-foreground",
+    bg: "--primary-hover",
+    min: 4.5,
+  },
+  {
+    label: "secondary-foreground on secondary",
+    fg: "--secondary-foreground",
+    bg: "--secondary",
+    min: 4.5,
+  },
+  { label: "accent-foreground on accent", fg: "--accent-foreground", bg: "--accent", min: 4.5 },
+  {
+    label: "destructive-foreground on destructive",
+    fg: "--destructive-foreground",
+    bg: "--destructive",
+    min: 4.5,
+  },
   { label: "link on card", fg: "--link", bg: "--card", min: 4.5 },
   { label: "link on background", fg: "--link", bg: "--background", over: "--background", min: 4.5 },
   { label: "focus ring on card", fg: "--focus", bg: "--card", min: 3 },
@@ -126,6 +152,8 @@ export const ROLE_CONTRAST_PAIRS: readonly ContrastPair[] = [
     over: "--background",
     min: 3,
   },
+  { label: "ring on card", fg: "--ring", bg: "--card", min: 3 },
+  { label: "ring on background", fg: "--ring", bg: "--background", over: "--background", min: 3 },
   {
     label: "input edge on background",
     fg: "--input",

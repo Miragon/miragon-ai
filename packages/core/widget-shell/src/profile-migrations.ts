@@ -12,7 +12,7 @@ type ProfileMigration = (raw: Record<string, unknown>) => void
  * module preferences of v1/v2) stay inert in the raw document — saves keep
  * them, the per-field projection ignores them — so those preferences read as
  * their defaults, while the fields every record has carried (`language`,
- * `theme`, `modules`) survive. A missing or out-of-range `schemaVersion`
+ * `modules`) survive. A missing or out-of-range `schemaVersion`
  * reads as the baseline too.
  */
 export const PROFILE_MIGRATION_BASELINE = 3

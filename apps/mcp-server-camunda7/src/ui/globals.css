@@ -4,48 +4,15 @@
 @source "../../../../packages/connectors/camunda/camunda7-connector/src";
 @source "../../../../packages/connectors/analytics/analytics-connector/src";
 /*
- * The shell's tokens (the toolkit's shadcn ramp + dark variant) WITHOUT a
- * forced font — the host's font (SEP-1865 `--font-sans`) or the system stack
- * renders text, and `font-mono` stays monospace. Never import
- * `@miragon/mcp-toolkit-ui/globals.css` next to it: it re-adds the
- * `font-family … !important` rule and ~61 KB of base64 Geist per view
- * (guarded by test/ui-stylesheet.test.ts).
- */
-@import "@miragon-ai/widget-shell/theme.css";
-
-/*
- * The status tones (danger / warning / success / info, each with -soft and
- * -ink), the link and focus roles come from the shell theme above, defined
- * once for every consumer. Override those ROLE names to rebrand; never add
- * palette classes in widgets.
+ * The Miragon theme, as the toolkit ships it: the vendored corporate-design
+ * tokens (--cd-*) and the role variables on top of them, light and dark —
+ * neutrals, --primary/--link/--focus, the status tones with -soft and -ink,
+ * radii, shadows, motion, the font stacks. Every widget colours through those
+ * role names; this app overrides none of them.
  *
- * What stays here is the legacy Miragon accent ramp (`--m-blue*`,
- * `--m-green*`) that connector widgets still read for links and selection;
- * it retires with the Miragon theme (vendored cd-tokens + alias layer).
- * Declared under :root (light) and .dark (dark) and registered via
- * `@theme inline`, so `text-m-blue` resolves through var() and re-themes
- * inside the host's dark mode.
+ * Never import `@miragon/mcp-toolkit-ui/globals.css` next to it (a second
+ * Tailwind entry with its own @source) or `fonts.css` (Geist as base64 in
+ * every view document; Geist is served by URL in a later step). Guarded by
+ * test/ui-stylesheet.test.ts.
  */
-@theme inline {
-  --color-m-blue: var(--m-blue);
-  --color-m-blue-light: var(--m-blue-light);
-  --color-m-blue-soft: var(--m-blue-soft);
-  --color-m-green: var(--m-green);
-  --color-m-green-soft: var(--m-green-soft);
-}
-
-:root {
-  --m-blue: #1b3b6f;
-  --m-blue-light: #2e5ba8;
-  --m-blue-soft: #eef3fa;
-  --m-green: #2d8659;
-  --m-green-soft: #eff7f2;
-}
-
-.dark {
-  --m-blue: #7aa7e0;
-  --m-blue-light: #5b8ad0;
-  --m-blue-soft: #16243a;
-  --m-green: #5cc08a;
-  --m-green-soft: #11271c;
-}
+@import "@miragon/mcp-toolkit-ui/theme.css";

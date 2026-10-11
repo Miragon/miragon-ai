@@ -29,7 +29,7 @@ import {
  */
 export interface SharedResources {
   /**
-   * One per-user preference store for the whole server (language, theme,
+   * One per-user preference store for the whole server (language,
    * engine and dashboard defaults), keyed by the OAuth caller. Filesystem-backed
    * when `MCP_PROFILE_DIR` is set, else in-memory.
    */

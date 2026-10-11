@@ -96,7 +96,6 @@ function profileView(canSave: boolean): UserProfileView {
   return {
     profile: {
       language: "en",
-      theme: "system",
       updatedAt: "2026-10-01T00:00:00.000Z",
       defaultEngineId: "prod",
       allowedEngineIds: [],
