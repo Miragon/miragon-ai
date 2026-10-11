@@ -1,15 +1,17 @@
 import { Alert, AlertDescription, Button } from "@miragon/mcp-toolkit-ui"
 import {
-  AskAiButton,
   DrillButton,
+  Icon,
   KpiGrid,
   RowCard,
   StatusBadge,
   WidgetHeader,
   WidgetShell,
+  formatNumber,
   formatTime,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
+import { RefreshCw } from "lucide-react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import type { EngineHealthCluster, EngineHealthData, EngineHealthStatus } from "../view-models.js"
 import { useNav, type OnNavigate } from "./navigation.js"
@@ -18,6 +20,8 @@ import { useViewData } from "./use-view-data.js"
 import { remediationHandOff, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
+import { HandOffButton } from "./lib/hand-off-button.js"
+import { healthVerdictLine } from "./lib/health-verdict.js"
 import { useT } from "../messages/use-t.js"
 
 const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; labelKey: string }> = {
@@ -135,7 +139,9 @@ function ClusterRow({
 
   const scope =
     cluster.processDefinitionKeys.length > 1
-      ? t("engineHealth.scopeProcesses", { count: cluster.processDefinitionKeys.length })
+      ? t("engineHealth.scopeProcesses", {
+          count: formatNumber(cluster.processDefinitionKeys.length),
+        })
       : (primaryKey ?? UNKNOWN)
 
   return (
@@ -152,7 +158,7 @@ function ClusterRow({
             count: formatCountAtLeast(cluster.incidentCount, cluster.scannedIncidentCount),
           })}
           {cluster.last24hCount !== null && cluster.last24hCount > 0
-            ? ` · ${t("engineHealth.clusterNew24h", { count: cluster.last24hCount })}`
+            ? ` · ${t("engineHealth.clusterNew24h", { count: formatNumber(cluster.last24hCount) })}`
             : ""}{" "}
           · {scope}
         </>
@@ -165,11 +171,7 @@ function ClusterRow({
           >
             {t("engineHealth.clusterOpen")}
           </DrillButton>
-          <AskAiButton
-            variant="subtle"
-            label={canFix ? t("engineHealth.clusterFix") : t("askAi.cluster.diagnoseLabel")}
-            prompt={ask(handOff)}
-          />
+          <HandOffButton action={canFix ? "planFix" : "explainError"} prompt={ask(handOff)} />
         </>
       }
     />
@@ -194,13 +196,15 @@ function HealthUnavailable({
     return (
       <div className="flex flex-col items-start gap-3">
         <Alert variant="destructive">
-          <AlertDescription>{error.message}</AlertDescription>
+          <AlertDescription>
+            {t("engineHealth.unavailable", { message: error.message })}
+          </AlertDescription>
         </Alert>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onRetry}>
             {t("viewState.retry")}
           </Button>
-          <AskAiButton variant="primary" prompt={ask(diagnoseHandOff(engine, error.message))} />
+          <HandOffButton action="findCause" prompt={ask(diagnoseHandOff(engine, error.message))} />
         </div>
       </div>
     )
@@ -229,7 +233,7 @@ function HealthKpis({
       cells={[
         {
           label: t("engineHealth.kpiRunningInstances"),
-          value: summary.runningInstances,
+          value: formatNumber(summary.runningInstances),
           // The engine-wide instances list — NOT the definitions list: the
           // KPI counts instances, so the drill must land on instances.
           onClick: () => go({ type: "process-instances" }),
@@ -239,12 +243,12 @@ function HealthKpis({
           label: t("engineHealth.kpiOpenIncidents"),
           // The derivative beats the absolute during an active incident:
           // "9 in the last hour" = burning now; fall back to the 24h count.
-          value: summary.totalIncidents,
+          value: formatNumber(summary.totalIncidents),
           fraction:
             summary.lastHourIncidents > 0
-              ? ` ${t("engineHealth.kpiInLastHour", { count: summary.lastHourIncidents })}`
+              ? ` ${t("engineHealth.kpiInLastHour", { count: formatNumber(summary.lastHourIncidents) })}`
               : summary.last24hIncidents > 0
-                ? ` ${t("engineHealth.kpiIn24h", { count: summary.last24hIncidents })}`
+                ? ` ${t("engineHealth.kpiIn24h", { count: formatNumber(summary.last24hIncidents) })}`
                 : undefined,
           tone: summary.totalIncidents > 0 ? status.tone : undefined,
           onClick: () => go({ type: "incidents" }),
@@ -258,8 +262,8 @@ function HealthKpis({
         },
         {
           label: t("engineHealth.kpiAffectedProcesses"),
-          value: summary.affectedDefinitions,
-          fraction: ` /${summary.totalDefinitions}`,
+          value: formatNumber(summary.affectedDefinitions),
+          fraction: ` /${formatNumber(summary.totalDefinitions)}`,
           tone: summary.affectedDefinitions > 0 ? "danger" : undefined,
         },
       ]}
@@ -277,13 +281,11 @@ function Throughput24h({ summary }: { summary: EngineHealthData["summary"] }) {
     <p className="text-muted-foreground text-xs">
       {t("engineHealth.throughput24h")}{" "}
       {summary.started24h !== null
-        ? t("engineHealth.throughputStarted", { count: summary.started24h.toLocaleString() })
+        ? t("engineHealth.throughputStarted", { count: formatNumber(summary.started24h) })
         : ""}
       {summary.started24h !== null && summary.completed24h !== null ? " · " : ""}
       {summary.completed24h !== null
-        ? t("engineHealth.throughputCompleted", {
-            count: summary.completed24h.toLocaleString(),
-          })
+        ? t("engineHealth.throughputCompleted", { count: formatNumber(summary.completed24h) })
         : ""}
     </p>
   )
@@ -361,11 +363,11 @@ export function EngineHealthView({
       <HostModelContext content={context(describeHealth(data, engine))}>{null}</HostModelContext>
       <WidgetHeader
         title={t("engineHealth.title")}
-        sub={<span>{data.headline}</span>}
+        sub={<span>{healthVerdictLine(t, data)}</span>}
         actions={
-          <AskAiButton
+          <HandOffButton
+            action="assess"
             variant="primary"
-            label={t("engineHealth.whatShouldIDo")}
             prompt={ask(triageHandOff(data, engine))}
           />
         }
@@ -382,8 +384,9 @@ export function EngineHealthView({
           type="button"
           onClick={refetch}
           disabled={refreshing}
-          className="hover:text-foreground focus-visible:ring-ring rounded font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
+          className="hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
         >
+          <Icon icon={RefreshCw} dense />
           {refreshing ? t("engineHealth.refreshing") : t("engineHealth.refresh")}
         </button>
         {/* A failed re-pull keeps the last verdict — and says it is not current. */}

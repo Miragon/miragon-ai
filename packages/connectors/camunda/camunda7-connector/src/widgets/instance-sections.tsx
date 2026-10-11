@@ -1,6 +1,13 @@
 import { useState } from "react"
 import { Button, Input } from "@miragon/mcp-toolkit-ui"
-import { ListTable, TableEmptyState, Td, useResetOnChange } from "@miragon-ai/widget-shell/widgets"
+import {
+  Icon,
+  ListTable,
+  TableEmptyState,
+  Td,
+  useResetOnChange,
+} from "@miragon-ai/widget-shell/widgets"
+import { X } from "lucide-react"
 
 import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
@@ -16,7 +23,23 @@ function prettyJson(serialized: string): string {
   }
 }
 
-export function formatVariableValue(value: unknown, type?: string): string {
+/** How a Boolean value reads on screen ("Ja"/"Nein"); omitted, `true`/`false` as the engine writes it. */
+export interface BooleanLabels {
+  yes: string
+  no: string
+}
+
+export function formatVariableValue(
+  value: unknown,
+  type?: string,
+  booleans?: BooleanLabels,
+): string {
+  if (typeof value === "boolean" && booleans) return value ? booleans.yes : booleans.no
+  return valueText(value, type)
+}
+
+/** A value as the engine holds it, Json/Object pretty-printed. */
+function valueText(value: unknown, type?: string): string {
   if (value === null || value === undefined) return "—"
   // The feeds read variables serialized: Json/Object values arrive as strings.
   if ((type === "Json" || type === "Object") && typeof value === "string") return prettyJson(value)
@@ -161,7 +184,7 @@ function VariableRow({
                 aria-label={t("instanceSections.cancelEditing")}
                 onClick={() => setEditing(false)}
               >
-                ×
+                <Icon icon={X} />
               </Button>
             </div>
             {editError && (
@@ -178,7 +201,10 @@ function VariableRow({
             )}
           </form>
         ) : (
-          formatVariableValue(variable.value, variable.type)
+          formatVariableValue(variable.value, variable.type, {
+            yes: t("value.yes"),
+            no: t("value.no"),
+          })
         )}
       </Td>
       {editable && (

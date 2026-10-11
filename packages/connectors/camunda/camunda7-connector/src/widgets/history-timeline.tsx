@@ -3,7 +3,6 @@ import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
   TONE_DOT,
-  AskAiButton,
   ListTable,
   TableEmptyState,
   Td,
@@ -15,6 +14,7 @@ import {
 import type { HistoryTimelineData } from "../view-models.js"
 import { CockpitListFooter } from "./list-footer.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
+import { HandOffButton } from "./lib/hand-off-button.js"
 import { useT } from "../messages/use-t.js"
 
 export type { HistoryTimelineData }
@@ -216,7 +216,7 @@ export function HistoryTimelineView({
     return <HistoryTable entries={activities} />
   }
 
-  // Duration outliers: only surface the per-row "Why so long here?" explain
+  // Duration outliers: only surface the per-row "explain duration" hand-off
   // affordance on the slowest step(s) so the timeline isn't cluttered. A row is
   // an outlier if it has the single max duration, or its duration is >= 2x the
   // median of all completed (non-null) durations.
@@ -257,7 +257,8 @@ export function HistoryTimelineView({
               )}
             </div>
           </div>
-          <AskAiButton
+          <HandOffButton
+            action="explainTimeline"
             variant="primary"
             prompt={ask(
               explainInstanceHandOff(
@@ -301,10 +302,9 @@ export function HistoryTimelineView({
                         : formatDuration(activity.durationInMillis)}
                     </span>
                     {isOutlier(activity.durationInMillis) && (
-                      <AskAiButton
+                      <HandOffButton
+                        action="explainDuration"
                         variant="icon"
-                        label={t("historyTimeline.whySoLong")}
-                        title={t("historyTimeline.whySoLong")}
                         prompt={ask(explainActivityHandOff(activity, processInstance, engineId))}
                       />
                     )}
@@ -378,7 +378,9 @@ export function PagedHistoryView({
       return (
         <Alert variant="destructive">
           <AlertDescription>
-            {paged.error.message || t("historyTimeline.loadError")}
+            {t("historyTimeline.loadError", {
+              message: paged.error.message || t("viewState.unknownError"),
+            })}
           </AlertDescription>
         </Alert>
       )

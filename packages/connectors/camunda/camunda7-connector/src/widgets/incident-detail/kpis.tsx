@@ -1,4 +1,4 @@
-import { KpiGrid, formatDate, formatTime } from "@miragon-ai/widget-shell/widgets"
+import { KpiGrid, formatDate, formatNumber, formatTime } from "@miragon-ai/widget-shell/widgets"
 
 import type { IncidentDetailData } from "../../view-models.js"
 
@@ -21,7 +21,7 @@ export function IncidentKpis({ data, resolved }: { data: IncidentDetailData; res
         },
         {
           label: t("incidentDetail.kpiRetriesLeft"),
-          value: data.job?.retries ?? "—",
+          value: formatNumber(data.job?.retries),
           tone: data.job && data.job.retries > 0 ? "success" : data.job ? "danger" : undefined,
         },
         {
@@ -34,7 +34,7 @@ export function IncidentKpis({ data, resolved }: { data: IncidentDetailData; res
         },
         {
           label: t("incidentDetail.kpiHistoryEvents"),
-          value: data.historyTotalCount ?? "—",
+          value: formatNumber(data.historyTotalCount),
         },
       ]}
     />

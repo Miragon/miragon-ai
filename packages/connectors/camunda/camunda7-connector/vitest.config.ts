@@ -43,8 +43,10 @@ export default mergeConfig(
         // 83.38 / 71.81 / 81.22 / 84.39; main was 78.66 / 66.81 / 75.72 / 79.89).
         // #341's cockpit-scope, paged-list and definition-view render suites
         // (measured standalone 79.88 / 68.24 / 76.93 / 81.2) keep the higher
-        // write-path floor.
-        thresholds: { statements: 81, branches: 69, functions: 79, lines: 82 },
+        // write-path floor. Raised 2026-10-11 with the brand gates, the
+        // localized verdict and hand-off suites and the view-title tests
+        // (#322; measured 88.05 / 76.85 / 87.3 / 89.19).
+        thresholds: { statements: 86, branches: 74, functions: 85, lines: 87 },
       },
     },
   }),

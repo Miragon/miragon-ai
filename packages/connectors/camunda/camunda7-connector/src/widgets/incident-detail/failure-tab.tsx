@@ -1,8 +1,8 @@
 import { Alert, AlertDescription, Badge, Button, Card, CardContent } from "@miragon/mcp-toolkit-ui"
 import {
-  AskAiButton,
   LogText,
   SectionHeading,
+  formatNumber,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
 
@@ -10,6 +10,7 @@ import type { IncidentDetailData, IncidentDetailJob } from "../../view-models.js
 
 import { recoveryOf } from "../lib/incident-recovery.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 
 /** The engine's error text for the incident — the incident message, else the job's exception. */
@@ -135,9 +136,7 @@ function FactsCard({ data }: { data: IncidentDetailData }) {
             <div className="flex items-center gap-2 text-sm">
               <code className="font-mono text-xs">{job.id}</code>
               <Badge variant={job.retries > 0 ? "secondary" : "destructive"}>
-                {job.retries === 1
-                  ? t("incidentFailure.retriesLeftOne", { count: job.retries })
-                  : t("incidentFailure.retriesLeftOther", { count: job.retries })}
+                {t("incidentFailure.retriesLeft", { count: formatNumber(job.retries) })}
               </Badge>
             </div>
           </div>
@@ -172,12 +171,8 @@ function ActionsRow({
   const { ask } = useHandOff()
   return (
     <div className="flex flex-col gap-1.5">
+      {/* The deterministic recovery first; the chat hand-off follows it. */}
       <div className="flex flex-wrap items-center gap-2">
-        <AskAiButton
-          variant="subtle"
-          label={t("incidentFailure.draftTicketLabel")}
-          prompt={ask(draftTicketHandOff(data))}
-        />
         {onRetry && (
           <RetryButton data={data} onRetry={onRetry} retrying={retrying} retried={retried} />
         )}
@@ -196,6 +191,7 @@ function ActionsRow({
             </Button>
           )
         )}
+        <HandOffButton action="draftTicket" prompt={ask(draftTicketHandOff(data))} />
       </div>
       {retryError && (
         <p role="alert" className="text-danger-ink text-xs">
@@ -247,13 +243,7 @@ function ErrorMessageSection({ data }: { data: IncidentDetailData }) {
     <div>
       <SectionHeading
         title={t("incidentFailure.errorMessageTitle")}
-        trailing={
-          <AskAiButton
-            variant="subtle"
-            label={t("incidentFailure.explainErrorLabel")}
-            prompt={ask(explainErrorHandOff(data))}
-          />
-        }
+        trailing={<HandOffButton action="explainError" prompt={ask(explainErrorHandOff(data))} />}
       />
       <LogText text={data.incidentMessage ?? data.job?.exceptionMessage} />
     </div>

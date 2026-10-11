@@ -4,6 +4,7 @@ import type { ComponentType } from "react"
 import { cleanup, render, screen } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
+import { formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { ClusterDetailWidget, describeCluster } from "./cluster-detail.js"
 import type { ClusterDetailData } from "../view-models.js"
 import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
@@ -68,7 +69,7 @@ describe("ClusterDetailWidget (fixture render)", () => {
     // Cluster identity + the guarded remediation handoff.
     expect(screen.getByText("callWMS")).toBeTruthy()
     expect(screen.getByText("failedExternalTask")).toBeTruthy()
-    expect(await screen.findByText("Fix")).toBeTruthy()
+    expect(await screen.findByText("Plan a fix in chat")).toBeTruthy()
 
     // Full sample failure message.
     expect(screen.getByText("Connection timeout to WMS after 30000ms")).toBeTruthy()
@@ -103,9 +104,9 @@ describe("ClusterDetailWidget (fixture render)", () => {
 
     // Never the scanned 1,000 passed off as the cluster's size (counts render
     // in the runtime's locale).
-    const scanned = (1000).toLocaleString()
+    const scanned = formatNumber(1000)
     expect(screen.getByText(`≥${scanned}`)).toBeTruthy()
-    expect(screen.getByText(`≥${scanned} affected · across shipping`)).toBeTruthy()
+    expect(screen.getByText(`≥${scanned} affected · in shipping`)).toBeTruthy()
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(3)
     expect(screen.queryByText("0")).toBeNull()
     expect(

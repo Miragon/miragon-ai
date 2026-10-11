@@ -23,7 +23,7 @@ import {
 } from "../tool-names.js"
 import { incidentsDashboardFilterShape } from "../feed-contracts.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
-import { localizeFor } from "../lib/server-locale.js"
+import { localizeFor, localizeViewFor } from "../lib/server-locale.js"
 import {
   type WidgetToolsContext,
   clusterDetailShape,
@@ -177,7 +177,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       ...showToolBinding(CAMUNDA7_SHOW_ENGINE_HEALTH, "Engine Health Overview"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildEngineHealthData(client, engineId, healthThresholds)
       const top = data.clusters[0]
@@ -186,7 +186,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
         app: "camunda7",
         dataType: "camunda7:engineHealth",
         data,
-        title: "Engine Overview",
+        title: title("viewTitle.engineHealth"),
         summary: t("c7sum.engineHealth", {
           engineId,
           status: data.status,
@@ -220,7 +220,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
       ...showToolBinding(CAMUNDA7_SHOW_CLUSTER_DETAIL, "Failure Cluster Detail"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildClusterDetailData(client, engineId, {
         activityId: args.activityId,
@@ -235,7 +235,7 @@ export function registerIncidentWidgetTools(ctx: WidgetToolsContext) {
         app: "camunda7",
         dataType: "camunda7:clusterDetail",
         data,
-        title: `Cluster: ${data.activityId}`,
+        title: title("viewTitle.clusterDetail", { activity: data.activityId }),
         summary: t("c7sum.clusterDetail", {
           engineId,
           activityId: data.activityId,

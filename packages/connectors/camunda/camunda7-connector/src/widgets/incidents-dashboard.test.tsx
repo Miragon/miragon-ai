@@ -27,6 +27,7 @@ const DATA: IncidentsDashboardData = {
   last24hCount: 251,
   latestIncident: "2026-10-10T12:00:00.000+0000",
   filters: {},
+  engineVendor: "CIB seven",
   engineId: "prod-a",
   processes: [
     {
@@ -92,7 +93,7 @@ describe("incidents dashboard widgets — honest numbers", () => {
     fireEvent.click(screen.getByText("Burst"))
     expect(
       screen.getByText(
-        "Breakdown of the newest 200 of 250 incidents — open the process for exact per-activity counts.",
+        "Breakdown of the newest 200 of 250 incidents. Open the process for exact counts per activity.",
       ),
     ).toBeTruthy()
   })
@@ -100,7 +101,7 @@ describe("incidents dashboard widgets — honest numbers", () => {
   it("the Last 24h chip shows the key's 24h count (— when unknown) and drops a process without any", () => {
     render(<WidgetFixtureHost widget={asWidget(IncidentProcessList)} data={data} />)
 
-    fireEvent.click(screen.getByText("⏱ Last 24h"))
+    fireEvent.click(screen.getByText("Last 24h"))
 
     expect(screen.getByText("Burst")).toBeTruthy()
     expect(screen.queryByText("Quiet")).toBeNull()
@@ -139,7 +140,7 @@ describe("incidents dashboard — a filtered view keeps its scope", () => {
   })
 
   /**
-   * Renders `widget` and returns the hand-off its Analyze button posts. The
+   * Renders `widget` and returns the hand-off its chat button posts. The
    * feed answers the engine's unfiltered dashboard and records each request.
    */
   async function promptOf(widget: unknown, props: { data?: IncidentsDashboardData }) {
@@ -156,8 +157,8 @@ describe("incidents dashboard — a filtered view keeps its scope", () => {
         onHostAction={(action) => actions.push(action)}
       />,
     )
-    // A card's toggle wraps its Analyze button — click the button itself.
-    const [analyze] = (await screen.findAllByRole("button", { name: /Analyze/ })).sort(
+    // A card's toggle wraps its chat hand-off — click the button itself.
+    const [analyze] = (await screen.findAllByRole("button", { name: /in chat/ })).sort(
       (a, b) => (a.textContent ?? "").length - (b.textContent ?? "").length,
     )
     fireEvent.click(analyze)

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useLocale } from "@miragon/mcp-toolkit-ui"
-import { TONE_DOT, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { Icon, TONE_DOT, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { ArrowLeftRight, ArrowRight, ChevronLeft, LayoutDashboard } from "lucide-react"
 import { DEFAULT_ENVIRONMENT_ID, groupEnginesByEnvironment } from "../../lib/environments.js"
 import { translator } from "../../messages/index.js"
 import { useEngineHealth } from "./engine-health.js"
@@ -36,11 +37,13 @@ function EngineChoice({ engineId, onEnter }: { engineId: string; onEnter: () => 
       ) : (
         incidents > 0 && (
           <span className="text-danger-ink text-xs tabular-nums">
-            {translator(locale, "cockpit.landing.engine.incidents", { count: incidents })}
+            {translator(locale, "cockpit.landing.engine.incidents", {
+              count: formatNumber(incidents),
+            })}
           </span>
         )
       )}
-      <span aria-hidden>→</span>
+      <Icon icon={ArrowRight} dense />
     </button>
   )
 }
@@ -101,9 +104,11 @@ function OperateCardBody({
               ))}
             </span>
             <span className="text-muted-foreground">
-              {translator(locale, "cockpit.landing.env.count", { count: g.engines.length })}
+              {translator(locale, "cockpit.landing.env.count", {
+                count: formatNumber(g.engines.length),
+              })}
             </span>
-            <span aria-hidden>→</span>
+            <Icon icon={ArrowRight} dense />
           </button>
         ))}
       </div>
@@ -122,9 +127,10 @@ function OperateCardBody({
             <button
               type="button"
               onClick={() => pickStage(null)}
-              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring self-start rounded text-sm outline-none focus-visible:ring-2"
+              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 self-start rounded text-sm outline-none focus-visible:ring-2"
             >
-              <span aria-hidden>‹</span> {translator(locale, "cockpit.landing.env.back")}
+              <Icon icon={ChevronLeft} dense />
+              {translator(locale, "cockpit.landing.env.back")}
             </button>
           )}
           <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
@@ -176,15 +182,15 @@ export function LandingChooser({
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
             {translator(locale, subtitleKey, {
-              count: engines.length,
-              envCount: environmentCount,
+              count: formatNumber(engines.length),
+              envCount: formatNumber(environmentCount),
             })}
           </p>
         </div>
         <div className={`grid grid-cols-1 gap-4 ${onOpenFleet ? "sm:grid-cols-2" : ""}`}>
           <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
-            <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
-              ▦
+            <div className="bg-m-blue-soft text-m-blue grid size-8 place-items-center rounded-lg">
+              <Icon icon={LayoutDashboard} />
             </div>
             <div>
               <h2 className="text-foreground font-semibold">
@@ -202,8 +208,8 @@ export function LandingChooser({
               onClick={onOpenFleet}
               className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-5 text-left outline-none focus-visible:ring-2"
             >
-              <div className="bg-m-blue-soft text-m-blue grid size-10 place-items-center rounded-lg text-lg">
-                ⤧
+              <div className="bg-m-blue-soft text-m-blue grid size-8 place-items-center rounded-lg">
+                <Icon icon={ArrowLeftRight} />
               </div>
               <div>
                 <h2 className="text-foreground font-semibold">
@@ -213,8 +219,9 @@ export function LandingChooser({
                   {translator(locale, "cockpit.landing.fleet.desc")}
                 </p>
               </div>
-              <span className="text-m-blue mt-1 text-sm font-medium">
-                {translator(locale, "cockpit.landing.fleet.open")} <span aria-hidden>→</span>
+              <span className="text-m-blue mt-1 inline-flex items-center gap-1 text-sm font-medium">
+                {translator(locale, "cockpit.landing.fleet.open")}
+                <Icon icon={ArrowRight} dense />
               </span>
             </button>
           )}

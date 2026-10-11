@@ -86,7 +86,7 @@ describe("CockpitApp navigation is side-effect free", () => {
     // Landing chooser → operate one engine.
     fireEvent.click(await screen.findByRole("button", { name: /prod-a/ }))
     // Sidebar switcher → another engine.
-    const switcher = await screen.findByLabelText("Active engine")
+    const switcher = await screen.findByLabelText("Selected engine")
     fireEvent.change(switcher, { target: { value: "prod-b" } })
     await waitFor(() => expect((switcher as HTMLSelectElement).value).toBe("prod-b"))
 
@@ -120,8 +120,8 @@ describe("CockpitApp navigation is side-effect free", () => {
 
 /** The engine the sidebar shows as active — null while no engine is open. */
 const activeEngine = () =>
-  screen.queryByLabelText<HTMLSelectElement>("Active engine")?.value ?? null
-const onLanding = () => screen.queryByText("Operate an engine") !== null
+  screen.queryByLabelText<HTMLSelectElement>("Selected engine")?.value ?? null
+const onLanding = () => screen.queryByText("Work with one engine") !== null
 
 /**
  * The cockpit OPENS where `camunda7_open_cockpit` resolved — the per-call

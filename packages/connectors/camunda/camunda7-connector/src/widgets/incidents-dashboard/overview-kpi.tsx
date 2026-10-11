@@ -1,16 +1,17 @@
 import {
-  AskAiButton,
   KpiGrid,
   LivePill,
   ViewDataState,
   WidgetHeader,
   WidgetShell,
+  formatNumber,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
 import type { IncidentsDashboardData } from "../../view-models.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
 import { dashboardScope, incidentsFeed } from "./scope.js"
@@ -91,12 +92,8 @@ export function IncidentOverviewKpiView({
             <LivePill>{t("incidentsKpi.live")}</LivePill>
             <span>
               {t("incidentsKpi.openSummary", {
-                count: data.totalCount,
-                processes: data.processCount,
-                unit:
-                  data.processCount === 1
-                    ? t("incidentsKpi.processUnitSingular")
-                    : t("incidentsKpi.processUnitPlural"),
+                count: formatNumber(data.totalCount),
+                processes: formatNumber(data.processCount),
               })}
               {data.latestIncident && (
                 <>
@@ -110,7 +107,8 @@ export function IncidentOverviewKpiView({
           </>
         }
         actions={
-          <AskAiButton
+          <HandOffButton
+            action="assess"
             variant="primary"
             prompt={ask(triageIncidentsHandOff(data, engine ?? data.engineId))}
           />
@@ -122,17 +120,20 @@ export function IncidentOverviewKpiView({
         cells={[
           {
             label: t("incidentsKpi.cellOpenIncidents"),
-            value: data.totalCount,
+            value: formatNumber(data.totalCount),
             tone: data.totalCount > 0 ? "danger" : undefined,
           },
-          { label: t("incidentsKpi.cellProcessesAffected"), value: data.processCount },
+          {
+            label: t("incidentsKpi.cellProcessesAffected"),
+            value: formatNumber(data.processCount),
+          },
           {
             label: t("incidentsKpi.cellActivitiesAffected"),
             value: formatCount(data.affectedActivityCount),
           },
           {
             label: t("incidentsKpi.cellLast24h"),
-            value: `+${data.last24hCount}`,
+            value: `+${formatNumber(data.last24hCount)}`,
             tone: data.last24hCount > 0 ? "danger" : undefined,
           },
         ]}

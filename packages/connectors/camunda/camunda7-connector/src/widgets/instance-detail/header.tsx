@@ -1,15 +1,16 @@
 import { Button } from "@miragon/mcp-toolkit-ui"
 import {
-  AskAiButton,
   KpiGrid,
   StatusBadge,
   WidgetHeader,
+  formatNumber,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData } from "../../view-models.js"
 import { type T, useT } from "../../messages/use-t.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 
 export interface InstanceStatus {
   label: string
@@ -121,17 +122,6 @@ export function InstanceHeader({
       }
       actions={
         <>
-          <AskAiButton
-            variant="primary"
-            prompt={ask(
-              diagnoseInstanceHandOff({
-                instance,
-                engineId,
-                activeActivityIds: activeActivityIds ?? [],
-                incidentActivityIds: incidentActivityIds ?? [],
-              }),
-            )}
-          />
           {isActionable && onRequestSuspendToggle && (
             <Button
               variant="outline"
@@ -153,6 +143,18 @@ export function InstanceHeader({
               {t("instanceDetail.cancelInstance")}
             </Button>
           )}
+          <HandOffButton
+            action="findCause"
+            variant="primary"
+            prompt={ask(
+              diagnoseInstanceHandOff({
+                instance,
+                engineId,
+                activeActivityIds: activeActivityIds ?? [],
+                incidentActivityIds: incidentActivityIds ?? [],
+              }),
+            )}
+          />
         </>
       }
     />
@@ -183,16 +185,16 @@ export function InstanceKpis({
         },
         {
           label: t("instanceDetail.kpiOpenTasks"),
-          value: openTaskCount,
+          value: formatNumber(openTaskCount),
         },
         {
           label: t("instanceDetail.kpiOpenIncidents"),
-          value: openIncidentCount,
+          value: formatNumber(openIncidentCount),
           tone: openIncidentCount > 0 ? "danger" : undefined,
         },
         {
           label: t("instanceDetail.kpiVariables"),
-          value: variableCount,
+          value: formatNumber(variableCount),
         },
       ]}
     />

@@ -5,6 +5,7 @@ import {
   TONE_DOT,
   TableEmptyState,
   Td,
+  formatNumber,
   type ListTableColumn,
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
@@ -104,18 +105,18 @@ export function ProcessDefinitionsTableView({
           {showCounts && (
             <>
               <Td align="right" className="text-muted-foreground font-mono text-xs tabular-nums">
-                {(row.counts?.instances ?? 0).toLocaleString()}
+                {formatNumber(row.counts?.instances ?? 0)}
               </Td>
               <Td align="right">
                 {row.counts && row.counts.failedJobs > 0 ? (
-                  <CountPill tone="warning">{row.counts.failedJobs}</CountPill>
+                  <CountPill tone="warning">{formatNumber(row.counts.failedJobs)}</CountPill>
                 ) : (
                   <span className="text-muted-foreground font-mono text-xs">0</span>
                 )}
               </Td>
               <Td align="right">
                 <CountPill tone={(row.counts?.totalIncidents ?? 0) > 0 ? "danger" : "success"}>
-                  {row.counts?.totalIncidents ?? 0}
+                  {formatNumber(row.counts?.totalIncidents ?? 0)}
                 </CountPill>
               </Td>
             </>

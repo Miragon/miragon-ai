@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { Alert, AlertDescription, Button, Input, useToolQuery } from "@miragon/mcp-toolkit-ui"
-import { NativeSelect } from "@miragon-ai/widget-shell/widgets"
+import { Icon, NativeSelect } from "@miragon-ai/widget-shell/widgets"
+import { Plus, X } from "lucide-react"
 
 import { useT } from "../messages/use-t.js"
 import type { TaskFormField, TaskFormSchema } from "../view-models.js"
@@ -209,6 +210,7 @@ function TaskCompleteFormBody({
             ])
           }
         >
+          <Icon icon={Plus} />
           {t("taskForm.addVariable")}
         </Button>
         <div className="flex items-center gap-2">
@@ -313,25 +315,21 @@ function FieldRow({
           </label>
           <span className="text-muted-foreground text-xs">{meta}</span>
         </div>
+        {/* The engine value stays "true"/"false"; the screen says Ja/Nein. */}
         <div className="flex gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant={value === "true" ? "default" : "outline"}
-            disabled={disabled}
-            onClick={() => onChange("true")}
-          >
-            true
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={value === "false" ? "default" : "outline"}
-            disabled={disabled}
-            onClick={() => onChange("false")}
-          >
-            false
-          </Button>
+          {(["true", "false"] as const).map((choice) => (
+            <Button
+              key={choice}
+              type="button"
+              size="sm"
+              variant={value === choice ? "default" : "outline"}
+              aria-pressed={value === choice}
+              disabled={disabled}
+              onClick={() => onChange(choice)}
+            >
+              {t(choice === "true" ? "value.yes" : "value.no")}
+            </Button>
+          ))}
         </div>
       </div>
     )
@@ -406,7 +404,7 @@ function ManualEntryRow({
         aria-label={t("taskForm.removeVariable")}
         onClick={onRemove}
       >
-        ×
+        <Icon icon={X} />
       </Button>
     </div>
   )

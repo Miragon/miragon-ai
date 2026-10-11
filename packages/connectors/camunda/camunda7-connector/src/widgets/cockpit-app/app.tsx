@@ -2,11 +2,20 @@ import { useReducer } from "react"
 import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext, WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
 import {
+  Icon,
   ViewDataState,
   WidgetShell,
   useHostWidgets,
   useResetOnChange,
+  type LucideIcon,
 } from "@miragon-ai/widget-shell/widgets"
+import {
+  ArrowLeftRight,
+  ChevronRight,
+  LayoutDashboard,
+  Settings,
+  TriangleAlert,
+} from "lucide-react"
 import type { CockpitAppData } from "../../view-models.js"
 import { groupEnginesByEnvironment } from "../../lib/environments.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
@@ -33,10 +42,10 @@ interface EnginesResult {
 
 type TopSection = "overview" | "incidents" | "settings"
 
-const SECTIONS: Array<{ id: TopSection; intent: NavIntent; icon: string }> = [
-  { id: "overview", intent: { type: "overview" }, icon: "▦" },
-  { id: "incidents", intent: { type: "incidents" }, icon: "⚠" },
-  { id: "settings", intent: { type: "settings" }, icon: "⚙" },
+const SECTIONS: Array<{ id: TopSection; intent: NavIntent; icon: LucideIcon }> = [
+  { id: "overview", intent: { type: "overview" }, icon: LayoutDashboard },
+  { id: "incidents", intent: { type: "incidents" }, icon: TriangleAlert },
+  { id: "settings", intent: { type: "settings" }, icon: Settings },
 ]
 
 function isTopSection(section: CockpitView["section"]): section is TopSection {
@@ -167,7 +176,7 @@ function EngineSwitcher({
           onClick={onOpenFleet}
           className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2"
         >
-          <span aria-hidden="true">⤧</span>
+          <Icon icon={ArrowLeftRight} />
           {translator(locale, "cockpit.nav.crossEngine")}
         </button>
       )}
@@ -350,7 +359,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
             >
               {translator(locale, "cockpit.crumb.cockpit")}
             </button>
-            <span aria-hidden="true">›</span>
+            <Icon icon={ChevronRight} dense />
             <span className="text-foreground font-medium">
               {translator(locale, "cockpit.crumb.fleet")}
             </span>
@@ -395,7 +404,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
-                  <span aria-hidden="true">{s.icon}</span>
+                  <Icon icon={s.icon} />
                   {translator(locale, `cockpit.section.${s.id}`)}
                 </button>
               )

@@ -6,17 +6,24 @@ import { Alert, AlertDescription, AlertTitle, Skeleton } from "@miragon/mcp-tool
  * renders the skeleton while loading, and a destructive alert once the query
  * errored — the branch several dashboard widgets forgot, leaving them on an
  * eternal skeleton after a failed fetch.
+ *
+ * The alert says what happened (`errorTitle`, one line: the toolkit's
+ * `AlertTitle` clamps to it), the cause the query reported, and what the
+ * user can do (`errorHint`) — the two-part error text brand-tone asks for.
  */
 export function QueryFallback({
   isError,
   error,
   errorTitle,
+  errorHint,
   skeleton,
 }: {
   isError: boolean
   error?: unknown
-  /** Caller-localized headline for the error state. */
+  /** Caller-localized headline for the error state: what happened, one line. */
   errorTitle: string
+  /** Caller-localized next step under the cause: what the user can do. */
+  errorHint?: string
   skeleton: ReactNode
 }) {
   if (isError) {
@@ -24,7 +31,12 @@ export function QueryFallback({
     return (
       <Alert variant="destructive">
         <AlertTitle>{errorTitle}</AlertTitle>
-        {message ? <AlertDescription>{message}</AlertDescription> : null}
+        {message || errorHint ? (
+          <AlertDescription>
+            {message ? <p>{message}</p> : null}
+            {errorHint ? <p>{errorHint}</p> : null}
+          </AlertDescription>
+        ) : null}
       </Alert>
     )
   }

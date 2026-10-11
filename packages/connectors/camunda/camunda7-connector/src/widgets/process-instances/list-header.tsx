@@ -1,5 +1,6 @@
-import { AskAiButton, LivePill, WidgetHeader } from "@miragon-ai/widget-shell/widgets"
+import { LivePill, WidgetHeader, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 import { instancesFilterFacts, type InstancesListFilters } from "./hand-offs.js"
 
@@ -72,7 +73,7 @@ export function InstancesHeader({
       sub={
         <>
           <LivePill tone="info">
-            {t("processInstances.runningCount", { count: total.toLocaleString() })}
+            {t("processInstances.runningCount", { count: formatNumber(total) })}
           </LivePill>
           {scopedKey && (
             <>
@@ -83,7 +84,8 @@ export function InstancesHeader({
         </>
       }
       actions={
-        <AskAiButton
+        <HandOffButton
+          action="assess"
           variant="primary"
           prompt={ask(triageInstancesHandOff({ scopedKey, processName, total, engine, filters }))}
         />

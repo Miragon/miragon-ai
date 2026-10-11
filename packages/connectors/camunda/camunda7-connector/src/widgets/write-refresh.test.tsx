@@ -87,6 +87,7 @@ const DEFINITION: ProcessIncidentsData = {
     },
   ],
   siblingsWithIncidents: null,
+  engineVendor: "CIB seven",
   engineId: "prod",
 }
 
@@ -192,12 +193,12 @@ describe("the definition view's remedy marks follow the rows they mark", () => {
     )
     fireEvent.click(await screen.findByText("Charge card"))
     fireEvent.click(await screen.findByRole("button", { name: "Retry" }))
-    expect(await screen.findByText("Retried")).toBeTruthy()
+    expect(await screen.findByText("Retry scheduled")).toBeTruthy()
 
     // The definition feed answered; the rows are still the pre-retry page.
     expect(await screen.findByText("fresh summary")).toBeTruthy()
     await waitFor(() => expect(rowReads).toBe(2))
-    expect(screen.getByText("Retried")).toBeTruthy()
+    expect(screen.getByText("Retry scheduled")).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
 
     // The rows' refetch lands: server truth replaces the mark.

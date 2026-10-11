@@ -7,6 +7,7 @@ import {
   SegmentedControl,
   ViewDataState,
   WidgetShell,
+  formatNumber,
   type BpmnHeatmapData,
   type SegmentedControlOption,
 } from "@miragon-ai/widget-shell/widgets"
@@ -78,6 +79,7 @@ function ProcessHeatmap({
       height={DIAGRAM_HEIGHT}
       diagramAriaLabel={t("procIncFlow.heatmapDiagramAria")}
       errorTitle={t("procIncFlow.heatmapErrorTitle")}
+      errorHint={t("procIncFlow.heatmapErrorHint")}
       noHeatLabel={t("procIncFlow.heatmapNoValues")}
     />
   )
@@ -87,12 +89,12 @@ function ProcessHeatmap({
 function activityHint(t: ReturnType<typeof useT>, data: ProcessIncidentsData): string {
   const fraction = diagramActivityFraction(data)
   if (fraction) {
-    return t("procIncFlow.hintOfTotal", { count: fraction.affected, total: fraction.total })
+    return t("procIncFlow.hintOfTotal", {
+      count: formatNumber(fraction.affected),
+      total: formatNumber(fraction.total),
+    })
   }
-  const affected = data.activities.length
-  return affected === 1
-    ? t("procIncFlow.hintSingular", { count: affected })
-    : t("procIncFlow.hintPlural", { count: affected })
+  return t("procIncFlow.hint", { count: formatNumber(data.activities.length) })
 }
 
 function FlowModeToolbar({

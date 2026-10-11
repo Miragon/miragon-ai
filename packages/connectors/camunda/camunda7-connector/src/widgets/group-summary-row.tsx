@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { CountPill, TONE_DOT, cn, type ToneVariant } from "@miragon-ai/widget-shell/widgets"
+import { CountPill, Icon, TONE_DOT, cn, type ToneVariant } from "@miragon-ai/widget-shell/widgets"
+import { ChevronRight, TriangleAlert } from "lucide-react"
 
 /** One right-aligned value-over-label stack in a {@link GroupSummaryRow}. */
 export interface GroupSummaryStat {
@@ -8,18 +9,20 @@ export interface GroupSummaryStat {
 }
 
 /**
- * The soft-tinted "!" tile that leads incident activity rows — shared so the
- * grouped incident lists (dashboard + definition view) stay pixel-identical.
+ * The soft-tinted warning tile (Lucide `TriangleAlert`) that leads incident
+ * activity rows — shared so the grouped incident lists (dashboard +
+ * definition view) stay pixel-identical. Decorative: the row names the
+ * activity and its count.
  */
 export function IncidentGroupIcon({ tone = "danger" }: { tone?: ToneVariant }) {
   return (
     <div
       className={cn(
-        "grid size-6 place-items-center rounded-md text-xs font-bold",
+        "grid size-6 place-items-center rounded-md",
         tone === "danger" ? "bg-danger-soft text-danger-ink" : "bg-muted text-muted-foreground",
       )}
     >
-      !
+      <Icon icon={TriangleAlert} dense />
     </div>
   )
 }
@@ -93,14 +96,11 @@ export function GroupSummaryRow({
       {count !== undefined && <CountPill tone={countTone}>{count}</CountPill>}
       {actions}
       {expanded !== undefined && (
-        <span
-          aria-hidden="true"
-          className={`text-muted-foreground inline-block w-3 text-center text-xs transition-transform ${
-            expanded ? "rotate-90" : ""
-          }`}
-        >
-          ▶
-        </span>
+        <Icon
+          icon={ChevronRight}
+          dense
+          className={`text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`}
+        />
       )}
     </div>
   )

@@ -62,20 +62,20 @@ describe("LandingChooser", () => {
   it("offers the cross-engine view only when the cockpit passes it in", () => {
     renderLanding(() => {})
     expect(screen.getByText("Cross-engine analyses")).toBeTruthy()
-    expect(screen.getByText(/or analyze across the whole fleet/)).toBeTruthy()
+    expect(screen.getByText(/or analyze all of them together/)).toBeTruthy()
   })
 
   it("without analytics: no fleet card, and the subtitle promises no fleet analysis", () => {
     renderLanding(undefined)
     expect(screen.queryByText("Cross-engine analyses")).toBeNull()
-    expect(screen.getByText("3 engines configured — pick one to operate.")).toBeTruthy()
+    expect(screen.getByText("3 engines configured. Pick an engine.")).toBeTruthy()
   })
 
   it("shows each engine's live health on the picker buttons", async () => {
     renderLanding(undefined)
     const prodA = await screen.findByRole("button", { name: /prod-a.*3 incidents/ })
     expect(prodA).toBeTruthy()
-    expect(await screen.findByRole("button", { name: /prod-c.*status unavailable/ })).toBeTruthy()
+    expect(await screen.findByRole("button", { name: /prod-c.*Status unavailable/ })).toBeTruthy()
     // A healthy engine carries no incident text — only its dot.
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /prod-b/ }).textContent).not.toMatch(/incident/),

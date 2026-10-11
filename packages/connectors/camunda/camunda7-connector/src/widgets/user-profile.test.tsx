@@ -188,7 +188,9 @@ describe("settings dashboard picker", () => {
   it("shows the empty state when every listed dashboard is unreadable", async () => {
     renderPanel(VIEW, [unreadable])
     await dashboardsSettled()
-    expect(await screen.findByText("No saved dashboards yet.")).toBeTruthy()
+    expect(
+      await screen.findByText("No saved dashboards yet. Have the chat build one and save it."),
+    ).toBeTruthy()
     expect(screen.queryByText(unreadable.name)).toBeNull()
   })
 })

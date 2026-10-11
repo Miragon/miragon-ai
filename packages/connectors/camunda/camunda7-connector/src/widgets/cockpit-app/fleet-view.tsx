@@ -1,5 +1,12 @@
 import { WidgetRenderer, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
-import { AskAiButton, CountPill, SectionHeading, TONE_DOT } from "@miragon-ai/widget-shell/widgets"
+import {
+  CountPill,
+  Icon,
+  SectionHeading,
+  TONE_DOT,
+  formatNumber,
+} from "@miragon-ai/widget-shell/widgets"
+import { ArrowRight } from "lucide-react"
 import type { CockpitDashboardData } from "../../view-models.js"
 import {
   enginesByEnvironment,
@@ -8,6 +15,7 @@ import {
 } from "../../lib/environments.js"
 import { useT } from "../../messages/use-t.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useEngineHealth } from "./engine-health.js"
 import { filterLayoutToWidgets } from "./views.js"
 
@@ -26,20 +34,22 @@ function FleetEngineKpis({
       <div>
         <div className="text-muted-foreground text-[11px]">{t("fleet.running")}</div>
         <div className="text-foreground font-mono font-semibold tabular-nums">
-          {summary.totalRunningInstances.toLocaleString()}
+          {formatNumber(summary.totalRunningInstances)}
         </div>
       </div>
       <div>
         <div className="text-muted-foreground text-[11px]">{t("fleet.incidents")}</div>
         <div>
-          <CountPill tone={incidents > 0 ? "danger" : "success"}>{incidents}</CountPill>
+          <CountPill tone={incidents > 0 ? "danger" : "success"}>
+            {formatNumber(incidents)}
+          </CountPill>
         </div>
       </div>
       <div>
         <div className="text-muted-foreground text-[11px]">{t("fleet.failedJobs")}</div>
         <div>
           {failed > 0 ? (
-            <CountPill tone="warning">{failed}</CountPill>
+            <CountPill tone="warning">{formatNumber(failed)}</CountPill>
           ) : (
             <span className="text-muted-foreground font-mono text-xs">0</span>
           )}
@@ -71,14 +81,15 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
           <span className={`size-2 rounded-full ${TONE_DOT[tone]}`} aria-hidden />
           {engineId}
         </span>
-        <span className="text-muted-foreground text-xs">
-          {t("fleet.operate")} <span aria-hidden>→</span>
+        <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+          {t("fleet.operate")}
+          <Icon icon={ArrowRight} dense />
         </span>
       </div>
 
       {q.isError ? (
         <span className="text-danger-ink text-xs">
-          {q.error?.message ?? t("fleet.failedToLoad")}
+          {t("fleet.loadError", { message: q.error?.message ?? t("viewState.unknownError") })}
         </span>
       ) : !s ? (
         <span className="text-muted-foreground text-xs">{t("fleet.loading")}</span>
@@ -87,9 +98,7 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
       )}
       {s && (
         <div className="text-muted-foreground text-[11px]">
-          {s.totalDefinitions === 1
-            ? t("fleet.processDefinitionsOne", { count: s.totalDefinitions })
-            : t("fleet.processDefinitionsOther", { count: s.totalDefinitions })}
+          {t("fleet.processDefinitions", { count: formatNumber(s.totalDefinitions) })}
         </div>
       )}
     </button>
@@ -205,19 +214,18 @@ export function FleetView({
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="bg-m-blue-soft text-m-blue mb-3 grid size-11 place-items-center rounded-xl text-xl">
-            ⤧
-          </div>
           <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">
             {t("fleet.heading")}
           </h1>
           <div className="text-muted-foreground text-sm">
-            {engines.length === 1
-              ? t("fleet.engineCountOne", { count: engines.length, list: idList })
-              : t("fleet.engineCountOther", { count: engines.length, list: idList })}
+            {t("fleet.engineCount", { count: formatNumber(engines.length), list: idList })}
           </div>
         </div>
-        <AskAiButton variant="primary" prompt={ask(fleetOverviewHandOff(fleet))} />
+        <HandOffButton
+          action="assess"
+          variant="primary"
+          prompt={ask(fleetOverviewHandOff(fleet))}
+        />
       </header>
 
       <section className="flex flex-col gap-4">
@@ -246,16 +254,8 @@ export function FleetView({
           hint={t("fleet.fleetAnalyses.hint")}
         />
         <div className="flex flex-wrap items-center gap-2">
-          <AskAiButton
-            variant="subtle"
-            label={t("fleet.failureAnalysis")}
-            prompt={ask(fleetFailuresHandOff(fleet))}
-          />
-          <AskAiButton
-            variant="subtle"
-            label={t("fleet.performance")}
-            prompt={ask(fleetPerformanceHandOff(fleet))}
-          />
+          <HandOffButton action="analyzeFailures" prompt={ask(fleetFailuresHandOff(fleet))} />
+          <HandOffButton action="analyzePerformance" prompt={ask(fleetPerformanceHandOff(fleet))} />
         </div>
       </section>
     </div>

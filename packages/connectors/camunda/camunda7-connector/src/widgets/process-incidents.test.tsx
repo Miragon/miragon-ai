@@ -48,6 +48,7 @@ const DATA: ProcessIncidentsData = {
     },
   ],
   siblingsWithIncidents: null,
+  engineVendor: "CIB seven",
   engineId: "prod-a",
 }
 

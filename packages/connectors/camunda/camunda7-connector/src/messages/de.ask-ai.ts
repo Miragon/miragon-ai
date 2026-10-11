@@ -1,62 +1,66 @@
 import type { Camunda7AskAiKey } from "./en.ask-ai.js"
 
-/** German Ask-AI hand-off intents — same keys as `en.ask-ai.ts` (the type enforces parity). */
+/**
+ * German Ask-AI hand-off intents — same keys as `en.ask-ai.ts` (the type
+ * enforces parity). Schlichtes du-Deutsch, denn der Text steht als Nachricht
+ * der Person im Chat, die klickt: kein Gedankenstrich als Verbinder, keine
+ * Urteile in Versalien, die Schlussformel („Ändere nichts.“) bleibt.
+ */
 export const deAskAi: Record<Camunda7AskAiKey, string> = {
   "askAi.jobs.triage":
-    "Triagiere die fehlgeschlagenen Jobs: nach Ursache gruppieren, je Gruppe die wahrscheinliche Ursache nennen und eine Maßnahme empfehlen. Nur empfehlen — nichts ändern.",
+    "Ordne die fehlgeschlagenen Jobs nach Ursache: Gruppier sie, nenn je Gruppe die wahrscheinliche Ursache und empfiehl je Gruppe eine Maßnahme. Nur empfehlen, ändere nichts.",
   "askAi.jobs.explainFailure":
-    "Erkläre, warum dieser Job fehlgeschlagen ist: was kaputt ist, ob es vorübergehend oder deterministisch ist, und ein Urteil — RETRY SICHER oder SCHLÄGT ERNEUT FEHL. Nichts ändern.",
+    "Erklär, warum dieser Job fehlgeschlagen ist: Was ist kaputt, ist der Fehler vorübergehend oder kommt er wieder, und hilft ein neuer Versuch oder schlägt er wieder fehl? Ändere nichts.",
   "askAi.jobs.draftTicket":
-    "Entwirf ein Incident-Ticket für diesen fehlgeschlagenen Job: den zugehörigen Incident finden, den Entwurf erstellen und mir zur Prüfung zeigen. Nirgends einreichen.",
+    "Entwirf ein Incident-Ticket für diesen fehlgeschlagenen Job: Finde den zugehörigen Incident, schreib den Entwurf und zeig ihn mir zur Prüfung. Reich ihn nirgends ein.",
   "askAi.health.triage":
-    "Bewerte den Zustand dieser Engine: die Incident-Cluster nach Auswirkung ordnen, das dringendste Problem fachlich benennen, die wahrscheinliche Ursache und den ersten Schritt zur Behebung. Nichts ohne meine Bestätigung ändern.",
+    "Bewerte den Zustand dieser Engine: Ordne die Incident-Cluster nach Auswirkung, nenn das dringendste Problem fachlich, seine wahrscheinliche Ursache und den ersten Schritt zur Behebung. Ändere nichts ohne meine Bestätigung.",
   "askAi.health.diagnoseUnreachable":
-    "Der Health-Check der Engine ist fehlgeschlagen. Ermittle, warum die Engine nicht erreichbar ist — ausgefallen, falsche Basis-URL, Authentifizierung oder Netzwerk — und nenne den nächsten Schritt. Nichts ändern.",
+    "Die Zustandsprüfung der Engine ist fehlgeschlagen. Finde heraus, warum die Engine nicht erreichbar ist (ausgefallen, falsche Basis-URL, Anmeldung oder Netzwerk), und nenn den nächsten Schritt. Ändere nichts.",
   "askAi.cluster.fix":
-    "Hilf mir, diesen Incident-Cluster verständlich zu beheben: die Ursache bestätigen, dann eine Behebung genau für diesen Cluster vorschlagen. Zeig mir den Plan und die Zahl der Betroffenen; nichts ausführen, bevor ich bestätige.",
+    "Hilf mir, diesen Incident-Cluster zu beheben: Bestätige die Ursache und schlag dann eine Behebung genau für diesen Cluster vor. Zeig mir den Plan und wie viele Instanzen betroffen sind, und führ nichts aus, bevor ich bestätige.",
   "askAi.cluster.diagnose":
-    "Diagnostiziere diesen Incident-Cluster verständlich: die Ursache bestätigen und ob ein Retry hilft. Diese Installation kann die Engine nicht ändern — entwirf ein Ticket, falls eine Behebung nötig ist.",
-  "askAi.cluster.diagnoseLabel": "Diagnose",
+    "Erklär diesen Incident-Cluster in einfachen Worten: Bestätige die Ursache und sag, ob ein neuer Versuch hilft. Diese Verbindung kann die Engine nicht ändern, also entwirf ein Ticket, falls eine Behebung nötig ist.",
   "askAi.history.explainInstance":
-    "Erkläre, wo diese Prozessinstanz ihre Zeit verbracht hat: der längste Schritt, Wartezeit gegenüber Arbeit, und ob dieser Durchlauf ein Ausreißer ist.",
+    "Erklär, wo diese Prozessinstanz ihre Zeit verbracht hat: der längste Schritt, Warten oder Arbeiten, und ob dieser Durchlauf auffällig ist.",
   "askAi.history.explainActivity":
-    "Erkläre, warum dieser Schritt so lange gedauert hat: Wartezeit oder Arbeit, und ob die Dauer für ihn typisch ist. Nichts ändern.",
+    "Erklär, warum dieser Schritt so lange gedauert hat: Warten oder Arbeiten, und ob die Dauer für ihn normal ist. Ändere nichts.",
   "askAi.fleet.overview":
-    "Gib mir einen Überblick über diese Engines: wo die meiste Arbeit und die meisten Probleme liegen, ob es einen Job-Rückstau oder eine stumme Engine gibt, und wo ich anfangen sollte. Nur empfehlen.",
+    "Gib mir einen Überblick über diese Engines: Wo liegt die meiste Arbeit, wo liegen die meisten Probleme, gibt es einen Job-Rückstau oder eine stille Engine, und wo fange ich an? Nur empfehlen.",
   "askAi.fleet.failures":
-    "Analysiere die Fehler über diese Engines: der dominante Fehler-Cluster, ob er isoliert oder systemisch ist, und die wirksamste Behebung.",
+    "Analysier die Fehler über diese Engines: der häufigste Fehler-Cluster, ob er einzeln oder systematisch auftritt, und die Behebung mit der größten Wirkung.",
   "askAi.fleet.performance":
-    "Gib mir einen Überblick über die Prozess-Performance dieser Engines: die schwächsten Prozesse und den Hauptengpass. Prozesse vergleichen, nicht Engines.",
+    "Gib mir einen Überblick über die Prozess-Performance dieser Engines: die langsamsten Prozesse und der größte Engpass. Vergleich Prozesse, nicht Engines.",
   "askAi.instances.rootCause":
-    "Finde die Ursache des Incidents dieser Instanz, prüfe, ob andere Instanzen des Prozesses genauso fehlschlagen, und empfiehl eine Behebung — für diese Instanz oder den ganzen Cluster.",
+    "Finde die Ursache des Incidents dieser Instanz, prüf, ob andere Instanzen des Prozesses genauso fehlschlagen, und empfiehl eine Behebung für diese Instanz oder den ganzen Cluster.",
   "askAi.instances.triageProcess":
-    "Triagiere die laufenden Instanzen dieses Prozesses: Incidents nach fehlschlagender Aktivität und Typ gruppieren, den dominanten Fehler nennen und wie viele Instanzen ein Retry behebt gegenüber einer Daten- oder Modellkorrektur. Nur empfehlen.",
+    "Ordne die laufenden Instanzen dieses Prozesses nach Dringlichkeit: Gruppier die Incidents nach fehlschlagender Aktivität und Typ, nenn den häufigsten Fehler und sag, wie viele Instanzen ein neuer Versuch behebt und wie viele eine Daten- oder Modellkorrektur brauchen. Nur empfehlen.",
   "askAi.instances.triageEngine":
-    "Triagiere die laufenden Instanzen dieser Engine über alle Prozesse: Fehler nach Prozess, Aktivität und Typ gruppieren und eine priorisierte Triage je Prozess geben. Nur empfehlen.",
+    "Ordne die laufenden Instanzen dieser Engine über alle Prozesse nach Dringlichkeit: Gruppier die Fehler nach Prozess, Aktivität und Typ und gib mir je Prozess eine Liste nach Priorität. Nur empfehlen.",
   "askAi.instance.explainTimeline":
-    "Erkläre den Ausführungsverlauf dieser Instanz: wo der Token die meiste Zeit verbracht hat, wo er hängt, und ob der Pfad dem Normalablauf entspricht. Nichts ändern.",
+    "Erklär den Ablauf dieser Instanz: Wo hat der Token die meiste Zeit verbracht, wo hängt er, und folgt der Pfad dem normalen Ablauf? Ändere nichts.",
   "askAi.instance.checkVariables":
-    "Erkläre und prüfe die Variablen dieser Instanz: Werte markieren, die fehlen, fehlerhaft oder widersprüchlich wirken und ihre Incidents erklären könnten. Korrekturen vorschlagen; nichts ohne meine Bestätigung setzen.",
+    "Erklär und prüf die Variablen dieser Instanz: Markier Werte, die fehlen, kaputt oder widersprüchlich wirken und ihre Incidents erklären könnten. Schlag Korrekturen vor und setz nichts ohne meine Bestätigung.",
   "askAi.instance.diagnose":
-    "Diagnostiziere diese Prozessinstanz: warum der Token hängt, die Ursache jedes offenen Incidents, ob andere Instanzen genauso fehlschlagen, und die beste Behebung. Plan vorlegen; nichts ausführen.",
+    "Finde heraus, warum diese Prozessinstanz hängt: die Ursache jedes offenen Incidents, ob andere Instanzen genauso fehlschlagen, und die beste Behebung. Zeig mir den Plan und führ nichts aus.",
   "askAi.incident.diagnose":
-    "Diagnostiziere diesen Incident: die wahrscheinliche Ursache, ob ein einfacher Retry gelingt, und die empfohlene Behebung — Retry, Datenkorrektur, Instanz-Modifikation oder Eskalation.",
+    "Finde die Ursache dieses Incidents: die wahrscheinliche Ursache, ob ein einfacher neuer Versuch gelingt, und die Behebung, die du empfiehlst (neuer Versuch, Datenkorrektur, Änderung der Instanz oder Eskalation).",
   "askAi.incident.explainError":
-    "Erkläre den Fehler dieses Incidents verständlich: was er bedeutet, die wahrscheinliche Ursache, und ob er vorübergehend (Retry sicher) oder deterministisch (schlägt erneut fehl) ist. Nichts ändern.",
+    "Erklär den Fehler dieses Incidents in einfachen Worten: was er bedeutet, die wahrscheinliche Ursache, und ob er vorübergehend ist (ein neuer Versuch ist sicher) oder wiederkommt (ein neuer Versuch schlägt wieder fehl). Ändere nichts.",
   "askAi.incident.draftTicket":
-    "Entwirf ein Incident-Ticket für diesen Incident und zeig mir den Entwurf — Titel, Text, Labels — zur Prüfung. Nirgends einreichen.",
+    "Entwirf ein Incident-Ticket für diesen Incident und zeig mir Titel, Text und Labels zur Prüfung. Reich es nirgends ein.",
   "askAi.process.triage":
-    "Triagiere den Zustand dieser Prozessdefinition: Incidents nach Ursache clustern, Symptome von Quellen trennen und je Cluster eine Behebung empfehlen. Nur Diagnose.",
+    "Ordne die Incidents dieser Prozessdefinition nach Ursache, trenn Symptome von Quellen und empfiehl je Cluster eine Behebung. Nur Diagnose.",
   "askAi.process.healthCheck":
-    "Prüfe den Zustand dieser Prozessdefinition: gesund oder beeinträchtigt, die schlechtesten Aktivitäten, die häufigste Incident-Meldung, die wahrscheinlichste Ursache und einen nächsten Schritt. Nichts ändern.",
+    "Prüf den Zustand dieser Prozessdefinition: gesund oder beeinträchtigt, die schlechtesten Aktivitäten, die häufigste Incident-Meldung, die wahrscheinlichste Ursache und einen nächsten Schritt. Ändere nichts.",
   "askAi.bpmn.explainState":
-    "Erkläre den Zustand dieser Instanz im Diagramm: welche Elemente den Fortschritt blockieren, was jeder Incident bedeutet, ob die Häufungen fehlgeschlagener Jobs auf einen systemischen Fehler deuten, und die nächsten Schritte nach Priorität.",
+    "Erklär den Zustand dieser Instanz im Diagramm: welche Elemente den Fortschritt blockieren, was jeder Incident bedeutet, ob die Häufungen fehlgeschlagener Jobs auf einen systematischen Fehler deuten, und die nächsten Schritte nach Priorität.",
   "askAi.landscape.triage":
-    "Triagiere die Prozesslandschaft dieser Engine: die betroffenen Prozesse nach Schwere ordnen, den dringendsten nennen, seine wahrscheinliche Ursache und den ersten Behebungsschritt.",
+    "Ordne die betroffenen Prozesse dieser Engine nach Schwere: Nenn den dringendsten, seine wahrscheinliche Ursache und den ersten Schritt zur Behebung.",
   "askAi.incidents.processRootCause":
-    "Finde die Ursache der offenen Incidents dieses Prozesses: haben die fehlschlagenden Aktivitäten eine gemeinsame Ursache, ist sie vorübergehend, ein Daten- oder Konfigurationsproblem oder ein fehlerhaftes Modell, und welche Behebung empfiehlst du. Nichts ohne meine Bestätigung ändern.",
+    "Finde die Ursache der offenen Incidents dieses Prozesses: Haben die fehlschlagenden Aktivitäten eine gemeinsame Ursache, ist sie vorübergehend, ein Daten- oder Konfigurationsproblem oder ein fehlerhaftes Modell, und welche Behebung empfiehlst du? Ändere nichts ohne meine Bestätigung.",
   "askAi.incidents.triage":
-    "Triagiere alle offenen Incidents dieser Engine: nach Fehler und fehlschlagender Aktivität clustern, die Cluster nach Auswirkung ordnen, die wahrscheinlichste systemische Ursache und den nächsten Schritt je Top-Cluster nennen. Noch nichts ändern.",
+    "Ordne alle offenen Incidents dieser Engine: Clustere sie nach Fehler und fehlschlagender Aktivität, sortier die Cluster nach Auswirkung und nenn die wahrscheinlichste systematische Ursache und den nächsten Schritt je Top-Cluster. Ändere noch nichts.",
   "askAi.incidents.triageFiltered":
-    "Triagiere die offenen Incidents, auf die diese Ansicht gefiltert ist: nach Fehler und fehlschlagender Aktivität clustern, die Cluster nach Auswirkung ordnen, die wahrscheinlichste Ursache und den nächsten Schritt je Top-Cluster nennen. Noch nichts ändern.",
+    "Ordne die offenen Incidents, auf die diese Ansicht gefiltert ist: Clustere sie nach Fehler und fehlschlagender Aktivität, sortier die Cluster nach Auswirkung und nenn die wahrscheinlichste Ursache und den nächsten Schritt je Top-Cluster. Ändere noch nichts.",
 }

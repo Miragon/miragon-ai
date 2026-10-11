@@ -1,3 +1,4 @@
+import { formatNumber } from "@miragon-ai/widget-shell/widgets"
 import type { IncidentsByProcess } from "../../view-models.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -40,7 +41,7 @@ export function EmptyStateWithSiblings({
                   {s.processDefinitionName ?? s.processDefinitionKey}
                 </span>
                 <span className="bg-danger-soft text-danger-ink inline-flex min-w-[1.75rem] items-center justify-center rounded-md px-1.5 py-0.5 font-semibold tabular-nums">
-                  {s.incidentCount}
+                  {formatNumber(s.incidentCount)}
                 </span>
               </button>
             ))}

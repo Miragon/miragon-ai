@@ -5,6 +5,7 @@ import {
   TONE_DOT,
   ViewDataState,
   WidgetShell,
+  formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
@@ -111,11 +112,7 @@ export function ActivityIncidentList({
       <section>
         <SectionHeading
           title={t("procIncList.groupedHeading")}
-          hint={
-            affectedActivityCount === 1
-              ? t("procIncList.affectedHintOne", { count: affectedActivityCount })
-              : t("procIncList.affectedHintOther", { count: affectedActivityCount })
-          }
+          hint={t("procIncList.affectedHint", { count: formatNumber(affectedActivityCount) })}
         />
         {data.activities.length === 0 ? (
           <NoIncidentsState data={data} emptyVariant={emptyVariant} onJumpTo={jumpToProcess} />
@@ -137,6 +134,7 @@ export function ActivityIncidentList({
                 processDefinitionKey={data.processDefinitionKey}
                 activityId={activity.activityId}
                 engine={engineId}
+                vendor={data.engineVendor}
                 onAnalyze={analyzeIncident}
               />
             </GroupCard>

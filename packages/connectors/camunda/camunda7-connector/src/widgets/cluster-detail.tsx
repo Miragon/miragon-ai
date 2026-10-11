@@ -1,5 +1,4 @@
 import {
-  AskAiButton,
   DrillButton,
   FilterBar,
   KpiGrid,
@@ -11,6 +10,7 @@ import {
   ViewDataState,
   WidgetHeader,
   WidgetShell,
+  formatNumber,
   formatTimestamp,
   truncate,
   usePagedListView,
@@ -29,6 +29,7 @@ import {
 } from "./remediation.js"
 import { useHandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
+import { HandOffButton } from "./lib/hand-off-button.js"
 import { useT } from "../messages/use-t.js"
 
 /** Page size — mirrors the server default (`CLUSTER_DETAIL_ROWS`). */
@@ -102,7 +103,7 @@ function clusterFeedParams({
   return { clusterActivityId, clusterIncidentType, clusterSignature, feedEngine, ready, args }
 }
 
-/** Header block: failing activity, incident-type badge, and the guarded "Fix" handoff. */
+/** Header block: failing activity, incident-type badge, and the guarded remediation hand-off. */
 function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: string }) {
   const t = useT()
   const { ask, surface } = useHandOff()
@@ -134,9 +135,9 @@ function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: 
         </span>
       }
       actions={
-        <AskAiButton
+        <HandOffButton
+          action={canFix ? "planFix" : "explainError"}
           variant="primary"
-          label={canFix ? t("clusterDetail.fix") : t("askAi.cluster.diagnoseLabel")}
           prompt={ask(handOff)}
         />
       }
@@ -237,7 +238,7 @@ function IncidentRow({ row }: { row: ClusterIncidentRow }) {
  * overview's cluster list and the single-incident detail. Shows the affected
  * instances business-key-first (the operator's "order number"), the full
  * sample message, and the time profile; remediation stays a guarded handoff
- * to the agent (same prompt as the overview's "Fix").
+ * to the agent (same prompt as the overview's cluster hand-off).
  */
 export function ClusterDetailView({
   data: initialData = null,
@@ -343,9 +344,7 @@ export function ClusterDetailView({
             <CockpitListFooter paged={paged} noun={t("clusterDetail.footerNoun")} />
             {listCapped(data) && (
               <p className="text-muted-foreground text-xs">
-                {t("clusterDetail.listCapped", {
-                  count: data.scannedIncidentCount.toLocaleString(),
-                })}
+                {t("clusterDetail.listCapped", { count: formatNumber(data.scannedIncidentCount) })}
               </p>
             )}
           </section>

@@ -79,13 +79,13 @@ describe("incident rows offer the action the engine accepts", () => {
   it("Retry for failedJob and failedExternalTask, Resolve only for custom incidents", async () => {
     renderWidget(Incidents, { [CAMUNDA7_WIDGET_ACTIONS_DATA]: ALL_ACTIONS })
     await waitFor(async () => expect(await rowButtons("message job")).toContain("Retry"))
-    expect(await rowButtons("message job")).not.toContain("Resolve")
+    expect(await rowButtons("message job")).not.toContain("Mark as resolved")
     expect(await rowButtons("message ext")).toContain("Retry")
-    expect(await rowButtons("message custom")).toContain("Resolve")
+    expect(await rowButtons("message custom")).toContain("Mark as resolved")
     expect(await rowButtons("message custom")).not.toContain("Retry")
     const propagated = await rowButtons("message propagated")
     expect(propagated).not.toContain("Retry")
-    expect(propagated).not.toContain("Resolve")
+    expect(propagated).not.toContain("Mark as resolved")
   })
 
   it("Retry calls the matching retries tool with retries 1 on the row's engine", async () => {
@@ -111,7 +111,7 @@ describe("incident rows offer the action the engine accepts", () => {
         ],
       ]),
     )
-    expect(await screen.findAllByText("Retried")).toHaveLength(2)
+    expect(await screen.findAllByText("Retry scheduled")).toHaveLength(2)
   })
 
   it("keeps the row's ticket handoff on the instance's engine next to its recovery action", async () => {
@@ -131,9 +131,9 @@ describe("incident rows offer the action the engine accepts", () => {
       />,
     )
     await waitFor(async () => expect(await rowButtons("message job")).toContain("Retry"))
-    expect(await rowButtons("message custom")).toContain("Resolve")
+    expect(await rowButtons("message custom")).toContain("Mark as resolved")
     const row = (await screen.findByText("message job")).closest("tr")!
-    fireEvent.click(within(row).getByRole("button", { name: "Draft ticket" }))
+    fireEvent.click(within(row).getByRole("button", { name: "Draft ticket in chat" }))
     const prompts = actions
       .filter((a) => a.type === "sendFollowUpMessage")
       .map((a) => (a as { prompt: string }).prompt)
@@ -146,7 +146,9 @@ describe("incident rows offer the action the engine accepts", () => {
     renderWidget(Incidents, {
       [CAMUNDA7_WIDGET_ACTIONS_DATA]: { allowedActions: ["camunda7_resolve_incident"] },
     })
-    await waitFor(async () => expect(await rowButtons("message custom")).toContain("Resolve"))
+    await waitFor(async () =>
+      expect(await rowButtons("message custom")).toContain("Mark as resolved"),
+    )
     expect(screen.queryByText("Retry")).toBeNull()
   })
 })

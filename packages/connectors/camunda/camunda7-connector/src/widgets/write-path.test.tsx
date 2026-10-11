@@ -169,7 +169,7 @@ describe("a confirmation names its target (N108)", () => {
     ])
   })
 
-  it("resolve: names the incident and its instance; Keep open vs Resolve incident", async () => {
+  it("resolve: names the incident and its instance; Keep open vs Mark as resolved", async () => {
     const calls: Calls = []
     const withIncident = instance({
       incidents: [
@@ -190,13 +190,13 @@ describe("a confirmation names its target (N108)", () => {
     renderInstance(Standalone, withIncident, {
       ...recorder(calls, "camunda7_resolve_incident", () => ({ success: true })),
     })
-    fireEvent.click(await screen.findByRole("button", { name: "Resolve" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Mark as resolved" }))
     const dialog = await screen.findByRole("dialog")
     expect(within(dialog).getByText("inc-9")).toBeTruthy()
     expect(within(dialog).getByText("invoiceMismatch")).toBeTruthy()
     expect(within(dialog).getByText("pi-1")).toBeTruthy()
     expect(within(dialog).getByRole("button", { name: "Keep open" })).toBeTruthy()
-    fireEvent.click(within(dialog).getByRole("button", { name: "Resolve incident" }))
+    fireEvent.click(within(dialog).getByRole("button", { name: "Mark as resolved" }))
     await waitFor(() => expect(calls).toHaveLength(1))
     expect(calls[0]).toEqual(["camunda7_resolve_incident", { incidentId: "inc-9", engine: "prod" }])
   })
@@ -248,7 +248,7 @@ describe("the cockpit refreshes and retries instead of dead-ending (N103)", () =
         }}
       />,
     )
-    const refresh = await screen.findByRole("button", { name: "↻ Refresh" })
+    const refresh = await screen.findByRole("button", { name: "Refresh" })
     await waitFor(() => expect(overviewCalls.length).toBeGreaterThan(0))
     const before = overviewCalls.length
     fireEvent.click(refresh)
@@ -295,7 +295,7 @@ describe("a standalone show view refreshes after a write (K46)", () => {
     )
     fireEvent.click(await screen.findByRole("button", { name: "Retry job" }))
 
-    expect(await screen.findByText("No jobs found")).toBeTruthy()
+    expect(await screen.findByText("No jobs in this selection.")).toBeTruthy()
     expect(calls.map(([name]) => name)).toEqual(["camunda7_set_job_retries", CAMUNDA7_JOBS_DATA])
     expect(calls[1][1]).toMatchObject({ engine: "prod", failedOnly: true, firstResult: 0 })
   })

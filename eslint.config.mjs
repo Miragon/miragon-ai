@@ -282,15 +282,20 @@ export default tseslint.config(
   // Connector widgets sit under BOTH gates — one block with the union, after
   // the registrar block (whose options it replaces for these files).
   {
-    files: [
-      "packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}",
-      "packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}",
-    ],
+    files: ["packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}"],
     rules: { "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate] },
   },
-  // Invariant 6, numbers: the kit's own widget code first. The connector
-  // widgets join this gate (in their union block above) once their raw
-  // toFixed/toLocaleString() calls moved to the kit formatters.
+  // camunda7's widgets render every number through the kit formatters, so
+  // they carry the number gate too (its own block: one union per glob).
+  {
+    files: ["packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate, ...widgetNumberGate],
+    },
+  },
+  // Invariant 6, numbers: the kit's own widget code and camunda7's (above).
+  // The analytics widgets join once their raw toFixed/toLocaleString() calls
+  // moved to the kit formatters.
   {
     files: ["packages/core/widget-shell/src/ui/**/*.{ts,tsx}"],
     rules: { "no-restricted-syntax": ["error", ...widgetNumberGate] },

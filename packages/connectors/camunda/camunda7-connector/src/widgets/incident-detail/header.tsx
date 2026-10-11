@@ -1,5 +1,4 @@
 import {
-  AskAiButton,
   OpenInCockpitLink,
   StatusBadge,
   VersionChip,
@@ -9,6 +8,7 @@ import {
 import type { IncidentDetailData } from "../../view-models.js"
 
 import { scopingDefinitionKey, useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
@@ -66,14 +66,9 @@ export function IncidentDetailHeader({
     <WidgetHeader
       size="detail"
       badge={
-        <div className="flex items-center gap-3">
-          <div className="bg-danger-soft text-danger-ink grid size-11 place-items-center rounded-xl text-xl">
-            ⚠
-          </div>
-          <StatusBadge tone={resolved ? "neutral" : "danger"}>
-            {resolved ? t("incidentDetail.resolved") : data.incidentType}
-          </StatusBadge>
-        </div>
+        <StatusBadge tone={resolved ? "neutral" : "danger"}>
+          {resolved ? t("incidentDetail.resolved") : data.incidentType}
+        </StatusBadge>
       }
       title={title}
       sub={
@@ -97,12 +92,19 @@ export function IncidentDetailHeader({
           {cockpitInstanceUrl && (
             <OpenInCockpitLink
               url={cockpitInstanceUrl}
-              label={t("incidentDetail.openInstanceInCockpit")}
+              vendor={data.engineVendor}
+              label={t("incidentDetail.openInstanceIn", { vendor: data.engineVendor })}
             />
           )}
         </>
       }
-      actions={<AskAiButton variant="primary" prompt={ask(diagnoseIncidentHandOff(data))} />}
+      actions={
+        <HandOffButton
+          action="findCause"
+          variant="primary"
+          prompt={ask(diagnoseIncidentHandOff(data))}
+        />
+      }
     />
   )
 }

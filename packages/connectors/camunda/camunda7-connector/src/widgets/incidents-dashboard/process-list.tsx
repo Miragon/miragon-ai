@@ -11,12 +11,12 @@ import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { GroupSummaryRow, IncidentGroupIcon } from "../group-summary-row.js"
 import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
 import { dashboardScope, incidentsFeed } from "./scope.js"
 
 import {
-  AskAiButton,
   DrillButton,
   FilterBar,
   GroupCard,
@@ -25,6 +25,7 @@ import {
   TableEmptyState,
   ViewDataState,
   WidgetShell,
+  formatNumber,
   formatTimestamp,
   type FilterChip,
   type ToneVariant,
@@ -94,11 +95,14 @@ function ProcessSummary({
   process,
   expanded,
   engineId,
+  vendor,
   filters,
   onOpenDetail,
 }: {
   process: DisplayProcess
   expanded: boolean
+  /** The engine product (`engineVendor`) — names the link into its web app. */
+  vendor: string
   /** The engine the dashboard was fetched from — undefined when the default routed it. */
   engineId: string | undefined
   /** The dashboard's echoed filters — the scope of the card's counts. */
@@ -116,15 +120,13 @@ function ProcessSummary({
       title={process.processDefinitionName ?? process.processDefinitionKey}
       subline={
         <>
-          {formatCount(process.affectedActivityCount)}{" "}
-          {process.affectedActivityCount === 1
-            ? t("incidentsList.activitySingular")
-            : t("incidentsList.activityPlural")}{" "}
-          ·{" "}
-          {t("incidentsList.instancesCount", {
-            count: process.runningInstances.toLocaleString(),
-          })}{" "}
-          · {t("incidentsList.lastSeen", { time: formatTimestamp(process.latestIncident) })}
+          {process.affectedActivityCount === null
+            ? `${formatCount(null)} ${t("incidentsList.activitiesLabel")}`
+            : t("incidentsList.activities", {
+                count: formatNumber(process.affectedActivityCount),
+              })}{" "}
+          · {t("incidentsList.instancesCount", { count: formatNumber(process.runningInstances) })} ·{" "}
+          {t("incidentsList.lastSeen", { time: formatTimestamp(process.latestIncident) })}
         </>
       }
       stats={[
@@ -133,7 +135,10 @@ function ProcessSummary({
           label: t("incidentsList.activitiesLabel"),
         },
         {
-          value: process.last24hCount === null ? formatCount(null) : `+${process.last24hCount}`,
+          value:
+            process.last24hCount === null
+              ? formatCount(null)
+              : `+${formatNumber(process.last24hCount)}`,
           label: t("incidentsList.last24hLabel"),
         },
       ]}
@@ -141,11 +146,6 @@ function ProcessSummary({
       countTone={tone}
       actions={
         <>
-          <AskAiButton
-            variant="subtle"
-            label={t("incidentsList.analyze")}
-            prompt={ask(processRootCauseHandOff(process, engineId, filters))}
-          />
           <DrillButton
             onDrill={onOpenDetail}
             ariaLabel={t("incidentsList.openDetailAria", {
@@ -154,7 +154,11 @@ function ProcessSummary({
           >
             {t("incidentsList.open")}
           </DrillButton>
-          {cockpitUrl ? <OpenInCockpitLink url={cockpitUrl} /> : <span />}
+          {cockpitUrl ? <OpenInCockpitLink url={cockpitUrl} vendor={vendor} /> : <span />}
+          <HandOffButton
+            action="findCause"
+            prompt={ask(processRootCauseHandOff(process, engineId, filters))}
+          />
         </>
       }
       expanded={expanded}
@@ -170,7 +174,7 @@ function ActivityRow({ activity }: { activity: IncidentsDashboardActivity }) {
       title={activity.activityName ?? activity.activityId}
       subline={activity.representativeMessage ?? activity.activityId}
       stats={[{ value: formatTimestamp(activity.firstSeen), label: t("incidentsList.firstSeen") }]}
-      count={activity.scannedIncidentCount}
+      count={formatNumber(activity.scannedIncidentCount)}
       className="border-border border-b pl-7 last:border-b-0"
     />
   )
@@ -188,8 +192,8 @@ function ActivityList({ process }: { process: DisplayProcess }) {
       {process.scannedIncidentCount < process.incidentCount && (
         <p className="text-muted-foreground border-border border-b px-4 py-2 pl-7 text-xs">
           {t("incidentsList.breakdownPartial", {
-            scanned: process.scannedIncidentCount,
-            total: process.incidentCount,
+            scanned: formatNumber(process.scannedIncidentCount),
+            total: formatNumber(process.incidentCount),
           })}
         </p>
       )}
@@ -298,13 +302,13 @@ export function IncidentProcessListView({
     {
       id: TYPE_ALL,
       label: t("incidentsList.chipAll"),
-      count: data.totalCount,
+      count: formatNumber(data.totalCount),
       active: activeChip === TYPE_ALL,
     },
     {
       id: TYPE_LAST24H,
       label: t("incidentsList.chipLast24h"),
-      count: data.last24hCount,
+      count: formatNumber(data.last24hCount),
       active: activeChip === TYPE_LAST24H,
     },
   ]
@@ -355,6 +359,7 @@ export function IncidentProcessListView({
                   process={p}
                   expanded={expanded.has(p.processDefinitionKey)}
                   engineId={engine ?? data.engineId}
+                  vendor={data.engineVendor}
                   filters={data.filters}
                   onOpenDetail={() => openDetail(p.processDefinitionKey)}
                 />

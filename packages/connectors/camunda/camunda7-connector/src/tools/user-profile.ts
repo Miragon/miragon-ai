@@ -28,6 +28,7 @@ import { resolveAuthUserId, resolveProfileKey } from "../lib/resolve-profile-key
 import { environmentOf } from "../lib/environments.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { translator } from "../messages/index.js"
+import { viewLocaleOf } from "../lib/server-locale.js"
 
 /**
  * One-line, model-facing summary of a profile — localized to the profile's own
@@ -116,12 +117,15 @@ export function registerUserProfileTools(
     },
     withToolErrors(async (_params, ctx) => {
       const view = await loadView(ctx)
+      // Titled only in a language the profile names; "system" sets none, so
+      // no English toolbar title sits over a German panel (#322 U3).
+      const { title } = viewLocaleOf(view.profile.language)
       return buildSingleWidgetView({
         widget: "camunda7:user-profile",
         app: "camunda7",
         dataType: "camunda7:userProfile",
         data: view,
-        title: "Profile & Settings",
+        title: title("viewTitle.userProfile"),
         summary: summarize(view.profile),
       })
     }),

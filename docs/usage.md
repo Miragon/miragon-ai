@@ -71,11 +71,11 @@ enable explicitly. Every write prompts for explicit confirmation before running.
 A widget button that cancels, suspends or resolves asks first and names what
 it acts on (instance, business key, engine); after any action the view reloads
 what it changed — completing a task shows the next one. The cockpit's
-**↻ Refresh** re-reads the open view, e.g. after the assistant changed something.
+**Refresh** re-reads the open view, e.g. after the assistant changed something.
 
 ## Your settings
 
-Ask _"open the cockpit"_ and click ⚙ **Settings** for the full page — one
+Ask _"open the cockpit"_ and click **Settings** for the full page — one
 section per active module, so an assistant with only some modules connected
 shows only those sections.
 
@@ -106,10 +106,10 @@ login on a deployment that allows writes; otherwise the dashboard picker says
   or ask for "the same thing but for the last 7 days."
 - Combine tools. "Find failed instances from yesterday, then retry the
   transient ones" works as a single sentence (the retry needs `operations`).
-- Failed jobs and failed external tasks clear by a retry, not by "resolve" —
-  the incident views offer **Retry** for them and **Resolve** only for custom
-  incidents. Batch actions (batch retries, migrations) only queue work: ask
-  for the batch status afterwards. Completing a task that was delegated in
+- Failed jobs and failed external tasks clear by a retry, not by marking them
+  resolved: the incident views offer **Retry** for them and **Mark as
+  resolved** only for custom incidents. Batch actions (batch retries,
+  migrations) only queue work: ask for the batch status afterwards. Completing a task that was delegated in
   Tasklist hands it back to its owner, and the task stays open.
 - The two health checks judge different things and say how: the engine
   overview rates one engine by its open incidents (by default critical at 50

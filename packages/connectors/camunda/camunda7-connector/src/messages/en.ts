@@ -1,10 +1,12 @@
 import type { MessageCatalog } from "@miragon/mcp-toolkit-core"
+import { countOf } from "./plural.js"
 
 /**
  * English message catalog — the fallback locale. Every key MUST exist here so
  * the translator's `requested → fallback(en) → key` chain always lands on a real
  * string. Keys are dotted by surface (`cockpit.*`, `profile.*`, `theme.*`,
- * `role.*`).
+ * `role.*`, `viewTitle.*`). Sentence case, active voice, no dash connectors;
+ * the terms follow GLOSSARY.md.
  */
 export const en: MessageCatalog = {
   // ── Cockpit shell ──────────────────────────────────────────────────────────
@@ -21,48 +23,48 @@ export const en: MessageCatalog = {
   "cockpit.crumb.incident": ({ id }) => `Incident ${String(id)}`,
   "cockpit.crumb.cluster": ({ activity }) => `Cluster: ${String(activity)}`,
   "cockpit.loading.engines": "Loading engines…",
-  "cockpit.empty.engines": "No CIB Seven engines configured.",
+  "cockpit.empty.engines":
+    "No engines configured. Ask your administrator to add an engine to the server configuration.",
   "cockpit.nav.crossEngine": "Cross-engine",
   "cockpit.nav.engine": "Engine",
   "cockpit.aria.breadcrumb": "Breadcrumb",
   "cockpit.aria.sections": "Cockpit sections",
-  "cockpit.aria.activeEngine": "Active engine",
-  "cockpit.refresh": "↻ Refresh",
+  "cockpit.aria.activeEngine": "Selected engine",
+  "cockpit.refresh": "Refresh",
   "cockpit.refreshing": "Refreshing…",
-  "cockpit.landing.title": "CIB Seven Cockpit",
+  "cockpit.landing.title": "Operations Cockpit",
   "cockpit.landing.subtitle": ({ count }) =>
-    `${String(count)} engines configured — operate one engine, or analyze across the whole fleet.`,
+    `${countOf(count, "engine", "engines")} configured. Work with one engine, or analyze all of them together.`,
   "cockpit.landing.subtitle.env": ({ count, envCount }) =>
-    `${String(count)} engines in ${String(envCount)} environments — pick an environment, then an engine, or analyze across the whole fleet.`,
-  "cockpit.landing.env.count": ({ count }) =>
-    `${String(count)} engine${Number(count) === 1 ? "" : "s"}`,
+    `${countOf(count, "engine", "engines")} in ${countOf(envCount, "environment", "environments")}. Pick an environment, then an engine, or analyze all of them together.`,
+  "cockpit.landing.env.count": ({ count }) => countOf(count, "engine", "engines"),
   "cockpit.landing.env.back": "All environments",
   "cockpit.landing.subtitle.noFleet": ({ count }) =>
-    `${String(count)} engines configured — pick one to operate.`,
+    `${countOf(count, "engine", "engines")} configured. Pick an engine.`,
   "cockpit.landing.subtitle.env.noFleet": ({ count, envCount }) =>
-    `${String(count)} engines in ${String(envCount)} environments — pick an environment, then an engine.`,
-  "cockpit.landing.engine.incidents": ({ count }) =>
-    `${String(count)} incident${Number(count) === 1 ? "" : "s"}`,
-  "cockpit.landing.engine.noStatus": "status unavailable",
-  "cockpit.landing.operate.title": "Operate an engine",
-  "cockpit.landing.operate.desc": "Overview, incidents and drill-downs for one engine.",
+    `${countOf(count, "engine", "engines")} in ${countOf(envCount, "environment", "environments")}. Pick an environment, then an engine.`,
+  "cockpit.landing.engine.incidents": ({ count }) => countOf(count, "incident", "incidents"),
+  "cockpit.landing.engine.noStatus": "Status unavailable",
+  "cockpit.landing.operate.title": "Work with one engine",
+  "cockpit.landing.operate.desc": "Overview, incidents and details of one engine.",
   "cockpit.landing.fleet.title": "Cross-engine analyses",
   "cockpit.landing.fleet.desc":
-    "Fleet health across all engines, engine comparison, and fleet-wide failure & performance analysis.",
-  "cockpit.landing.fleet.open": "Open fleet view",
+    "Health of every engine, comparison per process, and failure and performance analyses across all engines.",
+  "cockpit.landing.fleet.open": "Open the cross-engine overview",
   "cockpit.crumb.cockpit": "Cockpit",
-  "cockpit.crumb.fleet": "Fleet",
+  "cockpit.crumb.fleet": "All engines",
   "cockpit.engineGone": ({ engineId }) =>
     `Engine ${String(engineId)} is no longer in your engine list.`,
 
   // ── Profile / settings panel ────────────────────────────────────────────────
-  "profile.heading": "Profile & Settings",
-  "profile.subtitle": "Personal preferences — engine availability, language, theme and dashboards.",
+  "profile.heading": "Profile & settings",
+  "profile.subtitle": "Your engines, language, appearance and dashboards.",
   "profile.save": "Save",
   "profile.saving": "Saving…",
-  "profile.saved": ({ time }) => `Saved ${String(time)}`,
-  "profile.saveError": "Failed to save profile.",
-  "profile.readOnly": "Settings are read-only in this deployment.",
+  "profile.saved": ({ time }) => `Saved at ${String(time)}`,
+  "profile.saveError": "Could not save the profile. Your input is still here, try again.",
+  "profile.readOnly":
+    "This connection cannot save settings. Only a connection with write access can change them.",
   "profile.loading": "Loading…",
   "profile.none": "No profile available",
 
@@ -72,34 +74,34 @@ export const en: MessageCatalog = {
 
   "profile.field.language": "Language",
   "profile.field.language.help":
-    "UI language; Automatic follows the chat app. A chosen language also steers the tool summaries returned to the model.",
+    "Automatic follows your chat app. A fixed language also applies to what the tools report back to the AI.",
   "profile.field.theme": "Theme",
   "profile.field.role": "Preferred role",
-  "profile.field.role.help": "Hint only — tool access is set by the connection.",
+  "profile.field.role.help": "A hint only. Your connection decides what you can do.",
   "profile.role.unset": "(unset)",
 
   "profile.field.allowedEngines": "Available engines",
   "profile.field.allowedEngines.help":
-    "Which engines you can pick from. Uncheck all to allow every engine. Curation, not access control.",
+    "These engines appear in your pickers. With none checked, all of them do. Your permissions stay the same.",
   "profile.engines.none": "No engines configured.",
   "profile.field.defaultEngine": "Default engine",
   "profile.field.defaultEngine.help":
-    "The engine tools and the cockpit use when none is chosen explicitly.",
+    "Tools and the cockpit use this engine when you pick no other.",
   "profile.engine.auto": "(auto)",
 
-  "profile.dashboards.unavailable": "Saved dashboards are unavailable.",
-  "profile.dashboards.empty": "No saved dashboards yet.",
+  "profile.dashboards.unavailable":
+    "Saved dashboards are unavailable. They need a login and a server that allows changes. Ask your administrator to set this up.",
+  "profile.dashboards.empty": "No saved dashboards yet. Have the chat build one and save it.",
   "profile.field.defaultDashboard": "Default dashboard",
-  "profile.field.defaultDashboard.help":
-    "Suggested to the AI as the dashboard to open first (load-dashboard).",
+  "profile.field.defaultDashboard.help": "The AI suggests this dashboard first (load-dashboard).",
   "profile.dashboard.none": "(none)",
   "profile.field.pinnedDashboards": "Pinned dashboards",
-  "profile.field.pinnedDashboards.help": "Shown first in dashboard pickers.",
+  "profile.field.pinnedDashboards.help": "Listed first in dashboard pickers.",
 
   "profile.summary": ({ language, theme, engines, defaultDashboard }) =>
     `User profile: language ${String(language)}, theme ${String(theme)}, ${String(engines)}${String(defaultDashboard)}.`,
   "profile.summary.allEngines": "all engines",
-  "profile.summary.someEngines": ({ count }) => `${String(count)} allowed engine(s)`,
+  "profile.summary.someEngines": ({ count }) => countOf(count, "allowed engine", "allowed engines"),
   "profile.summary.defaultDashboard": ({ id }) =>
     `, default dashboard "${String(id)}" (open via load-dashboard)`,
 
@@ -112,53 +114,68 @@ export const en: MessageCatalog = {
   "role.operations": "Operations",
   "role.admin": "Admin",
 
+  // ── View titles of the show tools (the host toolbar) ───────────────────────
+  // Only when the profile names a language: with "system" the server does not
+  // know the host locale, so the view carries no title and the widget's own
+  // heading names it (`lib/server-locale.ts` → `localizeViewFor`).
+  "viewTitle.cockpit": "Cockpit",
+  "viewTitle.processList": "Process definitions",
+  "viewTitle.processInstances": "Running instances",
+  "viewTitle.historyTimeline": "History",
+  "viewTitle.instanceDetail": "Process instance",
+  "viewTitle.bpmnViewer": "BPMN diagram",
+  "viewTitle.jobPanel": "Jobs",
+  "viewTitle.engineHealth": "Engine overview",
+  "viewTitle.userProfile": "Profile & settings",
+  "viewTitle.clusterDetail": ({ activity }) => `Cluster: ${String(activity)}`,
+
   // ── Model-facing widget-tool summaries (c7sum.*) ─────────────────────────────
   "c7sum.cockpitOpened":
-    'Opened the CIB Seven cockpit on engine "{engineId}" ({engineCount} engine(s) in the user\'s engine list). The user can navigate the process landscape client-side from here.',
+    'Opened the operations cockpit on engine "{engineId}" ({engineCount} engine(s) in the user\'s engine list). The user can navigate the process landscape client-side from here.',
   "c7sum.cockpitOpenedPicker":
-    "Opened the CIB Seven cockpit on its engine picker: {engineCount} engines in the user's engine list, none preselected (no `engine` passed, no saved default). The user picks one; pass `engine` to open it on a specific engine.",
+    "Opened the operations cockpit on its engine picker: {engineCount} engine(s) in the user's engine list, none preselected (no `engine` passed, no saved default). The user picks one; pass `engine` to open it on a specific engine.",
   "c7sum.processList":
     'Process list: {totalCount} deployed definition(s){filters} on engine "{engineId}".',
-  "c7sum.state.active": "active",
+  "c7sum.state.active": "running",
   "c7sum.state.suspended": "suspended",
   "c7sum.state.ended": "ended",
   "c7sum.instanceDetail":
-    "Process instance {instanceId}{businessKey}: {state}, {activeActivities} active activities, {openIncidents} open incidents, {openTasks} open user tasks.",
+    "Process instance {instanceId}{businessKey}: {state}; running activities: {activeActivities}, open incidents: {openIncidents}, open user tasks: {openTasks}.",
   "c7sum.processInstances":
     '{totalCount} running instance(s) of "{processDefinitionKey}", of them {withIncidentCount} with incidents and {suspendedCount} suspended; showing {returnedCount} in the table.',
   "c7sum.incidentsDashboard":
     "Incidents dashboard: {totalCount} open incident(s) across {processCount} process definition(s), {last24hCount} in the last 24h.",
   "c7sum.processIncidents":
-    'Process incidents for "{processDefinitionKey}" (all versions; diagram v{diagramVersion}): {incidentCount} open incident(s) across {activities} activities, {last24hCount} in the last 24h.',
+    'Process incidents for "{processDefinitionKey}" (all versions; diagram v{diagramVersion}): {incidentCount} open incident(s), affected activities: {activities}, {last24hCount} in the last 24h.',
   "c7sum.incidentDetail":
     'Incident {incidentId} ({incidentType}) at activity "{activity}" in "{processDefinitionKey}", instance {processInstanceId}{message}.',
   "c7sum.processDetail":
     'Process "{processDefinitionKey}" (all versions; diagram v{diagramVersion}): {runningInstances} running instance(s), {openIncidents} open incident(s), {failedJobs} failed job(s).',
   "c7sum.historyTimeline":
-    "History timeline for process instance {processInstanceId}: {totalActivities} historic activities{notFound}.",
+    "History timeline for process instance {processInstanceId}: historic activities: {totalActivities}{notFound}.",
   "c7sum.historyTimeline.notFound": " (no historic process instance found)",
   "c7sum.engineHealth":
-    'Engine "{engineId}" — {status} ({rule}): {totalIncidents} open incidents across {affectedActivities} activities, {runningInstances} running instances.{topCluster}',
+    'Engine "{engineId}": {status} ({rule}). Open incidents: {totalIncidents}, affected activities: {affectedActivities}, running instances: {runningInstances}.{topCluster}',
   "c7sum.engineHealth.topCluster":
-    ' Top cluster: activity "{activityId}" / {incidentType}, {incidentCount} incidents.',
+    ' Top cluster: activity "{activityId}" / {incidentType}, incidents: {incidentCount}.',
   "c7sum.engineHealth.noIncidents": " No open incidents.",
   "c7sum.unknownNumberOf": "an unknown number of",
   "c7sum.atLeast": "at least {count}",
   "c7sum.unknown": "unknown",
   "c7sum.clusterDetail":
-    'Failure cluster on engine "{engineId}": activity "{activityId}" / {incidentType} — {incidentCount} incidents ({lastHourCount} in the last hour) across {processes}.{sample}',
+    'Failure cluster on engine "{engineId}": activity "{activityId}" / {incidentType}. Incidents: {incidentCount} ({lastHourCount} in the last hour), processes: {processes}.{sample}',
   "c7sum.clusterDetail.unknownProcesses": "unknown processes",
   "c7sum.clusterDetail.sample": " Sample: {message}",
   "c7sum.bpmnViewer": "Rendered the BPMN diagram for {target}{overlayInfo}{xmlUnavailable}.",
   "c7sum.bpmnViewer.empty":
-    "BPMN viewer: no matching process definition found — rendered an empty diagram.",
+    "BPMN viewer: no matching process definition found, so the diagram is empty.",
   "c7sum.bpmnViewer.targetInstance": "process instance {processInstanceId}",
   "c7sum.bpmnViewer.targetDefinition": "process definition {definitionId}",
   "c7sum.bpmnViewer.overlays":
-    ": {activeActivities} active activities, {incidentActivities} activities with incidents, {failedJobs} failed jobs of this instance",
+    "; running activities: {activeActivities}, activities with incidents: {incidentActivities}, failed jobs of this instance: {failedJobs}",
   "c7sum.bpmnViewer.noOverlays":
     " (no instance overlays; the badges count all running instances of this version)",
-  "c7sum.bpmnViewer.xmlUnavailable": " — diagram XML unavailable",
+  "c7sum.bpmnViewer.xmlUnavailable": "; diagram XML unavailable",
   "c7sum.jobPanel": "Job panel: {totalCount} job(s), {failedCount} failed{forProcess}{failedOnly}.",
   "c7sum.jobPanel.forProcess": ' for "{processDefinitionKey}"',
   "c7sum.jobPanel.failedOnly": " (failed only)",

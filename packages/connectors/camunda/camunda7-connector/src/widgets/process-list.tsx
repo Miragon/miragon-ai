@@ -1,16 +1,17 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import {
-  AskAiButton,
   DrillButton,
   FilterBar,
   PagedRows,
   QueryFallback,
   TableSkeleton,
   WidgetShell,
+  formatNumber,
   usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
 import { useNav } from "./navigation.js"
 import { useHandOff, type HandOff } from "./lib/hand-off.js"
+import { HandOffButton } from "./lib/hand-off-button.js"
 import { useT } from "../messages/use-t.js"
 import type { ProcessDefinition, ProcessListData } from "../view-models.js"
 import { CAMUNDA7_PROCESS_LIST_DATA } from "../tool-names.js"
@@ -140,6 +141,7 @@ export function ProcessListWidget({
           isError={!!paged.error}
           error={paged.error}
           errorTitle={t("processList.loadError")}
+          errorHint={t("viewState.loadErrorHint")}
           skeleton={<TableSkeleton />}
         />
       </WidgetShell>
@@ -163,7 +165,9 @@ export function ProcessListWidget({
     <WidgetShell>
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">{t("processList.heading")}</h2>
-        <Badge variant="secondary">{t("processList.deployedCount", { count: paged.total })}</Badge>
+        <Badge variant="secondary">
+          {t("processList.deployedCount", { count: formatNumber(paged.total) })}
+        </Badge>
       </div>
 
       <FilterBar
@@ -206,10 +210,9 @@ export function ProcessListWidget({
               >
                 {t("cockpitDefs.openAction")}
               </DrillButton>
-              <AskAiButton
+              <HandOffButton
+                action="checkHealth"
                 variant="icon"
-                label={t("processList.healthCheckLabel")}
-                title={t("processList.healthCheckLabel")}
                 prompt={ask(healthCheckHandOff(row, feedEngine ?? data.engineId))}
               />
             </>

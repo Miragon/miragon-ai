@@ -105,7 +105,7 @@ describe("buildIncidentIssuePayload", () => {
       "### Affected Module",
       "camunda7",
       "### Process Engine",
-      "CIB Seven",
+      "CIB seven",
       "### Cockpit",
     ]) {
       expect(result.body).toContain(section)
@@ -125,7 +125,7 @@ describe("buildIncidentIssuePayload", () => {
       repository: null,
     })
     expect(result.body).toContain("### Process Engine\nOperaton")
-    expect(result.body).not.toContain("CIB Seven")
+    expect(result.body).not.toContain("CIB seven")
   })
 
   it("returns null suggestedRepository and a draft-only nextStep when no repo is configured", () => {

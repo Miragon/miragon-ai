@@ -1,4 +1,4 @@
-import { formatTimestamp } from "@miragon-ai/widget-shell/widgets"
+import { formatNumber, formatTimestamp } from "@miragon-ai/widget-shell/widgets"
 
 import type { ProcessIncidentsActivity } from "../../view-models.js"
 import { GroupSummaryRow, IncidentGroupIcon } from "../group-summary-row.js"
@@ -21,7 +21,7 @@ export function ActivitySummary({
         { value: formatTimestamp(activity.firstSeen), label: t("procIncSummary.firstSeen") },
         { value: formatTimestamp(activity.latestIncident), label: t("procIncSummary.latest") },
       ]}
-      count={activity.incidentCount}
+      count={formatNumber(activity.incidentCount)}
       expanded={expanded}
     />
   )

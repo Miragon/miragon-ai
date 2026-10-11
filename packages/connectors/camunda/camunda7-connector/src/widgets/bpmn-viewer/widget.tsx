@@ -58,7 +58,7 @@ function BpmnViewerLoadError({ error }: { error: Error | null }) {
       <Alert variant="destructive">
         <AlertDescription>
           {t("bpmnWidget.loadError", {
-            message: error?.message ?? t("bpmnWidget.unknownError"),
+            message: error?.message ?? t("viewState.unknownError"),
           })}
         </AlertDescription>
       </Alert>

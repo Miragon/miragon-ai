@@ -215,9 +215,13 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page)
 
     await expectProcessList(app)
-    // The view envelope's own title (McpAppView toolbar) — the layout is the
-    // server's single-widget layout, not an empty one.
-    await expect(app.getByRole("heading", { name: "Process Definitions" }).first()).toBeVisible()
+    // The layout is the server's single-widget layout, not an empty one. The
+    // profile follows the host's locale ("system"), which only the view sees,
+    // so the server sets no toolbar title (#322 U3): the widget's own heading
+    // is the view's one title, never under an English toolbar title.
+    await expect(
+      app.getByRole("heading", { name: "Process definitions", exact: true }),
+    ).toHaveCount(1)
     // Harness self-checks: the frame runs mcp-use's synthesized document
     // (its inline view config), sandboxed to an opaque origin, under the
     // host's CSP — the first element of <head>, ahead of every script.
@@ -415,12 +419,12 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
         dataTheme: "dark",
         colorScheme: "dark",
       })
-      // … so the text is light on the host's dark canvas, the toolbar included.
+      // … so the text is light on the host's dark canvas, the view's title included.
       expect(await textLuminance(definitionsTable(app).getByRole("row").nth(2))).toBeGreaterThan(
         0.5,
       )
       expect(
-        await textLuminance(app.getByRole("heading", { name: "Process Definitions" }).first()),
+        await textLuminance(app.getByRole("heading", { name: "Process definitions" }).first()),
       ).toBeGreaterThan(0.5)
     },
   )
@@ -446,9 +450,9 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
         const app = await openView(page, { displayModes })
 
         await expectProcessList(app)
-        // The rest of the toolbar stays.
+        // The view itself stays.
         await expect(
-          app.getByRole("heading", { name: "Process Definitions" }).first(),
+          app.getByRole("heading", { name: "Process definitions" }).first(),
         ).toBeVisible()
         await expect(app.getByRole("button", { name: "Full screen" })).toBeHidden()
         expect((await hostLog(page)).displayModeRequests).toEqual([])
@@ -465,6 +469,12 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     await expect(table).toBeVisible({ timeout: 15_000 })
     await expect(table.getByRole("row")).toHaveCount(4)
     await expect(app.getByText("3 bereitgestellt")).toBeVisible()
+    // One German title and no English toolbar title over it: the server
+    // titles a view only in a language the profile names (#322 U3).
+    await expect(
+      app.getByRole("heading", { name: "Prozessdefinitionen", exact: true }),
+    ).toHaveCount(1)
+    await expect(app.getByRole("heading", { name: /Process definitions/i })).toHaveCount(0)
     // The view chrome (toolkit McpAppView) follows the same locale.
     await expect(app.getByRole("button", { name: "Vollbild" })).toBeVisible()
     expect(await app.locator("html").getAttribute("lang")).toBe("de")
@@ -644,7 +654,7 @@ test.describe("kit foundation (camunda7_show_job_panel)", () => {
       tool: "camunda7_show_job_panel",
       displayModes: ["inline", "fullscreen"],
     })
-    const handOff = app.getByRole("button", { name: "Analyze in chat" })
+    const handOff = app.getByRole("button", { name: "Assess in chat" })
     await expect(handOff).toBeVisible({ timeout: 15_000 })
 
     const roles = await app.locator("html").evaluate((el) => {
@@ -724,14 +734,16 @@ test.describe("cockpit (camunda7_open_cockpit)", () => {
       tool: "camunda7_open_cockpit",
       args: { engine: HEALTHY_ENGINE },
     })
-    await expect(app.getByLabel("Active engine")).toHaveValue(HEALTHY_ENGINE, { timeout: 15_000 })
+    await expect(app.getByLabel("Selected engine")).toHaveValue(HEALTHY_ENGINE, { timeout: 15_000 })
     await expect(app.getByRole("navigation", { name: "Cockpit sections" })).toBeVisible()
-    await expect(app.getByText("Operate an engine")).toHaveCount(0)
+    await expect(app.getByText("Work with one engine", { exact: true })).toHaveCount(0)
   })
 
   test("without one, shows the engine picker", async ({ page }) => {
     const app = await openView(page, { tool: "camunda7_open_cockpit", args: {} })
-    await expect(app.getByText("Operate an engine")).toBeVisible({ timeout: 15_000 })
-    await expect(app.getByLabel("Active engine")).toHaveCount(0)
+    await expect(app.getByText("Work with one engine", { exact: true })).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(app.getByLabel("Selected engine")).toHaveCount(0)
   })
 })

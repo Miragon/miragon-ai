@@ -129,7 +129,9 @@ describe("buildEngineHealthData — exact totals", () => {
 
     expect(data.summary.totalIncidents).toBe(5000)
     expect(data.summary.affectedActivities).toBeNull()
-    expect(data.headline).toBe("Critical — 5000 open incidents")
+    // The verdict is data (status + counts); each reader words it (#322 U3).
+    expect(data.status).toBe("critical")
+    expect(data).not.toHaveProperty("headline")
     // The top cluster holds 667 of the SCANNED rows — a lower bound, not its size.
     expect(data.clusters[0]).toMatchObject({
       activityId: "a0",

@@ -51,7 +51,7 @@ describe("ProcessListWidget (fixture render)", () => {
       />,
     )
 
-    expect(screen.getByText("Process Definitions")).toBeTruthy()
+    expect(screen.getByText("Process definitions")).toBeTruthy()
 
     // Renders the canonical definitions-table look (shared with the cockpit).
     expect(

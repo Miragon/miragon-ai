@@ -44,6 +44,7 @@ function detail(over: Partial<IncidentDetailData>): IncidentDetailData {
     processInstanceId: "pi-1",
     businessKey: null,
     cockpitInstanceUrl: null,
+    engineVendor: "CIB seven",
     bpmnXml: null,
     job: null,
     recovery: { action: "resolve" },
@@ -119,7 +120,7 @@ describe("the incident detail offers the remedy the engine accepts", () => {
       "camunda7_set_job_retries",
       { jobId: "job-1", retries: 1, engine: "prod" },
     ])
-    expect(screen.queryByText("Resolve")).toBeNull()
+    expect(screen.queryByText("Mark as resolved")).toBeNull()
   })
 
   it("failedExternalTask: Retry task sets the external task's retries — no Resolve", async () => {
@@ -134,12 +135,12 @@ describe("the incident detail offers the remedy the engine accepts", () => {
       "camunda7_set_external_task_retries",
       { externalTaskId: "ext-1", retries: 1, engine: "prod" },
     ])
-    expect(screen.queryByText("Resolve")).toBeNull()
+    expect(screen.queryByText("Mark as resolved")).toBeNull()
   })
 
   it("a custom incident gets Resolve and no Retry", async () => {
     renderDetail(CUSTOM, { [CAMUNDA7_WIDGET_ACTIONS_DATA]: ALL_ACTIONS })
-    expect(await screen.findByText("Resolve")).toBeTruthy()
+    expect(await screen.findByText("Mark as resolved")).toBeTruthy()
     expect(screen.queryByText("Retry job")).toBeNull()
     expect(screen.queryByText("Retry task")).toBeNull()
   })
@@ -165,7 +166,7 @@ describe("the incident detail offers the remedy the engine accepts", () => {
     await gateSettled()
     expect(await screen.findAllByText("failedJob")).not.toHaveLength(0)
     expect(screen.queryByText("Retry job")).toBeNull()
-    expect(screen.queryByText("Resolve")).toBeNull()
+    expect(screen.queryByText("Mark as resolved")).toBeNull()
   })
 })
 
@@ -182,7 +183,7 @@ describe("a result stored before `recovery` existed still renders", () => {
     cleanup()
     queryClient.clear()
     renderDetail(stored(CUSTOM), { [CAMUNDA7_WIDGET_ACTIONS_DATA]: ALL_ACTIONS })
-    expect(await screen.findByText("Resolve")).toBeTruthy()
+    expect(await screen.findByText("Mark as resolved")).toBeTruthy()
   })
 
   it("detail: a failedExternalTask without a target offers no action instead of crashing", async () => {
@@ -190,7 +191,7 @@ describe("a result stored before `recovery` existed still renders", () => {
     await gateSettled()
     expect(await screen.findAllByText("failedExternalTask")).not.toHaveLength(0)
     expect(screen.queryByText("Retry task")).toBeNull()
-    expect(screen.queryByText("Resolve")).toBeNull()
+    expect(screen.queryByText("Mark as resolved")).toBeNull()
   })
 
   it("list rows without `recovery` render: custom → Resolve, built-in → no action", async () => {
@@ -218,8 +219,8 @@ describe("a result stored before `recovery` existed still renders", () => {
       [...(await screen.findByText(message)).closest("tr")!.querySelectorAll("button")].map(
         (b) => b.textContent,
       )
-    await waitFor(async () => expect(await buttonsOf("message a")).toContain("Resolve"))
-    expect(await buttonsOf("message b")).not.toContain("Resolve")
+    await waitFor(async () => expect(await buttonsOf("message a")).toContain("Mark as resolved"))
+    expect(await buttonsOf("message b")).not.toContain("Mark as resolved")
     expect(await buttonsOf("message b")).not.toContain("Retry")
   })
 })
