@@ -15,6 +15,7 @@ import {
   HEAT_GRADIENT_CSS,
   type HeatPoint,
 } from "./bpmn-heatmap/heat-utils.js"
+import { DEFAULT_HEATMAP_LABELS, type BpmnHeatmapLabels } from "./bpmn-heatmap-labels.js"
 import { BpmnZoomControls } from "./bpmn-zoom-controls.js"
 import { useBpmnViewer } from "./use-bpmn-viewer.js"
 
@@ -22,43 +23,7 @@ import { useBpmnViewer } from "./use-bpmn-viewer.js"
 // be a fresh identity per render and re-trigger the repaint effect every time.
 const EMPTY_EDGES: Record<string, number> = {}
 
-/**
- * All user-facing strings — the shell carries no module i18n, so callers
- * (analytics-connector / camunda7-connector) inject `t()`-resolved values. Every field is
- * optional; the English defaults keep the component usable on its own.
- */
-export interface BpmnHeatmapLabels {
-  title?: string
-  window?: string
-  frequency?: string
-  duration?: string
-  frequencyLegend?: string
-  durationLegend?: string
-  noData?: string
-  noHeat?: string
-  bpmnUnavailable?: string
-  less?: string
-  more?: string
-  diagramAriaLabel?: string
-  errorTitle?: string
-}
-
-const DEFAULT_HEATMAP_LABELS: Required<BpmnHeatmapLabels> = {
-  title: "BPMN heatmap",
-  window: "window:",
-  frequency: "Frequency",
-  duration: "Duration",
-  frequencyLegend: "Executions per element",
-  durationLegend: "Avg duration per element (s)",
-  noData: "No heatmap data.",
-  noHeat: "No metric data in this window.",
-  bpmnUnavailable:
-    "BPMN diagram unavailable — the analytics module has no camunda7 client configured to fetch it.",
-  less: "Less",
-  more: "More",
-  diagramAriaLabel: "BPMN process diagram with an execution heat overlay",
-  errorTitle: "Diagram could not be rendered",
-}
+export type { BpmnHeatmapLabels }
 
 export interface BpmnHeatmapProps {
   bpmnXml: string

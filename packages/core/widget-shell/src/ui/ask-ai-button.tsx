@@ -1,8 +1,15 @@
 import { Button, useLocale } from "@miragon/mcp-toolkit-ui"
+import { MessageSquare } from "lucide-react"
 import type { AskAiPrompt } from "./ask-ai-prompt.js"
+import { Icon, type LucideIcon } from "./icon.js"
+import { kitLabels } from "./kit-labels.js"
 import { useHostActions } from "./use-host-actions.js"
 
-/** Visual emphasis tiers — all render the SAME ✦ AI signature, only size/weight differ. */
+/**
+ * Placement tiers. All render as the same secondary outline button (a
+ * hand-off is never the view's primary action: the deterministic next step,
+ * Retry or Resolve, is); `icon` drops the visible label for dense rows.
+ */
 export type AskAiVariant = "primary" | "subtle" | "icon"
 
 export interface AskAiButtonProps {
@@ -15,19 +22,23 @@ export interface AskAiButtonProps {
    */
   prompt: AskAiPrompt | null
   /**
-   * Button text. Defaults to a locale-aware "Analyze"/"Analysieren" — the ✦
-   * glyph already signals the AI handoff, so the primary entry needs no
-   * "…with AI" suffix. Override only for a different verb (`"Explain this
-   * error"`, `"Draft incident ticket"`, `"Prepare migration"`). For `icon` it
+   * The Lucide icon of the CONCRETE function the chat will do — `FileSearch`
+   * to explain an error, `ClipboardList` to draft a ticket, `GitCompare` to
+   * compare (CI: no sparkles, no generic "AI" symbol). Defaults to a neutral
+   * `MessageSquare` (it goes to the chat).
+   */
+  icon?: LucideIcon
+  /**
+   * A verb phrase that says the work happens in the chat: "Im Chat
+   * erklären" / "Explain in chat", "Ticket im Chat entwerfen". Defaults to
+   * the locale's "Im Chat analysieren" / "Analyze in chat". For `icon` it
    * moves to `aria-label`/`title`.
    */
   label?: string
   /**
-   * Every variant renders as a real (outline) button — the ✦ glyph + frame is the
-   * consistent "AI" signature. They differ only in emphasis/size:
-   * `primary` = the one surface-level entry (m-blue accent, AI-first);
-   * `subtle` = per-row / per-section (neutral outline, the common case);
-   * `icon` = dense table rows (neutral outline, ✦ only, label → aria-label).
+   * `primary` = the one surface-level entry of a view; `subtle` = per-row /
+   * per-section (the common case); `icon` = dense table rows (icon only,
+   * label → aria-label).
    */
   variant?: AskAiVariant
   /** Tooltip/aria override; defaults to `label`. */
@@ -37,19 +48,18 @@ export interface AskAiButtonProps {
   onSent?: () => void
 }
 
-const AI_GLYPH = "✦"
-
 /**
  * The single "cross into chat" affordance for the whole cockpit and the ONLY
  * owner of the {@link useHostActions} `askAi` call site (a structural test
  * fails on any other) for analyze / explain / compare / draft / prepare-action
- * handoffs. Renders identically everywhere (✦ + label, shadcn outline).
- * Deterministic navigation (`useNav`/`showWidget`) and mutations must NOT use
- * this — they keep their own neutral controls, and never the ✦ glyph or the
- * word "Analyze".
+ * handoffs. Renders the same everywhere: an outline button with the icon of
+ * the concrete function and a verb that names the chat. Deterministic
+ * navigation (`useNav`/`showWidget`) and mutations must NOT use this — they
+ * keep their own controls.
  */
 export function AskAiButton({
   prompt,
+  icon = MessageSquare,
   label,
   variant = "subtle",
   title,
@@ -62,16 +72,13 @@ export function AskAiButton({
   // The kit has no message catalog of its own, so the default verb follows the
   // ambient locale — otherwise every label-less call site leaks English into a
   // localized cockpit.
-  const effectiveLabel = label ?? (locale.startsWith("de") ? "Analysieren" : "Analyze")
+  const effectiveLabel = label ?? kitLabels(locale).askAiDefault
   const isIcon = variant === "icon"
   return (
     <Button
       type="button"
       variant="outline"
       size={isIcon ? "icon-sm" : "sm"}
-      // Always a real outline button (frame) so the ✦ never reads as a bare glyph;
-      // the primary surface entry gets the m-blue accent to stand out as AI-first.
-      className={variant === "primary" ? "border-m-blue/40 text-m-blue" : undefined}
       disabled={disabled}
       aria-label={isIcon ? (title ?? effectiveLabel) : undefined}
       title={isIcon ? (title ?? effectiveLabel) : title}
@@ -80,7 +87,7 @@ export function AskAiButton({
         onSent?.()
       }}
     >
-      <span aria-hidden>{AI_GLYPH}</span>
+      <Icon icon={icon} dense={isIcon} />
       {!isIcon && effectiveLabel}
     </Button>
   )

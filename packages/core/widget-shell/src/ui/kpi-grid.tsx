@@ -1,13 +1,30 @@
 import type { ReactNode } from "react"
 import { Skeleton } from "@miragon/mcp-toolkit-ui"
+import { ChevronRight, Minus, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react"
 import { cn } from "./cn.js"
-import { MICRO_LABEL, TONE_SOFT, TONE_TEXT, type ToneVariant } from "./tone-utils.js"
+import { Icon } from "./icon.js"
+import {
+  MICRO_LABEL,
+  TONE_BORDER,
+  TONE_DOT,
+  TONE_ICON,
+  TONE_TINT,
+  type ToneVariant,
+} from "./tone-utils.js"
 
-/** Direction-derived fallback (incident-biased: up = red); `trendTone` wins. */
-const TREND_TONE: Record<"up" | "down" | "flat", string> = {
-  up: "text-critical",
-  down: "text-m-green",
-  flat: "text-muted-foreground",
+type TrendDirection = "up" | "down" | "flat"
+
+/** Direction-derived fallback (incident-biased: up = worse); `trendTone` wins. */
+const TREND_TONE: Record<TrendDirection, ToneVariant> = {
+  up: "danger",
+  down: "success",
+  flat: "neutral",
+}
+
+const TREND_ICON: Record<TrendDirection, LucideIcon> = {
+  up: TrendingUp,
+  down: TrendingDown,
+  flat: Minus,
 }
 
 interface KpiCellBase {
@@ -15,10 +32,19 @@ interface KpiCellBase {
   value: ReactNode
   /** Small fraction shown next to the value, e.g. " /14" */
   fraction?: ReactNode
+  /** A short note under the value ("+2 seit gestern"); its words stay neutral. */
   trend?: ReactNode
-  trendDirection?: "up" | "down" | "flat"
-  /** Explicit trend color — overrides the direction-derived fallback. */
+  /** Draws a Lucide trend icon before the note, in the trend's tone. */
+  trendDirection?: TrendDirection
+  /**
+   * Explicit trend tone: overrides the direction-derived fallback. Shown as
+   * the direction icon's colour, or as a dot when there is no direction.
+   */
   trendTone?: ToneVariant
+  /**
+   * The state the number stands for. Shown as a dot next to the label (strip)
+   * or as the card's tint and edge (soft); the number itself stays neutral.
+   */
   tone?: ToneVariant
 }
 
@@ -31,9 +57,8 @@ export type KpiCell = KpiCellBase &
   ({ onClick: () => void; ariaLabel: string } | { onClick?: never; ariaLabel?: never })
 
 /**
- * Bordered KPI strip — typically 4 cells across. Matches the `.kpis` block
- * in the Miragon mockup. Cells flow as columns; cell count adapts via
- * `grid-cols-N` (1–6; more than 6 cells wrap onto further rows).
+ * Bordered KPI strip — typically 4 cells across. Cells flow as columns; cell
+ * count adapts via `grid-cols-N` (1–6; more than 6 cells wrap onto further rows).
  *
  * Responsive: 4+ cells fall back to 2 columns on narrow hosts (claude.ai inline
  * / mobile iframes are frequently <500px, where five cells side-by-side leave
@@ -57,13 +82,40 @@ export interface KpiGridHeader {
   badge?: ReactNode
 }
 
+/**
+ * The trend note: neutral words (black next to a state, muted without one)
+ * with the state beside them as a direction icon or a dot in the tone, never
+ * as coloured digits (CI §3.3).
+ */
+function TrendLine({ cell }: { cell: KpiCell }) {
+  const direction = cell.trendDirection
+  const tone = cell.trendTone ?? (direction ? TREND_TONE[direction] : undefined)
+  const marked = tone !== undefined && tone !== "neutral"
+  return (
+    <div className="mt-1.5 flex items-center gap-1 text-xs">
+      {direction ? (
+        <Icon
+          icon={TREND_ICON[direction]}
+          size={14}
+          dense
+          className={TONE_ICON[cell.trendTone ?? TREND_TONE[direction]]}
+        />
+      ) : (
+        marked && (
+          <span
+            aria-hidden="true"
+            data-trend-tone={tone}
+            className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[tone])}
+          />
+        )
+      )}
+      <span className={marked ? "text-foreground" : "text-muted-foreground"}>{cell.trend}</span>
+    </div>
+  )
+}
+
 /** Label + value + fraction + trend — shared by the strip and soft variants. */
 function KpiCellBody({ cell, variant }: { cell: KpiCell; variant: "strip" | "soft" }) {
-  const trendClass = cell.trendTone
-    ? (TONE_TEXT[cell.trendTone] ?? "text-muted-foreground")
-    : cell.trendDirection
-      ? TREND_TONE[cell.trendDirection]
-      : "text-muted-foreground"
   return (
     <>
       <div
@@ -73,21 +125,23 @@ function KpiCellBody({ cell, variant }: { cell: KpiCell; variant: "strip" | "sof
             : "text-muted-foreground flex items-center justify-between gap-2 text-xs font-medium"
         }
       >
-        <span>{cell.label}</span>
-        {cell.onClick && (
-          <span aria-hidden="true" className="text-sm leading-none">
-            ›
-          </span>
-        )}
+        <span className="flex min-w-0 items-center gap-1.5">
+          {variant === "strip" && cell.tone && cell.tone !== "neutral" && (
+            <span
+              aria-hidden="true"
+              data-tone={cell.tone}
+              className={cn("size-2 shrink-0 rounded-full", TONE_DOT[cell.tone])}
+            />
+          )}
+          {cell.label}
+        </span>
+        {cell.onClick && <Icon icon={ChevronRight} dense />}
       </div>
       <div
         className={
           variant === "soft"
             ? "mt-1 text-2xl font-bold tabular-nums"
-            : cn(
-                "mt-1.5 text-2xl leading-none font-bold tracking-tight tabular-nums",
-                (cell.tone && TONE_TEXT[cell.tone]) || "text-foreground",
-              )
+            : "text-foreground mt-1.5 text-2xl leading-none font-bold tracking-tight tabular-nums"
         }
       >
         {cell.value}
@@ -102,9 +156,15 @@ function KpiCellBody({ cell, variant }: { cell: KpiCell; variant: "strip" | "sof
           </span>
         )}
       </div>
-      {cell.trend && <div className={cn("mt-1.5 text-xs", trendClass)}>{cell.trend}</div>}
+      {cell.trend && <TrendLine cell={cell} />}
     </>
   )
+}
+
+/** A soft card: the tone's tint and edge around neutral text. */
+function softCardClass(tone: ToneVariant | undefined): string {
+  const t = tone ?? "neutral"
+  return cn("text-foreground rounded-xl border p-4", TONE_TINT[t], TONE_BORDER[t])
 }
 
 /**
@@ -113,9 +173,10 @@ function KpiCellBody({ cell, variant }: { cell: KpiCell; variant: "strip" | "sof
  * pattern in the cockpit-overview mockup). When unboxed (default), the
  * strip uses the lighter `border-y` look used by the incidents dashboard.
  *
- * `variant="soft"` renders each cell as a tone-tinted card (TONE_SOFT
- * background + foreground) in a gap grid instead of the bordered strip —
- * the failure-dashboard summary look. `boxed`/`header` don't apply there.
+ * `variant="soft"` renders each cell as a card in its tone's tint and edge
+ * (the failure-dashboard summary look) in a gap grid instead of the bordered
+ * strip — `boxed`/`header` don't apply there. In both variants the digits
+ * stay neutral: a coloured number is never the only carrier of a state.
  */
 export function KpiGrid({
   cells,
@@ -142,7 +203,6 @@ export function KpiGrid({
         className={cn("grid gap-4", colClass, className)}
       >
         {cells.map((cell, idx) => {
-          const toneClass = cell.tone ? TONE_SOFT[cell.tone] : "bg-muted text-muted-foreground"
           const body = <KpiCellBody cell={cell} variant="soft" />
           return cell.onClick ? (
             <button
@@ -150,15 +210,16 @@ export function KpiGrid({
               type="button"
               onClick={cell.onClick}
               aria-label={cell.ariaLabel}
+              data-tone={cell.tone}
               className={cn(
-                "focus-visible:ring-ring cursor-pointer rounded-xl p-4 text-left transition-colors outline-none focus-visible:ring-2",
-                toneClass,
+                "focus-visible:ring-ring cursor-pointer text-left transition-colors outline-none focus-visible:ring-2",
+                softCardClass(cell.tone),
               )}
             >
               {body}
             </button>
           ) : (
-            <div key={idx} className={cn("rounded-xl p-4", toneClass)}>
+            <div key={idx} data-tone={cell.tone} className={softCardClass(cell.tone)}>
               {body}
             </div>
           )
@@ -234,7 +295,7 @@ export function KpiGridSkeleton({
     return (
       <div aria-busy="true" className={cn("grid gap-4", colClass)}>
         {Array.from({ length: cells }, (_, idx) => (
-          <div key={idx} className="bg-muted rounded-xl p-4">
+          <div key={idx} className="bg-muted border-border rounded-xl border p-4">
             <Skeleton className="h-4 w-20" />
             <Skeleton className="mt-2 h-7 w-14" />
           </div>

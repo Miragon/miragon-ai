@@ -85,8 +85,6 @@ export function IncidentOverviewKpiView({
   return (
     <>
       <WidgetHeader
-        icon="⚠"
-        iconTone="critical"
         title={t("incidentsKpi.title")}
         sub={
           <>
@@ -125,7 +123,7 @@ export function IncidentOverviewKpiView({
           {
             label: t("incidentsKpi.cellOpenIncidents"),
             value: data.totalCount,
-            tone: data.totalCount > 0 ? "critical" : undefined,
+            tone: data.totalCount > 0 ? "danger" : undefined,
           },
           { label: t("incidentsKpi.cellProcessesAffected"), value: data.processCount },
           {
@@ -135,7 +133,7 @@ export function IncidentOverviewKpiView({
           {
             label: t("incidentsKpi.cellLast24h"),
             value: `+${data.last24hCount}`,
-            tone: data.last24hCount > 0 ? "critical" : undefined,
+            tone: data.last24hCount > 0 ? "danger" : undefined,
           },
         ]}
       />

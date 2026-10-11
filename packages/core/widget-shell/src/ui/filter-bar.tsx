@@ -1,6 +1,7 @@
 import { Input, useLocale } from "@miragon/mcp-toolkit-ui"
 import { cn } from "./cn.js"
 import { kitLabels } from "./kit-labels.js"
+import { TONE_BORDER, TONE_SOFT } from "./tone-utils.js"
 
 export interface FilterChip {
   id: string
@@ -10,8 +11,10 @@ export interface FilterChip {
 }
 
 /**
- * Search input + chip row used to filter a list/table of widget items.
- * Matches the `.filterbar` block in the Miragon mockup.
+ * Search input + chip row used to filter a list/table of widget items. An
+ * active chip is a selection: the info tone's tint and edge around black
+ * text (CI: selection = blue contour + tint), with `aria-pressed` carrying
+ * the state. The search field's focus edge and ring are the `--focus` role.
  */
 export function FilterBar({
   search,
@@ -42,7 +45,7 @@ export function FilterBar({
         onChange={(e) => onSearchChange(e.target.value)}
         placeholder={placeholder}
         aria-label={searchAriaLabel ?? placeholder}
-        className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-m-blue/30 focus-visible:border-m-blue h-9 min-w-[220px] flex-1 rounded-md text-sm"
+        className="border-input bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-focus focus-visible:border-focus h-9 min-w-[220px] flex-1 rounded-md text-sm"
       />
       <div className="flex flex-wrap gap-1.5">
         {chips.map((chip) => (
@@ -54,13 +57,13 @@ export function FilterBar({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
               chip.active
-                ? "bg-m-blue-soft border-m-blue-light text-m-blue font-semibold"
+                ? cn(TONE_SOFT.info, TONE_BORDER.info, "font-semibold")
                 : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             {chip.label}
             {chip.count !== undefined && chip.count !== "" && (
-              <span className="tabular-nums opacity-60">{chip.count}</span>
+              <span className="font-normal tabular-nums">{chip.count}</span>
             )}
           </button>
         ))}

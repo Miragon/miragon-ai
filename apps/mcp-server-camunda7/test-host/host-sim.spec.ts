@@ -289,10 +289,11 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       await expect(search).toBeFocused()
       await expect(search).toHaveValue("invoice")
       await expect(table.getByRole("row")).toHaveCount(4)
-      // … and SHOWS that they are not its answer yet: the rows are dimmed and
-      // busy, "Updating…" is visible, and no "Showing 3 of 3" sits beside the
-      // new search.
+      // … and SHOWS that they are not its answer yet: the rows are marked (an
+      // info bar, no dimming) and busy, "Updating…" is visible, and no
+      // "Showing 3 of 3" sits beside the new search.
       await expect(app.locator("[data-stale]")).toHaveAttribute("aria-busy", "true")
+      await expect(app.locator('[data-stale] > [data-tone="info"]')).toHaveCount(1)
       await expect(app.getByText("Updating…")).toBeVisible()
       await expect(app.getByText(/Showing \d+ of/)).toHaveCount(0)
     } finally {
@@ -366,7 +367,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
         "toolkit#176 fixed? An isError result must never be re-executed — expect 0",
       ).toHaveLength(1)
       await expect(
-        app.getByText("Waiting for pipeline result..."),
+        app.getByText("Loading view…"),
         "toolkit#176 fixed? The view must render the tool error instead of the loading skeleton",
       ).toBeVisible()
       await expect(definitionsTable(app)).toHaveCount(0)
@@ -377,10 +378,14 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page, { cancel: true })
 
     await waitForDelivery(page, "cancelled")
-    await expect(app.getByText("Tool call was cancelled.")).toBeVisible()
+    await expect(
+      app.getByText("Tool call cancelled. Ask in the chat to show this view again."),
+    ).toBeVisible()
     await page.waitForTimeout(OUTLAST_GRACE_MS)
     expect(await reExecutions(page)).toHaveLength(0)
-    await expect(app.getByText("Tool call was cancelled.")).toBeVisible()
+    await expect(
+      app.getByText("Tool call cancelled. Ask in the chat to show this view again."),
+    ).toBeVisible()
   })
 
   test("dark host on a dark OS: dark theme tokens (light text)", async ({ page }) => {
@@ -445,7 +450,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
         await expect(
           app.getByRole("heading", { name: "Process Definitions" }).first(),
         ).toBeVisible()
-        await expect(app.getByRole("button", { name: "Fullscreen" })).toBeHidden()
+        await expect(app.getByRole("button", { name: "Full screen" })).toBeHidden()
         expect((await hostLog(page)).displayModeRequests).toEqual([])
       }
     },
@@ -570,10 +575,10 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page, { displayModes: ["inline", "fullscreen"] })
 
     await expectProcessList(app)
-    await app.getByRole("button", { name: "Fullscreen" }).click()
+    await app.getByRole("button", { name: "Full screen" }).click()
 
     await expect.poll(async () => (await hostLog(page)).displayModeRequests).toEqual(["fullscreen"])
-    await expect(app.getByRole("button", { name: "Collapse" })).toBeVisible()
+    await expect(app.getByRole("button", { name: "Exit full screen" })).toBeVisible()
     await expectProcessList(app)
   })
 })
@@ -621,6 +626,67 @@ test.describe("real BPMN view (camunda7_show_bpmn_viewer)", () => {
       })
       expect(hit, `${name} is covered`).toBe(true)
     }
+  })
+})
+
+/**
+ * The kit's design-system foundation in the BUILT bundle (#322): the role
+ * variables reach the view (the shell theme survived Tailwind), Lucide icons
+ * draw at the CI stroke set once in theme.css (2.5; 2 in dense bars and the
+ * toolkit's toolbar), and a KPI's state is a tinted, edged card around neutral
+ * digits — never a coloured number.
+ */
+test.describe("kit foundation (camunda7_show_job_panel)", () => {
+  test("role variables, Lucide strokes and the tone model reach the rendered view", async ({
+    page,
+  }) => {
+    const app = await openView(page, {
+      tool: "camunda7_show_job_panel",
+      displayModes: ["inline", "fullscreen"],
+    })
+    const handOff = app.getByRole("button", { name: "Analyze in chat" })
+    await expect(handOff).toBeVisible({ timeout: 15_000 })
+
+    const roles = await app.locator("html").evaluate((el) => {
+      const style = getComputedStyle(el)
+      return [
+        "--danger-ink",
+        "--warning-ink",
+        "--success-ink",
+        "--info-ink",
+        "--link",
+        "--focus",
+      ].map((name) => style.getPropertyValue(name).trim())
+    })
+    for (const value of roles) expect(value).not.toBe("")
+
+    const stroke = (locator: Locator) => locator.evaluate((el) => getComputedStyle(el).strokeWidth)
+    expect(await stroke(handOff.locator("svg.lucide"))).toBe("2.5px")
+    const rowHandOffs = app.locator("td button svg.lucide")
+    expect(await rowHandOffs.count()).toBeGreaterThan(0)
+    expect(await stroke(rowHandOffs.first())).toBe("2px")
+    expect(await stroke(app.locator("svg.lucide-maximize-2"))).toBe("2px")
+    // No glyph icon anywhere in the view.
+    expect(await app.locator("body").innerText()).not.toMatch(/[✦⊡▦↗›⚠⚙⏱⤧▶✓✕▤⊞↻]/)
+
+    const blocked = app.locator('[data-tone="danger"]').first()
+    await expect(blocked).toBeVisible()
+    const card = await blocked.evaluate((el) => {
+      const style = getComputedStyle(el)
+      const digits = getComputedStyle(el.querySelector(".text-2xl")!)
+      const page = getComputedStyle(document.body)
+      return {
+        edge: style.borderTopColor,
+        tint: style.backgroundColor,
+        pageBackground: page.backgroundColor,
+        digits: digits.color,
+        foreground: page.color,
+      }
+    })
+    expect(card.edge).not.toBe("rgba(0, 0, 0, 0)")
+    expect(card.edge).not.toBe(card.foreground)
+    expect(card.tint, "the state is the card's tint").not.toBe(card.pageBackground)
+    expect(card.digits, "a KPI number stays neutral").toBe(card.foreground)
   })
 })
 

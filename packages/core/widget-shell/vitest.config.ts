@@ -23,7 +23,12 @@ export default mergeConfig(
         // and the v1→v3 migration steps gone): measured 93.02 / 93.51 / 97.34 / 93.79.
         // Raised again with #338 (the askAiPrompt primitive and its fence
         // fully covered): measured 93.4 / 92.96 / 97.59 / 94.04.
-        thresholds: { statements: 91, branches: 91, functions: 95, lines: 92 },
+        // Raised again with the brand-kit foundation (the testing gates, the
+        // tone model and the locale formatters landed with their suites):
+        // measured 94.23 / 93.69 / 96.77 / 95.1. Branches raised with its
+        // review fixes (colour gate, cascade model, lone-symbol rule, each
+        // with its negative cases): measured 94.64 / 94.06 / 97.01 / 95.48.
+        thresholds: { statements: 92, branches: 92, functions: 95, lines: 93 },
       },
     },
   }),

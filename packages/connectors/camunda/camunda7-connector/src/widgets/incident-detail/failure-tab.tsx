@@ -198,7 +198,7 @@ function ActionsRow({
         )}
       </div>
       {retryError && (
-        <p role="alert" className="text-critical text-xs">
+        <p role="alert" className="text-danger-ink text-xs">
           {t("incidentFailure.retryError", { message: retryError })}
         </p>
       )}

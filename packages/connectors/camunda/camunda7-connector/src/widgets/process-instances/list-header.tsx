@@ -68,8 +68,6 @@ export function InstancesHeader({
   const { ask } = useHandOff()
   return (
     <WidgetHeader
-      icon="▶"
-      iconTone="info"
       title={title}
       sub={
         <>

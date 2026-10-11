@@ -67,10 +67,10 @@ export function IncidentDetailHeader({
       size="detail"
       badge={
         <div className="flex items-center gap-3">
-          <div className="bg-critical-soft text-critical grid size-11 place-items-center rounded-xl text-xl">
+          <div className="bg-danger-soft text-danger-ink grid size-11 place-items-center rounded-xl text-xl">
             ⚠
           </div>
-          <StatusBadge tone={resolved ? "neutral" : "critical"}>
+          <StatusBadge tone={resolved ? "neutral" : "danger"}>
             {resolved ? t("incidentDetail.resolved") : data.incidentType}
           </StatusBadge>
         </div>

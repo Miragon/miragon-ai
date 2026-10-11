@@ -17,12 +17,12 @@ export function IncidentKpis({ data, resolved }: { data: IncidentDetailData; res
         {
           label: t("incidentDetail.kpiType"),
           value: data.incidentType,
-          tone: resolved ? "success" : "critical",
+          tone: resolved ? "success" : "danger",
         },
         {
           label: t("incidentDetail.kpiRetriesLeft"),
           value: data.job?.retries ?? "—",
-          tone: data.job && data.job.retries > 0 ? "success" : data.job ? "critical" : undefined,
+          tone: data.job && data.job.retries > 0 ? "success" : data.job ? "danger" : undefined,
         },
         {
           label: t("incidentDetail.kpiDate"),

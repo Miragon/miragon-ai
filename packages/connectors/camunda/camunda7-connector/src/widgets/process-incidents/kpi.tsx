@@ -66,12 +66,12 @@ export function ProcessDefinitionKpi({
     {
       label: t("procIncKpi.openIncidents"),
       value: data.incidentCount,
-      tone: data.incidentCount > 0 ? "critical" : undefined,
+      tone: data.incidentCount > 0 ? "danger" : undefined,
     },
     {
       label: "+24h",
       value: `+${data.last24hCount}`,
-      tone: data.last24hCount > 0 ? "critical" : undefined,
+      tone: data.last24hCount > 0 ? "danger" : undefined,
     },
     {
       label: t("procIncKpi.failedJobs"),

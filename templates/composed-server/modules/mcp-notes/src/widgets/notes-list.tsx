@@ -32,7 +32,7 @@ export function NotesListWidget({ data: initialData }: { data: NotesListData | n
   if (!data) {
     return (
       <WidgetShell>
-        <WidgetHeader icon="🗒" iconTone="info" title="Team Notes" />
+        <WidgetHeader title="Team Notes" />
         <QueryFallback
           isError={query.isError}
           error={query.error}
@@ -45,12 +45,7 @@ export function NotesListWidget({ data: initialData }: { data: NotesListData | n
 
   return (
     <WidgetShell>
-      <WidgetHeader
-        icon="🗒"
-        iconTone="info"
-        title={data.title}
-        sub={`${data.notes.length} note(s)`}
-      />
+      <WidgetHeader title={data.title} sub={`${data.notes.length} note(s)`} />
       {data.notes.length === 0 ? (
         <TableEmptyState>No notes match the current filter.</TableEmptyState>
       ) : (

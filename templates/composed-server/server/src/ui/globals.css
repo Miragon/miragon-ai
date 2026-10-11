@@ -28,18 +28,24 @@
 @import "@miragon-ai/widget-shell/theme.css";
 
 /*
- * Brand "tone" tokens layered on top of the toolkit's shadcn base. The toolkit
- * ships the neutral shadcn ramp (background / card / muted / border /
- * destructive …) with full light+dark variants — widgets use those for ALL
- * neutrals (text-foreground / text-muted-foreground / border-border / bg-muted /
- * bg-card). What shadcn lacks is a SEMANTIC severity ramp — critical / warning /
- * success / info — plus the brand blue/green used for links and accents.
- * We define only those here. Swap the values below for your own brand.
+ * Your brand. The shell theme above defines every role the widgets read:
+ * the neutrals (background / card / muted / border …), the status tones
+ * (danger / warning / success / info, each with -soft for a tint and -ink
+ * for its text), the link and the focus ring, in light and dark. To brand
+ * the UI, override those ROLE names here, under :root AND .dark, e.g.
  *
- * Declared under :root (light) and .dark (dark) and registered via
- * `@theme inline` so utilities (`bg-critical-soft`, `text-success`, `text-m-blue`
- * …) resolve through var() and re-theme automatically inside the host's dark
- * mode (`.dark` ancestor, per the toolkit's @custom-variant dark).
+ *   :root { --info: #0055aa; --info-soft: #e6f0fa; --info-ink: #0055aa; }
+ *   .dark { --info: #6b9ce0; --info-soft: #14233a; --info-ink: #6b9ce0; }
+ *
+ * Repeat every override under .dark: the host's dark mode sets .dark on
+ * <html>, where :root matches too, so a light-only value shows in dark. Keep
+ * the pairs readable (text 4.5:1, edges and dots 3:1); `contrastFindings`
+ * from @miragon-ai/widget-shell/testing measures them in both modes. Never
+ * add palette classes in widgets.
+ *
+ * The `--m-*` accents below are the legacy brand ramp the bundled connector
+ * widgets still read for links and selection; they retire with the next
+ * theme release. Swap their values for your own brand.
  */
 @theme inline {
   --color-m-blue: var(--m-blue);
@@ -47,17 +53,6 @@
   --color-m-blue-soft: var(--m-blue-soft);
   --color-m-green: var(--m-green);
   --color-m-green-soft: var(--m-green-soft);
-  --color-critical: var(--critical);
-  --color-critical-soft: var(--critical-soft);
-  --color-warning: var(--warning);
-  --color-warning-soft: var(--warning-soft);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
-  --color-success-foreground: var(--success-foreground);
-  --color-info: var(--info);
-  --color-info-soft: var(--info-soft);
-  --color-info-foreground: var(--info-foreground);
 }
 
 :root {
@@ -66,36 +61,12 @@
   --m-blue-soft: #eef3fa;
   --m-green: #2d8659;
   --m-green-soft: #eff7f2;
-  --critical: #c2410c;
-  --critical-soft: #fef0e6;
-  --warning: #a16207;
-  --warning-soft: #fefae0;
-  --warning-foreground: #854d0e;
-  --success: #2d8659;
-  --success-soft: #eff7f2;
-  --success-foreground: #1e6e47;
-  --info: #1b3b6f;
-  --info-soft: #eef3fa;
-  --info-foreground: #1b3b6f;
 }
 
 .dark {
-  /* Brand hues lifted for legibility on the dark card surface; the *-soft tints
-     become deep, low-chroma backgrounds that pair with the lifted foreground. */
   --m-blue: #7aa7e0;
   --m-blue-light: #5b8ad0;
   --m-blue-soft: #16243a;
   --m-green: #5cc08a;
   --m-green-soft: #11271c;
-  --critical: #f4926a;
-  --critical-soft: #2e1a10;
-  --warning: #e0b341;
-  --warning-soft: #2a2410;
-  --warning-foreground: #e0b341;
-  --success: #5cc08a;
-  --success-soft: #11271c;
-  --success-foreground: #5cc08a;
-  --info: #7aa7e0;
-  --info-soft: #16243a;
-  --info-foreground: #7aa7e0;
 }

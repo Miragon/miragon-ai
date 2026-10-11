@@ -58,14 +58,12 @@ export function ExecutionSummaryKpi({
     <QueryGate
       initialData={initialData}
       query={fallbackQuery}
-      header={<WidgetHeader icon="▤" iconTone="info" title={t("aExecSummary.title")} />}
+      header={<WidgetHeader title={t("aExecSummary.title")} />}
       skeleton={<KpiGridSkeleton cells={5} boxed />}
     >
       {(data) => (
         <WidgetShell>
           <WidgetHeader
-            icon="▤"
-            iconTone="info"
             title={t("aExecSummary.title")}
             actions={<AskAiButton variant="primary" prompt={ask(executionSummaryHandOff(data))} />}
           />
@@ -92,7 +90,7 @@ export function ExecutionSummaryKpi({
               {
                 label: t("aExecSummary.cellOpenIncidentsNow"),
                 value: live(data.openIncidentsNow),
-                tone: (data.openIncidentsNow ?? 0) > 0 ? "critical" : undefined,
+                tone: (data.openIncidentsNow ?? 0) > 0 ? "danger" : undefined,
               },
             ]}
           />

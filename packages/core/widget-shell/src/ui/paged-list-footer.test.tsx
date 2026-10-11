@@ -42,38 +42,43 @@ function renderList(state: PagedViewData<string, object>) {
 /**
  * While a new search or filter is in flight (or has failed) the list keeps the
  * previous result on screen (`stale`). A sighted operator must SEE that —
- * dimmed rows, a visible "Updating…" — and no "Showing X of Y" may pair the
- * previous count with the new search (#341 review).
+ * a marked list (a bar in the state's tone, info in flight, warning once it
+ * failed; never a dimming that drops muted text under AA), a visible
+ * "Updating…" — and no "Showing X of Y" may pair the previous count with the
+ * new search (#341 review).
  */
 describe("PagedListFooter + PagedRows — the stale and in-flight states", () => {
-  it("a settled page: count shown, status for screen readers only, rows not dimmed", () => {
+  it("a settled page: count shown, status for screen readers only, rows not marked", () => {
     const { rows, status } = renderList(paged())
     expect(screen.getByText("Showing 2 of 3 items")).toBeTruthy()
     expect(status.className).toBe("sr-only")
     expect(status.textContent).toBe("2 / 3 items")
     expect(rows.getAttribute("aria-busy")).toBe("false")
     expect(rows.hasAttribute("data-stale")).toBe(false)
-    expect(rows.className).not.toContain("opacity-60")
+    expect(rows.querySelector("[data-tone]")).toBeNull()
+    expect(rows.className).not.toContain("opacity")
   })
 
-  it("a new search in flight: a VISIBLE Updating… line, dimmed busy rows, no count", () => {
+  it("a new search in flight: a VISIBLE Updating… line, busy rows marked info, no count", () => {
     const { rows, status } = renderList(paged({ stale: true, refreshing: true, hasMore: false }))
     expect(status.className).not.toContain("sr-only")
     expect(status.textContent).toBe("Updating…")
     expect(rows.getAttribute("aria-busy")).toBe("true")
     expect(rows.getAttribute("data-stale")).toBe("true")
-    expect(rows.className).toContain("opacity-60")
+    expect(rows.querySelector("[data-tone]")?.getAttribute("data-tone")).toBe("info")
+    expect(rows.className).not.toContain("opacity")
     expect(screen.queryByText(/Showing/)).toBeNull()
   })
 
-  it("a failed search: the rows stay dimmed, the failure says so, still no count", () => {
+  it("a failed search: the rows stay marked (warning), the failure says so, still no count", () => {
     const state = paged({ stale: true, hasMore: false, error: new Error("engine down") })
     const { rows, status } = renderList(state)
     const alert = screen.getByRole("alert")
     expect(alert.textContent).toContain(
-      "Could not update the list — showing the previous result: engine down",
+      "Could not update the list (engine down). You are seeing the previous result.",
     )
     expect(rows.getAttribute("data-stale")).toBe("true")
+    expect(rows.querySelector("[data-tone]")?.getAttribute("data-tone")).toBe("warning")
     expect(status.className).toBe("sr-only")
     expect(status.textContent).toBe("")
     expect(screen.queryByText(/Showing/)).toBeNull()
@@ -122,10 +127,10 @@ describe("PagedListFooter — kit defaults follow the active locale", () => {
     )
     const [refresh, more] = screen.getAllByRole("alert")
     expect(refresh.textContent).toContain(
-      "Liste konnte nicht aktualisiert werden — das vorherige Ergebnis bleibt sichtbar: weg",
+      "Die Liste konnte nicht aktualisiert werden (weg). Du siehst das vorherige Ergebnis.",
     )
     expect(more.textContent).toContain(
-      "Weitere Einträge konnten nicht geladen werden: Zeitüberschreitung",
+      "Weitere Einträge konnten nicht geladen werden (Zeitüberschreitung).",
     )
     expect(screen.getAllByRole("button", { name: "Erneut versuchen" })).toHaveLength(2)
   })

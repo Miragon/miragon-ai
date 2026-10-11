@@ -83,13 +83,11 @@ export function ProcessHealthKpiView({
   const { summary } = data
   const rows = buildRows(data)
   const healthyCount = rows.filter((r) => r.tone === "success").length
-  const affectedCount = rows.filter((r) => r.tone === "critical" || r.tone === "warning").length
+  const affectedCount = rows.filter((r) => r.tone === "danger" || r.tone === "warning").length
 
   return (
     <>
       <WidgetHeader
-        icon="▦"
-        iconTone="info"
         title={t("cockpitHealth.title")}
         sub={
           <span>
@@ -132,12 +130,12 @@ export function ProcessHealthKpiView({
             label: t("cockpitHealth.cellAffected"),
             value: affectedCount,
             fraction: ` /${summary.totalDefinitions}`,
-            tone: affectedCount > 0 ? "critical" : undefined,
+            tone: affectedCount > 0 ? "danger" : undefined,
           },
           {
             label: t("cockpitHealth.cellOpenIncidents"),
             value: summary.totalIncidents,
-            tone: summary.totalIncidents > 0 ? "critical" : undefined,
+            tone: summary.totalIncidents > 0 ? "danger" : undefined,
             onClick: () => go({ type: "incidents" }),
             ariaLabel: t("cockpitHealth.cellOpenIncidentsAria"),
           },

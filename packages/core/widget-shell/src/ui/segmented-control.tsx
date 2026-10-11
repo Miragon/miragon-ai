@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { cn } from "./cn.js"
+import { TONE_SOFT } from "./tone-utils.js"
 
 export interface SegmentedControlOption<V extends string = string> {
   value: V
@@ -8,7 +9,8 @@ export interface SegmentedControlOption<V extends string = string> {
 
 /**
  * Compact multi-state toggle — a joined button row where the active segment
- * gets the soft-blue treatment. Modeled on the live/frequency/duration flow
+ * is a selection in the info tone (CI: blue contour + tint, black text: an
+ * inset info ring on the tint). Modeled on the live/frequency/duration flow
  * toggle in the process-detail widget; `aria-pressed` carries the state.
  */
 export function SegmentedControl<V extends string>({
@@ -40,9 +42,9 @@ export function SegmentedControl<V extends string>({
           onClick={() => onChange(option.value)}
           aria-pressed={value === option.value}
           className={cn(
-            "focus-visible:ring-ring [&:not(:last-child)]:border-border px-2.5 py-1 font-medium transition-colors outline-none focus-visible:ring-2 [&:not(:last-child)]:border-r",
+            "focus-visible:ring-focus [&:not(:last-child)]:border-border px-2.5 py-1 font-medium transition-colors outline-none focus-visible:ring-2 [&:not(:last-child)]:border-r",
             value === option.value
-              ? "bg-m-blue-soft text-m-blue"
+              ? cn(TONE_SOFT.info, "ring-info ring-1 ring-inset")
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >

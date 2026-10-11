@@ -21,16 +21,16 @@ const AN = "packages/connectors/analytics/analytics-connector/src"
 const eslint = new ESLint({ cwd: repoRoot })
 const linter = new Linter({ configType: "flat" })
 
-/** The effective `no-restricted-syntax` options for a repo path (null when off). */
-async function restrictedSyntaxFor(rel) {
+/** The effective options of `rule` for a repo path (null when off). */
+async function ruleOptionsFor(rel, rule) {
   const config = await eslint.calculateConfigForFile(path.join(repoRoot, rel))
-  const setting = config.rules?.["no-restricted-syntax"]
+  const setting = config.rules?.[rule]
   return setting && setting[0] !== 0 && setting[0] !== "off" ? setting : null
 }
 
-/** Messages the effective gate options report for `code` at `rel`. */
-async function gateMessages(rel, code) {
-  const options = await restrictedSyntaxFor(rel)
+/** Messages the effective `rule` options (default: the pattern gates) report for `code` at `rel`. */
+async function gateMessages(rel, code, rule = "no-restricted-syntax") {
+  const options = await ruleOptionsFor(rel, rule)
   if (!options) return []
   return linter
     .verify(
@@ -42,7 +42,7 @@ async function gateMessages(rel, code) {
             parser: tseslint.parser,
             parserOptions: { ecmaFeatures: { jsx: true } },
           },
-          rules: { "no-restricted-syntax": options },
+          rules: { [rule]: options },
         },
       ],
       { filename: path.join(repoRoot, rel) },
@@ -52,6 +52,90 @@ async function gateMessages(rel, code) {
 
 const isRegistrarHit = (m) => m.includes("createToolRegistrar")
 const isDateHit = (m) => m.includes("widget-shell/widgets")
+const isNumberHit = (m) => m.includes("view's locale") || m.includes("browser's locale")
+
+const WS = "packages/core/widget-shell/src/ui"
+
+describe("number gate (invariant 6) in the kit's widget code", () => {
+  it("catches toFixed and an argument-less toLocaleString in .ts and .tsx", async () => {
+    for (const rel of [`${WS}/__probe__.ts`, `${WS}/__probe__.tsx`]) {
+      const messages = await gateMessages(
+        rel,
+        "const a = n.toFixed(1)\nconst b = n.toLocaleString()\nconst c = (x as number).toFixed()",
+      )
+      assert.equal(messages.filter(isNumberHit).length, 3, rel)
+    }
+  })
+
+  it("catches the browser's locale spelled as undefined, null or [], and Intl.NumberFormat", async () => {
+    const escapes = [
+      "n.toLocaleString(undefined, { maximumFractionDigits: 1 })",
+      "n.toLocaleString(undefined)",
+      "n.toLocaleString(null, opts)",
+      "n.toLocaleString([], opts)",
+      "new Intl.NumberFormat(undefined, { style: 'percent' }).format(r)",
+      'Intl.NumberFormat("de").format(n)',
+    ]
+    for (const rel of [`${WS}/__probe__.ts`, `${WS}/__probe__.tsx`]) {
+      for (const code of escapes) {
+        const messages = await gateMessages(rel, code)
+        assert.equal(messages.filter(isNumberHit).length, 1, `${rel}: "${code}" passed the gate`)
+      }
+    }
+  })
+
+  it("leaves a locale-bound toLocaleString (the kit's own date helpers) alone", async () => {
+    const messages = await gateMessages(
+      `${WS}/__probe__.ts`,
+      'const a = d.toLocaleString(locale, opts)\nconst b = n.toLocaleString("de")\nconst c = d.toLocaleString(current?.locale, zoned())',
+    )
+    assert.deepEqual(messages, [])
+  })
+
+  it("lets exactly the kit's formatters build an Intl.NumberFormat, toFixed stays banned there", async () => {
+    const messages = await gateMessages(
+      `${WS}/format.ts`,
+      "new Intl.NumberFormat(current?.locale, options)\nconst a = n.toFixed(1)",
+    )
+    assert.equal(messages.filter(isNumberHit).length, 1)
+    assert.ok(messages.every((m) => !m.includes("Intl.NumberFormat")))
+  })
+})
+
+describe("sparkle gate (invariant 6, CI U4) in every widget tree", () => {
+  const isSparkleHit = (m) => m.includes("Sparkles")
+  const WIDGET_PATHS = [
+    `${WS}/__probe__.tsx`,
+    `${C7}/widgets/__probe__.tsx`,
+    `${AN}/widgets/__probe__.ts`,
+    "apps/mcp-server-camunda7/src/ui/__probe__.tsx",
+  ]
+
+  it("bans Lucide's AI sparkle, named, renamed or deep-imported", async () => {
+    const escapes = [
+      'import { Sparkles } from "lucide-react"',
+      'import { SparklesIcon as Ai } from "lucide-react"',
+      'import { LucideSparkle } from "lucide-react"',
+      'import { WandSparkles } from "lucide-react"',
+      'import { Wand2 } from "lucide-react"',
+      'import Sparkles from "lucide-react/icons/sparkles"',
+      'import Wand from "lucide-react/dist/esm/icons/wand-sparkles.js"',
+    ]
+    for (const rel of WIDGET_PATHS) {
+      for (const code of escapes) {
+        const messages = await gateMessages(rel, code, "no-restricted-imports")
+        assert.equal(messages.filter(isSparkleHit).length, 1, `${rel}: "${code}" passed the gate`)
+      }
+    }
+  })
+
+  it("leaves every other Lucide icon alone", async () => {
+    const code = 'import { FileSearch, MessageSquare, X, ArrowRight } from "lucide-react"'
+    for (const rel of WIDGET_PATHS) {
+      assert.deepEqual(await gateMessages(rel, code, "no-restricted-imports"), [], rel)
+    }
+  })
+})
 
 const REGISTRAR_ESCAPES = {
   "direct call": 'server.tool("x", {}, handler)',
@@ -118,6 +202,12 @@ describe("gates sharing a glob are merged, not overridden", () => {
     for (const messages of [widgetTs, widgetTsx]) {
       assert.ok(messages.some(isRegistrarHit), "registrar gate dropped for widgets")
       assert.equal(messages.filter(isDateHit).length, 2, "date gate dropped for widgets")
+    }
+  })
+
+  it("connector widgets do not carry the number gate yet (they join it after migrating)", () => {
+    for (const messages of [widgetTs, widgetTsx]) {
+      assert.equal(messages.filter(isNumberHit).length, 0)
     }
   })
 

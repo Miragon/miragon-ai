@@ -186,6 +186,91 @@
 /* ── Shell additions (everything above is the toolkit's) ─────────────────── */
 
 /*
+ * Role variables the kit reads on top of the toolkit's (the role contract of
+ * the Miragon theme: tone triple + link + focus + primary hover). Defined
+ * HERE, once, so a package consumer gets coloured tones without copying
+ * tokens; a consumer brands by overriding these names in its own stylesheet
+ * after this import, never by adding palette classes.
+ *
+ * Every tone has three roles (src/ui/tone-utils.ts):
+ *   --<tone>       fill / dot / border / icon (non-text, >= 3:1)
+ *   --<tone>-soft  the tint of a badge, chip or soft card (its text is
+ *                  --foreground, >= 4.5:1)
+ *   --<tone>-ink   the text colour of the tone on the card or page (>= 4.5:1)
+ * src/ui/tone-contrast.test.ts holds every TONE_* entry to those ratios in
+ * both modes.
+ *
+ * Interim values: today's look, carried behind the role names until the
+ * Miragon theme (vendored cd-tokens + alias layer) replaces them. `danger`
+ * keeps the toolkit's value above; the retired `critical` tone renders as it.
+ * `--focus` is the info navy (11:1 light, >= 7.1:1 dark), not the toolkit's
+ * grey ring (2.6:1 on white).
+ * Every value is repeated under `.dark`: `.dark` sits on <html>, where this
+ * `:root` (after the toolkit's `.dark`) matches too, so a value declared
+ * only here would show in dark (tone-contrast.test.ts checks the repeat).
+ */
+@theme inline {
+  --color-danger-ink: var(--danger-ink);
+  --color-warning-ink: var(--warning-ink);
+  --color-success-ink: var(--success-ink);
+  --color-info-ink: var(--info-ink);
+  --color-link: var(--link);
+  --color-focus: var(--focus);
+  --color-primary-hover: var(--primary-hover);
+}
+
+:root {
+  --success: #2d8659;
+  --success-soft: #eff7f2;
+  --success-ink: #1e6e47;
+  --warning: #a16207;
+  --warning-soft: #fefae0;
+  --warning-ink: #854d0e;
+  --info: #1b3b6f;
+  --info-soft: #eef3fa;
+  --info-ink: var(--info);
+  --danger-ink: var(--danger);
+  --link: var(--info);
+  --focus: var(--info);
+  --primary-hover: color-mix(in oklab, var(--primary) 90%, transparent);
+}
+
+.dark {
+  --success: #5cc08a;
+  --success-soft: #11271c;
+  --success-ink: var(--success);
+  --warning: #e0b341;
+  --warning-soft: #2a2410;
+  --warning-ink: var(--warning);
+  --info: #7aa7e0;
+  --info-soft: #16243a;
+  --info-ink: var(--info);
+  --danger-ink: var(--danger);
+  --link: var(--info);
+  --focus: var(--info);
+  --primary-hover: color-mix(in oklab, var(--primary) 90%, transparent);
+}
+
+/*
+ * Lucide function icons (CI: modeler-tool-design §11): stroke 2.5 in the
+ * 24 grid, growing with the size, currentColor; 2 in dense bars (the kit's
+ * `Icon dense`, or any ancestor marked `data-icon-density="dense"`). Set once
+ * here instead of per icon. The toolkit's view toolbar is such a dense chrome
+ * bar (identified by its fullscreen toggle; upstream: mcp-toolkit chrome).
+ */
+svg.lucide {
+  stroke-width: 2.5;
+}
+svg.lucide[data-icon-density="dense"],
+[data-icon-density="dense"] svg.lucide,
+[data-shell-fullscreen]
+  > main
+  > :first-child:has(svg.lucide-maximize-2, svg.lucide-minimize-2)
+  svg.lucide {
+  stroke-width: 2;
+}
+
+/*
  * McpAppView (toolkit) renders its Fullscreen toggle unconditionally; a host
  * that offers no fullscreen rejects the request, so the button would be dead.
  * LocalizedAppView marks its wrapper when the host does not offer the mode,

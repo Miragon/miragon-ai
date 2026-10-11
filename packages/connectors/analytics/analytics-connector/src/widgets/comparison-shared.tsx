@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@miragon/mcp-toolkit-ui"
-import { TONE_TEXT, formatDuration } from "@miragon-ai/widget-shell/widgets"
+import { TONE_INK, formatDuration } from "@miragon-ai/widget-shell/widgets"
 import type { CompareKpiDelta, CompareKpis } from "@miragon-ai/analytics-client"
 import { useT, type T } from "../messages/use-t.js"
 
@@ -66,16 +66,16 @@ export function judgmentFor(
 }
 
 /**
- * Map a numeric delta to a tone className. Returns `text-critical` when the
- * change is bad, `text-m-green` when it is good, and `undefined` for missing
+ * Map a numeric delta to a tone className. Returns `text-danger-ink` when the
+ * change is bad, `text-success-ink` when it is good, and `undefined` for missing
  * (null) or near-zero deltas so the cell inherits the default foreground.
  */
 export function toneFor(value: number | null, worseIfUp: boolean): string | undefined {
   const judgment = judgmentFor(value, worseIfUp)
   return judgment === "worse"
-    ? TONE_TEXT.critical
+    ? TONE_INK.danger
     : judgment === "better"
-      ? TONE_TEXT.success
+      ? TONE_INK.success
       : undefined
 }
 

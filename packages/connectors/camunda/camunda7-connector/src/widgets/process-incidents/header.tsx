@@ -60,20 +60,18 @@ function HeaderBadge({ data }: { data: ProcessIncidentsData }) {
   const remainingCount = data.incidentCount
   // The merged view also renders healthy definitions — only go red (and show
   // the incident badge) when there is actually something on fire.
-  const headerTone: ToneVariant = remainingCount > 0 ? "critical" : "info"
+  const headerTone: ToneVariant = remainingCount > 0 ? "danger" : "info"
   return (
     <div className="flex items-center gap-3">
       <div
         className={`${
-          headerTone === "critical"
-            ? "bg-critical-soft text-critical"
-            : "bg-m-blue-soft text-m-blue"
+          headerTone === "danger" ? "bg-danger-soft text-danger-ink" : "bg-m-blue-soft text-m-blue"
         } grid size-11 place-items-center rounded-xl text-xl`}
       >
-        {headerTone === "critical" ? "⚠" : "⊞"}
+        {headerTone === "danger" ? "⚠" : "⊞"}
       </div>
       {remainingCount > 0 && (
-        <StatusBadge tone="critical">
+        <StatusBadge tone="danger">
           {remainingCount === 1
             ? t("procIncHeader.openIncidentsOne", { count: remainingCount })
             : t("procIncHeader.openIncidentsOther", { count: remainingCount })}

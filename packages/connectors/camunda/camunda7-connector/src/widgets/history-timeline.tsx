@@ -40,12 +40,12 @@ export interface HistoryEntry {
 }
 
 // Categorical dot colors per BPMN activity type. Start/end map to the brand
-// success/critical tones; the remaining categories use a distinct, deduplicated
+// success/danger tones; the remaining categories use a distinct, deduplicated
 // palette (an explicit-color set, like the heatmap legend) kept readable in both
 // light and dark mode.
 const ACTIVITY_COLORS: Record<string, string> = {
   startEvent: TONE_DOT.success,
-  endEvent: TONE_DOT.critical,
+  endEvent: TONE_DOT.danger,
   userTask: "bg-blue-500 dark:bg-blue-400",
   serviceTask: "bg-purple-500 dark:bg-purple-400",
   sendTask: "bg-indigo-500 dark:bg-indigo-400",
@@ -291,7 +291,7 @@ export function HistoryTimelineView({
                       {activity.activityType}
                     </span>
                     {activity.assignee && (
-                      <span className="text-info ml-2 text-xs">@{activity.assignee}</span>
+                      <span className="text-info-ink ml-2 text-xs">@{activity.assignee}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

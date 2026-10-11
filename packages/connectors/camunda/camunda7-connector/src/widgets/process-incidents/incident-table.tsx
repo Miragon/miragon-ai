@@ -131,7 +131,7 @@ export function IncidentTable({
                 )}
                 <Td>
                   <div className="flex flex-col items-start gap-1">
-                    <StatusBadge tone="critical">{incident.incidentType}</StatusBadge>
+                    <StatusBadge tone="danger">{incident.incidentType}</StatusBadge>
                     <LogText text={incident.incidentMessage} />
                   </div>
                 </Td>
@@ -172,7 +172,7 @@ export function IncidentTable({
                     colSpan={columnCount}
                     className={`border-border border-b px-4 py-1.5 ${leadPad ?? ""}`}
                   >
-                    <span className="text-critical text-xs">
+                    <span className="text-danger-ink text-xs">
                       {retried
                         ? t("procIncTable.retryError", { message: error })
                         : t("procIncTable.resolveError", { message: error })}

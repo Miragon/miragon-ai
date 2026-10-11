@@ -58,6 +58,54 @@ If generated SDK files look wrong (e.g. `client.gen.ts` importing `./src/hey-api
 instead of `../hey-api.js`), the shared turbo cache replayed a poisoned `generate`
 output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-client --force`.
 
+## Design-System (verbindlich)
+
+Alle UI- und Gestaltungsarbeit folgt dem Miragon-Design-System für Produkte. Quelle der
+Wahrheit ist die Skill `miragon-brand:modeler-tool-design` im Repo Miragon/corporate-identity.
+Sie lädt automatisch bei UI-Arbeit, wenn das Plugin installiert ist. Ohne Plugin den Guide
+direkt lesen:
+https://raw.githubusercontent.com/Miragon/corporate-identity/main/plugins/miragon-brand/skills/modeler-tool-design/assets/modeler-design-system.md
+Für jedes Wort in der UI gilt zusätzlich `miragon-brand:brand-tone`.
+
+Die Marken-Tokens kommen aus der Skill (`cd-tokens.generated.css`). Keine HEX-Werte forken.
+Das Miragon-Theme ist das Default-Theme des Toolkits (`@miragon/mcp-toolkit-ui`): Es vendort
+`cd-tokens.generated.css` unverändert und bildet seine Rollen-Variablen in Hell und Dunkel
+darauf ab. Dieses Repo und das Starter-Template überschreiben nur Rollen- und
+Alias-Variablen (`--primary`, `--link`, `--focus`, `--<ton>`, `--<ton>-soft`, `--<ton>-ink`,
+Radien, Schatten), nie Palettenklassen oder rohe Farben in Komponenten. Bis das Toolkit-Release
+da ist, stehen die Rollen mit den bisherigen Werten in
+`packages/core/widget-shell/styles/theme.css`. Die Docs-Site vendort die Token-Datei unter
+`docs/.vitepress/theme/cd-tokens.generated.css`; bei jeder CI-Aktualisierung neu kopieren,
+nie von Hand ändern.
+
+UI-Texte gibt es auf Deutsch und Englisch, je nach Host-Locale. Deutsch folgt brand-tone
+vollständig: du-Ansprache, AI statt `KI`, „CIB seven“, kein Gedankenstrich als Verbinder,
+normale Groß- und Kleinschreibung, Fehlermeldungen sagen, was passiert ist und was du tun
+kannst. Englisch übernimmt die übertragbaren Regeln: Sentence case, aktiv, kein Em-Dash als
+Verbinder. Glossar: Incident (nicht Vorfall), aussetzen/ausgesetzt, läuft, Geschäftsschlüssel,
+Versuche. `.miragon/brand.json` schaltet den brand-lint-Hook für jede geänderte Datei ein;
+Strings in `.ts`/`.tsx` sieht brand-lint nicht, die prüfen die Gates aus
+`@miragon-ai/widget-shell/testing` (Invariante 6).
+
+### Abweichungen für eingebettete Chat-Widgets
+
+Die Widgets laufen als MCP Apps im Rahmen eines Chat-Hosts. Dafür gelten diese bewussten
+Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
+
+- Theme: Die Widgets folgen dem Host-Theme (#339), ohne Umschalter in der App; ohne Host
+  hell. Dunkel entsteht streng aus den Dark-Ground-Regeln der CI: Basis `--cd-schwarz`, Flächen
+  als `color-mix`-Aufhellungen davon, Text Weiß, Links und Akzenttext `--cd-gruen`, Buttons
+  `--cd-blau` mit Weiß, Fokus `--cd-blau-hell`, Status in den `-hell`-Werten ohne getönte
+  Flächen, leiser Text `--cd-kontur`. BPMN-Papier und seine Zoom-Leiste bleiben immer hell.
+- Sprache: Deutsch und Englisch nach Host-Locale (Fallback Englisch) statt nur Deutsch.
+- Chrome: im Rahmen des Hosts (Kopf mit Titel und Aktionen) statt randlosem Canvas mit
+  schwebendem Chrome in den Ecken.
+- Seitentitel: h2 mit 28 px statt h1 mit 40 px.
+- Dichte Tabellen: 14 px statt 16 px Fließtext.
+- Data-Viz: eine einfarbige Rampe von `--cd-info-soft` bis `--cd-blau`; Rot nur für
+  Incidents.
+- Komet: nur auf App-Ebene (Landing, Erststart, „keine Engines“), nicht in jedem Widget.
+
 ## Architecture invariants
 
 1. **New operations tools go through the registrar — never raw `server.tool()`.** Add the
@@ -148,11 +196,17 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
 6. **Widgets compose from the shared kit (`@miragon-ai/widget-shell/widgets`) — never
    re-inline its primitives.** `ViewDataState` for the loading/error/no-data guard;
    `QueryFallback` + `TableSkeleton` for self-fetching widgets (a missing `isError`
-   branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime`/
-   `formatDuration`/`truncate` for all formatting (canonical duration style "3m 7s";
-   dates render in the shell's effective locale + the host's time zone, published by
+   branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime` for dates
+   and `formatNumber`/`formatPercent`/`formatPercentPoints`/`formatPeriod`/`formatDuration`/
+   `truncate` for everything else (canonical duration style "3m 7s" in English, "3 Min. 7 s"
+   in German; "3,7 %" / "3.7%", "+0,2 Pp." / "+0.2 pp", "7 Tage" / "7 days"). Dates and
+   numbers render in the shell's effective locale (+ the host's time zone), published by
    `ProfileGate`; an ESLint gate bans `Intl.DateTimeFormat`/`toLocaleDateString`/`toLocaleTimeString`
-   in widget code — `Number#toLocaleString` for counts stays allowed);
+   in widget code, and a second one bans `toFixed`, a `toLocaleString()` without a locale (no
+   argument, `undefined`, `null`, `[]`) and a hand-built `Intl.NumberFormat` (exempt: the
+   kit's own `format.ts`; on for widget-shell's `src/ui`; a connector's widgets join it in its
+   block in `eslint.config.mjs` once their raw calls moved to the kit, flipping the pinned
+   "not yet" probe in `scripts/eslint-gates.test.mjs`);
    `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
    `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
    settings sections; `useBpmnViewer` (it owns the fixed light canvas, both themes) +
@@ -162,7 +216,7 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    `firstResult`/`maxResults` and return an honest total; a new page 0 keeps the
    previous rows mounted until it lands — `paged.stale`, so counts, filters and
    model contexts read the payload ON SCREEN, never the request) + `ListTable` (the table
-   frame; rows stay hand-composed `<tr>` + `Td`) inside `PagedRows` (dims stale rows) + `PagedListFooter` (a page-0
+   frame; rows stay hand-composed `<tr>` + `Td`) inside `PagedRows` (marks stale rows) + `PagedListFooter` (a page-0
    failure over rows on screen and a load-more failure, each with its own retry; in
    camunda7 via the i18n-bound `CockpitListFooter`, `src/widgets/list-footer.tsx`,
    rendered under an empty result too). Optimistic
@@ -172,6 +226,56 @@ output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-
    rejects, and it commits the stale shadow once before correcting it. Refs are never
    written during render (`react-hooks/refs`): a discarded render still mutates them,
    so anything a guard reads belongs in state — see `usePagedViewData`'s generation.
+   **A status is a tone, never a coloured word** (`widget-shell/src/ui/tone-utils.ts`, see
+   "Design-System"): `ToneVariant` is `danger | warning | success | info | neutral`. There is
+   no `critical`: an open incident or a failed job without retries is `danger`, a failed job
+   with retries left or a degraded engine is `warning`, a count without a state is `neutral`.
+   Each tone has three roles, theme variables defined once in
+   `widget-shell/styles/theme.css` (light + dark): `--<tone>` is the fill, dot, edge or icon
+   (`TONE_DOT`, `TONE_BORDER`, `TONE_ICON`), `--<tone>-soft` the tint (`TONE_TINT`, or
+   `TONE_SOFT` = tint + black text, paired with `TONE_BORDER`) and `--<tone>-ink` the text of
+   a tone directly on the card or page (`TONE_INK`, an inline error line; never on a tint,
+   never a number). Numbers stay neutral: `StatusBadge`/`CountPill`/`LivePill` put black text
+   on the tint with the edge and dot in the tone, `KpiGrid` shows a cell's `tone` as a dot
+   next to the label (strip) or as tint + edge (soft) and its trend as a Lucide direction icon
+   or dot beside neutral words, never as a coloured digit, and `PagedRows` marks stale rows
+   with a bar instead of dimming them. A selection (`FilterBar` chip, `SegmentedControl`) is
+   the info tint and contour around black text. Components use role names only
+   (`text-danger-ink`, `bg-info-soft`, `text-link`, `ring-focus` …), never Tailwind palette
+   classes or raw colours (`scanColors`, below); the legacy `--m-*` accents in the
+   app/template retire with the theme swap. `src/ui/tone-contrast.test.ts` holds every
+   `TONE_*` pair to WCAG AA in light and dark (role gaps of today's interim neutrals are a
+   shrink-only list there), the app's `test/ui-stylesheet.test.ts` does the same over the
+   app's and the template's overrides. `parseThemeVariables` reads a stylesheet stack the way
+   `<html class="dark">` sees it: `:root` and `.dark` in source order, later wins, so a
+   brand override goes under BOTH (a light-only `:root` value shows in dark); a theme rule it
+   cannot model (`html.dark`, `[data-theme]`, a media query or layer around `:root`) throws.
+   **Function icons are Lucide, never glyphs or emoji:** `Icon` (`currentColor`, 16 px, stroke
+   2.5 set once in `theme.css`, `dense` → 2 for tight bars and rows). `lucide-react` is a
+   widget-shell peer, deduped in the bundle (invariant 4); a workspace package that imports it
+   pins devDependency `0.562.0`, the version mcp-use's graph peers on: any other version
+   resolves a second mcp-use/toolkit instance for that package and splits the React contexts
+   between it and widget-shell in tests. `AskAiButton` takes `icon` (the Lucide icon of the
+   concrete function, e.g. `FileSearch` for "explain") and a verb that names the chat ("Im
+   Chat erklären" / "Explain in chat"); without them it shows `MessageSquare` + "Im Chat
+   analysieren"; every variant is a secondary outline (the deterministic next step is the
+   view's primary action), never ✦ or Sparkles (an ESLint `no-restricted-imports` gate bans
+   lucide-react's sparkle icons in every widget tree). `OpenInCockpitLink` takes `vendor`
+   (`provider.branding.displayName`) and reads "In CIB seven öffnen" / "Open in CIB seven",
+   with "öffnet in neuem Tab" in its accessible name. `WidgetHeader` has no icon tile; a state
+   goes into `badge` (a `StatusBadge`).
+   **Every widget package runs the brand gates** from `@miragon-ai/widget-shell/testing` in
+   its own tests (brand-lint cannot read strings in `.ts`/`.tsx`):
+   `catalogTextFindings(catalog, { language })` over each en/de message catalog (no dash as a
+   connector, AI not `KI`, "CIB seven", du not `Sie`/`Ihr`/`Ihnen`/`man`, also at the start of
+   an entry or sentence, no "1 incidents"; pass `params` for entries that need real shapes, and
+   `allow` with a reason for a sentence-initial she/its that refers to an instance, not to
+   the reader), `scanGlyphs(dir)` over widget code and catalogs (no ✦ ⊡ ▦ ↗ › ⚠ ⚙ ⏱ ⤧ ▶ ✓ ✕ ▤
+   ⊞ ↻ × and no emoji in JSX or strings, no lone symbol such as → − ‹ as an element's whole
+   content, no Lucide sparkle import) and `scanColors(dir, { allow })` over widget code (no
+   palette class such as `text-red-600`/`bg-black/50`, no hex, `rgb()`/`oklch()` …; `allow`
+   names a file with its reason, shrink-only). widget-shell runs all three in
+   `src/ui/brand-gates.test.ts`; camunda7 and analytics add theirs as they migrate.
    **Everything a widget tells the model is built by `askAiPrompt`/`modelContextText`**
    (`widget-shell/src/ui/ask-ai-prompt.ts`) — an Ask-AI hand-off is posted as the
    USER's message. A spec is a short catalogue intent (`askAi.*` in the module's

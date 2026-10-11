@@ -234,7 +234,7 @@ export function JobPanelWidget({
         ariaLabel={t("jobPanel.summaryLabel")}
         cells={[
           { label: t("jobPanel.totalJobs"), value: totalCount },
-          { label: t("jobPanel.stuck"), value: failedCount, tone: "critical" },
+          { label: t("jobPanel.stuck"), value: failedCount, tone: "danger" },
           { label: t("jobPanel.healthy"), value: totalCount - failedCount, tone: "success" },
         ]}
       />
@@ -317,7 +317,7 @@ export function JobPanelWidget({
                     )}
                     {retried && <Badge variant="secondary">{t("jobPanel.retried")}</Badge>}
                     {retryError && (
-                      <p role="alert" className="text-critical mt-1 text-xs">
+                      <p role="alert" className="text-danger-ink mt-1 text-xs">
                         {t("jobPanel.retryError", { message: retryError })}
                       </p>
                     )}

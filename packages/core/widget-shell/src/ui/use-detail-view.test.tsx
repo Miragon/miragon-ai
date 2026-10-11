@@ -174,7 +174,11 @@ describe("useDetailView", () => {
     callTool.mockRejectedValueOnce(new Error("gone"))
     render(<Bare />, { wrapper })
     await invalidate()
-    expect(await screen.findByText("Could not refresh this view: gone")).toBeTruthy()
+    expect(
+      await screen.findByText(
+        "Could not refresh this view (gone). You are seeing the last loaded state.",
+      ),
+    ).toBeTruthy()
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy()
   })
 
@@ -188,7 +192,9 @@ describe("useDetailView", () => {
     )
     await invalidate()
     expect(
-      await screen.findByText("Die Ansicht konnte nicht aktualisiert werden: weg"),
+      await screen.findByText(
+        "Die Ansicht konnte nicht aktualisiert werden (weg). Du siehst den zuletzt geladenen Stand.",
+      ),
     ).toBeTruthy()
     expect(screen.getByRole("button", { name: "Erneut versuchen" })).toBeTruthy()
   })

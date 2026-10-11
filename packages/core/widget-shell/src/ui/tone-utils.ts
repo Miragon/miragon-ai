@@ -1,41 +1,102 @@
 /**
- * Single source of truth for severity/brand "tones" used across widgets.
+ * The status tone model: the single source of the class strings every kit
+ * component (and every widget) uses to show a state. CI rule (modeler-tool-
+ * design §3.3): a status colour is a FILL, DOT, BORDER or ICON, never the colour
+ * of the words next to it. Each tone therefore has three roles, all theme
+ * variables defined once in `styles/theme.css` (light + dark):
  *
- * Tones map to the brand tokens defined in the server app's globals.css
- * (`--color-critical`, `--color-warning`, `--color-m-green`, `--color-m-blue`)
- * plus the shadcn neutral ramp for the `neutral` tone. All tokens carry
- * light + dark variants, so these class strings re-theme automatically.
+ *  - `--<tone>`       fill / dot / border / icon — non-text, ≥ 3:1 on a card
+ *  - `--<tone>-soft`  the tint of a badge, chip or soft card; the text on it
+ *                     is `--foreground` (black), the edge `--<tone>`
+ *  - `--<tone>-ink`   the TEXT colour of a tone directly on the card or page
+ *                     (an inline error line, ≥ 4.5:1); after the theme swap
+ *                     success/warning ink is plain black, so never rely on it
+ *                     to carry the meaning
  *
- * Use these maps instead of hand-rolling `tone === "x" ? "..." : "..."` ternaries
- * so a tone only ever needs editing in one place.
+ * Open incidents and failed jobs without retries are `danger`; a failed job
+ * that still has retries and a degraded engine are `warning`. There is no
+ * `critical` tone: one red, one amber. Counts without a state stay `neutral`,
+ * and a number is never coloured: put a dot, icon or border next to black
+ * text instead (KpiGrid, StatusBadge and CountPill do that for you).
+ *
+ * Use these maps instead of hand-rolled ternaries or palette classes, so a
+ * tone only ever changes in one place. `tone-contrast.test.ts` checks every
+ * entry against the theme in light AND dark.
  */
-export type ToneVariant = "critical" | "warning" | "success" | "info" | "neutral"
+export type ToneVariant = "danger" | "warning" | "success" | "info" | "neutral"
 
-/** Tinted background + readable foreground — badges, icon tiles, pills. */
+/** Every tone, in severity order (for loops in tests and pickers). */
+export const TONE_VARIANTS: readonly ToneVariant[] = [
+  "danger",
+  "warning",
+  "success",
+  "info",
+  "neutral",
+]
+
+/**
+ * Tint + black text (CI §3.3: "-soft … Text darauf --cd-schwarz, Rand in der
+ * Statusfarbe"): badges, chips, pills, soft cards. Pair with
+ * {@link TONE_BORDER} (and a {@link TONE_DOT} or {@link TONE_ICON}), which
+ * carry the state; the words and digits on the tint never take its colour.
+ */
 export const TONE_SOFT: Record<ToneVariant, string> = {
-  critical: "bg-critical-soft text-critical",
-  warning: "bg-warning-soft text-warning",
-  success: "bg-m-green-soft text-m-green",
-  info: "bg-m-blue-soft text-m-blue",
-  neutral: "bg-muted text-muted-foreground",
+  danger: "bg-danger-soft text-foreground",
+  warning: "bg-warning-soft text-foreground",
+  success: "bg-success-soft text-foreground",
+  info: "bg-info-soft text-foreground",
+  neutral: "bg-muted text-foreground",
 }
 
-/** Solid dot color — status dots next to a label. */
+/** The tint alone, for a surface whose text stays neutral (a soft KPI card). */
+export const TONE_TINT: Record<ToneVariant, string> = {
+  danger: "bg-danger-soft",
+  warning: "bg-warning-soft",
+  success: "bg-success-soft",
+  info: "bg-info-soft",
+  neutral: "bg-muted",
+}
+
+/** Solid fill: status dots next to a label, bars, meter fills. */
 export const TONE_DOT: Record<ToneVariant, string> = {
-  critical: "bg-critical",
+  danger: "bg-danger",
   warning: "bg-warning",
-  success: "bg-m-green",
-  info: "bg-m-blue",
+  success: "bg-success",
+  info: "bg-info",
   neutral: "bg-muted-foreground",
 }
 
-/** Foreground-only color — metric values, inline emphasis. */
-export const TONE_TEXT: Partial<Record<ToneVariant, string>> = {
-  critical: "text-critical",
-  warning: "text-warning",
-  success: "text-m-green",
-  info: "text-m-blue",
+/** The edge of a tinted badge, a selected chip or a status card. Neutral is decorative. */
+export const TONE_BORDER: Record<ToneVariant, string> = {
+  danger: "border-danger",
+  warning: "border-warning",
+  success: "border-success",
+  info: "border-info",
+  neutral: "border-border",
 }
 
-/** Micro-label typography — table headers, KPI strip headers, group labels. */
+/** `currentColor` of a status icon (Lucide via `Icon`). Icons only, never words. */
+export const TONE_ICON: Record<ToneVariant, string> = {
+  danger: "text-danger",
+  warning: "text-warning",
+  success: "text-success",
+  info: "text-info",
+  neutral: "text-muted-foreground",
+}
+
+/**
+ * The readable text colour of a tone directly on a card or the page: an
+ * inline error line under a field. Never on a tint (that text is black, see
+ * {@link TONE_SOFT}) and never for a number. Keep the words themselves
+ * meaningful; the ink only reinforces them.
+ */
+export const TONE_INK: Record<ToneVariant, string> = {
+  danger: "text-danger-ink",
+  warning: "text-warning-ink",
+  success: "text-success-ink",
+  info: "text-info-ink",
+  neutral: "text-muted-foreground",
+}
+
+/** Micro-label typography: table headers, KPI strip headers, group labels. */
 export const MICRO_LABEL = "text-[11px] font-semibold uppercase tracking-wide"

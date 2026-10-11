@@ -114,7 +114,7 @@ export function ErrorPatternsTable({
                           {pattern.processDefinitionKey}
                         </TableCell>
                         <TableCell className="text-right">
-                          <CountPill tone="critical">{pattern.incidentCount}</CountPill>
+                          <CountPill tone="danger">{pattern.incidentCount}</CountPill>
                         </TableCell>
                         <TableCell className="text-right">
                           <AskAiButton
