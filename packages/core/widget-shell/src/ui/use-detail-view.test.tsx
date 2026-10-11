@@ -13,7 +13,6 @@ import {
 import { AppQueryProvider, LocaleProvider, queryClient } from "@miragon/mcp-toolkit-ui"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import { useDetailView } from "./use-detail-view.js"
-import { ViewDataState } from "./view-data-state.js"
 import { viewRefreshState } from "./view-refresh-state.js"
 
 interface Detail {
@@ -132,7 +131,7 @@ function Detail({ seed }: { seed: Detail | null }) {
     loadingText: "Loading…",
     emptyText: "Nothing",
     retryText: "Retry now",
-    refreshErrorText: (message) => `Stale: ${message}`,
+    refreshErrorTitle: "Stale",
   })
   if (!data) return guard
   return (
@@ -146,9 +145,15 @@ function Detail({ seed }: { seed: Detail | null }) {
 
 describe("useDetailView", () => {
   it("offers a Retry on a failed load — never a dead end", async () => {
-    callTool.mockRejectedValueOnce(new Error("engine down"))
+    callTool.mockRejectedValueOnce(new Error("[503 ProcessEngineException] down (engine prod)"))
     render(<Detail seed={null} />, { wrapper })
-    expect(await screen.findByText("engine down")).toBeTruthy()
+    // The error in words; the raw text only under "Details".
+    expect(
+      await screen.findByRole("heading", { name: "Engine prod is unreachable (HTTP 503)" }),
+    ).toBeTruthy()
+    expect(
+      screen.getByText("[503 ProcessEngineException] down (engine prod)").closest("details"),
+    ).toBeTruthy()
 
     callTool.mockResolvedValueOnce(answer("loaded"))
     fireEvent.click(screen.getByRole("button", { name: "Retry now" }))
@@ -162,7 +167,14 @@ describe("useDetailView", () => {
     expect(screen.queryByRole("alert")).toBeNull()
 
     await invalidate()
-    expect(await screen.findByText("Stale: instance gone")).toBeTruthy()
+    const notice = await screen.findByRole("alert")
+    expect(notice.getAttribute("data-tone")).toBe("warning")
+    expect(notice.getAttribute("data-variant")).toBe("inline")
+    expect(notice.textContent).toContain("Stale")
+    expect(notice.textContent).toContain(
+      "Something went wrong. You're seeing the last loaded state.",
+    )
+    expect(screen.getByText("instance gone").closest("details")).toBeTruthy()
     expect(screen.getByText("seed")).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Act" })).toBeNull()
 
@@ -187,13 +199,12 @@ describe("useDetailView", () => {
   }
 
   it("defaults its texts to English outside a locale", async () => {
-    callTool.mockRejectedValueOnce(new Error("gone"))
+    callTool.mockRejectedValueOnce(new Error("engine prod unreachable (ECONNREFUSED)"))
     render(<Bare />, { wrapper })
     await invalidate()
+    expect(await screen.findByText("Couldn't refresh this view")).toBeTruthy()
     expect(
-      await screen.findByText(
-        "Could not refresh this view (gone). You are seeing the last loaded state.",
-      ),
+      screen.getByText("Engine prod is unreachable. You're seeing the last loaded state."),
     ).toBeTruthy()
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy()
   })
@@ -207,59 +218,10 @@ describe("useDetailView", () => {
       { wrapper },
     )
     await invalidate()
+    expect(await screen.findByText("Die Ansicht konnte nicht aktualisiert werden")).toBeTruthy()
     expect(
-      await screen.findByText(
-        "Die Ansicht konnte nicht aktualisiert werden (weg). Du siehst den zuletzt geladenen Stand.",
-      ),
+      screen.getByText("Das hat nicht geklappt. Du siehst den zuletzt geladenen Stand."),
     ).toBeTruthy()
     expect(screen.getByRole("button", { name: "Erneut versuchen" })).toBeTruthy()
-  })
-})
-
-describe("ViewDataState", () => {
-  it("renders the error with a Retry only when one is offered", () => {
-    const onRetry = vi.fn()
-    const { rerender } = render(
-      <ViewDataState loading={false} error={new Error("x")} loadingText="l" emptyText="e" />,
-    )
-    expect(screen.queryByRole("button")).toBeNull()
-    rerender(
-      <ViewDataState
-        loading={false}
-        error={new Error("x")}
-        loadingText="l"
-        emptyText="e"
-        onRetry={onRetry}
-      />,
-    )
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }))
-    expect(onRetry).toHaveBeenCalledTimes(1)
-  })
-
-  it("labels its Retry in the active locale unless the caller names it", () => {
-    const props = { loading: false, error: new Error("x"), loadingText: "l", emptyText: "e" }
-    const { rerender } = render(
-      <LocaleProvider locale="de">
-        <ViewDataState {...props} onRetry={vi.fn()} />
-      </LocaleProvider>,
-    )
-    expect(screen.getByRole("button", { name: "Erneut versuchen" })).toBeTruthy()
-    rerender(
-      <LocaleProvider locale="de">
-        <ViewDataState {...props} onRetry={vi.fn()} retryLabel="Nochmal" />
-      </LocaleProvider>,
-    )
-    expect(screen.getByRole("button", { name: "Nochmal" })).toBeTruthy()
-  })
-
-  it("shows the loading or the empty text without an error", () => {
-    const { rerender } = render(
-      <ViewDataState loading error={null} loadingText="Loading…" emptyText="Empty" />,
-    )
-    expect(screen.getByText("Loading…")).toBeTruthy()
-    rerender(
-      <ViewDataState loading={false} error={null} loadingText="Loading…" emptyText="Empty" />,
-    )
-    expect(screen.getByText("Empty")).toBeTruthy()
   })
 })

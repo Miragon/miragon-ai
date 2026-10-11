@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react"
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
 import { type BpmnElement } from "./bpmn-heatmap/heat-utils.js"
+import { BPMN_TOKENS, cdVar } from "./bpmn-tokens.js"
 
 /**
  * Structural typings for the bpmn-js services the widgets touch. bpmn-js ships
@@ -13,7 +14,15 @@ export interface BpmnCanvas {
   zoom(level: number): void
   zoom(): number
   addMarker(elementId: string, marker: string): void
-  viewbox(): { x: number; y: number; width: number; height: number; scale: number }
+  viewbox(): {
+    x: number
+    y: number
+    width: number
+    height: number
+    scale: number
+    /** The diagram's own bounds, in diagram units. */
+    inner?: { x: number; y: number; width: number; height: number }
+  }
   getContainer(): HTMLElement
 }
 
@@ -39,17 +48,51 @@ export interface BpmnViewerWithGet {
 
 /**
  * Paint the canvas every BPMN widget renders on: a fixed LIGHT surface in both
- * themes, like Camunda Cockpit. bpmn-js paints near-black strokes and labels
- * and white fills straight into the SVG; on the dark card those sequence
- * flows and external labels were unreadable, and a light canvas also keeps
- * the highlight fills (`HIGHLIGHT_COLORS`) and the heatmap's multiply blend
- * exactly as designed. Inline, so it beats any themed background class a
- * widget puts on the container — the hook owns the canvas, no call site
- * opts in.
+ * themes (modeler-tool-design §10: the paper stays light), like Camunda
+ * Cockpit. bpmn-js paints near-black strokes and labels and white fills
+ * straight into the SVG; on the dark card those sequence flows and external
+ * labels were unreadable, and a light canvas also keeps the overlay tints
+ * (`BPMN_TOKENS`) and the heatmap's multiply blend exactly as designed. The
+ * container becomes a forced-light island (`data-theme-mode="light"`), so
+ * anything themed inside it renders light too, and takes the paper token
+ * inline, so it beats any themed background class a widget puts on it — the
+ * hook owns the canvas, no call site opts in.
  */
 function paintLightCanvas(container: HTMLElement): void {
-  container.style.setProperty("background-color", "#fff")
+  container.setAttribute("data-theme-mode", "light")
+  container.style.setProperty("background-color", cdVar(BPMN_TOKENS.paper))
   container.style.setProperty("color-scheme", "light")
+}
+
+/** The diagram frame's height range (U20): never a sliver, never taller than a screenful. */
+export const DIAGRAM_MIN_HEIGHT = 240
+export const DIAGRAM_MAX_HEIGHT = 560
+/** Before the diagram's shape is known (or without one). */
+export const DIAGRAM_DEFAULT_HEIGHT = 360
+/** Room above and below the fitted diagram: the fit's 0.95 margin plus the zoom bar's reach. */
+const DIAGRAM_HEIGHT_PADDING = 48
+
+/**
+ * The frame height that shows a diagram whole at the container's width: its
+ * aspect ratio (height / width, diagram units) times the width, plus room for
+ * the zoom controls, clamped to {@link DIAGRAM_MIN_HEIGHT}–{@link DIAGRAM_MAX_HEIGHT}.
+ * A wide, flat process gets a low frame instead of a fixed 400 px with half
+ * of it empty; a tall one stops at a screenful and stays pannable.
+ */
+export function diagramHeight(aspect: number | null, width: number): number {
+  if (aspect === null || !(aspect > 0) || !(width > 0)) return DIAGRAM_DEFAULT_HEIGHT
+  const fitted = Math.ceil((width * aspect) / 0.95) + DIAGRAM_HEIGHT_PADDING
+  return Math.min(DIAGRAM_MAX_HEIGHT, Math.max(DIAGRAM_MIN_HEIGHT, fitted))
+}
+
+/** The diagram's aspect ratio from the viewer's bounds, or null when it has none to report. */
+function diagramAspect(canvas: BpmnCanvas): number | null {
+  try {
+    const inner = canvas.viewbox().inner
+    return inner && inner.width > 0 && inner.height > 0 ? inner.height / inner.width : null
+  } catch {
+    return null
+  }
 }
 
 const FALLBACK_IMPORT_ERROR = "Failed to render the BPMN diagram."
@@ -89,6 +132,12 @@ export interface UseBpmnViewerResult {
    * as the fixed light BPMN canvas, in every theme.
    */
   containerRef: RefObject<HTMLDivElement | null>
+  /**
+   * The frame height for this diagram at the container's current width
+   * ({@link diagramHeight}): set it as the container's (or its wrapper's)
+   * height unless the widget has a fixed one. The hook refits when it changes.
+   */
+  height: number
   /** Import failure message, or `null` while the diagram renders fine. */
   importError: string | null
   zoomIn: () => void
@@ -113,6 +162,8 @@ export function useBpmnViewer({
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<NavigatedViewer | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
+  const [aspect, setAspect] = useState<number | null>(null)
+  const [width, setWidth] = useState(0)
   // Latest callback, read at import time so identity changes don't remount.
   // Synced in an effect (not during render) so a discarded render can't leak
   // into the ref; declared before the mount effect below, so the ref is already
@@ -150,6 +201,26 @@ export function useBpmnViewer({
     if (canvas) canvas.zoom(Math.max(ZOOM_MIN, canvas.zoom() * 0.9))
   }, [getCanvas])
 
+  // The container's width drives the frame height. ResizeObserver reports
+  // once when observation starts, then on every resize.
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(() => setWidth(container.clientWidth))
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [bpmnXml])
+
+  const height = diagramHeight(aspect, width)
+  // A new diagram's frame height is known: fit the diagram into the resized
+  // container. A later height change (the width changed) refits only a
+  // viewer that refits on resize anyway — the heatmap keeps the operator's
+  // pan and zoom.
+  const refitOn = fitOnResize ? height : aspect
+  useLayoutEffect(() => {
+    fit()
+  }, [refitOn, fit])
+
   useEffect(() => {
     const container = containerRef.current
     if (!container || !bpmnXml) return
@@ -170,6 +241,8 @@ export function useBpmnViewer({
       }
       if (cancelled) return
       fit()
+      const canvas = getCanvas()
+      if (canvas) setAspect(diagramAspect(canvas))
       // Decoration failures (e.g. no 2D canvas context for the heat LUT) must
       // surface like import failures — outside this try they'd be a silent
       // unhandled rejection and the widget would render an undecorated diagram.
@@ -204,7 +277,7 @@ export function useBpmnViewer({
     }
     // `reimportKey` is a deliberate extra dependency: it lets callers force a
     // teardown + re-import when their decoration inputs change.
-  }, [bpmnXml, reimportKey, fitOnResize, fit])
+  }, [bpmnXml, reimportKey, fitOnResize, fit, getCanvas])
 
-  return { containerRef, importError, zoomIn, zoomOut, fit }
+  return { containerRef, height, importError, zoomIn, zoomOut, fit }
 }

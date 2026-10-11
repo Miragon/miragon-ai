@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { applyHighlights, dedupe, HIGHLIGHT_COLORS, HIGHLIGHT_CSS } from "./bpmn-highlights.js"
+import { BPMN_OVERLAY_CSS, BPMN_TOKENS, cdVar } from "@miragon-ai/widget-shell/widgets"
+import { applyHighlights, dedupe, HIGHLIGHT_COLORS } from "./bpmn-highlights.js"
 
 interface MarkerCall {
   activityId: string
@@ -151,15 +152,34 @@ describe("applyHighlights — overlays", () => {
 })
 
 describe("HIGHLIGHT_COLORS", () => {
-  it("is the single source for every color in the injected highlight CSS", () => {
-    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.running.fill)
-    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.running.stroke)
-    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.openTask.fill)
-    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.openTask.stroke)
-    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.incident.fill)
-    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.incident.stroke)
-    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.instanceBadge)
-    expect(HIGHLIGHT_CSS).toContain(HIGHLIGHT_COLORS.incidentBadge)
+  it("is the kit's BPMN token module, the one source of the overlay CSS (M5)", () => {
+    expect(HIGHLIGHT_COLORS).toEqual({
+      running: BPMN_TOKENS.running,
+      openTask: BPMN_TOKENS.openTask,
+      incident: BPMN_TOKENS.incident,
+      instanceBadge: BPMN_TOKENS.instanceBadge,
+      incidentBadge: BPMN_TOKENS.incidentBadge,
+    })
+    for (const marker of [
+      HIGHLIGHT_COLORS.running,
+      HIGHLIGHT_COLORS.openTask,
+      HIGHLIGHT_COLORS.incident,
+    ]) {
+      expect(BPMN_OVERLAY_CSS).toContain(cdVar(marker.fill))
+      expect(BPMN_OVERLAY_CSS).toContain(cdVar(marker.stroke))
+    }
+    for (const badge of [HIGHLIGHT_COLORS.instanceBadge, HIGHLIGHT_COLORS.incidentBadge]) {
+      expect(BPMN_OVERLAY_CSS).toContain(cdVar(badge.fill))
+    }
+  })
+
+  it("styles every marker class applyHighlights sets", () => {
+    for (const marker of ["highlight-running", "highlight-open-user-task", "highlight-incident"]) {
+      expect(BPMN_OVERLAY_CSS).toContain(`.${marker}:not(.djs-connection)`)
+    }
+    for (const badge of ["instance-count", "incident-count"]) {
+      expect(BPMN_OVERLAY_CSS).toContain(`.bpmn-overlay-badge--${badge}`)
+    }
   })
 })
 

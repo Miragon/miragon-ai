@@ -19,6 +19,8 @@
  *   --chart-1 … --chart-5, --sidebar-*                 charts, a sidebar
  *   --radius-sm/-md/-lg, --shadow-1/-2/-3, --scrim     shape and depth
  *   --font-sans, --font-mono                           type
+ *   --brand-mark-display                               the Miragon Komet on app-level
+ *                                                      surfaces: set none to hide it
  *
  * Miragon blue sits in more roles than --primary: --link, --focus, --ring,
  * --accent-foreground, --info/-ink, --chart-1/-3 and --sidebar-primary/

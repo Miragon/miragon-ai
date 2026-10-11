@@ -38,6 +38,7 @@ function renderForm(
     return (
       <TaskCompleteForm
         taskId="t-1"
+        taskName="Approve invoice"
         engine="prod"
         formSchema={formSchema}
         action={complete}
@@ -135,7 +136,15 @@ describe("a Boolean field speaks the view's language", () => {
         tool: "camunda7_complete_task",
         target: (args) => args.taskId,
       })
-      return <TaskCompleteForm taskId="t-1" engine="prod" formSchema={APPROVED} action={action} />
+      return (
+        <TaskCompleteForm
+          taskId="t-1"
+          taskName="Approve invoice"
+          engine="prod"
+          formSchema={APPROVED}
+          action={action}
+        />
+      )
     }
     render(
       <LocaleProvider locale={locale}>

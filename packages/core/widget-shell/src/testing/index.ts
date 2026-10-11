@@ -6,6 +6,7 @@
  *    every module's catalogs (plus a module's own rules);
  *  - `scanGlyphs` — no Unicode glyphs, emoji or sparkle icons in widget code;
  *  - `scanIconSizes` — icons at the CI sizes only (16 px chrome, 24 px previews);
+ *  - `scanTypeScale` — text on the type scale's five steps, nothing below 13 px;
  *  - `scanColors` — role names only, no palette classes, retired accents or
  *    raw colours; `stylesheetColorFindings` — no raw colour in a stylesheet's
  *    rules;
@@ -44,6 +45,13 @@ export {
   scanIconSizes,
   type IconSizeFinding,
 } from "./icon-sizes.js"
+export {
+  scanTypeScale,
+  typeScaleFindings,
+  type ScanTypeScaleOptions,
+  type TypeScaleFinding,
+  type TypeScaleRule,
+} from "./type-scale.js"
 export {
   colorFindings,
   scanColors,

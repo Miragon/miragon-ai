@@ -1,7 +1,12 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
-import { useBpmnViewer } from "./use-bpmn-viewer.js"
+import {
+  DIAGRAM_MAX_HEIGHT,
+  DIAGRAM_MIN_HEIGHT,
+  diagramHeight,
+  useBpmnViewer,
+} from "./use-bpmn-viewer.js"
 
 // bpmn-js needs a real SVG engine, which happy-dom does not provide — a
 // recording stub stands in. (The full lifecycle suite runs in the camunda7
@@ -50,7 +55,8 @@ function Diagram({
 const canvas = () => screen.getByTestId("canvas")
 
 function expectLightCanvas(el: HTMLElement) {
-  expect(el.style.getPropertyValue("background-color")).toBe("#fff")
+  expect(el.style.getPropertyValue("background-color")).toBe("var(--cd-weiss)")
+  expect(el.getAttribute("data-theme-mode")).toBe("light")
   expect(el.style.getPropertyValue("color-scheme")).toBe("light")
 }
 
@@ -87,5 +93,26 @@ describe("useBpmnViewer canvas (#339, N122)", () => {
 
     rerender(<Diagram xml={XML} />)
     expectLightCanvas(canvas())
+  })
+})
+
+describe("diagramHeight (U20: the frame follows the diagram, 240–560 px)", () => {
+  it("fits a diagram at the container width, plus room for the zoom bar", () => {
+    // 4:1 at 760 px → 760 / 4 / 0.95 = 200 + 48.
+    expect(diagramHeight(0.25, 760)).toBe(248)
+    expect(diagramHeight(0.5, 760)).toBe(Math.ceil(380 / 0.95) + 48)
+  })
+
+  it("never a sliver, never more than a screenful", () => {
+    expect(diagramHeight(0.05, 760)).toBe(DIAGRAM_MIN_HEIGHT)
+    expect(diagramHeight(3, 760)).toBe(DIAGRAM_MAX_HEIGHT)
+    expect([DIAGRAM_MIN_HEIGHT, DIAGRAM_MAX_HEIGHT]).toEqual([240, 560])
+  })
+
+  it("keeps the default until both the shape and the width are known", () => {
+    expect(diagramHeight(null, 760)).toBe(360)
+    expect(diagramHeight(0, 760)).toBe(360)
+    expect(diagramHeight(Number.NaN, 760)).toBe(360)
+    expect(diagramHeight(0.5, 0)).toBe(360)
   })
 })

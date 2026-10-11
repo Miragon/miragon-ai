@@ -18,6 +18,7 @@ import {
   formatPeriod,
   formatTime,
   modelContextText,
+  useActionFeedback,
   useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 import { PERIODS, type Period } from "@miragon-ai/analytics-client"
@@ -69,7 +70,7 @@ export function AnalyticsSettingsWidget({
           isError={query.isError}
           error={query.error}
           errorTitle={t("aSettings.loadError")}
-          errorHint={t("aSettings.loadErrorHint")}
+          onRetry={() => void query.refetch()}
           skeleton={<div className="bg-muted/50 h-24 animate-pulse rounded-md" aria-hidden />}
         />
       </WidgetShell>
@@ -101,6 +102,9 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
     minBucketSize: String(view.settings.minBucketSize),
   })
   const [savedAt, setSavedAt] = useState<string | null>(null)
+  // The save confirms in a toast (the toolkit's polite live region), a
+  // failure says why there too — and stays in the panel next to the entries.
+  const feedback = useActionFeedback()
 
   // Re-sync the baseline when server truth changes (feed refetch after save,
   // refreshCockpitData from the camunda7 panel, another session's write) —
@@ -120,7 +124,13 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
         defaultPeriod: form.defaultPeriod,
         minBucketSize: Math.max(1, Number.parseInt(form.minBucketSize, 10) || 1),
       },
-      { onSuccess: () => setSavedAt(formatTime(new Date().toISOString())) },
+      {
+        onSuccess: () => {
+          setSavedAt(formatTime(new Date().toISOString()))
+          feedback.succeeded(t("aSettings.savedToast"))
+        },
+        onError: (error) => feedback.failed(t("aSettings.saveFailedToast"), error),
+      },
     )
   }
 

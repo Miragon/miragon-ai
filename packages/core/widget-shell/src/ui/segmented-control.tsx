@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { cn, TONE_SOFT } from "@miragon/mcp-toolkit-ui"
+import { cn, FOCUS_RING_INSET, TONE_SOFT } from "@miragon/mcp-toolkit-ui"
 
 export interface SegmentedControlOption<V extends string = string> {
   value: V
@@ -30,7 +30,7 @@ export function SegmentedControl<V extends string>({
       role={ariaLabel ? "group" : undefined}
       aria-label={ariaLabel}
       className={cn(
-        "border-border inline-flex overflow-hidden rounded-md border text-xs",
+        "border-border text-dense inline-flex overflow-hidden rounded-md border",
         className,
       )}
     >
@@ -41,7 +41,8 @@ export function SegmentedControl<V extends string>({
           onClick={() => onChange(option.value)}
           aria-pressed={value === option.value}
           className={cn(
-            "focus-visible:ring-focus [&:not(:last-child)]:border-border px-2.5 py-1 font-medium transition-colors outline-none focus-visible:ring-2 [&:not(:last-child)]:border-r",
+            "[&:not(:last-child)]:border-border px-2.5 py-1 font-medium transition-colors [&:not(:last-child)]:border-r",
+            FOCUS_RING_INSET,
             value === option.value
               ? cn(TONE_SOFT.info, "ring-info ring-1 ring-inset")
               : "text-muted-foreground hover:bg-muted hover:text-foreground",

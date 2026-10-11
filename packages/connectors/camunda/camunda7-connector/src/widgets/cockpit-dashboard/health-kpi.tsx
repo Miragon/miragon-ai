@@ -59,7 +59,7 @@ export function ProcessHealthKpiView({
   const go = useNav()
   // Standalone the handed-in overview seeds the query, scoped to its own engine.
   const feedEngine = engine ?? initialData?.engineId
-  const { data, loading, error } = useViewData<CockpitDashboardData>(
+  const { data, loading, error, refetch } = useViewData<CockpitDashboardData>(
     initialData,
     ["camunda7:cockpit-overview", feedEngine ?? null],
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
@@ -75,6 +75,7 @@ export function ProcessHealthKpiView({
       <ViewDataState
         loading={loading}
         error={error}
+        onRetry={refetch}
         loadingText={t("cockpitHealth.loading")}
         emptyText={t("cockpitHealth.noData")}
       />

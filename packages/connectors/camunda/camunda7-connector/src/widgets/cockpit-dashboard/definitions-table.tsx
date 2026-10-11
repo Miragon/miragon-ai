@@ -54,7 +54,7 @@ export function ProcessDefinitionsSection({
   // health-kpi.tsx). Self-fetches in the cockpit; standalone the handed-in
   // overview seeds the query, scoped to its own engine.
   const feedEngine = engine ?? initialData?.engineId
-  const { data, loading, error } = useViewData<CockpitDashboardData>(
+  const { data, loading, error, refetch } = useViewData<CockpitDashboardData>(
     initialData,
     ["camunda7:cockpit-overview", feedEngine ?? null],
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
@@ -68,6 +68,7 @@ export function ProcessDefinitionsSection({
       <ViewDataState
         loading={loading}
         error={error}
+        onRetry={refetch}
         loadingText={t("cockpitDefs.loading")}
         emptyText={t("cockpitDefs.noData")}
       />

@@ -152,7 +152,7 @@ export function openTab(name: RegExp) {
 
 /** Answer the open confirmation with `dialogButton` and wait for it to close. */
 export async function confirmIn(dialogButton: string) {
-  const dialog = await screen.findByRole("dialog")
+  const dialog = await screen.findByRole("alertdialog")
   fireEvent.click(within(dialog).getByRole("button", { name: dialogButton }))
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull())
 }

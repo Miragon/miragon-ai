@@ -35,10 +35,6 @@ describe("camunda7 widget code colours through role names only", () => {
     expect(
       scanColors(join(SRC, "widgets"), {
         allow: {
-          "bpmn-highlights.ts":
-            "the BPMN overlay colours on the always-light paper; onto --cd-* tokens with M5",
-          "bpmn-viewer/legend.tsx":
-            "the legend swatches mirror bpmn-highlights.ts (white count text); moves with it in M5",
           "history-timeline.tsx":
             "the categorical activity-type dots; neutral dots plus a state marker in M5",
         },

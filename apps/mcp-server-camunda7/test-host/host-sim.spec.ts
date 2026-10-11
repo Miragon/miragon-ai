@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
+import AxeBuilder from "@axe-core/playwright"
 import { expect, test, type FrameLocator, type Locator, type Page } from "@playwright/test"
 import { SERVED_FONT_PATH } from "@miragon-ai/widget-shell/server"
 import { BROKEN_ENGINE, ENGINE_CONTROL_ENV, HEALTHY_ENGINE } from "./engines.js"
@@ -38,7 +39,6 @@ const HOST_THEME_ISSUE = "https://github.com/Miragon/miragon-ai/issues/339"
 const CHROME = {
   loading: "Loading view…",
   cancelled: "Cancelled. Ask in the chat to open this view again.",
-  errorTitle: "This view couldn't be loaded",
   retry: "Try again",
   enterFullscreen: "Fullscreen",
   exitFullscreen: "Exit fullscreen",
@@ -100,6 +100,8 @@ interface Scenario {
   failTools?: string[]
   /** Build the frame's CSP without the resource's resourceDomains (a host that ignores them). */
   ignoreResourceDomains?: boolean
+  /** The frame's width in px (the host sim's default: 960). */
+  width?: number
 }
 
 async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocator> {
@@ -120,6 +122,7 @@ async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocat
   if (scenario.initDelayMs) query.set("initDelayMs", String(scenario.initDelayMs))
   if (scenario.failTools) query.set("failTools", scenario.failTools.join(","))
   if (scenario.ignoreResourceDomains) query.set("resourceDomains", "ignore")
+  if (scenario.width) query.set("width", String(scenario.width))
   await page.goto(`${base}/?${query.toString()}`)
   return page.frameLocator("#app")
 }
@@ -485,6 +488,11 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     { annotation: { type: "issue", description: TOOLKIT_LIFECYCLE_ISSUE } },
     async ({ page }) => {
       const app = await openView(page, { args: { engine: BROKEN_ENGINE } })
+      // The kit's words for the engine's 503 (describeError, U1): what
+      // happened and what to do; the raw engine text only under "Details".
+      const described = app.getByRole("heading", {
+        name: `Engine ${BROKEN_ENGINE} is unreachable (HTTP 503)`,
+      })
 
       await waitForDelivery(page, "result")
       const log = await hostLog(page)
@@ -495,7 +503,14 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       await page.waitForTimeout(RECOVERY_GRACE_MS + OUTLAST_GRACE_MS)
 
       expect(await reExecutions(page)).toHaveLength(0)
-      await expect(app.getByRole("heading", { name: CHROME.errorTitle })).toBeVisible()
+      await expect(described).toBeVisible()
+      await expect(
+        app.getByText("Check that the engine is running, or pick another engine."),
+      ).toBeVisible()
+      const raw = app.getByText(/^\[503 ProcessEngineException\] Engine is shutting down/)
+      await expect(raw).toBeHidden()
+      await app.getByText("Details", { exact: true }).click()
+      await expect(raw).toBeVisible()
       await expect(app.getByText("Loading view…")).toHaveCount(0)
       await expect(definitionsTable(app)).toHaveCount(0)
 
@@ -505,7 +520,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       await expect
         .poll(() => reExecutions(page))
         .toEqual([{ name: RENDER_TOOL, arguments: { engine: BROKEN_ENGINE } }])
-      await expect(app.getByRole("heading", { name: CHROME.errorTitle })).toBeVisible()
+      await expect(described).toBeVisible()
       await page.waitForTimeout(OUTLAST_GRACE_MS)
       expect(await reExecutions(page)).toHaveLength(1)
     },
@@ -995,6 +1010,89 @@ test.describe("kit foundation (camunda7_show_job_panel)", () => {
     expect(card.tint, "the state is the card's tint").not.toBe(card.pageBackground)
     expect(card.digits, "a KPI number stays neutral").toBe(card.foreground)
     expect(card.digitSize, "a KPI figure is the CI page-title size").toBe("28px")
+  })
+})
+
+/** The inline width a chat column gives a view (the before-shots' 760 px frame). */
+const INLINE_WIDTH = 760
+
+/** Whether the view's own document scrolls sideways (a table that widened it). */
+async function documentOverflow(app: FrameLocator) {
+  return await app.locator("html").evaluate((html) => ({
+    scrollWidth: html.scrollWidth,
+    clientWidth: html.clientWidth,
+  }))
+}
+
+test.describe("layout at the inline width (760 px, U2/U20, WCAG 1.4.10)", () => {
+  test("the process list: no horizontal document scroll, the table in a named region", async ({
+    page,
+  }) => {
+    const app = await openView(page, { width: INLINE_WIDTH })
+    await expectProcessList(app)
+    const { scrollWidth, clientWidth } = await documentOverflow(app)
+    expect(scrollWidth, "the document never scrolls sideways").toBeLessThanOrEqual(clientWidth)
+    const region = app.getByRole("region", {
+      name: "Deployed process definitions with version and status",
+    })
+    await expect(region).toBeVisible()
+    expect(await region.getAttribute("tabindex")).toBe("0")
+    // The shell pads on the CI grid: 24 px at this width (16 px below 640).
+    const padding = await app
+      .locator(".max-w-7xl")
+      .first()
+      .evaluate((frame) => getComputedStyle(frame).paddingLeft)
+    expect(padding).toBe("24px")
+  })
+
+  test("the job panel: low-priority columns hide, the row actions stay pinned and reachable", async ({
+    page,
+  }) => {
+    const app = await openView(page, { tool: "camunda7_show_job_panel", width: INLINE_WIDTH })
+    const region = app.getByRole("region", { name: "Jobs", exact: true })
+    await expect(region).toBeVisible({ timeout: 15_000 })
+    const { scrollWidth, clientWidth } = await documentOverflow(app)
+    expect(scrollWidth, "the document never scrolls sideways").toBeLessThanOrEqual(clientWidth)
+
+    const layout = await region.evaluate((el) => {
+      const head = el.querySelectorAll("thead th")
+      const last = head[head.length - 1]
+      const created = head[head.length - 2]
+      const rowAction = el.querySelector("tbody tr > :last-child")
+      return {
+        createdDisplay: getComputedStyle(created).display,
+        stickyHead: getComputedStyle(last).position,
+        stickyCell: rowAction ? getComputedStyle(rowAction).position : "",
+        actionRight: rowAction ? rowAction.getBoundingClientRect().right : 0,
+        regionRight: el.getBoundingClientRect().right,
+      }
+    })
+    expect(layout.createdDisplay, "the Created column hides below 768 px").toBe("none")
+    expect(layout.stickyHead).toBe("sticky")
+    expect(layout.stickyCell).toBe("sticky")
+    // The action column ends inside the region, never past its right edge.
+    expect(layout.actionRight).toBeLessThanOrEqual(layout.regionRight + 1)
+  })
+
+  test("axe: the inline views pass WCAG 2.1 A/AA (light and dark)", async ({ page }) => {
+    for (const [tool, theme] of [
+      ["camunda7_show_process_list", "light"],
+      ["camunda7_show_job_panel", "light"],
+      ["camunda7_show_process_list", "dark"],
+      ["camunda7_show_job_panel", "dark"],
+    ] as const) {
+      const app = await openView(page, { tool, theme, width: INLINE_WIDTH })
+      await expect(app.getByRole("table").first()).toBeVisible({ timeout: 15_000 })
+      const results = await new AxeBuilder({ page })
+        .include("#app")
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .analyze()
+      const violations = results.violations.map((v) => ({
+        id: v.id,
+        nodes: v.nodes.map((n) => n.target.join(" ")).slice(0, 5),
+      }))
+      expect(violations, `${tool} (${theme})`).toEqual([])
+    }
   })
 })
 

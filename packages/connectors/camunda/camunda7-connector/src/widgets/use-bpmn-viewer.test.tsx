@@ -64,7 +64,7 @@ function Harness({
 }) {
   // Destructured at the call like the real widgets do — the container ref is
   // only ever handed to JSX, never read during render.
-  const { containerRef, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
+  const { containerRef, height, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
     bpmnXml: xml,
     reimportKey,
     onImported,
@@ -72,7 +72,7 @@ function Harness({
   // Published to the suite from an effect, so the render itself stays pure —
   // every assertion below reads it after the commit anyway.
   useEffect(() => {
-    latest = { containerRef, importError, zoomIn, zoomOut, fit }
+    latest = { containerRef, height, importError, zoomIn, zoomOut, fit }
   })
   return <div ref={containerRef} />
 }

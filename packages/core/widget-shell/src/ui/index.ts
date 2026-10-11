@@ -9,10 +9,28 @@
 export { LANGUAGES, LOCALES, type LanguagePref, type Locale } from "../profile-constants.js"
 export { createUseT, type T } from "./create-use-t.js"
 export { DisplayModeProvider, WidgetShell, useHostDisplayMode } from "./widget-shell.js"
-export { ViewDataState } from "./view-data-state.js"
+export { ViewDataState, LoadingStatus } from "./view-data-state.js"
+export {
+  describeError,
+  classifyError,
+  type DescribeErrorOptions,
+  type DescribedError,
+  type ErrorFacts,
+  type ErrorKind,
+  type ErrorSource,
+} from "./describe-error.js"
 export { Section } from "./section.js"
-export { Th, Td, TableEmptyState, VersionChip } from "./table.js"
-export { ListTable, type ListTableColumn } from "./list-table.js"
+export { Th, Td, TableEmptyState, VersionChip, type EmptyVariant } from "./table.js"
+export {
+  ListTable,
+  COLUMN_BREAKPOINTS,
+  type ColumnBreakpoint,
+  type ListTableColumn,
+} from "./list-table.js"
+export { IdText, IdCell, shortId, copyText, ID_FULL_LENGTH } from "./id-text.js"
+export { ConfirmDialog, type ConfirmDialogProps, type ConfirmTarget } from "./confirm-dialog.js"
+export { useActionFeedback, type ActionFeedback } from "./action-feedback.js"
+export { KometMark, AppEmptyState, KOMET_MIN_SIZE } from "./brand-mark.js"
 export { GenericKpiGridWidget, GenericDataTableWidget } from "./generic-widgets.js"
 export { QueryFallback, TableSkeleton } from "./query-fallback.js"
 export {
@@ -77,13 +95,23 @@ export { PagedRows } from "./paged-rows.js"
 export {
   BpmnHeatmap,
   HeatmapLegend,
-  BpmnHeatmapWidget,
-  type BpmnHeatmapData,
   type BpmnHeatmapProps,
   type BpmnHeatmapLabels,
 } from "./bpmn-heatmap.js"
+export { BpmnHeatmapWidget, HeatValuesTable, type BpmnHeatmapData } from "./bpmn-heatmap-widget.js"
+export {
+  BPMN_TOKENS,
+  BPMN_OVERLAY_CSS,
+  injectBpmnOverlayCss,
+  markerSwatch,
+  badgeSwatch,
+  cdVar,
+} from "./bpmn-tokens.js"
 export {
   useBpmnViewer,
+  diagramHeight,
+  DIAGRAM_MIN_HEIGHT,
+  DIAGRAM_MAX_HEIGHT,
   type UseBpmnViewerOptions,
   type UseBpmnViewerResult,
   type BpmnCanvas,

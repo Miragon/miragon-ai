@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Badge } from "@miragon/mcp-toolkit-ui"
+import { Badge, cn, FOCUS_RING } from "@miragon/mcp-toolkit-ui"
 import { ChevronRight } from "lucide-react"
 import { Icon } from "./icon.js"
 
@@ -28,12 +28,18 @@ export function Section({
 }) {
   return (
     <details open={defaultOpen || undefined} onToggle={(e) => onToggle?.(e.currentTarget.open)}>
-      <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+      <summary
+        className={cn(
+          "flex w-fit cursor-pointer list-none items-center gap-2 rounded-sm [&::-webkit-details-marker]:hidden",
+          FOCUS_RING,
+        )}
+      >
         <Icon
           icon={ChevronRight}
-          className="text-muted-foreground transition-transform [[open]>summary>&]:rotate-90"
+          className="text-muted-foreground transition-transform motion-reduce:transition-none [[open]>summary>&]:rotate-90"
         />
-        <h3 className="text-lg font-medium">{title}</h3>
+        {/* The section step of the type scale: 21 px / 600, the CI h3. */}
+        <h3 className="text-section">{title}</h3>
         {count !== undefined && <Badge variant={badgeVariant}>{count}</Badge>}
       </summary>
       <div className="mt-2">{children}</div>

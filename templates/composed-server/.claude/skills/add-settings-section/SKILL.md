@@ -142,10 +142,13 @@ One self-fetching card composed from `@miragon-ai/widget-shell/widgets` —
 `SettingsCard` / `SettingsField` / `SettingsInput` / `NativeSelect`:
 
 - Self-fetch the `*_data` feed via `useToolQuery`, `{ enabled: !initialData }`.
-- Show errors through `QueryFallback` — a missing `isError` branch is an
-  eternal skeleton.
+- Show errors through `QueryFallback` (its `onRetry` is the query's refetch):
+  a missing `isError` branch is an eternal skeleton.
 - Save via `useToolMutation(SAVE_TOOL, { invalidateKeys: [[…]] })` and re-sync
-  the form baseline from server truth after the refetch.
+  the form baseline from server truth after the refetch. Confirm the save in a
+  toast (`useActionFeedback().succeeded("Settings saved")`, a failure with
+  `.failed(title, error)`): the toolkit's toasts are the polite live region a
+  screen reader hears.
 - Hide Save (render disabled fields) when the view says `canSave: false`.
 
 Register it through the four-link chain (see the add-widget skill). **The

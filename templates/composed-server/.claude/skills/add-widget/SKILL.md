@@ -35,10 +35,21 @@ kit neither forks nor re-exports them:
 
 - `WidgetShell` (container) and `Section` from the kit; `WidgetHeader`
   (title/sub/badge, no icon tile, `as` for the heading level) from the toolkit
-- Tables: `Th`/`Td`/`TableEmptyState` (rows stay hand-composed `<tr>` + `Td`);
-  KPI strips: the toolkit's `KpiGrid`
+- Tables: `ListTable` (the frame: a named, keyboard-reachable scroll region so
+  a wide table never widens the view; `hideBelow` on a column a narrow view
+  can do without; `sticky` on the last column, the row actions) with
+  hand-composed `<tr>` + `Td` rows; `IdCell` for an id column (Geist Mono,
+  shortened, a copy button); `TableEmptyState` instead of an empty frame
+  (`variant="done"` for "nothing left to do"); KPI strips: the toolkit's
+  `KpiGrid`
 - Self-fetch fallback: `QueryFallback` + `TableSkeleton` — a missing `isError`
-  branch means an eternal skeleton
+  branch means an eternal skeleton. Its `onRetry` is required, and the error
+  speaks for itself: the kit's `describeError` turns an engine or transport
+  failure into what happened and what you can do, the raw text under
+  "Details"; `errorTitle` heads only a failure it cannot classify
+- Writes: confirm with the toast (`useActionFeedback().succeeded/failed`,
+  naming the object), ask first with the kit's `ConfirmDialog` (verb + object
+  on both buttons)
 - Formatting: `formatTimestamp`/`formatDate`/`formatTime` for dates,
   `formatNumber`/`formatPercent`/`formatPercentPoints`/`formatPeriod`/
   `formatDuration`/`truncate` for the rest, all in the view's locale; no

@@ -1,4 +1,4 @@
-import { useLocale } from "@miragon/mcp-toolkit-ui"
+import { cn, FOCUS_RING, useLocale } from "@miragon/mcp-toolkit-ui"
 import { ExternalLink } from "lucide-react"
 import { useHostActions } from "@miragon/mcp-toolkit-ui/app"
 import { Icon } from "./icon.js"
@@ -32,7 +32,7 @@ export function OpenInCockpitLink({
   const host = useHostActions()
   const labels = kitLabels(useLocale())
   const text = label ?? labels.openInVendor(vendor)
-  const pad = size === "md" ? "px-3 py-1.5 text-sm" : "px-2.5 py-1 text-xs"
+  const pad = size === "md" ? "text-dense px-3 py-1.5" : "text-small px-2.5 py-1"
   return (
     <a
       href={url}
@@ -43,7 +43,11 @@ export function OpenInCockpitLink({
         host.openLink(url)
       }}
       aria-label={labels.opensInNewTab(text)}
-      className={`border-border text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-md border font-medium transition-colors outline-none focus-visible:ring-2 ${pad}`}
+      className={cn(
+        "border-border text-foreground hover:bg-muted inline-flex items-center gap-1.5 rounded-md border font-medium transition-colors",
+        FOCUS_RING,
+        pad,
+      )}
     >
       {text}
       <Icon icon={ExternalLink} dense />

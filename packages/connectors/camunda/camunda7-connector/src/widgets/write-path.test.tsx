@@ -134,7 +134,7 @@ describe("a confirmation names its target (N108)", () => {
     })
     fireEvent.click(await screen.findByRole("button", { name: "Cancel instance" }))
 
-    const dialog = await screen.findByRole("dialog")
+    const dialog = await screen.findByRole("alertdialog")
     expect(within(dialog).getByText("pi-1")).toBeTruthy()
     expect(within(dialog).getByText("INV-7")).toBeTruthy()
     expect(within(dialog).getByText("prod")).toBeTruthy()
@@ -147,7 +147,7 @@ describe("a confirmation names its target (N108)", () => {
     expect(buttons).not.toContain("Cancel")
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Keep instance" }))
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull())
     expect(calls).toHaveLength(0)
   })
 
@@ -158,7 +158,7 @@ describe("a confirmation names its target (N108)", () => {
       [CAMUNDA7_INSTANCE_DETAIL_DATA]: () => instance(),
     })
     fireEvent.click(await screen.findByRole("button", { name: "Suspend" }))
-    const dialog = await screen.findByRole("dialog")
+    const dialog = await screen.findByRole("alertdialog")
     expect(within(dialog).getByText("pi-1")).toBeTruthy()
     expect(within(dialog).getByRole("button", { name: "Keep running" })).toBeTruthy()
     fireEvent.click(within(dialog).getByRole("button", { name: "Suspend instance" }))
@@ -191,7 +191,7 @@ describe("a confirmation names its target (N108)", () => {
       ...recorder(calls, "camunda7_resolve_incident", () => ({ success: true })),
     })
     fireEvent.click(await screen.findByRole("button", { name: "Mark as resolved" }))
-    const dialog = await screen.findByRole("dialog")
+    const dialog = await screen.findByRole("alertdialog")
     expect(within(dialog).getByText("inc-9")).toBeTruthy()
     expect(within(dialog).getByText("invoiceMismatch")).toBeTruthy()
     expect(within(dialog).getByText("pi-1")).toBeTruthy()

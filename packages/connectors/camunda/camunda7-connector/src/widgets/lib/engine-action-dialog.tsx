@@ -1,7 +1,7 @@
 import { useState } from "react"
 
 import { useT } from "../../messages/use-t.js"
-import { ConfirmDialog } from "../confirm-dialog.js"
+import { ConfirmDialog } from "@miragon-ai/widget-shell/widgets"
 import type { EngineAction } from "./engine-action.js"
 
 /**

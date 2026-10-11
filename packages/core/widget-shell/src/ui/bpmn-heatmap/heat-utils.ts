@@ -1,3 +1,5 @@
+import { BPMN_TOKENS, cdValue } from "../bpmn-tokens.js"
+
 /**
  * Pure helpers for the BPMN heatmap canvas: gradient LUT, brush stamp,
  * heat-point projection and the two-pass colorize draw. Kept free of React
@@ -47,44 +49,62 @@ const SKIP_TYPES = new Set([
 ])
 
 /**
- * Cockpit-style heat gradient stops (transparent → green → yellow → orange →
- * red), as `[offset, rgba]` tuples. Single source of truth shared by the canvas
- * LUT ({@link buildGradientLut}) and the widget's CSS legend swatch, so the two
- * never drift. These are intentionally explicit RGBA values (not theme tokens):
- * a heat ramp needs fixed hue/luminance steps, and the colors read in both
- * light and dark mode because the overlay composites with `mix-blend-mode`.
+ * The faintest an element with a value above zero ever paints: its share of
+ * the maximum, raised to this floor — so a rarely taken path still shows
+ * instead of fading to "never" (U16).
  */
-export const HEAT_GRADIENT_STOPS: ReadonlyArray<readonly [number, string]> = [
-  [0.0, "rgba(0, 0, 255, 0)"],
-  [0.25, "rgba(0, 200, 80, 0.85)"],
-  [0.5, "rgba(255, 230, 0, 0.9)"],
-  [0.75, "rgba(255, 140, 0, 0.95)"],
-  [1.0, "rgba(220, 30, 30, 1)"],
-]
-
-/** CSS `linear-gradient(...)` color list derived from {@link HEAT_GRADIENT_STOPS}. */
-export const HEAT_GRADIENT_CSS = `linear-gradient(to right, ${HEAT_GRADIENT_STOPS.map(
-  ([, color]) => color,
-).join(", ")})`
+export const MIN_HEAT_INTENSITY = 0.3
 
 /**
- * The heat gradient pre-rendered to a 256-row image so we can map alpha
- * (0-255) → RGB in O(1) during the colorize pass.
+ * The heat layer's opacity at full intensity. Below 1 on purpose: the layer
+ * multiplies over the diagram, and at 0.75 the darkest step (`--cd-blau`)
+ * keeps a black task label above 4.5:1 (`heat-utils.test.ts`).
+ */
+export const HEAT_PEAK_ALPHA = 0.75
+
+/** Intensity at which the opacity reaches its peak — the soft rim of a blob below it. */
+const HEAT_RIM = 0.2
+
+/** `#RRGGBB` → [r, g, b] (0–255). */
+export function hexChannels(hex: string): [number, number, number] {
+  const value = Number.parseInt(hex.replace("#", ""), 16)
+  return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff]
+}
+
+/**
+ * The heat ramp (owner decision 2j): ONE hue from `--cd-info-soft` to
+ * `--cd-blau`, never a rainbow and never red (red is for incidents). Colour
+ * at intensity `t` (0–1) is the linear mix of the two tokens; the opacity
+ * rises over the rim to {@link HEAT_PEAK_ALPHA}.
+ */
+export function heatColor(t: number): [number, number, number, number] {
+  const clamped = Math.max(0, Math.min(1, t))
+  const from = hexChannels(cdValue(BPMN_TOKENS.heat.from))
+  const to = hexChannels(cdValue(BPMN_TOKENS.heat.to))
+  const mix = (i: number) => Math.round(from[i] + (to[i] - from[i]) * clamped)
+  const alpha = HEAT_PEAK_ALPHA * Math.min(1, clamped / HEAT_RIM)
+  return [mix(0), mix(1), mix(2), Math.round(alpha * 255)]
+}
+
+/**
+ * The ramp as a 256-entry RGBA table (index = the stamped alpha 0–255), so
+ * the colorize pass maps a pixel in O(1). Pure: no canvas needed.
  */
 export function buildGradientLut(): Uint8ClampedArray {
-  const canvas = document.createElement("canvas")
-  canvas.width = 1
-  canvas.height = 256
-  const ctx = canvas.getContext("2d")
-  if (!ctx) throw new Error("2D canvas context unavailable")
-  const grad = ctx.createLinearGradient(0, 0, 0, 256)
-  for (const [offset, color] of HEAT_GRADIENT_STOPS) {
-    grad.addColorStop(offset, color)
-  }
-  ctx.fillStyle = grad
-  ctx.fillRect(0, 0, 1, 256)
-  return ctx.getImageData(0, 0, 1, 256).data
+  const lut = new Uint8ClampedArray(256 * 4)
+  for (let i = 0; i < 256; i++) lut.set(heatColor(i / 255), i * 4)
+  return lut
 }
+
+/**
+ * The legend swatch of the ramp as CSS: from the faintest value above zero
+ * ({@link MIN_HEAT_INTENSITY}) to full blue, through the same tokens. Paint it
+ * at {@link HEAT_PEAK_ALPHA} opacity on the light paper and it matches the
+ * diagram.
+ */
+export const HEAT_GRADIENT_CSS = `linear-gradient(to right, color-mix(in srgb, var(--cd-${BPMN_TOKENS.heat.to}) ${String(
+  Math.round(MIN_HEAT_INTENSITY * 100),
+)}%, var(--cd-${BPMN_TOKENS.heat.from})), var(--cd-${BPMN_TOKENS.heat.to}))`
 
 /** Soft radial brush stamp; one draw per heat point. */
 export function buildBrush(radius: number, blur: number): HTMLCanvasElement {
@@ -195,7 +215,7 @@ export function drawHeatLayer(
   // Pass 1: stamp greyscale alpha (intensity = weight / max).
   for (const p of points) {
     if (p.x < -r2 || p.y < -r2 || p.x > width + r2 || p.y > height + r2) continue
-    const intensity = Math.max(0.05, Math.min(1, p.weight / maxWeight))
+    const intensity = Math.max(MIN_HEAT_INTENSITY, Math.min(1, p.weight / maxWeight))
     ctx.globalAlpha = intensity
     ctx.drawImage(brush, p.x - r2, p.y - r2)
   }
@@ -217,4 +237,28 @@ export function drawHeatLayer(
     data[i + 3] = gradientLut[j + 3]
   }
   ctx.putImageData(img, 0, 0)
+}
+
+/** The smallest value above zero and the largest, or null when nothing is above zero. */
+export function heatRange(values: Record<string, number>): { min: number; max: number } | null {
+  const positive = Object.values(values).filter((v) => Number.isFinite(v) && v > 0)
+  if (positive.length === 0) return null
+  return { min: Math.min(...positive), max: Math.max(...positive) }
+}
+
+/**
+ * The names the diagram gives its elements (`name` attribute), keyed by id —
+ * so a values table can say "Antrag prüfen" instead of `Activity_1x2y`. An
+ * unparsable document gives no names (the table falls back to the ids).
+ */
+export function bpmnElementNames(xml: string): Record<string, string> {
+  const names: Record<string, string> = {}
+  const doc = new DOMParser().parseFromString(xml, "application/xml")
+  if (doc.getElementsByTagName("parsererror").length > 0) return names
+  for (const el of Array.from(doc.querySelectorAll("[id][name]"))) {
+    const name = el.getAttribute("name")?.trim()
+    const id = el.getAttribute("id")
+    if (id && name) names[id] = name
+  }
+  return names
 }

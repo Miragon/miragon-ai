@@ -289,6 +289,7 @@ export function ClusterDetailView({
         <ViewDataState
           loading={paged.loading}
           error={paged.error}
+          onRetry={paged.retry}
           loadingText={t("clusterDetail.loading")}
           emptyText={t("clusterDetail.noData")}
         />

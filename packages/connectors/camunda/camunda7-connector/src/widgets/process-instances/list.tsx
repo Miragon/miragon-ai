@@ -289,7 +289,7 @@ export function ProcessInstancesView({
         isError={!!paged.error}
         error={paged.error}
         errorTitle={t("processInstances.loadError")}
-        errorHint={t("viewState.loadErrorHint")}
+        onRetry={paged.retry}
         skeleton={<TableSkeleton />}
       />
     )
@@ -368,7 +368,7 @@ export function ProcessInstancesView({
               { label: t("processInstances.colVersion") },
               { label: t("processInstances.colState") },
               { label: t("processInstances.colIncident"), align: "right" as const },
-              { plain: true },
+              { plain: true, sticky: true },
             ]}
           >
             {paged.items.map((row) => (

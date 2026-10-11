@@ -1,10 +1,10 @@
 import { useToolQuery, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import {
+  ListTable,
   QueryFallback,
   TableEmptyState,
   TableSkeleton,
   Td,
-  Th,
   WidgetShell,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
@@ -36,6 +36,7 @@ export function NotesListWidget({ data: initialData }: { data: NotesListData | n
           isError={query.isError}
           error={query.error}
           errorTitle="Failed to load notes"
+          onRetry={() => void query.refetch()}
           skeleton={<TableSkeleton />}
         />
       </WidgetShell>
@@ -48,29 +49,26 @@ export function NotesListWidget({ data: initialData }: { data: NotesListData | n
       {data.notes.length === 0 ? (
         <TableEmptyState>No notes match the current filter.</TableEmptyState>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr>
-                <Th>Note</Th>
-                <Th>Tags</Th>
-                <Th align="right">Updated</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.notes.map((note) => (
-                <tr key={note.id}>
-                  <Td>
-                    <div className="font-medium">{note.title}</div>
-                    <div className="text-muted-foreground mt-0.5">{note.text}</div>
-                  </Td>
-                  <Td>{note.tags.join(", ")}</Td>
-                  <Td align="right">{formatTimestamp(note.updatedAt)}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ListTable
+          ariaLabel="Notes"
+          columns={[
+            { label: "Note" },
+            // Column priority: the tags hide while the table is narrow.
+            { label: "Tags", hideBelow: "sm" },
+            { label: "Updated", align: "right" },
+          ]}
+        >
+          {data.notes.map((note) => (
+            <tr key={note.id}>
+              <Td>
+                <div className="font-medium">{note.title}</div>
+                <div className="text-muted-foreground mt-0.5">{note.text}</div>
+              </Td>
+              <Td>{note.tags.join(", ")}</Td>
+              <Td align="right">{formatTimestamp(note.updatedAt)}</Td>
+            </tr>
+          ))}
+        </ListTable>
       )}
     </WidgetShell>
   )

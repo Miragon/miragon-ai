@@ -7,9 +7,12 @@ import { useT } from "../messages/use-t.js"
 import type { TaskFormField, TaskFormSchema } from "../view-models.js"
 import { coerceValue } from "./lib/coerce-value.js"
 import type { CompleteTaskAction } from "./lib/complete-task.js"
+import { writeFeedback } from "./lib/write-feedback.js"
 
 interface TaskCompleteFormProps {
   taskId: string
+  /** The task as its toasts name it (its name, else its id). */
+  taskName: string
   /** Engine the task lives on — threaded into the form fetch and the complete
    * call so both target the viewed engine, not the session default. */
   engine?: string
@@ -31,6 +34,7 @@ const TYPE_OPTIONS = ["String", "Boolean", "Long", "Double", "Date", "Json"]
 
 export function TaskCompleteForm({
   taskId,
+  taskName,
   engine,
   formSchema,
   action,
@@ -63,6 +67,7 @@ export function TaskCompleteForm({
   return (
     <TaskCompleteFormBody
       taskId={taskId}
+      taskName={taskName}
       engine={engine}
       schema={schema}
       action={action}
@@ -72,17 +77,12 @@ export function TaskCompleteForm({
   )
 }
 
-interface BodyProps {
-  taskId: string
-  engine?: string
-  schema: TaskFormSchema
-  action: CompleteTaskAction
-  onCompleted?: () => void
-  onCancel?: () => void
-}
+/** The form's props once its schema is at hand. */
+type BodyProps = Omit<TaskCompleteFormProps, "formSchema"> & { schema: TaskFormSchema }
 
 function TaskCompleteFormBody({
   taskId,
+  taskName,
   engine,
   schema,
   action,
@@ -143,6 +143,7 @@ function TaskCompleteFormBody({
     action.run(
       { taskId, variables, engine },
       {
+        feedback: writeFeedback.completeTask(t, taskName),
         onSuccess: (result) => {
           if (result?.outcome === "resolved") {
             setResolvedTo({ owner: result.assignee ?? null })

@@ -1,5 +1,7 @@
-import { McpAppView, type ViewTitleMode } from "@miragon/mcp-toolkit-ui/app"
-import type { ComponentProps } from "react"
+import { useLocale } from "@miragon/mcp-toolkit-ui"
+import { McpAppView, type DescribeViewError, type ViewTitleMode } from "@miragon/mcp-toolkit-ui/app"
+import { useMemo, type ComponentProps } from "react"
+import { describeError } from "./describe-error.js"
 import { useShellHost } from "./shell-host.js"
 
 /**
@@ -21,14 +23,35 @@ export function viewTitleMode(toolName: string | undefined): ViewTitleMode {
 }
 
 /**
+ * The view's failed rendering call in the kit's words ({@link describeError}):
+ * "Die Engine prod ist nicht erreichbar (HTTP 503)" over "Prüf, ob die Engine
+ * läuft …", the raw reason staying under the toolkit's "Details". A reason
+ * the kit cannot classify — and a result the chat did not pass on — keeps the
+ * toolkit's own words.
+ */
+export function viewErrorDescriber(locale: string | undefined): DescribeViewError {
+  return (reason, info) => {
+    if (info?.kind === "blocked" || !reason) return undefined
+    const described = describeError(reason, locale)
+    return described.kind === "unknown"
+      ? undefined
+      : { title: described.title, description: described.hint }
+  }
+}
+
+/**
  * The toolkit's McpAppView as every composed-server view mounts it. Its chrome
  * (loading, error and cancelled states, toolbar buttons) speaks the locale the
  * ProfileGate provides through the toolkit's own en/de catalog, the
  * Fullscreen toggle renders only where the host offers fullscreen, and Lucide
  * icons draw at the CI stroke (all toolkit 2.7). What stays here is the title
- * policy ({@link viewTitleMode}).
+ * policy ({@link viewTitleMode}) and the error words ({@link viewErrorDescriber}).
  */
-export function LocalizedAppView(props: Omit<ComponentProps<typeof McpAppView>, "titleMode">) {
+export function LocalizedAppView(
+  props: Omit<ComponentProps<typeof McpAppView>, "titleMode" | "describeError">,
+) {
   const { toolName } = useShellHost()
-  return <McpAppView {...props} titleMode={viewTitleMode(toolName)} />
+  const locale = useLocale()
+  const describe = useMemo(() => viewErrorDescriber(locale), [locale])
+  return <McpAppView {...props} titleMode={viewTitleMode(toolName)} describeError={describe} />
 }

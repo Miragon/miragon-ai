@@ -7,6 +7,8 @@ import { enAskAi } from "./en.ask-ai.js"
 import { deAskAi } from "./de.ask-ai.js"
 import { enBuilder } from "./en.builder.js"
 import { deBuilder } from "./de.builder.js"
+import { enFeedback } from "./en.feedback.js"
+import { deFeedback } from "./de.feedback.js"
 
 /**
  * The camunda7 module's message catalogs, keyed by locale. The locale source is
@@ -14,12 +16,12 @@ import { deBuilder } from "./de.builder.js"
  * fallback. The hand-written shell/profile strings (`en`/`de`) are merged with
  * the per-widget sweep catalogs (`enSweep`/`deSweep`); on a key clash the sweep
  * wins (last spread). The Ask-AI intents (`askAi.*`) sit in their own static
- * catalogs, the view builder's names (`builder.*`) in theirs. Shared by server summaries (`translator(locale, key)`) and
+ * catalogs, the view builder's names (`builder.*`) and the write toasts (`feedback.*`) in theirs. Shared by server summaries (`translator(locale, key)`) and
  * widgets (`useT()` over the global `<LocaleProvider>`).
  */
 export const catalogs: Catalogs = {
-  en: { ...en, ...enSweep, ...enAskAi, ...enBuilder },
-  de: { ...de, ...deSweep, ...deAskAi, ...deBuilder },
+  en: { ...en, ...enSweep, ...enAskAi, ...enBuilder, ...enFeedback },
+  de: { ...de, ...deSweep, ...deAskAi, ...deBuilder, ...deFeedback },
 }
 
 /** Resolve a message for an explicit locale (server side, or direct UI calls). */

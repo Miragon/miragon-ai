@@ -116,7 +116,11 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 - Dichte Tabellen: 14 px statt 16 px Fließtext.
 - Data-Viz: eine einfarbige Rampe von `--cd-info-soft` bis `--cd-blau`; Rot nur für
   Incidents.
-- Komet: nur auf App-Ebene (Landing, Erststart, „keine Engines“), nicht in jedem Widget.
+- Komet: nur auf App-Ebene (Landing, Erststart, „keine Engines“), nicht in jedem Widget
+  (`KometMark`/`AppEmptyState` aus widget-shell, die CI-Datei unverändert). Eine Kundenmarke
+  blendet ihn über den Theme-Slot `--brand-mark-display: none` aus.
+- BPMN-Zoom-Leiste oben rechts statt unten rechts: unten rechts liegt das bpmn.io-Logo
+  (Lizenzpflicht).
 
 ## Architecture invariants
 
@@ -219,7 +223,45 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    name; `/ui`'s `adaptDataWidget` is the one listed pass-through).
    `ViewDataState` for the loading/error/no-data guard;
    `QueryFallback` + `TableSkeleton` for self-fetching widgets (a missing `isError`
-   branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime` for dates
+   branch means an eternal skeleton). **States and feedback are the kit's (#322 U1, U9, U10,
+   U22):** both guards take a required `onRetry` (a failed load is never a dead end) and
+   render the toolkit's `ErrorState` from `describeError(error, locale)`: an engine or
+   transport failure (502/503/unreachable, a timeout, a tool the server lacks, 401/403, 404,
+   an engine exception; source and engine id read from the text the wire carries) as what
+   happened and what you can do in en/de ("Die Engine prod ist nicht erreichbar (HTTP 503)",
+   "Prüf, ob die Engine läuft …"), the raw "[503 ProcessEngineException] …" only collapsed
+   under "Details"; a caller's `errorTitle` heads only a failure it cannot classify, and
+   no raw engine text is ever a headline or a toast. Loading is a `skeleton` slot under a
+   polite sr-only status ("Ansicht wird geladen…" / "Loading view…" unless `loadingText`),
+   no data the toolkit's `EmptyState`. `useDetailView`'s stale notice is an inline warning
+   `ErrorState`; `LocalizedAppView` passes the same words to the toolkit's view as
+   `describeError`. A write says how it went: `useActionFeedback()` (`succeeded(title)`,
+   `failed(title, error)`) raises the toolkit's toasts (the polite live region `McpAppView`
+   mounts), each naming the object; camunda7's `useEngineAction` requires a `feedback` per
+   `run` (`widgets/lib/write-feedback.ts`, `feedback.*` keys) and leaves a confirmed
+   write's failure to its dialog. `ConfirmDialog` (kit, `ConfirmTarget` lines) is the one
+   confirmation: an `alertdialog` on the toolkit `Dialog` (scrim, md radius, `shadow-3`),
+   verb + object on both buttons, the destructive confirm in the danger role, closed to
+   dismissal while the write runs. Nothing to show is `TableEmptyState`: `variant="done"`
+   (`CircleCheck`, success tone) for "nothing left to do", the quiet `Inbox` default for no
+   data, `description` and `action` as the toolkit's `EmptyState` takes them; the Komet
+   (`KometMark`, the CI's `miragon-komet-blau.svg` inlined unchanged and sha-pinned, ≥ 24 px;
+   `AppEmptyState`) belongs to APP-level surfaces only (landing, first start, "no engines")
+   and hangs on the theme slot `--brand-mark-display` a customer brand sets to `none`.
+   **Tables never widen the document** (U2, WCAG 1.4.10; the host simulation checks 760 px):
+   `ListTable` scrolls inside a named region (`role="region"`, `tabIndex=0`, `ariaLabel`
+   required); `hideBelow: "sm" | "md" | "lg"` hides a column (header and every row's cell
+   in that position, rows one cell per column) while the REGION is narrower than
+   640/768/1024 px; `sticky: true` on the last column pins the row actions; `IdCell` /
+   `IdText` show an id in Geist Mono, shortened ("5f0ce78e…", whole for screen readers and
+   in `title`), with a copy button and its toast. `WidgetShell` pads 24 px (16 px below
+   640 px) and lets its children shrink (`min-w-0`). **Type on the scale**: kit components
+   sit on the toolkit's `TYPE_SCALE`: a widget's page title 28/700 (`WidgetHeader`, an h2
+   inside a view), a section `text-section` (21/600), running text `text-body` (16), dense
+   tables and form controls `text-dense` (14), captions and meta `text-small` (13, the
+   floor); `scanTypeScale` (`/testing`) fails a Tailwind size or anything below 13 px in
+   widget-shell's `src/ui` (a connector adopts it with `rules: ["below-floor"]` first).
+   `formatTimestamp`/`formatDate`/`formatTime` for dates
    and `formatNumber`/`formatPercent`/`formatPercentPoints`/`formatPeriod`/`formatDuration`/
    `truncate` for everything else (canonical duration style "3m 7s" in English, "3 Min. 7 s"
    in German; "3,7 %" / "3.7%", "+0,2 Pp." / "+0.2 pp", "7 Tage" / "7 days"). Dates and
@@ -238,9 +280,23 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    out when unknown;
    `Section`, `Th`/`Td`/`TableEmptyState`, the toolkit's `WidgetHeader` + `VersionChip`, its
    `KpiGrid`, `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
-   settings sections; `useBpmnViewer` (it owns the fixed light canvas, both themes) +
-   `BpmnZoomControls` for BPMN, with highlight/legend colors from `HIGHLIGHT_COLORS`
-   (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`). Paged lists compose
+   settings sections (form controls on the `--input` edge, `FIELD_CONTROL`); `useBpmnViewer`
+   (it owns the fixed light canvas: the container is a forced-light island,
+   `data-theme-mode="light"`, on the paper token; its `height` follows the diagram's aspect
+   ratio, 240–560 px, refitted when it changes) + `BpmnZoomControls` (light in every theme,
+   Lucide, 32 px buttons) for BPMN. Every canvas colour is ONE TS token module,
+   `widget-shell/src/ui/bpmn-tokens.ts` (`BPMN_TOKENS`: `--cd-*` names only, incident
+   danger + danger-soft, running and open task blue + info-soft, count badges white on blue
+   or danger; `BPMN_OVERLAY_CSS` refers to them as `var(--cd-*)`, `injectBpmnOverlayCss()`
+   adds it once; no pulse, an open user task is a heavier dashed stroke).
+   `bpmn-tokens.test.ts` is its drift test (every name's `CD_TOKENS` value equals the
+   vendored `cd-tokens.generated.css`) and contrast test (strokes ≥ 3:1 on the paper and
+   their tint, badge text ≥ 4.5:1). camunda7's `HIGHLIGHT_COLORS`
+   (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`) and its
+   legend (`markerSwatch`/`badgeSwatch`) read it. The heatmap's ramp is the one-hue data-viz
+   ramp `--cd-info-soft` → `--cd-blau` (never red), every value above zero at a visible
+   minimum, a legend with the smallest and largest value and the values per element as a
+   table (`HeatValuesTable`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total; a new page 0 keeps the
    previous rows of the same list mounted until it lands — TanStack's `placeholderData` on

@@ -19,8 +19,6 @@ import { useDefinitionData } from "./feed.js"
 
 type FlowMode = "incidents" | "frequency" | "duration"
 
-const DIAGRAM_HEIGHT = 460
-
 /**
  * Lazily loads the execution heatmap (Prometheus metrics via the analytics
  * module's plain data feed) and paints it on the definition diagram. Mounted
@@ -75,7 +73,6 @@ function ProcessHeatmap({
     <BpmnHeatmap
       bpmnXml={q.data.bpmnXml}
       nodeFrequencies={values}
-      height={DIAGRAM_HEIGHT}
       diagramAriaLabel={t("procIncFlow.heatmapDiagramAria")}
       errorTitle={t("procIncFlow.heatmapErrorTitle")}
       errorHint={t("procIncFlow.heatmapErrorHint")}
@@ -159,7 +156,11 @@ export function ProcessDefinitionFlow({
   engine?: string
 }) {
   const t = useT()
-  const { data, loading, error } = useDefinitionData(initialData, processDefinitionKey, engine)
+  const { data, loading, error, refetch } = useDefinitionData(
+    initialData,
+    processDefinitionKey,
+    engine,
+  )
   const [chosenMode, setMode] = useState<FlowMode>("incidents")
   const [heatmapUnavailable, setHeatmapUnavailable] = useState(false)
   // The heatmap is an analytics feature: offered only once the probe confirmed
@@ -193,6 +194,7 @@ export function ProcessDefinitionFlow({
         <ViewDataState
           loading={loading}
           error={error}
+          onRetry={refetch}
           loadingText={t("procIncFlow.loading")}
           emptyText={t("procIncFlow.noDataAvailable")}
         />
@@ -222,7 +224,7 @@ export function ProcessDefinitionFlow({
               incidentsCaption={t("procIncFlow.diagramVersion", { version: data.diagramVersion })}
             />
             {mode === "incidents" ? (
-              <BpmnDiagram bpmnXml={data.bpmnXml} height={DIAGRAM_HEIGHT} highlights={highlights} />
+              <BpmnDiagram bpmnXml={data.bpmnXml} highlights={highlights} />
             ) : (
               <ProcessHeatmap
                 processDefinitionKey={data.processDefinitionKey}

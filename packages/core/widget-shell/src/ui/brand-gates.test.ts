@@ -8,9 +8,11 @@ import {
   scanColors,
   scanGlyphs,
   scanIconSizes,
+  scanTypeScale,
 } from "../testing/index.js"
 import { ASK_AI_PROMPT_LABELS } from "./ask-ai-prompt.js"
 import { DEFAULT_HEATMAP_LABELS } from "./bpmn-heatmap-labels.js"
+import { ERROR_LABELS } from "./error-labels.js"
 import { KIT_LABELS } from "./kit-labels.js"
 
 /**
@@ -30,6 +32,9 @@ describe("kit copy follows the voice rules", () => {
     ["hand-off fence (de)", ASK_AI_PROMPT_LABELS.de, "de"],
     ["hand-off fence (en)", ASK_AI_PROMPT_LABELS.en, "en"],
     ["heatmap defaults (en)", DEFAULT_HEATMAP_LABELS, "en"],
+    // describeError's words (U1): what happened, what you can do.
+    ["error words (de)", ERROR_LABELS.de, "de"],
+    ["error words (en)", ERROR_LABELS.en, "en"],
   ] as const)("%s", (_, catalog, language) => {
     expect(catalogTextFindings(catalog, { language })).toEqual([])
   })
@@ -50,10 +55,22 @@ describe("kit widget code draws icons at the CI sizes", () => {
   })
 })
 
+describe("kit widget code sets text on the type scale", () => {
+  // CI §4 as the toolkit's TYPE_SCALE: title 28, section 21, body 16, dense
+  // 14 (tables, controls), small 13 — the floor. No Tailwind sizes.
+  it("src/ui has no text size off the five steps and nothing below 13 px", () => {
+    expect(scanTypeScale(UI_DIR)).toEqual([])
+  })
+})
+
 describe("kit copy uses the product glossary", () => {
   // The kit's labels sit in every module's views (hand-offs, list chrome).
   it.each(["de", "en"] as const)("kit labels (%s)", (language) => {
     expect(glossaryFindings(KIT_LABELS[language], PRODUCT_GLOSSARY[language])).toEqual([])
+  })
+
+  it.each(["de", "en"] as const)("error words (%s)", (language) => {
+    expect(glossaryFindings(ERROR_LABELS[language], PRODUCT_GLOSSARY[language])).toEqual([])
   })
 })
 
@@ -64,10 +81,8 @@ describe("kit widget code colours through role names only", () => {
     expect(
       scanColors(UI_DIR, {
         allow: {
-          "bpmn-heatmap/heat-utils.ts":
-            "the heat ramp's rgba stops; replaced by the one-hue data-viz ramp (M5, decision 2j)",
-          "use-bpmn-viewer.ts":
-            "the BPMN paper is always light in both modes (owner decision on issue 339)",
+          "komet-svg.ts":
+            "the CI's Komet icon, vendored byte for byte (modeler-tool-design §11), sha-pinned in brand-mark.test.tsx",
         },
       }),
     ).toEqual([])

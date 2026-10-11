@@ -39,7 +39,7 @@ export function InstanceDiagramSection({
       {bpmnXml && (
         <>
           <SectionHeading title={t("instanceDetail.sectionDiagram")} />
-          <BpmnDiagram bpmnXml={bpmnXml} height={420} highlights={highlights} />
+          <BpmnDiagram bpmnXml={bpmnXml} highlights={highlights} />
         </>
       )}
       {/* Textual token view next to the diagram — shows multi-instance

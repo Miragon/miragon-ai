@@ -33,6 +33,11 @@ export function useHostDisplayMode(): string {
  * background, and the default text/font conventions used by all dashboards.
  * Nesting-aware: an inner WidgetShell keeps only the section stack (gap), so a
  * widget that owns a shell can be embedded under an app-level shell unchanged.
+ *
+ * Padding on the CI grid: 24 px, 16 px below 640 px (an inline view on a
+ * phone or in a narrow chat column). Every child may shrink below its content
+ * (`min-w-0`), so a wide table scrolls inside its own region (`ListTable`)
+ * instead of widening the document.
  */
 export function WidgetShell({ children, className }: { children: ReactNode; className?: string }) {
   const nested = useContext(InsideShellContext)
@@ -40,14 +45,16 @@ export function WidgetShell({ children, className }: { children: ReactNode; clas
   // Nested: drop background, padding, max-width and centering (the outer shell
   // owns those), but keep the internal section stack — widgets rely on the
   // shell's gap for the spacing between their own header/KPIs/tables.
-  if (nested) return <div className={cn("flex flex-col gap-6", className)}>{children}</div>
+  if (nested) {
+    return <div className={cn("flex min-w-0 flex-col gap-6", className)}>{children}</div>
+  }
 
   const isFullscreen = displayMode === "fullscreen"
   return (
     <InsideShellContext.Provider value={true}>
-      <div className={cn("bg-card text-card-foreground min-h-full", className)}>
+      <div className={cn("bg-card text-card-foreground min-h-full min-w-0", className)}>
         <div
-          className={`mx-auto flex flex-col gap-6 px-9 py-8 ${isFullscreen ? "max-w-full" : "max-w-7xl"}`}
+          className={`mx-auto flex min-w-0 flex-col gap-6 p-4 sm:p-6 ${isFullscreen ? "max-w-full" : "max-w-7xl"}`}
         >
           {children}
         </div>

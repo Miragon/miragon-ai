@@ -13,6 +13,7 @@ import type { ActivityTree, VariableValue } from "../view-models.js"
 import { useT } from "../messages/use-t.js"
 import { coerceValue, isEditableVariable } from "./lib/coerce-value.js"
 import { useEngineAction, type EngineAction } from "./lib/engine-action.js"
+import { writeFeedback } from "./lib/write-feedback.js"
 
 /** A serialized Json/Object value, pretty-printed when it is valid JSON. */
 function prettyJson(serialized: string): string {
@@ -146,7 +147,7 @@ function VariableRow({
         valueInfo: variable.valueInfo,
         engine,
       },
-      { onSuccess: () => setEditing(false) },
+      { feedback: writeFeedback.variable(t, name), onSuccess: () => setEditing(false) },
     )
   }
 
@@ -261,7 +262,7 @@ export function VariablesTable({
         { label: t("instanceSections.columnName") },
         { label: t("instanceSections.columnType") },
         { label: t("instanceSections.columnValue") },
-        ...(editable ? [{ plain: true }] : []),
+        ...(editable ? [{ plain: true, sticky: true }] : []),
       ]}
     >
       {entries.map(([name, variable]) => (

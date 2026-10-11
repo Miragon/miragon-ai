@@ -20,13 +20,13 @@ export function RowCard({
   return (
     <div
       className={cn(
-        "border-border flex items-center justify-between gap-3 rounded-lg border p-3",
+        "border-border flex items-center justify-between gap-3 rounded-md border p-3",
         className,
       )}
     >
       <div className="min-w-0">
-        <div className="flex items-center gap-2 text-sm font-medium">{title}</div>
-        {subtitle && <div className="text-muted-foreground truncate text-xs">{subtitle}</div>}
+        <div className="text-dense flex items-center gap-2 font-medium">{title}</div>
+        {subtitle && <div className="text-muted-foreground text-small truncate">{subtitle}</div>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
     </div>

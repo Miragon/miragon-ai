@@ -168,7 +168,6 @@ export function IncidentDetailWidget({
     loadingText: t("incidentDetail.loading"),
     emptyText: t("incidentDetail.noData"),
     retryText: t("viewState.retry"),
-    refreshErrorText: (message) => t("viewState.refreshError", { message }),
   })
   // Mutations must target the exact engine this incident was fetched from (the
   // prop in the cockpit, the server-resolved id standalone) — never the caller's
@@ -209,7 +208,7 @@ export function IncidentDetailWidget({
             hint={t("incidentDetail.processFlowHint", { activity: data.activityId })}
           />
           {data.bpmnXml ? (
-            <BpmnDiagram bpmnXml={data.bpmnXml} height={420} highlights={highlights} />
+            <BpmnDiagram bpmnXml={data.bpmnXml} highlights={highlights} />
           ) : (
             <Alert>
               <AlertDescription>{t("incidentDetail.noBpmnDiagram")}</AlertDescription>

@@ -40,7 +40,6 @@ export const deSweep: MessageCatalog = {
   "aCommon.days": plural("count", "1 Tag", "{count} Tage"),
   "aCommon.hours": plural("count", "1 Stunde", "{count} Stunden"),
   "aCommon.loadError": "Die Kennzahlen konnten nicht geladen werden.",
-  "aCommon.loadErrorHint": "Aktualisier die Ansicht oder frag im Chat noch mal danach.",
   "aCommon.minutes": plural("count", "1 Minute", "{count} Minuten"),
   "aCommon.underOneMinute": "unter 1 Minute",
   "aComparison.deltaBetter": "besser",
@@ -168,7 +167,6 @@ export const deSweep: MessageCatalog = {
   "aLandscape.sharedBadge": plural("count", "auf 1 Engine", "auf {count} Engines"),
   "aSettings.heading": "Analyse-Einstellungen",
   "aSettings.loadError": "Die Einstellungen konnten nicht geladen werden.",
-  "aSettings.loadErrorHint": "Aktualisier die Ansicht.",
   "aSettings.minBucket": "Mindestgröße für Vergleiche",
   "aSettings.minBucket.help":
     "So viele Instanzen braucht jede Seite eines Vergleichs, bevor er eine Bewertung zeigt.",
@@ -181,6 +179,8 @@ export const deSweep: MessageCatalog = {
     "Die Einstellungen konnten nicht gespeichert werden. Deine Eingaben sind noch da, versuch es noch mal.",
   "aSettings.saveFailed":
     "Speichern hat nicht geklappt: {reason}. Deine Eingaben sind noch da, versuch es noch mal.",
+  "aSettings.savedToast": "Einstellungen gespeichert",
+  "aSettings.saveFailedToast": "Einstellungen konnten nicht gespeichert werden",
   "aSettings.saved": "Gespeichert um {time}",
   "aSettings.saving": "Wird gespeichert…",
   "aSettings.section": "Standardwerte",

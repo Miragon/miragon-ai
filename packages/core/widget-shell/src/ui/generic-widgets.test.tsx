@@ -80,8 +80,8 @@ describe("shell:data-table", () => {
       "Field4",
       "Field5",
     ])
-    // A Boolean as text, null and anything not primitive as a dash.
-    expect(cells().slice(0, 3)).toEqual(["true", "—", "0"])
+    // A Boolean in words, null and anything not primitive as a dash.
+    expect(cells().slice(0, 3)).toEqual(["Yes", "—", "0"])
   })
 
   it("shows a dash for a cell whose value is not primitive", () => {
@@ -92,20 +92,20 @@ describe("shell:data-table", () => {
     expect(cells()).toEqual(["a", "x", "b", "—"])
   })
 
-  it("says so when the key holds no rows, in the given text or naming the key", () => {
+  it("says so when the key holds no rows, in the given text or the kit's words", () => {
     renderTable([], { emptyText: "Keine Zeilen." })
     expect(screen.getByText("Keine Zeilen.")).toBeTruthy()
     cleanup()
     renderTable({ rows: "none" })
-    expect(screen.getByText('No rows under "probe:rows"')).toBeTruthy()
+    expect(screen.getByText("No rows yet")).toBeTruthy()
     cleanup()
     render(<GenericDataTableWidget keys={{}} context={CONTEXT} />)
-    expect(screen.getByText('No rows under "(missing dataKey prop)"')).toBeTruthy()
+    expect(screen.getByText("No rows yet")).toBeTruthy()
   })
 
   it("says so when the first row has no field it can show", () => {
     renderTable([{ nested: { a: 1 } }])
-    expect(screen.getByText('No rows under "probe:rows"')).toBeTruthy()
+    expect(screen.getByText("No rows yet")).toBeTruthy()
   })
 })
 
@@ -131,7 +131,7 @@ describe("shell:kpi-grid", () => {
       "not a cell",
     ])
     const text = container.textContent ?? ""
-    for (const shown of ["Open incidents", "4", "/10", "Running", "12", "Healthy", "true"]) {
+    for (const shown of ["Open incidents", "4", "/10", "Running", "12", "Healthy", "Yes"]) {
       expect(text).toContain(shown)
     }
     expect(text).toContain("Unknown")
@@ -157,14 +157,14 @@ describe("shell:kpi-grid", () => {
     expect(soft).not.toBe(strip)
   })
 
-  it("says so when the key holds no cells, in the given text or naming the key", () => {
+  it("says so when the key holds no cells, in the given text or the kit's words", () => {
     renderKpis("not cells", { emptyText: "Keine Kennzahlen." })
     expect(screen.getByText("Keine Kennzahlen.")).toBeTruthy()
     cleanup()
     renderKpis([])
-    expect(screen.getByText('No KPI data under "probe:kpis"')).toBeTruthy()
+    expect(screen.getByText("No figures yet")).toBeTruthy()
     cleanup()
     render(<GenericKpiGridWidget keys={{}} context={CONTEXT} widgetProps={{ dataKey: 7 }} />)
-    expect(screen.getByText('No KPI data under "(missing dataKey prop)"')).toBeTruthy()
+    expect(screen.getByText("No figures yet")).toBeTruthy()
   })
 })

@@ -109,11 +109,11 @@ export function IncidentTable({
       : [{ label: t("procIncTable.columnInstance"), className: leadPad }]),
     { label: t("procIncTable.columnErrorMessage") },
     { label: t("procIncTable.columnTime"), align: "right" as const },
-    { label: t("procIncTable.columnActions") },
+    { label: t("procIncTable.columnActions"), sticky: true },
   ]
 
   return (
-    <div className="bg-muted">
+    <div className="bg-muted [--list-table-surface:var(--muted)]">
       <ListTable ariaLabel={t("procIncTable.tableLabel")} columns={columns}>
         {visible.map((incident) => {
           const done = recovery.isDone(incident)
@@ -247,6 +247,7 @@ export function PagedIncidentTable({
         <ViewDataState
           loading={paged.loading}
           error={paged.error}
+          onRetry={paged.retry}
           loadingText={t("procIncTable.loading")}
           emptyText={t("procIncTable.noIncidents")}
         />

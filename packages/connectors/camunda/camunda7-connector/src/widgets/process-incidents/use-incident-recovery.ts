@@ -2,6 +2,7 @@ import type { IncidentInstance } from "../../view-models.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { recoveryOf } from "../lib/incident-recovery.js"
 import { useEngineAction, type ActionConfirmation, type TargetLine } from "../lib/engine-action.js"
+import { instanceName, writeFeedback } from "../lib/write-feedback.js"
 
 /** The button an incident row offers. */
 export type RowAction = "resolve" | "retry"
@@ -90,6 +91,7 @@ export function useIncidentRecovery(
   /** The action that clears `incident`, the target it runs on, and how to start it — null when none does. */
   function remedyOf(incident: RecoverableIncident, jobId?: string | null) {
     const recovery = recoveryOf(incident, jobId)
+    const instance = instanceName(incident.processInstanceId)
     switch (recovery.action) {
       case "resolve":
         return {
@@ -99,7 +101,10 @@ export function useIncidentRecovery(
           start: () =>
             resolve.run(
               { incidentId: incident.id, engine: engineId },
-              { confirm: resolveConfirmation(t, incident, engineId) },
+              {
+                confirm: resolveConfirmation(t, incident, engineId),
+                feedback: writeFeedback.resolve(t, instance),
+              },
             ),
         }
       case "retry-job":
@@ -107,7 +112,11 @@ export function useIncidentRecovery(
           kind: "retry" as const,
           action: jobRetry,
           target: recovery.jobId,
-          start: () => jobRetry.run({ jobId: recovery.jobId, retries: 1, engine: engineId }),
+          start: () =>
+            jobRetry.run(
+              { jobId: recovery.jobId, retries: 1, engine: engineId },
+              { feedback: writeFeedback.jobRetry(t, instance) },
+            ),
         }
       case "retry-external-task":
         return {
@@ -115,11 +124,10 @@ export function useIncidentRecovery(
           action: taskRetry,
           target: recovery.externalTaskId,
           start: () =>
-            taskRetry.run({
-              externalTaskId: recovery.externalTaskId,
-              retries: 1,
-              engine: engineId,
-            }),
+            taskRetry.run(
+              { externalTaskId: recovery.externalTaskId, retries: 1, engine: engineId },
+              { feedback: writeFeedback.externalTaskRetry(t, instance) },
+            ),
         }
       default:
         return null

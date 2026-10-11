@@ -1,12 +1,13 @@
 import { useEffect } from "react"
-import { Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import { ErrorState } from "@miragon/mcp-toolkit-ui"
 import {
   BpmnZoomControls,
+  injectBpmnOverlayCss,
   useBpmnViewer,
   useHostDisplayMode,
 } from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
-import { applyHighlights, HIGHLIGHT_CSS, type BpmnHighlight } from "./bpmn-highlights.js"
+import { applyHighlights, type BpmnHighlight } from "./bpmn-highlights.js"
 
 // The highlight semantics (colors, CSS, priority rules) live in
 // ./bpmn-highlights.ts; re-exported here so widget callers keep importing
@@ -15,6 +16,7 @@ export { applyHighlights, dedupe, HIGHLIGHT_COLORS, type BpmnHighlight } from ".
 
 export interface BpmnDiagramProps {
   bpmnXml: string
+  /** A fixed frame height; default: from the diagram's aspect ratio (240–560 px, the kit's `diagramHeight`). */
   height?: number
   /**
    * Declarative highlight set. Empty / undefined renders the diagram as
@@ -23,36 +25,31 @@ export interface BpmnDiagramProps {
   highlights?: ReadonlyArray<BpmnHighlight>
 }
 
-function injectHighlightCss() {
-  if (document.getElementById("bpmn-highlight-css")) return
-  const style = document.createElement("style")
-  style.id = "bpmn-highlight-css"
-  style.textContent = HIGHLIGHT_CSS
-  document.head.appendChild(style)
-}
-
 // Stable default: an inline `[]` default would mint a fresh identity per render
 // and, via `reimportKey`, force a full bpmn-js re-import for any non-memoizing
 // caller.
 const NO_HIGHLIGHTS: ReadonlyArray<BpmnHighlight> = []
 
-export function BpmnDiagram({
-  bpmnXml,
-  height = 400,
-  highlights = NO_HIGHLIGHTS,
-}: BpmnDiagramProps) {
+export function BpmnDiagram({ bpmnXml, height, highlights = NO_HIGHLIGHTS }: BpmnDiagramProps) {
   const t = useT()
   const displayMode = useHostDisplayMode()
 
-  const { containerRef, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
+  const {
+    containerRef,
+    height: autoHeight,
+    importError,
+    zoomIn,
+    zoomOut,
+    fit,
+  } = useBpmnViewer({
     bpmnXml,
     // A changed highlight set redecorates via a full re-import — bpmn-js
     // markers/overlays are only ever added, never removed.
     reimportKey: highlights,
     fitOnResize: true,
-    onImported: (viewer) => {
-      injectHighlightCss()
-      applyHighlights(viewer.get("canvas"), viewer.get("overlays"), highlights)
+    onImported: (imported) => {
+      injectBpmnOverlayCss()
+      applyHighlights(imported.get("canvas"), imported.get("overlays"), highlights)
     },
   })
 
@@ -61,20 +58,19 @@ export function BpmnDiagram({
     fit()
   }, [displayMode, fit])
 
+  // The paper, its zoom bar and its error stay light in a dark host (CI §10).
   return (
-    <div className="relative">
+    <div data-theme-mode="light" className="relative">
       <div
         ref={containerRef}
         role="img"
         aria-label={t("bpmnDiagram.ariaLabel")}
-        className="border-border rounded-lg border"
-        style={{ height: `${height}px`, width: "100%" }}
+        className="border-border rounded-md border"
+        style={{ height: `${height ?? autoHeight}px`, width: "100%" }}
       />
       {importError !== null && (
         <div className="absolute inset-0 grid place-items-center p-6">
-          <Alert>
-            <AlertDescription>{t("bpmnDiagram.renderError")}</AlertDescription>
-          </Alert>
+          <ErrorState variant="inline" title={t("bpmnDiagram.renderError")} details={importError} />
         </div>
       )}
       <BpmnZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onFit={fit} />
