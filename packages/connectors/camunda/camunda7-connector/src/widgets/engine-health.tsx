@@ -1,16 +1,20 @@
-import { Alert, AlertDescription, Button } from "@miragon/mcp-toolkit-ui"
 import {
-  HandOffButton,
+  Alert,
+  AlertDescription,
+  Button,
   DrillButton,
-  Icon,
   KpiGrid,
-  RowCard,
   StatusBadge,
   WidgetHeader,
+  type ToneVariant,
+} from "@miragon/mcp-toolkit-ui"
+import {
+  HandOffButton,
+  Icon,
+  RowCard,
   WidgetShell,
   formatNumber,
   formatTime,
-  type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import { RefreshCw } from "lucide-react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
@@ -237,7 +241,9 @@ function HealthKpis({
           // The engine-wide instances list — NOT the definitions list: the
           // KPI counts instances, so the drill must land on instances.
           onClick: () => go({ type: "process-instances" }),
-          ariaLabel: t("engineHealth.kpiRunningInstancesAria"),
+          // Named by its visible label and value (WCAG 2.5.3); the hint
+          // says what the click does.
+          actionHint: t("engineHealth.kpiRunningInstancesAria"),
         },
         {
           label: t("engineHealth.kpiOpenIncidents"),
@@ -252,7 +258,7 @@ function HealthKpis({
                 : undefined,
           tone: summary.totalIncidents > 0 ? status.tone : undefined,
           onClick: () => go({ type: "incidents" }),
-          ariaLabel: t("engineHealth.kpiOpenIncidentsAria"),
+          actionHint: t("engineHealth.kpiOpenIncidentsAria"),
         },
         {
           label: t("engineHealth.kpiAffectedActivities"),

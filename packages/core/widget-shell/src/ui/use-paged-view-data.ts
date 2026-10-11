@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "react"
-import { useCallTool } from "@miragon/mcp-toolkit-ui"
-import { parseToolResult } from "./parse-tool-result.js"
+import { parseToolResult, useCallTool } from "@miragon/mcp-toolkit-ui"
 import { useSeededToolQuery } from "./use-seeded-tool-query.js"
 
 /**

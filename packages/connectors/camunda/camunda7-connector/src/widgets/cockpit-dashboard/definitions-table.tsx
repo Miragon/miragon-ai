@@ -1,14 +1,12 @@
 import { useState } from "react"
+import { ViewDataState, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import {
   DrillButton,
   FilterBar,
   ListFooter,
   SectionHeading,
-  ViewDataState,
-  WidgetShell,
-  formatNumber,
   useDebouncedValue,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/mcp-toolkit-ui"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
 import { useNav } from "../navigation.js"

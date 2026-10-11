@@ -1,9 +1,5 @@
-import {
-  HandOffButton,
-  LivePill,
-  WidgetHeader,
-  formatNumber,
-} from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { LivePill, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 import { instancesFilterFacts, type InstancesListFilters } from "./hand-offs.js"

@@ -76,8 +76,10 @@ describe("incidents dashboard widgets — honest numbers", () => {
   it("shows the unknown affected-activity total as —, never 0", () => {
     render(<WidgetFixtureHost widget={asWidget(IncidentOverviewKpi)} data={data} />)
 
-    // label span → label row → the cell (label row + value row)
-    const cell = screen.getByText("Activities affected").parentElement!.parentElement!
+    // The toolkit KpiGrid's cell: a direct child of the strip's grid.
+    const cell = screen
+      .getByText("Activities affected")
+      .closest<HTMLElement>('[data-slot="kpi-strip"] > div > *')!
     expect(within(cell).getByText("—")).toBeTruthy()
     expect(within(cell).queryByText("0")).toBeNull()
   })

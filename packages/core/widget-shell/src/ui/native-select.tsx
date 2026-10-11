@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react"
-import { cn } from "./cn.js"
+import { cn } from "@miragon/mcp-toolkit-ui"
 
 /**
  * Styled native `<select>` on the shadcn tokens — the one canonical class

@@ -1,10 +1,13 @@
-export { cn } from "./cn.js"
+// The kit's OWN pieces: what widget-shell adds on top of
+// `@miragon/mcp-toolkit-ui`. The toolkit's components, tone maps, `cn` and
+// hooks (KpiGrid, StatusBadge, FilterBar, WidgetHeader, PagedListFooter,
+// TONE_*, useDebouncedValue, …) are imported from the toolkit itself, never
+// re-exported or forked here.
 // Zod-free profile option sets (select/checkbox option lists in settings
 // widgets) — safe for the UI bundle; the zod record schema stays on /server.
 export { LANGUAGES, LOCALES, type LanguagePref, type Locale } from "../profile-constants.js"
 export { createUseT, type T } from "./create-use-t.js"
 export { DisplayModeProvider, WidgetShell, useHostDisplayMode } from "./widget-shell.js"
-export { WidgetHeader } from "./widget-header.js"
 export { ViewDataState } from "./view-data-state.js"
 export { Section } from "./section.js"
 export { Th, Td, TableEmptyState, VersionChip } from "./table.js"
@@ -32,20 +35,7 @@ export {
   type ViewMetaLabels,
   type ViewMetaParts,
 } from "./view-meta.js"
-export {
-  TONE_VARIANTS,
-  TONE_SOFT,
-  TONE_TINT,
-  TONE_DOT,
-  TONE_BORDER,
-  TONE_ICON,
-  TONE_INK,
-  MICRO_LABEL,
-  type ToneVariant,
-} from "./tone-utils.js"
 export { Icon, type LucideIcon } from "./icon.js"
-export { KpiGrid, KpiGridSkeleton, type KpiCell, type KpiGridHeader } from "./kpi-grid.js"
-export { FilterBar, type FilterChip } from "./filter-bar.js"
 export { RowCard } from "./row-card.js"
 export { NativeSelect } from "./native-select.js"
 export { SettingsCard, SettingsField, SettingsInput } from "./settings.js"
@@ -58,11 +48,7 @@ export { HostDocument } from "./host-document.js"
 export { SegmentedControl, type SegmentedControlOption } from "./segmented-control.js"
 export { useDetailView } from "./use-detail-view.js"
 export { useViewData, type ViewDataResult } from "./use-view-data.js"
-export { SectionHeading } from "@miragon/mcp-toolkit-ui"
-export { GroupCard } from "@miragon/mcp-toolkit-ui"
-export { LivePill, StatusBadge, CountPill } from "./pills.js"
 export { LogText, LOG_TEXT_PREVIEW } from "./log-text.js"
-export { useHostActions, buildShowWidgetIntent, type HostActions } from "./use-host-actions.js"
 export { AskAiButton, type AskAiButtonProps, type AskAiVariant } from "./ask-ai-button.js"
 export { HAND_OFF_ACTIONS, HandOffButton, type HandOffAction } from "./hand-off-button.js"
 export {
@@ -79,18 +65,12 @@ export {
   type ToolSurface,
   type UntrustedText,
 } from "./ask-ai-prompt.js"
-export { DrillButton } from "@miragon/mcp-toolkit-ui"
 export { OpenInCockpitLink } from "./open-in-cockpit-link.js"
-export { ListFooter } from "@miragon/mcp-toolkit-ui"
-export { useDebouncedValue } from "./use-debounced-value.js"
 export { useResetOnChange } from "./use-reset-on-change.js"
 export { useApplyTheme } from "./use-apply-theme.js"
 export { usePagedViewData, type PagedViewData } from "./use-paged-view-data.js"
 export { usePagedListView, type PagedListView } from "./use-paged-list-view.js"
-export { PagedListFooter } from "./paged-list-footer.js"
 export { PagedRows } from "./paged-rows.js"
-export { parseToolResult, parseViewToolResult } from "./parse-tool-result.js"
-export { useViewToolQuery, type UseViewToolQueryOptions } from "./use-view-tool-query.js"
 export {
   BpmnHeatmap,
   HeatmapLegend,

@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { cn } from "./cn.js"
-import { TONE_DOT } from "./tone-utils.js"
+import { cn, TONE_DOT } from "@miragon/mcp-toolkit-ui"
 import type { PagedViewData } from "./use-paged-view-data.js"
 
 /**
@@ -9,9 +8,11 @@ import type { PagedViewData } from "./use-paged-view-data.js"
  * filter is in flight or has failed) and `aria-busy` while a page 0 is in
  * flight. The mark is a bar along the left edge in the tone of the state
  * (info while the new page loads, warning once it failed), not a dimming:
- * faded rows push muted text under 4.5:1. Pairs with
- * {@link PagedListFooter}'s status line, which says in words what the bar
- * marks, so old rows under a new search never read as its answer.
+ * faded rows push muted text under 4.5:1. Pairs with the toolkit's
+ * `PagedListFooter` (`paged` passes as is), whose live count line says in
+ * words what the bar marks ("Updating…", the failure above it), so old rows
+ * under a new search never read as its answer. The toolkit did not lift this
+ * piece: it is the kit's own.
  */
 export function PagedRows<TItem, TData>({
   paged,

@@ -1,14 +1,12 @@
 import {
   HandOffButton,
-  KpiGrid,
-  KpiGridSkeleton,
   ViewMeta,
-  WidgetHeader,
   WidgetShell,
   formatLookback,
   formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
+import { KpiGrid, KpiGridSkeleton, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"

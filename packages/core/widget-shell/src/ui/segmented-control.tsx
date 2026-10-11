@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { cn } from "./cn.js"
-import { TONE_SOFT } from "./tone-utils.js"
+import { cn, TONE_SOFT } from "@miragon/mcp-toolkit-ui"
 
 export interface SegmentedControlOption<V extends string = string> {
   value: V

@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react"
-import { cn } from "./cn.js"
+import { cn } from "@miragon/mcp-toolkit-ui"
 
 /**
  * True below an already-rendered WidgetShell. Widgets wrap themselves in a

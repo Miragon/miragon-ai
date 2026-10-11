@@ -328,15 +328,9 @@ importers:
       '@tanstack/react-query':
         specifier: 5.102.8
         version: 5.102.8(react@19.3.0)
-      clsx:
-        specifier: 2.1.1
-        version: 2.1.1
       prom-client:
         specifier: 15.1.3
         version: 15.1.3
-      tailwind-merge:
-        specifier: 3.7.0
-        version: 3.7.0
     devDependencies:
       '@miragon/mcp-toolkit-core':
         specifier: 2.8.0

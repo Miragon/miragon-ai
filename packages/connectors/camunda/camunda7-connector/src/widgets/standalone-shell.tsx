@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
-import { HostModelContext, WidgetRenderer, useHostBridge } from "@miragon/mcp-toolkit-ui/app"
 import {
+  HostModelContext,
+  WidgetRenderer,
+  useHostBridge,
   useHostActions,
-  useHostWidgets,
-  useResetOnChange,
-  WidgetShell,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/mcp-toolkit-ui/app"
+import { useHostWidgets, useResetOnChange, WidgetShell } from "@miragon-ai/widget-shell/widgets"
 import { translator } from "../messages/index.js"
 import { NavBreadcrumb } from "./cockpit-app/breadcrumb.js"
 import { cockpitViews, filterLayoutToWidgets } from "./cockpit-app/views.js"

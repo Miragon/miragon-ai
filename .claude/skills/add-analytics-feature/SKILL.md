@@ -198,16 +198,18 @@ The widget chain mirrors the camunda7 module:
 
 Rules while building:
 
-- Compose the component from `@miragon-ai/widget-shell/widgets` — `ViewDataState` for
-  the loading/error/no-data guard, `Section`, `Th`/`Td`/`TableEmptyState`,
-  `WidgetHeader` (no icon tile), `KpiGrid` (incl. `variant="soft"`), `WidgetShell`;
+- Compose the component from `@miragon-ai/widget-shell/widgets` and the toolkit
+  `@miragon/mcp-toolkit-ui` — `ViewDataState` for the loading/error/no-data guard,
+  `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetShell` from the kit; `WidgetHeader` (no
+  icon tile, `as` for the heading level), `KpiGrid` (incl. `variant="soft"`),
+  `StatusBadge`/`CountPill`, the `TONE_*` maps and `cn` from the toolkit;
   formatting via `formatTimestamp`/`formatNumber`/`formatPercent`/`formatPercentPoints`/
   `formatPeriod`/`formatDuration`/`truncate` (canonical duration style "3m 7s", German
   "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage"). Never re-inline these primitives, write
   local format helpers, or call `toFixed`, a `toLocaleString()` without a locale or a
   hand-built `Intl.NumberFormat`.
-- Status and comparison colour come from the tone model (`ToneVariant`, `TONE_*` maps,
-  CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
+- Status and comparison colour come from the toolkit's tone model (`ToneVariant`, `TONE_*`
+  maps, `resolveTone` for a tone from the wire, CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
   (`TONE_SOFT`), `TONE_INK` only for words in a tone directly on the card (an inline error);
   volume (starts) and suppressed comparisons stay `neutral`, red is `danger` and only for
   incidents/failures. No palette classes or raw colours.

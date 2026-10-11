@@ -1,5 +1,4 @@
-import { Alert, AlertDescription, Button, useLocale } from "@miragon/mcp-toolkit-ui"
-import { cn } from "./cn.js"
+import { Alert, AlertDescription, Button, cn, useLocale } from "@miragon/mcp-toolkit-ui"
 import { kitLabels } from "./kit-labels.js"
 
 /**

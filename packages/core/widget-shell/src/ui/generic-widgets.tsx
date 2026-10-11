@@ -1,7 +1,6 @@
 import type { WidgetProps } from "@miragon/mcp-toolkit-core"
-import { KpiGrid, type KpiCell } from "./kpi-grid.js"
+import { KpiGrid, resolveTone, type KpiCell } from "@miragon/mcp-toolkit-ui"
 import { TableEmptyState, Td, Th } from "./table.js"
-import { TONE_VARIANTS, type ToneVariant } from "./tone-utils.js"
 
 /**
  * Module-agnostic widgets — the standard composition targets for
@@ -14,8 +13,6 @@ import { TONE_VARIANTS, type ToneVariant } from "./tone-utils.js"
  * `../shell-catalogue.ts`, exported via `@miragon-ai/widget-shell/server`). All texts arrive via props —
  * the shell carries no module i18n.
  */
-
-const TONES: ReadonlySet<string> = new Set(TONE_VARIANTS)
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)
@@ -44,7 +41,9 @@ function coerceKpiCells(raw: unknown): KpiCell[] {
       .map((r) => ({
         label: r.label as string,
         value: cellValue(r.value),
-        tone: typeof r.tone === "string" && TONES.has(r.tone) ? (r.tone as ToneVariant) : undefined,
+        // A tone from the wire: the five tones as is, a retired name
+        // (`critical`) onto its tone, anything else neutral (no dot).
+        tone: typeof r.tone === "string" ? resolveTone(r.tone) : undefined,
         fraction: typeof r.fraction === "string" ? r.fraction : undefined,
       }))
   }

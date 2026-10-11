@@ -1,9 +1,9 @@
 import { Button, useLocale } from "@miragon/mcp-toolkit-ui"
 import { MessageSquare } from "lucide-react"
+import { useHostActions } from "@miragon/mcp-toolkit-ui/app"
 import type { AskAiPrompt } from "./ask-ai-prompt.js"
 import { Icon, type LucideIcon } from "./icon.js"
 import { kitLabels } from "./kit-labels.js"
-import { useHostActions } from "./use-host-actions.js"
 
 /**
  * Placement tiers. All render as the same secondary outline button (a

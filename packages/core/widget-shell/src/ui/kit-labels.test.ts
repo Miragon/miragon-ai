@@ -10,9 +10,7 @@ function rendered(tag: string | undefined) {
   expect(Object.keys(handOff).length).toBeGreaterThan(0)
   return {
     ...labels,
-    loadMoreFailed: labels.loadMoreFailed("timeout"),
     refreshFailed: labels.refreshFailed("gone"),
-    listRefreshFailed: labels.listRefreshFailed("down"),
     openInVendor: labels.openInVendor("CIB seven"),
     openInEngine: labels.openInVendor(undefined),
     opensInNewTab: labels.opensInNewTab("In CIB seven öffnen"),
@@ -27,14 +25,9 @@ describe("kitLabels — the kit's own strings follow the active locale", () => {
         zoomIn: "Vergrößern",
         zoomOut: "Verkleinern",
         fitViewport: "An Ansicht anpassen",
-        filter: "Filtern…",
         retry: "Erneut versuchen",
-        loadMoreFailed: "Weitere Einträge konnten nicht geladen werden (timeout).",
         refreshFailed:
           "Die Ansicht konnte nicht aktualisiert werden (gone). Du siehst den zuletzt geladenen Stand.",
-        listRefreshFailed:
-          "Die Liste konnte nicht aktualisiert werden (down). Du siehst das vorherige Ergebnis.",
-        updating: "Wird aktualisiert…",
         askAiDefault: "Im Chat analysieren",
         openInVendor: "In CIB seven öffnen",
         openInEngine: "Im Engine-Cockpit öffnen",
@@ -50,12 +43,8 @@ describe("kitLabels — the kit's own strings follow the active locale", () => {
         zoomIn: "Zoom in",
         zoomOut: "Zoom out",
         fitViewport: "Fit to viewport",
-        filter: "Filter…",
         retry: "Try again",
-        loadMoreFailed: "Could not load more entries (timeout).",
         refreshFailed: "Could not refresh this view (gone). You are seeing the last loaded state.",
-        listRefreshFailed: "Could not update the list (down). You are seeing the previous result.",
-        updating: "Updating…",
         askAiDefault: "Analyze in chat",
         openInVendor: "Open in CIB seven",
         openInEngine: "Open in engine cockpit",

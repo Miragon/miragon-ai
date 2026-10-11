@@ -1,11 +1,10 @@
 import {
   HandOffButton,
-  KpiGrid,
   ViewDataState,
-  WidgetHeader,
   WidgetShell,
   formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
+import { KpiGrid, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
 import { useNav } from "../navigation.js"
@@ -114,7 +113,9 @@ export function ProcessHealthKpiView({
             label: t("cockpitHealth.cellTotalProcesses"),
             value: formatNumber(summary.totalDefinitions),
             onClick: () => go({ type: "process-list" }),
-            ariaLabel: t("cockpitHealth.cellTotalProcessesAria"),
+            // Named by its visible label and value (WCAG 2.5.3); the hint
+            // says what the click does.
+            actionHint: t("cockpitHealth.cellTotalProcessesAria"),
           },
           {
             label: t("cockpitHealth.cellHealthy"),
@@ -133,7 +134,7 @@ export function ProcessHealthKpiView({
             value: formatNumber(summary.totalIncidents),
             tone: summary.totalIncidents > 0 ? "danger" : undefined,
             onClick: () => go({ type: "incidents" }),
-            ariaLabel: t("cockpitHealth.cellOpenIncidentsAria"),
+            actionHint: t("cockpitHealth.cellOpenIncidentsAria"),
           },
         ]}
       />

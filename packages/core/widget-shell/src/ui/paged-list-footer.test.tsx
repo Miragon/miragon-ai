@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { LocaleProvider } from "@miragon/mcp-toolkit-ui"
-import { PagedListFooter } from "./paged-list-footer.js"
+import { LocaleProvider, PagedListFooter } from "@miragon/mcp-toolkit-ui"
 import { PagedRows } from "./paged-rows.js"
 import type { PagedViewData } from "./use-paged-view-data.js"
 
@@ -27,6 +26,9 @@ function paged(overrides: Partial<PagedViewData<string, object>> = {}) {
   } satisfies PagedViewData<string, object>
 }
 
+/** The count line's wrapper: visually hidden while there is nothing to show. */
+const footerOf = (status: HTMLElement) => status.closest('[data-slot="list-footer"]')!
+
 function renderList(state: PagedViewData<string, object>) {
   render(
     <>
@@ -40,19 +42,24 @@ function renderList(state: PagedViewData<string, object>) {
 }
 
 /**
+ * The kit's PagedRows over the toolkit's PagedListFooter (2.8, which took the
+ * widget-shell fork's behaviour; its own suite is `PagedListFooter.test.tsx`
+ * in @miragon/mcp-toolkit-ui). `usePagedViewData`'s result passes as is.
+ *
  * While a new search or filter is in flight (or has failed) the list keeps the
  * previous result on screen (`stale`). A sighted operator must SEE that —
  * a marked list (a bar in the state's tone, info in flight, warning once it
  * failed; never a dimming that drops muted text under AA), a visible
  * "Updating…" — and no "Showing X of Y" may pair the previous count with the
- * new search (#341 review).
+ * new search (#341 review). The list has ONE live region: the footer's count
+ * line.
  */
 describe("PagedListFooter + PagedRows — the stale and in-flight states", () => {
-  it("a settled page: count shown, status for screen readers only, rows not marked", () => {
+  it("a settled page: the count in the one live region, rows not marked", () => {
     const { rows, status } = renderList(paged())
-    expect(screen.getByText("Showing 2 of 3 items")).toBeTruthy()
-    expect(status.className).toBe("sr-only")
-    expect(status.textContent).toBe("2 / 3 items")
+    expect(screen.getAllByRole("status")).toHaveLength(1)
+    expect(status.textContent).toBe("Showing 2 of 3 items")
+    expect(footerOf(status).className).not.toContain("sr-only")
     expect(rows.getAttribute("aria-busy")).toBe("false")
     expect(rows.hasAttribute("data-stale")).toBe(false)
     expect(rows.querySelector("[data-tone]")).toBeNull()
@@ -61,7 +68,7 @@ describe("PagedListFooter + PagedRows — the stale and in-flight states", () =>
 
   it("a new search in flight: a VISIBLE Updating… line, busy rows marked info, no count", () => {
     const { rows, status } = renderList(paged({ stale: true, refreshing: true, hasMore: false }))
-    expect(status.className).not.toContain("sr-only")
+    expect(footerOf(status).className).not.toContain("sr-only")
     expect(status.textContent).toBe("Updating…")
     expect(rows.getAttribute("aria-busy")).toBe("true")
     expect(rows.getAttribute("data-stale")).toBe("true")
@@ -74,12 +81,14 @@ describe("PagedListFooter + PagedRows — the stale and in-flight states", () =>
     const state = paged({ stale: true, hasMore: false, error: new Error("engine down") })
     const { rows, status } = renderList(state)
     const alert = screen.getByRole("alert")
-    expect(alert.textContent).toContain(
-      "Could not update the list (engine down). You are seeing the previous result.",
-    )
+    expect(alert.textContent).toContain("Couldn't update the list")
+    expect(alert.textContent).toContain("You're seeing the previous result.")
+    // The raw reason sits under "Details", out of the sentence.
+    expect(alert.querySelector("details pre")?.textContent).toBe("engine down")
+    expect(alert.getAttribute("data-tone")).toBe("warning")
     expect(rows.getAttribute("data-stale")).toBe("true")
     expect(rows.querySelector("[data-tone]")?.getAttribute("data-tone")).toBe("warning")
-    expect(status.className).toBe("sr-only")
+    expect(footerOf(status).className).toBe("sr-only")
     expect(status.textContent).toBe("")
     expect(screen.queryByText(/Showing/)).toBeNull()
 
@@ -90,20 +99,25 @@ describe("PagedListFooter + PagedRows — the stale and in-flight states", () =>
 
   it("a same-filter refetch: Updating… is visible, the count of THIS filter stays", () => {
     const { rows, status } = renderList(paged({ refreshing: true }))
-    expect(status.textContent).toBe("Updating…")
-    expect(status.className).not.toContain("sr-only")
+    expect(status.textContent).toBe("Showing 2 of 3 itemsUpdating…")
+    expect(footerOf(status).className).not.toContain("sr-only")
     expect(rows.getAttribute("aria-busy")).toBe("true")
     expect(rows.hasAttribute("data-stale")).toBe(false)
-    expect(screen.getByText("Showing 2 of 3 items")).toBeTruthy()
+  })
+
+  it("a search that finds nothing: the live region stays and says so", () => {
+    const { status } = renderList(paged({ items: [], total: 0, hasMore: false }))
+    expect(status.textContent).toBe("No entries")
+    expect(footerOf(status).className).toBe("sr-only")
   })
 })
 
 /**
- * The footer's own strings are kit defaults: without a caller's texts (a
- * composed-server list) they follow the active locale like the rest of the
- * kit (#339) — the two lines the stale states added included.
+ * The footer's strings come from the toolkit's catalog: without a caller's
+ * texts they follow the active locale like the rest of the kit (#339) — the
+ * two failure lines included.
  */
-describe("PagedListFooter — kit defaults follow the active locale", () => {
+describe("PagedListFooter — the catalog follows the active locale", () => {
   function renderGerman(state: PagedViewData<string, object>) {
     render(
       <LocaleProvider locale="de">
@@ -126,12 +140,11 @@ describe("PagedListFooter — kit defaults follow the active locale", () => {
       }),
     )
     const [refresh, more] = screen.getAllByRole("alert")
-    expect(refresh.textContent).toContain(
-      "Die Liste konnte nicht aktualisiert werden (weg). Du siehst das vorherige Ergebnis.",
-    )
-    expect(more.textContent).toContain(
-      "Weitere Einträge konnten nicht geladen werden (Zeitüberschreitung).",
-    )
+    expect(refresh.textContent).toContain("Die Liste konnte nicht aktualisiert werden")
+    expect(refresh.textContent).toContain("Du siehst das vorherige Ergebnis.")
+    expect(refresh.querySelector("details pre")?.textContent).toBe("weg")
+    expect(more.textContent).toContain("Weitere Einträge konnten nicht geladen werden")
+    expect(more.querySelector("details pre")?.textContent).toBe("Zeitüberschreitung")
     expect(screen.getAllByRole("button", { name: "Erneut versuchen" })).toHaveLength(2)
   })
 })

@@ -1,11 +1,6 @@
-import {
-  HandOffButton,
-  OpenInCockpitLink,
-  StatusBadge,
-  VersionChip,
-  WidgetHeader,
-} from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton, OpenInCockpitLink, VersionChip } from "@miragon-ai/widget-shell/widgets"
 
+import { StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import type { IncidentDetailData } from "../../view-models.js"
 
 import { scopingDefinitionKey, useHandOff, type HandOff } from "../lib/hand-off.js"

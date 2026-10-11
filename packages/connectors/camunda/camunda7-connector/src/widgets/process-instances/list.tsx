@@ -1,30 +1,32 @@
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
   HandOffButton,
-  CountPill,
-  DrillButton,
-  FilterBar,
   Icon,
   ListTable,
   PagedRows,
   QueryFallback,
-  StatusBadge,
-  TONE_DOT,
   TableEmptyState,
   TableSkeleton,
   Td,
   WidgetShell,
   usePagedListView,
-  type FilterChip,
-  type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import { useState } from "react"
 import { TriangleAlert } from "lucide-react"
+import {
+  CountPill,
+  DrillButton,
+  FilterBar,
+  StatusBadge,
+  TONE_DOT,
+  PagedListFooter,
+  type FilterChip,
+  type ToneVariant,
+} from "@miragon/mcp-toolkit-ui"
 import type { ProcessInstanceRow, ProcessInstancesData } from "../../view-models.js"
 import type { ProcessInstancesFilters } from "../../feed-contracts.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
-import { CockpitListFooter } from "../list-footer.js"
 import { InstancesHeader } from "./list-header.js"
 import { useHandOff } from "../lib/hand-off.js"
 import { describeInstancesView, rootCauseHandOff, type InstanceChip } from "./hand-offs.js"
@@ -383,7 +385,7 @@ export function ProcessInstancesView({
       </PagedRows>
       {/* Also under an empty result: a failed search keeps the previous
           (empty) rows on screen, and its error + retry live in the footer. */}
-      <CockpitListFooter paged={paged} noun={t("processInstances.footerNoun")} />
+      <PagedListFooter paged={paged} noun={t("processInstances.footerNoun")} />
     </>
   )
 }

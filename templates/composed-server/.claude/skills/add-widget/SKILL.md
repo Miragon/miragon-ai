@@ -28,12 +28,15 @@ the widget `_meta` contract by name across all composed modules.
 ## Step 1 — the component
 
 Widgets live in `src/widgets/` and receive their payload as a `data` prop.
-Compose them from the shared kit `@miragon-ai/widget-shell/widgets` — never
-re-inline its primitives:
+Compose them from the shared kit `@miragon-ai/widget-shell/widgets` and the
+toolkit `@miragon/mcp-toolkit-ui` — never re-inline their primitives. The
+toolkit's own components, tone maps and `cn` come from the toolkit itself; the
+kit neither forks nor re-exports them:
 
-- `WidgetShell` (container), `WidgetHeader` (title/sub/badge, no icon tile), `Section`
+- `WidgetShell` (container) and `Section` from the kit; `WidgetHeader`
+  (title/sub/badge, no icon tile, `as` for the heading level) from the toolkit
 - Tables: `Th`/`Td`/`TableEmptyState` (rows stay hand-composed `<tr>` + `Td`);
-  KPI strips: `KpiGrid`
+  KPI strips: the toolkit's `KpiGrid`
 - Self-fetch fallback: `QueryFallback` + `TableSkeleton` — a missing `isError`
   branch means an eternal skeleton
 - Formatting: `formatTimestamp`/`formatDate`/`formatTime` for dates,
@@ -41,16 +44,16 @@ re-inline its primitives:
   `formatDuration`/`truncate` for the rest, all in the view's locale; no
   local helpers, no `Intl.DateTimeFormat`/`toLocaleDateString`/`toFixed` in
   widget code
-- Status: a tone (`danger`/`warning`/`success`/`info`/`neutral`) via
-  `StatusBadge`/`CountPill`/`KpiCell.tone` or the `TONE_*` maps, next to
+- Status: a tone (`danger`/`warning`/`success`/`info`/`neutral`) via the
+  toolkit's `StatusBadge`/`CountPill`/`KpiCell.tone` or its `TONE_*` maps, next to
   readable words; colours come from the role variables (override them in
   `server/src/ui/brand.css`, light and dark, to brand), never palette
   classes or raw colours in widgets
 - Icons: Lucide through the kit's `Icon` (add `lucide-react` to the module's
   dependencies at the exact version `server/package.json` pins), never Unicode
   glyphs or emoji
-- Long paged lists: `usePagedListView` + `ListTable` inside `PagedRows` +
-  `PagedListFooter` (the feed must accept `firstResult`/`maxResults` and return
+- Long paged lists: `usePagedListView` + `ListTable` inside `PagedRows` + the
+  toolkit's `PagedListFooter` (the feed must accept `firstResult`/`maxResults` and return
   an honest total). A new search keeps the previous rows on screen
   (`paged.stale`): read counts and filters from the payload shown, not from
   the request

@@ -10,16 +10,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  cn,
+  TONE_ICON,
 } from "@miragon/mcp-toolkit-ui"
 import { CircleAlert, TrendingDown, TrendingUp } from "lucide-react"
-import {
-  Icon,
-  TONE_ICON,
-  cn,
-  formatDuration,
-  formatNumber,
-  formatPercent,
-} from "@miragon-ai/widget-shell/widgets"
+import { Icon, formatDuration, formatNumber, formatPercent } from "@miragon-ai/widget-shell/widgets"
 import type { CompareKpiDelta, CompareKpis } from "@miragon-ai/analytics-client"
 import { useT, type T } from "../messages/use-t.js"
 

@@ -11,8 +11,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react"
-import { AppQueryProvider, queryClient } from "@miragon/mcp-toolkit-ui"
-import { PagedListFooter } from "./paged-list-footer.js"
+import { AppQueryProvider, PagedListFooter, queryClient } from "@miragon/mcp-toolkit-ui"
 import { usePagedViewData } from "./use-paged-view-data.js"
 
 /**

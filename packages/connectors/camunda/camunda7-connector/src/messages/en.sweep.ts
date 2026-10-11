@@ -325,11 +325,6 @@ export const enSweep: MessageCatalog = {
   "jobPanel.tableLabel": "Jobs",
   "jobPanel.title": "Jobs",
   "jobPanel.totalJobs": "Total jobs",
-  "listFooter.loadMoreError": "Could not load more entries ({message}). Try again.",
-  "listFooter.refreshError":
-    "Could not update the list ({message}). You are seeing the previous result.",
-  "listFooter.refreshing": "Updating…",
-  "listFooter.retryLoadMore": "Try again",
   "procIncTable.footerNoun": "incidents",
   "procIncTable.loading": "Loading incidents…",
   "procIncTable.noIncidents": "No open incidents.",

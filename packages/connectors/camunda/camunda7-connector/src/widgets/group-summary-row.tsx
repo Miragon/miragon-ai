@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
-import { CountPill, Icon, TONE_DOT, cn, type ToneVariant } from "@miragon-ai/widget-shell/widgets"
+import { Icon } from "@miragon-ai/widget-shell/widgets"
 import { ChevronRight, TriangleAlert } from "lucide-react"
+import { cn, CountPill, TONE_DOT, type ToneVariant } from "@miragon/mcp-toolkit-ui"
 
 /** One right-aligned value-over-label stack in a {@link GroupSummaryRow}. */
 export interface GroupSummaryStat {

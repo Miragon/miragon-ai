@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { cn } from "./cn.js"
+import { cn } from "@miragon/mcp-toolkit-ui"
 
 export type { LucideIcon }
 

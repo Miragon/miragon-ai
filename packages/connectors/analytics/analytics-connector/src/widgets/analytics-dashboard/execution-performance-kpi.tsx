@@ -1,11 +1,6 @@
-import {
-  KpiGrid,
-  KpiGridSkeleton,
-  WidgetShell,
-  formatDuration,
-  formatNumber,
-} from "@miragon-ai/widget-shell/widgets"
+import { WidgetShell, formatDuration, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
+import { KpiGrid, KpiGridSkeleton } from "@miragon/mcp-toolkit-ui"
 import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"

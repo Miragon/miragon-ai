@@ -20,9 +20,14 @@ package customers build their own connectors and composed servers on (see the
   always-on generic `shell:kpi-grid` / `shell:data-table` widgets (components in `./widgets`), the
   standard `render-view`/builder composition targets fed via `props.dataKey`. Apps own no domain UI,
   so the catalogue lives here.
-- **Shared UI primitives** (`./widgets`) — common components (`WidgetShell`, tables, formatters,
-  `useApplyTheme`, …) and `with-tool-errors` handling reused across both widget packages. Status
-  is a tone (`TONE_*` maps over the `--<tone>`, `--<tone>-soft` and `--<tone>-ink` roles: a dot,
+- **Shared UI primitives** (`./widgets`) — what the kit adds on top of `@miragon/mcp-toolkit-ui`
+  (`WidgetShell`, tables, `ListTable` + `PagedRows`, the dual-mode data hooks, formatters,
+  hand-offs, the BPMN viewer, `useApplyTheme`, …), reused across both widget packages. The
+  toolkit's own components and helpers (`KpiGrid`, `StatusBadge`/`LivePill`/`CountPill`,
+  `FilterBar`, `WidgetHeader`, `PagedListFooter`, `SectionHeading`, the `TONE_*` maps,
+  `resolveTone`, `MICRO_LABEL`, `cn`, `useDebouncedValue`, …) are imported from the toolkit:
+  the kit neither forks nor re-exports them. Status
+  is a tone (the toolkit's `TONE_*` maps over the `--<tone>`, `--<tone>-soft` and `--<tone>-ink` roles: a dot,
   edge or icon next to black text, black text on a tint, never a coloured number), function
   icons are Lucide via `Icon`, and numbers, percentages, periods and durations render in the
   view's locale (`formatNumber`, `formatPercent`, `formatPercentPoints`, `formatPeriod`,

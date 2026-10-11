@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseToolResult, parseViewToolResult } from "./parse-tool-result.js"
+import { parseToolResult, parseViewToolResult } from "@miragon/mcp-toolkit-ui"
 
 describe("parseToolResult (structuredContent-first contract)", () => {
   it("prefers structuredContent over the text channel", () => {

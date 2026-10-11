@@ -1,13 +1,11 @@
 import {
   HandOffButton,
-  KpiGrid,
-  LivePill,
   ViewDataState,
-  WidgetHeader,
   WidgetShell,
   formatNumber,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
+import { KpiGrid, LivePill, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import type { IncidentsDashboardData } from "../../view-models.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"

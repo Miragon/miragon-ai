@@ -1,11 +1,10 @@
-import { useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { useToolQuery, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import {
   QueryFallback,
   TableEmptyState,
   TableSkeleton,
   Td,
   Th,
-  WidgetHeader,
   WidgetShell,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"

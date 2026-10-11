@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { Alert, AlertDescription, useToolQuery, SectionHeading } from "@miragon/mcp-toolkit-ui"
 import {
   BpmnHeatmap,
   HeatmapLegend,
-  SectionHeading,
   SegmentedControl,
   ViewDataState,
   WidgetShell,

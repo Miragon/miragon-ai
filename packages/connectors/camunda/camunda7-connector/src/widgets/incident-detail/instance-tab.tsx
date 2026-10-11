@@ -1,5 +1,4 @@
-import { Card, CardContent } from "@miragon/mcp-toolkit-ui"
-import { SectionHeading } from "@miragon-ai/widget-shell/widgets"
+import { Card, CardContent, SectionHeading } from "@miragon/mcp-toolkit-ui"
 
 import type { IncidentDetailData } from "../../view-models.js"
 

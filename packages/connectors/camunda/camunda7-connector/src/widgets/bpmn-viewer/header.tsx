@@ -1,6 +1,6 @@
-import { Badge } from "@miragon/mcp-toolkit-ui"
+import { Badge, StatusBadge } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
-import { HandOffButton, StatusBadge, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 

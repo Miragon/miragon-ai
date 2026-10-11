@@ -1,8 +1,8 @@
 import { useLocale } from "@miragon/mcp-toolkit-ui"
 import { ExternalLink } from "lucide-react"
+import { useHostActions } from "@miragon/mcp-toolkit-ui/app"
 import { Icon } from "./icon.js"
 import { kitLabels } from "./kit-labels.js"
-import { useHostActions } from "./use-host-actions.js"
 
 /**
  * The single, consistent "jump to the engine's own web app" affordance (the

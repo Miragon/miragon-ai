@@ -330,12 +330,6 @@ export const deSweep: MessageCatalog = {
   "jobPanel.tableLabel": "Jobs",
   "jobPanel.title": "Jobs",
   "jobPanel.totalJobs": "Jobs gesamt",
-  "listFooter.loadMoreError":
-    "Weitere Einträge konnten nicht geladen werden ({message}). Versuch es noch mal.",
-  "listFooter.refreshError":
-    "Die Liste konnte nicht aktualisiert werden ({message}). Du siehst das vorherige Ergebnis.",
-  "listFooter.refreshing": "Wird aktualisiert…",
-  "listFooter.retryLoadMore": "Erneut versuchen",
   "procIncTable.footerNoun": "Incidents",
   "procIncTable.loading": "Incidents werden geladen…",
   "procIncTable.noIncidents": "Keine offenen Incidents.",

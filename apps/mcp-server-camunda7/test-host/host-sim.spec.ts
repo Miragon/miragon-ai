@@ -769,13 +769,15 @@ test.describe("kit foundation (camunda7_show_job_panel)", () => {
     await expect(blocked).toBeVisible()
     const card = await blocked.evaluate((el) => {
       const style = getComputedStyle(el)
-      const digits = getComputedStyle(el.querySelector(".text-2xl")!)
+      // The toolkit's KpiGrid (2.8): the figure on the type scale's title step.
+      const digits = getComputedStyle(el.querySelector(".text-title")!)
       const page = getComputedStyle(document.body)
       return {
         edge: style.borderTopColor,
         tint: style.backgroundColor,
         pageBackground: page.backgroundColor,
         digits: digits.color,
+        digitSize: digits.fontSize,
         foreground: page.color,
       }
     })
@@ -783,6 +785,7 @@ test.describe("kit foundation (camunda7_show_job_panel)", () => {
     expect(card.edge).not.toBe(card.foreground)
     expect(card.tint, "the state is the card's tint").not.toBe(card.pageBackground)
     expect(card.digits, "a KPI number stays neutral").toBe(card.foreground)
+    expect(card.digitSize, "a KPI figure is the CI page-title size").toBe("28px")
   })
 })
 

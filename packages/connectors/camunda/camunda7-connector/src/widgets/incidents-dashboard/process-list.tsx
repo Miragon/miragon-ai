@@ -1,5 +1,13 @@
 import { useMemo, useState } from "react"
 
+import {
+  DrillButton,
+  FilterBar,
+  GroupCard,
+  SectionHeading,
+  type FilterChip,
+  type ToneVariant,
+} from "@miragon/mcp-toolkit-ui"
 import type {
   IncidentsDashboardActivity,
   IncidentsDashboardData,
@@ -17,18 +25,12 @@ import { dashboardScope, incidentsFeed } from "./scope.js"
 
 import {
   HandOffButton,
-  DrillButton,
-  FilterBar,
-  GroupCard,
   OpenInCockpitLink,
-  SectionHeading,
   TableEmptyState,
   ViewDataState,
   WidgetShell,
   formatNumber,
   formatTimestamp,
-  type FilterChip,
-  type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 
 const TYPE_ALL = "all"

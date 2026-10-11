@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { cn } from "./cn.js"
+import { cn } from "@miragon/mcp-toolkit-ui"
 import { Th } from "./table.js"
 
 export interface ListTableColumn {

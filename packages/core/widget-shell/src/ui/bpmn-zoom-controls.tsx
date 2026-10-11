@@ -1,6 +1,5 @@
-import { useLocale } from "@miragon/mcp-toolkit-ui"
+import { cn, useLocale } from "@miragon/mcp-toolkit-ui"
 import { Scan, ZoomIn, ZoomOut } from "lucide-react"
-import { cn } from "./cn.js"
 import { Icon } from "./icon.js"
 import { kitLabels } from "./kit-labels.js"
 

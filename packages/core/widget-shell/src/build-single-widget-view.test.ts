@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
+import { parseViewToolResult } from "@miragon/mcp-toolkit-ui"
 import { buildComposedView, buildSingleWidgetView } from "./server.js"
-import { parseViewToolResult } from "./ui/parse-tool-result.js"
 
 /**
  * The structuredContent shape produced here is an implicit contract with the

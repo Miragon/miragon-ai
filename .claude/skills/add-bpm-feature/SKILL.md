@@ -179,8 +179,9 @@ Only when you created a new `src/tools/<domain>.ts`: add
 ## Step 4 — widget path (only for UI features)
 
 Widget components live in `packages/connectors/camunda/camunda7-connector/src/widgets/` and receive their data as
-a `data` prop. Compose them from the shared kit `@miragon-ai/widget-shell/widgets` —
-never re-inline these primitives:
+a `data` prop. Compose them from the shared kit `@miragon-ai/widget-shell/widgets` and the
+toolkit `@miragon/mcp-toolkit-ui` (its components, tone maps and `cn` come from the toolkit
+itself; widget-shell neither forks nor re-exports them) — never re-inline these primitives:
 
 - `ViewDataState` — the loading/error/no-data guard (no inline Alert/loading ternary)
 - Self-fetching widgets: skeleton + error via `QueryFallback` (+ `TableSkeleton`) — a
@@ -190,14 +191,17 @@ never re-inline these primitives:
   helpers, no `toFixed`, no `toLocaleString()` without a locale, no hand-built
   `Intl.NumberFormat` (canonical duration style
   "3m 7s" / German "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage")
-- `Section` (collapsibles); `Th`/`Td`/`TableEmptyState` (tables); `WidgetHeader`
-  (`badge`/`titleSuffix`/`size="detail"`, no icon tile) + `VersionChip` (hero/detail
-  headers); `KpiGrid` (KPI strips, incl. `variant="soft"`); `WidgetShell` (page
-  container, split into View + Shell only when the body is embedded elsewhere)
+- `Section` (collapsibles); `Th`/`Td`/`TableEmptyState` (tables); the toolkit's
+  `WidgetHeader` (`badge`/`titleSuffix`/`size="detail"`/`as`, no icon tile) + `VersionChip`
+  (hero/detail headers); the toolkit's `KpiGrid` (KPI strips, incl. `variant="soft"`; a
+  clickable cell says what the click does in `actionHint`, never `ariaLabel`);
+  `WidgetShell` (page container, split into View + Shell only when the body is embedded
+  elsewhere)
 - Status: a `ToneVariant` (`danger`/`warning`/`success`/`info`/`neutral`; open incident or
   failed job without retries = `danger`, retries left or degraded = `warning`) shown via
-  `StatusBadge`/`CountPill`/`KpiCell.tone` or the `TONE_DOT`/`TONE_BORDER`/`TONE_ICON`/
-  `TONE_TINT`/`TONE_SOFT`/`TONE_INK` maps, next to readable words; never a coloured
+  the toolkit's `StatusBadge` (tone and words required)/`CountPill`/`KpiCell.tone` or its
+  `TONE_DOT`/`TONE_BORDER`/`TONE_ICON`/`TONE_TINT`/`TONE_SOFT`/`TONE_INK` maps (a tone
+  from the wire through `resolveTone`), next to readable words; never a coloured
   number, never a palette class or raw colour; text on a tint is black (`TONE_SOFT`), the
   `-ink` role is only for text in a tone directly on the card or page (an inline error)
 - Icons: Lucide via `Icon` (`import { FileSearch } from "lucide-react"`; the package pins
@@ -232,10 +236,11 @@ never re-inline these primitives:
    `filtersActive` + the `args`) → `FilterBar` → `PagedRows` (marks the rows while they
    are the previous result) around `ListTable` (frame + `Th` header row;
    rows stay hand-composed `<tr>` + `Td`) or a `RowCard` stack → `TableEmptyState`
-   (distinguish "no match" when `interacted`) → `CockpitListFooter`
-   (`src/widgets/list-footer.tsx` — the stale page-0 error and the load-more error,
-   each with its own retry, + "Showing X of Y" + Load more; deliberately not infinite
-   scroll; rendered under an empty result too). Guard the whole view on
+   (distinguish "no match" when `interacted`) → the toolkit's `PagedListFooter`
+   (`paged` as is, `noun` from the catalog — the stale page-0 error and the load-more
+   error, each with its own retry and the raw reason under Details, + "Showing X of Y" in
+   the list's one live region + Load more; deliberately not infinite scroll; rendered
+   under an empty result too). Guard the whole view on
    `!paged.firstPage` only: a search keeps the previous rows (and the search box)
    mounted while its page 0 is in flight. While it does, `paged.stale` is true and
    `firstPage`/`total` are the PREVIOUS result's — a header count, the filters it

@@ -1,12 +1,10 @@
 import { Fragment, useState } from "react"
-import { Button } from "@miragon/mcp-toolkit-ui"
+import { Button, DrillButton, StatusBadge, PagedListFooter } from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
-  DrillButton,
   ListTable,
   LogText,
   OpenInCockpitLink,
-  StatusBadge,
   Td,
   ViewDataState,
   formatNumber,
@@ -18,7 +16,6 @@ import {
 
 import type { ActivityIncidentsData, IncidentInstance } from "../../view-models.js"
 import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
-import { CockpitListFooter } from "../list-footer.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 import { EngineActionDialog } from "../lib/engine-action-dialog.js"
@@ -273,7 +270,7 @@ export function PagedIncidentTable({
         />
       )}
       <div className="bg-muted px-3 pb-1">
-        <CockpitListFooter paged={paged} noun={t("procIncTable.footerNoun")} />
+        <PagedListFooter paged={paged} noun={t("procIncTable.footerNoun")} />
       </div>
       {/* The per-row button only requests the resolve; the actual
           camunda7_resolve_incident call runs after this confirmation. The

@@ -201,8 +201,14 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    keys, never a silently stripped filter (`test/strict-input.e2e.test.ts` in the app).
    Parameter names follow the guide in the add-bpm-feature skill.
 
-6. **Widgets compose from the shared kit (`@miragon-ai/widget-shell/widgets`) — never
-   re-inline its primitives.** `ViewDataState` for the loading/error/no-data guard;
+6. **Widgets compose from the shared kit (`@miragon-ai/widget-shell/widgets`) and the
+   toolkit (`@miragon/mcp-toolkit-ui`) — never re-inline their primitives.** ONE kit: the
+   toolkit's components (`KpiGrid`/`KpiGridSkeleton`, `StatusBadge`/`LivePill`/`CountPill`,
+   `FilterBar`, `WidgetHeader` with `as`, `SectionHeading`, `GroupCard`, `DrillButton`,
+   `ListFooter`, `PagedListFooter`), its tone model (`TONE_*`, `resolveTone`, `MICRO_LABEL`)
+   and its `cn` (tailwind-merge that knows the type scale) are imported from the toolkit;
+   widget-shell exports only what it adds, never a fork or a re-export of the toolkit's.
+   `ViewDataState` for the loading/error/no-data guard;
    `QueryFallback` + `TableSkeleton` for self-fetching widgets (a missing `isError`
    branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime` for dates
    and `formatNumber`/`formatPercent`/`formatPercentPoints`/`formatPeriod`/`formatDuration`/
@@ -221,8 +227,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `ViewMeta` (`formatLookback`, `formatViewMeta`) for the quiet reference line under a data
    view's title, "Letzte 7 Tage · 6 Engines (3 ohne Metriken) · Stand 14:32", every part left
    out when unknown;
-   `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
-   `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
+   `Section`, `Th`/`Td`/`TableEmptyState`, the toolkit's `WidgetHeader` + `VersionChip`, its
+   `KpiGrid`, `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
    settings sections; `useBpmnViewer` (it owns the fixed light canvas, both themes) +
    `BpmnZoomControls` for BPMN, with highlight/legend colors from `HIGHLIGHT_COLORS`
    (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`). Paged lists compose
@@ -230,29 +236,32 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `firstResult`/`maxResults` and return an honest total; a new page 0 keeps the
    previous rows mounted until it lands — `paged.stale`, so counts, filters and
    model contexts read the payload ON SCREEN, never the request) + `ListTable` (the table
-   frame; rows stay hand-composed `<tr>` + `Td`) inside `PagedRows` (marks stale rows) + `PagedListFooter` (a page-0
-   failure over rows on screen and a load-more failure, each with its own retry; in
-   camunda7 via the i18n-bound `CockpitListFooter`, `src/widgets/list-footer.tsx`,
-   rendered under an empty result too). Optimistic
+   frame; rows stay hand-composed `<tr>` + `Td`) inside `PagedRows` (marks stale rows) + the toolkit's
+   `PagedListFooter` (a page-0 failure over rows on screen and a load-more failure, each an
+   inline `ErrorState` with its own retry and the raw reason under Details; its count line
+   is the list's ONE polite live region, kept mounted at zero rows; its words are the
+   toolkit's en/de catalog; rendered under an empty result too). Optimistic
    local state (resolved marks, variable shadows, form baselines) is dropped with
    `useResetOnChange(data, reset)` — React's render-phase "adjust state when a prop
    changes"; `useEffect(reset, [data])` is the shape `react-hooks/set-state-in-effect`
    rejects, and it commits the stale shadow once before correcting it. Refs are never
    written during render (`react-hooks/refs`): a discarded render still mutates them,
    so anything a guard reads belongs in state — see `usePagedViewData`'s generation.
-   **A status is a tone, never a coloured word** (`widget-shell/src/ui/tone-utils.ts`, see
+   **A status is a tone, never a coloured word** (the toolkit's `TONE_*` maps, see
    "Design-System"): `ToneVariant` is `danger | warning | success | info | neutral`. There is
-   no `critical`: an open incident or a failed job without retries is `danger`, a failed job
+   no `critical` (a retired name from the wire resolves through `resolveTone`): an open incident or a failed job without retries is `danger`, a failed job
    with retries left or a degraded engine is `warning`, a count without a state is `neutral`.
    Each tone has three roles, theme variables of the toolkit's Miragon theme
    (`@miragon/mcp-toolkit-ui/theme.css`, light + dark): `--<tone>` is the fill, dot, edge or icon
    (`TONE_DOT`, `TONE_BORDER`, `TONE_ICON`), `--<tone>-soft` the tint (`TONE_TINT`, or
    `TONE_SOFT` = tint + black text, paired with `TONE_BORDER`) and `--<tone>-ink` the text of
    a tone directly on the card or page (`TONE_INK`, an inline error line; never on a tint,
-   never a number). Numbers stay neutral: `StatusBadge`/`CountPill`/`LivePill` put black text
-   on the tint with the edge and dot in the tone, `KpiGrid` shows a cell's `tone` as a dot
-   next to the label (strip) or as tint + edge (soft) and its trend as a Lucide direction icon
-   or dot beside neutral words, never as a coloured digit, and `PagedRows` marks stale rows
+   never a number). Numbers stay neutral: `StatusBadge` (tone and words required)/`CountPill`/
+   `LivePill` put black text on the tint with the edge and dot in the tone, `KpiGrid` shows a
+   cell's `tone` as a dot next to the label (strip) or as tint + edge (soft) and its trend as a
+   Lucide direction icon or dot beside neutral words, never as a coloured digit; a clickable
+   cell is named by its visible label and value and says what the click does in
+   `actionHint` (WCAG 2.5.3, never `ariaLabel`), and `PagedRows` marks stale rows
    with a bar instead of dimming them. A selection (`FilterBar` chip, `SegmentedControl`) is
    the info tint and contour around black text. Components use role names only
    (`text-danger-ink`, `bg-info-soft`, `text-link`, `ring-focus` …), never Tailwind palette

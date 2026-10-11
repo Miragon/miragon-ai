@@ -1,8 +1,6 @@
-import { Badge } from "@miragon/mcp-toolkit-ui"
+import { Badge, DrillButton, FilterBar, PagedListFooter } from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
-  DrillButton,
-  FilterBar,
   PagedRows,
   QueryFallback,
   TableSkeleton,
@@ -15,7 +13,6 @@ import { useHandOff, type HandOff } from "./lib/hand-off.js"
 import { useT } from "../messages/use-t.js"
 import type { ProcessDefinition, ProcessListData } from "../view-models.js"
 import { CAMUNDA7_PROCESS_LIST_DATA } from "../tool-names.js"
-import { CockpitListFooter } from "./list-footer.js"
 import {
   ProcessDefinitionsTableView,
   type ProcessDefinitionsTableRow,
@@ -219,7 +216,7 @@ export function ProcessListWidget({
           )}
         />
       </PagedRows>
-      <CockpitListFooter paged={paged} noun={t("processList.footerNoun")} />
+      <PagedListFooter paged={paged} noun={t("processList.footerNoun")} />
     </WidgetShell>
   )
 }
