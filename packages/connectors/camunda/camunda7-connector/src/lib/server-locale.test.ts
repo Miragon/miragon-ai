@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
-import { localizeFor, localizeViewFor, resolveLocale } from "./server-locale.js"
+import { localizeFor, localizeViewFor, resolveLocale, viewLocaleOf } from "./server-locale.js"
 
 /** A signed-in caller's handler ctx — whose record the lookup reads. */
 const CTX = { auth: { user: { id: "user-1" } } }
@@ -68,6 +68,15 @@ describe("localizeViewFor", () => {
     const { t, title } = await localizeViewFor(store, CTX)
     expect(title("viewTitle.processList")).toBeUndefined()
     expect(t("profile.heading")).toBe("Profile & settings")
+  })
+
+  it("a language already read titles the same way (the settings view's own record)", () => {
+    expect(viewLocaleOf("de").title("viewTitle.userProfile")).toBe("Profil & Einstellungen")
+    expect(viewLocaleOf("en").title("viewTitle.userProfile")).toBe("Profile & settings")
+    for (const language of ["system", undefined, "fr"]) {
+      expect(viewLocaleOf(language).title("viewTitle.userProfile")).toBeUndefined()
+      expect(viewLocaleOf(language).t("viewTitle.userProfile")).toBe("Profile & settings")
+    }
   })
 
   it("no store, no caller or a store outage reads as the host's locale: no title", async () => {

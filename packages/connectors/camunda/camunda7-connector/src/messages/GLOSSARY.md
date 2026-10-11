@@ -2,7 +2,8 @@
 
 Ein Begriff pro Sache, in jeder Ansicht gleich. Gilt für die Kataloge in diesem Ordner
 (`en*.ts`, `de*.ts`): Widget-Texte, Ask-AI-Übergaben und Server-Zusammenfassungen.
-`glossary.test.ts` prüft die verbotenen Synonyme, `catalog-text.test.ts` die Regeln aus
+`glossary.test.ts` prüft die verbotenen Synonyme (in jeder Flexion, jede Regel mit einer Probe,
+die sie fangen muss), `catalog-text.test.ts` die Regeln aus
 brand-tone (du, AI, „CIB seven“, kein Gedankenstrich als Verbinder, Plural nach
 der Zahl). Neue Begriffe kommen erst hier hinein, dann in den Test, dann in den Katalog.
 
@@ -15,6 +16,7 @@ der Zahl). Neue Begriffe kommen erst hier hinein, dann in den Test, dann in den 
 | Ausgesetzte Instanz fortsetzen                  | aktivieren                                                           | fortsetzen                      | activate                                      | resume                |
 | Zustand einer Instanz                           | läuft (Zustand), laufend (bei Zahlen)                                | aktiv                           | running                                       | active                |
 | Zustand einer Definition                        | aktiv, ausgesetzt                                                    | –                               | active, suspended                             | –                     |
+| BPMN-Modell auf die Engine bringen              | bereitstellen, bereitgestellt (das Ergebnis heißt Deployment)        | deployen, deployst, deployt     | deploy, deployed                              | –                     |
 | Business Key                                    | Geschäftsschlüssel                                                   | GK, Business Key                | business key                                  | BK                    |
 | Retries eines Jobs                              | Versuche („Noch 2 Versuche“, „Keine Versuche mehr“)                  | Wiederholungen                  | retries                                       | –                     |
 | Job neu ausführen lassen                        | neu versuchen, Ergebnis „Neu eingeplant“                             | wiederholen, „Wiederholt“       | retry, result „Retry scheduled“               | –                     |
@@ -45,7 +47,9 @@ Die übrigen Funktionen (Verlauf, Dauer, Variablen, Diagramm, Zustand, Fehler un
 ## Texte
 
 - Fehlermeldungen sagen, was passiert ist, und was du tun kannst: „Der Job konnte nicht neu
-  eingeplant werden (…). Prüf die Fehlermeldung und versuch es noch mal.“
+  eingeplant werden (…). Prüf die Fehlermeldung und versuch es noch mal.“ Steht der erste Teil
+  als Titel über einer Meldung (`QueryFallback`, `BpmnHeatmap`), kommt der zweite als
+  `errorHint` darunter; der Titel hat nur eine Zeile.
 - Booleans heißen „Ja“ und „Nein“ („Yes“ und „No“), nie `true`/`false`.
 - Zahlen kommen formatiert in den Katalog (`formatNumber` im Widget); der Plural hängt an der
   Zahl (`countOf` in `plural.ts`), nie an zwei Schlüsseln `…One`/`…Other`.

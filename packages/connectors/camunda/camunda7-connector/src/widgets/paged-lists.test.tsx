@@ -395,3 +395,30 @@ describe("the instance list states what is ON SCREEN while a filter is pending o
     await screen.findByText("No instances match the filter.")
   })
 })
+
+describe("a failed first load says what happened, why, and what you can do", () => {
+  const engineDown = () => {
+    throw new Error("connect ECONNREFUSED")
+  }
+
+  it.each([
+    [
+      "process list",
+      () => <ProcessListWidget data={null} engine="prod-a" />,
+      CAMUNDA7_PROCESS_LIST_DATA,
+      "Could not load the process definitions",
+    ],
+    [
+      "process instances",
+      () => <ProcessInstancesWidget data={null} engine="prod-a" />,
+      CAMUNDA7_PROCESS_INSTANCES_DATA,
+      "Could not load the process instances",
+    ],
+  ])("%s", async (_name, Widget, feed, title) => {
+    host(Widget, { [feed]: engineDown })
+    const alert = await screen.findByRole("alert")
+    expect(alert.textContent).toBe(
+      `${title}connect ECONNREFUSEDCheck that the engine is reachable, then open the view again.`,
+    )
+  })
+})

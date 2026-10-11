@@ -287,6 +287,7 @@ export function ProcessInstancesView({
         isError={!!paged.error}
         error={paged.error}
         errorTitle={t("processInstances.loadError")}
+        errorHint={t("viewState.loadErrorHint")}
         skeleton={<TableSkeleton />}
       />
     )

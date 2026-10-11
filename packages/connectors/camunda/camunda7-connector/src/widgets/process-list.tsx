@@ -141,6 +141,7 @@ export function ProcessListWidget({
           isError={!!paged.error}
           error={paged.error}
           errorTitle={t("processList.loadError")}
+          errorHint={t("viewState.loadErrorHint")}
           skeleton={<TableSkeleton />}
         />
       </WidgetShell>

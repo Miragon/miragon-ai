@@ -89,7 +89,8 @@ export const de: MessageCatalog = {
     "Diese Engine nutzen die Tools und das Cockpit, wenn du keine andere wählst.",
   "profile.engine.auto": "(automatisch)",
 
-  "profile.dashboards.unavailable": "Gespeicherte Dashboards sind nicht verfügbar.",
+  "profile.dashboards.unavailable":
+    "Gespeicherte Dashboards sind nicht verfügbar. Dafür braucht der Server eine Anmeldung und muss Änderungen erlauben. Bitte deine Administration, das einzurichten.",
   "profile.dashboards.empty":
     "Noch keine Dashboards gespeichert. Lass dir im Chat eins bauen und speichere es.",
   "profile.field.defaultDashboard": "Standard-Dashboard",
@@ -125,6 +126,7 @@ export const de: MessageCatalog = {
   "viewTitle.bpmnViewer": "BPMN-Diagramm",
   "viewTitle.jobPanel": "Jobs",
   "viewTitle.engineHealth": "Engine-Übersicht",
+  "viewTitle.userProfile": "Profil & Einstellungen",
   "viewTitle.clusterDetail": ({ activity }) => `Cluster: ${String(activity)}`,
 
   // ── Modellseitige Widget-Tool-Zusammenfassungen (c7sum.*) ────────────────────

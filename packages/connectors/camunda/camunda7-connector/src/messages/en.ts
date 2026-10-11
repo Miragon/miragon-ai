@@ -89,7 +89,8 @@ export const en: MessageCatalog = {
     "Tools and the cockpit use this engine when you pick no other.",
   "profile.engine.auto": "(auto)",
 
-  "profile.dashboards.unavailable": "Saved dashboards are unavailable.",
+  "profile.dashboards.unavailable":
+    "Saved dashboards are unavailable. They need a login and a server that allows changes. Ask your administrator to set this up.",
   "profile.dashboards.empty": "No saved dashboards yet. Have the chat build one and save it.",
   "profile.field.defaultDashboard": "Default dashboard",
   "profile.field.defaultDashboard.help": "The AI suggests this dashboard first (load-dashboard).",
@@ -125,6 +126,7 @@ export const en: MessageCatalog = {
   "viewTitle.bpmnViewer": "BPMN diagram",
   "viewTitle.jobPanel": "Jobs",
   "viewTitle.engineHealth": "Engine overview",
+  "viewTitle.userProfile": "Profile & settings",
   "viewTitle.clusterDetail": ({ activity }) => `Cluster: ${String(activity)}`,
 
   // ── Model-facing widget-tool summaries (c7sum.*) ─────────────────────────────
@@ -138,7 +140,7 @@ export const en: MessageCatalog = {
   "c7sum.state.suspended": "suspended",
   "c7sum.state.ended": "ended",
   "c7sum.instanceDetail":
-    "Process instance {instanceId}{businessKey}: {state}; active activities: {activeActivities}, open incidents: {openIncidents}, open user tasks: {openTasks}.",
+    "Process instance {instanceId}{businessKey}: {state}; running activities: {activeActivities}, open incidents: {openIncidents}, open user tasks: {openTasks}.",
   "c7sum.processInstances":
     '{totalCount} running instance(s) of "{processDefinitionKey}", of them {withIncidentCount} with incidents and {suspendedCount} suspended; showing {returnedCount} in the table.',
   "c7sum.incidentsDashboard":
@@ -170,7 +172,7 @@ export const en: MessageCatalog = {
   "c7sum.bpmnViewer.targetInstance": "process instance {processInstanceId}",
   "c7sum.bpmnViewer.targetDefinition": "process definition {definitionId}",
   "c7sum.bpmnViewer.overlays":
-    "; active activities: {activeActivities}, activities with incidents: {incidentActivities}, failed jobs of this instance: {failedJobs}",
+    "; running activities: {activeActivities}, activities with incidents: {incidentActivities}, failed jobs of this instance: {failedJobs}",
   "c7sum.bpmnViewer.noOverlays":
     " (no instance overlays; the badges count all running instances of this version)",
   "c7sum.bpmnViewer.xmlUnavailable": "; diagram XML unavailable",

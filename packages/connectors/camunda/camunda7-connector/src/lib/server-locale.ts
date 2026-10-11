@@ -43,12 +43,22 @@ export interface ViewLocale {
 }
 
 /**
+ * The {@link ViewLocale} of a profile language the caller already holds (the
+ * settings view reads the whole record anyway): the one title rule for every
+ * show tool, whether it read the profile itself or through
+ * {@link localizeViewFor}.
+ */
+export function viewLocaleOf(language: string | undefined): ViewLocale {
+  const named = explicitLocale(language)
+  const t: ServerT = (key, params) => translator(named ?? "en", key, params)
+  return { t, title: (key, params) => (named ? t(key, params) : undefined) }
+}
+
+/**
  * {@link localizeFor} plus the view title, from ONE profile read. Fail-soft
  * like it: no store, no caller or a store outage reads as "system".
  */
 export async function localizeViewFor(store?: ProfileSource, ctx?: unknown): Promise<ViewLocale> {
   const record = store ? await readProfileAdvisory(store, resolveProfileKey(ctx)) : undefined
-  const named = explicitLocale(record?.language)
-  const t: ServerT = (key, params) => translator(named ?? "en", key, params)
-  return { t, title: (key, params) => (named ? t(key, params) : undefined) }
+  return viewLocaleOf(record?.language)
 }

@@ -390,12 +390,13 @@ export const enSweep: MessageCatalog = {
   "procIncFlow.heatmapCaptionDuration": "Avg duration per element · 30 days",
   "procIncFlow.heatmapCaptionFrequency": "Executions per element · 30 days",
   "procIncFlow.heatmapDiagramAria": "BPMN process diagram with an execution heat overlay",
+  "procIncFlow.heatmapErrorHint": "Open the model in your modeler and check it.",
   "procIncFlow.heatmapErrorTitle": "The diagram could not be rendered",
   "procIncFlow.heatmapLoading": "Loading heatmap…",
   "procIncFlow.heatmapNoDiagram": "No diagram available for the heatmap.",
   "procIncFlow.heatmapNoValues": "No metrics for this engine in this period.",
   "procIncFlow.heatmapUnavailable":
-    "Could not load the heatmap. Check that the analytics module is active.",
+    "Could not load the heatmap. Check that the analytics module is enabled.",
   "procIncFlow.hint": ({ count }) => `${countOf(count, "activity", "activities")} failing`,
   "procIncFlow.hintOfTotal": ({ count, total }) =>
     `${String(count)} of ${countOf(total, "activity", "activities")} failing`,
@@ -481,6 +482,9 @@ export const enSweep: MessageCatalog = {
   "value.yes": "Yes",
   "viewState.refreshError":
     "Could not refresh this view ({message}). You are seeing the last loaded state.",
+  // The second part under a load-error title (QueryFallback): what you can
+  // do. The title says what could not be loaded.
+  "viewState.loadErrorHint": "Check that the engine is reachable, then open the view again.",
   "viewState.retry": "Try again",
   "viewState.unknownError": "unknown error",
 }

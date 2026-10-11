@@ -58,7 +58,7 @@ export const deSweep: MessageCatalog = {
   "cockpitDefs.colVersion": "Version",
   "cockpitDefs.deployedHint": "{count} bereitgestellt · Zahlen über alle Versionen",
   "cockpitDefs.emptyState":
-    "Noch kein Prozess bereitgestellt. Sobald du ein BPMN-Modell deployst, steht es hier.",
+    "Noch kein Prozess bereitgestellt. Sobald du ein BPMN-Modell bereitstellst, steht es hier.",
   "cockpitDefs.footerNoun": "Prozesse",
   "cockpitDefs.heading": "Alle Prozesse",
   "cockpitDefs.instancesAction": "Instanzen",
@@ -378,7 +378,7 @@ export const deSweep: MessageCatalog = {
   "processList.colStatus": "Status",
   "processList.deployedCount": "{count} bereitgestellt",
   "processList.emptyState":
-    "Noch kein Prozess bereitgestellt. Sobald du ein BPMN-Modell deployst, steht es hier.",
+    "Noch kein Prozess bereitgestellt. Sobald du ein BPMN-Modell bereitstellst, steht es hier.",
   "processList.footerNoun": "Definitionen",
   "processList.heading": "Prozessdefinitionen",
   "processList.loadError": "Die Prozessdefinitionen konnten nicht geladen werden",
@@ -396,6 +396,7 @@ export const deSweep: MessageCatalog = {
   "procIncFlow.heatmapCaptionDuration": "Ø Dauer je Element · 30 Tage",
   "procIncFlow.heatmapCaptionFrequency": "Ausführungen je Element · 30 Tage",
   "procIncFlow.heatmapDiagramAria": "BPMN-Prozessdiagramm mit Ausführungs-Heatmap",
+  "procIncFlow.heatmapErrorHint": "Öffne das Modell in deinem Modeler und prüf es.",
   "procIncFlow.heatmapErrorTitle": "Das Diagramm ließ sich nicht darstellen",
   "procIncFlow.heatmapLoading": "Heatmap wird geladen…",
   "procIncFlow.heatmapNoDiagram": "Kein Diagramm für die Heatmap verfügbar.",
@@ -491,6 +492,9 @@ export const deSweep: MessageCatalog = {
   "value.yes": "Ja",
   "viewState.refreshError":
     "Die Ansicht konnte nicht aktualisiert werden ({message}). Du siehst den zuletzt geladenen Stand.",
+  // Der zweite Teil unter dem Titel einer Ladefehler-Meldung (QueryFallback):
+  // was du tun kannst. Der Titel sagt, was nicht geladen werden konnte.
+  "viewState.loadErrorHint": "Prüf, ob die Engine erreichbar ist, und öffne die Ansicht noch mal.",
   "viewState.retry": "Erneut versuchen",
   "viewState.unknownError": "unbekannter Fehler",
 }

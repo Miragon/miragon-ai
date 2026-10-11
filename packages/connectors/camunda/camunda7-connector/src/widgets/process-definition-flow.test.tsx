@@ -16,6 +16,21 @@ vi.mock("./bpmn-diagram.js", () => ({
   BpmnDiagram: () => <div data-testid="incident-overlay" />,
 }))
 
+// The heatmap's viewer (the kit's useBpmnViewer) meets a diagram bpmn-js
+// cannot import: the import-error alert is what the last suite reads.
+const viewer = vi.hoisted(() => ({
+  MockViewer: class {
+    importXML(): Promise<never> {
+      return Promise.reject(new Error("unparsable content <bpmn:foo> detected"))
+    }
+    get(): unknown {
+      return { zoom: () => 1 }
+    }
+    destroy() {}
+  },
+}))
+vi.mock("bpmn-js/lib/NavigatedViewer", () => ({ default: viewer.MockViewer }))
+
 /**
  * The definition view leads with the incident overlay on every entry, and
  * the analytics heatmap modes exist only once the analytics module is
@@ -117,7 +132,10 @@ const ENTRIES: Array<[string, Record<string, unknown>]> = [
   ],
 ]
 
-function renderFlow(props: Record<string, unknown>, { analytics }: { analytics: boolean }) {
+function renderFlow(
+  props: Record<string, unknown>,
+  { analytics, bpmnXml = null }: { analytics: boolean; bpmnXml?: string | null },
+) {
   const heatmapCalls: Array<Record<string, unknown>> = []
   const tools: Record<string, unknown> = {
     [CAMUNDA7_PROCESS_INCIDENTS_DATA]: DATA,
@@ -126,7 +144,7 @@ function renderFlow(props: Record<string, unknown>, { analytics }: { analytics: 
     [HEATMAP_FEED]: (args: Record<string, unknown>) => {
       heatmapCalls.push(args)
       if (!analytics) throw new Error(`Tool ${HEATMAP_FEED} not found`)
-      return { bpmnXml: null, frequency: {}, durationSec: {} }
+      return { bpmnXml, frequency: {}, durationSec: {} }
     },
     ...(analytics ? { [ANALYTICS_PROBE]: { settings: {}, canSave: false } } : {}),
   }
@@ -168,5 +186,21 @@ describe.each(ENTRIES)("definition view flow — %s", (_entry, props) => {
     fireEvent.click(frequency)
     await waitFor(() => expect(heatmapCalls).toHaveLength(1))
     expect(heatmapCalls[0]).toMatchObject({ processDefinitionKey: "leasing", engine: "prod-a" })
+  })
+})
+
+describe("definition view flow — a heatmap diagram bpmn-js cannot import", () => {
+  it("says what happened, the parser's cause, and what you can do", async () => {
+    const [, props] = ENTRIES[0]
+    renderFlow(props, { analytics: true, bpmnXml: "<broken/>" })
+    expect(await screen.findByTestId("incident-overlay")).toBeTruthy()
+    fireEvent.click(await within(modeGroup()).findByRole("button", { name: "Frequency" }))
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.textContent).toBe(
+      "The diagram could not be rendered" +
+        "unparsable content <bpmn:foo> detected" +
+        "Open the model in your modeler and check it.",
+    )
   })
 })

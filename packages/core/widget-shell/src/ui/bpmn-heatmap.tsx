@@ -36,8 +36,13 @@ export interface BpmnHeatmapProps {
   diagramRadius?: number
   /** Accessible name for the diagram (localize per module; English fallback). */
   diagramAriaLabel?: string
-  /** Title of the import-error alert (English fallback). */
+  /** Title of the import-error alert (English fallback): what happened, one line. */
   errorTitle?: string
+  /**
+   * Next step under the import error: what the user can do. No fallback, so
+   * a caller without a localized hint shows no English sentence in its view.
+   */
+  errorHint?: string
   /**
    * Shown over the diagram when NO element carries a positive value. Without
    * it an empty result (window with no traffic, or a metrics `engine_id` that
@@ -61,6 +66,7 @@ export function BpmnHeatmap({
   diagramRadius = 55,
   diagramAriaLabel = DEFAULT_HEATMAP_LABELS.diagramAriaLabel,
   errorTitle = DEFAULT_HEATMAP_LABELS.errorTitle,
+  errorHint,
   noHeatLabel = DEFAULT_HEATMAP_LABELS.noHeat,
 }: BpmnHeatmapProps) {
   const heatCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -171,7 +177,10 @@ export function BpmnHeatmap({
       {importError ? (
         <Alert className="absolute inset-x-3 top-3">
           <AlertTitle>{errorTitle}</AlertTitle>
-          <AlertDescription>{importError}</AlertDescription>
+          <AlertDescription>
+            <p>{importError}</p>
+            {errorHint ? <p>{errorHint}</p> : null}
+          </AlertDescription>
         </Alert>
       ) : (
         <>

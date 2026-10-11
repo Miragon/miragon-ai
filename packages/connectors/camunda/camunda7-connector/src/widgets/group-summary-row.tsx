@@ -22,7 +22,7 @@ export function IncidentGroupIcon({ tone = "danger" }: { tone?: ToneVariant }) {
         tone === "danger" ? "bg-danger-soft text-danger-ink" : "bg-muted text-muted-foreground",
       )}
     >
-      <Icon icon={TriangleAlert} size={14} dense />
+      <Icon icon={TriangleAlert} dense />
     </div>
   )
 }
