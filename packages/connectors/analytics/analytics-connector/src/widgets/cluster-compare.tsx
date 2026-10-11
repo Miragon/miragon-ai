@@ -1,6 +1,6 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import { Scale } from "lucide-react"
-import type { ClusterCompareResult } from "@miragon-ai/analytics-client"
+import type { ClusterCompareKpi, ClusterCompareResult } from "@miragon-ai/analytics-client"
 import {
   AskAiButton,
   ViewMeta,
@@ -47,16 +47,40 @@ export function clusterCompareHandOff(data: ClusterCompareResult): HandOff {
   }
 }
 
+const MINUTE = 60
+const HOUR = 60 * MINUTE
+const DAY = 24 * HOUR
+
+type MeasuredWindow = Pick<ClusterCompareKpi, "window_from" | "window_to" | "window_days">
+
 /**
- * A measured window length in words: whole days and tenths ("7 Tage",
- * "1,5 days"), under a day in hours, so a window cut short at now reads
- * "2 Stunden", not "0,1 Tage".
+ * A measured window's length in seconds, from its exact bounds. `window_days`
+ * is rounded to 0.01 d (about 14 minutes), too coarse for a window cut short
+ * at now; it stands in only when the bounds do not parse.
  */
-export function windowLength(t: T, days: number): string {
-  if (days < 1) {
-    return t("aCommon.hours", { count: formatNumber(Math.max(1, Math.round(days * 24))) })
+function measuredSeconds(measured: MeasuredWindow) {
+  const seconds = (Date.parse(measured.window_to) - Date.parse(measured.window_from)) / 1000
+  return Number.isFinite(seconds) ? seconds : measured.window_days * DAY
+}
+
+/**
+ * A measured window's length in words, in the largest unit it fills: days
+ * and tenths ("7 Tage", "1.5 days"), else whole hours, else whole minutes,
+ * else "unter 1 Minute". A window cut short at now reads "2 Stunden" or
+ * "10 Minuten", never "0,1 Tage" and never a minute window as "1 Stunde".
+ */
+export function windowLength(t: T, measured: MeasuredWindow): string {
+  const seconds = measuredSeconds(measured)
+  if (seconds >= DAY) {
+    return t("aCommon.days", { count: formatNumber(seconds / DAY, { maximumFractionDigits: 1 }) })
   }
-  return t("aCommon.days", { count: formatNumber(days, { maximumFractionDigits: 1 }) })
+  if (seconds >= HOUR) {
+    return t("aCommon.hours", { count: formatNumber(Math.round(seconds / HOUR)) })
+  }
+  if (seconds >= MINUTE) {
+    return t("aCommon.minutes", { count: formatNumber(Math.round(seconds / MINUTE)) })
+  }
+  return t("aCommon.underOneMinute")
 }
 
 export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
@@ -91,8 +115,8 @@ export function ClusterCompareWidget({ data }: { data: ClusterCompareData }) {
       meta={
         <ViewMeta
           period={t("aClusterCompare.period", {
-            before: windowLength(t, data.windowDays.before),
-            after: windowLength(t, data.windowDays.after),
+            before: windowLength(t, before),
+            after: windowLength(t, after),
           })}
           engines={enginesMeta(data.engines)}
           asOf={data.asOf}

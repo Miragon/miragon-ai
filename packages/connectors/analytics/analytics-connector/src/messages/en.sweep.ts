@@ -42,6 +42,8 @@ export const enSweep: MessageCatalog = {
   "aCommon.days": plural("count", "1 day", "{count} days"),
   "aCommon.hours": plural("count", "1 hour", "{count} hours"),
   "aCommon.loadError": "Could not load the figures. Refresh the view or ask in the chat again.",
+  "aCommon.minutes": plural("count", "1 minute", "{count} minutes"),
+  "aCommon.underOneMinute": "under 1 minute",
   "aComparison.askLabel": "Assess in chat",
   "aComparison.deltaBetter": "better",
   "aComparison.deltaColumnHeader": "Change",
@@ -101,7 +103,7 @@ export const enSweep: MessageCatalog = {
   "aFailureRate.analyzeLabel": "Find the cause in chat",
   "aFailureRate.colAi": "Chat hand-off",
   "aFailureRate.colDeadJobs": "Jobs without retries",
-  "aFailureRate.colIncidentRate": "Incidents per 100 running",
+  "aFailureRate.colIncidentRate": "Incidents per 100 running instances",
   "aFailureRate.colOpenIncidents": "Open incidents",
   "aFailureRate.colProcess": "Process",
   "aFailureRate.colRunningNow": "Running now",
@@ -114,8 +116,12 @@ export const enSweep: MessageCatalog = {
   "aFailureSummary.title": "Failure analysis",
   "aFailureSummary.totalIncidents": "Open incidents",
   "aFailureSummary.uniqueErrorPatterns": "Incident groups",
-  "aHeatmap.bpmnUnavailable":
+  "aHeatmap.bpmnNoCamunda7":
     "The diagram is not available here: without the camunda7 module, analytics cannot load BPMN files. Ask in the chat for the figures per activity instead.",
+  "aHeatmap.bpmnNotLoaded":
+    "Could not load the diagram: the first configured engine was unreachable, or the process is not deployed there. Check the engine, or ask in the chat for the figures per activity.",
+  "aHeatmap.bpmnUnavailable":
+    "Could not load the diagram. Ask in the chat for the figures per activity instead.",
   "aHeatmap.diagramAria": "BPMN diagram with the execution heat per element",
   "aHeatmap.duration": "Duration",
   "aHeatmap.durationLegend": "Average duration per element",
@@ -166,6 +172,7 @@ export const enSweep: MessageCatalog = {
   "aLandscape.notDeployed": "not deployed on this engine",
   "aLandscape.sharedBadge": plural("count", "on 1 engine", "on {count} engines"),
   "aSettings.heading": "Analytics settings",
+  "aSettings.loadError": "Could not load the settings. Refresh the view.",
   "aSettings.minBucket": "Minimum size for comparisons",
   "aSettings.minBucket.help":
     "How many instances each side of a comparison needs before it shows a verdict.",

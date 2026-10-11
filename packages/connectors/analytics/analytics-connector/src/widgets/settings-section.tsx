@@ -68,7 +68,7 @@ export function AnalyticsSettingsWidget({
         <QueryFallback
           isError={query.isError}
           error={query.error}
-          errorTitle={t("aCommon.loadError")}
+          errorTitle={t("aSettings.loadError")}
           skeleton={<div className="bg-muted/50 h-24 animate-pulse rounded-md" aria-hidden />}
         />
       </WidgetShell>

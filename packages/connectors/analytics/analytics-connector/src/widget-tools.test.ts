@@ -118,3 +118,60 @@ describe("view titles (U3) and the heatmap's as-of stamp (U7)", () => {
     expect(feed.structuredContent.asOf).toMatch(iso)
   })
 })
+
+/**
+ * The heatmap says WHY it has no diagram only when the server knows it: no
+ * lookup injected (camunda7 not active), or a lookup that failed or found
+ * nothing. The widget picks its text from that and never guesses.
+ */
+describe("the heatmap's missing-diagram cause", () => {
+  type FetchBpmnXml = (key: string) => Promise<string | null>
+  type HeatmapPayload = { bpmnXml: string | null; bpmnMissing?: string }
+
+  /** The diagram fields of the show tool's payload and of the feed's. */
+  async function payloads(fetchBpmnXml?: FetchBpmnXml) {
+    const byName = new Map<string, Handler>()
+    const server = {
+      tool: (definition: { name: string }, handler: Handler) => {
+        byName.set(definition.name, handler)
+      },
+    } as unknown as MCPServer
+    registerWidgetTools(server, recordingClient().client, {
+      engineScope: createEngineScope(["prod-a"]),
+      fetchBpmnXml,
+    })
+    const args = { processDefinitionKey: "order" }
+    const show = (await byName.get("analytics_show_bpmn_heatmap")!(args, {})) as unknown as {
+      structuredContent: { context: { stepData: { result: { data: HeatmapPayload } } } }
+    }
+    const feed = (await byName.get("analytics_bpmn_heatmap_data")!(args, {})) as unknown as {
+      structuredContent: HeatmapPayload
+    }
+    return [show.structuredContent.context.stepData.result.data, feed.structuredContent].map(
+      ({ bpmnXml, bpmnMissing }) => ({ bpmnXml, bpmnMissing }),
+    )
+  }
+
+  it("names the missing camunda7 module only when no lookup was injected", async () => {
+    for (const payload of await payloads()) {
+      expect(payload).toEqual({ bpmnXml: null, bpmnMissing: "no-camunda7" })
+    }
+  })
+
+  it("says the lookup found nothing when it failed or returned null", async () => {
+    const failing: FetchBpmnXml = () => Promise.reject(new Error("ECONNREFUSED"))
+    const empty: FetchBpmnXml = () => Promise.resolve(null)
+    for (const fetcher of [failing, empty]) {
+      for (const payload of await payloads(fetcher)) {
+        expect(payload).toEqual({ bpmnXml: null, bpmnMissing: "not-loaded" })
+      }
+    }
+  })
+
+  it("carries no cause when the diagram is there", async () => {
+    const xml = '<?xml version="1.0"?><definitions />'
+    for (const payload of await payloads(() => Promise.resolve(xml))) {
+      expect(payload).toEqual({ bpmnXml: xml, bpmnMissing: undefined })
+    }
+  })
+})

@@ -62,10 +62,20 @@ export const RATE_MIN_CHANGE = 1
 export type DeltaVerdict = "worse" | "better" | "notReliable"
 
 /**
+ * A delta as its cell shows it: one decimal, rounded half away from zero
+ * like `Intl.NumberFormat`. The verdict judges this number, so the same
+ * "+5 %" on screen is never neutral in one row and "schlechter" in another.
+ */
+function shownDelta(value: number): number {
+  return Math.sign(value) * (Math.round(Math.abs(value) * 10) / 10)
+}
+
+/**
  * The verdict on one delta, or `undefined` for none: a missing (null) delta,
- * a volume, or a change below the metric's threshold. In a suppressed
- * comparison (a side below `minBucketSize`) every quality delta is "not
- * reliable": the screen must not judge what the model is told is noise.
+ * a volume, or a change below the metric's threshold. The threshold applies
+ * to the delta as shown ({@link shownDelta}). In a suppressed comparison (a
+ * side below `minBucketSize`) every quality delta is "not reliable": the
+ * screen must not judge what the model is told is noise.
  */
 export function deltaVerdict(
   value: number | null,
@@ -74,8 +84,9 @@ export function deltaVerdict(
 ): DeltaVerdict | undefined {
   if (value === null || rule.kind === "volume") return undefined
   if (suppressed) return "notReliable"
-  if (Math.abs(value) < rule.minChange) return undefined
-  const bad = rule.worseIfUp ? value > 0 : value < 0
+  const shown = shownDelta(value)
+  if (Math.abs(shown) < rule.minChange) return undefined
+  const bad = rule.worseIfUp ? shown > 0 : shown < 0
   return bad ? "worse" : "better"
 }
 
@@ -86,10 +97,14 @@ export function deltaVerdict(
  */
 type DeltaUnit = "pct" | "rate"
 
-/** A signed delta in the view's locale ("+12,5 %", "−0,4"), or an em-dash when null. */
+/**
+ * A signed delta in the view's locale ("+12,5 %", "−0,4"), or an em-dash when
+ * null. It formats {@link shownDelta}, the number the verdict judges.
+ */
 export function formatDelta(value: number | null, unit: DeltaUnit): string {
-  if (unit === "pct") return formatPercent(value, { signed: true })
-  return formatNumber(value, { signDisplay: "exceptZero", maximumFractionDigits: 1 })
+  const shown = value === null ? null : shownDelta(value)
+  if (unit === "pct") return formatPercent(shown, { signed: true })
+  return formatNumber(shown, { signDisplay: "exceptZero", maximumFractionDigits: 1 })
 }
 
 /**

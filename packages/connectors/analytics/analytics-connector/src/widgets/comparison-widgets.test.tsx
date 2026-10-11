@@ -204,7 +204,8 @@ describe("EngineCompareWidget in English", () => {
     expect(avg.icon).toContain("text-success")
     expect(screen.getByText("6.6")).toBeTruthy()
     expect(metaLine()).toBe("Last 14 days · As of 14:32")
-    expect(screen.getByRole("button", { name: /Assess in chat/ })).toBeTruthy()
+    const ask = screen.getByRole("button", { name: /Assess in chat/ })
+    expect(ask.querySelector("svg")?.getAttribute("class")).toContain("lucide-scale")
   })
 
   it("shows the suppressed chip as a neutral note, not an error", () => {
@@ -215,33 +216,52 @@ describe("EngineCompareWidget in English", () => {
   })
 })
 
-const CLUSTER: ClusterCompareResult = {
-  engines: ["prod-a", "prod-b"],
-  processDefinitionKey: "order",
-  activityId: null,
-  deploymentTimestamp: "2026-10-09T10:00:00.000Z",
-  requestedWindowDays: { before: 7, after: 7 },
-  windowDays: { before: 7, after: 0.08 },
-  partial: true,
-  minBucketSize: 10,
-  suppressed: false,
-  kpis: (["before", "after"] as const).map((period) => ({
-    period,
-    window_from: "",
-    window_to: "",
-    window_days: period === "before" ? 7 : 0.08,
-    instance_count: 576,
-    completed_count: 500,
-    incident_count: 38,
-    incident_rate_pct: 6.6,
-    element_incident_count: null,
-    element_incident_rate_pct: null,
-    avg_duration_sec: 8340,
-    p95_duration_sec: 20100,
-  })),
-  delta: DELTA,
-  asOf: AS_OF,
+const DEPLOYED_AT = Date.parse("2026-10-10T10:40:00.000Z")
+const iso = (ms: number) => new Date(ms).toISOString()
+
+/**
+ * A before/after comparison whose windows measured `beforeSec` and `afterSec`
+ * around the deployment: the exact bounds, and `window_days` rounded to
+ * 0.01 d like the query does.
+ */
+function cluster(beforeSec: number, afterSec: number): ClusterCompareResult {
+  const windows = {
+    before: { from: DEPLOYED_AT - beforeSec * 1000, to: DEPLOYED_AT, seconds: beforeSec },
+    after: { from: DEPLOYED_AT, to: DEPLOYED_AT + afterSec * 1000, seconds: afterSec },
+  }
+  const days = (seconds: number) => Math.round((seconds / 86_400) * 100) / 100
+  return {
+    engines: ["prod-a", "prod-b"],
+    processDefinitionKey: "order",
+    activityId: null,
+    deploymentTimestamp: iso(DEPLOYED_AT),
+    requestedWindowDays: { before: 7, after: 7 },
+    windowDays: { before: days(beforeSec), after: days(afterSec) },
+    partial: true,
+    minBucketSize: 10,
+    suppressed: false,
+    kpis: (["before", "after"] as const).map((period) => ({
+      period,
+      window_from: iso(windows[period].from),
+      window_to: iso(windows[period].to),
+      window_days: days(windows[period].seconds),
+      instance_count: 576,
+      completed_count: 500,
+      incident_count: 38,
+      incident_rate_pct: 6.6,
+      element_incident_count: null,
+      element_incident_rate_pct: null,
+      avg_duration_sec: 8340,
+      p95_duration_sec: 20100,
+    })),
+    delta: DELTA,
+    asOf: AS_OF,
+  }
 }
+
+const HOUR = 3600
+const DAY = 24 * HOUR
+const CLUSTER = cluster(7 * DAY, 2 * HOUR)
 
 describe("ClusterCompareWidget", () => {
   it("names the measured windows, a short one in hours (de)", () => {
@@ -252,7 +272,33 @@ describe("ClusterCompareWidget", () => {
   })
 
   it("says the same in English", () => {
-    renderIn("en", ClusterCompareWidget, { ...CLUSTER, windowDays: { before: 1, after: 1.5 } })
+    renderIn("en", ClusterCompareWidget, cluster(DAY, 1.5 * DAY))
     expect(metaLine()).toBe("1 day before, 1.5 days after · 2 engines · As of 14:32")
+  })
+
+  it("reads a window of a few minutes from its bounds, never as a rounded-up hour", () => {
+    renderIn("de", ClusterCompareWidget, cluster(7 * DAY, 10 * 60))
+    expect(metaLine()).toBe("7 Tage davor, 10 Minuten danach · 2 Engines · Stand 14:32")
+  })
+
+  it("says 'under 1 minute' for a deployment compared right away", () => {
+    renderIn("en", ClusterCompareWidget, cluster(7 * DAY, 30))
+    expect(metaLine()).toBe("7 days before, under 1 minute after · 2 engines · As of 14:32")
+    cleanup()
+    renderIn("de", ClusterCompareWidget, cluster(7 * DAY, 60))
+    expect(metaLine()).toBe("7 Tage davor, 1 Minute danach · 2 Engines · Stand 14:32")
+  })
+
+  it("falls back to the rounded window length when the bounds do not parse", () => {
+    const unparsable = cluster(7 * DAY, 2 * HOUR)
+    unparsable.kpis = unparsable.kpis.map((kpi) => ({ ...kpi, window_from: "", window_to: "" }))
+    renderIn("de", ClusterCompareWidget, unparsable)
+    expect(metaLine()).toBe("7 Tage davor, 2 Stunden danach · 2 Engines · Stand 14:32")
+  })
+
+  it("hands off to assess the comparison with the Scale icon", () => {
+    renderIn("de", ClusterCompareWidget, CLUSTER)
+    const ask = screen.getByRole("button", { name: /Im Chat bewerten/ })
+    expect(ask.querySelector("svg")?.getAttribute("class")).toContain("lucide-scale")
   })
 })

@@ -27,8 +27,11 @@ export default mergeConfig(
         // under the stacked floor. Raised 2026-10-11 with the widget DOM
         // suites (`*.test.tsx`: the comparison verdicts, meta lines and
         // hand-offs in de and en) and the brand gates: measured
-        // 90.53 / 75.27 / 91.51 / 92.35.
-        thresholds: { statements: 88, branches: 73, functions: 89, lines: 90 },
+        // 90.53 / 75.27 / 91.51 / 92.35. Raised again with the ma3 review
+        // fixes (the settings section's error state, the heatmap's
+        // missing-diagram cause, the measured window lengths under test):
+        // measured 92.8 / 79.36 / 92.95 / 94.67.
+        thresholds: { statements: 90, branches: 77, functions: 90, lines: 92 },
       },
     },
   }),

@@ -137,6 +137,49 @@ describe("sparkle gate (invariant 6, CI U4) in every widget tree", () => {
   })
 })
 
+describe("hand-off gate (invariant 6, CI U4) in analytics' widgets", () => {
+  const isHandOffHit = (attribute) => (m) => m.startsWith(`AskAiButton needs \`${attribute}\``)
+  const REL = `${AN}/widgets/__probe__.tsx`
+
+  it("requires icon and label on every AskAiButton, self-closing or not", async () => {
+    const cases = [
+      ["<AskAiButton prompt={p} />", ["icon", "label"]],
+      ['<AskAiButton prompt={p} label={t("x")} />', ["icon"]],
+      ["<AskAiButton prompt={p} icon={Scale} />", ["label"]],
+      ["<AskAiButton prompt={p} {...rest} />", ["icon", "label"]],
+      ["<AskAiButton prompt={p}>Ask</AskAiButton>", ["icon", "label"]],
+      // An attribute of a nested element does not count for the button.
+      ["<AskAiButton prompt={<X icon={Scale} label={l} />} />", ["icon", "label"]],
+    ]
+    for (const [jsx, missing] of cases) {
+      const messages = await gateMessages(REL, `const el = ${jsx}`)
+      for (const attribute of ["icon", "label"]) {
+        assert.equal(
+          messages.filter(isHandOffHit(attribute)).length,
+          missing.includes(attribute) ? 1 : 0,
+          `${jsx}: ${attribute}`,
+        )
+      }
+    }
+  })
+
+  it("passes a call site that names both, and leaves other components alone", async () => {
+    const code = [
+      'const a = <AskAiButton prompt={p} icon={Scale} label={t("aComparison.askLabel")} />',
+      "const b = <Button prompt={p} />",
+    ].join("\n")
+    assert.deepEqual(await gateMessages(REL, code), [])
+  })
+
+  it("is not on for camunda7's widgets yet (they join once their call sites pass both)", async () => {
+    const messages = await gateMessages(
+      `${C7}/widgets/__probe__.tsx`,
+      "const el = <AskAiButton prompt={p} />",
+    )
+    assert.equal(messages.filter((m) => m.startsWith("AskAiButton needs")).length, 0)
+  })
+})
+
 const REGISTRAR_ESCAPES = {
   "direct call": 'server.tool("x", {}, handler)',
   "registerTool call": 'server.registerTool("x", {}, handler)',

@@ -169,9 +169,27 @@ describe("deltaVerdict — U6: volume neutral, thresholds per metric, suppressed
 
   it("judges an incident rate only from 1 incident per 100 starts on", () => {
     expect(deltaVerdict(0.2, RATE, false)).toBeUndefined()
-    expect(deltaVerdict(-0.99, RATE, false)).toBeUndefined()
+    expect(deltaVerdict(-0.94, RATE, false)).toBeUndefined()
     expect(deltaVerdict(1, RATE, false)).toBe("worse")
     expect(deltaVerdict(-6.5, RATE, false)).toBe("better")
+  })
+
+  it("judges the delta as the cell shows it, so one number never gets two readings", () => {
+    german()
+    // 4.96 shows as "+5 %": judged like 5. 4.94 shows as "+4,9 %": neutral.
+    expect(plain(formatDelta(4.96, "pct"))).toBe("+5 %")
+    expect(deltaVerdict(4.96, DURATION, false)).toBe("worse")
+    expect(deltaVerdict(-4.96, DURATION, false)).toBe("better")
+    expect(plain(formatDelta(4.94, "pct"))).toBe("+4,9 %")
+    expect(deltaVerdict(4.94, DURATION, false)).toBeUndefined()
+    // Half away from zero, like Intl: -0.95 shows as "-1" and is judged.
+    expect(formatDelta(-0.95, "rate")).toBe("-1")
+    expect(deltaVerdict(-0.95, RATE, false)).toBe("better")
+    expect(formatDelta(0.96, "rate")).toBe("+1")
+    expect(deltaVerdict(0.96, RATE, false)).toBe("worse")
+    // A change that rounds to zero shows no sign and no verdict.
+    expect(formatDelta(-0.04, "rate")).toBe("0")
+    expect(deltaVerdict(-0.04, RATE, false)).toBeUndefined()
   })
 
   it("follows the metric's direction: a rule where up is good flips the verdict", () => {

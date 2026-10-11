@@ -266,7 +266,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    Chat erklären" / "Explain in chat"); without them it shows `MessageSquare` + "Im Chat
    analysieren"; every variant is a secondary outline (the deterministic next step is the
    view's primary action), never ✦ or Sparkles (an ESLint `no-restricted-imports` gate bans
-   lucide-react's sparkle icons in every widget tree). `OpenInCockpitLink` takes `vendor`
+   lucide-react's sparkle icons in every widget tree; a `no-restricted-syntax` gate requires
+   `icon` and `label` on every `AskAiButton` in analytics' widgets, camunda7's join it once
+   their call sites pass both). `OpenInCockpitLink` takes `vendor`
    (`provider.branding.displayName`) and reads "In CIB seven öffnen" / "Open in CIB seven",
    with "öffnet in neuem Tab" in its accessible name. `WidgetHeader` has no icon tile; a state
    goes into `badge` (a `StatusBadge`).

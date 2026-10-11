@@ -138,6 +138,17 @@ const widgetSparkleGate = {
   ],
 }
 
+// Invariant 6 / CI U4, the other half: every AskAiButton names its function.
+// Without `icon` and `label` the kit falls back to the generic MessageSquare
+// and "Im Chat analysieren", which no DOM suite notices at every call site.
+// Both attributes are required as written attributes (a spread does not
+// count). Analytics' widgets carry it; camunda7's join once their call sites
+// pass both.
+const widgetHandOffGate = ["icon", "label"].map((attribute) => ({
+  selector: `JSXOpeningElement[name.name='AskAiButton']:not(:has(> JSXAttribute[name.name='${attribute}']))`,
+  message: `AskAiButton needs \`${attribute}\`: the Lucide icon of the concrete function and a verb that names the chat (CI U4, CLAUDE.md invariant 6).`,
+}))
+
 export default tseslint.config(
   {
     ignores: [
@@ -289,10 +300,18 @@ export default tseslint.config(
       "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate, ...widgetNumberGate],
     },
   },
+  // analytics' widgets also carry the hand-off gate: every AskAiButton
+  // passes its icon and label.
   {
     files: ["packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate, ...widgetNumberGate],
+      "no-restricted-syntax": [
+        "error",
+        ...registrarGate,
+        ...widgetDateGate,
+        ...widgetNumberGate,
+        ...widgetHandOffGate,
+      ],
     },
   },
   // Invariant 6, numbers: the kit's own widget code, and both connectors'

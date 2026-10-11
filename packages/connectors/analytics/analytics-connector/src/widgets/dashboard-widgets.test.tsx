@@ -204,9 +204,12 @@ describe("the failure dashboard", () => {
   it("names the jobs without retries and a rate over 100 as a number (de)", () => {
     renderIn("de", FailureRateTable, FAILURES)
     expect(screen.getByText("Jobs ohne Versuche")).toBeTruthy()
-    expect(screen.getByText("Incidents je 100 laufende")).toBeTruthy()
+    expect(screen.getByText("Incidents je 100 laufende Instanzen")).toBeTruthy()
     expect(screen.getByText("425")).toBeTruthy()
     expect(screen.getByText("3.000")).toBeTruthy()
+    const asks = screen.getAllByRole("button", { name: "Ursache im Chat suchen" })
+    expect(asks).toHaveLength(2)
+    expect(iconOf(asks[0])).toContain("lucide-file-search")
   })
 })
 
@@ -295,8 +298,12 @@ describe("the BPMN heatmap", () => {
     expect(screen.queryByText(/Zeitraum:/)).toBeNull()
   })
 
-  it("explains in English why the diagram is missing, and what to ask instead", () => {
-    renderIn("en", AnalyticsBpmnHeatmap, { ...HEATMAP, bpmnXml: null })
+  it("blames the missing camunda7 module only when the server says so (en)", () => {
+    renderIn("en", AnalyticsBpmnHeatmap, {
+      ...HEATMAP,
+      bpmnXml: null,
+      bpmnMissing: "no-camunda7",
+    })
     expect(
       screen.getByText(
         "The diagram is not available here: without the camunda7 module, analytics cannot load BPMN files. Ask in the chat for the figures per activity instead.",
@@ -304,4 +311,30 @@ describe("the BPMN heatmap", () => {
     ).toBeTruthy()
     expect(document.querySelector("[data-view-meta]")).toBeNull()
   })
+
+  it("names the engine lookup when camunda7 is there but found no diagram (de)", () => {
+    renderIn("de", AnalyticsBpmnHeatmap, {
+      ...HEATMAP,
+      bpmnXml: null,
+      bpmnMissing: "not-loaded",
+    })
+    expect(
+      screen.getByText(
+        "Das Diagramm konnte nicht geladen werden: Die erste konfigurierte Engine war nicht erreichbar, oder der Prozess ist dort nicht deployt. Prüf die Engine oder frag im Chat nach den Kennzahlen je Aktivität.",
+      ),
+    ).toBeTruthy()
+    expect(screen.queryByText(/camunda7-Modul/)).toBeNull()
+  })
+
+  it.each([undefined, "constructor"])(
+    "names no cause it does not know (bpmnMissing: %s)",
+    (bpmnMissing) => {
+      renderIn("en", AnalyticsBpmnHeatmap, { ...HEATMAP, bpmnXml: null, bpmnMissing })
+      expect(
+        screen.getByText(
+          "Could not load the diagram. Ask in the chat for the figures per activity instead.",
+        ),
+      ).toBeTruthy()
+    },
+  )
 })

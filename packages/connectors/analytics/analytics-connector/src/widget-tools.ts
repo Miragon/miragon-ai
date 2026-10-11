@@ -25,6 +25,7 @@ import { optionalPeriod, settingsFor } from "./settings.js"
 import { registerComparisonWidgetTools } from "./widget-tools/comparisons.js"
 import { engineScopeSummary } from "./widget-tools/shared.js"
 import { isFleetRequest, withEngineScope, type AnalyticsEngineScope } from "./engine-ids.js"
+import type { BpmnMissingReason } from "./heatmap-data.js"
 
 /**
  * Engine-agnostic BPMN-XML lookup injected by the host app (which owns the
@@ -97,12 +98,16 @@ export function registerWidgetTools(
 
   /**
    * Fetches the latest deployed version's BPMN XML for the heatmap overlay via
-   * the injected lookup. Returns `null` without an injected fetcher or on any
-   * fetch error — the widget renders its non-diagram fallback in that case.
+   * the injected lookup. Without a lookup, or when it fails or finds nothing,
+   * the XML is `null` and `bpmnMissing` says which of the two happened, so the
+   * widget's fallback names the known cause (`heatmap-data.ts`).
    */
-  async function fetchBpmnXml(processDefinitionKey: string): Promise<string | null> {
-    if (!options.fetchBpmnXml) return null
-    return (await options.fetchBpmnXml(processDefinitionKey).catch(() => null)) ?? null
+  async function loadBpmn(
+    processDefinitionKey: string,
+  ): Promise<{ bpmnXml: string | null; bpmnMissing?: BpmnMissingReason }> {
+    if (!options.fetchBpmnXml) return { bpmnXml: null, bpmnMissing: "no-camunda7" }
+    const bpmnXml = (await options.fetchBpmnXml(processDefinitionKey).catch(() => null)) ?? null
+    return bpmnXml ? { bpmnXml } : { bpmnXml: null, bpmnMissing: "not-loaded" }
   }
 
   // --- Process Analytics Dashboard ---
@@ -210,7 +215,7 @@ export function registerWidgetTools(
         ...scoped,
         period,
       })
-      const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
+      const bpmn = await loadBpmn(args.processDefinitionKey)
       // Model summary only — the bpmnXml must never reach the text channel;
       // the widget renders the diagram from structuredContent.
       return buildSingleWidgetView({
@@ -223,7 +228,7 @@ export function registerWidgetTools(
           processDefinitionKey: args.processDefinitionKey,
           period,
           engines: scoped.engine,
-          bpmnXml,
+          ...bpmn,
           frequency: heat.frequency,
           durationSec: heat.durationSec,
           asOf: heat.asOf,
@@ -234,7 +239,7 @@ export function registerWidgetTools(
           period,
           engines: engineScopeSummary(t, scoped.engine, isFleetRequest(args.engine)),
           elementCount: Object.keys(heat.frequency).length,
-          fallbackNote: bpmnXml ? "" : t("aSum.bpmnHeatmapNoXml"),
+          fallbackNote: bpmn.bpmnXml ? "" : t("aSum.bpmnHeatmapNoXml"),
         }),
       })
     }),
@@ -257,12 +262,12 @@ export function registerWidgetTools(
         ...scoped,
         period,
       })
-      const bpmnXml = await fetchBpmnXml(args.processDefinitionKey)
+      const bpmn = await loadBpmn(args.processDefinitionKey)
       const data = {
         processDefinitionKey: args.processDefinitionKey,
         period,
         engines: scoped.engine,
-        bpmnXml,
+        ...bpmn,
         frequency: heat.frequency,
         durationSec: heat.durationSec,
         asOf: heat.asOf,

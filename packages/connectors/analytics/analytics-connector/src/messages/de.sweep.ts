@@ -42,6 +42,8 @@ export const deSweep: MessageCatalog = {
   "aCommon.hours": plural("count", "1 Stunde", "{count} Stunden"),
   "aCommon.loadError":
     "Die Kennzahlen konnten nicht geladen werden. Aktualisier die Ansicht oder frag im Chat noch mal danach.",
+  "aCommon.minutes": plural("count", "1 Minute", "{count} Minuten"),
+  "aCommon.underOneMinute": "unter 1 Minute",
   "aComparison.askLabel": "Im Chat bewerten",
   "aComparison.deltaBetter": "besser",
   "aComparison.deltaColumnHeader": "Änderung",
@@ -101,7 +103,7 @@ export const deSweep: MessageCatalog = {
   "aFailureRate.analyzeLabel": "Ursache im Chat suchen",
   "aFailureRate.colAi": "Übergabe an den Chat",
   "aFailureRate.colDeadJobs": "Jobs ohne Versuche",
-  "aFailureRate.colIncidentRate": "Incidents je 100 laufende",
+  "aFailureRate.colIncidentRate": "Incidents je 100 laufende Instanzen",
   "aFailureRate.colOpenIncidents": "Offene Incidents",
   "aFailureRate.colProcess": "Prozess",
   "aFailureRate.colRunningNow": "Laufen gerade",
@@ -114,8 +116,12 @@ export const deSweep: MessageCatalog = {
   "aFailureSummary.title": "Fehleranalyse",
   "aFailureSummary.totalIncidents": "Offene Incidents",
   "aFailureSummary.uniqueErrorPatterns": "Incident-Gruppen",
-  "aHeatmap.bpmnUnavailable":
+  "aHeatmap.bpmnNoCamunda7":
     "Das Diagramm ist hier nicht verfügbar: Ohne das camunda7-Modul kann Analytics keine BPMN-Dateien laden. Frag im Chat stattdessen nach den Kennzahlen je Aktivität.",
+  "aHeatmap.bpmnNotLoaded":
+    "Das Diagramm konnte nicht geladen werden: Die erste konfigurierte Engine war nicht erreichbar, oder der Prozess ist dort nicht deployt. Prüf die Engine oder frag im Chat nach den Kennzahlen je Aktivität.",
+  "aHeatmap.bpmnUnavailable":
+    "Das Diagramm konnte nicht geladen werden. Frag im Chat stattdessen nach den Kennzahlen je Aktivität.",
   "aHeatmap.diagramAria": "BPMN-Diagramm mit der Ausführungshäufigkeit je Element als Heatmap",
   "aHeatmap.duration": "Dauer",
   "aHeatmap.durationLegend": "Durchschnittliche Dauer je Element",
@@ -167,6 +173,7 @@ export const deSweep: MessageCatalog = {
   "aLandscape.notDeployed": "auf dieser Engine nicht deployt",
   "aLandscape.sharedBadge": plural("count", "auf 1 Engine", "auf {count} Engines"),
   "aSettings.heading": "Analyse-Einstellungen",
+  "aSettings.loadError": "Die Einstellungen konnten nicht geladen werden. Aktualisier die Ansicht.",
   "aSettings.minBucket": "Mindestgröße für Vergleiche",
   "aSettings.minBucket.help":
     "So viele Instanzen braucht jede Seite eines Vergleichs, bevor er eine Bewertung zeigt.",
