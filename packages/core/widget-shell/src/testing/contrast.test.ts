@@ -91,6 +91,23 @@ describe("resolveColor", () => {
   })
 })
 
+describe("hostile input stays linear (CodeQL js/polynomial-redos)", () => {
+  it("reads a var() with a long whitespace run without backtracking", () => {
+    const vars = new Map([["--x", "#ffffff"]])
+    const started = performance.now()
+    expect(resolveColor(`var(--x,${" ".repeat(100_000)}#000)`, vars)).toEqual(WHITE)
+    expect(() => resolveColor(`var(---,${" ".repeat(100_000)}`, vars)).toThrow()
+    expect(performance.now() - started).toBeLessThan(500)
+  })
+
+  it("strips many unterminated comment openers in linear time", () => {
+    const started = performance.now()
+    const vars = parseThemeVariables(`:root { --ink: #111111; }\n/*${"a/*".repeat(100_000)}`)
+    expect(vars.light.get("--ink")).toBe("#111111")
+    expect(performance.now() - started).toBeLessThan(500)
+  })
+})
+
 describe("composite", () => {
   it("paints a translucent colour over an opaque one", () => {
     expect(composite({ r: 0, g: 0, b: 0, a: 0.5 }, WHITE)).toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 })

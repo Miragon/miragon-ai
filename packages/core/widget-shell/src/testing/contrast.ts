@@ -23,9 +23,21 @@ export interface ThemeVariables {
   dark: Map<string, string>
 }
 
-/** Drop CSS comments (a comment may quote a rule it forbids). */
+/**
+ * Drop CSS comments (a comment may quote a rule it forbids). A linear scan,
+ * not a lazy regex: the helper is exported and reads consumer stylesheets.
+ */
 function stripComments(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, "")
+  let out = ""
+  let at = 0
+  for (;;) {
+    const open = css.indexOf("/*", at)
+    if (open === -1) return out + css.slice(at)
+    out += css.slice(at, open)
+    const close = css.indexOf("*/", open + 2)
+    if (close === -1) return out
+    at = close + 2
+  }
 }
 
 /** One `{ … }` block: its prelude, the preludes around it, its own custom properties. */
@@ -263,6 +275,21 @@ function resolveColorMix(args: string, vars: Map<string, string>, seen: Set<stri
 }
 
 /**
+ * `var(--name[, fallback])` split without a backtracking regex: the name runs
+ * to the first comma, everything after it is the fallback.
+ */
+function parseVarReference(value: string): { name: string; fallback?: string } | undefined {
+  if (!value.startsWith("var(") || !value.endsWith(")")) return undefined
+  const inner = value.slice(4, -1)
+  const comma = inner.indexOf(",")
+  const name = (comma === -1 ? inner : inner.slice(0, comma)).trim()
+  if (!/^--[\w-]+$/.test(name)) return undefined
+  if (comma === -1) return { name }
+  const fallback = inner.slice(comma + 1).trim()
+  return fallback ? { name, fallback } : { name }
+}
+
+/**
  * Resolve a CSS colour value against a mode's variables. Supports the
  * shapes the theme uses: `var(--x[, fallback])`, `#rgb[a]`/`#rrggbb[aa]`,
  * `oklch(L C H [/ A])`, `color-mix(in srgb|oklab, c1 [p%], c2 [q%])`,
@@ -275,8 +302,8 @@ export function resolveColor(
   seen = new Set<string>(),
 ): Rgba {
   const v = value.trim()
-  const varRef = /^var\(\s*(--[\w-]+)\s*(?:,\s*(.+))?\)$/.exec(v)
-  if (varRef) return resolveVar(varRef[1], varRef[2], vars, seen)
+  const varRef = parseVarReference(v)
+  if (varRef) return resolveVar(varRef.name, varRef.fallback, vars, seen)
   if (v.startsWith("#")) return parseHex(v)
   if (v in NAMED) return NAMED[v]
   const fn = /^(oklch|color-mix)\((.+)\)$/.exec(v)
