@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { useLocale } from "@miragon/mcp-toolkit-ui"
+import { Icon } from "@miragon-ai/widget-shell/widgets"
+import { RefreshCw } from "lucide-react"
 import { translator } from "../../messages/index.js"
 import { refreshCockpitData } from "../refresh.js"
 
@@ -21,6 +23,7 @@ export function CockpitRefreshButton() {
       }}
       className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 disabled:opacity-50"
     >
+      <Icon icon={RefreshCw} />
       {translator(locale, refreshing ? "cockpit.refreshing" : "cockpit.refresh")}
     </button>
   )

@@ -105,6 +105,7 @@ export async function buildProcessIncidentsData(
     latestIncident: latestEngineDate(scan.rows.map((r) => r.incidentTimestamp)),
     activities,
     siblingsWithIncidents,
+    engineVendor: options.provider.branding.displayName,
   }
 }
 

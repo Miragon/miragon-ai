@@ -19,7 +19,7 @@ import {
 } from "../tool-names.js"
 import { resolveEngine } from "../lib/resolve-engine.js"
 import { jobsFilterShape, pagingShape } from "../feed-contracts.js"
-import { localizeFor } from "../lib/server-locale.js"
+import { localizeViewFor } from "../lib/server-locale.js"
 import { type WidgetToolsContext } from "./shared.js"
 
 /** Single-instance drill-downs: instance detail, BPMN viewer, job panel. */
@@ -40,7 +40,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       ...showToolBinding(CAMUNDA7_SHOW_INSTANCE_DETAIL, "Process Instance Detail"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const { client, engineId, baseUrl, cockpitUrl, provider } = await resolveEngine(
         args.engine,
         registry,
@@ -62,7 +62,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
         app: "camunda7",
         dataType: "camunda7:processInstance",
         data,
-        title: "Process Instance",
+        title: title("viewTitle.instanceDetail"),
         summary: t("c7sum.instanceDetail", {
           instanceId: data.instance.id,
           businessKey: data.instance.businessKey
@@ -113,7 +113,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       ...showToolBinding(CAMUNDA7_SHOW_BPMN_VIEWER, "BPMN Diagram Viewer"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       // Shared builder with the `camunda7:load-bpmn-viewer` step — the two
       // render paths must stay in sync (data/bpmn-viewer-data.ts).
@@ -126,7 +126,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       const view = (summary: string) =>
         buildComposedView({
           app: "camunda7",
-          title: "BPMN Viewer",
+          title: title("viewTitle.bpmnViewer"),
           layout: [{ row: [{ widget: "camunda7:bpmn-viewer" }] }],
           entries: [{ dataType: "camunda7:bpmnViewer", data }],
           summary,
@@ -177,7 +177,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
       ...showToolBinding(CAMUNDA7_SHOW_JOB_PANEL, "Job Management Panel"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildJobPanelData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
@@ -189,7 +189,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
         widget: "camunda7:job-panel",
         app: "camunda7",
         dataType: "camunda7:jobPanel",
-        title: "Job Panel",
+        title: title("viewTitle.jobPanel"),
         data,
         summary: t("c7sum.jobPanel", {
           totalCount: data.totalCount,

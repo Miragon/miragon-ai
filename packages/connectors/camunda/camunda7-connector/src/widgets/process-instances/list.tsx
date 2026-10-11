@@ -1,9 +1,9 @@
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
-  AskAiButton,
   CountPill,
   DrillButton,
   FilterBar,
+  Icon,
   ListTable,
   PagedRows,
   QueryFallback,
@@ -18,6 +18,7 @@ import {
   type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import { useState } from "react"
+import { TriangleAlert } from "lucide-react"
 import type { ProcessInstanceRow, ProcessInstancesData } from "../../view-models.js"
 import type { ProcessInstancesFilters } from "../../feed-contracts.js"
 import { useNav } from "../navigation.js"
@@ -25,6 +26,7 @@ import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { InstancesHeader } from "./list-header.js"
 import { useHandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { describeInstancesView, rootCauseHandOff, type InstanceChip } from "./hand-offs.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -117,27 +119,28 @@ function InstanceRow({
       </Td>
       <Td align="right">
         {row.hasIncident ? (
-          <CountPill tone="danger">!</CountPill>
+          <CountPill tone="danger">
+            <Icon icon={TriangleAlert} dense label={t("processInstances.hasIncident")} />
+          </CountPill>
         ) : (
           <span className="text-muted-foreground font-mono text-xs">—</span>
         )}
       </Td>
       <Td align="right">
         <div className="inline-flex items-center justify-end gap-1">
-          {row.hasIncident && (
-            <AskAiButton
-              variant="icon"
-              label={t("processInstances.analyzeLabel")}
-              title={t("processInstances.analyzeLabel")}
-              prompt={ask(rootCauseHandOff(row, processDefinitionKey, engine))}
-            />
-          )}
           <DrillButton
             onDrill={() => onOpen(row.id)}
             ariaLabel={t("processInstances.openInstanceAria", { name: row.businessKey ?? row.id })}
           >
             {t("processInstances.openButton")}
           </DrillButton>
+          {row.hasIncident && (
+            <HandOffButton
+              action="findCause"
+              variant="icon"
+              prompt={ask(rootCauseHandOff(row, processDefinitionKey, engine))}
+            />
+          )}
         </div>
       </Td>
     </tr>

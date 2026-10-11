@@ -1,65 +1,71 @@
 import type { MessageCatalog } from "@miragon/mcp-toolkit-core"
+import { countOf } from "./plural.js"
 
-/** German message catalog. Missing keys fall back to {@link en} via the translator. */
+/**
+ * German message catalog. Missing keys would fall back to {@link en}, so
+ * `catalog-text.test.ts` holds both to the same key set. Folgt brand-tone:
+ * du, aktiv, kein Gedankenstrich als Verbinder; die Begriffe stehen in
+ * GLOSSARY.md.
+ */
 export const de: MessageCatalog = {
   // ── Cockpit shell ──────────────────────────────────────────────────────────
   "cockpit.crumb.processList": "Alle Prozesse",
   "cockpit.section.overview": "Übersicht",
-  "cockpit.section.incidents": "Vorfälle",
+  "cockpit.section.incidents": "Incidents",
   "cockpit.section.settings": "Einstellungen",
   "cockpit.crumb.overview": "Übersicht",
-  "cockpit.crumb.incidents": "Vorfälle",
+  "cockpit.crumb.incidents": "Incidents",
   "cockpit.crumb.instances": "Instanzen",
   "cockpit.crumb.origin": "Start",
   // Die {id} kommt bereits gekürzt an (Kit-`truncate` ergänzt die Ellipse).
   "cockpit.crumb.instance": ({ id }) => `Instanz ${String(id)}`,
-  "cockpit.crumb.incident": ({ id }) => `Vorfall ${String(id)}`,
+  "cockpit.crumb.incident": ({ id }) => `Incident ${String(id)}`,
   "cockpit.crumb.cluster": ({ activity }) => `Cluster: ${String(activity)}`,
   "cockpit.loading.engines": "Engines werden geladen…",
-  "cockpit.empty.engines": "Keine CIB-Seven-Engines konfiguriert.",
+  "cockpit.empty.engines":
+    "Keine Engines konfiguriert. Bitte deine Administration, eine Engine in der Server-Konfiguration einzutragen.",
   "cockpit.nav.crossEngine": "Engine-übergreifend",
   "cockpit.nav.engine": "Engine",
-  "cockpit.aria.breadcrumb": "Breadcrumb-Navigation",
+  "cockpit.aria.breadcrumb": "Navigationspfad",
   "cockpit.aria.sections": "Cockpit-Bereiche",
-  "cockpit.aria.activeEngine": "Aktive Engine",
-  "cockpit.refresh": "↻ Aktualisieren",
+  "cockpit.aria.activeEngine": "Gewählte Engine",
+  "cockpit.refresh": "Aktualisieren",
   "cockpit.refreshing": "Wird aktualisiert…",
-  "cockpit.landing.title": "CIB Seven Cockpit",
+  "cockpit.landing.title": "Operations Cockpit",
   "cockpit.landing.subtitle": ({ count }) =>
-    `${String(count)} Engines konfiguriert — eine Engine bedienen oder über die gesamte Flotte analysieren.`,
+    `${countOf(count, "Engine", "Engines")} konfiguriert. Arbeite mit einer Engine, oder analysiere alle zusammen.`,
   "cockpit.landing.subtitle.env": ({ count, envCount }) =>
-    `${String(count)} Engines in ${String(envCount)} Umgebungen — erst Umgebung, dann Engine wählen, oder über die gesamte Flotte analysieren.`,
-  "cockpit.landing.env.count": ({ count }) =>
-    `${String(count)} Engine${Number(count) === 1 ? "" : "s"}`,
+    `${countOf(count, "Engine", "Engines")} in ${countOf(envCount, "Umgebung", "Umgebungen")}. Wähl eine Umgebung und dann eine Engine, oder analysiere alle zusammen.`,
+  "cockpit.landing.env.count": ({ count }) => countOf(count, "Engine", "Engines"),
   "cockpit.landing.env.back": "Alle Umgebungen",
   "cockpit.landing.subtitle.noFleet": ({ count }) =>
-    `${String(count)} Engines konfiguriert — eine zum Bedienen wählen.`,
+    `${countOf(count, "Engine", "Engines")} konfiguriert. Wähl eine Engine.`,
   "cockpit.landing.subtitle.env.noFleet": ({ count, envCount }) =>
-    `${String(count)} Engines in ${String(envCount)} Umgebungen — erst Umgebung, dann Engine wählen.`,
-  "cockpit.landing.engine.incidents": ({ count }) =>
-    `${String(count)} ${Number(count) === 1 ? "Vorfall" : "Vorfälle"}`,
-  "cockpit.landing.engine.noStatus": "Status nicht verfügbar",
-  "cockpit.landing.operate.title": "Eine Engine bedienen",
-  "cockpit.landing.operate.desc": "Übersicht, Vorfälle und Drill-downs für eine Engine.",
+    `${countOf(count, "Engine", "Engines")} in ${countOf(envCount, "Umgebung", "Umgebungen")}. Wähl eine Umgebung und dann eine Engine.`,
+  "cockpit.landing.engine.incidents": ({ count }) => countOf(count, "Incident", "Incidents"),
+  "cockpit.landing.engine.noStatus": "Zustand nicht abrufbar",
+  "cockpit.landing.operate.title": "Mit einer Engine arbeiten",
+  "cockpit.landing.operate.desc": "Übersicht, Incidents und Details einer Engine.",
   "cockpit.landing.fleet.title": "Engine-übergreifende Analysen",
   "cockpit.landing.fleet.desc":
-    "Flottengesundheit über alle Engines, Engine-Vergleich sowie flottenweite Fehler- & Performance-Analyse.",
-  "cockpit.landing.fleet.open": "Flottenansicht öffnen",
+    "Zustand jeder Engine, Vergleich je Prozess und Analysen von Fehlern und Performance über alle Engines.",
+  "cockpit.landing.fleet.open": "Engine-übergreifende Übersicht öffnen",
   "cockpit.crumb.cockpit": "Cockpit",
-  "cockpit.crumb.fleet": "Flotte",
+  "cockpit.crumb.fleet": "Alle Engines",
   "cockpit.engineGone": ({ engineId }) =>
     `Engine ${String(engineId)} ist nicht mehr in deiner Engine-Liste.`,
 
   // ── Profil-/Einstellungs-Panel ──────────────────────────────────────────────
   "profile.heading": "Profil & Einstellungen",
-  "profile.subtitle":
-    "Persönliche Einstellungen — Engine-Verfügbarkeit, Sprache, Theme und Dashboards.",
+  "profile.subtitle": "Deine Engines, Sprache, Darstellung und Dashboards.",
   "profile.save": "Speichern",
-  "profile.saving": "Speichern…",
-  "profile.saved": ({ time }) => `Gespeichert ${String(time)}`,
-  "profile.saveError": "Profil konnte nicht gespeichert werden.",
-  "profile.readOnly": "Einstellungen sind in diesem Deployment schreibgeschützt.",
-  "profile.loading": "Laden…",
+  "profile.saving": "Wird gespeichert…",
+  "profile.saved": ({ time }) => `Gespeichert um ${String(time)}`,
+  "profile.saveError":
+    "Das Profil konnte nicht gespeichert werden. Deine Eingaben sind noch da, versuch es noch mal.",
+  "profile.readOnly":
+    "Diese Verbindung darf keine Einstellungen speichern. Ändern kann sie nur eine Verbindung mit Schreibrechten.",
+  "profile.loading": "Wird geladen…",
   "profile.none": "Kein Profil verfügbar",
 
   "profile.section.appearance": "Sprache & Darstellung",
@@ -68,34 +74,36 @@ export const de: MessageCatalog = {
 
   "profile.field.language": "Sprache",
   "profile.field.language.help":
-    "UI-Sprache; „Automatisch“ folgt der Chat-App. Eine gewählte Sprache steuert auch die Tool-Zusammenfassungen an das Modell.",
-  "profile.field.theme": "Theme",
+    "„Automatisch“ übernimmt die Sprache deiner Chat-App. Eine feste Sprache gilt auch für das, was die Tools der AI zurückmelden.",
+  "profile.field.theme": "Darstellung",
   "profile.field.role": "Bevorzugte Rolle",
-  "profile.field.role.help": "Nur ein Hinweis — der Tool-Zugriff wird über die Verbindung gesetzt.",
+  "profile.field.role.help": "Nur ein Hinweis. Was du darfst, legt deine Verbindung fest.",
   "profile.role.unset": "(nicht gesetzt)",
 
   "profile.field.allowedEngines": "Verfügbare Engines",
   "profile.field.allowedEngines.help":
-    "Aus welchen Engines du wählen kannst. Alle abwählen = alle erlauben. Kuratierung, keine Zugriffskontrolle.",
+    "Diese Engines stehen in deinen Auswahllisten. Ohne Haken stehen alle drin. Deine Rechte ändert das nicht.",
   "profile.engines.none": "Keine Engines konfiguriert.",
   "profile.field.defaultEngine": "Standard-Engine",
   "profile.field.defaultEngine.help":
-    "Die Engine, die Tools und Cockpit verwenden, wenn keine explizit gewählt ist.",
+    "Diese Engine nutzen die Tools und das Cockpit, wenn du keine andere wählst.",
   "profile.engine.auto": "(automatisch)",
 
   "profile.dashboards.unavailable": "Gespeicherte Dashboards sind nicht verfügbar.",
-  "profile.dashboards.empty": "Noch keine gespeicherten Dashboards.",
+  "profile.dashboards.empty":
+    "Noch keine Dashboards gespeichert. Lass dir im Chat eins bauen und speichere es.",
   "profile.field.defaultDashboard": "Standard-Dashboard",
   "profile.field.defaultDashboard.help":
-    "Wird der KI als zuerst zu öffnendes Dashboard vorgeschlagen (load-dashboard).",
+    "Dieses Dashboard schlägt die AI als Erstes vor (load-dashboard).",
   "profile.dashboard.none": "(keins)",
   "profile.field.pinnedDashboards": "Angepinnte Dashboards",
-  "profile.field.pinnedDashboards.help": "Werden in Dashboard-Auswahlen zuerst angezeigt.",
+  "profile.field.pinnedDashboards.help": "Stehen in Dashboard-Auswahlen oben.",
 
   "profile.summary": ({ language, theme, engines, defaultDashboard }) =>
     `Benutzerprofil: Sprache ${String(language)}, Theme ${String(theme)}, ${String(engines)}${String(defaultDashboard)}.`,
   "profile.summary.allEngines": "alle Engines",
-  "profile.summary.someEngines": ({ count }) => `${String(count)} erlaubte Engine(s)`,
+  "profile.summary.someEngines": ({ count }) =>
+    countOf(count, "erlaubte Engine", "erlaubte Engines"),
   "profile.summary.defaultDashboard": ({ id }) =>
     `, Standard-Dashboard „${String(id)}" (öffnen mit load-dashboard)`,
 
@@ -104,58 +112,69 @@ export const de: MessageCatalog = {
   "theme.dark": "Dunkel",
   "theme.system": "System",
   "language.system": "Automatisch (wie die Chat-App)",
-  "role.read-only": "Nur Lesen",
+  "role.read-only": "Nur lesen",
   "role.operations": "Betrieb",
-  "role.admin": "Administrator",
+  "role.admin": "Administration",
+
+  // ── Ansichtstitel der Show-Tools (Werkzeugleiste des Hosts) ─────────────────
+  "viewTitle.cockpit": "Cockpit",
+  "viewTitle.processList": "Prozessdefinitionen",
+  "viewTitle.processInstances": "Laufende Instanzen",
+  "viewTitle.historyTimeline": "Verlauf",
+  "viewTitle.instanceDetail": "Prozessinstanz",
+  "viewTitle.bpmnViewer": "BPMN-Diagramm",
+  "viewTitle.jobPanel": "Jobs",
+  "viewTitle.engineHealth": "Engine-Übersicht",
+  "viewTitle.clusterDetail": ({ activity }) => `Cluster: ${String(activity)}`,
 
   // ── Modellseitige Widget-Tool-Zusammenfassungen (c7sum.*) ────────────────────
   "c7sum.cockpitOpened":
-    'Das CIB-Seven-Cockpit wurde auf Engine "{engineId}" geöffnet ({engineCount} Engine(s) in der Engine-Liste des Benutzers). Der Benutzer kann die Prozesslandschaft von hier aus clientseitig navigieren.',
+    'Das Operations Cockpit wurde auf Engine "{engineId}" geöffnet ({engineCount} Engine(s) in der Engine-Liste des Benutzers). Der Benutzer kann die Prozesslandschaft von hier aus clientseitig navigieren.',
   "c7sum.cockpitOpenedPicker":
-    "Das CIB-Seven-Cockpit wurde auf seiner Engine-Auswahl geöffnet: {engineCount} Engines in der Engine-Liste des Benutzers, keine vorausgewählt (kein `engine` übergeben, kein gespeicherter Standard). Der Benutzer wählt eine; mit `engine` öffnet es direkt auf einer bestimmten Engine.",
+    "Das Operations Cockpit wurde auf seiner Engine-Auswahl geöffnet: {engineCount} Engine(s) in der Engine-Liste des Benutzers, keine vorausgewählt (kein `engine` übergeben, kein gespeicherter Standard). Der Benutzer wählt eine; mit `engine` öffnet es direkt auf einer bestimmten Engine.",
   "c7sum.processList":
     'Prozessliste: {totalCount} bereitgestellte Definition(en){filters} auf Engine "{engineId}".',
-  "c7sum.state.active": "aktiv",
+  "c7sum.state.active": "läuft",
   "c7sum.state.suspended": "ausgesetzt",
   "c7sum.state.ended": "beendet",
   "c7sum.instanceDetail":
-    "Prozessinstanz {instanceId}{businessKey}: {state}, {activeActivities} aktive Aktivitäten, {openIncidents} offene Vorfälle, {openTasks} offene Benutzeraufgaben.",
+    "Prozessinstanz {instanceId}{businessKey}: {state}; laufende Aktivitäten: {activeActivities}, offene Incidents: {openIncidents}, offene Benutzeraufgaben: {openTasks}.",
   "c7sum.processInstances":
-    '{totalCount} laufende Instanz(en) von "{processDefinitionKey}", davon {withIncidentCount} mit Vorfällen und {suspendedCount} ausgesetzt; {returnedCount} in der Tabelle angezeigt.',
+    '{totalCount} laufende Instanz(en) von "{processDefinitionKey}", davon {withIncidentCount} mit Incidents und {suspendedCount} ausgesetzt; {returnedCount} in der Tabelle angezeigt.',
   "c7sum.incidentsDashboard":
-    "Vorfall-Dashboard: {totalCount} offene(r) Vorfall/Vorfälle über {processCount} Prozessdefinition(en), {last24hCount} in den letzten 24 Stunden.",
+    "Incident-Übersicht: {totalCount} offene Incident(s) in {processCount} Prozessdefinition(en), {last24hCount} in den letzten 24 Stunden.",
   "c7sum.processIncidents":
-    'Prozessvorfälle für "{processDefinitionKey}" (alle Versionen; Diagramm v{diagramVersion}): {incidentCount} offene(r) Vorfall/Vorfälle über {activities} Aktivitäten, {last24hCount} in den letzten 24 Stunden.',
+    'Incidents des Prozesses "{processDefinitionKey}" (alle Versionen; Diagramm v{diagramVersion}): {incidentCount} offene Incident(s), betroffene Aktivitäten: {activities}, {last24hCount} in den letzten 24 Stunden.',
   "c7sum.incidentDetail":
-    'Vorfall {incidentId} ({incidentType}) bei Aktivität "{activity}" in "{processDefinitionKey}", Instanz {processInstanceId}{message}.',
+    'Incident {incidentId} ({incidentType}) bei Aktivität "{activity}" in "{processDefinitionKey}", Instanz {processInstanceId}{message}.',
   "c7sum.processDetail":
-    'Prozess "{processDefinitionKey}" (alle Versionen; Diagramm v{diagramVersion}): {runningInstances} laufende Instanz(en), {openIncidents} offene(r) Vorfall/Vorfälle, {failedJobs} fehlgeschlagene(r) Job(s).',
+    'Prozess "{processDefinitionKey}" (alle Versionen; Diagramm v{diagramVersion}): {runningInstances} laufende Instanz(en), {openIncidents} offene Incident(s), {failedJobs} fehlgeschlagene(r) Job(s).',
   "c7sum.historyTimeline":
-    "Verlaufs-Zeitleiste für Prozessinstanz {processInstanceId}: {totalActivities} historische Aktivitäten{notFound}.",
+    "Verlaufs-Zeitleiste für Prozessinstanz {processInstanceId}: historische Aktivitäten: {totalActivities}{notFound}.",
   "c7sum.historyTimeline.notFound": " (keine historische Prozessinstanz gefunden)",
   "c7sum.engineHealth":
-    'Engine "{engineId}" — {status} ({rule}): {totalIncidents} offene Vorfälle über {affectedActivities} Aktivitäten, {runningInstances} laufende Instanzen.{topCluster}',
+    'Engine "{engineId}": {status} ({rule}). Offene Incidents: {totalIncidents}, betroffene Aktivitäten: {affectedActivities}, laufende Instanzen: {runningInstances}.{topCluster}',
   "c7sum.engineHealth.topCluster":
-    ' Größter Cluster: Aktivität "{activityId}" / {incidentType}, {incidentCount} Vorfälle.',
-  "c7sum.engineHealth.noIncidents": " Keine offenen Vorfälle.",
+    ' Größter Cluster: Aktivität "{activityId}" / {incidentType}, Incidents: {incidentCount}.',
+  "c7sum.engineHealth.noIncidents": " Keine offenen Incidents.",
   "c7sum.unknownNumberOf": "unbekannt viele",
   "c7sum.atLeast": "mindestens {count}",
   "c7sum.unknown": "unbekannt",
   "c7sum.clusterDetail":
-    'Fehler-Cluster auf Engine "{engineId}": Aktivität "{activityId}" / {incidentType} — {incidentCount} Vorfälle ({lastHourCount} in der letzten Stunde) über {processes}.{sample}',
+    'Fehler-Cluster auf Engine "{engineId}": Aktivität "{activityId}" / {incidentType}. Incidents: {incidentCount} ({lastHourCount} in der letzten Stunde), Prozesse: {processes}.{sample}',
   "c7sum.clusterDetail.unknownProcesses": "unbekannte Prozesse",
   "c7sum.clusterDetail.sample": " Beispiel: {message}",
   "c7sum.bpmnViewer":
     "Das BPMN-Diagramm für {target}{overlayInfo}{xmlUnavailable} wurde gerendert.",
   "c7sum.bpmnViewer.empty":
-    "BPMN-Viewer: Keine passende Prozessdefinition gefunden — ein leeres Diagramm wurde gerendert.",
+    "BPMN-Viewer: Keine passende Prozessdefinition gefunden, das Diagramm ist leer.",
   "c7sum.bpmnViewer.targetInstance": "Prozessinstanz {processInstanceId}",
   "c7sum.bpmnViewer.targetDefinition": "Prozessdefinition {definitionId}",
   "c7sum.bpmnViewer.overlays":
-    ": {activeActivities} aktive Aktivitäten, {incidentActivities} Aktivitäten mit Vorfällen, {failedJobs} fehlgeschlagene Jobs dieser Instanz",
+    "; laufende Aktivitäten: {activeActivities}, Aktivitäten mit Incidents: {incidentActivities}, fehlgeschlagene Jobs dieser Instanz: {failedJobs}",
   "c7sum.bpmnViewer.noOverlays":
     " (keine Instanz-Overlays; die Badges zählen alle laufenden Instanzen dieser Version)",
-  "c7sum.bpmnViewer.xmlUnavailable": " — Diagramm-XML nicht verfügbar",
+  "c7sum.bpmnViewer.xmlUnavailable": "; Diagramm-XML nicht verfügbar",
   "c7sum.jobPanel":
     "Job-Panel: {totalCount} Job(s), {failedCount} fehlgeschlagen{forProcess}{failedOnly}.",
   "c7sum.jobPanel.forProcess": ' für "{processDefinitionKey}"',

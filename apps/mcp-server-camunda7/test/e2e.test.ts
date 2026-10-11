@@ -116,7 +116,7 @@ describe("mcp-server-camunda7 E2E smoke", () => {
           id: "default",
           environment: "default",
           flavor: "cibseven",
-          engineName: "CIB Seven",
+          engineName: "CIB seven",
         },
       ],
       environments: [{ id: "default", engineIds: ["default"] }],

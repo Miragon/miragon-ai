@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
-import { localizeFor, resolveLocale } from "./server-locale.js"
+import { localizeFor, localizeViewFor, resolveLocale } from "./server-locale.js"
 
 /** A signed-in caller's handler ctx — whose record the lookup reads. */
 const CTX = { auth: { user: { id: "user-1" } } }
@@ -38,6 +38,48 @@ describe("localizeFor", () => {
 
   it("still returns a working translate when the store is down", async () => {
     const t = await localizeFor(outageStore, CTX)
-    expect(t("profile.heading")).toBe("Profile & Settings")
+    expect(t("profile.heading")).toBe("Profile & settings")
+  })
+})
+
+describe("localizeViewFor", () => {
+  it("titles the view in the language the profile names", async () => {
+    const store = createInMemoryProfileStore()
+    await store.save("user-1", { language: "de" })
+    const { t, title } = await localizeViewFor(store, CTX)
+    expect(title("viewTitle.processList")).toBe("Prozessdefinitionen")
+    expect(title("viewTitle.clusterDetail", { activity: "ship" })).toBe("Cluster: ship")
+    // The model summary follows the same language.
+    expect(t("profile.heading")).toBe("Profil & Einstellungen")
+  })
+
+  it("an English profile gets the English title", async () => {
+    const store = createInMemoryProfileStore()
+    await store.save("user-1", { language: "en" })
+    const { title } = await localizeViewFor(store, CTX)
+    expect(title("viewTitle.processList")).toBe("Process definitions")
+  })
+
+  // "system" follows the HOST's locale, which only the widget sees: the
+  // server sets no title rather than an English one over a German view.
+  it("sets no title while the profile follows the host, and summarizes in English", async () => {
+    const store = createInMemoryProfileStore()
+    await store.save("user-1", { language: "system" })
+    const { t, title } = await localizeViewFor(store, CTX)
+    expect(title("viewTitle.processList")).toBeUndefined()
+    expect(t("profile.heading")).toBe("Profile & settings")
+  })
+
+  it("no store, no caller or a store outage reads as the host's locale: no title", async () => {
+    const store = createInMemoryProfileStore()
+    await store.save("user-1", { language: "de" })
+    for (const view of [
+      await localizeViewFor(undefined, CTX),
+      await localizeViewFor(store),
+      await localizeViewFor(outageStore, CTX),
+    ]) {
+      expect(view.title("viewTitle.processList")).toBeUndefined()
+      expect(view.t("profile.heading")).toBe("Profile & settings")
+    }
   })
 })

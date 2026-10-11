@@ -1,17 +1,17 @@
 import {
-  AskAiButton,
   DrillButton,
   OpenInCockpitLink,
   StatusBadge,
   ViewDataState,
   WidgetHeader,
   WidgetShell,
+  formatNumber,
   formatTimestamp,
-  type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 import { diagramActivityFraction } from "./activity-scope.js"
 import { useDefinitionData } from "./feed.js"
@@ -54,30 +54,17 @@ export function triageProcessHandOff(
   }
 }
 
-/** Tone icon + open-incident badge column of the header. */
+/**
+ * The open-incident badge of the header. The merged view also renders healthy
+ * definitions — the badge appears only when there is something on fire.
+ */
 function HeaderBadge({ data }: { data: ProcessIncidentsData }) {
   const t = useT()
-  const remainingCount = data.incidentCount
-  // The merged view also renders healthy definitions — only go red (and show
-  // the incident badge) when there is actually something on fire.
-  const headerTone: ToneVariant = remainingCount > 0 ? "danger" : "info"
+  if (data.incidentCount === 0) return null
   return (
-    <div className="flex items-center gap-3">
-      <div
-        className={`${
-          headerTone === "danger" ? "bg-danger-soft text-danger-ink" : "bg-m-blue-soft text-m-blue"
-        } grid size-11 place-items-center rounded-xl text-xl`}
-      >
-        {headerTone === "danger" ? "⚠" : "⊞"}
-      </div>
-      {remainingCount > 0 && (
-        <StatusBadge tone="danger">
-          {remainingCount === 1
-            ? t("procIncHeader.openIncidentsOne", { count: remainingCount })
-            : t("procIncHeader.openIncidentsOther", { count: remainingCount })}
-        </StatusBadge>
-      )}
-    </div>
+    <StatusBadge tone="danger">
+      {t("procIncHeader.openIncidents", { count: formatNumber(data.incidentCount) })}
+    </StatusBadge>
   )
 }
 
@@ -95,9 +82,7 @@ function HeaderSub({ data }: { data: ProcessIncidentsData }) {
       <span>{t("procIncHeader.allVersions")}</span>
       <span className="text-muted-foreground">·</span>
       <span>
-        {t("procIncHeader.runningInstances", {
-          count: data.runningInstances.toLocaleString(),
-        })}
+        {t("procIncHeader.runningInstances", { count: formatNumber(data.runningInstances) })}
       </span>
       {data.latestIncident && (
         <>
@@ -109,16 +94,14 @@ function HeaderSub({ data }: { data: ProcessIncidentsData }) {
           </span>
         </>
       )}
-      {cockpitUrl && (
-        <OpenInCockpitLink url={cockpitUrl} label={t("procIncHeader.openInCockpit")} />
-      )}
+      {cockpitUrl && <OpenInCockpitLink url={cockpitUrl} vendor={data.engineVendor} />}
     </>
   )
 }
 
 /**
  * Header of the unified definition view — the single action home: the primary
- * "Analyze" AI handoff plus the running-instances drill live here, so the
+ * chat hand-off plus the running-instances drill live here, so the
  * section widgets below stay action-free.
  */
 export function ProcessDetailHeader({
@@ -164,9 +147,10 @@ export function ProcessDetailHeader({
         title={title}
         sub={<HeaderSub data={data} />}
         actions={
-          <AskAiButton
-            prompt={ask(triageProcessHandOff(data, engine ?? data.engineId))}
+          <HandOffButton
+            action="assess"
             variant="primary"
+            prompt={ask(triageProcessHandOff(data, engine ?? data.engineId))}
           />
         }
       />

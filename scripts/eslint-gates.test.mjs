@@ -205,10 +205,20 @@ describe("gates sharing a glob are merged, not overridden", () => {
     }
   })
 
-  it("connector widgets do not carry the number gate yet (they join it after migrating)", () => {
-    for (const messages of [widgetTs, widgetTsx]) {
-      assert.equal(messages.filter(isNumberHit).length, 0)
+  it("camunda7 widgets carry the number gate on top of both (they render through the kit formatters)", async () => {
+    for (const rel of [`${C7}/widgets/__probe__.ts`, `${C7}/widgets/__probe__.tsx`]) {
+      const messages = await gateMessages(
+        rel,
+        'server.tool("x")\nd.toLocaleDateString()\nconst a = n.toFixed(1)\nconst b = n.toLocaleString()\nnew Intl.NumberFormat("de")',
+      )
+      assert.ok(messages.some(isRegistrarHit), `${rel}: registrar gate dropped`)
+      assert.equal(messages.filter(isDateHit).length, 1, `${rel}: date gate dropped`)
+      assert.equal(messages.filter(isNumberHit).length, 3, `${rel}: number gate missing`)
     }
+  })
+
+  it("analytics widgets do not carry the number gate yet (they join it after migrating)", () => {
+    assert.equal(widgetTsx.filter(isNumberHit).length, 0)
   })
 
   it("the app's UI keeps the date gate", async () => {

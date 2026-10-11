@@ -1,7 +1,6 @@
 import { Fragment, useState } from "react"
 import { Button } from "@miragon/mcp-toolkit-ui"
 import {
-  AskAiButton,
   DrillButton,
   ListTable,
   LogText,
@@ -9,6 +8,7 @@ import {
   StatusBadge,
   Td,
   ViewDataState,
+  formatNumber,
   formatTimestamp,
   truncate,
   usePagedViewData,
@@ -19,6 +19,7 @@ import type { ActivityIncidentsData, IncidentInstance } from "../../view-models.
 import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
 import { CockpitListFooter } from "../list-footer.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 import { EngineActionDialog } from "../lib/engine-action-dialog.js"
 import { recoveryOf } from "../lib/incident-recovery.js"
@@ -72,6 +73,7 @@ export function IncidentTable({
   hideInstanceColumn = false,
   previewCount,
   engine,
+  vendor,
 }: {
   incidents: IncidentInstance[]
   /** Row actions + their optimistic state (`useIncidentRecovery`). */
@@ -90,6 +92,8 @@ export function IncidentTable({
   previewCount?: number
   /** The engine the rows came from, pinned into the AI handoffs. */
   engine?: string
+  /** The engine product (`engineVendor`) — names the per-row link into its web app. */
+  vendor?: string
 }) {
   const t = useT()
   const { ask } = useHandOff()
@@ -154,14 +158,13 @@ export function IncidentTable({
                       >
                         {t("procIncTable.open")}
                       </DrillButton>
-                      {instanceUrl && <OpenInCockpitLink url={instanceUrl} />}
-                      <AskAiButton
+                      <RecoveryButton incident={incident} recovery={recovery} />
+                      {instanceUrl && <OpenInCockpitLink url={instanceUrl} vendor={vendor} />}
+                      <HandOffButton
+                        action="draftTicket"
                         variant="icon"
-                        label={t("procIncTable.draftTicket")}
-                        title={t("procIncTable.draftTicket")}
                         prompt={ask(draftIncidentTicketHandOff(incident, engine))}
                       />
-                      <RecoveryButton incident={incident} recovery={recovery} />
                     </div>
                   )}
                 </Td>
@@ -191,9 +194,7 @@ export function IncidentTable({
           onClick={() => setShowAll(true)}
           className={`text-m-blue w-full justify-start ${leadPad ?? "pl-4"}`}
         >
-          {hidden === 1
-            ? t("procIncTable.showMoreOne", { count: hidden })
-            : t("procIncTable.showMoreOther", { count: hidden })}
+          {t("procIncTable.showMore", { count: formatNumber(hidden) })}
         </Button>
       )}
     </div>
@@ -217,12 +218,15 @@ export function PagedIncidentTable({
   processDefinitionKey,
   activityId,
   engine,
+  vendor,
   onAnalyze,
 }: {
   processDefinitionKey: string
   activityId: string
   /** Explicit engine routing; omitted → the caller's saved default engine. */
   engine?: string
+  /** The engine product of the definition view (`engineVendor`), for the rows' links. */
+  vendor?: string
   onAnalyze: (incidentId: string) => void
 }) {
   const t = useT()
@@ -265,6 +269,7 @@ export function PagedIncidentTable({
           recovery={recovery}
           onAnalyze={onAnalyze}
           engine={engine}
+          vendor={vendor}
         />
       )}
       <div className="bg-muted px-3 pb-1">

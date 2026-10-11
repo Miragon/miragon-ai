@@ -6,6 +6,7 @@ import {
   SectionHeading,
   ViewDataState,
   WidgetShell,
+  formatNumber,
   useDebouncedValue,
 } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
@@ -99,7 +100,7 @@ export function ProcessDefinitionsSection({
     <section>
       <SectionHeading
         title={t("cockpitDefs.heading")}
-        hint={t("cockpitDefs.deployedHint", { count: allRows.length })}
+        hint={t("cockpitDefs.deployedHint", { count: formatNumber(allRows.length) })}
       />
       <FilterBar
         search={search}

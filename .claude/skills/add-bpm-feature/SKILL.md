@@ -202,13 +202,19 @@ never re-inline these primitives:
   `-ink` role is only for text in a tone directly on the card or page (an inline error)
 - Icons: Lucide via `Icon` (`import { FileSearch } from "lucide-react"`; the package pins
   devDependency `lucide-react` `0.562.0`, see CLAUDE.md invariant 6), never a Unicode glyph
-  or emoji; `AskAiButton` gets the `icon` of the concrete function and a verb that names
-  the chat ("Im Chat erklären" / "Explain in chat"); `OpenInCockpitLink` gets
-  `vendor={provider.branding.displayName}`
+  or emoji; a chat hand-off is `<HandOffButton action="explainError" prompt={ask(…)} />`
+  (`src/widgets/lib/hand-off-button.tsx`: the Lucide icon of the concrete function and a
+  `handOff.*` label that names the chat, "Fehler im Chat erklären" / "Explain error in
+  chat"; a new function gets an entry there and its label in both catalogs), placed after
+  the deterministic action; `OpenInCockpitLink` gets `vendor={data.engineVendor}` (the
+  builder sets it from `provider.branding.displayName`)
 - Copy: en + de catalogs in the brand voice (du, AI, "CIB seven", no dash connector,
-  errors say what happened and what you can do); the package's brand-gate test runs
-  `catalogTextFindings` over both catalogs, `scanGlyphs` over `src/widgets` +
-  `src/messages` and `scanColors` over `src/widgets` (`@miragon-ai/widget-shell/testing`;
+  errors say what happened and what you can do, `Ja`/`Nein` for Booleans) and the terms of
+  `src/messages/GLOSSARY.md`; counts go in formatted (`formatNumber`) and the entry picks
+  the noun's number (`countOf` from `messages/plural.ts`). The gates: `catalogTextFindings`
+  over every catalog and en/de key parity (`messages/catalog-text.test.ts`), the glossary
+  (`messages/glossary.test.ts`), `scanGlyphs` over all of `src` and `scanColors` over
+  `src/widgets` (`src/brand-gates.test.ts`, `@miragon-ai/widget-shell/testing`;
   `HIGHLIGHT_COLORS` in `bpmn-highlights.ts` is an `allow` entry with its reason)
 - BPMN: viewer lifecycle and the fixed light canvas via `useBpmnViewer` +
   `BpmnZoomControls`; highlight/legend colors via `HIGHLIGHT_COLORS` from
@@ -342,7 +348,7 @@ exception that uses `server.tool()` directly):
   the new call site to `src/widgets/action-gating.sites.ts` + its renderer in
   `action-gating.test-support.tsx`.
 - Everything the widget tells the model goes through `useHandOff()`
-  (`src/widgets/lib/hand-off.ts`): `<AskAiButton prompt={ask(handOff)} />` and
+  (`src/widgets/lib/hand-off.ts`): `<HandOffButton action="…" prompt={ask(handOff)} />` and
   `<HostModelContext content={context(view)}>`. A hand-off is a typed spec — an `intent`
   key from `messages/{en,de}.ask-ai.ts` (static, no tool names) or a static view
   `summary`, plus `ids` (arguments every named tool may take), `toolIds` (arguments only

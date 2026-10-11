@@ -58,7 +58,7 @@ const HAND_OFF_RULE =
   "propose it and wait for the user's confirmation."
 
 /**
- * The guarded incident remediation (the cockpit's "Fix" hand-off), with only
+ * The guarded incident remediation (the cockpit's "Plan a fix in chat" hand-off), with only
  * the writes `toolset` registers: none on the read-only floor, per-job
  * retries and variable fixes in operations, the batch retry in admin.
  */

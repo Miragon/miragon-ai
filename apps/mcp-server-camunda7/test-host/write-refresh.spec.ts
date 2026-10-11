@@ -46,7 +46,7 @@ test("a write in a standalone view refetches its feed and re-renders — no re-e
   await app.getByRole("button", { name: "Retry job" }).click()
 
   // The retried job left the failed-only list: the view re-read its feed.
-  await expect(app.getByText("No jobs found")).toBeVisible()
+  await expect(app.getByText("No jobs in this selection.")).toBeVisible()
   const log = await hostLog(page)
   const calls = log.toolCalls.filter((c) => c.name !== "camunda7_widget_actions_data")
   const write = calls.findIndex((c) => c.name === "camunda7_set_job_retries")

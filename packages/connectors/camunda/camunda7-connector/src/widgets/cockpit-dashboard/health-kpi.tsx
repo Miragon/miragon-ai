@@ -1,9 +1,9 @@
 import {
-  AskAiButton,
   KpiGrid,
   ViewDataState,
   WidgetHeader,
   WidgetShell,
+  formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
@@ -11,6 +11,7 @@ import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
@@ -91,17 +92,12 @@ export function ProcessHealthKpiView({
         title={t("cockpitHealth.title")}
         sub={
           <span>
-            {t("cockpitHealth.subSummary", {
-              count: summary.totalDefinitions,
-              unit:
-                summary.totalDefinitions === 1
-                  ? t("cockpitHealth.processUnitSingular")
-                  : t("cockpitHealth.processUnitPlural"),
-            })}
+            {t("cockpitHealth.subSummary", { count: formatNumber(summary.totalDefinitions) })}
           </span>
         }
         actions={
-          <AskAiButton
+          <HandOffButton
+            action="assess"
             variant="primary"
             prompt={ask(triageLandscapeHandOff(data, engine ?? data.engineId))}
           />
@@ -116,25 +112,25 @@ export function ProcessHealthKpiView({
         cells={[
           {
             label: t("cockpitHealth.cellTotalProcesses"),
-            value: summary.totalDefinitions,
+            value: formatNumber(summary.totalDefinitions),
             onClick: () => go({ type: "process-list" }),
             ariaLabel: t("cockpitHealth.cellTotalProcessesAria"),
           },
           {
             label: t("cockpitHealth.cellHealthy"),
-            value: healthyCount,
-            fraction: ` /${summary.totalDefinitions}`,
+            value: formatNumber(healthyCount),
+            fraction: ` /${formatNumber(summary.totalDefinitions)}`,
             tone: healthyCount > 0 ? "success" : undefined,
           },
           {
             label: t("cockpitHealth.cellAffected"),
-            value: affectedCount,
-            fraction: ` /${summary.totalDefinitions}`,
+            value: formatNumber(affectedCount),
+            fraction: ` /${formatNumber(summary.totalDefinitions)}`,
             tone: affectedCount > 0 ? "danger" : undefined,
           },
           {
             label: t("cockpitHealth.cellOpenIncidents"),
-            value: summary.totalIncidents,
+            value: formatNumber(summary.totalIncidents),
             tone: summary.totalIncidents > 0 ? "danger" : undefined,
             onClick: () => go({ type: "incidents" }),
             ariaLabel: t("cockpitHealth.cellOpenIncidentsAria"),

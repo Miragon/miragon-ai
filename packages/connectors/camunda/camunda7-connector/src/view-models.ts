@@ -387,7 +387,15 @@ export interface IncidentsDashboardProcess {
   activities: IncidentsDashboardActivity[]
 }
 
-export interface IncidentsDashboardData {
+/**
+ * A view that links into the engine product's own web app. `engineVendor` is
+ * the product's display name (`provider.branding.displayName`: "CIB seven",
+ * "Camunda 7", "Operaton") — it names that link ("In CIB seven öffnen"),
+ * never this app's own "Cockpit".
+ */
+export type EngineVendorInfo = { engineVendor: string }
+
+export interface IncidentsDashboardData extends EngineVendorInfo {
   totalCount: number
   processCount: number
   /** Null unless every card's breakdown is complete. */
@@ -432,7 +440,7 @@ export interface ActivityIncidentsData {
  * spans all deployed versions; only the diagram is one version
  * (`diagramVersion`, the latest over every tenant).
  */
-export interface ProcessIncidentsData {
+export interface ProcessIncidentsData extends EngineVendorInfo {
   processDefinitionKey: string
   processDefinitionName: string | null
   /** Version of `bpmnXml` — the latest deployed; the counts cover every version. */
@@ -474,7 +482,7 @@ export interface IncidentDetailJob {
   dueDate: string | null
 }
 
-export interface IncidentDetailData {
+export interface IncidentDetailData extends EngineVendorInfo {
   // Header
   incidentId: string
   incidentType: string
@@ -572,8 +580,6 @@ export interface EngineHealthData {
   status: EngineHealthStatus
   /** How `status` was decided, in words (source + thresholds) — `healthVerdictRule`. */
   statusRule: string
-  /** Deterministic plain-language headline, e.g. "Degraded — 51 open incidents across 3 activities". */
-  headline: string
   summary: {
     totalIncidents: number
     /** New incidents in the last hour — the "is it burning right now?" signal. */

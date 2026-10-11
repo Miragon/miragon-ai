@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { queryClient } from "@miragon/mcp-toolkit-ui"
+import { LocaleProvider, queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
 import type { TaskFormSchema } from "../view-models.js"
@@ -72,7 +72,7 @@ describe("the task form reports what the engine did", () => {
       () => completed++,
     )
     fireEvent.click(await screen.findByText("Complete task"))
-    expect(await screen.findByText(/back to its owner \(mary\)/)).toBeTruthy()
+    expect(await screen.findByText(/goes back to mary instead of being completed/)).toBeTruthy()
     expect(completed).toBe(0)
   })
 
@@ -85,7 +85,7 @@ describe("the task form reports what the engine did", () => {
     )
     fireEvent.click(await screen.findByText("Complete task"))
     await waitFor(() => expect(completed).toBe(1))
-    expect(screen.queryByText(/back to its owner/)).toBeNull()
+    expect(screen.queryByText(/goes back to/)).toBeNull()
   })
 })
 
@@ -93,7 +93,7 @@ describe("the task form never passes an unknown form for 'no form'", () => {
   it("names a linked Camunda Form (formRef)", async () => {
     renderForm({ ...NO_FIELDS, formRef: "invoiceForm" }, {})
     expect(await screen.findByText(/uses its own form \(invoiceForm\)/)).toBeTruthy()
-    expect(screen.queryByText("No form is defined for this task.")).toBeNull()
+    expect(screen.queryByText("This task has no form.")).toBeNull()
   })
 
   it("loads a schema the server could not build, and shows that load's failure", async () => {
@@ -106,8 +106,64 @@ describe("the task form never passes an unknown form for 'no form'", () => {
         throw new Error("[403] not authorized")
       },
     })
-    expect(await screen.findByText(/Could not load task form: .*not authorized/)).toBeTruthy()
+    expect(
+      await screen.findByText(/Could not load the task form \(.*not authorized.*\)/),
+    ).toBeTruthy()
     expect(asked).toEqual([{ taskId: "t-1", engine: "prod" }])
-    expect(screen.queryByText("No form is defined for this task.")).toBeNull()
+    expect(screen.queryByText("This task has no form.")).toBeNull()
+  })
+})
+
+/**
+ * A Boolean field reads "Ja"/"Nein" ("Yes"/"No") on screen, never the
+ * engine's `true`/`false` — the variable still goes to the engine as a
+ * Boolean. The choice states its selection (`aria-pressed`).
+ */
+describe("a Boolean field speaks the view's language", () => {
+  const APPROVED: TaskFormSchema = {
+    taskId: "t-1",
+    fields: [{ name: "approved", label: "Genehmigt", type: "Boolean", source: "form-data" }],
+  }
+
+  it.each([
+    ["de", "Ja", "Nein", "Aufgabe abschließen"],
+    ["en", "Yes", "No", "Complete task"],
+  ] as const)("%s: %s / %s, and the engine gets a Boolean", async (locale, yes, no, complete) => {
+    const submitted: unknown[] = []
+    const Form: ComponentType<Record<string, unknown>> = () => {
+      const action = useEngineAction<CompleteTaskArgs, TaskCompletion>({
+        tool: "camunda7_complete_task",
+        target: (args) => args.taskId,
+      })
+      return <TaskCompleteForm taskId="t-1" engine="prod" formSchema={APPROVED} action={action} />
+    }
+    render(
+      <LocaleProvider locale={locale}>
+        <WidgetFixtureHost
+          widget={Form}
+          data={{}}
+          tools={{
+            [CAMUNDA7_WIDGET_ACTIONS_DATA]: COMPLETE_ALLOWED,
+            camunda7_complete_task: (args: unknown) => {
+              submitted.push(args)
+              return { success: true, taskId: "t-1", outcome: "completed" }
+            },
+          }}
+        />
+      </LocaleProvider>,
+    )
+    const yesButton = await screen.findByRole("button", { name: yes })
+    const noButton = screen.getByRole("button", { name: no })
+    expect(screen.queryByText("true")).toBeNull()
+    expect(screen.queryByText("false")).toBeNull()
+    expect(yesButton.getAttribute("aria-pressed")).toBe("false")
+    fireEvent.click(yesButton)
+    expect(yesButton.getAttribute("aria-pressed")).toBe("true")
+    expect(noButton.getAttribute("aria-pressed")).toBe("false")
+    fireEvent.click(await screen.findByText(complete))
+    await waitFor(() => expect(submitted).toHaveLength(1))
+    expect(submitted[0]).toMatchObject({
+      variables: { approved: { value: true, type: "Boolean" } },
+    })
   })
 })

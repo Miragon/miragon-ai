@@ -48,6 +48,7 @@ const PROCESS_VIEW: ProcessIncidentsData = {
     },
   ],
   siblingsWithIncidents: null,
+  engineVendor: "CIB seven",
   engineId: "prod-a",
 }
 

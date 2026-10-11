@@ -1,4 +1,10 @@
-import { KpiGrid, ViewDataState, WidgetShell, type KpiCell } from "@miragon-ai/widget-shell/widgets"
+import {
+  KpiGrid,
+  ViewDataState,
+  WidgetShell,
+  formatNumber,
+  type KpiCell,
+} from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { useT } from "../../messages/use-t.js"
@@ -45,19 +51,19 @@ export function ProcessDefinitionKpi({
   const activitiesCell: KpiCell = fraction
     ? {
         label: t("procIncKpi.activitiesAffected"),
-        value: fraction.affected,
-        fraction: `/${fraction.total}`,
+        value: formatNumber(fraction.affected),
+        fraction: `/${formatNumber(fraction.total)}`,
         trend:
           fraction.olderVersionsOnly > 0
-            ? t("procIncKpi.olderVersionsOnly", { count: fraction.olderVersionsOnly })
+            ? t("procIncKpi.olderVersionsOnly", { count: formatNumber(fraction.olderVersionsOnly) })
             : undefined,
       }
-    : { label: t("procIncKpi.activitiesAffected"), value: data.activities.length }
+    : { label: t("procIncKpi.activitiesAffected"), value: formatNumber(data.activities.length) }
 
   const cells: KpiCell[] = [
     {
       label: t("procIncKpi.running"),
-      value: data.runningInstances.toLocaleString(),
+      value: formatNumber(data.runningInstances),
       tone: data.runningInstances > 0 ? "success" : undefined,
       onClick: () =>
         go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey }),
@@ -65,17 +71,17 @@ export function ProcessDefinitionKpi({
     },
     {
       label: t("procIncKpi.openIncidents"),
-      value: data.incidentCount,
+      value: formatNumber(data.incidentCount),
       tone: data.incidentCount > 0 ? "danger" : undefined,
     },
     {
-      label: "+24h",
-      value: `+${data.last24hCount}`,
+      label: t("procIncKpi.last24h"),
+      value: `+${formatNumber(data.last24hCount)}`,
       tone: data.last24hCount > 0 ? "danger" : undefined,
     },
     {
       label: t("procIncKpi.failedJobs"),
-      value: data.failedJobs,
+      value: formatNumber(data.failedJobs),
       tone: data.failedJobs > 0 ? "warning" : undefined,
     },
     activitiesCell,

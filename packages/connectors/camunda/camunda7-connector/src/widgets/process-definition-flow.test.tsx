@@ -67,6 +67,7 @@ const DATA: ProcessIncidentsData = {
     },
   ],
   siblingsWithIncidents: null,
+  engineVendor: "CIB seven",
   engineId: "prod-a",
 }
 
@@ -134,7 +135,7 @@ function renderFlow(props: Record<string, unknown>, { analytics }: { analytics: 
   return heatmapCalls
 }
 
-const modeGroup = () => screen.getByRole("group", { name: "Process flow display mode" })
+const modeGroup = () => screen.getByRole("group", { name: "Process flow display" })
 
 describe.each(ENTRIES)("definition view flow — %s", (_entry, props) => {
   it("without analytics: the incident overlay, no heatmap mode, no heatmap call", async () => {

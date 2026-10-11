@@ -38,7 +38,7 @@ export const GATING_SITES = [
   {
     site: "process-incidents/use-incident-recovery.ts#camunda7_resolve_incident",
     write: "camunda7_resolve_incident",
-    control: "Resolve",
+    control: "Mark as resolved",
   },
   {
     site: "process-incidents/use-incident-recovery.ts#camunda7_set_job_retries",

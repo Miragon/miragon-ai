@@ -350,6 +350,7 @@ export async function buildIncidentDetailData(
     processInstanceId,
     businessKey: rawInstance?.businessKey ?? null,
     cockpitInstanceUrl,
+    engineVendor: options.provider.branding.displayName,
 
     bpmnXml,
 

@@ -9,7 +9,7 @@ import { createDialectClient } from "./create-client.js"
  */
 export const cibsevenProvider: EngineProvider = {
   flavor: "cibseven",
-  branding: { displayName: "CIB Seven" },
+  branding: { displayName: "CIB seven" },
   createClient: createDialectClient,
   cockpit: {
     deriveWebappBase: (baseUrl) =>

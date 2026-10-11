@@ -1,3 +1,5 @@
+import { Icon } from "@miragon-ai/widget-shell/widgets"
+import { ChevronRight } from "lucide-react"
 import { translator } from "../../messages/index.js"
 import { crumbLabel, type CockpitView } from "../nav-core.js"
 
@@ -31,7 +33,7 @@ export function NavBreadcrumb({
     >
       {entries.map((entry, position) => (
         <span key={position} className="inline-flex items-center gap-1.5">
-          {position > 0 && <span aria-hidden="true">›</span>}
+          {position > 0 && <Icon icon={ChevronRight} dense />}
           {position < entries.length - 1 ? (
             <button
               type="button"
@@ -41,7 +43,9 @@ export function NavBreadcrumb({
               {entry.label}
             </button>
           ) : (
-            <span className="text-foreground font-medium">{entry.label}</span>
+            <span aria-current="page" className="text-foreground font-medium">
+              {entry.label}
+            </span>
           )}
         </span>
       ))}

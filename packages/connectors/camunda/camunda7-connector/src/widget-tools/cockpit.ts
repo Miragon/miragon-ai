@@ -29,7 +29,7 @@ import {
   processInstancesFilterShape,
   processListFilterShape,
 } from "../feed-contracts.js"
-import { localizeFor } from "../lib/server-locale.js"
+import { localizeFor, localizeViewFor } from "../lib/server-locale.js"
 import { type WidgetToolsContext, definitionViewLayout } from "./shared.js"
 
 /** The cockpit entry + the definition/instance list & detail show-tools. */
@@ -47,7 +47,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       ...showToolBinding(CAMUNDA7_OPEN_COCKPIT, "Open Cockpit"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       // Thin bootstrap: the engine the cockpit OPENS on (per-call `engine` >
       // the caller's saved default > the only engine in their list; null →
       // the picker) over the caller's engine list — the app seeds its scope
@@ -76,7 +76,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
         app: "camunda7",
         dataType: "camunda7:cockpitApp",
         data,
-        title: "Cockpit",
+        title: title("viewTitle.cockpit"),
         summary: engineId
           ? t("c7sum.cockpitOpened", { engineId, engineCount: data.engines.length })
           : t("c7sum.cockpitOpenedPicker", { engineCount: data.engines.length }),
@@ -99,7 +99,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       ...showToolBinding(CAMUNDA7_SHOW_PROCESS_LIST, "Process Definitions"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildProcessListData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
@@ -119,7 +119,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
         app: "camunda7",
         dataType: "camunda7:processDefinitionList",
         data,
-        title: "Process Definitions",
+        title: title("viewTitle.processList"),
         summary: t("c7sum.processList", {
           totalCount: data.totalCount,
           filters: filters ? ` matching ${filters}` : "",
@@ -145,7 +145,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       ...showToolBinding(CAMUNDA7_SHOW_PROCESS_INSTANCES, "Process Instances"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       const data = await buildProcessInstancesData(client, engineId, {
         processDefinitionKey: args.processDefinitionKey,
@@ -161,7 +161,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
         app: "camunda7",
         dataType: "camunda7:processInstances",
         data,
-        title: "Process Instances",
+        title: title("viewTitle.processInstances"),
         summary: t("c7sum.processInstances", {
           totalCount: data.totalCount,
           processDefinitionKey: data.processDefinitionKey ?? "(all definitions)",
@@ -230,7 +230,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
       ...showToolBinding(CAMUNDA7_SHOW_HISTORY_TIMELINE, "History Timeline"),
     },
     withToolErrors(async (args, ctx) => {
-      const t = await localizeFor(profileStore, ctx)
+      const { t, title } = await localizeViewFor(profileStore, ctx)
       const { client, engineId } = await resolveEngine(args.engine, registry, ctx)
       // Shared builder with the `camunda7:load-history-timeline` step.
       const data = await buildHistoryTimelineData(client, engineId, {
@@ -243,7 +243,7 @@ export function registerCockpitWidgetTools(ctx: WidgetToolsContext) {
         app: "camunda7",
         dataType: "camunda7:historyTimeline",
         data,
-        title: "History Timeline",
+        title: title("viewTitle.historyTimeline"),
         summary: t("c7sum.historyTimeline", {
           processInstanceId: args.processInstanceId,
           totalActivities: data.totalActivities,

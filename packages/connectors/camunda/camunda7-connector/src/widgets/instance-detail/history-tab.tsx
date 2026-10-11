@@ -1,8 +1,6 @@
-import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
-
 import { PagedHistoryView } from "../history-timeline.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
-import { useT } from "../../messages/use-t.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 
 /** Walk ONE instance's activity history: where the token spent its time. */
 export function explainTimelineHandOff(
@@ -27,14 +25,12 @@ export function HistoryTab({
   definitionId: string
   engineId?: string
 }) {
-  const t = useT()
   const { ask } = useHandOff()
   return (
     <>
       <div className="mb-2">
-        <AskAiButton
-          variant="subtle"
-          label={t("instanceDetail.explainTimeline")}
+        <HandOffButton
+          action="explainTimeline"
           prompt={ask(explainTimelineHandOff(instanceId, definitionId, engineId))}
         />
       </div>

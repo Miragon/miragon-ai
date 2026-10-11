@@ -2,8 +2,9 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { queryClient } from "@miragon/mcp-toolkit-ui"
+import { LocaleProvider, queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost, type HostActionLog } from "@miragon/mcp-toolkit-ui/app"
+import { formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { EngineHealthVerdict } from "./engine-health.js"
 import type { EngineHealthData } from "../view-models.js"
 import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
@@ -26,7 +27,6 @@ const RULE =
 const DEGRADED: EngineHealthData = {
   status: "degraded",
   statusRule: RULE,
-  headline: "Degraded — 51 open incidents across 3 activities",
   summary: {
     totalIncidents: 51,
     lastHourIncidents: 9,
@@ -73,7 +73,6 @@ const DEGRADED: EngineHealthData = {
 const HEALTHY: EngineHealthData = {
   status: "ok",
   statusRule: RULE,
-  headline: "Stable — no open incidents (312 running instances)",
   summary: {
     totalIncidents: 0,
     lastHourIncidents: 0,
@@ -103,19 +102,19 @@ describe("EngineHealthVerdict (fixture render)", () => {
     )
 
     // Verdict header (title + deterministic headline) and the top-level AI handoff.
-    expect(screen.getByText("Engine Overview")).toBeTruthy()
-    expect(screen.getByText("Degraded — 51 open incidents across 3 activities")).toBeTruthy()
-    expect(await screen.findByText("Analyze")).toBeTruthy()
+    expect(screen.getByText("Engine overview")).toBeTruthy()
+    expect(screen.getByText("51 open incidents across 3 activities")).toBeTruthy()
+    expect(await screen.findByText("Assess in chat")).toBeTruthy()
 
     // KPI row.
     expect(screen.getByText("Running instances")).toBeTruthy()
 
     // Freshness affordances: the "as of" stamp + a manual refresh button.
-    expect(screen.getByText(/as of/)).toBeTruthy()
-    expect(screen.getByRole("button", { name: "↻ Refresh" })).toBeTruthy()
+    expect(screen.getByText(/As of/)).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy()
 
     // Clustered incidents (cross-process, by activity + type).
-    expect(screen.getByText("Top failures (grouped by root cause)")).toBeTruthy()
+    expect(screen.getByText("Top failures, grouped by cause")).toBeTruthy()
     expect(screen.getByText("callWMS")).toBeTruthy()
     expect(screen.getByText("failedExternalTask")).toBeTruthy()
     expect(screen.getByText("checkCustomer")).toBeTruthy()
@@ -123,7 +122,7 @@ describe("EngineHealthVerdict (fixture render)", () => {
     // Each cluster carries both launchpads: a deterministic drill + the guarded
     // remediation handoff to the agent.
     expect(screen.getAllByText("Open")).toHaveLength(2)
-    expect(await screen.findAllByText("Fix")).toHaveLength(2)
+    expect(await screen.findAllByText("Plan a fix in chat")).toHaveLength(2)
   })
 
   // A surface feed that cannot answer (failed call; a host without in-widget
@@ -141,9 +140,9 @@ describe("EngineHealthVerdict (fixture render)", () => {
         onHostAction={(action) => actions.push(action)}
       />,
     )
-    fireEvent.click(await screen.findByRole("button", { name: /Analyze/ }))
+    fireEvent.click(await screen.findByRole("button", { name: /Assess in chat/ }))
     // Without a confirmed retry tool the clusters offer the diagnosis.
-    expect(await screen.findAllByRole("button", { name: /Diagnose/ })).toHaveLength(2)
+    expect(await screen.findAllByRole("button", { name: /Explain error in chat/ })).toHaveLength(2)
     const prompts = actions.flatMap((a) => (a.type === "sendFollowUpMessage" ? [a.prompt] : []))
     expect(prompts).toHaveLength(1)
     expect(prompts[0]).toContain('Ids: engine="default"')
@@ -156,8 +155,8 @@ describe("EngineHealthVerdict (fixture render)", () => {
       <WidgetFixtureHost widget={Widget} data={HEALTHY as unknown as Record<string, unknown>} />,
     )
 
-    expect(screen.getByText("Stable — no open incidents (312 running instances)")).toBeTruthy()
-    expect(screen.queryByText("Top failures (grouped by root cause)")).toBeNull()
+    expect(screen.getByText("No open incidents, 312 running instances")).toBeTruthy()
+    expect(screen.queryByText("Top failures, grouped by cause")).toBeNull()
 
     // The healthy state still earns the screen: throughput is visible.
     expect(screen.getByText(/Throughput \(24h\)/)).toBeTruthy()
@@ -180,8 +179,97 @@ describe("EngineHealthVerdict (fixture render)", () => {
       <WidgetFixtureHost widget={Widget} data={capped as unknown as Record<string, unknown>} />,
     )
 
-    expect(screen.getByText(`≥${(1400).toLocaleString()} affected`, { exact: false })).toBeTruthy()
+    expect(screen.getByText(`≥${formatNumber(1400)} affected`, { exact: false })).toBeTruthy()
     // An unknown 24h count is left out, not rendered as "0 new in 24h".
     expect(screen.queryByText(/new in 24h/)).toBeNull()
+  })
+})
+
+/**
+ * The verdict travels as data (status + counts) and the widget words it in
+ * the view's language (#322 U3) — never the server's English sentence under
+ * a German title. The status word stays in the KPI badge, not in the line.
+ */
+describe("the verdict line and the hand-offs speak the view's language", () => {
+  function renderIn(locale: string, data: EngineHealthData) {
+    return render(
+      <LocaleProvider locale={locale}>
+        <WidgetFixtureHost
+          widget={Widget}
+          data={data as unknown as Record<string, unknown>}
+          tools={tools}
+        />
+      </LocaleProvider>,
+    )
+  }
+
+  const ONE: EngineHealthData = {
+    ...DEGRADED,
+    summary: { ...DEGRADED.summary, totalIncidents: 1, affectedActivities: 1 },
+  }
+  const CAPPED: EngineHealthData = {
+    ...DEGRADED,
+    summary: { ...DEGRADED.summary, affectedActivities: null },
+  }
+  const EMPTY_ENGINE: EngineHealthData = {
+    ...HEALTHY,
+    summary: { ...HEALTHY.summary, runningInstances: 0, totalDefinitions: 0 },
+  }
+  const ONE_RUNNING: EngineHealthData = {
+    ...HEALTHY,
+    summary: { ...HEALTHY.summary, runningInstances: 1 },
+  }
+
+  it.each([
+    ["en", DEGRADED, "51 open incidents across 3 activities"],
+    ["de", DEGRADED, "51 offene Incidents in 3 Aktivitäten"],
+    ["en", ONE, "1 open incident across 1 activity"],
+    ["de", ONE, "1 offener Incident in 1 Aktivität"],
+    // A capped scan leaves the activity count out instead of guessing it.
+    ["en", CAPPED, "51 open incidents"],
+    ["de", CAPPED, "51 offene Incidents"],
+    ["en", HEALTHY, "No open incidents, 312 running instances"],
+    ["de", HEALTHY, "Keine offenen Incidents bei 312 laufenden Instanzen"],
+    ["de", ONE_RUNNING, "Keine offenen Incidents bei 1 laufender Instanz"],
+    // An engine with nothing deployed says so, not "no open incidents".
+    ["en", EMPTY_ENGINE, "No processes deployed"],
+    ["de", EMPTY_ENGINE, "Keine Prozesse bereitgestellt"],
+  ] as const)("%s: %s", (locale, data, line) => {
+    renderIn(locale, data)
+    expect(screen.getByText(line)).toBeTruthy()
+  })
+
+  it("a German view: German title, verdict, status badge and chat hand-offs, no English left", async () => {
+    const { container } = renderIn("de", DEGRADED)
+    expect(screen.getByText("Engine-Übersicht")).toBeTruthy()
+    expect(screen.getByText("Beeinträchtigt")).toBeTruthy()
+    // The hand-offs name the chat and draw the icon of their function.
+    const assess = await screen.findByRole("button", { name: "Im Chat bewerten" })
+    expect(assess.querySelector("svg")!.getAttribute("class")).toContain("lucide-list-checks")
+    const fixes = await screen.findAllByRole("button", { name: "Behebung im Chat planen" })
+    expect(fixes).toHaveLength(2)
+    expect(fixes[0].querySelector("svg")!.getAttribute("class")).toContain("lucide-wrench")
+    expect(screen.getByRole("button", { name: "Aktualisieren" })).toBeTruthy()
+    for (const english of ["Engine overview", "open incidents", "Degraded", "Assess", "Refresh"]) {
+      expect(container.textContent).not.toContain(english)
+    }
+    // No glyph icon and no sparkle anywhere in the view.
+    expect(container.textContent).not.toMatch(/[✦↻⚠▶›]/)
+  })
+
+  it("a read-only deployment explains the cluster instead of planning a fix", async () => {
+    render(
+      <LocaleProvider locale="de">
+        <WidgetFixtureHost
+          widget={Widget}
+          data={DEGRADED as unknown as Record<string, unknown>}
+          tools={{ [CAMUNDA7_WIDGET_ACTIONS_DATA]: await widgetActionsFeedFor("read-only") }}
+        />
+      </LocaleProvider>,
+    )
+    const explain = await screen.findAllByRole("button", { name: "Fehler im Chat erklären" })
+    expect(explain).toHaveLength(2)
+    expect(explain[0].querySelector("svg")!.getAttribute("class")).toContain("lucide-file-search")
+    expect(screen.queryByRole("button", { name: "Behebung im Chat planen" })).toBeNull()
   })
 })

@@ -1,7 +1,8 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
-import { AskAiButton, StatusBadge } from "@miragon-ai/widget-shell/widgets"
+import { StatusBadge, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { HandOffButton } from "../lib/hand-off-button.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
@@ -53,16 +54,20 @@ export function BpmnViewerHeader({ data }: { data: BpmnViewerData | null }) {
         )}
         {totalActive > 0 && (
           <StatusBadge tone="success" className="py-0.5">
-            {t("bpmnHeader.activeCount", { count: totalActive })}
+            {t("bpmnHeader.activeCount", { count: formatNumber(totalActive) })}
           </StatusBadge>
         )}
         {totalIncidents > 0 && (
           <Badge variant="destructive">
-            {t("bpmnHeader.incidentsCount", { count: totalIncidents })}
+            {t("bpmnHeader.incidentsCount", { count: formatNumber(totalIncidents) })}
           </Badge>
         )}
       </div>
-      <AskAiButton prompt={ask(explainDiagramHandOff(data))} variant="primary" />
+      <HandOffButton
+        action="explainDiagram"
+        variant="primary"
+        prompt={ask(explainDiagramHandOff(data))}
+      />
     </div>
   )
 }

@@ -88,6 +88,7 @@ export async function buildIncidentsDashboardData(
       processDefinitionKey: options.processDefinitionKey,
       incidentType: options.incidentType,
     },
+    engineVendor: options.provider.branding.displayName,
   }
 }
 

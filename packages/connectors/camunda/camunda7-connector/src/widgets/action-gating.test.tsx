@@ -109,7 +109,7 @@ describe("the gate fails closed and hides only the write", () => {
     renderWith(JobPanel, { allowedActions: [], modelTools: readOnlyModelTools })
     await feedSettled()
     expect(screen.queryByText("Retry job")).toBeNull()
-    expect(screen.getByLabelText("Explain this failure")).toBeTruthy()
+    expect(screen.getByLabelText("Explain error in chat")).toBeTruthy()
   })
 
   it("fails closed while the feed has not answered", () => {

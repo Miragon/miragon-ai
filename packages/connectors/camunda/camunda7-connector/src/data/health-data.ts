@@ -193,24 +193,6 @@ function toClusterList(
     }))
 }
 
-function healthHeadline(
-  status: EngineHealthData["status"],
-  totalIncidents: number,
-  runningInstances: number,
-  affectedActivities: number | null,
-): string {
-  if (totalIncidents === 0) {
-    return `Stable — no open incidents (${runningInstances} running instances)`
-  }
-  const statusLabel = status === "ok" ? "Stable" : status === "degraded" ? "Degraded" : "Critical"
-  const incidents = `${totalIncidents} open incident${totalIncidents === 1 ? "" : "s"}`
-  if (affectedActivities === null) return `${statusLabel} — ${incidents}`
-  return (
-    `${statusLabel} — ${incidents} ` +
-    `across ${affectedActivities} ${affectedActivities === 1 ? "activity" : "activities"}`
-  )
-}
-
 /**
  * Engine-wide health verdict for the AI-first cockpit overview. Purely
  * deterministic: it counts running instances + open incidents, then clusters
@@ -230,7 +212,7 @@ export async function buildEngineHealthData(
 
   // Deliberately NO .catch(() => []) on the verdict inputs: a down or
   // unauthorized engine must surface as a tool error (via the withToolErrors
-  // wrapper), never as a confident "Stable — no open incidents" verdict. The
+  // wrapper), never as a confident "ok, no open incidents" verdict. The
   // two throughput counts are OPTIONAL enrichment — history can be disabled
   // (history level "none") on an otherwise healthy engine, so they degrade to
   // null instead of failing the whole verdict. Every total is a `/count` or
@@ -286,13 +268,14 @@ export async function buildEngineHealthData(
   // The cluster rule judges the top cluster's SCANNED share — a lower bound,
   // so it never raises a false "critical"; a capped scan means at least
   // CLUSTER_SCAN_LIMIT open incidents, which the total rule judges exactly.
+  // The verdict travels as data — status + the counts below — and each
+  // reader words it: the widget in the view's locale, the show tool's model
+  // summary from its catalog (#322 U3). No sentence is built here.
   const status = statusOf(totalIncidents, clusters[0]?.scannedIncidentCount ?? 0, thresholds)
-  const headline = healthHeadline(status, totalIncidents, runningInstances, affectedActivities)
 
   return {
     status,
     statusRule: healthVerdictRule(thresholds),
-    headline,
     summary: {
       totalIncidents,
       lastHourIncidents,

@@ -3,7 +3,6 @@ import { Badge, Button } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "../view-models.js"
 import {
-  AskAiButton,
   KpiGrid,
   ListTable,
   LogText,
@@ -11,6 +10,7 @@ import {
   Td,
   ViewDataState,
   WidgetShell,
+  formatNumber,
   formatTimestamp,
   usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
@@ -18,6 +18,7 @@ import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { CockpitListFooter } from "./list-footer.js"
 import { useEngineAction } from "./lib/engine-action.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
+import { HandOffButton } from "./lib/hand-off-button.js"
 import { useT } from "../messages/use-t.js"
 
 export type { JobPanelData }
@@ -219,13 +220,21 @@ export function JobPanelWidget({
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-semibold">{t("jobPanel.title")}</h2>
-          <Badge variant="secondary">{t("jobPanel.badgeTotal", { count: totalCount })}</Badge>
+          <Badge variant="secondary">
+            {t("jobPanel.badgeTotal", { count: formatNumber(totalCount) })}
+          </Badge>
           {failedCount > 0 && (
-            <Badge variant="destructive">{t("jobPanel.badgeFailed", { count: failedCount })}</Badge>
+            <Badge variant="destructive">
+              {t("jobPanel.badgeFailed", { count: formatNumber(failedCount) })}
+            </Badge>
           )}
         </div>
         {failedJobs.length > 0 && (
-          <AskAiButton variant="primary" prompt={ask(triageJobsHandOff(data, engineId))} />
+          <HandOffButton
+            action="assess"
+            variant="primary"
+            prompt={ask(triageJobsHandOff(data, engineId))}
+          />
         )}
       </div>
       <KpiGrid
@@ -233,9 +242,13 @@ export function JobPanelWidget({
         className="grid-cols-2 gap-3 sm:grid-cols-3"
         ariaLabel={t("jobPanel.summaryLabel")}
         cells={[
-          { label: t("jobPanel.totalJobs"), value: totalCount },
-          { label: t("jobPanel.stuck"), value: failedCount, tone: "danger" },
-          { label: t("jobPanel.healthy"), value: totalCount - failedCount, tone: "success" },
+          { label: t("jobPanel.totalJobs"), value: formatNumber(totalCount) },
+          { label: t("jobPanel.stuck"), value: formatNumber(failedCount), tone: "danger" },
+          {
+            label: t("jobPanel.healthy"),
+            value: formatNumber(totalCount - failedCount),
+            tone: "success",
+          },
         ]}
       />
 
@@ -277,7 +290,7 @@ export function JobPanelWidget({
                       }
                       className="tabular-nums"
                     >
-                      {retried ? 1 : job.retries}
+                      {formatNumber(retried ? 1 : job.retries)}
                     </Badge>
                   </Td>
                   <Td>
@@ -289,18 +302,6 @@ export function JobPanelWidget({
                   <Td align="right">
                     {job.retries === 0 && !retried && (
                       <div className="inline-flex items-center justify-end gap-1">
-                        <AskAiButton
-                          variant="icon"
-                          label={t("jobPanel.explainFailure")}
-                          title={t("jobPanel.explainFailure")}
-                          prompt={ask(explainJobHandOff(job, engineId))}
-                        />
-                        <AskAiButton
-                          variant="icon"
-                          label={t("jobPanel.draftTicket")}
-                          title={t("jobPanel.draftTicket")}
-                          prompt={ask(draftJobTicketHandOff(job, engineId))}
-                        />
                         {retry.allowed && (
                           <Button
                             variant="outline"
@@ -313,6 +314,16 @@ export function JobPanelWidget({
                             {t("jobPanel.retry")}
                           </Button>
                         )}
+                        <HandOffButton
+                          action="explainError"
+                          variant="icon"
+                          prompt={ask(explainJobHandOff(job, engineId))}
+                        />
+                        <HandOffButton
+                          action="draftTicket"
+                          variant="icon"
+                          prompt={ask(draftJobTicketHandOff(job, engineId))}
+                        />
                       </div>
                     )}
                     {retried && <Badge variant="secondary">{t("jobPanel.retried")}</Badge>}

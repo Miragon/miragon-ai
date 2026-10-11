@@ -30,7 +30,7 @@ import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
  *   lands — the list, and the search box the operator is typing into, must
  *   stay mounted with the previous rows meanwhile;
  * - N130: a page-0 failure over rows on screen is its own error with a retry
- *   that re-runs page 0 — never "Failed to load more".
+ *   that re-runs page 0 — never "Could not load more entries".
  */
 
 const toolkitDefaults = queryClient.getDefaultOptions()
@@ -238,7 +238,7 @@ describe("a page-0 failure over rows on screen is not a load-more failure (N130)
     const alert = await screen.findByRole("alert")
     expect(alert.textContent).toContain("Could not update the list")
     expect(alert.textContent).toContain("engine down")
-    expect(alert.textContent).not.toContain("Failed to load more")
+    expect(alert.textContent).not.toContain("Could not load more entries")
     expect(screen.getByText("Invoice Process")).toBeTruthy()
 
     state.failPage0 = false
@@ -256,7 +256,7 @@ describe("a page-0 failure over rows on screen is not a load-more failure (N130)
     state.failMore = true
     fireEvent.click(screen.getByRole("button", { name: "Load more" }))
     const alert = await screen.findByRole("alert")
-    expect(alert.textContent).toContain("Failed to load more: page 2 timed out")
+    expect(alert.textContent).toContain("Could not load more entries (page 2 timed out)")
     expect(alert.textContent).not.toContain("Could not update the list")
 
     state.failMore = false
@@ -316,7 +316,7 @@ describe("the instance list states what is ON SCREEN while a filter is pending o
     await waitFor(() => expect(modelContexts.at(-1)).toContain("matchingInstances=120"))
     /** The prompt the header's triage button posts right now. */
     const triage = () => {
-      fireEvent.click(screen.getByRole("button", { name: /Analyze/ }))
+      fireEvent.click(screen.getByRole("button", { name: /Assess in chat/ }))
       const prompts = actions.flatMap((a) => (a.type === "sendFollowUpMessage" ? [a.prompt] : []))
       return prompts.at(-1)!
     }
@@ -365,7 +365,9 @@ describe("the instance list states what is ON SCREEN while a filter is pending o
     control[0].reject(new Error("engine timeout"))
 
     const alert = await screen.findByRole("alert")
-    expect(alert.textContent).toContain("showing the previous result: engine timeout")
+    expect(alert.textContent).toContain(
+      "Could not update the list (engine timeout). You are seeing the previous result.",
+    )
     const context = modelContexts.at(-1)!
     expect(context).toContain("PREVIOUS result")
     expect(context).toContain("matchingInstances=120")
@@ -387,9 +389,9 @@ describe("the instance list states what is ON SCREEN while a filter is pending o
     })
     await waitFor(() => expect(held.calls).toHaveLength(1), { timeout: 2_000 })
     expect(screen.getByText("No running instances for this process definition.")).toBeTruthy()
-    expect(screen.queryByText("No instances match the current filter.")).toBeNull()
+    expect(screen.queryByText("No instances match the filter.")).toBeNull()
 
     held.calls[0].resolve({ ...EMPTY, filters: { businessKeyLike: "ORD" } })
-    await screen.findByText("No instances match the current filter.")
+    await screen.findByText("No instances match the filter.")
   })
 })
