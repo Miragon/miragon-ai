@@ -50,6 +50,10 @@
       //   failTools=a,b             answer the view's tools/call for these
       //                             names with an error, as a server without
       //                             them would (e.g. an analytics-only boot)
+      //   resourceDomains=ignore    build the CSP without the resource's
+      //                             resourceDomains (a host that does not
+      //                             honour them): the server's font route is
+      //                             refused, like any other resource load
       //
       // Every tools/call the VIEW makes is proxied to the real server through
       // the host backend; the spec reads `window.__hostLog`.
@@ -67,6 +71,7 @@
         availableDisplayModes: q.has("displayModes") ? q.get("displayModes").split(",") : undefined,
         initDelayMs: Number(q.get("initDelayMs") ?? 0),
         failTools: (q.get("failTools") ?? "").split(",").filter(Boolean),
+        ignoreResourceDomains: q.get("resourceDomains") === "ignore",
       }
       document.body.dataset.hostTheme = scenario.theme
       // A themed page declares its color-scheme; an iframe whose scheme differs
@@ -111,7 +116,7 @@
 
       function cspFor(csp = {}) {
         const list = (key, fallback) => (csp[key] ?? []).join(" ") || fallback
-        const resources = list("resourceDomains", "")
+        const resources = scenario.ignoreResourceDomains ? "" : list("resourceDomains", "")
         return [
           "default-src 'none'",
           `script-src 'unsafe-inline' ${resources}`,

@@ -171,4 +171,84 @@ describe("widget wire contract (dual-protocol _meta)", () => {
     // mcp-use appends the request-resolved server origin itself since 2.x.
     expect(csp!.connectDomains).toContain(serverOrigin)
   })
+
+  it("admits the server's origin for resources on EVERY view — where the view loads Geist from", async () => {
+    // Without MCP_URL the origin is the one the host read the view from; the
+    // view resolves its font URLs against the same origin (servedFontBaseUrl).
+    const { resources } = await client.listResources()
+    const views = resources.filter((r) => r.uri.startsWith(VIEW_RESOURCE_URI_PREFIX))
+    expect(views.length).toBeGreaterThanOrEqual(20)
+    for (const view of views) {
+      expect(await readResourceDomains(client, view.uri), view.uri).toContain(serverOrigin)
+    }
+  })
+})
+
+/** `_meta.ui.csp.resourceDomains` of a view resource as `resources/read` returns it. */
+async function readResourceDomains(client: Client, uri: string): Promise<string[]> {
+  const { contents } = await client.readResource({ uri })
+  const csp = uiBlock((contents[0] as { _meta?: Record<string, unknown> })._meta ?? {}).csp as
+    { resourceDomains?: string[] } | undefined
+  return csp?.resourceDomains ?? []
+}
+
+/**
+ * Behind its public URL (`MCP_URL`) the server declares that origin itself on
+ * every view-bound tool — `render-view` and each module's `*_show_*` alike,
+ * listed and read, and in the Apps SDK half (`openai/widgetCSP`) — so a host
+ * admits the font route (`/fonts/geist-<version>/…`) the views load Geist from.
+ */
+describe("widget wire contract — the font origin under MCP_URL", () => {
+  const PUBLIC_ORIGIN = "https://mcp.example.test"
+  let server: BootedServer
+
+  beforeAll(async () => {
+    server = await bootServer({
+      authenticated: true,
+      env: {
+        MCP_ACTIVE_MODULES: "camunda7:admin,analytics:standard",
+        MCP_URL: `${PUBLIC_ORIGIN}/mcp`,
+      },
+    })
+  })
+
+  afterAll(async () => {
+    await server?.close()
+  })
+
+  it("advertises it in resourceDomains on every view resource, listed and read", async () => {
+    const { resources } = await server.client.listResources()
+    const views = resources.filter((r) => r.uri.startsWith(VIEW_RESOURCE_URI_PREFIX))
+    const widgetTools = (await server.client.listTools()).tools.filter(
+      (t) => t._meta?.["openai/outputTemplate"] !== undefined,
+    )
+    // One view per widget tool: the show tools, the cockpit and render-view.
+    expect(views).toHaveLength(widgetTools.length)
+    expect(views.length).toBeGreaterThanOrEqual(20)
+    for (const view of views) {
+      const listed = uiBlock((view as { _meta?: Record<string, unknown> })._meta ?? {}).csp as
+        { resourceDomains?: string[] } | undefined
+      expect(listed?.resourceDomains, `${view.uri} listed`).toContain(PUBLIC_ORIGIN)
+      expect(await readResourceDomains(server.client, view.uri), `${view.uri} read`).toContain(
+        PUBLIC_ORIGIN,
+      )
+    }
+  })
+
+  it("advertises it to Apps SDK hosts on every widget tool (openai/widgetCSP)", async () => {
+    const { tools } = await server.client.listTools()
+    const widgetTools = tools.filter((t) => t._meta?.["openai/outputTemplate"] !== undefined)
+    expect(widgetTools.map((t) => t.name)).toEqual(
+      expect.arrayContaining([
+        "render-view",
+        "camunda7_show_process_list",
+        "analytics_show_dashboard",
+      ]),
+    )
+    for (const tool of widgetTools) {
+      expect(tool._meta?.["openai/widgetCSP"], tool.name).toEqual({
+        resource_domains: [PUBLIC_ORIGIN],
+      })
+    }
+  })
 })

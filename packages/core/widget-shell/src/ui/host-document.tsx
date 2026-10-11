@@ -1,5 +1,6 @@
 import { useLayoutEffect, type CSSProperties, type ReactNode } from "react"
 import { adoptHostFontVariables } from "@miragon/mcp-toolkit-ui"
+import { declareServedFonts } from "./declare-served-fonts.js"
 import { useShellHost } from "./shell-host.js"
 
 const HOST_FONTS_ID = "__mcp-host-fonts"
@@ -20,11 +21,14 @@ const INLINE_STYLE: CSSProperties = { display: "contents" }
  * whose theme channel wrote only `data-theme` from the host/OS and reset
  * `color-scheme` — the shell's `useApplyTheme` owns the theme now, from ONE
  * resolution):
+ *  - Geist and Geist Mono are declared once from the server that served the
+ *    view (`declareServedFonts`, `font-display: swap`);
  *  - the host's SEP-1865 style variables land on `<html>` and its font CSS is
  *    injected once; right after, the toolkit's `adoptHostFontVariables` moves
  *    the host's `--font-sans`/`--font-mono` into the fallback slot of the
- *    theme's font roles (`--host-font-*`), so the stack stays Geist first
- *    (when the consumer loads it), then the host's font, then the system;
+ *    theme's font roles (`--host-font-*`), so the stack stays Geist first,
+ *    then the host's font (what renders while Geist loads, or when the host
+ *    blocks the server's origin), then the system;
  *  - inline views size to their content (auto-resize reports it) and, when the
  *    host states a height budget (`containerDimensions` → `maxHeight`), scroll
  *    inside it instead of being clipped;
@@ -32,6 +36,10 @@ const INLINE_STYLE: CSSProperties = { display: "contents" }
  */
 export function HostDocument({ children }: { children: ReactNode }) {
   const { styleVariables, fontCss, displayMode, maxHeight } = useShellHost()
+
+  useLayoutEffect(() => {
+    declareServedFonts()
+  }, [])
 
   useLayoutEffect(() => {
     if (!styleVariables) return

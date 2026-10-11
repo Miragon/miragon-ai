@@ -71,6 +71,18 @@ export {
   type HttpEdgePolicy,
 } from "./http-edge.js"
 export {
+  fontAssetsCsp,
+  installFontAssets,
+  type FontAsset,
+  type FontAssetsOptions,
+} from "./font-assets.js"
+export { SERVED_FONT_FILES, SERVED_FONT_PATH, servedFontBaseUrl } from "./served-fonts.js"
+export {
+  honorWidgetMetaDefaults,
+  withWidgetMetaDefaults,
+  type WidgetMetaDefaults,
+} from "./widget-meta-defaults.js"
+export {
   createBodyLimitedListener,
   type BodyLimitedListener,
   type BodyLimitedListenerOptions,

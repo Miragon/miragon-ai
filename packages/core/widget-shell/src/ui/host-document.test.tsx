@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"
 import { LocaleProvider } from "@miragon/mcp-toolkit-ui"
+import { SERVED_FONTS_STYLE_ID } from "./declare-served-fonts.js"
 import { HostDocument } from "./host-document.js"
 import { viewTitleMode } from "./localized-app-view.js"
 import { BpmnZoomControls } from "./bpmn-zoom-controls.js"
@@ -26,6 +27,8 @@ afterEach(() => {
   document.documentElement.removeAttribute("style")
   document.body.removeAttribute("style")
   document.getElementById("__mcp-host-fonts")?.remove()
+  document.getElementById(SERVED_FONTS_STYLE_ID)?.remove()
+  delete globalThis.__mcpUseViewConfig
 })
 
 describe("HostDocument", () => {
@@ -66,8 +69,8 @@ describe("HostDocument", () => {
     const style = document.documentElement.style
     expect(style.getPropertyValue("--color-text-primary")).toBe("#f5f4ef")
     // The host's font moves into the fallback slot of the theme's font roles
-    // (the toolkit's adoptHostFontVariables): Geist stays first in the stack
-    // when the consumer loads it, then the host's font, then the system.
+    // (the toolkit's adoptHostFontVariables): Geist stays first in the stack,
+    // then the host's font, then the system.
     expect(style.getPropertyValue("--host-font-sans")).toBe("HostSans")
     expect(style.getPropertyValue("--font-sans")).toBe("")
     expect(style.getPropertyValue("--host-font-mono")).toBe("")
@@ -75,6 +78,22 @@ describe("HostDocument", () => {
     cleanup()
     renderDocument({ fontCss: "@font-face { font-family: Other; src: local(Arial); }" })
     expect(document.querySelectorAll("#__mcp-host-fonts")).toHaveLength(1)
+  })
+
+  it("declares Geist from the server that served the view, before the host's font", () => {
+    globalThis.__mcpUseViewConfig = { publicBase: "https://mcp.example.com/mcp/_mcp-use/public/" }
+    renderDocument({ fontCss: "@font-face { font-family: HostSans; src: local(Arial); }" })
+    const served = document.getElementById(SERVED_FONTS_STYLE_ID)!
+    expect(served.textContent).toContain(
+      'url("https://mcp.example.com/fonts/geist-5.3.0/geist-latin-wght-normal.woff2")',
+    )
+    const styles = [...document.head.querySelectorAll("style")].map((style) => style.id)
+    expect(styles.indexOf(SERVED_FONTS_STYLE_ID)).toBeLessThan(styles.indexOf("__mcp-host-fonts"))
+  })
+
+  it("declares no face outside a served view document", () => {
+    renderDocument({})
+    expect(document.getElementById(SERVED_FONTS_STYLE_ID)).toBeNull()
   })
 })
 

@@ -1,7 +1,11 @@
 import http from "node:http"
 import path from "node:path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
-import type { RunningServer } from "@miragon-ai/widget-shell/server"
+import {
+  SERVED_FONT_FILES,
+  SERVED_FONT_PATH,
+  type RunningServer,
+} from "@miragon-ai/widget-shell/server"
 import { createApp } from "../src/app.js"
 import { stubNeutralEnv } from "./neutral-env.js"
 
@@ -14,7 +18,7 @@ function request(
     body,
     ...options
   }: { method?: string; path: string; headers?: Record<string, string | number>; body?: string },
-): Promise<{ status: number; body: string }> {
+): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
     const req = http.request(
       { host: "127.0.0.1", port, agent: false, method: "GET", ...options },
@@ -22,7 +26,11 @@ function request(
         const chunks: Buffer[] = []
         res.on("data", (chunk: Buffer) => chunks.push(chunk))
         res.on("end", () =>
-          resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf8") }),
+          resolve({
+            status: res.statusCode ?? 0,
+            headers: res.headers,
+            body: Buffer.concat(chunks).toString("utf8"),
+          }),
         )
       },
     )
@@ -34,8 +42,9 @@ function request(
 /**
  * The HTTP surface `src/index.ts` serves next to `/mcp`, booted through the
  * real `createApp`: the probes a Kubernetes deployment (or the Dockerfile
- * HEALTHCHECK) polls, the Prometheus scrape, and the shared edge — the
- * Host/Origin guard (DNS-rebinding protection) and the request-body cap.
+ * HEALTHCHECK) polls, the Prometheus scrape, the font route the views load
+ * Geist from, and the shared edge — the Host/Origin guard (DNS-rebinding
+ * protection) and the request-body cap.
  */
 describe("HTTP surface (createApp)", () => {
   let server: RunningServer
@@ -91,6 +100,25 @@ describe("HTTP surface (createApp)", () => {
       headers: { host: "10.0.0.7:8400" },
     })
     expect(probe.status).toBe(200)
+  })
+
+  it("serves Geist to the views: woff2, cached immutable, any origin, behind the Host guard", async () => {
+    for (const file of Object.values(SERVED_FONT_FILES)) {
+      const path = `${SERVED_FONT_PATH}/${file}`
+      // A font load from the host's sandboxed view: CORS mode, opaque origin.
+      const font = await request(server.port, { path, headers: { origin: "null" } })
+      expect(font.status, path).toBe(200)
+      expect(font.headers, path).toMatchObject({
+        "content-type": "font/woff2",
+        "cache-control": "public, max-age=31536000, immutable",
+        "access-control-allow-origin": "*",
+      })
+    }
+    const foreign = await request(server.port, {
+      path: `${SERVED_FONT_PATH}/${SERVED_FONT_FILES.sans}`,
+      headers: { host: "attacker.example" },
+    })
+    expect(foreign.status).toBe(403)
   })
 
   it("answers 413 for a body over the 4 MiB default before reading it", async () => {

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import { expect, test, type FrameLocator, type Locator, type Page } from "@playwright/test"
+import { SERVED_FONT_PATH } from "@miragon-ai/widget-shell/server"
 import { BROKEN_ENGINE, ENGINE_CONTROL_ENV, HEALTHY_ENGINE } from "./engines.js"
 
 /**
@@ -97,6 +98,8 @@ interface Scenario {
   initDelayMs?: number
   /** Answer the view's calls to these tools with an error (a server without them). */
   failTools?: string[]
+  /** Build the frame's CSP without the resource's resourceDomains (a host that ignores them). */
+  ignoreResourceDomains?: boolean
 }
 
 async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocator> {
@@ -116,6 +119,7 @@ async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocat
   if (scenario.displayModes) query.set("displayModes", scenario.displayModes.join(","))
   if (scenario.initDelayMs) query.set("initDelayMs", String(scenario.initDelayMs))
   if (scenario.failTools) query.set("failTools", scenario.failTools.join(","))
+  if (scenario.ignoreResourceDomains) query.set("resourceDomains", "ignore")
   await page.goto(`${base}/?${query.toString()}`)
   return page.frameLocator("#app")
 }
@@ -237,6 +241,77 @@ async function settledHeight(page: Page, app: FrameLocator): Promise<number> {
     })
     .toBe(true)
   return settled
+}
+
+type DomNode = { nodeId: number; children?: DomNode[]; contentDocument?: DomNode }
+
+/**
+ * The fonts Chromium actually drew the text directly inside `locator` with
+ * (CDP `CSS.getPlatformFontsForNode`) — not the computed stack, which names
+ * Geist first whether or not it loaded. The srcdoc view shares the page's
+ * CDP session, so the probe pierces into the frame's document.
+ */
+async function renderedFonts(page: Page, locator: Locator): Promise<string[]> {
+  const probe = `font-probe-${Math.random().toString(36).slice(2)}`
+  await locator.evaluate((el, id) => el.setAttribute("data-font-probe", id), probe)
+  const cdp = await page.context().newCDPSession(page)
+  try {
+    await cdp.send("DOM.enable")
+    await cdp.send("CSS.enable")
+    const { root } = (await cdp.send("DOM.getDocument", { depth: -1, pierce: true })) as {
+      root: DomNode
+    }
+    const viewDocument = (node: DomNode): DomNode | undefined =>
+      node.contentDocument ?? node.children?.map(viewDocument).find(Boolean)
+    const view = viewDocument(root)
+    if (!view) throw new Error("the view frame's document is not in the page's DOM tree")
+    const { nodeId } = await cdp.send("DOM.querySelector", {
+      nodeId: view.nodeId,
+      selector: `[data-font-probe="${probe}"]`,
+    })
+    const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId })
+    return fonts.map((font) => font.familyName)
+  } finally {
+    await cdp.detach()
+  }
+}
+
+/** The view's Geist faces by family, with their load status (`loaded`, `error`, …). */
+async function servedFaces(app: FrameLocator): Promise<Record<string, string>> {
+  return await app
+    .locator("html")
+    .evaluate(() =>
+      Object.fromEntries(
+        [...document.fonts]
+          .filter((face) => face.family.replaceAll('"', "").startsWith("Geist"))
+          .map((face) => [face.family.replaceAll('"', ""), face.status]),
+      ),
+    )
+}
+
+/** Font loads the view sends to the server's font route, recorded from now on. */
+function fontRequests(page: Page): string[] {
+  const urls: string[] = []
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.startsWith(`${SERVED_FONT_PATH}/`)) urls.push(request.url())
+  })
+  return urls
+}
+
+/** What a font swap could move: the list's box, its first row, the document's overflow. */
+async function listLayout(page: Page, app: FrameLocator) {
+  const table = definitionsTable(app)
+  const box = await table.boundingBox()
+  const row = await table.getByRole("row").nth(1).boundingBox()
+  const overflow = await app.locator("html").evaluate((html) => html.scrollWidth - html.clientWidth)
+  return { table: box!, row: row!, overflow, reported: await settledHeight(page, app) }
+}
+
+/** `actual` within `tolerance` (a share, e.g. 0.05) of `expected`. */
+function expectWithin(actual: number, expected: number, tolerance: number, label: string): void {
+  expect(Math.abs(actual - expected), `${label}: ${actual} vs ${expected}`).toBeLessThanOrEqual(
+    expected * tolerance,
+  )
 }
 
 test.describe("real camunda7 view (camunda7_show_process_list)", () => {
@@ -575,7 +650,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     expect(await documentTheme(app)).toEqual({ dark: true, dataTheme: "dark", colorScheme: "dark" })
   })
 
-  test("host font: Geist first, then the host's --font-sans; Geist is not loaded, so the host's font renders", async ({
+  test("host font: Geist first, then the host's --font-sans in the fallback slot", async ({
     page,
   }) => {
     const app = await openView(page, { fontSans: '"Host Sim Sans", serif' })
@@ -592,7 +667,6 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
         // The host's value moved off the role name (adoptHostFontVariables).
         roleInline: document.documentElement.style.getPropertyValue("--font-sans"),
         hostSlot: document.documentElement.style.getPropertyValue("--host-font-sans"),
-        geistFaces: [...document.fonts].filter((f) => /Geist/i.test(f.family)).length,
       }
       mono.remove()
       return result
@@ -603,10 +677,8 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     expect(fonts.hostSlot).toBe('"Host Sim Sans", serif')
     expect(fonts.body).toMatch(/^"?Geist"?,/)
     expect(fonts.body.indexOf("Host Sim Sans")).toBeGreaterThan(fonts.body.indexOf("Geist"))
-    // … and no Geist face ships with the view (served by URL in a later
-    // step), so the host's font is what renders.
-    expect(fonts.geistFaces).toBe(0)
-    expect(fonts.mono).toMatch(/monospace/)
+    // … and ids name Geist Mono first, then a monospace stack.
+    expect(fonts.mono).toMatch(/^"?Geist Mono"?,.*monospace/)
   })
 
   test("the served stylesheet inlines no font, sets no height floor and carries the vendored tokens (#339)", async ({
@@ -615,12 +687,26 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     const app = await openView(page)
     await expectProcessList(app)
 
-    const css = await app
-      .locator("html")
-      .evaluate(() => [...document.querySelectorAll("style")].map((s) => s.textContent).join("\n"))
+    const { css, faces } = await app.locator("html").evaluate(() => {
+      const styles = [...document.querySelectorAll("style")]
+      const served = styles.find((s) => s.id === "__miragon-served-fonts")
+      return {
+        css: styles
+          .filter((s) => s !== served)
+          .map((s) => s.textContent)
+          .join("\n"),
+        faces: served?.textContent ?? "",
+      }
+    })
     expect(css).not.toMatch(/font-family:[^;}]*!important/)
     expect(css).not.toMatch(/@font-face|data:font\/woff2/)
     expect(css).not.toMatch(/min-height:\s*600px/)
+    // Geist arrives by URL from the server's font route, swap, never inlined.
+    expect(faces.match(/@font-face/g)).toHaveLength(2)
+    expect(faces).toContain(`${SERVED_FONT_PATH}/geist-latin-wght-normal.woff2`)
+    expect(faces).toContain(`${SERVED_FONT_PATH}/geist-mono-latin-wght-normal.woff2`)
+    expect(faces.match(/font-display: swap/g)).toHaveLength(2)
+    expect(faces).not.toContain("data:")
 
     // Drift guard on the BUILT bundle: every Miragon colour token resolves to
     // the value the toolkit vendors (normalized by a canvas, so a minified
@@ -676,6 +762,119 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     await expect.poll(async () => (await hostLog(page)).displayModeRequests).toEqual(["fullscreen"])
     await expect(app.getByRole("button", { name: CHROME.exitFullscreen })).toBeVisible()
     await expectProcessList(app)
+  })
+})
+
+/**
+ * Geist and Geist Mono come from the server's own font route, admitted by the
+ * view's CSP (`resourceDomains`). Where they cannot arrive, the host's font
+ * renders — at once (`font-display: swap`) and without moving the layout.
+ */
+test.describe("served fonts (Geist from the server's font route)", () => {
+  /** The name of the first definition (body text) and its key (an id, `font-mono`). */
+  const nameCell = (app: FrameLocator) => app.getByText("Customer Onboarding", { exact: true })
+  const keyCell = (app: FrameLocator) => app.getByText("customer-onboarding", { exact: true })
+
+  /**
+   * What the text of `locator` renders in WITHOUT Geist: a twin with the same
+   * text and size in the element's stack minus its Geist entries — the host's
+   * font where the host sent one, else the system's.
+   */
+  async function fallbackFonts(page: Page, app: FrameLocator, locator: Locator) {
+    const id = await locator.evaluate((el) => {
+      const style = getComputedStyle(el)
+      const twin = document.createElement("span")
+      twin.id = `fallback-${Math.random().toString(36).slice(2)}`
+      twin.textContent = el.textContent
+      twin.style.fontFamily = style.fontFamily
+        .split(",")
+        .filter((family) => !/geist/i.test(family))
+        .join(",")
+      twin.style.fontSize = style.fontSize
+      twin.style.fontWeight = style.fontWeight
+      el.parentElement!.appendChild(twin)
+      return twin.id
+    })
+    const twin = app.locator(`#${id}`)
+    try {
+      return await renderedFonts(page, twin)
+    } finally {
+      await twin.evaluate((el) => el.remove())
+    }
+  }
+
+  test("fonts allowed: body text renders in Geist and ids in Geist Mono, loaded once from the font route", async ({
+    page,
+  }) => {
+    const errors = collectErrors(page)
+    const requests = fontRequests(page)
+    const app = await openView(page)
+    await expectProcessList(app)
+
+    await expect
+      .poll(() => servedFaces(app), { timeout: 15_000 })
+      .toEqual({ Geist: "loaded", "Geist Mono": "loaded" })
+    // What Chromium drew the text with, not just the stack it was given.
+    expect(await renderedFonts(page, nameCell(app))).toEqual(["Geist"])
+    expect(await renderedFonts(page, keyCell(app))).toEqual(["Geist Mono"])
+    // Each file once, from the server that served the view, by its versioned URL.
+    expect(requests.map((url) => new URL(url).pathname).sort()).toEqual([
+      `${SERVED_FONT_PATH}/geist-latin-wght-normal.woff2`,
+      `${SERVED_FONT_PATH}/geist-mono-latin-wght-normal.woff2`,
+    ])
+    expect(errors).toEqual([])
+  })
+
+  test("a host that ignores resourceDomains: the host's font renders, and the layout holds", async ({
+    page,
+  }) => {
+    const fontSans = '"Host Sim Sans", serif'
+    const allowed = await openView(page, { fontSans })
+    await expectProcessList(allowed)
+    await expect
+      .poll(() => servedFaces(allowed), { timeout: 15_000 })
+      .toEqual({ Geist: "loaded", "Geist Mono": "loaded" })
+    const withGeist = await listLayout(page, allowed)
+
+    const errors = collectErrors(page)
+    const blocked = await openView(page, { fontSans, ignoreResourceDomains: true })
+    await expectProcessList(blocked)
+    // The CSP refuses both files; the faces fail instead of hanging.
+    await expect
+      .poll(() => servedFaces(blocked), { timeout: 15_000 })
+      .toEqual({ Geist: "error", "Geist Mono": "error" })
+    const withoutGeist = await listLayout(page, blocked)
+    const name = await renderedFonts(page, nameCell(blocked))
+    expect(name).not.toContain("Geist")
+    expect(name).toEqual(await fallbackFonts(page, blocked, nameCell(blocked)))
+    const key = await renderedFonts(page, keyCell(blocked))
+    expect(key).not.toContain("Geist Mono")
+    expect(key).toEqual(await fallbackFonts(page, blocked, keyCell(blocked)))
+
+    // The fallback moves nothing that matters: same rows, same height within
+    // tolerance, no horizontal overflow either way.
+    expect(withGeist.overflow).toBeLessThanOrEqual(0)
+    expect(withoutGeist.overflow).toBeLessThanOrEqual(0)
+    expectWithin(withoutGeist.row.height, withGeist.row.height, 0.05, "first row height")
+    expectWithin(withoutGeist.table.height, withGeist.table.height, 0.05, "table height")
+    expectWithin(withoutGeist.reported, withGeist.reported, 0.05, "reported view height")
+    // The only complaints are the refused font loads.
+    expect(errors.length).toBeGreaterThan(0)
+    expect(errors.filter((line) => !/font/i.test(line))).toEqual([])
+  })
+
+  test("a font route the browser cannot reach: the view paints at once in the fallback (swap)", async ({
+    page,
+  }) => {
+    // Held, never answered: nothing may wait for the files.
+    await page.route(`**${SERVED_FONT_PATH}/**`, () => {})
+    const app = await openView(page)
+    await expectProcessList(app)
+
+    expect(await servedFaces(app)).toEqual({ Geist: "loading", "Geist Mono": "loading" })
+    const name = await renderedFonts(page, nameCell(app))
+    expect(name).not.toContain("Geist")
+    expect(name).toEqual(await fallbackFonts(page, app, nameCell(app)))
   })
 })
 

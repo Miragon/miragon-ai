@@ -189,7 +189,10 @@ docker run -p 127.0.0.1:8400:8400 \
   when running behind a proxy or MCP gateway — and, with
   `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS`, the only non-localhost
   `Host`/`Origin` the server accepts: anything else gets 403 (DNS-rebinding
-  protection), with the message naming the variable to set.
+  protection), with the message naming the variable to set. It is also the
+  origin the views load Geist from (the server's own `/fonts/geist-<version>/`
+  route, declared in every view's CSP `resourceDomains`): behind a gateway,
+  route `/fonts/` to the server too, or the views show the host's font.
 - Federation/aggregation across MCP servers belongs in an external gateway
   (e.g. agentgateway) IN FRONT of this server — this repo builds one
   self-contained server; don't add upstream/proxy mechanics to it.
