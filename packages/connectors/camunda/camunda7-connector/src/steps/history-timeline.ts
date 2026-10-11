@@ -2,6 +2,7 @@ import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import { buildHistoryTimelineData } from "../data/history-timeline-data.js"
 import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 import { ENGINE_KEY, requiredKey, stepEngine } from "./shared.js"
+import { builderText } from "../builder-texts.js"
 
 /**
  * The activity timeline of one process instance (first page, exact total) —
@@ -10,6 +11,7 @@ import { ENGINE_KEY, requiredKey, stepEngine } from "./shared.js"
  */
 export const loadHistoryTimelineStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-history-timeline",
+  ...builderText("step.load-history-timeline"),
   description:
     "The activity history of one process instance (first page, exact total; the widget pages the rest). Powers camunda7:history-timeline.",
   dataType: "camunda7:historyTimeline",

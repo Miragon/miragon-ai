@@ -254,7 +254,12 @@ somewhere**:
    `"camunda7:my-widget": adaptDataWidget(MyWidget, "camunda7:myData")`
    (`adaptDataWidget` comes from `@miragon-ai/widget-shell/ui`).
 2. `src/definition.ts` — add the widget entry (`id`, `requires`, `size`, optional
-   `propsSchema`) to the `widgets` array.
+   `propsSchema`) to the `widgets` array, with `...builderText("widget.<slug>")` (the view
+   builder's title and summary for people: `builder.widget.<slug>.title|summary` in
+   `messages/{en,de}.builder.ts`) and `.meta(fieldText("<schema>.<field>"))` on every
+   `propsSchema` field; a new pipeline step takes `...builderText("step.<slug>")`.
+   `description` stays the model's text; `src/builder-texts.test.ts` fails on anything the
+   builder would still show by its id.
 3. `apps/mcp-server-camunda7/src/ui/widget-registry.ts` — the host bundle map. It spreads
    `camunda7Widgets` from `src/widgets/index.ts`, which spreads the registry — verify
    your widget actually arrives in the host map.

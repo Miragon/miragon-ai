@@ -176,7 +176,12 @@ The widget chain mirrors the camunda7 module:
    `adaptDataWidget(MyWidget, "analytics:<dataType>")` (from
    `@miragon-ai/widget-shell/ui`).
 3. Add the widget entry (`id`, `description`, `requires`/`consumes`, `size`, optional
-   `propsSchema`) to `src/definition.ts`.
+   `propsSchema`) to `src/definition.ts`, with `...builderText("widget.<slug>")` — the view
+   builder's title and one-line summary for people, `builder.widget.<slug>.title|summary`
+   in `messages/{en,de}.builder.ts` — and `.meta(fieldText("<schema>.<field>"))` on every
+   `propsSchema` field (`builder.field.*`, the props sheet's label and help line);
+   `description` stays the model's text. `src/builder-texts.test.ts` fails on anything
+   the builder would still show by its id.
 4. The host map `apps/mcp-server-camunda7/src/ui/widget-registry.ts` spreads
    `analyticsWidgets` — verify your widget arrives there.
 5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with

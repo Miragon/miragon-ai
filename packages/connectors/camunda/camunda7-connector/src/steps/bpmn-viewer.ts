@@ -2,6 +2,7 @@ import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import { buildBpmnViewerData } from "../data/bpmn-viewer-data.js"
 import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 import { ENGINE_KEY, requiredKey, stepEngine } from "./shared.js"
+import { builderText } from "../builder-texts.js"
 
 /**
  * One running instance on its diagram, with ITS tokens, incidents and failed
@@ -11,6 +12,7 @@ import { ENGINE_KEY, requiredKey, stepEngine } from "./shared.js"
  */
 export const loadBpmnViewerStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-bpmn-viewer",
+  ...builderText("step.load-bpmn-viewer"),
   description:
     "A running instance's BPMN diagram with its own active activities, incidents and failed jobs. Powers camunda7:bpmn-viewer-header, camunda7:bpmn-viewer-legend and camunda7:bpmn-flow-viewer.",
   dataType: "camunda7:bpmnViewer",

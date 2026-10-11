@@ -8,9 +8,11 @@ import {
   unnamedGlossaryTerms,
 } from "@miragon-ai/widget-shell/testing"
 import { deAskAi } from "./de.ask-ai.js"
+import { deBuilder } from "./de.builder.js"
 import { deServer } from "./de.server.js"
 import { deSweep } from "./de.sweep.js"
 import { enAskAi } from "./en.ask-ai.js"
+import { enBuilder } from "./en.builder.js"
 import { enServer } from "./en.server.js"
 import { enSweep } from "./en.sweep.js"
 import { GLOSSARY } from "./glossary.js"
@@ -40,8 +42,8 @@ function texts(catalog: MessageCatalog): [key: string, text: string][] {
 }
 
 const CATALOGS = {
-  de: { ui: [deSweep, deAskAi], model: [deServer] },
-  en: { ui: [enSweep, enAskAi], model: [enServer] },
+  de: { ui: [deSweep, deAskAi, deBuilder], model: [deServer] },
+  en: { ui: [enSweep, enAskAi, enBuilder], model: [enServer] },
 } as const
 
 function offenders(language: "de" | "en"): string[] {

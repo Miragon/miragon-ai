@@ -2,6 +2,7 @@ import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import { buildInstanceDetailData } from "../data/instance-detail-data.js"
 import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 import { ENGINE_KEY, requiredKey, stepEngine } from "./shared.js"
+import { builderText } from "../builder-texts.js"
 
 /**
  * One running process instance: state, activity tree, variables, open
@@ -11,6 +12,7 @@ import { ENGINE_KEY, requiredKey, stepEngine } from "./shared.js"
  */
 export const loadProcessInstanceStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-process-instance",
+  ...builderText("step.load-process-instance"),
   description:
     "One running process instance: state, activity tree, variables, open incidents and user tasks, BPMN. Powers camunda7:instance-detail.",
   dataType: "camunda7:processInstance",

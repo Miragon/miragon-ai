@@ -166,7 +166,10 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 3. **Widget registration is a four-link chain** — a widget that misses a link is silently
    absent somewhere:
    - `packages/connectors/camunda/camunda7-connector/src/widgets/registry.ts` — component → dataType via `adaptDataWidget`
-   - `packages/connectors/camunda/camunda7-connector/src/definition.ts` — widget metadata (`id`, `requires`, `size`, `propsSchema`)
+   - `packages/connectors/camunda/camunda7-connector/src/definition.ts` — widget metadata (`id`, `requires`, `size`, `propsSchema`;
+     the view builder's `title`/`summary` and each field's `x-display` for people, from the
+     `builder.*` entries of the module's catalogs via `createBuilderTexts` — `description` stays
+     the model's text; each connector's `src/builder-texts.test.ts` runs `missingDisplayTexts`)
    - `apps/mcp-server-camunda7/src/ui/widget-registry.ts` — the host bundle map (spreads
      `camunda7Widgets`/`analyticsWidgets`)
    - `packages/connectors/camunda/camunda7-connector/src/tool-names.ts` — the tool-name constant for every
