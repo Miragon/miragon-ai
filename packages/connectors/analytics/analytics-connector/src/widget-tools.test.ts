@@ -3,6 +3,7 @@ import type { MCPServer } from "mcp-use"
 import type { PrometheusClient } from "@miragon-ai/analytics-client"
 import { registerWidgetTools } from "./widget-tools.js"
 import { createEngineScope } from "./engine-ids.js"
+import type { ProfileSource } from "./server-locale.js"
 
 type Cell = { widget: string; props?: Record<string, unknown> }
 type ShowResult = { structuredContent: { layout: Array<{ row: Cell[] }> } }
@@ -68,5 +69,52 @@ describe("analytics_show_failure_dashboard engine scope", () => {
     expect(queries.length).toBeGreaterThan(0)
     for (const query of queries) expect(query).toContain('engine_id=~"prod-a|prod-b"')
     expect(cells(result).every((cell) => cell.props === undefined)).toBe(true)
+  })
+})
+
+describe("view titles (U3) and the heatmap's as-of stamp (U7)", () => {
+  const CTX = { auth: { user: { id: "user-1" } } }
+  function localizedHandlers(language: string): Map<string, Handler> {
+    const byName = new Map<string, Handler>()
+    const server = {
+      tool: (definition: { name: string }, handler: Handler) => {
+        byName.set(definition.name, handler)
+      },
+    } as unknown as MCPServer
+    const profileStore: ProfileSource = { get: () => Promise.resolve({ language }) }
+    registerWidgetTools(server, recordingClient().client, {
+      engineScope: createEngineScope(["prod-a"]),
+      profileStore,
+    })
+    return byName
+  }
+  const SHOWS: Array<[string, Record<string, unknown>]> = [
+    ["analytics_show_dashboard", {}],
+    ["analytics_show_failure_dashboard", {}],
+    ["analytics_show_bpmn_heatmap", { processDefinitionKey: "order" }],
+  ]
+  const titles = async (language: string) => {
+    const tools = localizedHandlers(language)
+    const results = await Promise.all(SHOWS.map(([name, args]) => tools.get(name)!(args, CTX)))
+    return results.map((r) => (r.structuredContent as unknown as { title?: string }).title)
+  }
+
+  it("titles each view in the caller's language, like the widget heading", async () => {
+    expect(await titles("de")).toEqual(["Prozessanalyse", "Fehleranalyse", "BPMN-Heatmap"])
+    expect(await titles("en")).toEqual(["Process analytics", "Failure analysis", "BPMN heatmap"])
+  })
+
+  it("stamps the heatmap with the time its values were read, in the view and the feed", async () => {
+    const tools = localizedHandlers("en")
+    const args = { processDefinitionKey: "order" }
+    const show = (await tools.get("analytics_show_bpmn_heatmap")!(args, CTX)) as unknown as {
+      structuredContent: { context: { stepData: { result: { data: { asOf?: string } } } } }
+    }
+    const feed = (await tools.get("analytics_bpmn_heatmap_data")!(args, CTX)) as unknown as {
+      structuredContent: { asOf?: string }
+    }
+    const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+    expect(show.structuredContent.context.stepData.result.data.asOf).toMatch(iso)
+    expect(feed.structuredContent.asOf).toMatch(iso)
   })
 })

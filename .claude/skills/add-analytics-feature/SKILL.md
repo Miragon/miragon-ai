@@ -216,6 +216,15 @@ Rules while building:
   names the chat. Copy follows the brand voice in en + de; the package's brand-gate test
   runs `catalogTextFindings` over both catalogs, `scanGlyphs` over `src/widgets` +
   `src/messages` and `scanColors` over `src/widgets` (`@miragon-ai/widget-shell/testing`).
+  The words come from `src/messages/GLOSSARY.md` ("Incident", "Jobs ohne Versuche", "nicht
+  belastbar" …; `glossary.test.ts` rejects the synonyms it rules out), counted entries are
+  `plural(…)` and take the count formatted, and every hand-off label names the chat.
+- Every data view states its reference frame under its title with the kit's `ViewMeta`:
+  `formatLookback(data.period)`, `enginesMeta(data.engines, reporting)`
+  (`src/widgets/view-meta.ts`) and the result's `asOf` (every analytics-client view
+  result carries it). A comparison judges only quality metrics, from their threshold on
+  (`deltaVerdict` in `src/widgets/comparison-shared.tsx`); volume stays neutral and a
+  suppressed comparison reads "nicht belastbar".
 - Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`)
   — a missing `isError` branch means an eternal skeleton.
 - The model description (`adaptDataWidget`'s third argument, in

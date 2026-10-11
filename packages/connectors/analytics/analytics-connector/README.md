@@ -11,9 +11,11 @@ the other `@miragon-ai` packages (pin them all to one version); the
 into your own MCP server.
 
 The consumer-shared libraries are ranged **peer dependencies** so they dedupe against your app's
-copy: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*` `~2.6.0`. **`mcp-use`
-is exactly pinned** — pin it to `mcp-use@2.7.3` in your app; a duplicate `mcp-use` instance breaks
-the React context and hangs every in-widget query on "Loading…".
+copy: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*` `~2.6.0`,
+`lucide-react` `^0.562.0 || ^1.0.0` (the widgets' icons; add it to your `dedupe` list like the
+widget-shell kit asks). **`mcp-use` is exactly pinned** — pin it to `mcp-use@2.7.3` in your app; a
+duplicate `mcp-use` instance breaks the React context and hangs every in-widget query on
+"Loading…".
 
 ## What it provides
 

@@ -1,10 +1,17 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
+import { Scale } from "lucide-react"
 import type { EngineCompareResult } from "@miragon-ai/analytics-client"
-import { AskAiButton } from "@miragon-ai/widget-shell/widgets"
+import {
+  AskAiButton,
+  ViewMeta,
+  formatLookback,
+  formatNumber,
+} from "@miragon-ai/widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
 import {
   ComparisonCard,
   ComparisonEmptyState,
+  SuppressedBadge,
   buildComparisonMetrics,
   deltaFacts,
 } from "./comparison-shared.js"
@@ -52,25 +59,32 @@ export function EngineCompareWidget({ data }: { data: EngineCompareData }) {
       beforeLabel={data.engineA}
       afterLabel={data.engineB}
       metrics={metrics}
-      actions={<AskAiButton prompt={ask(engineCompareHandOff(data))} variant="primary" />}
+      suppressed={data.suppressed}
+      actions={
+        <AskAiButton
+          prompt={ask(engineCompareHandOff(data))}
+          icon={Scale}
+          label={t("aComparison.askLabel")}
+          variant="primary"
+        />
+      }
+      // The two engines head the columns; the line names the period and when.
+      meta={<ViewMeta period={formatLookback(`${data.windowDays}d`)} asOf={data.asOf} />}
       badges={
         <>
           <Badge variant="secondary">
-            {data.engineA} ↔ {data.engineB}
+            {t("aEngineCompare.enginesBadge", { engineA: data.engineA, engineB: data.engineB })}
           </Badge>
           <Badge>{data.processDefinitionKey}</Badge>
-          <Badge variant="outline">
-            {t("aEngineCompare.windowBadge", { days: data.windowDays })}
-          </Badge>
           {data.activityId && (
             <Badge variant="outline">
               {t("aEngineCompare.elementBadge", { id: data.activityId })}
             </Badge>
           )}
           {data.suppressed && (
-            <Badge variant="destructive">
-              {t("aEngineCompare.suppressed", { min: data.minBucketSize })}
-            </Badge>
+            <SuppressedBadge>
+              {t("aEngineCompare.suppressed", { min: formatNumber(data.minBucketSize) })}
+            </SuppressedBadge>
           )}
         </>
       }

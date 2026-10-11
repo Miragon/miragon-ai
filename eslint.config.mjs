@@ -279,23 +279,24 @@ export default tseslint.config(
     files: ["apps/mcp-server-camunda7/src/ui/**/*.{ts,tsx}"],
     rules: { "no-restricted-syntax": ["error", ...widgetDateGate] },
   },
-  // Connector widgets sit under BOTH gates — one block with the union, after
-  // the registrar block (whose options it replaces for these files).
-  {
-    files: ["packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}"],
-    rules: { "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate] },
-  },
-  // camunda7's widgets render every number through the kit formatters, so
-  // they carry the number gate too (its own block: one union per glob).
+  // Connector widgets sit under the registrar AND date gates, and render
+  // every number through the kit formatters, so they carry the number gate
+  // too — one block per connector, each with the union, after the registrar
+  // block (whose options it replaces for these files).
   {
     files: ["packages/connectors/camunda/camunda7-connector/src/widgets/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate, ...widgetNumberGate],
     },
   },
-  // Invariant 6, numbers: the kit's own widget code and camunda7's (above).
-  // The analytics widgets join once their raw toFixed/toLocaleString() calls
-  // moved to the kit formatters.
+  {
+    files: ["packages/connectors/analytics/analytics-connector/src/widgets/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": ["error", ...registrarGate, ...widgetDateGate, ...widgetNumberGate],
+    },
+  },
+  // Invariant 6, numbers: the kit's own widget code, and both connectors'
+  // widgets in their union blocks above.
   {
     files: ["packages/core/widget-shell/src/ui/**/*.{ts,tsx}"],
     rules: { "no-restricted-syntax": ["error", ...widgetNumberGate] },

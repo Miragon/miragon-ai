@@ -205,20 +205,26 @@ describe("gates sharing a glob are merged, not overridden", () => {
     }
   })
 
-  it("camunda7 widgets carry the number gate on top of both (they render through the kit formatters)", async () => {
-    for (const rel of [`${C7}/widgets/__probe__.ts`, `${C7}/widgets/__probe__.tsx`]) {
-      const messages = await gateMessages(
-        rel,
-        'server.tool("x")\nd.toLocaleDateString()\nconst a = n.toFixed(1)\nconst b = n.toLocaleString()\nnew Intl.NumberFormat("de")',
-      )
+  it("both connectors' widgets carry the registrar, date AND number gates in one union per glob", async () => {
+    const code = [
+      'server.tool("x")',
+      "d.toLocaleDateString()",
+      "const a = n.toFixed(1)",
+      "const b = n.toLocaleString()",
+      "const c = n.toLocaleString(undefined)",
+      "const d = new Intl.NumberFormat('de').format(n)",
+    ].join("\n")
+    for (const rel of [
+      `${C7}/widgets/__probe__.ts`,
+      `${C7}/widgets/__probe__.tsx`,
+      `${AN}/widgets/__probe__.ts`,
+      `${AN}/widgets/__probe__.tsx`,
+    ]) {
+      const messages = await gateMessages(rel, code)
       assert.ok(messages.some(isRegistrarHit), `${rel}: registrar gate dropped`)
       assert.equal(messages.filter(isDateHit).length, 1, `${rel}: date gate dropped`)
-      assert.equal(messages.filter(isNumberHit).length, 3, `${rel}: number gate missing`)
+      assert.equal(messages.filter(isNumberHit).length, 4, `${rel}: number gate missing`)
     }
-  })
-
-  it("analytics widgets do not carry the number gate yet (they join it after migrating)", () => {
-    assert.equal(widgetTsx.filter(isNumberHit).length, 0)
   })
 
   it("the app's UI keeps the date gate", async () => {

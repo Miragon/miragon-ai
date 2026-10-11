@@ -1,14 +1,18 @@
 import type { MessageCatalog } from "@miragon/mcp-toolkit-core"
 
-/** English model-facing analytics tool summaries (aSum.*). Generated, hand-editable. */
+/**
+ * English model-facing analytics tool summaries (aSum.*). Hand-editable; the
+ * model may quote them, so they follow the catalog voice rules too (no dash
+ * as a connector).
+ */
 export const enServer: MessageCatalog = {
   "aSum.bpmnHeatmap":
     'BPMN heatmap for "{key}" over {period}{engines}: heat values for {elementCount} element(s){fallbackNote}.',
-  "aSum.bpmnHeatmapNoXml": " — no BPMN XML available, widget shows the non-diagram fallback",
+  "aSum.bpmnHeatmapNoXml": "; no BPMN XML available, the widget shows the non-diagram fallback",
   "aSum.clusterCompare":
     "Pre/post deployment comparison{scope}{engines} around {deploymentTimestamp} (measured -{before}d / +{after}d{partial}): {delta}{suppressed}.",
   "aSum.clusterComparePartial":
-    ", partial — a window was cut short at now or at the retention; starts compare per day",
+    ", partial: a window was cut short at now or at the retention; starts compare per day",
   "aSum.dashboard":
     "Analytics dashboard{scope} over {period}{engines}: within the period {totalCount} instance(s) started, {completedCount} completed, {incidentsCreated} incident(s) created ({incidentRatePct} per 100 started); right now {runningNow} running, {openIncidentsNow} incident(s) open.",
   "aSum.engineCompare":
@@ -32,5 +36,5 @@ export const enServer: MessageCatalog = {
   "aSum.versionCompare":
     'Version comparison for "{key}" v{versionA} vs v{versionB} over {windowDays}d{engines}: {delta}{incidents}{suppressed}.',
   "aSum.versionIncidentsUnavailable":
-    " — incident rates unavailable per version (the incident metric carries no version label), not zero",
+    "; incident rates unavailable per version (the incident metric carries no version label), not zero",
 }

@@ -11,6 +11,7 @@ import {
   AlertTitle,
   AlertDescription,
 } from "@miragon/mcp-toolkit-ui"
+import { FileSearch } from "lucide-react"
 import {
   AskAiButton,
   CountPill,
@@ -18,6 +19,7 @@ import {
   TableEmptyState,
   TableSkeleton,
   WidgetShell,
+  formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ErrorPatternItem, FailureDashboardData } from "@miragon-ai/analytics-client"
 import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
@@ -114,12 +116,12 @@ export function ErrorPatternsTable({
                           {pattern.processDefinitionKey}
                         </TableCell>
                         <TableCell className="text-right">
-                          <CountPill tone="danger">{pattern.incidentCount}</CountPill>
+                          <CountPill tone="danger">{formatNumber(pattern.incidentCount)}</CountPill>
                         </TableCell>
                         <TableCell className="text-right">
                           <AskAiButton
                             variant="icon"
-                            title={t("aErrorPatterns.analyzeLabel")}
+                            icon={FileSearch}
                             label={t("aErrorPatterns.analyzeLabel")}
                             prompt={ask(errorPatternHandOff(pattern, data))}
                           />

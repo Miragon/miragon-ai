@@ -43,7 +43,7 @@ export function compareDeltaSummary(delta: CompareKpiDelta): string {
 }
 
 export const suppressedNote = (suppressed: boolean) =>
-  suppressed ? " — flagged suppressed (sample below minBucketSize)" : ""
+  suppressed ? "; flagged suppressed (sample below minBucketSize)" : ""
 
 /**
  * The engine scope of a result, for summaries: one engine by name, or — the

@@ -6,7 +6,13 @@ import {
   AlertDescription,
   Skeleton,
 } from "@miragon/mcp-toolkit-ui"
-import { Section, TONE_INK, WidgetShell, formatDuration } from "@miragon-ai/widget-shell/widgets"
+import {
+  Section,
+  TONE_INK,
+  WidgetShell,
+  formatDuration,
+  formatNumber,
+} from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
 import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
@@ -56,20 +62,26 @@ export function ProcessDefinitionBreakdown({
                       </span>
                       <div className="text-muted-foreground flex items-center gap-4 text-sm">
                         <span>
-                          {t("aDefBreakdown.totalInstances", { count: def.totalInstances })}
+                          {t("aDefBreakdown.totalInstances", {
+                            count: formatNumber(def.totalInstances),
+                          })}
                         </span>
                         <span className={TONE_INK.success}>
-                          {t("aDefBreakdown.completedCount", { count: def.completed })}
+                          {t("aDefBreakdown.completedCount", {
+                            count: formatNumber(def.completed),
+                          })}
                         </span>
                         {def.runningNow !== null && (
                           <span className={TONE_INK.info}>
-                            {t("aDefBreakdown.runningNowCount", { count: def.runningNow })}
+                            {t("aDefBreakdown.runningNowCount", {
+                              count: formatNumber(def.runningNow),
+                            })}
                           </span>
                         )}
                         {def.incidentsCreated > 0 && (
                           <Badge variant="destructive">
                             {t("aDefBreakdown.incidentsCreatedCount", {
-                              count: def.incidentsCreated,
+                              count: formatNumber(def.incidentsCreated),
                             })}
                           </Badge>
                         )}

@@ -15,6 +15,7 @@ import {
   SettingsField,
   SettingsInput,
   WidgetShell,
+  formatPeriod,
   formatTime,
   modelContextText,
   useResetOnChange,
@@ -146,7 +147,11 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
 
       {save.isError && (
         <Alert variant="destructive">
-          <AlertDescription>{save.error?.message ?? t("aSettings.saveError")}</AlertDescription>
+          <AlertDescription>
+            {save.error?.message
+              ? t("aSettings.saveFailed", { reason: save.error.message })
+              : t("aSettings.saveError")}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -167,7 +172,7 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
             >
               {PERIODS.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {formatPeriod(p)}
                 </option>
               ))}
             </NativeSelect>

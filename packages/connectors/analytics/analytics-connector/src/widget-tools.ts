@@ -133,7 +133,8 @@ export function registerWidgetTools(
       }
       return buildComposedView({
         app: "analytics",
-        title: "Analytics Dashboard",
+        // The view title in the caller's language (the widget heading's own key).
+        title: t("aExecSummary.title"),
         layout: [
           { row: [{ widget: "analytics:execution-summary-kpi", props: cellProps }] },
           { row: [{ widget: "analytics:execution-performance-kpi", props: cellProps }] },
@@ -169,7 +170,7 @@ export function registerWidgetTools(
       const cellProps = isFleetRequest(args.engine) ? undefined : { engine: args.engine }
       return buildComposedView({
         app: "analytics",
-        title: "Failure Dashboard",
+        title: t("aFailureSummary.title"),
         layout: [
           { row: [{ widget: "analytics:failure-summary-kpi", props: cellProps }] },
           { row: [{ widget: "analytics:error-patterns-table", props: cellProps }] },
@@ -225,8 +226,9 @@ export function registerWidgetTools(
           bpmnXml,
           frequency: heat.frequency,
           durationSec: heat.durationSec,
+          asOf: heat.asOf,
         },
-        title: "BPMN Heatmap",
+        title: t("aHeatmap.title"),
         summary: t("aSum.bpmnHeatmap", {
           key: args.processDefinitionKey,
           period,
@@ -263,6 +265,7 @@ export function registerWidgetTools(
         bpmnXml,
         frequency: heat.frequency,
         durationSec: heat.durationSec,
+        asOf: heat.asOf,
       }
       return buildDataFeedResult(data)
     }),

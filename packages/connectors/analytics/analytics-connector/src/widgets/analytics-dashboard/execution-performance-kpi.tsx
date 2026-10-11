@@ -3,6 +3,7 @@ import {
   KpiGridSkeleton,
   WidgetShell,
   formatDuration,
+  formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
 import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
@@ -35,7 +36,9 @@ export function ExecutionPerformanceKpi({
               { label: t("aExecPerf.p95"), value: formatDuration(data.p95DurationMs) },
               {
                 label: t("aExecPerf.incidentRate"),
-                value: data.incidentRatePct === null ? "—" : `${data.incidentRatePct}%`,
+                // Incidents per 100 starts: one instance may carry several, so
+                // the rate can pass 100 and reads as a number, not a share.
+                value: formatNumber(data.incidentRatePct, { maximumFractionDigits: 1 }),
                 tone: (data.incidentRatePct ?? 0) > 0 ? "danger" : undefined,
               },
             ]}

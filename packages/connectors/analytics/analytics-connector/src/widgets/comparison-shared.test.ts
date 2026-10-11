@@ -1,15 +1,32 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 import type { CompareKpiDelta } from "@miragon-ai/analytics-client"
+import { setFormatLocale } from "@miragon-ai/widget-shell/testing"
 import { translator } from "../messages/index.js"
 import type { T } from "../messages/use-t.js"
-import { buildComparisonMetrics, deltaFacts } from "./comparison-shared.js"
+import {
+  DURATION_MIN_CHANGE_PCT,
+  RATE_MIN_CHANGE,
+  buildComparisonMetrics,
+  deltaFacts,
+  deltaVerdict,
+  formatDelta,
+  type DeltaRule,
+} from "./comparison-shared.js"
 
-const t: T = (key, params) => translator("en", key, params)
+afterEach(() => setFormatLocale(undefined))
+
+const english = () => setFormatLocale({ language: "en", locale: "en-US" })
+const german = () => setFormatLocale({ language: "de", locale: "de-DE" })
+const en: T = (key, params) => translator("en", key, params)
+const de: T = (key, params) => translator("de", key, params)
+
+/** The formatters keep a number and its unit together with a non-breaking space. */
+const plain = (s: string) => s.replace(/\u00a0/g, " ")
 
 type Kpis = Parameters<typeof buildComparisonMetrics>[1]
 
 const kpis = (over: Partial<Kpis> = {}): Kpis => ({
-  instance_count: 40,
+  instance_count: 1240,
   incident_rate_pct: 5,
   element_incident_count: null,
   element_incident_rate_pct: null,
@@ -26,62 +43,95 @@ const delta: CompareKpiDelta = {
   p95_duration_delta_pct: null,
 }
 
-const row = (metrics: ReturnType<typeof buildComparisonMetrics>, labelKey: string) =>
+const row = (t: T, metrics: ReturnType<typeof buildComparisonMetrics>, labelKey: string) =>
   metrics.find((m) => m.label === t(labelKey))
 
-describe("buildComparisonMetrics", () => {
-  it("formats measured rates as percentages and keeps the raw deltas", () => {
-    const metrics = buildComparisonMetrics(t, kpis(), kpis({ incident_rate_pct: 3 }), delta)
+const VOLUME: DeltaRule = { kind: "volume" }
+const DURATION: DeltaRule = { kind: "quality", worseIfUp: true, minChange: DURATION_MIN_CHANGE_PCT }
+const RATE: DeltaRule = { kind: "quality", worseIfUp: true, minChange: RATE_MIN_CHANGE }
 
-    expect(row(metrics, "aComparison.metricIncidentRate")).toEqual({
-      label: t("aComparison.metricIncidentRate"),
-      before: "5.0%",
-      after: "3.0%",
-      delta: { value: -2, unit: "pp", worseIfUp: true },
+describe("buildComparisonMetrics", () => {
+  it("formats the values in the view's locale and keeps the raw deltas with their rule", () => {
+    english()
+    const metrics = buildComparisonMetrics(en, kpis(), kpis({ incident_rate_pct: 3 }), delta)
+
+    expect(row(en, metrics, "aComparison.metricIncidentRate")).toEqual({
+      label: "Incidents per 100 starts",
+      before: "5.0",
+      after: "3.0",
+      delta: { value: -2, unit: "rate", rule: RATE },
     })
-    // The count per window, the delta per day — fair across unequal windows.
-    expect(row(metrics, "aComparison.metricStarted")).toMatchObject({
-      before: "40",
-      delta: { value: 10, unit: "pct", worseIfUp: false },
+    // The count per window, the delta per day: fair across unequal windows,
+    // and a volume, so it carries no verdict rule.
+    expect(row(en, metrics, "aComparison.metricStarted")).toMatchObject({
+      label: "Starts (change per day)",
+      before: "1,240",
+      delta: { value: 10, unit: "pct", rule: VOLUME },
     })
-    expect(row(metrics, "aComparison.metricP95Duration")).toMatchObject({
+    expect(row(en, metrics, "aComparison.metricAvgDuration")).toMatchObject({
+      before: "1m 0s",
+      delta: { value: 5, unit: "pct", rule: DURATION },
+    })
+    expect(row(en, metrics, "aComparison.metricP95Duration")).toMatchObject({
       before: "3m 7s",
       delta: { value: null },
     })
   })
 
-  it("renders unmeasured rates as n/a with no delta, never as 0.0% (#327)", () => {
+  it("speaks German: grouped digits, decimal comma, German units and labels", () => {
+    german()
+    const metrics = buildComparisonMetrics(de, kpis(), kpis({ incident_rate_pct: 3.25 }), delta)
+    expect(row(de, metrics, "aComparison.metricStarted")).toMatchObject({
+      label: "Starts (Änderung je Tag)",
+      before: "1.240",
+    })
+    expect(row(de, metrics, "aComparison.metricIncidentRate")).toMatchObject({
+      label: "Incidents je 100 Starts",
+      before: "5,0",
+      after: "3,3",
+    })
+    expect(plain(row(de, metrics, "aComparison.metricP95Duration")!.before)).toBe("3 Min. 7 s")
+  })
+
+  it("renders unmeasured rates as 'not measured' with no delta, never as 0 (#327)", () => {
+    english()
     const unmeasured = kpis({ incident_rate_pct: null })
-    const metrics = buildComparisonMetrics(t, unmeasured, unmeasured, {
+    const metrics = buildComparisonMetrics(en, unmeasured, unmeasured, {
       ...delta,
       incident_rate_delta_pp: null,
     })
 
-    expect(row(metrics, "aComparison.metricIncidentRate")).toMatchObject({
-      before: "n/a",
-      after: "n/a",
+    expect(row(en, metrics, "aComparison.metricIncidentRate")).toMatchObject({
+      before: "not measured",
+      after: "not measured",
       delta: { value: null },
     })
-    expect(JSON.stringify(metrics)).not.toContain("0.0%")
+    expect(JSON.stringify(metrics)).not.toContain('"0.0"')
   })
 
-  it("renders 'nothing ended' as an unmeasured duration, never 0ms (N78)", () => {
+  it("renders 'nothing ended' as an unmeasured duration, never 0 ms (N78)", () => {
+    german()
     const noneEnded = kpis({ avg_duration_sec: null, p95_duration_sec: null })
-    const metrics = buildComparisonMetrics(t, kpis(), noneEnded, {
+    const metrics = buildComparisonMetrics(de, kpis(), noneEnded, {
       ...delta,
       avg_duration_delta_pct: null,
     })
 
     for (const labelKey of ["aComparison.metricAvgDuration", "aComparison.metricP95Duration"]) {
-      expect(row(metrics, labelKey)).toMatchObject({ after: "n/a", delta: { value: null } })
+      expect(row(de, metrics, labelKey)).toMatchObject({
+        after: "nicht gemessen",
+        delta: { value: null },
+      })
     }
-    expect(JSON.stringify(metrics)).not.toContain("0ms")
+    expect(JSON.stringify(metrics)).not.toContain("0 ms")
   })
 
   it("shows the element incident rate only when the comparison was scoped to an element", () => {
+    english()
     expect(
       row(
-        buildComparisonMetrics(t, kpis(), kpis(), delta),
+        en,
+        buildComparisonMetrics(en, kpis(), kpis(), delta),
         "aComparison.metricElementIncidentRate",
       ),
     ).toBeUndefined()
@@ -89,18 +139,69 @@ describe("buildComparisonMetrics", () => {
     const scoped = kpis({ element_incident_count: 2, element_incident_rate_pct: 5 })
     expect(
       row(
+        en,
         buildComparisonMetrics(
-          t,
+          en,
           scoped,
           kpis({ element_incident_count: 0, element_incident_rate_pct: 0 }),
-          {
-            ...delta,
-            element_incident_rate_delta_pp: -5,
-          },
+          { ...delta, element_incident_rate_delta_pp: -5 },
         ),
         "aComparison.metricElementIncidentRate",
       ),
-    ).toMatchObject({ before: "5.0%", after: "0.0%", delta: { value: -5, unit: "pp" } })
+    ).toMatchObject({ before: "5.0", after: "0.0", delta: { value: -5, unit: "rate", rule: RATE } })
+  })
+})
+
+describe("deltaVerdict — U6: volume neutral, thresholds per metric, suppressed not reliable", () => {
+  it("never judges a volume: fewer starts on a test engine are no regression", () => {
+    for (const value of [-84.7, 0, 427.4]) {
+      expect(deltaVerdict(value, VOLUME, false)).toBeUndefined()
+      expect(deltaVerdict(value, VOLUME, true)).toBeUndefined()
+    }
+  })
+
+  it("judges a duration only from 5 % on, in either direction", () => {
+    expect(deltaVerdict(4.9, DURATION, false)).toBeUndefined()
+    expect(deltaVerdict(-4.9, DURATION, false)).toBeUndefined()
+    expect(deltaVerdict(5, DURATION, false)).toBe("worse")
+    expect(deltaVerdict(-5, DURATION, false)).toBe("better")
+  })
+
+  it("judges an incident rate only from 1 incident per 100 starts on", () => {
+    expect(deltaVerdict(0.2, RATE, false)).toBeUndefined()
+    expect(deltaVerdict(-0.99, RATE, false)).toBeUndefined()
+    expect(deltaVerdict(1, RATE, false)).toBe("worse")
+    expect(deltaVerdict(-6.5, RATE, false)).toBe("better")
+  })
+
+  it("follows the metric's direction: a rule where up is good flips the verdict", () => {
+    const upIsGood: DeltaRule = { kind: "quality", worseIfUp: false, minChange: 1 }
+    expect(deltaVerdict(3, upIsGood, false)).toBe("better")
+    expect(deltaVerdict(-3, upIsGood, false)).toBe("worse")
+  })
+
+  it("calls every quality delta of a suppressed comparison not reliable, below threshold too", () => {
+    expect(deltaVerdict(-100, DURATION, true)).toBe("notReliable")
+    expect(deltaVerdict(0.1, RATE, true)).toBe("notReliable")
+  })
+
+  it("has nothing to judge for a missing delta (a zero baseline)", () => {
+    expect(deltaVerdict(null, DURATION, false)).toBeUndefined()
+    expect(deltaVerdict(null, RATE, true)).toBeUndefined()
+  })
+})
+
+describe("formatDelta", () => {
+  it("signs relative changes as percent and rate changes in the rate's own unit", () => {
+    english()
+    expect(formatDelta(12.5, "pct")).toBe("+12.5%")
+    expect(formatDelta(-84.66, "pct")).toBe("-84.7%")
+    expect(formatDelta(0.24, "rate")).toBe("+0.2")
+    expect(formatDelta(0, "rate")).toBe("0")
+    expect(formatDelta(null, "pct")).toBe("—")
+    german()
+    expect(plain(formatDelta(12.5, "pct"))).toBe("+12,5 %")
+    expect(formatDelta(-2, "rate")).toBe("-2")
   })
 })
 

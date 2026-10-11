@@ -59,7 +59,8 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         app: "analytics",
         dataType: "analytics:clusterCompare",
         data,
-        title: "Cluster Compare",
+        // The view title in the caller's language (the widget heading's own key).
+        title: t("aClusterCompare.title"),
         summary: t("aSum.clusterCompare", {
           scope: data.processDefinitionKey
             ? t("aSum.scopeForProcess", { key: data.processDefinitionKey })
@@ -106,7 +107,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         app: "analytics",
         dataType: "analytics:versionCompare",
         data,
-        title: "Version Compare",
+        title: t("aVersionCompare.title"),
         summary: t("aSum.versionCompare", {
           key: data.processDefinitionKey,
           versionA: data.versionA,
@@ -150,7 +151,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         app: "analytics",
         dataType: "analytics:engineCompare",
         data,
-        title: "Engine Compare",
+        title: t("aEngineCompare.title"),
         summary: t("aSum.engineCompare", {
           engineA: data.engineA,
           engineB: data.engineB,
@@ -185,7 +186,7 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         app: "analytics",
         dataType: "analytics:engineLandscape",
         data,
-        title: "Cross-Engine Landscape",
+        title: t("aLandscape.heading"),
         summary: t("aSum.engineLandscape", {
           engineCount: data.totals.engineCount,
           reportingEngineCount: data.totals.reportingEngineCount,

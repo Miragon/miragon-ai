@@ -10,6 +10,7 @@ import {
   TableRow,
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
+import { ArrowLeftRight } from "lucide-react"
 import {
   AskAiButton,
   CountPill,
@@ -17,7 +18,9 @@ import {
   SectionHeading,
   TableEmptyState,
   TableSkeleton,
+  ViewMeta,
   WidgetShell,
+  formatNumber,
   type KpiCell,
 } from "@miragon-ai/widget-shell/widgets"
 import type { EngineLandscapeResult } from "@miragon-ai/analytics-client"
@@ -83,25 +86,34 @@ function LandscapeSummary({ data, t }: { data: EngineLandscapeResult; t: T }) {
   const cells: KpiCell[] = [
     {
       label: t("aLandscape.kpiEngines"),
-      value: totals.engineCount,
-      trend: silent > 0 ? t("aLandscape.kpiEnginesSilent", { count: silent }) : undefined,
+      value: formatNumber(totals.engineCount),
+      trend:
+        silent > 0 ? t("aLandscape.kpiEnginesSilent", { count: formatNumber(silent) }) : undefined,
       trendTone: silent > 0 ? "danger" : undefined,
     },
     {
       label: t("aLandscape.kpiProcesses"),
-      value: totals.processKeyCount,
-      trend: t("aLandscape.kpiProcessesShared", { count: totals.sharedProcessKeyCount }),
+      value: formatNumber(totals.processKeyCount),
+      trend: t("aLandscape.kpiProcessesShared", {
+        count: formatNumber(totals.sharedProcessKeyCount),
+      }),
     },
-    { label: t("aLandscape.kpiRunning"), value: totals.runningInstances.toLocaleString() },
+    { label: t("aLandscape.kpiRunning"), value: formatNumber(totals.runningInstances) },
     {
       label: t("aLandscape.kpiIncidents"),
-      value: totals.openIncidents,
+      value: formatNumber(totals.openIncidents),
       tone: totals.openIncidents > 0 ? "danger" : undefined,
     },
   ]
   return (
     <>
       <SectionHeading title={t("aLandscape.heading")} hint={t("aLandscape.headingHint")} />
+      {/* A live snapshot: no period, the engines (and how many send no metrics) and when. */}
+      <ViewMeta
+        className="-mt-2 mb-3"
+        engines={{ count: totals.engineCount, silent }}
+        asOf={data.asOf}
+      />
       <KpiGrid cells={cells} />
     </>
   )
@@ -165,39 +177,41 @@ function EngineTable({ data, t }: { data: EngineLandscapeResult; t: T }) {
                   )}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {e.runningInstances.toLocaleString()}
+                  {formatNumber(e.runningInstances)}
                 </TableCell>
                 <TableCell className="text-right">
                   {e.openIncidents > 0 ? (
-                    <CountPill tone="danger">{e.openIncidents}</CountPill>
+                    <CountPill tone="danger">{formatNumber(e.openIncidents)}</CountPill>
                   ) : (
                     <span className="text-muted-foreground tabular-nums">0</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">
                   {e.failedJobs > 0 ? (
-                    <CountPill tone="warning">{e.failedJobs}</CountPill>
+                    <CountPill tone="warning">{formatNumber(e.failedJobs)}</CountPill>
                   ) : (
                     <span className="text-muted-foreground tabular-nums">0</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {e.executableJobs.toLocaleString()}
+                  {formatNumber(e.executableJobs)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {e.suspendedJobs.toLocaleString()}
+                  {formatNumber(e.suspendedJobs)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {e.jobsDueFuture.toLocaleString()}
+                  {formatNumber(e.jobsDueFuture)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {e.openExternalTasks.toLocaleString()}
+                  {formatNumber(e.openExternalTasks)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {e.deployedDefinitionKeys}
+                  {formatNumber(e.deployedDefinitionKeys)}
                   {e.exclusiveDefinitionKeys > 0 && (
                     <span className="text-muted-foreground ml-1 text-xs">
-                      {t("aLandscape.exclusiveSuffix", { count: e.exclusiveDefinitionKeys })}
+                      {t("aLandscape.exclusiveSuffix", {
+                        count: formatNumber(e.exclusiveDefinitionKeys),
+                      })}
                     </span>
                   )}
                 </TableCell>
@@ -251,7 +265,7 @@ function ProcessMatrix({ data, t }: { data: EngineLandscapeResult; t: T }) {
                   {p.processDefinitionKey}
                   {p.shared && (
                     <Badge variant="secondary" className="ml-2">
-                      {t("aLandscape.sharedBadge", { count: p.engineIds.length })}
+                      {t("aLandscape.sharedBadge", { count: formatNumber(p.engineIds.length) })}
                     </Badge>
                   )}
                 </TableCell>
@@ -260,7 +274,7 @@ function ProcessMatrix({ data, t }: { data: EngineLandscapeResult; t: T }) {
                   return (
                     <TableCell key={id} className="text-right tabular-nums">
                       {deployed ? (
-                        (p.runningByEngine[id] ?? 0).toLocaleString()
+                        formatNumber(p.runningByEngine[id] ?? 0)
                       ) : (
                         <span className="text-muted-foreground" title={t("aLandscape.notDeployed")}>
                           —
@@ -271,7 +285,7 @@ function ProcessMatrix({ data, t }: { data: EngineLandscapeResult; t: T }) {
                 })}
                 <TableCell className="text-right">
                   {p.openIncidentsTotal > 0 ? (
-                    <CountPill tone="danger">{p.openIncidentsTotal}</CountPill>
+                    <CountPill tone="danger">{formatNumber(p.openIncidentsTotal)}</CountPill>
                   ) : (
                     <span className="text-muted-foreground tabular-nums">0</span>
                   )}
@@ -309,7 +323,7 @@ function CompareAction({ processKey, on, t }: { processKey: string; on: string[]
   return (
     <AskAiButton
       variant="icon"
-      title={t("aLandscape.compareLabel", { key: processKey })}
+      icon={ArrowLeftRight}
       label={t("aLandscape.compareLabel", { key: processKey })}
       prompt={ask(landscapeCompareHandOff(processKey, on))}
     />

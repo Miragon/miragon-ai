@@ -204,12 +204,15 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `ProfileGate`; an ESLint gate bans `Intl.DateTimeFormat`/`toLocaleDateString`/`toLocaleTimeString`
    in widget code, and a second one bans `toFixed`, a `toLocaleString()` without a locale (no
    argument, `undefined`, `null`, `[]`) and a hand-built `Intl.NumberFormat` (exempt: the
-   kit's own `format.ts`; on for widget-shell's `src/ui` and camunda7's `src/widgets`; a
-   connector's widgets join it in their own block in `eslint.config.mjs` once their raw calls
-   moved to the kit, flipping the pinned "not yet" probe in `scripts/eslint-gates.test.mjs`).
-   A count reaches a catalog entry already formatted (`formatNumber`), and the entry puts the
-   noun in the right number (camunda7: `countOf` in `messages/plural.ts`), never a
-   `…One`/`…Other` key pair;
+   kit's own `format.ts`; on for widget-shell's `src/ui` and both connectors' `src/widgets`,
+   each connector in its own union block in `eslint.config.mjs`, pinned by
+   `scripts/eslint-gates.test.mjs`; a new connector's widgets join it in a block of their own
+   once their raw calls moved to the kit). A count reaches a catalog entry already formatted
+   (`formatNumber`), and the entry puts the noun in the right number (`countOf` in camunda7's
+   `messages/plural.ts`, `plural(…)` in analytics'), never a `…One`/`…Other` key pair;
+   `ViewMeta` (`formatLookback`, `formatViewMeta`) for the quiet reference line under a data
+   view's title, "Letzte 7 Tage · 6 Engines (3 ohne Metriken) · Stand 14:32", every part left
+   out when unknown;
    `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
    `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
    settings sections; `useBpmnViewer` (it owns the fixed light canvas, both themes) +
@@ -280,17 +283,21 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    names a file with its reason, shrink-only). widget-shell runs all three in
    `src/ui/brand-gates.test.ts`; camunda7 in `src/brand-gates.test.ts` (glyphs over all of
    `src`, colours over `src/widgets`) and `src/messages/catalog-text.test.ts` (every catalog,
-   plus en/de holding the same keys, so no English fallback leaks into a German view), with
-   its glossary (`src/messages/GLOSSARY.md`: Incident, aussetzen, läuft, Geschäftsschlüssel,
-   Versuche …) held by `src/messages/glossary.test.ts`; analytics adds its own as it
-   migrates. camunda7's hand-offs render through `HandOffButton`
-   (`src/widgets/lib/hand-off-button.tsx`): one entry per function with its Lucide icon and
-   its `handOff.*` label ("Behebung im Chat planen", "Fehler im Chat erklären", "Ticket im
-   Chat entwerfen" …), placed after the deterministic action it accompanies. A verdict
-   travels as data and the widget words it in the view's locale (the engine overview's line,
-   `widgets/lib/health-verdict.ts`); a show tool titles its view only in a language the
-   profile names (`localizeViewFor` in `lib/server-locale.ts`), with "system" it sets no
-   title and the widget's own heading names the view.
+   plus en/de holding the same keys, so no English fallback leaks into a German view);
+   analytics in `src/brand-gates.test.ts` (widget texts, Ask-AI intents and model summaries in
+   de and en, glyphs over `src/widgets` + `src/messages`, colours over `src/widgets`). Each
+   connector holds its glossary in `src/messages/GLOSSARY.md`, enforced by
+   `src/messages/glossary.test.ts` (camunda7: Incident, aussetzen, läuft, Geschäftsschlüssel,
+   Versuche …; analytics: no "Vorfall", "tote Jobs", "unzureichendes Signal" …, every hand-off
+   label names the chat, en/de holding the same keys). camunda7's hand-offs render through
+   `HandOffButton` (`src/widgets/lib/hand-off-button.tsx`): one entry per function with its
+   Lucide icon and its `handOff.*` label ("Behebung im Chat planen", "Fehler im Chat
+   erklären", "Ticket im Chat entwerfen" …), placed after the deterministic action it
+   accompanies. A verdict travels as data and the widget words it in the view's locale (the
+   engine overview's line, `widgets/lib/health-verdict.ts`); a show tool titles its view only
+   in a language the profile names (`localizeViewFor` in `lib/server-locale.ts`), with
+   "system" it sets no title and the widget's own heading names the view. `setFormatLocale`
+   from `/testing` renders a widget's numbers in a language in a test.
    **Everything a widget tells the model is built by `askAiPrompt`/`modelContextText`**
    (`widget-shell/src/ui/ask-ai-prompt.ts`) — an Ask-AI hand-off is posted as the
    USER's message. A spec is a short catalogue intent (`askAi.*` in the module's
