@@ -31,8 +31,8 @@ package customers build their own connectors and composed servers on (see the
   `catalogTextFindings` (the voice rules over a message catalog), `scanGlyphs` (no Unicode glyphs,
   emoji, lone symbols or sparkle imports as icons), `scanColors` (role names only: no palette
   classes, retired accents or raw colours, with a reasoned allow list), `stylesheetColorFindings`
-  (no raw colour in a stylesheet's rules) and `contrastFindings` with `toneContrastPairs()` /
-  `ROLE_CONTRAST_PAIRS` (WCAG AA of every tone and role pair over
+  (no raw colour or retired accent variable in a stylesheet's rules) and `contrastFindings` with
+  `toneContrastPairs()` / `ROLE_CONTRAST_PAIRS` (WCAG AA of every tone and role pair over
   `toolkitThemeStylesheets()` — the toolkit's Miragon theme as installed — plus your overrides,
   light and dark; `:root` and the dark scopes cascade in source order as on
   `<html class="dark" data-theme="dark">`, so override a role under both). Node only;
@@ -95,7 +95,11 @@ The `@miragon/mcp-toolkit-*`, `react`/`react-dom`, `zod` and `@tanstack/react-qu
 `dedupe` array in the server app's `vite.config.ts`), otherwise the React contexts diverge and
 in-widget queries hang. They are published as ranges (`react`/`react-dom` `^19.2.0`, `zod`
 `^4.4.0`, `@miragon/mcp-toolkit-*` `~2.7.0`, `lucide-react` `^0.562.0 || ^1.0.0`) so they dedupe
-against your app's copy; add `lucide-react` to your `dedupe` list too.
+against your app's copy; add `lucide-react` to your `dedupe` list too. **A host bundle that dedupes
+`lucide-react` needs 1.47.0 or newer** (the version `@miragon/mcp-toolkit-ui` 2.7 depends on): the
+toolkit's chrome imports `LucideProvider`, which 0.x does not export, so a deduped 0.x copy fails
+the bundle build with a missing export. The peer range still admits 0.562 only for this repo's own
+test graph; no package manager warns you about it.
 
 `mcp-use` is the exception: it is an **exactly pinned** peer dependency — pin it to `mcp-use@2.7.3`
 in your app. A duplicate `mcp-use` instance breaks the React context and hangs every in-widget query

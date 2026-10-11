@@ -7,19 +7,33 @@
  * variables in the block below. Never set the --cd-* tokens themselves, and
  * never add palette classes or raw colours in a widget.
  *
- * The roles you can set:
+ * The roles your brand owns:
  *   --primary, --primary-foreground, --primary-hover   buttons
  *   --link                                             links, interactive text
  *   --focus, --ring                                    the focus ring (3:1)
  *   --accent, --accent-foreground                      hover and selection
- *   --background, --card, --popover, --muted,          surfaces
- *   --secondary
- *   --foreground, --muted-foreground                   text (4.5:1)
- *   --border, --input                                  divider, field edge (3:1)
+ *   --input                                            the field edge (3:1)
+ *   --destructive, --destructive-foreground            a destructive action
  *   --danger, --warning, --success, --info             a status: dot, edge, icon
  *     each with -soft (its tint) and -ink (its text)
+ *   --chart-1 … --chart-5, --sidebar-*                 charts, a sidebar
  *   --radius-sm/-md/-lg, --shadow-1/-2/-3, --scrim     shape and depth
  *   --font-sans, --font-mono                           type
+ *
+ * Miragon blue sits in more roles than --primary: --link, --focus, --ring,
+ * --accent-foreground, --info/-ink, --chart-1/-3 and --sidebar-primary/
+ * -accent-foreground/-ring carry it too. Give them your colour, or your
+ * brand ships mixed with Miragon's: a view's selected section, for example,
+ * is --accent-foreground on --accent.
+ *
+ * The neutrals are the HOST's: the surfaces (--background, --card,
+ * --popover, --muted, --secondary), the text on them (--foreground,
+ * --card-foreground, --popover-foreground, --secondary-foreground,
+ * --muted-foreground) and the divider (--border). A host that sends its
+ * palette (SEP-1865 style variables) writes these inline on <html>, which
+ * beats this file, so a neutral set here shows only where the host sends
+ * none. Your brand colours therefore sit on the host's surfaces, not only
+ * on the Miragon neutrals: check them against a light AND a dark host too.
  *
  * Set a role in BOTH blocks: the host's dark mode puts .dark and
  * data-theme="dark" on <html>, where :root matches too, so a value set only
@@ -27,9 +41,12 @@
  * surface forced light inside a dark view (an element marked
  * data-theme-mode="light") keeps your light values.
  *
- * Keep every pair readable: text 4.5:1, edges, dots and the focus ring 3:1.
- * server/test/brand.test.ts measures your roles in light and dark over the
- * Miragon theme, the example at the end of this file included.
+ * Keep every pair readable: text and each -foreground on its fill 4.5:1;
+ * edges, dots, icons and the focus ring 3:1. server/test/brand.test.ts
+ * measures those pairs (the role and tone pairs of
+ * @miragon-ai/widget-shell/testing) in light and dark over the Miragon
+ * neutrals, the example at the end of this file included. It does not
+ * measure charts, the sidebar, radii, shadows or fonts.
  */
 @import "@miragon/mcp-toolkit-ui/theme.css";
 
@@ -49,6 +66,8 @@
 /* ── Example: a blue brand ─────────────────────────────────────────────────
  * Copy the declarations into the blocks above and put in your own values.
  * brand.test.ts checks this example too, so it stays a valid starting point.
+ * For a single brand, also set the roles named above that carry Miragon
+ * blue (--info/-ink, --chart-1/-3, --sidebar-*).
  *
  * brand-example:light
  *   --primary: #0b5cad;
@@ -56,11 +75,15 @@
  *   --link: #0b5cad;
  *   --focus: #0b5cad;
  *   --ring: #0b5cad;
+ *   --accent: #e7f0fa;
+ *   --accent-foreground: #0b5cad;
  * brand-example:dark
  *   --primary: #0b5cad;
  *   --primary-hover: #094a8c;
  *   --link: #7fb2ec;
  *   --focus: #7fb2ec;
  *   --ring: #7fb2ec;
+ *   --accent: #1b3350;
+ *   --accent-foreground: #ffffff;
  * brand-example:end
  */

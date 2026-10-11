@@ -5,6 +5,7 @@ import { queryClient, useLocale } from "@miragon/mcp-toolkit-ui"
 import { useHostBridge, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { AppShellProviders } from "./app-shell-providers.js"
 import { useHostWidgets } from "./host-widgets.js"
+import { LocalizedAppView } from "./localized-app-view.js"
 import { useHostDisplayMode } from "./widget-shell.js"
 
 // The REAL mcp-use view runtime (bootstrapView), connected to an in-memory
@@ -80,6 +81,8 @@ function createFakeHost(options: {
 
   return {
     transport: transport as unknown as ViewTransport,
+    /** The methods the view sent, in order (requests and notifications). */
+    methods: () => sent.map((m) => m.method),
     toolCalls: () =>
       sent
         .filter((m) => m.method === "tools/call")
@@ -245,5 +248,64 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     expect(host.toolCalls()).toEqual([])
     expect(root.lang).toBe("en")
     expect(root.classList.contains("dark")).toBe(true)
+  })
+})
+
+/** A module widget with its own heading, as `WidgetHeader` renders it. */
+const HeadedWidget: WidgetComponent = () => <h2>Widget heading</h2>
+const VIEW_WIDGETS = { "demo:headed": HeadedWidget }
+
+/** A `show_*` / `render-view` result: the server's view title over one widget. */
+const VIEW_RESULT = {
+  content: [{ type: "text", text: "Rendered the view." }],
+  structuredContent: {
+    title: "Server view title",
+    context: { keys: {}, stepIds: [], stepData: {}, errors: [] },
+    layout: { rows: [{ row: [{ widget: "demo:headed" }] }] },
+  },
+}
+
+/**
+ * Mount a view the way every composed-server bundle does (AppShellProviders +
+ * LocalizedAppView), deliver the tool's result over the real view runtime and
+ * return the headings it renders. `toolName` is what the host names in
+ * SEP-1865 `toolInfo`; the chain under test is toolInfo → ShellHost.toolName
+ * (ViewHostBridge) → viewTitleMode → the toolkit toolbar's title.
+ */
+async function viewHeadings(toolName: string | undefined): Promise<(string | null)[]> {
+  const host = createFakeHost({
+    hostContext: toolName
+      ? { toolInfo: { tool: { name: toolName, inputSchema: { type: "object" } } } }
+      : {},
+    tools: { [PROFILE_FEED]: profileResult({ language: "en" }) },
+  })
+  bootstrapView(
+    {
+      default: () => (
+        <AppShellProviders widgets={VIEW_WIDGETS} profileTool={PROFILE_FEED}>
+          <LocalizedAppView widgets={VIEW_WIDGETS} />
+        </AppShellProviders>
+      ),
+    },
+    { transport: host.transport },
+  )
+  await vi.waitFor(() => expect(host.methods()).toContain("ui/notifications/initialized"))
+  host.notify("ui/notifications/tool-input", { arguments: {} })
+  host.notify("ui/notifications/tool-result", VIEW_RESULT)
+  await vi.waitFor(() => expect(document.body.textContent).toContain("Widget heading"))
+  return [...document.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((h) => h.textContent)
+}
+
+describe("LocalizedAppView: one title per view (real mcp-use view runtime)", () => {
+  it("hides the toolbar title over a module view: the widget's heading is the one title", async () => {
+    expect(await viewHeadings("camunda7_show_process_list")).toEqual(["Widget heading"])
+  })
+
+  it("keeps the toolbar title over a composed render-view, whose widgets carry none", async () => {
+    expect(await viewHeadings("render-view")).toEqual(["Server view title", "Widget heading"])
+  })
+
+  it("keeps it where the host does not name the rendering tool", async () => {
+    expect(await viewHeadings(undefined)).toEqual(["Server view title", "Widget heading"])
   })
 })

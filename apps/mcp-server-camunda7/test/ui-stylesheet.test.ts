@@ -128,7 +128,7 @@ describe("view stylesheets: role variables over the Miragon theme", () => {
   )
 
   it.each(Object.entries(SHIPPED))(
-    "%s: text, links, the focus ring and field edges reach AA in light and dark",
+    "%s: text, each foreground on its fill, links, focus rings and field edges reach AA in light and dark",
     (_, stack) => {
       const theme = parseThemeVariables(...toolkit, ...stack)
       expect(contrastFindings(theme, ROLE_CONTRAST_PAIRS)).toEqual([])

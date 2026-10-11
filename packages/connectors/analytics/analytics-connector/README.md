@@ -13,9 +13,10 @@ into your own MCP server.
 The consumer-shared libraries are ranged **peer dependencies** so they dedupe against your app's
 copy: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*` `~2.7.0`,
 `lucide-react` `^0.562.0 || ^1.0.0` (the widgets' icons; add it to your `dedupe` list like the
-widget-shell kit asks). **`mcp-use` is exactly pinned**: pin it to `mcp-use@2.7.3` in your app. A
-duplicate `mcp-use` instance breaks the React context and hangs every in-widget query on
-"Loading…".
+widget-shell kit asks, and pin 1.47.0 or newer: the toolkit 2.7 chrome imports `LucideProvider`,
+which 0.x lacks, so a deduped 0.x copy fails the bundle build). **`mcp-use` is exactly pinned**:
+pin it to `mcp-use@2.7.3` in your app. A duplicate `mcp-use` instance breaks the React context and
+hangs every in-widget query on "Loading…".
 
 ## What it provides
 

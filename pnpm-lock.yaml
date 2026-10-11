@@ -337,9 +337,6 @@ importers:
       tailwind-merge:
         specifier: 3.7.0
         version: 3.7.0
-      tw-animate-css:
-        specifier: 1.4.0
-        version: 1.4.0
     devDependencies:
       '@miragon/mcp-toolkit-core':
         specifier: 2.7.0

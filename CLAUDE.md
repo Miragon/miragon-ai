@@ -256,10 +256,12 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    with a bar instead of dimming them. A selection (`FilterBar` chip, `SegmentedControl`) is
    the info tint and contour around black text. Components use role names only
    (`text-danger-ink`, `bg-info-soft`, `text-link`, `ring-focus` …), never Tailwind palette
-   classes, raw colours or the retired `--m-*`/`critical` accents (`scanColors`, below; a
-   selected nav item is `bg-accent text-accent-foreground`, a link `text-link`).
-   `src/ui/tone-contrast.test.ts` holds every
-   `TONE_*` and role pair to WCAG AA in light and dark over the shipped theme
+   classes, raw colours or the retired `--m-*`/`critical` accents, as a class or a `var()`
+   reference (`scanColors`, below; a selected nav item is `bg-accent text-accent-foreground`,
+   a link `text-link`). `src/ui/tone-contrast.test.ts` holds every `TONE_*` and role pair
+   (`ROLE_CONTRAST_PAIRS`: text on every surface, each `-foreground` on its fill, the link,
+   `--focus` and `--ring`, the input edge — a role a brand may override belongs in it) to
+   WCAG AA in light and dark over the shipped theme
    (`toolkitThemeStylesheets()` from `/testing`); the one exemption is the CI's own (§3.3:
    success green and amber as a dot, edge or icon on light reach 1.67:1 / 1.83:1, so a status
    never stands alone), a shrink-only list. The app's `test/ui-stylesheet.test.ts` does the

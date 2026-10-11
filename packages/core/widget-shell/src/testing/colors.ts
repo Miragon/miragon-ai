@@ -19,9 +19,10 @@ import {
  *   expect(scanColors(widgetsDir, { allow: { "x.ts": "why" } })).toEqual([])
  *
  * It reads string and template literals (class lists, inline styles), never
- * comments or visible JSX text. It also fails the retired accent classes
- * (`text-m-blue`, `bg-critical-soft` …): their variables left with the Miragon
- * theme, so such a class would now style nothing — silently.
+ * comments or visible JSX text. It also fails the retired accents, as a
+ * class (`text-m-blue`, `bg-critical-soft` …) and as a variable reference
+ * (`text-[var(--m-blue)]`, `{ color: "var(--critical)" }`): their variables
+ * left with the Miragon theme, so either would now style nothing — silently.
  *
  * Stylesheets get the same rule through {@link stylesheetColorFindings}: a
  * consumer's CSS overrides role variables on top of the toolkit's theme and
@@ -49,6 +50,16 @@ const RETIRED_ROLE_CLASS = new RegExp(
   "g",
 )
 
+/**
+ * The same retired accents referenced as a variable: in an arbitrary value
+ * (`text-[var(--m-blue)]`, `border-[color:var(--critical)]`), an inline style
+ * (`{ color: "var(--m-blue)" }`) or through Tailwind's registration
+ * (`var(--color-m-blue-soft)`). The variable no longer exists, so the colour
+ * falls back to the inherited or initial value without a build error.
+ */
+const RETIRED_ROLE_VARIABLE =
+  /(?<![\w-])--(?:color-)?(?:m-(?:blue|green)(?:-(?:light|soft))?|critical(?:-(?:soft|ink))?)(?![\w-])/g
+
 /** `#fff`, `#1b3b6f80` (3, 4, 6 or 8 hex digits, never part of an id like `#root`). */
 const HEX = /(?<![\w&#])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])/g
 
@@ -70,7 +81,7 @@ export function colorFindings(source: string, file: string): ColorFinding[] {
   walkNodes(sf, (node) => {
     const text = literalText(node)
     if (text === undefined) return
-    const matches = [PALETTE_CLASS, RETIRED_ROLE_CLASS, HEX, COLOR_FUNCTION]
+    const matches = [PALETTE_CLASS, RETIRED_ROLE_CLASS, RETIRED_ROLE_VARIABLE, HEX, COLOR_FUNCTION]
       .flatMap((pattern) => [...text.matchAll(pattern)])
       .sort((a, b) => a.index - b.index)
     for (const [match] of matches) {
@@ -100,7 +111,8 @@ function blankComments(css: string): string {
 }
 
 /**
- * Every raw colour (hex, `rgb()`, `oklch()` …) in a stylesheet's rules —
+ * Every raw colour (hex, `rgb()`, `oklch()` …) and every reference to a
+ * retired accent variable (`var(--m-blue)`) in a stylesheet's rules —
  * comments are skipped, so a commented-out example may hold the values a
  * customer is meant to fill in. A consumer stylesheet imports the toolkit's
  * theme and overrides role variables; a brand value it does set belongs in
@@ -111,7 +123,7 @@ export function stylesheetColorFindings(css: string, file: string): ColorFinding
   const findings: ColorFinding[] = []
   const lines = rules.split("\n")
   lines.forEach((text, index) => {
-    const matches = [HEX, COLOR_FUNCTION]
+    const matches = [RETIRED_ROLE_VARIABLE, HEX, COLOR_FUNCTION]
       .flatMap((pattern) => [...text.matchAll(pattern)])
       .sort((a, b) => a.index - b.index)
     for (const [match] of matches) {

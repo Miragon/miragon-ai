@@ -76,6 +76,28 @@ describe("colorFindings — role names only, never palette classes or raw colour
     ).toEqual([])
   })
 
+  it("finds the retired accents referenced as a variable: arbitrary values and inline styles", () => {
+    const source = [
+      'export const a = "text-[var(--m-blue)] border-[color:var(--critical)]"',
+      'export const b = { color: "var(--m-blue-light)", background: "var(--m-green-soft)" }',
+      "export const c = `bg-[var(--color-m-blue-soft)] text-[var(--critical-ink)]`",
+    ].join("\n")
+    expect(found(source)).toEqual([
+      "1:--m-blue",
+      "1:--critical",
+      "2:--m-blue-light",
+      "2:--m-green-soft",
+      "3:--color-m-blue-soft",
+      "3:--critical-ink",
+    ])
+    // Role variables, and names that merely start like a retired one, stay allowed.
+    expect(
+      found(
+        'export const ok = "text-[var(--link)] bg-[var(--accent)] [--critical-path:1] var(--m-blueprint)"',
+      ),
+    ).toEqual([])
+  })
+
   it("leaves role classes, role variables, comments and visible text alone", () => {
     const source = [
       "// text-red-600 and #fff in a comment",
@@ -105,6 +127,17 @@ describe("stylesheetColorFindings — a consumer stylesheet names no raw colour"
       "3:#0055aa",
       "4:rgba(",
       "6:oklch(",
+    ])
+  })
+
+  it("finds a reference to a retired accent variable in a rule", () => {
+    const css = [
+      "/* var(--m-blue) in a comment */",
+      ".selected { color: var(--m-blue); border-color: var(--color-critical-soft); }",
+    ].join("\n")
+    expect(stylesheetColorFindings(css, "globals.css").map((f) => `${f.line}:${f.match}`)).toEqual([
+      "2:--m-blue",
+      "2:--color-critical-soft",
     ])
   })
 
