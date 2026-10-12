@@ -49,7 +49,7 @@ const INSTANCE: InstanceDetailData = {
   variables: {},
   incidents: [],
   incidentCount: 0,
-  bpmnXml: null,
+  diagramDefinitionId: null,
   activeActivityIds: ["review"],
   incidentActivityIds: [],
   openTasks: [

@@ -28,15 +28,19 @@ export const CAMUNDA7_PROCESS_INCIDENTS_DATA = "camunda7_process_incidents_data"
 // definition view (offset paging + exact /incident/count total).
 export const CAMUNDA7_ACTIVITY_INCIDENTS_DATA = "camunda7_activity_incidents_data"
 export const CAMUNDA7_INCIDENT_DETAIL_DATA = "camunda7_incident_detail_data"
-// Standalone diagram + timeline views. The BPMN viewer self-fetches via its
-// own show tool (widgets/bpmn-viewer/widget.tsx), so the constant is load-bearing
-// for more than prompt hints.
+// Standalone diagram + timeline views. The BPMN viewer's show tool is
+// registration-only: the widget self-fetches CAMUNDA7_BPMN_VIEWER_DATA.
 export const CAMUNDA7_SHOW_HISTORY_TIMELINE = "camunda7_show_history_timeline"
 export const CAMUNDA7_SHOW_BPMN_VIEWER = "camunda7_show_bpmn_viewer"
 // Feed twin of the BPMN viewer — the widget's self-fetch; calling the show
 // tool from inside the iframe is host-defined (a second rendered widget on
 // hosts honoring resultCanProduceWidget).
 export const CAMUNDA7_BPMN_VIEWER_DATA = "camunda7_bpmn_viewer_data"
+// One deployed definition's BPMN XML, by id. Every diagram a view draws
+// comes from here (`BpmnDiagram`), never inside the view's own payload: a
+// definition's XML never changes, so the widget keeps it for good and the
+// server caches it (`lib/definition-xml.ts`).
+export const CAMUNDA7_BPMN_XML_DATA = "camunda7_bpmn_xml_data"
 // AI-first engine overview: deterministic health verdict + cross-process
 // incident clusters. The cockpit overview's home base; self-fetches its feed.
 export const CAMUNDA7_SHOW_ENGINE_HEALTH = "camunda7_show_engine_health"

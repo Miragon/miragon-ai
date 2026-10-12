@@ -67,7 +67,9 @@ export async function buildBpmnViewerData(
   // else its pool's; its key is the target's, or the id's segment.
   const processKey = target.processDefinitionKey ?? definitionKeyInId(definitionId)
   return {
-    bpmnXml,
+    // The widget draws the diagram by this id (`camunda7_bpmn_xml_data`); the
+    // XML read here only names the view (cached either way).
+    diagramDefinitionId: bpmnXml ? definitionId : null,
     processInstanceId,
     businessKey,
     processDefinitionId: definitionId,
@@ -174,7 +176,7 @@ async function resolveDefinitionId(
 /** The empty shape callers detect via `processDefinitionId === null`. */
 function emptyViewerData(processInstanceId: string | null, engineId: string): BpmnViewerData {
   return {
-    bpmnXml: null,
+    diagramDefinitionId: null,
     processInstanceId,
     businessKey: null,
     processDefinitionId: null,

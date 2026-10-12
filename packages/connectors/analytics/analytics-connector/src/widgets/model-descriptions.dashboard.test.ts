@@ -256,7 +256,6 @@ describe("describeBpmnHeatmap", () => {
     processDefinitionKey: "order",
     period: "7d",
     engines,
-    bpmnXml: null,
     frequency: { Task_A: 12, Task_B: 4 },
     durationSec: { Task_A: 1.04, Task_B: 9.26 },
   })

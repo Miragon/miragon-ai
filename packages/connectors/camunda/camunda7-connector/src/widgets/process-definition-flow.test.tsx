@@ -5,14 +5,18 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import { collectLayoutWidgets, type LayoutConfig } from "@miragon/mcp-toolkit-core"
-import { CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../tool-names.js"
+import { CAMUNDA7_BPMN_XML_DATA, CAMUNDA7_PROCESS_INCIDENTS_DATA } from "../tool-names.js"
 import type { ProcessIncidentsData } from "../view-models.js"
 import { definitionViewLayout } from "../widget-tools/shared.js"
 import { cockpitViews } from "./cockpit-app/views.js"
+import type * as DiagramModule from "./bpmn-diagram.js"
 import { ProcessDefinitionFlow } from "./process-incidents/flow.js"
 
 // bpmn-js needs a real layout engine; the overlay's presence is what counts.
-vi.mock("./bpmn-diagram.js", () => ({
+vi.mock("./bpmn-diagram.js", async (importOriginal) => ({
+  // The real XML read (the heatmap draws on the view's own diagram)…
+  ...(await importOriginal<typeof DiagramModule>()),
+  // …and a stand-in for the incident overlay.
   BpmnDiagram: () => <div data-testid="incident-overlay" />,
 }))
 
@@ -62,7 +66,7 @@ const DATA: ProcessIncidentsData = {
   processDefinitionKey: "leasing",
   processDefinitionName: "Leasing",
   diagramVersion: 2,
-  bpmnXml: "<definitions/>",
+  diagramDefinitionId: "leasing:2:d2",
   cockpitUrl: null,
   runningInstances: 4,
   incidentCount: 1,
@@ -134,17 +138,19 @@ const ENTRIES: Array<[string, Record<string, unknown>]> = [
 
 function renderFlow(
   props: Record<string, unknown>,
-  { analytics, bpmnXml = null }: { analytics: boolean; bpmnXml?: string | null },
+  { analytics, bpmnXml = "<definitions/>" }: { analytics: boolean; bpmnXml?: string },
 ) {
   const heatmapCalls: Array<Record<string, unknown>> = []
   const tools: Record<string, unknown> = {
     [CAMUNDA7_PROCESS_INCIDENTS_DATA]: DATA,
+    // The view's own diagram, which the incident overlay and the heatmap both draw on.
+    [CAMUNDA7_BPMN_XML_DATA]: { processDefinitionId: DATA.diagramDefinitionId, bpmnXml },
     // Registered either way so a call is RECORDED — without analytics it
     // fails like the unknown tool it is.
     [HEATMAP_FEED]: (args: Record<string, unknown>) => {
       heatmapCalls.push(args)
       if (!analytics) throw new Error(`Tool ${HEATMAP_FEED} not found`)
-      return { bpmnXml, frequency: {}, durationSec: {} }
+      return { frequency: {}, durationSec: {} }
     },
     ...(analytics ? { [ANALYTICS_PROBE]: { settings: {}, canSave: false } } : {}),
   }

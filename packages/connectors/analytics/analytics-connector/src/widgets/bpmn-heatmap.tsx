@@ -1,5 +1,7 @@
+import { Skeleton, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import {
   BpmnHeatmapWidget,
+  QueryFallback,
   ViewMeta,
   formatLookback,
   type BpmnHeatmapData,
@@ -7,23 +9,30 @@ import {
 
 import type { BpmnMissingReason } from "../heatmap-data.js"
 import { useT } from "../messages/use-t.js"
+import { ANALYTICS_BPMN_XML_DATA } from "../tool-names.js"
 import { enginesMeta } from "./view-meta.js"
 
 /**
- * The analytics heatmap payload (`analytics_show_bpmn_heatmap` and its
- * `analytics_bpmn_heatmap_data` feed): the shell's heatmap data plus the
- * configured engines its frequency/duration values add up, so the model
- * description and the meta line name the scope like every other analytics
- * view, and when the values were read.
+ * The analytics heatmap payload (`analytics_show_bpmn_heatmap`): the heat
+ * values plus the configured engines they add up, so the model description
+ * and the meta line name the scope like every other analytics view, and when
+ * the values were read. The diagram is NOT in it: the widget reads it from
+ * `analytics_bpmn_xml_data`, so the model never sees the XML.
  */
-export interface AnalyticsBpmnHeatmapData extends BpmnHeatmapData {
+export interface AnalyticsBpmnHeatmapData extends Omit<BpmnHeatmapData, "bpmnXml"> {
   engines: string[]
   /** When the heat values were read (ISO); absent in payloads recorded before it existed. */
   asOf?: string
   /**
-   * Why `bpmnXml` is null, as the server knows it (`heatmap-data.ts`). Absent
-   * with a diagram and in payloads recorded before it existed.
+   * Why there is no diagram, as the server knows it (`heatmap-data.ts`).
+   * Absent when a diagram exists (the widget then reads it).
    */
+  bpmnMissing?: BpmnMissingReason
+}
+
+/** `analytics_bpmn_xml_data`: the key's latest diagram, or why there is none. */
+interface HeatmapDiagram {
+  bpmnXml: string | null
   bpmnMissing?: BpmnMissingReason
 }
 
@@ -50,11 +59,44 @@ function bpmnMissingKey(data: Pick<AnalyticsBpmnHeatmapData, "bpmnMissing"> | nu
  * `useT()` to the component. Registered under `analytics:bpmn-heatmap` in
  * `widgets/index.ts` in place of the raw shell widget.
  */
+/**
+ * The heatmap's data with its diagram: read from `analytics_bpmn_xml_data`
+ * unless the server said why there is none, scoped to the engines whose heat
+ * the view shows. `pending` while the read is out (or failed).
+ */
+function useHeatmapWithDiagram(data: AnalyticsBpmnHeatmapData | null) {
+  const hasDiagram = data !== null && data.bpmnMissing === undefined
+  const diagram = useToolQuery<HeatmapDiagram>(
+    ["analytics:bpmn-xml", data?.processDefinitionKey ?? null, data?.engines ?? null],
+    ANALYTICS_BPMN_XML_DATA,
+    { processDefinitionKey: data?.processDefinitionKey ?? "", engine: data?.engines },
+    { enabled: hasDiagram },
+  )
+  const full: (BpmnHeatmapData & Pick<AnalyticsBpmnHeatmapData, "bpmnMissing">) | null = data && {
+    ...data,
+    bpmnXml: diagram.data?.bpmnXml ?? null,
+    bpmnMissing: data.bpmnMissing ?? diagram.data?.bpmnMissing,
+  }
+  return { diagram, pending: hasDiagram && !diagram.data, full }
+}
+
 export function AnalyticsBpmnHeatmap({ data }: { data: AnalyticsBpmnHeatmapData | null }) {
   const t = useT()
+  const { diagram, pending, full } = useHeatmapWithDiagram(data)
+  if (pending) {
+    return (
+      <QueryFallback
+        isError={diagram.isError}
+        error={diagram.error}
+        onRetry={() => void diagram.refetch()}
+        errorTitle={t("aHeatmap.errorTitle")}
+        skeleton={<Skeleton className="h-60 w-full rounded-md" />}
+      />
+    )
+  }
   return (
     <BpmnHeatmapWidget
-      data={data}
+      data={full}
       meta={
         data && (
           <ViewMeta
@@ -73,7 +115,7 @@ export function AnalyticsBpmnHeatmap({ data }: { data: AnalyticsBpmnHeatmapData 
         durationLegend: t("aHeatmap.durationLegend"),
         noData: t("aHeatmap.noData"),
         noHeat: t("aHeatmap.noHeat"),
-        bpmnUnavailable: t(bpmnMissingKey(data)),
+        bpmnUnavailable: t(bpmnMissingKey(full)),
         less: t("aHeatmap.less"),
         more: t("aHeatmap.more"),
         diagramAriaLabel: t("aHeatmap.diagramAria"),

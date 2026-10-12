@@ -127,8 +127,12 @@ export interface ActivityStat {
 }
 
 export interface BpmnViewerData {
-  /** The rendered version's diagram — null when it could not be read (enrichment). */
-  bpmnXml: string | null
+  /**
+   * The deployed version whose diagram the view draws — null when it could not
+   * be read (enrichment). The XML itself is not in the payload: `BpmnDiagram`
+   * reads it by this id from `camunda7_bpmn_xml_data`, once per definition.
+   */
+  diagramDefinitionId: string | null
   processInstanceId: string | null
   /** The instance's business key — null for a definition target or an instance without one. */
   businessKey: string | null
@@ -293,7 +297,12 @@ export interface InstanceDetailData {
   /** The instance's open incidents (capped list; the total is `incidentCount`). */
   incidents: IncidentInstance[]
   incidentCount: number
-  bpmnXml: string | null
+  /**
+   * The deployed version whose diagram the view draws — null when it could not
+   * be read (enrichment). The XML itself is not in the payload: `BpmnDiagram`
+   * reads it by this id from `camunda7_bpmn_xml_data`, once per definition.
+   */
+  diagramDefinitionId: string | null
   activeActivityIds: string[]
   incidentActivityIds: string[]
   /** The instance's open user tasks (capped list; the total is `openTaskCount`). */
@@ -459,9 +468,14 @@ export interface ActivityIncidentsData {
 export interface ProcessIncidentsData extends EngineVendorInfo {
   processDefinitionKey: string
   processDefinitionName: string | null
-  /** Version of `bpmnXml` — the latest deployed; the counts cover every version. */
+  /** Version of the diagram — the latest deployed; the counts cover every version. */
   diagramVersion: number
-  bpmnXml: string | null
+  /**
+   * The deployed version whose diagram the view draws — null when it could not
+   * be read (enrichment). The XML itself is not in the payload: `BpmnDiagram`
+   * reads it by this id from `camunda7_bpmn_xml_data`, once per definition.
+   */
+  diagramDefinitionId: string | null
   cockpitUrl: string | null
   runningInstances: number
   incidentCount: number
@@ -518,7 +532,12 @@ export interface IncidentDetailData extends EngineVendorInfo {
   cockpitInstanceUrl: string | null
 
   // BPMN
-  bpmnXml: string | null
+  /**
+   * The deployed version whose diagram the view draws — null when it could not
+   * be read (enrichment). The XML itself is not in the payload: `BpmnDiagram`
+   * reads it by this id from `camunda7_bpmn_xml_data`, once per definition.
+   */
+  diagramDefinitionId: string | null
 
   // Failure tab — null when the incident has no associated job (e.g. external-task incidents)
   job: IncidentDetailJob | null

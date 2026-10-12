@@ -13,7 +13,7 @@ afterEach(() => {
 })
 
 const VIEW: BpmnViewerData = {
-  bpmnXml: null,
+  diagramDefinitionId: null,
   processInstanceId: "5f0ce78e-8b14-4c2a-9f3e-100000110866",
   businessKey: "LEA-2026-00413",
   processDefinitionId: "leasing:3:abc",

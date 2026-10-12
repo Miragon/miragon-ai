@@ -346,26 +346,24 @@ const HEATMAP: AnalyticsBpmnHeatmapData = {
   processDefinitionKey: "order",
   period: "14d",
   engines: ["prod-a", "prod-b"],
-  bpmnXml: '<?xml version="1.0"?><definitions />',
   frequency: { Task_A: 12 },
   durationSec: { Task_A: 3.5 },
   asOf: AS_OF,
 }
 
+/** The heatmap's diagram feed: the view reads the XML from it, never from its payload. */
+const diagram = (bpmnXml: string | null) => ({ analytics_bpmn_xml_data: { bpmnXml } })
+
 describe("the BPMN heatmap", () => {
-  it("states period, engines and as-of in place of the period badge (de)", () => {
-    renderIn("de", AnalyticsBpmnHeatmap, HEATMAP)
-    expect(screen.getByText("BPMN-Heatmap")).toBeTruthy()
+  it("states period, engines and as-of in place of the period badge (de)", async () => {
+    renderIn("de", AnalyticsBpmnHeatmap, HEATMAP, diagram('<?xml version="1.0"?><definitions />'))
+    expect(await screen.findByText("BPMN-Heatmap")).toBeTruthy()
     expect(metaLine()).toBe("Letzte 14 Tage · 2 Engines · Stand 14:32")
     expect(screen.queryByText(/Zeitraum:/)).toBeNull()
   })
 
   it("blames the missing camunda7 module only when the server says so (en)", () => {
-    renderIn("en", AnalyticsBpmnHeatmap, {
-      ...HEATMAP,
-      bpmnXml: null,
-      bpmnMissing: "no-camunda7",
-    })
+    renderIn("en", AnalyticsBpmnHeatmap, { ...HEATMAP, bpmnMissing: "no-camunda7" })
     expect(
       screen.getByText(
         "The diagram is not available here: without the camunda7 module, analytics cannot load BPMN files. Ask in the chat for the figures per activity instead.",
@@ -375,11 +373,7 @@ describe("the BPMN heatmap", () => {
   })
 
   it("names the engine lookup when camunda7 is there but found no diagram (de)", () => {
-    renderIn("de", AnalyticsBpmnHeatmap, {
-      ...HEATMAP,
-      bpmnXml: null,
-      bpmnMissing: "not-loaded",
-    })
+    renderIn("de", AnalyticsBpmnHeatmap, { ...HEATMAP, bpmnMissing: "not-loaded" })
     expect(
       screen.getByText(
         "Das Diagramm konnte nicht geladen werden: Keine Engine dieser Ansicht hat es geliefert. Prüf, ob die Engines erreichbar sind und der Prozess bereitgestellt ist, oder frag im Chat nach den Kennzahlen je Aktivität.",
@@ -390,10 +384,11 @@ describe("the BPMN heatmap", () => {
 
   it.each([undefined, "constructor"])(
     "names no cause it does not know (bpmnMissing: %s)",
-    (bpmnMissing) => {
-      renderIn("en", AnalyticsBpmnHeatmap, { ...HEATMAP, bpmnXml: null, bpmnMissing })
+    async (bpmnMissing) => {
+      // Without a known cause the view reads the diagram feed, which has none.
+      renderIn("en", AnalyticsBpmnHeatmap, { ...HEATMAP, bpmnMissing }, diagram(null))
       expect(
-        screen.getByText(
+        await screen.findByText(
           "Could not load the diagram. Ask in the chat for the figures per activity instead.",
         ),
       ).toBeTruthy()

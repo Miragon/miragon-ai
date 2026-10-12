@@ -155,7 +155,7 @@ export function registerInstanceWidgetTools(ctx: WidgetToolsContext) {
         t("c7sum.bpmnViewer", {
           target,
           overlayInfo,
-          xmlUnavailable: data.bpmnXml ? "" : t("c7sum.bpmnViewer.xmlUnavailable"),
+          xmlUnavailable: data.diagramDefinitionId ? "" : t("c7sum.bpmnViewer.xmlUnavailable"),
         }),
       )
     }),

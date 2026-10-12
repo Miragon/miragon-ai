@@ -66,7 +66,7 @@ describe("buildBpmnViewerData — instance-scoped overlays (#335 N66)", () => {
     expect(data).toMatchObject({
       processInstanceId: "pi-1",
       processDefinitionId: DEF,
-      bpmnXml: "<definitions/>",
+      diagramDefinitionId: DEF,
       statsScope: "instance",
       incidentActivityIds: ["charge"],
       engineId: "fake",
@@ -183,7 +183,7 @@ describe("buildBpmnViewerData — instance-scoped overlays (#335 N66)", () => {
       processDefinitionId: null,
       processDefinitionName: null,
       businessKey: null,
-      bpmnXml: null,
+      diagramDefinitionId: null,
       activityStats: [],
     })
   })

@@ -62,7 +62,7 @@ export function InstanceDetailWidget({
 
   if (!data) return guard
 
-  const { instance, activityTree, variables, incidents, bpmnXml } = data
+  const { instance, activityTree, variables, incidents, diagramDefinitionId } = data
   const { engineId, isSuspended, cancelled, isActionable } = actions
 
   const variableEntries = Object.entries(variables)
@@ -161,7 +161,8 @@ export function InstanceDetailWidget({
       }
       diagram={
         <InstanceDiagramSection
-          bpmnXml={bpmnXml}
+          diagramDefinitionId={diagramDefinitionId}
+          engineId={engineId}
           activityTree={activityTree}
           activeActivityIds={data.activeActivityIds}
           incidentActivityIds={data.incidentActivityIds}

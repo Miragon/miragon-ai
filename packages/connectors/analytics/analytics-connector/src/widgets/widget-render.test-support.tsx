@@ -32,6 +32,8 @@ export function renderIn(
   language: "de" | "en",
   Widget: ComponentType<{ data: never }>,
   data: unknown,
+  /** The tools a self-fetching widget calls (e.g. the heatmap's diagram feed). */
+  tools?: Record<string, unknown>,
 ) {
   setFormatLocale({
     language,
@@ -43,6 +45,7 @@ export function renderIn(
       <WidgetFixtureHost
         widget={Widget as unknown as ComponentType<Record<string, unknown>>}
         data={data as Record<string, unknown>}
+        tools={tools}
       />
     </LocaleProvider>,
   )

@@ -148,7 +148,12 @@ describe("Prometheus config reaches the wire", () => {
         queries: 0,
       })
     }
-    expect(neverQuery).toEqual(["analytics_show_settings", "analytics_settings_data"])
+    // The settings and the heatmap's diagram (read from the engine) never ask Prometheus.
+    expect(neverQuery.sort()).toEqual([
+      "analytics_bpmn_xml_data",
+      "analytics_settings_data",
+      "analytics_show_settings",
+    ])
     expect(tools.size - neverQuery.length).toBeGreaterThanOrEqual(11)
   })
 

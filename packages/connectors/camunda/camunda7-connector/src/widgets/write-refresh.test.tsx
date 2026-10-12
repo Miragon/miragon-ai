@@ -68,7 +68,7 @@ const DEFINITION: ProcessIncidentsData = {
   processDefinitionKey: "invoice",
   processDefinitionName: "Invoice",
   diagramVersion: 1,
-  bpmnXml: null,
+  diagramDefinitionId: null,
   cockpitUrl: null,
   runningInstances: 1,
   incidentCount: 1,

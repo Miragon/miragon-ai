@@ -95,7 +95,9 @@ export async function buildProcessIncidentsData(
     // The engine's name, else the diagram's (a Modeler pool around an unnamed process).
     processDefinitionName: definition.name ?? bpmnProcessNameOf(diagramNames, key),
     diagramVersion: definition.version,
-    bpmnXml,
+    // Drawn by id (`camunda7_bpmn_xml_data`); the XML read here names the
+    // activities and scopes the counts to the diagram.
+    diagramDefinitionId: bpmnXml && definition.id ? definition.id : null,
     cockpitUrl: buildProcessCockpitUrl(
       options,
       { key, version: definition.version, definitionId: definition.id || null },

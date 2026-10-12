@@ -469,7 +469,13 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 7. **Shared server data paths are single-sourced.** Definition name/version/instance
    lookups come from `packages/connectors/camunda/camunda7-connector/src/data/definition-info.ts`;
    `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step — never
-   fork them. Every camunda7 view has ONE builder in `src/data/` behind its show tool,
+   fork them. No view payload carries BPMN XML (a show tool's `structuredContent` reaches
+   the model on some hosts): a view names the version it draws (`diagramDefinitionId`)
+   and `BpmnDiagram` reads the XML by id from the app-only `camunda7_bpmn_xml_data`
+   (kept for good: a definition's XML never changes); the analytics heatmap reads its
+   diagram from `analytics_bpmn_xml_data`. The ONE XML read is `lib/definition-xml.ts`,
+   cached per engine client and per caller (`callerCacheKey`, so passthrough engines keep
+   deciding per token). Every camunda7 view has ONE builder in `src/data/` behind its show tool,
    `*_data` feed and pipeline step (`steps/steps.test.ts` holds them equal), and every
    builder follows the honest-numbers rule (`data/engine-reads.ts`): **primary rows/counts
    propagate errors; enrichment degrades to `null` (rendered "—"), never 0**; totals come

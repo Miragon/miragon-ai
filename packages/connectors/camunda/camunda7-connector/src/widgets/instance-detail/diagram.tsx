@@ -9,13 +9,15 @@ import { useT } from "../../messages/use-t.js"
 
 /** The diagram block — BPMN overlay plus the textual activity tree. */
 export function InstanceDiagramSection({
-  bpmnXml,
+  diagramDefinitionId,
+  engineId,
   activityTree,
   activeActivityIds,
   incidentActivityIds,
   visibleTasks,
 }: {
-  bpmnXml: string | null
+  diagramDefinitionId: string | null
+  engineId?: string
   activityTree: InstanceDetailData["activityTree"]
   activeActivityIds: string[]
   incidentActivityIds: string[]
@@ -33,13 +35,17 @@ export function InstanceDiagramSection({
     ],
     [activeActivityIds, incidentActivityIds, visibleTasks],
   )
-  if (!bpmnXml && !activityTree) return null
+  if (!diagramDefinitionId && !activityTree) return null
   return (
     <section>
-      {bpmnXml && (
+      {diagramDefinitionId && (
         <>
           <SectionHeading title={t("instanceDetail.sectionDiagram")} />
-          <BpmnDiagram bpmnXml={bpmnXml} highlights={highlights} />
+          <BpmnDiagram
+            definitionId={diagramDefinitionId}
+            engineId={engineId}
+            highlights={highlights}
+          />
         </>
       )}
       {/* Textual token view next to the diagram — shows multi-instance

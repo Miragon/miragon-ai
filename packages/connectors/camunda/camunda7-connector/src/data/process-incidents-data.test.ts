@@ -155,7 +155,7 @@ describe("buildProcessIncidentsData — key-wide (#335 N60)", () => {
     const { data } = await build(definitionRoutes([row(0, "assess", V2)], 1))
 
     expect(data).toMatchObject({ processDefinitionName: "Leasing", diagramVersion: 2 })
-    expect(data.bpmnXml).toBe(XML)
+    expect(data.diagramDefinitionId).toBe(V2)
   })
 
   it("fails on a key no version is deployed for — never a view of zeros", async () => {
