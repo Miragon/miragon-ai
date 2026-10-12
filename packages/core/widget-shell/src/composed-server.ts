@@ -18,7 +18,7 @@
  * 4. `createFrameworkApp` (every view-bound tool advertising the view CSP —
  *    `MCP_URL`'s origin in `resourceDomains`, where the views load their
  *    fonts from), then the mcp-use middleware (request context before
- *    tool-call logging before metrics) and the HTTP routes: metrics first
+ *    metrics; request logging is mcp-use's own) and the HTTP routes: metrics first
  *    (hono only counts routes registered after its middleware), then the
  *    Host/Origin guard, then the health probes — so `/metrics` and
  *    `/health*` stay reachable by IP-addressed scrapers and probes — and the
@@ -42,7 +42,7 @@ import type { MCPServer } from "mcp-use"
 import type { OAuthProvider } from "mcp-use/oauth"
 import { frameworkWritesAllowed, type ModuleComposition, type ResolvedBoot } from "./composition.js"
 import { installHealthEndpoints, type ReadinessCheck } from "./health.js"
-import { installToolCallLogging, resolvePort, swallowDevCliViewsPrime } from "./host-boot.js"
+import { requestLogLevelWarning, resolvePort, swallowDevCliViewsPrime } from "./host-boot.js"
 import {
   describeHttpEdgePolicy,
   edgeRejection,
@@ -390,6 +390,8 @@ export async function createComposedServer(
   const boot = composition.resolveBoot(env, { authenticated: oauth !== undefined })
   const builder = frameworkWritesAllowed(boot)
   composition.emitBootWarnings(env)
+  const logLevel = requestLogLevelWarning(env)
+  if (logLevel) console.warn(`[${label}] ${logLevel}`)
   composition.logEffectiveToolsets(boot)
   if (!builder) {
     console.info(
@@ -409,12 +411,11 @@ export async function createComposedServer(
   const state = { draining: false }
 
   // Ambient per-request info (OAuth caller, Authorization header) for the
-  // consumers without a handler `ctx`; one log line per tools/call (no
-  // arguments/results — they can carry credentials or PII); input schemas
-  // trimmed of keys a model never needs (`$schema`, safe-integer bounds); the
-  // dev-CLI views-prime workaround (no-op outside `mcp-use dev`).
+  // consumers without a handler `ctx`; input schemas trimmed of keys a model
+  // never needs (`$schema`, safe-integer bounds); the dev-CLI views-prime
+  // workaround (no-op outside `mcp-use dev`). Request logging is mcp-use's
+  // own (`MCP_USE_LOG_LEVEL`, see `requestLogLevelWarning`).
   installMcpRequestContext(app)
-  installToolCallLogging(app, label)
   installToolSchemaTrim(app)
   swallowDevCliViewsPrime(app, env)
   installMetrics(app, { path: METRICS_PATH, token: edge.metricsToken })

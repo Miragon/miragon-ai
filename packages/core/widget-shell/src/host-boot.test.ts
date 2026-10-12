@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import {
-  installToolCallLogging,
+  requestLogLevelWarning,
   resolvePort,
   swallowDevCliViewsPrime,
-  type ToolCallMiddlewareHost,
+  toolCallOutcome,
+  toolNameOf,
 } from "./host-boot.js"
 
 describe("resolvePort", () => {
@@ -52,58 +53,29 @@ describe("swallowDevCliViewsPrime", () => {
   })
 })
 
-describe("installToolCallLogging", () => {
-  afterEach(() => {
-    vi.restoreAllMocks()
+describe("requestLogLevelWarning", () => {
+  it("stays silent at mcp-use's default level or when unset", () => {
+    expect(requestLogLevelWarning({})).toBeUndefined()
+    expect(requestLogLevelWarning({ MCP_USE_LOG_LEVEL: "info" })).toBeUndefined()
   })
 
-  function hostWithCapture() {
-    let handler: ((ctx: unknown, next: () => Promise<unknown>) => Promise<unknown>) | undefined
-    const server: ToolCallMiddlewareHost = {
-      use: (pattern, fn) => {
-        expect(pattern).toBe("mcp:tools/call")
-        handler = fn
-        return undefined
-      },
-    }
-    installToolCallLogging(server, "test-app")
-    if (!handler) throw new Error("middleware was not registered")
-    return handler
-  }
-
-  it("logs name, outcome ok, and passes the result through", async () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined)
-    const handler = hostWithCapture()
-    const result = { content: [] }
-
-    const returned = await handler({ params: { name: "notes_list_notes" } }, async () => result)
-
-    expect(returned).toBe(result)
-    expect(log).toHaveBeenCalledOnce()
-    expect(log.mock.calls[0][0]).toMatch(/^\[test-app\] tools\/call notes_list_notes ok in \d+ms$/)
-  })
-
-  it("logs isError results as error and unknown tool names as 'unknown'", async () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined)
-    const handler = hostWithCapture()
-
-    await handler({}, async () => ({ isError: true }))
-
-    expect(log.mock.calls[0][0]).toMatch(/^\[test-app\] tools\/call unknown error in \d+ms$/)
-  })
-
-  it("logs and rethrows on a throwing handler", async () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined)
-    const handler = hostWithCapture()
-    const boom = new Error("boom")
-
-    await expect(
-      handler({ params: { name: "notes_show_notes" } }, async () => {
-        throw boom
-      }),
-    ).rejects.toThrow(boom)
-    expect(log.mock.calls[0][0]).toMatch(
-      /^\[test-app\] tools\/call notes_show_notes error in \d+ms$/,
+  it("warns that debug logs tool inputs and outputs", () => {
+    expect(requestLogLevelWarning({ MCP_USE_LOG_LEVEL: " DEBUG " })).toMatch(
+      /^MCP_USE_LOG_LEVEL=debug — mcp-use logs tool inputs and outputs/,
     )
+  })
+
+  it("warns that trace logs full requests, bearer tokens included", () => {
+    expect(requestLogLevelWarning({ MCP_USE_LOG_LEVEL: "trace" })).toContain("bearer tokens")
+  })
+})
+
+describe("toolCallOutcome / toolNameOf", () => {
+  it("reads an isError result as error and a missing tool name as unknown", () => {
+    expect(toolCallOutcome({ isError: true })).toBe("error")
+    expect(toolCallOutcome({ content: [] })).toBe("ok")
+    expect(toolCallOutcome(undefined)).toBe("ok")
+    expect(toolNameOf({ params: { name: "notes_list_notes" } })).toBe("notes_list_notes")
+    expect(toolNameOf({})).toBe("unknown")
   })
 })

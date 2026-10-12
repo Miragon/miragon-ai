@@ -253,6 +253,8 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
     const apps = activeApps()
     expect(apps.map((e) => e.app)).toEqual(["camunda7"])
     expect(apps[0].config).toMatchObject({ toolset: "admin" })
+    // Said once per boot, among the boot warnings.
+    emitBootWarnings(process.env)
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown module "nope"'))
     warn.mockRestore()
   })
@@ -457,7 +459,7 @@ describe("warnUnknownEnvVars", () => {
       MCP_OAUTH: "{}",
       MCP_USE_ANONYMIZED_TELEMETRY: "false",
       MCP_INSPECTOR_FRAME_ANCESTORS: "*",
-      MCP_DEBUG_LEVEL: "debug",
+      MCP_USE_LOG_LEVEL: "debug",
       PATH: "/usr/bin",
       PROMETHEUS_URL: "http://localhost:8460",
     })

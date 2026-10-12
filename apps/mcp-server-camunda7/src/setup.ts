@@ -45,9 +45,9 @@ const APP_ENV_VARS = [
   // for documentation AND because every known var contributes its prefix to
   // the typo watcher.
   "DATABASE_URL",
-  // mcp-use's own logger knob, consumed in-process (unprefixed, unlike the
-  // rest of its MCP_USE_* family).
-  "MCP_DEBUG_LEVEL",
+  // mcp-use's request-log level, read by mcp-use itself (the boot warns at
+  // debug/trace).
+  "MCP_USE_LOG_LEVEL",
 ]
 
 /**

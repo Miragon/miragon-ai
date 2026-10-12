@@ -5,7 +5,10 @@
  *
  * - `mcp:tools/call` middleware → per-tool call counter + duration histogram.
  *   Tool names are a finite catalogue, so the `tool` label stays bounded;
- *   arguments, users and sessions are never labels (cardinality + PII).
+ *   arguments, users and sessions are never labels (cardinality + PII). It
+ *   counts the calls that reached a tool's handler: the SDK refuses an unknown
+ *   tool or arguments that fail the input schema before that, so those show
+ *   only in mcp-use's request log (and as `/mcp` requests below).
  * - hono `*` middleware → HTTP request counter + duration histogram. The
  *   `route` label is folded onto the known route set (`other` for the rest)
  *   because request paths are caller-controlled.

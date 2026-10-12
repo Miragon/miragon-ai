@@ -584,8 +584,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `createFrameworkApp` with `serverInfo` (version from the root's `package.json`, title,
    `instructions`) and the view CSP (`fontAssetsCsp`: `MCP_URL`'s origin in `resourceDomains`,
    carried onto every plugin's view-bound tools and their `openai/widgetCSP` by
-   `honorWidgetMetaDefaults`) → request context → `installToolCallLogging` →
-   `swallowDevCliViewsPrime` → `installMetrics` (labels bounded by construction: tool
+   `honorWidgetMetaDefaults`) → request context (request logging is mcp-use's own,
+   `MCP_USE_LOG_LEVEL`; debug/trace warn at boot) → `swallowDevCliViewsPrime` →
+   `installMetrics` (labels bounded by construction: tool
    catalogue + known routes, never users/sessions/arguments; optional
    `MCP_METRICS_TOKEN` bearer) → `installHttpEdgeGuard` → `installHealthEndpoints`
    (readiness probes the server's OWN dependencies only, never engines or Prometheus;

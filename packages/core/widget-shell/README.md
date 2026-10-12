@@ -89,7 +89,8 @@ oauth? })` is the one boot sequence every composed server shares: env-typo warni
   install — build it with `oauthFromEnv({ env, label })` from `MCP_OAUTH` and spread
   `OAUTH_ENV_VARS` into your known vars; it is the only caller identity), the boot log, your
   `setup(boot)` (plugins + persistence), `createFrameworkApp` with
-  `serverInfo`/`instructions`, request context, tool-call logging, `/metrics` (optional
+  `serverInfo`/`instructions`, request context (request logging is mcp-use's own:
+  `MCP_USE_LOG_LEVEL`, warned at boot above `info`), `/metrics` (optional
   `MCP_METRICS_TOKEN`), the Host/Origin guard, `/health/*` and the font route
   (`installFontAssets`: Geist + Geist Mono as woff2 under `/fonts/geist-<version>/`, cached
   immutable, any origin, behind the guard). Every view-bound tool advertises `MCP_URL`'s origin

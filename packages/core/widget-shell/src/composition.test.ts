@@ -69,13 +69,24 @@ describe("activeModules / appEntries", () => {
     ])
   })
 
-  it("skips unknown modules with a warning (fail open)", () => {
+  it("skips unknown modules, warning ONCE per boot in the boot warnings", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    expect(compose().activeModules({ MCP_ACTIVE_MODULES: "nope:read-only,alpha" })).toEqual([
-      { name: "alpha" },
-    ])
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown module "nope"'))
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("[test-root]"))
+    const env = { MCP_ACTIVE_MODULES: "nope:read-only,alpha" }
+    const composition = compose()
+    expect(composition.activeModules(env)).toEqual([{ name: "alpha" }])
+    composition.resolveBoot(env)
+    expect(warn).not.toHaveBeenCalled()
+    composition.emitBootWarnings(env)
+    expect(warn).toHaveBeenCalledOnce()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[test-root] Unknown module "nope"'))
+  })
+
+  it("refuses a module named twice, whichever suffixes it carries", () => {
+    for (const value of ["alpha,alpha:read-only", "alpha:admin, beta, alpha"]) {
+      expect(() => compose().resolveBoot({ MCP_ACTIVE_MODULES: value })).toThrow(
+        /MCP_ACTIVE_MODULES names "alpha" more than once/,
+      )
+    }
   })
 
   it("threads the EFFECTIVE toolset into every module config; config comes from configFromEnv(env)", () => {

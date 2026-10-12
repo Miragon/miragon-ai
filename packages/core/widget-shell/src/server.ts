@@ -39,7 +39,7 @@ export {
 } from "./request-context.js"
 export { OAUTH_ENV_VARS, oauthFromEnv, type OAuthFromEnvOptions } from "./oauth-env.js"
 export {
-  installToolCallLogging,
+  requestLogLevelWarning,
   resolvePort,
   swallowDevCliViewsPrime,
   type ResolvePortOptions,
