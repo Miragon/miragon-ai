@@ -2,7 +2,8 @@ import { readTaskVariables, type Client, type VariableMap } from "@miragon-ai/ca
 import type { TaskFormField, TaskFormSchema } from "../view-models.js"
 import { getTaskFormInput } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { getTask, getProcessDefinitionBpmn20Xml } from "@miragon-ai/camunda7-client/sdk"
+import { getTask } from "@miragon-ai/camunda7-client/sdk"
+import { fetchDefinitionXml } from "../lib/definition-xml.js"
 import { extractEmbeddedFormFields } from "../lib/bpmn-task-form.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
@@ -102,9 +103,5 @@ async function fetchBpmnXml(
   processDefinitionId: string | null,
 ): Promise<string | null> {
   if (!processDefinitionId) return null
-  const xmlResponse = await getProcessDefinitionBpmn20Xml({
-    client,
-    path: { id: processDefinitionId },
-  })
-  return xmlResponse.bpmn20Xml ?? null
+  return fetchDefinitionXml(client, processDefinitionId)
 }

@@ -45,9 +45,12 @@ const mockedTasks = vi.mocked(getTasks)
 const mockedTasksCount = vi.mocked(getTasksCount)
 const mockedFormSchema = vi.mocked(buildTaskFormSchema)
 
-const fakeClient = {} as Parameters<typeof buildInstanceDetailData>[0]
+type FakeClient = Parameters<typeof buildInstanceDetailData>[0]
+// A fresh client per test: the XML read is cached per engine client.
+let fakeClient = {} as FakeClient
 
 beforeEach(() => {
+  fakeClient = {} as FakeClient
   vi.clearAllMocks()
 })
 

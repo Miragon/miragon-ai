@@ -130,9 +130,9 @@ export const de: MessageCatalog = {
 
   // ── Modellseitige Widget-Tool-Zusammenfassungen (c7sum.*) ────────────────────
   "c7sum.cockpitOpened":
-    'Das Operations Cockpit wurde auf Engine "{engineId}" geöffnet ({engineCount} Engine(s) in der Engine-Liste des Benutzers). Der Benutzer kann die Prozesslandschaft von hier aus clientseitig navigieren.',
+    'Operations Cockpit für Engine "{engineId}" ({engineCount} Engine(s) in der Engine-Liste des Benutzers). Wo der Host die Ansicht zeigt, navigiert der Benutzer darin durch die Prozesslandschaft.',
   "c7sum.cockpitOpenedPicker":
-    "Das Operations Cockpit wurde auf seiner Engine-Auswahl geöffnet: {engineCount} Engine(s) in der Engine-Liste des Benutzers, keine vorausgewählt (kein `engine` übergeben, kein gespeicherter Standard). Der Benutzer wählt eine; mit `engine` öffnet es direkt auf einer bestimmten Engine.",
+    "Operations Cockpit auf seiner Engine-Auswahl: {engineCount} Engine(s) in der Engine-Liste des Benutzers, keine vorausgewählt (kein `engine` übergeben, kein gespeicherter Standard). Wo der Host die Ansicht zeigt, wählt der Benutzer dort eine; mit `engine` öffnet es direkt auf einer bestimmten Engine.",
   "c7sum.processList":
     'Prozessliste: {totalCount} bereitgestellte Definition(en){filters} auf Engine "{engineId}".',
   "c7sum.state.active": "läuft",
@@ -141,7 +141,7 @@ export const de: MessageCatalog = {
   "c7sum.instanceDetail":
     "Prozessinstanz {instanceId}{businessKey}: {state}; laufende Aktivitäten: {activeActivities}, offene Incidents: {openIncidents}, offene Benutzeraufgaben: {openTasks}.",
   "c7sum.processInstances":
-    '{totalCount} laufende Instanz(en) von "{processDefinitionKey}", davon {withIncidentCount} mit Incidents und {suspendedCount} ausgesetzt; {returnedCount} in der Tabelle angezeigt.',
+    '{totalCount} laufende Instanz(en) von "{processDefinitionKey}", davon {withIncidentCount} mit Incidents und {suspendedCount} ausgesetzt; diese Seite enthält {returnedCount}.',
   "c7sum.incidentsDashboard":
     "Incident-Übersicht: {totalCount} offene Incident(s) in {processCount} Prozessdefinition(en), {last24hCount} in den letzten 24 Stunden.",
   "c7sum.processIncidents":
@@ -165,8 +165,7 @@ export const de: MessageCatalog = {
     'Fehler-Cluster auf Engine "{engineId}": Aktivität "{activityId}" / {incidentType}. Incidents: {incidentCount} ({lastHourCount} in der letzten Stunde), Prozesse: {processes}.{sample}',
   "c7sum.clusterDetail.unknownProcesses": "unbekannte Prozesse",
   "c7sum.clusterDetail.sample": " Beispiel: {message}",
-  "c7sum.bpmnViewer":
-    "Das BPMN-Diagramm für {target}{overlayInfo}{xmlUnavailable} wurde gerendert.",
+  "c7sum.bpmnViewer": "BPMN-Diagramm für {target}{overlayInfo}{xmlUnavailable}.",
   "c7sum.bpmnViewer.empty":
     "BPMN-Viewer: Keine passende Prozessdefinition gefunden, das Diagramm ist leer.",
   "c7sum.bpmnViewer.targetInstance": "Prozessinstanz {processInstanceId}",

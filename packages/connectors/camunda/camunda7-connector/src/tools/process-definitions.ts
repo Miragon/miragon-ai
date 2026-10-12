@@ -4,14 +4,11 @@ import {
 } from "@miragon-ai/camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import { engineLike, engineSorting, trueOnly } from "@miragon-ai/camunda7-client"
-import {
-  getProcessDefinitions,
-  getProcessDefinitionsCount,
-  getProcessDefinitionBpmn20Xml,
-} from "@miragon-ai/camunda7-client/sdk"
+import { getProcessDefinitions, getProcessDefinitionsCount } from "@miragon-ai/camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
+import { fetchDefinitionXml } from "../lib/definition-xml.js"
 
 type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
 
@@ -56,11 +53,9 @@ export function registerProcessDefinitionTools(register: Register) {
       "Get the BPMN 2.0 XML of a process definition by ID. Returns the raw BPMN XML string.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...getProcessDefinitionXmlInput.shape, ...engineParamShape },
-    handler: withEngine(async (client, args) =>
-      getProcessDefinitionBpmn20Xml({
-        client,
-        path: { id: args.processDefinitionId },
-      }),
-    ),
+    handler: withEngine(async (client, args) => ({
+      id: args.processDefinitionId,
+      bpmn20Xml: await fetchDefinitionXml(client, args.processDefinitionId),
+    })),
   })
 }

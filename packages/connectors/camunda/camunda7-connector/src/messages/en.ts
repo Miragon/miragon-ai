@@ -129,9 +129,9 @@ export const en: MessageCatalog = {
 
   // ── Model-facing widget-tool summaries (c7sum.*) ─────────────────────────────
   "c7sum.cockpitOpened":
-    'Opened the operations cockpit on engine "{engineId}" ({engineCount} engine(s) in the user\'s engine list). The user can navigate the process landscape client-side from here.',
+    'Operations cockpit for engine "{engineId}" ({engineCount} engine(s) in the user\'s engine list). Where the host shows the view, the user navigates the process landscape in it.',
   "c7sum.cockpitOpenedPicker":
-    "Opened the operations cockpit on its engine picker: {engineCount} engine(s) in the user's engine list, none preselected (no `engine` passed, no saved default). The user picks one; pass `engine` to open it on a specific engine.",
+    "Operations cockpit at its engine picker: {engineCount} engine(s) in the user's engine list, none preselected (no `engine` passed, no saved default). Where the host shows the view, the user picks one there; pass `engine` to open it on a specific engine.",
   "c7sum.processList":
     'Process list: {totalCount} deployed definition(s){filters} on engine "{engineId}".',
   "c7sum.state.active": "running",
@@ -140,7 +140,7 @@ export const en: MessageCatalog = {
   "c7sum.instanceDetail":
     "Process instance {instanceId}{businessKey}: {state}; running activities: {activeActivities}, open incidents: {openIncidents}, open user tasks: {openTasks}.",
   "c7sum.processInstances":
-    '{totalCount} running instance(s) of "{processDefinitionKey}", of them {withIncidentCount} with incidents and {suspendedCount} suspended; showing {returnedCount} in the table.',
+    '{totalCount} running instance(s) of "{processDefinitionKey}", of them {withIncidentCount} with incidents and {suspendedCount} suspended; this page holds {returnedCount}.',
   "c7sum.incidentsDashboard":
     "Incidents dashboard: {totalCount} open incident(s) across {processCount} process definition(s), {last24hCount} in the last 24h.",
   "c7sum.processIncidents":
@@ -164,7 +164,7 @@ export const en: MessageCatalog = {
     'Failure cluster on engine "{engineId}": activity "{activityId}" / {incidentType}. Incidents: {incidentCount} ({lastHourCount} in the last hour), processes: {processes}.{sample}',
   "c7sum.clusterDetail.unknownProcesses": "unknown processes",
   "c7sum.clusterDetail.sample": " Sample: {message}",
-  "c7sum.bpmnViewer": "Rendered the BPMN diagram for {target}{overlayInfo}{xmlUnavailable}.",
+  "c7sum.bpmnViewer": "BPMN diagram for {target}{overlayInfo}{xmlUnavailable}.",
   "c7sum.bpmnViewer.empty":
     "BPMN viewer: no matching process definition found, so the diagram is empty.",
   "c7sum.bpmnViewer.targetInstance": "process instance {processInstanceId}",

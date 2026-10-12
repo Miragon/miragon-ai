@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { feedPayload } from "./test-support/feed-payload.js"
 import type { MCPServer } from "mcp-use"
 import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import { registerUserProfileTools } from "./user-profile.js"
@@ -100,7 +101,7 @@ describe("canSave mirrors the registered tool surface", () => {
     const { names, handlerFor } = register(toolset)
     const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, CTX)
     return {
-      canSave: result.structuredContent?.canSave,
+      canSave: feedPayload(result).canSave,
       hasSaveTool: names.includes(CAMUNDA7_SAVE_USER_PROFILE),
     }
   }
@@ -156,7 +157,7 @@ describe("engine disclosure (#324)", () => {
       ],
     } as unknown as EngineRegistry
     const result = await register("operations", registry).handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
-    expect(result.structuredContent?.availableEngines).toEqual([
+    expect(feedPayload(result).availableEngines).toEqual([
       { id: "prod-a", environment: "default" },
       { id: "prod-b", environment: "eu" },
     ])
@@ -171,7 +172,7 @@ describe("caller round-trip", () => {
     // The save and the read resolve the SAME record from the handler ctx.
     await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }, CTX)
     const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, CTX)
-    const profile = result.structuredContent?.profile as { language: string } | undefined
+    const profile = feedPayload(result).profile as { language: string } | undefined
     expect(profile?.language).toBe("de")
 
     const other = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)(
@@ -179,7 +180,7 @@ describe("caller round-trip", () => {
       { auth: { user: { id: "u-2" } } },
     )
     // Another caller sees the default: follow the host's language.
-    expect((other.structuredContent?.profile as { language: string }).language).toBe("system")
+    expect((feedPayload(other).profile as { language: string }).language).toBe("system")
   })
 
   it("an explicitly declared local caller round-trips through the anonymous record", async () => {
@@ -188,7 +189,7 @@ describe("caller round-trip", () => {
     const local = <T>(fn: () => T): T => runWithMcpRequestInfo({ anonymousCaller: true }, fn)
     await local(() => handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }))
     const result = await local(() => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}))
-    expect(result.structuredContent?.canSave).toBe(true)
+    expect(feedPayload(result).canSave).toBe(true)
     expect((await store.get("anonymous"))?.language).toBe("de")
   })
 
@@ -198,7 +199,7 @@ describe("caller round-trip", () => {
     await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "system" }, CTX)
 
     const result = await handlerFor(CAMUNDA7_SHOW_USER_PROFILE)({}, CTX)
-    expect(JSON.stringify(result.structuredContent)).toContain('"language":"system"')
+    expect(JSON.stringify(feedPayload(result))).toContain('"language":"system"')
     // The host locale `system` follows never reaches the server: English summary.
     expect(result.content?.[0]?.text).toContain("User profile: language system")
   })
@@ -217,12 +218,12 @@ describe("clearing an optional id from the settings page", () => {
     await save({ defaultEngineId: "prod-a", defaultDashboardId: "d1", pinnedDashboardIds: ["d1"] })
 
     const cleared = await save({ defaultEngineId: "", defaultDashboardId: "" })
-    expect(cleared.structuredContent?.defaultEngineId).toBeUndefined()
-    expect(cleared.structuredContent?.defaultDashboardId).toBeUndefined()
-    expect(cleared.structuredContent?.pinnedDashboardIds).toEqual(["d1"])
+    expect(feedPayload(cleared).defaultEngineId).toBeUndefined()
+    expect(feedPayload(cleared).defaultDashboardId).toBeUndefined()
+    expect(feedPayload(cleared).pinnedDashboardIds).toEqual(["d1"])
 
     const view = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, CTX)
-    const profile = view.structuredContent?.profile as Record<string, unknown>
+    const profile = feedPayload(view).profile as Record<string, unknown>
     expect(profile.defaultEngineId).toBeUndefined()
     expect(profile.defaultDashboardId).toBeUndefined()
     expect((await store.get("user-1"))?.modules?.camunda7).toEqual({
@@ -241,7 +242,7 @@ describe("identity gating (OAuth is the only identity)", () => {
   it("reports canSave false to the view when the request carries no identity", async () => {
     const { handlerFor } = register()
     const result = await runWithMcpRequestInfo({}, () => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}))
-    expect(result.structuredContent?.canSave).toBe(false)
+    expect(feedPayload(result).canSave).toBe(false)
   })
 
   it("save refuses without identity, pointing at MCP_OAUTH", async () => {
@@ -273,8 +274,8 @@ describe("identity gating (OAuth is the only identity)", () => {
   ] as const)("%s, %s: canSave %s, reason %s", async (toolset, caller, canSave, reason) => {
     const { handlerFor } = register(toolset)
     const result = await callers[caller]((ctx) => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, ctx))
-    expect(result.structuredContent?.canSave).toBe(canSave)
-    expect(result.structuredContent?.readOnlyReason).toBe(reason)
+    expect(feedPayload(result).canSave).toBe(canSave)
+    expect(feedPayload(result).readOnlyReason).toBe(reason)
   })
 
   it("an authenticated user gets canSave true and a working round-trip", async () => {
@@ -282,8 +283,8 @@ describe("identity gating (OAuth is the only identity)", () => {
     const under = <T>(fn: () => T): T => runWithMcpRequestInfo({ authUserId: "user-7" }, fn)
     await under(() => handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }))
     const result = await under(() => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}))
-    expect(result.structuredContent?.canSave).toBe(true)
-    const profile = result.structuredContent?.profile as { language: string } | undefined
+    expect(feedPayload(result).canSave).toBe(true)
+    const profile = feedPayload(result).profile as { language: string } | undefined
     expect(profile?.language).toBe("de")
   })
 })

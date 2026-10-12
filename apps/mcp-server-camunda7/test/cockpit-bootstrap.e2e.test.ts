@@ -61,14 +61,14 @@ describe("camunda7_open_cockpit — the engine the cockpit opens on (createApp)"
     await aliceSettings({ defaultEngineId: "prod-c" })
     const result = await open({ engine: "prod-b" })
     expect(bootstrapOf(result).engineId).toBe("prod-b")
-    expect(textOf(result)).toContain('cockpit on engine "prod-b"')
+    expect(textOf(result)).toContain('cockpit for engine "prod-b"')
   })
 
   it("without one, opens on the caller's saved default", async () => {
     await aliceSettings({ defaultEngineId: "prod-c" })
     const result = await open()
     expect(bootstrapOf(result).engineId).toBe("prod-c")
-    expect(textOf(result)).toContain('cockpit on engine "prod-c"')
+    expect(textOf(result)).toContain('cockpit for engine "prod-c"')
   })
 
   it("no default, several engines: the picker, and the summary names no engine", async () => {
@@ -77,7 +77,7 @@ describe("camunda7_open_cockpit — the engine the cockpit opens on (createApp)"
     expect(bootstrapOf(result)).toMatchObject({ engineId: null })
     expect(bootstrapOf(result).engines.map((e) => e.id)).toEqual(ENGINES)
     expect(textOf(result)).toContain("engine picker")
-    expect(textOf(result)).not.toMatch(/on engine "/)
+    expect(textOf(result)).not.toMatch(/for engine "/)
   })
 
   it("an unknown engine is refused as a tool error", async () => {

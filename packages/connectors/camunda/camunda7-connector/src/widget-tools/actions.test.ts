@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { feedPayload } from "../tools/test-support/feed-payload.js"
 import type { MCPServer } from "mcp-use"
 import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
 import { DEFAULT_HEALTH_THRESHOLDS } from "../data/health-data.js"
@@ -33,7 +34,7 @@ function registerFeed(toolset: Camunda7Toolset, modelTools: () => string[] = () 
 
 async function allowedActionsFor(toolset: Camunda7Toolset): Promise<unknown> {
   const result = await registerFeed(toolset).handler({})
-  return result.structuredContent?.allowedActions
+  return feedPayload(result).allowedActions
 }
 
 describe("camunda7_widget_actions_data", () => {
@@ -63,7 +64,7 @@ describe("camunda7_widget_actions_data", () => {
     const { handler } = registerFeed("read-only", () => surface)
     surface.push("camunda7_show_user_profile")
     const result = await handler({})
-    expect(result.structuredContent?.modelTools).toEqual([
+    expect(feedPayload(result).modelTools).toEqual([
       "camunda7_list_incidents",
       "camunda7_show_user_profile",
     ])

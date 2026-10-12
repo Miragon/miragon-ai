@@ -102,7 +102,7 @@ describe("camunda7_open_cockpit — the engine it opens on", () => {
     const result = await openCockpit(THREE)({ engine: "beta" })
     expect(result.isError).toBeUndefined()
     expect(dataOf(result)).toEqual({ engineId: "beta", engines: ALL })
-    expect(textOf(result)).toContain('cockpit on engine "beta"')
+    expect(textOf(result)).toContain('cockpit for engine "beta"')
   })
 
   it("an unknown `engine` is a tool error — never a silent picker", async () => {
@@ -117,7 +117,7 @@ describe("camunda7_open_cockpit — the engine it opens on", () => {
     const handler = openCockpit(THREE, await storeWith({ defaultEngineId: "gamma" }))
     const result = await handler({}, callAs("user-1"))
     expect(dataOf(result)).toMatchObject({ engineId: "gamma" })
-    expect(textOf(result)).toContain('cockpit on engine "gamma"')
+    expect(textOf(result)).toContain('cockpit for engine "gamma"')
     // Another caller has no default: the picker.
     expect(dataOf(await handler({}, callAs("user-2")))).toMatchObject({ engineId: null })
   })
@@ -133,7 +133,7 @@ describe("camunda7_open_cockpit — the engine it opens on", () => {
     const result = await openCockpit(THREE)({})
     expect(dataOf(result)).toEqual({ engineId: null, engines: ALL })
     expect(textOf(result)).toContain("engine picker")
-    expect(textOf(result)).not.toMatch(/on engine "/)
+    expect(textOf(result)).not.toMatch(/for engine "/)
   })
 
   it("lists the caller's curated engines — the same list camunda7_list_engines returns", async () => {

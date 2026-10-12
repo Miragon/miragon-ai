@@ -8,7 +8,8 @@ import type { MessageCatalog } from "@miragon/mcp-toolkit-core"
 export const enServer: MessageCatalog = {
   "aSum.bpmnHeatmap":
     'BPMN heatmap for "{key}" over {period}{engines}: heat values for {elementCount} element(s){fallbackNote}.',
-  "aSum.bpmnHeatmapNoXml": "; no BPMN XML available, the widget shows the non-diagram fallback",
+  "aSum.bpmnHeatmapNoXml":
+    "; no BPMN XML available, so the view has the heat values but no diagram",
   "aSum.clusterCompare":
     "Pre/post deployment comparison{scope}{engines} around {deploymentTimestamp} (measured -{before}d / +{after}d{partial}): {delta}{suppressed}.",
   "aSum.clusterComparePartial":

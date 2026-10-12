@@ -9,7 +9,7 @@ export const deServer: MessageCatalog = {
   "aSum.bpmnHeatmap":
     'BPMN-Heatmap für "{key}" über {period}{engines}: Heat-Werte für {elementCount} Element(e){fallbackNote}.',
   "aSum.bpmnHeatmapNoXml":
-    "; kein BPMN-XML verfügbar, das Widget zeigt die Ersatzansicht ohne Diagramm",
+    "; kein BPMN-XML verfügbar, die Ansicht hat die Heat-Werte, aber kein Diagramm",
   "aSum.clusterCompare":
     "Vor/Nach-Deployment-Vergleich{scope}{engines} um {deploymentTimestamp} (gemessen -{before} d / +{after} d{partial}): {delta}{suppressed}.",
   "aSum.clusterComparePartial":
