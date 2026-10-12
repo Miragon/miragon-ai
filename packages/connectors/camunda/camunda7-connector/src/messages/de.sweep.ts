@@ -11,6 +11,9 @@ import { countOf, isOne } from "./plural.js"
  */
 export const deSweep: MessageCatalog = {
   "bpmnDiagram.ariaLabel": "BPMN-Prozessdiagramm",
+  "bpmnDiagram.loading": "Diagramm wird geladen…",
+  "bpmnDiagram.loadError": "Das Diagramm konnte nicht geladen werden.",
+  "bpmnDiagram.unavailable": "Die Engine hat für diese Version kein Diagramm.",
   "bpmnDiagram.renderError":
     "Das BPMN-Diagramm lässt sich nicht darstellen. Aktualisiere die Ansicht, oder öffne das Modell in deinem Modeler.",
   "bpmnFlow.noData": "Keine Daten verfügbar",

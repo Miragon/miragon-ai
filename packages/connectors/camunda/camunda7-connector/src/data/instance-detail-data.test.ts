@@ -79,7 +79,7 @@ describe("buildInstanceDetailData", () => {
       processInstanceId: "p1",
     })
 
-    expect(data.bpmnXml).toBe("<xml/>")
+    expect(data.diagramDefinitionId).toBe("K1:3:dep")
     expect(data.activeActivityIds).toEqual(["root", "A1"])
     expect(data.incidentActivityIds).toEqual(["A1"])
     expect(data.engineId).toBe("engine-a")
@@ -236,7 +236,7 @@ describe("buildInstanceDetailData", () => {
       processInstanceId: "p1",
     })
 
-    expect(data.bpmnXml).toBeNull()
+    expect(data.diagramDefinitionId).toBeNull()
   })
 
   it("skips the BPMN fetch entirely when the instance carries no definition id", async () => {
@@ -247,7 +247,7 @@ describe("buildInstanceDetailData", () => {
     })
 
     expect(mockedBpmn).not.toHaveBeenCalled()
-    expect(data.bpmnXml).toBeNull()
+    expect(data.diagramDefinitionId).toBeNull()
   })
 
   it("attaches a form schema per open task — null (never 'no form') when one fails", async () => {

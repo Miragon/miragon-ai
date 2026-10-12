@@ -215,8 +215,12 @@ export function IncidentDetailWidget({
               activity: data.activityName ?? data.activityId,
             })}
           />
-          {data.bpmnXml ? (
-            <BpmnDiagram bpmnXml={data.bpmnXml} highlights={highlights} />
+          {data.diagramDefinitionId ? (
+            <BpmnDiagram
+              definitionId={data.diagramDefinitionId}
+              engineId={engineId}
+              highlights={highlights}
+            />
           ) : (
             <Alert>
               <AlertDescription>{t("incidentDetail.noBpmnDiagram")}</AlertDescription>

@@ -20,7 +20,7 @@ const PROCESS_VIEW: ProcessIncidentsData = {
   processDefinitionKey: "invoice",
   processDefinitionName: "Invoice",
   diagramVersion: 3,
-  bpmnXml: null,
+  diagramDefinitionId: null,
   cockpitUrl: null,
   runningInstances: 40,
   incidentCount: 7,
@@ -100,7 +100,7 @@ describe("processRootCauseHandOff", () => {
 
 describe("explainDiagramHandOff", () => {
   const VIEW: BpmnViewerData = {
-    bpmnXml: null,
+    diagramDefinitionId: null,
     processInstanceId: "pi-1",
     businessKey: null,
     processDefinitionId: "invoice:3:abc",

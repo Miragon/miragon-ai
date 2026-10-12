@@ -360,7 +360,9 @@ export async function buildIncidentDetailData(
     cockpitInstanceUrl,
     engineVendor: options.provider.branding.displayName,
 
-    bpmnXml,
+    // Drawn by id (`camunda7_bpmn_xml_data`); the XML read here names the
+    // activity and the process.
+    diagramDefinitionId: bpmnXml ? processDefinitionId : null,
 
     job,
     recovery: incident.recovery,

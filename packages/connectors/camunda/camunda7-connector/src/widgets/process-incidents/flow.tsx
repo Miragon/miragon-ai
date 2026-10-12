@@ -7,11 +7,10 @@ import {
   ViewDataState,
   WidgetShell,
   formatNumber,
-  type BpmnHeatmapData,
   type SegmentedControlOption,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
-import { BpmnDiagram, type BpmnHighlight } from "../bpmn-diagram.js"
+import { BpmnDiagram, useDefinitionXml, type BpmnHighlight } from "../bpmn-diagram.js"
 import { useT } from "../../messages/use-t.js"
 import { useAnalyticsActive } from "../cockpit-app/analytics-probe.js"
 import { diagramActivityFraction } from "./activity-scope.js"
@@ -19,9 +18,16 @@ import { useDefinitionData } from "./feed.js"
 
 type FlowMode = "incidents" | "frequency" | "duration"
 
+/** The heat values of `analytics_bpmn_heatmap_data`, per activity id. */
+interface HeatValues {
+  frequency: Record<string, number>
+  durationSec: Record<string, number>
+}
+
 /**
  * Lazily loads the execution heatmap (Prometheus metrics via the analytics
- * module's plain data feed) and paints it on the definition diagram. Mounted
+ * module's plain data feed) and paints it on the view's own diagram (the
+ * definition it draws, read like every diagram by id). Mounted
  * only when the operator switches the mode toggle off "Incidents" — a mode
  * offered only once the analytics probe confirmed the module — so the
  * metrics query never runs on first paint. `mode` swaps frequency↔duration
@@ -34,17 +40,21 @@ type FlowMode = "incidents" | "frequency" | "duration"
  */
 function ProcessHeatmap({
   processDefinitionKey,
+  definitionId,
   engine,
   mode,
   onUnavailable,
 }: {
   processDefinitionKey: string
+  /** The version the view draws: the heat lands on its diagram. */
+  definitionId: string
   engine?: string
   mode: "frequency" | "duration"
   onUnavailable: () => void
 }) {
   const t = useT()
-  const q = useToolQuery<BpmnHeatmapData>(
+  const xml = useDefinitionXml(definitionId, engine)
+  const q = useToolQuery<HeatValues>(
     // Engine + definition key stay in the query key — without them the cache
     // would leak one definition's (or engine's) heatmap into another's view.
     ["camunda7:heatmap", engine ?? null, processDefinitionKey],
@@ -56,22 +66,22 @@ function ProcessHeatmap({
     if (unavailable) onUnavailable()
   }, [unavailable, onUnavailable])
   if (unavailable) return null
-  if (!q.data) {
-    return (
-      <div className="text-muted-foreground text-dense p-6">{t("procIncFlow.heatmapLoading")}</div>
-    )
-  }
-  if (!q.data.bpmnXml) {
+  if (xml.isError || xml.data?.bpmnXml === null) {
     return (
       <Alert>
         <AlertDescription>{t("procIncFlow.heatmapNoDiagram")}</AlertDescription>
       </Alert>
     )
   }
+  if (!q.data || !xml.data?.bpmnXml) {
+    return (
+      <div className="text-muted-foreground text-dense p-6">{t("procIncFlow.heatmapLoading")}</div>
+    )
+  }
   const values = mode === "frequency" ? q.data.frequency : q.data.durationSec
   return (
     <BpmnHeatmap
-      bpmnXml={q.data.bpmnXml}
+      bpmnXml={xml.data.bpmnXml}
       nodeFrequencies={values}
       diagramAriaLabel={t("procIncFlow.heatmapDiagramAria")}
       errorTitle={t("procIncFlow.heatmapErrorTitle")}
@@ -214,7 +224,7 @@ export function ProcessDefinitionFlow({
     <WidgetShell>
       <section>
         <SectionHeading title={t("procIncFlow.title")} hint={activityHint(t, data)} />
-        {data.bpmnXml ? (
+        {data.diagramDefinitionId ? (
           <>
             <FlowModeToolbar
               options={modeOptions}
@@ -224,10 +234,15 @@ export function ProcessDefinitionFlow({
               incidentsCaption={t("procIncFlow.diagramVersion", { version: data.diagramVersion })}
             />
             {mode === "incidents" ? (
-              <BpmnDiagram bpmnXml={data.bpmnXml} highlights={highlights} />
+              <BpmnDiagram
+                definitionId={data.diagramDefinitionId}
+                engineId={engine ?? data.engineId}
+                highlights={highlights}
+              />
             ) : (
               <ProcessHeatmap
                 processDefinitionKey={data.processDefinitionKey}
+                definitionId={data.diagramDefinitionId}
                 // Keep the metrics scoped to the engine this view shows —
                 // without it the feed aggregates across the whole fleet.
                 engine={engine ?? data.engineId}

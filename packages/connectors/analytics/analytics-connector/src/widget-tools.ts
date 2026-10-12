@@ -17,6 +17,7 @@ import {
 } from "@miragon-ai/analytics-client"
 import {
   ANALYTICS_BPMN_HEATMAP_DATA,
+  ANALYTICS_BPMN_XML_DATA,
   ANALYTICS_DASHBOARD_DATA,
   ANALYTICS_FAILURE_DASHBOARD_DATA,
 } from "./tool-names.js"
@@ -235,9 +236,10 @@ export function registerWidgetTools(
         ...scoped,
         period,
       })
+      // Read here only to know whether a diagram exists (and why not); the
+      // XML stays out of the payload — the widget reads it from
+      // `analytics_bpmn_xml_data` (cached by the camunda7 lookup).
       const bpmn = await loadBpmn(args.processDefinitionKey, scoped.engine)
-      // Model summary only — the bpmnXml must never reach the text channel;
-      // the widget renders the diagram from structuredContent.
       return buildSingleWidgetView({
         widget: "analytics:bpmn-heatmap",
         app: "analytics",
@@ -248,7 +250,7 @@ export function registerWidgetTools(
           processDefinitionKey: args.processDefinitionKey,
           period,
           engines: scoped.engine,
-          ...bpmn,
+          ...(bpmn.bpmnMissing ? { bpmnMissing: bpmn.bpmnMissing } : {}),
           frequency: heat.frequency,
           durationSec: heat.durationSec,
           asOf: heat.asOf,
@@ -270,7 +272,7 @@ export function registerWidgetTools(
       name: ANALYTICS_BPMN_HEATMAP_DATA,
       title: "BPMN heatmap data (internal)",
       description:
-        "Internal JSON feed (no UI) for the BPMN heatmap — per-element execution frequency + average duration over a window, plus the latest BPMN XML. Lets another widget (e.g. the CIB Seven cockpit) render the heatmap inline. Prefer analytics_show_bpmn_heatmap for a standalone view.",
+        "Internal JSON feed (no UI) for the BPMN heatmap — per-element execution frequency + average duration over a window. Lets another widget (e.g. the CIB Seven cockpit) paint the heat on its own diagram. Prefer analytics_show_bpmn_heatmap for a standalone view.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput(heatmapInputShape),
       ...appOnly,
@@ -282,17 +284,37 @@ export function registerWidgetTools(
         ...scoped,
         period,
       })
-      const bpmn = await loadBpmn(args.processDefinitionKey, scoped.engine)
       const data = {
         processDefinitionKey: args.processDefinitionKey,
         period,
         engines: scoped.engine,
-        ...bpmn,
         frequency: heat.frequency,
         durationSec: heat.durationSec,
         asOf: heat.asOf,
       }
       return buildDataFeedResult(data)
+    }),
+  )
+
+  server.tool(
+    {
+      name: ANALYTICS_BPMN_XML_DATA,
+      title: "BPMN heatmap diagram (internal)",
+      description:
+        "Internal JSON feed (no UI): the latest deployed BPMN XML of a process key on the engines in scope, for the heatmap view's diagram.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      inputSchema: strictToolInput({
+        processDefinitionKey: heatmapInputShape.processDefinitionKey,
+        ...schemas.engineFilterShape,
+      }),
+      ...appOnly,
+    },
+    withToolErrors(async (args) => {
+      const scoped = withEngineScope(engineScope, args)
+      return buildDataFeedResult({
+        processDefinitionKey: args.processDefinitionKey,
+        ...(await loadBpmn(args.processDefinitionKey, scoped.engine)),
+      })
     }),
   )
 

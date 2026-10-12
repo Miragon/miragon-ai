@@ -151,7 +151,9 @@ export async function buildInstanceDetailData(
     variables: variables as unknown as InstanceDetailData["variables"],
     incidents: incidentRows,
     incidentCount,
-    bpmnXml,
+    // Drawn by id (`camunda7_bpmn_xml_data`); the XML read here names the
+    // process and builds the task forms.
+    diagramDefinitionId: bpmnXml && definitionId ? definitionId : null,
     activeActivityIds: collectActiveActivityIds(activityTree),
     incidentActivityIds: collectIncidentActivityIds(incidents),
     openTasks,

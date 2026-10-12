@@ -24,9 +24,11 @@ import {
 } from "../data/process-incidents-data.js"
 import { buildIncidentDetailData } from "../data/incident-detail-data.js"
 import { buildBpmnViewerData } from "../data/bpmn-viewer-data.js"
+import { fetchDefinitionXml } from "../data/definition-info.js"
 import {
   CAMUNDA7_ACTIVITY_INCIDENTS_DATA,
   CAMUNDA7_BPMN_VIEWER_DATA,
+  CAMUNDA7_BPMN_XML_DATA,
   CAMUNDA7_CLUSTER_DETAIL_DATA,
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
   CAMUNDA7_ENGINE_HEALTH_DATA,
@@ -168,6 +170,31 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
           processDefinitionKey: args.processDefinitionKey,
           version: args.version,
         })),
+      })
+    }),
+  )
+
+  server.tool(
+    {
+      name: CAMUNDA7_BPMN_XML_DATA,
+      title: "BPMN XML data (internal)",
+      description:
+        "Internal JSON feed (no UI): one deployed process definition's BPMN 2.0 XML, by id — what every diagram in the views draws. Use camunda7_get_process_definition_xml for the XML itself.",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+      inputSchema: strictToolInput({
+        processDefinitionId: z
+          .string()
+          .min(1)
+          .describe("The deployed version's id (key:version:deployment)."),
+        ...engineParam,
+      }),
+      ...appOnly,
+    },
+    withToolErrors(async (args, ctx) => {
+      const { client } = await resolveEngine(args.engine, registry, ctx)
+      return rawData({
+        processDefinitionId: args.processDefinitionId,
+        bpmnXml: await fetchDefinitionXml(client, args.processDefinitionId),
       })
     }),
   )

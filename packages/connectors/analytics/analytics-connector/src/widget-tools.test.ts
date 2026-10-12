@@ -128,9 +128,13 @@ describe("view titles (U3) and the heatmap's as-of stamp (U7)", () => {
  * nothing. The widget picks its text from that and never guesses.
  */
 describe("the heatmap's missing-diagram cause", () => {
-  type HeatmapPayload = { bpmnXml: string | null; bpmnMissing?: string }
+  type Diagram = { bpmnXml?: string | null; bpmnMissing?: string }
 
-  /** The diagram fields of the show tool's payload and of the feed's. */
+  /**
+   * The diagram fields of the show tool's payload (a cause at most, never the
+   * XML: the model reads that payload on some hosts), of the heat feed (none)
+   * and of the diagram feed the widget reads the XML from.
+   */
   async function payloads(fetchBpmnXml?: FetchBpmnXml, engines = ["prod-a"]) {
     const byName = new Map<string, Handler>()
     const server = {
@@ -144,36 +148,41 @@ describe("the heatmap's missing-diagram cause", () => {
     })
     const args = { processDefinitionKey: "order" }
     const show = (await byName.get("analytics_show_bpmn_heatmap")!(args, {})) as unknown as {
-      structuredContent: { context: { stepData: { result: { data: HeatmapPayload } } } }
+      structuredContent: { context: { stepData: { result: { data: Diagram } } } }
     }
-    const feed = await byName.get("analytics_bpmn_heatmap_data")!(args, {})
-    return [
-      show.structuredContent.context.stepData.result.data,
-      feedData<HeatmapPayload>(feed),
-    ].map(({ bpmnXml, bpmnMissing }) => ({ bpmnXml, bpmnMissing }))
+    const heat = feedData<Diagram>(await byName.get("analytics_bpmn_heatmap_data")!(args, {}))
+    const diagram = feedData<Diagram>(await byName.get("analytics_bpmn_xml_data")!(args, {}))
+    const fields = ({ bpmnXml, bpmnMissing }: Diagram) => ({ bpmnXml, bpmnMissing })
+    return {
+      show: fields(show.structuredContent.context.stepData.result.data),
+      heat: fields(heat),
+      diagram: fields(diagram),
+    }
   }
 
   it("names the missing camunda7 module only when no lookup was injected", async () => {
-    for (const payload of await payloads()) {
-      expect(payload).toEqual({ bpmnXml: null, bpmnMissing: "no-camunda7" })
-    }
+    const { show, heat, diagram } = await payloads()
+    expect(show).toEqual({ bpmnXml: undefined, bpmnMissing: "no-camunda7" })
+    expect(heat).toEqual({ bpmnXml: undefined, bpmnMissing: undefined })
+    expect(diagram).toEqual({ bpmnXml: null, bpmnMissing: "no-camunda7" })
   })
 
   it("says the lookup found nothing when it failed or returned null", async () => {
     const failing: FetchBpmnXml = () => Promise.reject(new Error("ECONNREFUSED"))
     const empty: FetchBpmnXml = () => Promise.resolve(null)
     for (const fetcher of [failing, empty]) {
-      for (const payload of await payloads(fetcher)) {
-        expect(payload).toEqual({ bpmnXml: null, bpmnMissing: "not-loaded" })
-      }
+      const { show, diagram } = await payloads(fetcher)
+      expect(show).toEqual({ bpmnXml: undefined, bpmnMissing: "not-loaded" })
+      expect(diagram).toEqual({ bpmnXml: null, bpmnMissing: "not-loaded" })
     }
   })
 
-  it("carries no cause when the diagram is there", async () => {
+  it("keeps the XML out of the show payload and the heat feed when the diagram is there", async () => {
     const xml = '<?xml version="1.0"?><definitions />'
-    for (const payload of await payloads(() => Promise.resolve(xml))) {
-      expect(payload).toEqual({ bpmnXml: xml, bpmnMissing: undefined })
-    }
+    const { show, heat, diagram } = await payloads(() => Promise.resolve(xml))
+    expect(show).toEqual({ bpmnXml: undefined, bpmnMissing: undefined })
+    expect(heat).toEqual({ bpmnXml: undefined, bpmnMissing: undefined })
+    expect(diagram).toEqual({ bpmnXml: xml, bpmnMissing: undefined })
   })
 
   // The process may run on a later engine only: the first engine of the
@@ -186,9 +195,8 @@ describe("the heatmap's missing-diagram cause", () => {
       if (engine === "prod-a") return Promise.reject(new Error("503"))
       return Promise.resolve(engine === "prod-c" ? xml : null)
     }
-    for (const payload of await payloads(fetcher, ["prod-a", "prod-b", "prod-c"])) {
-      expect(payload).toEqual({ bpmnXml: xml, bpmnMissing: undefined })
-    }
+    const { diagram } = await payloads(fetcher, ["prod-a", "prod-b", "prod-c"])
+    expect(diagram).toEqual({ bpmnXml: xml, bpmnMissing: undefined })
     expect(asked.slice(0, 3)).toEqual([
       ["order", "prod-a"],
       ["order", "prod-b"],

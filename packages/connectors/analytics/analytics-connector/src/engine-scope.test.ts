@@ -158,6 +158,9 @@ const ARGS: Record<string, Record<string, unknown>> = {
 /** Tools that take `engineA`/`engineB` instead of an `engine` filter. */
 const PAIRWISE = new Set(["analytics_engine_compare", "analytics_show_engine_compare"])
 
+/** Tools that read no Prometheus series: the heatmap's diagram comes from the engine. */
+const READS_NO_PROMETHEUS = new Set(["analytics_bpmn_xml_data"])
+
 /** Every engine id an `engine_id` matcher of `promql` admits (`""` = an engine-less series). */
 function engineIdsMatched(promql: string): string[][] {
   return [...promql.matchAll(/engine_id(=~?)"([^"]*)"/g)].map((m) =>
@@ -180,7 +183,34 @@ describe("every engine-reading tool is scoped to the configured engines (N138)",
 
   it("names every Prometheus-reading tool the module registers", () => {
     const { ch } = recordingClient()
-    expect([...toolsOver(ch, scope).keys()].sort()).toEqual(Object.keys(ARGS).sort())
+    const prometheusReading = [...toolsOver(ch, scope).keys()].filter(
+      (name) => !READS_NO_PROMETHEUS.has(name),
+    )
+    expect(prometheusReading.sort()).toEqual(Object.keys(ARGS).sort())
+  })
+
+  it("reads the heatmap's diagram from the configured engines only", async () => {
+    const asked: Array<string | undefined> = []
+    const tools = new Map<string, ToolCallback>()
+    const server = {
+      tool: (definition: { name: string }, callback: ToolCallback) => {
+        tools.set(definition.name, callback)
+      },
+    } as unknown as MCPServer
+    registerWidgetTools(server, recordingClient().ch, {
+      engineScope: scope,
+      fetchBpmnXml: (_key, engine) => {
+        asked.push(engine)
+        return Promise.resolve(null)
+      },
+    })
+    const feed = tools.get("analytics_bpmn_xml_data")!
+    expect((await call(feed, { processDefinitionKey: "order" })).refused).toBeNull()
+    expect(asked).toEqual(["prod-a", "prod-b"])
+    asked.length = 0
+    const { refused } = await call(feed, { processDefinitionKey: "order", engine: "tenant-x" })
+    expect(refused).toMatch(/tenant-x/)
+    expect(asked).toEqual([])
   })
 
   it.each(Object.entries(ARGS))(

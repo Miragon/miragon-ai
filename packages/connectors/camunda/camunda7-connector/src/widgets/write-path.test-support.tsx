@@ -81,7 +81,7 @@ export function instance(over: Partial<InstanceDetailData> = {}): InstanceDetail
     variables: { amount: { value: 42, type: "Integer" } },
     incidents: [],
     incidentCount: 0,
-    bpmnXml: null,
+    diagramDefinitionId: null,
     activeActivityIds: ["review"],
     incidentActivityIds: [],
     openTasks: [task("review", "Review invoice")],

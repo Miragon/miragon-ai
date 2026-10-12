@@ -65,7 +65,7 @@
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Internal JSON feed (no UI) for the BPMN heatmap — per-element execution frequency + average duration over a window, plus the latest BPMN XML. Lets another widget (e.g. the CIB Seven cockpit) render the heatmap inline. Prefer analytics_show_bpmn_heatmap for a standalone view.",
+    "description": "Internal JSON feed (no UI) for the BPMN heatmap — per-element execution frequency + average duration over a window. Lets another widget (e.g. the CIB Seven cockpit) paint the heat on its own diagram. Prefer analytics_show_bpmn_heatmap for a standalone view.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -106,6 +106,51 @@
     },
     "name": "analytics_bpmn_heatmap_data",
     "title": "BPMN heatmap data (internal)"
+  },
+  {
+    "_meta": {
+      "openai/widgetAccessible": true,
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "description": "Internal JSON feed (no UI): the latest deployed BPMN XML of a process key on the engines in scope, for the heatmap view's diagram.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Engine id(s) to scope to; omitted = all configured (see server instructions)"
+        },
+        "processDefinitionKey": {
+          "description": "Process definition key to analyze",
+          "type": "string"
+        }
+      },
+      "required": [
+        "processDefinitionKey"
+      ],
+      "type": "object"
+    },
+    "name": "analytics_bpmn_xml_data",
+    "title": "BPMN heatmap diagram (internal)"
   },
   {
     "annotations": {
@@ -1267,6 +1312,45 @@
     },
     "name": "camunda7_bpmn_viewer_data",
     "title": "BPMN viewer data (internal)"
+  },
+  {
+    "_meta": {
+      "openai/widgetAccessible": true,
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "description": "Internal JSON feed (no UI): one deployed process definition's BPMN 2.0 XML, by id — what every diagram in the views draws. Use camunda7_get_process_definition_xml for the XML itself.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "description": "Engine id (see server instructions)",
+          "enum": [
+            "default"
+          ],
+          "type": "string"
+        },
+        "processDefinitionId": {
+          "description": "The deployed version's id (key:version:deployment).",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "processDefinitionId"
+      ],
+      "type": "object"
+    },
+    "name": "camunda7_bpmn_xml_data",
+    "title": "BPMN XML data (internal)"
   },
   {
     "annotations": {

@@ -10,6 +10,9 @@ import { countOf, isOne } from "./plural.js"
  */
 export const enSweep: MessageCatalog = {
   "bpmnDiagram.ariaLabel": "BPMN process diagram",
+  "bpmnDiagram.loading": "Loading diagram…",
+  "bpmnDiagram.loadError": "The diagram could not be loaded.",
+  "bpmnDiagram.unavailable": "The engine has no diagram for this version.",
   "bpmnDiagram.renderError":
     "The BPMN diagram cannot be rendered. Refresh the view, or open the model in your modeler.",
   "bpmnFlow.noData": "No data available",

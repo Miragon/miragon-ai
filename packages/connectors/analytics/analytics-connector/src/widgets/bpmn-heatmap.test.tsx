@@ -30,7 +30,6 @@ const HEATMAP: AnalyticsBpmnHeatmapData = {
   processDefinitionKey: "order",
   period: "14d",
   engines: ["prod-a"],
-  bpmnXml: "<broken/>",
   frequency: { Task_A: 12 },
   durationSec: { Task_A: 3.5 },
 }
@@ -41,6 +40,8 @@ function renderIn(language: "de" | "en") {
       <WidgetFixtureHost
         widget={AnalyticsBpmnHeatmap as unknown as ComponentType<Record<string, unknown>>}
         data={HEATMAP as unknown as Record<string, unknown>}
+        // The view reads its diagram from the feed, never from its payload.
+        tools={{ analytics_bpmn_xml_data: { bpmnXml: "<broken/>" } }}
       />
     </LocaleProvider>,
   )

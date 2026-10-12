@@ -19,7 +19,7 @@ const DATA: ProcessIncidentsData = {
   processDefinitionKey: "leasing",
   processDefinitionName: "Leasing",
   diagramVersion: 2,
-  bpmnXml: null,
+  diagramDefinitionId: null,
   cockpitUrl: null,
   runningInstances: 99,
   incidentCount: 3,

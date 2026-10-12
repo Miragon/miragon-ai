@@ -12,6 +12,10 @@ export const ANALYTICS_FAILURE_DASHBOARD_DATA = "analytics_failure_dashboard_dat
 // Cross-module consumers (camunda7's process-incidents flow) reference this
 // feed by raw string with graceful degradation — keep the name stable.
 export const ANALYTICS_BPMN_HEATMAP_DATA = "analytics_bpmn_heatmap_data"
+// The latest deployed diagram of a process key, for the heatmap view: never
+// inside the heat payload, so the model never reads the XML and the heat
+// values refresh without it.
+export const ANALYTICS_BPMN_XML_DATA = "analytics_bpmn_xml_data"
 // Backs the cross-engine landscape widget's self-fetch. Also referenced by
 // camunda7's cross-engine cockpit mode through the widget id (tier-2), so the
 // section disappears with the module instead of erroring.

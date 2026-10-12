@@ -113,8 +113,9 @@ function onBareDefinitionId(path: string, rows: unknown[]): Case["world"] {
 const processIncidents: Case["run"] = (client, baseUrl) =>
   buildProcessIncidentsData(client, { ...urls(baseUrl), processDefinitionKey: WORLD.key })
 const processIncidentsXml = {
-  [`GET /process-definition/${WORLD.latestDefinitionId}/xml`]: (data: { bpmnXml: unknown }) =>
-    data.bpmnXml,
+  [`GET /process-definition/${WORLD.latestDefinitionId}/xml`]: (data: {
+    diagramDefinitionId: unknown
+  }) => data.diagramDefinitionId,
 }
 const clusterDetail: Case["run"] = (client) =>
   buildClusterDetailData(client, "fake", {
@@ -136,8 +137,9 @@ const incidentDetailEnrichment = {
   [`GET /process-definition/${WORLD.instanceDefinitionId}`]: (data: {
     processDefinitionName: unknown
   }) => data.processDefinitionName,
-  [`GET /process-definition/${WORLD.instanceDefinitionId}/xml`]: (data: { bpmnXml: unknown }) =>
-    data.bpmnXml,
+  [`GET /process-definition/${WORLD.instanceDefinitionId}/xml`]: (data: {
+    diagramDefinitionId: unknown
+  }) => data.diagramDefinitionId,
   "GET /history/activity-instance/count?processInstanceId": (data: {
     historyTotalCount: unknown
   }) => data.historyTotalCount,
@@ -187,8 +189,9 @@ const CASES: Record<string, Case> = {
       buildInstanceDetailData(client, "fake", { processInstanceId: WORLD.instanceId }),
     unknown: { read: `GET /process-instance/${WORLD.instanceId}`, reply: NOT_FOUND },
     enrichment: {
-      [`GET /process-definition/${WORLD.instanceDefinitionId}/xml`]: (data: { bpmnXml: unknown }) =>
-        data.bpmnXml,
+      [`GET /process-definition/${WORLD.instanceDefinitionId}/xml`]: (data: {
+        diagramDefinitionId: unknown
+      }) => data.diagramDefinitionId,
     },
   },
   buildHistoryTimelineData: {
@@ -204,8 +207,9 @@ const CASES: Record<string, Case> = {
     run: (client) => buildBpmnViewerData(client, "fake", { processInstanceId: WORLD.instanceId }),
     unknown: { read: `GET /process-instance/${WORLD.instanceId}`, reply: NOT_FOUND },
     enrichment: {
-      [`GET /process-definition/${WORLD.instanceDefinitionId}/xml`]: (data: { bpmnXml: unknown }) =>
-        data.bpmnXml,
+      [`GET /process-definition/${WORLD.instanceDefinitionId}/xml`]: (data: {
+        diagramDefinitionId: unknown
+      }) => data.diagramDefinitionId,
     },
   },
   buildEngineHealthData: {

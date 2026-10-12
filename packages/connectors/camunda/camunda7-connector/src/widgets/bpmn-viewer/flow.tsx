@@ -39,7 +39,7 @@ export function BpmnFlowViewer({ data }: { data: BpmnViewerData | null }) {
     )
   }
 
-  if (!data.bpmnXml) {
+  if (!data.diagramDefinitionId) {
     return (
       <Alert>
         <AlertDescription>{t("bpmnFlow.noDiagram")}</AlertDescription>
@@ -47,5 +47,11 @@ export function BpmnFlowViewer({ data }: { data: BpmnViewerData | null }) {
     )
   }
 
-  return <BpmnDiagram bpmnXml={data.bpmnXml} highlights={highlights} />
+  return (
+    <BpmnDiagram
+      definitionId={data.diagramDefinitionId}
+      engineId={data.engineId}
+      highlights={highlights}
+    />
+  )
 }

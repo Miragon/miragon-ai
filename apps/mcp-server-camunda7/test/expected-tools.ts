@@ -25,6 +25,7 @@
 export const EXPECTED_TOOLS_READ_ONLY: readonly string[] = [
   "analytics_analyze_process_performance",
   "analytics_bpmn_heatmap_data",
+  "analytics_bpmn_xml_data",
   "analytics_cluster_compare",
   "analytics_compare_execution_periods",
   "analytics_dashboard_data",
@@ -47,6 +48,7 @@ export const EXPECTED_TOOLS_READ_ONLY: readonly string[] = [
   "analytics_version_compare",
   "camunda7_activity_incidents_data",
   "camunda7_bpmn_viewer_data",
+  "camunda7_bpmn_xml_data",
   "camunda7_cluster_detail_data",
   "camunda7_cockpit_overview_data",
   "camunda7_engine_health_data",

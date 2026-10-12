@@ -45,7 +45,7 @@ function detail(over: Partial<IncidentDetailData>): IncidentDetailData {
     businessKey: null,
     cockpitInstanceUrl: null,
     engineVendor: "CIB seven",
-    bpmnXml: null,
+    diagramDefinitionId: null,
     job: null,
     recovery: { action: "resolve" },
     instance: {
