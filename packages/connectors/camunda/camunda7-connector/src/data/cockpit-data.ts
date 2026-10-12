@@ -12,8 +12,8 @@ import {
   getProcessDefinitionsCount,
   getProcessInstances,
   getProcessInstancesCount,
-  getJobs,
   getJobsCount,
+  queryJobs,
 } from "@miragon-ai/camunda7-client/sdk"
 import type {
   JobsFilters,
@@ -319,6 +319,19 @@ interface RawJob {
 }
 
 /**
+ * The job panel's order: jobs without retries first — the stuck ones are
+ * what the panel is opened for (#322 U11) — and the job id as the tie-break.
+ * Retries alone is no total order (most jobs share a count), and the engine
+ * adds no tie-break of its own once a sort is given, so LIMIT/OFFSET could
+ * return the tied rows differently per page and "Mehr laden" would repeat
+ * some jobs and skip others. Only the POST query takes two keys.
+ */
+const JOB_PANEL_ORDER = [
+  { sortBy: "jobRetries", sortOrder: "asc" },
+  { sortBy: "jobId", sortOrder: "asc" },
+] as const
+
+/**
  * One page of jobs plus the two GLOBAL totals (`/job/count`) behind the KPIs
  * and the "X of Y" footer. All three are primary: an unreachable engine is a
  * tool error, never "0 jobs, 0 failed".
@@ -330,17 +343,13 @@ export async function buildJobPanelData(
 ): Promise<JobPanelData> {
   const baseQuery = { processDefinitionKey: args.processDefinitionKey }
   const [raw, failedCount, allCount] = await Promise.all([
-    getJobs({
+    queryJobs({
       client,
-      query: {
+      query: { firstResult: args.firstResult ?? 0, maxResults: args.maxResults ?? 50 },
+      body: {
         ...baseQuery,
         noRetriesLeft: args.failedOnly ? true : undefined,
-        firstResult: args.firstResult ?? 0,
-        maxResults: args.maxResults ?? 50,
-        // Jobs without retries first: the stuck ones are what the panel is
-        // opened for (#322 U11), on every page in the same order.
-        sortBy: "jobRetries",
-        sortOrder: "asc",
+        sorting: [...JOB_PANEL_ORDER],
       },
     }).then((rows) => rowsOf<RawJob>(rows)),
     getJobsCount({ client, query: { ...baseQuery, noRetriesLeft: true } }).then(countOf),

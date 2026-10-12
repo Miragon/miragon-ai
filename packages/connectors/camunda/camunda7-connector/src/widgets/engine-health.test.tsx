@@ -96,6 +96,20 @@ const HEALTHY: EngineHealthData = {
 const Widget = EngineHealthVerdict as unknown as ComponentType<Record<string, unknown>>
 
 describe("EngineHealthVerdict (fixture render)", () => {
+  it("labels each view's clusters section by its own heading — two views on one page included", () => {
+    const Two = () => (
+      <>
+        <EngineHealthVerdict data={DEGRADED} />
+        <EngineHealthVerdict data={{ ...DEGRADED, engineId: "other" }} />
+      </>
+    )
+    render(<WidgetFixtureHost widget={Two} data={{}} tools={tools} />)
+    const sections = screen.getAllByRole("region", { name: "Top failures, grouped by cause" })
+    expect(sections).toHaveLength(2)
+    const ids = sections.map((s) => s.getAttribute("aria-labelledby"))
+    expect(new Set(ids).size).toBe(2)
+  })
+
   it("renders the verdict header, KPIs and the incident clusters with drill + ask handoffs", async () => {
     render(
       <WidgetFixtureHost

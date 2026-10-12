@@ -182,9 +182,25 @@ const CONNECT_PHASE_CODES = new Set([
   "UND_ERR_CONNECT_TIMEOUT",
 ])
 
+/**
+ * The engine's POST QUERIES the connector reads through — a POST only
+ * because the query has a body (`POST /job` takes a sort over two keys, its
+ * GET twin only one). Reads: a failure carries no write caveat. Matched as
+ * the path's last segment(s) below the REST root.
+ */
+const POST_QUERY_PATHS = ["/job"]
+
+/** Whether `request` only reads: a safe method, or one of the engine's POST queries. */
+function isRead(request: Request): boolean {
+  if (SAFE_METHODS.has(request.method)) return true
+  if (request.method !== "POST") return false
+  const path = new URL(request.url).pathname.replace(/\/+$/, "")
+  return POST_QUERY_PATHS.some((query) => path.endsWith(query))
+}
+
 /** The caveat for a write whose outcome is unknown; empty for reads. */
 function writeCaveat(request: Request): string {
-  return SAFE_METHODS.has(request.method)
+  return isRead(request)
     ? ""
     : ` — the ${request.method} may still have been applied; check the current state before retrying`
 }

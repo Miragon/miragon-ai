@@ -271,10 +271,12 @@ function JobRow({
               <MoreActions label={t("jobPanel.moreActions", { name })}>
                 <HandOffButton
                   action="explainError"
+                  variant="menuitem"
                   prompt={ask(explainJobHandOff(job, engineId))}
                 />
                 <HandOffButton
                   action="draftTicket"
+                  variant="menuitem"
                   prompt={ask(draftJobTicketHandOff(job, engineId))}
                 />
               </MoreActions>

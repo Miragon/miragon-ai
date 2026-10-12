@@ -3,7 +3,7 @@ import { useT, type T } from "../../messages/use-t.js"
 import { recoveryOf } from "../lib/incident-recovery.js"
 import { useEngineAction, type ActionConfirmation, type TargetLine } from "../lib/engine-action.js"
 import { engineTargetLines, useEngineEnvironment } from "../lib/engine-context.js"
-import { instanceName, writeFeedback } from "../lib/write-feedback.js"
+import { instanceName, instanceTargetLines, writeFeedback } from "../lib/write-feedback.js"
 
 /** The button an incident row offers. */
 export type RowAction = "resolve" | "retry"
@@ -33,9 +33,9 @@ interface ExternalTaskRetryArgs extends Record<string, unknown> {
 }
 
 /**
- * The resolve question, naming the incident, its type, its instance (and its
- * business key) and the engine with its environment — a write on prod says
- * so before it runs (#322 U4).
+ * The resolve question, naming the incident, its type, its instance by its
+ * label (business key, then short id, #322 U13) and the engine with its
+ * environment — a write on prod says so before it runs (#322 U4).
  */
 export function resolveConfirmation(
   t: T,
@@ -45,10 +45,9 @@ export function resolveConfirmation(
 ): ActionConfirmation {
   const lines: TargetLine[] = [
     [t("confirmDialog.incidentType"), incident.incidentType],
-    [t("confirmDialog.instance"), incident.processInstanceId],
+    ...instanceTargetLines(t, incident.processInstanceId, incident.businessKey),
+    ...engineTargetLines(t, engineId, environment),
   ]
-  if (incident.businessKey) lines.push([t("confirmDialog.businessKey"), incident.businessKey])
-  lines.push(...engineTargetLines(t, engineId, environment))
   return {
     title: t("confirmDialog.resolveTitle"),
     description: t("confirmDialog.resolveDescription"),

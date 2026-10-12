@@ -1,7 +1,7 @@
 import { shortId } from "@miragon-ai/widget-shell/widgets"
 import type { T } from "../../messages/use-t.js"
 import type { TaskCompletion } from "./complete-task.js"
-import type { WriteFeedback } from "./engine-action.js"
+import type { TargetLine, WriteFeedback } from "./engine-action.js"
 
 /**
  * An instance as a toast names it: its business key when it has one (what
@@ -9,6 +9,20 @@ import type { WriteFeedback } from "./engine-action.js"
  */
 export function instanceName(id: string, businessKey?: string | null): string {
   return businessKey || shortId(id)
+}
+
+/**
+ * An instance as a confirmation names it, the label every view shows
+ * (`InstanceLabel`, #322 U13): its business key first, then its short id —
+ * never a bare UUID that wraps over two lines.
+ */
+export function instanceTargetLines(
+  t: T,
+  id: string,
+  businessKey?: string | null,
+): [TargetLine, ...TargetLine[]] {
+  const instance: TargetLine = [t("confirmDialog.instance"), shortId(id)]
+  return businessKey ? [[t("confirmDialog.businessKey"), businessKey], instance] : [instance]
 }
 
 /**

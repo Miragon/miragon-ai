@@ -153,9 +153,12 @@ function ProcessSummary({
             {t("incidentsList.open")}
           </DrillButton>
           <MoreActions label={t("incidentsList.moreActions", { name })}>
-            {cockpitUrl && <OpenInCockpitLink url={cockpitUrl} vendor={vendor} />}
+            {cockpitUrl && (
+              <OpenInCockpitLink url={cockpitUrl} vendor={vendor} variant="menuitem" />
+            )}
             <HandOffButton
               action="findCause"
+              variant="menuitem"
               prompt={ask(processRootCauseHandOff(process, engineId, filters))}
             />
           </MoreActions>

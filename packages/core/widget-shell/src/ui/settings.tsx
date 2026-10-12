@@ -9,12 +9,25 @@ import { FIELD_CONTROL } from "./native-select.js"
  * sharing any code beyond this kit.
  */
 
-/** One titled settings card — the visual unit a module's settings section renders. */
-export function SettingsCard({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * One titled settings card — the visual unit a module's settings section
+ * renders. Its title is an `h3` under the section's own `h2` heading; a
+ * section whose cards sit directly under the page title (`h1`) passes
+ * `titleAs="h2"`, so the outline never skips a level.
+ */
+export function SettingsCard({
+  title,
+  titleAs: Title = "h3",
+  children,
+}: {
+  title: string
+  titleAs?: "h2" | "h3"
+  children: ReactNode
+}) {
   return (
     <Card className="gap-0 py-0 shadow-none">
       <CardContent className="flex flex-col gap-4 p-4">
-        <h3 className="text-foreground text-section">{title}</h3>
+        <Title className="text-foreground text-section">{title}</Title>
         {children}
       </CardContent>
     </Card>

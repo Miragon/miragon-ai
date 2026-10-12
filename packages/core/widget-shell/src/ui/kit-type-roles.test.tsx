@@ -50,6 +50,22 @@ describe("kit type roles", () => {
     expect(classes(screen.getByText("Used when a view names none."))).toContain("text-small")
   })
 
+  it("a settings card heads one step under its section (h3), or under the page title (h2)", () => {
+    render(
+      <>
+        <SettingsCard title="Defaults">
+          <p>under a section</p>
+        </SettingsCard>
+        <SettingsCard title="Language" titleAs="h2">
+          <p>under the page title</p>
+        </SettingsCard>
+      </>,
+    )
+    expect(screen.getByRole("heading", { level: 3, name: "Defaults" })).toBeTruthy()
+    const h2 = screen.getByRole("heading", { level: 2, name: "Language" })
+    expect(classes(h2)).toContain("text-section")
+  })
+
   it("form controls take the 3:1 input edge, the dense step and the toolkit's focus ring", () => {
     render(
       <>

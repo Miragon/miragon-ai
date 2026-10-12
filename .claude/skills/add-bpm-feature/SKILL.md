@@ -244,7 +244,9 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
   words of `instanceName`); a drill passes the target's `label` so its breadcrumb reads
   the name. The builder reads names as enrichment (`fetchNamesByDefinition`,
   `fetchDefinitionsById`, `fetchBusinessKeys`). A row keeps ONE deterministic action;
-  its vendor link and chat hand-offs sit behind `MoreActions`
+  its vendor link and chat hand-offs sit behind `MoreActions`, as `variant="menuitem"`
+  entries (`HandOffButton`, `OpenInCockpitLink`); a confirmation names an instance with
+  `instanceTargetLines` (business key, then short id)
 - Status: a `ToneVariant` (`danger`/`warning`/`success`/`info`/`neutral`; open incident or
   failed job without retries = `danger` — `severityTone`/`countTone` in
   `widgets/cockpit-dashboard/lib.ts` is the one ladder for incident and job counts, a count

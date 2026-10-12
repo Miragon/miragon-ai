@@ -130,7 +130,11 @@ export interface BpmnViewerData {
   /** The rendered version's diagram — null when it could not be read (enrichment). */
   bpmnXml: string | null
   processInstanceId: string | null
+  /** The instance's business key — null for a definition target or an instance without one. */
+  businessKey: string | null
   processDefinitionId: string | null
+  /** The process's name from its diagram (the view's title) — null when unnamed or unreadable. */
+  processDefinitionName: string | null
   activeActivityIds: string[]
   incidentActivityIds: string[]
   /** Per-activity token and failed-job counts, scoped by {@link statsScope}. */

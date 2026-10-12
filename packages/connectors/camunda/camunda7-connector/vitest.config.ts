@@ -50,8 +50,10 @@ export default mergeConfig(
         // en and de): measured 88.27 / 77.51 / 87.47 / 89.4. Raised 2026-10-12
         // with the camunda7 CI pass (#322: names, business keys, job order,
         // history marks, cockpit head, landing, settings save bar; measured
-        // 88.96 / 78.13 / 88.69 / 90.08).
-        thresholds: { statements: 88, branches: 77, functions: 88, lines: 89 },
+        // 88.96 / 78.13 / 88.69 / 90.08). Raised with the camunda7 review
+        // fixes (the row menu, the read-only reason matrix, the BPMN viewer's
+        // names; measured 89.46 / 78.91 / 89.08 / 90.49).
+        thresholds: { statements: 89, branches: 78, functions: 89, lines: 90 },
       },
     },
   }),

@@ -7,7 +7,7 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
   `src/app.ts`, default read-only deployment — plus a `camunda7:operations`
   one for the write scenario) serving `dist/mcp-app.{js,css}`, a CIB Seven
   REST stub (`stub-engine.ts`, `fixtures/process-definitions.json` plus the
-  `invoice` diagram `fixtures/invoice.bpmn`, one failed job) and the host's
+  `invoice` diagram `fixtures/invoice.bpmn`, three failed jobs) and the host's
   server side (`host-backend.ts`, a real MCP client) — all on ephemeral
   loopback ports. A scenario can hold the stub's answers to one search term
   and release them later (`POST /__control/hold|release?nameLike=<term>` at
@@ -53,6 +53,7 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | kit foundation             | `camunda7_show_job_panel`, fullscreen offered     | Miragon roles (link `--cd-blau-link`), Lucide stroke 2.5, 2 dense, neutral KPI                     |
 | layout at 760 px           | `width: 760` (a chat's inline column)             | no horizontal document scroll, the table in a named region, 24 px shell padding                    |
 | column priority            | `camunda7_show_job_panel` at 760 px               | `hideBelow` column hidden, the row actions `sticky` and inside the region                          |
+| row menu                   | job panel at 760 px, "more" on a middle row       | the menu lies over the next rows' pinned cells: its entries take the clicks, focus, Escape         |
 | axe                        | process list + job panel, light and dark, 760 px  | zero WCAG 2.1 A/AA violations (`@axe-core/playwright`)                                             |
 | write refresh (operations) | `camunda7_show_job_panel`, user clicks Retry      | the retry refetches the seeded feed and re-renders, **zero** re-executions                         |
 | cockpit on an engine       | `camunda7_open_cockpit` with `engine`             | opens on that engine (sidebar switcher), not on the engine picker                                  |

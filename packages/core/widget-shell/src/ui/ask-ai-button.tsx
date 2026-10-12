@@ -4,13 +4,16 @@ import { useHostActions } from "@miragon/mcp-toolkit-ui/app"
 import type { AskAiPrompt } from "./ask-ai-prompt.js"
 import { Icon, type LucideIcon } from "./icon.js"
 import { kitLabels } from "./kit-labels.js"
+import { MENU_ITEM } from "./menu-item.js"
 
 /**
- * Placement tiers. All render as the same secondary outline button (a
- * hand-off is never the view's primary action: the deterministic next step,
- * Retry or Resolve, is); `icon` drops the visible label for dense rows.
+ * Placement tiers. All but `menuitem` render as the same secondary outline
+ * button (a hand-off is never the view's primary action: the deterministic
+ * next step, Retry or Resolve, is); `icon` drops the visible label for dense
+ * rows; `menuitem` is an entry of a row's action menu ({@link MENU_ITEM},
+ * `role="menuitem"`), whose card is its surface.
  */
-export type AskAiVariant = "primary" | "subtle" | "icon"
+export type AskAiVariant = "primary" | "subtle" | "icon" | "menuitem"
 
 export interface AskAiButtonProps {
   /**
@@ -38,7 +41,7 @@ export interface AskAiButtonProps {
   /**
    * `primary` = the one surface-level entry of a view; `subtle` = per-row /
    * per-section (the common case); `icon` = dense table rows (icon only,
-   * label → aria-label).
+   * label → aria-label); `menuitem` = an entry of a row's action menu.
    */
   variant?: AskAiVariant
   /** Tooltip/aria override; defaults to `label`. */
@@ -73,6 +76,26 @@ export function AskAiButton({
   // ambient locale — otherwise every label-less call site leaks English into a
   // localized cockpit.
   const effectiveLabel = label ?? kitLabels(locale).askAiDefault
+  const send = () => {
+    host.askAi(prompt)
+    onSent?.()
+  }
+  if (variant === "menuitem") {
+    return (
+      <button
+        type="button"
+        role="menuitem"
+        tabIndex={-1}
+        disabled={disabled}
+        title={title}
+        className={MENU_ITEM}
+        onClick={send}
+      >
+        <Icon icon={icon} dense />
+        {effectiveLabel}
+      </button>
+    )
+  }
   const isIcon = variant === "icon"
   return (
     <Button
@@ -82,10 +105,7 @@ export function AskAiButton({
       disabled={disabled}
       aria-label={isIcon ? (title ?? effectiveLabel) : undefined}
       title={isIcon ? (title ?? effectiveLabel) : title}
-      onClick={() => {
-        host.askAi(prompt)
-        onSent?.()
-      }}
+      onClick={send}
     >
       <Icon icon={icon} dense={isIcon} />
       {!isIcon && effectiveLabel}

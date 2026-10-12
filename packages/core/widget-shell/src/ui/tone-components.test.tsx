@@ -106,7 +106,10 @@ describe("icons", () => {
 })
 
 describe("OpenInCockpitLink", () => {
-  function renderLink(locale: string, props: { vendor?: string; label?: string }) {
+  function renderLink(
+    locale: string,
+    props: { vendor?: string; label?: string; variant?: "outline" | "menuitem" },
+  ) {
     const openExternal = vi.fn()
     const bridge: HostBridge = {
       callTool: vi.fn(),
@@ -146,6 +149,18 @@ describe("OpenInCockpitLink", () => {
       name: "Open instance in Camunda 7 (opens in a new tab)",
     })
     fireEvent.click(link)
+    expect(openExternal).toHaveBeenCalledWith("https://engine.example/cockpit")
+  })
+
+  it("as a menu entry: the same link and name, its icon in front, no outline", () => {
+    const openExternal = renderLink("de", { vendor: "CIB seven", variant: "menuitem" })
+    const item = screen.getByRole("menuitem", { name: "In CIB seven öffnen, öffnet in neuem Tab" })
+    expect(item.tagName).toBe("A")
+    expect(item.getAttribute("href")).toBe("https://engine.example/cockpit")
+    expect(item.getAttribute("tabindex")).toBe("-1")
+    expect(item.firstElementChild?.getAttribute("class")).toContain("lucide-external-link")
+    expect(item.className).not.toContain("border-border")
+    fireEvent.click(item)
     expect(openExternal).toHaveBeenCalledWith("https://engine.example/cockpit")
   })
 })

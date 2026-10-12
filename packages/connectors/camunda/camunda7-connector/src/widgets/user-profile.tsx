@@ -165,7 +165,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
       {!canSave && view.readOnlyReason && <ReadOnlyNotice reason={view.readOnlyReason} />}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SettingsCard title={t("profile.section.general")}>
+        <SettingsCard title={t("profile.section.general")} titleAs="h2">
           <SettingsField
             label={t("profile.field.language")}
             help={t("profile.field.language.help")}
@@ -195,7 +195,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           onDefaultEngine={(id) => set("defaultEngineId", id)}
         />
 
-        <SettingsCard title={t("profile.section.dashboards")}>
+        <SettingsCard title={t("profile.section.dashboards")} titleAs="h2">
           <DashboardsCardBody
             unavailable={dashboardsQuery.isError}
             dashboards={dashboards}

@@ -1016,7 +1016,7 @@ test.describe("kit foundation (camunda7_show_job_panel)", () => {
 /** The inline width a chat column gives a view (the before-shots' 760 px frame). */
 const INLINE_WIDTH = 760
 
-/** A frame narrow enough that the job table (one failed job) is wider than its region. */
+/** A frame narrow enough that the job table is wider than its region. */
 const NARROW_WIDTH = 420
 
 /** A row of twelve unbroken values: far wider than any inline region. */
@@ -1158,6 +1158,55 @@ test.describe("layout at the inline width (760 px, U2/U20, WCAG 1.4.10)", () => 
     expect(layout.stickyCell).toBe("sticky")
     // The action column ends inside the region, never past its right edge.
     expect(layout.actionRight).toBeLessThanOrEqual(layout.regionRight + 1)
+  })
+
+  test("a row's menu lies over the next rows' pinned cells: its entries take the clicks (U20)", async ({
+    page,
+  }) => {
+    const app = await openView(page, { tool: "camunda7_show_job_panel", width: INLINE_WIDTH })
+    // The stub's job-2 (never written), with job-3's row under it.
+    const row = app.getByRole("row").filter({ hasText: "Card expired" })
+    const next = app.getByRole("row").filter({ hasText: "Billing address unknown" })
+    await expect(row).toBeVisible({ timeout: 15_000 })
+    const more = row.getByRole("button", { name: /^More actions for / })
+    expect(await more.getAttribute("aria-haspopup")).toBe("menu")
+    await more.click()
+    const menu = app.getByRole("menu")
+    const items = menu.getByRole("menuitem")
+    await expect(items).toHaveCount(2)
+
+    // It opened downward, over the next row and its pinned action cell.
+    const [menuBox, nextBox] = await Promise.all([menu.boundingBox(), next.boundingBox()])
+    expect(menuBox && nextBox && menuBox.y + menuBox.height > nextBox.y + 4).toBe(true)
+    // Every point of every entry is the entry's own: none is painted under a cell.
+    const hits = await menu.evaluate((el) =>
+      [...el.querySelectorAll('[role="menuitem"]')].flatMap((item) => {
+        const box = item.getBoundingClientRect()
+        return [0.1, 0.5, 0.9].map((share) => {
+          const hit = document.elementFromPoint(
+            box.left + box.width * share,
+            box.top + box.height / 2,
+          )
+          return item.contains(hit) ? "entry" : `${hit?.tagName ?? "nothing"} ${hit?.textContent}`
+        })
+      }),
+    )
+    expect(hits, "a click on an entry reaches the entry").toEqual(hits.map(() => "entry"))
+
+    // The keyboard: the focus starts on the first entry, the arrows move it,
+    // Escape closes the menu and returns the focus to its button.
+    await expect(items.first()).toBeFocused()
+    await page.keyboard.press("ArrowDown")
+    await expect(items.nth(1)).toBeFocused()
+    await page.keyboard.press("Escape")
+    await expect(menu).toHaveCount(0)
+    await expect(more).toBeFocused()
+
+    // A click runs the entry (the hand-off goes to the chat) and closes the menu.
+    await more.click()
+    await menu.getByRole("menuitem", { name: "Draft ticket in chat" }).click()
+    await expect(menu).toHaveCount(0)
+    expect((await hostLog(page)).methods).toContain("ui/message")
   })
 
   test("a table wider than its region scrolls inside it — the document never does", async ({

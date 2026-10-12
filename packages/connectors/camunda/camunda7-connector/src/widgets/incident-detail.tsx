@@ -40,12 +40,17 @@ function retryToolFor(data: IncidentDetailData) {
   return null
 }
 
-/** The incident as the shared recovery reads it — with the feed's (or the old payload's) remedy. */
+/**
+ * The incident as the shared recovery reads it — with the feed's (or the old
+ * payload's) remedy and the instance's business key, so the confirmation and
+ * the toasts name the instance as the head does (#322 U13).
+ */
 function recoverable(data: IncidentDetailData): RecoverableIncident {
   return {
     id: data.incidentId,
     incidentType: data.incidentType,
     processInstanceId: data.processInstanceId,
+    businessKey: data.businessKey,
     recovery: detailRecovery(data),
   }
 }

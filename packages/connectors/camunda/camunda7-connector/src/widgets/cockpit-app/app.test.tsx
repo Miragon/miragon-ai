@@ -2,11 +2,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import type { CockpitAppData } from "../../view-models.js"
+import type { CockpitAppData, EngineHealthData } from "../../view-models.js"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import {
   CAMUNDA7_COCKPIT_OVERVIEW_DATA,
+  CAMUNDA7_ENGINE_HEALTH_DATA,
   CAMUNDA7_LIST_ENGINES,
   CAMUNDA7_SELECT_ENGINE,
 } from "../../tool-names.js"
@@ -63,6 +64,25 @@ function renderCockpit(
     definitions: [],
     engineId: args.engine,
   })
+  // A quiet engine: the overview's health verdict renders its full header.
+  const health = (args: Record<string, unknown>): EngineHealthData => ({
+    status: "ok",
+    statusRule: "ok without open incidents",
+    summary: {
+      totalIncidents: 0,
+      lastHourIncidents: 0,
+      last24hIncidents: 0,
+      affectedActivities: 0,
+      affectedDefinitions: 0,
+      runningInstances: 3,
+      totalDefinitions: 1,
+      started24h: null,
+      completed24h: null,
+    },
+    clusters: [],
+    fetchedAt: "2026-06-11T14:05:00.000Z",
+    engineId: String(args.engine),
+  })
   const Cockpit: ComponentType<Record<string, unknown>> = () => <CockpitApp data={bootstrap} />
   render(
     <WidgetFixtureHost
@@ -72,6 +92,7 @@ function renderCockpit(
         [CAMUNDA7_LIST_ENGINES]: listEngines,
         [CAMUNDA7_SELECT_ENGINE]: selectEngine,
         [CAMUNDA7_COCKPIT_OVERVIEW_DATA]: overview,
+        [CAMUNDA7_ENGINE_HEALTH_DATA]: health,
       }}
       onModelContext={(text) => modelContexts.push(text)}
     />,
@@ -237,12 +258,20 @@ describe("CockpitApp head", () => {
   it("has one refresh control", async () => {
     renderCockpit({ engineId: "prod-a", engines: ENVIRONMENTS }, { engines: ENVIRONMENTS })
     await waitFor(() => expect(activeEngine()).toBe("prod-a"))
+    // The overview's engine health has rendered its header — the one that
+    // brings its own Refresh outside the cockpit (#322 U27).
+    expect(await screen.findByRole("heading", { name: "prod-a · Overview" })).toBeTruthy()
     expect(screen.getAllByRole("button", { name: "Refresh" })).toHaveLength(1)
   })
 
-  it("no engines at all: the app-level empty state with the Komet", async () => {
+  it("no engines at all: the product signature over the app-level empty state", async () => {
     renderCockpit({ engineId: null, engines: [] }, { engines: [] })
-    expect(await screen.findByRole("heading", { name: "No engines configured" })).toBeTruthy()
-    expect(document.querySelector("[data-brand-mark='komet']")).toBeTruthy()
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "No engines configured" }),
+    ).toBeTruthy()
+    // The landing's signature: the Komet, "Miragon AI" over the page's h1.
+    expect(screen.getByRole("heading", { level: 1, name: "Operations Cockpit" })).toBeTruthy()
+    expect(screen.getByText("Miragon AI")).toBeTruthy()
+    expect(document.querySelectorAll("[data-brand-mark='komet']")).toHaveLength(1)
   })
 })

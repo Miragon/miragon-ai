@@ -3,7 +3,7 @@ import { useT, type T } from "../../messages/use-t.js"
 import { useEngineAction, type ActionConfirmation, type TargetLine } from "../lib/engine-action.js"
 import { engineTargetLines, useEngineEnvironment } from "../lib/engine-context.js"
 import { useIncidentRecovery } from "../process-incidents/use-incident-recovery.js"
-import { instanceName, writeFeedback } from "../lib/write-feedback.js"
+import { instanceName, instanceTargetLines, writeFeedback } from "../lib/write-feedback.js"
 
 interface SuspensionArgs extends Record<string, unknown> {
   processInstanceId: string
@@ -22,14 +22,16 @@ interface WriteTarget {
   environment: string | null
 }
 
-/** The instance as a confirmation names it: id, business key, definition, engine, environment. */
+/**
+ * The instance as a confirmation names it: its label (business key, then
+ * short id, #322 U13), definition, engine, environment.
+ */
 function instanceLines(
   t: T,
   instance: InstanceDetailData["instance"],
   { engineId, environment }: WriteTarget,
 ): [TargetLine, ...TargetLine[]] {
-  const lines: [TargetLine, ...TargetLine[]] = [[t("confirmDialog.instance"), instance.id]]
-  if (instance.businessKey) lines.push([t("confirmDialog.businessKey"), instance.businessKey])
+  const lines = instanceTargetLines(t, instance.id, instance.businessKey)
   lines.push([t("confirmDialog.definition"), instance.definitionId])
   lines.push(...engineTargetLines(t, engineId, environment))
   return lines

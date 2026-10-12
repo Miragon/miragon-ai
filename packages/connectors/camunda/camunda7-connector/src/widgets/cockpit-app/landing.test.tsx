@@ -88,10 +88,10 @@ describe("LandingChooser", () => {
 
   it("offers the cross-engine view only when the cockpit passes it in", () => {
     renderLanding(() => {})
-    expect(screen.getByRole("button", { name: "Compare across engines" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Cross-engine overview" })).toBeTruthy()
     cleanup()
     renderLanding(undefined)
-    expect(screen.queryByRole("button", { name: "Compare across engines" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Cross-engine overview" })).toBeNull()
   })
 
   it("lists every engine at once, grouped by environment", () => {

@@ -136,7 +136,7 @@ describe("incident rows offer the action the engine accepts", () => {
     const row = (await screen.findByText("message job")).closest("tr")!
     // The hand-off waits behind the row's "more" button (#322 U11).
     fireEvent.click(within(row).getByRole("button", { name: "More actions for this incident" }))
-    fireEvent.click(within(row).getByRole("button", { name: "Draft ticket in chat" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: "Draft ticket in chat" }))
     const prompts = actions
       .filter((a) => a.type === "sendFollowUpMessage")
       .map((a) => (a as { prompt: string }).prompt)

@@ -102,20 +102,16 @@ interface StubJob {
   createTime: string
 }
 
-/**
- * The write scenario's job (`write-refresh.spec.ts`): failed — no retries
- * left — until a retry lands. The one stateful corner of the stub's engine
- * data (the search holds are scenario control), owned by that one scenario.
- */
-function failedJob(): StubJob {
+/** A failed job (no retries left) of the invoice fixture. */
+function failedJob(id: string, processInstanceId: string, exceptionMessage: string): StubJob {
   return {
-    id: "job-1",
-    processInstanceId: "pi-1",
+    id,
+    processInstanceId,
     processDefinitionKey: "invoice",
     processDefinitionId: "invoice:3:7f1c2a9e-2f4b-11f1-9c7e-0242ac120004",
     failedActivityId: "chargeCard",
     retries: 0,
-    exceptionMessage: "Card declined",
+    exceptionMessage,
     dueDate: null,
     suspended: false,
     priority: 0,
@@ -123,7 +119,27 @@ function failedJob(): StubJob {
   }
 }
 
-/** `/job` reads and the retries write; null for every other request. */
+/**
+ * The stub's jobs. `job-1` is the write scenario's (`write-refresh.spec.ts`):
+ * failed until a retry lands, the one stateful corner of the stub's engine
+ * data (the search holds are scenario control), owned by that one scenario.
+ * `job-2` and `job-3` are never written: the row menu scenario opens the
+ * menu of a row with another row under it.
+ */
+function stubJobs(): Map<string, StubJob> {
+  return new Map(
+    [
+      failedJob("job-1", "pi-1", "Card declined"),
+      failedJob("job-2", "pi-2", "Card expired"),
+      failedJob("job-3", "pi-3", "Billing address unknown"),
+    ].map((job) => [job.id, job]),
+  )
+}
+
+/**
+ * `/job` reads — the count (GET, query) and the panel's query (POST, its
+ * filter in the body) — and the retries write; null for every other request.
+ */
 function jobRoute(
   method: string,
   url: URL,
@@ -131,14 +147,14 @@ function jobRoute(
   jobs: Map<string, StubJob>,
 ): { status: number; body: unknown } | null {
   const { pathname, searchParams } = url
-  const listed = () =>
-    [...jobs.values()].filter(
-      (j) => searchParams.get("noRetriesLeft") !== "true" || j.retries === 0,
-    )
+  const failedOnly =
+    searchParams.get("noRetriesLeft") === "true" ||
+    (body as { noRetriesLeft?: unknown } | undefined)?.noRetriesLeft === true
+  const listed = () => [...jobs.values()].filter((j) => !failedOnly || j.retries === 0)
   if (method === "GET" && pathname === "/engine-rest/job/count") {
     return { status: 200, body: { count: listed().length } }
   }
-  if (method === "GET" && pathname === "/engine-rest/job") return { status: 200, body: listed() }
+  if (method === "POST" && pathname === "/engine-rest/job") return { status: 200, body: listed() }
   const retries = /^\/engine-rest\/job\/([^/]+)\/retries$/.exec(pathname)
   const job = retries ? jobs.get(decodeURIComponent(retries[1])) : undefined
   if (method === "PUT" && job) {
@@ -198,7 +214,7 @@ function createSearchHolds() {
  * against it through the real server, so the view renders the payload the
  * server ACTUALLY builds (view envelope, data shape, engine id) from a fixed
  * engine response (`fixtures/process-definitions.json`, plus the `invoice`
- * diagram `fixtures/invoice.bpmn` with empty statistics and one failed job).
+ * diagram `fixtures/invoice.bpmn` with empty statistics and three failed jobs).
  * The broken base URL turns any tool into a genuine `isError` result — an
  * engine 503 through the server's own error mapping.
  *
@@ -211,7 +227,7 @@ function createSearchHolds() {
  * wait on each other.
  */
 export async function startStubEngine(): Promise<StubEngine> {
-  const jobs = new Map([["job-1", failedJob()]])
+  const jobs = stubJobs()
   const holds = createSearchHolds()
   const server = http.createServer((req, res) => {
     void readJson(req).then((requestBody) => {

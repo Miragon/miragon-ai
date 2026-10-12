@@ -28,9 +28,19 @@ async function engineWith(routes: FakeRoutes) {
 
 const calls = (engine: FakeEngine, path: string) => engine.requests.filter((r) => r.path === path)
 
+/**
+ * The panel's order (#322 U11): jobs without retries first, the job id as the
+ * tie-break. Retries alone is no total order, so LIMIT/OFFSET could repeat
+ * and skip tied jobs between two pages of "Mehr laden".
+ */
+const JOB_ORDER = [
+  { sortBy: "jobRetries", sortOrder: "asc" },
+  { sortBy: "jobId", sortOrder: "asc" },
+]
+
 describe("buildJobPanelData — exact totals from /job/count", () => {
   const jobRoutes = {
-    "GET /job": {
+    "POST /job": {
       body: [
         {
           id: "j1",
@@ -56,26 +66,27 @@ describe("buildJobPanelData — exact totals from /job/count", () => {
 
     expect([all.totalCount, all.failedCount]).toEqual([120, 3])
     expect([failed.totalCount, failed.failedCount]).toEqual([3, 3])
-    expect(calls(engine, "/job").map((r) => r.query)).toEqual([
-      // Jobs without retries first, on every page (#322 U11).
-      {
-        processDefinitionKey: "K1",
-        firstResult: "0",
-        maxResults: "50",
-        sortBy: "jobRetries",
-        sortOrder: "asc",
-      },
-      {
-        noRetriesLeft: "true",
-        firstResult: "0",
-        maxResults: "50",
-        sortBy: "jobRetries",
-        sortOrder: "asc",
-      },
+    expect(calls(engine, "/job").map((r) => [r.method, r.query, r.body])).toEqual([
+      [
+        "POST",
+        { firstResult: "0", maxResults: "50" },
+        { processDefinitionKey: "K1", sorting: JOB_ORDER },
+      ],
+      ["POST", { firstResult: "0", maxResults: "50" }, { noRetriesLeft: true, sorting: JOB_ORDER }],
     ])
     // A scoped panel checks its key exists (an unknown key is not-found, not "0 jobs").
     expect(calls(engine, "/process-definition").map((r) => r.query)).toEqual([
       { key: "K1", latestVersion: "true", sortBy: "version", sortOrder: "desc", maxResults: "1" },
+    ])
+  })
+
+  it("asks for the next page at its offset, in the same total order", async () => {
+    const { engine, client } = await engineWith(jobRoutes)
+
+    await buildJobPanelData(client, "engine-a", { firstResult: 50, maxResults: 25 })
+
+    expect(calls(engine, "/job").map((r) => [r.query, r.body])).toEqual([
+      [{ firstResult: "50", maxResults: "25" }, { sorting: JOB_ORDER }],
     ])
   })
 
@@ -116,7 +127,7 @@ describe("buildJobPanelData — exact totals from /job/count", () => {
     })
     const { engine, client } = await engineWith({
       ...jobRoutes,
-      "GET /job": { body: [job("j1", "K1:1:a"), job("j2", "K1:1:a"), job("j3", "K1:2:b")] },
+      "POST /job": { body: [job("j1", "K1:1:a"), job("j2", "K1:1:a"), job("j3", "K1:2:b")] },
       "GET /process-definition/K1:1:a/xml": { body: { id: "K1:1:a", bpmn20Xml: xml } },
       // Unreadable: its jobs keep their ids, the panel still renders.
       "GET /process-definition/K1:2:b/xml": { status: 500, body: { message: "boom" } },

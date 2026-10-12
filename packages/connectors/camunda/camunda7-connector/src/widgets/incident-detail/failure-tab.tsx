@@ -1,3 +1,4 @@
+import { useId } from "react"
 import {
   Alert,
   AlertDescription,
@@ -113,10 +114,12 @@ export function FailureSummary({
 }: { data: IncidentDetailData } & RemedyProps) {
   const t = useT()
   const { ask } = useHandOff()
+  // Per instance: two incident details on one page keep their own label.
+  const headingId = useId()
   return (
-    <section aria-labelledby="incident-failure" className="flex flex-col gap-3">
+    <section aria-labelledby={headingId} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="incident-failure" className={cn("text-muted-foreground", MICRO_LABEL)}>
+        <h2 id={headingId} className={cn("text-muted-foreground", MICRO_LABEL)}>
           {t("incidentFailure.errorMessageTitle")}
         </h2>
         <HandOffButton action="explainError" prompt={ask(explainErrorHandOff(data))} />

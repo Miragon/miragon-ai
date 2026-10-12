@@ -8,7 +8,7 @@ import {
   useLocale,
 } from "@miragon/mcp-toolkit-ui"
 import { Icon, KometMark, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
-import { ArrowLeftRight, ArrowRight, CircleDashed, LoaderCircle, Unplug } from "lucide-react"
+import { ArrowRight, CircleDashed, Layers, LoaderCircle, Unplug } from "lucide-react"
 import { DEFAULT_ENVIRONMENT_ID, groupEnginesByEnvironment } from "../../lib/environments.js"
 import { translator } from "../../messages/index.js"
 import { useEngineHealth } from "./engine-health.js"
@@ -121,9 +121,10 @@ function EngineRow({
  * The product signature of an app-level surface (#322 U15, owner decision):
  * the Komet beside "Miragon AI" over "Operations Cockpit". Both Miragon
  * marks hang on the theme slot a customer brand empties
- * (`--brand-mark-display: none`); the product title stays.
+ * (`--brand-mark-display: none`); the product title stays. The landing and
+ * the "no engines" surface open with it.
  */
-function LandingHeader({ subtitle, action }: { subtitle: string; action?: ReactNode }) {
+export function LandingHeader({ subtitle, action }: { subtitle?: string; action?: ReactNode }) {
   const locale = useLocale()
   return (
     <header className="flex flex-wrap items-center justify-between gap-4">
@@ -140,7 +141,7 @@ function LandingHeader({ subtitle, action }: { subtitle: string; action?: ReactN
           <h1 className="text-title text-foreground font-bold tracking-tight">
             {translator(locale, "cockpit.landing.title")}
           </h1>
-          <p className="text-muted-foreground text-dense mt-1">{subtitle}</p>
+          {subtitle && <p className="text-muted-foreground text-dense mt-1">{subtitle}</p>}
         </div>
       </div>
       {action}
@@ -190,7 +191,7 @@ export function LandingChooser({
           action={
             onOpenFleet && (
               <Button type="button" variant="outline" onClick={onOpenFleet}>
-                <Icon icon={ArrowLeftRight} />
+                <Icon icon={Layers} />
                 {tr("cockpit.landing.fleet.open")}
               </Button>
             )

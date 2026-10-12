@@ -113,7 +113,7 @@ describe("the gate fails closed and hides only the write", () => {
     expect(screen.queryByText("Retry job")).toBeNull()
     // The hand-offs wait behind the row's "more" button (#322 U11).
     fireEvent.click(screen.getByRole("button", { name: "More actions for the job at chargeCard" }))
-    expect(screen.getByRole("button", { name: "Explain error in chat" })).toBeTruthy()
+    expect(screen.getByRole("menuitem", { name: "Explain error in chat" })).toBeTruthy()
   })
 
   it("fails closed while the feed has not answered", () => {

@@ -126,13 +126,15 @@ export interface UserProfileView {
    */
   canSave: boolean
   /**
-   * Why the panel is read-only, so it can say how to change that (#322 U25):
-   * `toolset` — the connection runs without profile writes (a toolset like
-   * `operations` has them); `signedOut` — writes are registered, but the
-   * request names no signed-in user to save for. Null when `canSave`.
+   * Why the panel is read-only, so it can name the way out (#322 U25), the
+   * missing sign-in first: `noSignIn` — the request names no user to save for
+   * (a connection without OAuth, the default deployment): only a deployment
+   * with sign-in can save, whatever its toolset; `toolset` — a signed-in
+   * user on a connection without profile writes (a toolset like `operations`
+   * has them). Null when `canSave`.
    */
   readOnlyReason: ProfileReadOnlyReason | null
 }
 
 /** Why a settings panel cannot save — see {@link UserProfileView.readOnlyReason}. */
-export type ProfileReadOnlyReason = "toolset" | "signedOut"
+export type ProfileReadOnlyReason = "noSignIn" | "toolset"

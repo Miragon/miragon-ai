@@ -165,9 +165,12 @@ export function IncidentTable({
                       </DrillButton>
                       <RecoveryButton incident={incident} recovery={recovery} />
                       <MoreActions label={t("procIncTable.moreActions")}>
-                        {instanceUrl && <OpenInCockpitLink url={instanceUrl} vendor={vendor} />}
+                        {instanceUrl && (
+                          <OpenInCockpitLink url={instanceUrl} vendor={vendor} variant="menuitem" />
+                        )}
                         <HandOffButton
                           action="draftTicket"
+                          variant="menuitem"
                           prompt={ask(draftIncidentTicketHandOff(incident, engine))}
                         />
                       </MoreActions>

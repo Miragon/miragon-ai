@@ -118,11 +118,13 @@ describe("UserProfileWidget save — only what the user changed", () => {
   it("the one save bar: Save stays off until a change, Discard takes it back", () => {
     renderPanel()
     const bar = screen.getByRole("region", { name: "Save settings" })
-    expect(bar.textContent).toContain("Everything is saved.")
+    expect(bar.textContent).toContain("Language, engines and dashboards are saved.")
     expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", true)
     expect(screen.queryByRole("button", { name: "Discard changes" })).toBeNull()
     fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
-    expect(bar.textContent).toContain("You have unsaved changes.")
+    expect(bar.textContent).toContain(
+      "Your changes to language, engines or dashboards aren't saved yet.",
+    )
     expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", false)
     fireEvent.click(screen.getByRole("button", { name: "Discard changes" }))
     expect(screen.getByLabelText("Language")).toHaveProperty("value", "en")
@@ -184,13 +186,22 @@ describe("UserProfileWidget save — only what the user changed", () => {
     renderPanel()
     expect(screen.queryByLabelText("Preferred role")).toBeNull()
   })
+
+  // The page's outline skips no level: the panel's title, then its cards.
+  it("heads its cards one step under the page title", () => {
+    renderPanel()
+    const outline = screen
+      .getAllByRole("heading")
+      .map((h) => `${h.tagName.toLowerCase()} ${h.textContent}`)
+    expect(outline).toEqual(["h1 Settings", "h2 Language", "h2 Engines", "h2 Dashboards"])
+  })
 })
 
 // #322 U25: the read-only reason on top, with the way out.
 describe("a read-only panel says why, on top, with the way out", () => {
   it.each([
     ["toolset", /operations toolset/],
-    ["signedOut", /Sign in through the connection/],
+    ["noSignIn", /Saving needs a connection with sign-in/],
   ] as const)("%s", (reason, wayOut) => {
     renderPanel({ ...VIEW, canSave: false, readOnlyReason: reason })
     const notice = screen.getByRole("status")

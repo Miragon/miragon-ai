@@ -27,7 +27,7 @@ export const de: MessageCatalog = {
   "cockpit.empty.engines":
     "Bitte deine Administration, eine Engine in der Server-Konfiguration einzutragen. Dann erscheint sie hier.",
   "cockpit.signature": "Miragon AI",
-  "cockpit.nav.crossEngine": "Engine-übergreifend",
+  "cockpit.nav.crossEngine": "Engine-übergreifende Übersicht",
   "cockpit.aria.breadcrumb": "Navigationspfad",
   "cockpit.aria.sections": "Cockpit-Bereiche",
   "cockpit.aria.activeEngine": "Gewählte Engine",
@@ -48,9 +48,9 @@ export const de: MessageCatalog = {
     countOf(count, "Job ohne Versuche", "Jobs ohne Versuche"),
   "cockpit.landing.status.idle": "keine laufenden Instanzen",
   "cockpit.landing.status.healthy": "keine Incidents",
-  "cockpit.landing.fleet.open": "Engines vergleichen",
+  "cockpit.landing.fleet.open": "Engine-übergreifende Übersicht",
   "cockpit.crumb.allEngines": "Alle Engines",
-  "cockpit.crumb.fleet": "Engine-übergreifend",
+  "cockpit.crumb.fleet": "Engine-übergreifende Übersicht",
   "cockpit.engineGone": ({ engineId }) =>
     `Engine ${String(engineId)} ist nicht mehr in deiner Engine-Liste.`,
 
@@ -61,15 +61,16 @@ export const de: MessageCatalog = {
   "profile.saving": "Wird gespeichert…",
   "profile.discard": "Änderungen verwerfen",
   "profile.saveBar.label": "Einstellungen speichern",
-  "profile.saveBar.unsaved": "Du hast ungespeicherte Änderungen.",
-  "profile.saveBar.clean": "Alles ist gespeichert.",
+  "profile.saveBar.unsaved":
+    "Deine Änderungen an Sprache, Engines oder Dashboards sind noch nicht gespeichert.",
+  "profile.saveBar.clean": "Sprache, Engines und Dashboards sind gespeichert.",
   "profile.saveError":
     "Die Einstellungen konnten nicht gespeichert werden. Deine Eingaben sind noch da, versuch es noch mal.",
   "profile.readOnly.title": "Die Einstellungen sind hier nur lesbar",
   "profile.readOnly.toolset":
     "Diese Verbindung läuft mit dem Toolset read-only. Mit dem Toolset operations kannst du sie ändern: Bitte deine Administration, die Verbindung umzustellen.",
-  "profile.readOnly.signedOut":
-    "Ohne Anmeldung weiß diese Verbindung nicht, für wen sie speichern soll. Melde dich über die Verbindung an, dann kannst du sie ändern.",
+  "profile.readOnly.noSignIn":
+    "Diese Verbindung hat keine Anmeldung und weiß deshalb nicht, für wen sie speichern soll. Speichern geht nur über eine Verbindung mit Anmeldung: Bitte deine Administration, sie einzurichten.",
   "profile.loading": "Wird geladen…",
   "profile.none": "Kein Profil verfügbar",
 

@@ -253,6 +253,30 @@ describe("identity gating (OAuth is the only identity)", () => {
     expect(result.content?.[0]?.text).toContain("MCP_OAUTH")
   })
 
+  // #322 U25: the panel names the way out, the missing sign-in first — on a
+  // connection without one, "switch to operations" would only lead to a
+  // second read-only panel.
+  const callers = {
+    "signed in": <T>(fn: (ctx?: unknown) => T): T => fn(CTX),
+    "declared local caller": <T>(fn: (ctx?: unknown) => T): T =>
+      runWithMcpRequestInfo({ anonymousCaller: true }, () => fn()),
+    "no sign-in": <T>(fn: (ctx?: unknown) => T): T => runWithMcpRequestInfo({}, () => fn()),
+  }
+  it.each([
+    ["read-only", "signed in", false, "toolset"],
+    ["read-only", "declared local caller", false, "toolset"],
+    ["read-only", "no sign-in", false, "noSignIn"],
+    ["operations", "signed in", true, null],
+    ["operations", "declared local caller", true, null],
+    ["operations", "no sign-in", false, "noSignIn"],
+    ["admin", "no sign-in", false, "noSignIn"],
+  ] as const)("%s, %s: canSave %s, reason %s", async (toolset, caller, canSave, reason) => {
+    const { handlerFor } = register(toolset)
+    const result = await callers[caller]((ctx) => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, ctx))
+    expect(result.structuredContent?.canSave).toBe(canSave)
+    expect(result.structuredContent?.readOnlyReason).toBe(reason)
+  })
+
   it("an authenticated user gets canSave true and a working round-trip", async () => {
     const { handlerFor } = register()
     const under = <T>(fn: () => T): T => runWithMcpRequestInfo({ authUserId: "user-7" }, fn)

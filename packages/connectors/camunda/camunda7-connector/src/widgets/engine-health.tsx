@@ -1,3 +1,4 @@
+import { useId } from "react"
 import {
   Button,
   DrillButton,
@@ -329,10 +330,12 @@ function ClustersSection({
   go: OnNavigate
 }) {
   const t = useT()
+  // Per instance: two engine-health views on one page keep their own label.
+  const headingId = useId()
   if (clusters.length === 0) return null
   return (
-    <section aria-labelledby="engine-health-clusters" className="flex flex-col gap-2">
-      <h2 id="engine-health-clusters" className="text-section text-foreground">
+    <section aria-labelledby={headingId} className="flex flex-col gap-2">
+      <h2 id={headingId} className="text-section text-foreground">
         {t("engineHealth.clustersHeading")}
       </h2>
       <ul className="flex flex-col gap-2">

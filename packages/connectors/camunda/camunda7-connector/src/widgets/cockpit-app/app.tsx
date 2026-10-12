@@ -2,6 +2,7 @@ import { useReducer, type ReactNode } from "react"
 import {
   Button,
   cn,
+  EmptyState,
   FOCUS_RING,
   useCallTool,
   useLocale,
@@ -9,7 +10,6 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext, WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
 import {
-  AppEmptyState,
   Icon,
   NativeSelect,
   ViewDataState,
@@ -18,13 +18,7 @@ import {
   useResetOnChange,
   type LucideIcon,
 } from "@miragon-ai/widget-shell/widgets"
-import {
-  ArrowLeftRight,
-  ChevronRight,
-  LayoutDashboard,
-  Settings,
-  TriangleAlert,
-} from "lucide-react"
+import { ChevronRight, Layers, LayoutDashboard, Settings, TriangleAlert } from "lucide-react"
 import type { CockpitAppData } from "../../view-models.js"
 import { groupEnginesByEnvironment } from "../../lib/environments.js"
 import { EngineChromeProvider, EnvironmentChip, environmentIn } from "../lib/engine-context.js"
@@ -39,7 +33,7 @@ import { NavBreadcrumb } from "./breadcrumb.js"
 import { cockpitViews, filterLayoutToWidgets } from "./views.js"
 import { useAnalyticsActive } from "./analytics-probe.js"
 import { FleetView } from "./fleet-view.js"
-import { LandingChooser } from "./landing.js"
+import { LandingChooser, LandingHeader } from "./landing.js"
 import { CockpitRefreshButton } from "./refresh-button.js"
 
 export type { CockpitAppData }
@@ -273,7 +267,7 @@ function CockpitHead({
               aria-label={crossEngine}
               title={crossEngine}
             >
-              <Icon icon={ArrowLeftRight} />
+              <Icon icon={Layers} />
               <span className="hidden @4xl:inline">{crossEngine}</span>
             </Button>
           )}
@@ -333,8 +327,10 @@ function EngineGoneNotice({ engineId }: { engineId: string | null }) {
 
 /**
  * No engine to operate: loading or a failed engine list are the kit's view
- * states; an empty one is the app-level "no engines" surface — the Miragon
- * signature (Komet, "Miragon AI") over what to do (#322 U15).
+ * states; an empty one is the app-level "no engines" surface (#322 U15): the
+ * landing's product signature (the Komet, "Miragon AI" over the page's `h1`
+ * "Operations Cockpit") over what is missing and what to do, in the card the
+ * engine list would fill.
  */
 function EnginesEmptyState({
   hasTransport,
@@ -361,10 +357,15 @@ function EnginesEmptyState({
   }
   return (
     <WidgetShell>
-      <AppEmptyState
-        title={translator(locale, "cockpit.empty.enginesTitle")}
-        description={translator(locale, "cockpit.empty.engines")}
-      />
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <LandingHeader />
+        <EmptyState
+          titleAs="h2"
+          title={translator(locale, "cockpit.empty.enginesTitle")}
+          description={translator(locale, "cockpit.empty.engines")}
+          className="border-border bg-card rounded-md border"
+        />
+      </div>
     </WidgetShell>
   )
 }

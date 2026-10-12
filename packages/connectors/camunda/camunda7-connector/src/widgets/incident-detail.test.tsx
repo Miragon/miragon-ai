@@ -145,6 +145,45 @@ describe("the incident detail offers the remedy the engine accepts", () => {
     expect(screen.queryByText("Retry task")).toBeNull()
   })
 
+  it("labels each detail's failure section by its own heading — two details on one page included", async () => {
+    const Two = () => (
+      <>
+        <IncidentDetailWidget data={CUSTOM} />
+        <IncidentDetailWidget data={{ ...CUSTOM, incidentId: "inc-2" }} />
+      </>
+    )
+    render(<WidgetFixtureHost widget={Two} data={{}} tools={{}} />)
+    const sections = await screen.findAllByRole("region", { name: "Error message" })
+    expect(sections).toHaveLength(2)
+    const ids = sections.map((s) => s.getAttribute("aria-labelledby"))
+    expect(new Set(ids).size).toBe(2)
+  })
+
+  it("its confirmation names the instance as the head does: business key, then short id", async () => {
+    const instanceId = "5f0ce78e-8b14-4c2a-9f3e-100000110866"
+    renderDetail(
+      detail({
+        incidentType: "invoiceMismatch",
+        processInstanceId: instanceId,
+        businessKey: "LEA-7",
+      }),
+      { [CAMUNDA7_WIDGET_ACTIONS_DATA]: ALL_ACTIONS },
+    )
+    fireEvent.click(await screen.findByText("Mark as resolved"))
+    const dialog = await screen.findByRole("alertdialog")
+    const lines = [...dialog.querySelectorAll("dt")].map((dt) => [
+      dt.textContent,
+      dt.nextElementSibling?.textContent,
+    ])
+    expect(lines).toEqual([
+      ["Incident", "inc-1"],
+      ["Type", "invoiceMismatch"],
+      ["Business key", "LEA-7"],
+      ["Process instance", "5f0ce78e…"],
+      ["Engine", "prod"],
+    ])
+  })
+
   it("offers no remedy once a refetch cannot confirm the incident is still open", async () => {
     renderDetail(FAILED_JOB, {
       [CAMUNDA7_WIDGET_ACTIONS_DATA]: ALL_ACTIONS,

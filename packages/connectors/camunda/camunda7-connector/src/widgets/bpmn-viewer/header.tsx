@@ -1,8 +1,9 @@
 import { StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
-import { HandOffButton, IdText, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { EngineMeta } from "../lib/engine-context.js"
+import { InstanceLabel } from "../lib/identity.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
@@ -45,11 +46,15 @@ export function BpmnViewerHeader({ data }: { data: BpmnViewerData | null }) {
 
   return (
     <WidgetHeader
-      title={t("bpmnHeader.title")}
+      // Names before ids (#322 U13): the process's name, the instance by its
+      // label (business key, then the id chip), as the instance detail does.
+      title={data.processDefinitionName ?? t("bpmnHeader.title")}
       sub={
         <>
           <EngineMeta engineId={data.engineId} />
-          {data.processInstanceId && <IdText value={data.processInstanceId} />}
+          {data.processInstanceId && (
+            <InstanceLabel id={data.processInstanceId} businessKey={data.businessKey} />
+          )}
           {/* Running tokens are a state in progress (info); incidents are danger. */}
           {totalActive > 0 && (
             <StatusBadge tone="info">

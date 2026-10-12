@@ -28,7 +28,7 @@ export const en: MessageCatalog = {
   "cockpit.empty.engines":
     "Ask your administrator to add an engine to the server configuration. Then it shows up here.",
   "cockpit.signature": "Miragon AI",
-  "cockpit.nav.crossEngine": "Cross-engine",
+  "cockpit.nav.crossEngine": "Cross-engine overview",
   "cockpit.aria.breadcrumb": "Breadcrumb",
   "cockpit.aria.sections": "Cockpit sections",
   "cockpit.aria.activeEngine": "Selected engine",
@@ -49,9 +49,9 @@ export const en: MessageCatalog = {
     countOf(count, "job without retries", "jobs without retries"),
   "cockpit.landing.status.idle": "no running instances",
   "cockpit.landing.status.healthy": "no incidents",
-  "cockpit.landing.fleet.open": "Compare across engines",
+  "cockpit.landing.fleet.open": "Cross-engine overview",
   "cockpit.crumb.allEngines": "All engines",
-  "cockpit.crumb.fleet": "Cross-engine",
+  "cockpit.crumb.fleet": "Cross-engine overview",
   "cockpit.engineGone": ({ engineId }) =>
     `Engine ${String(engineId)} is no longer in your engine list.`,
 
@@ -62,14 +62,14 @@ export const en: MessageCatalog = {
   "profile.saving": "Saving…",
   "profile.discard": "Discard changes",
   "profile.saveBar.label": "Save settings",
-  "profile.saveBar.unsaved": "You have unsaved changes.",
-  "profile.saveBar.clean": "Everything is saved.",
+  "profile.saveBar.unsaved": "Your changes to language, engines or dashboards aren't saved yet.",
+  "profile.saveBar.clean": "Language, engines and dashboards are saved.",
   "profile.saveError": "Could not save the settings. Your input is still here, try again.",
   "profile.readOnly.title": "These settings are read-only here",
   "profile.readOnly.toolset":
     "This connection runs the read-only toolset. With the operations toolset you can change them: ask your administrator to switch the connection.",
-  "profile.readOnly.signedOut":
-    "Without a sign-in this connection has no one to save settings for. Sign in through the connection to change them.",
+  "profile.readOnly.noSignIn":
+    "This connection has no sign-in, so it has no one to save settings for. Saving needs a connection with sign-in: ask your administrator to set one up.",
   "profile.loading": "Loading…",
   "profile.none": "No profile available",
 
