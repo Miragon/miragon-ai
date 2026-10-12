@@ -6,8 +6,10 @@ import {
   formatNumber,
   type ListTableColumn,
 } from "@miragon-ai/widget-shell/widgets"
-import { CountPill, TONE_DOT, type ToneVariant } from "@miragon/mcp-toolkit-ui"
+import { CountPill, TONE_DOT, cn, type ToneVariant } from "@miragon/mcp-toolkit-ui"
 import { useT } from "../messages/use-t.js"
+import { countTone } from "./cockpit-dashboard/lib.js"
+import { NamedId } from "./lib/identity.js"
 
 /**
  * Row model of the canonical process-definitions table — a superset both
@@ -65,8 +67,12 @@ export function ProcessDefinitionsTableView({
   const columns: ListTableColumn[] = [
     { label: t("cockpitDefs.colProcess") },
     // Count rows are one per KEY (every version summed): their chip is the
-    // key's latest version, not the version the counts belong to.
-    { label: showCounts ? t("cockpitDefs.colLatestVersion") : t("cockpitDefs.colVersion") },
+    // key's latest version, not the version the counts belong to — the
+    // column a reader can do without in an inline frame, where the counts
+    // and the actions need the room (#322 U2).
+    showCounts
+      ? { label: t("cockpitDefs.colLatestVersion"), hideBelow: "md" }
+      : { label: t("cockpitDefs.colVersion") },
     ...(status ? [{ label: status.header }] : []),
     ...(showCounts
       ? ([
@@ -83,18 +89,24 @@ export function ProcessDefinitionsTableView({
       {rows.map((row) => (
         <tr key={row.id} className="hover:bg-muted transition-colors">
           <Td>
-            <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
-              <span className={`size-1.5 rounded-full ${TONE_DOT[row.tone]}`} />
-              <span className="truncate">{row.name ?? row.key}</span>
-            </div>
-            <div className="text-muted-foreground mt-0.5 font-mono text-xs">{row.key}</div>
+            {/* Name first, the key a quiet mono line (#322 U13). */}
+            <NamedId
+              name={row.name}
+              id={row.key}
+              lead={
+                <span
+                  aria-hidden="true"
+                  className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[row.tone])}
+                />
+              }
+            />
           </Td>
           <Td>
-            <span className="border-border bg-muted text-muted-foreground inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
+            <span className="border-border bg-muted text-muted-foreground text-small inline-block rounded border px-1.5 py-0.5 font-mono">
               v{row.version}
             </span>
             {row.versionTag && (
-              <span className="border-border bg-muted text-muted-foreground ml-1.5 inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
+              <span className="border-border bg-muted text-muted-foreground text-small ml-1.5 inline-block rounded border px-1.5 py-0.5 font-mono">
                 {row.versionTag}
               </span>
             )}
@@ -102,18 +114,19 @@ export function ProcessDefinitionsTableView({
           {status && <Td>{status.render(row)}</Td>}
           {showCounts && (
             <>
-              <Td align="right" className="text-muted-foreground font-mono text-xs tabular-nums">
+              {/* A count without a state is a plain number; jobs without
+                  retries and open incidents take the one severity ladder
+                  (#322 U14) — danger while there are any, else neutral. */}
+              <Td align="right" className="text-foreground tabular-nums">
                 {formatNumber(row.counts?.instances ?? 0)}
               </Td>
               <Td align="right">
-                {row.counts && row.counts.failedJobs > 0 ? (
-                  <CountPill tone="warning">{formatNumber(row.counts.failedJobs)}</CountPill>
-                ) : (
-                  <span className="text-muted-foreground font-mono text-xs">0</span>
-                )}
+                <CountPill tone={countTone(row.counts?.failedJobs)}>
+                  {formatNumber(row.counts?.failedJobs ?? 0)}
+                </CountPill>
               </Td>
               <Td align="right">
-                <CountPill tone={(row.counts?.totalIncidents ?? 0) > 0 ? "danger" : "success"}>
+                <CountPill tone={countTone(row.counts?.totalIncidents)}>
                   {formatNumber(row.counts?.totalIncidents ?? 0)}
                 </CountPill>
               </Td>

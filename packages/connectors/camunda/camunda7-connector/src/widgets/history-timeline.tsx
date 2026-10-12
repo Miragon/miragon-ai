@@ -2,18 +2,18 @@ import { useMemo } from "react"
 import {
   Card,
   CardContent,
-  Badge,
   Alert,
   AlertDescription,
+  StatusBadge,
   TONE_DOT,
   PagedListFooter,
+  WidgetHeader,
+  cn,
 } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
   HandOffButton,
-  ListTable,
   TableEmptyState,
-  Td,
   WidgetShell,
   formatDuration,
   formatTimestamp,
@@ -21,48 +21,19 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
+import { EngineMeta } from "./lib/engine-context.js"
 import { useT } from "../messages/use-t.js"
+import {
+  HistoryTable,
+  STEP_TONE,
+  StepBadge,
+  historyStepState,
+  instanceStateLabel,
+  type HistoryEntry,
+} from "./history-steps.js"
 
 export type { HistoryTimelineData }
 export type HistoryActivity = HistoryTimelineData["activities"][number]
-
-/**
- * Row contract of the history family — the one shape every historic-activity
- * rendering in this module shares. Raw `ActivityData` rows (historic activity
- * instances, also the `camunda7_query_historic_activity_instances` page items)
- * satisfy it structurally, so either source renders through
- * {@link HistoryTimelineView} without mapping.
- */
-export interface HistoryEntry {
-  id: string
-  activityId: string
-  activityName: string | null
-  activityType: string
-  startTime: string
-  endTime: string | null
-  durationInMillis: number | null
-  assignee?: string | null
-  canceled?: boolean
-}
-
-// Categorical dot colors per BPMN activity type. Start/end map to the brand
-// success/danger tones; the remaining categories use a distinct, deduplicated
-// palette (an explicit-color set, like the heatmap legend) kept readable in both
-// light and dark mode.
-const ACTIVITY_COLORS: Record<string, string> = {
-  startEvent: TONE_DOT.success,
-  endEvent: TONE_DOT.danger,
-  userTask: "bg-blue-500 dark:bg-blue-400",
-  serviceTask: "bg-purple-500 dark:bg-purple-400",
-  sendTask: "bg-indigo-500 dark:bg-indigo-400",
-  receiveTask: "bg-teal-500 dark:bg-teal-400",
-  exclusiveGateway: "bg-yellow-500 dark:bg-yellow-400",
-  parallelGateway: "bg-orange-500 dark:bg-orange-400",
-  inclusiveGateway: "bg-amber-500 dark:bg-amber-400",
-  callActivity: "bg-cyan-500 dark:bg-cyan-400",
-  subProcess: "bg-pink-500 dark:bg-pink-400",
-}
-const ACTIVITY_COLOR_FALLBACK = TONE_DOT.neutral
 
 type TimelineInstance = NonNullable<HistoryTimelineData["processInstance"]>
 
@@ -129,62 +100,6 @@ export function explainActivityHandOff(
 }
 
 /**
- * Compact table look of the family: a real `<table>` (kit `Th`/`Td`) with
- * Started / Duration / Status columns for dense embeddings (the incident
- * detail's history tab). Same {@link HistoryEntry} rows and shared format
- * helpers as the rich timeline.
- */
-function HistoryTable({ entries }: { entries: HistoryEntry[] }) {
-  const t = useT()
-  return (
-    <div className="border-border overflow-x-auto rounded-lg border">
-      {/* Compact variant: py-2 overrides Td/Th's default padding, the wrapper
-          border replaces the header's own top edge, and the activity cell takes
-          the remaining width (w-full max-w-0) so long names truncate instead of
-          widening the table into horizontal scroll. */}
-      <ListTable
-        className="[&_th]:border-t-0"
-        ariaLabel={t("incidentHistory.tableAriaLabel")}
-        columns={[
-          { label: t("incidentHistory.columnActivity"), className: "py-2" },
-          { label: t("incidentHistory.columnStarted"), align: "right", className: "py-2" },
-          { label: t("incidentHistory.columnDuration"), align: "right", className: "py-2" },
-          { label: t("incidentHistory.columnStatus"), align: "right", className: "py-2" },
-        ]}
-      >
-        {entries.map((entry) => (
-          <tr key={entry.id} className="hover:bg-card [&:last-child>td]:border-b-0">
-            <Td className="w-full max-w-0 py-2">
-              <div className="text-foreground truncate font-medium">
-                {entry.activityName ?? entry.activityId}
-              </div>
-              <div className="text-muted-foreground truncate font-mono text-xs">
-                {entry.activityType}
-              </div>
-            </Td>
-            <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
-              {formatTimestamp(entry.startTime)}
-            </Td>
-            <Td align="right" className="text-muted-foreground py-2 font-mono text-xs">
-              {formatDuration(entry.durationInMillis)}
-            </Td>
-            <Td align="right" className="py-2">
-              {entry.canceled ? (
-                <Badge variant="secondary">{t("incidentHistory.statusCanceled")}</Badge>
-              ) : entry.endTime ? (
-                <Badge variant="secondary">{t("incidentHistory.statusCompleted")}</Badge>
-              ) : (
-                <Badge variant="default">{t("incidentHistory.statusRunning")}</Badge>
-              )}
-            </Td>
-          </tr>
-        ))}
-      </ListTable>
-    </div>
-  )
-}
-
-/**
  * Shell-less activity history — THE component family for historic activity
  * instances. Two variants of the same rows and formatting:
  *  - `"timeline"` (default): the rich vertical dot timeline with duration
@@ -200,16 +115,20 @@ export function HistoryTimelineView({
   processInstance,
   engineId,
   totalActivities,
+  incidentActivityIds,
   variant = "timeline",
 }: {
   activities: HistoryEntry[]
   processInstance?: HistoryTimelineData["processInstance"]
   engineId?: string
   totalActivities?: number
+  /** Activities with an open incident on this instance — their running step is marked. */
+  incidentActivityIds?: readonly string[] | null
   variant?: "timeline" | "table"
 }) {
   const t = useT()
   const { ask } = useHandOff()
+  const incidentIds = new Set(incidentActivityIds ?? [])
   if (activities.length === 0) {
     return (
       <TableEmptyState>
@@ -219,7 +138,7 @@ export function HistoryTimelineView({
   }
 
   if (variant === "table") {
-    return <HistoryTable entries={activities} />
+    return <HistoryTable entries={activities} incidentIds={incidentIds} />
   }
 
   // Duration outliers: only surface the per-row "explain duration" hand-off
@@ -242,13 +161,16 @@ export function HistoryTimelineView({
   return (
     <div className="flex flex-col gap-4">
       {processInstance && (
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold">
-              {processInstance.processDefinitionName ?? processInstance.processDefinitionKey}
-            </h2>
-            <div className="text-muted-foreground mt-1 flex items-center gap-3 text-sm">
-              <Badge variant="secondary">{processInstance.state}</Badge>
+        <WidgetHeader
+          badge={
+            <StatusBadge tone={instanceStateLabel(t, processInstance.state).tone}>
+              {instanceStateLabel(t, processInstance.state).label}
+            </StatusBadge>
+          }
+          title={processInstance.processDefinitionName ?? processInstance.processDefinitionKey}
+          sub={
+            <>
+              <EngineMeta engineId={engineId} />
               <span>
                 {t("historyTimeline.started", {
                   time: formatTimestamp(processInstance.startTime),
@@ -261,52 +183,69 @@ export function HistoryTimelineView({
                   })}
                 </span>
               )}
-            </div>
-          </div>
-          <HandOffButton
-            action="explainTimeline"
-            variant="primary"
-            prompt={ask(
-              explainInstanceHandOff(
-                processInstance,
-                engineId,
-                totalActivities ?? activities.length,
-              ),
-            )}
-          />
-        </div>
+            </>
+          }
+          actions={
+            <HandOffButton
+              action="explainTimeline"
+              prompt={ask(
+                explainInstanceHandOff(
+                  processInstance,
+                  engineId,
+                  totalActivities ?? activities.length,
+                ),
+              )}
+            />
+          }
+        />
       )}
 
       <ol className="flex flex-col gap-1" aria-label={t("historyTimeline.timelineLabel")}>
         {activities.map((activity, index) => {
-          const color = ACTIVITY_COLORS[activity.activityType] ?? ACTIVITY_COLOR_FALLBACK
+          const state = historyStepState(activity, incidentIds)
           return (
             <li key={activity.id} className="flex items-center gap-3">
               <div className="flex flex-col items-center">
-                <div className={`size-3 rounded-full ${color}`} aria-hidden="true" />
+                <div
+                  className={cn(
+                    "size-3 rounded-full",
+                    TONE_DOT[STEP_TONE[state]],
+                    state === "incident" &&
+                      "ring-danger ring-offset-background ring-2 ring-offset-2",
+                  )}
+                  aria-hidden="true"
+                />
                 {index < activities.length - 1 && (
                   <div className="bg-border h-6 w-0.5" aria-hidden="true" />
                 )}
               </div>
-              <Card className="flex-1 gap-0 py-0 shadow-none">
-                <CardContent className="flex items-center justify-between px-3 py-2">
-                  <div>
-                    <span className="text-sm font-medium">
+              <Card
+                className={cn(
+                  "flex-1 gap-0 py-0 shadow-none",
+                  state === "incident" && "border-danger",
+                )}
+              >
+                <CardContent className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                  <div className="min-w-0">
+                    <span className="text-dense font-medium">
                       {activity.activityName ?? activity.activityId}
                     </span>
-                    <span className="text-muted-foreground ml-2 text-xs">
+                    <span className="text-muted-foreground text-small ml-2">
                       {activity.activityType}
                     </span>
                     {activity.assignee && (
-                      <span className="text-info-ink ml-2 text-xs">@{activity.assignee}</span>
+                      <span className="text-muted-foreground text-small ml-2">
+                        {t("historyTimeline.assignedTo", { assignee: activity.assignee })}
+                      </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-xs">
-                      {activity.durationInMillis == null
-                        ? t("incidentHistory.statusRunning")
-                        : formatDuration(activity.durationInMillis)}
-                    </span>
+                    {(state === "incident" || state === "running") && <StepBadge state={state} />}
+                    {activity.durationInMillis != null && (
+                      <span className="text-muted-foreground text-small">
+                        {formatDuration(activity.durationInMillis)}
+                      </span>
+                    )}
                     {isOutlier(activity.durationInMillis) && (
                       <HandOffButton
                         action="explainDuration"
@@ -351,6 +290,7 @@ export function PagedHistoryView({
   variant = "timeline",
   initialPage = null,
   processInstance,
+  incidentActivityIds,
 }: {
   processInstanceId: string
   /** Explicit engine routing; omitted → the caller's saved default engine. */
@@ -360,6 +300,8 @@ export function PagedHistoryView({
   initialPage?: HistoryPage | null
   /** Instance summary header (timeline variant only). */
   processInstance?: HistoryTimelineData["processInstance"]
+  /** Activities with an open incident on this instance — their running step is marked. */
+  incidentActivityIds?: readonly string[] | null
 }) {
   const t = useT()
   const args: Record<string, unknown> = {
@@ -391,7 +333,7 @@ export function PagedHistoryView({
         </Alert>
       )
     }
-    return <p className="text-muted-foreground text-sm">{t("historyTimeline.loading")}</p>
+    return <p className="text-muted-foreground text-dense">{t("historyTimeline.loading")}</p>
   }
 
   return (
@@ -402,6 +344,7 @@ export function PagedHistoryView({
         processInstance={processInstance}
         engineId={engine}
         totalActivities={paged.total}
+        incidentActivityIds={incidentActivityIds}
       />
       <PagedListFooter paged={paged} noun={t("historyTimeline.footerNoun")} />
     </div>
@@ -475,6 +418,7 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
           engine={data.engineId}
           initialPage={initialPage}
           processInstance={data.processInstance}
+          incidentActivityIds={data.incidentActivityIds}
         />
       ) : (
         // Unknown to history: nothing to page (and no id to scope a page by).
@@ -482,6 +426,7 @@ export function HistoryTimelineWidget({ data }: { data: HistoryTimelineData | nu
           activities={data.activities}
           engineId={data.engineId}
           totalActivities={data.totalActivities}
+          incidentActivityIds={data.incidentActivityIds}
         />
       )}
     </WidgetShell>

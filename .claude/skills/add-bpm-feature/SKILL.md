@@ -234,8 +234,21 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
   clickable cell says what the click does in `actionHint`, never `ariaLabel`);
   `WidgetShell` (page container, split into View + Shell only when the body is embedded
   elsewhere)
+- Where and what (#322 U4, U13): a show view's `WidgetHeader` `sub` starts with
+  `<EngineMeta engineId={…} asOf={…} />` (`widgets/lib/engine-context.tsx`: the
+  environment as a text chip, "PROD", and the engine through the kit's `ViewMeta`; inside
+  the cockpit, whose head names the engine, only the time); a write confirmation adds
+  `engineTargetLines(t, engineId, useEngineEnvironment(engineId))`. Names before ids
+  (`widgets/lib/identity.tsx`): `NamedId` (an activity's or process's name, the id a quiet
+  mono line), `InstanceLabel` (the business key, the UUID a copyable `IdText` chip; the
+  words of `instanceName`); a drill passes the target's `label` so its breadcrumb reads
+  the name. The builder reads names as enrichment (`fetchNamesByDefinition`,
+  `fetchDefinitionsById`, `fetchBusinessKeys`). A row keeps ONE deterministic action;
+  its vendor link and chat hand-offs sit behind `MoreActions`
 - Status: a `ToneVariant` (`danger`/`warning`/`success`/`info`/`neutral`; open incident or
-  failed job without retries = `danger`, retries left or degraded = `warning`) shown via
+  failed job without retries = `danger` — `severityTone`/`countTone` in
+  `widgets/cockpit-dashboard/lib.ts` is the one ladder for incident and job counts, a count
+  without a state stays neutral —, retries left or degraded = `warning`) shown via
   the toolkit's `StatusBadge` (tone and words required)/`CountPill`/`KpiCell.tone` or its
   `TONE_DOT`/`TONE_BORDER`/`TONE_ICON`/`TONE_TINT`/`TONE_SOFT`/`TONE_INK` maps (a tone
   from the wire through `resolveTone`), next to readable words; never a coloured

@@ -10,6 +10,7 @@ import { DrillButton, StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { EngineMeta } from "../lib/engine-context.js"
 import { useT } from "../../messages/use-t.js"
 import { diagramActivityFraction } from "./activity-scope.js"
 import { useDefinitionData } from "./feed.js"
@@ -70,12 +71,13 @@ function HeaderBadge({ data }: { data: ProcessIncidentsData }) {
  * Sub line: definition key + its scope (every version — the view is key-wide),
  * running-instance count, last event, cockpit link.
  */
-function HeaderSub({ data }: { data: ProcessIncidentsData }) {
+function HeaderSub({ data, engine }: { data: ProcessIncidentsData; engine?: string }) {
   const t = useT()
   const cockpitUrl = data.cockpitUrl
   return (
     <>
-      <span className="font-mono text-xs">{data.processDefinitionKey}</span>
+      <EngineMeta engineId={engine ?? data.engineId} />
+      <span className="font-mono">{data.processDefinitionKey}</span>
       <span className="text-muted-foreground">·</span>
       <span>{t("procIncHeader.allVersions")}</span>
       <span className="text-muted-foreground">·</span>
@@ -143,11 +145,10 @@ export function ProcessDetailHeader({
         size="detail"
         badge={<HeaderBadge data={data} />}
         title={title}
-        sub={<HeaderSub data={data} />}
+        sub={<HeaderSub data={data} engine={engine} />}
         actions={
           <HandOffButton
             action="assess"
-            variant="primary"
             prompt={ask(triageProcessHandOff(data, engine ?? data.engineId))}
           />
         }

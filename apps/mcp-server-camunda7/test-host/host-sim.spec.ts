@@ -1336,14 +1336,22 @@ test.describe("cockpit (camunda7_open_cockpit)", () => {
     })
     await expect(app.getByLabel("Selected engine")).toHaveValue(HEALTHY_ENGINE, { timeout: 15_000 })
     await expect(app.getByRole("navigation", { name: "Cockpit sections" })).toBeVisible()
-    await expect(app.getByText("Work with one engine", { exact: true })).toHaveCount(0)
+    await expect(app.getByRole("heading", { level: 1, name: "Operations Cockpit" })).toHaveCount(0)
   })
 
+  // #322 U15: the picker is the engine list, each engine's state in words in
+  // its accessible name — an unreachable engine says so, never a grey dot.
   test("without one, shows the engine picker", async ({ page }) => {
     const app = await openView(page, { tool: "camunda7_open_cockpit", args: {} })
-    await expect(app.getByText("Work with one engine", { exact: true })).toBeVisible({
+    await expect(app.getByRole("heading", { level: 1, name: "Operations Cockpit" })).toBeVisible({
       timeout: 15_000,
     })
+    await expect(
+      app.getByRole("button", { name: new RegExp(`^${HEALTHY_ENGINE}\\b`) }),
+    ).toBeVisible()
+    await expect(
+      app.getByRole("button", { name: new RegExp(`^${BROKEN_ENGINE}\\b.*\\bunreachable$`) }),
+    ).toBeVisible({ timeout: 15_000 })
     await expect(app.getByLabel("Selected engine")).toHaveCount(0)
   })
 })

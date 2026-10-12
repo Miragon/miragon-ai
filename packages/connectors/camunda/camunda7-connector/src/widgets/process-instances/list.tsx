@@ -8,6 +8,7 @@ import {
   TableEmptyState,
   TableSkeleton,
   Td,
+  VersionChip,
   WidgetShell,
   usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
@@ -30,6 +31,8 @@ import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { InstancesHeader } from "./list-header.js"
 import { useHandOff } from "../lib/hand-off.js"
 import { describeInstancesView, rootCauseHandOff, type InstanceChip } from "./hand-offs.js"
+import { InstanceLabel, NamedId } from "../lib/identity.js"
+import { instanceName } from "../lib/write-feedback.js"
 import { useT } from "../../messages/use-t.js"
 
 const PAGE_SIZE = 50
@@ -68,8 +71,8 @@ function InstanceRow({
   engine: string | undefined
   /** Engine-wide list: each row names (and drills into) its own definition. */
   showProcessColumn: boolean
-  onOpen: (processInstanceId: string) => void
-  onOpenProcess: (processDefinitionKey: string) => void
+  onOpen: (row: ProcessInstanceRow) => void
+  onOpenProcess: (row: ProcessInstanceRow) => void
 }) {
   const t = useT()
   const { ask } = useHandOff()
@@ -77,44 +80,43 @@ function InstanceRow({
   return (
     <tr className="hover:bg-muted transition-colors">
       <Td>
-        <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
-          <span className={`size-1.5 rounded-full ${TONE_DOT[tone]}`} />
-          <span className="truncate">{row.businessKey ?? "—"}</span>
-        </div>
-        <div className="text-muted-foreground mt-0.5 font-mono text-xs">{row.id}</div>
+        {/* One instance label (#322 U13): the business key, the UUID a
+            copyable chip beside it — never a three-line UUID. */}
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${TONE_DOT[tone]}`} />
+          <InstanceLabel id={row.id} businessKey={row.businessKey} />
+        </span>
       </Td>
       {showProcessColumn && (
         <Td>
           {row.processDefinitionKey ? (
             <button
               type="button"
-              onClick={() => onOpenProcess(row.processDefinitionKey ?? "")}
-              className="text-link font-mono text-xs hover:underline"
+              onClick={() => onOpenProcess(row)}
+              className="text-link text-left hover:underline"
               aria-label={t("processInstances.openProcessAria", {
-                key: row.processDefinitionKey,
+                key: row.processDefinitionName ?? row.processDefinitionKey,
               })}
             >
-              {row.processDefinitionKey}
+              <NamedId name={row.processDefinitionName} id={row.processDefinitionKey} />
             </button>
           ) : (
-            <span className="text-muted-foreground font-mono text-xs">—</span>
+            <span className="text-muted-foreground">—</span>
           )}
         </Td>
       )}
       <Td>
         {row.version !== null ? (
-          <span className="border-border bg-muted text-muted-foreground inline-block rounded border px-1.5 py-0.5 font-mono text-xs">
-            v{row.version}
-          </span>
+          <VersionChip version={row.version} />
         ) : (
-          <span className="text-muted-foreground font-mono text-xs">—</span>
+          <span className="text-muted-foreground">—</span>
         )}
       </Td>
       <Td>
         {row.suspended ? (
           <StatusBadge tone="warning">{t("processInstances.stateSuspended")}</StatusBadge>
         ) : (
-          <span className="text-muted-foreground text-xs">
+          <span className="text-muted-foreground text-small">
             {t("processInstances.stateRunning")}
           </span>
         )}
@@ -125,14 +127,16 @@ function InstanceRow({
             <Icon icon={TriangleAlert} dense label={t("processInstances.hasIncident")} />
           </CountPill>
         ) : (
-          <span className="text-muted-foreground font-mono text-xs">—</span>
+          <span className="text-muted-foreground">—</span>
         )}
       </Td>
       <Td align="right">
         <div className="inline-flex items-center justify-end gap-1">
           <DrillButton
-            onDrill={() => onOpen(row.id)}
-            ariaLabel={t("processInstances.openInstanceAria", { name: row.businessKey ?? row.id })}
+            onDrill={() => onOpen(row)}
+            ariaLabel={t("processInstances.openInstanceAria", {
+              name: instanceName(row.id, row.businessKey),
+            })}
           >
             {t("processInstances.openButton")}
           </DrillButton>
@@ -378,8 +382,21 @@ export function ProcessInstancesView({
                 processDefinitionKey={scopedKey}
                 engine={feedEngine}
                 showProcessColumn={!scopedKey}
-                onOpen={(id) => go({ type: "instance-detail", processInstanceId: id })}
-                onOpenProcess={(key) => go({ type: "process-detail", processDefinitionKey: key })}
+                onOpen={(instance) =>
+                  go({
+                    type: "instance-detail",
+                    processInstanceId: instance.id,
+                    label: instanceName(instance.id, instance.businessKey),
+                  })
+                }
+                onOpenProcess={(instance) => {
+                  if (!instance.processDefinitionKey) return
+                  go({
+                    type: "process-detail",
+                    processDefinitionKey: instance.processDefinitionKey,
+                    label: instance.processDefinitionName ?? undefined,
+                  })
+                }}
               />
             ))}
           </ListTable>

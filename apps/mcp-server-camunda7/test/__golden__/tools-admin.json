@@ -4247,15 +4247,6 @@
             "type": "string"
           },
           "type": "array"
-        },
-        "preferredRole": {
-          "description": "Preferred operations role (UI hint only; tool exposure is set by the connection toolset).",
-          "enum": [
-            "read-only",
-            "operations",
-            "admin"
-          ],
-          "type": "string"
         }
       },
       "type": "object"

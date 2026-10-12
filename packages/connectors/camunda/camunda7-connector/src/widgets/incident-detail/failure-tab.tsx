@@ -1,18 +1,20 @@
 import {
   Alert,
   AlertDescription,
-  Badge,
   Button,
-  Card,
-  CardContent,
-  SectionHeading,
+  MICRO_LABEL,
+  StatusBadge,
+  cn,
 } from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
+  Icon,
+  IdText,
   LogText,
   formatNumber,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
+import { Check, RotateCcw } from "lucide-react"
 
 import type { IncidentDetailData, IncidentDetailJob } from "../../view-models.js"
 
@@ -62,17 +64,8 @@ export function explainErrorHandOff(data: IncidentDetailData): HandOff {
   }
 }
 
-export function FailureTab({
-  data,
-  resolved,
-  onResolve,
-  resolving,
-  onRetry,
-  retrying,
-  retried,
-  retryError,
-}: {
-  data: IncidentDetailData
+/** The remedy controls of the failure block — the one write that clears THIS incident. */
+export interface RemedyProps {
   resolved: boolean
   /** Omitted when the deployment's toolset has no resolve tool — no button. */
   onResolve?: () => void
@@ -82,78 +75,33 @@ export function FailureTab({
   retrying: boolean
   retried: boolean
   retryError?: string | null
-}) {
-  return (
-    <div className="flex flex-col gap-4">
-      <FactsCard data={data} />
-      <ActionsRow
-        data={data}
-        resolved={resolved}
-        onResolve={onResolve}
-        resolving={resolving}
-        onRetry={onRetry}
-        retrying={retrying}
-        retried={retried}
-        retryError={retryError}
-      />
-      <ErrorMessageSection data={data} />
-      {data.job && <StacktraceSection job={data.job} />}
-    </div>
-  )
 }
 
-function FactsCard({ data }: { data: IncidentDetailData }) {
+/**
+ * The facts of the incident as ONE wrapping line instead of a KPI strip
+ * whose tiles cut "10/10/202" (#322 U12): when it happened, the retries its
+ * job has left, how long its history is. The type is the header's badge.
+ */
+function FactLine({ data }: { data: IncidentDetailData }) {
   const t = useT()
-  const job = data.job
-  return (
-    <Card className="gap-0 py-0 shadow-none">
-      <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2">
-        <div>
-          <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            {t("incidentFailure.incidentType")}
-          </div>
-          <div className="font-mono text-sm">{data.incidentType}</div>
-        </div>
-        <div>
-          <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            {t("incidentFailure.activity")}
-          </div>
-          <div className="text-sm">
-            {data.activityName ?? data.activityId}
-            {data.activityName && (
-              <span className="text-muted-foreground ml-2 font-mono text-xs">
-                ({data.activityId})
-              </span>
-            )}
-          </div>
-        </div>
-        <div>
-          <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            {t("incidentFailure.occurredAt")}
-          </div>
-          <div className="text-muted-foreground font-mono text-xs">
-            {formatTimestamp(data.incidentTimestamp)}
-          </div>
-        </div>
-        {job && (
-          <div>
-            <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-              {t("incidentFailure.job")}
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <code className="font-mono text-xs">{job.id}</code>
-              <Badge variant={job.retries > 0 ? "secondary" : "destructive"}>
-                {t("incidentFailure.retriesLeft", { count: formatNumber(job.retries) })}
-              </Badge>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
+  const facts = [
+    t("incidentFailure.factOccurred", { time: formatTimestamp(data.incidentTimestamp) }),
+    data.job ? t("incidentFailure.retriesLeft", { count: formatNumber(data.job.retries) }) : null,
+    data.historyTotalCount !== null
+      ? t("incidentFailure.factHistory", { count: formatNumber(data.historyTotalCount) })
+      : null,
+  ].filter((fact): fact is string => fact !== null)
+  return <p className="text-muted-foreground text-small break-words">{facts.join(" · ")}</p>
 }
 
-function ActionsRow({
+/**
+ * The failure first (#322 U12): right under the head, what went wrong — the
+ * engine's error text — and what clears it. The deterministic remedy is the
+ * view's ONE primary (blue) button (#322 U11): Retry for a failed job or
+ * external task, "Als gelöst markieren" for a custom incident; the chat
+ * hand-offs follow it as secondary buttons. Done, it says so with a check.
+ */
+export function FailureSummary({
   data,
   resolved,
   onResolve,
@@ -162,50 +110,49 @@ function ActionsRow({
   retrying,
   retried,
   retryError,
-}: {
-  data: IncidentDetailData
-  resolved: boolean
-  /** Omitted when the deployment's toolset has no resolve tool — no button. */
-  onResolve?: () => void
-  resolving: boolean
-  /** Omitted when the deployment's toolset has no retry tool — no button. */
-  onRetry?: () => void
-  retrying: boolean
-  retried: boolean
-  retryError?: string | null
-}) {
+}: { data: IncidentDetailData } & RemedyProps) {
   const t = useT()
   const { ask } = useHandOff()
   return (
-    <div className="flex flex-col gap-1.5">
-      {/* The deterministic recovery first; the chat hand-off follows it. */}
+    <section aria-labelledby="incident-failure" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="incident-failure" className={cn("text-muted-foreground", MICRO_LABEL)}>
+          {t("incidentFailure.errorMessageTitle")}
+        </h2>
+        <HandOffButton action="explainError" prompt={ask(explainErrorHandOff(data))} />
+      </div>
+      <LogText text={errorText(data)} />
       <div className="flex flex-wrap items-center gap-2">
-        {onRetry && (
-          <RetryButton data={data} onRetry={onRetry} retrying={retrying} retried={retried} />
-        )}
-        {resolved ? (
-          <Badge variant="secondary">{t("incidentDetail.resolved")}</Badge>
+        {retried || resolved ? (
+          <StatusBadge tone="success">
+            <Icon icon={Check} dense />
+            {retried ? t("incidentFailure.retriedButton") : t("incidentDetail.resolved")}
+          </StatusBadge>
         ) : (
-          onResolve && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onResolve}
-              disabled={resolving}
-              aria-label={t("incidentFailure.resolveAria")}
-            >
-              {t("incidentFailure.resolveButton")}
-            </Button>
-          )
+          <>
+            {onRetry && <RetryButton data={data} onRetry={onRetry} retrying={retrying} />}
+            {onResolve && (
+              <Button
+                size="sm"
+                onClick={onResolve}
+                disabled={resolving}
+                aria-label={t("incidentFailure.resolveAria")}
+              >
+                <Icon icon={Check} />
+                {t("incidentFailure.resolveButton")}
+              </Button>
+            )}
+          </>
         )}
         <HandOffButton action="draftTicket" prompt={ask(draftTicketHandOff(data))} />
       </div>
       {retryError && (
-        <p role="alert" className="text-danger-ink text-xs">
+        <p role="alert" className="text-danger-ink text-small">
           {t("incidentFailure.retryError", { message: retryError })}
         </p>
       )}
-    </div>
+      <FactLine data={data} />
+    </section>
   )
 }
 
@@ -214,66 +161,61 @@ function RetryButton({
   data,
   onRetry,
   retrying,
-  retried,
 }: {
   data: IncidentDetailData
   onRetry: () => void
   retrying: boolean
-  retried: boolean
 }) {
   const t = useT()
   const task = recoveryOf(data).action === "retry-external-task"
   const aria = task ? t("incidentFailure.retryTaskAria") : t("incidentFailure.retryAria")
-  const retriedAria = task ? t("incidentFailure.retriedTaskAria") : t("incidentFailure.retriedAria")
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={onRetry}
-      disabled={retrying || retried}
-      title={aria}
-      aria-label={retried ? retriedAria : aria}
-    >
-      {retried
-        ? t("incidentFailure.retriedButton")
-        : task
-          ? t("incidentFailure.retryTaskButton")
-          : t("incidentFailure.retryButton")}
+    <Button size="sm" onClick={onRetry} disabled={retrying} title={aria} aria-label={aria}>
+      <Icon icon={RotateCcw} />
+      {task ? t("incidentFailure.retryTaskButton") : t("incidentFailure.retryButton")}
     </Button>
   )
 }
 
-function ErrorMessageSection({ data }: { data: IncidentDetailData }) {
+/**
+ * The technical depth behind the failure: the job (its id to copy) and its
+ * full stacktrace — the second look, after the message above.
+ */
+export function StacktraceTab({ data }: { data: IncidentDetailData }) {
   const t = useT()
-  const { ask } = useHandOff()
+  const job = data.job
+  if (!job) {
+    return (
+      <Alert>
+        <AlertDescription>{t("incidentFailure.noStacktrace")}</AlertDescription>
+      </Alert>
+    )
+  }
   return (
-    <div>
-      <SectionHeading
-        title={t("incidentFailure.errorMessageTitle")}
-        trailing={<HandOffButton action="explainError" prompt={ask(explainErrorHandOff(data))} />}
-      />
-      <LogText text={data.incidentMessage ?? data.job?.exceptionMessage} />
+    <div className="flex flex-col gap-3">
+      <p className="text-muted-foreground text-small inline-flex items-center gap-2">
+        {t("incidentFailure.job")} <IdText value={job.id} />
+      </p>
+      <StacktraceSection job={job} />
     </div>
   )
 }
 
 function StacktraceSection({ job }: { job: IncidentDetailJob }) {
   const t = useT()
+  if (!job.stacktrace) {
+    return (
+      <Alert>
+        <AlertDescription>{t("incidentFailure.noStacktrace")}</AlertDescription>
+      </Alert>
+    )
+  }
   return (
-    <div>
-      <SectionHeading
-        title={t("incidentFailure.stacktraceTitle")}
-        hint={job.stacktrace ? undefined : t("incidentFailure.stacktraceUnavailableHint")}
-      />
-      {job.stacktrace ? (
-        <pre className="border-border bg-card text-foreground max-h-[480px] overflow-auto rounded-lg border p-3 font-mono text-[11px] leading-relaxed">
-          {job.stacktrace}
-        </pre>
-      ) : (
-        <Alert>
-          <AlertDescription>{t("incidentFailure.noStacktrace")}</AlertDescription>
-        </Alert>
-      )}
-    </div>
+    <pre
+      aria-label={t("incidentFailure.stacktraceTitle")}
+      className="border-border bg-card text-foreground text-small max-h-[480px] overflow-auto rounded-md border p-3 font-mono leading-relaxed"
+    >
+      {job.stacktrace}
+    </pre>
   )
 }

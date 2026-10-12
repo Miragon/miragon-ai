@@ -122,6 +122,7 @@ export function InstanceDetailWidget({
           instanceId={instance.id}
           definitionId={instance.definitionId}
           engineId={engineId}
+          incidentActivityIds={data.incidentActivityIds}
         />
       ),
     },
@@ -137,6 +138,7 @@ export function InstanceDetailWidget({
           {notice}
           <InstanceHeader
             instance={instance}
+            processName={data.processDefinitionName}
             status={status}
             engineId={engineId}
             activeActivityIds={data.activeActivityIds}

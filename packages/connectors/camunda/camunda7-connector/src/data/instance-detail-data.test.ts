@@ -80,6 +80,28 @@ describe("buildInstanceDetailData", () => {
     expect(data.activeActivityIds).toEqual(["root", "A1"])
     expect(data.incidentActivityIds).toEqual(["A1"])
     expect(data.engineId).toBe("engine-a")
+    // A diagram without a named process element names none.
+    expect(data.processDefinitionName).toBeNull()
+  })
+
+  it("names the process from its diagram and each incident row by the instance's business key", async () => {
+    mockedInstance.mockResolvedValueOnce({
+      id: "p1",
+      definitionId: "K1:3:dep",
+      businessKey: "LEA-2026-00424",
+    })
+    mockedBpmn.mockResolvedValueOnce({
+      bpmn20Xml:
+        '<definitions><process id="K1" name="Miravelo Bike Leasing"><task id="A1" name="Check"/></process></definitions>',
+    })
+    mockedIncidents.mockResolvedValueOnce([
+      { id: "i1", processInstanceId: "p1", activityId: "A1", incidentType: "failedJob" },
+    ] as never)
+
+    const data = await buildInstanceDetailData(fakeClient, "engine-a", { processInstanceId: "p1" })
+
+    expect(data.processDefinitionName).toBe("Miravelo Bike Leasing")
+    expect(data.incidents.map((i) => i.businessKey)).toEqual(["LEA-2026-00424"])
   })
 
   it("builds per-incident cockpit links when engine urls are supplied", async () => {

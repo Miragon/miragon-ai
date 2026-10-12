@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
@@ -27,27 +27,46 @@ afterEach(() => {
   queryClient.setDefaultOptions(toolkitDefaults)
 })
 
-const ENGINES = [{ id: "prod-a" }, { id: "prod-b" }, { id: "prod-c" }]
+const ENGINES = [
+  { id: "prod-a", environment: "prod" },
+  { id: "prod-b", environment: "prod" },
+  { id: "test-down", environment: "test" },
+  { id: "test-empty", environment: "test" },
+  { id: "test-slow", environment: "test" },
+  { id: "test-stuck", environment: "test" },
+]
 
-/** Per-engine overview feed: prod-a has open incidents, prod-b is healthy, prod-c unreachable. */
+/**
+ * Per-engine overview feed: prod-a has open incidents, prod-b is healthy,
+ * test-down is unreachable, test-empty has nothing deployed, test-slow never
+ * answers, test-stuck holds jobs without retries.
+ */
 function overviewFeed(args: Record<string, unknown>) {
-  if (args.engine === "prod-c") throw new Error("ECONNREFUSED")
-  const incidents = args.engine === "prod-a" ? 3 : 0
+  if (args.engine === "test-down") throw new Error("ECONNREFUSED")
+  if (args.engine === "test-slow") return new Promise(() => {})
   return {
     summary: {
-      totalDefinitions: 2,
-      totalRunningInstances: 10,
-      totalFailedJobs: 0,
-      totalIncidents: incidents,
+      totalDefinitions: args.engine === "test-empty" ? 0 : 2,
+      totalRunningInstances: args.engine === "test-empty" ? 0 : 10,
+      totalFailedJobs: args.engine === "test-stuck" ? 4 : 0,
+      totalIncidents: args.engine === "prod-a" ? 18 : 0,
     },
     definitions: [],
     engineId: args.engine,
   }
 }
 
-function renderLanding(onOpenFleet?: () => void) {
+function renderLanding(
+  onOpenFleet?: () => void,
+  engines: Array<{ id: string; environment?: string }> = ENGINES,
+) {
   const Landing: ComponentType<Record<string, unknown>> = () => (
-    <LandingChooser engines={ENGINES} onEnterEngine={() => {}} onOpenFleet={onOpenFleet} />
+    <LandingChooser
+      engines={engines}
+      defaultEngineId="prod-b"
+      onEnterEngine={() => {}}
+      onOpenFleet={onOpenFleet}
+    />
   )
   render(
     <WidgetFixtureHost
@@ -58,28 +77,52 @@ function renderLanding(onOpenFleet?: () => void) {
   )
 }
 
+// #322 U15: the landing is the product signature over a dense engine list.
 describe("LandingChooser", () => {
+  it("signs the app: Miragon AI over Operations Cockpit, with the Komet", () => {
+    renderLanding()
+    expect(screen.getByRole("heading", { level: 1, name: "Operations Cockpit" })).toBeTruthy()
+    expect(screen.getByText("Miragon AI")).toBeTruthy()
+    expect(document.querySelector("[data-brand-mark='komet']")).toBeTruthy()
+  })
+
   it("offers the cross-engine view only when the cockpit passes it in", () => {
     renderLanding(() => {})
-    expect(screen.getByText("Cross-engine analyses")).toBeTruthy()
-    expect(screen.getByText(/or analyze all of them together/)).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Compare across engines" })).toBeTruthy()
+    cleanup()
+    renderLanding(undefined)
+    expect(screen.queryByRole("button", { name: "Compare across engines" })).toBeNull()
   })
 
-  it("without analytics: no fleet card, and the subtitle promises no fleet analysis", () => {
-    renderLanding(undefined)
-    expect(screen.queryByText("Cross-engine analyses")).toBeNull()
-    expect(screen.getByText("3 engines configured. Pick an engine.")).toBeTruthy()
+  it("lists every engine at once, grouped by environment", () => {
+    renderLanding()
+    expect(screen.getByRole("region", { name: "Environment PROD" })).toBeTruthy()
+    const test = screen.getByRole("region", { name: "Environment TEST" })
+    expect(within(test).getAllByRole("button")).toHaveLength(4)
+    expect(screen.getByText("6 engines in 2 environments. Pick one to work with.")).toBeTruthy()
   })
 
-  it("shows each engine's live health on the picker buttons", async () => {
-    renderLanding(undefined)
-    const prodA = await screen.findByRole("button", { name: /prod-a.*3 incidents/ })
-    expect(prodA).toBeTruthy()
-    expect(await screen.findByRole("button", { name: /prod-c.*Status unavailable/ })).toBeTruthy()
-    // A healthy engine carries no incident text — only its dot.
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /prod-b/ }).textContent).not.toMatch(/incident/),
-    )
+  it("names each engine's state in words inside its button", async () => {
+    renderLanding()
+    expect(await screen.findByRole("button", { name: /^prod-a\s*,\s*18 incidents$/ })).toBeTruthy()
+    expect(
+      await screen.findByRole("button", { name: /^test-down\s*,\s*unreachable$/ }),
+    ).toBeTruthy()
+    expect(await screen.findByRole("button", { name: /^test-empty\s*,\s*empty$/ })).toBeTruthy()
+    expect(await screen.findByRole("button", { name: /^test-slow\s*,\s*loading…$/ })).toBeTruthy()
+    expect(
+      await screen.findByRole("button", { name: /^test-stuck\s*,\s*4 jobs without retries$/ }),
+    ).toBeTruthy()
+    // The saved default says so.
+    expect(
+      await screen.findByRole("button", { name: /^prod-b\s*default\s*,\s*no incidents$/ }),
+    ).toBeTruthy()
+  })
+
+  it("no named environment: one flat list, no environment heading", () => {
+    renderLanding(undefined, [{ id: "solo-a" }, { id: "solo-b" }])
+    expect(screen.queryByRole("heading", { level: 2 })).toBeNull()
+    expect(screen.getByText("2 engines configured. Pick one to work with.")).toBeTruthy()
   })
 })
 

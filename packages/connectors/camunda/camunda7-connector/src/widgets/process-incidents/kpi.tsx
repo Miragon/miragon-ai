@@ -55,11 +55,13 @@ export function ProcessDefinitionKpi({
       }
     : { label: t("procIncKpi.activitiesAffected"), value: formatNumber(data.activities.length) }
 
+  // One severity ladder (#322 U14): open incidents and jobs without retries
+  // are danger while there are any; running instances and the 24 h count are
+  // counts — neutral, never a green or red digit.
   const cells: KpiCell[] = [
     {
       label: t("procIncKpi.running"),
       value: formatNumber(data.runningInstances),
-      tone: data.runningInstances > 0 ? "success" : undefined,
       onClick: () =>
         go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey }),
       // Named by its visible label and value (WCAG 2.5.3); the hint says
@@ -74,12 +76,11 @@ export function ProcessDefinitionKpi({
     {
       label: t("procIncKpi.last24h"),
       value: `+${formatNumber(data.last24hCount)}`,
-      tone: data.last24hCount > 0 ? "danger" : undefined,
     },
     {
       label: t("procIncKpi.failedJobs"),
       value: formatNumber(data.failedJobs),
-      tone: data.failedJobs > 0 ? "warning" : undefined,
+      tone: data.failedJobs > 0 ? "danger" : undefined,
     },
     activitiesCell,
   ]

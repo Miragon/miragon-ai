@@ -203,6 +203,7 @@ describe("a result stored before `recovery` existed still renders", () => {
       processInstanceId: "pi-1",
       incidentTimestamp: "2026-10-09T09:30:00.000+0000",
       cockpitInstanceUrl: null,
+      businessKey: null,
     }))
     const Rows: ComponentType<Record<string, unknown>> = () => {
       const recovery = useIncidentRecovery("prod", { resetOn: rows })

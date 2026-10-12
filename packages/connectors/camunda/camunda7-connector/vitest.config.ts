@@ -47,8 +47,11 @@ export default mergeConfig(
         // localized verdict and hand-off suites and the view-title tests
         // (#322; measured 88.05 / 76.85 / 87.3 / 89.19). Branches raised with
         // the toolkit 2.8 review fixes (every search box rendered by its name,
-        // en and de): measured 88.27 / 77.51 / 87.47 / 89.4.
-        thresholds: { statements: 86, branches: 75, functions: 85, lines: 87 },
+        // en and de): measured 88.27 / 77.51 / 87.47 / 89.4. Raised 2026-10-12
+        // with the camunda7 CI pass (#322: names, business keys, job order,
+        // history marks, cockpit head, landing, settings save bar; measured
+        // 88.96 / 78.13 / 88.69 / 90.08).
+        thresholds: { statements: 88, branches: 77, functions: 88, lines: 89 },
       },
     },
   }),

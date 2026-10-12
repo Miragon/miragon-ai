@@ -67,7 +67,7 @@ function OpenTaskCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col">
             <div className="font-medium">{task.name ?? task.taskDefinitionKey}</div>
-            <div className="text-muted-foreground font-mono text-xs">
+            <div className="text-muted-foreground text-small font-mono">
               {task.taskDefinitionKey}
               {task.assignee && <> · {t("instanceDetail.assignee", { name: task.assignee })}</>}
               {!task.assignee && <> · {t("instanceDetail.unassigned")}</>}
@@ -123,7 +123,7 @@ export function OpenTasksTab({
   const canComplete = complete.allowed
   if (visibleTasks.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
+      <p className="text-muted-foreground text-dense">
         {(openTasks ?? []).length > 0
           ? t("instanceDetail.tasksAllCompleted")
           : t("instanceDetail.noOpenTasks")}

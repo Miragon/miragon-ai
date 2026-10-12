@@ -281,8 +281,44 @@ describe("buildActivityIncidentsData — one page of an activity's incidents (N6
         ["/incident/count", { processDefinitionKeyIn: KEY, activityId: "assess" }],
       ]),
     )
-    // No statistics or definition lookup per expanded group.
-    expect(engine.requests).toHaveLength(2)
+    // No statistics or definition lookup per expanded group — only the page's
+    // business keys, ONE read (#322 U13).
+    expect(engine.requests.map((r) => r.path)).toEqual(
+      expect.arrayContaining(["/incident", "/incident/count", "/process-instance"]),
+    )
+    expect(engine.requests).toHaveLength(3)
+  })
+
+  it("names each row by its instance's business key, and degrades to none", async () => {
+    const engine = await startFakeEngine({
+      "GET /incident": { body: [row(0, "assess", V1), row(1, "assess", V1)] },
+      "GET /incident/count": { body: { count: 2 } },
+      "GET /process-instance": { body: [{ id: "pi-assess-0", businessKey: "LEA-7" }] },
+    })
+    engines.push(engine)
+    const broken = await startFakeEngine({
+      "GET /incident": { body: [row(0, "assess", V1)] },
+      "GET /incident/count": { body: { count: 1 } },
+      "GET /process-instance": { status: 500, body: { message: "boom" } },
+    })
+    engines.push(broken)
+    const build = (target: typeof engine) =>
+      buildActivityIncidentsData(clientFor(target), {
+        baseUrl: target.baseUrl,
+        provider: cibsevenProvider,
+        processDefinitionKey: KEY,
+        activityId: "assess",
+      })
+
+    const named = await build(engine)
+    const unnamed = await build(broken)
+
+    expect(named.incidents.map((i) => i.businessKey)).toEqual(["LEA-7", null])
+    expect(engine.requests.find((r) => r.path === "/process-instance")?.query).toEqual({
+      processInstanceIds: "pi-assess-0,pi-assess-1",
+      maxResults: "2",
+    })
+    expect(unnamed.incidents.map((i) => i.businessKey)).toEqual([null])
   })
 
   it("links a row on a bare generated definition id by the view's key, never its UUID", async () => {
@@ -307,6 +343,7 @@ describe("buildActivityIncidentsData — one page of an activity's incidents (N6
     // The CIB Seven route by key; an unknown version is left out (latest).
     expect(url).toContain(`/process/${longKey}/pi-assess-0?tab=incidents`)
     expect(url).not.toContain(uuid)
-    expect(engine.requests).toHaveLength(2)
+    // The rows' business keys, never a definition lookup.
+    expect(engine.requests.filter((r) => r.path.startsWith("/process-definition"))).toEqual([])
   })
 })

@@ -20,11 +20,22 @@ export type CockpitView =
       activityId: string
       incidentType: string
       messageSignature?: string
+      label?: string
     }
-  | { section: "process-detail"; processDefinitionKey: string; focus?: "incidents" }
+  | {
+      section: "process-detail"
+      processDefinitionKey: string
+      focus?: "incidents"
+      label?: string
+    }
   | { section: "process-instances"; processDefinitionKey?: string }
-  | { section: "instance-detail"; processInstanceId: string }
-  | { section: "incident-detail"; incidentId: string }
+  | { section: "instance-detail"; processInstanceId: string; label?: string }
+  | { section: "incident-detail"; incidentId: string; label?: string }
+
+/** The intent's display label, only when it has one (a view never carries `label: undefined`). */
+function labelOf(intent: { label?: string }): { label?: string } {
+  return intent.label ? { label: intent.label } : {}
+}
 
 /**
  * Map the public {@link NavIntent} contract onto a view. Compile-checked
@@ -50,9 +61,14 @@ export function intentToView(intent: NavIntent): CockpitView {
         activityId: intent.activityId,
         incidentType: intent.incidentType,
         messageSignature: intent.messageSignature,
+        ...labelOf(intent),
       }
     case "process-detail":
-      return { section: "process-detail", processDefinitionKey: intent.processDefinitionKey }
+      return {
+        section: "process-detail",
+        processDefinitionKey: intent.processDefinitionKey,
+        ...labelOf(intent),
+      }
     case "process-instances":
       return { section: "process-instances", processDefinitionKey: intent.processDefinitionKey }
     // The "process-incidents" intent is a KEPT public contract (widgets emit
@@ -62,11 +78,16 @@ export function intentToView(intent: NavIntent): CockpitView {
         section: "process-detail",
         processDefinitionKey: intent.processDefinitionKey,
         focus: "incidents",
+        ...labelOf(intent),
       }
     case "instance-detail":
-      return { section: "instance-detail", processInstanceId: intent.processInstanceId }
+      return {
+        section: "instance-detail",
+        processInstanceId: intent.processInstanceId,
+        ...labelOf(intent),
+      }
     case "incident-detail":
-      return { section: "incident-detail", incidentId: intent.incidentId }
+      return { section: "incident-detail", incidentId: intent.incidentId, ...labelOf(intent) }
   }
   return intent satisfies never
 }
@@ -133,16 +154,21 @@ export function crumbLabel(view: CockpitView, locale: string): string {
       return tr("cockpit.crumb.incidents")
     case "settings":
       return tr("cockpit.section.settings")
+    // Names before ids (#322 U13): the label the drill carried — a
+    // process's or an activity's name, an instance's business key — else
+    // the id the view is addressed by.
     case "process-detail":
-      return view.processDefinitionKey
+      return view.label ?? view.processDefinitionKey
     case "process-instances":
       return tr("cockpit.crumb.instances")
     case "instance-detail":
-      return tr("cockpit.crumb.instance", { id: truncate(view.processInstanceId, 8) })
+      return view.label ?? tr("cockpit.crumb.instance", { id: truncate(view.processInstanceId, 8) })
     case "incident-detail":
-      return tr("cockpit.crumb.incident", { id: truncate(view.incidentId, 8) })
+      return view.label
+        ? tr("cockpit.crumb.incidentAt", { activity: view.label })
+        : tr("cockpit.crumb.incident", { id: truncate(view.incidentId, 8) })
     case "cluster-detail":
-      return tr("cockpit.crumb.cluster", { activity: view.activityId })
+      return view.label ?? tr("cockpit.crumb.cluster", { activity: view.activityId })
   }
 }
 
@@ -173,20 +199,33 @@ export function viewToIntent(view: CockpitView): NavIntent {
   switch (view.section) {
     case "process-detail":
       return view.focus === "incidents"
-        ? { type: "process-incidents", processDefinitionKey: view.processDefinitionKey }
-        : { type: "process-detail", processDefinitionKey: view.processDefinitionKey }
+        ? {
+            type: "process-incidents",
+            processDefinitionKey: view.processDefinitionKey,
+            ...labelOf(view),
+          }
+        : {
+            type: "process-detail",
+            processDefinitionKey: view.processDefinitionKey,
+            ...labelOf(view),
+          }
     case "process-instances":
       return { type: "process-instances", processDefinitionKey: view.processDefinitionKey }
     case "instance-detail":
-      return { type: "instance-detail", processInstanceId: view.processInstanceId }
+      return {
+        type: "instance-detail",
+        processInstanceId: view.processInstanceId,
+        ...labelOf(view),
+      }
     case "incident-detail":
-      return { type: "incident-detail", incidentId: view.incidentId }
+      return { type: "incident-detail", incidentId: view.incidentId, ...labelOf(view) }
     case "cluster-detail":
       return {
         type: "cluster-detail",
         activityId: view.activityId,
         incidentType: view.incidentType,
         messageSignature: view.messageSignature,
+        ...labelOf(view),
       }
     default:
       return { type: view.section }

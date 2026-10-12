@@ -249,15 +249,16 @@ routing rule once for every tool. Each engine entry may carry its own `auth`
 Entries may also declare their vendor via `flavor` (`cibseven` | `operaton` | `camunda7`, default
 `cibseven`), which selects the engine's cockpit-link routes and display name.
 
-With several engines, the cockpit landing shows each engine's live health (status dot, open
-incidents) on the engine picker, read from the engine itself. The cross-engine view (process
+With several engines, the cockpit landing lists every engine with its live health in words (open
+incidents, empty, unreachable, loading), read from the engine itself. The cross-engine view (process
 landscape plus fleet-wide failure and performance analyses) needs the analytics module; without it
 (e.g. `MCP_ACTIVE_MODULES=camunda7` where no Prometheus exists) the cockpit does not offer it.
 
 Fleets that span several environments (each environment hosting some services with an engine)
-group their engines per environment: the cockpit landing becomes a two-stage selection
-(pick the environment first, then one of its engines), and the engine switcher, the settings
-page and `camunda7_list_engines` group their engines by environment. Either write the
+group their engines per environment: the cockpit landing lists the engines under their
+environment, the engine switcher, the settings page and `camunda7_list_engines` group them by
+environment, and every engine view names the environment as a chip ("PROD") next to the engine,
+write confirmations included. Either write the
 engines JSON as a map keyed by environment id, or tag entries individually:
 
 ```json

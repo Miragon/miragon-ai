@@ -2,6 +2,7 @@ import { Fragment, useState } from "react"
 import { Button, DrillButton, StatusBadge, PagedListFooter } from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
+  Icon,
   ListTable,
   LogText,
   OpenInCockpitLink,
@@ -9,10 +10,10 @@ import {
   ViewDataState,
   formatNumber,
   formatTimestamp,
-  truncate,
   usePagedViewData,
   type ListTableColumn,
 } from "@miragon-ai/widget-shell/widgets"
+import { Check } from "lucide-react"
 
 import type { ActivityIncidentsData, IncidentInstance } from "../../view-models.js"
 import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
@@ -21,6 +22,8 @@ import { useT } from "../../messages/use-t.js"
 import { EngineActionDialog } from "../lib/engine-action-dialog.js"
 import { recoveryOf } from "../lib/incident-recovery.js"
 import { useIncidentRecovery, type IncidentRecoveryState } from "./use-incident-recovery.js"
+import { InstanceLabel } from "../lib/identity.js"
+import { MoreActions } from "../lib/more-actions.js"
 
 /** Page size — mirrors the feed's server default. */
 const INCIDENT_PAGE_SIZE = 10
@@ -108,7 +111,9 @@ export function IncidentTable({
       ? []
       : [{ label: t("procIncTable.columnInstance"), className: leadPad }]),
     { label: t("procIncTable.columnErrorMessage") },
-    { label: t("procIncTable.columnTime"), align: "right" as const },
+    // The column an inline frame can do without (the activity's summary row
+    // above names first and latest): the error message keeps the room (#322 U2).
+    { label: t("procIncTable.columnTime"), align: "right" as const, hideBelow: "md" as const },
     { label: t("procIncTable.columnActions"), sticky: true },
   ]
 
@@ -122,12 +127,15 @@ export function IncidentTable({
           const instanceUrl = incident.cockpitInstanceUrl
           return (
             <Fragment key={incident.id}>
-              <tr className={done ? "opacity-50" : undefined}>
+              <tr>
                 {!hideInstanceColumn && (
                   <Td className={leadPad}>
-                    <span className="text-foreground font-mono text-xs font-medium">
-                      {truncate(incident.processInstanceId, 12)}
-                    </span>
+                    {/* One instance label (#322 U13): its business key, the
+                        UUID a copyable chip. */}
+                    <InstanceLabel
+                      id={incident.processInstanceId}
+                      businessKey={incident.businessKey}
+                    />
                   </Td>
                 )}
                 <Td>
@@ -136,15 +144,15 @@ export function IncidentTable({
                     <LogText text={incident.incidentMessage} />
                   </div>
                 </Td>
-                <Td
-                  align="right"
-                  className="text-muted-foreground font-mono text-xs whitespace-nowrap"
-                >
+                <Td align="right" className="text-muted-foreground text-small whitespace-nowrap">
                   {formatTimestamp(incident.incidentTimestamp)}
                 </Td>
                 <Td>
                   {done ? (
-                    <StatusBadge tone="neutral">
+                    // Done is a success the row says in words, never a dimmed
+                    // row that reads as disabled (#322 U11).
+                    <StatusBadge tone="success" className="whitespace-nowrap">
+                      <Icon icon={Check} dense />
                       {retried ? t("procIncTable.retried") : t("procIncTable.resolved")}
                     </StatusBadge>
                   ) : (
@@ -156,12 +164,13 @@ export function IncidentTable({
                         {t("procIncTable.open")}
                       </DrillButton>
                       <RecoveryButton incident={incident} recovery={recovery} />
-                      {instanceUrl && <OpenInCockpitLink url={instanceUrl} vendor={vendor} />}
-                      <HandOffButton
-                        action="draftTicket"
-                        variant="icon"
-                        prompt={ask(draftIncidentTicketHandOff(incident, engine))}
-                      />
+                      <MoreActions label={t("procIncTable.moreActions")}>
+                        {instanceUrl && <OpenInCockpitLink url={instanceUrl} vendor={vendor} />}
+                        <HandOffButton
+                          action="draftTicket"
+                          prompt={ask(draftIncidentTicketHandOff(incident, engine))}
+                        />
+                      </MoreActions>
                     </div>
                   )}
                 </Td>
@@ -172,7 +181,7 @@ export function IncidentTable({
                     colSpan={columnCount}
                     className={`border-border border-b px-4 py-1.5 ${leadPad ?? ""}`}
                   >
-                    <span className="text-danger-ink text-xs">
+                    <span role="alert" className="text-danger-ink text-small">
                       {retried
                         ? t("procIncTable.retryError", { message: error })
                         : t("procIncTable.resolveError", { message: error })}
@@ -258,7 +267,7 @@ export function PagedIncidentTable({
   return (
     <>
       {paged.items.length === 0 ? (
-        <p className="bg-muted text-muted-foreground px-4 py-3 text-sm">
+        <p className="bg-muted text-muted-foreground text-dense px-4 py-3">
           {t("procIncTable.noIncidents")}
         </p>
       ) : (

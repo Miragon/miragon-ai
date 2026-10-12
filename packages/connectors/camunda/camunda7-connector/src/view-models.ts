@@ -97,7 +97,11 @@ export interface Job {
   processInstanceId: string
   processDefinitionKey: string | null
   processDefinitionId: string | null
+  /** The process's name (the job's definition version) — null without one or unread. */
+  processDefinitionName: string | null
   activityId: string | null
+  /** The failing activity's name in the job's diagram — null without one or unread. */
+  activityName: string | null
   retries: number
   exceptionMessage: string | null
   dueDate: string | null
@@ -173,6 +177,8 @@ export interface ProcessInstanceRow {
    *  as its own drillable column. Resolved, never a bare generated definition
    *  id (long keys) parsed as a key: null when it cannot be resolved. */
   processDefinitionKey: string | null
+  /** The name of the definition this instance runs on — null without one or unread. */
+  processDefinitionName: string | null
   /** Definition version this instance runs on (parsed from definitionId). */
   version: number | null
   suspended: boolean
@@ -244,6 +250,8 @@ export type IncidentRecovery =
 export interface IncidentInstance {
   id: string
   processInstanceId: string
+  /** The instance's business key — what the row names it by (else its short id); null without one or unread. */
+  businessKey: string | null
   incidentType: string
   incidentMessage: string | null
   incidentTimestamp: string
@@ -274,6 +282,8 @@ export interface InstanceDetailData {
     suspended: boolean
     ended: boolean
   }
+  /** The process's name, from the instance's diagram — null without one or unreadable. */
+  processDefinitionName: string | null
   activityTree: ActivityTree | null
   variables: Record<string, VariableValue>
   /** The instance's open incidents (capped list; the total is `incidentCount`). */
@@ -334,6 +344,8 @@ export interface HistoryTimelineData {
   processInstance: HistoricProcessInstance | null
   activities: ActivityData[]
   totalActivities: number
+  /** Activities with an open incident on this instance — the timeline marks them; null when unread. */
+  incidentActivityIds: string[] | null
   engineId?: string
 }
 
@@ -531,115 +543,6 @@ export interface IncidentDetailData extends EngineVendorInfo {
   engineId?: string
 }
 
-// === Engine health verdict (camunda7_show_engine_health) ===
-
-export type EngineHealthStatus = "ok" | "degraded" | "critical"
-
-/**
- * A failure cluster's size as far as the health views' newest-first incident
- * scan (`CLUSTER_SCAN_LIMIT`) can vouch for it. A cluster larger than the
- * scan is known only as a lower bound — never the scan's length as its size.
- */
-export interface ClusterCounts {
-  /** The cluster's open incidents — null when unknown (only `scannedIncidentCount` of it is). */
-  incidentCount: number | null
-  /** The cluster's incidents among the newest scanned ones — a lower bound of `incidentCount`. */
-  scannedIncidentCount: number
-  /** Incidents since now − 24h — null when neither the scan nor a count can vouch for them. */
-  last24hCount: number | null
-}
-
-/**
- * A cross-process incident cluster: the same activity failing the same way
- * (`activityId` + `incidentType` + normalized failure-message signature) across
- * one or more process definitions. This is the root-cause unit a support
- * operator triages — surfaced instead of a flat per-instance incident list. The
- * plain-language interpretation and the recommended fix are the host agent's
- * job (the "ask the AI" handoff), not the server's: the cluster carries only
- * deterministic, grounded facts. Its counts are exact only when the scan read
- * every open incident (24h: when it reaches back that far); the clusters rank
- * by `scannedIncidentCount`.
- */
-export interface EngineHealthCluster extends ClusterCounts {
-  /** Stable key `${activityId}::${incidentType}::${messageSignature}` — used for React keys. */
-  id: string
-  activityId: string
-  incidentType: string
-  /** Normalized failure-message signature — the third clustering dimension; drill filter. */
-  messageSignature: string
-  /** Distinct process definition keys this cluster spans, most-affected first. */
-  processDefinitionKeys: string[]
-  /** A sample message + its incident id, for the drill-in and the AI prompt. */
-  representativeMessage: string | null
-  representativeIncidentId: string
-  latestIncident: string | null
-}
-
-export interface EngineHealthData {
-  /** Deterministic traffic-light verdict from incident volume + cluster size. */
-  status: EngineHealthStatus
-  /** How `status` was decided, in words (source + thresholds) — `healthVerdictRule`. */
-  statusRule: string
-  summary: {
-    totalIncidents: number
-    /** New incidents in the last hour — the "is it burning right now?" signal. */
-    lastHourIncidents: number
-    last24hIncidents: number
-    /** Activities with open incidents — null unless the incident scan read every incident. */
-    affectedActivities: number | null
-    /** Definition keys with open incidents. */
-    affectedDefinitions: number
-    runningInstances: number
-    /** Deployed definition keys. */
-    totalDefinitions: number
-    /** Instances started in the last 24h — null when the history API is unavailable. */
-    started24h: number | null
-    /** Instances completed in the last 24h — null when the history API is unavailable. */
-    completed24h: number | null
-  }
-  /** Top incident clusters by count (cross-process), most severe first. */
-  clusters: EngineHealthCluster[]
-  /** When this snapshot was computed (ISO) — rendered as "as of …" for ops trust. */
-  fetchedAt: string
-  engineId: string
-}
-
-// === Cluster detail (camunda7_show_cluster_detail) ===
-
-export interface ClusterIncidentRow {
-  incidentId: string
-  processInstanceId: string
-  /** Business key of the affected instance — the operator's "order number". */
-  businessKey: string | null
-  processDefinitionKey: string
-  incidentTimestamp: string
-}
-
-/**
- * Drill-in for ONE failure cluster: the affected instances (business keys
- * first), the full sample message, and the time profile — the middle layer
- * between the engine overview's cluster list and the single-incident detail.
- * Without a message filter the counts are `/incident/count` totals; with one,
- * a count the scan cannot vouch for is null. The list pages over the
- * `scannedIncidentCount` scanned incidents.
- */
-export interface ClusterDetailData extends ClusterCounts {
-  activityId: string
-  incidentType: string
-  /** Signature the result was filtered by; null = no message filter (activity+type only). */
-  messageSignature: string | null
-  /** Incidents in the last hour — null when neither the scan nor a count can vouch for it. */
-  lastHourCount: number | null
-  /** Null unless the scan holds the whole cluster. */
-  firstSeen: string | null
-  latestIncident: string | null
-  /** Distinct process definition keys of the scanned incidents, most-affected first. */
-  processDefinitionKeys: string[]
-  representativeMessage: string | null
-  /** First page of affected incidents (most recent first). */
-  incidents: ClusterIncidentRow[]
-  /** The list's total: the scanned incidents after the business-key search (may exceed `incidents.length`). */
-  totalMatching: number
-  fetchedAt: string
-  engineId: string
-}
+// The engine-health and cluster views' contracts live in their own module;
+// re-exported here so every consumer keeps one import path.
+export type * from "./view-models.health.js"

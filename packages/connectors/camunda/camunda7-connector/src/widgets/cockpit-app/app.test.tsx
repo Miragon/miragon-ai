@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import type { CockpitAppData } from "../../view-models.js"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
@@ -121,7 +121,8 @@ describe("CockpitApp navigation is side-effect free", () => {
 /** The engine the sidebar shows as active — null while no engine is open. */
 const activeEngine = () =>
   screen.queryByLabelText<HTMLSelectElement>("Selected engine")?.value ?? null
-const onLanding = () => screen.queryByText("Work with one engine") !== null
+const onLanding = () =>
+  screen.queryByRole("heading", { level: 1, name: "Operations Cockpit" }) !== null
 
 /**
  * The cockpit OPENS where `camunda7_open_cockpit` resolved — the per-call
@@ -199,5 +200,49 @@ describe("CockpitApp reconciles its engine scope with the engine list", () => {
     renderCockpit({ engineId: "prod-a", engines: THREE }, { engines: THREE.slice(1) })
     await waitFor(() => expect(onLanding()).toBe(true))
     expect(screen.getByText(/prod-a is no longer in your engine list/)).toBeTruthy()
+  })
+})
+
+/**
+ * #322 U4, U15, U20, U27: the head names the engine and its environment in
+ * one compact row, "All engines" leads back to the chooser, and the cockpit
+ * has ONE refresh control.
+ */
+describe("CockpitApp head", () => {
+  const ENVIRONMENTS = [
+    { id: "prod-a", environment: "prod" },
+    { id: "test-a", environment: "test" },
+  ]
+
+  it("names the engine and its environment as a text chip", async () => {
+    renderCockpit({ engineId: "prod-a", engines: ENVIRONMENTS }, { engines: ENVIRONMENTS })
+    await waitFor(() => expect(activeEngine()).toBe("prod-a"))
+    const chip = document.querySelector(
+      "[data-slot='engine-context'] [data-slot='environment-chip']",
+    )
+    expect(chip?.textContent).toBe("Environment prod")
+    // Optgroups name the environments in capitals, like the chip.
+    expect(screen.getByRole("group", { name: "PROD" })).toBeTruthy()
+  })
+
+  it("'All engines' leads back to the chooser; the last crumb is the current page", async () => {
+    renderCockpit({ engineId: "prod-a", engines: ENVIRONMENTS }, { engines: ENVIRONMENTS })
+    const trail = await screen.findByRole("navigation", { name: "Breadcrumb" })
+    const current = within(trail).getByText("Overview")
+    expect(current.getAttribute("aria-current")).toBe("page")
+    fireEvent.click(within(trail).getByRole("button", { name: "All engines" }))
+    await waitFor(() => expect(onLanding()).toBe(true))
+  })
+
+  it("has one refresh control", async () => {
+    renderCockpit({ engineId: "prod-a", engines: ENVIRONMENTS }, { engines: ENVIRONMENTS })
+    await waitFor(() => expect(activeEngine()).toBe("prod-a"))
+    expect(screen.getAllByRole("button", { name: "Refresh" })).toHaveLength(1)
+  })
+
+  it("no engines at all: the app-level empty state with the Komet", async () => {
+    renderCockpit({ engineId: null, engines: [] }, { engines: [] })
+    expect(await screen.findByRole("heading", { name: "No engines configured" })).toBeTruthy()
+    expect(document.querySelector("[data-brand-mark='komet']")).toBeTruthy()
   })
 })

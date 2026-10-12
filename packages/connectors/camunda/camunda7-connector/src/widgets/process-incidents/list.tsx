@@ -16,7 +16,7 @@ function NoIncidentsState({
 }: {
   data: ProcessIncidentsData
   emptyVariant: "siblings" | "note"
-  onJumpTo: (processDefinitionKey: string) => void
+  onJumpTo: (processDefinitionKey: string, label?: string) => void
 }) {
   const t = useT()
   const processName = data.processDefinitionName ?? data.processDefinitionKey
@@ -30,7 +30,7 @@ function NoIncidentsState({
     )
   }
   return (
-    <div className="border-border bg-card flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm">
+    <div className="border-border bg-card text-dense flex items-center gap-2 rounded-lg border px-4 py-2.5">
       <span className={`size-1.5 rounded-full ${TONE_DOT.success}`} aria-hidden="true" />
       <span className="text-foreground">{t("procIncList.noIncidentsNote", { processName })}</span>
     </div>
@@ -82,12 +82,12 @@ export function ActivityIncidentList({
     )
   }
 
-  function jumpToProcess(processDefinitionKey: string) {
-    go({ type: "process-incidents", processDefinitionKey })
+  function jumpToProcess(processDefinitionKey: string, label?: string) {
+    go({ type: "process-incidents", processDefinitionKey, label })
   }
 
-  function analyzeIncident(incidentId: string) {
-    go({ type: "incident-detail", incidentId })
+  function analyzeIncident(incidentId: string, activityName: string | null) {
+    go({ type: "incident-detail", incidentId, label: activityName ?? undefined })
   }
 
   function toggleExpanded(activityId: string) {
@@ -129,7 +129,7 @@ export function ActivityIncidentList({
                 activityId={activity.activityId}
                 engine={engineId}
                 vendor={data.engineVendor}
-                onAnalyze={analyzeIncident}
+                onAnalyze={(incidentId) => analyzeIncident(incidentId, activity.activityName)}
               />
             </GroupCard>
           ))

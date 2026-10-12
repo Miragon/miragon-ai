@@ -69,8 +69,8 @@ export function ActivityNode({ node, depth = 0 }: { node: ActivityTree; depth?: 
   return (
     <div>
       <div className="flex items-center gap-2 py-1" style={{ paddingLeft: `${depth * 16}px` }}>
-        <span className="text-muted-foreground font-mono text-xs">{node.activityType}</span>
-        <span className="text-sm font-medium">{node.activityName ?? node.activityId}</span>
+        <span className="text-muted-foreground text-small font-mono">{node.activityType}</span>
+        <span className="text-dense font-medium">{node.activityName ?? node.activityId}</span>
       </div>
       {(node.childActivityInstances ?? []).map((child) => (
         <ActivityNode key={child.id} node={child} depth={depth + 1} />
@@ -153,9 +153,9 @@ function VariableRow({
 
   return (
     <tr className="hover:bg-muted transition-colors">
-      <Td className="font-mono text-sm">{name}</Td>
-      <Td className="text-muted-foreground text-xs">{variable.type ?? "—"}</Td>
-      <Td className="max-w-md font-mono text-xs break-words whitespace-pre-wrap">
+      <Td className="text-dense font-mono">{name}</Td>
+      <Td className="text-muted-foreground text-small">{variable.type ?? "—"}</Td>
+      <Td className="text-small max-w-md font-mono break-words whitespace-pre-wrap">
         {editing ? (
           <form
             className="flex flex-col gap-1"
@@ -166,7 +166,7 @@ function VariableRow({
           >
             <div className="flex items-center gap-1">
               <Input
-                className="h-7 font-mono text-xs"
+                className="text-small h-7 font-mono"
                 value={editValue}
                 onChange={(e) => {
                   setEditValue(e.target.value)
@@ -189,14 +189,14 @@ function VariableRow({
               </Button>
             </div>
             {editError && (
-              <p role="alert" className="text-destructive font-sans text-xs">
+              <p role="alert" className="text-destructive text-small font-sans">
                 {editError}
               </p>
             )}
             {/* Server-side rejection of a validly-parsed write — without this the
                 Save button just re-enables and the row stays silently in edit. */}
             {!editError && serverError && (
-              <p role="alert" className="text-destructive font-sans text-xs">
+              <p role="alert" className="text-destructive text-small font-sans">
                 {t("instanceSections.saveError", { message: serverError })}
               </p>
             )}

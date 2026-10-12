@@ -1,30 +1,35 @@
 import { useState } from "react"
-import { useLocale } from "@miragon/mcp-toolkit-ui"
+import { Button, cn, useLocale } from "@miragon/mcp-toolkit-ui"
 import { Icon } from "@miragon-ai/widget-shell/widgets"
 import { RefreshCw } from "lucide-react"
 import { translator } from "../../messages/index.js"
 import { refreshCockpitData } from "../refresh.js"
 
 /**
- * The cockpit's manual Refresh: re-reads every data feed of the open view —
- * the way to see what the agent (or another session) changed meanwhile, and
- * the retry of a view stuck in an error state.
+ * The cockpit's ONE Refresh (#322 U27): re-reads every data feed of the open
+ * view — the way to see what the agent (or another session) changed
+ * meanwhile, and the retry of a view stuck in an error state. A 32 px icon
+ * button in the head; its name says what it does, and while it runs the
+ * icon turns (not under reduced motion) and the name says so.
  */
 export function CockpitRefreshButton() {
   const locale = useLocale()
   const [refreshing, setRefreshing] = useState(false)
+  const label = translator(locale, refreshing ? "cockpit.refreshing" : "cockpit.refresh")
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-sm"
       disabled={refreshing}
+      aria-label={label}
+      title={label}
       onClick={() => {
         setRefreshing(true)
         void refreshCockpitData().finally(() => setRefreshing(false))
       }}
-      className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 disabled:opacity-50"
     >
-      <Icon icon={RefreshCw} />
-      {translator(locale, refreshing ? "cockpit.refreshing" : "cockpit.refresh")}
-    </button>
+      <Icon icon={RefreshCw} className={cn(refreshing && "motion-safe:animate-spin")} />
+    </Button>
   )
 }

@@ -44,6 +44,7 @@ const INSTANCE: InstanceDetailData = {
     suspended: false,
     ended: false,
   },
+  processDefinitionName: null,
   activityTree: null,
   variables: {},
   incidents: [],
@@ -79,7 +80,9 @@ const JOBS: JobPanelData = {
       processInstanceId: "pi-1",
       processDefinitionKey: "invoice",
       processDefinitionId: "invoice:1:abc",
+      processDefinitionName: null,
       activityId: "chargeCard",
+      activityName: null,
       retries: 0,
       exceptionMessage: "Card declined",
       dueDate: null,
@@ -100,10 +103,10 @@ function profileView(canSave: boolean): UserProfileView {
       defaultEngineId: "prod",
       allowedEngineIds: [],
       pinnedDashboardIds: [],
-      preferredRole: "admin",
     },
     availableEngines: [{ id: "prod", environment: "default" }],
     canSave,
+    readOnlyReason: canSave ? null : "toolset",
   }
 }
 
@@ -117,6 +120,7 @@ function incidentRows(incidentType: string, recovery: IncidentRecovery) {
       incidentMessage: "boom",
       incidentTimestamp: "2026-10-10T08:00:00.000+0000",
       cockpitInstanceUrl: null,
+      businessKey: null,
       recovery,
     },
   ]

@@ -99,7 +99,6 @@ export function ProcessHealthKpiView({
         actions={
           <HandOffButton
             action="assess"
-            variant="primary"
             prompt={ask(triageLandscapeHandOff(data, engine ?? data.engineId))}
           />
         }

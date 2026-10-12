@@ -401,7 +401,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    palette class such as `text-red-600`/`bg-black/50`, no hex, `rgb()`/`oklch()` …; `allow`
    names a file with its reason, shrink-only). widget-shell runs all four in
    `src/ui/brand-gates.test.ts`; camunda7 in `src/brand-gates.test.ts` (glyphs over all of
-   `src`, icon sizes and colours over `src/widgets`) and `src/messages/catalog-text.test.ts`
+   `src`, icon sizes, colours and the type scale with both rules over `src/widgets`) and
+   `src/messages/catalog-text.test.ts`
    (every catalog, plus en/de holding the same keys, so no English fallback leaks into a German
    view); analytics in `src/brand-gates.test.ts` (widget texts, Ask-AI intents and model
    summaries in de and en, glyphs over `src/widgets` + `src/messages`, icon sizes and colours

@@ -22,11 +22,13 @@ export const en: MessageCatalog = {
   "cockpit.crumb.instance": ({ id }) => `Instance ${String(id)}`,
   "cockpit.crumb.incident": ({ id }) => `Incident ${String(id)}`,
   "cockpit.crumb.cluster": ({ activity }) => `Cluster: ${String(activity)}`,
+  "cockpit.crumb.incidentAt": ({ activity }) => `Incident at ${String(activity)}`,
   "cockpit.loading.engines": "Loading engines…",
+  "cockpit.empty.enginesTitle": "No engines configured",
   "cockpit.empty.engines":
-    "No engines configured. Ask your administrator to add an engine to the server configuration.",
+    "Ask your administrator to add an engine to the server configuration. Then it shows up here.",
+  "cockpit.signature": "Miragon AI",
   "cockpit.nav.crossEngine": "Cross-engine",
-  "cockpit.nav.engine": "Engine",
   "cockpit.aria.breadcrumb": "Breadcrumb",
   "cockpit.aria.sections": "Cockpit sections",
   "cockpit.aria.activeEngine": "Selected engine",
@@ -34,54 +36,57 @@ export const en: MessageCatalog = {
   "cockpit.refreshing": "Refreshing…",
   "cockpit.landing.title": "Operations Cockpit",
   "cockpit.landing.subtitle": ({ count }) =>
-    `${countOf(count, "engine", "engines")} configured. Work with one engine, or analyze all of them together.`,
+    `${countOf(count, "engine", "engines")} configured. Pick one to work with.`,
   "cockpit.landing.subtitle.env": ({ count, envCount }) =>
-    `${countOf(count, "engine", "engines")} in ${countOf(envCount, "environment", "environments")}. Pick an environment, then an engine, or analyze all of them together.`,
-  "cockpit.landing.env.count": ({ count }) => countOf(count, "engine", "engines"),
-  "cockpit.landing.env.back": "All environments",
-  "cockpit.landing.subtitle.noFleet": ({ count }) =>
-    `${countOf(count, "engine", "engines")} configured. Pick an engine.`,
-  "cockpit.landing.subtitle.env.noFleet": ({ count, envCount }) =>
-    `${countOf(count, "engine", "engines")} in ${countOf(envCount, "environment", "environments")}. Pick an environment, then an engine.`,
-  "cockpit.landing.engine.incidents": ({ count }) => countOf(count, "incident", "incidents"),
-  "cockpit.landing.engine.noStatus": "Status unavailable",
-  "cockpit.landing.operate.title": "Work with one engine",
-  "cockpit.landing.operate.desc": "Overview, incidents and details of one engine.",
-  "cockpit.landing.fleet.title": "Cross-engine analyses",
-  "cockpit.landing.fleet.desc":
-    "Health of every engine, comparison per process, and failure and performance analyses across all engines.",
-  "cockpit.landing.fleet.open": "Open the cross-engine overview",
-  "cockpit.crumb.cockpit": "Cockpit",
-  "cockpit.crumb.fleet": "All engines",
+    `${countOf(count, "engine", "engines")} in ${countOf(envCount, "environment", "environments")}. Pick one to work with.`,
+  "cockpit.landing.envLabel": ({ env }) => `Environment ${String(env).toUpperCase()}`,
+  "cockpit.landing.default": "default",
+  "cockpit.landing.status.loading": "loading…",
+  "cockpit.landing.status.unreachable": "unreachable",
+  "cockpit.landing.status.empty": "empty",
+  "cockpit.landing.status.incidents": ({ count }) => countOf(count, "incident", "incidents"),
+  "cockpit.landing.status.failedJobs": ({ count }) =>
+    countOf(count, "job without retries", "jobs without retries"),
+  "cockpit.landing.status.idle": "no running instances",
+  "cockpit.landing.status.healthy": "no incidents",
+  "cockpit.landing.fleet.open": "Compare across engines",
+  "cockpit.crumb.allEngines": "All engines",
+  "cockpit.crumb.fleet": "Cross-engine",
   "cockpit.engineGone": ({ engineId }) =>
     `Engine ${String(engineId)} is no longer in your engine list.`,
 
   // ── Profile / settings panel ────────────────────────────────────────────────
-  "profile.heading": "Profile & settings",
-  "profile.subtitle": "Your engines, language, role and dashboards.",
+  "profile.heading": "Settings",
+  "profile.subtitle": "Your language, engines and dashboards, in every chat.",
   "profile.save": "Save",
   "profile.saving": "Saving…",
-  "profile.saved": ({ time }) => `Saved at ${String(time)}`,
-  "profile.saveError": "Could not save the profile. Your input is still here, try again.",
-  "profile.readOnly":
-    "This connection cannot save settings. Only a connection with write access can change them.",
+  "profile.discard": "Discard changes",
+  "profile.saveBar.label": "Save settings",
+  "profile.saveBar.unsaved": "You have unsaved changes.",
+  "profile.saveBar.clean": "Everything is saved.",
+  "profile.saveError": "Could not save the settings. Your input is still here, try again.",
+  "profile.readOnly.title": "These settings are read-only here",
+  "profile.readOnly.toolset":
+    "This connection runs the read-only toolset. With the operations toolset you can change them: ask your administrator to switch the connection.",
+  "profile.readOnly.signedOut":
+    "Without a sign-in this connection has no one to save settings for. Sign in through the connection to change them.",
   "profile.loading": "Loading…",
   "profile.none": "No profile available",
 
-  "profile.section.general": "Language and role",
+  "profile.section.general": "Language",
   "profile.section.engines": "Engines",
   "profile.section.dashboards": "Dashboards",
 
   "profile.field.language": "Language",
   "profile.field.language.help":
     "Automatic follows your chat app. A fixed language also applies to what the tools report back to the AI.",
-  "profile.field.role": "Preferred role",
-  "profile.field.role.help": "A hint only. Your connection decides what you can do.",
-  "profile.role.unset": "(unset)",
 
-  "profile.field.allowedEngines": "Available engines",
-  "profile.field.allowedEngines.help":
-    "These engines appear in your pickers. With none checked, all of them do. Your permissions stay the same.",
+  "profile.field.allEngines": "Allow all engines",
+  "profile.field.allEngines.help":
+    "Every configured engine appears in your pickers, engines added later too. Your permissions stay the same.",
+  "profile.field.allowedEngines": "Your engines",
+  "profile.field.allowedEngines.help": "Only these engines appear in your pickers.",
+  "profile.engines.noneChosen": "Pick at least one engine, or allow all engines.",
   "profile.engines.none": "No engines configured.",
   "profile.field.defaultEngine": "Default engine",
   "profile.field.defaultEngine.help":
@@ -106,9 +111,6 @@ export const en: MessageCatalog = {
 
   // ── Enumerated option labels ────────────────────────────────────────────────
   "language.system": "Automatic (follows the chat app)",
-  "role.read-only": "Read-only",
-  "role.operations": "Operations",
-  "role.admin": "Admin",
 
   // ── View titles of the show tools (the host toolbar) ───────────────────────
   // Only when the profile names a language: with "system" the server does not
@@ -122,7 +124,7 @@ export const en: MessageCatalog = {
   "viewTitle.bpmnViewer": "BPMN diagram",
   "viewTitle.jobPanel": "Jobs",
   "viewTitle.engineHealth": "Engine overview",
-  "viewTitle.userProfile": "Profile & settings",
+  "viewTitle.userProfile": "Settings",
   "viewTitle.clusterDetail": ({ activity }) => `Cluster: ${String(activity)}`,
 
   // ── Model-facing widget-tool summaries (c7sum.*) ─────────────────────────────

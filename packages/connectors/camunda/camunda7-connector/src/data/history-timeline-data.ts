@@ -4,10 +4,15 @@ import {
   getHistoricActivityInstances,
   getHistoricActivityInstancesCount,
   getHistoricProcessInstances,
+  getIncidents,
 } from "@miragon-ai/camunda7-client/sdk"
+import { collectIncidentActivityIds } from "../lib/activity-tree.js"
 import type { HistoryTimelineData } from "../view-models.js"
 import type { PagingArgs } from "../feed-contracts.js"
-import { countOf, rowsOf } from "./engine-reads.js"
+import { countOf, optional, rowsOf } from "./engine-reads.js"
+
+/** How many of the instance's open incidents mark the timeline (one per failing step). */
+const INCIDENT_MARKS = 100
 
 /**
  * One capped page of an instance's activity history, with the exact total
@@ -22,7 +27,7 @@ export async function buildHistoryTimelineData(
   args: { processInstanceId: string } & PagingArgs,
 ): Promise<HistoryTimelineData> {
   const { processInstanceId } = args
-  const [activities, totalActivities, instances] = await Promise.all([
+  const [activities, totalActivities, instances, incidents] = await Promise.all([
     getHistoricActivityInstances({
       client,
       query: {
@@ -37,11 +42,18 @@ export async function buildHistoryTimelineData(
     getHistoricProcessInstances({ client, query: { processInstanceId, maxResults: 1 } }).then(
       (rows) => rowsOf<NonNullable<HistoryTimelineData["processInstance"]>>(rows),
     ),
+    // The failing steps the timeline marks — enrichment: unread, no marks.
+    optional(
+      getIncidents({ client, query: { processInstanceId, maxResults: INCIDENT_MARKS } }).then(
+        (rows) => rowsOf<{ activityId?: string | null }>(rows),
+      ),
+    ),
   ])
   return {
     processInstance: instances[0] ?? null,
     activities,
     totalActivities,
+    incidentActivityIds: incidents ? collectIncidentActivityIds(incidents) : null,
     engineId,
   }
 }

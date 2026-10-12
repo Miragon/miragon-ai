@@ -41,6 +41,7 @@ function incident(id: string, over: Partial<IncidentInstance>): IncidentInstance
     incidentMessage: `message ${id}`,
     incidentTimestamp: "2026-10-09T09:30:00.000+0000",
     cockpitInstanceUrl: null,
+    businessKey: null,
     recovery: { action: "none" },
     ...over,
   }
@@ -133,6 +134,8 @@ describe("incident rows offer the action the engine accepts", () => {
     await waitFor(async () => expect(await rowButtons("message job")).toContain("Retry"))
     expect(await rowButtons("message custom")).toContain("Mark as resolved")
     const row = (await screen.findByText("message job")).closest("tr")!
+    // The hand-off waits behind the row's "more" button (#322 U11).
+    fireEvent.click(within(row).getByRole("button", { name: "More actions for this incident" }))
     fireEvent.click(within(row).getByRole("button", { name: "Draft ticket in chat" }))
     const prompts = actions
       .filter((a) => a.type === "sendFollowUpMessage")

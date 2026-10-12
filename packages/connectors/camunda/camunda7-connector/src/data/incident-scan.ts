@@ -5,7 +5,7 @@ import {
   latestEngineDate,
   type Client,
 } from "@miragon-ai/camunda7-client"
-import { getIncidents } from "@miragon-ai/camunda7-client/sdk"
+import { getIncidents, getProcessInstances } from "@miragon-ai/camunda7-client/sdk"
 import type { IncidentInstance } from "../view-models.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
@@ -128,6 +128,32 @@ export function scanFacts(
   }
 }
 
+/**
+ * The business keys of `instanceIds` — what an operator calls an instance
+ * ("LEA-2026-00424"), ONE `/process-instance?processInstanceIds=` read for
+ * the whole page. The read propagates: every caller shows the keys as
+ * ENRICHMENT, so it wraps the call in `optional(...)` and labels the rows by
+ * their short id without them.
+ */
+export async function fetchBusinessKeys(
+  client: Client,
+  instanceIds: Iterable<string | null | undefined>,
+): Promise<Map<string, string | null>> {
+  const ids = [...new Set([...instanceIds].filter((id): id is string => !!id))]
+  if (ids.length === 0) return new Map()
+  const rows = rowsOf<{ id?: string | null; businessKey?: string | null }>(
+    await getProcessInstances({
+      client,
+      query: { processInstanceIds: ids.join(","), maxResults: ids.length },
+    }),
+  )
+  return new Map(
+    rows
+      .filter((row): row is { id: string; businessKey?: string | null } => !!row.id)
+      .map((row) => [row.id, row.businessKey ?? null]),
+  )
+}
+
 /** Cockpit-URL context of an incident row's instance link. */
 export interface IncidentLinkContext {
   baseUrl: string
@@ -144,10 +170,15 @@ export interface IncidentLinkContext {
  * (the one that instance runs on; unknown for a bare id), not the key's
  * latest: no definition lookup per page.
  */
-export function toIncidentInstance(r: IncidentRow, ctx: IncidentLinkContext): IncidentInstance {
+export function toIncidentInstance(
+  r: IncidentRow,
+  ctx: IncidentLinkContext,
+  businessKeys?: Map<string, string | null> | null,
+): IncidentInstance {
   return {
     id: r.id,
     processInstanceId: r.processInstanceId,
+    businessKey: businessKeys?.get(r.processInstanceId) ?? null,
     incidentType: r.incidentType,
     incidentMessage: r.incidentMessage ?? null,
     incidentTimestamp: r.incidentTimestamp,

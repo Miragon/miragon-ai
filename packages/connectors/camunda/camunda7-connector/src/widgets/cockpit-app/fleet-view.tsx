@@ -1,7 +1,7 @@
 import { WidgetRenderer, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { HandOffButton, Icon, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { ArrowRight } from "lucide-react"
-import { CountPill, SectionHeading, TONE_DOT } from "@miragon/mcp-toolkit-ui"
+import { CountPill, FOCUS_RING, SectionHeading, TONE_DOT, cn } from "@miragon/mcp-toolkit-ui"
 import type { CockpitDashboardData } from "../../view-models.js"
 import {
   enginesByEnvironment,
@@ -11,6 +11,8 @@ import {
 import { useT } from "../../messages/use-t.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useEngineHealth } from "./engine-health.js"
+import { engineStatusKind } from "./landing.js"
+import { EnvironmentChip } from "../lib/engine-context.js"
 import { filterLayoutToWidgets } from "./views.js"
 
 function FleetEngineKpis({
@@ -24,29 +26,27 @@ function FleetEngineKpis({
 }) {
   const t = useT()
   return (
-    <div className="grid grid-cols-3 gap-2 text-sm">
+    <div className="text-dense grid grid-cols-3 gap-2">
       <div>
-        <div className="text-muted-foreground text-[11px]">{t("fleet.running")}</div>
+        <div className="text-muted-foreground text-small">{t("fleet.running")}</div>
         <div className="text-foreground font-mono font-semibold tabular-nums">
           {formatNumber(summary.totalRunningInstances)}
         </div>
       </div>
+      {/* One severity ladder (#322 U14): open incidents and jobs without
+          retries are danger when there are any; a zero is a count, neutral. */}
       <div>
-        <div className="text-muted-foreground text-[11px]">{t("fleet.incidents")}</div>
+        <div className="text-muted-foreground text-small">{t("fleet.incidents")}</div>
         <div>
-          <CountPill tone={incidents > 0 ? "danger" : "success"}>
+          <CountPill tone={incidents > 0 ? "danger" : "neutral"}>
             {formatNumber(incidents)}
           </CountPill>
         </div>
       </div>
       <div>
-        <div className="text-muted-foreground text-[11px]">{t("fleet.failedJobs")}</div>
+        <div className="text-muted-foreground text-small">{t("fleet.failedJobs")}</div>
         <div>
-          {failed > 0 ? (
-            <CountPill tone="warning">{formatNumber(failed)}</CountPill>
-          ) : (
-            <span className="text-muted-foreground font-mono text-xs">0</span>
-          )}
+          <CountPill tone={failed > 0 ? "danger" : "neutral"}>{formatNumber(failed)}</CountPill>
         </div>
       </div>
     </div>
@@ -57,9 +57,18 @@ function FleetEngineKpis({
  * One health tile per engine ({@link useEngineHealth} — the same numbers the
  * landing's engine picker shows). Clicking the tile enters that engine's cockpit.
  */
-function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () => void }) {
+function FleetEngineCard({
+  engineId,
+  environment,
+  onEnter,
+}: {
+  engineId: string
+  environment: string | null
+  onEnter: () => void
+}) {
   const { query: q, summary: s, incidents, failed, tone } = useEngineHealth(engineId)
   const t = useT()
+  const kind = engineStatusKind({ isError: q.isError, summary: s })
 
   return (
     <button
@@ -68,30 +77,33 @@ function FleetEngineCard({ engineId, onEnter }: { engineId: string; onEnter: () 
       // No aria-label: it would REPLACE the accessible name and hide the KPI
       // grid + error text from screen readers — the visible content (engine
       // name, "Operate", counts) speaks for itself.
-      className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-4 text-left transition-colors outline-none focus-visible:ring-2"
+      className={cn(
+        "border-border bg-card hover:bg-muted flex flex-col gap-3 rounded-xl border p-4 text-left transition-colors",
+        FOCUS_RING,
+      )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-foreground inline-flex items-center gap-2 font-semibold">
-          <span className={`size-2 rounded-full ${TONE_DOT[tone]}`} aria-hidden />
-          {engineId}
+        <span className="text-foreground inline-flex min-w-0 items-center gap-2 font-semibold">
+          <span className={cn("size-2 shrink-0 rounded-full", TONE_DOT[tone])} aria-hidden />
+          {environment && <EnvironmentChip environment={environment} />}
+          <span className="truncate">{engineId}</span>
         </span>
-        <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+        <span className="text-muted-foreground text-small inline-flex items-center gap-1">
           {t("fleet.operate")}
           <Icon icon={ArrowRight} dense />
         </span>
       </div>
 
-      {q.isError ? (
-        <span className="text-danger-ink text-xs">
-          {t("fleet.loadError", { message: q.error?.message ?? t("viewState.unknownError") })}
+      {/* The same words as the chooser: "nicht erreichbar", "lädt …" (#322 U15). */}
+      {kind === "unreachable" || kind === "loading" || !s ? (
+        <span className="text-muted-foreground text-small">
+          {t(`cockpit.landing.status.${kind}`)}
         </span>
-      ) : !s ? (
-        <span className="text-muted-foreground text-xs">{t("fleet.loading")}</span>
       ) : (
         <FleetEngineKpis summary={s} incidents={incidents} failed={failed} />
       )}
       {s && (
-        <div className="text-muted-foreground text-[11px]">
+        <div className="text-muted-foreground text-small">
           {t("fleet.processDefinitions", { count: formatNumber(s.totalDefinitions) })}
         </div>
       )}
@@ -125,9 +137,11 @@ function LandscapeSection({
     widgets,
   )
   if (!(LANDSCAPE_WIDGET in widgets)) return null
+  // The landscape widget heads its own section (its title says what it is and
+  // that it ranks no engines) — a second heading over it said the same twice
+  // (#322 U27).
   return (
-    <section>
-      <SectionHeading title={t("fleet.landscape.title")} hint={t("fleet.landscape.hint")} />
+    <section aria-label={t("fleet.landscape.title")}>
       <WidgetRenderer layout={layout} keys={{}} errors={[]} widgets={widgets} />
     </section>
   )
@@ -208,18 +222,12 @@ export function FleetView({
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-foreground mb-1.5 text-2xl font-bold tracking-tight">
-            {t("fleet.heading")}
-          </h1>
-          <div className="text-muted-foreground text-sm">
+          <h1 className="text-title text-foreground mb-1.5 tracking-tight">{t("fleet.heading")}</h1>
+          <div className="text-muted-foreground text-small">
             {t("fleet.engineCount", { count: formatNumber(engines.length), list: idList })}
           </div>
         </div>
-        <HandOffButton
-          action="assess"
-          variant="primary"
-          prompt={ask(fleetOverviewHandOff(fleet))}
-        />
+        <HandOffButton action="assess" prompt={ask(fleetOverviewHandOff(fleet))} />
       </header>
 
       <section className="flex flex-col gap-4">
@@ -227,13 +235,18 @@ export function FleetView({
         {engineGroups.map((g) => (
           <div key={g.id}>
             {engineGroups.length > 1 && (
-              <div className="text-muted-foreground mb-2 text-[11px] font-medium tracking-wide uppercase">
+              <h3 className="text-muted-foreground text-small mb-2 font-semibold tracking-wide uppercase">
                 {g.id}
-              </div>
+              </h3>
             )}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {g.engines.map((e) => (
-                <FleetEngineCard key={e.id} engineId={e.id} onEnter={() => onEnterEngine(e.id)} />
+                <FleetEngineCard
+                  key={e.id}
+                  engineId={e.id}
+                  environment={engineGroups.length > 1 ? g.id : null}
+                  onEnter={() => onEnterEngine(e.id)}
+                />
               ))}
             </div>
           </div>

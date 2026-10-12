@@ -160,6 +160,14 @@ describe("incidents dashboard — a filtered view keeps its scope", () => {
         onHostAction={(action) => actions.push(action)}
       />,
     )
+    // A card keeps its chat hand-off behind its "more" button (#322 U20).
+    await waitFor(() =>
+      expect(
+        screen.queryAllByRole("button", { name: /in chat|^More actions for / }).length,
+      ).toBeGreaterThan(0),
+    )
+    const more = screen.queryAllByRole("button", { name: /^More actions for / })
+    if (more.length > 0) fireEvent.click(more[0])
     // A card's toggle wraps its chat hand-off — click the button itself.
     const [analyze] = (await screen.findAllByRole("button", { name: /in chat/ })).sort(
       (a, b) => (a.textContent ?? "").length - (b.textContent ?? "").length,

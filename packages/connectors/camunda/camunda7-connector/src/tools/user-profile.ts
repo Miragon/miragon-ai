@@ -99,8 +99,10 @@ export function registerUserProfileTools(
       })),
       // Toolset gate (decided up front) AND per-request identity: without a
       // profile key the save tool refuses, so the panel must render read-only
-      // instead of a Save button whose click errors.
+      // instead of a Save button whose click errors — and says which of the
+      // two keeps it read-only, so it can name the way out.
       canSave: canSave && key !== undefined,
+      readOnlyReason: !canSave ? "toolset" : key === undefined ? "signedOut" : null,
     }
   }
 

@@ -19,6 +19,7 @@ import { bpmnActivityIds, extractActivityNames } from "../lib/bpmn-parse.js"
 import { fetchDefinitionXml, fetchLatestDefinition, fetchStatsByKey } from "./definition-info.js"
 import { countOf, DAY_MS, optional, rowsOf } from "./engine-reads.js"
 import {
+  fetchBusinessKeys,
   groupBy,
   scanFacts,
   scanIncidents,
@@ -225,10 +226,18 @@ export async function buildActivityIncidentsData(
     }).then((rows) => rowsOf<IncidentRow>(rows)),
     getIncidentsCount({ client, query }).then(countOf),
   ])
+  // The rows are named by their instances' business keys — enrichment: a
+  // failed read names them by their short ids.
+  const businessKeys = await optional(
+    fetchBusinessKeys(
+      client,
+      raw.map((r) => r.processInstanceId),
+    ),
+  )
   return {
     processDefinitionKey: options.processDefinitionKey,
     activityId: options.activityId,
-    incidents: raw.map((r) => toIncidentInstance(r, options)),
+    incidents: raw.map((r) => toIncidentInstance(r, options, businessKeys)),
     totalCount,
   }
 }

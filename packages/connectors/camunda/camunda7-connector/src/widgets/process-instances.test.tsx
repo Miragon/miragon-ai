@@ -40,6 +40,7 @@ function firstPage(flags: StateFlags): ProcessInstancesData {
       id,
       businessKey: `BK-${id}`,
       processDefinitionKey: "invoice",
+      processDefinitionName: null,
       version: 1,
       suspended: flags.suspended === true || flags.active === false,
       hasIncident: false,

@@ -24,9 +24,12 @@ import type {
 import {
   definitionKeyInId,
   definitionVersionFromId,
+  fetchDefinitionsById,
   fetchLatestDefinition,
+  fetchNamesByDefinition,
   fetchStatsByKey,
   resolveDefinitionKeys,
+  type DefinitionInfo,
 } from "./definition-info.js"
 import { countOf, optional, rowsOf } from "./engine-reads.js"
 
@@ -216,6 +219,27 @@ async function rowKeyResolver(
   return (await optional(keys)) ?? definitionKeyInId
 }
 
+/**
+ * The process name each row runs on — a scoped list's rows all run on its
+ * definition (named by the key lookup it already made); the engine-wide list
+ * reads the names of the page's definition versions in ONE call. ENRICHMENT:
+ * a failed read leaves the names null, the rows then show their keys.
+ */
+async function rowNameResolver(
+  client: Client,
+  page: RawInstance[],
+  scoped: DefinitionInfo | null,
+): Promise<(definitionId: string) => string | null> {
+  if (scoped) return () => scoped.name
+  const byId = await optional(
+    fetchDefinitionsById(
+      client,
+      page.map((i) => i.definitionId),
+    ),
+  )
+  return (definitionId) => byId?.get(definitionId)?.name ?? null
+}
+
 export async function buildProcessInstancesData(
   client: Client,
   engineId: string,
@@ -243,18 +267,20 @@ export async function buildProcessInstancesData(
   ])
 
   const page = raw.filter((i): i is RawInstance & { id: string } => !!i.id)
-  const [flagged, keyOf] = await Promise.all([
+  const [flagged, keyOf, nameOf] = await Promise.all([
     instancesWithIncident(
       client,
       page.map((i) => i.id),
       filter,
     ),
     rowKeyResolver(client, page, args.processDefinitionKey),
+    rowNameResolver(client, page, definition),
   ])
   const instances: ProcessInstanceRow[] = page.map((i) => ({
     id: i.id,
     businessKey: i.businessKey ?? null,
     processDefinitionKey: i.definitionId ? keyOf(i.definitionId) : null,
+    processDefinitionName: i.definitionId ? nameOf(i.definitionId) : null,
     version: definitionVersionFromId(i.definitionId),
     suspended: i.suspended ?? false,
     hasIncident: flagged.has(i.id),
@@ -311,8 +337,10 @@ export async function buildJobPanelData(
         noRetriesLeft: args.failedOnly ? true : undefined,
         firstResult: args.firstResult ?? 0,
         maxResults: args.maxResults ?? 50,
-        sortBy: "jobId",
-        sortOrder: "desc",
+        // Jobs without retries first: the stuck ones are what the panel is
+        // opened for (#322 U11), on every page in the same order.
+        sortBy: "jobRetries",
+        sortOrder: "asc",
       },
     }).then((rows) => rowsOf<RawJob>(rows)),
     getJobsCount({ client, query: { ...baseQuery, noRetriesLeft: true } }).then(countOf),
@@ -323,6 +351,16 @@ export async function buildJobPanelData(
       : Promise.resolve(null),
   ])
 
+  // Names before ids (#322 U13): the activities' and processes' names from
+  // the diagrams of the page's definition versions — enrichment, the ids
+  // stand in when a diagram is unreadable.
+  const names = await fetchNamesByDefinition(
+    client,
+    raw.map((j) => j.processDefinitionId),
+  )
+  const nameIn = (definitionId: string | null | undefined, id: string | null | undefined) =>
+    (definitionId && id ? names.get(definitionId)?.[id] : null) ?? null
+
   return {
     totalCount: args.failedOnly ? failedCount : allCount,
     failedCount,
@@ -331,8 +369,10 @@ export async function buildJobPanelData(
       processInstanceId: j.processInstanceId,
       processDefinitionKey: j.processDefinitionKey ?? null,
       processDefinitionId: j.processDefinitionId ?? null,
+      processDefinitionName: nameIn(j.processDefinitionId, j.processDefinitionKey),
       // The engine's job carries the activity it failed at, not an `activityId`.
       activityId: j.failedActivityId ?? null,
+      activityName: nameIn(j.processDefinitionId, j.failedActivityId),
       retries: j.retries,
       exceptionMessage: j.exceptionMessage ?? null,
       dueDate: j.dueDate ?? null,

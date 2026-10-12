@@ -1,4 +1,10 @@
-import { Badge, DrillButton, FilterBar, PagedListFooter } from "@miragon/mcp-toolkit-ui"
+import {
+  DrillButton,
+  FilterBar,
+  PagedListFooter,
+  StatusBadge,
+  WidgetHeader,
+} from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
   PagedRows,
@@ -10,6 +16,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import { useNav } from "./navigation.js"
 import { useHandOff, type HandOff } from "./lib/hand-off.js"
+import { EngineMeta } from "./lib/engine-context.js"
 import { useT } from "../messages/use-t.js"
 import type { ProcessDefinition, ProcessListData } from "../view-models.js"
 import { CAMUNDA7_PROCESS_LIST_DATA } from "../tool-names.js"
@@ -160,12 +167,15 @@ export function ProcessListWidget({
 
   return (
     <WidgetShell>
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">{t("processList.heading")}</h2>
-        <Badge variant="secondary">
-          {t("processList.deployedCount", { count: formatNumber(paged.total) })}
-        </Badge>
-      </div>
+      <WidgetHeader
+        title={t("processList.heading")}
+        sub={
+          <>
+            <EngineMeta engineId={feedEngine ?? data.engineId} />
+            <span>{t("processList.deployedCount", { count: formatNumber(paged.total) })}</span>
+          </>
+        }
+      />
 
       <FilterBar
         search={search}
@@ -185,13 +195,9 @@ export function ProcessListWidget({
             header: t("processList.colStatus"),
             render: (row) =>
               row.suspended ? (
-                <Badge variant="secondary" className="bg-warning-soft text-warning-ink">
-                  {t("processList.statusSuspended")}
-                </Badge>
+                <StatusBadge tone="warning">{t("processList.statusSuspended")}</StatusBadge>
               ) : (
-                <Badge variant="secondary" className="bg-success-soft text-success-ink">
-                  {t("processList.statusActive")}
-                </Badge>
+                <StatusBadge tone="success">{t("processList.statusActive")}</StatusBadge>
               ),
           }}
           renderActions={(row) => (
@@ -203,7 +209,13 @@ export function ProcessListWidget({
                 {t("cockpitDefs.instancesAction")}
               </DrillButton>
               <DrillButton
-                onDrill={() => go({ type: "process-detail", processDefinitionKey: row.key })}
+                onDrill={() =>
+                  go({
+                    type: "process-detail",
+                    processDefinitionKey: row.key,
+                    label: row.name ?? undefined,
+                  })
+                }
                 ariaLabel={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
               >
                 {t("cockpitDefs.openAction")}

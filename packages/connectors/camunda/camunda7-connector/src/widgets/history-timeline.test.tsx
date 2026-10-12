@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import { HistoryTimelineWidget } from "./history-timeline.js"
 import type { HistoryTimelineData } from "../view-models.js"
@@ -43,6 +43,7 @@ const DATA: HistoryTimelineData = {
     },
   ],
   totalActivities: 2,
+  incidentActivityIds: null,
   engineId: "default",
 }
 
@@ -54,9 +55,9 @@ describe("HistoryTimelineWidget (fixture render)", () => {
   it("renders the process header and per-activity rows from fixture data", () => {
     render(<WidgetFixtureHost widget={Widget} data={DATA as unknown as Record<string, unknown>} />)
 
-    // Process header (processInstance.processDefinitionName + state badge).
+    // Process header (processInstance.processDefinitionName + its state in words).
     expect(screen.getByText("Invoice Process")).toBeTruthy()
-    expect(screen.getByText("COMPLETED")).toBeTruthy()
+    expect(screen.getByText("Completed")).toBeTruthy()
 
     // The accessible timeline list and its activity rows.
     expect(screen.getByRole("list", { name: "Activity history timeline" })).toBeTruthy()
@@ -65,6 +66,49 @@ describe("HistoryTimelineWidget (fixture render)", () => {
 
     // Duration formatting via the shared widget-shell helper: 120_000ms → "2m 0s".
     expect(screen.getByText("2m 0s")).toBeTruthy()
+  })
+
+  // #322 U14: a dot per BPMN type said nothing, and red on every end event
+  // read as an error. The type stays text; colour marks state only.
+  it("marks the step stuck at an open incident, and no type in a colour of its own", () => {
+    const running = {
+      ...DATA.activities[1],
+      id: "a2",
+      activityId: "charge",
+      activityName: "Charge card",
+      activityType: "serviceTask",
+      endTime: null,
+      durationInMillis: null,
+      assignee: null,
+    }
+    const end = {
+      ...DATA.activities[0],
+      id: "a9",
+      activityId: "end",
+      activityName: "Paid",
+      activityType: "endEvent",
+    }
+    const { container } = render(
+      <WidgetFixtureHost
+        widget={Widget}
+        data={{
+          ...DATA,
+          activities: [DATA.activities[0], running, end],
+          totalActivities: 3,
+          incidentActivityIds: ["charge"],
+        }}
+      />,
+    )
+    const stuck = screen.getByText("Charge card").closest("li")!
+    expect(within(stuck).getByText("Incident")).toBeTruthy()
+    expect(stuck.querySelector(".bg-danger")).toBeTruthy()
+    // The end event's dot is neutral, like every completed step.
+    const done = screen.getByText("Paid").closest("li")!
+    expect(done.querySelector(".bg-danger")).toBeNull()
+    // No categorical palette class anywhere in the timeline.
+    expect(container.innerHTML).not.toMatch(
+      /bg-(purple|indigo|pink|cyan|teal|orange|amber|yellow|blue)-/,
+    )
   })
 
   it("renders the empty state when data is null", () => {

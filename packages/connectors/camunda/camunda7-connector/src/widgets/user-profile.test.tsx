@@ -23,13 +23,18 @@ const VIEW: UserProfileView = {
     defaultEngineId: "prod-a",
     allowedEngineIds: [],
     pinnedDashboardIds: [],
-    preferredRole: "admin",
   },
   availableEngines: [
     { id: "prod-a", environment: "default" },
     { id: "prod-b", environment: "default" },
   ],
   canSave: true,
+  readOnlyReason: null,
+}
+
+/** Switch "Allow all engines" off — the curated engine list appears. */
+function curate() {
+  fireEvent.click(screen.getByRole("switch", { name: "Allow all engines" }))
 }
 
 /** VIEW with profile overrides. */
@@ -84,12 +89,49 @@ describe("UserProfileWidget save — only what the user changed", () => {
 
   it("narrowing the engine curation also clears a default it excludes", async () => {
     const { save } = renderPanel()
+    curate()
     fireEvent.click(screen.getByRole("checkbox", { name: "prod-a" }))
     expect(await save()).toEqual({ allowedEngineIds: ["prod-b"], defaultEngineId: "" })
   })
 
+  it("switching 'Allow all engines' off alone changes nothing: every engine stays checked", () => {
+    renderPanel()
+    curate()
+    expect(screen.getByRole("checkbox", { name: "prod-a" })).toHaveProperty("checked", true)
+    expect(screen.getByRole("checkbox", { name: "prod-b" })).toHaveProperty("checked", true)
+    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", true)
+  })
+
+  it("switching 'Allow all engines' on persists 'all' as []", async () => {
+    const { save } = renderPanel(viewWith({ allowedEngineIds: ["prod-a"] }))
+    fireEvent.click(screen.getByRole("switch", { name: "Allow all engines" }))
+    expect(await save()).toEqual({ allowedEngineIds: [] })
+  })
+
+  it("with no engine left, Save is off and the field says why", async () => {
+    renderPanel(viewWith({ allowedEngineIds: ["prod-a"] }))
+    fireEvent.click(screen.getByRole("checkbox", { name: "prod-a" }))
+    expect(await screen.findByText("Pick at least one engine, or allow all engines.")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", true)
+  })
+
+  it("the one save bar: Save stays off until a change, Discard takes it back", () => {
+    renderPanel()
+    const bar = screen.getByRole("region", { name: "Save settings" })
+    expect(bar.textContent).toContain("Everything is saved.")
+    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", true)
+    expect(screen.queryByRole("button", { name: "Discard changes" })).toBeNull()
+    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
+    expect(bar.textContent).toContain("You have unsaved changes.")
+    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", false)
+    fireEvent.click(screen.getByRole("button", { name: "Discard changes" }))
+    expect(screen.getByLabelText("Language")).toHaveProperty("value", "en")
+    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", true)
+  })
+
   it("unchecking and re-checking an engine is no change", async () => {
     const { save } = renderPanel()
+    curate()
     fireEvent.click(screen.getByRole("checkbox", { name: "prod-b" }))
     fireEvent.click(screen.getByRole("checkbox", { name: "prod-b" }))
     fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
@@ -123,23 +165,44 @@ describe("UserProfileWidget save — only what the user changed", () => {
 
   it("a second save sends only what changed since the first", async () => {
     const { save } = renderPanel()
-    fireEvent.change(screen.getByLabelText("Preferred role"), { target: { value: "operations" } })
-    expect(await save()).toEqual({ preferredRole: "operations" })
+    fireEvent.change(screen.getByLabelText("Default engine"), { target: { value: "prod-b" } })
+    expect(await save()).toEqual({ defaultEngineId: "prod-b" })
     fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
     expect(await save()).toEqual({ language: "de" })
   })
 
-  it("offers following the chat app's language as a choice of its own (#339)", async () => {
+  // #339: the widgets follow the host; its language is a choice of its own.
+  it("offers following the chat app's language as a choice of its own", async () => {
     const { save } = renderPanel()
     fireEvent.change(screen.getByLabelText("Language"), { target: { value: "system" } })
     expect(screen.getByRole("option", { name: "Automatic (follows the chat app)" })).toBeTruthy()
     expect(await save()).toEqual({ language: "system" })
   })
 
-  it("never sends an unset role (the stored role stays)", async () => {
-    const { save } = renderPanel()
-    fireEvent.change(screen.getByLabelText("Preferred role"), { target: { value: "" } })
-    expect(await save()).toEqual({})
+  // #322 U25: the role was a hint nothing read — the field is gone.
+  it("offers no role setting", () => {
+    renderPanel()
+    expect(screen.queryByLabelText("Preferred role")).toBeNull()
+  })
+})
+
+// #322 U25: the read-only reason on top, with the way out.
+describe("a read-only panel says why, on top, with the way out", () => {
+  it.each([
+    ["toolset", /operations toolset/],
+    ["signedOut", /Sign in through the connection/],
+  ] as const)("%s", (reason, wayOut) => {
+    renderPanel({ ...VIEW, canSave: false, readOnlyReason: reason })
+    const notice = screen.getByRole("status")
+    expect(notice.textContent).toContain("These settings are read-only here")
+    expect(notice.textContent).toMatch(wayOut)
+    // Above the fields, not under them.
+    expect(
+      notice.compareDocumentPosition(screen.getByLabelText("Language")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(screen.getByLabelText("Language")).toHaveProperty("disabled", true)
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull()
   })
 })
 

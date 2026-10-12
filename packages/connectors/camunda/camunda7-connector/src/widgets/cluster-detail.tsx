@@ -1,14 +1,14 @@
 import {
   HandOffButton,
+  ListTable,
   LogText,
   PagedRows,
-  RowCard,
   TableEmptyState,
+  Td,
   ViewDataState,
   WidgetShell,
   formatNumber,
   formatTimestamp,
-  truncate,
   usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
@@ -32,6 +32,9 @@ import {
 } from "./remediation.js"
 import { useHandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
+import { EngineMeta } from "./lib/engine-context.js"
+import { InstanceLabel, NamedId } from "./lib/identity.js"
+import { instanceName } from "./lib/write-feedback.js"
 import { useT } from "../messages/use-t.js"
 
 /** Page size — mirrors the server default (`CLUSTER_DETAIL_ROWS`). */
@@ -105,6 +108,18 @@ function clusterFeedParams({
   return { clusterActivityId, clusterIncidentType, clusterSignature, feedEngine, ready, args }
 }
 
+/**
+ * The cluster's processes as the sub-line names them: by name where a listed
+ * row carries one (#322 U13), else by key — in the cluster's own order.
+ */
+function clusterProcesses(data: ClusterDetailData, unknown: string): string {
+  const names = new Map<string, string>()
+  for (const row of data.incidents) {
+    if (row.processDefinitionName) names.set(row.processDefinitionKey, row.processDefinitionName)
+  }
+  return data.processDefinitionKeys.map((key) => names.get(key) ?? key).join(", ") || unknown
+}
+
 /** Header block: failing activity, incident-type badge, and the guarded remediation hand-off. */
 function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: string }) {
   const t = useT()
@@ -124,32 +139,33 @@ function ClusterHeader({ data, engineId }: { data: ClusterDetailData; engineId: 
   )
   return (
     <WidgetHeader
-      title={data.activityId}
+      badge={<StatusBadge tone="danger">{data.incidentType}</StatusBadge>}
+      // The activity by its name; its BPMN id only where it has none (#322 U13).
+      title={data.activityName ?? <span className="font-mono">{data.activityId}</span>}
       sub={
-        <span>
-          <StatusBadge tone="danger">{data.incidentType}</StatusBadge>
-          <span className="ml-2">
+        <>
+          <EngineMeta engineId={engineId} asOf={data.fetchedAt} />
+          <span>
             {t("clusterDetail.affectedAcross", {
               count: formatCountAtLeast(data.incidentCount, data.scannedIncidentCount),
-              keys: data.processDefinitionKeys.join(", ") || t("clusterDetail.unknownKeys"),
+              keys: clusterProcesses(data, t("clusterDetail.unknownKeys")),
             })}
+            {/* A point in time is a fact of the line, not a KPI tile it
+                would not fit in (#322 U12). */}
+            {data.firstSeen &&
+              ` · ${t("clusterDetail.firstSeen", { time: formatTimestamp(data.firstSeen) })}`}
           </span>
-        </span>
+        </>
       }
-      actions={
-        <HandOffButton
-          action={canFix ? "planFix" : "explainError"}
-          variant="primary"
-          prompt={ask(handOff)}
-        />
-      }
+      actions={<HandOffButton action={canFix ? "planFix" : "explainError"} prompt={ask(handOff)} />}
     />
   )
 }
 
 /**
- * KPI row: affected total plus the last-hour / 24h freshness profile. A count
- * a capped scan cannot vouch for renders as a lower bound ("≥2,000") or "—".
+ * KPI row: affected total plus the last-hour / 24h freshness profile — counts
+ * only (when it was first seen is a fact of the head's line). A count a
+ * capped scan cannot vouch for renders as a lower bound ("≥2,000") or "—".
  */
 function ClusterKpis({ data }: { data: ClusterDetailData }) {
   const t = useT()
@@ -162,17 +178,9 @@ function ClusterKpis({ data }: { data: ClusterDetailData }) {
           value: formatCountAtLeast(data.incidentCount, data.scannedIncidentCount),
           tone: "danger",
         },
-        {
-          label: t("clusterDetail.kpiNewLastHour"),
-          value: formatCount(data.lastHourCount),
-          tone: data.lastHourCount ? "danger" : undefined,
-        },
-        {
-          label: t("clusterDetail.kpiNew24h"),
-          value: formatCount(data.last24hCount),
-          tone: data.last24hCount ? "warning" : undefined,
-        },
-        { label: t("clusterDetail.kpiFirstSeen"), value: formatTimestamp(data.firstSeen) },
+        // How fast it grows is a count, not a second state (#322 U14).
+        { label: t("clusterDetail.kpiNewLastHour"), value: formatCount(data.lastHourCount) },
+        { label: t("clusterDetail.kpiNew24h"), value: formatCount(data.last24hCount) },
       ]}
     />
   )
@@ -187,51 +195,71 @@ function listCapped(data: ClusterDetailData): boolean {
   return !clusterScanComplete(data)
 }
 
-/** One affected instance row with its instance/incident drill actions. */
-function IncidentRow({ row }: { row: ClusterIncidentRow }) {
+/**
+ * Whether the rows need a process column: only when the cluster spans more
+ * than one process — for one, the head's line already names it.
+ */
+function spansProcesses(data: ClusterDetailData): boolean {
+  return data.processDefinitionKeys.length > 1
+}
+
+/**
+ * One affected instance (#322 U2, U13): its one label (business key, the
+ * UUID a copyable chip), its process by name where the cluster spans several,
+ * when the incident came — and the two drills pinned at the row's end.
+ */
+function IncidentRow({
+  row,
+  activityName,
+  showProcess,
+}: {
+  row: ClusterIncidentRow
+  activityName: string | null
+  showProcess: boolean
+}) {
   const go = useNav()
   const t = useT()
+  const label = instanceName(row.processInstanceId, row.businessKey)
   return (
-    <RowCard
-      title={
-        /* Business key first — the operator's order number, not an engine UUID. */
-        <span className="truncate">
-          {row.businessKey ??
-            t("clusterDetail.instanceFallback", {
-              id: truncate(row.processInstanceId, 12),
-            })}
-        </span>
-      }
-      subtitle={
-        <>
-          {row.processDefinitionKey} · {formatTimestamp(row.incidentTimestamp)}
-        </>
-      }
-      actions={
-        <>
+    <tr className="hover:bg-muted transition-colors">
+      <Td>
+        <InstanceLabel id={row.processInstanceId} businessKey={row.businessKey} />
+      </Td>
+      {showProcess && (
+        <Td>
+          <NamedId name={row.processDefinitionName} id={row.processDefinitionKey} />
+        </Td>
+      )}
+      <Td align="right" className="text-muted-foreground text-small whitespace-nowrap">
+        {formatTimestamp(row.incidentTimestamp)}
+      </Td>
+      <Td align="right">
+        <div className="inline-flex items-center justify-end gap-1">
           <DrillButton
             onDrill={() =>
-              go({ type: "instance-detail", processInstanceId: row.processInstanceId })
+              go({ type: "instance-detail", processInstanceId: row.processInstanceId, label })
             }
-            ariaLabel={t("clusterDetail.openInstanceAria", {
-              ref: row.businessKey ?? row.processInstanceId,
-            })}
+            ariaLabel={t("clusterDetail.openInstanceAria", { ref: label })}
           >
             {t("clusterDetail.instance")}
           </DrillButton>
           {row.incidentId && (
             <DrillButton
-              onDrill={() => go({ type: "incident-detail", incidentId: row.incidentId })}
-              ariaLabel={t("clusterDetail.openIncidentAria", {
-                ref: row.businessKey ?? row.processInstanceId,
-              })}
+              onDrill={() =>
+                go({
+                  type: "incident-detail",
+                  incidentId: row.incidentId,
+                  label: activityName ?? undefined,
+                })
+              }
+              ariaLabel={t("clusterDetail.openIncidentAria", { ref: label })}
             >
               {t("clusterDetail.incident")}
             </DrillButton>
           )}
-        </>
-      }
-    />
+        </div>
+      </Td>
+    </tr>
   )
 }
 
@@ -309,10 +337,10 @@ export function ClusterDetailView({
       content={
         <>
           {data.representativeMessage && (
-            <div className="text-sm">
-              <span className="text-muted-foreground font-medium">
+            <div>
+              <h2 className="text-foreground text-dense font-semibold">
                 {t("clusterDetail.failureMessage")}
-              </span>
+              </h2>
               <LogText text={data.representativeMessage} className="mt-1" />
             </div>
           )}
@@ -321,7 +349,9 @@ export function ClusterDetailView({
             aria-label={t("clusterDetail.affectedInstances")}
             className="flex flex-col gap-2"
           >
-            <h3 className="text-sm font-semibold">{t("clusterDetail.affectedInstances")}</h3>
+            <h2 className="text-foreground text-dense font-semibold">
+              {t("clusterDetail.affectedInstances")}
+            </h2>
             <FilterBar
               search={search}
               onSearchChange={setSearch}
@@ -330,24 +360,39 @@ export function ClusterDetailView({
               chips={[]}
               onChipToggle={() => undefined}
             />
-            <PagedRows paged={paged} className="flex flex-col gap-2">
-              {paged.items.map((row) => (
-                <IncidentRow
-                  // The engine can report rows without an incident id — fall back to
-                  // instance+timestamp so React keys stay unique per incident row.
-                  key={row.incidentId || `${row.processInstanceId}-${row.incidentTimestamp}`}
-                  row={row}
-                />
-              ))}
-              {paged.items.length === 0 && (
+            <PagedRows paged={paged}>
+              {paged.items.length === 0 ? (
                 <TableEmptyState>
                   {interacted ? t("clusterDetail.noMatch") : t("clusterDetail.noMatchingIncidents")}
                 </TableEmptyState>
+              ) : (
+                <ListTable
+                  ariaLabel={t("clusterDetail.affectedInstances")}
+                  columns={[
+                    { label: t("clusterDetail.colInstance") },
+                    ...(spansProcesses(data)
+                      ? [{ label: t("clusterDetail.colProcess"), hideBelow: "sm" as const }]
+                      : []),
+                    { label: t("clusterDetail.colOccurred"), align: "right" },
+                    { plain: true, sticky: true },
+                  ]}
+                >
+                  {paged.items.map((row) => (
+                    <IncidentRow
+                      // The engine can report rows without an incident id — fall back to
+                      // instance+timestamp so React keys stay unique per incident row.
+                      key={row.incidentId || `${row.processInstanceId}-${row.incidentTimestamp}`}
+                      row={row}
+                      activityName={data.activityName}
+                      showProcess={spansProcesses(data)}
+                    />
+                  ))}
+                </ListTable>
               )}
             </PagedRows>
             <PagedListFooter paged={paged} noun={t("clusterDetail.footerNoun")} />
             {listCapped(data) && (
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground text-small">
                 {t("clusterDetail.listCapped", { count: formatNumber(data.scannedIncidentCount) })}
               </p>
             )}

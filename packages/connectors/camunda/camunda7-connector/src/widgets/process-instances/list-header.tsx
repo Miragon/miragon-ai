@@ -1,6 +1,7 @@
 import { HandOffButton, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { LivePill, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { EngineMeta } from "../lib/engine-context.js"
 import { useT } from "../../messages/use-t.js"
 import { instancesFilterFacts, type InstancesListFilters } from "./hand-offs.js"
 
@@ -72,13 +73,14 @@ export function InstancesHeader({
       title={title}
       sub={
         <>
+          <EngineMeta engineId={engine} />
           <LivePill tone="info">
             {t("processInstances.runningCount", { count: formatNumber(total) })}
           </LivePill>
           {scopedKey && (
             <>
               <span className="text-muted-foreground">·</span>
-              <span className="font-mono text-xs">{scopedKey}</span>
+              <span className="font-mono">{scopedKey}</span>
             </>
           )}
         </>
@@ -86,7 +88,6 @@ export function InstancesHeader({
       actions={
         <HandOffButton
           action="assess"
-          variant="primary"
           prompt={ask(triageInstancesHandOff({ scopedKey, processName, total, engine, filters }))}
         />
       }

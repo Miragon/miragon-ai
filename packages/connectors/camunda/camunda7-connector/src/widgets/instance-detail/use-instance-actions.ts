@@ -1,6 +1,7 @@
 import type { InstanceDetailData } from "../../view-models.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { useEngineAction, type ActionConfirmation, type TargetLine } from "../lib/engine-action.js"
+import { engineTargetLines, useEngineEnvironment } from "../lib/engine-context.js"
 import { useIncidentRecovery } from "../process-incidents/use-incident-recovery.js"
 import { instanceName, writeFeedback } from "../lib/write-feedback.js"
 
@@ -15,28 +16,34 @@ interface CancelArgs extends Record<string, unknown> {
   engine?: string
 }
 
-/** The instance as a confirmation names it: id, business key, definition, engine. */
+/** Where a write lands: the engine and its environment (#322 U4). */
+interface WriteTarget {
+  engineId: string | undefined
+  environment: string | null
+}
+
+/** The instance as a confirmation names it: id, business key, definition, engine, environment. */
 function instanceLines(
   t: T,
   instance: InstanceDetailData["instance"],
-  engineId: string | undefined,
+  { engineId, environment }: WriteTarget,
 ): [TargetLine, ...TargetLine[]] {
   const lines: [TargetLine, ...TargetLine[]] = [[t("confirmDialog.instance"), instance.id]]
   if (instance.businessKey) lines.push([t("confirmDialog.businessKey"), instance.businessKey])
   lines.push([t("confirmDialog.definition"), instance.definitionId])
-  if (engineId) lines.push([t("confirmDialog.engine"), engineId])
+  lines.push(...engineTargetLines(t, engineId, environment))
   return lines
 }
 
 function cancelConfirmation(
   t: T,
   instance: InstanceDetailData["instance"],
-  engineId: string | undefined,
+  where: WriteTarget,
 ): ActionConfirmation {
   return {
     title: t("instanceDetail.confirmCancelTitle"),
     description: t("instanceDetail.confirmCancelDescription"),
-    target: instanceLines(t, instance, engineId),
+    target: instanceLines(t, instance, where),
     confirmLabel: t("instanceDetail.cancelInstance"),
     keepLabel: t("instanceDetail.keepInstance"),
     destructive: true,
@@ -47,9 +54,9 @@ function suspensionConfirmation(
   t: T,
   suspend: boolean,
   instance: InstanceDetailData["instance"],
-  engineId: string | undefined,
+  where: WriteTarget,
 ): ActionConfirmation {
-  const target = instanceLines(t, instance, engineId)
+  const target = instanceLines(t, instance, where)
   return suspend
     ? {
         title: t("instanceDetail.confirmSuspendTitle"),
@@ -117,6 +124,7 @@ export function useInstanceActions({
   // prompts) must target the exact engine this data came from, never the caller's
   // default engine, which can differ if the default-engine save raced or failed.
   const engineId = engine ?? data?.engineId
+  const where: WriteTarget = { engineId, environment: useEngineEnvironment(engineId) }
   const recovery = useIncidentRecovery(engineId, { resetOn: data, available: isActionable })
   const isSuspended =
     suspension.done.get(instanceId)?.args.suspended ?? data?.instance.suspended ?? false
@@ -128,7 +136,7 @@ export function useInstanceActions({
     suspension.run(
       { processInstanceId: data.instance.id, suspended: !isSuspended, engine: engineId },
       {
-        confirm: suspensionConfirmation(t, !isSuspended, data.instance, engineId),
+        confirm: suspensionConfirmation(t, !isSuspended, data.instance, where),
         feedback: writeFeedback.suspension(
           t,
           instanceName(data.instance.id, data.instance.businessKey),
@@ -143,7 +151,7 @@ export function useInstanceActions({
     cancel.run(
       { processInstanceId: data.instance.id, engine: engineId },
       {
-        confirm: cancelConfirmation(t, data.instance, engineId),
+        confirm: cancelConfirmation(t, data.instance, where),
         feedback: writeFeedback.cancel(
           t,
           instanceName(data.instance.id, data.instance.businessKey),

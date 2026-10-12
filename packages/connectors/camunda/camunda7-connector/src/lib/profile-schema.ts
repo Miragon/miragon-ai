@@ -6,7 +6,6 @@ import {
   type LanguagePref,
   type ProfileRecord,
 } from "@miragon-ai/widget-shell/server"
-import { ROLES } from "./profile-constants.js"
 
 /** Slice key under `profile.modules.<module>` — this module's name. */
 export const CAMUNDA7_MODULE_KEY = "camunda7"
@@ -42,12 +41,6 @@ export const camunda7SettingsSchema = z.object({
     .describe(
       "Saved-dashboard id suggested as the user's default — surfaced to the model (open via load-dashboard) and to pickers; the cockpit has no dashboards surface yet.",
     ),
-  preferredRole: z
-    .enum(ROLES)
-    .optional()
-    .describe(
-      "Preferred operations role (UI hint only; tool exposure is set by the connection toolset).",
-    ),
 })
 
 export type Camunda7Settings = z.infer<typeof camunda7SettingsSchema>
@@ -55,8 +48,10 @@ export type Camunda7Settings = z.infer<typeof camunda7SettingsSchema>
 /**
  * Fail-soft slice parse: absent slice, garbage, or fields a different build
  * wrote all degrade to the schema defaults — per FIELD, via the shared
- * `parseModuleSlice`, so one bad value (e.g. a `preferredRole` a newer build
- * wrote) can't reset the engine curation next to it. Same contract as
+ * `parseModuleSlice`, so one bad value (e.g. an `allowedEngineIds` a newer
+ * build wrote in another shape) can't reset the default engine next to it.
+ * A key this build no longer reads (the retired `preferredRole`, #322 U25)
+ * stays in the stored document untouched, inert. Same contract as
  * analytics' `parseAnalyticsSettings`.
  */
 export function parseCamunda7Settings(
@@ -130,4 +125,14 @@ export interface UserProfileView {
    * write that resolves to an unknown tool.
    */
   canSave: boolean
+  /**
+   * Why the panel is read-only, so it can say how to change that (#322 U25):
+   * `toolset` — the connection runs without profile writes (a toolset like
+   * `operations` has them); `signedOut` — writes are registered, but the
+   * request names no signed-in user to save for. Null when `canSave`.
+   */
+  readOnlyReason: ProfileReadOnlyReason | null
 }
+
+/** Why a settings panel cannot save — see {@link UserProfileView.readOnlyReason}. */
+export type ProfileReadOnlyReason = "toolset" | "signedOut"

@@ -1,128 +1,38 @@
 import { useState } from "react"
-import { Alert, AlertDescription, Badge, Button, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { WidgetHeader, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import {
   LANGUAGES,
   NativeSelect,
   SettingsCard,
   SettingsField,
   WidgetShell,
-  formatTime,
   useDetailView,
   useResetOnChange,
-  type LanguagePref,
-  type Locale,
 } from "@miragon-ai/widget-shell/widgets"
 
 import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_USER_PROFILE_DATA } from "../tool-names.js"
-import { ROLES, type Role } from "../lib/profile-constants.js"
-import { groupEnginesByEnvironment } from "../lib/environments.js"
-import type { UserProfile, UserProfileView } from "../lib/profile-schema.js"
+import type { UserProfileView } from "../lib/profile-schema.js"
 import { useT } from "../messages/use-t.js"
 import { useEngineAction } from "./lib/engine-action.js"
 import { writeFeedback } from "./lib/write-feedback.js"
 import { ProfileModelContext } from "./user-profile-context.js"
-
-/** Subset of a dashboard summary the picker needs (from `list-dashboards`). */
-interface DashboardSummary {
-  id: string
-  name: string
-  title?: string
-  /**
-   * Set (since toolkit 2.6) when the store holds the record but cannot read
-   * it — a newer `schemaVersion` mid rolling upgrade, a corrupt row. Its
-   * `name` is then just the id, and `load-dashboard` refuses it.
-   */
-  unreadable?: string
-}
-
-/**
- * The dashboards the picker offers: unreadable records left out (they could
- * be chosen but never opened), pinned ones first — the one behavior the pin
- * promises. A saved default or pin that points at an unreadable record stays
- * in the form state untouched, so it survives until the record reads again.
- */
-function pickableDashboards(items: DashboardSummary[], pinnedIds: string[]): DashboardSummary[] {
-  return items
-    .filter((d) => d.unreadable === undefined)
-    .sort((a, b) => Number(pinnedIds.includes(b.id)) - Number(pinnedIds.includes(a.id)))
-}
-
-/** Language names are endonyms — shown in their own language, not the UI locale. */
-const LANGUAGE_LABELS: Record<Locale, string> = { en: "English", de: "Deutsch" }
-
-/** The editable preference state mirrored by the form controls. */
-interface FormState {
-  language: LanguagePref
-  allowedEngineIds: string[]
-  defaultEngineId: string
-  defaultDashboardId: string
-  pinnedDashboardIds: string[]
-  preferredRole: "" | Role
-}
-
-/** Narrow a `<select>` value back to its constant array without a cast. */
-function parseEnum<T extends string>(value: string, allowed: readonly T[]): T | undefined {
-  return (allowed as readonly string[]).includes(value) ? (value as T) : undefined
-}
-
-function fromProfile(p: UserProfile, engineIds: string[]): FormState {
-  return {
-    language: p.language,
-    // Empty/absent allow-list means "all" — render every engine as checked.
-    allowedEngineIds:
-      p.allowedEngineIds && p.allowedEngineIds.length > 0 ? p.allowedEngineIds : engineIds,
-    defaultEngineId: p.defaultEngineId ?? "",
-    defaultDashboardId: p.defaultDashboardId ?? "",
-    pinnedDashboardIds: p.pinnedDashboardIds ?? [],
-    preferredRole: p.preferredRole ?? "",
-  }
-}
-
-const sameSet = (a: string[], b: string[]) =>
-  a.length === b.length && a.every((id) => b.includes(id))
-
-/** The single-valued preferences, compared by value. */
-const SCALAR_FIELDS = [
-  "language",
-  "defaultEngineId",
-  "defaultDashboardId",
-  "preferredRole",
-] as const
-
-/**
- * The save payload: ONLY the preferences the user changed against the form's
- * baseline. The panel may render from a cached (stale) view, and another
- * writer (the model's `camunda7_select_engine`, a second tab) may have
- * changed the profile meanwhile — re-sending untouched fields would silently
- * write the old values back. The save input is default-free, so an omitted
- * field stays unchanged on the server.
- */
-function changedPreferences(
-  form: FormState,
-  baseline: FormState,
-  engineIds: string[],
-): Record<string, unknown> {
-  const payload: Record<string, unknown> = {}
-  for (const field of SCALAR_FIELDS) {
-    if (form[field] !== baseline[field]) payload[field] = form[field]
-  }
-  // "" = unset → never sent: the enum stays valid and the stored role unchanged.
-  if (payload.preferredRole === "") delete payload.preferredRole
-  if (!sameSet(form.pinnedDashboardIds, baseline.pinnedDashboardIds)) {
-    payload.pinnedDashboardIds = form.pinnedDashboardIds
-  }
-  if (!sameSet(form.allowedEngineIds, baseline.allowedEngineIds)) {
-    // Everything checked persists as [] — the documented "all engines"
-    // encoding — so engines configured later are included automatically
-    // instead of freezing today's expanded list.
-    payload.allowedEngineIds = sameSet(form.allowedEngineIds, engineIds)
-      ? []
-      : form.allowedEngineIds
-  }
-  return payload
-}
-
-const helpCls = "text-muted-foreground text-xs"
+import {
+  LANGUAGE_LABELS,
+  allowedIn,
+  changedPreferences,
+  fromProfile,
+  isDirty,
+  parseEnum,
+  pickableDashboards,
+  type DashboardSummary,
+  type FormState,
+} from "./user-profile-form.js"
+import {
+  DashboardsCardBody,
+  EnginesCard,
+  ReadOnlyNotice,
+  SaveBar,
+} from "./user-profile-sections.js"
 
 /**
  * Profile & settings panel. Self-fetches the signed-in caller's profile +
@@ -154,73 +64,11 @@ export function UserProfileWidget({ data: initialData = null }: { data?: UserPro
   )
 }
 
-function DashboardsCardBody({
-  unavailable,
-  dashboards,
-  form,
-  canSave,
-  onSetDefault,
-  onTogglePinned,
-}: {
-  unavailable: boolean
-  dashboards: DashboardSummary[]
-  form: Pick<FormState, "defaultDashboardId" | "pinnedDashboardIds">
-  canSave: boolean
-  onSetDefault: (id: string) => void
-  onTogglePinned: (id: string, on: boolean) => void
-}) {
-  const t = useT()
-  if (unavailable) {
-    return <span className={helpCls}>{t("profile.dashboards.unavailable")}</span>
-  }
-  if (dashboards.length === 0) {
-    return <span className={helpCls}>{t("profile.dashboards.empty")}</span>
-  }
-  return (
-    <>
-      <SettingsField
-        label={t("profile.field.defaultDashboard")}
-        help={t("profile.field.defaultDashboard.help")}
-      >
-        <NativeSelect
-          value={form.defaultDashboardId}
-          disabled={!canSave}
-          onChange={(e) => onSetDefault(e.target.value)}
-        >
-          <option value="">{t("profile.dashboard.none")}</option>
-          {dashboards.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.title ?? d.name}
-            </option>
-          ))}
-        </NativeSelect>
-      </SettingsField>
-      <SettingsField
-        label={t("profile.field.pinnedDashboards")}
-        help={t("profile.field.pinnedDashboards.help")}
-        group
-      >
-        <div className="flex flex-col gap-1.5">
-          {dashboards.map((d) => (
-            <label key={d.id} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.pinnedDashboardIds.includes(d.id)}
-                disabled={!canSave}
-                onChange={(ev) => onTogglePinned(d.id, ev.target.checked)}
-              />
-              <span>{d.title ?? d.name}</span>
-            </label>
-          ))}
-        </div>
-      </SettingsField>
-    </>
-  )
-}
-
 /**
  * The shell-less form body — localized via `useT` (locale from the global
- * ProfileGate). Wrapped in `WidgetShell` by `UserProfileWidget` above.
+ * ProfileGate). Wrapped in `WidgetShell` by `UserProfileWidget` above. The
+ * settings page has ONE title (#322 U27): this panel's, "Einstellungen";
+ * each card under it is a section.
  */
 function ProfilePanel({ view }: { view: UserProfileView }) {
   const t = useT()
@@ -243,18 +91,13 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
     tool: CAMUNDA7_SAVE_USER_PROFILE,
     allowed: canSave,
   })
-  const saveError = save.error()
-  const viewForm = () =>
-    fromProfile(
-      view.profile,
-      view.availableEngines.map((e) => e.id),
-    )
+  const engineIds = view.availableEngines.map((e) => e.id)
+  const viewForm = () => fromProfile(view.profile, engineIds)
   // The baseline is what the user last saw persisted: the view's profile,
   // advanced to the submitted form after each successful save — so reverting
   // a saved change is a change again even before the profile refetched.
   const [baseline, setBaseline] = useState<FormState>(viewForm)
   const [form, setForm] = useState<FormState>(baseline)
-  const [savedAt, setSavedAt] = useState<string | null>(null)
 
   // Re-sync form and baseline from server truth whenever the view's profile
   // changes (the save invalidates the profile feed, which refetches).
@@ -264,8 +107,6 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
     setForm(next)
   })
 
-  const engines = view.availableEngines
-  const engineGroups = groupEnginesByEnvironment(engines)
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }))
 
@@ -280,6 +121,14 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
     })
   }
 
+  function setAllEngines(on: boolean) {
+    setForm((f) => {
+      // Switched off with nothing curated yet: start from every engine checked.
+      const allowedEngineIds = on || f.allowedEngineIds.length > 0 ? f.allowedEngineIds : engineIds
+      return { ...f, allEngines: on, allowedEngineIds }
+    })
+  }
+
   function togglePinned(id: string, on: boolean) {
     setForm((f) => {
       const next = on
@@ -291,57 +140,29 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
 
   function handleSave() {
     const submitted = form
-    save.run(
-      changedPreferences(
-        submitted,
-        baseline,
-        engines.map((e) => e.id),
-      ),
-      {
-        feedback: writeFeedback.settings(t),
-        onSuccess: () => {
-          setBaseline(submitted)
-          setSavedAt(formatTime(new Date().toISOString()))
-        },
-      },
-    )
+    save.run(changedPreferences(submitted, baseline, engineIds), {
+      feedback: writeFeedback.settings(t),
+      onSuccess: () => setBaseline(submitted),
+    })
   }
 
-  const allEnginesAllowed = form.allowedEngineIds.length >= engines.length
+  const allowed = allowedIn(form, engineIds)
+  const allEnginesAllowed = form.allEngines || allowed.length >= engineIds.length
+  const invalid = !form.allEngines && form.allowedEngineIds.length === 0
+  const dirty = isDirty(form, baseline, engineIds)
 
   return (
     <>
       <ProfileModelContext
-        form={form}
+        form={{ ...form, allowedEngineIds: allowed }}
         canSave={canSave}
         allEnginesAllowed={allEnginesAllowed}
         dashboardsAnswered={dashboardsQuery.isSuccess}
       />
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">{t("profile.heading")}</h2>
-          <p className="text-muted-foreground mt-1 text-sm">{t("profile.subtitle")}</p>
-        </div>
-        {save.allowed ? (
-          <div className="flex items-center gap-2">
-            {savedAt && !save.pending() && (
-              <Badge variant="secondary">{t("profile.saved", { time: savedAt })}</Badge>
-            )}
-            <Button size="sm" onClick={handleSave} disabled={save.pending()}>
-              {save.pending() ? t("profile.saving") : t("profile.save")}
-            </Button>
-          </div>
-        ) : (
-          <span className={helpCls}>{t("profile.readOnly")}</span>
-        )}
-      </div>
+      <WidgetHeader title={t("profile.heading")} sub={<span>{t("profile.subtitle")}</span>} />
 
-      {saveError !== null && (
-        <Alert variant="destructive">
-          <AlertDescription>{saveError || t("profile.saveError")}</AlertDescription>
-        </Alert>
-      )}
+      {!canSave && view.readOnlyReason && <ReadOnlyNotice reason={view.readOnlyReason} />}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SettingsCard title={t("profile.section.general")}>
@@ -363,83 +184,16 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
               ))}
             </NativeSelect>
           </SettingsField>
-          <SettingsField label={t("profile.field.role")} help={t("profile.field.role.help")}>
-            <NativeSelect
-              value={form.preferredRole}
-              disabled={!canSave}
-              onChange={(e) => set("preferredRole", parseEnum(e.target.value, ROLES) ?? "")}
-            >
-              <option value="">{t("profile.role.unset")}</option>
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {t(`role.${r}`)}
-                </option>
-              ))}
-            </NativeSelect>
-          </SettingsField>
         </SettingsCard>
 
-        <SettingsCard title={t("profile.section.engines")}>
-          <SettingsField
-            label={t("profile.field.allowedEngines")}
-            help={t("profile.field.allowedEngines.help")}
-            group
-          >
-            <div className="flex flex-col gap-1.5">
-              {engines.length === 0 && <span className={helpCls}>{t("profile.engines.none")}</span>}
-              {/* The environment→engine map: checkboxes group under their
-                  environment (flat when only one environment is configured). */}
-              {engineGroups.map((g) => (
-                <div key={g.id} className="flex flex-col gap-1.5">
-                  {engineGroups.length > 1 && (
-                    <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-                      {g.id}
-                    </span>
-                  )}
-                  {g.engines.map((e) => (
-                    <label key={e.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={form.allowedEngineIds.includes(e.id)}
-                        disabled={!canSave}
-                        onChange={(ev) => toggleEngine(e.id, ev.target.checked)}
-                      />
-                      <span className="font-mono">{e.id}</span>
-                    </label>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </SettingsField>
-          <SettingsField
-            label={t("profile.field.defaultEngine")}
-            help={t("profile.field.defaultEngine.help")}
-          >
-            <NativeSelect
-              value={form.defaultEngineId}
-              disabled={!canSave}
-              onChange={(e) => set("defaultEngineId", e.target.value)}
-            >
-              <option value="">{t("profile.engine.auto")}</option>
-              {engineGroups.map((g) => {
-                const allowed = g.engines.filter((e) => form.allowedEngineIds.includes(e.id))
-                if (allowed.length === 0) return null
-                const options = allowed.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.id}
-                  </option>
-                ))
-                return engineGroups.length > 1 ? (
-                  <optgroup key={g.id} label={g.id}>
-                    {options}
-                  </optgroup>
-                ) : (
-                  options
-                )
-              })}
-            </NativeSelect>
-          </SettingsField>
-        </SettingsCard>
+        <EnginesCard
+          view={view}
+          form={form}
+          canSave={canSave}
+          onAllEngines={setAllEngines}
+          onToggleEngine={toggleEngine}
+          onDefaultEngine={(id) => set("defaultEngineId", id)}
+        />
 
         <SettingsCard title={t("profile.section.dashboards")}>
           <DashboardsCardBody
@@ -452,6 +206,17 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           />
         </SettingsCard>
       </div>
+
+      {save.allowed && (
+        <SaveBar
+          dirty={dirty}
+          pending={save.pending()}
+          invalid={invalid}
+          error={save.error()}
+          onSave={handleSave}
+          onDiscard={() => setForm(baseline)}
+        />
+      )}
     </>
   )
 }

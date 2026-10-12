@@ -1,8 +1,17 @@
-import { useReducer } from "react"
-import { useCallTool, useLocale, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { useReducer, type ReactNode } from "react"
+import {
+  Button,
+  cn,
+  FOCUS_RING,
+  useCallTool,
+  useLocale,
+  useToolQuery,
+} from "@miragon/mcp-toolkit-ui"
 import { HostModelContext, WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
 import {
+  AppEmptyState,
   Icon,
+  NativeSelect,
   ViewDataState,
   WidgetShell,
   useHostWidgets,
@@ -18,6 +27,7 @@ import {
 } from "lucide-react"
 import type { CockpitAppData } from "../../view-models.js"
 import { groupEnginesByEnvironment } from "../../lib/environments.js"
+import { EngineChromeProvider, EnvironmentChip, environmentIn } from "../lib/engine-context.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
 import { buildViewParams, intentToView, popTo, pushView, type CockpitView } from "../nav-core.js"
 import { camunda7BaseWidgets } from "../registry.js"
@@ -152,45 +162,37 @@ function cockpitReducer(state: CockpitState, action: CockpitAction): CockpitStat
 }
 
 /**
- * The sidebar's multi-engine block: the way to the cross-engine view (only while
- * `onOpenFleet` is offered — an analytics feature) and the active-engine select,
- * with the environment→engine map as optgroups (flat for a single environment).
+ * The engine the cockpit operates, as its head shows it (#322 U4): the
+ * environment as a text chip ("PROD") and the engine, a select over the
+ * environment→engine map when there is more than one (optgroups by
+ * environment, flat for a single one).
  */
-function EngineSwitcher({
+function EngineSwitch({
   engineId,
+  environment,
   engineGroups,
   onSwitch,
-  onOpenFleet,
 }: {
   engineId: string
+  environment: string | null
   engineGroups: Array<{ id: string; engines: Array<{ id: string }> }>
   onSwitch: (id: string) => void
-  onOpenFleet?: () => void
 }) {
   const locale = useLocale()
+  const engines = engineGroups.flatMap((g) => g.engines)
   return (
-    <div className="border-border mt-1 flex flex-col gap-2 border-t pt-3">
-      {onOpenFleet && (
-        <button
-          type="button"
-          onClick={onOpenFleet}
-          className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2"
-        >
-          <Icon icon={ArrowLeftRight} />
-          {translator(locale, "cockpit.nav.crossEngine")}
-        </button>
-      )}
-      <label className="text-muted-foreground flex flex-col gap-1 px-3 text-[11px] font-medium">
-        {translator(locale, "cockpit.nav.engine")}
-        <select
+    <div data-slot="engine-context" className="flex min-w-0 items-center gap-2">
+      {environment && <EnvironmentChip environment={environment} />}
+      {engines.length > 1 ? (
+        <NativeSelect
           aria-label={translator(locale, "cockpit.aria.activeEngine")}
           value={engineId}
           onChange={(e) => onSwitch(e.target.value)}
-          className="border-border bg-background text-foreground h-8 rounded-md border px-2 text-xs"
+          className="h-8 max-w-56 font-semibold"
         >
           {engineGroups.length > 1
             ? engineGroups.map((g) => (
-                <optgroup key={g.id} label={g.id}>
+                <optgroup key={g.id} label={g.id.toUpperCase()}>
                   {g.engines.map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.id}
@@ -198,16 +200,123 @@ function EngineSwitcher({
                   ))}
                 </optgroup>
               ))
-            : engineGroups
-                .flatMap((g) => g.engines)
-                .map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.id}
-                  </option>
-                ))}
-        </select>
-      </label>
+            : engines.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.id}
+                </option>
+              ))}
+        </NativeSelect>
+      ) : (
+        <span className="text-dense text-foreground truncate font-semibold">{engineId}</span>
+      )}
     </div>
+  )
+}
+
+/**
+ * The cockpit's head (#322 U20): ONE compact row — the section switch on the
+ * left; the way across engines, the engine with its environment and the one
+ * Refresh on the right. It replaces the sidebar that cost an inline frame
+ * some 200 px before the first content. Wraps only when the frame is
+ * narrower than its content; the cross-engine label shows from 56rem of head
+ * width, below it the button keeps its name in `aria-label`.
+ */
+function CockpitHead({
+  activeSection,
+  onSection,
+  engineSwitch,
+  onOpenFleet,
+}: {
+  activeSection: TopSection
+  onSection: (intent: NavIntent) => void
+  engineSwitch: ReactNode
+  onOpenFleet?: () => void
+}) {
+  const locale = useLocale()
+  const crossEngine = translator(locale, "cockpit.nav.crossEngine")
+  return (
+    <div className="border-border @container mb-4 border-b pb-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <nav
+          aria-label={translator(locale, "cockpit.aria.sections")}
+          className="flex flex-wrap items-center gap-1"
+        >
+          {SECTIONS.map((s) => {
+            const isActive = activeSection === s.id
+            return (
+              <button
+                key={s.id}
+                type="button"
+                aria-current={isActive ? "page" : undefined}
+                onClick={() => onSection(s.intent)}
+                className={cn(
+                  "text-dense inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 font-medium transition-colors",
+                  FOCUS_RING,
+                  isActive
+                    ? "bg-accent text-accent-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon icon={s.icon} />
+                {translator(locale, `cockpit.section.${s.id}`)}
+              </button>
+            )
+          })}
+        </nav>
+        <div className="ms-auto flex min-w-0 flex-wrap items-center gap-2">
+          {onOpenFleet && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onOpenFleet}
+              aria-label={crossEngine}
+              title={crossEngine}
+            >
+              <Icon icon={ArrowLeftRight} />
+              <span className="hidden @4xl:inline">{crossEngine}</span>
+            </Button>
+          )}
+          {engineSwitch}
+          <CockpitRefreshButton />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The section the head highlights: the ROOT of the trail — the section the
+ * user drilled in from stays active (every stack starts at a top section).
+ */
+function activeSectionOf(stack: CockpitView[]): TopSection {
+  const root = stack[0].section
+  return root === "incidents" || root === "settings" ? root : "overview"
+}
+
+/**
+ * The cross-engine view's trail: "Alle Engines" (the chooser) and itself,
+ * the current page. The cockpit offers the view only with more than one
+ * engine, so the chooser is always there to go back to.
+ */
+function FleetCrumbs({ locale, onLanding }: { locale: string; onLanding: () => void }) {
+  return (
+    <nav
+      aria-label={translator(locale, "cockpit.aria.breadcrumb")}
+      className="text-muted-foreground text-dense mb-4 flex items-center gap-1.5"
+    >
+      <button
+        type="button"
+        onClick={onLanding}
+        className={cn("hover:text-foreground rounded", FOCUS_RING)}
+      >
+        {translator(locale, "cockpit.crumb.allEngines")}
+      </button>
+      <Icon icon={ChevronRight} dense />
+      <span aria-current="page" className="text-foreground font-medium">
+        {translator(locale, "cockpit.crumb.fleet")}
+      </span>
+    </nav>
   )
 }
 
@@ -216,12 +325,17 @@ function EngineGoneNotice({ engineId }: { engineId: string | null }) {
   const locale = useLocale()
   if (!engineId) return null
   return (
-    <p role="status" className="text-muted-foreground mb-3 text-sm">
+    <p role="status" className="text-muted-foreground text-dense mb-3">
       {translator(locale, "cockpit.engineGone", { engineId })}
     </p>
   )
 }
 
+/**
+ * No engine to operate: loading or a failed engine list are the kit's view
+ * states; an empty one is the app-level "no engines" surface — the Miragon
+ * signature (Komet, "Miragon AI") over what to do (#322 U15).
+ */
 function EnginesEmptyState({
   hasTransport,
   enginesQuery,
@@ -230,16 +344,26 @@ function EnginesEmptyState({
   enginesQuery: { isError: boolean; error: Error | null; data: unknown; refetch: () => unknown }
 }) {
   const locale = useLocale()
+  const loading = hasTransport && !enginesQuery.isError && enginesQuery.data === undefined
+  if (loading || enginesQuery.error) {
+    return (
+      <WidgetShell>
+        <ViewDataState
+          loading={loading}
+          error={enginesQuery.error}
+          loadingText={translator(locale, "cockpit.loading.engines")}
+          emptyText={translator(locale, "cockpit.empty.engines")}
+          onRetry={() => void enginesQuery.refetch()}
+          retryLabel={translator(locale, "viewState.retry")}
+        />
+      </WidgetShell>
+    )
+  }
   return (
     <WidgetShell>
-      <ViewDataState
-        loading={hasTransport && !enginesQuery.isError && enginesQuery.data === undefined}
-        error={enginesQuery.error}
-        loadingText={translator(locale, "cockpit.loading.engines")}
-        emptyText={translator(locale, "cockpit.empty.engines")}
-        className="text-muted-foreground p-6 text-sm"
-        onRetry={() => void enginesQuery.refetch()}
-        retryLabel={translator(locale, "viewState.retry")}
+      <AppEmptyState
+        title={translator(locale, "cockpit.empty.enginesTitle")}
+        description={translator(locale, "cockpit.empty.engines")}
       />
     </WidgetShell>
   )
@@ -334,6 +458,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
         <HostModelContext content={context(landingContext(engineGroups))}>{null}</HostModelContext>
         <LandingChooser
           engines={engines}
+          defaultEngineId={enginesQuery.data?.defaultEngineId ?? null}
           onEnterEngine={enterEngine}
           onOpenFleet={openFleet}
           notice={<EngineGoneNotice engineId={goneEngineId} />}
@@ -347,24 +472,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     return (
       <WidgetShell>
         <HostModelContext content={context(fleetContext(engineGroups))}>{null}</HostModelContext>
-        {engines.length > 1 && (
-          <nav
-            aria-label={translator(locale, "cockpit.aria.breadcrumb")}
-            className="text-muted-foreground mb-4 flex items-center gap-1.5 text-sm"
-          >
-            <button
-              type="button"
-              onClick={() => dispatch({ type: "to-landing" })}
-              className="hover:text-foreground focus-visible:ring-ring rounded outline-none focus-visible:ring-2"
-            >
-              {translator(locale, "cockpit.crumb.cockpit")}
-            </button>
-            <Icon icon={ChevronRight} dense />
-            <span className="text-foreground font-medium">
-              {translator(locale, "cockpit.crumb.fleet")}
-            </span>
-          </nav>
-        )}
+        <FleetCrumbs locale={locale} onLanding={() => dispatch({ type: "to-landing" })} />
         <FleetView engines={engines} onEnterEngine={enterEngine} widgets={cockpitWidgets} />
       </WidgetShell>
     )
@@ -373,70 +481,50 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const engineId = scope.engineId
   // The reducer never empties the stack (pop clamps to one element).
   const current = stack[stack.length - 1]
-  // The sidebar highlights the ROOT of the trail — the section the user drilled
-  // in from stays active (every stack starts at a top section).
-  const rootSection = stack[0].section
-  const activeSection: TopSection =
-    rootSection === "incidents" || rootSection === "settings" ? rootSection : "overview"
+  const activeSection = activeSectionOf(stack)
+
+  const environment = environmentIn(engines, engineId)
 
   return (
     <WidgetShell>
       <HostModelContext content={context(cockpitContext(engineId, current))}>
         {null}
       </HostModelContext>
-      <div className="flex flex-col gap-6 md:flex-row md:items-start">
-        <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">
-          <nav
-            aria-label={translator(locale, "cockpit.aria.sections")}
-            className="flex flex-row flex-wrap gap-1 md:flex-col"
-          >
-            {SECTIONS.map((s) => {
-              const isActive = activeSection === s.id
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  aria-current={isActive ? "page" : undefined}
-                  onClick={() => dispatch(s.intent)}
-                  className={`focus-visible:ring-ring inline-flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 ${
-                    isActive
-                      ? "bg-accent text-accent-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <Icon icon={s.icon} />
-                  {translator(locale, `cockpit.section.${s.id}`)}
-                </button>
-              )
-            })}
-          </nav>
-
-          <CockpitRefreshButton />
-
-          {engines.length > 1 && (
-            <EngineSwitcher
-              engineId={engineId}
-              engineGroups={engineGroups}
-              onSwitch={switchEngine}
-              onOpenFleet={openFleet}
-            />
-          )}
-        </aside>
-
-        <main className="min-w-0 flex-1">
-          <EngineGoneNotice engineId={goneEngineId} />
-          {/* Roots (stack of one) render no trail — NavBreadcrumb handles that. */}
-          <NavBreadcrumb
-            stack={stack}
-            locale={locale}
-            onPop={(to) => dispatch({ type: "pop", to })}
+      <CockpitHead
+        activeSection={activeSection}
+        onSection={(intent) => dispatch(intent)}
+        onOpenFleet={openFleet}
+        engineSwitch={
+          <EngineSwitch
+            engineId={engineId}
+            environment={environment}
+            engineGroups={engineGroups}
+            onSwitch={switchEngine}
           />
+        }
+      />
 
-          {/* Every view is a layout of self-fetching widgets rendered through the
-              toolkit renderer. The NavProvider is the client-side navigation
-              seam: widgets call `useNav()`, which resolves to this in-app router
-              instead of a chat follow-up. */}
-          <NavProvider value={navigate}>
+      <main className="min-w-0">
+        <EngineGoneNotice engineId={goneEngineId} />
+        {/* "Alle Engines" leads back to the chooser (#322 U15) whenever there
+            is more than one engine to choose from; a root view with a single
+            engine renders no trail (NavBreadcrumb handles that). */}
+        <NavBreadcrumb
+          stack={stack}
+          locale={locale}
+          rootLabel={
+            engines.length > 1 ? translator(locale, "cockpit.crumb.allEngines") : undefined
+          }
+          onPop={(to) => dispatch(to < 0 ? { type: "to-landing" } : { type: "pop", to })}
+        />
+
+        {/* Every view is a layout of self-fetching widgets rendered through the
+            toolkit renderer. The NavProvider is the client-side navigation
+            seam: widgets call `useNav()`, which resolves to this in-app router
+            instead of a chat follow-up. The head names the engine, so the
+            views leave it out of their own meta line (EngineChromeProvider). */}
+        <NavProvider value={navigate}>
+          <EngineChromeProvider>
             <WidgetRenderer
               layout={filterLayoutToWidgets(
                 cockpitViews[current.section](buildViewParams(current, engineId), {
@@ -451,9 +539,9 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
               errors={[]}
               widgets={cockpitWidgets}
             />
-          </NavProvider>
-        </main>
-      </div>
+          </EngineChromeProvider>
+        </NavProvider>
+      </main>
     </WidgetShell>
   )
 }

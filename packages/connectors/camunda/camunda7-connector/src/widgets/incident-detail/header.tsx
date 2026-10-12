@@ -4,6 +4,8 @@ import { StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import type { IncidentDetailData } from "../../view-models.js"
 
 import { scopingDefinitionKey, useHandOff, type HandOff } from "../lib/hand-off.js"
+import { EngineMeta } from "../lib/engine-context.js"
+import { InstanceLabel } from "../lib/identity.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
@@ -55,7 +57,6 @@ export function IncidentDetailHeader({
 }) {
   const t = useT()
   const { ask } = useHandOff()
-  const title = data.activityName ?? data.activityId
   const cockpitInstanceUrl = data.cockpitInstanceUrl
   return (
     <WidgetHeader
@@ -65,25 +66,20 @@ export function IncidentDetailHeader({
           {resolved ? t("incidentDetail.resolved") : data.incidentType}
         </StatusBadge>
       }
-      title={title}
+      // The activity by its name; its BPMN id only where it has none (#322 U13).
+      title={data.activityName ?? <span className="font-mono">{data.activityId}</span>}
       sub={
         <>
-          <span>
+          <span className="inline-flex items-center gap-1.5">
             {data.processDefinitionName ?? data.processDefinitionKey}
             {data.processDefinitionVersion !== null && (
               <VersionChip version={data.processDefinitionVersion} />
             )}
           </span>
-          <span className="text-muted-foreground">·</span>
-          <span className="font-mono text-xs">{data.processInstanceId}</span>
-          {data.businessKey && (
-            <>
-              <span className="text-muted-foreground">·</span>
-              <span>
-                {t("incidentDetail.businessKeyLabel")} {data.businessKey}
-              </span>
-            </>
-          )}
+          <span aria-hidden="true">·</span>
+          {/* One instance label: its business key, the UUID a copyable chip. */}
+          <InstanceLabel id={data.processInstanceId} businessKey={data.businessKey} />
+          <EngineMeta engineId={data.engineId} />
           {cockpitInstanceUrl && (
             <OpenInCockpitLink
               url={cockpitInstanceUrl}
@@ -93,13 +89,7 @@ export function IncidentDetailHeader({
           )}
         </>
       }
-      actions={
-        <HandOffButton
-          action="findCause"
-          variant="primary"
-          prompt={ask(diagnoseIncidentHandOff(data))}
-        />
-      }
+      actions={<HandOffButton action="findCause" prompt={ask(diagnoseIncidentHandOff(data))} />}
     />
   )
 }
